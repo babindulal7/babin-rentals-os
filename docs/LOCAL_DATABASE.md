@@ -1,3 +1,5 @@
+> **Release verification update (2 Nov 2026):** For the current full migration chain, use [the no-cloud local verification runbook](verification/NO_CLOUD_LOCAL_RELEASE_VERIFICATION_2026-11-02.md). This 16 Aug setup diary contains historical first-run and WSL notes; for parity testing, explicitly include migration 0062 and never target hosted Supabase.
+
 # Running Babin Rentals OS against a local database
 
 **Written 16 Aug 2026.** How to develop without touching the live Supabase project, and what

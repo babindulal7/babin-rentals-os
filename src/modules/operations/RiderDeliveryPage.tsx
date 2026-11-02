@@ -6,14 +6,21 @@
  * Requirements:
  *   - Public route `/rider/:token` (unauthenticated, token-hashed validation).
  *   - Strictly money-blind (Law 6: zero prices, rates, fees, or deposit figures).
- *   - 5 screen states (Law 16): loading, active, in-transit, delivered, expired/revoked.
+ *   - Screen states (Law 16): loading, active, in-transit, delivered, offline,
+ *     expired/revoked.
  *   - Floor touch target discipline: minimum 56px for primary floor verbs.
  *   - Drawn signature capture (T2-02) and optional photo (T2-01).
+ *
+ * Errors are inline (`ErrorBanner`, role="alert"), never `alert()` — Law 12.
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
+import { ErrorBanner } from '../../components/ui/StateViews'
+import { SignaturePad, type SignaturePadRef } from '../../components/ui/SignaturePad'
+import { useNetwork } from '../../lib/network'
+import { compressEvidencePhoto } from '../../lib/imageCompression'
 import {
   fetchRiderJobByToken,
   riderMarkJobPickedUp,
@@ -21,20 +28,55 @@ import {
   type RiderJobData,
 } from '../../lib/queries/riderLink'
 
+/**
+ * Delivery proof is stored as text in `delivery_job_events.metadata.photo_url`
+ * (0190 §rider_complete_delivery). There is no Supabase Storage bucket in this
+ * project, so a data URL is the only self-contained representation: a `blob:`
+ * URL is scoped to this document and resolves to nothing on the office side.
+ * `compressEvidencePhoto` shrinks the image and re-encodes it through a canvas,
+ * which also strips camera EXIF/GPS before a client's doorway leaves the phone.
+ */
+const PROOF_MAX_DIMENSION = 1280
+const PROOF_MAX_BYTES = 600 * 1024
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string' && reader.result.startsWith('data:')) {
+        resolve(reader.result)
+        return
+      }
+      reject(new Error('That photo could not be read. Try taking it again.'))
+    }
+    reader.onerror = () => reject(new Error('That photo could not be read. Try taking it again.'))
+    reader.readAsDataURL(blob)
+  })
+}
+
+/** The signature contract is an SVG wrapper around a PNG data URL (0190). */
+function signatureSvgFrom(pad: SignaturePadRef | null): string | undefined {
+  if (!pad || pad.isEmpty()) return undefined
+  const dataUrl = pad.toDataURL('image/png')
+  if (!dataUrl) return undefined
+  return `<svg xmlns="http://www.w3.org/2000/svg"><image href="${dataUrl}" /></svg>`
+}
+
 export default function RiderDeliveryPage() {
   const { token } = useParams<{ token: string }>()
+  const isOnline = useNetwork()
   const [job, setJob] = useState<RiderJobData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   const [pickupLoading, setPickupLoading] = useState(false)
   const [deliveryLoading, setDeliveryLoading] = useState(false)
   const [receiverName, setReceiverName] = useState('')
-  const [signatureSvg, setSignatureSvg] = useState<string | null>(null)
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null)
-  const [isDrawing, setIsDrawing] = useState(false)
+  const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null)
+  const [photoBusy, setPhotoBusy] = useState(false)
   const [deliverySuccess, setDeliverySuccess] = useState(false)
 
-  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const signatureRef = useRef<SignaturePadRef | null>(null)
 
   const loadJob = useCallback(async () => {
     if (!token) {
@@ -62,67 +104,19 @@ export default function RiderDeliveryPage() {
     void loadJob()
   }, [loadJob])
 
-  // Canvas drawing handlers for signature
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    setIsDrawing(true)
-    const rect = canvas.getBoundingClientRect()
-    const clientX = 'touches' in e && e.touches[0] ? e.touches[0].clientX : (e as React.MouseEvent).clientX
-    const clientY = 'touches' in e && e.touches[0] ? e.touches[0].clientY : (e as React.MouseEvent).clientY
-
-    ctx.beginPath()
-    ctx.moveTo(clientX - rect.left, clientY - rect.top)
-    ctx.lineWidth = 2.5
-    ctx.lineCap = 'round'
-    ctx.strokeStyle = '#000000'
-  }
-
-  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    const rect = canvas.getBoundingClientRect()
-    const clientX = 'touches' in e && e.touches[0] ? e.touches[0].clientX : (e as React.MouseEvent).clientX
-    const clientY = 'touches' in e && e.touches[0] ? e.touches[0].clientY : (e as React.MouseEvent).clientY
-
-    ctx.lineTo(clientX - rect.left, clientY - rect.top)
-    ctx.stroke()
-  }
-
-  const stopDrawing = () => {
-    if (!isDrawing) return
-    setIsDrawing(false)
-    const canvas = canvasRef.current
-    if (!canvas) return
-    // Simple SVG representation for audit logging
-    const dataUrl = canvas.toDataURL('image/png')
-    setSignatureSvg(`<svg xmlns="http://www.w3.org/2000/svg"><image href="${dataUrl}" /></svg>`)
-  }
-
-  const clearSignature = () => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-    setSignatureSvg(null)
-  }
-
   const handlePickup = async () => {
     if (!token) return
+    if (!isOnline) {
+      setActionError('Reconnect before confirming pickup. Nothing was sent to the office.')
+      return
+    }
     try {
+      setActionError(null)
       setPickupLoading(true)
       await riderMarkJobPickedUp(token)
       await loadJob()
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Could not confirm pickup.')
+      setActionError(err instanceof Error ? err.message : 'Could not confirm pickup.')
     } finally {
       setPickupLoading(false)
     }
@@ -132,33 +126,52 @@ export default function RiderDeliveryPage() {
     if (!token) return
     const cleanReceiver = receiverName.trim()
     if (cleanReceiver.length < 2) {
-      alert('Please enter the name of the person receiving the gear.')
+      setActionError('Enter the full name of the person receiving the gear.')
+      return
+    }
+    if (!isOnline) {
+      setActionError('Reconnect before marking delivered. Nothing was sent to the office.')
       return
     }
 
     try {
+      setActionError(null)
       setDeliveryLoading(true)
       await riderCompleteJobDelivery(
         token,
         cleanReceiver,
-        signatureSvg || undefined,
-        photoUrl || undefined
+        signatureSvgFrom(signatureRef.current),
+        photoDataUrl || undefined
       )
       setDeliverySuccess(true)
       await loadJob()
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Could not complete delivery.')
+      setActionError(err instanceof Error ? err.message : 'Could not complete delivery.')
     } finally {
       setDeliveryLoading(false)
     }
   }
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.currentTarget
+    const file = input.files?.[0]
     if (!file) return
-    // Read local object URL for instant proof preview
-    const objectUrl = URL.createObjectURL(file)
-    setPhotoUrl(objectUrl)
+    setActionError(null)
+    setPhotoBusy(true)
+    try {
+      const { blob } = await compressEvidencePhoto(file, {
+        maxDimension: PROOF_MAX_DIMENSION,
+        maxSizeBytes: PROOF_MAX_BYTES,
+      })
+      setPhotoDataUrl(await blobToDataUrl(blob))
+    } catch (err: unknown) {
+      setPhotoDataUrl(null)
+      setActionError(err instanceof Error ? err.message : 'That photo could not be read. Try taking it again.')
+    } finally {
+      setPhotoBusy(false)
+      // Allow re-picking the same file after a failed read.
+      input.value = ''
+    }
   }
 
   // 1. Loading State
@@ -244,6 +257,29 @@ export default function RiderDeliveryPage() {
       </header>
 
       <main style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Offline state (Law 16) — this page cannot act without the network */}
+        {!isOnline && (
+          <div
+            role="status"
+            style={{
+              padding: '12px 14px',
+              borderRadius: 10,
+              /* Same pair as the app-wide OfflineBanner (App.tsx): work paused,
+                 not broken. --st-warn-* is not a theme token. */
+              backgroundColor: 'var(--st-progress-bg)',
+              color: 'var(--st-progress-fg)',
+              fontSize: 13,
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <Icon name="error" size={16} />
+            <span>You are offline. Reconnect to confirm pickup or delivery — nothing is queued.</span>
+          </div>
+        )}
+
         {/* Rider Greeting Card */}
         <section style={{ padding: 14, backgroundColor: 'var(--card)', borderRadius: 12, border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ width: 44, height: 44, borderRadius: '50%', backgroundColor: 'var(--st-progress-bg)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -318,6 +354,11 @@ export default function RiderDeliveryPage() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {/*
+              Read-only rows with no local state, from a payload that carries no
+              line id (0190 aggregates product_name + qty only). Nothing reorders
+              or filters, so an index key cannot mis-associate state here.
+            */}
             {job.items.map((it, idx) => (
               <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', backgroundColor: 'var(--surface-2)', borderRadius: 8, fontSize: 13 }}>
                 <span style={{ fontWeight: 500 }}>{it.product_name}</span>
@@ -335,12 +376,15 @@ export default function RiderDeliveryPage() {
 
         {/* Step 1: Confirm Pickup Button (56px touch target) */}
         {!isInTransit && (
-          <div style={{ marginTop: 8 }}>
+          <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {actionError && (
+              <ErrorBanner title="Pickup not confirmed" message={actionError} />
+            )}
             <button
               type="button"
               data-floor-verb="pickup"
               onClick={handlePickup}
-              disabled={pickupLoading}
+              disabled={pickupLoading || !isOnline}
               style={{
                 width: '100%',
                 minHeight: 56,
@@ -354,13 +398,14 @@ export default function RiderDeliveryPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 10,
-                cursor: pickupLoading ? 'wait' : 'pointer',
+                cursor: pickupLoading ? 'wait' : isOnline ? 'pointer' : 'not-allowed',
+                opacity: isOnline ? 1 : 0.6,
               }}
             >
               <Icon name="truck" size={24} />
               <span>{pickupLoading ? 'Updating Status…' : 'Picked Up from Shop'}</span>
             </button>
-            <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>
+            <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--muted)', margin: 0 }}>
               Tap once you have loaded the gear from the shop.
             </p>
           </div>
@@ -376,11 +421,17 @@ export default function RiderDeliveryPage() {
 
             {/* Receiver Name */}
             <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+              <label
+                htmlFor="rider-receiver-name"
+                style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}
+              >
                 Receiver Full Name <span style={{ color: 'var(--danger)' }}>*</span>
               </label>
               <input
+                id="rider-receiver-name"
                 type="text"
+                autoComplete="name"
+                aria-required="true"
                 placeholder="Name of person receiving the gear"
                 value={receiverName}
                 onChange={(e) => setReceiverName(e.target.value)}
@@ -399,33 +450,14 @@ export default function RiderDeliveryPage() {
 
             {/* Signature Pad */}
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <label style={{ fontSize: 13, fontWeight: 600 }}>Receiver Signature</label>
-                {signatureSvg && (
-                  <button
-                    type="button"
-                    onClick={clearSignature}
-                    style={{ background: 'none', border: 'none', color: 'var(--danger)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                  >
-                    Clear Signature
-                  </button>
-                )}
-              </div>
-              <div style={{ border: '1px dashed var(--border)', borderRadius: 8, backgroundColor: '#ffffff', overflow: 'hidden' }}>
-                <canvas
-                  ref={canvasRef}
-                  width={480}
-                  height={150}
-                  onMouseDown={startDrawing}
-                  onMouseMove={draw}
-                  onMouseUp={stopDrawing}
-                  onMouseLeave={stopDrawing}
-                  onTouchStart={startDrawing}
-                  onTouchMove={draw}
-                  onTouchEnd={stopDrawing}
-                  style={{ width: '100%', height: 150, touchAction: 'none', display: 'block', cursor: 'crosshair' }}
-                />
-              </div>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Receiver Signature</div>
+              <SignaturePad
+                ref={signatureRef}
+                height={150}
+                strokeColor="#000000"
+                guideText="Ask the receiver to sign here"
+                ariaLabel="Receiver signature pad. Draw the receiver's signature with a finger or stylus."
+              />
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
                 Ask the receiver to draw their signature in the box above.
               </div>
@@ -433,20 +465,30 @@ export default function RiderDeliveryPage() {
 
             {/* Optional Photo Proof */}
             <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+              <label
+                htmlFor="rider-photo-proof"
+                style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}
+              >
                 Delivery Photo Proof (Optional)
               </label>
               <input
+                id="rider-photo-proof"
                 type="file"
                 accept="image/*"
                 capture="environment"
                 onChange={handlePhotoUpload}
+                disabled={photoBusy}
                 style={{ fontSize: 14 }}
               />
-              {photoUrl && (
+              {photoBusy && (
+                <div role="status" style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>
+                  Preparing photo…
+                </div>
+              )}
+              {photoDataUrl && !photoBusy && (
                 <div style={{ marginTop: 8 }}>
                   <img
-                    src={photoUrl}
+                    src={photoDataUrl}
                     alt="Delivery proof preview"
                     style={{ width: '100%', maxHeight: 180, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)' }}
                   />
@@ -454,12 +496,16 @@ export default function RiderDeliveryPage() {
               )}
             </div>
 
+            {actionError && (
+              <ErrorBanner title="Delivery not recorded" message={actionError} />
+            )}
+
             {/* Complete Delivery Button (56px touch target) */}
             <button
               type="button"
               data-floor-verb="deliver"
               onClick={handleComplete}
-              disabled={deliveryLoading || receiverName.trim().length < 2}
+              disabled={deliveryLoading || photoBusy || receiverName.trim().length < 2 || !isOnline}
               style={{
                 width: '100%',
                 minHeight: 56,
@@ -473,8 +519,8 @@ export default function RiderDeliveryPage() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 10,
-                cursor: deliveryLoading ? 'wait' : 'pointer',
-                opacity: receiverName.trim().length < 2 ? 0.6 : 1,
+                cursor: deliveryLoading ? 'wait' : isOnline ? 'pointer' : 'not-allowed',
+                opacity: receiverName.trim().length < 2 || !isOnline ? 0.6 : 1,
               }}
             >
               <Icon name="check" size={24} />

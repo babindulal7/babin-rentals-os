@@ -347,6 +347,9 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     // either way — this can only ever be narrower than the policy, never wider.
     //
     // Revert: `return rbac.canWriteSharedTriage(ctx.role);`
+    case 'case.create':
+      return rbac.isStaff(ctx.role);
+
     case 'case.resolve':
       return rbac.canApproveDamage(ctx.role, 'Manager');
 

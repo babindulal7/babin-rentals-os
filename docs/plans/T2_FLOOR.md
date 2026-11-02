@@ -324,7 +324,7 @@ match case-insensitively; every code is checked by the server, and an unknown co
 time; a Warehouse seat sees no money.
 **Needs** — none.
 
-### T2-15 · Damage found during reset            status: todo · size: S · lane A · [soon]
+### T2-15 · Damage found during reset            status: done — awaiting merge (lane-a/T2-15-damage-found-during-reset) · size: S · lane A · [soon]
 **What** — When Reset marks an item Damaged after the client has left (W44), the app opens a damage
 case **linked to the booking it last came back from**, defaulting to **claim from the client**; the
 client gets the "damage found — under review" email without an amount (W23, T5-07); the amount

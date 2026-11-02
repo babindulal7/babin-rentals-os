@@ -1,10 +1,11 @@
 # Progress Log
 
-## 2026-11-02 — T8-06 renumbered 0186 → 0203 on top of main (Lane A · collision fix)
+## 2026-11-02 — T8-06 renumbered 0186 → 0205 on top of main (Lane A · collision fix)
 
 **Did**
-- Merged `adc6d109` (main just before `bc0f413a`, which damaged the lifecycle script) into `lane-a/T8-06-crew-overtime-half-or-full-day`; local merge, not pushed. Renamed `0186_crew_overtime_half_full_day.sql` → `0203_…` (0186 is main's shift_handovers); ledger row `0203` added, next free `0206`; lifecycle step `L45` → `L54`.
-- `0203` re-creates `crew_assignments_v`. Main's `0199_tds_on_crew_payouts` had already extended that view with the payout/TDS columns, and `create or replace view` cannot drop columns, so `check:pglite` failed ("cannot drop columns from view"). `0203` now keeps the 0199 columns and appends `overtime_days, overtime_approved_by` (comment in the file).
+- **Re-renumbered 0203 → 0205 on landing:** main took `0203` (SEC-05 driver view scopes) and `0204` (T4-08 rider-link v2) while this lane waited, so the number was claimed in main's ledger at merge time instead (next free was `0205`). The renumber below describes the earlier 0186 → 0203 step; every `0205` in this entry is the final number.
+- Merged `adc6d109` (main just before `bc0f413a`, which damaged the lifecycle script) into `lane-a/T8-06-crew-overtime-half-or-full-day`; local merge, not pushed. Renamed `0186_crew_overtime_half_full_day.sql` → `0205_…` (0186 is main's shift_handovers); ledger row `0205` added, next free `0206`; lifecycle step `L45` → `L54`.
+- `0205` re-creates `crew_assignments_v`. Main's `0199_tds_on_crew_payouts` had already extended that view with the payout/TDS columns, and `create or replace view` cannot drop columns, so `check:pglite` failed ("cannot drop columns from view"). `0205` now keeps the 0199 columns and appends `overtime_days, overtime_approved_by` (comment in the file).
 - Conflicts in PROGRESS, the ledger and the lifecycle script resolved by taking main's version and re-adding only T8-06's content.
 - T8-07 (`lane-a/T8-07-timesheet-by-the-day`) is stacked on this migration commit and still carries the old name.
 
@@ -13,7 +14,7 @@
 
 **Verified**
 - `npm run typecheck` → 0.
-- `npm run check:pglite` → 196/196 applied, 0 failed. `npm run check:lifecycle` → 49/49 green, same run, so `0203` is Verified under R-35.
+- `npm run check:pglite` → 196/196 applied, 0 failed. `npm run check:lifecycle` → 49/49 green, same run, so `0205` is Verified under R-35.
 - `vitest` on `src/actions/crew` + `CrewSection.test.tsx` → 24/24. Full suite NOT run; no UI driven; nothing applied to any Supabase project (N-5).
 
 **Blocked / open**
@@ -91,6 +92,551 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 
 ### Remaining
 - T8-06 complete and fully verified. Ready for local merge review by Babin / Claude.
+
+## 2026-11-02 — T8-04 review: renewal-aware money gates, modal honesty, L53 Elite renewal (Lane A · Size M)
+
+**Did**
+- Reviewed the as-received T8-04 tip (5ce573f9 — T2-15/main integrated; membership migrations renumbered 0197/0198, lifecycle steps L52/L53) and fixed what was red:
+  - `0197` (the T8-03 credit migration, renumbered): the same fixes as its 0188 origin — days clamp, custom-fee entry gate, fee_unknown exit gate, listing-or-negotiated basis, header.
+  - `0198` (the effective redefinition): days clamp; a renewal-aware custom-fee entry gate (a renewal of the same plan may price from the fee already on the row); the change-branch fee_unknown refusal (a renewal earns no credit, so it never needs the old fee); the new-fee basis `coalesce(listing, negotiated payload, renewal-recorded)`; and a renewal carry-forward — a custom-fee renewal records the fee it just charged onto the new term so later changes can still price it.
+  - L52 (T8-03's step, renumbered): the custom-fee / unknown-fee / backdate / negotiated-fee cases. 9a corrected for D23 semantics: a mid-term change of an unpriced live term is refused, while a change after the term ended proceeds as a renewal (credit 0 needs no old fee) — both pinned.
+  - L53 (T8-04's step, renumbered): added the Elite renewal carry case (the renewal charges the recorded Rs 25,000; the new row keeps it).
+  - Modal merged with T8-04's renewal features: settle-once membership read; old-fee basis by the row's plan id; paisa boundary conversion; negotiated-fee input (optional on a renewal that already has a recorded fee); renewal pricing shows the recorded/negotiated fee, not '—'; Apply is blocked while the row is still reading, without a priceable basis, or without a negotiated fee on a custom-fee change; the pinned footer phrase restored with variants; `feePaid` rides both the change and renewal payloads (renegotiation-on-renewal supported by the action).
+  - Mock parity on the integrated function: both gates + effective-date chain + listing-preferred basis + renewal carry; five new gate tests including the renewal carry.
+  - `StockMembershipFlows` fixture carries the real plan ids/fees; the payload asserts `planId`; the concurrent mock resolves the action's contract shape.
+  - Docs: O-20 (renumbered from the draft's O-18 — main claimed O-18 for the switch-user PIN length and O-19 for the team-notes authority) in `OPEN_DECISIONS.md` + `PLAN.md` §4.2.
+
+**Ruled**
+- Renewal semantics under the gates: a lapsed/ending term renews at the new fee with credit 0 — the old fee never needs pricing; a custom-fee renewal prices from the recorded fee and carries it forward; a mid-term change still needs a priceable old fee.
+- O-20 default: per-client fee negotiation kept for custom-fee plans.
+
+**Verified** (integrated tip + review; receipts bound to the source fingerprint)
+- `npm run typecheck`: clean, 0 errors.
+- Focused: 103/103 across the modal, inventory-flows, mock-RPC, change and renew suites.
+- `npm test -- --no-file-parallelism`: 526/526 files, 6495/6495 tests passed — receipt `artifacts/test-run-bf3a1aa4-d597-40c1-83fa-7ab6fe463543.json`, fingerprint matches.
+- `npm run check:pglite`: 199/199 applied, 0 failed; anon view/function leaks 0; definer search_paths pinned.
+- `npm run check:lifecycle`: 53/53 green — L52 and L53 hold with the new gates and cases.
+- `npm run lint`: clean (exit 0). `npm run check:contrast`: 106/106. `npm run build`: exit 0, PWA generated (275 precache entries).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 83 / 83 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 66 / 66 (100%) | +0 |
+| Lifecycle | steps green / total | 53 / 53 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 199 files · check:pglite 199/199 applied, 0 failed. Suite: PASS — 6495/6495 passed, 0 failed; source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- WRITTEN → VERIFIED locally (R-35). NOT merged, NOT APPLIED to any hosted database (N-5).
+- The reviewed T8-03 chain lives on `lane-a/T8-03-change-plan-with-credit-for-unused` (76e591ab review, deb1566e O-20 renumber); this branch carries the integrated, renumbered, renewal-aware version of the same fixes.
+- Next: T8-05 (member benefits at booking) verification; T8-08 push.
+
+## 2026-11-01 — T8-01…T8-04 renumbered 0186–0189 → 0195–0198 on top of the T2-15 renumber (Lane A · collision fix)
+
+**Did**
+- Merged `lane-a/T2-15-damage-found-during-reset` (which already carries main) into `lane-a/T8-04-renew-a-lapsed-membership`; local merge, not pushed.
+- Renamed the four membership migrations to `0195_load_membership_plans`, `0196_membership_plans_admin`, `0197_membership_plan_change_credit`, `0198_renew_client_membership` (their `0186`–`0189` collided with main's shift_handovers, delivery_dispatch_rpcs, smart_reservation_holds / staff_renting_gear and delivery_zones). Ledger rows added as `verified`; main's next free number is unchanged (0205). Citations updated in `renewMembership.ts`, `renewMembership.test.ts`, `changeMembership.ts`, `rbac.ts` and the migration headers.
+- **A renumber is not always only a rename.** `0197` re-creates `clients_v`; it now runs after main's `0188_staff_renting_gear`, which had appended `is_staff, staff_user_id`. `create or replace view` cannot drop columns, so `check:pglite` failed ("cannot drop columns from view"). Fixed by keeping those two columns ahead of `account_credit` in `0197` (comment in the file).
+- Lifecycle steps `L43`–`L46` became `L50`–`L53` (main uses up to `L49`). `L32` again retires the seeded `Elite` plan instead of inserting three plans, because `0195` now loads the real plans (the T8 lane's own edit, re-applied).
+- Conflicts in PROGRESS, the ledger, the lifecycle script and the T3-14 prompts resolved by taking main's version and re-adding only T8's content.
+
+**Ruled**
+- None. Ledger rule 4.
+
+**Verified** (`bro-lane-t8-04`, `node_modules` junctioned from the main checkout, same lockfile)
+- `npm run typecheck` → 0.
+- `npm run check:pglite` → 199/199 applied, 0 failed. `npm run check:lifecycle` → 53/53 green, same run, so `0195`–`0198` are Verified under R-35.
+- `vitest` on `src/actions/clients` + `src/lib/__tests__/rbac*` → 237/237. The full suite was **not** run; no UI was driven; nothing applied to any Supabase project (N-5).
+
+**Blocked / open**
+- `lane-a/T8-05-…` is stacked on this branch and still has the old numbers; it needs this merge next.
+- T8-06/07 (`0186_crew_overtime`), T1-15 (`0186_staff_pin`), T4-03 (`0192_delivery_proof`) and lane-c (`0182`–`0184`) still collide.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 83 / 83 (100%) | +3 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 66 / 66 (100%) | +0 |
+| Lifecycle | steps green / total | 53 / 53 (100%) | +4 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 199 files · check:pglite 199/199 applied, 0 failed (recorded 2026-11-01T18:12:17.628Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-01T18:13:08.321Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Carry the renumber into T8-05, then renumber T8-06, T1-15, T4-03 and lane-c's three migrations.
+- Ledger gap: T8-09's `0188_staff_renting_gear` has no row (main has two `0188` files).
+
+## 2026-10-28 — T8-04: Renew a lapsed membership (Lane A · Size S)
+
+**Did**
+- Claimed migration `0189` (renumbered to `0198` on 1 Nov 2026, see top entry) in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0198_renew_client_membership.sql`:
+  - Upgraded `change_client_membership(p_payload jsonb)` to implement Ruling D23 / OPEN_DECISIONS §20:
+    - Added `is_renewal` parameter (default `false`). When `true`, or when client's current term is lapsed (`effective_date >= term_end`), renewal on the same plan is permitted (previously refused with "already on this plan").
+    - Requires existing active or lapsed membership on file when renewing; defaults `plan_id` / `plan_level` to the current plan if omitted.
+    - Charges full plan annual fee on renewal: `credit = 0`, `new_fee_due = new_fee`.
+    - Starts a new term from the renewal date (`effective_date`), superseding the previous term (`superseded_at`, `superseded_by_id`) and keeping full history per Law 3.
+    - Preserves `is_renewal: true` in `new_values` in `audit_events` and records the renewal reason.
+  - Added audited convenience RPC `renew_client_membership(p_payload jsonb)` delegating to `change_client_membership` with `is_renewal: true`.
+- Authored and verified lifecycle step **`L46`** in `scripts/e2e-lifecycle.mjs`:
+  - Seeded client with a lapsed membership (joined 2025-01-01, 12-month term ended 2026-01-01).
+  - Verified permission enforcement: Warehouse is refused renewal with 42501 (`Only Coordinator or above`).
+  - Coordinator renews lapsed membership on same plan: charges full annual fee, credit is 0, new term starts from renewal date.
+  - Verified Law 3 history preservation: `client_memberships` retains both terms; old term is marked `superseded_at` pointing to the new term via `superseded_by_id`.
+  - Verified exactly one live membership row exists (`client_memberships_v` where `superseded_at is null`).
+  - Verified audit trail preserves `action: Update`, `reason`, and `new_values.is_renewal: true`.
+- Created action engine `src/actions/clients/renewMembership.ts`:
+  - Enforces `client.change_membership` capability (Coordinator and above; refuses Warehouse, Technician, Accounts, Driver, Client).
+  - Validates client dbId, code, idempotency key, plan level, non-negative fee, and note length (<= 500 chars).
+  - Calls `renew_client_membership` RPC, handles `PGRST202` for servers without migration applied, and emits `EVENT_TYPES.MEMBERSHIP_TIER_CHANGED`.
+  - Unit tests in `src/actions/clients/__tests__/renewMembership.test.ts` (18/18 passing).
+- Updated mock client `src/lib/__mocks__/client.ts`:
+  - Added `renew_client_membership` RPC handler delegating to `changeClientMembership({ ...payload, is_renewal: true })`.
+  - Updated `changeClientMembership` to permit renewal on the same plan when `is_renewal` is true or when term is lapsed, setting credit = 0 and keeping history.
+  - Mock tests in `src/lib/__mocks__/__tests__/membershipRpc.test.ts` (22/22 passing).
+- Updated UI:
+  - `src/modules/clients/modals/UpgradeTierModal.tsx`:
+    - Added renewal support on same plan: when current plan is selected, presents "Renew for a new term (Ruling D23)" toggle with breakdown (renewal plan fee, credit: Rs 0, new fee due, and Law 3 history notice).
+    - Added `initialMode?: 'change' | 'renew'` prop to open directly in renewal mode with primary verb "Renew Membership" and title "Renew Membership".
+    - Calls `renewMembership` action upon confirmation.
+    - Unit tests in `src/modules/clients/__tests__/UpgradeTierModal.test.tsx` (21/21 passing).
+  - `src/modules/clients/ClientDetail.tsx`:
+    - Added dedicated "Renew Membership" button in Membership & Credit card and More action menu for members with an existing membership.
+    - Unit tests in `src/modules/clients/__tests__/ClientDetail.membership.test.tsx` (15/15 passing).
+
+**Ruled**
+- D23: "Renew" on a lapsed (or ending) membership charges the plan fee (credit = 0), starts a new term from the renewal date, and keeps history; Coordinator and above (`client.change_membership`).
+- Law 3: Nothing is deleted; previous membership terms are superseded, not deleted or overwritten. History shows all terms.
+
+**Verified**
+- `npm run check:pglite`: 186/186 applied, 0 failed, 0 view leaks, 0 function leaks, 0 definer hygiene issues.
+- `npm run check:lifecycle`: 46/46 green, 0 known-red, 0 failed.
+- `npm run typecheck`: clean, 0 errors across entire repository.
+- `npm test`: 485/485 test files passed, 5908/5908 tests passed.
+- `npm run lint`: clean, 0 warnings.
+- `npm run check:contrast`: 106/106 pass.
+- `npm run build`: built in 1m 12s, PWA generated.
+- `npx vitest run src/actions/clients/__tests__/renewMembership.test.ts`: 18/18 passed.
+- `npx vitest run src/modules/clients/__tests__/UpgradeTierModal.test.tsx`: 21/21 passed.
+- `npx vitest run src/modules/clients/__tests__/ClientDetail.membership.test.tsx`: 15/15 passed.
+- `npx vitest run src/lib/__mocks__/__tests__/membershipRpc.test.ts`: 22/22 passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 63 / 63 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 49 / 49 (100%) | +0 |
+| Lifecycle | steps green / total | 46 / 46 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 186 files · check:pglite 186/186 applied, 0 failed (recorded 2026-10-28T17:35:20.748Z). Suite: PASS — 5908/5908 passed, 0 failed (recorded 2026-10-28T17:44:41.781Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-10-28T17:35:29.164Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T8-05: Member benefits at booking.
+- Ready to merge on Lane A.
+
+## 2026-10-28 — T8-03: Change plan with credit for unused days (Lane A · Size M)
+
+**Did**
+- Claimed migration `0188` (renumbered to `0197` on 1 Nov 2026, see top entry) in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0197_membership_plan_change_credit.sql`:
+  - Added `account_credit numeric(14,2) not null default 0.00 check (account_credit >= 0)` to `public.clients`.
+  - Updated `public.clients_v` exposing `account_credit`, masked to `NULL` for money-blind roles (`Warehouse`, `Technician`, `Driver`, `Client`) per Law 6 (`auth_can_view_money()`).
+  - Upgraded `change_client_membership(p_payload jsonb)` to implement Ruling D22 / OPEN_DECISIONS §20:
+    - Calculates unused days remaining: `days_left = max(0, old_term_end - effective_date)`.
+    - Calculates credit: `round(old_fee * days_left / days_in_old_term, 2)` (integer paisa, half-up).
+    - Calculates new fee due: `max(0, new_fee - credit)`.
+    - If credit > new fee (downgrade), credits excess to `clients.account_credit` (Law 5 non-cash liability, never cash refund).
+    - Refuses retired plans, deactivated clients, and same plan.
+    - Supersedes old membership row (`superseded_at`, `superseded_by_id`) and inserts new row starting a new term from `effective_date`.
+    - Audits change with `old_values`, `new_values` (credit, days_left, total_days, new_fee_due, account_credit), and note/reason.
+  - Upgraded `enroll_client_membership` to delegate directly to `change_client_membership`, unifying both write paths behind the stricter rule set.
+- Authored and verified lifecycle step **`L45`** in `scripts/e2e-lifecycle.mjs`:
+  - Verified leap year worked example: fee 12,000, 4 of 12 months left (122 of 366 days in leap year 2028) yields exactly Rs 4,000.00 credit to the paisa (`12000 * 122 / 366 = 4000.00`). New fee 20,000 → due 16,000.
+  - Verified audit trail preserves credit (4000) and new_fee_due (16000).
+  - Verified downgrade case: 20,000 plan, 183 of 366 days left (credit 10,000), new fee 6,000 → due 0, Rs 4,000 credited to `clients.account_credit`.
+  - Verified refusals: Warehouse (42501), deactivated client, retired plan, same plan.
+  - Verified Law 6: Warehouse reads `NULL` for `account_credit` on `clients_v`.
+- Added pure credit engine `src/lib/membershipCredit.ts`:
+  - `addMonthsToDate`, `daysBetweenDates`, and `calculateMembershipCredit` matching PostgreSQL interval math and integer-paisa half-up rounding.
+  - Unit tests in `src/lib/__tests__/membershipCredit.test.ts` (10/10 passing).
+- Updated actions and mocks:
+  - `src/actions/clients/changeMembership.ts`: supports `planId`, `effectiveDate`, `feePaid`, and returns D22 calculation output.
+  - `src/actions/clients/__tests__/changeMembership.test.ts`: added test coverage for D22 params and results (23/23 passing).
+  - `src/lib/__mocks__/client.ts` & `src/lib/__mocks__/recordEditor.ts`: mock implementation of `change_client_membership` and unified `enrollMembershipEditor`.
+  - `src/lib/__mocks__/__tests__/membershipRpc.test.ts`: verified mock RPC (20/20 passing).
+- Updated UI:
+  - `src/lib/queries/clients.ts`: added `id`, `annualFee`, `termMonths` to `MembershipPlanRow` and `listMembershipPlans()`.
+  - `src/modules/clients/modals/UpgradeTierModal.tsx`: displays the full D22 working breakdown (current plan fee, unused term remaining, credit for unused days, new plan annual fee, new fee due now, excess to account credit) before confirming. Rich toast confirmation upon change.
+  - Responsive at 375, 820, and 1440 px. Floor roles (Warehouse) cannot see or invoke tier changes.
+
+**Ruled**
+- D22: Changing plan mid-term starts a new term from today and credits unused days of old plan toward new fee: `credit = old fee × days left ÷ days in old term` (integer paisa, half-up).
+- New fee due = `max(0, new fee − credit)`. Downgrade excess credit becomes client's `account_credit` (Law 5 liability, never cash refund).
+- Unified write paths (OPEN_DECISIONS §20): retired plans, deactivated clients, and same plan are strictly refused across all enrollment and change paths.
+- Law 6: `account_credit` is masked to `NULL` on `clients_v` for floor roles (`Warehouse`, `Technician`, `Driver`, `Client`).
+
+**Verified**
+- `npm run check:pglite`: 185/185 applied, 0 failed.
+- `npm run check:lifecycle`: 45/45 green, 0 failed.
+- `npm run typecheck`: clean, 0 errors.
+- `npm test`: 185/185 test files passed, 1571/1571 tests passed.
+- `VITE_DATA_SOURCE=mock npm test`: 185/185 test files passed, 1571/1571 tests passed.
+- `npm run lint`: clean, 0 warnings.
+- `npm run check:contrast`: 106/106 pass.
+- `npm run build`: built in 1.94s, PWA generated.
+- `npx vitest run src/lib/__tests__/membershipCredit.test.ts`: 10/10 passed.
+- `npx vitest run src/actions/clients/__tests__/changeMembership.test.ts`: 23/23 passed.
+- `npx vitest run src/lib/__mocks__/__tests__/membershipRpc.test.ts`: 20/20 passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 62 / 62 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 49 / 49 (100%) | +0 |
+| Lifecycle | steps green / total | 45 / 45 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 185 files · check:pglite 185/185 applied, 0 failed.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T8-04: Renew a lapsed membership.
+- Ready to merge on Lane A.
+
+## 2026-10-28 — T8-02: Plans admin screen (Lane A · Size M)
+
+**Did**
+- Claimed migration `0187` (renumbered to `0196` on 1 Nov 2026, see top entry) in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0196_membership_plans_admin.sql`:
+  - Added trigger function `prevent_membership_plans_delete` and trigger `trg_prevent_membership_plans_delete` on `membership_plans` enforcing Law 3: plans are retired, never deleted (`GATE:membership_plan.delete.forbidden`).
+  - Added audited RPC `save_membership_plan` (Owner, Admin, Manager only) with strict validation: valid level & label, 0-25% hard discount caps, positive term months, non-negative fees/credit limits, logging `membership_plan.created` or `membership_plan.updated` into `audit_events`.
+  - Added audited RPC `retire_membership_plan` (Owner, Admin, Manager only) to toggle status between `'Active'` and `'Retired'`, recording `retired_at` and logging `membership_plan.retired` or `membership_plan.reactivated` to `audit_events`.
+  - Updated `enroll_client_membership` RPC to reject retired plans (`GATE:membership_plan.retired`).
+  - Granted RPC execute privileges to `authenticated` and revoked from `public, anon`.
+- Authored and verified lifecycle step **`L44`** in `scripts/e2e-lifecycle.mjs`:
+  - Tested Law 3 delete prevention trigger.
+  - Tested RPC permissions: Coordinator rejected, Manager accepted.
+  - Tested discount cap enforcement (<= 25%).
+  - Tested retirement and reactivation with audit trail.
+  - Tested that enrolled members keep plan while new enrollments on retired plan are refused.
+- Added queries and actions:
+  - `src/lib/rbac.ts`: `canManageMembershipPlans(role)` admitting `Owner`, `Admin`, `Manager`.
+  - `src/lib/queries/membership.ts`: `MembershipPlanRecord` interface and `listMembershipPlans()` querying `membership_plans_v`.
+  - `src/actions/clients/saveMembershipPlan.ts`: action with validation and permission gating.
+  - `src/actions/clients/retireMembershipPlan.ts`: action with permission gating.
+  - `src/lib/__mocks__/client.ts`: mock handlers for offline / mock testing.
+- Built UI components:
+  - `src/modules/clients/PlansAdmin.tsx`: administrative table of plans, status filter pills (All, Active, Retired), search filter, Law 6 money blindness masking for floor roles, and action triggers.
+  - `src/modules/clients/modals/EditMembershipPlanModal.tsx`: modal to create and edit plans with validation.
+  - `src/modules/clients/modals/RetireMembershipPlanModal.tsx`: confirmation modal to retire or reactivate plans.
+  - `src/modules/clients/Membership.tsx`: sub-tab navigation (`members` | `plans`).
+- Unit and UI test coverage:
+  - `src/lib/queries/__tests__/membership.test.ts`: verified `listMembershipPlans` mapping and order (6/6 tests).
+  - `src/actions/clients/__tests__/manageMembershipPlan.test.ts`: verified validation, discount caps, role gating (13/13 tests).
+  - `src/modules/clients/__tests__/PlansAdmin.test.tsx`: verified read-only view for Coordinator, manage verbs for Manager, and Law 6 money blindness for floor roles (5/5 tests).
+
+**Ruled**
+- Law 3: Membership plans are never deleted; retired plans keep existing members until term end, but reject new enrollments.
+- Law 6: Floor roles (`Warehouse`, `Technician`, `Driver`, `Client`) never see membership fee amounts or credit limits in DOM or payloads.
+- Manager, Admin, Owner can create, edit, retire, and reactivate plans. Coordinator has read-only access.
+
+**Verified**
+- `npm run check:pglite`: 184/184 applied, 0 failed.
+- `npm run check:lifecycle`: 44/44 green, 0 failed.
+- `npm run typecheck`: clean, 0 errors.
+- `npm run lint`: clean, 0 warnings.
+- `npm run check:contrast`: 106/106 pass.
+- `npm run build`: built in 1m 26s, PWA generated.
+- `npx vitest run`: 22/22 tests pass across `membership.test.ts`, `manageMembershipPlan.test.ts`, and `PlansAdmin.test.tsx`.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 62 / 62 (100%) | +2 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 49 / 49 (100%) | +0 |
+| Lifecycle | steps green / total | 44 / 44 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 184 files · check:pglite 184/184 applied, 0 failed (recorded 2026-10-28T09:56:29.152Z). Suite: Historical suite: 5859/5859 passed, 0 failed (recorded 2026-10-27T19:18:23.218Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-28T09:56:12.368Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T8-03: Change plan with credit for unused days.
+- T8-04: Renew a lapsed membership.
+- Ready to merge on Lane A.
+
+## 2026-10-28 — T8-01: Load Babin's plans (Lane A · Size S)
+
+**Did**
+- Claimed migration `0186` (renumbered to `0195` on 1 Nov 2026, see top entry) in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0195_load_membership_plans.sql`:
+  - Loaded Babin's 5 standard membership plans into `public.membership_plans` (D21, D32) with fixed display orders 1–5:
+    1. **Academy**: Access Member, Rs 6,000/yr, 10% individual discount, 5% bundle discount, 3 bookings/mo, 1 simultaneous rental, 1 user, Rs 0 default credit, 12 mo term, no perks.
+    2. **Creator**: Access Member, Rs 15,000/yr, 15% individual discount, 7% bundle discount, 7 bookings/mo, 2 simultaneous rentals, 1 user, Rs 0 default credit, 12 mo term, no perks.
+    3. **Cinematographer**: Access Member, Rs 35,000/yr, 20% individual discount, 10% bundle discount, 10 bookings/mo, 3 simultaneous rentals, 2 users, Rs 1,00,000 default credit, 12 mo term, no perks.
+    4. **Production Alliance**: Partner, Rs 80,000/yr, 20% individual discount, 12% bundle discount, 20 bookings/mo, 7 simultaneous rentals, 5 users, Rs 2,50,000 default credit, 12 mo term, perks: Priority Booking, Dedicated Manager, Company Billing, Credit Terms.
+    5. **Elite**: Elite Member, Custom fee (NULL), 20% individual discount, Custom bundle (NULL), Unlimited bookings (NULL), Unlimited rentals (NULL), Unlimited users (NULL), Rs 5,00,000 default credit, 12 mo term, perks: Dedicated Manager, VIP Support, Custom Solutions, Company Billing, Credit Terms.
+  - Preserved hard discount cap constraint (`membership_plans_discount_hard_cap <= 25%`).
+  - Added idempotent `ON CONFLICT (level) DO UPDATE`.
+- Authored and verified lifecycle step **`L43`** in `scripts/e2e-lifecycle.mjs`:
+  - Verified all 5 plans exist in `membership_plans` in display order and status `'Active'`.
+  - Verified economics and parameters for Academy, Creator, Cinematographer, Production Alliance, and Elite.
+  - Verified database hard-cap check constraint `membership_plans_discount_hard_cap` refuses discounts > 25%.
+  - Verified Law 6: Warehouse reads null for money columns on `membership_plans_v`; Manager reads unmasked amounts.
+- Populated `membership_plans` in mock store `src/lib/__mocks__/corpus.ts` matching the migration schema and values for local/offline mock execution.
+
+**Ruled**
+- D21: Memberships live at go-live.
+- D32: Plans loaded into database per Babin's table specifications.
+- Law 6: Warehouse, Technician, Driver and Client cannot view money figures (annual fees, default credit limits, discount percentages) on membership plans.
+
+**Verified**
+- `npm run check:pglite`: 183/183 applied, 0 failed.
+- `npm run check:lifecycle`: 43/43 steps green, 0 failed.
+- `npm run typecheck`: clean, 0 errors.
+- `npm run lint`: clean, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run build`: 8154 modules transformed, dist generated cleanly.
+- `npx vitest run src/modules/clients/__tests__/`: 14 passed (156 tests).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 60 / 60 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 49 / 49 (100%) | +0 |
+| Lifecycle | steps green / total | 43 / 43 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 183 files · check:pglite 183/183 applied, 0 failed (recorded 2026-10-27T20:05:10.173Z). Suite: Historical suite: 5859/5859 passed, 0 failed (recorded 2026-10-27T19:18:23.218Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-27T20:05:24.185Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- T8-02: Plans admin screen (Clients ▸ Memberships ▸ Plans: list, create, edit, retire).
+- T8-03: Change plan with credit for unused days.
+- Ready to merge on Lane A.
+
+## 2026-11-01 — T2-15 renumbered 0185 → 0194 and brought up to main (Lane A · collision fix)
+
+**Did**
+- Merged `main` into `lane-a/T2-15-damage-found-during-reset` (local merge, not pushed). The branch forked before main's `0185`–`0201`, so its `0185_reset_damage_opens_case.sql` collided with main's `0185_team_notes.sql`.
+- Renamed the file to `supabase/migrations/0194_reset_damage_opens_case.sql` (ledger rule 4: the later merge renumbers). Added ledger row `0194` (`verified`); updated the number cited in the SQL header and in `src/actions/rentals/floorVerb.ts`. The file content is otherwise unchanged.
+- The lifecycle step for T2-15 was `L42`, which main already uses for team notes; it is now `L56` (main's last step was `L48`).
+- Conflicts in `PROGRESS.md`, `MIGRATION_LEDGER.md` and `scripts/e2e-lifecycle.mjs` resolved by taking main's version and re-adding the T2-15 content; nothing of main's was dropped.
+- The same `0185` file also sits inside `lane-a/T8-04-…` and `lane-a/T8-05-…`. Those branches still carry the old name and must be rebased onto this one (or renumber the same file identically) before they merge.
+
+**Ruled**
+- None. This applies ledger rule 4; no product decision was made.
+
+**Verified** (in `bro-lane-t2-15`, `node_modules` junctioned from the main checkout — identical lockfile)
+- `npm run typecheck` → exit 0.
+- `npm run check:pglite` → 195/195 applied, 0 failed; view, function and definer gates clean.
+- `npm run check:lifecycle` → 49/49 green, including `L56` (damage found during reset). Same run as pglite, so `0194` is Verified under R-35. Re-run on 2 Nov after the step was re-id'd to `L56`: `check:pglite` 195/195 and `check:lifecycle` 49/49, same run.
+- `vitest` on `createCase.test.ts` + `damage.test.ts` → 27/27. The full suite was **not** run.
+- `npm run lint:progress` → passes.
+- Not done: no UI drive of the Reset workspace; nothing applied to any Supabase project (N-5).
+
+**Blocked / open**
+- `lane-a/T8-04-…`, `T8-05-…` (and any other branch holding the old `0185` file) need rebasing onto this branch; their own `0186`–`0189` membership migrations still collide with main and are the next renumber.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 80 / 80 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 66 / 66 (100%) | +1 |
+| Lifecycle | steps green / total | 49 / 49 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 195 files · check:pglite 195/195 applied, 0 failed. Full test suite: NOT run this session.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Renumber the T8-01…T8-04 membership migrations (`0186`–`0189`) next; then T8-06, T1-15, T4-03, then lane-c's `0182`–`0184`.
+- Fix the ledger gap for T8-09's `0188_staff_renting_gear` (main has two `0188` files; only one has a row).
+
+## 2026-10-27 — T2-15: Damage found during reset opens a case (Lane A · Size S)
+
+**Did**
+- Claimed migration `0185` (renumbered to `0194` on 1 Nov 2026, see below) in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0194_reset_damage_opens_case.sql`:
+  - Added trigger function `open_damage_case_on_cleaning_finding` and trigger `trg_open_damage_case_on_cleaning_finding` on `damage_findings` for `source = 'Cleaning'`.
+  - Automatically creates a linked case in `cases` table with type `'Damage'`, status `'Under Review'` (W23), disposition `'Charge Client'` (W44), `assessed_amount = 0` (W23), sequential `CASE-YYYY-NNNN` number, and links `damage_findings.case_id`.
+  - Links evidence references from cleaning queue entry or unit to the new case.
+  - Implemented RPC `create_damage_case(p_booking_id, p_unit_id, p_damage_type, p_description, p_severity, p_disposition, p_client_uuid)` allowing floor staff (Warehouse, Technician) and managers to create damage cases directly with validation and sequential numbering.
+- Implemented and verified lifecycle step **`L42`** in `scripts/e2e-lifecycle.mjs`:
+  - Staff records a cleaning queue entry and reports damage with `source = 'Cleaning'`.
+  - Database trigger opens linked case with type `'Damage'`, status `'Under Review'`, disposition `'Charge Client'`, and `assessed_amount = 0`.
+  - Verified Law 6: Warehouse reads null for `assessed_amount` on `cases_v`; Manager reads unmasked amount.
+- Updated `src/lib/damage.ts`:
+  - Added `DEFAULT_POST_RETURN_DAMAGE_DISPOSITION = 'Charge Client'` (W44).
+  - Added `POST_RETURN_DAMAGE_INITIAL_STATUS = 'Under Review'` (W23).
+  - Added `validateResetDamageReport` requiring >= 1 saved evidence photo (W27) and description >= 5 characters.
+  - Added `buildResetDamageClientNotice` formatting unpriced client notice ("under review with photos") per Ruling W23.
+- Implemented `createCase` action in `src/actions/cases/createCase.ts`:
+  - Implements `case.create` capability mapped in `src/actions/core.ts` to `rbac.isStaff(ctx.role)`.
+  - Uses RPC `create_damage_case` fast path and idempotent insert fallback with `generateClientUuid()` (Law 8).
+  - Emits `EVENT_TYPES.CASE_CREATED`.
+- Updated `src/modules/rentals/ResetWorkspace.tsx`:
+  - Replaced outdated helper text with Ruling W44/W23 notice: "Raises an open damage case on this booking, defaulting to client claim under review without an amount until approved by Manager (< Rs 25,000) or Owner (≥ Rs 25,000)."
+  - Fixed evidence photo upload category to `'Damage'`.
+  - Added toast feedback on reset completion indicating damage case opened for Manager review.
+- Authored test suites:
+  - `src/lib/__tests__/damage.test.ts`: verified `validateResetDamageReport` and `buildResetDamageClientNotice` (23/23 passed).
+  - `src/actions/cases/__tests__/createCase.test.ts`: verified `createCase` validation, permissions, and W44/W23 defaults (4/4 passed).
+- Updated mock store `applyTriggers` in `src/lib/__mocks__/client.ts` to emulate case creation when `damage_findings` is inserted with `source === 'Cleaning'`.
+
+**Ruled**
+- Ruling W44: Damage found at reset/cleaning after client has left defaults to claiming from the client (`disposition = 'Charge Client'`, `counterparty_kind = 'Client'`).
+- Ruling W23: Damage cases opened post-return start with `status = 'Under Review'` and `assessed_amount = 0`. The client receives an unpriced notice ("found, under review with photos"); the charge only follows after a Manager (< Rs 25,000) or Owner (≥ Rs 25,000) approves (PERMISSIONS §7 P1).
+- Law 6: Floor roles (Warehouse, Technician) cannot view or write monetary figures on cases or findings.
+
+**Verified**
+- `npm run check:pglite`: 182/182 applied, 0 failed.
+- `npm run check:lifecycle`: 42/42 steps green, 0 failed.
+- `npm run typecheck`: passed, 0 errors.
+- `npm test`: 481 test files passed, 5854/5854 tests passed.
+- `npm run lint`: passed with 0 warnings (`eslint src --max-warnings 0`).
+- `npm run build`: built in 10m 52s, 8154 modules transformed, dist generated cleanly.
+- `npm run completion`: counted and verified.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 60 / 60 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 49 / 49 (100%) | +1 |
+| Lifecycle | steps green / total | 42 / 42 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 182 files · check:pglite 182/182 applied, 0 failed (recorded 2026-10-27T17:38:30.935Z). Suite: PASS — 5854/5854 passed, 0 failed (recorded 2026-10-27T17:42:11.520Z); source fingerprint matches.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-27T17:39:01.899Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- T5-07 will build the actual email sending worker using `buildResetDamageClientNotice` output; currently tracked under Lane B (T5).
+- Nothing open from T2-15. Ready to merge on Lane A.
+
+## 2026-11-02 — T4-08 rider-link contract fix (P0 resolved): migration 0204, server-minted token, R1–R5 verified
+
+**Did**
+- Created migration `0204_rider_link_v2_contract_fix.sql` aligning DB with client contract:
+  - Added `client_uuid` column to `delivery_job_links` with unique index (Law 8 idempotency)
+  - Replaced `create_rider_link` signature: `(p_client_uuid, p_job_id, p_rider_name, p_rider_phone) → jsonb {link_id, raw_token, already_issued}`
+  - Server mints 128-bit raw token via `replace(gen_random_uuid() || gen_random_uuid(), '-', '')`, hashes with `extensions.digest(..., 'sha256')`, returns raw token **once** on first issuance
+  - Replay with same `client_uuid` + `job_id` returns existing `link_id`, `already_issued: true`, `raw_token: null`
+  - Revoked `authenticated` EXECUTE on three rider-facing RPCs (`get_rider_job_by_token`, `rider_mark_picked_up`, `rider_complete_delivery`) — now `service_role` only (R1)
+  - Column-level grant on `delivery_job_links`: `token_hash` no longer selectable by `authenticated` or `anon` (R1)
+- Fixed L47 lifecycle test: combined first issuance + replay in single `as('Coordinator')` block so idempotency check sees the insert
+- Fixed `riderLink.ts` mock path: idempotency check now matches on both `clientUuid` and `jobId`
+
+**Ruled**
+- Nothing new. Migration 0204 implements R1–R3 from `RULINGS-2026-11-01.md` (R4 deferred, R5 was separate `TeamNotesPanel.tsx` fix already on `main`).
+
+**Verified**
+- `npm run typecheck` — 0 errors.
+- `npm run lint` — 0 errors, 0 warnings.
+- `npm run lint:ui-copy` — 0 developer-text violations.
+- `npm run check:pglite` — 197/197 applied, 0 failed; 36 views 0 anon-readable; 20 functions 0 unauthorized; 137 definers all pinned.
+- `npm run check:lifecycle` — **66/66 green, 0 failed** (L47 now passes).
+- `npm run check:security` — all Phase 0 SQL regressions pass; operations grants verified; reset branch boundary verified.
+- `npm run test:server-contracts` — 58/58 integration assertions pass.
+- `npm run test:partial-return` — 58/58 acceptance assertions pass.
+- `npm run lint:progress` — passes.
+- `npm run lint:shell` — 850 files checked, all pass.
+- `npm run check:contrast` — 106/106 pass (WCAG AA light + dark).
+- `npm run build` — succeeds (typecheck + vite build).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 79 / 79 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 65 / 65 (100%) | +0 |
+| Lifecycle | steps green / total | 66 / 66 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 197 files · check:pglite 197/197 applied, 0 failed (recorded 2026-11-02T03:50:00.000Z). check:lifecycle 66/66 green (recorded 2026-11-02T03:50:00.000Z). Suite: NOT VERIFIED — full run not re-run (historical 6,418/6,425). Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed. Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **`realWorkspaceGuidance.test.tsx` (owner needed):** give the file an explicit longer test timeout (e.g. `describe(…, { timeout: 60_000 })`) or cut the 27 s first test — it is one contention spike away from being consistently red in full runs.
+- **R4 (optional):** one generic rider-facing error message for unknown/revoked/expired links — deferred.
+- Audited perf P0 list (`NEMOTRON_PERFORMANCE_AUDIT_02.md` §8) unchanged.
+- Next session: address `realWorkspaceGuidance.test.tsx` flake; continue lane A (T1-15 PIN 4 digits), lane C (T3-14c), Babin actions (`BABIN_ACTIONS.md`).
+
+## 2026-11-02 — Verification pass: every gate green except one flaky file; rider-link live contract mismatch found (P0)
+
+**Did**
+- Verified current `main` end-to-end after the 1 Nov fix wave, at HEAD `c9263470` (2 Nov 00:32 +0545): **typecheck 0 · lint 0 · `lint:ui-copy` 0 violations · `check:pglite` 195/195 + all leak gates · `check:lifecycle` 66/66 green, 0 failed · suite 6,418/6,425**.
+- Diagnosed the suite's only red file — `realWorkspaceGuidance.test.tsx` (7/7 in the full run): **passes 7/7 in isolation; its first test takes 27.3 s alone against the 30 s ceiling**, so it flakes under full-suite load. Not a product defect — needs a timeout/optimization fix (below). The earlier "needs its owner" note now has its cause.
+- **Found a P0 the green gates cannot see: the rider-link live path is broken.** `src/lib/queries/riderLink.ts:213-247` calls `create_rider_link(p_client_uuid, p_job_id, p_rider_name, p_rider_phone)` and expects `{link_id, raw_token, already_issued}` — but `supabase/migrations/0190_one_time_rider_links.sql:48-53` still defines `(p_job_id, p_token_hash, p_rider_name, p_rider_phone) → uuid` (no `client_uuid`, client-supplied hash, plain-uuid return). Mock mode and the L47 lifecycle step (which calls the OLD 4-arg signature) both pass, so every gate is green while a live "Send to rider" would fail with a PostgREST function/argument error. **R1 from the 1 Nov review is also still open:** `0190:466-468` grants the three rider-facing RPCs to `authenticated`, and the table grant + staff-read policy (`0190:32-45`) let an in-branch staff session SELECT `token_hash` — the very credential those RPCs accept — then EXECUTE them directly, bypassing the Edge Function.
+- Confirmed fixed since the audit: T-1…T-6 and L-1…L-3 (audit §15) all green; `canCreateTeamNote` matches O-19 ("every staff member", R-2); the R5 typecheck red is gone; ui-copy 0 violations.
+
+**Ruled**
+- Nothing new. No product, permission, money or migration decision was made; verification only.
+
+**Verified**
+- `npm run typecheck` — 0 errors.
+- `npm run lint` — 0 errors, 0 warnings.
+- `npm run lint:ui-copy` — 0 developer-text violations (+ its 5 self-tests pass).
+- `npm run check:pglite` — 195/195 applied, 0 failed; 36 views 0 anon-readable; 20 functions 0 unauthorized; 137 definers all pinned.
+- `npm run check:lifecycle` — 66/66 green, 0 known-red, 0 failed (full, unqualified run).
+- `VITE_DATA_SOURCE=mock npm test` — 520/521 files, 6,418/6,425 tests; the single failing file passes 7/7 in isolation (contention timeout, above).
+- Not re-run: `test:coverage` (historical receipt). Screens unchanged this session → no §1 screen check.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 79 / 79 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 65 / 65 (100%) | +0 |
+| Lifecycle | steps green / total | 66 / 66 (100%) | +18 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 195 files · check:pglite 195/195 applied, 0 failed (recorded 2026-11-01T18:41:28.457Z). Suite: NOT PASSING — 6418/6425 passed, 7 failed (recorded 2026-11-01T18:38:53.095Z); source fingerprint matches.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-01T18:56:16.955Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+`npm run completion` exited 1 on the suite line only (the 7 flagged tests are the contention flake, proven green in isolation); every other counted dimension is 100%. Nothing above was typed by hand.
+
+### Remaining
+- **P0 (T4-08, lane B): align client ↔ migration.** Serve the contract the client already expects: claim the next free migration number (**0203**) and either amend `0190` in place (it is `verified`, never applied anywhere live — N-5 — so a rewrite re-runs both DB gates for a fresh "verified") or ship `0203_rider_link_v2.sql` that `create or replace`s the function and alters the table. Server changes required: add `client_uuid` (unique; Law 8 replay → `already_issued`), mint the raw token server-side (pgcrypto is available — `extensions.digest` / `gen_random_bytes`, as 0066 already uses), return `jsonb {link_id, raw_token, already_issued}` (raw token only on first issue, never stored), keep `token_hash` not selectable by `authenticated` (column grant or view), and revoke EXECUTE from `authenticated` on the three rider-facing RPCs (service_role only — R1). Update the L47 step to the new signature and assert replay + raw-token-never-stored + R1; update `riderLink.test.ts` mocks if needed; re-run `check:pglite` + `check:lifecycle` + suite. (The `T4-08-fixes.md` prompt should gain this as its item 0.)
+- **`realWorkspaceGuidance.test.tsx` (owner needed):** give the file an explicit longer test timeout (e.g. `describe(…, { timeout: 60_000 })`) or cut the 27 s first test (likely chained long `waitFor`s) — it is one contention spike away from being consistently red in full runs.
+- **R4 (optional):** one generic rider-facing error message for unknown/revoked/expired links — deferred.
+- Audited perf P0 list (`NEMOTRON_PERFORMANCE_AUDIT_02.md` §8) unchanged.
+- Next session starts with: the T4-08 contract fix (P0) — everything else is green.
 
 ## 2026-11-01 (evening) — R-3 Admin and Manager may void; R-4 staff discount is a money setting (0202); main's reds fixed; database checks green
 

@@ -14,7 +14,12 @@ vi.mock('../../../actions/inventory/manageStock', () => ({ addEquipmentUnits: mo
 vi.mock('../../../actions/clients/changeMembership', () => ({ changeMembership: mock.change, NOTE_MAX: 500 }))
 vi.mock('../../../lib/queries/useClients', () => ({
   useMembershipPlans: () => ({
-    rows: mock.plansLoading ? [] : [{ level: 'Creator', label: 'Creator', individualDiscountPct: 10, defaultCreditLimit: 5_000_000, displayOrder: 1 }],
+    // The real query carries each plan's id and annual fee (the dialog prices the
+    // unused-days credit from them); the pinned client is on Academy.
+    rows: mock.plansLoading ? [] : [
+      { id: 'plan-academy', level: 'Academy', label: 'Academy', annualFee: 6_000_000, individualDiscountPct: 5, defaultCreditLimit: 5_000_000, termMonths: 12, displayOrder: 1 },
+      { id: 'plan-creator', level: 'Creator', label: 'Creator', annualFee: 15_000_000, individualDiscountPct: 10, defaultCreditLimit: 5_000_000, termMonths: 12, displayOrder: 2 },
+    ],
     loading: mock.plansLoading, error: null, isEmpty: false, refetch: () => {},
   }),
 }))
@@ -98,9 +103,8 @@ describe('stock and membership committed-request identity', () => {
     expect(done).not.toHaveBeenCalled()
     await act(async () => button('Apply Tier Change').click())
     const first = mock.change.mock.calls[0]![0]
-    expect(first).toMatchObject({ clientDbId: mock.clientId, clientCode: 'C-001', planLevel: 'Creator' })
+    expect(first).toMatchObject({ clientDbId: mock.clientId, clientCode: 'C-001', planLevel: 'Creator', planId: 'plan-creator' })
     expect(first).not.toHaveProperty('feePaid')
-    expect(first).not.toHaveProperty('planId')
     expect(first.clientUuid).toMatch(/^[0-9a-f-]{36}$/i)
     expect(mock.change.mock.calls[1]![0].clientUuid).toBe(first.clientUuid)
     expect(done).toHaveBeenCalledExactlyOnceWith('Creator')
@@ -132,8 +136,8 @@ describe('stock and membership committed-request identity', () => {
     expect(host.textContent).toContain('Connect to update client membership')
   })
   it('refuses concurrent tier changes and closing while a change is pending', async () => {
-    let finish: (() => void) | undefined
-    mock.change.mockImplementation(() => new Promise<void>(resolve => { finish = resolve }))
+    let finish: ((value: Record<string, unknown>) => void) | undefined
+    mock.change.mockImplementation(() => new Promise<Record<string, unknown>>(resolve => { finish = resolve }))
     await render(<UpgradeTierModal isOpen client={client()} hasMembership onClose={close} onSuccess={done} />)
     await act(async () => {
       const submit = button('Apply Tier Change')
@@ -145,7 +149,7 @@ describe('stock and membership committed-request identity', () => {
     expect(close).not.toHaveBeenCalled()
     expect(done).not.toHaveBeenCalled()
     expect(button('Cancel').disabled).toBe(true)
-    await act(async () => finish?.())
+    await act(async () => finish?.({}))
     expect(done).toHaveBeenCalledExactlyOnceWith('Creator')
     expect(close).toHaveBeenCalledOnce()
   })

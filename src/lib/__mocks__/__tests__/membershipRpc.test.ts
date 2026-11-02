@@ -30,17 +30,19 @@ const baseInserts = (role: string) => [
   { table: 'users', row: { id: ACTOR, primary_role: role, is_active: true } },
   { table: 'clients', row: { id: CLIENT, client_code: 'C-0001', name: 'Asha Rai', status: 'Active', created_at: '2026-10-01T00:00:00Z' } },
   { table: 'clients', row: { id: GONE, client_code: 'C-0002', name: 'Closed Co', status: 'Deactivated', created_at: '2026-10-01T00:00:00Z' } },
-  { table: 'membership_plans', row: { id: 'plan-academy', level: 'Academy', label: 'Access Member', status: 'Active', created_at: '2026-10-01T00:00:00Z' } },
-  { table: 'membership_plans', row: { id: 'plan-creator', level: 'Creator', label: 'Partner', status: 'Active', created_at: '2026-10-01T00:00:00Z' } },
-  { table: 'membership_plans', row: { id: 'plan-elite', level: 'Elite', label: 'Elite Member', status: 'Retired', created_at: '2026-10-01T00:00:00Z' } },
+  // Plans carry the fees the live seeds have (0195): the change gates read them.
+  { table: 'membership_plans', row: { id: 'plan-academy', level: 'Academy', label: 'Access Member', annual_fee: 6000, term_months: 12, status: 'Active', created_at: '2026-10-01T00:00:00Z' } },
+  { table: 'membership_plans', row: { id: 'plan-creator', level: 'Creator', label: 'Partner', annual_fee: 15000, term_months: 12, status: 'Active', created_at: '2026-10-01T00:00:00Z' } },
+  { table: 'membership_plans', row: { id: 'plan-elite', level: 'Elite', label: 'Elite Member', annual_fee: null, term_months: 12, status: 'Active', created_at: '2026-10-01T00:00:00Z' } },
+  { table: 'membership_plans', row: { id: 'plan-retired', level: 'Cinematographer', label: 'Retired Partner', annual_fee: 35000, term_months: 12, status: 'Retired', created_at: '2026-10-01T00:00:00Z' } },
 ]
 
 let storage: Storage
 
-async function boot(role: string, signedIn = true) {
+async function boot(role: string, signedIn = true, extraRows: Array<{ table: string; row: Row }> = []) {
   vi.stubEnv('VITE_MOCK_SEEDED', 'false')
   storage = memoryStorage({
-    'babin.mock.overlay.v1': JSON.stringify({ inserts: baseInserts(role), updates: [], deletes: [], seq: {} }),
+    'babin.mock.overlay.v1': JSON.stringify({ inserts: [...baseInserts(role), ...extraRows], updates: [], deletes: [], seq: {} }),
     ...(signedIn ? { 'babin.mock.session.v1': JSON.stringify({ user: { id: ACTOR, email: 'a@b.test' } }) } : {}),
   })
   vi.stubGlobal('localStorage', storage)
@@ -133,12 +135,53 @@ describe('activate, retry, change', () => {
     expect(await level(reloaded)).toBe('Creator')
     expect(await liveFor(reloaded)).toHaveLength(1)
   })
+
+  it('renews a membership on the same plan (D23): charges full fee, 0 credit, supersedes old term', async () => {
+    const m = await boot('Coordinator')
+    const first = await change(m, { client_id: CLIENT, client_uuid: KEY(1), plan_level: 'Creator' })
+    expect(first.error).toBeNull()
+
+    const renewRes = await m.rpc('renew_client_membership', {
+      p_payload: {
+        client_id: CLIENT,
+        client_uuid: KEY(2),
+        plan_level: 'Creator',
+        fee_paid: 15000,
+        note: 'Renewing for 2026',
+      },
+    })
+    expect(renewRes.error).toBeNull()
+    expect(renewRes.data).toMatchObject({
+      is_renewal: true,
+      plan_level: 'Creator',
+      previous_level: 'Creator',
+      credit: 0,
+      new_fee: 15000,
+      new_fee_due: 15000,
+    })
+
+    const all = (await rows(m, 'client_memberships')).filter((r) => r['client_id'] === CLIENT)
+    expect(all).toHaveLength(2)
+    expect(await liveFor(m)).toHaveLength(1)
+    expect((await liveFor(m))[0]!['id']).toBe((renewRes.data as Row)['membership_id'])
+  })
+
+  it('refuses renewing when client has no membership on file', async () => {
+    const m = await boot('Coordinator')
+    const renewRes = await m.rpc('renew_client_membership', {
+      p_payload: {
+        client_id: CLIENT,
+        client_uuid: KEY(1),
+      },
+    })
+    expect(renewRes.error?.message).toMatch(/Cannot renew: client does not have an active or lapsed membership/)
+  })
 })
 
 describe('refusals leave everything as it was', () => {
   it.each([
     ['the plan they are already on', { plan_level: 'Creator' }, /already on the Creator plan/],
-    ['a retired plan', { plan_level: 'Elite' }, /retired/],
+    ['a retired plan', { plan_level: 'Cinematographer' }, /retired/],
     ['a plan that does not exist', { plan_level: 'Platinum' }, /does not exist/],
     ['a note over 500 characters', { plan_level: 'Academy', note: 'x'.repeat(501) }, /at most 500/],
     ['a missing plan', { plan_level: '' }, /required/],
@@ -157,5 +200,80 @@ describe('refusals leave everything as it was', () => {
     expect((await change(m, { client_id: GONE, client_uuid: KEY(1), plan_level: 'Academy' })).error?.message).toMatch(/deactivated/)
     expect((await change(m, { client_id: KEY(99), client_uuid: KEY(2), plan_level: 'Academy' })).error?.message).toMatch(/Client was not found/)
     expect(await rows(m, 'client_memberships')).toHaveLength(0)
+  })
+})
+
+describe('custom-fee plans and unsettled fees (T8-03 review)', () => {
+  it('refuses the custom-fee plan without a negotiated fee, then records the fee and prices changes from it', async () => {
+    const m = await boot('Manager')
+    // Elite charges whatever Babin negotiated — zero is not a price.
+    const refused = await change(m, { client_id: CLIENT, client_uuid: KEY(1), plan_level: 'Elite' })
+    expect(refused.error?.message).toMatch(/custom fee/)
+    expect(await rows(m, 'client_memberships')).toHaveLength(0)
+
+    const entered = await change(m, { client_id: CLIENT, client_uuid: KEY(2), plan_level: 'Elite', fee_paid: 25000, join_date: '2028-01-01' })
+    expect(entered.error).toBeNull()
+    const live = await liveFor(m)
+    expect(live).toHaveLength(1)
+    expect(live[0]!['fee_paid']).toBe(25000)
+
+    // The fee the Elite row carries prices any later change out of it:
+    // 2028-01-01 → 2029-01-01 is 366 days; changing effective 2028-09-01 leaves
+    // 122 days = exactly a third of Rs 25,000 = Rs 8,333.33.
+    const moved = await change(m, { client_id: CLIENT, client_uuid: KEY(3), plan_level: 'Creator', effective_date: '2028-09-01' })
+    expect(moved.error).toBeNull()
+    const movedOut = moved.data as Row
+    expect(movedOut).toMatchObject({ old_fee: 25000, total_days: 366, days_left: 122 })
+    expect(movedOut['credit']).toBeCloseTo(8333.33, 2)
+    expect(movedOut['new_fee_due']).toBeCloseTo(6666.67, 2)
+  })
+
+  it('refuses the custom-fee plan even for a fresh activation when no fee is agreed', async () => {
+    const m = await boot('Coordinator')
+    const refused = await change(m, { client_id: CLIENT, client_uuid: KEY(1), plan_level: 'Elite' })
+    expect(refused.error?.message).toMatch(/custom fee/)
+    expect(await rows(m, 'client_memberships')).toHaveLength(0)
+  })
+
+  it('records an explicitly negotiated zero fee, instead of reading an absent fee as zero', async () => {
+    const m = await boot('Coordinator')
+    const comped = await change(m, { client_id: CLIENT, client_uuid: KEY(1), plan_level: 'Elite', fee_paid: 0 })
+    expect(comped.error).toBeNull()
+    expect((await liveFor(m))[0]!['fee_paid']).toBe(0)
+  })
+
+  it('refuses to price a change out of a membership whose fee was never recorded', async () => {
+    const m = await boot('Manager', true, [{
+      table: 'client_memberships',
+      row: {
+        id: 'membership-unknown-fee',
+        client_uuid: '00000000-0000-4000-8000-0000000000f1',
+        client_id: CLIENT, plan_id: 'plan-elite', join_date: '2027-01-01',
+        fee_paid: null, superseded_at: null, superseded_by_id: null, created_at: '2027-01-01T00:00:00Z',
+      },
+    }])
+    expect(await liveFor(m)).toHaveLength(1)
+    const res = await change(m, { client_id: CLIENT, client_uuid: KEY(1), plan_level: 'Academy' })
+    expect(res.error?.message).toMatch(/fee_unknown/)
+    // Nothing changed: the client keeps the untouched row.
+    const live = await liveFor(m)
+    expect(live).toHaveLength(1)
+    expect(live[0]!['plan_id']).toBe('plan-elite')
+    expect(live[0]!['fee_paid']).toBeNull()
+  })
+
+  it('renews a custom-fee membership from its recorded fee, carrying the price onto the new term', async () => {
+    const m = await boot('Coordinator')
+    const entered = await change(m, { client_id: CLIENT, client_uuid: KEY(1), plan_level: 'Elite', fee_paid: 25000, join_date: '2028-01-01' })
+    expect(entered.error).toBeNull()
+
+    const renewRes = await m.rpc('renew_client_membership', {
+      p_payload: { client_id: CLIENT, client_uuid: KEY(2), effective_date: '2029-02-01' },
+    })
+    expect(renewRes.error).toBeNull()
+    expect(renewRes.data).toMatchObject({ is_renewal: true, plan_level: 'Elite', new_fee: 25000, new_fee_due: 25000, credit: 0 })
+    const live = await liveFor(m)
+    expect(live).toHaveLength(1)
+    expect(live[0]!['fee_paid']).toBe(25000)
   })
 })

@@ -24,6 +24,8 @@ import { captureError } from '../../lib/monitoring'
 import { formatBsOrAd, formatAd } from '../../lib/bs'
 import { newClientUuid, supabase } from '../../lib/supabase'
 import { DomainEvents, EVENT_TYPES } from '../../events/eventBus'
+import { uploadEvidencePhoto } from '../../lib/evidenceStorage'
+import { compressEvidencePhoto } from '../../lib/imageCompression'
 import { fetchFloorBooking, type FloorBooking, type FloorLine } from '../../lib/queries/bookings'
 import type { ResetEntryInput } from '../../actions/rentals/floorVerb'
 import {
@@ -406,6 +408,40 @@ export default function ResetWorkspace({
    */
   const [completionKey, setCompletionKey] = useState(() => newClientUuid())
   const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true)
+  const [uploadingUnitId, setUploadingUnitId] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+
+  const handleEvidencePhotoUpload = async (unitId: string, files: FileList | null) => {
+    if (!files || files.length === 0 || !user?.id || !floor?.id) return
+    setUploadingUnitId(unitId)
+    setUploadError(null)
+
+    try {
+      for (const file of Array.from(files)) {
+        const compressed = await compressEvidencePhoto(file, { isDamage: true })
+        const baseName = file.name ? file.name.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_') : 'reset_damage'
+        const cleanFileName = `${baseName}_reset_${Date.now()}.jpg`
+
+        await uploadEvidencePhoto({
+          file: compressed.blob,
+          filename: cleanFileName,
+          category: 'Damage',
+          reference: {
+            bookingId: floor.id,
+            operationStage: 'Reset',
+            itemId: unitId,
+          },
+          userId: user.id,
+        })
+      }
+      await savedEvidence.refresh()
+      showSuccessToast('Damage Photo Saved', 'Evidence photo attached to unit.')
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Photo upload failed.')
+    } finally {
+      setUploadingUnitId(null)
+    }
+  }
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true)
@@ -1170,7 +1206,15 @@ export default function ResetWorkspace({
       )
       .then(() => {
         void DomainEvents.emit(EVENT_TYPES.RENTAL_RESET_COMPLETED, { bookingNo: floor.bookingNo })
-        showSuccessToast('Reset Completed', `Rental ${floor.bookingNo} reset and returned to pool`)
+        const damageCount = resetEntries.filter((e) => e.problemState === 'Damaged').length
+        if (damageCount > 0) {
+          showSuccessToast(
+            'Reset & Damage Case Opened',
+            `Rental ${floor.bookingNo} reset completed. ${damageCount} damage case${damageCount > 1 ? 's' : ''} opened for Manager review (W44, W23).`,
+          )
+        } else {
+          showSuccessToast('Reset Completed', `Rental ${floor.bookingNo} reset and returned to pool`)
+        }
         setDispatching(false)
         if (onConfirmSuccess) {
           onConfirmSuccess()
@@ -2018,17 +2062,43 @@ export default function ResetWorkspace({
                                           <option value="">Severity…</option>
                                           {SEVERITIES.map((s) => <option key={s} value={s}>{s}</option>)}
                                         </select>
-                                        <Button icon="refresh" onClick={savedEvidence.refresh}>
-                                          Refresh saved photos ({draft.evidence})
-                                        </Button>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-xs)', flexWrap: 'wrap' }}>
+                                          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 12px', height: 38, borderRadius: 'var(--r-xs)', border: '1px solid var(--border)', background: 'var(--card2)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontWeight: 600, cursor: uploadingUnitId === r.assetId ? 'wait' : 'pointer' }}>
+                                            <Icon name="camera" size={14} />
+                                            <span>{uploadingUnitId === r.assetId ? 'Uploading…' : 'Add Damage Photo'}</span>
+                                            <input
+                                              type="file"
+                                              accept="image/*"
+                                              capture="environment"
+                                              multiple
+                                              disabled={uploadingUnitId === r.assetId}
+                                              style={{ display: 'none' }}
+                                              onChange={(e) => {
+                                                if (r.assetId) void handleEvidencePhotoUpload(r.assetId, e.target.files)
+                                                e.target.value = ''
+                                              }}
+                                            />
+                                          </label>
+                                          <Button icon="refresh" size="sm" onClick={savedEvidence.refresh}>
+                                            Refresh ({draft.evidence})
+                                          </Button>
+                                        </div>
+                                        {uploadError && (
+                                          <div style={{ fontSize: 'var(--t-meta)', color: 'var(--st-danger-fg)' }}>
+                                            {uploadError}
+                                          </div>
+                                        )}
                                         <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
-                                          {/* Required before recording — Warehouse records the finding, never a cost (§8.3). The count is
-                                          only saved photos satisfy the gate. */}A saved photo linked to this unit is required. Photo upload is unavailable here.</p>
+                                          {draft.evidence > 0
+                                            ? `${draft.evidence} evidence photo(s) saved for this unit.`
+                                            : 'At least 1 saved photo of the damage is required before recording (Ruling W27).'}
+                                        </p>
                                       </>
                                     )}
                                     <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
-                                      {PROBLEM_ROUTE[draft.type as Exclude<ProblemState, 'No Problems'>]}
-                                      {' — the routing is where this finding goes in the workflow; no repair or case record is written from this screen yet, and the item is excluded from the reset dispatch.'}
+                                      {draft.type === 'Damaged'
+                                        ? 'Raises an open damage case on this booking, defaulting to client claim under review without an amount until approved by Manager (< Rs 25,000) or Owner (≥ Rs 25,000) (Ruling W44, W23).'
+                                        : `${PROBLEM_ROUTE[draft.type as Exclude<ProblemState, 'No Problems'>]} — the item is excluded from the reset dispatch.`}
                                     </p>
                                     <div style={{ display: 'flex', gap: 6 }}>
                                       <button type="button" onClick={() => cancelProblem(r.key)} style={{ minHeight: 44, padding: '0 12px', borderRadius: 'var(--r-xs)', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text2)', fontSize: 'var(--t-meta)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
