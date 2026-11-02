@@ -54,10 +54,14 @@ function InputGroupAddon({
       data-slot="input-group-addon"
       data-align={align}
       className={cn(inputGroupAddonVariants({ align }), className)}
-      onClick={(e) => {
-        if ((e.target as HTMLElement).closest("button")) {
+      // Pressing the addon's own padding hands focus to the field (a pointer convenience;
+      // keyboard users already tab straight to the input). Same mouse-down pattern as
+      // ui/InputGroup: preventDefault stops the press from moving focus to the body.
+      onMouseDown={(e) => {
+        if ((e.target as HTMLElement).closest("button, a, input, select, textarea, [role='button']")) {
           return
         }
+        e.preventDefault()
         e.currentTarget.parentElement?.querySelector("input")?.focus()
       }}
       {...props}

@@ -208,6 +208,7 @@ export function ActionsOverflowMenu({
           ref={menuRef}
           role="menu"
           aria-label={ariaLabel}
+          tabIndex={-1}
           onKeyDown={onMenuKeyDown}
           style={{
             position: 'fixed',
@@ -273,6 +274,16 @@ export function ActionsOverflowMenu({
                 role="menuitem"
                 tabIndex={0}
                 onClick={() => closeMenu(false)}
+                onKeyDown={(event) => {
+                  // Enter/Space on the row itself does what a click on it does. A control
+                  // inside the row handles its own keys; its click bubbles up to close the menu.
+                  if (event.target !== event.currentTarget) return
+                  if (event.key !== 'Enter' && event.key !== ' ') return
+                  event.preventDefault()
+                  const inner = event.currentTarget.querySelector<HTMLElement>('button, a[href], [role="button"]')
+                  if (inner) inner.click()
+                  else closeMenu(false)
+                }}
                 style={{
                   width: '100%',
                   minHeight: 44,

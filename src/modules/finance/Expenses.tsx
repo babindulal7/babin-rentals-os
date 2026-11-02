@@ -1073,7 +1073,7 @@ export default function Expenses({
                         <th style={th}>Category</th>
                         <th style={th}>Vendor</th>
                         <th style={{ ...th, textAlign: 'right' }}>Amount</th>
-                        <th style={th}>
+                        <th style={th} aria-label="VAT">
                           <Unavailable reason={VAT_UNAVAILABLE}>
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--muted)' }}>
                               VAT

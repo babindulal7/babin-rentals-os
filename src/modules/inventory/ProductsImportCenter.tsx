@@ -354,6 +354,8 @@ function ProductImportForm({ embedded = false, onDone }: ProductsImportCenterPro
         }
       >
         <div
+          role="group"
+          aria-label="CSV upload — drop a file here or use Choose file"
           onDragOver={(e) => {
             e.preventDefault()
             setDragOver(true)

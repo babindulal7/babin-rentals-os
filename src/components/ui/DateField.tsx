@@ -606,6 +606,7 @@ export function CalendarPopover({
       <div
         ref={gridRef}
         role="grid"
+        tabIndex={-1}
         onKeyDown={onGridKeyDown}
         style={{
           display: 'grid',
