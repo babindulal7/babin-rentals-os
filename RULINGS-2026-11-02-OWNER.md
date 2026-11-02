@@ -23,19 +23,28 @@
 | T2-09 / O-16 | **Scanner / label-printer selection approved in principle**. | Exact models and purchase prices were not specified; only order after a concrete compatible shortlist is selected. |
 | Lanes A/B/C | **All three development lanes may proceed** with their assigned independent tasks. | Approval is for source work, not production migration, merge, billing, staging expense, or deployment. |
 
-## Cancellation policy — booking-duration threshold clarified (T3-03; O-10/O-13)
+## Cancellation policy — Option A approved, 2 November 2026 (T3-03 / O-10 / O-13)
 
-Babin specified all of these:
-- Charge **one rental day's fee** for a cancellation made **within the 24 hours immediately before the scheduled rental/booking start** (the day before pickup). This is measured from the **scheduled start time**, **not** the booking creation time.
-- A **50% cancellation charge** applies to a booking whose rental duration is **more than 2 rental days** (owner clarified 2 Nov). This is **not** a rule about cancelling more than 48 hours before pickup.
-- Staff may **override** a suggested cancellation fee.
+**Owner acceptance:** Babin replied "OK" to the immediately preceding recommended **Option A** (international-style) and earlier clarified that "more than 2 days" describes **booking rental duration**, and "within 24 hours" means **the final 24 hours before scheduled rental/pickup start** (not 24 hours after reservation creation). The following is the policy to implement **on confirmed bookings before scheduled start**, subject to reviews below.
 
-**Clarification:** "more than 2 days" refers to **booking duration**, not notice given before pickup. "One-day charge" must use the authoritative day-pricing engine; do not invent a flat amount. Existing plan default for percentage-fee base is booking rental total before VAT, pending any later explicit change. **Confirmed:** the 24-hour window is the **last 24 hours before the scheduled booking start**, not 24 hours after reservation creation. **Still undecided:** which fee prevails when a >2-day rental is cancelled inside that final 24-hour window. For 1–2-day rentals cancelled outside the 24-hour period, fee policy is not specified. Leave these cases unconfigured rather than charging silently. Existing RBAC must still restrict who can override charges; require reason and audit, and preserve immutable payment/refund reversal behavior. VAT treatment of a cancellation fee still needs accountant approval.
+| Time remaining until scheduled rental start | Booking duration 1–2 rental days | Booking duration >2 rental days |
+| --- | --- | --- |
+| **More than 48 hours** | **Free** | **Free** |
+| **More than 24 hours and up to 48 hours** | **Free** | **50% of rental subtotal before VAT** |
+| **Final 24 hours (including exact 24-hour mark)** | **One rental day's charge** | **Higher of one rental day's charge OR 50% of rental subtotal before VAT** |
+
+- **Draft/unconfirmed bookings:** free cancellation (no reserved stock). Active/handed-over bookings, no-shows, sub-rent third-party commitments, and early returns require their respective separate policies; do not reuse this pre-start cancellation table after handover.
+- **Base:** fee percent uses the booking's **equipment rental subtotal before VAT**, not deposits, VAT, or delivery/crew/pass-through charges. The single-day fee comes from the canonical booking-day pricing engine using the booking's applicable rate and discounts; do not create a hard-coded Rs amount or double charge the one day plus 50%. If a fee-base/discount mismatch appears, send it for policy review rather than invent pricing.
+- **Time and boundaries:** compute against the **scheduled booking start timestamp in Kathmandu local context**; store server-side unambiguous timestamps and reject stale client clock assumptions. Exactly 48 hours is in the 50% window for >2-day bookings; exactly 24 hours is in the final-24-hour window. Duration **exactly 2 days** is not >2 days.
+- **Overrides:** authorized staff may lower/waive suggested fees with a required reason and audit. Keep existing role/approval controls; do not grant every staff role money-changing permissions from this statement alone.
+- **Finance:** show the fee and refund/remaining advance clearly before confirmation. Use immutable ledger/refund reversal rows, do not modify past payments or an issued invoice. VAT/tax treatment of the cancellation fee and tax-invoice timing **still require accountant confirmation**.
+- **Examples:** 5 × Rs 3,500 = Rs 17,500 rental: cancel 72 h out → Rs 0; 36 h → Rs 8,750; 12 h → max(Rs 3,500, Rs 8,750) = **Rs 8,750**. A 2-day booking 36 h out → Rs 0; cancelled 12 h out → one rental day's charge. Prices shown before VAT.
+- **Delivery:** implementation is still **TODO**. No pricing code, migrations, settings, or live data were changed by this documentation PR.
 
 ## Required follow-up decisions / verification (do not guess)
 
 1. **O-17 — tax-invoice issuance timing:** must a VAT invoice be issued at first advance, at handover, or at full payment? Confirm with accountant under applicable Nepal law. This is **different** from the answered rule for *additional bills after issuance*.
-2. **Cancellation:** The 50% threshold is **rental duration >2 days**, and the one-day rule refers to the **24 hours immediately before scheduled booking/pickup start** — both answered. Still resolve which rule takes precedence for a >2-day booking cancelled in that final 24-hour window, whether the standard one-day charge applies to 1–2-day bookings cancelled earlier, and the precise authorized override roles.
+2. **Cancellation:** **O-10 policy is now answered** by approved Option A above. Development must verify the canonical equipment-rental subtotal/day rate, correct time boundaries, authorized override permissions, advance reversals, and VAT treatment with the accountant before go-live. No new policy question is needed for 24/48-hour precedence.
 3. **Elite annual fixed fee:** supply the NPR amount and whether VAT applies.
 4. **Delivery:** define inside/outside boundary; provide van prices for each configured area and how far-valley/out-of-valley quotes work.
 5. **IRD and non-VAT:** accountant must verify e-billing applicability, eligible non-VAT supplies, invoice layout, cancellation VAT, and crew/service 1.5% withholding treatment before live release.
