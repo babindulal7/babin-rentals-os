@@ -73,7 +73,9 @@ export async function fetchBookingEvidenceFiles(bookingId: string): Promise<Save
       .is('removed_at', null)
       .order('created_at', { ascending: false })
 
-    if (error || !Array.isArray(data)) return []
+    if (error || !Array.isArray(data)) {
+      throw new Error(error?.message ?? 'Evidence query returned no usable data')
+    }
 
     const results: SavedEvidenceFile[] = []
     for (const row of data as Array<{
@@ -112,8 +114,8 @@ export async function fetchBookingEvidenceFiles(bookingId: string): Promise<Save
       })
     }
     return results
-  } catch {
-    return []
+  } catch (err) {
+    throw new Error(`Could not load photos: ${err instanceof Error ? err.message : String(err)}`)
   }
 }
 
