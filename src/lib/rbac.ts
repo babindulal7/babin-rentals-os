@@ -736,27 +736,27 @@ export function canAcknowledgeTeamNote(role: SystemRole): boolean {
 }
 
 /**
- * Create a delivery zone — Coordinator and above (Owner, Admin, Manager, Coordinator).
- * Mirrors the RLS policy on `delivery_zones` INSERT (migration 0189).
+ * Create a delivery zone — Owner, Admin or Manager; Coordinator is read-only.
+ * Mirrors the forward-only RLS repair in migration 0205.
  */
 export function canCreateDeliveryZone(role: SystemRole): boolean {
-  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+  return role === 'Owner' || role === 'Admin' || role === 'Manager'
 }
 
 /**
  * Read/list delivery zones — all staff roles (not Client).
- * Mirrors the RLS policy on `delivery_zones` SELECT (migration 0189).
+ * Reads only zone names for money-blind roles; RPC masks fee_paisa (0205).
  */
 export function canReadDeliveryZones(role: SystemRole): boolean {
   return isStaff(role)
 }
 
 /**
- * Update/deactivate a delivery zone — Coordinator and above.
- * Mirrors the RLS policy on `delivery_zones` UPDATE/DELETE (migration 0189).
+ * Update/deactivate a delivery zone — Owner, Admin or Manager.
+ * Only UPDATE/INSERT are allowed; DELETE is forbidden (migration 0205).
  */
 export function canManageDeliveryZones(role: SystemRole): boolean {
-  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+  return role === 'Owner' || role === 'Admin' || role === 'Manager'
 }
 
 /**
