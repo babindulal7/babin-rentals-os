@@ -16,6 +16,7 @@ describe('T2-18 evidence category to operation stage', () => {
   })
 
   it.each([
+    ['Client Pickup', 'Pickup'],
     ['Customer Pickup', 'Pickup'],
     ['Third Party', 'Pickup'],
     ['Babin Delivery', 'Delivery'],

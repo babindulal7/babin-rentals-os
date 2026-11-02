@@ -90,7 +90,7 @@ beforeEach(() => {
   state.rows.evidence_files.length = 0
   state.rows.evidence_references.length = 0
   state.rows.operation_sessions = [{ id: SESSION, booking_id: BOOKING, operation: 'Handover', state: 'In Progress' }]
-  state.rows.bookings = [{ id: BOOKING, delivery_type: 'Customer Pickup' }]
+  state.rows.bookings = [{ id: BOOKING, delivery_type: 'Client Pickup' }]
   state.fail = ''
   state.uploads.length = 0
   state.signs = 0
@@ -164,7 +164,7 @@ describe('P2B: fail-closed proof-of-delivery evidence persistence', () => {
     expect(state.rows.operation_sessions[0]).toMatchObject({
       operation: 'Handover',
       booking_id: BOOKING,
-      delivery_method: 'Customer Pickup',
+      delivery_method: 'Client Pickup',
       state: 'In Progress',
     })
     expect(state.rows.evidence_references[0]).toMatchObject({

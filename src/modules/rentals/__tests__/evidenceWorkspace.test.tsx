@@ -191,7 +191,7 @@ describe('T2-18 — saved evidence read failures are visible and retryable', () 
 
 describe('T2-18 — stage mapping in the rendered upload path', () => {
   it('uses Pickup, not Packing, for a photo on a Packed booking', async () => {
-    answer = { ...FLOOR, deliveryType: 'Customer Pickup' }
+    answer = { ...FLOOR, deliveryType: 'Client Pickup' }
     await mountAt('B-812')
     const categoryButton = buttons().find((b) => (b.textContent ?? '').includes('Pickup / Delivery'))
     expect(categoryButton).toBeDefined()

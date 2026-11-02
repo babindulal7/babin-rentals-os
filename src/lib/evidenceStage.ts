@@ -11,7 +11,7 @@ export function evidenceStageForCategory(
   switch (category) {
     case 'Packing': return 'Packing'
     case 'Pickup / Delivery':
-      if (deliveryType === 'Customer Pickup' || deliveryType === 'Third Party') return 'Pickup'
+      if (deliveryType === 'Client Pickup' || deliveryType === 'Customer Pickup' || deliveryType === 'Third Party') return 'Pickup'
       if (deliveryType === 'Babin Delivery' || deliveryType === 'Courier') return 'Delivery'
       throw new Error('Booking delivery method could not be verified. Photo was not saved.')
     case 'Return': return 'Return'
