@@ -64,10 +64,15 @@ if (!plan) {
   plan = pRes.rows[0].id
 }
 
-const pRes2 = await sql(`insert into membership_plans
-  (client_uuid, level, label, annual_fee, individual_discount_pct, monthly_booking_limit, simultaneous_rental_limit, authorized_users, default_credit_limit, display_order, created_by)
-  values (gen_random_uuid(), 'Cinematographer', 'Partner', 100000, 15, 30, 8, 4, 1000000, 2, $1) returning id`, [ownerId])
-const plan2 = pRes2.rows[0].id
+// Migration 0195 seeds a 'Cinematographer' plan and membership_plans.level is unique,
+// so reuse the seeded row when present and only insert it on a database without the seed.
+let plan2 = (await sql(`select id from membership_plans where level = 'Cinematographer'`)).rows[0]?.id
+if (!plan2) {
+  const pRes2 = await sql(`insert into membership_plans
+    (client_uuid, level, label, annual_fee, individual_discount_pct, monthly_booking_limit, simultaneous_rental_limit, authorized_users, default_credit_limit, display_order, created_by)
+    values (gen_random_uuid(), 'Cinematographer', 'Partner', 100000, 15, 30, 8, 4, 1000000, 2, $1) returning id`, [ownerId])
+  plan2 = pRes2.rows[0].id
+}
 
 const category = (await sql('select id from inventory_categories order by name limit 1')).rows[0]?.id
 
@@ -244,7 +249,7 @@ console.log('\n--- 3. Testing enroll_client_membership ---')
 await asUser(driverId)
 await expectThrows(
   () => sql(`select enroll_client_membership($1, $2, current_date, 50000, 'Test', $3)`, [client, plan, crypto.randomUUID()]),
-  'Permission denied',
+  'Only Coordinator or above can change a client membership',
   'Driver role cannot enroll client membership'
 )
 
@@ -252,7 +257,7 @@ await expectThrows(
 await asUser(ownerId)
 const enrollKey1 = crypto.randomUUID()
 const enroll1 = await sql(`select enroll_client_membership($1, $2, current_date, 50000, 'VIP member', $3) as result`, [client, plan, enrollKey1])
-const mem1Id = enroll1.rows[0].result.id
+const mem1Id = enroll1.rows[0].result.membership_id
 assert(mem1Id !== undefined, 'First membership enrolled with ID')
 
 // Verify active membership exists
@@ -263,7 +268,7 @@ assert(memDb1.rows[0].id === mem1Id, 'Active membership id matches initial enrol
 // 3.3 Enroll upgrade / new tier -> supersedes initial membership atomically
 const enrollKey2 = crypto.randomUUID()
 const enroll2 = await sql(`select enroll_client_membership($1, $2, current_date, 100000, 'Upgrade to Cinematographer', $3) as result`, [client, plan2, enrollKey2])
-const mem2Id = enroll2.rows[0].result.id
+const mem2Id = enroll2.rows[0].result.membership_id
 assert(enroll2.rows[0].result.superseded_membership_id === mem1Id, 'Superseded membership ID points to mem1')
 
 // Verify old membership was superseded and new one is the single active membership
