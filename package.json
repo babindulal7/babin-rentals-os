@@ -25,6 +25,7 @@
     "test": "node scripts/run-tests.mjs",
     "test:watch": "vitest",
     "test:coverage": "node scripts/run-tests.mjs --coverage",
+    "gates": "node scripts/run-gates.mjs",
     "seed:sql": "node scripts/emit-seed-sql.mjs",
     "db:types": "supabase gen types typescript --local > src/types/database.ts",
     "check:contrast": "node scripts/check-contrast.cjs",
