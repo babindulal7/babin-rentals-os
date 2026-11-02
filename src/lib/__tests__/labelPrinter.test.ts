@@ -30,12 +30,12 @@ describe('Asset Tag & Thermal Label Printer', () => {
     const original = 'FX3-9941-SN'
     const svg = generateQrSvg(original)
     expect(svg).toContain('data-symbology="qr"')
-    const dims = svg.match(/viewBox="0 0 (\\d+) (\\d+)"/)
+    const dims = svg.match(/viewBox="0 0 (\d+) (\d+)"/)
     expect(dims).not.toBeNull()
     const width = Number(dims![1])
     const height = Number(dims![2])
     const pixels = new Uint8ClampedArray(width * height).fill(255)
-    const rectangles = svg.matchAll(/<rect x="(\\d+)" y="(\\d+)" width="1" height="1"\\/>/g)
+    const rectangles = svg.matchAll(/<rect x="(\d+)" y="(\d+)" width="1" height="1"\/>/g)
     for (const match of rectangles) {
       pixels[Number(match[2]) * width + Number(match[1])] = 0
     }
