@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildEquipmentDraftPreview } from './equipmentDraftPreview'
+import { buildEquipmentDraftPreview } from './equipmentDraftPreviewModel'
 
 describe('equipment unsaved preview', () => {
   it('displays entered serials and maps stored warehouse IDs to human labels', () => {

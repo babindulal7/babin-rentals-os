@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { syncEngine, type SyncState } from './syncEngine'
 import { useToast } from '../components/ui/Toast'
 
@@ -27,7 +27,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     return unsubscribe
   }, [])
 
-  const triggerSync = async () => {
+  const triggerSync = useCallback(async () => {
     /* Law 12 — toasts carry successes only. The offline and failure outcomes
        land in SyncState (`status` / `error`), which syncAll writes before
        returning; the shell renders that inline and it persists until the next
@@ -36,10 +36,12 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     if (res.success) {
       showSuccessToast('Sync Complete', 'Cloud database & local cache are 100% in sync.')
     }
-  }
+  }, [showSuccessToast])
+
+  const value = useMemo(() => ({ ...syncState, triggerSync }), [syncState, triggerSync])
 
   return (
-    <SyncContext.Provider value={{ ...syncState, triggerSync }}>
+    <SyncContext.Provider value={value}>
       {children}
     </SyncContext.Provider>
   )

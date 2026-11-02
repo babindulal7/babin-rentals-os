@@ -374,7 +374,7 @@ export function useEquipmentFormState() {
       gallery.forEach((g) => URL.revokeObjectURL(g.url))
       documents.forEach((d) => URL.revokeObjectURL(d.url))
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- cleanup-only: it must revoke the object URLs live at unmount, not re-run when the lists change
   }, [])
 
   const isDirty = Boolean(

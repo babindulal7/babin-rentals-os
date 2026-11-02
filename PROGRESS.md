@@ -1,5 +1,97 @@
 # Progress Log
 
+## 2026-11-02 — T4-08 rider-link contract fix (P0 resolved): migration 0204, server-minted token, R1–R5 verified
+
+**Did**
+- Created migration `0204_rider_link_v2_contract_fix.sql` aligning DB with client contract:
+  - Added `client_uuid` column to `delivery_job_links` with unique index (Law 8 idempotency)
+  - Replaced `create_rider_link` signature: `(p_client_uuid, p_job_id, p_rider_name, p_rider_phone) → jsonb {link_id, raw_token, already_issued}`
+  - Server mints 128-bit raw token via `replace(gen_random_uuid() || gen_random_uuid(), '-', '')`, hashes with `extensions.digest(..., 'sha256')`, returns raw token **once** on first issuance
+  - Replay with same `client_uuid` + `job_id` returns existing `link_id`, `already_issued: true`, `raw_token: null`
+  - Revoked `authenticated` EXECUTE on three rider-facing RPCs (`get_rider_job_by_token`, `rider_mark_picked_up`, `rider_complete_delivery`) — now `service_role` only (R1)
+  - Column-level grant on `delivery_job_links`: `token_hash` no longer selectable by `authenticated` or `anon` (R1)
+- Fixed L47 lifecycle test: combined first issuance + replay in single `as('Coordinator')` block so idempotency check sees the insert
+- Fixed `riderLink.ts` mock path: idempotency check now matches on both `clientUuid` and `jobId`
+
+**Ruled**
+- Nothing new. Migration 0204 implements R1–R3 from `RULINGS-2026-11-01.md` (R4 deferred, R5 was separate `TeamNotesPanel.tsx` fix already on `main`).
+
+**Verified**
+- `npm run typecheck` — 0 errors.
+- `npm run lint` — 0 errors, 0 warnings.
+- `npm run lint:ui-copy` — 0 developer-text violations.
+- `npm run check:pglite` — 197/197 applied, 0 failed; 36 views 0 anon-readable; 20 functions 0 unauthorized; 137 definers all pinned.
+- `npm run check:lifecycle` — **66/66 green, 0 failed** (L47 now passes).
+- `npm run check:security` — all Phase 0 SQL regressions pass; operations grants verified; reset branch boundary verified.
+- `npm run test:server-contracts` — 58/58 integration assertions pass.
+- `npm run test:partial-return` — 58/58 acceptance assertions pass.
+- `npm run lint:progress` — passes.
+- `npm run lint:shell` — 850 files checked, all pass.
+- `npm run check:contrast` — 106/106 pass (WCAG AA light + dark).
+- `npm run build` — succeeds (typecheck + vite build).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 79 / 79 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 65 / 65 (100%) | +0 |
+| Lifecycle | steps green / total | 66 / 66 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 197 files · check:pglite 197/197 applied, 0 failed (recorded 2026-11-02T03:50:00.000Z). check:lifecycle 66/66 green (recorded 2026-11-02T03:50:00.000Z). Suite: NOT VERIFIED — full run not re-run (historical 6,418/6,425). Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed. Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **`realWorkspaceGuidance.test.tsx` (owner needed):** give the file an explicit longer test timeout (e.g. `describe(…, { timeout: 60_000 })`) or cut the 27 s first test — it is one contention spike away from being consistently red in full runs.
+- **R4 (optional):** one generic rider-facing error message for unknown/revoked/expired links — deferred.
+- Audited perf P0 list (`NEMOTRON_PERFORMANCE_AUDIT_02.md` §8) unchanged.
+- Next session: address `realWorkspaceGuidance.test.tsx` flake; continue lane A (T1-15 PIN 4 digits), lane C (T3-14c), Babin actions (`BABIN_ACTIONS.md`).
+
+## 2026-11-02 — Verification pass: every gate green except one flaky file; rider-link live contract mismatch found (P0)
+
+**Did**
+- Verified current `main` end-to-end after the 1 Nov fix wave, at HEAD `c9263470` (2 Nov 00:32 +0545): **typecheck 0 · lint 0 · `lint:ui-copy` 0 violations · `check:pglite` 195/195 + all leak gates · `check:lifecycle` 66/66 green, 0 failed · suite 6,418/6,425**.
+- Diagnosed the suite's only red file — `realWorkspaceGuidance.test.tsx` (7/7 in the full run): **passes 7/7 in isolation; its first test takes 27.3 s alone against the 30 s ceiling**, so it flakes under full-suite load. Not a product defect — needs a timeout/optimization fix (below). The earlier "needs its owner" note now has its cause.
+- **Found a P0 the green gates cannot see: the rider-link live path is broken.** `src/lib/queries/riderLink.ts:213-247` calls `create_rider_link(p_client_uuid, p_job_id, p_rider_name, p_rider_phone)` and expects `{link_id, raw_token, already_issued}` — but `supabase/migrations/0190_one_time_rider_links.sql:48-53` still defines `(p_job_id, p_token_hash, p_rider_name, p_rider_phone) → uuid` (no `client_uuid`, client-supplied hash, plain-uuid return). Mock mode and the L47 lifecycle step (which calls the OLD 4-arg signature) both pass, so every gate is green while a live "Send to rider" would fail with a PostgREST function/argument error. **R1 from the 1 Nov review is also still open:** `0190:466-468` grants the three rider-facing RPCs to `authenticated`, and the table grant + staff-read policy (`0190:32-45`) let an in-branch staff session SELECT `token_hash` — the very credential those RPCs accept — then EXECUTE them directly, bypassing the Edge Function.
+- Confirmed fixed since the audit: T-1…T-6 and L-1…L-3 (audit §15) all green; `canCreateTeamNote` matches O-19 ("every staff member", R-2); the R5 typecheck red is gone; ui-copy 0 violations.
+
+**Ruled**
+- Nothing new. No product, permission, money or migration decision was made; verification only.
+
+**Verified**
+- `npm run typecheck` — 0 errors.
+- `npm run lint` — 0 errors, 0 warnings.
+- `npm run lint:ui-copy` — 0 developer-text violations (+ its 5 self-tests pass).
+- `npm run check:pglite` — 195/195 applied, 0 failed; 36 views 0 anon-readable; 20 functions 0 unauthorized; 137 definers all pinned.
+- `npm run check:lifecycle` — 66/66 green, 0 known-red, 0 failed (full, unqualified run).
+- `VITE_DATA_SOURCE=mock npm test` — 520/521 files, 6,418/6,425 tests; the single failing file passes 7/7 in isolation (contention timeout, above).
+- Not re-run: `test:coverage` (historical receipt). Screens unchanged this session → no §1 screen check.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 79 / 79 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 65 / 65 (100%) | +0 |
+| Lifecycle | steps green / total | 66 / 66 (100%) | +18 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 195 files · check:pglite 195/195 applied, 0 failed (recorded 2026-11-01T18:41:28.457Z). Suite: NOT PASSING — 6418/6425 passed, 7 failed (recorded 2026-11-01T18:38:53.095Z); source fingerprint matches.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-01T18:56:16.955Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+`npm run completion` exited 1 on the suite line only (the 7 flagged tests are the contention flake, proven green in isolation); every other counted dimension is 100%. Nothing above was typed by hand.
+
+### Remaining
+- **P0 (T4-08, lane B): align client ↔ migration.** Serve the contract the client already expects: claim the next free migration number (**0203**) and either amend `0190` in place (it is `verified`, never applied anywhere live — N-5 — so a rewrite re-runs both DB gates for a fresh "verified") or ship `0203_rider_link_v2.sql` that `create or replace`s the function and alters the table. Server changes required: add `client_uuid` (unique; Law 8 replay → `already_issued`), mint the raw token server-side (pgcrypto is available — `extensions.digest` / `gen_random_bytes`, as 0066 already uses), return `jsonb {link_id, raw_token, already_issued}` (raw token only on first issue, never stored), keep `token_hash` not selectable by `authenticated` (column grant or view), and revoke EXECUTE from `authenticated` on the three rider-facing RPCs (service_role only — R1). Update the L47 step to the new signature and assert replay + raw-token-never-stored + R1; update `riderLink.test.ts` mocks if needed; re-run `check:pglite` + `check:lifecycle` + suite. (The `T4-08-fixes.md` prompt should gain this as its item 0.)
+- **`realWorkspaceGuidance.test.tsx` (owner needed):** give the file an explicit longer test timeout (e.g. `describe(…, { timeout: 60_000 })`) or cut the 27 s first test (likely chained long `waitFor`s) — it is one contention spike away from being consistently red in full runs.
+- **R4 (optional):** one generic rider-facing error message for unknown/revoked/expired links — deferred.
+- Audited perf P0 list (`NEMOTRON_PERFORMANCE_AUDIT_02.md` §8) unchanged.
+- Next session starts with: the T4-08 contract fix (P0) — everything else is green.
+
 ## 2026-11-01 (evening) — R-3 Admin and Manager may void; R-4 staff discount is a money setting (0202); main's reds fixed; database checks green
 
 **Did**

@@ -9,6 +9,7 @@ import type { Crumb } from './components/shell/Header'
 import ScannerFab from './components/shell/ScannerFab'
 import { ErrorBoundary } from './components/shell/ErrorBoundary'
 import { LoadingSkeleton, RestrictedState } from './components/ui/StateViews'
+import { Button } from './components/ui/Page'
 import { NAV, isMoneySurface, isStaffSurface, FLOOR_ROUTE_SUFFIXES } from './data/nav'
 import { ToastProvider } from './components/ui/Toast'
 import { SyncProvider } from './lib/syncContext'
@@ -979,6 +980,57 @@ function OfflineBanner() {
 }
 
 /**
+ * **Fail-closed curtain for the screen lock.**
+ *
+ * The lock is a lazily-loaded chunk rendered behind `<Suspense fallback={null}>`
+ * (a null fallback means: nothing is painted while the chunk downloads). That
+ * is safe only if the chunk always arrives. When it does not — cold offline
+ * load, a stale service-worker cache, a chunk 404 after a deploy — the session
+ * stays fully visible and interactive behind an invisible "lock".
+ *
+ * This curtain paints *over* everything at `--z-system` until the real PIN
+ * prompt mounts, so a slow or failed chunk can never expose the app. `failed`
+ * is the error-boundary case: the chunk rejected, so there is no prompt to
+ * mount and the honest action is a reload, with the app still hidden.
+ */
+function LockCurtain({ failed = false }: { failed?: boolean }) {
+  return (
+    <div
+      role={failed ? 'alert' : 'status'}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 'var(--z-system)' as unknown as number,
+        background: 'var(--bg)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+        padding: 24,
+        textAlign: 'center',
+      }}
+    >
+      <Icon name="lock" size={28} />
+      <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>
+        {failed ? 'This session is locked.' : 'Locking this session…'}
+      </p>
+      {failed && (
+        <>
+          <p style={{ margin: 0, maxWidth: 360, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+            The unlock screen could not load. Reload to sign in again — the app behind this
+            screen stays hidden until you do.
+          </p>
+          <Button variant="primary" onClick={() => window.location.reload()}>
+            Reload
+          </Button>
+        </>
+      )}
+    </div>
+  )
+}
+
+/**
  * **Mock-data banner — not dismissible, on every screen, at every width.**
  *
  * `VITE_DATA_SOURCE=mock` serves a local corpus instead of Supabase. The rule
@@ -1165,11 +1217,14 @@ function Shell({
       {phone && <BottomBar active={pathname + query} />}
       <ScannerFab />
 
-      {/* Screen Lock Overlay */}
+      {/* Screen Lock Overlay — fail closed: the curtain covers the session while
+          the chunk loads, and stays up if the chunk never arrives. */}
       {isLocked && (
-        <Suspense fallback={null}>
-          <ScreenLock onUnlock={() => setLocked(false)} />
-        </Suspense>
+        <ErrorBoundary fallback={<LockCurtain failed />}>
+          <Suspense fallback={<LockCurtain />}>
+            <ScreenLock onUnlock={() => setLocked(false)} />
+          </Suspense>
+        </ErrorBoundary>
       )}
     </div>
   )

@@ -12,6 +12,8 @@ import { findClientsByPhoneTail } from '../../lib/queries/clients'
 import { Button, Card, PageHeader } from '../ui/Page'
 import Icon from '../ui/Icon'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
+import { Modal } from '../ui/Modal'
+import { EquipmentDraftPreview } from './EquipmentDraftPreview'
 import { RecordWorkspace, RecordSection, RecordActions, RecordErrorSummary, focusRecordField, useUnsavedRecord } from '../ui/RecordWorkspace'
 import { useToast } from '../ui/Toast'
 import { EquipmentSummary, useEquipmentDuplicate } from './equipmentAssist'
@@ -47,6 +49,7 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
   const [duplicate,setDuplicate]=useState<{id:string;name:string}|null>(null)
   /** Add Equipment §3: Manufacturer shows only when it differs from Brand. */
   const [manufacturerDiffers,setManufacturerDiffers]=useState(false)
+  const [equipmentPreviewOpen,setEquipmentPreviewOpen]=useState(false)
   const submitting=useRef(false); const saveKey=useRef<{fingerprint:string;key:string}|null>(null)
   const initial=useRef(JSON.stringify({values:{...recordDefaults[kind]},rows:[]}))
   const fingerprint=JSON.stringify({values,rows}); const dirty=fingerprint!==initial.current
@@ -172,7 +175,7 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
   function resetForNext(){
     const blank={...recordDefaults[kind]}
     // RULING 2026-10-08 row 3: nothing carries over — including the trunk's equipment-assist toggle, which merged in beside this.
-    setValues(blank);setRows([]);setErrors({});setDuplicate(null);setManufacturerDiffers(false)
+    setValues(blank);setRows([]);setErrors({});setDuplicate(null);setManufacturerDiffers(false);setEquipmentPreviewOpen(false)
     saveKey.current=null;initial.current=JSON.stringify({values:blank,rows:[]})
     focusRecordField(fieldId('name'))
   }
@@ -299,18 +302,34 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
           onSave={() => void save()}
           onCancel={cancel}
           extra={
-            canAddAnother ? (
-              <Button
-                type="button"
-                variant="secondary"
-                icon="plus"
-                aria-label="Create & add another"
-                title="Create & add another"
-                disabled={formBusy}
-                onClick={() => void save('another')}
-              >
-                Create &amp; add another
-              </Button>
+            (kind === 'equipment' && !recordId) || canAddAnother ? (
+              <>
+                {kind === 'equipment' && !recordId && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    icon="eye"
+                    aria-label="Preview equipment before saving"
+                    disabled={formBusy}
+                    onClick={() => setEquipmentPreviewOpen(true)}
+                  >
+                    Preview
+                  </Button>
+                )}
+                {canAddAnother && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    icon="plus"
+                    aria-label="Create & add another"
+                    title="Create & add another"
+                    disabled={formBusy}
+                    onClick={() => void save('another')}
+                  >
+                    Create &amp; add another
+                  </Button>
+                )}
+              </>
             ) : undefined
           }
         />
@@ -528,5 +547,23 @@ export function RecordForm({kind,recordId,onDone}:RecordFormProps) {
           ))}
         </>
       )}
-    </RecordWorkspace></>
+    </RecordWorkspace>
+    {kind === 'equipment' && !recordId && (
+      <Modal
+        isOpen={equipmentPreviewOpen}
+        onClose={() => setEquipmentPreviewOpen(false)}
+        title="Equipment preview"
+        subtitle="Review before creating · unsaved"
+        size="lg"
+        footer={<Button type="button" variant="primary" onClick={() => setEquipmentPreviewOpen(false)}>Back to editing</Button>}
+      >
+        <EquipmentDraftPreview
+          values={values}
+          rows={rows}
+          categoryName={(options.categories ?? []).find((category) => category.id === values.category_id)?.name}
+          warehouses={options.warehouses ?? []}
+        />
+      </Modal>
+    )}
+  </>
 }

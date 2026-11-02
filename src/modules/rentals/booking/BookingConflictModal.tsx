@@ -242,9 +242,9 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
                           </div>
                         </div>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          {item.suggestedSolutions.freeDateWindows.slice(0, 2).map((w, idx) => (
+                          {item.suggestedSolutions.freeDateWindows.slice(0, 2).map((w) => (
                             <Button
-                              key={idx}
+                              key={w.fromIso}
                               size="sm"
                               variant="secondary"
                               onClick={() => onAdjustDates?.(w)}
