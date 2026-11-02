@@ -19,7 +19,9 @@ export const getDeliveryZoneFee = createAction<GetDeliveryZoneFeeInput, GetDeliv
     }
   },
   execute: async (input, ctx) => {
-    void ctx;
+    if (['Warehouse', 'Technician', 'Driver'].includes(ctx.role)) {
+      throw new Error('Delivery fee is restricted for this role');
+    }
     const { data, error } = await supabase.rpc('get_delivery_zone_fee', {
       p_zone_name: input.zoneName.trim(),
     });
@@ -28,8 +30,12 @@ export const getDeliveryZoneFee = createAction<GetDeliveryZoneFeeInput, GetDeliv
       throw new Error(`Failed to get delivery zone fee: ${error.message}`);
     }
 
+    if (data === null || data === undefined || !Number.isSafeInteger(Number(data))) {
+      throw new Error('Delivery fee is not available for this role');
+    }
+
     return {
-      result: { feePaisa: data as number },
+      result: { feePaisa: Number(data) },
       events: [],
     };
   },
