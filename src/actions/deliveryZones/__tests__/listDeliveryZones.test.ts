@@ -72,6 +72,16 @@ describe('listDeliveryZones', () => {
     });
   });
 
+  it('masks monetary columns even when an older RPC returns them to Warehouse', async () => {
+    mockRpc.mockResolvedValue({ data: mockZones, error: null } as any);
+    const result = await listDeliveryZones(
+      {},
+      { userId: 'warehouse-123', role: 'Warehouse' as const },
+    );
+    expect(result.zones.map(z => z.fee_paisa)).toEqual([null, null]);
+    expect(result.zones.map(z => z.name)).toEqual(['Ring Road', 'Boudha']);
+  });
+
   it('respects custom limit and offset', async () => {
     mockRpc.mockResolvedValue({ data: [], error: null } as any);
 
