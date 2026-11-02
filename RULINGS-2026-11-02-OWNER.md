@@ -27,7 +27,7 @@
 
 Babin specified all of these:
 - Charge **one rental day's fee** for a cancellation **within 24 hours**.
-- A **50% cancellation charge applies to a booking whose rental duration is **more than 2 rental days** (owner clarified 2 Nov). This is **not** a rule about cancelling more than 48 hours before pickup.
+- A **50% cancellation charge** applies to a booking whose rental duration is **more than 2 rental days** (owner clarified 2 Nov). This is **not** a rule about cancelling more than 48 hours before pickup.
 - Staff may **override** a suggested cancellation fee.
 
 **Clarification:** "more than 2 days" refers to **booking duration**, not notice given before pickup. "One-day charge" must use the authoritative day-pricing engine; do not invent a flat amount. Existing plan default for percentage-fee base is booking rental total before VAT, pending any later explicit change. **Still undecided:** what "cancelled within 24 hours" is measured from (booking creation vs scheduled pickup), and which fee prevails when a >2-day rental is cancelled within that 24-hour period. For 1–2-day rentals cancelled outside the 24-hour period, fee policy is not specified. Leave these cases unconfigured rather than charging silently. Existing RBAC must still restrict who can override charges; require reason and audit, and preserve immutable payment/refund reversal behavior. VAT treatment of a cancellation fee still needs accountant approval.
