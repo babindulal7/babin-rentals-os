@@ -139,15 +139,15 @@ describe('ScreenLock — the curtain', () => {
 
   it('unlocks on the correct PIN, and only after the database says so', async () => {
     await mount()
-    await enter('418293')
+    await enter('4182')
 
-    expect(verifyStaffPin).toHaveBeenCalledWith('418293')
+    expect(verifyStaffPin).toHaveBeenCalledWith('4182')
     expect(onUnlock).toHaveBeenCalledTimes(1)
   })
 
   it('sends the entered digits to the database and nothing else', async () => {
     await mount()
-    await enter('418293')
+    await enter('4182')
     // No local comparison anywhere: the pad reports digits, Postgres decides.
     expect(verifyStaffPin).toHaveBeenCalledTimes(1)
   })
@@ -162,7 +162,7 @@ describe('ScreenLock — the refusals', () => {
       lockedUntil: null,
     })
     await mount()
-    await enter('000000')
+    await enter('0000')
 
     expect(onUnlock).not.toHaveBeenCalled()
     // Words, not a colour and not a shrinking bar — Law 11.
@@ -177,7 +177,7 @@ describe('ScreenLock — the refusals', () => {
       lockedUntil: null,
     })
     await mount()
-    await enter('000000')
+    await enter('0000')
     expect(text()).toContain('1 attempt left')
     expect(text()).not.toContain('1 attempts left')
   })
@@ -191,7 +191,7 @@ describe('ScreenLock — the refusals', () => {
       message: 'Failed to fetch',
     })
     await mount()
-    await enter('418293')
+    await enter('4182')
 
     expect(onUnlock).not.toHaveBeenCalled()
     expect(text()).toContain('Cannot check your PIN right now')
@@ -202,7 +202,7 @@ describe('ScreenLock — the refusals', () => {
   it('does NOT unlock when no PIN is enrolled', async () => {
     verifyStaffPin.mockResolvedValue({ ok: false, reason: 'no_pin' })
     await mount()
-    await enter('418293')
+    await enter('4182')
 
     expect(onUnlock).not.toHaveBeenCalled()
     expect(text()).toContain('No PIN is set')
@@ -211,7 +211,7 @@ describe('ScreenLock — the refusals', () => {
   it('does NOT unlock a deactivated staff row', async () => {
     verifyStaffPin.mockResolvedValue({ ok: false, reason: 'inactive' })
     await mount()
-    await enter('418293')
+    await enter('4182')
 
     expect(onUnlock).not.toHaveBeenCalled()
     expect(text()).toContain('no longer active')
@@ -225,7 +225,7 @@ describe('ScreenLock — the refusals', () => {
       lockedUntil: new Date(Date.now() + 15 * 60_000).toISOString(),
     })
     await mount()
-    await enter('000000')
+    await enter('0000')
 
     expect(onUnlock).not.toHaveBeenCalled()
     // A real sign-out. The old build navigated to /login and left the session
@@ -242,7 +242,7 @@ describe('ScreenLock — the refusals', () => {
       lockedUntil: until.toISOString(),
     })
     await mount()
-    await enter('000000')
+    await enter('0000')
 
     expect(container.querySelector('button[aria-label="Digit 1"]')).toBeNull()
     expect(text()).toContain('PIN locked until')
@@ -261,7 +261,7 @@ describe('ScreenLock — the refusals', () => {
       lockedUntil: null,
     })
     await mount()
-    await enter('000000')
+    await enter('0000')
 
     expect(verifyStaffPin).toHaveBeenCalledTimes(1)
   })

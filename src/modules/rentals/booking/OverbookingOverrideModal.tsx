@@ -114,15 +114,15 @@ export function OverbookingOverrideModal({ isOpen, onClose, unit, onOverbook, on
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-        <label style={{ display: 'flex', gap: 'var(--sp-sm)', alignItems: 'flex-start', cursor: 'pointer' }}>
-          <input type="radio" name="overbooking-choice" checked={choice === 'sub-rent'} onChange={() => setChoice('sub-rent')} style={{ marginTop: 3 }} />
+        <label htmlFor="overbooking-subrent" style={{ display: 'flex', gap: 'var(--sp-sm)', alignItems: 'flex-start', cursor: 'pointer' }}>
+          <input id="overbooking-subrent" type="radio" name="overbooking-choice" checked={choice === 'sub-rent'} onChange={() => setChoice('sub-rent')} style={{ marginTop: 3 }} aria-label="Sub-rent this item instead" />
           <span>
             <span style={{ display: 'block', fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>Sub-rent this item instead</span>
             <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--link)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em' }}>Preferred</span>
           </span>
         </label>
-        <label style={{ display: 'flex', gap: 'var(--sp-sm)', alignItems: 'flex-start', cursor: 'pointer' }}>
-          <input type="radio" name="overbooking-choice" checked={choice === 'overbook'} onChange={() => setChoice('overbook')} style={{ marginTop: 3 }} />
+        <label htmlFor="overbooking-overbook" style={{ display: 'flex', gap: 'var(--sp-sm)', alignItems: 'flex-start', cursor: 'pointer' }}>
+          <input id="overbooking-overbook" type="radio" name="overbooking-choice" checked={choice === 'overbook'} onChange={() => setChoice('overbook')} style={{ marginTop: 3 }} aria-label="Add it to this booking anyway" />
           <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>Add it to this booking anyway</span>
         </label>
 

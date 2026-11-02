@@ -200,4 +200,86 @@ describe('CrewSection', () => {
       host.remove()
     }
   })
+
+  it('allows adding shoot day overtime (+½ day) per shoot day and calculates 3.5 days billed (D24, T8-06)', async () => {
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const root = createRoot(host)
+    const onUpdateCrewExtras = vi.fn()
+    const onUpdateCrewLine = vi.fn()
+
+    const threeDayCrew: CrewLine[] = [
+      {
+        crewId: 'crew-1',
+        name: 'Anup Baral',
+        role: 'Director of Photography',
+        phone: '9841234567',
+        days: 3,
+        dayRatePaisa: rupees(5000),
+        overtimePaisa: rupees(0),
+        accommodationPaisa: rupees(0),
+        mealsPaisa: rupees(0),
+      },
+    ]
+
+    try {
+      await act(async () => {
+        root.render(
+          <MemoryRouter>
+            <CrewSection
+              open={true}
+              onToggle={vi.fn()}
+              crew={threeDayCrew}
+              days={3}
+              canCrewMoney={true}
+              onAddCrew={vi.fn()}
+              onRemoveCrew={vi.fn()}
+              onClearCrew={vi.fn()}
+              onUpdateCrewExtras={onUpdateCrewExtras}
+              onUpdateCrewLine={onUpdateCrewLine}
+              crewChargesPaisa={rupees(15000)}
+              isPhone={false}
+            />
+          </MemoryRouter>,
+        )
+      })
+
+      // Expand extras
+      const expandBtn = host.querySelector<HTMLButtonElement>(
+        'button[aria-label="Show overtime, meals and accommodation for Anup Baral"]',
+      )
+      expect(expandBtn).not.toBeNull()
+      await act(async () => {
+        expandBtn?.click()
+      })
+
+      expect(host.textContent).toContain('Shoot Day Overtime (D24)')
+      expect(host.textContent).toContain('Day 1:')
+      expect(host.textContent).toContain('Day 2:')
+      expect(host.textContent).toContain('Day 3:')
+
+      // Click +½ day on Day 2
+      const day2HalfBtn = host.querySelector<HTMLButtonElement>(
+        'button[aria-label="Day 2 overtime +½ day for Anup Baral"]',
+      )
+      expect(day2HalfBtn).not.toBeNull()
+
+      await act(async () => {
+        day2HalfBtn?.click()
+      })
+
+      // Overtime for 0.5 days @ 5000 = 2500 Rs = 250000 paisa
+      expect(onUpdateCrewExtras).toHaveBeenCalledWith('crew-1', 'overtimePaisa', rupees(2500))
+      expect(onUpdateCrewLine).toHaveBeenCalledWith(
+        'crew-1',
+        expect.objectContaining({
+          overtimeDays: 0.5,
+          overtimePaisa: rupees(2500),
+        }),
+      )
+    } finally {
+      await act(async () => root.unmount())
+      host.remove()
+    }
+  })
 })

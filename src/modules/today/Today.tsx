@@ -621,6 +621,7 @@ export default function Today() {
             className="dispatch-toolbar__presets"
             role="tablist"
             aria-label="Preset dispatch periods"
+            tabIndex={0}
             onKeyDown={onPresetKeyDown}
           >
             {QUICK_PERIODS.map((period) => {
@@ -637,7 +638,6 @@ export default function Today() {
                   type="button"
                   tabIndex={isActive ? 0 : -1}
                   aria-selected={isActive}
-                  aria-pressed={isActive}
                   style={{ minHeight: 'var(--tap, 44px)' }}
                   onClick={() => syncBothPanels({ kind: 'quick', period })}
                 >

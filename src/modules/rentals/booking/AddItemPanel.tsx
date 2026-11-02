@@ -1653,11 +1653,13 @@ function BundleRow({
       id={id}
       role="option"
       aria-selected={active}
+      tabIndex={-1}
       aria-label={`${result.name}. Bundle, ${result.category}, ${facts.totalItems} items. ${availability.label} — ${availability.detail}. ${
         showPrices ? `${formatMoney(result.ratePaisa)} per day. ` : ''
       }Press Enter to add its components, or press Right Arrow to preview them.`}
       onMouseMove={onHover}
       onClick={onAdd}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAdd() } }}
       style={{
         display: 'grid',
         gap: 'var(--sp-xs)',

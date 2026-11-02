@@ -203,7 +203,7 @@ screen < 3 s on 4G.
 **Needs** — T1-07.
 
 
-### T1-15 · Switch user with name + PIN            status: doing — design phase (lane-a/T1-15-switch-user-with-name-plus-pin: design note written, awaiting Claude check-in review before code) · size: L · lane A · [go-live]
+### T1-15 · Switch user with name + PIN            status: done — awaiting merge (lane-a/T1-15-switch-user-with-name-plus-pin) · size: L · lane A · [go-live]
 **What** — On a shared iPad or the counter PC (W52, W53): staff tap their **name**, type their
 **4-digit PIN**, and the device switches to **their own real session** — every action after that is
 theirs. Design first (a one-page note reviewed at a Claude check-in before code), because the

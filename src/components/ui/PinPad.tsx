@@ -46,7 +46,7 @@ export interface PinPadProps {
 }
 
 export function PinPad({
-  length = 6,
+  length = 4,
   value,
   onChange,
   onComplete,
