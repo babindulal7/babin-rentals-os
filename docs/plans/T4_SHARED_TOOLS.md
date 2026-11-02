@@ -135,7 +135,8 @@ slow reply could overwrite the next zone's fee.
 Warehouse cannot see fees.
 **Needs** — none.
 
-### T4-08 · One-time rider link            status: doing (lane-b/T4-08-one-time-rider-link) · size: L · lane B · [go-live]
+### T4-08 · One-time rider link            status: done (awaiting merge lane-b/T4-08-review-fixes) · size: L · lane B · [go-live]
+review fixes R1–R5 — done, awaiting merge (lane-b/T4-08-review-fixes)
 **What** — For a hired rider (W49): staff tap "Send to rider" on a delivery job, type the rider's
 name and phone, and share a link (WhatsApp/SMS from the staff phone). The link opens **only that
 job**, with **no login and no money**: pickup point, drop address and contact, item count and case

@@ -517,7 +517,7 @@ export function QuickCreateDialog({
               <Button variant="ghost" onClick={handleRequestClose} disabled={loading}>
                 Cancel
               </Button>
-              <Button variant="primary" icon="check" onClick={handleSaveClient} disabled={loading}>
+              <Button type="submit" variant="primary" icon="check" disabled={loading}>
                 {loading ? 'Saving Client…' : 'Save Client'}
               </Button>
             </div>
@@ -647,7 +647,7 @@ export function QuickCreateDialog({
               <Button variant="ghost" onClick={handleRequestClose} disabled={loading}>
                 Cancel
               </Button>
-              <Button variant="primary" icon="check" onClick={handleSaveGeneric} disabled={loading || !title.trim()}>
+              <Button type="submit" variant="primary" icon="check" disabled={loading || !title.trim()}>
                 {loading ? 'Creating…' : 'Create'}
               </Button>
             </div>

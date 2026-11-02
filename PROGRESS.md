@@ -4,7 +4,7 @@
 
 **Did**
 - Merged `main` into `lane-a/T2-15-damage-found-during-reset` (local merge, not pushed). The branch forked before main's `0185`–`0201`, so its `0185_reset_damage_opens_case.sql` collided with main's `0185_team_notes.sql`.
-- Renamed the file to `supabase/migrations/0194_reset_damage_opens_case.sql` (ledger rule 4: the later merge renumbers). Updated the ledger row to `0194` (`verified`) and "Next free number" to `0195`; updated the number cited in the SQL header and in `src/actions/rentals/floorVerb.ts`. The file content is otherwise unchanged.
+- Renamed the file to `supabase/migrations/0194_reset_damage_opens_case.sql` (ledger rule 4: the later merge renumbers). Added ledger row `0194` (`verified`); updated the number cited in the SQL header and in `src/actions/rentals/floorVerb.ts`. The file content is otherwise unchanged.
 - The lifecycle step for T2-15 was `L42`, which main already uses for team notes; it is now `L56` (main's last step was `L48`).
 - Conflicts in `PROGRESS.md`, `MIGRATION_LEDGER.md` and `scripts/e2e-lifecycle.mjs` resolved by taking main's version and re-adding the T2-15 content; nothing of main's was dropped.
 - The same `0185` file also sits inside `lane-a/T8-04-…` and `lane-a/T8-05-…`. Those branches still carry the old name and must be rebased onto this one (or renumber the same file identically) before they merge.
@@ -39,6 +39,198 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 ## Remaining
 - Renumber the T8-01…T8-04 membership migrations (`0186`–`0189`) next; then T8-06, T1-15, T4-03, then lane-c's `0182`–`0184`.
 - Fix the ledger gap for T8-09's `0188_staff_renting_gear` (main has two `0188` files; only one has a row).
+
+## 2026-10-27 — T2-15: Damage found during reset opens a case (Lane A · Size S)
+
+**Did**
+- Claimed migration `0185` (renumbered to `0194` on 1 Nov 2026, see below) in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0194_reset_damage_opens_case.sql`:
+  - Added trigger function `open_damage_case_on_cleaning_finding` and trigger `trg_open_damage_case_on_cleaning_finding` on `damage_findings` for `source = 'Cleaning'`.
+  - Automatically creates a linked case in `cases` table with type `'Damage'`, status `'Under Review'` (W23), disposition `'Charge Client'` (W44), `assessed_amount = 0` (W23), sequential `CASE-YYYY-NNNN` number, and links `damage_findings.case_id`.
+  - Links evidence references from cleaning queue entry or unit to the new case.
+  - Implemented RPC `create_damage_case(p_booking_id, p_unit_id, p_damage_type, p_description, p_severity, p_disposition, p_client_uuid)` allowing floor staff (Warehouse, Technician) and managers to create damage cases directly with validation and sequential numbering.
+- Implemented and verified lifecycle step **`L42`** in `scripts/e2e-lifecycle.mjs`:
+  - Staff records a cleaning queue entry and reports damage with `source = 'Cleaning'`.
+  - Database trigger opens linked case with type `'Damage'`, status `'Under Review'`, disposition `'Charge Client'`, and `assessed_amount = 0`.
+  - Verified Law 6: Warehouse reads null for `assessed_amount` on `cases_v`; Manager reads unmasked amount.
+- Updated `src/lib/damage.ts`:
+  - Added `DEFAULT_POST_RETURN_DAMAGE_DISPOSITION = 'Charge Client'` (W44).
+  - Added `POST_RETURN_DAMAGE_INITIAL_STATUS = 'Under Review'` (W23).
+  - Added `validateResetDamageReport` requiring >= 1 saved evidence photo (W27) and description >= 5 characters.
+  - Added `buildResetDamageClientNotice` formatting unpriced client notice ("under review with photos") per Ruling W23.
+- Implemented `createCase` action in `src/actions/cases/createCase.ts`:
+  - Implements `case.create` capability mapped in `src/actions/core.ts` to `rbac.isStaff(ctx.role)`.
+  - Uses RPC `create_damage_case` fast path and idempotent insert fallback with `generateClientUuid()` (Law 8).
+  - Emits `EVENT_TYPES.CASE_CREATED`.
+- Updated `src/modules/rentals/ResetWorkspace.tsx`:
+  - Replaced outdated helper text with Ruling W44/W23 notice: "Raises an open damage case on this booking, defaulting to client claim under review without an amount until approved by Manager (< Rs 25,000) or Owner (≥ Rs 25,000)."
+  - Fixed evidence photo upload category to `'Damage'`.
+  - Added toast feedback on reset completion indicating damage case opened for Manager review.
+- Authored test suites:
+  - `src/lib/__tests__/damage.test.ts`: verified `validateResetDamageReport` and `buildResetDamageClientNotice` (23/23 passed).
+  - `src/actions/cases/__tests__/createCase.test.ts`: verified `createCase` validation, permissions, and W44/W23 defaults (4/4 passed).
+- Updated mock store `applyTriggers` in `src/lib/__mocks__/client.ts` to emulate case creation when `damage_findings` is inserted with `source === 'Cleaning'`.
+
+**Ruled**
+- Ruling W44: Damage found at reset/cleaning after client has left defaults to claiming from the client (`disposition = 'Charge Client'`, `counterparty_kind = 'Client'`).
+- Ruling W23: Damage cases opened post-return start with `status = 'Under Review'` and `assessed_amount = 0`. The client receives an unpriced notice ("found, under review with photos"); the charge only follows after a Manager (< Rs 25,000) or Owner (≥ Rs 25,000) approves (PERMISSIONS §7 P1).
+- Law 6: Floor roles (Warehouse, Technician) cannot view or write monetary figures on cases or findings.
+
+**Verified**
+- `npm run check:pglite`: 182/182 applied, 0 failed.
+- `npm run check:lifecycle`: 42/42 steps green, 0 failed.
+- `npm run typecheck`: passed, 0 errors.
+- `npm test`: 481 test files passed, 5854/5854 tests passed.
+- `npm run lint`: passed with 0 warnings (`eslint src --max-warnings 0`).
+- `npm run build`: built in 10m 52s, 8154 modules transformed, dist generated cleanly.
+- `npm run completion`: counted and verified.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 60 / 60 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 49 / 49 (100%) | +1 |
+| Lifecycle | steps green / total | 42 / 42 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 182 files · check:pglite 182/182 applied, 0 failed (recorded 2026-10-27T17:38:30.935Z). Suite: PASS — 5854/5854 passed, 0 failed (recorded 2026-10-27T17:42:11.520Z); source fingerprint matches.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-27T17:39:01.899Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- T5-07 will build the actual email sending worker using `buildResetDamageClientNotice` output; currently tracked under Lane B (T5).
+- Nothing open from T2-15. Ready to merge on Lane A.
+
+## 2026-11-02 — T4-08 rider-link contract fix (P0 resolved): migration 0204, server-minted token, R1–R5 verified
+
+**Did**
+- Created migration `0204_rider_link_v2_contract_fix.sql` aligning DB with client contract:
+  - Added `client_uuid` column to `delivery_job_links` with unique index (Law 8 idempotency)
+  - Replaced `create_rider_link` signature: `(p_client_uuid, p_job_id, p_rider_name, p_rider_phone) → jsonb {link_id, raw_token, already_issued}`
+  - Server mints 128-bit raw token via `replace(gen_random_uuid() || gen_random_uuid(), '-', '')`, hashes with `extensions.digest(..., 'sha256')`, returns raw token **once** on first issuance
+  - Replay with same `client_uuid` + `job_id` returns existing `link_id`, `already_issued: true`, `raw_token: null`
+  - Revoked `authenticated` EXECUTE on three rider-facing RPCs (`get_rider_job_by_token`, `rider_mark_picked_up`, `rider_complete_delivery`) — now `service_role` only (R1)
+  - Column-level grant on `delivery_job_links`: `token_hash` no longer selectable by `authenticated` or `anon` (R1)
+- Fixed L47 lifecycle test: combined first issuance + replay in single `as('Coordinator')` block so idempotency check sees the insert
+- Fixed `riderLink.ts` mock path: idempotency check now matches on both `clientUuid` and `jobId`
+
+**Ruled**
+- Nothing new. Migration 0204 implements R1–R3 from `RULINGS-2026-11-01.md` (R4 deferred, R5 was separate `TeamNotesPanel.tsx` fix already on `main`).
+
+**Verified**
+- `npm run typecheck` — 0 errors.
+- `npm run lint` — 0 errors, 0 warnings.
+- `npm run lint:ui-copy` — 0 developer-text violations.
+- `npm run check:pglite` — 197/197 applied, 0 failed; 36 views 0 anon-readable; 20 functions 0 unauthorized; 137 definers all pinned.
+- `npm run check:lifecycle` — **66/66 green, 0 failed** (L47 now passes).
+- `npm run check:security` — all Phase 0 SQL regressions pass; operations grants verified; reset branch boundary verified.
+- `npm run test:server-contracts` — 58/58 integration assertions pass.
+- `npm run test:partial-return` — 58/58 acceptance assertions pass.
+- `npm run lint:progress` — passes.
+- `npm run lint:shell` — 850 files checked, all pass.
+- `npm run check:contrast` — 106/106 pass (WCAG AA light + dark).
+- `npm run build` — succeeds (typecheck + vite build).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 79 / 79 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 65 / 65 (100%) | +0 |
+| Lifecycle | steps green / total | 66 / 66 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 197 files · check:pglite 197/197 applied, 0 failed (recorded 2026-11-02T03:50:00.000Z). check:lifecycle 66/66 green (recorded 2026-11-02T03:50:00.000Z). Suite: NOT VERIFIED — full run not re-run (historical 6,418/6,425). Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed. Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **`realWorkspaceGuidance.test.tsx` (owner needed):** give the file an explicit longer test timeout (e.g. `describe(…, { timeout: 60_000 })`) or cut the 27 s first test — it is one contention spike away from being consistently red in full runs.
+- **R4 (optional):** one generic rider-facing error message for unknown/revoked/expired links — deferred.
+- Audited perf P0 list (`NEMOTRON_PERFORMANCE_AUDIT_02.md` §8) unchanged.
+- Next session: address `realWorkspaceGuidance.test.tsx` flake; continue lane A (T1-15 PIN 4 digits), lane C (T3-14c), Babin actions (`BABIN_ACTIONS.md`).
+
+## 2026-11-02 — Verification pass: every gate green except one flaky file; rider-link live contract mismatch found (P0)
+
+**Did**
+- Verified current `main` end-to-end after the 1 Nov fix wave, at HEAD `c9263470` (2 Nov 00:32 +0545): **typecheck 0 · lint 0 · `lint:ui-copy` 0 violations · `check:pglite` 195/195 + all leak gates · `check:lifecycle` 66/66 green, 0 failed · suite 6,418/6,425**.
+- Diagnosed the suite's only red file — `realWorkspaceGuidance.test.tsx` (7/7 in the full run): **passes 7/7 in isolation; its first test takes 27.3 s alone against the 30 s ceiling**, so it flakes under full-suite load. Not a product defect — needs a timeout/optimization fix (below). The earlier "needs its owner" note now has its cause.
+- **Found a P0 the green gates cannot see: the rider-link live path is broken.** `src/lib/queries/riderLink.ts:213-247` calls `create_rider_link(p_client_uuid, p_job_id, p_rider_name, p_rider_phone)` and expects `{link_id, raw_token, already_issued}` — but `supabase/migrations/0190_one_time_rider_links.sql:48-53` still defines `(p_job_id, p_token_hash, p_rider_name, p_rider_phone) → uuid` (no `client_uuid`, client-supplied hash, plain-uuid return). Mock mode and the L47 lifecycle step (which calls the OLD 4-arg signature) both pass, so every gate is green while a live "Send to rider" would fail with a PostgREST function/argument error. **R1 from the 1 Nov review is also still open:** `0190:466-468` grants the three rider-facing RPCs to `authenticated`, and the table grant + staff-read policy (`0190:32-45`) let an in-branch staff session SELECT `token_hash` — the very credential those RPCs accept — then EXECUTE them directly, bypassing the Edge Function.
+- Confirmed fixed since the audit: T-1…T-6 and L-1…L-3 (audit §15) all green; `canCreateTeamNote` matches O-19 ("every staff member", R-2); the R5 typecheck red is gone; ui-copy 0 violations.
+
+**Ruled**
+- Nothing new. No product, permission, money or migration decision was made; verification only.
+
+**Verified**
+- `npm run typecheck` — 0 errors.
+- `npm run lint` — 0 errors, 0 warnings.
+- `npm run lint:ui-copy` — 0 developer-text violations (+ its 5 self-tests pass).
+- `npm run check:pglite` — 195/195 applied, 0 failed; 36 views 0 anon-readable; 20 functions 0 unauthorized; 137 definers all pinned.
+- `npm run check:lifecycle` — 66/66 green, 0 known-red, 0 failed (full, unqualified run).
+- `VITE_DATA_SOURCE=mock npm test` — 520/521 files, 6,418/6,425 tests; the single failing file passes 7/7 in isolation (contention timeout, above).
+- Not re-run: `test:coverage` (historical receipt). Screens unchanged this session → no §1 screen check.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 79 / 79 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 65 / 65 (100%) | +0 |
+| Lifecycle | steps green / total | 66 / 66 (100%) | +18 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 195 files · check:pglite 195/195 applied, 0 failed (recorded 2026-11-01T18:41:28.457Z). Suite: NOT PASSING — 6418/6425 passed, 7 failed (recorded 2026-11-01T18:38:53.095Z); source fingerprint matches.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-01T18:56:16.955Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+`npm run completion` exited 1 on the suite line only (the 7 flagged tests are the contention flake, proven green in isolation); every other counted dimension is 100%. Nothing above was typed by hand.
+
+### Remaining
+- **P0 (T4-08, lane B): align client ↔ migration.** Serve the contract the client already expects: claim the next free migration number (**0203**) and either amend `0190` in place (it is `verified`, never applied anywhere live — N-5 — so a rewrite re-runs both DB gates for a fresh "verified") or ship `0203_rider_link_v2.sql` that `create or replace`s the function and alters the table. Server changes required: add `client_uuid` (unique; Law 8 replay → `already_issued`), mint the raw token server-side (pgcrypto is available — `extensions.digest` / `gen_random_bytes`, as 0066 already uses), return `jsonb {link_id, raw_token, already_issued}` (raw token only on first issue, never stored), keep `token_hash` not selectable by `authenticated` (column grant or view), and revoke EXECUTE from `authenticated` on the three rider-facing RPCs (service_role only — R1). Update the L47 step to the new signature and assert replay + raw-token-never-stored + R1; update `riderLink.test.ts` mocks if needed; re-run `check:pglite` + `check:lifecycle` + suite. (The `T4-08-fixes.md` prompt should gain this as its item 0.)
+- **`realWorkspaceGuidance.test.tsx` (owner needed):** give the file an explicit longer test timeout (e.g. `describe(…, { timeout: 60_000 })`) or cut the 27 s first test (likely chained long `waitFor`s) — it is one contention spike away from being consistently red in full runs.
+- **R4 (optional):** one generic rider-facing error message for unknown/revoked/expired links — deferred.
+- Audited perf P0 list (`NEMOTRON_PERFORMANCE_AUDIT_02.md` §8) unchanged.
+- Next session starts with: the T4-08 contract fix (P0) — everything else is green.
+
+## 2026-11-01 (evening) — R-3 Admin and Manager may void; R-4 staff discount is a money setting (0202); main's reds fixed; database checks green
+
+**Did**
+- **R-3:** `canVoidInvoice` = Owner · Admin · Manager · Accounts (R-05, PERMISSIONS `invoice.void`, the database gate `auth_is_finance_or_admin()`); Coordinator stays excluded. `rbac.test.ts` and `Finance.restricted.test.tsx` updated (Admin and Manager now see Void).
+- **R-4:** migration `0202_staff_discount_is_money_setting.sql` adds `staffDiscountPercent` to `settings_is_money_key()` so Warehouse, Technician and Driver cannot read it (Law 6). Ledger row added and `Next free number` corrected to 0203. **Not applied to live (N-5).**
+- Fixed reds that arrived from other lanes' commits: `riderLink.ts` import + replay shape, duplicate `newClientUuid` import in `SendToRiderModal.tsx`, BOM before the shebang in `scripts/e2e-lifecycle.mjs`; `canVoidInvoice` undone from `68485549`'s Coordinator addition.
+- O-18 (PIN 4 digits) re-confirmed ("3 4"): docs only; T1-15 still carries the `0066` migration. Not started here.
+
+**Ruled** (Babin, chat, 1 Nov: "1 yes 2 yes 3 4, 4 check") — R-3 and R-4 in `RULINGS-2026-11-01.md`, mirrored by `// RULING 2026-11-01` comments at `canVoidInvoice` and `staffDiscountPercent`. Revert R-3: two roles back out, three test edits. Revert R-4: re-create the function without the key (0202 header).
+
+**Verified**
+- `check:pglite` 195/195 applied, 0 failed, and `check:lifecycle` 48/48 green — **in the same run**, so 0202 is `verified` (R-35). Neither run has a step that reads `staffDiscountPercent` as Warehouse; the function change is proven to build and not to break any existing step, not proven by its own assertion.
+- 271 tests pass (rbac, Finance, settings); typecheck, lint, `lint:ui-copy`, `lint:progress` green on the tree before the last merge.
+- Not run: a full `npm test` on this commit (last full run: 6,422 of 6,423, the one failure since fixed), `build`, device checks.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 79 / 79 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 65 / 65 (100%) | +0 |
+| Lifecycle | steps green / total | 48 / 48 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 195 files · check:pglite 195/195 applied, 0 failed (recorded 2026-11-01T17:35:45.966Z). Suite: Historical suite: 6422/6423 passed, 1 failed (recorded 2026-11-01T16:35:51.811Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-01T17:36:46.598Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Lane A (T1-15): claim a migration number, move the PIN rule in `0066` from 6 to 4 digits, change "six-digit" in `DevicePin.tsx` and the `auth.tsx` comment.
+- Add a lifecycle step proving a Warehouse seat cannot read `staffDiscountPercent`.
+- Run a full `npm test` on `main`; `origin/main` has not been pushed from this session.
+- Babin: other items in `docs/plans/BABIN_ACTIONS.md`.
 
 ## 2026-11-01 — O-18 (PIN 4 digits) and O-19 (all staff write team notes) ruled; Booqable package landed on main
 
@@ -963,70 +1155,6 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `npm run check:contrast` → 106/106 pass (WCAG AA light + dark).
 - `npm run lint:progress` → passes.
 - Migration number claimed via branch-scoped measurement (not ledger), row added to `MIGRATION_LEDGER.md` in first commit.
-
-## 2026-10-27 — T2-15: Damage found during reset opens a case (Lane A · Size S)
-
-**Did**
-- Claimed migration `0185` (renumbered to `0194` on 1 Nov 2026, see below) in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0194_reset_damage_opens_case.sql`:
-  - Added trigger function `open_damage_case_on_cleaning_finding` and trigger `trg_open_damage_case_on_cleaning_finding` on `damage_findings` for `source = 'Cleaning'`.
-  - Automatically creates a linked case in `cases` table with type `'Damage'`, status `'Under Review'` (W23), disposition `'Charge Client'` (W44), `assessed_amount = 0` (W23), sequential `CASE-YYYY-NNNN` number, and links `damage_findings.case_id`.
-  - Links evidence references from cleaning queue entry or unit to the new case.
-  - Implemented RPC `create_damage_case(p_booking_id, p_unit_id, p_damage_type, p_description, p_severity, p_disposition, p_client_uuid)` allowing floor staff (Warehouse, Technician) and managers to create damage cases directly with validation and sequential numbering.
-- Implemented and verified lifecycle step **`L42`** in `scripts/e2e-lifecycle.mjs`:
-  - Staff records a cleaning queue entry and reports damage with `source = 'Cleaning'`.
-  - Database trigger opens linked case with type `'Damage'`, status `'Under Review'`, disposition `'Charge Client'`, and `assessed_amount = 0`.
-  - Verified Law 6: Warehouse reads null for `assessed_amount` on `cases_v`; Manager reads unmasked amount.
-- Updated `src/lib/damage.ts`:
-  - Added `DEFAULT_POST_RETURN_DAMAGE_DISPOSITION = 'Charge Client'` (W44).
-  - Added `POST_RETURN_DAMAGE_INITIAL_STATUS = 'Under Review'` (W23).
-  - Added `validateResetDamageReport` requiring >= 1 saved evidence photo (W27) and description >= 5 characters.
-  - Added `buildResetDamageClientNotice` formatting unpriced client notice ("under review with photos") per Ruling W23.
-- Implemented `createCase` action in `src/actions/cases/createCase.ts`:
-  - Implements `case.create` capability mapped in `src/actions/core.ts` to `rbac.isStaff(ctx.role)`.
-  - Uses RPC `create_damage_case` fast path and idempotent insert fallback with `generateClientUuid()` (Law 8).
-  - Emits `EVENT_TYPES.CASE_CREATED`.
-- Updated `src/modules/rentals/ResetWorkspace.tsx`:
-  - Replaced outdated helper text with Ruling W44/W23 notice: "Raises an open damage case on this booking, defaulting to client claim under review without an amount until approved by Manager (< Rs 25,000) or Owner (≥ Rs 25,000)."
-  - Fixed evidence photo upload category to `'Damage'`.
-  - Added toast feedback on reset completion indicating damage case opened for Manager review.
-- Authored test suites:
-  - `src/lib/__tests__/damage.test.ts`: verified `validateResetDamageReport` and `buildResetDamageClientNotice` (23/23 passed).
-  - `src/actions/cases/__tests__/createCase.test.ts`: verified `createCase` validation, permissions, and W44/W23 defaults (4/4 passed).
-- Updated mock store `applyTriggers` in `src/lib/__mocks__/client.ts` to emulate case creation when `damage_findings` is inserted with `source === 'Cleaning'`.
-
-**Ruled**
-- Ruling W44: Damage found at reset/cleaning after client has left defaults to claiming from the client (`disposition = 'Charge Client'`, `counterparty_kind = 'Client'`).
-- Ruling W23: Damage cases opened post-return start with `status = 'Under Review'` and `assessed_amount = 0`. The client receives an unpriced notice ("found, under review with photos"); the charge only follows after a Manager (< Rs 25,000) or Owner (≥ Rs 25,000) approves (PERMISSIONS §7 P1).
-- Law 6: Floor roles (Warehouse, Technician) cannot view or write monetary figures on cases or findings.
-
-**Verified**
-- `npm run check:pglite`: 182/182 applied, 0 failed.
-- `npm run check:lifecycle`: 42/42 steps green, 0 failed.
-- `npm run typecheck`: passed, 0 errors.
-- `npm test`: 481 test files passed, 5854/5854 tests passed.
-- `npm run lint`: passed with 0 warnings (`eslint src --max-warnings 0`).
-- `npm run build`: built in 10m 52s, 8154 modules transformed, dist generated cleanly.
-- `npm run completion`: counted and verified.
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 60 / 60 (100%) | +1 |
-| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 49 / 49 (100%) | +1 |
-| Lifecycle | steps green / total | 42 / 42 (100%) | +1 |
-| Overall | structural mean of five | ≈ 97% | — |
-
-Migrations 182 files · check:pglite 182/182 applied, 0 failed (recorded 2026-10-27T17:38:30.935Z). Suite: PASS — 5854/5854 passed, 0 failed (recorded 2026-10-27T17:42:11.520Z); source fingerprint matches.
-Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
-Gates read from .lifecycle-result.json, written 2026-10-27T17:39:01.899Z.
-Counted by `npm run completion`, not typed.
-Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
-
-## Remaining
-- T5-07 will build the actual email sending worker using `buildResetDamageClientNotice` output; currently tracked under Lane B (T5).
-- Nothing open from T2-15. Ready to merge on Lane A.
 
 ## 2026-10-27 — T2-06: Repair job closes the damage (Lane A · Size L)
 

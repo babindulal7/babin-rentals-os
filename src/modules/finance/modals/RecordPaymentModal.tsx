@@ -200,7 +200,7 @@ export function RecordPaymentModal({
     if (amountTouched) return
     const o = outstandingOf(invoiceId)
     if (typeof o === 'number') setAmount(o)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- outstandingOf closes over `invoices`, which is already a dependency
   }, [invoiceId, invoices, amountTouched])
   useEffect(() => {
     if (isOpen) setAmountTouched(initialAmount !== undefined)
