@@ -101,7 +101,16 @@ export const bookCrewConfig: ActionConfig<BookCrewInput, BookCrewResult> = {
     }
 
     const overtimeDays = input.overtimeDays ?? 0
-    const overtimeApprovedBy = overtimeDays > 0 ? (input.overtimeApprovedBy ?? ctx.userId) : null
+    // Approval/entry provenance must never come from a caller-supplied UUID.
+    // This is an application-side guard only; authenticated DB write policies
+    // must independently enforce actor identity before this is release-ready.
+    if (overtimeDays > 0 && !UUID.test(ctx.userId)) {
+      throw new Error('An authenticated user UUID is required to record crew overtime.')
+    }
+    if (input.overtimeApprovedBy !== undefined && input.overtimeApprovedBy !== ctx.userId) {
+      throw new Error('Crew overtime approval must match the signed-in operator.')
+    }
+    const overtimeApprovedBy = overtimeDays > 0 ? ctx.userId : null
     const billableDays = days + overtimeDays
 
     const prepared = []
