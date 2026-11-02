@@ -4,8 +4,8 @@ import { Card, Button } from '../../../components/ui/Page'
 import { EmptyState, LoadingSkeleton, ErrorBanner } from '../../../components/ui/StateViews'
 import { useToast } from '../../../components/ui/Toast'
 import { useAuth } from '../../../lib/auth'
-import { canManageSettings } from '../../../lib/rbac'
-import { formatMoney, type Paisa } from '../../../lib/money'
+import { canManageDeliveryZones } from '../../../lib/rbac'
+import { formatMoney, parseMoney, toRupees, type Paisa } from '../../../lib/money'
 import {
   listDeliveryZones,
   type DeliveryZoneRow,
@@ -28,7 +28,7 @@ import { ConfirmDialog } from '../../../components/ui/ConfirmDialog'
 export function DeliveryZonesControl() {
   const { user } = useAuth()
   const { showSuccessToast } = useToast()
-  const canManage = canManageSettings(user?.role ?? 'Client')
+  const canManage = canManageDeliveryZones(user?.role ?? 'Client')
   const [zones, setZones] = useState<DeliveryZoneRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +39,7 @@ export function DeliveryZonesControl() {
   // Form state
   const [formName, setFormName] = useState('')
   const [formDescription, setFormDescription] = useState('')
-  const [formFeePaisa, setFormFeePaisa] = useState(350000)
+  const [formFeeRupees, setFormFeeRupees] = useState('3500')
   const [formIsActive, setFormIsActive] = useState(true)
   const [formSubmitting, setFormSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -64,7 +64,7 @@ export function DeliveryZonesControl() {
   const openCreateModal = () => {
     setFormName('')
     setFormDescription('')
-    setFormFeePaisa(350000)
+    setFormFeeRupees('3500')
     setFormIsActive(true)
     setEditingZone(null)
     setFormError(null)
@@ -74,7 +74,7 @@ export function DeliveryZonesControl() {
   const openEditModal = (zone: DeliveryZoneRow) => {
     setFormName(zone.name)
     setFormDescription(zone.description || '')
-    setFormFeePaisa(zone.fee_paisa)
+    setFormFeeRupees(zone.fee_paisa == null ? '' : String(toRupees(zone.fee_paisa as Paisa)))
     setFormIsActive(zone.is_active)
     setEditingZone(zone)
     setFormError(null)
@@ -86,8 +86,9 @@ export function DeliveryZonesControl() {
       setFormError('Zone name is required')
       return
     }
-    if (formFeePaisa < 0) {
-      setFormError('Fee cannot be negative')
+    const parsedFee = /[eE]/.test(formFeeRupees) ? null : parseMoney(formFeeRupees)
+    if (parsedFee === null || parsedFee < 0 || !Number.isSafeInteger(parsedFee)) {
+      setFormError('Enter a valid non-negative fee in rupees')
       return
     }
 
@@ -97,7 +98,7 @@ export function DeliveryZonesControl() {
       await createDeliveryZone({
         name: formName.trim(),
         description: formDescription.trim(),
-        feePaisa: formFeePaisa,
+        feePaisa: parsedFee,
       })
       showSuccessToast('Zone created', `Delivery zone "${formName.trim()}" created successfully`)
       setShowCreateModal(false)
@@ -116,8 +117,9 @@ export function DeliveryZonesControl() {
       setFormError('Zone name is required')
       return
     }
-    if (formFeePaisa < 0) {
-      setFormError('Fee cannot be negative')
+    const parsedFee = /[eE]/.test(formFeeRupees) ? null : parseMoney(formFeeRupees)
+    if (parsedFee === null || parsedFee < 0 || !Number.isSafeInteger(parsedFee)) {
+      setFormError('Enter a valid non-negative fee in rupees')
       return
     }
 
@@ -128,7 +130,7 @@ export function DeliveryZonesControl() {
         zoneId: editingZone.id,
         name: formName.trim(),
         description: formDescription.trim(),
-        feePaisa: formFeePaisa,
+        feePaisa: parsedFee,
         isActive: formIsActive,
       })
       showSuccessToast('Zone updated', `Delivery zone "${formName.trim()}" updated successfully`)
@@ -157,7 +159,7 @@ export function DeliveryZonesControl() {
   const resetForm = () => {
     setFormName('')
     setFormDescription('')
-    setFormFeePaisa(350000)
+    setFormFeeRupees('3500')
     setFormIsActive(true)
     setEditingZone(null)
     setFormError(null)
@@ -223,7 +225,7 @@ export function DeliveryZonesControl() {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', flexShrink: 0 }}>
               <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, fontFamily: 'var(--mono)', color: 'var(--text)' }}>
-                {formatMoney(zone.fee_paisa as Paisa)}
+                {zone.fee_paisa == null ? 'Fee restricted' : formatMoney(zone.fee_paisa as Paisa)}
               </span>
               {canManage && (
                 <>
@@ -336,13 +338,13 @@ export function DeliveryZonesControl() {
                 />
               </label>
               <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 'var(--t-meta)', fontWeight: 500 }}>
-                Fee (paisa) <span style={{ color: 'var(--danger)' }}>*</span>
+                Fee (Rs) <span style={{ color: 'var(--danger)' }}>*</span>
                 <input
                   type="number"
-                  value={formFeePaisa}
-                  onChange={(e) => { setFormFeePaisa(Number(e.target.value) || 0); setFormError(null); }}
+                  value={formFeeRupees}
+                  onChange={(e) => { setFormFeeRupees(e.target.value); setFormError(null); }}
                   min={0}
-                  step={1}
+                  step={0.01}
                   style={{
                     marginTop: 4,
                     padding: '10px 12px',
@@ -355,7 +357,7 @@ export function DeliveryZonesControl() {
                   }}
                 />
                 <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-                  Default: Rs 3,500 (350000 paisa) for valley zones. "Outside Valley" = 0 (quoted per job).
+                  Default: Rs 3,500 for valley zones. "Outside Valley" = 0 (quoted per job).
                 </span>
               </label>
               {editingZone && (
@@ -390,7 +392,7 @@ export function DeliveryZonesControl() {
                 Existing deliveries using this zone are not affected.
               </p>
               <p style={{ margin: 0, fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-                Fee: <strong>{formatMoney(deletingZone.fee_paisa as Paisa)}</strong>
+                Fee: <strong>{deletingZone.fee_paisa == null ? 'Restricted' : formatMoney(deletingZone.fee_paisa as Paisa)}</strong>
               </p>
             </div>
           ) : undefined
