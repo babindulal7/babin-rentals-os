@@ -50,6 +50,20 @@ jobs:
           node-version: '24'
           cache: npm
 
+      # Built-in Node-only checks run before the costly npm install. Move,
+      # rather than duplicate, the original security-neutral release gates.
+      - name: Preflight · progress receipt completeness
+        run: npm run lint:progress
+
+      - name: Preflight · completion receipt integrity
+        run: node --test scripts/test-receipt.test.mjs
+
+      - name: Preflight · page shell design invariants
+        run: npm run lint:shell
+
+      - name: Preflight · theme contrast (WCAG AA)
+        run: npm run check:contrast
+
       # Always reconstruct node_modules from the lockfile. setup-node already
       # caches npm's downloaded tarballs; prefer those verified cache entries
       # and skip non-gating audit/funding network requests. No install scripts
@@ -106,33 +120,8 @@ jobs:
       - name: Verified partial serial and quantity Return reservations
         run: npm run test:partial-return
 
-      # R-29: an entry that logs Did / Ruled / Verified and no Completion /
-      # Remaining is logged as unfinished, and this is what says so. One grep.
-      - name: PROGRESS.md carries its Completion and Remaining blocks
-        run: npm run lint:progress
-
-      - name: Completion receipts cannot certify stale or failed runs
-        run: node --test scripts/test-receipt.test.mjs
-
-      # Item 5: Page shell design invariants (PageHeader, single primary CTA, 44px floor, no dev notes)
-      - name: Page shell design invariants
-        run: npm run lint:shell
-
       - name: Staff UI contains no developer notes
         run: npm run lint:ui-copy
-
-      # WCAG AA on the SHIPPED theme.css, both themes.
-      #
-      # This gate existed and was never in this file, which is how three real
-      # contrast bugs reached the dashboard: `--muted` was measured only against
-      # `--surface` (white) while being painted on the app's tinted surfaces,
-      # where it fell to 4.45:1; `--warn`'s desaturation took its dark ink to
-      # 4.03:1; and the dark sidebar's `--nav-active-accent` sat at 4.30:1. A
-      # gate nobody runs is not a gate. The tinted-surface and nav-accent pairs
-      # are now asserted too, so a token cannot pass by being checked against
-      # the one background it was never painted on.
-      - name: Contrast (WCAG AA, light + dark)
-        run: npm run check:contrast
 
       # The Typecheck step above has already run `tsc --noEmit` and failed
       # closed on any errors. Invoke the Vite bundler directly here instead of
