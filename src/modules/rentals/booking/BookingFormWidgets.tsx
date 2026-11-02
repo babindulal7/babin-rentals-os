@@ -198,9 +198,13 @@ export function Section({
   const expanded = !collapsible || open
   return (
     <section id={id} className={`new-rental-section-card ${expanded ? 'is-active' : ''}`} style={{ ...cardStyle, minWidth: 0, padding: 0 }}>
+      {/* eslint-disable jsx-a11y/no-static-element-interactions -- conditional role/button when collapsible */}
       <div
         className="new-rental-section-heading"
+        role={collapsible ? 'button' : undefined}
+        tabIndex={collapsible ? 0 : undefined}
         onClick={collapsible ? onToggle : undefined}
+        onKeyDown={collapsible ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle() } } : undefined}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -239,7 +243,10 @@ export function Section({
         )}
         {expanded && action && (
           <span
+            role="region"
+            tabIndex={-1}
             onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation() } }}
             style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}
           >
             {action}

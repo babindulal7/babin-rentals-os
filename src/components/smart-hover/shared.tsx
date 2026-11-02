@@ -90,7 +90,7 @@ export function PackingBar({ packed, total }: { packed: number; total: number })
         <strong>Packing {packed} / {total}</strong>
         <span className="figure" style={{ fontVariantNumeric: 'tabular-nums' }}>{pct}%</span>
       </div>
-      <div role="progressbar" aria-valuenow={packed} aria-valuemin={0} aria-valuemax={total} style={{ height: 8, borderRadius: 999, background: 'var(--w08)', marginTop: 6, overflow: 'hidden' }}>
+      <div role="progressbar" aria-valuenow={packed} aria-valuemin={0} aria-valuemax={total} aria-label={`Packing progress: ${packed} of ${total}`} style={{ height: 8, borderRadius: 999, background: 'var(--w08)', marginTop: 6, overflow: 'hidden' }}>
         <div style={{ width: `${pct}%`, height: '100%', background: 'var(--primary)', transition: 'width 150ms cubic-bezier(0.16, 1, 0.3, 1)' }} />
       </div>
     </div>

@@ -289,7 +289,14 @@ export const CommandPalette: React.FC = () => {
         background: 'rgba(0, 0, 0, 0.6)',
       }}
     >
-      <div style={{ position: 'fixed', inset: 0 }} onClick={() => setIsOpen(false)} />
+      <div
+        style={{ position: 'fixed', inset: 0 }}
+        role="button"
+        tabIndex={-1}
+        aria-label="Close command palette"
+        onClick={() => setIsOpen(false)}
+        onKeyDown={(e) => { if (e.key === 'Escape') setIsOpen(false) }}
+      />
 
       <div
         ref={dialogRef}
@@ -449,6 +456,7 @@ export const CommandPalette: React.FC = () => {
                     item.onSelect()
                     setIsOpen(false)
                   }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); item.onSelect(); setIsOpen(false) } }}
                   onMouseEnter={() => setSelectedIndex(idx)}
                   style={{
                     display: 'flex',

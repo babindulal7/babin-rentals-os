@@ -225,7 +225,11 @@ export function CreationDrawer({
     >
       {/* Backdrop */}
       <div
+        role="button"
+        tabIndex={-1}
+        aria-label="Close creation drawer"
         onClick={handleRequestClose}
+        onKeyDown={(e) => { if (e.key === 'Escape') handleRequestClose() }}
         style={{
           position: 'fixed',
           inset: 0,

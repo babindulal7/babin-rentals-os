@@ -208,6 +208,7 @@ export function ActionsOverflowMenu({
           ref={menuRef}
           role="menu"
           aria-label={ariaLabel}
+          tabIndex={0}
           onKeyDown={onMenuKeyDown}
           style={{
             position: 'fixed',
@@ -273,6 +274,7 @@ export function ActionsOverflowMenu({
                 role="menuitem"
                 tabIndex={0}
                 onClick={() => closeMenu(false)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); closeMenu(false) } }}
                 style={{
                   width: '100%',
                   minHeight: 44,

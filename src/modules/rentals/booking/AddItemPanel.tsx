@@ -1864,6 +1864,7 @@ function EquipmentGroupRow({
          chips below and the bundle row's [View] — already calls
          `e.stopPropagation()`, so picking a specific unit still picks that
          unit and never also auto-picks another. */
+      tabIndex={-1}
       onClick={
         isSubRentalMode
           ? () => {
@@ -1876,6 +1877,7 @@ function EquipmentGroupRow({
               ? () => onRequestOverride(overrideCandidate)
               : undefined
       }
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { const target = e.currentTarget as HTMLLIElement & { onClick?: () => void }; if (target.onClick) { e.preventDefault(); target.onClick() } } }}
       style={{
         display: 'grid',
         gap: 6,
@@ -2016,6 +2018,10 @@ function EquipmentGroupRow({
 
       {!bulk && (
         <div
+          role="region"
+          tabIndex={-1}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation() } }}
           style={{
             display: 'flex',
             flexDirection: 'column',
@@ -2026,7 +2032,6 @@ function EquipmentGroupRow({
             border: '1px solid var(--border)',
             borderRadius: 'var(--r-btn)',
           }}
-          onClick={(e) => e.stopPropagation()}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text2)' }}>
@@ -2154,11 +2159,13 @@ function CrewRow({
       id={id}
       role="option"
       aria-selected={active}
+      tabIndex={-1}
       aria-label={`${result.name}. Crew member, ${result.role}. ${result.phone}. ${availability.label} — ${availability.detail}. ${
         showPrices ? `${formatMoney(result.dayRatePaisa)} per day. ` : ''
       }${assigned ? 'Already on booking.' : 'Press Enter to assign to booking.'}`}
       onMouseMove={onHover}
       onClick={assigned ? undefined : onAdd}
+      onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !assigned) { const target = e.currentTarget as HTMLLIElement & { onClick?: () => void }; if (target.onClick) { e.preventDefault(); target.onClick() } } }}
       style={{
         display: 'grid',
         gap: 'var(--sp-xs)',
@@ -2278,6 +2285,7 @@ function TransportRow({
       id={id}
       role="option"
       aria-selected={active}
+      tabIndex={-1}
       aria-label={`${result.name}. Transport mode: ${result.type}. ${
         showPrices
           ? result.ratePaisa === null
@@ -2287,6 +2295,7 @@ function TransportRow({
       }${selected ? 'Currently selected.' : 'Press Enter to select transport mode.'}`}
       onMouseMove={onHover}
       onClick={onSelect}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect() } }}
       style={{
         display: 'grid',
         gap: 'var(--sp-xs)',

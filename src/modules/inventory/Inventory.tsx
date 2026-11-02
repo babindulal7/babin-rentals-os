@@ -2252,8 +2252,9 @@ export default function Inventory() {
                       <thead>
                         <tr style={{ background: 'var(--th-bg)' }}>
                           <th style={{ ...th, width: 44 }}>
-                            <label className="data-table-selection-hit">
+                            <label htmlFor="inventory-select-all" className="data-table-selection-hit">
                             <input
+                              id="inventory-select-all"
                               type="checkbox"
                               aria-label="Select every model on this page"
                               checked={allOnPageSelected}

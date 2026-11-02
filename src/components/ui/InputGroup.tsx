@@ -134,7 +134,10 @@ export const InputGroupAddon = forwardRef<HTMLDivElement, InputGroupAddonProps>(
       ref={ref}
       data-slot="input-group-addon"
       data-align={align}
+      role="button"
+      tabIndex={-1}
       onMouseDown={handleMouseDown}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleMouseDown(e as unknown as React.MouseEvent<HTMLDivElement>) } }}
       className={cn(className)}
       style={{
         display: 'flex',

@@ -178,7 +178,7 @@ export const ModuleTable: React.FC<ModuleTableProps> = ({
 
                     {/* Col 6: Pinned Row Action + Overflow */}
                     <td>
-                      <div className="module-table__actions" onClick={(e) => e.stopPropagation()}>
+                      <div className="module-table__actions" role="region" tabIndex={-1} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation() } }}>
                         {row.primaryAction && (
                           <button
                             type="button"

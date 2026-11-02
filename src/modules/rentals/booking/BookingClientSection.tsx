@@ -116,6 +116,8 @@ export function BookingClientSection({
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', flexWrap: 'wrap' }}>
           <div
             ref={clientFieldRef as RefObject<HTMLDivElement>}
+            role="group"
+            tabIndex={-1}
             onBlur={(e) => {
               if (addClientOpen) return
               if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setClientFieldTouched(true)

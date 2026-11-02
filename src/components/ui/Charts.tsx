@@ -406,6 +406,7 @@ export function GroupedBars({
           {groups.map((g, gi) => (
             <div key={g.label} style={{ flex: 1, display: 'flex', alignItems: 'flex-end', gap: 2, height: '100%' }}>
               {g.values.map((v, si) => (
+                /* eslint-disable jsx-a11y/no-static-element-interactions -- chart bar hover only, not interactive */
                 <div
                   key={si}
                   title={`${g.label} · ${series[si]} · ${format(v)}`}

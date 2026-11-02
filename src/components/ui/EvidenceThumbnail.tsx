@@ -126,7 +126,11 @@ export const EvidenceThumbnail: React.FC<EvidenceThumbnailProps> = ({
         >
           <div
             style={{ position: 'fixed', inset: 0 }}
+            role="button"
+            tabIndex={-1}
+            aria-label="Close image preview"
             onClick={() => setIsOpen(false)}
+            onKeyDown={(e) => { if (e.key === 'Escape') setIsOpen(false) }}
           />
 
           <div

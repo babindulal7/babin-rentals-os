@@ -86,6 +86,10 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
               >
                 {/* Header row */}
                 <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setExpandedLineId(isExpanded ? null : item.lineId)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpandedLineId(isExpanded ? null : item.lineId) } }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -93,7 +97,6 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
                     cursor: 'pointer',
                     userSelect: 'none',
                   }}
-                  onClick={() => setExpandedLineId(isExpanded ? null : item.lineId)}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <Badge tone="danger" label={item.status === 'hold_conflict' ? 'Hold Conflict' : 'Unavailable'} />

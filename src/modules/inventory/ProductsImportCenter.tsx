@@ -354,6 +354,9 @@ function ProductImportForm({ embedded = false, onDone }: ProductsImportCenterPro
         }
       >
         <div
+          role="region"
+          aria-label="CSV file drop zone"
+          tabIndex={0}
           onDragOver={(e) => {
             e.preventDefault()
             setDragOver(true)
@@ -365,6 +368,7 @@ function ProductImportForm({ embedded = false, onDone }: ProductsImportCenterPro
             const file = e.dataTransfer.files[0]
             if (file) handleFile(file)
           }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.getElementById('csv-file-input')?.click() } }}
           style={{
             border: `2px dashed ${dragOver ? 'var(--nav-active-accent)' : 'var(--border)'}`,
             borderRadius: 'var(--r-card)',

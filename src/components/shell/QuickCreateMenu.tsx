@@ -157,6 +157,7 @@ export function QuickCreateMenu({ role, compact = false }: { role: SystemRole | 
           id={menuId}
           role="menu"
           aria-label="Create actions"
+          tabIndex={0}
           onKeyDown={(event) => {
             const items = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? [])
             const current = items.indexOf(document.activeElement as HTMLButtonElement)

@@ -420,9 +420,11 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
                     role="option"
                     aria-selected={isSelected}
                     aria-disabled={opt.disabled || undefined}
+                    tabIndex={-1}
                     onClick={() => {
                       if (!opt.disabled) handleSelect(opt.value)
                     }}
+                    onKeyDown={(e) => { if (!opt.disabled && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); handleSelect(opt.value) } }}
                     onMouseEnter={() => {
                       if (!opt.disabled) setHighlight(i)
                     }}
