@@ -22,6 +22,7 @@ import { deliveryTypeLabel } from '../../lib/format'
 import { fetchFloorBooking, type FloorBooking } from '../../lib/queries/bookings'
 import { compressEvidencePhoto, DAMAGE_PHOTO_MAX_BYTES, STANDARD_PHOTO_MAX_BYTES } from '../../lib/imageCompression'
 import { uploadEvidencePhoto } from '../../lib/evidenceStorage'
+import { evidenceStageForCategory } from '../../lib/evidenceStage'
 import {
   PHOTOS,
   matchState,
@@ -409,11 +410,11 @@ export default function EvidenceWorkspace() {
     setUploading(true)
     setUploadErrorText(null)
 
-    const targetStage = category === 'Return' ? 'Return' : category === 'Damage' ? 'Damage' : 'Packing'
-    const isDamage = category === 'Damage' || targetStage === 'Damage'
-    const maxBytes = isDamage ? DAMAGE_PHOTO_MAX_BYTES : STANDARD_PHOTO_MAX_BYTES
-
     try {
+      // Never re-label another category as Packing after Pack is sealed.
+      const targetStage = evidenceStageForCategory(toEvidenceCategory(category), floor.deliveryType)
+      const isDamage = category === 'Damage' || targetStage === 'Damage'
+      const maxBytes = isDamage ? DAMAGE_PHOTO_MAX_BYTES : STANDARD_PHOTO_MAX_BYTES
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
         throw new Error('You are offline. This photo was not saved — take it again when you are back online.')
       }

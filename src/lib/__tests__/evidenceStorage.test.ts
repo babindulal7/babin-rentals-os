@@ -6,6 +6,7 @@ const state = vi.hoisted(() => ({
     evidence_files: [] as Array<Record<string, unknown>>,
     evidence_references: [] as Array<Record<string, unknown>>,
     operation_sessions: [] as Array<Record<string, unknown>>,
+    bookings: [] as Array<Record<string, unknown>>,
   },
   fail: '' as string,
   uploads: [] as string[],
@@ -22,6 +23,8 @@ vi.mock('../supabase', () => {
     let staged: Record<string, unknown> | undefined
     const q = {
       select: () => q,
+      order: () => q,
+      limit: () => q,
       eq: (key: string, val: unknown) => { filters[key] = val; return q },
       insert: (payload: Record<string, unknown>) => { staged = payload; return q },
       async maybeSingle() {
@@ -87,6 +90,7 @@ beforeEach(() => {
   state.rows.evidence_files.length = 0
   state.rows.evidence_references.length = 0
   state.rows.operation_sessions = [{ id: SESSION, booking_id: BOOKING, operation: 'Handover', state: 'In Progress' }]
+  state.rows.bookings = [{ id: BOOKING, delivery_type: 'Customer Pickup' }]
   state.fail = ''
   state.uploads.length = 0
   state.signs = 0
@@ -146,6 +150,62 @@ describe('P2B: fail-closed proof-of-delivery evidence persistence', () => {
     await uploadEvidencePhoto(evidenceInput())
     await expect(uploadEvidencePhoto(evidenceInput('image-B'))).rejects.toThrow(/different image bytes/)
     expect(state.uploads).toHaveLength(1)
+  })
+
+  it('creates a Handover session with the stored delivery method after Pack', async () => {
+    state.rows.operation_sessions = []
+    const input = evidenceInput()
+    const result = await uploadEvidencePhoto({
+      ...input,
+      reference: { bookingId: BOOKING, operationStage: 'Pickup' },
+    })
+    expect(result.referenceId).toBeDefined()
+    expect(state.rows.operation_sessions).toHaveLength(1)
+    expect(state.rows.operation_sessions[0]).toMatchObject({
+      operation: 'Handover',
+      booking_id: BOOKING,
+      delivery_method: 'Customer Pickup',
+      state: 'In Progress',
+    })
+    expect(state.rows.evidence_references[0]).toMatchObject({
+      operation_stage: 'Pickup',
+      session_id: state.rows.operation_sessions[0]?.id,
+    })
+  })
+
+  it('refuses a Handover session if the booking delivery method cannot be read', async () => {
+    state.rows.operation_sessions = []
+    state.fail = 'bookings:read'
+    const input = evidenceInput()
+    await expect(uploadEvidencePhoto({
+      ...input,
+      reference: { bookingId: BOOKING, operationStage: 'Pickup' },
+    })).rejects.toThrow(/Could not verify the booking delivery method/)
+    expect(state.rows.operation_sessions).toHaveLength(0)
+    expect(state.uploads).toHaveLength(0)
+  })
+
+  it('does not open another session when the existing-session read fails', async () => {
+    state.fail = 'operation_sessions:read'
+    const input = evidenceInput()
+    await expect(uploadEvidencePhoto({
+      ...input,
+      reference: { bookingId: BOOKING, operationStage: 'Pickup' },
+    })).rejects.toThrow(/Could not verify open Handover session/)
+    expect(state.uploads).toHaveLength(0)
+  })
+
+  it('attaches Inspection evidence to a Return session, not Handover', async () => {
+    state.rows.operation_sessions[0]!.operation = 'Return'
+    const input = evidenceInput()
+    const result = await uploadEvidencePhoto({
+      ...input,
+      reference: { ...input.reference, operationStage: 'Inspection' },
+    })
+    expect(result.referenceId).toBeDefined()
+    expect(state.rows.evidence_references[0]).toMatchObject({
+      operation_stage: 'Inspection', session_id: SESSION, booking_id: BOOKING,
+    })
   })
 
   it('rejects sessions from other bookings before writing anything', async () => {
