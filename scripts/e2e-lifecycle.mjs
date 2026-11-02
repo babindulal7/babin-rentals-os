@@ -5279,12 +5279,35 @@ STEPS.push({
 
 STEPS.push({
   id: 'L46',
-  title: 'Delivery zones CRUD and permission matrix (T4-07, migration 0189)',
+  title: 'Delivery zone permissions and money masking (T4-07, migrations 0189/0205)',
   expect: 'green',
   run: async () => {
     await undone(async () => {
-      // 1. Coordinator can create a delivery zone
-      const zoneId = await as('Coordinator', async () => {
+      // Money-blind roles may list zone names but neither access fee RPC nor base-table fees.
+      await as('Warehouse', async () => {
+        const masked = await one(`select get_delivery_zone_fee('Ring Road')`)
+        assertEq(masked, null, 'Warehouse fee RPC returns no amount')
+        const direct = await q(`select fee_paisa from delivery_zones`)
+        assertEq(direct.rows.length, 0, 'Warehouse cannot directly SELECT delivery zone fee rows')
+      })
+
+      // Coordinator cannot manage fees. No zone can be deleted, including by Manager.
+      await as('Coordinator', async () => {
+        await q('savepoint zone_coordinator_probe')
+        try {
+          await refuses(
+            'Coordinator cannot create a delivery zone',
+            `select create_delivery_zone('Not Allowed', 'No', 100)`,
+            [],
+            /Only Owner, Admin or Manager can create delivery zones/i,
+          )
+        } finally {
+          await q('rollback to savepoint zone_coordinator_probe')
+          await q('release savepoint zone_coordinator_probe')
+        }
+      })
+      // 1. Manager can create a delivery zone
+      const zoneId = await as('Manager', async () => {
         const id = await one(`select create_delivery_zone($1, $2, $3)`, [
           'Test Valley Zone',
           'Test zone for lifecycle',
@@ -5293,18 +5316,56 @@ STEPS.push({
         return id
       })
       assert(zoneId, 'create_delivery_zone returns a zone ID')
+      await as('Manager', async () => {
+        await q('savepoint zone_delete_probe')
+        try {
+          await refuses(
+            'Manager cannot delete zone records',
+            `delete from delivery_zones where id = $1`,
+            [zoneId],
+            /permission denied|insufficient privilege|row level security/i,
+          )
+        } finally {
+          await q('rollback to savepoint zone_delete_probe')
+          await q('release savepoint zone_delete_probe')
+        }
+      })
 
-      // 2. Zone appears in list for all staff roles
+      // 0093 grants ALL by default on newly created tables. DELETE-only
+      // protection is insufficient: TRUNCATE bypasses row-level security.
+      // Validate real database-role grants, and attempt the destructive statement
+      // inside an isolated savepoint so an accidentally allowed truncate cannot
+      // persist even in the lifecycle test's private PGlite database.
+      await as('Manager', async () => {
+        const canTruncate = await one(`select has_table_privilege('authenticated', 'public.delivery_zones', 'TRUNCATE')`)
+        assertEq(canTruncate, false, 'authenticated must not have TRUNCATE privilege on zones')
+        const canAnonTruncate = await one(`select has_table_privilege('anon', 'public.delivery_zones', 'TRUNCATE')`)
+        assertEq(canAnonTruncate, false, 'anon must not have TRUNCATE privilege on zones')
+        await q('savepoint zone_truncate_probe')
+        try {
+          await refuses(
+            'Manager cannot TRUNCATE delivery zones (RLS bypass)',
+            'truncate table public.delivery_zones',
+            [],
+            /permission denied|insufficient privilege/i,
+          )
+        } finally {
+          await q('rollback to savepoint zone_truncate_probe')
+          await q('release savepoint zone_truncate_probe')
+        }
+      })
+
+      // 2. Zone name is visible to floor; fee must be masked
       await as('Warehouse', async () => {
         const zones = await q(`select * from list_delivery_zones(50, 0, true)`)
         const found = zones.rows.find((z) => z.id === zoneId)
         assert(found, 'Warehouse can read active zones')
         assertEq(found.name, 'Test Valley Zone', 'Zone name matches')
-        assertEq(Number(found.fee_paisa), 350000, 'Zone fee in paisa')
+        assertEq(found.fee_paisa, null, 'Warehouse cannot read zone fees')
       })
 
-      // 3. Coordinator can update the zone
-      await as('Coordinator', async () => {
+      // 3. Manager can update the zone
+      await as('Manager', async () => {
         const updated = await one(`select update_delivery_zone($1, $2, $3, $4, $5)`, [
           zoneId,
           'Test Valley Zone Updated',
@@ -5329,7 +5390,8 @@ STEPS.push({
           await refuses(
             'Warehouse cannot create delivery zones',
             `select create_delivery_zone('WH Zone', 'Should fail', 300000)`,
-            /Only Coordinator\+ can create delivery zones/i,
+            [],
+            /Only Owner, Admin or Manager can create delivery zones/i,
           )
         } finally {
           await q('rollback to savepoint wh_create_probe')
@@ -5344,6 +5406,7 @@ STEPS.push({
           await refuses(
             'Client cannot read delivery zones',
             `select * from list_delivery_zones(50, 0, true)`,
+            [],
             /Only staff can list delivery zones/i,
           )
         } finally {
@@ -5359,6 +5422,7 @@ STEPS.push({
           await refuses(
             'anon cannot list delivery zones',
             `select * from list_delivery_zones(50, 0, true)`,
+            [],
             /insufficient_privilege|permission denied/i,
           )
         } finally {
@@ -5367,14 +5431,14 @@ STEPS.push({
         }
       })
 
-      // 8. Deactivate (soft delete) by Coordinator
-      await as('Coordinator', async () => {
+      // 8. Deactivate (soft delete) by Manager
+      await as('Manager', async () => {
         const deactivated = await one(`select deactivate_delivery_zone($1)`, [zoneId])
         assertEq(deactivated, true, 'deactivate_delivery_zone returns true')
       })
 
       // 9. Deactivated zone not in active-only list
-      await as('Coordinator', async () => {
+      await as('Manager', async () => {
         const zones = await q(`select * from list_delivery_zones(50, 0, true)`)
         const found = zones.rows.find((z) => z.id === zoneId)
         assert(!found, 'Deactivated zone excluded from active-only list')
@@ -5389,7 +5453,7 @@ STEPS.push({
       })
 
       // 11. get_delivery_zone_fee works for active zone
-      await as('Coordinator', async () => {
+      await as('Manager', async () => {
         const feeZoneId = await one(`select create_delivery_zone($1, $2, $3)`, [
           'Fee Lookup Zone',
           'For fee lookup test',
@@ -5400,12 +5464,13 @@ STEPS.push({
       })
 
       // 12. get_delivery_zone_fee fails for inactive zone
-      await as('Coordinator', async () => {
+      await as('Manager', async () => {
         await q('savepoint fee_inactive_probe')
         try {
           await refuses(
             'get_delivery_zone_fee fails for inactive zone',
             `select get_delivery_zone_fee('Test Valley Zone Updated')`,
+            [],
             /Zone not found or inactive/i,
           )
         } finally {
@@ -5415,7 +5480,7 @@ STEPS.push({
       })
 
       // 13. Default Kathmandu zones seeded
-      await as('Coordinator', async () => {
+      await as('Manager', async () => {
         const zones = await q(`select name from delivery_zones where is_active = true order by name`)
         const names = zones.rows.map((r) => r.name)
         const expectedZones = ['Bhaktapur', 'Boudha', 'Kirtipur', 'Outside Valley', 'Patan', 'Ring Road', 'Swoyambhu']
