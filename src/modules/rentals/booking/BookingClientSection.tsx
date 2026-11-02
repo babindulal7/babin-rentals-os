@@ -117,7 +117,7 @@ export function BookingClientSection({
           <div
             ref={clientFieldRef as RefObject<HTMLDivElement>}
             role="group"
-            tabIndex={-1}
+            aria-labelledby="new-rental-client-label"
             onBlur={(e) => {
               if (addClientOpen) return
               if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setClientFieldTouched(true)

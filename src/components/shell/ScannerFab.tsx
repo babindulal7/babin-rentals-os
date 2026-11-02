@@ -558,8 +558,15 @@ export default function ScannerFab() {
             marginBottom: 10,
             border: `2px solid ${feedback ? bannerBg : 'transparent'}`
           }}>
-            {/* eslint-disable jsx-a11y/media-has-caption -- live camera feed, no captions available */}
-            <video ref={videoRef} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            {/* Live camera viewfinder: video-only stream with no audio or speech, so there is
+                nothing to caption. Declared muted (as BarcodeScannerModal does) and named. */}
+            <video
+              ref={videoRef}
+              aria-label="Camera viewfinder"
+              muted
+              playsInline
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
             
             {hasTorch && (
               <button

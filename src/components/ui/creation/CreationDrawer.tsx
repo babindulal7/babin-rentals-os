@@ -12,7 +12,7 @@
  * - Form validation (equipment name, category, tracking mode, serials).
  */
 
-import React, { useEffect, useId, useState } from 'react'
+import React, { useCallback, useEffect, useId, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Icon from '../Icon'
 import { Button } from '../Button'
@@ -106,13 +106,24 @@ export function CreationDrawer({
     expAmount
   )
 
-  const handleRequestClose = () => {
+  const handleRequestClose = useCallback(() => {
     if (isDirty) {
       setShowDiscardConfirm(true)
     } else {
       onClose()
     }
-  }
+  }, [isDirty, onClose])
+
+  // Escape asks to close exactly like the scrim and the Close button do (including the
+  // discard prompt). While that prompt is up it owns Escape, so this stands down.
+  useEffect(() => {
+    if (!isOpen || showDiscardConfirm) return undefined
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleRequestClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isOpen, showDiscardConfirm, handleRequestClose])
 
   const handleSaveEquipment = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -223,11 +234,9 @@ export function CreationDrawer({
         justifyContent: 'flex-end',
       }}
     >
-      {/* Backdrop */}
+      {/* Backdrop — pointer-only; keyboard users use Escape or the Close button. */}
       <div
-        role="button"
-        tabIndex={-1}
-        aria-label="Close creation drawer"
+        aria-hidden="true"
         onClick={handleRequestClose}
         onKeyDown={(e) => { if (e.key === 'Escape') handleRequestClose() }}
         style={{

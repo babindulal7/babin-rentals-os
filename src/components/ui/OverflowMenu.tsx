@@ -116,7 +116,7 @@ export function OverflowMenu({ items, ariaLabel = 'More actions', style }: Overf
           ref={menuRef}
           role="menu"
           aria-label={ariaLabel}
-          tabIndex={0}
+          tabIndex={-1}
           onKeyDown={onMenuKeyDown}
           style={{
             // User shell audit: escape clipping cards/tables and fit the viewport.

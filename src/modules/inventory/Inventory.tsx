@@ -2263,7 +2263,7 @@ export default function Inventory() {
                             />
                             </label>
                           </th>
-                          <th style={{ ...th, width: 26 }} />
+                          <th style={{ ...th, width: 26 }}><span className="sr-only">Expand or collapse row</span></th>
                           <th style={th}>
                             <button
                               type="button"

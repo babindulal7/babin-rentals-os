@@ -2192,21 +2192,17 @@ export default function Warehouses() {
       {/* ── create transfer ───────────────────────────────────────────── */}
       {modalOpen && (
         <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Create stock transfer backdrop"
-          tabIndex={0}
-          onClick={() => setModalOpen(false)}
-          onKeyDown={(e) => { if (e.key === 'Escape') setModalOpen(false) }}
+          role="presentation"
+          onClick={(e) => {
+            // Only a press on the scrim itself closes; presses inside the dialog bubble here too.
+            if (e.target === e.currentTarget) setModalOpen(false)
+          }}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'grid', placeItems: 'center', zIndex: 'var(--z-modal)', padding: 'var(--sp-lg)' }}
         >
           <div
             role="dialog"
             aria-modal="true"
             aria-label="Create stock transfer"
-            tabIndex={-1}
-            onClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation() } }}
             style={{
               ...cardStyle,
               background: 'var(--modal)',

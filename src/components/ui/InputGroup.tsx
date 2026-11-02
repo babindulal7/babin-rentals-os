@@ -132,6 +132,7 @@ export const InputGroupAddon = forwardRef<HTMLDivElement, InputGroupAddonProps>(
   return (
     <div
       ref={ref}
+      role="presentation"
       data-slot="input-group-addon"
       data-align={align}
       role="button"

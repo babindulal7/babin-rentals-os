@@ -104,18 +104,25 @@ export interface KpiCardProps {
 }
 
 export function KpiCard({ label, value, subtext, trend, icon, onClick }: KpiCardProps) {
+  // A card is only a control when it has somewhere to go. When it does it is a real
+  // button: focusable, named, and operable with Enter and Space as well as a click.
+  const buttonProps = onClick
+    ? {
+        role: 'button' as const,
+        tabIndex: 0,
+        'aria-label': `${label}: ${value}`,
+        onClick,
+        onKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            onClick()
+          }
+        },
+      }
+    : {}
   return (
     <div
-      onClick={onClick}
-      onKeyDown={onClick ? (event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault()
-          onClick()
-        }
-      } : undefined}
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      aria-label={onClick ? `${label}: ${value}` : undefined}
+      {...buttonProps}
       className={['surface-card', 'kpi-card', onClick ? 'lift' : ''].filter(Boolean).join(' ')}
       style={{
         padding: 'var(--sp-lg)',

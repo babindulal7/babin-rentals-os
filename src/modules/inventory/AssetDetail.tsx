@@ -774,7 +774,7 @@ function AssetDetailView() {
                 <table className="inventory-table operations-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--t-meta)', minWidth: viewport === 'tablet' ? 720 : 900 }}>
                   <thead>
                     <tr style={{ background: 'var(--card2)', borderBottom: '1px solid var(--border)', textAlign: 'left', color: 'var(--muted)' }}>
-                      <th style={{ padding: '8px', width: 44 }} />
+                      <th style={{ padding: '8px', width: 44 }}><span className="sr-only">Expand or collapse unit</span></th>
                       <th style={{ padding: '8px' }}>Asset Tag</th>
                       <th style={{ padding: '8px' }}>Serial Number</th>
                       <th style={{ padding: '8px' }}>Condition</th>

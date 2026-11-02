@@ -409,6 +409,8 @@ export function GroupedBars({
                 /* eslint-disable jsx-a11y/no-static-element-interactions -- chart bar hover only, not interactive */
                 <div
                   key={si}
+                  role="img"
+                  aria-label={`${g.label} · ${series[si]} · ${format(v)}`}
                   title={`${g.label} · ${series[si]} · ${format(v)}`}
                   onMouseEnter={() => setHover([gi, si])}
                   onMouseLeave={() => setHover(null)}
