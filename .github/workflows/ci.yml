@@ -29,9 +29,11 @@ jobs:
     # A self-hosted runner executes whatever the workflow says on Babin's machine,
     # so never run code from a forked pull request.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    # Full mock suite + PGlite + build use ~15m; coverage needs additional time.
+    # Full mock suite + PGlite + build use ~15m on a fast host; coverage needs additional time.
+    # The first self-hosted run spent 22m in `npm ci` and 9m in typecheck and was cancelled
+    # at 35m before the test step, so the limit is 120m. Revert = set it back to 35.
     # Do not weaken or skip any security, lifecycle, build, or coverage gates.
-    timeout-minutes: 35
+    timeout-minutes: 120
 
     steps:
       - name: Checkout
