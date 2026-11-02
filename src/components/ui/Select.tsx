@@ -89,7 +89,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     useEffect(() => {
       if (!isOpen || highlight < 0) return
       document.getElementById(optionId(highlight))?.scrollIntoView({ block: 'nearest' })
-      // eslint-disable-next-line react-hooks/exhaustive-deps
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- optionId is a module-level pure helper; it cannot change between renders
     }, [isOpen, highlight])
 
     /* Measures the trigger and places the floating listbox: below it when

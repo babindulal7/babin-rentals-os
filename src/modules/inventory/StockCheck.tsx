@@ -514,7 +514,7 @@ export default function StockCheck({ embedded = false }: { embedded?: boolean } 
                 fontSize: 'var(--t-ui)',
               }}
             />
-            <Button variant="primary" icon={<Icon name="checklist" size={13} />} disabled={scanBusy} onClick={handleScanSubmit}>
+            <Button type="submit" variant="primary" icon={<Icon name="checklist" size={13} />} disabled={scanBusy}>
               {scanBusy ? 'Checking…' : 'Scan'}
             </Button>
             {/* variant/size explicit since the Phase-1 default unification:

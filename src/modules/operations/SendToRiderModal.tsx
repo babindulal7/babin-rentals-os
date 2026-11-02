@@ -7,6 +7,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Modal } from '../../components/ui/Modal'
 import { Button } from '../../components/ui/Page'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
+import { ErrorBanner } from '../../components/ui/StateViews'
 import Icon from '../../components/ui/Icon'
 import { useAuth } from '../../lib/auth'
 import { newClientUuid } from '../../lib/supabase'
@@ -46,7 +48,15 @@ export function SendToRiderModal({
   const [copied, setCopied] = useState(false)
   const [activeLinks, setActiveLinks] = useState<DeliveryJobLinkRecord[]>([])
   const [revokingId, setRevokingId] = useState<string | null>(null)
+  const [pendingRevokeId, setPendingRevokeId] = useState<string | null>(null)
   const clientUuidRef = useRef<string>(newClientUuid())
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  /* The "Copied!" label is cosmetic; a timer that outlives the modal would set
+     state on an unmounted tree. Clear it on unmount. */
+  useEffect(() => () => {
+    if (copiedTimerRef.current !== null) clearTimeout(copiedTimerRef.current)
+  }, [])
 
   const loadLinks = useCallback(async () => {
     if (!jobId) return
@@ -107,26 +117,28 @@ export function SendToRiderModal({
       await navigator.clipboard.writeText(generatedLink.url)
       setCopied(true)
       showSuccessToast('Link copied to clipboard!')
-      setTimeout(() => setCopied(false), 2000)
+      if (copiedTimerRef.current !== null) clearTimeout(copiedTimerRef.current)
+      copiedTimerRef.current = setTimeout(() => {
+        copiedTimerRef.current = null
+        setCopied(false)
+      }, 2000)
     } catch {
       setError('Could not copy link to clipboard.')
     }
   }
 
   const handleRevoke = async (linkId: string) => {
-    if (!confirm('Are you sure you want to revoke this rider link? The rider will no longer be able to use it.')) {
-      return
-    }
-
     try {
+      setError(null)
       setRevokingId(linkId)
       await revokeRiderLink(linkId, user?.role)
       showSuccessToast('Rider link revoked.')
       await loadLinks()
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Could not revoke link.')
+      setError(err instanceof Error ? err.message : 'Could not revoke link.')
     } finally {
       setRevokingId(null)
+      setPendingRevokeId(null)
     }
   }
 
@@ -143,6 +155,7 @@ export function SendToRiderModal({
     : ''
 
   return (
+    <>
     <Modal isOpen={isOpen} onClose={onClose} title="Send Delivery Job to Hired Rider">
       <div style={{ padding: '0 4px', display: 'flex', flexDirection: 'column', gap: 20 }}>
         {/* Job summary info */}
@@ -166,20 +179,23 @@ export function SendToRiderModal({
         </div>
 
         {error && (
-          <div style={{ padding: 10, backgroundColor: 'var(--st-danger-bg)', color: 'var(--st-danger-fg)', borderRadius: 8, fontSize: 13 }}>
-            {error}
-          </div>
+          <ErrorBanner title="Rider link not updated" message={error} />
         )}
 
         {/* Generate Form */}
         {!generatedLink ? (
           <form onSubmit={handleGenerate} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
+              <label
+                htmlFor="rider-link-name"
+                style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}
+              >
                 Rider Full Name <span style={{ color: 'var(--danger)' }}>*</span>
               </label>
               <input
+                id="rider-link-name"
                 type="text"
+                autoComplete="name"
                 placeholder="e.g. Ramesh Thapa"
                 value={riderName}
                 onChange={(e) => setRiderName(e.target.value)}
@@ -198,11 +214,17 @@ export function SendToRiderModal({
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
+              <label
+                htmlFor="rider-link-phone"
+                style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4 }}
+              >
                 Rider Mobile Phone <span style={{ color: 'var(--danger)' }}>*</span>
               </label>
               <input
+                id="rider-link-phone"
                 type="tel"
+                autoComplete="tel"
+                aria-describedby="rider-link-phone-hint"
                 placeholder="e.g. 98XXXXXXXX"
                 value={riderPhone}
                 onChange={(e) => setRiderPhone(e.target.value)}
@@ -218,7 +240,7 @@ export function SendToRiderModal({
                   fontSize: 14,
                 }}
               />
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+              <div id="rider-link-phone-hint" style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
                 Used to share via WhatsApp/SMS. Rider does not require a staff login account.
               </div>
             </div>
@@ -327,7 +349,7 @@ export function SendToRiderModal({
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => handleRevoke(l.id)}
+                      onClick={() => setPendingRevokeId(l.id)}
                       disabled={revokingId === l.id}
                     >
                       {revokingId === l.id ? 'Revoking…' : 'Revoke'}
@@ -340,5 +362,20 @@ export function SendToRiderModal({
         )}
       </div>
     </Modal>
+
+    <ConfirmDialog
+      isOpen={pendingRevokeId !== null}
+      onClose={() => setPendingRevokeId(null)}
+      onConfirm={() => {
+        if (pendingRevokeId) void handleRevoke(pendingRevokeId)
+      }}
+      title="Revoke rider link?"
+      description="The rider will no longer be able to open this job, and the link cannot be restored. You can issue a new link afterwards."
+      confirmLabel="Revoke link"
+      cancelLabel="Keep link"
+      variant="danger"
+      isSubmitting={revokingId !== null}
+    />
+    </>
   )
 }

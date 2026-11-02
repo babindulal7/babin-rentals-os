@@ -427,6 +427,12 @@ function ProductImportForm({ embedded = false, onDone }: ProductsImportCenterPro
               </thead>
               <tbody>
                 {headers.map((header, index) => (
+                  /*
+                   * Index key, deliberately: a column's identity in this screen
+                   * IS its position. `mapping` is keyed by the same index, so
+                   * two columns both called "Name" must stay distinct rows —
+                   * a header-string key would collide and drop one.
+                   */
                   <tr key={index}>
                     <td style={{ padding: 8, maxWidth: 280, overflowWrap: 'anywhere' }}>{header}</td>
                     <td style={{ padding: 8 }}>

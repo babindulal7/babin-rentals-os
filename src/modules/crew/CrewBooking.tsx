@@ -1109,8 +1109,13 @@ function AlertsList({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      {rows.map((r, i) => {
+      {rows.map((r) => {
         const tone = STATUS[r.severity === 'Critical' ? 'danger' : 'progress']
+        /* `title` repeats (every conflict is "Double booking"), `detail` carries
+           the booking numbers / names, so the pair is the row's real identity.
+           An index key would re-associate a link with a different alert when
+           one clears. */
+        const rowKey = `${r.title}|${r.detail}`
         const body = (
           <>
             <span style={{ width: 26, height: 26, borderRadius: 7, background: tone.bg, color: tone.fg, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
@@ -1125,7 +1130,7 @@ function AlertsList({
 
         if (r.to) {
           return (
-            <Link key={i} to={r.to} className="crew-alert-row" style={ALERT_ROW_LAYOUT}>
+            <Link key={rowKey} to={r.to} className="crew-alert-row" style={ALERT_ROW_LAYOUT}>
               {body}
             </Link>
           )
@@ -1133,7 +1138,7 @@ function AlertsList({
         if (r.onSelect) {
           return (
             <button
-              key={i}
+              key={rowKey}
               type="button"
               onClick={r.onSelect}
               className="press crew-alert-row"
@@ -1144,7 +1149,7 @@ function AlertsList({
           )
         }
         return (
-          <div key={i} className="crew-alert-row" style={ALERT_ROW_LAYOUT}>
+          <div key={rowKey} className="crew-alert-row" style={ALERT_ROW_LAYOUT}>
             {body}
           </div>
         )
