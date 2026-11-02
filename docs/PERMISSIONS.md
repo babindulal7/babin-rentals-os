@@ -328,6 +328,18 @@ model**. Nothing is stored: `product_units_service_v` derives it at read time.
 | `purchase.draft` | C+ · Floor | | ○ |
 | `purchase.approve` | ⛔ **CORRECTED — Owner · Manager.** Admin is refused by both `canApprovePurchase` (`rbac.ts`) and live `auth_can_approve_purchase()`. No Rs 50,000 branch exists anywhere in the capability path; the threshold is aspirational. | `auth_can_approve_purchase()` | ✓ string · ⛔ roles |
 
+### 4.3a Delivery zones (T4-07; migration 0205)
+
+| Capability | Roles | Enforcement |
+|---|---|---|
+| `delivery_zone.read` | All authenticated staff; never Clients | `list_delivery_zones` exposes zone names; `fee_paisa` is NULL for Warehouse, Technician and Driver |
+| `delivery_zone.create` | **Owner · Admin · Manager** | RLS INSERT and SECURITY DEFINER RPC enforce role; Coordinator refused |
+| `delivery_zone.manage` | **Owner · Admin · Manager** | RLS UPDATE and RPC enforce role; DELETE disallowed; deactivation is soft delete |
+| `get_delivery_zone_fee` | Money-authorized staff only | Other staff receive NULL from RPC; frontend refuses floor-role money reads |
+| Direct `delivery_zones` SELECT | Money-authorized staff only | Finance RLS protects the base-table fee column; floor uses the masked RPC |
+
+The above rules are source-only until migration 0205 has been verified on staging and explicitly released. No source merge is evidence that the live database is protected.
+
 ### 4.4 Inventory
 
 | Capability | Roles | Notes | Code |
