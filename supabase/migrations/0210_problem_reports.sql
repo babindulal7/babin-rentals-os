@@ -14,9 +14,14 @@ begin;
 do $$
 begin
     if exists (select 1 from information_schema.tables where table_schema = 'storage' and table_name = 'buckets') then
-        insert into storage.buckets (id, name, public)
-        values ('problem-reports', 'problem-reports', false)
-        on conflict (id) do update set public = false;
+        insert into storage.buckets (id, name)
+        values ('problem-reports', 'problem-reports')
+        on conflict (id) do nothing;
+
+        if exists (select 1 from information_schema.columns
+          where table_schema = 'storage' and table_name = 'buckets' and column_name = 'public') then
+            execute 'update storage.buckets set public = false where id = ''problem-reports''';
+        end if;
     end if;
 end $$;
 
@@ -42,7 +47,7 @@ begin
                 using (
                     bucket_id = 'problem-reports'
                     and (
-                        owner = auth.uid()
+                        (string_to_array(name, '/'))[1] = auth.uid()::text
                         or public.auth_user_role() in ('Owner', 'Admin')
                     )
                 );
@@ -59,7 +64,7 @@ begin
                 with check (
                     bucket_id = 'problem-reports'
                     and public.auth_is_staff()
-                    and (storage.foldername(name))[1] = auth.uid()::text
+                    and (string_to_array(name, '/'))[1] = auth.uid()::text
                 );
         end if;
 
@@ -132,6 +137,8 @@ create index if not exists problem_reports_route_idx on public.problem_reports (
 
 -- 4. Row Level Security
 alter table public.problem_reports enable row level security;
+revoke all on public.problem_reports from public, anon;
+grant select, insert on public.problem_reports to authenticated;
 
 -- SELECT: Staff can read their own reports; Owner/Admin can read all
 drop policy if exists problem_reports_select on public.problem_reports;
@@ -187,6 +194,7 @@ declare
     v_author_name text;
     v_author_role text;
     v_report_id uuid;
+    v_admin record;
 begin
     -- 1. Must be authenticated staff
     if not public.auth_is_staff() then
@@ -269,6 +277,31 @@ begin
         nullif(trim(p_error_reference), '')
     )
     returning id into v_report_id;
+
+    -- 8. Notify Owner and Admin if notification infrastructure is present (T5-01)
+    if exists (select 1 from pg_proc where proname = 'create_notification') then
+        for v_admin in
+            select id from public.users
+            where primary_role in ('Owner', 'Admin')
+              and coalesce(is_active, true) = true
+        loop
+            begin
+                perform public.create_notification(
+                    gen_random_uuid(),
+                    v_admin.id,
+                    'problem_report',
+                    'Problem reported: ' || coalesce(v_author_name, 'Staff'),
+                    left(trim(p_description), 200),
+                    'problem_report',
+                    v_report_id::text,
+                    '/settings/problem-reports',
+                    'Warning'::alert_severity
+                );
+            exception when others then
+                null;
+            end;
+        end loop;
+    end if;
 
     return v_report_id;
 end;
@@ -415,5 +448,22 @@ grant execute on function public.list_problem_reports(int, int, text, uuid, text
 
 revoke execute on function public.update_problem_report_status(uuid, text, text) from public, anon;
 grant execute on function public.update_problem_report_status(uuid, text, text) to authenticated;
+
+-- 11. Verification assertions
+do $verify$
+begin
+  if has_table_privilege('anon', 'public.problem_reports', 'SELECT')
+     or has_table_privilege('anon', 'public.problem_reports', 'INSERT')
+     or has_table_privilege('anon', 'public.problem_reports', 'UPDATE')
+     or has_table_privilege('anon', 'public.problem_reports', 'DELETE')
+     or has_table_privilege('anon', 'public.problem_reports_v', 'SELECT')
+     or has_function_privilege('anon', 'public.create_problem_report(text, uuid, text, text, text, text, text, int, int, text)', 'EXECUTE')
+     or has_function_privilege('anon', 'public.list_problem_reports(int, int, text, uuid, text)', 'EXECUTE')
+     or has_function_privilege('anon', 'public.update_problem_report_status(uuid, text, text)', 'EXECUTE')
+  then
+    raise exception '0210: problem_reports must not expose access or execution to anon';
+  end if;
+end;
+$verify$;
 
 commit;
