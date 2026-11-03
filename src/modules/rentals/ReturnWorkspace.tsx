@@ -670,6 +670,14 @@ export default function ReturnWorkspace({
           persisted.payload.sigWarehouse !== null)
       ) {
         setMarks(persisted.payload.marks || {})
+        // Damaged/lost units need photo evidence before completion. The default
+        // Outstanding filter hides rows already marked Returned, so reveal those
+        // restored rows rather than hiding the controls needed to unblock Return.
+        if (Object.values(persisted.payload.marks || {}).some((mark) =>
+          mark.state === 'Returned' && (mark.condition === 'Damaged' || mark.condition === 'Lost'),
+        )) {
+          setFilter('All')
+        }
         setScanLog(persisted.payload.scanLog || [])
         setSessionNotes(persisted.payload.sessionNotes || '')
         setReturningName(persisted.payload.returningName || '')

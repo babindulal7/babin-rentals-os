@@ -26,8 +26,8 @@ describe('T2-18 evidence category to operation stage', () => {
   })
 
   it('refuses unknown delivery type rather than defaulting to Packing', () => {
-    expect(() => evidenceStageForCategory('Pickup / Delivery', null)).toThrow('not verified')
-    expect(() => evidenceStageForCategory('Pickup / Delivery', 'Delivery')).toThrow('not verified')
+    expect(() => evidenceStageForCategory('Pickup / Delivery', null)).toThrow('could not be verified. Photo was not saved.')
+    expect(() => evidenceStageForCategory('Pickup / Delivery', 'Delivery')).toThrow('could not be verified. Photo was not saved.')
   })
 
   it.each(['Marketing', 'Others'] as const)('refuses unsupported %s without a false stage', (category) => {

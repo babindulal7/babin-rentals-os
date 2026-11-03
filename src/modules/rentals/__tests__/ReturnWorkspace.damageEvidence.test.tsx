@@ -99,6 +99,10 @@ describe('Return damage evidence for individual units (T2-18)', () => {
     ))
     await flush()
 
+    // A restored damaged Return must not hide the required photo buttons
+    // behind the default Outstanding-only checklist filter.
+    const activeFilter = host.querySelector('[role="tablist"][aria-label="Filter return checklist items"] [role="tab"][aria-selected="true"]')
+    expect(activeFilter?.textContent).toContain('All')
     expect(host.querySelector('button[aria-label="Take / Upload Damage Photo for FX3 · unit 1"]')).not.toBeNull()
     expect(host.querySelector('button[aria-label="Take / Upload Damage Photo for FX3 · unit 2"]')).not.toBeNull()
     expect(complete().disabled).toBe(true)
