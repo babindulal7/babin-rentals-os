@@ -9,12 +9,11 @@ import {
   getCalendarFeedTokenStatus,
 } from '../../../actions/delivery'
 import { canCreateCalendarFeedToken, canRevokeCalendarFeedToken, canViewCalendarFeedTokenStatus } from '../../../lib/rbac'
-import type { SystemRole } from '../../../types/database'
 
 export function CalendarFeedControl() {
   const { user } = useAuth()
   const role = user?.role ?? null
-  const { showSuccessToast, showErrorToast } = useToast()
+  const { showSuccessToast } = useToast()
 
   const [hasToken, setHasToken] = useState(false)
   const [createdAt, setCreatedAt] = useState<string | null>(null)
@@ -23,6 +22,7 @@ export function CalendarFeedControl() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [showToken, setShowToken] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const canCreate = canCreateCalendarFeedToken(role)
   const canRevoke = canRevokeCalendarFeedToken(role, user?.id, user?.id)
@@ -32,13 +32,14 @@ export function CalendarFeedControl() {
     if (!canView) return
     setLoading(true)
     try {
-      const response = await getCalendarFeedTokenStatus()
-      const result = response.result
+      const result = await getCalendarFeedTokenStatus({})
       setHasToken(result.hasToken)
       setCreatedAt(result.createdAt)
       setRevokedAt(result.revokedAt)
+      setError(null)
     } catch (err) {
-      console.error('Failed to load calendar feed token status:', err)
+      // Inline, never a toast: a failed read is not a success (UI copy rule).
+      setError(err instanceof Error ? err.message : 'Failed to load calendar feed link')
     } finally {
       setLoading(false)
     }
@@ -52,15 +53,15 @@ export function CalendarFeedControl() {
     if (!canCreate) return
     setSaving(true)
     try {
-      const response = await createCalendarFeedToken()
-      const result = response.result
+      const result = await createCalendarFeedToken({})
       setRawToken(result.rawToken)
       setHasToken(true)
       setRevokedAt(null)
+      setError(null)
       loadStatus()
       showSuccessToast('Calendar feed link created. Copy it now — it won\'t be shown again.')
     } catch (err) {
-      showErrorToast(err instanceof Error ? err.message : 'Failed to create calendar feed link')
+      setError(err instanceof Error ? err.message : 'Failed to create calendar feed link')
     } finally {
       setSaving(false)
     }
@@ -70,16 +71,16 @@ export function CalendarFeedControl() {
     if (!canRevoke || !hasToken) return
     setSaving(true)
     try {
-      const response = await revokeCalendarFeedToken({ userId: user?.id })
-      const result = response.result
+      const result = await revokeCalendarFeedToken(user?.id ? { userId: user.id } : {})
       if (result.revoked) {
         setRawToken(null)
         setHasToken(false)
+        setError(null)
         loadStatus()
         showSuccessToast('Calendar feed link revoked. The old link no longer works.')
       }
     } catch (err) {
-      showErrorToast(err instanceof Error ? err.message : 'Failed to revoke calendar feed link')
+      setError(err instanceof Error ? err.message : 'Failed to revoke calendar feed link')
     } finally {
       setSaving(false)
     }
@@ -92,10 +93,7 @@ export function CalendarFeedControl() {
 
   if (!canView) {
     return (
-      <Card
-        title="Calendar feed"
-        subtitle="Access denied"
-      >
+      <Card title="Calendar feed">
         <p style={{ color: 'var(--text3)', margin: 0 }}>
           Your role cannot view the calendar feed settings.
         </p>
@@ -108,11 +106,18 @@ export function CalendarFeedControl() {
     : null
 
   return (
-    <Card
-      title="Calendar feed"
-      subtitle={hasToken ? 'Link active — add to Google Calendar, Apple Calendar, Outlook, etc.' : 'No active link'}
-    >
+    <Card title="Calendar feed">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+        <p style={{ margin: 0, fontSize: 'var(--t-th)', color: 'var(--text2)' }}>
+          {hasToken ? 'Link active — add to Google Calendar, Apple Calendar, Outlook, etc.' : 'No active link'}
+        </p>
+
+        {error && (
+          <p role="alert" style={{ margin: 0, padding: '8px 12px', borderRadius: 'var(--r-btn)', background: 'var(--danger-bg)', color: 'var(--danger-text)', fontSize: 'var(--t-th)' }}>
+            {error}
+          </p>
+        )}
+
         {loading && (
           <div style={{ padding: '8px', background: 'var(--surface2)', borderRadius: '6px', fontSize: 'var(--t-th)', color: 'var(--text2)' }}>
             Loading…

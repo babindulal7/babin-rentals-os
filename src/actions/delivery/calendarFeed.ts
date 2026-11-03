@@ -1,6 +1,5 @@
 import { createAction } from '../core';
 import { IS_MOCK, supabase } from '../../lib/supabase';
-import type { SystemRole } from '../../types/database';
 
 export type CreateCalendarFeedTokenOutput = {
   rawToken: string;
@@ -12,7 +11,7 @@ export const createCalendarFeedToken = createAction<Record<string, never>, Creat
   permissions: ['calendar_feed.create'],
   implemented: true,
   validate: () => {},
-  execute: async (_input, ctx) => {
+  execute: async (_input, _ctx) => {
     if (IS_MOCK) {
       const rawToken = 'mock_calendar_feed_token_' + Date.now().toString(36)
       return {
@@ -60,7 +59,7 @@ export const revokeCalendarFeedToken = createAction<RevokeCalendarFeedTokenInput
       throw new Error('User ID must be a string');
     }
   },
-  execute: async (input, ctx) => {
+  execute: async (input, _ctx) => {
     if (IS_MOCK) {
       return {
         result: { revoked: true },
