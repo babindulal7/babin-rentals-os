@@ -1,5 +1,54 @@
 # Progress Log
 
+## 2026-11-03 — T1-15 Switch user with name + PIN **MERGED** (lane A)
+
+**Did**
+- Merged `lane-a/T1-15-switch-user-with-name-plus-pin` onto `main` (commit `148ccb93` → `main`):
+  - Migration `0208_staff_pin_four_digits.sql`: PIN validation relaxed from 6 to 4 digits (O-18), weak-PIN rules re-scaled (four identical, four sequential, last-4-of-mobile), transition mode accepts 4 or 6 until rotation
+  - `src/lib/secureStorage.ts`: AES-GCM device key (non-extractable WebCrypto), IndexedDB roster/sessions
+  - `src/lib/deviceSession.ts`: Roster (≤15), encrypted refresh tokens, LIMBO state machine, token rotation on `TOKEN_REFRESHED`
+  - `src/lib/auth.tsx`: `switchUser`, `verifyStaffPin`, roster/limbo/lock integration, audit events
+  - `src/modules/auth/ScreenLock.tsx`: Roster list, 4-digit PIN pad, lockout handling, offline refusal, inline confirmations
+  - `src/components/shell/Header.tsx`: "Remove me" + Owner/Admin "Forget this device" with inline alertdialog
+  - Updated `docs/verification/T1-15_DESIGN.md`, `docs/plans/T1_RELEASE.md` status to `done · merged`
+
+**Ruled**
+- Nothing new. Migration 0208 implements O-18 (4 digits) per Babin's ruling 1 Nov.
+
+**Verified**
+- `npm run typecheck` — 0 errors (on T1-15 files; pre-existing failures in CrewSection/NewRental unrelated)
+- `npm run lint` — 0 errors
+- `npm run check:pglite` — 208/208 applied, 0 failed (migration 0208 verified)
+- `npm run check:lifecycle` — 57/57 green (L47 rider-link, L56–L57 T2-15/T8-06, L50–L54 T8)
+- `npm run check:security` — 18/18 Phase 0 pass; ops grants verified
+- `npm run test:server-contracts` — 58/58 pass
+- `npm run test:partial-return` — 58/58 pass
+- `npm run lint:progress` — passes
+- `node --test scripts/test-receipt.test.mjs` — 11/11 pass
+- `npm run lint:shell` — 873 files
+- `npm run lint:ui-copy` — 0 violations
+- `npm run check:contrast` — 106/106 WCAG AA
+- **Auth tests**: 56/56 pass (screenLock 14, rosterLock 8, login 7, passwordReset 10, deviceSession 17)
+- All gates verified locally per R-35 (`check:pglite` + `check:lifecycle` green in same run)
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 87 / 87 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 72 / 72 (100%) | +0 |
+| Lifecycle | steps green / total | 57 / 57 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 208 files · check:pglite 208/208 applied, 0 failed. check:lifecycle 57/57 green. Suite: 6498/6498 passed. Coverage: 5784/5784 passed (historical).
+Counted by `npm run completion`, not typed. Structural coverage only.
+
+### Remaining
+- T1-15 code is merged. Babin applies migration 0208 to live after backup protocol.
+- Next lane A: T1-16 (Settings switches that save nothing) and T1-17 (Two-step sign-in for money roles).
+- Lane B: T4-05 (shift handover), T4-06 (report a problem), then T6 Nepali.
+- Lane C: T3-14c blocked on O-14/O-17 (accountant).
+
 ## 2026-11-03 — T4-07 delivery zones finished on `main` (build notes 3–4) and main's red gates repaired
 
 **Did**

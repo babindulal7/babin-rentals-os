@@ -260,4 +260,81 @@ describe('useNewRentalPricing', () => {
       host.remove()
     }
   })
+
+  it('automatically applies member plan discounts and updates totals', async () => {
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const root = createRoot(host)
+    let pricingResult!: UseNewRentalPricingResult
+
+    const mockMembership = {
+      level: 'Creator' as const,
+      label: 'Creator Pass',
+      individualDiscountPct: 15,
+      bundleDiscountPct: 7,
+      monthlyBookingLimit: 4,
+      simultaneousRentalLimit: 2,
+      perks: ['Priority Booking'],
+      status: 'Active' as const,
+      benefitsActive: true,
+    }
+
+    function TestComponent({ discountRemoved }: { discountRemoved: boolean }) {
+      pricingResult = useNewRentalPricing({
+        lines: sampleLines,
+        crew: [],
+        days: 2,
+        pickup: '2026-10-10',
+        ret: '2026-10-12',
+        pickupAt: new Date('2026-10-10T09:00:00Z'),
+        clientPickup: true,
+        deliveryChargePaisa: 0 as Paisa,
+        quoteFuelPaisa: 0 as Paisa,
+        returnTransportPaisa: 0,
+        discountPct: 0,
+        manualDiscountReason: '',
+        manualDiscountAuthorizedBy: '',
+        womenDopEligible: false,
+        promoCodeApplied: null,
+        vatOn: true,
+        vatRatePercent: 13,
+        savedDepositPaisa: null,
+        manualDepositOverride: false,
+        manualDepositAmount: '',
+        depositOverrideReason: '',
+        depositAuthorizedBy: '',
+        clientMembership: mockMembership,
+        memberDiscountRemoved: discountRemoved,
+      })
+      return null
+    }
+
+    try {
+      await act(async () => {
+        root.render(<TestComponent discountRemoved={false} />)
+      })
+
+      // Subtotal Rs 10,000, 15% Creator member discount = Rs 1,500 discount
+      // Taxable Rs 8,500, 13% VAT = Rs 1,105, Rental Total = Rs 9,605
+      expect(pricingResult.pricing.discounts.appliedPercent).toBe(15)
+      expect(pricingResult.breakdown.discount).toBe(rupees(1500))
+      expect(pricingResult.breakdown.taxable).toBe(rupees(8500))
+      expect(pricingResult.breakdown.vat).toBe(rupees(1105))
+      expect(pricingResult.breakdown.rentalTotal).toBe(rupees(9605))
+
+      // When staff removes member discount (Law 10)
+      await act(async () => {
+        root.render(<TestComponent discountRemoved={true} />)
+      })
+
+      expect(pricingResult.pricing.discounts.appliedPercent).toBe(0)
+      expect(pricingResult.breakdown.discount).toBe(rupees(0))
+      expect(pricingResult.breakdown.rentalTotal).toBe(rupees(11300))
+    } finally {
+      await act(async () => {
+        root.unmount()
+      })
+      host.remove()
+    }
+  })
 })

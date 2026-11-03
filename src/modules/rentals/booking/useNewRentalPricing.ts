@@ -13,6 +13,7 @@ import {
 } from '../../../lib/productDeposit'
 import { lineAmountPaisa, type Line } from './RentalLineItemsTree'
 import type { CrewLine } from './CrewSection'
+import type { ClientActiveMembership } from '../../../lib/queries/membership'
 
 export interface UseNewRentalPricingOptions {
   lines: Line[]
@@ -42,6 +43,8 @@ export interface UseNewRentalPricingOptions {
   isStaffClient?: boolean | undefined
   staffDiscountPercent?: number | undefined
   staffDiscountRemoved?: boolean | undefined
+  clientMembership?: ClientActiveMembership | null | undefined
+  memberDiscountRemoved?: boolean | undefined
 }
 
 export interface PricingBreakdown {
@@ -109,6 +112,8 @@ export function useNewRentalPricing({
   isStaffClient,
   staffDiscountPercent,
   staffDiscountRemoved,
+  clientMembership,
+  memberDiscountRemoved,
 }: UseNewRentalPricingOptions): UseNewRentalPricingResult {
   const standaloneEquipmentLines = useMemo(
     () => lines.filter((l) => (l.lineType === undefined || l.lineType === 'Equipment') && !l.isIncluded),
@@ -185,6 +190,8 @@ export function useNewRentalPricing({
 
   const pricing = useMemo<PricingPipelineResult>(() => {
     const promo = promoCodeApplied
+    const memberBenefitActive =
+      clientMembership && clientMembership.benefitsActive !== false && !memberDiscountRemoved
     return calculatePricingPipeline({
       equipmentSubtotalPaisa: equipmentPaisa,
       bundleSubtotalPaisa: bundlePaisa,
@@ -203,6 +210,13 @@ export function useNewRentalPricing({
         isStaffClient: Boolean(isStaffClient),
         staffDiscountPercent: staffDiscountPercent ?? 20,
         staffDiscountRemoved: Boolean(staffDiscountRemoved),
+        ...(memberBenefitActive
+          ? {
+              membershipPercent: clientMembership.individualDiscountPct ?? undefined,
+              membershipBundlePercent: clientMembership.bundleDiscountPct ?? undefined,
+              membershipPlanName: clientMembership.level,
+            }
+          : {}),
       },
       vatEnabled: vatOn,
       vatRatePercent,
@@ -231,6 +245,8 @@ export function useNewRentalPricing({
     isStaffClient,
     staffDiscountPercent,
     staffDiscountRemoved,
+    clientMembership,
+    memberDiscountRemoved,
     vatOn,
     vatRatePercent,
     recommendedDepositPaisa,
