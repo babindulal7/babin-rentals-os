@@ -140,45 +140,20 @@ export async function compressEvidencePhoto(
     typeof document.createElement === 'function' &&
     Boolean(document.createElement('canvas')?.getContext)
 
-  // Fallback for non-browser / Node test environments
+  // Evidence must never be a truncated or relabelled binary masquerading as a JPEG.
+  // Without a decoder/canvas we cannot prove image integrity or remove EXIF/GPS.
   if (!hasCanvasSupport) {
-    const outBlob =
-      originalBytes > targetCap
-        ? file.slice(0, targetCap, 'image/jpeg')
-        : isHeic || file.type !== 'image/jpeg'
-          ? new Blob([file], { type: 'image/jpeg' })
-          : file
-
-    const { width, height } = calculateTargetDimensions(2400, 1800, initialMaxDim)
-    return {
-      blob: outBlob,
-      originalBytes,
-      compressedBytes: outBlob.size,
-      width,
-      height,
-      format: 'image/jpeg',
-    }
+    throw new Error('Photo processing is unavailable on this device. The photo was not saved.')
   }
 
   return new Promise<CompressedImageResult>((resolve, reject) => {
     const objectUrl = URL.createObjectURL(file)
     const img = new Image()
 
-    const finishWithFallback = () => {
-      // If browser cannot decode HEIC natively or decodes with error, convert as binary JPEG fallback
-      const outBlob =
-        originalBytes > targetCap
-          ? file.slice(0, targetCap, 'image/jpeg')
-          : new Blob([file], { type: 'image/jpeg' })
-
-      resolve({
-        blob: outBlob,
-        originalBytes,
-        compressedBytes: outBlob.size,
-        width: 1600,
-        height: 1200,
-        format: 'image/jpeg',
-      })
+    const rejectUnsupportedImage = () => {
+      reject(new Error(isHeic
+        ? 'This device cannot decode HEIC photos. Convert the photo to JPEG and try again; nothing was saved.'
+        : 'This device could not encode the photo as JPEG. Nothing was saved.'))
     }
 
     img.onload = async () => {
@@ -225,14 +200,14 @@ export async function compressEvidencePhoto(
           }
         }
 
-        if (bestResult) {
+        if (bestResult && bestResult.blob.size <= targetCap && bestResult.blob.type === 'image/jpeg') {
           resolve(bestResult)
         } else {
-          finishWithFallback()
+          reject(new Error('Photo could not be compressed below the upload limit. Nothing was saved.'))
         }
       } catch (err) {
         if (isHeic) {
-          finishWithFallback()
+          rejectUnsupportedImage()
         } else {
           reject(err instanceof Error ? err : new Error(String(err)))
         }
@@ -242,7 +217,7 @@ export async function compressEvidencePhoto(
     img.onerror = () => {
       URL.revokeObjectURL(objectUrl)
       if (isHeic) {
-        finishWithFallback()
+        rejectUnsupportedImage()
       } else {
         reject(new Error('Selected file could not be decoded as an image'))
       }
