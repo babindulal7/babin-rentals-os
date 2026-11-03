@@ -23,13 +23,15 @@ import { AddDropdownButton } from '../ui/header/PageHeader'
 import { GlobalAddMenu } from '../ui/creation/GlobalAddMenu'
 import { MobileHeaderSearch } from './MobileHeaderSearch'
 import { UnsavedChangesIndicator } from '../ui/header/UnsavedChangesIndicator'
-import { IS_MOCK } from '../../lib/supabase'
+import { supabase, IS_MOCK } from '../../lib/supabase'
+import { getUnreadNotificationCount } from '../../lib/queries/notifications'
 import { resolveSearchOwner, resolvePhoneSearchKind } from './shellLayoutContract'
 import './shell.css'
 
 const HandoverSheet = lazy(() => import('../../modules/auth/HandoverSheet'))
 const InternalNotesDrawer = lazy(() => import('../../modules/notes/InternalNotesDrawer'))
 const ProblemReportModal = lazy(() => import('./ProblemReportModal'))
+const NotificationsDrawer = lazy(() => import('./NotificationsDrawer'))
 
 export interface Crumb {
   label: string
@@ -113,6 +115,10 @@ export default function Header({ crumbs, actions }: HeaderProps) {
   const [problemReportOpen, setProblemReportOpen] = useState(false)
   const [notesVisited, setNotesVisited] = useState(false)
   useEffect(() => { if (notesOpen) setNotesVisited(true) }, [notesOpen])
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [notificationsVisited, setNotificationsVisited] = useState(false)
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0)
+  useEffect(() => { if (notificationsOpen) setNotificationsVisited(true) }, [notificationsOpen])
   const [activeConfirmAction, setActiveConfirmAction] = useState<PageActionItem | null>(null)
   const [showMockDialog, setShowMockDialog] = useState(false)
   const [showForgetDevice, setShowForgetDevice] = useState(false)
@@ -129,13 +135,66 @@ export default function Header({ crumbs, actions }: HeaderProps) {
       }
     }
     const handleOpenNotes = () => setNotesOpen(true)
+    const handleOpenNotifications = () => setNotificationsOpen(true)
     window.addEventListener('keydown', handleKeyDown)
     window.addEventListener('babin:open-notes', handleOpenNotes)
+    window.addEventListener('babin:open-notifications', handleOpenNotifications)
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('babin:open-notes', handleOpenNotes)
+      window.removeEventListener('babin:open-notifications', handleOpenNotifications)
     }
   }, [])
+
+  useEffect(() => {
+    let isMounted = true
+    const refreshCount = async () => {
+      try {
+        const count = await getUnreadNotificationCount(user?.id)
+        if (isMounted) setUnreadNotificationCount(count)
+      } catch {
+        // ignore
+      }
+    }
+
+    void refreshCount()
+
+    // Realtime postgres changes
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    if (!IS_MOCK) {
+      channel = supabase
+        .channel(`realtime:header-notifications:${user?.id ?? 'all'}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'notifications' },
+          () => {
+            void refreshCount()
+          }
+        )
+        .subscribe()
+    }
+
+    // Refresh on focus
+    const handleFocus = () => {
+      void refreshCount()
+    }
+    window.addEventListener('focus', handleFocus)
+
+    // App-internal notifications updated event
+    const handleNotifUpdate = () => {
+      void refreshCount()
+    }
+    window.addEventListener('babin:notifications-updated', handleNotifUpdate)
+
+    return () => {
+      isMounted = false
+      if (channel) {
+        void supabase.removeChannel(channel)
+      }
+      window.removeEventListener('focus', handleFocus)
+      window.removeEventListener('babin:notifications-updated', handleNotifUpdate)
+    }
+  }, [user?.id])
 
   const activeCrumb = crumbs[crumbs.length - 1]?.label || crumbs[0]?.label || ''
 
@@ -343,6 +402,11 @@ export default function Header({ crumbs, actions }: HeaderProps) {
         label: 'Team Internal Notes',
         icon: 'message' as IconName,
         onClick: () => setNotesOpen(true),
+      })
+      items.push({
+        label: unreadNotificationCount > 0 ? `Notifications (${unreadNotificationCount})` : 'Notifications',
+        icon: 'bell' as IconName,
+        onClick: () => setNotificationsOpen(true),
       })
     }
 
@@ -952,6 +1016,49 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             </span>
           )}
 
+          {/* 8. Notification Centre Bell (hidden on phone — overflow menu instead) */}
+          {!isPhone && <button
+            type="button"
+            onClick={() => setNotificationsOpen(true)}
+            aria-label={unreadNotificationCount > 0 ? `Notifications (${unreadNotificationCount} unread)` : 'Notifications'}
+            title={unreadNotificationCount > 0 ? `Notifications (${unreadNotificationCount} unread)` : 'Notifications'}
+            style={{
+              ...iconBtn,
+              position: 'relative',
+            }}
+          >
+            <Icon name="bell" size={17} />
+            {unreadNotificationCount > 0 && (
+              <span
+                className="header-notification-badge"
+                aria-hidden="true"
+                style={{
+                  position: 'absolute',
+                  top: 4,
+                  right: 4,
+                  minWidth: 18,
+                  height: 18,
+                  padding: '0 4px',
+                  borderRadius: 9,
+                  background: 'var(--brand-mark)',
+                  color: '#fff',
+                  fontSize: '0.6875rem',
+                  fontWeight: 700,
+                  fontFamily: 'var(--font-num)',
+                  fontVariantNumeric: 'tabular-nums',
+                  display: 'grid',
+                  placeItems: 'center',
+                  lineHeight: 1,
+                  border: '1.5px solid var(--sidebar)',
+                  pointerEvents: 'none',
+                  boxSizing: 'border-box',
+                }}
+              >
+                {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+              </span>
+            )}
+          </button>}
+
           {/* Mock Mode Icon Indicator (Law 15: >= 44x44px hit area) */}
           {IS_MOCK && !isPhone && (
             <button
@@ -1321,6 +1428,10 @@ export default function Header({ crumbs, actions }: HeaderProps) {
         {(notesOpen || notesVisited) && <InternalNotesDrawer isOpen={notesOpen} onClose={() => setNotesOpen(false)} />}
 
         {problemReportOpen && <ProblemReportModal isOpen={problemReportOpen} onClose={() => setProblemReportOpen(false)} />}
+
+        {(notificationsOpen || notificationsVisited) && (
+          <NotificationsDrawer isOpen={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
+        )}
       </Suspense>
 
       {showMockDialog && (
