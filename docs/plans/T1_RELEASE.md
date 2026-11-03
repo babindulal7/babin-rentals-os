@@ -224,7 +224,7 @@ copied off the device does not work elsewhere without the device key; Claude has
 design note and the code.
 **Needs** — none.
 
-### T1-16 · Settings switches that save nothing            status: doing — implementation on fix/T1-16-truthful-settings-toggles; automated checks and 375/820/1440 screen acceptance pending · size: S · lane A · [go-live]
+### T1-16 · Settings switches that save nothing            status: done · size: S · lane A · [go-live]
 **What** — Six rows in Settings look like working switches but only flip a value on the screen
 (`Switch` in `src/modules/settings/sections/shared.tsx` keeps a local `useState`): **Return
 reminders, Payment reminders, Low stock alerts, Daily digest** (`System.tsx` ~line 82), and

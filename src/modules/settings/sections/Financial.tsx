@@ -3,10 +3,10 @@ import { toRupees } from '../../../lib/money'
 import { FEE_PER_CREW_DAY_PAISA } from '../../../lib/queries/crew'
 import {
   DEPOSIT_BY_CATEGORY_UNAVAILABLE,
-  CANCELLATION_TIERS_UNAVAILABLE,
 } from '../../../lib/queries/settings'
 import type { Dest } from '../../../lib/queries/settings'
 import { NotTrackedYet, SectionCards } from './shared'
+import { CancellationFeeTiersCard } from './CancellationFeeTiersCard'
 import { CreditPolicyCard } from '../../clients/CreditPolicyCard'
 import type { Section } from './shared'
 
@@ -169,6 +169,7 @@ export const FINANCIAL_SECTIONS: Section[] = [
       {
         label: 'Allow overbooking',
         note: 'This device only — replaced by a per-product switch in T2-23. Off by default. When on here, a booked/maintenance chip in Add Item opens an override (sub-rent preferred); no shared or server-side policy is changed.',
+        readOnlyWhy: 'This device only — replaced by the switch on each product (T2-23)',
       },
     ],
   },
@@ -195,9 +196,7 @@ export function FinancialPane() {
           membership_plans; this pane is money-only already (Settings.tsx). */}
       <CreditPolicyCard />
 
-      <Card title="Cancellation fee tiers">
-        <NotTrackedYet title="Notice period → fee %" why={CANCELLATION_TIERS_UNAVAILABLE} />
-      </Card>
+      <CancellationFeeTiersCard />
     </>
   )
 }

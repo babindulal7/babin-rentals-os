@@ -36,7 +36,7 @@ Warehouse → queues, Accounts → payments).
 seat reads none.
 **Needs** — none.
 
-### T5-02 · Notification centre            status: done — awaiting merge (lane-b/T5-02-notification-centre) · size: M · lane B
+### T5-02 · Notification centre            status: done · merged · size: M · lane B
 **What** — A bell in the 64 px header (count badge, never colour alone) opening a drawer: newest
 first, unread bold, tap opens the entity, "Mark all read". Realtime via Supabase subscription;
 falls back to refresh on focus. Same drawer on phone as a bottom sheet.

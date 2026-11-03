@@ -90,7 +90,7 @@ export function CrewAndTransportSection({
 
   const handleUpdateCrewExtras = (
     crewId: string,
-    field: 'overtimeDays' | 'accommodationPaisa' | 'mealsPaisa',
+    field: 'overtimeDays' | 'accommodationPaisa' | 'mealsPaisa' | 'overtimePaisa',
     value: number | Paisa,
   ) => {
     onUpdateCrew(crewId, { [field]: value })

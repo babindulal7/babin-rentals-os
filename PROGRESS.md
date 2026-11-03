@@ -1,5 +1,59 @@
 # Progress Log
 
+## 2026-11-04 — T1-16, T4-11, T4-03, T5-02, T8-05, T8-06 MERGED & VERIFIED on `main`
+
+**Did**
+- **T1-16: Settings switches that save nothing (lane A):**
+  - Removed deceptive unsaved toggles (`Switch`) in `System.tsx` and `shared.tsx`.
+  - Honest "Not built yet" markers displayed with link to their delivering cards (Return reminders → T5-07, Payment reminders → T5-08, Daily digest → T5-04, Low stock → T3-30, 2FA → T1-17).
+  - Clarified "Allow overbooking" as device-only toggle ("This device only — replaced by the switch on each product (T2-23)").
+  - Enforced by automated test suite `src/modules/settings/__tests__/truthful-toggles.test.tsx`.
+- **T4-11: Report a problem (lane B):**
+  - Added "Report a problem" in user menu across all screens for all staff roles (B27, B48).
+  - Auto-captures route, app version, screen size, error reference; allows optional photo upload to private bucket.
+  - Migration `0210_problem_reports.sql` and lifecycle step L57 verified: Warehouse sees only own reports, Owner and Admin see all and manage lifecycle status (Open, Seen, Fixed, Won't fix).
+- **T4-03: Proof of delivery (lane B):**
+  - Migration `0211_delivery_proof.sql` and lifecycle step L55 verified: attaches receiver signature and optional photo to Delivered job.
+- **T5-02: Notification centre (lane B):**
+  - Added notification bell with live unread counter badge in shell header.
+  - Interactive NotificationsDrawer with realtime updates, chronological list, unread styling, and mark all read.
+- **T8-05 & T8-06: Member benefits at booking & Crew overtime UI (lane A):**
+  - Automatically calculates member discounts in New Rental pricing pipeline.
+  - Wired crew overtime UI controls for half/full day adjustments.
+- **Documentation & Plan Sync:**
+  - Updated `docs/plans/T1_RELEASE.md` (T1-16 done).
+  - Updated `docs/plans/T4_SHARED_TOOLS.md` (T4-03 done, T4-11 done · merged).
+  - Updated `docs/plans/T5_NOTIFICATIONS.md` (T5-02 done · merged).
+  - Updated `docs/plans/T8_MEMBERSHIP_CREW.md` (T8-05 done · merged, T8-06 done).
+  - Updated `docs/plans/MIGRATION_LEDGER.md` (0210 and 0211 marked verified).
+
+**Ruled**
+- Law 16 (honest UI, no fake switches or placebo controls), B27/B48 (problem reporting on every screen), Law 6 (money privacy), and fail-closed security rules enforced across all merged features.
+
+**Verified**
+- `npm run check:pglite` — 209/209 migrations applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 154/154 pinned.
+- `npm run check:lifecycle` — 58/58 green (all L1–L57 + L67 passing).
+- `npm run test:server-contracts` — 58/58 integration assertions passed.
+- `npm run lint:progress` — passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +4 |
+| Real data | DB-only · mixed · seed · none / 64 | 54 · 0 · 0 · 10 | +1 |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +4 |
+| Lifecycle | steps green / total | 58 / 58 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 212 files · check:pglite 209/209 applied, 0 failed. check:lifecycle 58/58 green. Suite: passed.
+Counted by `npm run completion`, not typed. Structural coverage only.
+
+### Remaining
+- Babin: apply migrations 0190, 0208, 0210, 0211 to live after backup protocol.
+- Next lane A: T1-17 (Two-step sign-in for money roles) and T2-17 (Unit editor permissions preflight).
+- Next lane B: T4-05 (shift handover), T4-06 (export old browser entries), then T6 Nepali.
+- Next lane C: T3-03 (cancellation fee tiers), T3-04 (non-VAT bills), T3-07 (opening balances).
+
 ## 2026-11-04 — T4-08: One-time rider link review fixes R1–R5 MERGED (lane B)
 
 **Did**

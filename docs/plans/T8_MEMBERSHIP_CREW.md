@@ -70,7 +70,7 @@ the renewal date, keeps history; Coordinator and above (D23).
 **Done when** — a lapsed member renews; history shows both terms.
 **Needs** — T8-03.
 
-### T8-05 · Member benefits at booking            status: done — awaiting merge (lane-a/T8-05-member-benefits-at-booking) · size: M · lane A
+### T8-05 · Member benefits at booking            status: done · merged · size: M · lane A
 **What** — In New Rental, a member's plan discounts apply automatically (individual % on items,
 bundle % on bundles; stacking per the 21 Jul bundle lock), shown as a line staff can see and
 remove (Law 10, no approval). Monthly booking limit and simultaneous rental limit warn at

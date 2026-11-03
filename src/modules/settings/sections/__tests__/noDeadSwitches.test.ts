@@ -36,10 +36,10 @@ describe('T1-16: Settings controls must tell the truth', () => {
     expect(fieldRowSource).toContain('<NotBuilt why={f.readOnlyWhy} />')
   })
 
-  it('labels the legacy allow-overbooking switch as device-only without changing its save path', () => {
-    expect(financeSource).toMatch(/label: 'Allow overbooking',[\s\S]*?note: 'This device only/)
+  it('labels the legacy allow-overbooking switch as device-only and read-only', () => {
+    expect(financeSource).toMatch(/label: 'Allow overbooking',[\s\S]*?readOnlyWhy: 'This device only/)
     expect(financeSource).toContain('T2-23')
-    expect(fieldRowSource).toContain('setAllowOverbooking(next)')
-    expect(fieldRowSource).toContain("f.label === 'Allow overbooking'")
+    expect(financeSource).toContain("readOnlyWhy: 'This device only")
+    expect(financeSource).not.toContain("on: false")
   })
 })

@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0212**
+**Next free number: 0215**
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
@@ -48,8 +48,11 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0207 | T8-06 | crew-overtime-half-full-day | lane-a/T8-06-crew-overtime-half-or-full-day | verified |
 | 0208 | T1-15 | staff-pin-four-digits | lane-a/T1-15-switch-user-with-name-plus-pin | verified |
 | 0209 | T4-10 | calendar-feed-tokens | lane-b/T4-10-jobs-in-phone-calendars | verified |
-| 0210 | T4-11 | problem-reports | lane-b/T4-11-report-a-problem | written |
-| 0211 | T4-03 | delivery-proof | lane-b/T4-03-delivery-proof | written |
+| 0210 | T4-11 | problem-reports | lane-b/T4-11-report-a-problem | verified |
+| 0211 | T4-03 | delivery-proof | lane-b/T4-03-delivery-proof | verified |
+| 0212 | T3-03 | cancellation-fee-tiers | lane-c/T3-03-cancellation-fee-tiers | written |
+| 0213 | T3-04 | non-vat-bills | lane-c/T3-04-non-vat-bills | written |
+| 0214 | T3-07 | opening-balances | lane-c/T3-07-opening-balances | written |
 
 ## Expected migrations (not yet claimed)
 
