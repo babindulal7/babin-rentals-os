@@ -5,6 +5,7 @@
 1. Read [`docs/00_READ_FIRST.md`](docs/00_READ_FIRST.md) — documentation governance and rules of truth.
 2. Read [`PLAN.md`](PLAN.md) — the go-live roadmap: finish line, tracks, calendar, decisions index and how agents work in parallel. Build-ready task cards are in [`docs/plans/`](docs/plans/README.md). *(Re-created 26 Oct 2026 by Babin's ruling — `RULINGS-2026-10-26.md` S4. It is a new plan, not a reconstruction of the pre-October file: laws live in [`docs/PRODUCT_RULES.md`](docs/PRODUCT_RULES.md); open decisions are indexed in `PLAN.md` §4.2 with full text in [`docs/OPEN_DECISIONS.md`](docs/OPEN_DECISIONS.md).)*
 3. Read [`PROGRESS.md`](PROGRESS.md) — what state the build is actually in.
+4. Read [`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md) — one shared policy: which source wins, who may push, the one gate, what "done" means.
 
 **Before ending a session:** update [`PROGRESS.md`](PROGRESS.md) with what changed, **how it
 was verified**, and what is now blocked. Log verification, not intention — "typechecks" and
@@ -31,8 +32,12 @@ permission or named-action gate — it removes *avoidable* steps only. Budgets:
 - **Verify by driving the app**, not by reading the code you just wrote.
 - **Claude in a cloud chat session is read-only on GitHub** (ruled 26 Oct 2026, W74): read,
   review and suggest; never push, open or close PRs, or comment. Deliver plans, prompts and
-  patches as files for Babin. Codex and Gemini build locally; Babin merges.
-- **CI is off** (W75): the local gates in `PLAN.md` §6.4 are the merge gate.
+  patches as files for Babin. Codex and Gemini build locally; Babin merges. A local Claude Code session
+  in an authorized worktree may push a **new branch** and open a **draft PR**, never `main`, never merge
+  (`docs/AGENT_WORKFLOW.md` §3).
+- **CI:** W75 (26 Oct 2026, historical) turned it off because GitHub-hosted minutes were billing-blocked; it now
+  runs on the owner's self-hosted runner. Run the local gates (`npm run gates`, `PLAN.md` §6.4) before you push;
+  a complete CI run on the same head is supporting evidence (`docs/AGENT_WORKFLOW.md` §5–6).
 
 ## The ones most easily broken
 
@@ -52,8 +57,9 @@ Full list in `PLAN.md §0`.
 ## Specs
 
 [`../mds and photos/Babin Rentals OS/`](../mds%20and%20photos/Babin%20Rentals%20OS/) —
-canonical is `00 Getting Started/Foundation Specification.md`. Where anything disagrees with
-Foundation, Foundation wins. Never build from `_Archive/`.
+canonical is `00 Getting Started/Foundation Specification.md`. For domain concepts Foundation is the
+reference; it never overrides `docs/PERMISSIONS.md`, a newer owner ruling or a Law
+(`docs/AGENT_WORKFLOW.md` §2). Never build from `_Archive/`.
 
 ---
 

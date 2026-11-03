@@ -1,5 +1,40 @@
 # Progress Log
 
+## 2026-11-04 — Rule collision audit and one shared agent workflow (docs only; draft PR, nothing merged)
+
+**Did**
+- Audited the tracked rules, the ignored local agent configs (names and sizes only) and what actually runs, against `origin/main` `c5902fbc`: [`docs/audits/RULE_CONFLICT_AUDIT_2026-11-04.md`](docs/audits/RULE_CONFLICT_AUDIT_2026-11-04.md). 11 confirmed collisions or stale instructions (CI off vs running, push rights, four authority orderings, gate lists missing `test:local-api-guards`, duplicate CI runs and a drift-guard conflict in the CI-efficiency branch, card status vs merged, Booqable date, migration numbers, a dangling `opencode.jsonc`, `main` red at `lint:shell`, a stale workflow comment), 3 not conflicts, 3 owner decisions.
+- Added [`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md) (one policy: which source wins by topic, who may push, the one gate bound to a SHA, definition of done) and `scripts/check-rule-consistency.mjs` (read-only guard: the 15 B/N rows mirror, gate list vs docs, links in the new files; not wired into CI).
+- Minimal edits to `AGENTS.md`, `CLAUDE.md` (outside §15), `docs/00_READ_FIRST.md`, `PLAN.md` (three CI lines) and `docs/plans/README.md` (added the missing `test:local-api-guards` gate): historical W74/W75 kept and scoped, current text links to the workflow file.
+
+**Ruled**
+- Nothing. No ruling was made. Text that is not already a cited ruling is labelled **PROPOSAL — NOT YET APPROVED** (the CI-is-on wording; the six-state card model) and takes effect only if Babin merges it.
+
+**Verified**
+- `node scripts/check-rule-consistency.mjs`: 36 checks pass on this tree. Negative control: `main`'s `docs/plans/README.md` and `AGENTS.md` contain 0 mentions of `test:local-api-guards`, so the gate-coverage check fails on `main`'s documents.
+- Evidence behind the audit is local: git history and refs, and the self-hosted runner's own logs (77 jobs: 10 succeeded, 62 failed, 5 cancelled; no push to `main` has completed green). **GitHub's PR list, issues, workflow state, auto-merge and branch protection were not visible** (`gh` not logged in; the private repo returns 404 in the browser), so PR numbers are matched to branches by content and are UNVERIFIED.
+- **Not run:** `npm run gates`, typecheck, lint, tests, build, coverage — no source file changed, so they are not required for this patch and are **not** claimed as passed. `.github/workflows/ci.yml`, `docs/PERMISSIONS.md`, `CLAUDE.md` §15, migrations and `BABIN_ACTIONS.md` are untouched.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 87 / 87 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 72 / 72 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 207 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed. Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **Babin:** approve or change the two proposals (CI wording, card states); merge the owner-rulings branch so the Booqable date and the 2 Nov business figures stop contradicting `main`; decide the cut-over timeline before the 18 Feb 2027 renewal (do not cancel before checking the billing terms).
+- **A one-file fix keeps `main` red:** `src/modules/auth/ScreenLock.tsx:288` still calls `window.confirm`, which fails `lint:shell`; `fix/main-green-20261103` now conflicts with `c5902fbc` on `Header.tsx`.
+- **A separate CI PR** for duplicate push + pull_request runs, which must update `scripts/run-gates.mjs` in the same change (the CI-efficiency branch fails its drift guard today).
+- Card text to fix one by one, with SHAs: T8-01, T0-10, T0-11 (confirmed); T2-07, T2-08, T4-09, T8-06, T4-04, T4-05 (unverified). Ledger: row 0188 and row 0200 status; branch `fix/t4-09-route-branch-hardening-0209` would add a second `0209`.
+
 ## 2026-11-03 — T4-07 delivery zones finished on `main` (build notes 3–4) and main's red gates repaired
 
 **Did**

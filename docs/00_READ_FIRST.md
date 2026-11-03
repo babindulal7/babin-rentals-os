@@ -21,6 +21,8 @@ When any two documents in this repository conflict or disagree, read in this exa
 10. Historical Audits & Plans      — Point-in-time measurements (never current status)
 ```
 
+This is the order in which documents are read and trusted. **Which source decides a given question depends on the question** — a permission, a business choice, an invariant, or what the code does today — and [`AGENT_WORKFLOW.md`](AGENT_WORKFLOW.md) §2 sets that out once, so the other entry files link to it instead of keeping their own ordering. Foundation (9) never overrides a permission, a ruling or a Law.
+
 ---
 
 ## 2. Core Governance Rules
@@ -49,6 +51,7 @@ When an agent or developer encounters an ambiguity, missing requirement, or edge
 
 | Path | Purpose | Authority Level |
 |---|---|---|
+| [`docs/AGENT_WORKFLOW.md`](AGENT_WORKFLOW.md) | One shared agent policy: which source wins, who may push, the one gate, what "done" means (proposals are labelled) | **Active Truth** |
 | [`PLAN.md`](../PLAN.md) | Go-live roadmap: finish line, tracks, calendar, decisions index, parallel-work protocol | **Active Truth** |
 | [`docs/plans/`](plans/README.md) | Build-ready task cards per track (T0–T10), owner checklist, migration ledger | **Active Truth** |
 | [`docs/CURRENT_STATE.md`](CURRENT_STATE.md) | Current phase, runtime gate verification, release readiness | **Active Truth** |
