@@ -784,7 +784,17 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
       const mapped = prefill.lines.map((l) => ({ ...l }) as Line)
       setLines((prev) => (mode === 'fresh' ? mapped : [...prev, ...mapped]))
       if (prefill.crew.length > 0) {
-        const crewMapped = prefill.crew.map((c) => ({ ...c, role: c.role as CrewRole }) as CrewLine)
+        const crewMapped: CrewLine[] = prefill.crew.map((c) => ({
+          crewId: c.crewMemberId ?? `crew-${Math.random().toString(36).slice(2, 9)}`,
+          crewMemberId: c.crewMemberId ?? undefined,
+          name: c.name,
+          role: c.role as CrewRole,
+          phone: c.phone,
+          dayRatePaisa: c.dayRatePaisa,
+          overtimeDays: c.dayRatePaisa > 0 ? c.overtimePaisa / c.dayRatePaisa : 0,
+          accommodationPaisa: c.accommodationPaisa,
+          mealsPaisa: c.mealsPaisa,
+        }))
         setCrew((prev) => (mode === 'fresh' ? crewMapped : [...prev, ...crewMapped]))
       }
       if (prefill.delivery) {

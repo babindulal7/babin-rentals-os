@@ -214,6 +214,7 @@ export const CREW_DATA: CrewAssignment[] = [
     overtimeDays: 0,
     dayRatePaisa: rupees(18000),
     totalCostPaisa: rupees(36000),
+    status: 'Completed',
     cancelled: false,
     payoutStatus: 'Paid',
     isInternalStaff: false,

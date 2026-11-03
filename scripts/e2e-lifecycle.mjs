@@ -5825,6 +5825,137 @@ STEPS.push({
   },
 })
 
+// T4-03: Proof of delivery - evidence photo + recipient signature on the job
+STEPS.push({
+  id: 'L55',
+  title: 'Delivery proof attach: Manager/Coordinator/Warehouse/Driver attach photo and signature to Delivered job; idempotent; role gated; does not change status (0211)',
+  expect: 'green',
+  run: async () => {
+    // A refused statement aborts the surrounding transaction, and as()'s clean-up then rolls the
+    // whole step back, seeded jobs included. Probe every refusal inside a savepoint instead.
+    const refusedAt = async (what, text, params, matcher) => {
+      await db.exec('savepoint proof_probe;')
+      try {
+        return await refuses(what, text, params, matcher)
+      } finally {
+        await db.exec('rollback to savepoint proof_probe;')
+      }
+    }
+    const attach = (jobId, key, photo, signature) =>
+      one(`select delivery_attach_proof($1, $2, $3, $4) as job_id`, [jobId, key, photo, signature])
+
+    await undone(async () => {
+      const J1 = '00000000-0000-4000-8000-00000000b994' // Delivered · Outbound · booking a
+      const J2 = '00000000-0000-4000-8000-00000000b995' // Delivered · Return   · booking a
+      const J3 = '00000000-0000-4000-8000-00000000b996' // Delivered · Outbound · booking b · assigned to Driver
+      const J4 = '00000000-0000-4000-8000-00000000b997' // In Transit · Outbound · booking c
+      await asOwnerOfTheDatabase(async () => {
+        const delivered = (id, bookingId, leg, driver) => q(
+          `insert into delivery_jobs (
+             id, client_uuid, booking_id, branch_id, leg, scheduled_at, status,
+             delivered_at, received_by, assigned_driver_id, created_by, updated_by
+           ) values ($1, gen_random_uuid(), $2, $3, $4, now() - interval '2 hours', 'Delivered',
+                     now() - interval '1 hour', 'Test Receiver', $5, $6, $6)`,
+          [id, bookingId, BRANCH, leg, driver, U.Coordinator],
+        )
+        await delivered(J1, bookingIds.a, 'Outbound', null)
+        await delivered(J2, bookingIds.a, 'Return', null)
+        await delivered(J3, bookingIds.b, 'Outbound', U.Driver)
+        await q(
+          `insert into delivery_jobs (
+             id, client_uuid, booking_id, branch_id, leg, scheduled_at, status,
+             dispatched_at, created_by, updated_by
+           ) values ($1, gen_random_uuid(), $2, $3, 'Outbound', now() + interval '2 hours', 'In Transit',
+                     now() - interval '1 hour', $4, $4)`,
+          [J4, bookingIds.c, BRANCH, U.Coordinator],
+        )
+      })
+
+      // 1. Client cannot attach proof
+      await as('Client', async () => {
+        await refusedAt(
+          'Client cannot attach proof',
+          `select delivery_attach_proof($1, $2, $3, $4)`,
+          [J1, crypto.randomUUID(), 'https://storage/path.jpg', 'https://storage/sig.png'],
+          /role or assignment denied/i,
+        )
+      })
+
+      // 2. Manager attaches photo + signature; the job stays Delivered
+      const receiptKey = crypto.randomUUID()
+      await as('Manager', async () => {
+        assertEq(await attach(J1, receiptKey, 'https://storage/photo.jpg', 'https://storage/signature.png'), J1, 'Manager attached proof')
+      })
+      const after = (await asOwnerOfTheDatabase(() => q(
+        `select status, proof_photo_path, proof_signature_path, proof_attached_by from delivery_jobs where id = $1`, [J1],
+      ))).rows[0]
+      assertEq(after.status, 'Delivered', 'attaching proof does not change the job status')
+      assertEq(after.proof_photo_path, 'https://storage/photo.jpg', 'photo path stored')
+      assertEq(after.proof_signature_path, 'https://storage/signature.png', 'signature path stored')
+      assertEq(after.proof_attached_by, U.Manager, 'attaching actor recorded')
+
+      // 3. Idempotent replay: same key, same payload, same job
+      await as('Manager', async () => {
+        assertEq(await attach(J1, receiptKey, 'https://storage/photo.jpg', 'https://storage/signature.png'), J1, 'replay returns the same job')
+      })
+      const events = Number((await asOwnerOfTheDatabase(() => q(
+        `select count(*) from delivery_job_events where request_key = $1`, [receiptKey],
+      ))).rows[0].count)
+      assertEq(events, 1, 'replay wrote no second event')
+
+      // 4. Same key, different payload is refused
+      await as('Manager', async () => {
+        await refusedAt(
+          'Same key with different proof is refused',
+          `select delivery_attach_proof($1, $2, $3, $4)`,
+          [J1, receiptKey, 'https://storage/different.jpg', 'https://storage/different.png'],
+          /different request/i,
+        )
+      })
+
+      // 5. Warehouse (same branch) attaches a photo
+      await as('Warehouse', async () => {
+        assertEq(await attach(J2, crypto.randomUUID(), 'https://storage/wh_photo.jpg', null), J2, 'Warehouse attached a photo')
+      })
+
+      // 6. The assigned Driver attaches a signature; a Driver who is not assigned cannot
+      await as('Driver', async () => {
+        assertEq(await attach(J3, crypto.randomUUID(), null, 'https://storage/driver_sig.png'), J3, 'assigned Driver attached a signature')
+        await refusedAt(
+          'a Driver who is not assigned cannot attach proof',
+          `select delivery_attach_proof($1, $2, $3, $4)`,
+          [J1, crypto.randomUUID(), 'https://storage/x.jpg', null],
+          /role or assignment denied/i,
+        )
+      })
+
+      // 7. Proof can only be attached to a Delivered job
+      await as('Manager', async () => {
+        await refusedAt(
+          'cannot attach proof to a job that is not Delivered',
+          `select delivery_attach_proof($1, $2, $3, $4)`,
+          [J4, crypto.randomUUID(), 'https://storage/path.jpg', null],
+          /Delivered/i,
+        )
+      })
+
+      // 8. At least one artifact (photo or signature) is required
+      await as('Manager', async () => {
+        await refusedAt(
+          'an empty proof is refused',
+          `select delivery_attach_proof($1, $2, null, null)`,
+          [J1, crypto.randomUUID()],
+          /At least one proof artifact/i,
+        )
+      })
+
+      // 9. anon cannot execute it
+      const anonExec = await one(`select has_function_privilege('anon', 'public.delivery_attach_proof(uuid, uuid, text, text, text)', 'EXECUTE')`)
+      assertEq(anonExec, false, 'delivery_attach_proof is NOT executable by anon')
+    })
+  },
+})
+
 /* ΓöÇΓöÇ Run ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
 await seed()

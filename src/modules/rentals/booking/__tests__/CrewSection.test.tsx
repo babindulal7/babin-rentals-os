@@ -215,7 +215,7 @@ describe('CrewSection', () => {
         phone: '9841234567',
         days: 3,
         dayRatePaisa: rupees(5000),
-        overtimePaisa: rupees(0),
+        overtimeDays: 0,
         accommodationPaisa: rupees(0),
         mealsPaisa: rupees(0),
       },

@@ -411,6 +411,10 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'delivery_zone.manage':
       return rbac.canManageDeliveryZones(ctx.role);
 
+    // Delivery proof (T4-03, migration 0211)
+    case 'delivery.proof':
+      return rbac.canAttachDeliveryProof(ctx.role);
+
     // Problem reports (T4-11, migration 0210)
     case 'problem_report.create':
       return rbac.canCreateProblemReport(ctx.role);

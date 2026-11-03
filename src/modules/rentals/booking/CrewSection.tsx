@@ -21,7 +21,6 @@ export interface CrewLine {
   overtimeDays: number
   accommodationPaisa: Paisa
   mealsPaisa: Paisa
-  overtimeDays?: number | undefined
   shootDayOvertimes?: Record<number, 0 | 0.5 | 1.0> | undefined
   overtimeApprovedBy?: string | undefined
 }
@@ -111,8 +110,8 @@ export function CrewSection({
       const sum = Object.values(memberMap).reduce<number>((acc, f) => acc + f, 0)
       if (sum > 0) return sum
     }
-    if (c.overtimePaisa > 0 && c.dayRatePaisa > 0) {
-      return Math.round((c.overtimePaisa / c.dayRatePaisa) * 10) / 10
+    if ((c.overtimeDays ?? 0) > 0) {
+      return c.overtimeDays
     }
     return 0
   }
@@ -129,14 +128,12 @@ export function CrewSection({
     }))
 
     const totalDays = Object.values(updatedMemberMap).reduce<number>((sum, f) => sum + f, 0)
-    const newOvertimePaisa = Math.round(totalDays * c.dayRatePaisa) as Paisa
 
-    onUpdateCrewExtras(c.crewId, 'overtimePaisa', newOvertimePaisa)
+    onUpdateCrewExtras(c.crewId, 'overtimeDays', totalDays)
     if (onUpdateCrewLine) {
       onUpdateCrewLine(c.crewId, {
         overtimeDays: totalDays,
         shootDayOvertimes: updatedMemberMap,
-        overtimePaisa: newOvertimePaisa,
       })
     }
   }
@@ -309,7 +306,7 @@ export function CrewSection({
                                 </span>
                                 {getEffectiveOvertimeDays(c) > 0 && (
                                   <span style={{ fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--primary)' }}>
-                                    +{getEffectiveOvertimeDays(c)} day{getEffectiveOvertimeDays(c) === 1 ? '' : 's'} ({formatMoney(c.overtimePaisa)})
+                                    +{getEffectiveOvertimeDays(c)} day{getEffectiveOvertimeDays(c) === 1 ? '' : 's'} ({formatMoney((Math.round(getEffectiveOvertimeDays(c) * c.dayRatePaisa)) as Paisa)})
                                   </span>
                                 )}
                               </div>

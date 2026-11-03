@@ -351,6 +351,7 @@ export function useNewRentalSubmit({
     },
     [
       client,
+      clientMembership,
       pickupAt,
       returnAt,
       lines,
@@ -466,7 +467,6 @@ export function useNewRentalSubmit({
     saveState,
     dispatchContext,
     client,
-    clientMembership?.perks,
     pickupAt,
     returnAt,
     draftId,

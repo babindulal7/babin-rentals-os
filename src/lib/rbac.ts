@@ -573,6 +573,15 @@ export function canReset(role: SystemRole): boolean {
   return canPerformOperations(role) // QC / cleaning is floor + technician work
 }
 
+/**
+ * T4-03: Attach proof of delivery (evidence photo + recipient signature).
+ * Allowed for Manager/Coordinator/Warehouse/Driver at the branch, plus Owner/Admin.
+ * Technician is NOT permitted — proof attachment is a custodial completion action.
+ */
+export function canAttachDeliveryProof(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator' || role === 'Warehouse' || role === 'Driver'
+}
+
 export function canPerformOp(role: SystemRole, op: OperationName): boolean {
   switch (op) {
     case 'pack':
