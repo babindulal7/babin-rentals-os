@@ -26,6 +26,7 @@ vi.mock('../supabase', () => {
       order: () => q,
       limit: () => q,
       eq: (key: string, val: unknown) => { filters[key] = val; return q },
+      is: (key: string, val: null) => { filters[key] = val; return q },
       insert: (payload: Record<string, unknown>) => { staged = payload; return q },
       async maybeSingle() {
         if (state.fail === `${tableName}:read`) return { data: null, error: { message: 'read denied' } }
@@ -171,6 +172,50 @@ describe('P2B: fail-closed proof-of-delivery evidence persistence', () => {
       operation_stage: 'Damage',
     })
     expect(state.uploads).toHaveLength(1)
+  })
+
+  it('does not mistake a unit-specific Damage link for a booking-level link of identical bytes', async () => {
+    state.rows.operation_sessions = []
+    const itemId = '00000000-0000-4000-8000-000000000005'
+    const input = {
+      ...evidenceInput(),
+      category: 'Damage' as const,
+      reference: { bookingId: BOOKING, operationStage: 'Damage' as const, itemId },
+    }
+
+    const unit = await uploadEvidencePhoto(input)
+    const booking = await uploadEvidencePhoto({
+      ...input,
+      reference: { bookingId: BOOKING, operationStage: 'Damage' as const },
+    })
+
+    expect(booking.id).toBe(unit.id) // Same file bytes are de-duplicated.
+    expect(booking.referenceId).not.toBe(unit.referenceId)
+    expect(state.uploads).toHaveLength(1)
+    expect(state.rows.evidence_references).toHaveLength(2)
+    expect(state.rows.evidence_references.map((row) => row.item_id)).toEqual([itemId, null])
+
+    const bookingRetry = await uploadEvidencePhoto({
+      ...input,
+      reference: { bookingId: BOOKING, operationStage: 'Damage' as const },
+    })
+    expect(bookingRetry.referenceId).toBe(booking.referenceId)
+    expect(state.rows.evidence_references).toHaveLength(2)
+  })
+
+  it('does not mistake a session-bound link for session-free Damage evidence', async () => {
+    const input = evidenceInput()
+    await uploadEvidencePhoto(input)
+    const unitId = '00000000-0000-4000-8000-000000000005'
+    const damage = await uploadEvidencePhoto({
+      ...input,
+      category: 'Damage',
+      reference: { bookingId: BOOKING, operationStage: 'Damage', itemId: unitId },
+    })
+    expect(state.rows.evidence_references).toHaveLength(2)
+    expect(state.rows.evidence_references[1]).toMatchObject({
+      id: damage.referenceId, session_id: null, item_id: unitId, operation_stage: 'Damage',
+    })
   })
 
   it('refuses to reuse a retry UUID with changed image bytes', async () => {
