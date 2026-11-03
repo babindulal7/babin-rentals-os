@@ -5636,6 +5636,195 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L57',
+  title: 'Report a problem: staff submit with auto context, idempotency via client_uuid; Warehouse sees only own reports; Owner sees all and manages status with reason (T4-11, B27, B48)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      const clientUuidW = crypto.randomUUID()
+      const clientUuidC = crypto.randomUUID()
+      let reportIdW = null
+      let reportIdC = null
+
+      // 1. Warehouse submits problem report with auto-context and client_uuid
+      await as('Warehouse', async () => {
+        reportIdW = await one(
+          `select create_problem_report(
+             $1, $2, null, $3, $4, $5, $6, $7, $8, $9
+           )`,
+          [
+            'Barcode scanner reader unresponsive in Boudha shop',
+            clientUuidW,
+            '/operations',
+            'v3.0.0',
+            'Warehouse',
+            'tablet',
+            820,
+            1180,
+            'ERR-20261103-W1',
+          ],
+        )
+        assert(reportIdW, 'Warehouse problem report created')
+
+        // Idempotency: re-submitting with same client_uuid returns existing id (Law 8)
+        const replayedId = await one(
+          `select create_problem_report(
+             $1, $2, null, $3, $4, $5, $6, $7, $8, $9
+           )`,
+          [
+            'Different text replay attempt',
+            clientUuidW,
+            '/operations',
+            'v3.0.0',
+            'Warehouse',
+            'tablet',
+            820,
+            1180,
+            'ERR-20261103-W1',
+          ],
+        )
+        assertEq(replayedId, reportIdW, 'replaying same client_uuid returns existing report id')
+      })
+
+      // 2. Coordinator submits another problem report
+      await as('Coordinator', async () => {
+        reportIdC = await one(
+          `select create_problem_report(
+             $1, $2, null, $3, $4, $5, $6, $7, $8, $9
+           )`,
+          [
+            'Tax rounding mismatch on draft invoice preview',
+            clientUuidC,
+            '/finance/invoices',
+            'v3.0.0',
+            'Coordinator',
+            'desktop',
+            1440,
+            900,
+            'ERR-20261103-C1',
+          ],
+        )
+        assert(reportIdC, 'Coordinator problem report created')
+      })
+
+      // 3. RLS Isolation: Warehouse sees ONLY their own reports
+      await as('Warehouse', async () => {
+        const rows = (await q(`select id from problem_reports`)).rows
+        const ids = rows.map((r) => r.id)
+        assert(ids.includes(reportIdW), 'Warehouse sees own report')
+        assert(!ids.includes(reportIdC), 'Warehouse CANNOT see Coordinator report (RLS enforced)')
+
+        const listRows = (await q(`select id from list_problem_reports()`)).rows
+        const listIds = listRows.map((r) => r.id)
+        assert(listIds.includes(reportIdW), 'Warehouse list_problem_reports includes own report')
+        assert(!listIds.includes(reportIdC), 'Warehouse list_problem_reports excludes other reports')
+      })
+
+      // 4. Coordinator sees only their own report
+      await as('Coordinator', async () => {
+        const rows = (await q(`select id from problem_reports`)).rows
+        const ids = rows.map((r) => r.id)
+        assert(ids.includes(reportIdC), 'Coordinator sees own report')
+        assert(!ids.includes(reportIdW), 'Coordinator cannot see Warehouse report')
+      })
+
+      // 5. Owner sees ALL reports
+      await as('Owner', async () => {
+        const rows = (await q(`select id from problem_reports`)).rows
+        const ids = rows.map((r) => r.id)
+        assert(ids.includes(reportIdW), 'Owner sees Warehouse report')
+        assert(ids.includes(reportIdC), 'Owner sees Coordinator report')
+      })
+
+      // 6. Client cannot access problem_reports
+      await as('Client', async () => {
+        const rows = (await q(`select id from problem_reports`)).rows
+        assertEq(rows.length, 0, 'Client sees zero problem reports (RLS)')
+
+        await q('savepoint pr_client_create')
+        try {
+          await q(
+            `select create_problem_report('Client trying to submit report', gen_random_uuid())`,
+          )
+          throw new Error('Expected create_problem_report to refuse Client')
+        } catch (e) {
+          if (!/insufficient_privilege|Only staff/i.test(e.message)) throw e
+          await q('rollback to savepoint pr_client_create')
+        }
+      })
+
+      // 7. Status update authorization: Warehouse cannot update status
+      await as('Warehouse', async () => {
+        await q('savepoint pr_wh_update')
+        try {
+          await q(
+            `select update_problem_report_status($1, 'fixed', 'Fixed by warehouse staff')`,
+            [reportIdW],
+          )
+          throw new Error('Expected update_problem_report_status to refuse Warehouse')
+        } catch (e) {
+          if (!/insufficient_privilege|Only Owner or Admin/i.test(e.message)) throw e
+          await q('rollback to savepoint pr_wh_update')
+        }
+      })
+
+      // 8. Owner status updates with reason validation (>= 10 chars)
+      await as('Owner', async () => {
+        // Reason too short
+        await q('savepoint pr_short_reason')
+        try {
+          await q(
+            `select update_problem_report_status($1, 'fixed', 'short')`,
+            [reportIdW],
+          )
+          throw new Error('Expected short reason to be rejected')
+        } catch (e) {
+          if (!/at least 10 characters/i.test(e.message)) throw e
+          await q('rollback to savepoint pr_short_reason')
+        }
+
+        // Valid status update
+        const updated = await one(
+          `select update_problem_report_status($1, 'fixed', 'Replaced scanner cable and tested')`,
+          [reportIdW],
+        )
+        assertEq(updated, true, 'status update succeeded for Owner')
+
+        const row = (await q(`select status, status_changed_by, status_change_reason from problem_reports where id = $1`, [reportIdW])).rows[0]
+        assertEq(row.status, 'fixed', 'status changed to fixed')
+        assertEq(row.status_changed_by, U.Owner, 'status_changed_by recorded as Owner')
+        assertEq(row.status_change_reason, 'Replaced scanner cable and tested', 'status_change_reason recorded')
+      })
+
+      // 9. Route constraint security tests (N-8)
+      await as('Warehouse', async () => {
+        await q('savepoint pr_bad_route_query')
+        try {
+          await q(
+            `select create_problem_report('Route test query string', gen_random_uuid(), null, '/operations?foo=bar')`,
+          )
+          throw new Error('Expected route with query string to be rejected')
+        } catch (e) {
+          if (!/query string/i.test(e.message)) throw e
+          await q('rollback to savepoint pr_bad_route_query')
+        }
+
+        await q('savepoint pr_bad_route_token')
+        try {
+          await q(
+            `select create_problem_report('Route test token', gen_random_uuid(), null, '/auth/token-page')`,
+          )
+          throw new Error('Expected route with token to be rejected')
+        } catch (e) {
+          if (!/sensitive parameters/i.test(e.message)) throw e
+          await q('rollback to savepoint pr_bad_route_token')
+        }
+      })
+    })
+  },
+})
+
 /* ΓöÇΓöÇ Run ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
 await seed()

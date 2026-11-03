@@ -109,7 +109,7 @@ export default function ProblemReportModal({ isOpen, onClose }: ProblemReportMod
         deviceCategory: viewport,
         viewportWidth: typeof window !== 'undefined' ? window.innerWidth : undefined,
         viewportHeight: typeof window !== 'undefined' ? window.innerHeight : undefined,
-        errorReference: typeof window !== 'undefined' ? (window as any).__LAST_ERROR_REF__ : undefined,
+        errorReference: typeof window !== 'undefined' ? (window as unknown as { __LAST_ERROR_REF__?: string }).__LAST_ERROR_REF__ : undefined,
       }
 
       const { reportId: _reportId } = await createProblemReport(input, {
@@ -166,6 +166,29 @@ export default function ProblemReportModal({ isOpen, onClose }: ProblemReportMod
       subtitle="Describe what went wrong. We'll attach the current screen, version, and device info automatically."
       size="md"
       sheet={viewport !== 'desktop'}
+      footer={
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--sp-sm)', width: '100%' }}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={submitting}
+            style={{ minHeight: 44 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            icon="send"
+            onClick={handleSubmit}
+            disabled={submitting || !description.trim()}
+            style={{ minHeight: 44 }}
+          >
+            {submitting ? 'Sending…' : 'Send'}
+          </Button>
+        </div>
+      }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-lg)' }}>
         {/* Description */}
@@ -295,7 +318,7 @@ export default function ProblemReportModal({ isOpen, onClose }: ProblemReportMod
             <div><strong>Your role:</strong> {user?.role}</div>
             <div><strong>Device:</strong> {deviceLabel} ({pointerLabel})</div>
             <div><strong>Viewport:</strong> {typeof window !== 'undefined' ? `${window.innerWidth}×${window.innerHeight}` : '—'}</div>
-            <div><strong>Error ref:</strong> {(typeof window !== 'undefined' && (window as any).__LAST_ERROR_REF__) || 'None'}</div>
+            <div><strong>Error ref:</strong> {(typeof window !== 'undefined' && (window as unknown as { __LAST_ERROR_REF__?: string }).__LAST_ERROR_REF__) || 'None'}</div>
             <div><strong>Submitted by:</strong> {user?.name} ({user?.id?.slice(0, 8)}…)</div>
           </div>
         </details>
@@ -304,7 +327,7 @@ export default function ProblemReportModal({ isOpen, onClose }: ProblemReportMod
         {submitStatus === 'success' && (
           <div role="status" style={{ padding: 'var(--sp-sm)', background: 'var(--success-soft)', border: '1px solid var(--success)', borderRadius: 'var(--r-md)', color: 'var(--success-text)', display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)' }}>
             <Icon name="check" size={20} />
-            <span>Problem report sent — thank you!</span>
+            <span>Sent — thank you</span>
           </div>
         )}
         {submitStatus === 'error' && (

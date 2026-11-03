@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import Icon from '../../components/ui/Icon'
+import type { IconName } from '../../components/ui/Icon'
 import { PageHeader, KpiStrip, cardStyle } from '../../components/ui/Page'
 import { Button } from '../../components/ui/Button'
 import { DataTableShell } from '../../components/ui/DataTable'
@@ -12,10 +13,13 @@ import { useList } from '../../lib/queries/useList'
 import type { ListFilters } from '../../lib/queries/listQuery'
 import {
   listProblemReports,
+  getProblemReportPhotoUrl,
   PROBLEM_REPORT_STATUSES,
   PROBLEM_REPORT_STATUS_LABELS,
   type ProblemReportListRow,
 } from '../../lib/queries/problemReports'
+import { updateProblemReportStatus, type UpdateProblemReportStatusInput } from '../../actions/problemReports/updateProblemReportStatus'
+import { useToast } from '../../components/ui/Toast'
 
 /**
  * **Problem Reports — Admin review screen (T4-11).**
@@ -86,11 +90,30 @@ export default function ProblemReports() {
   }, [pageCount, page])
 
   const canManageStatus = user?.role === 'Owner' || user?.role === 'Admin'
+  const { showSuccessToast } = useToast()
+  const [actionError, setActionError] = useState<string | null>(null)
 
-  const handleStatusChange = async (_reportId: string, _newStatus: string, _reason: string) => {
-    // This would call the update_problem_report_status RPC
-    // For now, we'll refresh the list
-    list.refetch()
+  const handleStatusChange = async (reportId: string, newStatus: string, reason: string) => {
+    setActionError(null)
+    try {
+      await updateProblemReportStatus(
+        {
+          reportId,
+          status: newStatus as UpdateProblemReportStatusInput['status'],
+          reason: reason || undefined,
+        },
+        {
+          userId: user?.id ?? '',
+          role: user?.role ?? 'Owner',
+          isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
+        }
+      )
+      showSuccessToast('Status updated')
+      list.refetch()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to update problem report status'
+      setActionError(msg)
+    }
   }
 
   const clearFilters = useCallback(() => {
@@ -107,6 +130,13 @@ export default function ProblemReports() {
         title="Problem Reports"
         description="Reports submitted by staff from any page. Owner/Admin can review all and update status."
       />
+
+      {actionError && (
+        <div role="alert" style={{ padding: 'var(--sp-sm)', background: 'var(--danger-soft)', border: '1px solid var(--danger)', borderRadius: 'var(--r-md)', color: 'var(--danger-text)', display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)' }}>
+          <Icon name="alert_circle" size={16} />
+          <span>{actionError}</span>
+        </div>
+      )}
 
       {!restriction.restricted && (
         <>
@@ -346,15 +376,15 @@ function WhenCell({ iso }: { iso: string }) {
   )
 }
 
-const STATUS_TONES: Record<string, { bg: string; fg: string; icon: string }> = {
-  open: { bg: 'var(--primary-soft)', fg: 'var(--primary-text)', icon: 'circle' },
+const STATUS_TONES: Record<string, { bg: string; fg: string; icon: IconName }> = {
+  open: { bg: 'var(--primary-soft)', fg: 'var(--primary-text)', icon: 'dot' },
   seen: { bg: 'var(--progress-soft)', fg: 'var(--progress-text)', icon: 'eye' },
-  fixed: { bg: 'var(--success-soft)', fg: 'var(--success-text)', icon: 'check_circle' },
-  wont_fix: { bg: 'var(--neutral-soft)', fg: 'var(--text2)', icon: 'block' },
+  fixed: { bg: 'var(--success-soft)', fg: 'var(--success-text)', icon: 'check' },
+  wont_fix: { bg: 'var(--neutral-soft)', fg: 'var(--text2)', icon: 'x' },
 }
 
 function StatusPill({ status }: { status: string }) {
-  const tone = STATUS_TONES[status] ?? { bg: 'var(--card2)', fg: 'var(--text2)', icon: 'help' }
+  const tone = STATUS_TONES[status] ?? { bg: 'var(--card2)', fg: 'var(--text2)', icon: 'info' }
   const label = PROBLEM_REPORT_STATUS_LABELS[status as keyof typeof PROBLEM_REPORT_STATUS_LABELS] ?? status
   return (
     <span
@@ -372,7 +402,7 @@ function StatusPill({ status }: { status: string }) {
         whiteSpace: 'nowrap',
       }}
     >
-      <Icon name={tone.icon as any} size={11} />
+      <Icon name={tone.icon} size={11} />
       {label}
     </span>
   )
@@ -436,6 +466,20 @@ function ProblemReportDetail({
 }) {
   const [newStatus, setNewStatus] = useState<string>(row.status)
   const [reason, setReason] = useState<string>('')
+  const [photoLoading, setPhotoLoading] = useState(false)
+
+  const handleViewPhoto = async () => {
+    if (!row.photo_path) return
+    setPhotoLoading(true)
+    try {
+      const url = await getProblemReportPhotoUrl(row.photo_path)
+      if (url && typeof window !== 'undefined') {
+        window.open(url, '_blank', 'noopener,noreferrer')
+      }
+    } finally {
+      setPhotoLoading(false)
+    }
+  }
 
   if (!canManageStatus) {
     return (
@@ -471,7 +515,23 @@ function ProblemReportDetail({
             </dt>
             <dd style={{ margin: 0 }}>
               {row.photo_path ? (
-                <a href="#" style={{ color: 'var(--link)' }}>View photo</a>
+                <button
+                  type="button"
+                  onClick={handleViewPhoto}
+                  disabled={photoLoading}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    color: 'var(--link)',
+                    cursor: photoLoading ? 'wait' : 'pointer',
+                    fontSize: 'inherit',
+                    textDecoration: 'underline',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  {photoLoading ? 'Opening…' : 'View photo'}
+                </button>
               ) : (
                 <span style={{ color: 'var(--muted)' }}>No photo attached</span>
               )}
@@ -498,7 +558,6 @@ function ProblemReportDetail({
 
   const handleSubmit = () => {
     if (!reason.trim() || reason.trim().length < 10) {
-      alert('Reason must be at least 10 characters')
       return
     }
     onStatusChange(newStatus, reason.trim())
@@ -537,7 +596,23 @@ function ProblemReportDetail({
           </dt>
           <dd style={{ margin: 0 }}>
             {row.photo_path ? (
-              <a href="#" style={{ color: 'var(--link)' }}>View photo</a>
+              <button
+                type="button"
+                onClick={handleViewPhoto}
+                disabled={photoLoading}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  color: 'var(--link)',
+                  cursor: photoLoading ? 'wait' : 'pointer',
+                  fontSize: 'inherit',
+                  textDecoration: 'underline',
+                  fontFamily: 'inherit',
+                }}
+              >
+                {photoLoading ? 'Opening…' : 'View photo'}
+              </button>
             ) : (
               <span style={{ color: 'var(--muted)' }}>No photo attached</span>
             )}
