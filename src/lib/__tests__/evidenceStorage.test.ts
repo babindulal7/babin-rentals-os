@@ -146,6 +146,33 @@ describe('P2B: fail-closed proof-of-delivery evidence persistence', () => {
     expect(state.rows.evidence_references).toHaveLength(1)
   })
 
+  it('keeps a pre-Return unit Damage photo session-free and idempotent on retry', async () => {
+    // A damaged unit needs evidence BEFORE the Return floor verb is allowed to
+    // complete. The photo must not consume an operation_sessions Return key.
+    state.rows.operation_sessions = []
+    const unitId = '00000000-0000-4000-8000-000000000005'
+    const input = {
+      ...evidenceInput(),
+      category: 'Damage' as const,
+      reference: { bookingId: BOOKING, itemId: unitId, operationStage: 'Damage' as const },
+    }
+
+    const first = await uploadEvidencePhoto(input)
+    const retry = await uploadEvidencePhoto(input)
+
+    expect(retry.id).toBe(first.id)
+    expect(retry.referenceId).toBe(first.referenceId)
+    expect(state.rows.operation_sessions).toHaveLength(0)
+    expect(state.rows.evidence_references).toHaveLength(1)
+    expect(state.rows.evidence_references[0]).toMatchObject({
+      booking_id: BOOKING,
+      item_id: unitId,
+      session_id: null,
+      operation_stage: 'Damage',
+    })
+    expect(state.uploads).toHaveLength(1)
+  })
+
   it('refuses to reuse a retry UUID with changed image bytes', async () => {
     await uploadEvidencePhoto(evidenceInput())
     await expect(uploadEvidencePhoto(evidenceInput('image-B'))).rejects.toThrow(/different image bytes/)
