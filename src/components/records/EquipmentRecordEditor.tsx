@@ -1331,7 +1331,6 @@ export function EquipmentRecordEditor({
 
       {/* ── IDENTITY ─────────────────────────────────────────────────────── */}
       {renderIdentitySection()}
-      {renderLocationSection()}
 
       {/* ── STOCK & UNITS ────────────────────────────────────────────────── */}
       {renderStockSection()}
@@ -1339,8 +1338,8 @@ export function EquipmentRecordEditor({
       {/* ── RELATIONSHIPS ────────────────────────────────────────────────── */}
       {renderRelationshipsSection()}
 
-      {/* ── LOCATION (non-wizard order) ──────────────────────────────────── */}
-      {/* already rendered above in identity section */}
+      {/* ── LOCATION ─────────────────────────────────────────────────────── */}
+      {renderLocationSection()}
 
       {/* ── PRICING & TERMS ──────────────────────────────────────────────── */}
       {canViewMoney ? (
