@@ -267,13 +267,11 @@ describe('CrewSection', () => {
         day2HalfBtn?.click()
       })
 
-      // Overtime for 0.5 days @ 5000 = 2500 Rs = 250000 paisa
-      expect(onUpdateCrewExtras).toHaveBeenCalledWith('crew-1', 'overtimePaisa', rupees(2500))
+      expect(onUpdateCrewExtras).toHaveBeenCalledWith('crew-1', 'overtimeDays', 0.5)
       expect(onUpdateCrewLine).toHaveBeenCalledWith(
         'crew-1',
         expect.objectContaining({
           overtimeDays: 0.5,
-          overtimePaisa: rupees(2500),
         }),
       )
     } finally {
