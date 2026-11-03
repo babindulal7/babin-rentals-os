@@ -6,14 +6,14 @@
  * - All other evidence photos shrink to ≤ 3 MB (3 * 1024 * 1024 bytes).
  * - Stepwise reduction: lower long edge and JPEG quality step by step, keeping serial numbers readable.
  * - EXIF location stripped: canvas drawImage + toBlob discards original camera EXIF/GPS coordinates.
- * - HEIC / HEIF converted to standard JPEG.
- * - Graceful fallback in environments without DOM/Canvas (e.g. Node test runners).
+ * - HEIC / HEIF converted to JPEG only if the device can actually decode them.
+ * - Without a working decoder/canvas, fail closed; never truncate or relabel bytes.
  */
 
 export interface CompressionOptions {
-  /** Maximum pixel length for the longest edge. Default 2048 (or 2560 for damage). */
+  /** Maximum pixel length for the longest edge. Default 1600 (or 2560 for damage). */
   maxDimension?: number
-  /** Initial JPEG quality between 0.0 and 1.0. Default 0.85. */
+  /** Initial JPEG quality between 0.0 and 1.0. Default 0.85 (0.90 for damage). */
   quality?: number
   /** Flag indicating whether this is a damage photo (up to 10 MB cap instead of standard 3 MB cap). */
   isDamage?: boolean
@@ -121,7 +121,7 @@ function canvasToBlobAsync(canvas: HTMLCanvasElement, quality: number): Promise<
  * Stepwise lowers long edge and quality to satisfy W27 size caps:
  *   - Damage: ≤ 10 MB
  *   - Standard: ≤ 3 MB
- * Converts HEIC to JPEG.
+ * Converts HEIC to JPEG only when supported by the browser decoder.
  */
 export async function compressEvidencePhoto(
   file: Blob | File,
@@ -129,7 +129,7 @@ export async function compressEvidencePhoto(
 ): Promise<CompressedImageResult> {
   const targetCap = options.maxSizeBytes ?? options.maxBytes ?? (options.isDamage ? MAX_DAMAGE_PHOTO_BYTES : MAX_STANDARD_PHOTO_BYTES)
   const initialMaxDim = options.maxDimension ?? (options.isDamage ? 2560 : MAX_EVIDENCE_DIMENSION)
-  const initialQuality = options.quality ?? DEFAULT_JPEG_QUALITY
+  const initialQuality = options.quality ?? (options.isDamage ? 0.90 : DEFAULT_JPEG_QUALITY)
   const originalBytes = file.size
   const isHeic = isHeicFile(file)
 
