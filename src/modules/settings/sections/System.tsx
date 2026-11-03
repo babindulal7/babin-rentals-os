@@ -77,14 +77,14 @@ export const SYSTEM_SECTIONS: Section[] = [
     title: 'Notifications',
     icon: 'bell',
     fields: [
-      /* The four toggles stay; the "Notification templates" row that pointed at
-         the archived Notification Center is gone rather than re-aimed. A row
-         whose destination no longer exists is a dead control, and this file's
-         standing rule is that no destination is ever dead. */
-      { label: 'Return reminders', note: 'Sent 24 hours before a return is due.', on: true },
-      { label: 'Payment reminders', note: 'Sent when an invoice passes its due date.', on: true },
-      { label: 'Low stock alerts', note: 'When a SKU falls below its minimum.', on: true },
-      { label: 'Daily digest', note: 'One summary each morning.', on: false },
+      /* T1-16: no toggle may claim that a notification has been enabled when
+         there is no save handler or delivery service behind it. Each future
+         capability owns the actual settings/persistence and can replace its
+         read-only marker when shipped. */
+      { label: 'Return reminders', note: 'Return-due notifications.', readOnlyWhy: 'Not built yet — arrives with T5-07.' },
+      { label: 'Payment reminders', note: 'Payment-due notifications.', readOnlyWhy: 'Not built yet — arrives with T5-08.' },
+      { label: 'Low stock alerts', note: 'Inventory minimum-stock warnings.', readOnlyWhy: 'Not built yet — arrives with T3-30.' },
+      { label: 'Daily digest', note: 'Morning operations summary.', readOnlyWhy: 'Not built yet — arrives with T5-04.' },
     ],
   },
   {
@@ -193,9 +193,9 @@ export const SYSTEM_SECTIONS: Section[] = [
     title: 'Access',
     icon: 'crew',
     fields: [
-      { label: 'Two-factor authentication', note: 'Required for Owner and Admin roles.', on: true },
+      { label: 'Two-factor authentication', note: 'Multi-factor sign-in for privileged staff.', readOnlyWhy: 'Not built yet — arrives with T1-17. This does not currently enforce two-factor authentication.' },
       { label: 'Password policy', note: 'Min 12 chars, mixed case, number, symbol. 90-day expiry.', settingKey: 'passwordPolicy' },
-      { label: 'Shared-device screen lock', note: 'Locks the tablet between operators.', on: true },
+      { label: 'Shared-device screen lock', note: 'Name-and-PIN switching on shared tablets.', readOnlyWhy: 'Not built yet — arrives with T1-15. The separate Idle screen lock setting below remains available.' },
       /*
        * How long that lock waits — moved here from System preferences on
        * 25 Aug 2026, by ruling. It reads as one idea in this order: the lock,
