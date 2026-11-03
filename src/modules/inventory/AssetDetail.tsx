@@ -11,10 +11,10 @@ import { EditableRows } from '../../components/ui/EditableRows'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { useViewport } from '../../lib/device'
 import { useAuth } from '../../lib/auth'
-import { canAdjustStock } from '../../lib/rbac'
+import { canAdjustStock, canEditUnitIdentity } from '../../lib/rbac'
 import { gateContext, canViewUtilization } from '../../lib/fieldGating'
 import { useEditMode } from '../../lib/edit/useEditMode'
-import type { FieldSpec } from '../../lib/edit/useEditMode'
+import { UNIT_FIELDS } from './unitEditFields'
 import { formatMoney } from '../../lib/money'
 import { formatAd } from '../../lib/bs'
 import { useList } from '../../lib/queries/useList'
@@ -85,41 +85,7 @@ async function fetchAssetDetail(filters: ListFilters): Promise<ListQueryResult<A
   return { rows: record ? [record] : [], total: record ? 1 : 0 }
 }
 
-/* ── Unit editor field rules ───────────────────────────────────────────────── */
-
-const UNIT_FIELDS: FieldSpec[] = [
-  /* `asset_tag` is the unit's NOT NULL unique key (0004:195, :233) — the one
-     field the floor loop cannot work without: it is what the QR label encodes
-     and what Packing scans. This only refuses emptying it, the failure this
-     screen can cause. */
-  { key: 'assetTag', validate: (v) => (String(v ?? '').trim() ? null : 'The asset tag is the unit’s unique key — a unit without one cannot be scanned at Packing.') },
-  /* `serial_no` is NULLABLE in the schema (0004:194): a unit can be tagged
-     without a manufacturer serial, so emptying it is legal. */
-  { key: 'serialNo' },
-  /* Status and location move together. A unit marked On Rent that still claims
-     a shelf, or moved to a bay while still Packed, is exactly the halfway
-     state per-field saving would otherwise persist. */
-  {
-    key: 'state',
-    group: 'placement',
-    validate: (v) =>
-      INVENTORY_STATES.includes(String(v) as (typeof INVENTORY_STATES)[number])
-        ? null
-        : `Status must be one of: ${INVENTORY_STATES.join(', ')}.`,
-  },
-  { key: 'rack', group: 'placement' },
-  { key: 'shelf', group: 'placement' },
-  { key: 'bin', group: 'placement' },
-  {
-    key: 'condition',
-    validate: (v) =>
-      UNIT_CONDITIONS.includes(String(v) as (typeof UNIT_CONDITIONS)[number])
-        ? null
-        : `Condition must be one of: ${UNIT_CONDITIONS.join(', ')}.`,
-  },
-  /* Money column on the unit record — set at intake, never corrected inline. */
-  { key: 'replacementValue', immutable: 'Replacement value is recorded at intake and corrected there, not on the shelf.' },
-]
+/* Field-level authority and read-only lifecycle metadata live in unitEditFields. */
 
 /** The editable slice of a unit, as strings — what the inputs hold. */
 interface UnitDraft {
@@ -140,7 +106,7 @@ interface UnitDraft {
  * two half-edited units share a namespace. One row, one hook, one draft.
  */
 function UnitEditor({ unit, money, onDone }: { unit: InventoryUnitRow; money: boolean; onDone: () => void }) {
-  const [draft, setDraft] = useState<UnitDraft>(() => ({
+  const [draft] = useState<UnitDraft>(() => ({
     assetTag: unit.assetTag,
     serialNo: unit.serialNo ?? '',
     state: unit.state,
@@ -152,11 +118,10 @@ function UnitEditor({ unit, money, onDone }: { unit: InventoryUnitRow; money: bo
   const [leaveError, setLeaveError] = useState<string | null>(null)
 
   const record = useMemo(() => ({ ...draft }) as Record<string, unknown>, [draft])
-  const onSave = useCallback(async (patch: Record<string, unknown>) => {
-    /* There is no `updateUnit` action under `src/actions/` yet, so the edit
-       lands in this component and the panel says so below — never a success
-       toast for a write that did not happen. */
-    setDraft((d) => ({ ...d, ...patch }) as UnitDraft)
+  const onSave = useCallback(async () => {
+    // T2-17 safety preflight: do not acknowledge a local-only edit as Saved.
+    // The future updateUnit action must prove a durable, authorised write first.
+    throw new Error('Unit details were not saved. Saving identity and location is not connected yet.')
   }, [])
 
   const edit = useEditMode({ record, fields: UNIT_FIELDS, onSave })
@@ -221,7 +186,7 @@ function UnitEditor({ unit, money, onDone }: { unit: InventoryUnitRow; money: bo
 
       <span style={{ display: 'flex', alignItems: 'flex-start', gap: 5, fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
         <Icon name="info" size={11} style={{ flexShrink: 0, marginTop: 2 }} />
-        Editing this session only — there is no unit-update action yet, so nothing is persisted.
+        Saving unit identity and shelf location is not connected yet. No changes will be saved.
       </span>
     </div>
   )
@@ -750,9 +715,11 @@ function AssetDetailView() {
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                     <Button variant="secondary" size="sm" onClick={() => openItemCard(u.assetTag)}>Item Card</Button>
                     <Button variant="secondary" size="sm" onClick={() => setLabelUnit(u)}>Label</Button>
-                    <Button variant="ghost" size="sm" onClick={() => setEditingUnit((prev) => (prev === u.id ? null : u.id))}>
-                      {editingUnit === u.id ? 'Close' : 'Edit'}
-                    </Button>
+                    {user && canEditUnitIdentity(user.role) && (
+                      <Button variant="ghost" size="sm" onClick={() => setEditingUnit((prev) => (prev === u.id ? null : u.id))}>
+                        {editingUnit === u.id ? 'Close' : 'Edit'}
+                      </Button>
+                    )}
                     {u.state !== 'Retired' && user && ['Owner', 'Admin', 'Manager'].includes(user.role) && (
                       <Button
                         variant="danger"
@@ -764,7 +731,7 @@ function AssetDetailView() {
                       </Button>
                     )}
                   </div>
-                  {editingUnit === u.id && <UnitEditor unit={u} money={money} onDone={() => setEditingUnit(null)} />}
+                  {user && canEditUnitIdentity(user.role) && editingUnit === u.id && <UnitEditor unit={u} money={money} onDone={() => setEditingUnit(null)} />}
                 </article>
               ))}
             </div>
@@ -846,9 +813,11 @@ function AssetDetailView() {
                               <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
                                 <Button variant="ghost" onClick={() => openItemCard(u.assetTag)}>Card</Button>
                                 <Button variant="ghost" onClick={() => setLabelUnit(u)}>Label</Button>
-                                <Button variant="ghost" onClick={() => setEditingUnit((prev) => (prev === u.id ? null : u.id))}>
-                                  {editingUnit === u.id ? 'Close' : 'Edit'}
-                                </Button>
+                                {user && canEditUnitIdentity(user.role) && (
+                                  <Button variant="ghost" onClick={() => setEditingUnit((prev) => (prev === u.id ? null : u.id))}>
+                                    {editingUnit === u.id ? 'Close' : 'Edit'}
+                                  </Button>
+                                )}
                                 {u.state !== 'Retired' && user && ['Owner', 'Admin', 'Manager'].includes(user.role) && (
                                   <Button
                                     variant="danger"
@@ -863,7 +832,7 @@ function AssetDetailView() {
                             </td>
                           </tr>
 
-                          {editingUnit === u.id && (
+                          {user && canEditUnitIdentity(user.role) && editingUnit === u.id && (
                             <tr key={`${u.id}-edit`} style={{ borderBottom: '1px solid var(--border)', background: 'var(--card2)' }}>
                               <td />
                               <td colSpan={8} style={{ padding: '8px 12px 14px' }}>
