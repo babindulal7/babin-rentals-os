@@ -1,5 +1,42 @@
 # Progress Log
 
+## 2026-11-03 — T4-07 delivery zones finished on `main` (build notes 3–4) and main's red gates repaired
+
+**Did**
+- **T4-07 build note 3 — role set narrowed to Owner · Admin · Manager (B-1).** Migration 0189 was amended in place in `148ccb93` (`auth_is_manager_or_above()`, INSERT/UPDATE-only policies, no DELETE policy) before this session. The mirror was still wrong: `canCreateDeliveryZone` / `canManageDeliveryZones` in `src/lib/rbac.ts` still admitted Coordinator, and nothing pinned the role set — no `delivery_zone.*` round-trip in `core.test.ts`, no rows in `docs/PERMISSIONS.md` §4 (B-3). Now the two helpers are Owner · Admin · Manager; `delivery_zone.read / create / manage` are in `docs/PERMISSIONS.md` §4.10 and in the T-1 fixture (`src/actions/__tests__/core.test.ts`), with role-set tests in `src/lib/__tests__/rbac.test.ts` and Coordinator-refusal tests in all three zone action suites (which previously called with a Coordinator context). The Settings control had been gated on `settings.manage` — **Owner only** in code — so Admin and Manager could not manage zones at all; it now gates on `canManageDeliveryZones`.
+- **T4-07 build note 4 — rupees in, paisa stored.** Settings ▸ System ▸ Delivery zones now asks for **Fee (Rs)** and converts through `parseMoney` (handles "3,500", "Rs 3,500", ".50") before calling the action, which still stores integer paisa; editing pre-fills through `toRupees`. The dialog's inline error is used for a bad amount; no toast.
+- **Law 6 on the screen, end to end.** `DeliveryZoneRow.fee_paisa` is `number | null` because `list_delivery_zones()` returns null for Warehouse · Technician · Driver; the settings table shows `—` and the booking zone select shows the zone name alone rather than "Rs 0". `DeliveryZonesControl` gates on `canManageDeliveryZones` (not `canManageSettings`), including the empty-state "Create first zone" action, and `System.tsx` now says "Owner, Admin and Manager".
+- **`main` was red at `6a1ee2ec` before any T4-07 edit.** Typecheck: `CalendarFeedControl.tsx` (added by `6a1ee2ec`) read `response.result` (the dispatcher returns the output directly), called `showErrorToast` (the toast context exposes only `showSuccessToast`), passed `Card subtitle` (no such prop) and called both token actions with no input argument; `calendarFeed.ts` had an unused `SystemRole` import and two unused `ctx` params; `InputGroup.tsx` and `AddItemPanel.tsx` each carried a duplicate JSX attribute from the `39b053d0` merge resolution. Repaired rather than skipped, because the gate list cannot run past typecheck. Errors now render inline (`role="alert"`), and `createCalendarFeedToken` / `getCalendarFeedTokenStatus` are called with `{}` as their input type requires.
+- **`main`'s lint was red too** (not from this card): `npm run lint` (`--max-warnings 0`) failed on two **unused** `eslint-disable` directives — `src/components/shadcn/pagination.tsx` (`anchor-has-content`) and `src/components/ui/Charts.tsx` (`no-static-element-interactions`). Removed: a directive that suppresses nothing cannot change behaviour, and leaving it makes the gate list un-runnable.
+- **T4-09 capability mismatch closed on the way**: `setClientMapPin` and `setRoutePosition` declared `delivery.reschedule` while `core.ts` had dedicated cases for `delivery.setClientMapPin` / `delivery.setRoutePosition` — both now declare their own capability, so the T-1 scan no longer finds an action borrowing another action's rule.
+- All work is on **`main`**, no lane branch or worktree; nothing was applied to any Supabase project (N-5).
+
+**Ruled**
+- Nothing new. 0189 is amended in place because it has never been applied to live (N-5), and narrowing Coordinator out follows B-1 (stricter wins) plus the card's own role set — it was not a product change to be logged in `OPEN_DECISIONS.md`.
+
+**Verified**
+- Gate run in progress; results pasted here when green (see below).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 87 / 87 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 72 / 72 (100%) | +5 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 207 files · check:pglite Historical, incomplete or failed receipt (2026-11-02T18:55:09.645Z); current source NOT VERIFIED. Suite: Historical suite: 3/3 passed, 0 failed (recorded 2026-11-02T14:43:58.377Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-02T18:50:45.223Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **0189 is written and verified locally, never applied.** Babin applies it after `docs/archive/BACKUP_PROTOCOL.md`; until then the live Settings screen has no zone table.
+- **Not seen on a screen.** The fee-in-rupees dialog, the `—` masking and the booking zone select were exercised by unit tests only; no browser run (`npm run dev`) was done in this session.
+- Next on lane B: T4-05, T4-06, then T6 (Nepali) once no lane A or C card touches the module.
+
 ## 2026-11-02 — main's red gates fixed (typecheck, UI copy, server-contracts) and verified on the self-hosted Windows runner
 
 **Did**

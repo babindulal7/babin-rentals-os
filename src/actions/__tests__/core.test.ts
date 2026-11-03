@@ -384,6 +384,56 @@ describe('createAction — fails closed', () => {
   })
 })
 
+/*
+ * T4-07 · delivery zones (migration 0189, amended 3 Nov 2026).
+ *
+ * The T-1 round-trip for the three zone capabilities: the dispatcher must
+ * resolve each to the role set in PERMISSIONS.md §4.10 and its RLS policy, not
+ * to a broader default. Coordinator is the regression this pins — 0189 shipped
+ * Coordinator+, the card's role set is Owner · Admin · Manager (build note 3),
+ * and `checkCapability` had no case for these strings at all until T4-07.
+ */
+describe('delivery_zone capabilities — T-1 matrix round-trip (T4-07)', () => {
+  const probe = (capability: string, role: SystemRole) => {
+    const execute = vi.fn(async () => ({ result: { ok: true }, events: [] }))
+    const action = createAction({
+      name: `PROBE_${capability}`,
+      permissions: [capability],
+      implemented: true,
+      validate: () => {},
+      execute,
+    })
+    return { run: () => action({}, { userId: 'u-1', role }), execute }
+  }
+
+  const ZONE_WRITERS = ['Owner', 'Admin', 'Manager'] as const
+  const NOT_ZONE_WRITERS = ['Coordinator', 'Accounts', 'Warehouse', 'Technician', 'Driver', 'Client'] as const
+
+  it.each(['delivery_zone.create', 'delivery_zone.manage'] as const)(
+    '%s admits exactly Owner · Admin · Manager',
+    async (capability) => {
+      for (const role of ZONE_WRITERS) {
+        await expect(probe(capability, role).run()).resolves.toEqual({ ok: true })
+      }
+      for (const role of NOT_ZONE_WRITERS) {
+        const { run, execute } = probe(capability, role)
+        await expect(run()).rejects.toBeInstanceOf(ActionPermissionError)
+        expect(execute).not.toHaveBeenCalled()
+      }
+    },
+  )
+
+  it('delivery_zone.read admits every staff role and refuses Client', async () => {
+    const staff: SystemRole[] = ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts', 'Driver']
+    for (const role of staff) {
+      await expect(probe('delivery_zone.read', role).run()).resolves.toEqual({ ok: true })
+    }
+    const { run, execute } = probe('delivery_zone.read', 'Client')
+    await expect(run()).rejects.toBeInstanceOf(ActionPermissionError)
+    expect(execute).not.toHaveBeenCalled()
+  })
+})
+
 /**
  * ## The guard that should have existed first
  *

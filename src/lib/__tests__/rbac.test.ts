@@ -31,6 +31,9 @@ import {
   canWriteSharedTriage,
   canApprovePurchase,
   canManageCollateral,
+  canCreateDeliveryZone,
+  canManageDeliveryZones,
+  canReadDeliveryZones,
 } from '../rbac'
 
 /**
@@ -597,5 +600,30 @@ describe('canManageCollateral — Ruling D1 / Task T2-03', () => {
     expect(canManageCollateral('Accounts')).toBe(false)
     expect(canManageCollateral('Driver')).toBe(false)
     expect(canManageCollateral('Client')).toBe(false)
+  })
+})
+
+/* ── T4-07 · delivery zones (migration 0189, amended 3 Nov 2026) ─────────── */
+
+describe('delivery zones — Owner · Admin · Manager write, all staff read', () => {
+  const ZONE_WRITERS: readonly SystemRole[] = ['Owner', 'Admin', 'Manager']
+
+  it('admits exactly Owner, Admin and Manager to create a zone', () => {
+    expect(ALL_ROLES.filter((r) => canCreateDeliveryZone(r))).toEqual([...ZONE_WRITERS])
+  })
+
+  it('admits exactly Owner, Admin and Manager to update or deactivate a zone', () => {
+    expect(ALL_ROLES.filter((r) => canManageDeliveryZones(r))).toEqual([...ZONE_WRITERS])
+  })
+
+  it('refuses Coordinator a zone write — narrowed from Coordinator+ (build note 3, B-1)', () => {
+    expect(canCreateDeliveryZone('Coordinator')).toBe(false)
+    expect(canManageDeliveryZones('Coordinator')).toBe(false)
+  })
+
+  it('lets every staff role read zones, and refuses Client', () => {
+    for (const role of ALL_ROLES) {
+      expect(canReadDeliveryZones(role)).toBe(role !== 'Client')
+    }
   })
 })

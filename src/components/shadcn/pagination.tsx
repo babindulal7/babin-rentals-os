@@ -52,7 +52,6 @@ function PaginationLink({
       className={cn(className)}
       nativeButton={false}
       render={
-        /* eslint-disable jsx-a11y/anchor-has-content -- content passed via props */
         <a
           aria-current={isActive ? "page" : undefined}
           data-slot="pagination-link"

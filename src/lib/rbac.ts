@@ -746,11 +746,12 @@ export function canAcknowledgeTeamNote(role: SystemRole): boolean {
 }
 
 /**
- * Create a delivery zone — Coordinator and above (Owner, Admin, Manager, Coordinator).
- * Mirrors the RLS policy on `delivery_zones` INSERT (migration 0189).
+ * Create a delivery zone — Owner, Admin, Manager (T4-07 build note 3, B-1).
+ * Mirrors `delivery_zones_insert_manager_plus` (migration 0189, amended 3 Nov 2026).
+ * Coordinator was narrowed out: the card's role set is Owner · Admin · Manager.
  */
 export function canCreateDeliveryZone(role: SystemRole): boolean {
-  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+  return role === 'Owner' || role === 'Admin' || role === 'Manager'
 }
 
 /**
@@ -762,11 +763,12 @@ export function canReadDeliveryZones(role: SystemRole): boolean {
 }
 
 /**
- * Update/deactivate a delivery zone — Coordinator and above.
- * Mirrors the RLS policy on `delivery_zones` UPDATE/DELETE (migration 0189).
+ * Update/deactivate a delivery zone — Owner, Admin, Manager (T4-07 build notes 2–3).
+ * Mirrors `delivery_zones_update_manager_plus` (migration 0189, amended 3 Nov 2026):
+ * INSERT and UPDATE only — there is no DELETE policy, "Deactivate" is terminal (Law 3).
  */
 export function canManageDeliveryZones(role: SystemRole): boolean {
-  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+  return role === 'Owner' || role === 'Admin' || role === 'Manager'
 }
 
 /**
@@ -912,5 +914,39 @@ export function canSetClientMapPin(role: SystemRole | null | undefined): boolean
 export function canViewDayRoute(role: SystemRole | null | undefined): boolean {
   if (!role) return false
   return ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Driver', 'Accounts'].includes(role)
+}
+
+/**
+ * Create own calendar feed token (T4-10) — any staff role.
+ * Mirrors `create_calendar_feed_token` authorization.
+ */
+export function canCreateCalendarFeedToken(role: SystemRole | null | undefined): boolean {
+  if (!role) return false
+  return ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Driver', 'Accounts'].includes(role)
+}
+
+/**
+ * Revoke calendar feed token (T4-10) — self or Owner/Admin.
+ * Mirrors `revoke_calendar_feed_token` authorization.
+ */
+export function canRevokeCalendarFeedToken(role: SystemRole | null | undefined, targetUserId?: string, currentUserId?: string): boolean {
+  if (!role) return false
+  // Self-revoke: any staff
+  if (targetUserId === currentUserId) {
+    return ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Driver', 'Accounts'].includes(role)
+  }
+  // Revoke others: Owner/Admin only
+  return role === 'Owner' || role === 'Admin'
+}
+
+/**
+ * View calendar feed token status (T4-10) — self or Owner/Admin.
+ */
+export function canViewCalendarFeedTokenStatus(role: SystemRole | null | undefined, targetUserId?: string, currentUserId?: string): boolean {
+  if (!role) return false
+  if (targetUserId === currentUserId) {
+    return ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Driver', 'Accounts'].includes(role)
+  }
+  return role === 'Owner' || role === 'Admin'
 }
 
