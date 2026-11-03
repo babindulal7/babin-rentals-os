@@ -195,7 +195,7 @@ days of jobs; a test proves no amount, phone or address is in the feed; a reset 
 screen check.
 **Needs** — T4-01 for delivery jobs (pickups and returns work without it).
 
-### T4-11 · Report a problem            status: todo · size: M · lane B · [go-live] · slips first
+### T4-11 · Report a problem            status: doing (lane-b/T4-11-report-a-problem) · size: M · lane B · [go-live] · slips first
 **What** — "**Report a problem**" in the user menu, on every screen and for every staff role (B27),
 kept after go-live (B48). Tap it, type what went wrong in one box, Send. The app adds on its own: the
 screen (route without the query string), time, app version, role, device and screen size, and the
