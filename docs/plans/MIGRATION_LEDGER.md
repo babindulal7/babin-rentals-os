@@ -48,7 +48,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0207 | T8-06 | crew-overtime-half-full-day | lane-a/T8-06-crew-overtime-half-or-full-day | verified |
 | 0208 | T1-15 | staff-pin-four-digits | lane-a/T1-15-switch-user-with-name-plus-pin | verified |
 | 0209 | T4-10 | calendar-feed-tokens | lane-b/T4-10-jobs-in-phone-calendars | verified |
-| 0210 | T4-11 | problem-reports | lane-nemotron/T4-11-report-problem-20261103 | verified |
+| 0210 | T4-11 | problem-reports | lane-b/T4-11-report-a-problem | written |
 
 ## Expected migrations (not yet claimed)
 
