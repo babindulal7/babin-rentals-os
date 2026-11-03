@@ -917,6 +917,7 @@ export function canViewDayRoute(role: SystemRole | null | undefined): boolean {
 }
 
 /**
+/**
  * Create own calendar feed token (T4-10) — any staff role.
  * Mirrors `create_calendar_feed_token` authorization.
  */
@@ -947,6 +948,35 @@ export function canViewCalendarFeedTokenStatus(role: SystemRole | null | undefin
   if (targetUserId === currentUserId) {
     return ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Driver', 'Accounts'].includes(role)
   }
+  return role === 'Owner' || role === 'Admin'
+}
+
+/**
+ * Create a problem report (T4-11) — any staff role.
+ * Mirrors the RLS policy on `problem_reports` INSERT — all staff can submit.
+ */
+export function canCreateProblemReport(role: SystemRole | null | undefined): boolean {
+  if (!role) return false
+  return role !== 'Client'
+}
+
+/**
+ * Read problem reports (T4-11) — staff see own, Owner/Admin see all.
+ * Mirrors the RLS policy on `problem_reports` SELECT.
+ */
+export function canReadProblemReports(role: SystemRole | null | undefined): boolean {
+  if (!role) return false
+  return role !== 'Client'
+}
+
+/**
+ * Manage problem report status (T4-11) — Owner/Admin only.
+ * Mirrors the RPC authorization for `update_problem_report_status`.
+ */
+export function canManageProblemReports(role: SystemRole | null | undefined): boolean {
+  if (!role) return false
+  return role === 'Owner' || role === 'Admin'
+}
   return role === 'Owner' || role === 'Admin'
 }
 

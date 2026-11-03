@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { AUDIT_LOG_PATH, PRODUCTIONS_HUB_PATH, financeTabPath, type FinanceTabSlug } from './lib/routeTargets'
+import { AUDIT_LOG_PATH, PROBLEM_REPORTS_PATH, PRODUCTIONS_HUB_PATH, financeTabPath, type FinanceTabSlug } from './lib/routeTargets'
 import Sidebar from './components/shell/Sidebar'
 import BottomBar, { BAR_BOX } from './components/shell/BottomBar'
 import HeaderBar from './components/shell/Header'
@@ -64,6 +64,7 @@ const BackupRestore     = lazy(() => import('./modules/admin/BackupRestore'))
 const AuditSettings     = lazy(() => import('./modules/admin/AuditSettings'))
 const ActivityLog       = lazy(() => import('./modules/admin/ActivityLog'))
 const AuditLog          = lazy(() => import('./modules/admin/AuditLog'))
+const ProblemReports    = lazy(() => import('./modules/admin/ProblemReports'))
 const NumberingSequences = lazy(() => import('./modules/admin/NumberingSequences'))
 const CashFlowReport    = lazy(() => import('./modules/reports/CashFlowReport'))
 const WorkingCapital    = lazy(() => import('./modules/reports/WorkingCapitalReport'))
@@ -849,6 +850,15 @@ export default function App() {
           element={
             <Shell crumbs={[{ label: 'Settings', to: '/settings' }, { label: 'Backup & Restore' }]}>
               <BackupRestore />
+            </Shell>
+          }
+        />
+
+        <Route
+          path={PROBLEM_REPORTS_PATH}
+          element={
+            <Shell crumbs={[{ label: 'Settings', to: '/settings' }, { label: 'Problem Reports' }]}>
+              <ProblemReports />
             </Shell>
           }
         />

@@ -29,6 +29,7 @@ import './shell.css'
 
 const HandoverSheet = lazy(() => import('../../modules/auth/HandoverSheet'))
 const InternalNotesDrawer = lazy(() => import('../../modules/notes/InternalNotesDrawer'))
+const ProblemReportModal = lazy(() => import('./ProblemReportModal'))
 
 export interface Crumb {
   label: string
@@ -109,6 +110,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
   const [profileOpen, setProfileOpen] = useState(false)
   const [showHandover, setShowHandover] = useState(false)
   const [notesOpen, setNotesOpen] = useState(false)
+  const [problemReportOpen, setProblemReportOpen] = useState(false)
   const [notesVisited, setNotesVisited] = useState(false)
   useEffect(() => { if (notesOpen) setNotesVisited(true) }, [notesOpen])
   const [activeConfirmAction, setActiveConfirmAction] = useState<PageActionItem | null>(null)
@@ -1064,6 +1066,32 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                       Team internal notes
                     </Button>
                   )}
+                  {/* Report a Problem — available to all staff on every screen (T4-11) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfileOpen(false)
+                      setProblemReportOpen(true)
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      minHeight: 44,
+                      padding: '0 10px',
+                      borderRadius: 'var(--r-sm)',
+                      border: '1px solid var(--border)',
+                      background: 'var(--card2)',
+                      color: 'var(--text)',
+                      fontSize: 'var(--t-ui)',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    <Icon name="alert_triangle" size={16} />
+                    Report a Problem
+                  </button>
                   {/* RULING 2026-10-21: retain mock options in the phone
                       profile; a separate 44px control clipped primary actions. */}
                   {IS_MOCK && isPhone && (
@@ -1291,6 +1319,8 @@ export default function Header({ crumbs, actions }: HeaderProps) {
         )}
 
         {(notesOpen || notesVisited) && <InternalNotesDrawer isOpen={notesOpen} onClose={() => setNotesOpen(false)} />}
+
+        {problemReportOpen && <ProblemReportModal isOpen={problemReportOpen} onClose={() => setProblemReportOpen(false)} />}
       </Suspense>
 
       {showMockDialog && (
