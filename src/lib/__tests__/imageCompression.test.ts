@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   calculateTargetDimensions,
+  compressionDimensionSteps,
   compressEvidencePhoto,
   isHeicImage,
   resolveMaxBytes,
@@ -39,6 +40,22 @@ describe('calculateTargetDimensions', () => {
     const res = calculateTargetDimensions(3200, 1600)
     expect(res.width).toBe(1600)
     expect(res.height).toBe(800)
+  })
+})
+
+describe('compressionDimensionSteps', () => {
+  it('never increases a standard photo beyond its initial 1600px cap', () => {
+    expect(compressionDimensionSteps(1600)).toEqual([1600, 1400, 1200])
+  })
+
+  it('keeps the higher-resolution damage first attempt and steps downward', () => {
+    expect(compressionDimensionSteps(2560)).toEqual([2560, 1800, 1600, 1400, 1200])
+  })
+
+  it('does not upscale small source limits and refuses invalid dimension caps', () => {
+    expect(compressionDimensionSteps(900)).toEqual([900])
+    expect(() => compressionDimensionSteps(0)).toThrow(/positive finite/)
+    expect(() => compressionDimensionSteps(Number.NaN)).toThrow(/positive finite/)
   })
 })
 
