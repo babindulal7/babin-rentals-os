@@ -204,6 +204,10 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     // RULING 2026-09-08 (R-34): new capability, Owner/Admin/Manager, mirrored from live RLS.
     case 'inventory.update':
       return rbac.canUpdateBundle(ctx.role);
+    // T2-17 — product_units_update: exactly Owner, Admin, Manager, Warehouse.
+    // Technician's condition-at-intake permission does not cover unit identity.
+    case 'inventory.update_unit_identity':
+      return rbac.canEditUnitIdentity(ctx.role);
     /*
      * `inventory.edit_service_plan` — R-28, 8 Sep 2026. Owner · Admin · Manager,
      * as `PERMISSIONS.md` §4.3 states it. Ruled with the action rather than
