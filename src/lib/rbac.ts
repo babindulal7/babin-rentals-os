@@ -917,7 +917,6 @@ export function canViewDayRoute(role: SystemRole | null | undefined): boolean {
 }
 
 /**
-/**
  * Create own calendar feed token (T4-10) — any staff role.
  * Mirrors `create_calendar_feed_token` authorization.
  */
@@ -977,6 +976,5 @@ export function canManageProblemReports(role: SystemRole | null | undefined): bo
   if (!role) return false
   return role === 'Owner' || role === 'Admin'
 }
-  return role === 'Owner' || role === 'Admin'
-}
+
 
