@@ -73,6 +73,8 @@ export type ActionContext = {
   role: SystemRole;
   /** Law 6 / rbac's offline degradation: several approvals are refused offline. */
   isOnline?: boolean;
+  /** Target user ID for actions on behalf of another user (e.g., revoke another's token). */
+  targetUserId?: string;
 };
 
 export type ActionConfig<Input, Output> = {
@@ -388,6 +390,18 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
       return rbac.canRescheduleDeliveryJob(ctx.role);
     case 'delivery.view':
       return rbac.canViewDayRoute(ctx.role);
+    case 'delivery.setRoutePosition':
+      return rbac.canSetDeliveryRoutePosition(ctx.role);
+    case 'delivery.setClientMapPin':
+      return rbac.canSetClientMapPin(ctx.role);
+
+    // Calendar feed tokens (T4-10, migration 0209)
+    case 'calendar_feed.create':
+      return rbac.canCreateCalendarFeedToken(ctx.role);
+    case 'calendar_feed.revoke':
+      return rbac.canRevokeCalendarFeedToken(ctx.role, ctx.targetUserId, ctx.userId);
+    case 'calendar_feed.view':
+      return rbac.canViewCalendarFeedTokenStatus(ctx.role, ctx.targetUserId, ctx.userId);
 
     // Delivery zones (T4-07, migration 0189)
     case 'delivery_zone.create':

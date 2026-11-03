@@ -4,6 +4,7 @@ import { DevicePinControl } from './DevicePin'
 import { PwaInstallControl } from '../../../components/ui/PwaInstallControl'
 import { LegacyExportControl } from './LegacyExportControl'
 import { DeliveryZonesControl } from './DeliveryZonesControl'
+import { CalendarFeedControl } from './CalendarFeedControl'
 
 /**
  * **Settings ▸ System** — appearance, notifications, preferences, security and
@@ -102,6 +103,11 @@ export const SYSTEM_SECTIONS: Section[] = [
         label: 'Legacy data backup',
         note: 'Download old browser-stored data from this device before starting fresh.',
         custom: <LegacyExportControl />,
+      },
+      {
+        label: 'Calendar feed',
+        note: 'Add your jobs to your phone calendar (Google Calendar, Apple Calendar, etc.). Only booking number, time, and client name — no amounts, addresses, or phone numbers. Reset your link to revoke the old one.',
+        custom: <CalendarFeedControl />,
       },
       /*
        * The idle lock used to sit here as "Session timeout", and moved to
