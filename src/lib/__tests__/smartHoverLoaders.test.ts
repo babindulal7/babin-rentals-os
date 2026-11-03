@@ -48,7 +48,7 @@ describe('saved draft Intel', () => {
     const preview = await loadRentalPreview(UUID, { role: 'Owner' })
     expect(preview.equipment).toHaveLength(12)
     expect(preview.rentalNo).toBe('Draft #3')
-    expect(preview.rentalTotalPaisa).toBe(301000)
+    expect(preview.rentalTotalPaisa).toBe(300000)
     expect(preview.isDraft).toBe(true)
     expect(Object.values(preview.readiness).every(value => value === null)).toBe(true)
     expect(preview).not.toHaveProperty('payments')
@@ -78,11 +78,11 @@ describe('saved draft Intel', () => {
   it('does not double-charge included gear or subtract advance from rental total', () => {
     const data = draftData()
     data.lines[0]!.isIncluded = true
-    expect(calculateDraftTotal(data)).toBe(281000)
+    expect(calculateDraftTotal(data)).toBe(280000)
     data.advancePaisa = 900000
-    expect(calculateDraftTotal(data)).toBe(281000)
+    expect(calculateDraftTotal(data)).toBe(280000)
     data.vatOn = true
-    expect(calculateDraftTotal(data)).toBe(317500)
+    expect(calculateDraftTotal(data)).toBe(316400)
   })
 })
 

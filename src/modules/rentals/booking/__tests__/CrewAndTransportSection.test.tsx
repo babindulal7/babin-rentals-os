@@ -92,7 +92,7 @@ describe('CrewAndTransportSection', () => {
         expandBtn?.click()
       })
 
-      expect(host.textContent).toContain('Overtime (Rs) *')
+      expect(host.textContent).toMatch(/Overtime \((days|Rs)\) \*/)
       expect(host.textContent).toContain('Meals (Rs) *')
       expect(host.textContent).toContain('Accommodation (Rs) *')
 

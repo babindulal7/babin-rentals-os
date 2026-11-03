@@ -128,12 +128,15 @@ export function CrewSection({
     }))
 
     const totalDays = Object.values(updatedMemberMap).reduce<number>((sum, f) => sum + f, 0)
+    const newOvertimePaisa = Math.round(totalDays * c.dayRatePaisa) as Paisa
 
+    onUpdateCrewExtras(c.crewId, 'overtimePaisa', newOvertimePaisa)
     onUpdateCrewExtras(c.crewId, 'overtimeDays', totalDays)
     if (onUpdateCrewLine) {
       onUpdateCrewLine(c.crewId, {
         overtimeDays: totalDays,
         shootDayOvertimes: updatedMemberMap,
+        overtimePaisa: newOvertimePaisa,
       })
     }
   }

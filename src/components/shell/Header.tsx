@@ -161,7 +161,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
 
     // Realtime postgres changes
     let channel: ReturnType<typeof supabase.channel> | null = null
-    if (!IS_MOCK) {
+    if (!IS_MOCK && typeof supabase?.channel === 'function') {
       channel = supabase
         .channel(`realtime:header-notifications:${user?.id ?? 'all'}`)
         .on(
@@ -188,7 +188,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
 
     return () => {
       isMounted = false
-      if (channel) {
+      if (channel && typeof supabase?.removeChannel === 'function') {
         void supabase.removeChannel(channel)
       }
       window.removeEventListener('focus', handleFocus)
