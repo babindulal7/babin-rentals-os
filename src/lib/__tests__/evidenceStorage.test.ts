@@ -11,10 +11,11 @@ const state = vi.hoisted(() => ({
   fail: '' as string,
   uploads: [] as string[],
   signs: 0,
+  generatedIds: 0,
 }))
 
 vi.mock('../dataAccess', () => ({
-  generateClientUuid: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  generateClientUuid: () => `aaaaaaaa-aaaa-4aaa-8aaa-${String(++state.generatedIds).padStart(12, '0')}`,
 }))
 
 vi.mock('../supabase', () => {
@@ -95,6 +96,7 @@ beforeEach(() => {
   state.fail = ''
   state.uploads.length = 0
   state.signs = 0
+  state.generatedIds = 0
 })
 
 describe('P2B: fail-closed proof-of-delivery evidence persistence', () => {
