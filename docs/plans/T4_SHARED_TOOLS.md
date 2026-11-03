@@ -104,7 +104,7 @@ per device until dismissed; reachable later from Settings ▸ System.
 still present afterwards; a clean device shows nothing.
 **Needs** — none.
 
-### T4-07 · Delivery zones and fees            status: doing — database, actions, RBAC, lifecycle step, Settings UI, and New Rental zone integration complete (lane-b/T4-07-delivery-zones) · size: S · lane B · [go-live]
+### T4-07 · Delivery zones and fees            status: done — all five build notes closed on `main` 3 Nov 2026 (0189 amended, RBAC narrowed, rupees input, Law 6 masking) · size: S · lane B · [go-live]
 **What** — Settings ▸ Operations ▸ **Delivery zones**: a short table of zones with a fee each.
 Starting zones (L6, researched — Kathmandu services group the valley the same way):
 **Inside Ring Road · Outside Ring Road, inside the valley · Far valley (Bhaktapur town, Godawari,
@@ -116,7 +116,7 @@ the shop stays Rs 0. Replace the fixed Rs 3,500 "Babin Delivery" price.
 **Where** — `src/lib/settingsStore.ts`, settings table (0158), `src/lib/bookingTransportForm.ts`,
 `NewRental.tsx` transport section, `src/lib/pricingPipeline.ts`.
 **Database** — migration `0189_delivery_zones.sql`: `delivery_zones` table + RPCs + seed data.
-**Build notes** — **before this card is done** (Claude's review of `main` `9e219db`, 31 Oct):
+**Build notes** — **closed 3 Nov 2026; kept as the record of what changed** (Claude's review of `main` `9e219db`, 31 Oct):
 1) **Money leak (Law 6, P4):** the `delivery_zones` read policy, `list_delivery_zones()` and
 `get_delivery_zone_fee()` (0189) give `fee_paisa` to Warehouse, Technician and Driver, and lifecycle
 step L46 even asserts that Warehouse reads 350000. Money-blind roles must get no fee: return it only
@@ -135,7 +135,8 @@ slow reply could overwrite the next zone's fee.
 Warehouse cannot see fees.
 **Needs** — none.
 
-### T4-08 · One-time rider link            status: doing (lane-b/T4-08-one-time-rider-link) · size: L · lane B · [go-live]
+### T4-08 · One-time rider link            status: done (awaiting merge lane-b/T4-08-review-fixes) · size: L · lane B · [go-live]
+review fixes R1–R5 — done, awaiting merge (lane-b/T4-08-review-fixes)
 **What** — For a hired rider (W49): staff tap "Send to rider" on a delivery job, type the rider's
 name and phone, and share a link (WhatsApp/SMS from the staff phone). The link opens **only that
 job**, with **no login and no money**: pickup point, drop address and contact, item count and case
@@ -156,7 +157,7 @@ appear for staff; a second use, an expired link and a guessed link all fail; a s
 is in `docs/verification/` and Claude has reviewed it at a check-in.
 **Needs** — T4-01, T2-01, T2-02.
 
-### T4-09 · Delivery route: suggested order and map links            status: todo · size: M · lane B · [go-live] · slips first
+### T4-09 · Delivery route: suggested order and map links            status: done · size: M · lane B · [go-live] · slips first
 **What** — For a day's deliveries and collections (T4-01), show a **suggested order** and **Google
 Maps links** (B30). Each stop has "Open in Maps"; the run has "Open route" with the stops in order.
 Google's Maps links take up to **3 stops in between on a phone browser** (9 elsewhere), so split a long
@@ -174,7 +175,7 @@ a phone with every stop; a manual reorder sticks; the rider link shows the same 
 driver screen.
 **Needs** — T4-01, T4-07.
 
-### T4-10 · Jobs in phone calendars            status: todo · size: M · lane B · [go-live] · slips first
+### T4-10 · Jobs in phone calendars            status: done · size: M · lane B · [go-live] · slips first
 **What** — Every staff member can add **their jobs to their phone calendar** (B28) with a private
 subscribe link (an iCal feed): Settings ▸ My preferences ▸ "Add my jobs to my phone calendar" → copy
 the link or open it in the calendar app. Each entry (B29) shows **booking number, time and client

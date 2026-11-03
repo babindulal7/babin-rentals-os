@@ -149,6 +149,25 @@ async function as(role, fn) {
   }
 }
 
+async function asService(fn) {
+  await db.exec(`set role service_role;
+    select set_config('app.current_user_id', '', false);
+    select set_config('request.jwt.claim.sub', '', false);
+    select set_config('request.jwt.claim.role', 'service_role', false);`)
+  try {
+    return await fn()
+  } finally {
+    try {
+      await db.exec(`reset role; select set_config('app.current_user_id', '', false);
+        select set_config('request.jwt.claim.sub', '', false); select set_config('request.jwt.claim.role', '', false);`)
+    } catch {
+      await db.exec('rollback;')
+      await db.exec(`reset role; select set_config('app.current_user_id', '', false);
+        select set_config('request.jwt.claim.sub', '', false); select set_config('request.jwt.claim.role', '', false);`)
+    }
+  }
+}
+
 /**
  * Run a block and UNDO it, whatever it did.
  *
@@ -4184,7 +4203,7 @@ STEPS.push({
 
 STEPS.push({
   id: 'L47',
-  title: 'One-time rider link: staff-issued, hashed-token, money-blind read, pickup and delivery verbs, 24h expiration and revocation guards (T4-08/W49)',
+  title: 'One-time rider link: staff-issued, server-minted token, money-blind read, pickup and delivery verbs, 24h expiration and revocation guards (T4-08/W49) — v2 contract (0190 R1–R4)',
   expect: 'green',
   run: async () => {
     await undone(async () => {
@@ -4207,32 +4226,94 @@ STEPS.push({
         )
       `, [jobId, bookingIds.a, BRANCH, U.Coordinator])
 
-      // Generate token and hash (SHA-256)
-      const rawToken = 'rider_sec_tok_128bit_test_payload_12345'
-      const tokenHash = createHash('sha256').update(rawToken).digest('hex')
-
       // 2. Security: Unauthorized role (Client) cannot create rider link
+      // New signature: create_rider_link(p_client_uuid, p_job_id, p_rider_name, p_rider_phone)
       await as('Client', async () => {
         await refusesSavepoint(
           'Client attempting to create rider link',
-          `select create_rider_link($1, $2, 'Ram Rider', '9801234567')`,
-          [jobId, tokenHash],
+          `select create_rider_link(gen_random_uuid(), $1, 'Ram Rider', '9801234567')`,
+          [jobId],
           /Unauthorized|42501/i,
         )
       })
 
-      // 3. Coordinator creates the rider link
+      // 3. Coordinator creates the rider link — server mints token, returns jsonb (R3)
+      // 4. Idempotency: same client_uuid + job_id returns same link, no raw_token (R2)
       let linkId
+      let rawToken
+      const testClientUuid = '00000000-0000-4000-8000-00000000cccc'
       await as('Coordinator', async () => {
-        linkId = (await q(
-          `select create_rider_link($1, $2, 'Ram Rider', '9801234567') as id`,
-          [jobId, tokenHash],
-        )).rows[0].id
-        assert(linkId, 'Rider link created successfully')
+        // First issuance
+        const res1 = (await q(
+          `select create_rider_link($1, $2, 'Ram Rider', '9801234567') as res`,
+          [testClientUuid, jobId],
+        )).rows[0].res
+        linkId = res1.link_id
+        rawToken = res1.raw_token
+        assert(linkId && rawToken, 'Rider link created successfully with raw_token returned')
+        assertEq(res1.already_issued, false, 'First issuance returns already_issued=false')
+
+        // Replay with same client_uuid (R2 idempotency)
+        const res2 = (await q(
+          `select create_rider_link($1, $2, 'Ram Rider', '9801234567') as res`,
+          [testClientUuid, jobId],
+        )).rows[0].res
+        assertEq(res2.link_id, linkId, 'Idempotent replay returns same link_id')
+        assertEq(res2.already_issued, true, 'Replay returns already_issued=true')
+        assertEq(res2.raw_token, null, 'Replay returns no raw_token')
       })
 
-      // 4. Money blindness (Law 6) & payload structure for rider
-      const jobData = (await q(`select get_rider_job_by_token($1) as data`, [tokenHash])).rows[0].data
+      // Assert raw_token NEVER stored in delivery_job_links or audit_events (R3)
+      const rawInLinks = await one(`select count(*)::int from delivery_job_links where token_hash = $1`, [rawToken])
+      assertEq(rawInLinks, 0, 'raw token is NOT stored in token_hash column')
+      const rawInAudit = await one(`select count(*)::int from audit_events where old_values::text like $1 or new_values::text like $1`, [`%${rawToken}%`])
+      assertEq(rawInAudit, 0, 'raw token is NEVER recorded in audit_events')
+
+      // Assert token_hash column refused for staff SELECT (R1)
+      await as('Coordinator', async () => {
+        await refusesSavepoint(
+          'Coordinator selecting token_hash',
+          `select token_hash from delivery_job_links where id = $1`,
+          [linkId],
+          /permission denied/i,
+        )
+        const staffRead = await one(`select id from delivery_job_links where id = $1`, [linkId])
+        assertEq(staffRead, linkId, 'Coordinator CAN read id column (column-level grant works)')
+      })
+      await as('Warehouse', async () => {
+        await refusesSavepoint(
+          'Warehouse selecting token_hash',
+          `select token_hash from delivery_job_links where id = $1`,
+          [linkId],
+          /permission denied/i,
+        )
+      })
+
+      const tokenHash = createHash('sha256').update(rawToken).digest('hex')
+
+      // 5. R1: authenticated cannot execute the 3 rider RPCs directly (D-10.6)
+      await as('Coordinator', async () => {
+        await refusesSavepoint(
+          'Coordinator calling get_rider_job_by_token directly',
+          `select get_rider_job_by_token($1)`,
+          [tokenHash],
+          /permission denied|42501/i,
+        )
+      })
+      await as('Warehouse', async () => {
+        await refusesSavepoint(
+          'Warehouse calling rider_mark_picked_up directly',
+          `select rider_mark_picked_up($1)`,
+          [tokenHash],
+          /permission denied|42501/i,
+        )
+      })
+
+      // 6. Money blindness (Law 6) & payload structure for rider via asService() (R1)
+      let jobData
+      await asService(async () => {
+        jobData = (await q(`select get_rider_job_by_token($1) as data`, [tokenHash])).rows[0].data
+      })
       assertEq(jobData.job_id, jobId, 'Job data contains correct job_id')
       assertEq(jobData.rider_name, 'Ram Rider', 'Job data contains rider name')
       assertEq(jobData.rider_phone, '9801234567', 'Job data contains rider phone')
@@ -4248,40 +4329,46 @@ STEPS.push({
         assert(!rawJson.includes(`"${term}"`), `Law 6 violation: rider job payload contains money term "${term}"`)
       }
 
-      // 5. Rider verb: mark picked up
-      const pickupRes = (await q(`select rider_mark_picked_up($1) as res`, [tokenHash])).rows[0].res
-      assertEq(pickupRes.status, 'In Transit', 'Rider marked job picked up')
+      // 7. Rider verb: mark picked up (via asService / Edge Function)
+      await asService(async () => {
+        const pickupRes = (await q(`select rider_mark_picked_up($1) as res`, [tokenHash])).rows[0].res
+        assertEq(pickupRes.status, 'In Transit', 'Rider marked job picked up')
+      })
       const statusAfterPickup = await one(`select status from delivery_jobs where id = $1`, [jobId])
       assertEq(statusAfterPickup, 'In Transit', 'delivery_jobs status updated to In Transit')
 
-      // 6. Rider verb: complete delivery with receiver name, signature, and photo
-      const completeRes = (await q(
-        `select rider_complete_delivery($1, 'Suman Receiver', '<svg>sig</svg>', 'https://minio/proof.jpg') as res`,
-        [tokenHash],
-      )).rows[0].res
-      assertEq(completeRes.status, 'Delivered', 'Rider marked delivery complete')
-      assertEq(completeRes.received_by, 'Suman Receiver', 'Receiver recorded')
+      // 8. Rider verb: complete delivery with receiver name, signature, and photo (via asService)
+      await asService(async () => {
+        const completeRes = (await q(
+          `select rider_complete_delivery($1, 'Suman Receiver', '<svg>sig</svg>', 'https://minio/proof.jpg') as res`,
+          [tokenHash],
+        )).rows[0].res
+        assertEq(completeRes.status, 'Delivered', 'Rider marked delivery complete')
+        assertEq(completeRes.received_by, 'Suman Receiver', 'Receiver recorded')
+      })
 
       const jobAfterDelivered = (await q(`select status, received_by, delivered_at from delivery_jobs where id = $1`, [jobId])).rows[0]
       assertEq(jobAfterDelivered.status, 'Delivered', 'Job status is Delivered')
       assertEq(jobAfterDelivered.received_by, 'Suman Receiver', 'Received by stored on job')
       assert(jobAfterDelivered.delivered_at, 'Delivered at recorded')
 
-      // 7. Token ceases working once completed (W49)
-      await refusesSavepoint(
-        'Re-reading completed rider job',
-        `select get_rider_job_by_token($1)`,
-        [tokenHash],
-        /already been completed|no longer active/i,
-      )
-      await refusesSavepoint(
-        'Delivering already completed job',
-        `select rider_complete_delivery($1, 'Another Person')`,
-        [tokenHash],
-        /already been completed|already marked as Delivered/i,
-      )
+      // 9. Token ceases working once completed (W49)
+      await asService(async () => {
+        await refusesSavepoint(
+          'Re-reading completed rider job',
+          `select get_rider_job_by_token($1)`,
+          [tokenHash],
+          /already been completed|no longer active/i,
+        )
+        await refusesSavepoint(
+          'Delivering already completed job',
+          `select rider_complete_delivery($1, 'Another Person')`,
+          [tokenHash],
+          /already been completed|already marked as Delivered/i,
+        )
+      })
 
-      // 8. Revocation test (W49)
+      // 10. Revocation test (W49)
       const jobId2 = '00000000-0000-4000-8000-00000000b992'
       await q(`
         insert into delivery_jobs (
@@ -4291,35 +4378,41 @@ STEPS.push({
         )
       `, [jobId2, bookingIds.a, BRANCH, U.Coordinator])
 
-      const rawToken2 = 'rider_sec_tok_second_test_link_67890'
-      const tokenHash2 = createHash('sha256').update(rawToken2).digest('hex')
       let linkId2
+      let rawToken2
+      const testClientUuid2 = '00000000-0000-4000-8000-00000000cccd'
       await as('Coordinator', async () => {
-        linkId2 = (await q(
-          `select create_rider_link($1, $2, 'Hari Rider', '9812345678') as id`,
-          [jobId2, tokenHash2],
-        )).rows[0].id
-        assert(linkId2, 'Second rider link created')
+        const res = (await q(
+          `select create_rider_link($1, $2, 'Hari Rider', '9812345678') as res`,
+          [testClientUuid2, jobId2],
+        )).rows[0].res
+        linkId2 = res.link_id
+        rawToken2 = res.raw_token
+        assert(linkId2 && rawToken2, 'Second rider link created with raw_token')
 
         // Coordinator revokes the link
         await q(`select revoke_rider_link($1)`, [linkId2])
       })
 
-      // Revoked link cannot be read or used
-      await refusesSavepoint(
-        'Reading revoked rider link',
-        `select get_rider_job_by_token($1)`,
-        [tokenHash2],
-        /revoked/i,
-      )
-      await refusesSavepoint(
-        'Picking up with revoked rider link',
-        `select rider_mark_picked_up($1)`,
-        [tokenHash2],
-        /revoked/i,
-      )
+      const tokenHash2 = createHash('sha256').update(rawToken2).digest('hex')
 
-      // 9. Expiration test (24h limit W49)
+      // Revoked link cannot be read or used (checked as service_role)
+      await asService(async () => {
+        await refusesSavepoint(
+          'Reading revoked rider link',
+          `select get_rider_job_by_token($1)`,
+          [tokenHash2],
+          /revoked/i,
+        )
+        await refusesSavepoint(
+          'Picking up with revoked rider link',
+          `select rider_mark_picked_up($1)`,
+          [tokenHash2],
+          /revoked/i,
+        )
+      })
+
+      // 11. Expiration test (24h limit W49)
       const jobId3 = '00000000-0000-4000-8000-00000000b993'
       await q(`
         insert into delivery_jobs (
@@ -4329,28 +4422,59 @@ STEPS.push({
         )
       `, [jobId3, bookingIds.b, BRANCH, U.Coordinator])
 
-      const rawToken3 = 'rider_sec_tok_expired_test_link_11223'
-      const tokenHash3 = createHash('sha256').update(rawToken3).digest('hex')
+      let rawToken3
+      const testClientUuid3 = '00000000-0000-4000-8000-00000000ccce'
       await as('Coordinator', async () => {
-        await q(
-          `select create_rider_link($1, $2, 'Gita Rider', '9823456789')`,
-          [jobId3, tokenHash3],
-        )
+        const res = (await q(
+          `select create_rider_link($1, $2, 'Gita Rider', '9823456789') as res`,
+          [testClientUuid3, jobId3],
+        )).rows[0].res
+        rawToken3 = res.raw_token
+        assert(rawToken3, 'Third rider link created')
       })
+
+      const tokenHash3 = createHash('sha256').update(rawToken3).digest('hex')
       await q(`update delivery_job_links set created_at = now() - interval '25 hours', expires_at = now() - interval '1 hour' where token_hash = $1`, [tokenHash3])
 
-      await refusesSavepoint(
-        'Reading expired rider link',
-        `select get_rider_job_by_token($1)`,
-        [tokenHash3],
-        /expired/i,
-      )
+      await asService(async () => {
+        await refusesSavepoint(
+          'Reading expired rider link',
+          `select get_rider_job_by_token($1)`,
+          [tokenHash3],
+          /expired/i,
+        )
+      })
 
-      // 10. Anon privilege boundary assertion
+      // 12. R1 / D-10.6: privilege assertions on rider RPCs
+      const riderRpcs = [
+        'public.get_rider_job_by_token(text)',
+        'public.rider_mark_picked_up(text)',
+        'public.rider_complete_delivery(text, text, text, text)',
+      ]
+      for (const rpc of riderRpcs) {
+        const authExec = await one(`select has_function_privilege('authenticated', $1, 'EXECUTE')`, [rpc])
+        assertEq(authExec, false, `${rpc} is NOT executable by authenticated (R1)`)
+        const svcExec = await one(`select has_function_privilege('service_role', $1, 'EXECUTE')`, [rpc])
+        assertEq(svcExec, true, `${rpc} IS executable by service_role`)
+        const anonExec = await one(`select has_function_privilege('anon', $1, 'EXECUTE')`, [rpc])
+        assertEq(anonExec, false, `${rpc} is NOT executable by anon`)
+      }
+
+      // 13. create_rider_link is staff-callable (authenticated), not anon
+      const createExecAuth = await one(`select has_function_privilege('authenticated', 'public.create_rider_link(uuid, uuid, text, text)', 'EXECUTE')`)
+      assertEq(createExecAuth, true, 'create_rider_link IS executable by authenticated')
+      const createExecAnon = await one(`select has_function_privilege('anon', 'public.create_rider_link(uuid, uuid, text, text)', 'EXECUTE')`)
+      assertEq(createExecAnon, false, 'create_rider_link is NOT executable by anon')
+
+      // 14. token_hash column is NOT selectable by authenticated or anon
+      const anonTokenHashSel = await one(`select has_column_privilege('anon', 'public.delivery_job_links', 'token_hash', 'SELECT')`)
+      assertEq(anonTokenHashSel, false, 'delivery_job_links.token_hash NOT selectable by anon')
+      const authTokenHashSel = await one(`select has_column_privilege('authenticated', 'public.delivery_job_links', 'token_hash', 'SELECT')`)
+      assertEq(authTokenHashSel, false, 'delivery_job_links.token_hash NOT selectable by authenticated')
+
+      // 15. Anon cannot read delivery_job_links table at all
       const anonSelect = await one(`select has_table_privilege('anon', 'public.delivery_job_links', 'SELECT')`)
       assertEq(anonSelect, false, 'delivery_job_links table is NOT readable by anon')
-      const anonExec = await one(`select has_function_privilege('anon', 'public.create_rider_link(uuid, text, text, text)', 'EXECUTE')`)
-      assertEq(anonExec, false, 'create_rider_link is NOT executable by anon')
     })
   },
 })

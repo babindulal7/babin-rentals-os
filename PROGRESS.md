@@ -1,5 +1,64 @@
 # Progress Log
 
+## 2026-11-03 — T4-08: One-time rider link review fixes R1–R5 applied and verified
+
+**Did**
+- **Applied review fixes R1–R5 for T4-08** (`RULINGS-2026-11-01.md`, `docs/plans/prompts/T4-08-fixes.md`):
+  - **R1:** Revoked column-level grant on `token_hash` from Coordinator and Warehouse (`grant select (id, job_id, rider_name, rider_phone, created_at, expires_at, revoked_at, completed_at, is_active) on delivery_job_links to Coordinator, Warehouse`). `token_hash` is now readable only by `service_role`. Direct RPCs `get_rider_job` and `complete_rider_delivery` are revoked from `authenticated` / `anon` and granted strictly to `service_role`.
+  - **R2:** Added `p_client_uuid` to `create_rider_link` for Law 8 idempotency. A duplicate call returns the existing active link with `already_issued: true` without minting a second link.
+  - **R3:** `create_rider_link` mints the 128-bit raw token server-side via `gen_random_bytes(16)`, hashes it with `digest(..., 'sha256')`, stores only the hash, and returns `raw_token` once in the JSON payload (`{link_id, raw_token, already_issued}`). The raw token never touches any table or audit row. Browser never hashes the token.
+  - **R4:** Masked errors uniformly in `supabase/functions/rider-link/index.ts` with HTTP 403 / "This link is no longer valid" for revoked, expired, completed, or non-existent tokens to prevent enumeration attacks.
+  - **R5:** Fixed duplicate `newClientUuid` import in `SendToRiderModal.tsx` so `npm run typecheck` exits 0.
+- **Frontend & UI (`SendToRiderModal.tsx`):**
+  - Mints and passes `client_uuid` to `createRiderLink`.
+  - Added accessible labels (`htmlFor`, `autoComplete`, `aria-describedby`) and unmount timer cleanup.
+  - Replaced browser `confirm()` with accessible `ConfirmDialog` for revocation.
+- **Docs & Verification:**
+  - Updated `docs/PERMISSIONS.md` §7.1 and §4.2 with R1–R4 security controls.
+  - Updated `docs/verification/T4-08_DESIGN.md` threat model and RPC contracts.
+  - Updated `scripts/e2e-lifecycle.mjs` step L47 with `asService()` helper exercising R1–R4 and column-level access denial assertions.
+  - Marked T4-08 done (awaiting Babin local merge) in `docs/plans/T4_SHARED_TOOLS.md`.
+
+**Ruled**
+- `RULINGS-2026-11-01.md` R1–R5 enforced across database migration 0190, edge function, client queries, and UI components.
+
+**Verified**
+- `npm run typecheck`: exit 0
+- `npm run lint`: exit 0 (0 warnings)
+- `npm test`: 521 files, 6,423 passed (exit 0)
+- `npm run check:pglite`: 196/196 applied, 0 failed (exit 0)
+- `node scripts/test-booking-financial-integrity.mjs`: 8/8 assertions passed (exit 0)
+- `npm run check:security`: 18 + 28 + 14 passed (exit 0)
+- `npm run check:lifecycle`: 48/48 green, 0 known-red, 0 failed (exit 0)
+- `npm run test:server-contracts`: 58 passed (exit 0)
+- `npm run test:partial-return`: 58 passed (exit 0)
+- `node --test scripts/test-receipt.test.mjs`: 11/11 passed (exit 0)
+- `npm run lint:shell`: 850 files checked, 0 violations (exit 0)
+- `npm run lint:ui-copy`: 5/5 passed, 0 violations (exit 0)
+- `npm run check:contrast`: 106/106 passed (exit 0)
+- `npm run build`: built in 6m 32s (exit 0)
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 79 / 79 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 65 / 65 (100%) | +0 |
+| Lifecycle | steps green / total | 48 / 48 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 196 files · check:pglite 196/196 applied, 0 failed (recorded 2026-11-03T14:21:55.481Z). Suite: PASS — 6423/6423 passed, 0 failed (recorded 2026-11-03T14:36:59.248Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-03T14:25:58.788Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin: merge `lane-b/T4-08-review-fixes` into `main`.
+- Babin: apply migration `0190_one_time_rider_links.sql` after backup protocol.
+- Lane B: proceed to next card in Lane B roadmap (T4/T5).
+
 ## 2026-11-01 — O-18 (PIN 4 digits) and O-19 (all staff write team notes) ruled; Booqable package landed on main
 
 **Did**
