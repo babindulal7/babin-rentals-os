@@ -253,12 +253,15 @@ export async function uploadEvidencePhoto(
     .eq('operation_stage', reference.operationStage)
     .eq('booking_id', reference.bookingId)
 
-  if (resolvedSessionId) {
-    linkQuery = linkQuery.eq('session_id', resolvedSessionId)
-  }
-  if (reference.itemId) {
-    linkQuery = linkQuery.eq('item_id', reference.itemId)
-  }
+  // A booking-level reference must not accidentally reuse a unit-specific link,
+  // and a session-free Damage link must not reuse a session-bound reference.
+  // PostgREST eq(null) is not a valid SQL NULL predicate: use IS NULL.
+  linkQuery = resolvedSessionId
+    ? linkQuery.eq('session_id', resolvedSessionId)
+    : linkQuery.is('session_id', null)
+  linkQuery = reference.itemId
+    ? linkQuery.eq('item_id', reference.itemId)
+    : linkQuery.is('item_id', null)
 
   const { data: alreadyLinked, error: lookupError } = await linkQuery.maybeSingle()
   if (lookupError) throw new Error(`Could not verify evidence session link: ${lookupError.message}`)
