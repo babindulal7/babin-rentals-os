@@ -113,6 +113,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
   useEffect(() => { if (notesOpen) setNotesVisited(true) }, [notesOpen])
   const [activeConfirmAction, setActiveConfirmAction] = useState<PageActionItem | null>(null)
   const [showMockDialog, setShowMockDialog] = useState(false)
+  const [showForgetDevice, setShowForgetDevice] = useState(false)
   const ws = useOptionalWorkspace()
   const profileBtnRef = useRef<HTMLButtonElement>(null)
 
@@ -1128,11 +1129,9 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                   {(user?.role === 'Owner' || user?.role === 'Admin') && roster && roster.length > 0 && (
                     <button
                       type="button"
-                      onClick={async () => {
+                      onClick={() => {
                         setProfileOpen(false)
-                        if (window.confirm('Forget all stored sessions and roster on this device?')) {
-                          await forgetThisDevice()
-                        }
+                        setShowForgetDevice(true)
                       }}
                       style={{
                         display: 'flex',
@@ -1324,6 +1323,21 @@ export default function Header({ crumbs, actions }: HeaderProps) {
             } catch {
               /* ignore */
             }
+          }}
+        />
+      )}
+      {showForgetDevice && (
+        <ConfirmDialog
+          isOpen={true}
+          title="Forget this device?"
+          description="All stored sessions and the staff roster on this device will be removed. Nobody will be able to unlock without signing in again."
+          confirmLabel="Forget this device"
+          cancelLabel="Cancel"
+          variant="danger"
+          onClose={() => setShowForgetDevice(false)}
+          onConfirm={() => {
+            setShowForgetDevice(false)
+            void forgetThisDevice()
           }}
         />
       )}
