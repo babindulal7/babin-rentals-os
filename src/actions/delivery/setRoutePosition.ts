@@ -15,7 +15,7 @@ export type SetRoutePositionOutput = {
 
 export const setRoutePosition = createAction<SetRoutePositionInput, SetRoutePositionOutput>({
   name: 'setRoutePosition',
-  permissions: ['delivery.reschedule'],
+  permissions: ['delivery.setRoutePosition'],
   implemented: true,
   validate: (input) => {
     if (!input.jobId || typeof input.jobId !== 'string') {

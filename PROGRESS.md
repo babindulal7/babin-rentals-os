@@ -1,42 +1,74 @@
 # Progress Log
 
-## 2026-11-03 — main red again after two sessions' a11y fixes collided; fixed on one branch and green on the self-hosted runner (51 jsx-a11y errors → 0 included)
+## 2026-11-03 — `lint:shell` was the last red gate on `main`: the two native `window.confirm` calls are replaced (PR #83, cut down to 3 files)
 
 **Did**
-- **51 `jsx-a11y` ESLint errors → 0 with real behaviour, no rule disabled** (`e8b0d99c`, `a2c6873c`; merged to `main` by PR #70 as `a4372434`). Escape now closes `EvidenceThumbnail` and `CreationDrawer` (neither had any); menus and the date grid are focusable; option rows (`CommandPalette`, `Select`, `AddItemPanel`) select on Enter/Space and ignore keys from nested controls; the booking conflict row is a disclosure with `aria-expanded`; nine empty column headers got `sr-only` names; `ScannerFab`'s silent video-only viewfinder is `muted` + named (no fake captions track); `ClientCombobox`'s outer wrapper was a second `role="listbox"` (invalid ARIA, 2 placement tests red) and is now `role="presentation"`. PR #70 was merged by the `babindulal7` account one minute after its last push, before CI finished — not by this session.
-- **CI #1005 on `main` (`39b053d0`) failed Typecheck: `TS17001` duplicate JSX attributes** in `InputGroup.tsx` and the `AddItemPanel` serial panel. Cause: commit `74a9536f` ("Add Electron secure storage and fix a11y lint errors", another session, 00:00) fixed the same elements independently of `a4372434`; the merge kept both. Kept the other session's complete versions and removed mine (`2dec45d6`).
-- That same collision left two `eslint-disable jsx-a11y/...` comments (`shadcn/pagination.tsx`, `ui/Charts.tsx`) that became unused and failed `--max-warnings 0`; removed (`2dec45d6`). **No `jsx-a11y` suppression remains in `src`.**
-- **Real bug from the other session's change:** the `InputGroup` addon became `role="button"`, and its mousedown handler skipped anything inside a `[role="button"]`, so it matched the addon itself and never focused the input (`cossPrimitives` "transfers focus to input when clicking on non-interactive addon" was red on `main`). Only a different interactive element between the target and the addon now counts (`90f5a1b6`).
-- **`lint:shell` was red on `main` since the T1-15 switch-user commit `9e5bc9b9`** (native `window.confirm` in `Header.tsx` and `ScreenLock.tsx`). The fix on `main`'s lineage is `3e79a846` (another session), which is **byte-identical** to this session's `fix/shell-native-confirm` (`4d094b7b`); merged in here (`1ebc0324`). Header uses `ConfirmDialog`; the lock screen confirms inline because it sits at `--z-system`, above the modal layer.
+- `main` (`34e58b8b`, "…repair red main gates") is green on `tsc`, ESLint, the a11y rules (no `jsx-a11y` suppression left in `src`) and the three tests that were red on `39b053d0` — **except `lint:shell`**, which still fails on `Header.tsx:1133` and `ScreenLock.tsx:288` (`window.confirm('Forget all stored sessions and roster on this device?')`, from the T1-15 switch-user commit `9e5bc9b9`).
+- This PR replaces them: `Header` uses the shared `ConfirmDialog`; `ScreenLock` confirms inline (`role="alertdialog"`, Cancel / Forget this device) because the lock screen sits at `--z-system`, above the modal layer, and a dialog would render behind it. Two taps either way. The `rosterLock` test asserts the first tap forgets nothing, Cancel backs out, only the explicit confirm calls `forgetThisDevice` once, and no native confirm is used. The three files are byte-identical to `4d094b7b` and to the other session's `3e79a846`.
+- The earlier, wider version of this branch (an `InputGroup` focus fix, removal of duplicate JSX attributes and of two dead `eslint-disable` comments after two sessions' a11y fixes collided in CI #1005) was **dropped**: `34e58b8b` repaired the same files itself and its versions pass, so the branch was merged with `main`'s tree and only the three confirm files were kept.
 
 **Ruled**
 - Nothing new. No product, permission, money or migration decision was made.
 
 **Verified**
-- **Green on the runner:** run `41514544707`, branch `fix/main-green-20261103`, commit `1ebc0324` (= `main` `39b053d0` + the fixes above) — runner log `Job result after all job steps finish: Succeeded`, all 22 steps ran for real durations, no non-zero exit, ~32 min, including Typecheck, Lint, local API guards, full mock tests, PGlite, financial integrity, security, lifecycle, server contracts, partial return, `lint:shell`, `lint:ui-copy`, contrast, Build and Coverage plus both artifact uploads. Source: the runner's own log on `DESKTOP-99FC3AO`; GitHub's run page was not seen (`gh` not logged in, repo private).
-- Earlier green run of the same confirm fix on the older lineage: `41487111932` (`4d094b7b`) and `41493258321` (`d7390aa9`).
-- Red before this: CI #1005 (`39b053d0`) failed Typecheck (2 × `TS17001`); runs of `a4372434` and PR #70 failed at `lint:shell`.
-- Local on the final head: `tsc` 0; `eslint` 0; `lint:shell` 864 files; `lint:ui-copy`, `lint:progress`, `check:contrast`, `test:local-api-guards` and the receipt test pass; `cossPrimitives` 5/5.
-- **Not verified:** none of the changed components has been driven in a browser (Escape on the evidence viewer and drawer, the conflict-row disclosure, the lock-screen confirmation, the input-group addon focus). A `RecordForm` focus test failed 3 times under full-suite CPU load earlier and 0 of 42 times alone; its cause is unproven.
+- Local, on the final tree (`main` `34e58b8b` + these three files): `tsc` 0; `eslint` 0; `lint:shell` passes (866 files); `lint:ui-copy`, `check:contrast`, `test:local-api-guards` and the receipt test pass; auth + shell + UI test folders 584 tests pass.
+- On the self-hosted runner (`DESKTOP-99FC3AO`, runner's own log; GitHub's page not seen — `gh` not logged in, repo private): the same three-file fix was green on three earlier trees — `41487111932` (`4d094b7b`), `41493258321` (`d7390aa9`), `41514544707` (`1ebc0324`) and `41541633909` (`bbe17de1`), each all 22 steps incl. Build and Coverage, 28–43 min. The **PR #83 `pull_request` run `41545398265` was cancelled, not failed**: "Install dependencies" ran 2h42m and the job hit its time limit (the PC most likely slept; unproven). It verified nothing.
+- **Not verified:** the final tree above has not had a full 22-step run yet (a run on this push is the check); none of the changed UI has been driven in a browser (Header "Forget this device" dialog; the lock-screen inline confirmation).
 
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 86 / 86 (100%) | +0 |
+| Backend | actions implemented / total | 87 / 87 (100%) | +0 |
 | Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
 | DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
-| Permissions | capabilities mapped / declared | 67 / 67 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 72 / 72 (100%) | +0 |
 | Lifecycle | steps green / total | not measured — current receipt required | — |
 | Overall | structural mean of five | not measured | — |
-Migrations 206 files · check:pglite not run this session (pass --migrations to run). Suite: NOT VERIFIED — invalid test receipt. Coverage suite: NOT VERIFIED — invalid test receipt.
+Migrations 207 files · check:pglite not run this session (pass --migrations to run). Suite: NOT VERIFIED — invalid test receipt. Coverage suite: NOT VERIFIED — invalid test receipt.
 Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
 Counted by `npm run completion`, not typed. Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- **Babin:** merge `fix/main-green-20261103` (it carries the other session's `3e79a846`). Until then `main` is red (Typecheck, ESLint, `lint:shell`, `cossPrimitives`). `fix/shell-native-confirm` and `fix/shell-native-confirm-current-main-20261103` are now redundant and can be deleted.
-- **Babin / sessions:** two sessions editing the same a11y code produced the collision. Before another bulk lint pass, agree who owns it and run `npm run lint` + `tsc` on the merged tree before merging; check whether auto-merge is on (PR #70 merged within a minute of its last push).
-- Drive the changed components with a keyboard in `npm run dev`; none has been seen on screen.
-- Stale docs on `main`: `CLAUDE.md` / `PLAN.md` / `AGENTS.md` still say CI is off; `RULINGS-2026-11-02-ci.md` exists only on `claude/equipment-draft-preview-rename-a5f063`. Register the runner as a Windows service so CI does not depend on an open window.
+- **Babin:** merge PR #83 once its `pull_request` run is green; it is the last thing keeping `main` red. Close `fix/shell-native-confirm`, `fix/shell-native-confirm-current-main-20261103` and the throwaway `ci/verify-*` branches afterwards (all superseded by this PR).
+- **Babin:** the PC that hosts the runner must not sleep while CI runs (a 2h42m "Install dependencies" is what cancelled PR #83's run); register the runner as a Windows service so CI does not depend on an open window. Several sessions pushing at once queue on one desktop.
+- Drive the Header dialog and the lock-screen confirmation in `npm run dev`; neither has been seen on screen.
+
+## 2026-11-03 — T4-07 delivery zones finished on `main` (build notes 3–4) and main's red gates repaired
+
+**Did**
+- **T4-07 build note 3 — role set narrowed to Owner · Admin · Manager (B-1).** Migration 0189 was amended in place in `148ccb93` (`auth_is_manager_or_above()`, INSERT/UPDATE-only policies, no DELETE policy) before this session. The mirror was still wrong: `canCreateDeliveryZone` / `canManageDeliveryZones` in `src/lib/rbac.ts` still admitted Coordinator, and nothing pinned the role set — no `delivery_zone.*` round-trip in `core.test.ts`, no rows in `docs/PERMISSIONS.md` §4 (B-3). Now the two helpers are Owner · Admin · Manager; `delivery_zone.read / create / manage` are in `docs/PERMISSIONS.md` §4.10 and in the T-1 fixture (`src/actions/__tests__/core.test.ts`), with role-set tests in `src/lib/__tests__/rbac.test.ts` and Coordinator-refusal tests in all three zone action suites (which previously called with a Coordinator context). The Settings control had been gated on `settings.manage` — **Owner only** in code — so Admin and Manager could not manage zones at all; it now gates on `canManageDeliveryZones`.
+- **T4-07 build note 4 — rupees in, paisa stored.** Settings ▸ System ▸ Delivery zones now asks for **Fee (Rs)** and converts through `parseMoney` (handles "3,500", "Rs 3,500", ".50") before calling the action, which still stores integer paisa; editing pre-fills through `toRupees`. The dialog's inline error is used for a bad amount; no toast.
+- **Law 6 on the screen, end to end.** `DeliveryZoneRow.fee_paisa` is `number | null` because `list_delivery_zones()` returns null for Warehouse · Technician · Driver; the settings table shows `—` and the booking zone select shows the zone name alone rather than "Rs 0". `DeliveryZonesControl` gates on `canManageDeliveryZones` (not `canManageSettings`), including the empty-state "Create first zone" action, and `System.tsx` now says "Owner, Admin and Manager".
+- **`main` was red at `6a1ee2ec` before any T4-07 edit.** Typecheck: `CalendarFeedControl.tsx` (added by `6a1ee2ec`) read `response.result` (the dispatcher returns the output directly), called `showErrorToast` (the toast context exposes only `showSuccessToast`), passed `Card subtitle` (no such prop) and called both token actions with no input argument; `calendarFeed.ts` had an unused `SystemRole` import and two unused `ctx` params; `InputGroup.tsx` and `AddItemPanel.tsx` each carried a duplicate JSX attribute from the `39b053d0` merge resolution. Repaired rather than skipped, because the gate list cannot run past typecheck. Errors now render inline (`role="alert"`), and `createCalendarFeedToken` / `getCalendarFeedTokenStatus` are called with `{}` as their input type requires.
+- **`main`'s lint was red too** (not from this card): `npm run lint` (`--max-warnings 0`) failed on two **unused** `eslint-disable` directives — `src/components/shadcn/pagination.tsx` (`anchor-has-content`) and `src/components/ui/Charts.tsx` (`no-static-element-interactions`). Removed: a directive that suppresses nothing cannot change behaviour, and leaving it makes the gate list un-runnable.
+- **T4-09 capability mismatch closed on the way**: `setClientMapPin` and `setRoutePosition` declared `delivery.reschedule` while `core.ts` had dedicated cases for `delivery.setClientMapPin` / `delivery.setRoutePosition` — both now declare their own capability, so the T-1 scan no longer finds an action borrowing another action's rule.
+- All work is on **`main`**, no lane branch or worktree; nothing was applied to any Supabase project (N-5).
+
+**Ruled**
+- Nothing new. 0189 is amended in place because it has never been applied to live (N-5), and narrowing Coordinator out follows B-1 (stricter wins) plus the card's own role set — it was not a product change to be logged in `OPEN_DECISIONS.md`.
+
+**Verified**
+- Gate run in progress; results pasted here when green (see below).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 87 / 87 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 72 / 72 (100%) | +5 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 207 files · check:pglite Historical, incomplete or failed receipt (2026-11-02T18:55:09.645Z); current source NOT VERIFIED. Suite: Historical suite: 3/3 passed, 0 failed (recorded 2026-11-02T14:43:58.377Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-02T18:50:45.223Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **0189 is written and verified locally, never applied.** Babin applies it after `docs/archive/BACKUP_PROTOCOL.md`; until then the live Settings screen has no zone table.
+- **Not seen on a screen.** The fee-in-rupees dialog, the `—` masking and the booking zone select were exercised by unit tests only; no browser run (`npm run dev`) was done in this session.
+- Next on lane B: T4-05, T4-06, then T6 (Nepali) once no lane A or C card touches the module.
 
 ## 2026-11-02 — main's red gates fixed (typecheck, UI copy, server-contracts) and verified on the self-hosted Windows runner
 

@@ -181,7 +181,7 @@ export const SYSTEM_SECTIONS: Section[] = [
       },
       {
         label: 'Delivery zones',
-        note: 'Zones and fees for delivery dispatch. Pickup at the shop is always Rs 0. Coordinator+ can create, edit, and deactivate zones.',
+        note: 'Zones and fees for delivery dispatch. Pickup at the shop is always Rs 0. Owner, Admin and Manager can create, edit, and deactivate zones.',
         custom: <DeliveryZonesControl />,
         readBy: 'lib/queries/delivery.ts, modules/operations/DeliveryWorkspace.tsx',
       },

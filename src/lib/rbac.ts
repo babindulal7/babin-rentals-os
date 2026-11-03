@@ -746,11 +746,12 @@ export function canAcknowledgeTeamNote(role: SystemRole): boolean {
 }
 
 /**
- * Create a delivery zone — Coordinator and above (Owner, Admin, Manager, Coordinator).
- * Mirrors the RLS policy on `delivery_zones` INSERT (migration 0189).
+ * Create a delivery zone — Owner, Admin, Manager (T4-07 build note 3, B-1).
+ * Mirrors `delivery_zones_insert_manager_plus` (migration 0189, amended 3 Nov 2026).
+ * Coordinator was narrowed out: the card's role set is Owner · Admin · Manager.
  */
 export function canCreateDeliveryZone(role: SystemRole): boolean {
-  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+  return role === 'Owner' || role === 'Admin' || role === 'Manager'
 }
 
 /**
@@ -762,11 +763,12 @@ export function canReadDeliveryZones(role: SystemRole): boolean {
 }
 
 /**
- * Update/deactivate a delivery zone — Coordinator and above.
- * Mirrors the RLS policy on `delivery_zones` UPDATE/DELETE (migration 0189).
+ * Update/deactivate a delivery zone — Owner, Admin, Manager (T4-07 build notes 2–3).
+ * Mirrors `delivery_zones_update_manager_plus` (migration 0189, amended 3 Nov 2026):
+ * INSERT and UPDATE only — there is no DELETE policy, "Deactivate" is terminal (Law 3).
  */
 export function canManageDeliveryZones(role: SystemRole): boolean {
-  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+  return role === 'Owner' || role === 'Admin' || role === 'Manager'
 }
 
 /**

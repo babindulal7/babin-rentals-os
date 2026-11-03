@@ -95,10 +95,8 @@ export const InputGroupAddon = forwardRef<HTMLDivElement, InputGroupAddonProps>(
     onMouseDown?.(e)
     const target = e.target as HTMLElement | null
     if (!target) return
-    const interactive = target.closest('button, a, input, select, textarea, [role="button"]')
-    // The addon is itself role="button" so it is keyboard-reachable; that must not count as
-    // a control inside it, or pressing the addon would never hand focus to the field.
-    if (interactive && interactive !== e.currentTarget) return
+    const isInteractive = target.closest('button, a, input, select, textarea, [role="button"]')
+    if (isInteractive) return
 
     e.preventDefault()
     const parent = e.currentTarget.parentElement
@@ -134,12 +132,14 @@ export const InputGroupAddon = forwardRef<HTMLDivElement, InputGroupAddonProps>(
   return (
     <div
       ref={ref}
+      role="presentation"
       data-slot="input-group-addon"
       data-align={align}
-      role="button"
-      tabIndex={-1}
+      /* Pointer-only affordance: clicking the padding/icon focuses the sibling
+         input. Keyboard users reach that input directly, and a nested real
+         button keeps its own semantics — so the wrapper stays presentational
+         rather than a focusable role="button" that can do nothing on Enter. */
       onMouseDown={handleMouseDown}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleMouseDown(e as unknown as React.MouseEvent<HTMLDivElement>) } }}
       className={cn(className)}
       style={{
         display: 'flex',

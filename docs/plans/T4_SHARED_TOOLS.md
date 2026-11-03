@@ -104,7 +104,7 @@ per device until dismissed; reachable later from Settings ▸ System.
 still present afterwards; a clean device shows nothing.
 **Needs** — none.
 
-### T4-07 · Delivery zones and fees            status: doing — database, actions, RBAC, lifecycle step, Settings UI, and New Rental zone integration complete (lane-b/T4-07-delivery-zones) · size: S · lane B · [go-live]
+### T4-07 · Delivery zones and fees            status: done — all five build notes closed on `main` 3 Nov 2026 (0189 amended, RBAC narrowed, rupees input, Law 6 masking) · size: S · lane B · [go-live]
 **What** — Settings ▸ Operations ▸ **Delivery zones**: a short table of zones with a fee each.
 Starting zones (L6, researched — Kathmandu services group the valley the same way):
 **Inside Ring Road · Outside Ring Road, inside the valley · Far valley (Bhaktapur town, Godawari,
@@ -116,7 +116,7 @@ the shop stays Rs 0. Replace the fixed Rs 3,500 "Babin Delivery" price.
 **Where** — `src/lib/settingsStore.ts`, settings table (0158), `src/lib/bookingTransportForm.ts`,
 `NewRental.tsx` transport section, `src/lib/pricingPipeline.ts`.
 **Database** — migration `0189_delivery_zones.sql`: `delivery_zones` table + RPCs + seed data.
-**Build notes** — **before this card is done** (Claude's review of `main` `9e219db`, 31 Oct):
+**Build notes** — **closed 3 Nov 2026; kept as the record of what changed** (Claude's review of `main` `9e219db`, 31 Oct):
 1) **Money leak (Law 6, P4):** the `delivery_zones` read policy, `list_delivery_zones()` and
 `get_delivery_zone_fee()` (0189) give `fee_paisa` to Warehouse, Technician and Driver, and lifecycle
 step L46 even asserts that Warehouse reads 350000. Money-blind roles must get no fee: return it only

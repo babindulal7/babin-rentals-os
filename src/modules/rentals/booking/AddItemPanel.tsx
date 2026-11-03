@@ -2027,6 +2027,7 @@ function EquipmentGroupRow({
         <div
           role="region"
           tabIndex={-1}
+          // Containment only: clicks on the unit chips must not also add the whole row.
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation() } }}
           style={{
