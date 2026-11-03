@@ -1,5 +1,61 @@
 # Progress Log
 
+## 2026-11-04 — T3-03, T3-04, T3-07, T3-08, T3-09 MERGED & VERIFIED on `main` (lane C)
+
+**Did**
+- **T3-03: Cancellation fee tiers (lane C):**
+  - Migration `0212_cancellation_fee_tiers.sql`: `cancellation_fee_tiers` table with notice hours, fee %, RLS (desk roles read, Owner writes), and no-delete trigger (Law 3).
+  - Query layer: `cancellationFeeTiers.ts` with `fetchCancellationFeeTiers()` and `suggestCancellationFee()`.
+  - UI: `CancellationFeeTiersCard.tsx` wired into Settings ▸ Financial (`Financial.tsx`).
+- **T3-04: Non-VAT bills (lane C, D13):**
+  - Migration `0213_non_vat_bills.sql`: `vat_treatment` enum ('standard', 'non_vat') on invoices table, trigger to auto-set from vat_rate, and historical backfill for zero-VAT invoices.
+  - Query layer: `salesVatReports.ts` updated to track non-VAT sales turnover separately.
+- **T3-07: Opening balances (lane C, D15):**
+  - Migration `0214_opening_balances.sql`: `opening_balances` append-only table (cash/bank, date, amount, scope) with RLS (money roles read, Owner writes) and no-delete trigger.
+  - Query layer: `openingBalances.ts` with `fetchOpeningBalances()` and `fetchLatestOpeningBalance()`.
+  - Reports: `liquidity.ts` and `CashFlowReport.tsx` show opening and closing cash amounts from opening balances.
+- **T3-08: Equipment form one page seven sections (lane C):**
+  - Removed 5-step wizard mode and stepper from `EquipmentRecordEditor.tsx`.
+  - All 7 sections (Identity, Stock & Units, Relationships, Location, Purchase, Pricing & Terms, Maintenance & Documents) render continuously with always-visible section links.
+  - Verified section ordering with `RecordForm.test.tsx` (32/32 tests pass).
+- **T3-09: Structure-priced bookings invoice preview (lane C):**
+  - `invoicePreview.ts` updated to read stored `line_total` and `price_breakdown` from `booking_lines_v`.
+  - Fixed-rate and structure-priced lines retain their exact quoted total on invoice preview.
+- **Migration Ledger & Gates:**
+  - Migrations 0212, 0213, 0214 claimed in `MIGRATION_LEDGER.md` (next free: 0215).
+  - All 212 migrations applied from scratch in PGlite with 0 failed.
+
+**Ruled**
+- Integer paisa integrity, money privacy under Law 6, append-only balances (Law 4 spirit), and immutable delete backstops (Law 3).
+
+**Verified**
+- `npm run check:pglite` — 212/212 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 154/154 pinned.
+- `npm run check:lifecycle` — 58/58 green, 0 known-red, 0 failed.
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm test` — 534/534 test files passed, 6,595/6,595 tests passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 64 | 54 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 58 / 58 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 212 files · check:pglite 212/212 applied, 0 failed (recorded 2026-11-03T20:55:05.293Z). Suite: Historical suite: 6594/6595 passed, 1 failed (recorded 2026-11-03T20:50:11.091Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-03T20:56:09.696Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin: apply migrations 0190, 0208, 0210, 0211, 0212, 0213, 0214 to live after backup protocol.
+- Next lane A: T1-17 (Two-step sign-in for money roles) and T2-17 (Unit editor permissions preflight).
+- Next lane B: T4-05 (shift handover), T4-06 (export old browser entries), then T6 Nepali.
+- Next lane C: T3-14c blocked on O-14/O-17 (accountant).
+
 ## 2026-11-04 — T1-16, T4-11, T4-03, T5-02, T8-05, T8-06 MERGED & VERIFIED on `main`
 
 **Did**
