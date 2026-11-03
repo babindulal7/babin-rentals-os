@@ -109,6 +109,16 @@ export function calculateTargetDimensions(
   }
 }
 
+/** Never upscale a photo on a later compression attempt. In particular, the
+ * standard 1600px path must not jump to 1800px after a size-cap failure. */
+export function compressionDimensionSteps(initialMaxDim: number): number[] {
+  if (!Number.isFinite(initialMaxDim) || initialMaxDim < 1) {
+    throw new Error('Photo dimension limit must be a positive finite number')
+  }
+  return [...new Set([initialMaxDim, 1800, 1600, 1400, 1200]
+    .filter((dim) => dim <= initialMaxDim))]
+}
+
 function canvasToBlobAsync(canvas: HTMLCanvasElement, quality: number): Promise<Blob | null> {
   return new Promise((resolve) => {
     canvas.toBlob((b) => resolve(b), 'image/jpeg', quality)
@@ -160,7 +170,7 @@ export async function compressEvidencePhoto(
       URL.revokeObjectURL(objectUrl)
       try {
         const qualitySteps = [initialQuality, 0.80, 0.75, 0.70, 0.65]
-        const dimensionSteps = [initialMaxDim, 1800, 1600, 1400, 1200]
+        const dimensionSteps = compressionDimensionSteps(initialMaxDim)
 
         let bestResult: CompressedImageResult | null = null
 
