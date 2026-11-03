@@ -198,13 +198,16 @@ export function FilterBar({
             const isSingleSelected = selectedOptionId !== undefined && selectedOptionId === opt.id
             const isMultiSelected = selectedOptionIds !== undefined && selectedOptionIds.has(opt.id)
             const isSelected = isSingleSelected || isMultiSelected
+            // A filter with no selection handler is informational, not an actionable control.
+            const canSelect = Boolean(onToggleOptionId || onSelectOption)
 
             return (
               <button
                 key={opt.id}
                 type="button"
                 className="filter-bar__option"
-                aria-pressed={isSelected}
+                aria-pressed={canSelect ? isSelected : undefined}
+                disabled={!canSelect}
                 onClick={() => {
                   if (onToggleOptionId) onToggleOptionId(opt.id)
                   else if (onSelectOption) onSelectOption(opt.id)
@@ -221,7 +224,7 @@ export function FilterBar({
                   color: isSelected ? 'var(--text, #0f172a)' : 'var(--text2, #475569)',
                   fontSize: 'var(--t-meta, 12px)',
                   fontWeight: isSelected ? 600 : 500,
-                  cursor: 'pointer',
+                  cursor: canSelect ? 'pointer' : 'default',
                   fontFamily: 'inherit',
                   whiteSpace: 'nowrap',
                   transition: 'background-color 120ms ease, border-color 120ms ease, color 120ms ease',
@@ -238,7 +241,7 @@ export function FilterBar({
                   />
                 )}
                 <span>{opt.label}</span>
-                {opt.count !== undefined && opt.count !== null && !Number.isNaN(opt.count) && (
+                {opt.count !== undefined && opt.count !== null && Number.isFinite(opt.count) && opt.count >= 0 && (
                   <span
                     style={{
                       fontSize: '11px',
