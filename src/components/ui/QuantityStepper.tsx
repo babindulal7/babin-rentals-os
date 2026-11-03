@@ -133,6 +133,9 @@ export const QuantityStepper = forwardRef<HTMLInputElement, QuantityStepperProps
   }
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // IME Enter selects a character; it must not commit the quantity or step it.
+    // keyCode 229 covers older mobile/desktop composition implementations.
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return
     if (e.key === 'Enter') {
       if (editingText !== null) {
         commitValue(editingText)
