@@ -22,8 +22,6 @@ import type { ListQueryResult } from '../../lib/queries/useList'
 import type { ListFilters } from '../../lib/queries/listQuery'
 import {
   getAssetDetail,
-  INVENTORY_STATES,
-  UNIT_CONDITIONS,
   unitLocationOf,
   INV_STYLE,
   INV_TONE,
