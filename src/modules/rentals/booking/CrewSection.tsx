@@ -18,7 +18,7 @@ export interface CrewLine {
   role: CrewRole
   phone: string
   dayRatePaisa: Paisa
-  overtimePaisa: Paisa
+  overtimeDays: number
   accommodationPaisa: Paisa
   mealsPaisa: Paisa
   overtimeDays?: number | undefined
@@ -58,8 +58,8 @@ export interface CrewSectionProps {
   onClearCrew: () => void
   onUpdateCrewExtras: (
     crewId: string,
-    field: 'overtimePaisa' | 'accommodationPaisa' | 'mealsPaisa',
-    paisa: Paisa,
+    field: 'overtimeDays' | 'accommodationPaisa' | 'mealsPaisa',
+    value: number | Paisa,
   ) => void
   onUpdateCrewLine?: ((crewId: string, updates: Partial<CrewLine>) => void) | undefined
   crewChargesPaisa: Paisa
@@ -205,7 +205,7 @@ export function CrewSection({
               <tbody>
                 {crew.map((c) => {
                   const expanded = expandedCrew.has(c.crewId)
-                  const hasExtras = c.overtimePaisa > 0 || c.mealsPaisa > 0 || c.accommodationPaisa > 0
+                  const hasExtras = (c.overtimeDays ?? 0) > 0 || c.mealsPaisa > 0 || c.accommodationPaisa > 0
                   return (
                     <Fragment key={c.crewId}>
                       <tr style={{ borderBottom: expanded ? 'none' : '1px solid var(--border)' }}>
@@ -242,8 +242,7 @@ export function CrewSection({
                             </td>
                             <td className="figure" style={{ ...td, textAlign: 'right', fontWeight: 700 }}>
                               {formatMoney(
-                                (c.dayRatePaisa * (c.days ?? days) +
-                                  c.overtimePaisa +
+                                (c.dayRatePaisa * ((c.days ?? days) + (c.overtimeDays ?? 0)) +
                                   c.accommodationPaisa +
                                   c.mealsPaisa) as Paisa,
                               )}
@@ -381,22 +380,23 @@ export function CrewSection({
                                 alignItems: 'center',
                               }}
                             >
-                              <Field label="Overtime (Rs) *" id="crew-overtime">
-                                <Input
+                              <Field label="Overtime (days) *" id="crew-overtime">
+                                <select
                                   id="crew-overtime"
-                                  type="number"
-                                  min={0}
-                                  value={c.overtimePaisa > 0 ? c.overtimePaisa / 100 : ''}
-                                  placeholder="0"
+                                  value={c.overtimeDays ?? 0}
                                   onChange={(e) =>
                                     onUpdateCrewExtras(
                                       c.crewId,
-                                      'overtimePaisa',
-                                      rupees(Math.max(0, Number(e.target.value) || 0)),
+                                      'overtimeDays',
+                                      Number(e.target.value),
                                     )
                                   }
                                   style={{ ...inputStyle, minHeight: 44, fontSize: 'var(--t-meta)' }}
-                                />
+                                >
+                                  <option value={0}>0 days</option>
+                                  <option value={0.5}>½ day</option>
+                                  <option value={1}>1 day</option>
+                                </select>
                               </Field>
                               <Field label="Meals (Rs) *" id="crew-meals">
                                 <Input

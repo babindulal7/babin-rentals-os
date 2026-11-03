@@ -341,7 +341,7 @@ export default function ProblemReports() {
       </PageBody>
 
       <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.6 }}>
-        Reports are never deleted (Law 3). Status lifecycle: Open → Seen → Fixed/Won't fix. Owner/Admin can change status with a reason (≥10 chars).
+        Reports are preserved for audit history. Status lifecycle: Open → Seen → Fixed/Won&apos;t fix. Owner/Admin can change status with a reason (at least 10 characters).
       </p>
     </div>
   )

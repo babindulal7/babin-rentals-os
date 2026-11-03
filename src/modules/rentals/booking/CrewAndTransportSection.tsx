@@ -80,8 +80,7 @@ export function CrewAndTransportSection({
       crew.reduce(
         (acc, member) =>
           acc +
-          member.dayRatePaisa * (member.days ?? (days || 1)) +
-          member.overtimePaisa +
+          member.dayRatePaisa * ((member.days ?? (days || 1)) + (member.overtimeDays ?? 0)) +
           member.accommodationPaisa +
           member.mealsPaisa,
         0,
@@ -91,10 +90,10 @@ export function CrewAndTransportSection({
 
   const handleUpdateCrewExtras = (
     crewId: string,
-    field: 'overtimePaisa' | 'accommodationPaisa' | 'mealsPaisa',
-    paisa: Paisa,
+    field: 'overtimeDays' | 'accommodationPaisa' | 'mealsPaisa',
+    value: number | Paisa,
   ) => {
-    onUpdateCrew(crewId, { [field]: paisa })
+    onUpdateCrew(crewId, { [field]: value })
   }
 
   return (

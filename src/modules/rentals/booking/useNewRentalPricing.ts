@@ -149,8 +149,7 @@ export function useNewRentalPricing({
       crew.reduce(
         (s, c) =>
           s +
-          c.dayRatePaisa * (c.days ?? days) +
-          c.overtimePaisa +
+          c.dayRatePaisa * ((c.days ?? days) + (c.overtimeDays ?? 0)) +
           c.accommodationPaisa +
           c.mealsPaisa,
         0,
