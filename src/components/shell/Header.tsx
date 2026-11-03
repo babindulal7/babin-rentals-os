@@ -411,7 +411,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
     }
 
     return items
-  }, [resolved, compactHeader, isPhone, actionContext])
+  }, [resolved, compactHeader, isPhone, actionContext, unreadNotificationCount])
 
   return (
     <>
