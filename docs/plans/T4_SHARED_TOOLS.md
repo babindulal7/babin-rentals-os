@@ -53,7 +53,7 @@ transition RPC cannot change the time.
 WhatsApp draft opens with the right number and text.
 **Needs** — T4-01.
 
-### T4-03 · Proof of delivery            status: todo · size: S · lane B
+### T4-03 · Proof of delivery            status: done · size: S · lane B
 **What** — On "Delivered": receiver name (as today) **plus** a drawn signature and an optional photo,
 through the T2-01 / T2-02 components, linked to the delivery job.
 **Why** — DELIVERY_DISPATCH_PHASE2 ("signed proof-of-delivery remains a later requirement").
