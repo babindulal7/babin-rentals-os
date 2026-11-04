@@ -159,7 +159,7 @@ day); staff apply; a waiver needs Manager or Owner approval (D6 — unchanged).
 **Done when** — three returns (20 min, 90 min, 3 h late) produce 0, half and full day.
 **Needs** — Batch 1 on staging.
 
-### T3-12 · Paste a WhatsApp gear list            status: todo · size: M · lane C · [go-live]
+### T3-12 · Paste a WhatsApp gear list            status: doing — lane-c/T3-12-paste-a-whatsapp-gear-list · size: M · lane C · [go-live]
 **What** — In New Rental, "Paste list": staff paste the client's WhatsApp text ("FX3 x2, 24-70 GM,
 2 Aputure 600x, V-mount x6 …"). The app splits it into lines, reads quantities, and suggests the
 best product or bundle match for each line with a confidence mark; unmatched lines stay visible.
