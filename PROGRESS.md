@@ -54,7 +54,12 @@
 - `npm run typecheck` — exit 0.
 - `npm run lint:ui-copy` — exit 0.
 - Install: `npm ci` failed in this sandbox because `onnxruntime-node`'s install script is blocked by the proxy (nuget.org 403). Reinstalled with `npm ci --ignore-scripts` (exit 0). This is a sandbox limit, not a repo change. Node here is v22.23.4; CI pins Node 24 — not reproduced.
-- Not run this session: `check:pglite`, `check:lifecycle`, `check:security`, full `npm run test`, `npm run build`. CI on `0f58de5` had passed these except Law 17.
+- `npm run check:pglite` — 218/218 migrations applied, 0 failed (exit 0).
+- `npm run check:security` — exit 0.
+- `npm run check:lifecycle` — 63/63 green (exit 0).
+- `npm run test` (mock backend) — 6690/6690 passed (exit 0).
+- `npm run build` — exit 0.
+- Install caveat: `npm ci` failed in this sandbox because `onnxruntime-node`'s install script is blocked by the proxy (nuget.org 403). All checks above ran after `npm ci --ignore-scripts`. Node here is v22.23.4; CI pins Node 24 — not reproduced locally.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -66,7 +71,7 @@
 | Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
 | Overall | structural mean of five | ≈ 97% | — |
 Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-04T19:26:43.781Z). Suite: Historical suite: 6/6 passed, 0 failed (recorded 2026-11-04T10:03:18.125Z); current source NOT VERIFIED.
-Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED. Test receipt invalid; `npm run test:coverage` not run this session.
 Gates read from .lifecycle-result.json, written 2026-11-04T19:27:50.805Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
@@ -80,6 +85,8 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - Babin: apply migrations 0215–0220 to live after backup protocol.
 - Run `check:pglite` and `check:lifecycle` before any migration change or Verified claim.
 - Confirm Node 24 locally or rely on CI for the `bs.ts` ICU check.
+- Confirm the CI run on `008e499` is green on the self-hosted runner (Node 24).
+- Coverage suite receipt is invalid; `npm run test:coverage` not run this session.
 
 ## 2026-11-04 — T6-02: String catalogue and lint infrastructure (Lane B)
 
