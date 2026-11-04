@@ -15,23 +15,27 @@
 - `npm run typecheck` — exit 0.
 - `npm run lint:ui-copy` — exit 0.
 - Install: `npm ci` failed in this sandbox because `onnxruntime-node`'s install script is blocked by the proxy (nuget.org 403). Reinstalled with `npm ci --ignore-scripts` (exit 0). This is a sandbox limit, not a repo change. Node here is v22.23.4; CI pins Node 24 — not reproduced.
-- Not run this session: `check:pglite`, `check:lifecycle`, `check:security`, full `npm run test`, `npm run build`. CI on `0f58de5` had passed these except Law 17.
+- `npm run check:pglite` — 218/218 migrations applied, 0 failed (exit 0).
+- `npm run check:security` — exit 0.
+- `npm run check:lifecycle` — 63/63 green (exit 0).
+- `npm run test` (mock backend) — 6690/6690 passed (exit 0).
+- `npm run build` — exit 0.
+- Install caveat: `npm ci` failed in this sandbox because `onnxruntime-node`'s install script is blocked by the proxy (nuget.org 403). All checks above ran after `npm ci --ignore-scripts`. Node here is v22.23.4; CI pins Node 24 — not reproduced locally.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
 | Backend | actions implemented / total | 91 / 91 (100%) | +0 |
 | Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
-| DB enforcement | gates in Postgres / unknown | not measured | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
 | Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
-| Lifecycle | steps green / total | not measured | — |
-| Overall | structural mean of five | not measured | — |
-Counted by `npm run completion`. Migrations and lifecycle not run this session.
+| Lifecycle | steps green / total | 63 / 63 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Counted by `npm run completion`, not typed. Coverage suite: NOT VERIFIED (invalid test receipt).
 
 ### Remaining
-- Babin: apply the patch, commit, push; CI re-runs on the self-hosted runner.
-- Run `check:pglite` and `check:lifecycle` before any migration change or Verified claim.
-- Confirm Node 24 locally or rely on CI for the `bs.ts` ICU check.
+- Confirm the CI run on `008e499` is green on the self-hosted runner (Node 24).
+- Coverage suite receipt is invalid; `npm run test:coverage` not run this session.
 
 ## 2026-11-04 — T5-03 through T5-11 MERGED & VERIFIED on `main` (Lane B)
 
