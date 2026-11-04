@@ -21,7 +21,7 @@ import { InspectorNavigator } from '../../components/ui/InspectorNavigator'
 import { useInspectorTraversal } from '../../components/ui/useInspectorTraversal'
 import { SavedViewsMenu, type SavedListView } from '../../components/ui/SavedViewsMenu'
 import { captureInventoryView, restoreInventoryView, type InventoryViewChoices } from '../../lib/inventoryViewPresets'
-import { canPublishTeamViews } from '../../lib/rbac'
+import { canEditProductDeposits, canPublishTeamViews } from '../../lib/rbac'
 import { useDisplayDensity } from '../../lib/displayDensity'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { Unavailable } from '../../components/ui/Unavailable'
@@ -1830,7 +1830,14 @@ export default function Inventory() {
           ariaLabel="Inventory sections"
           size={phone ? 'sm' : 'md'}
           options={[
-            ...TABS.map((t) => ({ id: t, label: t })),
+            /* T3-02: the deposit editor writes three money columns, so the tab
+               itself is absent for every role the database would refuse. It is
+               absent, not disabled (Law 6 / rbac's rule); a deep link still
+               lands on the pane, which renders its own restricted state. */
+            ...TABS.filter((t) => t !== 'Deposit Setup' || canEditProductDeposits(role)).map((t) => ({
+              id: t,
+              label: t,
+            })),
             ...(isNew ? [{ id: 'new', label: 'Add Equipment' }] : []),
             ...(isImport ? [{ id: 'import', label: 'Import CSV' }] : []),
           ]}

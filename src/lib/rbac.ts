@@ -259,6 +259,27 @@ export function canEditServicePlan(role: SystemRole): boolean {
   return role === 'Owner' || role === 'Admin' || role === 'Manager'
 }
 
+/**
+ * T3-02: may set a product's security-deposit rule and replacement value.
+ *
+ * Owner · Admin · Manager — the role set `save_record_section` itself checks for
+ * an equipment record (0173). `products_update` also admits Warehouse, but
+ * `0092`'s money-column guard refuses that session any price change, so the
+ * database's effective set for these three columns is these three roles. The
+ * screen gate and the tab must both use this rather than the wider "can view
+ * booking money" set: Coordinator and Accounts may see money on a booking, but
+ * the section-save RPC refuses them this write, so showing them an editor would
+ * offer a save that cannot land.
+ *
+ * A separate predicate from `canUpdateBundle` and `canEditServicePlan` although
+ * the three roles are the same today: each mirrors a different policy (bundles,
+ * the service plan, and the section-save RPC), and one function serving all
+ * three would move silently the day any one of them changes.
+ */
+export function canEditProductDeposits(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin' || role === 'Manager'
+}
+
 /** RULING 2026-09-29: product-wide bulk stock corrections require Manager+. */
 export function canAdjustStock(role: SystemRole): boolean {
   return role === 'Owner' || role === 'Admin' || role === 'Manager'
