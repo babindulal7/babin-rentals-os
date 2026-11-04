@@ -12,7 +12,11 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0221**
+**Next free number: 0222**
+
+> **Legacy exception:** `0188` exists as two distinct, locally verified migration files
+> (`0188_smart_reservation_holds.sql` and `0188_staff_renting_gear.sql`). Both are preserved because
+> later verified migrations depend on their applied order; do not rename, edit or reuse either one.
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
@@ -27,6 +31,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0186 | T4-05 | shift-handovers | lane-b/T4-05-shift-handover-on-the-database | verified |
 | 0187 | T4-01 | delivery-dispatch-rpcs | lane-b/T4-01-delivery-dispatch-on-the-database | verified |
 | 0188 | T3-smart-reservations | smart-reservation-holds | lane-c/T3-smart-reservations | verified |
+| 0188 | T8-09 | staff-renting-gear | main (`d6d2fae7`) | verified; legacy duplicate number |
 | 0189 | T4-07 | delivery-zones | lane-b/T4-07-delivery-zones | verified |
 | 0190 | T4-08 | one-time-rider-link | lane-b/T4-08-one-time-rider-link | verified |
 | 0191 | T4-02 | delivery-reschedule-rpc | lane-b/T4-02-reschedule-a-delivery | verified |
@@ -59,6 +64,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0218 | T5-07 | client-message-events | lane-b/T5-07-automatic-client-emails | written |
 | 0219 | T5-08 | payment-reminders | lane-b/T5-08-payment-reminders | written |
 | 0220 | T5-09 | push-subscriptions | lane-b/T5-09-phone-pop-ups | written |
+| 0221 | T1-17 | two-step-sign-in | lane-a/T1-17-two-step-sign-in-for-every | claimed; branch not merged |
 
 ## Expected migrations (not yet claimed)
 

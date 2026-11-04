@@ -1,5 +1,40 @@
 # Progress Log
 
+## 2026-11-04 — Reconciled completed-card status and migration ledger on `main`
+
+**Did**
+- Marked T2-12, T4-01, T4-02, T8-01 and T8-03 as merged using their verified commits already present on `main`; no feature branch history was merged.
+- Recorded the historical second `0188` migration (`staff-renting-gear`) instead of renaming an already-verified migration.
+- Reserved `0221` for the unmerged T1-17 branch and advanced the next free migration number to `0222`.
+
+**Ruled**
+- Current `main` wins over stale plan copies on old branches.
+- Applied or verified migration identities remain immutable; the historical `0188` collision is documented and must never be reused.
+
+**Verified**
+- Commit ancestry and per-file history confirm the five completed cards are already present on `main`.
+- Migration inventory confirms the two distinct `0188` files and migrations through `0220`; no SQL file was changed or applied.
+
+### Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | — |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 | — |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | — |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T1-17 stays unmerged and incomplete until its security reset flow, lifecycle assertions and full gates are complete.
+- Reconcile old T0-03/T0-04 branch-triage records separately; they were not folded into this change.
+
 ## 2026-11-04 — T5-03 through T5-11 MERGED & VERIFIED on `main` (Lane B)
 
 **Did**

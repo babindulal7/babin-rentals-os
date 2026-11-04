@@ -20,7 +20,7 @@ database half already exists in source: `0165_delivery_jobs_and_event_rpc.sql` a
 
 ---
 
-### T4-01 · Delivery dispatch on the database            status: done — awaiting merge (lane-b/T4-01-delivery-dispatch-on-the-database) · size: L · lane B
+### T4-01 · Delivery dispatch on the database            status: done · merged (`65cc99b8`) · size: L · lane B
 **What** — Replace the localStorage store in `delivery.ts` with the 0165/0166 RPCs:
 `delivery_create_job`, `delivery_assign_driver`, `delivery_transition_job` (Scheduled → Ready → In
 Transit → Delivered / Failed, terminal states immutable). The Driver sees **only jobs assigned to
@@ -41,7 +41,7 @@ or any charge; 3) replaying the same `request_key` changes nothing; 4) a deliver
 changes the booking stage (Phase 2 rule).
 **Needs** — T1-05 (Driver seat), Batch 1 on staging.
 
-### T4-02 · Reschedule a delivery            status: done — awaiting merge (lane-b/T4-02-reschedule-a-delivery) · size: S · lane B
+### T4-02 · Reschedule a delivery            status: done · merged (`ca73e667`) · size: S · lane B
 **What** — "Change time" on a delivery job moves **only the job's scheduled time** — the rental
 dates stay (D8). The change is audited, and a WhatsApp draft ("Your delivery is now at …") is
 prepared for staff to send — never auto-sent (21 Jul comms lock).
