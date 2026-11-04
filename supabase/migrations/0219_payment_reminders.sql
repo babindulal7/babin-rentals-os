@@ -97,7 +97,7 @@ create or replace view public.clients_v as
     reminders_paused_by,
     reminders_paused_at
    FROM public.clients
-  where auth_is_staff();
+  where auth_is_staff() and auth_user_role() <> 'Driver';
 
 revoke all on public.clients_v from anon;
 grant select on public.clients_v to authenticated;
