@@ -18,11 +18,6 @@ vi.mock('../../../lib/auth', () => ({
   useAuth: () => ({ user: mockCurrentUser }),
 }))
 
-vi.mock('../../../lib/supabase', () => ({
-  IS_MOCK: true,
-  supabase: {},
-}))
-
 vi.mock('../../../components/ui/Toast', () => ({
   useOptionalToast: () => ({
     showSuccessToast: vi.fn(),

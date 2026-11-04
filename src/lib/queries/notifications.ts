@@ -242,17 +242,62 @@ export async function getUnreadNotificationCount(userId?: string | undefined): P
     return list.length
   }
 
-  const { count, error } = await supabase
-    .from('notifications_v')
-    .select('*', { count: 'exact', head: true })
-    .eq('is_read', false)
+  try {
+    if (!supabase || typeof supabase.from !== 'function') {
+      return 0
+    }
+    const { count, error } = await supabase
+      .from('notifications_v')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_read', false)
 
-  if (error) {
-    console.warn('Failed to get unread notification count:', error.message)
+    if (error) {
+      console.warn('Failed to get unread notification count:', error.message)
+      return 0
+    }
+
+    return count ?? 0
+  } catch {
     return 0
   }
+}
 
-  return count ?? 0
+/**
+ * Subscribe to realtime notification updates.
+ * Returns unsubscribe callback.
+ */
+export function subscribeToNotificationChanges(
+  callback: () => void,
+  userId?: string | undefined,
+): () => void {
+  try {
+    if (IS_MOCK || !supabase || typeof supabase.channel !== 'function') {
+      return () => {}
+    }
+
+    const channel = supabase
+      .channel(`realtime:notifications:${userId ?? 'all'}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications' },
+        () => {
+          callback()
+        },
+      )
+      .subscribe()
+
+    return () => {
+      try {
+        if (typeof supabase.removeChannel === 'function') {
+          void supabase.removeChannel(channel)
+        }
+      } catch {
+        // ignore
+      }
+    }
+  } catch {
+    return () => {}
+  }
 }
 
 /**
@@ -473,8 +518,15 @@ export async function notifyStaff(params: {
 }
 
 /**
+ * Returns a copy of current mock notifications for synchronous initial state.
+ */
+export function getMockNotifications(): AppNotification[] {
+  return mockNotifications.map((n) => ({ ...n }))
+}
+
+/**
  * Resets in-memory mock notifications for test isolation.
  */
 export function _resetMockNotifications(): void {
-  mockNotifications = [...INITIAL_MOCK_NOTIFICATIONS]
+  mockNotifications = INITIAL_MOCK_NOTIFICATIONS.map((n) => ({ ...n }))
 }

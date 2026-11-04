@@ -56,6 +56,44 @@ export function isStaff(role: SystemRole): boolean {
 }
 
 /**
+ * Role task group classification for role-specific home screens (W61, W79).
+ */
+export function getRoleTaskDesk(role: SystemRole): 'floor' | 'desk' | 'finance' | 'management' | 'executive' | 'driver' | 'client' {
+  switch (role) {
+    case 'Warehouse':
+    case 'Technician':
+      return 'floor'
+    case 'Coordinator':
+      return 'desk'
+    case 'Accounts':
+      return 'finance'
+    case 'Manager':
+      return 'management'
+    case 'Owner':
+      return 'executive'
+    case 'Admin':
+      return 'management'
+    case 'Driver':
+      return 'driver'
+    case 'Client':
+      return 'client'
+  }
+}
+
+/**
+ * W61: Primary home route for each role.
+ * - Warehouse, Technician, Coordinator, Accounts, Manager, Owner, Admin: /today (tailored cockpit)
+ * - Driver: /operations
+ * - Client: /clients
+ */
+export function getRoleHomeRoute(role?: SystemRole): string {
+  if (!role) return '/login'
+  if (role === 'Client') return '/clients'
+  if (role === 'Driver') return '/operations'
+  return '/today'
+}
+
+/**
  * The booking desk and the floor: every role the database lets write a booking,
  * its lines, its client, or a stage transition.
  *
@@ -984,6 +1022,28 @@ export function canReadProblemReports(role: SystemRole | null | undefined): bool
 export function canManageProblemReports(role: SystemRole | null | undefined): boolean {
   if (!role) return false
   return role === 'Owner' || role === 'Admin'
+}
+
+/**
+ * Role Home & Default Task Surface (W61, W79).
+ * Every role opens on its own tasks; this path is where the role lands or defaults.
+ */
+export function getRoleHomePath(role: SystemRole): string {
+  switch (role) {
+    case 'Warehouse':
+    case 'Technician':
+    case 'Coordinator':
+    case 'Accounts':
+    case 'Manager':
+    case 'Owner':
+    case 'Admin':
+    case 'Driver':
+      return '/today'
+    case 'Client':
+      return '/rentals'
+    default:
+      return '/today'
+  }
 }
 
 

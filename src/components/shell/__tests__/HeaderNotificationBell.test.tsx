@@ -31,21 +31,13 @@ vi.mock('../../../lib/syncContext', () => ({
   useSync: () => ({ status: 'synced', pendingCount: 0 }),
 }))
 
-vi.mock('../../../lib/supabase', () => ({
-  IS_MOCK: true,
-  supabase: {
-    channel: () => ({
-      on: () => ({ subscribe: () => ({}) }),
-    }),
-    removeChannel: () => {},
-  },
-}))
-
 vi.mock('../../../lib/queries/notifications', () => ({
   getUnreadNotificationCount: vi.fn(() => Promise.resolve(mockUnreadCount)),
   fetchNotifications: vi.fn(() => Promise.resolve([])),
+  getMockNotifications: vi.fn(() => []),
   markNotificationAsRead: vi.fn(),
   markAllNotificationsAsRead: vi.fn(() => Promise.resolve(0)),
+  subscribeToNotificationChanges: vi.fn(() => () => {}),
   _resetMockNotifications: vi.fn(),
 }))
 
@@ -124,6 +116,7 @@ describe('HeaderNotificationBell (T5-02)', () => {
   })
 
   it('opens notification centre drawer when bell button is clicked', async () => {
+    await import('../NotificationsDrawer')
     mockUnreadCount = 2
     const container = renderHeader()
     await act(async () => {
@@ -139,7 +132,7 @@ describe('HeaderNotificationBell (T5-02)', () => {
 
     // Allow React.lazy dynamic import to resolve
     await act(async () => {
-      await new Promise((r) => setTimeout(r, 250))
+      await new Promise((r) => setTimeout(r, 100))
     })
 
     const dialog = document.querySelector('[role="dialog"]')

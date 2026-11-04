@@ -20,6 +20,7 @@ import { supabase, IS_MOCK } from '../../lib/supabase'
 import { useOptionalToast } from '../ui/Toast'
 import {
   fetchNotifications,
+  getMockNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
   type AppNotification,
@@ -72,6 +73,9 @@ function resolveNotificationMeta(type: string): { icon: IconName; label: string;
     case 'return_overdue':
     case 'return_due':
       return { icon: 'calendar', label: 'Return', badgeBg: 'var(--warning-surface, rgba(245, 158, 11, 0.12))' }
+    case 'approval_requested':
+    case 'approval':
+      return { icon: 'checklist', label: 'Approval', badgeBg: 'var(--warning-surface, rgba(245, 158, 11, 0.12))' }
     default:
       return { icon: 'bell', label: 'Alert', badgeBg: 'var(--card2, rgba(100, 116, 139, 0.12))' }
   }
@@ -84,7 +88,9 @@ export default function NotificationsDrawer({ isOpen, onClose }: NotificationsDr
   const navigate = useNavigate()
   const toast = useOptionalToast()
 
-  const [notifications, setNotifications] = useState<AppNotification[]>([])
+  const [notifications, setNotifications] = useState<AppNotification[]>(() =>
+    IS_MOCK ? getMockNotifications() : [],
+  )
   const [filterMode, setFilterMode] = useState<'all' | 'unread'>('all')
   const [isLoading, setIsLoading] = useState(false)
   const [hasError, setHasError] = useState(false)

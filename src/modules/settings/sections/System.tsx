@@ -5,6 +5,7 @@ import { PwaInstallControl } from '../../../components/ui/PwaInstallControl'
 import { LegacyExportControl } from './LegacyExportControl'
 import { DeliveryZonesControl } from './DeliveryZonesControl'
 import { CalendarFeedControl } from './CalendarFeedControl'
+import { NotificationPreferencesControl } from './NotificationPreferencesControl'
 
 /**
  * **Settings ▸ System** — appearance, notifications, preferences, security and
@@ -74,17 +75,19 @@ export const SYSTEM_SECTIONS: Section[] = [
   },
   {
     key: 'notifications',
-    title: 'Notifications',
+    title: 'Notification preferences',
     icon: 'bell',
     fields: [
+      {
+        label: 'My channel & type preferences',
+        note: 'Configure in-app alerts and email notifications per category. Morning digest is on by default (21 Jul lock, T5-05).',
+        custom: <NotificationPreferencesControl />,
+      },
       /* T1-16: no toggle may claim that a notification has been enabled when
          there is no save handler or delivery service behind it. Each future
          capability owns the actual settings/persistence and can replace its
          read-only marker when shipped. */
-      { label: 'Return reminders', note: 'Return-due notifications.', readOnlyWhy: 'Not built yet — arrives with T5-07.' },
-      { label: 'Payment reminders', note: 'Payment-due notifications.', readOnlyWhy: 'Not built yet — arrives with T5-08.' },
       { label: 'Low stock alerts', note: 'Inventory minimum-stock warnings.', readOnlyWhy: 'Not built yet — arrives with T3-30.' },
-      { label: 'Daily digest', note: 'Morning operations summary.', readOnlyWhy: 'Not built yet — arrives with T5-04.' },
     ],
   },
   {

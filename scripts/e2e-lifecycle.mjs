@@ -389,12 +389,12 @@ async function seed() {
 
 let bookingIds = {}
 
-function createPayload({ key, window, actor, lines, discountPercent }) {
+function createPayload({ key, window, actor, lines, discountPercent, clientId }) {
   const payload = {
     client_uuid: crypto.randomUUID(),
     created_by: U[actor],
     branch_id: BRANCH,
-    client_id: CLIENT,
+    client_id: clientId ?? CLIENT,
     pickup_at: window[0],
     return_at: window[1],
     delivery_type: 'Client Pickup',
@@ -6031,6 +6031,939 @@ STEPS.push({
     })
   },
 })
+
+STEPS.push({
+  id: 'L58',
+  title: 'Morning digest: operational day query, Law 6 money blindness, empty-day fallback, and cron schedule (T5-04, O-4)',
+  expect: 'green',
+  async run() {
+    await undone(async () => {
+      // 1. Cron schedule verification
+      const cronRows = (await q(`
+        select job_name, schedule, command
+        from cron_schedules
+        where job_name = 'morning-digest'
+      `)).rows
+
+      assertEq(cronRows.length, 1, 'morning-digest cron job registered')
+      assertEq(cronRows[0].schedule, '45 23 * * *', 'schedule is 23:45 UTC (05:30 NPT)')
+
+      // 2. Query as Owner (money role)
+      await as('Owner', async () => {
+        const res = (await q(`select get_morning_digest($1::uuid) as digest`, [U.Owner])).rows[0]?.digest
+        assert(res, 'Owner receives morning digest JSON')
+        assertEq(res.can_view_money, true, 'Owner has can_view_money = true')
+        assert(Array.isArray(res.pickups), 'Pickups is an array')
+        assert(Array.isArray(res.returns), 'Returns is an array')
+        assert(Array.isArray(res.overdue), 'Overdue is an array')
+        assert(Array.isArray(res.open_damage), 'Open damage is an array')
+        assert(Array.isArray(res.shift_handovers), 'Shift handovers is an array')
+        assert(Array.isArray(res.payments_due), 'Payments due is an array for money roles')
+      })
+
+      // 3. Query as Warehouse (money-blind role)
+      await as('Warehouse', async () => {
+        const res = (await q(`select get_morning_digest($1::uuid) as digest`, [U.Warehouse])).rows[0]?.digest
+        assert(res, 'Warehouse receives morning digest JSON')
+        assertEq(res.can_view_money, false, 'Warehouse has can_view_money = false (Law 6)')
+        assertEq(res.payments_due.length, 0, 'Warehouse payments_due is empty array (Law 6)')
+
+        // Check that any open damage item masks estimated cost
+        if (res.open_damage.length > 0) {
+          for (const item of res.open_damage) {
+            assertEq(item.estimated_cost_paisa, null, 'Warehouse damage estimated_cost_paisa is null (Law 6)')
+          }
+        }
+      })
+
+      // 4. Empty day test with explicit date
+      await as('Owner', async () => {
+        const res = (await q(`select get_morning_digest($1::uuid, '2099-01-01'::date) as digest`, [U.Owner])).rows[0]?.digest
+        assert(res, 'Future day returns digest object')
+        assertEq(res.pickups.length, 0, 'No pickups on 2099-01-01')
+        assertEq(res.returns.length, 0, 'No returns on 2099-01-01')
+        assertEq(res.payments_due.length, 0, 'No payments due on 2099-01-01')
+        if (res.overdue.length === 0 && res.open_damage.length === 0 && res.shift_handovers.length === 0) {
+          assertEq(res.has_scheduled_items, false, 'has_scheduled_items is false')
+          assertEq(res.empty_message, 'Nothing scheduled today', 'Empty day fallback is Nothing scheduled today (O-4)')
+        }
+      })
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L59',
+  title: 'Notification preferences: own rows only, turning a type off stops new rows for that user only, hard delete forbidden (T5-05, Law 3)',
+  expect: 'green',
+  async run() {
+    await undone(async () => {
+      // 1. Initial defaults check
+      await as('Coordinator', async () => {
+        const prefs = (await q(`select get_user_notification_preferences($1::uuid) as res`, [U.Coordinator])).rows[0]?.res
+        assert(prefs, 'Coordinator receives notification preferences')
+        const damagePref = prefs.preferences.find(p => p.category === 'damage')
+        assert(damagePref, 'damage category exists in preferences')
+        assertEq(damagePref.in_app_enabled, true, 'Default damage in_app_enabled is true')
+      })
+
+      // 2. Coordinator turns off in-app for 'damage'
+      await as('Coordinator', async () => {
+        await q(`
+          select set_notification_preference(
+            '11111111-2222-4444-8888-999900000001'::uuid,
+            $1::uuid,
+            'damage',
+            false,
+            true
+          )
+        `, [U.Coordinator])
+
+        const updated = (await q(`select get_user_notification_preferences($1::uuid) as res`, [U.Coordinator])).rows[0]?.res
+        const damagePref = updated.preferences.find(p => p.category === 'damage')
+        assertEq(damagePref.in_app_enabled, false, 'Coordinator successfully disabled damage in-app notifications')
+      })
+
+      // 3. Coordinator cannot edit Warehouse's preferences (RLS own rows only)
+      await as('Coordinator', async () => {
+        await q('savepoint pref_forbidden_probe')
+        try {
+          await refuses(
+            'Coordinator editing Warehouse preferences is forbidden',
+            `select set_notification_preference(
+              '11111111-2222-4444-8888-999900000002'::uuid,
+              $1::uuid,
+              'damage',
+              false,
+              true
+            )`,
+            [U.Warehouse],
+            /Permission denied|Access denied|cannot modify preferences|42501/i,
+          )
+        } finally {
+          await q('rollback to savepoint pref_forbidden_probe')
+          await q('release savepoint pref_forbidden_probe')
+        }
+      })
+
+      // 4. Broadcast a damage notification
+      await as('Owner', async () => {
+        await q(`
+          select notify_staff(
+            'damage',
+            'Damage Case Alert',
+            'Damage case opened on Camera Body #2',
+            'Damage case opened on Camera Body #2',
+            '/inventory?tab=damage',
+            'damage',
+            'DMG-TEST-001'
+          )
+        `)
+      })
+
+      // 5. Verify: Coordinator did NOT receive notification (turned off), but Warehouse DID
+      await as('Coordinator', async () => {
+        const notifs = (await q(`
+          select id, title, type
+          from notifications
+          where user_id = $1::uuid and type = 'damage' and title = 'Damage Case Alert'
+        `, [U.Coordinator])).rows
+        assertEq(notifs.length, 0, 'Coordinator received NO damage notification (type turned off, T5-05)')
+      })
+
+      await as('Warehouse', async () => {
+        const notifs = (await q(`
+          select id, title, type
+          from notifications
+          where user_id = $1::uuid and type = 'damage' and title = 'Damage Case Alert'
+        `, [U.Warehouse])).rows
+        assertEq(notifs.length, 1, 'Warehouse still received damage notification (user isolation holds)')
+      })
+
+      // 6. Hard delete is forbidden by Law 3
+      await as('Coordinator', async () => {
+        await q('savepoint delete_pref_probe')
+        try {
+          await refuses(
+            'Hard delete of notification_preferences is REFUSED by Law 3 trigger',
+            `delete from notification_preferences where user_id = $1::uuid`,
+            [U.Coordinator],
+            /HARD DELETE FORBIDDEN|Law 3|55000/i,
+          )
+        } finally {
+          await q('rollback to savepoint delete_pref_probe')
+          await q('release savepoint delete_pref_probe')
+        }
+      })
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L60',
+  title: 'Automatic client emails: late-return is due at +30 min and sent once, no-email client gets WhatsApp draft task, hard delete forbidden (T5-07, W21, W22, W38, Law 3)',
+  expect: 'green',
+  async run() {
+    await undone(async () => {
+      // 1. Create a confirmed booking with an email-bearing client
+      let bookingId
+      let bookingNo
+      await as('Coordinator', async () => {
+        const clientRes = await q(`
+          insert into clients (
+            client_uuid, client_code, name, phone, email
+          ) values (
+            '99999999-0001-4000-8000-000000000001'::uuid,
+            'C-9871',
+            'Alisha Shrestha',
+            '+9779841999888',
+            'alisha.shrestha@example.com'
+          ) returning id
+        `)
+        const clientId = clientRes.rows[0].id
+
+        const pickupAt = new Date(Date.now() + 4 * 3600 * 1000).toISOString()
+        const returnAt = new Date(Date.now() + 28 * 3600 * 1000).toISOString()
+        bookingNo = '9871'
+
+        const bRes = await q(`
+          insert into bookings (
+            client_uuid, booking_no, branch_id, client_id, stage,
+            pickup_at, return_at, delivery_type, created_by, updated_by
+          ) values (
+            '99999999-0001-4000-8000-000000000002'::uuid,
+            $1, $2, $3, 'Quote',
+            $4, $5, 'Client Pickup', $6, $6
+          ) returning id
+        `, [bookingNo, BRANCH, clientId, pickupAt, returnAt, U.Coordinator])
+        bookingId = bRes.rows[0].id
+
+        await q(`
+          insert into booking_lines
+            (client_uuid, booking_id, line_type, product_id, qty, days, rate, created_by)
+          values (gen_random_uuid(), $1, 'Equipment', $2, 1, 1, 3500, $3)
+        `, [bookingId, SERIAL_PRODUCT, U.Coordinator])
+
+        await q(`
+          insert into booking_stage_transitions (
+            client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at
+          ) values (
+            gen_random_uuid(), $1, $2, 'Quote', 'Booked', $3, 'Coordinator', now()
+          )
+        `, [bookingId, BRANCH, U.Coordinator])
+
+        // Verify scheduled events
+        const events = (await q(`
+          select event_type, channel, status, due_at, recipient_email
+          from client_message_events
+          where booking_id = $1::uuid
+          order by due_at asc
+        `, [bookingId])).rows
+
+        assertEq(events.length, 3, 'Three events scheduled for Booked stage (pickup_reminder, return_reminder, late_return)')
+
+        const pickupReminder = events.find(e => e.event_type === 'pickup_reminder')
+        assert(pickupReminder, 'pickup_reminder event exists')
+        assertEq(pickupReminder.channel, 'email', 'Client with email receives pickup_reminder via email channel')
+        assertEq(pickupReminder.status, 'pending', 'pickup_reminder status is pending')
+
+        const returnReminder = events.find(e => e.event_type === 'return_reminder')
+        assert(returnReminder, 'return_reminder event exists')
+        assertEq(returnReminder.channel, 'email', 'Client with email receives return_reminder via email channel')
+
+        const lateReturn = events.find(e => e.event_type === 'late_return')
+        assert(lateReturn, 'late_return event exists')
+        assertEq(lateReturn.channel, 'email', 'late_return channel is email')
+
+        // Assert timing:
+        // pickup_reminder is due at pickup_at - interval '2 hours' (W37)
+        // late_return is due at return_at + interval '30 minutes' (W38)
+        const expectedLateReturnDue = new Date(new Date(returnAt).getTime() + 30 * 60 * 1000)
+        const actualLateReturnDue = new Date(lateReturn.due_at)
+        const diffMs = Math.abs(actualLateReturnDue.getTime() - expectedLateReturnDue.getTime())
+        assert(diffMs < 5000, `Late return email is due at return_at + 30 min (W38), diff=${diffMs}ms`)
+      })
+
+      // 2. Client with NO email gets WhatsApp draft task for staff (W22)
+      let noEmailBookingId
+      await as('Coordinator', async () => {
+        const noEmailClientRes = await q(`
+          insert into clients (
+            client_uuid, client_code, name, phone, email
+          ) values (
+            '99999999-0002-4000-8000-000000000001'::uuid,
+            'C-9872',
+            'Ramesh Karki',
+            '+9779851000111',
+            null
+          ) returning id
+        `)
+        const noEmailClientId = noEmailClientRes.rows[0].id
+
+        const bRes = await q(`
+          insert into bookings (
+            client_uuid, booking_no, branch_id, client_id, stage,
+            pickup_at, return_at, delivery_type, created_by, updated_by
+          ) values (
+            '99999999-0002-4000-8000-000000000002'::uuid,
+            '9872', $1, $2, 'Quote',
+            now() - interval '1 hour', now() + interval '5 hours', 'Client Pickup', $3, $3
+          ) returning id
+        `, [BRANCH, noEmailClientId, U.Coordinator])
+        noEmailBookingId = bRes.rows[0].id
+
+        await q(`
+          insert into booking_lines
+            (client_uuid, booking_id, line_type, product_id, qty, days, rate, created_by)
+          values (gen_random_uuid(), $1, 'Equipment', $2, 1, 1, 3500, $3)
+        `, [noEmailBookingId, SERIAL_PRODUCT, U.Coordinator])
+
+        await q(`
+          insert into booking_stage_transitions (
+            client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at
+          ) values (
+            gen_random_uuid(), $1, $2, 'Quote', 'Booked', $3, 'Coordinator', now()
+          )
+        `, [noEmailBookingId, BRANCH, U.Coordinator])
+
+        const events = (await q(`
+          select event_type, channel, status
+          from client_message_events
+          where booking_id = $1::uuid
+        `, [noEmailBookingId])).rows
+
+        assert(events.every(e => e.channel === 'whatsapp_draft'), 'Client with no email is routed to whatsapp_draft channel for all events (W22)')
+      })
+
+      // 3. Process due events: late-return is due and sent ONCE
+      await as('Owner', async () => {
+        // Force the late_return event on the first booking to be due now (at top of due_at asc)
+        await q(`
+          update client_message_events
+          set due_at = now() - interval '365 days'
+          where booking_id = $1::uuid and event_type = 'late_return'
+        `, [bookingId])
+
+        // Also force the no-email booking's pickup_reminder to be due now (at top of due_at asc)
+        await q(`
+          update client_message_events
+          set due_at = now() - interval '364 days'
+          where booking_id = $1::uuid and event_type = 'pickup_reminder'
+        `, [noEmailBookingId])
+
+        // Run processor
+        const processed = (await q(`select * from process_due_client_message_events(50)`)).rows
+        assert(processed.length >= 2, `Processor executed due events (got ${processed.length})`)
+
+        const emailEvent = processed.find(p => p.booking_id === bookingId && p.event_type === 'late_return')
+        assert(emailEvent, 'Late return email was processed')
+        assertEq(emailEvent.status, 'sent', 'Late return email transitioned to sent status')
+
+        const waEvent = processed.find(p => p.booking_id === noEmailBookingId && p.event_type === 'pickup_reminder')
+        assert(waEvent, 'No-email pickup reminder was processed')
+        assertEq(waEvent.status, 'draft_ready', 'No-email reminder transitioned to draft_ready status for staff')
+
+        // Re-run processor immediately: assert 0 additional dispatches (SENT ONCE / IDEMPOTENT)
+        const reprocessed = (await q(`
+          select * from process_due_client_message_events(50)
+          where booking_id in ($1::uuid, $2::uuid)
+        `, [bookingId, noEmailBookingId])).rows
+        assertEq(reprocessed.length, 0, 'Second run processed 0 events — a late-return email is sent ONCE')
+
+        // Check email_log audit entry: strictly NO body
+        const logs = (await q(`
+          select id, template_id, recipient_email, status
+          from email_log
+          where entity_id = $1::text and template_id = 'late_return'
+        `, [bookingId])).rows
+        assertEq(logs.length, 1, 'email_log records exactly one entry for the sent late-return email')
+      })
+
+      // 4. Damage finding opens -> notice created with strictly NO amount (W23, Law 6)
+      await as('Warehouse', async () => {
+        // Create a cleaning queue entry linked to bookingId
+        const cqeRes = await q(`
+          insert into cleaning_queue_entries (
+            client_uuid, unit_id, booking_id, state, created_by
+          ) values (
+            '99999999-0003-4000-8000-000000000010'::uuid,
+            $1::uuid, $2::uuid, 'Waiting', $3::uuid
+          ) returning id
+        `, [UNITS[0], bookingId, U.Warehouse])
+        const cqeId = cqeRes.rows[0].id
+
+        const findRes = await q(`
+          insert into damage_findings (
+            client_uuid, source, return_line_id, cleaning_queue_entry_id, unit_id,
+            damage_type, description, severity, estimated_cost, approval_state, created_by
+          ) values (
+            '99999999-0003-4000-8000-000000000001'::uuid,
+            'Cleaning', null, $1::uuid, $2::uuid,
+            'Cosmetic', 'Scratched lens front element', 'Moderate', 15000.00, 'Pending Approval', $3::uuid
+          ) returning id
+        `, [cqeId, UNITS[0], U.Warehouse])
+        const findingId = findRes.rows[0]?.id
+
+        assert(findingId, 'Damage finding created')
+
+        const dmgEvent = (await q(`
+          select event_type, payload
+          from client_message_events
+          where booking_id = $1::uuid and finding_id = $2::uuid
+        `, [bookingId, findingId])).rows[0]
+
+        assert(dmgEvent, 'damage_notice event created on finding insert')
+        assertEq(dmgEvent.event_type, 'damage_notice', 'event_type is damage_notice')
+        assert(!dmgEvent.payload.approved_amount, 'Notice carries NO money amount before approval (Law 6, W23)')
+      })
+
+      // 5. Law 3: Hard delete forbidden
+      await as('Coordinator', async () => {
+        await q('savepoint del_cme_probe')
+        try {
+          await refuses(
+            'Hard delete of client_message_events is REFUSED by Law 3 trigger',
+            `delete from client_message_events where booking_id = $1::uuid`,
+            [bookingId],
+            /HARD DELETE FORBIDDEN|Law 3|55000/i,
+          )
+        } finally {
+          await q('rollback to savepoint del_cme_probe')
+          await q('release savepoint del_cme_probe')
+        }
+      })
+
+      // 6. RLS: Client cannot write or update client_message_events
+      await as('Client', async () => {
+        await q('savepoint client_write_probe')
+        try {
+          await refuses(
+            'Client writing client_message_events is REFUSED by RLS',
+            `insert into client_message_events (
+              client_uuid, booking_id, event_type, channel, status, due_at
+            ) values (
+              '99999999-0004-4000-8000-000000000001'::uuid,
+              $1::uuid, 'late_return', 'email', 'pending', now()
+            )`,
+            [bookingId],
+            /Permission denied|violates row-level security policy|42501/i,
+          )
+        } finally {
+          await q('rollback to savepoint client_write_probe')
+          await q('release savepoint client_write_probe')
+        }
+      })
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L61',
+  title: 'Payment reminders: cadence, client pause flag, and cancellation when balance is 0 (T5-08, W18, W18b, W22)',
+  expect: 'green',
+  async run() {
+    await undone(async () => {
+      let clientId, bookingId, invoiceId
+
+      // 1. Setup client and booking in Returned stage with outstanding invoice balance
+      await as('Coordinator', async () => {
+        const clientRes = await q(`
+          insert into clients (
+            client_uuid, client_code, name, phone, email
+          ) values (
+            '99999999-0005-4000-8000-000000000001'::uuid,
+            'C-9875',
+            'Sita Pokharel',
+            '+9779841999888',
+            'sita.pokharel@example.com'
+          ) returning id
+        `)
+        clientId = clientRes.rows[0].id
+
+        await createBooking({
+          key: 'rem-client',
+          clientId,
+          window: [new Date(Date.now() - 360000000).toISOString(), new Date(Date.now() - 180000000).toISOString()],
+          actor: 'Coordinator',
+          lines: [
+            {
+              productId: SERIAL_PRODUCT,
+              description: 'Camera for payment reminder test',
+              qty: 1,
+              days: 2,
+              rate: 3500,
+              units: [UNITS[0]],
+            },
+          ],
+        })
+        bookingId = bookingIds['rem-client']
+
+        await transition('rem-client', 'Quote', 'Booked', 'Coordinator')
+      })
+
+      await as('Warehouse', async () => {
+        await actionPackRental({
+          key: 'rem-client',
+          actor: 'Warehouse',
+          units: [{ id: UNITS[0], serial: 'SN-REM1' }],
+        })
+        await actionHandoverRental({
+          key: 'rem-client',
+          actor: 'Warehouse',
+          signerName: 'Sita Pokharel',
+        })
+      })
+
+      await as('Accounts', async () => {
+        // Create invoice with outstanding amount = Rs 5000
+        const invRes = await q(`
+          insert into invoices (
+            client_uuid, invoice_no, booking_id, client_id, branch_id,
+            status, subtotal, discount_amount, taxable_amount, vat_amount, total_amount, paid_amount, outstanding_amount,
+            issue_date, due_date, created_by, updated_by
+          ) values (
+            '99999999-0005-4000-8000-000000000003'::uuid,
+            'INV-L50-001', $1, $2, $3,
+            'Sent', 5000, 0, 5000, 0, 5000, 0, 5000,
+            now()::date, (now() + interval '7 days')::date, $4, $4
+          ) returning id
+        `, [bookingId, clientId, BRANCH, U.Accounts])
+        invoiceId = invRes.rows[0].id
+      })
+
+      // Complete the rental (transition On Rent -> Returned)
+      await as('Warehouse', async () => {
+        await actionReturnRental({
+          key: 'rem-client',
+          actor: 'Warehouse',
+          returnedUnits: [UNITS[0]],
+        })
+      })
+
+      // 2. Assert Day 0 payment_reminder was scheduled
+      await as('Coordinator', async () => {
+        const events = (await q(`
+          select id, sequence, channel, status, due_at, outstanding_amount
+          from payment_reminders
+          where booking_id = $1::uuid
+        `, [bookingId])).rows
+
+        assertEq(events.length, 1, 'Day 0 payment_reminder scheduled on Returned completion')
+        assertEq(events[0].sequence, 0, 'Initial payment reminder has sequence 0 (completion)')
+        assertEq(events[0].status, 'pending', 'Initial payment reminder status is pending')
+        assertEq(events[0].channel, 'email', 'Client with email receives payment reminder via email')
+      })
+
+      // 3. Process due events: sends Day 0 and automatically schedules Day 5 (sequence 1)
+      await as('Owner', async () => {
+        // Force payment_reminder to be due now
+        await q(`
+          update payment_reminders
+          set due_at = now() - interval '365 days'
+          where booking_id = $1::uuid and sequence = 0
+        `, [bookingId])
+
+        const processed = (await q(`select * from process_due_payment_reminders(50)`)).rows
+        const reminderEvt = processed.find(p => p.booking_id === bookingId)
+        assert(reminderEvt, 'Payment reminder was processed')
+        assertEq(reminderEvt.status, 'sent', 'Payment reminder sent')
+
+        // Assert sequence 1 (Day 5) was automatically scheduled
+        const seq1 = (await q(`
+          select sequence, status, due_at
+          from payment_reminders
+          where booking_id = $1::uuid and sequence = 1
+        `, [bookingId])).rows[0]
+
+        assert(seq1, 'Day 5 payment reminder (sequence 1) was automatically scheduled after completion send')
+        assertEq(seq1.status, 'pending', 'Sequence 1 reminder is pending')
+      })
+
+      // 4. Staff pauses client: cancels pending reminder (W18b)
+      await as('Coordinator', async () => {
+        await q(`
+          select pause_client_payment_reminders(
+            '99999999-0005-4000-8000-000000000004'::uuid,
+            $1::uuid,
+            'Client requested extension to next Monday'
+          )
+        `, [clientId])
+
+        const client = (await q(`
+          select reminders_paused, reminders_paused_reason, reminders_paused_by
+          from clients where id = $1::uuid
+        `, [clientId])).rows[0]
+
+        assertEq(client.reminders_paused, true, 'Client reminders_paused flag is true')
+        assertEq(client.reminders_paused_reason, 'Client requested extension to next Monday', 'Pause reason recorded')
+        assertEq(client.reminders_paused_by, U.Coordinator, 'Paused by user recorded')
+
+        // Assert pending payment reminder was cancelled
+        const cancelledSeq1 = (await q(`
+          select status, error_message
+          from payment_reminders
+          where booking_id = $1::uuid and sequence = 1
+        `, [bookingId])).rows[0]
+
+        assertEq(cancelledSeq1.status, 'cancelled', 'Pending reminder cancelled when client paused')
+        assert(cancelledSeq1.error_message.includes('paused by staff'), 'Cancellation reason noted')
+
+        // Processor yields 0 sends for this booking
+        const recheck = (await q(`
+          select * from process_due_payment_reminders(50)
+          where booking_id = $1::uuid
+        `, [bookingId])).rows
+        assertEq(recheck.length, 0, 'No payment reminders sent while client paused')
+      })
+
+      // 5. Staff resumes client: re-schedules reminder
+      await as('Coordinator', async () => {
+        await q(`
+          select resume_client_payment_reminders(
+            '99999999-0005-4000-8000-000000000005'::uuid,
+            $1::uuid
+          )
+        `, [clientId])
+
+        const client = (await q(`
+          select reminders_paused, reminders_paused_reason
+          from clients where id = $1::uuid
+        `, [clientId])).rows[0]
+
+        assertEq(client.reminders_paused, false, 'Client reminders_paused is false after resume')
+        assertEq(client.reminders_paused_reason, null, 'Pause reason cleared on resume')
+
+        const resumedSeq = (await q(`
+          select status, sequence
+          from payment_reminders
+          where booking_id = $1::uuid and status = 'pending'
+        `, [bookingId])).rows[0]
+
+        assert(resumedSeq, 'Pending payment reminder re-scheduled upon resume')
+      })
+
+      // 6. Balance reaches 0: reminders stop immediately ("reminders stop the moment the balance is 0")
+      await as('Accounts', async () => {
+        // Record payment settling all invoices for the booking to 0
+        await q(`
+          update invoices
+          set paid_amount = total_amount,
+              outstanding_amount = 0,
+              status = 'Paid',
+              updated_at = now()
+          where booking_id = $1::uuid
+        `, [bookingId])
+
+        // Assert trigger cancelled pending reminder
+
+        const pendingReminders = (await q(`
+          select status, error_message
+          from payment_reminders
+          where booking_id = $1::uuid and status in ('pending', 'draft_ready')
+        `, [bookingId])).rows
+
+        assertEq(pendingReminders.length, 0, 'Reminders stop the moment the balance is 0 (all pending cancelled)')
+
+        const cancelledRow = (await q(`
+          select status, error_message
+          from payment_reminders
+          where booking_id = $1::uuid and sequence > 0
+          order by sequence desc limit 1
+        `, [bookingId])).rows[0]
+
+        assertEq(cancelledRow.status, 'cancelled', 'Reminder row cancelled')
+        assertEq(cancelledRow.error_message, 'Balance fully settled', 'Settlement reason noted')
+      })
+
+      // 7. Client role cannot pause or resume payment reminders (RLS / permission check)
+      await as('Client', async () => {
+        await q('savepoint client_pause_probe')
+        try {
+          await refuses(
+            'Client calling pause_client_payment_reminders is REFUSED',
+            `select pause_client_payment_reminders(gen_random_uuid(), $1::uuid, 'self pause')`,
+            [clientId],
+            /Permission denied|only staff|42501/i,
+          )
+        } finally {
+          await q('rollback to savepoint client_pause_probe')
+          await q('release savepoint client_pause_probe')
+        }
+      })
+
+      // 8. Client with no email produces WhatsApp draft task (W22)
+      let noEmailClientId, noEmailBookingId
+      await as('Coordinator', async () => {
+        const cRes = await q(`
+          insert into clients (
+            client_uuid, client_code, name, phone, email
+          ) values (
+            '99999999-0005-4000-8000-000000000006'::uuid,
+            'C-9876',
+            'Hari Shrestha',
+            '+9779841112233',
+            null
+          ) returning id
+        `)
+        noEmailClientId = cRes.rows[0].id
+
+        await createBooking({
+          key: 'rem-noemail',
+          clientId: noEmailClientId,
+          window: [new Date(Date.now() - 170000000).toISOString(), new Date(Date.now() - 90000000).toISOString()],
+          actor: 'Coordinator',
+          lines: [
+            {
+              productId: SERIAL_PRODUCT,
+              description: 'Camera for no-email reminder test',
+              qty: 1,
+              days: 2,
+              rate: 3500,
+              units: [UNITS[0]],
+            },
+          ],
+        })
+        noEmailBookingId = bookingIds['rem-noemail']
+
+        await transition('rem-noemail', 'Quote', 'Booked', 'Coordinator')
+      })
+
+      await as('Warehouse', async () => {
+        await actionPackRental({
+          key: 'rem-noemail',
+          actor: 'Warehouse',
+          units: [{ id: UNITS[0], serial: 'SN-REM2' }],
+        })
+        await actionHandoverRental({
+          key: 'rem-noemail',
+          actor: 'Warehouse',
+          signerName: 'Hari Shrestha',
+        })
+      })
+
+      await as('Accounts', async () => {
+        await q(`
+          insert into invoices (
+            client_uuid, invoice_no, booking_id, client_id, branch_id,
+            status, subtotal, discount_amount, taxable_amount, vat_amount, total_amount, paid_amount, outstanding_amount,
+            issue_date, due_date, created_by, updated_by
+          ) values (
+            '99999999-0005-4000-8000-000000000008'::uuid,
+            'INV-L50-002', $1, $2, $3,
+            'Sent', 4000, 0, 4000, 0, 4000, 0, 4000,
+            now()::date, (now() + interval '7 days')::date, $4, $4
+          )
+        `, [noEmailBookingId, noEmailClientId, BRANCH, U.Accounts])
+      })
+
+      await as('Warehouse', async () => {
+        await actionReturnRental({
+          key: 'rem-noemail',
+          actor: 'Warehouse',
+          returnedUnits: [UNITS[0]],
+        })
+
+        const reminder = (await q(`
+          select channel, status, recipient_phone
+          from payment_reminders
+          where booking_id = $1::uuid and sequence = 0
+        `, [noEmailBookingId])).rows[0]
+
+        assert(reminder, 'Reminder created for client without email')
+        assertEq(reminder.channel, 'whatsapp_draft', 'No email routes to whatsapp_draft')
+      })
+
+      await as('Owner', async () => {
+        await q(`select * from process_due_payment_reminders(50) where booking_id = $1::uuid`, [noEmailBookingId])
+
+        const tasks = (await q(`select * from get_pending_whatsapp_draft_tasks()`)).rows
+        const task = tasks.find(t => t.booking_id === noEmailBookingId && t.event_type === 'payment_reminder')
+        assert(task, 'WhatsApp draft task appears in get_pending_whatsapp_draft_tasks')
+      })
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L62',
+  title: 'Phone pop-ups: subscriptions, RLS own-rows, Law 6 money blindness, and 4 event triggers (T5-09, W62, W38, W39)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      const subWh = 'https://push.example.com/sub/wh-device-01'
+      const subCoord = 'https://push.example.com/sub/coord-device-02'
+      const subOwner = 'https://push.example.com/sub/owner-device-03'
+
+      // 1. Warehouse registers a push subscription on floor phone
+      await as('Warehouse', async () => {
+        await q(`
+          select register_push_subscription(
+            '99999999-0005-4000-8000-000000000091'::uuid,
+            $1, 'key-p256dh-wh', 'key-auth-wh', 'Samsung Galaxy XCover (Floor)', 'Mozilla/5.0 Android'
+          )
+        `, [subWh])
+
+        const rows = (await q(`select * from push_subscriptions_v where endpoint = $1`, [subWh])).rows
+        assertEq(rows.length, 1, 'Warehouse reads own push subscription via view')
+        assertEq(rows[0].device_label, 'Samsung Galaxy XCover (Floor)', 'Device label matches')
+        assertEq(rows[0].is_active, true, 'Subscription is active')
+      })
+
+      // 2. Coordinator registers a push subscription on iPad
+      await as('Coordinator', async () => {
+        await q(`
+          select register_push_subscription(
+            '99999999-0005-4000-8000-000000000092'::uuid,
+            $1, 'key-p256dh-coord', 'key-auth-coord', 'M4 iPad Pro (Counter)', 'Mozilla/5.0 iPad'
+          )
+        `, [subCoord])
+      })
+
+      // 3. Owner registers a push subscription on iPhone 17 Pro
+      await as('Owner', async () => {
+        await q(`
+          select register_push_subscription(
+            '99999999-0005-4000-8000-000000000093'::uuid,
+            $1, 'key-p256dh-owner', 'key-auth-owner', 'iPhone 17 Pro (Babin)', 'Mozilla/5.0 iPhone'
+          )
+        `, [subOwner])
+      })
+
+      // 4. RLS: Warehouse sees only own subscription, not Coordinator or Owner
+      await as('Warehouse', async () => {
+        const rows = (await q(`select * from push_subscriptions_v`)).rows
+        assertEq(rows.length, 1, 'Warehouse sees only own push subscription under RLS')
+        assertEq(rows[0].endpoint, subWh, 'Endpoint is Warehouse endpoint')
+
+        // Law 3: Hard delete is rejected by trigger
+        await q('savepoint delete_push_probe')
+        try {
+          await refuses(
+            'Hard delete on push_subscriptions is rejected (Law 3)',
+            `delete from push_subscriptions where endpoint = $1`,
+            [subWh],
+            /HARD DELETE FORBIDDEN|55000/i,
+          )
+        } finally {
+          await q('rollback to savepoint delete_push_probe')
+          await q('release savepoint delete_push_probe')
+        }
+
+        // Soft unregister sets is_active = false
+        const unregOk = (await q(`select unregister_push_subscription($1)`, [subWh])).rows[0].unregister_push_subscription
+        assertEq(unregOk, true, 'Unregister returns true')
+
+        const unregRows = (await q(`select * from push_subscriptions where endpoint = $1`, [subWh])).rows
+        assertEq(unregRows[0].is_active, false, 'Subscription is deactivated (is_active = false)')
+
+        // Re-register reactivates it
+        await q(`
+          select register_push_subscription(
+            '99999999-0005-4000-8000-000000000091'::uuid,
+            $1, 'key-p256dh-wh', 'key-auth-wh', 'Samsung Galaxy XCover (Floor)', 'Mozilla/5.0 Android'
+          )
+        `, [subWh])
+      })
+
+      // 5. Test Event: payment_received (Law 6 money blindness check)
+      await as('Owner', async () => {
+        const payload = JSON.stringify({
+          payment_id: 'pay-001',
+          booking_no: 'BK-L51-PAY',
+          amount_paisa: 1250000, // Rs 12,500
+        })
+
+        const notifs = (await q(`select * from get_push_notifications_for_event('payment_received', $1::jsonb)`, [payload])).rows
+
+        const whNotif = notifs.find(n => n.endpoint === subWh)
+        assert(whNotif, 'Warehouse received payment notification')
+        assert(!whNotif.body.includes('12,500') && !whNotif.body.includes('Rs'), 'Warehouse body contains NO money figures (Law 6)')
+        assertEq(whNotif.body, 'Payment received for booking BK-L51-PAY.', 'Warehouse receives money-blind payment notification')
+
+        const ownerNotif = notifs.find(n => n.endpoint === subOwner)
+        assert(ownerNotif, 'Owner received payment notification')
+        assert(ownerNotif.body.includes('Rs 12,500'), 'Owner body includes formatted rupee amount')
+      })
+
+      // 6. Test Event: late_return (W38, W39 — to all staff on shift at once, 30m overdue)
+      await as('Owner', async () => {
+        const payload = JSON.stringify({
+          booking_id: 'bk-uuid-001',
+          booking_no: 'BK-L51-LATE',
+          outstanding_paisa: 450000, // Rs 4,500
+        })
+
+        const notifs = (await q(`select * from get_push_notifications_for_event('late_return', $1::jsonb)`, [payload])).rows
+
+        // Both Warehouse and Owner receive it (all staff on shift at once)
+        const whNotif = notifs.find(n => n.endpoint === subWh)
+        const ownerNotif = notifs.find(n => n.endpoint === subOwner)
+        assert(whNotif, 'Warehouse alerted for late return at 30 min (W38, W39)')
+        assert(ownerNotif, 'Owner alerted for late return at 30 min (W38, W39)')
+
+        // Law 6: Warehouse sees zero figures; Owner sees balance owed
+        assert(!whNotif.body.includes('Rs') && !whNotif.body.includes('4,500'), 'Warehouse alert has no balance figure (Law 6)')
+        assert(ownerNotif.body.includes('Rs 4,500'), 'Owner alert includes balance owed figure')
+        assertEq(whNotif.link_url, '/rentals/bk-uuid-001', 'Link URL points to booking record')
+      })
+
+      // 7. Test Event: new_online_request (W62)
+      await as('Coordinator', async () => {
+        const payload = JSON.stringify({
+          booking_id: 'bk-uuid-002',
+          client_name: 'Shree Production',
+          item_count: 5,
+          total_paisa: 2800000,
+        })
+
+        const notifs = (await q(`select * from get_push_notifications_for_event('new_online_request', $1::jsonb)`, [payload])).rows
+        const coordNotif = notifs.find(n => n.endpoint === subCoord)
+        assert(coordNotif, 'Coordinator notified of new online booking request')
+        assert(coordNotif.body.includes('Shree Production'), 'Client name included in push text')
+        assertEq(coordNotif.link_url, '/rentals/bk-uuid-002', 'Record link opens the requested booking')
+      })
+
+      // 8. Test Event: damage_found (W62)
+      await as('Warehouse', async () => {
+        const payload = JSON.stringify({
+          finding_id: 'df-uuid-001',
+          item_name: 'Sony FX3 Body',
+          description: 'Top handle mount cracked during reset',
+        })
+
+        const notifs = (await q(`select * from get_push_notifications_for_event('damage_found', $1::jsonb)`, [payload])).rows
+        const whNotif = notifs.find(n => n.endpoint === subWh)
+        assert(whNotif, 'Warehouse notified of damage found')
+        assert(whNotif.body.includes('Sony FX3 Body'), 'Item name in damage push alert')
+        assertEq(whNotif.link_url, '/inventory/damage/df-uuid-001', 'Record link opens damage finding')
+      })
+
+      // 9. Notification preferences suppression (T5-05 integration)
+      await as('Owner', async () => {
+        // Owner disables payments notifications
+        await q(`
+          select set_notification_preference(gen_random_uuid(), $1, 'payments', false, false)
+        `, [U.Owner])
+
+        const payload = JSON.stringify({
+          payment_id: 'pay-002',
+          booking_no: 'BK-L51-PREF',
+          amount_paisa: 500000,
+        })
+
+        const notifs = (await q(`select * from get_push_notifications_for_event('payment_received', $1::jsonb)`, [payload])).rows
+        const ownerNotif = notifs.find(n => n.endpoint === subOwner)
+        assert(!ownerNotif, 'Owner did NOT receive payment push alert when disabled in notification preferences (T5-05)')
+
+        // Re-enable
+        await q(`
+          select set_notification_preference(gen_random_uuid(), $1, 'payments', true, true)
+        `, [U.Owner])
+      })
+    })
+  },
+})
+
 
 /* ΓöÇΓöÇ Run ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
