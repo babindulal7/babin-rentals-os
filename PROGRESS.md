@@ -1,5 +1,64 @@
 # Progress Log
 
+## 2026-11-05 — T6-04: Wave 1 — the floor localization conversion (Lane B)
+
+**Did**
+- **T6-04: Floor and operations localization conversion (S6, S11, R-21, Law 6):**
+  - Converted Floor, Shell, Sign-In, and Operations components to reactive translation hook `useTranslation()`:
+    - **Shell:** Converted `src/components/shell/BottomBar.tsx` (Today, Rentals, Scan, Inventory, More), aria-labels, and scan actions.
+    - **Auth / Sign-In:** Converted `src/modules/auth/AuthCard.tsx`, `src/modules/auth/Login.tsx`, and `src/modules/auth/ScreenLock.tsx` (welcome titles, work email, password, lockout warnings, 4-digit PIN unlock, roster switching, forget device dialog).
+    - **Today:** Converted `src/modules/today/Today.tsx` date range filters, strictly correcting Devanagari digit violations in quick presets (`आगामी 7 दिन` with Latin 7 per R-21).
+    - **Operations:** Converted `src/modules/operations/RentalOperationShell.tsx` (job titles, stepper stages, pickup/return dates, blockers, sticky footer actions) and `src/modules/operations/OperationsQueues.tsx` (Queue chips: Pack, Handover, Return, Reset, Cases; data table headers: Booking, Client, Items, Stage, Time, Action).
+  - Enriched dictionaries in `src/i18n/en/` and `src/i18n/ne/` across `core.json`, `auth.json`, `today.json`, and `operations.json` using exact approved glossary terms from `src/i18n/glossary.ne.json` (approved by Babin 2026-11-01).
+  - Maintained strict digit invariant: Latin digits preserved across all translations (`4-अङ्कको PIN`, `15 मिनेटको`, `{attempts}`, `{seconds}`, `{count}`). Zero Devanagari digits `[०-९]`.
+  - Registered newly converted components in `CONVERTED_MODULES` (`scripts/check-ui-copy.mjs`) to permanently ban raw JSX text.
+  - Exported comprehensive 154-row Wave 1 review sheet (`docs/reviews/wave1_floor_review.csv`) via `npm run i18n:export -- --wave=1` for Babin's screen-by-screen approvals.
+
+**Ruled**
+- R-21 / Law 6 / S6: Numbers, IDs, booking numbers, and NPR remain in Latin script in both English and Nepali.
+- S11: Floor and operational copy uses approved terms from `src/i18n/glossary.ne.json`.
+
+**Verified**
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 tests passed including converted module enforcement.
+- `npm run test:i18n-review` — 4/4 passed.
+- `npx vitest run src/lib/__tests__/i18n.test.ts` — 30/30 passed.
+- `npx vitest run src/components/shell/__tests__/shell.test.tsx` — 32/32 passed.
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS (financial integrity verified in isolated PGlite).
+- `npm run check:security` — 18/18 Phase 0 SQL regressions passed, 14/14 Reset branch regression groups passed, operations branch grants verified.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `npm run test:server-contracts` — 58/58 passed.
+- `npm run test:partial-return` — 58/58 passed.
+- `node --test scripts/test-receipt.test.mjs` — 11/11 passed.
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run lint:shell` — 893 files checked, 0 violations.
+- `npm run check:contrast` — 106/106 pass, 0 fail.
+- `npm run build` — `tsc --noEmit && vite build` bundled cleanly (dist/).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-04T23:05:47.345Z). Suite: Historical suite: 6699/6699 passed, 0 failed (recorded 2026-11-04T21:20:06.962Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-04T23:08:38.372Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin: review and approve Wave 1 strings in `docs/reviews/wave1_floor_review.csv` on mobile.
+- Babin: merge `lane-b/T6-04-wave-1-the-floor`.
+- Lane B: T6-05 (Wave 2 — The Desk localization conversion: rentals, inventory, clients, finance).
+- Lane A: T1-17 (Two-step sign-in for money roles) and T2-18 (Finish evidence capture).
+- Lane C: T3-14c (draft invoice numbering) blocked on accountant decisions O-14/O-17.
+- Babin: apply migrations 0215–0220 to live after backup protocol.
+
 ## 2026-11-05 — T6-03: Review sheets generator and importer (Lane B)
 
 **Did**
