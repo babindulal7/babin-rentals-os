@@ -5,6 +5,7 @@
  * flightcases, and cables. Includes an embedded, lightweight Code 128 barcode
  * generator that outputs clean SVG vectors with zero external runtime dependencies.
  */
+import { BarcodeFormat, QRCodeWriter } from '@zxing/library'
 
 export type LabelPreset = 'standard' | 'case' | 'cable'
 
@@ -42,6 +43,8 @@ export interface LabelData {
   subtitle?: string | undefined
   serialNo?: string | undefined
   barcodeValue: string
+  /** Selects the actual encoded symbol on the printable label. */
+  symbology?: 'qr' | 'code128' | undefined
   orgName?: string | undefined
 }
 
@@ -107,6 +110,27 @@ export function generateCode128Svg(text: string, height = 40): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalWidth} ${height}" width="100%" height="${height}" preserveAspectRatio="none">${rects.join('')}</svg>`
 }
 
+/**
+ * Offline, standards-compliant QR matrix rendered as SVG. Uses the ZXing
+ * encoder already installed in the app. The output is numeric SVG geometry
+ * only; the original asset text is NEVER inserted as markup.
+ * ZXing supplies the required quiet zone inside the encoded matrix.
+ */
+export function generateQrSvg(text: string, size = 120): string {
+  const clean = text.trim()
+  if (!clean) return '<svg></svg>'
+  const matrix = new QRCodeWriter().encode(clean, BarcodeFormat.QR_CODE, size, size, new Map())
+  const width = matrix.getWidth()
+  const height = matrix.getHeight()
+  const cells: string[] = []
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (matrix.get(x, y)) cells.push(`<rect x="${x}" y="${y}" width="1" height="1"/>`)
+    }
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" data-symbology="qr" viewBox="0 0 ${width} ${height}" width="100%" height="${size}" preserveAspectRatio="xMidYMid meet" shape-rendering="crispEdges"><rect width="${width}" height="${height}" fill="#fff"/><g fill="#000">${cells.join('')}</g></svg>`
+}
+
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
@@ -121,7 +145,9 @@ function escapeHtml(str: string): string {
  */
 export function generateLabelHtml(data: LabelData, preset: LabelPreset = 'standard'): string {
   const dim = LABEL_PRESETS[preset]
-  const barcodeSvg = generateCode128Svg(data.barcodeValue, preset === 'cable' ? 24 : 36)
+  const barcodeSvg = data.symbology === 'qr'
+    ? generateQrSvg(data.barcodeValue, preset === 'case' ? 78 : 52)
+    : generateCode128Svg(data.barcodeValue, preset === 'cable' ? 24 : 36)
   const org = data.orgName || 'BABIN RENTALS OS · KATHMANDU'
 
   const safeAssetCode = escapeHtml(data.assetCode)
