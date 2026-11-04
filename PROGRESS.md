@@ -37,11 +37,15 @@
 
 **Verified**
 - `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `npm run check:security` — 18/18 Phase 0 SQL regressions passed, 14/14 Reset branch regression groups passed, operations branch grants verified.
 - `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed (including L58 morning digest, L59 preferences, L60 client emails, L61 payment reminders, L62 phone popups).
+- `npm run test:server-contracts` — 58/58 passed.
+- `npm run test:partial-return` — 58/58 passed.
 - `npm run typecheck` — 0 errors (`tsc --noEmit`).
 - `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
 - `npm run lint:shell` — 892 files checked, 0 violations.
 - `npm run lint:ui-copy` — 0 developer-text violations.
+- `npm run build` — `tsc --noEmit && vite build` bundled cleanly (dist/).
 - Vitest suites for T5 passed cleanly: `clientMessageRegister.test.ts`, `email.test.ts`, `morningDigest.test.ts`, `clientMessages.test.ts`, `notificationPreferences.test.ts`, `push.test.ts`, `clientMessageEvents.test.ts`, `approvals.test.ts`, `ApprovalsInbox.test.tsx`, `RoleTaskCockpit.test.tsx`, `NotificationsDrawer.test.tsx`, `ClientDetail.reminders.test.tsx`.
 
 ### Completion
