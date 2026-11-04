@@ -112,7 +112,7 @@ const QUICK_PERIOD_LABELS: Record<'en' | 'ne', Record<QuickPeriod, string>> = {
   ne: {
     Today: 'आज',
     Tomorrow: 'भोलि',
-    'Next 7 Days': 'यो हप्ता (७ दिन)',
+    'Next 7 Days': 'आगामी 7 दिन',
   },
 }
 

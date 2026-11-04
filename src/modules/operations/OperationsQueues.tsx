@@ -49,6 +49,7 @@ import { useOperationsWorkspace } from './OperationsWorkspaceContext'
 import { useDomainEvent } from '../../events/useDomainEvent'
 import { EVENT_TYPES } from '../../events/eventBus'
 import { listCases, type Case } from '../../lib/queries/cases'
+import { useTranslation } from '../../lib/i18n'
 
 
 const th = {
@@ -455,8 +456,28 @@ interface QueueChipProps {
   onToggle: () => void
 }
 
+const QUEUE_TITLE_KEYS: Record<string, string> = {
+  Pack: 'operations.queue.pack',
+  Handover: 'operations.queue.handover',
+  Return: 'operations.queue.return',
+  Reset: 'operations.queue.reset',
+  Cases: 'operations.queue.cases',
+}
+
+const TABLE_HEADINGS: Record<string, string> = {
+  Booking: 'operations.col.booking',
+  Client: 'operations.col.client',
+  Items: 'operations.col.items',
+  Stage: 'operations.col.status',
+  Time: 'operations.col.due',
+  Action: 'operations.col.action',
+}
+
 function QueueChip({ id, queue, active, tabIndex, total, loading, error, onToggle }: QueueChipProps) {
+  const { t } = useTranslation()
   const tok = total === 0 ? STATUS.neutral : queue.job === 'Reset' ? STATUS.progress : STATUS[statusToken(JOBS_META[queue.job].runsAt)]
+  const queueKey = QUEUE_TITLE_KEYS[queue.job]
+  const queueTitle = queueKey ? t(queueKey, queue.title) : queue.title
 
   /*
    * The count, or an explicit non-value. `—` is not a zero and must not be
@@ -466,7 +487,7 @@ function QueueChip({ id, queue, active, tabIndex, total, loading, error, onToggl
    */
   const countText = loading && total === null ? '…' : total === null ? '—' : String(total)
   const countLabel =
-    total === null ? `${queue.title}: no count available` : `${queue.title}: ${total} ${total === 1 ? 'job' : 'jobs'}`
+    total === null ? `${queueTitle}: no count available` : `${queueTitle}: ${total} ${total === 1 ? 'job' : 'jobs'}`
 
   return (
     <button
@@ -483,7 +504,7 @@ function QueueChip({ id, queue, active, tabIndex, total, loading, error, onToggl
     >
       {/* Law 11 — the queue's stage tone never carries the meaning alone; the icon and the word are both present. */}
       <Icon name={queue.icon} size={15} style={{ color: active ? 'var(--select-fg)' : 'var(--text2)', flexShrink: 0 }} />
-      {queue.title}
+      {queueTitle}
       <span
         className="figure"
         aria-label={countLabel}
@@ -534,6 +555,7 @@ function StageBadge({ stage }: { stage: JobRow['stage'] }) {
 export default function OperationsQueues() {
   const { openOperations } = useOperationsWorkspace()
   const routeNavigate = useNavigate()
+  const { t } = useTranslation()
   // Keep the existing dense table render readable while changing its action
   // from URL navigation to the global modal host.
   const navigate = (route: string) => {
@@ -1046,7 +1068,7 @@ export default function OperationsQueues() {
           style={{ ...chipStyle(selected === 'Cases'), textDecoration: 'none' }}
         >
           <Icon name="briefcase" size={15} style={{ color: selected === 'Cases' ? 'var(--select-fg)' : 'var(--text2)', flexShrink: 0 }} />
-          Cases
+          {t('operations.queue.cases', 'Cases')}
           <span
             className="figure"
             title={casesList.error ?? undefined}
@@ -1248,9 +1270,11 @@ export default function OperationsQueues() {
                           aria-label="Select visible bookings"
                         />
                       </th>
-                      {['Booking', 'Client', 'Items', 'Stage', 'Time', 'Action', ''].map((heading, index) => (
-                        <th key={heading || index} style={th}>{heading}</th>
-                      ))}
+                      {['Booking', 'Client', 'Items', 'Stage', 'Time', 'Action', ''].map((heading, index) => {
+                        const transKey = TABLE_HEADINGS[heading]
+                        const label = transKey ? t(transKey, heading) : heading
+                        return <th key={heading || index} style={th}>{label}</th>
+                      })}
                     </tr>
                   </thead>
                   <tbody>

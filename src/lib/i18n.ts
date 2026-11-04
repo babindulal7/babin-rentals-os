@@ -515,8 +515,16 @@ export function useCurrentLanguage(): Language {
  */
 export function useTranslation() {
   const lang = useCurrentLanguage()
-  const translate = (key: StringKey | string, params?: Record<string, string | number>) => {
-    return t(key, lang, params)
+  function translate(
+    key: StringKey | string,
+    fallbackOrParams?: string | Record<string, string | number>,
+    params?: Record<string, string | number>
+  ): string {
+    if (typeof fallbackOrParams === 'string') {
+      const translated = t(key, lang, params)
+      return translated === key ? fallbackOrParams : translated
+    }
+    return t(key, lang, fallbackOrParams)
   }
   return { t: translate, lang }
 }

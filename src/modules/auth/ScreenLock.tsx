@@ -3,6 +3,7 @@ import Icon from '../../components/ui/Icon'
 import { PinPad } from '../../components/ui/PinPad'
 import { ErrorBanner } from '../../components/ui/StateViews'
 import { useAuth, type PinVerdict, type RosterEntry } from '../../lib/auth'
+import { useTranslation } from '../../lib/i18n'
 import './auth.css'
 
 /**
@@ -20,6 +21,7 @@ import './auth.css'
  */
 export default function ScreenLock({ onUnlock }: { onUnlock: () => void }) {
   const { user, roster, verifyStaffPin, switchUser, logout, forgetThisDevice } = useAuth()
+  const { t } = useTranslation()
   const hasRoster = Boolean(roster && roster.length > 0)
 
   // On shared devices with enrolled staff, start on the roster list.
@@ -200,10 +202,10 @@ export default function ScreenLock({ onUnlock }: { onUnlock: () => void }) {
         {hasRoster && !selectedUserId ? (
           <div>
             <h2 style={{ fontSize: 'clamp(20px, 2vw, 24px)', fontWeight: 600, margin: '0 0 8px', color: 'var(--text)' }}>
-              Who is working?
+              {t('auth.screenLock.whoIsWorking', 'Who is working?')}
             </h2>
             <p style={{ margin: '0 0 16px', color: 'var(--text2)', fontSize: 'var(--t-meta)' }}>
-              Tap your name to unlock your session
+              {t('auth.screenLock.tapYourName', 'Tap your name to unlock your session')}
             </p>
 
             {isOffline && (
@@ -248,12 +250,12 @@ export default function ScreenLock({ onUnlock }: { onUnlock: () => void }) {
                       <span className="roster-name-text">{member.name}</span>
                       {memberLocked && (
                         <span className="roster-status-badge locked">
-                          Locked until {memberLockTime}
+                          {t('auth.screenLock.lockedUntil', 'Locked until {time}', { time: memberLockTime ?? '' })}
                         </span>
                       )}
                       {!memberLocked && member.userId === user?.id && (
                         <span className="roster-status-badge active">
-                          Active session
+                          {t('auth.screenLock.activeSession', 'Active session')}
                         </span>
                       )}
                     </div>
@@ -279,7 +281,7 @@ export default function ScreenLock({ onUnlock }: { onUnlock: () => void }) {
                   fontFamily: 'inherit',
                 }}
               >
-                Sign in with another account
+                {t('auth.screenLock.switchAccount', 'Sign in with another account')}
               </button>
 
               {(user?.role === 'Owner' || user?.role === 'Admin') && !confirmingForget && (
@@ -297,7 +299,7 @@ export default function ScreenLock({ onUnlock }: { onUnlock: () => void }) {
                     fontFamily: 'inherit',
                   }}
                 >
-                  Forget this device
+                  {t('auth.screenLock.forgetDevice', 'Forget this device')}
                 </button>
               )}
 
@@ -306,7 +308,7 @@ export default function ScreenLock({ onUnlock }: { onUnlock: () => void }) {
               {(user?.role === 'Owner' || user?.role === 'Admin') && confirmingForget && (
                 <div
                   role="alertdialog"
-                  aria-label="Forget this device"
+                  aria-label={t('auth.screenLock.forgetDevice', 'Forget this device')}
                   style={{
                     display: 'flex',
                     flexDirection: 'column',
@@ -317,7 +319,7 @@ export default function ScreenLock({ onUnlock }: { onUnlock: () => void }) {
                   }}
                 >
                   <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text)' }}>
-                    Forget every stored session and the roster on this device? Everyone will have to sign in again.
+                    {t('auth.screenLock.forgetPrompt', 'Forget every stored session and the roster on this device? Everyone will have to sign in again.')}
                   </span>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button
@@ -336,7 +338,7 @@ export default function ScreenLock({ onUnlock }: { onUnlock: () => void }) {
                         fontFamily: 'inherit',
                       }}
                     >
-                      Cancel
+                      {t('auth.screenLock.cancel', 'Cancel')}
                     </button>
                     <button
                       type="button"
@@ -357,7 +359,7 @@ export default function ScreenLock({ onUnlock }: { onUnlock: () => void }) {
                         fontFamily: 'inherit',
                       }}
                     >
-                      Forget this device
+                      {t('auth.screenLock.forgetConfirm', 'Forget this device')}
                     </button>
                   </div>
                 </div>
@@ -388,13 +390,13 @@ export default function ScreenLock({ onUnlock }: { onUnlock: () => void }) {
                   }}
                 >
                   <Icon name="arrow_left" size={16} />
-                  Back to staff list
+                  {t('action.back', 'Back to staff list')}
                 </button>
               </div>
             )}
 
             <h2 style={{ fontSize: 'clamp(20px, 2vw, 24px)', fontWeight: 600, margin: '0 0 8px', color: 'var(--text)' }}>
-              Session Locked
+              {t('auth.screenLock.title', 'Session Locked')}
             </h2>
 
             <p style={{ margin: '0 0 4px', color: 'var(--text)', fontSize: 'var(--t-meta)', fontWeight: 600 }}>
@@ -441,7 +443,7 @@ export default function ScreenLock({ onUnlock }: { onUnlock: () => void }) {
                   textAlign: 'left',
                 }}
               >
-                PIN locked until {unlockTime}. Sign in with your password.
+                {t('auth.screenLock.pinLockedUntilPrefix', 'PIN locked until')} {unlockTime}. {t('auth.screenLock.signInWithPassword', 'Sign in with your password.')}
               </p>
             ) : (
               <PinPad
@@ -465,8 +467,11 @@ export default function ScreenLock({ onUnlock }: { onUnlock: () => void }) {
                   fontWeight: 600,
                 }}
               >
-                Incorrect PIN — {verdict.attemptsRemaining}{' '}
-                {verdict.attemptsRemaining === 1 ? 'attempt' : 'attempts'} left
+                {t('auth.screenLock.incorrectPinPrefix', 'Incorrect PIN —')}{' '}
+                {verdict.attemptsRemaining}{' '}
+                {verdict.attemptsRemaining === 1
+                  ? t('auth.screenLock.attemptLeft', 'attempt left')
+                  : t('auth.screenLock.attemptsLeftPlural', 'attempts left')}
               </p>
             )}
 
@@ -480,7 +485,7 @@ export default function ScreenLock({ onUnlock }: { onUnlock: () => void }) {
                   fontWeight: 600,
                 }}
               >
-                This staff account is no longer active. Sign out to continue.
+                {t('auth.screenLock.accountInactive', 'This staff account is no longer active. Sign out to continue.')}
               </p>
             )}
 
@@ -513,7 +518,7 @@ export default function ScreenLock({ onUnlock }: { onUnlock: () => void }) {
                 fontFamily: 'inherit',
               }}
             >
-              Sign out instead
+              {t('auth.screenLock.signOutInstead', 'Sign out instead')}
             </button>
           </div>
         )}
