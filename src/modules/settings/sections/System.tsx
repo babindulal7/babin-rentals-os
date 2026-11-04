@@ -5,6 +5,7 @@ import { PwaInstallControl } from '../../../components/ui/PwaInstallControl'
 import { LegacyExportControl } from './LegacyExportControl'
 import { DeliveryZonesControl } from './DeliveryZonesControl'
 import { CalendarFeedControl } from './CalendarFeedControl'
+import { NotificationPreferencesControl } from './NotificationPreferencesControl'
 
 /**
  * **Settings ▸ System** — appearance, notifications, preferences, security and
@@ -74,17 +75,19 @@ export const SYSTEM_SECTIONS: Section[] = [
   },
   {
     key: 'notifications',
-    title: 'Notifications',
+    title: 'Notification preferences',
     icon: 'bell',
     fields: [
-      /* The four toggles stay; the "Notification templates" row that pointed at
-         the archived Notification Center is gone rather than re-aimed. A row
-         whose destination no longer exists is a dead control, and this file's
-         standing rule is that no destination is ever dead. */
-      { label: 'Return reminders', note: 'Sent 24 hours before a return is due.', on: true },
-      { label: 'Payment reminders', note: 'Sent when an invoice passes its due date.', on: true },
-      { label: 'Low stock alerts', note: 'When a SKU falls below its minimum.', on: true },
-      { label: 'Daily digest', note: 'One summary each morning.', on: false },
+      {
+        label: 'My channel & type preferences',
+        note: 'Configure in-app alerts and email notifications per category. Morning digest is on by default (21 Jul lock, T5-05).',
+        custom: <NotificationPreferencesControl />,
+      },
+      /* T1-16: no toggle may claim that a notification has been enabled when
+         there is no save handler or delivery service behind it. Each future
+         capability owns the actual settings/persistence and can replace its
+         read-only marker when shipped. */
+      { label: 'Low stock alerts', note: 'Inventory minimum-stock warnings.', readOnlyWhy: 'Not built yet — arrives with T3-30.' },
     ],
   },
   {
@@ -193,9 +196,9 @@ export const SYSTEM_SECTIONS: Section[] = [
     title: 'Access',
     icon: 'crew',
     fields: [
-      { label: 'Two-factor authentication', note: 'Required for Owner and Admin roles.', on: true },
+      { label: 'Two-factor authentication', note: 'Multi-factor sign-in for privileged staff.', readOnlyWhy: 'Not built yet — arrives with T1-17. This does not currently enforce two-factor authentication.' },
       { label: 'Password policy', note: 'Min 12 chars, mixed case, number, symbol. 90-day expiry.', settingKey: 'passwordPolicy' },
-      { label: 'Shared-device screen lock', note: 'Locks the tablet between operators.', on: true },
+      { label: 'Shared-device screen lock', note: 'Name-and-PIN switching on shared tablets.', readOnlyWhy: 'Not built yet — arrives with T1-15. The separate Idle screen lock setting below remains available.' },
       /*
        * How long that lock waits — moved here from System preferences on
        * 25 Aug 2026, by ruling. It reads as one idea in this order: the lock,

@@ -110,27 +110,22 @@ export function generateRiderRawToken(): string {
  */
 export async function hashRiderToken(rawToken: string): Promise<string> {
   const trimmed = rawToken.trim()
-  if (typeof crypto !== 'undefined' && crypto.subtle && crypto.subtle.digest) {
+  const subtle = globalThis.crypto?.subtle
+  if (subtle && typeof subtle.digest === 'function') {
     const encoder = new TextEncoder()
     const data = encoder.encode(trimmed)
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+    const hashBuffer = await subtle.digest('SHA-256', data)
     const hashArray = Array.from(new Uint8Array(hashBuffer))
     return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
   }
 
-  // Node.js environment fallback
-  try {
-    const nodeCrypto = await import('node:crypto')
-    return nodeCrypto.createHash('sha256').update(trimmed).digest('hex')
-  } catch {
-    // In-memory simple hash simulation for mock-only edge runs
-    let hash = 0
-    for (let i = 0; i < trimmed.length; i++) {
-      hash = (hash << 5) - hash + trimmed.charCodeAt(i)
-      hash |= 0
-    }
-    return Math.abs(hash).toString(16).padStart(64, '0').slice(0, 64)
+  // Fallback for non-crypto mock environments
+  let hash = 0
+  for (let i = 0; i < trimmed.length; i++) {
+    hash = (hash << 5) - hash + trimmed.charCodeAt(i)
+    hash |= 0
   }
+  return Math.abs(hash).toString(16).padStart(64, '0').slice(0, 64)
 }
 
 /**

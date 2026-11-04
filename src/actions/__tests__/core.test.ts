@@ -434,6 +434,54 @@ describe('delivery_zone capabilities — T-1 matrix round-trip (T4-07)', () => {
   })
 })
 
+describe('problem_report capabilities — T-1 matrix round-trip (T4-11)', () => {
+  const probe = (capability: string, role: SystemRole) => {
+    const execute = vi.fn(async () => ({ result: { ok: true }, events: [] }))
+    const action = createAction({
+      name: `PROBE_${capability}`,
+      permissions: [capability],
+      implemented: true,
+      validate: () => {},
+      execute,
+    })
+    return {
+      run: () => action({}, { userId: 'u-1', role, isOnline: true }),
+      execute,
+    }
+  }
+
+  it('problem_report.create admits all staff and refuses Client', async () => {
+    const staff: SystemRole[] = ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts', 'Driver']
+    for (const role of staff) {
+      await expect(probe('problem_report.create', role).run()).resolves.toEqual({ ok: true })
+    }
+    const { run, execute } = probe('problem_report.create', 'Client')
+    await expect(run()).rejects.toBeInstanceOf(ActionPermissionError)
+    expect(execute).not.toHaveBeenCalled()
+  })
+
+  it('problem_report.read admits all staff and refuses Client', async () => {
+    const staff: SystemRole[] = ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts', 'Driver']
+    for (const role of staff) {
+      await expect(probe('problem_report.read', role).run()).resolves.toEqual({ ok: true })
+    }
+    const { run, execute } = probe('problem_report.read', 'Client')
+    await expect(run()).rejects.toBeInstanceOf(ActionPermissionError)
+    expect(execute).not.toHaveBeenCalled()
+  })
+
+  it('problem_report.manage admits exactly Owner and Admin', async () => {
+    for (const role of ['Owner', 'Admin'] as const) {
+      await expect(probe('problem_report.manage', role).run()).resolves.toEqual({ ok: true })
+    }
+    for (const role of ['Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts', 'Driver', 'Client'] as const) {
+      const { run, execute } = probe('problem_report.manage', role)
+      await expect(run()).rejects.toBeInstanceOf(ActionPermissionError)
+      expect(execute).not.toHaveBeenCalled()
+    }
+  })
+})
+
 /**
  * ## The guard that should have existed first
  *

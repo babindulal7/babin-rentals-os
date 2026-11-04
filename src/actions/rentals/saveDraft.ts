@@ -58,7 +58,7 @@ export interface RentalDraftData {
     role: string
     phone: string
     dayRatePaisa: number
-    overtimePaisa: number
+    overtimeDays: number
     accommodationPaisa: number
     mealsPaisa: number
   }>

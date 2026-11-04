@@ -13,6 +13,7 @@ import type { ClientRecord } from '../../../lib/queries/clients'
 import type { ClientHealthVerdict } from './clientHealth'
 import type { GateContext } from '../../../lib/fieldGating'
 import type { AuthUser } from '../../../lib/auth'
+import type { ClientActiveMembership } from '../../../lib/queries/membership'
 
 export interface BookingClientSectionProps {
   open: boolean
@@ -47,6 +48,7 @@ export interface BookingClientSectionProps {
   setKindOther: (o: string) => void
   govId: string
   setGovId: (id: string) => void
+  clientMembership?: ClientActiveMembership | null | undefined
   title?: string
 }
 
@@ -54,6 +56,7 @@ export function BookingClientSection({
   open,
   onToggle,
   client,
+  clientMembership,
   clientPool,
   selectedClientId,
   clientFieldTouched,
@@ -165,6 +168,44 @@ export function BookingClientSection({
                 controls="new-rental-client-quick-view"
                 onClick={() => setQuickViewOpen((o) => !o)}
               />}
+              {clientMembership && (
+                <span
+                  data-testid="client-membership-badge"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '2px 8px',
+                    borderRadius: 'var(--r-badge)',
+                    background: 'var(--card2)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text)',
+                    fontSize: 11,
+                    fontWeight: 600,
+                  }}
+                >
+                  <Icon name="card" size={12} /> {clientMembership.level}
+                </span>
+              )}
+              {clientMembership?.perks?.some((p) => p.toLowerCase().includes('priority booking')) && (
+                <span
+                  data-testid="priority-booking-badge"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '2px 8px',
+                    borderRadius: 'var(--r-badge)',
+                    background: 'var(--st-primary-bg, #eff6ff)',
+                    border: '1px solid var(--st-primary-border, #bfdbfe)',
+                    color: 'var(--st-primary-fg, #1d4ed8)',
+                    fontSize: 11,
+                    fontWeight: 600,
+                  }}
+                >
+                  <Icon name="zap" size={12} /> Priority Booking
+                </span>
+              )}
             {client.dbId && (
                 <IntelCard
                   glance={clientGlance(client, gctx)}

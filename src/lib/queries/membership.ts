@@ -1,7 +1,8 @@
 import { supabase } from '../supabase'
-import { formatAd, formatBsOrAd } from '../bs'
+import { formatAd, formatBsOrAd, getBusinessToday } from '../bs'
 import { rupees, type Paisa } from '../money'
 import type { MembershipTier } from '../../data/clients'
+import { MEMBERS, PLANS } from '../../data/membership'
 
 /** Only values backed by the current membership, client and plan views. */
 export interface MemberListRow {
@@ -118,3 +119,167 @@ export async function listMembershipPlans(): Promise<MembershipPlanRecord[]> {
     updatedAt: p.updated_at,
   }))
 }
+
+export interface ClientActiveMembership {
+  id?: string | undefined
+  clientId?: string | undefined
+  planId?: string | undefined
+  level: MembershipTier
+  label: string
+  individualDiscountPct: number | null
+  bundleDiscountPct: number | null
+  monthlyBookingLimit: number | null
+  simultaneousRentalLimit: number | null
+  perks: string[]
+  status: 'Active' | 'Grace' | 'Lapsed'
+  benefitsActive: boolean
+}
+
+export async function fetchClientActiveMembership(
+  client: { id?: string; dbId?: string; name?: string; membership?: string; membershipLevel?: string | null } | undefined | null,
+): Promise<ClientActiveMembership | null> {
+  if (!client) return null
+
+  // If client.membershipLevel is explicitly null, this is an unjoined client (no membership)
+  if (client.membershipLevel === null) {
+    return null
+  }
+
+  // 1. Try DB read if client.dbId is present
+  if (client.dbId) {
+    try {
+      const plans = await listMembershipPlans()
+      const { data, error } = await supabase
+        .from('client_memberships_v')
+        .select('id, client_id, plan_id, join_date, fee_paid')
+        .eq('client_id', client.dbId)
+        .is('superseded_at', null)
+        .maybeSingle()
+
+      if (!error && data) {
+        const plan = plans.find((p) => p.id === data.plan_id)
+        if (plan) {
+          const joinDate = new Date(data.join_date)
+          const termMonths = plan.termMonths ?? 12
+          const termEnd = new Date(joinDate)
+          termEnd.setMonth(termEnd.getMonth() + termMonths)
+          const graceEnd = new Date(termEnd)
+          graceEnd.setDate(graceEnd.getDate() + 30)
+          const today = getBusinessToday()
+
+          let status: 'Active' | 'Grace' | 'Lapsed' = 'Active'
+          let benefitsActive = true
+          if (today > graceEnd) {
+            status = 'Lapsed'
+            benefitsActive = false
+          } else if (today > termEnd) {
+            status = 'Grace'
+            benefitsActive = true
+          }
+
+          return {
+            id: data.id,
+            clientId: client.dbId,
+            planId: plan.id,
+            level: plan.level,
+            label: plan.label,
+            individualDiscountPct: plan.individualDiscountPct,
+            bundleDiscountPct: plan.bundleDiscountPct,
+            monthlyBookingLimit: plan.monthlyBookingLimit,
+            simultaneousRentalLimit: plan.simultaneousRentalLimit,
+            perks: plan.perks,
+            status,
+            benefitsActive,
+          }
+        }
+      }
+    } catch {
+      // Fallback to sample or tier mapping
+    }
+  }
+
+  // 2. Sample data fallback (MEMBERS array from data/membership)
+  const clientName = client.name?.toLowerCase().trim()
+  const memberRow = MEMBERS.find(
+    (m) =>
+      (client.id && m.id === client.id) ||
+      (clientName && m.name.toLowerCase().trim() === clientName),
+  )
+
+  if (memberRow) {
+    const planFromData = PLANS.find((p) => p.name === memberRow.level)
+    const isLapsed = memberRow.bucket === 'Lapsed'
+    const isGrace = memberRow.bucket === 'Grace'
+    const indPctMatch = planFromData?.discounts[0]?.match(/(\d+)%/)
+    const bndPctMatch = planFromData?.discounts[1]?.match(/(\d+)%/)
+    const individualDiscountPct = indPctMatch ? Number(indPctMatch[1]) : 0
+    const bundleDiscountPct = bndPctMatch ? Number(bndPctMatch[1]) : 0
+
+    const monthlyLimitMatch = planFromData?.limits[0]?.value
+    const simLimitMatch = planFromData?.limits[1]?.value
+    const monthlyBookingLimit = monthlyLimitMatch && monthlyLimitMatch !== 'Unlimited' ? Number(monthlyLimitMatch) : null
+    const simultaneousRentalLimit = simLimitMatch && simLimitMatch !== 'Unlimited' ? Number(simLimitMatch) : null
+    const perks = (planFromData?.features ?? []).filter((f) => f.kind !== 'off').map((f) => f.text)
+
+    return {
+      level: memberRow.level,
+      label: planFromData?.badge ?? 'Access Member',
+      individualDiscountPct,
+      bundleDiscountPct,
+      monthlyBookingLimit,
+      simultaneousRentalLimit,
+      perks,
+      status: isLapsed ? 'Lapsed' : isGrace ? 'Grace' : 'Active',
+      benefitsActive: !isLapsed,
+    }
+  }
+
+  // 3. If client has an explicit membership tier (e.g. from props/tests)
+  const tier = (client.membershipLevel || client.membership) as MembershipTier | undefined
+  if (tier && tier !== 'Academy' && ['Creator', 'Cinematographer', 'Production Alliance', 'Elite'].includes(tier)) {
+    const planFromData = PLANS.find((p) => p.name === tier)
+    const indPctMatch = planFromData?.discounts[0]?.match(/(\d+)%/)
+    const bndPctMatch = planFromData?.discounts[1]?.match(/(\d+)%/)
+    const individualDiscountPct = indPctMatch ? Number(indPctMatch[1]) : 0
+    const bundleDiscountPct = bndPctMatch ? Number(bndPctMatch[1]) : 0
+
+    const monthlyLimitMatch = planFromData?.limits[0]?.value
+    const simLimitMatch = planFromData?.limits[1]?.value
+    const monthlyBookingLimit = monthlyLimitMatch && monthlyLimitMatch !== 'Unlimited' ? Number(monthlyLimitMatch) : null
+    const simultaneousRentalLimit = simLimitMatch && simLimitMatch !== 'Unlimited' ? Number(simLimitMatch) : null
+    const perks = (planFromData?.features ?? []).filter((f) => f.kind !== 'off').map((f) => f.text)
+
+    return {
+      level: tier,
+      label: planFromData?.badge ?? 'Access Member',
+      individualDiscountPct,
+      bundleDiscountPct,
+      monthlyBookingLimit,
+      simultaneousRentalLimit,
+      perks,
+      status: 'Active',
+      benefitsActive: true,
+    }
+  }
+
+  return null
+}
+
+export async function fetchClientMonthlyBookingsCount(clientId: string): Promise<number> {
+  if (!clientId || typeof (supabase as unknown as { from?: unknown })?.from !== 'function') return 0
+  const now = new Date()
+  const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString()
+  try {
+    const { count, error } = await supabase
+      .from('bookings')
+      .select('id', { count: 'exact', head: true })
+      .eq('client_id', clientId)
+      .gte('created_at', startOfMonth)
+
+    if (error) return 0
+    return count ?? 0
+  } catch {
+    return 0
+  }
+}
+

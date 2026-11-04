@@ -53,7 +53,7 @@ transition RPC cannot change the time.
 WhatsApp draft opens with the right number and text.
 **Needs** — T4-01.
 
-### T4-03 · Proof of delivery            status: todo · size: S · lane B
+### T4-03 · Proof of delivery            status: done · size: S · lane B
 **What** — On "Delivered": receiver name (as today) **plus** a drawn signature and an optional photo,
 through the T2-01 / T2-02 components, linked to the delivery job.
 **Why** — DELIVERY_DISPATCH_PHASE2 ("signed proof-of-delivery remains a later requirement").
@@ -195,7 +195,7 @@ days of jobs; a test proves no amount, phone or address is in the feed; a reset 
 screen check.
 **Needs** — T4-01 for delivery jobs (pickups and returns work without it).
 
-### T4-11 · Report a problem            status: todo · size: M · lane B · [go-live] · slips first
+### T4-11 · Report a problem            status: done · merged · size: M · lane B · [go-live] · slips first
 **What** — "**Report a problem**" in the user menu, on every screen and for every staff role (B27),
 kept after go-live (B48). Tap it, type what went wrong in one box, Send. The app adds on its own: the
 screen (route without the query string), time, app version, role, device and screen size, and the

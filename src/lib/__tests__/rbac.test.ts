@@ -34,6 +34,9 @@ import {
   canCreateDeliveryZone,
   canManageDeliveryZones,
   canReadDeliveryZones,
+  canCreateProblemReport,
+  canReadProblemReports,
+  canManageProblemReports,
 } from '../rbac'
 
 /**
@@ -625,5 +628,27 @@ describe('delivery zones — Owner · Admin · Manager write, all staff read', (
     for (const role of ALL_ROLES) {
       expect(canReadDeliveryZones(role)).toBe(role !== 'Client')
     }
+  })
+})
+
+describe('canCreateProblemReport / canReadProblemReports / canManageProblemReports (T4-11, B27, B48)', () => {
+  it('lets every staff role create and read problem reports, refusing Client and unauthenticated', () => {
+    for (const role of ALL_ROLES) {
+      expect(canCreateProblemReport(role)).toBe(role !== 'Client')
+      expect(canReadProblemReports(role)).toBe(role !== 'Client')
+    }
+    expect(canCreateProblemReport(null)).toBe(false)
+    expect(canCreateProblemReport(undefined)).toBe(false)
+    expect(canReadProblemReports(null)).toBe(false)
+    expect(canReadProblemReports(undefined)).toBe(false)
+  })
+
+  it('admits exactly Owner and Admin to manage problem reports', () => {
+    for (const role of ALL_ROLES) {
+      const expected = role === 'Owner' || role === 'Admin'
+      expect(canManageProblemReports(role)).toBe(expected)
+    }
+    expect(canManageProblemReports(null)).toBe(false)
+    expect(canManageProblemReports(undefined)).toBe(false)
   })
 })
