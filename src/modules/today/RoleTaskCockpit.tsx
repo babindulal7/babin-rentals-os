@@ -392,7 +392,7 @@ export function RoleTaskCockpit() {
             <TaskCard
               title="Quotes Waiting"
               count={metrics.coordinator.quotesWaitingCount}
-              subtitle="Pending customer approval or advance"
+              subtitle="Pending client approval or advance"
               actionLabel="View Quotes"
               actionPath="/rentals"
               icon="file"
