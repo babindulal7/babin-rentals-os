@@ -1,0 +1,38 @@
+key,wave,module,screen,english,nepali_draft,screenshot_link,status,babin_fix,notes
+auth.title,1,auth,auth,Sign In,साइन इन,https://os.babinrentals.com/screenshots/auth/auth.png,OK,,S11 approved wording
+nav.today,1,core,nav,Today,आज,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+nav.rentals,1,core,nav,Rentals,भाडा,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+nav.inventory,1,core,nav,Inventory,मौज्दात,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+nav.clients,1,core,nav,Clients,ग्राहक,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+nav.calendar,1,core,nav,Calendar,पात्रो,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+nav.finance,1,core,nav,Finance,वित्त,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+nav.tools,1,core,nav,Tools,औजार,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+nav.settings,1,core,nav,Settings,सेटिङ,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+nav.operations,1,core,nav,Operations,सञ्चालन,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+nav.crewAssist,1,core,nav,Crew Assist,क्रु सहायता,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+nav.newRental,1,core,nav,New Rental,नयाँ भाडा,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+nav.scan,1,core,nav,Scan,स्क्यान,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+nav.more,1,core,nav,More,थप,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+status.draft,1,core,status,Draft,मस्यौदा,https://os.babinrentals.com/screenshots/core/status.png,OK,,S11 approved wording
+status.booked,1,core,status,Booked,बुक भएको,https://os.babinrentals.com/screenshots/core/status.png,OK,,S11 approved wording
+status.onRent,1,core,status,On Rent,भाडामा,https://os.babinrentals.com/screenshots/core/status.png,OK,,S11 approved wording
+status.returned,1,core,status,Returned,फिर्ता भयो,https://os.babinrentals.com/screenshots/core/status.png,OK,,S11 approved wording
+status.overdue,1,core,status,Overdue,म्याद नाघेको,https://os.babinrentals.com/screenshots/core/status.png,OK,,S11 approved wording
+status.quote,1,core,status,Quote,कोटेसन,https://os.babinrentals.com/screenshots/core/status.png,OK,,S11 approved wording
+status.confirmed,1,core,status,Confirmed,पक्का भयो,https://os.babinrentals.com/screenshots/core/status.png,OK,,S11 approved wording
+status.completed,1,core,status,Completed,सम्पन्न,https://os.babinrentals.com/screenshots/core/status.png,OK,,S11 approved wording
+status.cancelled,1,core,status,Cancelled,रद्द,https://os.babinrentals.com/screenshots/core/status.png,OK,,S11 approved wording
+action.save,1,core,action,Save,सुरक्षित गर्नुहोस्,https://os.babinrentals.com/screenshots/core/action.png,OK,,S11 approved wording
+action.cancel,1,core,action,Cancel,रद्द गर्नुहोस्,https://os.babinrentals.com/screenshots/core/action.png,OK,,S11 approved wording
+action.edit,1,core,action,Edit,सम्पादन गर्नुहोस्,https://os.babinrentals.com/screenshots/core/action.png,OK,,S11 approved wording
+action.confirm,1,core,action,Confirm,पुष्टि गर्नुहोस्,https://os.babinrentals.com/screenshots/core/action.png,OK,,S11 approved wording
+action.back,1,core,action,Back,पछाडि,https://os.babinrentals.com/screenshots/core/action.png,OK,,S11 approved wording
+action.delete,1,core,action,Delete,मेटाउनुहोस्,https://os.babinrentals.com/screenshots/core/action.png,OK,,S11 approved wording
+action.close,1,core,action,Close,बन्द गर्नुहोस्,https://os.babinrentals.com/screenshots/core/action.png,OK,,S11 approved wording
+action.search,1,core,action,Search,खोज्नुहोस्,https://os.babinrentals.com/screenshots/core/action.png,OK,,S11 approved wording
+action.filter,1,core,action,Filter,फिल्टर,https://os.babinrentals.com/screenshots/core/action.png,OK,,S11 approved wording
+action.apply,1,core,action,Apply,लागू गर्नुहोस्,https://os.babinrentals.com/screenshots/core/action.png,OK,,S11 approved wording
+action.reset,1,core,action,Reset,रिसेट गर्नुहोस्,https://os.babinrentals.com/screenshots/core/action.png,OK,,S11 approved wording
+action.retry,1,core,action,Retry,पुनः प्रयास गर्नुहोस्,https://os.babinrentals.com/screenshots/core/action.png,OK,,S11 approved wording
+operations.title,1,operations,operations,Operations,सञ्चालन,https://os.babinrentals.com/screenshots/operations/operations.png,OK,,S11 approved wording
+today.title,1,today,today,Today,आज,https://os.babinrentals.com/screenshots/today/today.png,OK,,S11 approved wording

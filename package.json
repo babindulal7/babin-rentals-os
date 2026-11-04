@@ -52,6 +52,9 @@
     "test:race": "node scripts/test-last-unit-race.mjs",
     "test:server-contracts": "node scripts/test-unit-lifecycle-and-contracts.mjs",
     "test:partial-return": "node scripts/test-partial-return-reservation-release.mjs",
+    "test:i18n-review": "node --test scripts/test-i18n-review.test.mjs",
+    "i18n:export": "node scripts/i18n-review-export.mjs",
+    "i18n:import": "node scripts/i18n-review-import.mjs",
     "check:fixtures": "node scripts/check-no-fixtures.mjs",
     "check:security": "node scripts/check-astra-phase0.mjs && npm run test:operations-grants && node scripts/test-reset-branch-boundary.mjs"
   },

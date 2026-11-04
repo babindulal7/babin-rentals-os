@@ -1,5 +1,67 @@
 # Progress Log
 
+## 2026-11-05 — T6-03: Review sheets generator and importer (Lane B)
+
+**Did**
+- **T6-03: Review sheets export and import tooling (S11, R-21, Law 6):**
+  - Created `scripts/i18n-review-export.mjs`:
+    - Structured catalogue exporter targeting Google Sheets / CSV / JSON formats for phone review by Babin.
+    - Fields: `key`, `wave`, `module`, `screen`, `english`, `nepali_draft`, `screenshot_link`, `status` (`OK`/`PENDING`), `babin_fix`, and `notes`.
+    - Supports filtering by wave (`--wave=1..4`), module (`--module=<name>`), and custom output path (`--out=<path>`).
+    - Added RFC 4180 CSV serialization with proper escaping of quotes, commas, and newlines.
+  - Created `scripts/i18n-review-import.mjs`:
+    - Robust zero-dependency RFC 4180 CSV & JSON parser.
+    - Strict validation: refuses any row not marked explicitly with `OK` or `Approved` status.
+    - Invariant enforcement: strictly refuses text containing Devanagari digits `[०-९]` (Law 6, R-21, S11: numbers and IDs must remain Latin).
+    - Supports Babin's review overrides via `babin_fix` column, updating module catalogues (`src/i18n/ne/*.json`) atomically.
+  - Automated round-trip test `scripts/test-i18n-review.test.mjs`:
+    - Added comprehensive 4-test suite validating export of 20+ strings, RFC 4180 parsing, and a simulated 20-string review round-trip.
+    - Verified strict rejection of unapproved rows (`PENDING`, `FIX`, blank status) and illegal Devanagari digits.
+  - Exported Wave 1 floor review sheet `docs/reviews/wave1_floor_review.csv` ready for Babin's screen-by-screen approvals.
+  - Added npm scripts: `npm run i18n:export`, `npm run i18n:import`, and `npm run test:i18n-review`.
+
+**Ruled**
+- S11: Babin approves translations screen by screen on a phone; unapproved rows are strictly refused at import.
+- R-21 / S6: Digits, booking IDs, serials, and NPR stay Latin; Devanagari digits in review fixes are hard-refused.
+
+**Verified**
+- `npm run test:i18n-review` — 4/4 passed (20-string round trip, strict rejection of unapproved rows and Devanagari digits, CSV parser robustness).
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS (financial integrity verified in isolated PGlite).
+- `npm run check:security` — 18/18 Phase 0 SQL regressions passed, 14/14 Reset branch regression groups passed, operations branch grants verified.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `npm run test:server-contracts` — 58/58 passed.
+- `npm run test:partial-return` — 58/58 passed.
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run lint:shell` — 893 files checked, 0 violations.
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 tests passed including converted module enforcement.
+- `npm run check:contrast` — 106/106 pass, 0 fail.
+- `npm run build` — `tsc --noEmit && vite build` bundled cleanly (dist/).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-04T19:26:43.781Z). Suite: Historical suite: 6/6 passed, 0 failed (recorded 2026-11-04T10:03:18.125Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-04T19:27:50.805Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin: merge `lane-b/T6-03-review-sheets`.
+- Babin: review and approve Wave 1 strings in `docs/reviews/wave1_floor_review.csv`.
+- Lane B: T6-04 (Wave 1 — The Floor localization conversion).
+- Lane A: T1-17 (Two-step sign-in for money roles) and T2-18 (Finish evidence capture).
+- Lane C: T3-14c (draft invoice numbering) blocked on accountant decisions O-14/O-17.
+- Babin: apply migrations 0215–0220 to live after backup protocol.
+
 ## 2026-11-04 — T6-02: String catalogue and lint infrastructure (Lane B)
 
 **Did**
