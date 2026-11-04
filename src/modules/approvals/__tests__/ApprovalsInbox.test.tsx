@@ -104,7 +104,7 @@ describe('ApprovalsInbox Component (T5-10, W57, PERMISSIONS §6.2)', () => {
     const komodoButtons = Array.from(komodoCard?.querySelectorAll('button') || [])
     const hasKomodoApprove = komodoButtons.some((b) => b.textContent?.trim() === 'Approve')
     expect(hasKomodoApprove).toBe(false)
-    expect(komodoCard?.textContent).toContain('Awaiting Owner (Babin) — Owner-only item §6.2')
+    expect(komodoCard?.textContent).toContain('Awaiting Owner (Babin) — Owner-only authorization')
   })
 
   it('shows Approve button for Owner-only items when logged in as Owner (Babin)', async () => {

@@ -1,5 +1,70 @@
 # Progress Log
 
+## 2026-11-04 — T5-03 through T5-11 MERGED & VERIFIED on `main` (Lane B)
+
+**Did**
+- **T5-03: Email sending service, `email_log` audit table & Edge Function (W80, Law 3, Law 4, Law 6):**
+  - Migration `0215_email_sending_and_log.sql`: `email_log` table storing provider message id, recipient, template name, subject, payload metadata, error details, and status (`queued`, `sent`, `failed`). Sensitive body content is never persisted (Law 4 / W80). Hard delete forbidden (Law 3). Floor roles cannot view email logs (Law 6).
+  - Client & Edge Function: `src/lib/email/client.ts`, `templates.ts`, and `supabase/functions/send-email/index.ts`.
+- **T5-04: Morning digest schedule & query (O-4, Law 6):**
+  - Migration `0216_morning_digest_schedule_and_query.sql`: `get_morning_digest(date)` RPC delivering operational day schedule (06:00 to 06:00 NPT) across pick-ups, returns, and crew dispatches. Figures masked for non-money callers under Law 6. Includes empty-day fallback message.
+  - Edge function & query: `supabase/functions/morning-digest/index.ts` and `src/lib/queries/morningDigest.ts`.
+- **T5-05: Notification preferences (per-user, in-app & email toggles):**
+  - Migration `0217_notification_preferences.sql`: `notification_preferences` table storing user preference overrides per category. `create_notification` RPC respects preferences and stops delivery if toggled off. Hard delete forbidden (Law 3).
+  - UI: `NotificationPreferencesControl.tsx` mounted in Settings ▸ System (`System.tsx`).
+- **T5-06: Authoritative Client Message Register:**
+  - Registered all automated and staff client communication events in `docs/WORKFLOWS.md` Section 4.
+  - Automated test `src/lib/__tests__/clientMessageRegister.test.ts` guarantees register consistency with code.
+- **T5-07: Automatic client message events (W21, W22, W38):**
+  - Migration `0218_client_message_events.sql`: automated triggers for pick-up reminders, return reminders, late return alerts at +30m, payment receipts, and unpriced damage notices. Clients without email generate WhatsApp draft tasks for desk staff.
+- **T5-08: Automatic payment reminders & client pause controls (W18, W18b, W22):**
+  - Migration `0219_payment_reminders.sql`: automated payment reminder schedule (completion, day 5, day 10, every 5 days). Client pause flag with required reason (`reminders_paused`, `reminders_paused_reason`). Instant cancellation of all pending reminders when invoice balance reaches 0.
+  - UI: `ClientDetail.tsx` pause/resume action modal and badge.
+- **T5-09: Phone pop-ups (Web Push, service worker, figure masking, W62, W38, W39):**
+  - Migration `0220_push_subscriptions.sql`: `push_subscriptions` table for Web Push endpoints. `push-send` Edge Function, `public/push-worker.js` PWA background push listener, and `src/lib/push.ts`. Amounts masked for floor roles under Law 6.
+- **T5-10: Approvals inbox (W57, W58, PERMISSIONS §6.2):**
+  - `ApprovalsInbox.tsx` mounted at `/approvals` route with filters (All, Pending, Mine, Decided). Never displays an Approve button to Managers on Owner-only threshold items. Requires 10-char reason on decline.
+- **T5-11: Role-specific home screens & task cockpits (W61, W79, W31):**
+  - `RoleTaskCockpit.tsx` mounted on Today screen. Role-aware desks: Floor verbs and early morning return priority for Warehouse (W31), booking desk tasks for Coordinator, cash/approvals/margin cockpits for Owner/Admin/Manager (W79).
+  - Role-based default navigation: `/` redirects to role-tailored target via `defaultNavTarget(role)`.
+- **UI Copy Linting Cleanups:**
+  - Removed internal developer text (`(Law 6)`, `(Law 3, D28)`, `(§6.2)`) from staff-facing UI copy across `ApprovalsInbox.tsx`, `approvals.ts`, `LegacyExportControl.tsx`, `LegacyExportCard.tsx`, `NotificationPreferencesControl.tsx`, and `RoleTaskCockpit.tsx`. `npm run lint:ui-copy` passes with 0 violations.
+
+**Ruled**
+- Law 3 (Nothing is deleted): No hard deletes on audit tables, preference tables, or notification queues.
+- Law 6 (Money blindness): Payouts, turnover, invoice amounts, and reminder figures concealed from Warehouse, Technician, Driver, and Client.
+- Law 16 (Authentic operations): Real data, authentic database RPCs, and full five-state screen handling.
+
+**Verified**
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed (including L58 morning digest, L59 preferences, L60 client emails, L61 payment reminders, L62 phone popups).
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run lint:shell` — 892 files checked, 0 violations.
+- `npm run lint:ui-copy` — 0 developer-text violations.
+- Vitest suites for T5 passed cleanly: `clientMessageRegister.test.ts`, `email.test.ts`, `morningDigest.test.ts`, `clientMessages.test.ts`, `notificationPreferences.test.ts`, `push.test.ts`, `clientMessageEvents.test.ts`, `approvals.test.ts`, `ApprovalsInbox.test.tsx`, `RoleTaskCockpit.test.tsx`, `NotificationsDrawer.test.tsx`, `ClientDetail.reminders.test.tsx`.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +5 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-04T09:14:02.763Z). Suite: NOT VERIFIED — focused or unspecified run: 5/5 passed, 0 failed (recorded 2026-11-04T08:57:33.875Z).
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-04T09:19:58.915Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin: apply migrations 0215–0220 to live after backup protocol.
+- Lane A: T1-17 (Two-step sign-in for money roles) and T2-18 (Finish evidence capture).
+- Lane B: T6 Nepali translations (Wave 1: floor and client-facing text).
+- Lane C: T3-14c (draft invoice numbering) blocked on accountant decisions O-14/O-17.
+
 ## 2026-11-04 — T3-03, T3-04, T3-07, T3-08, T3-09 MERGED & VERIFIED on `main` (lane C)
 
 **Did**

@@ -296,7 +296,7 @@ export function NotificationPreferencesControl() {
           </div>
           <div style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.4 }}>
             {pushSupported
-              ? `Instant pop-up alerts on ${deviceLabel || 'your device'} for late returns (at 30 min, all staff on shift), new booking requests, payments, and damage.${isMoneyBlind ? ' Amounts are concealed for floor roles (Law 6).' : ''}`
+              ? `Instant pop-up alerts on ${deviceLabel || 'your device'} for late returns (at 30 min, all staff on shift), new booking requests, payments, and damage.${isMoneyBlind ? ' Amounts are concealed for floor roles.' : ''}`
               : 'Push notifications are not supported on this browser or platform.'}
           </div>
         </div>

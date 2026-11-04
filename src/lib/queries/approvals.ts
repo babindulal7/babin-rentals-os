@@ -217,7 +217,7 @@ export function canUserApprove(
   if (!canViewMoney(role)) {
     return {
       allowed: false,
-      reason: 'Floor roles (Warehouse, Technician, Driver) cannot approve management items (Law 6).',
+      reason: 'Floor roles (Warehouse, Technician, Driver) cannot approve management items.',
     }
   }
 
@@ -246,7 +246,7 @@ export function canUserApprove(
   if (item.requiredLevel === 'Owner') {
     return {
       allowed: false,
-      reason: 'Owner-only approval required (Babin). This item is at or above the threshold (§6.2).',
+      reason: 'Owner-only approval required (Babin). This item is at or above the authorization threshold.',
     }
   }
 

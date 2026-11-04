@@ -544,7 +544,7 @@ export function RoleTaskCockpit() {
             <TaskCard
               title="Approvals Waiting"
               count={metrics.owner.approvalsWaitingCount}
-              subtitle="Owner-only thresholds (§6.2) & pending requests"
+              subtitle="Owner-only thresholds and pending requests"
               actionLabel="Review Approvals"
               actionPath="/approvals"
               icon="checklist"
