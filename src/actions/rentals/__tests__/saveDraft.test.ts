@@ -27,7 +27,7 @@ const completeDraft = (overrides: Partial<RentalDraftData> = {}): RentalDraftDat
   }],
   crew: [{
     crewId: 'CR-1', name: 'Asha', role: 'DoP', phone: '9800000000', dayRatePaisa: 3000000,
-    overtimePaisa: 200000, accommodationPaisa: 500000, mealsPaisa: 150000,
+    overtimeDays: 0.5, accommodationPaisa: 500000, mealsPaisa: 150000,
   }],
   deliveryChargePaisa: 250000, fuelChargePaisa: 100000, vehicle: 'Tata Ace',
   numberPlate: 'BA 2 KHA 1234', driverContact: '9800000001', discountPct: 10,

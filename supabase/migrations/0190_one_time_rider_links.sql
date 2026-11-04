@@ -6,6 +6,7 @@ begin;
 -- Table: delivery_job_links
 create table public.delivery_job_links (
   id uuid primary key default gen_random_uuid(),
+  client_uuid uuid not null unique,
   job_id uuid not null references public.delivery_jobs(id) on delete cascade,
   token_hash text not null unique check (char_length(token_hash) = 64),
   rider_name text not null check (length(btrim(rider_name)) >= 2),
@@ -22,6 +23,7 @@ create table public.delivery_job_links (
 create index delivery_job_links_token_hash_idx on public.delivery_job_links(token_hash)
   where revoked_at is null and completed_at is null;
 create index delivery_job_links_job_id_idx on public.delivery_job_links(job_id);
+create index delivery_job_links_client_uuid_idx on public.delivery_job_links(client_uuid);
 
 alter table public.delivery_job_links enable row level security;
 
@@ -29,7 +31,20 @@ alter table public.delivery_job_links enable row level security;
 revoke all on public.delivery_job_links from public, anon, authenticated;
 
 -- Staff read policy: staff can see links for jobs in their branch (or Owner/Admin global)
-grant select on public.delivery_job_links to authenticated;
+-- Column-level SELECT grant strictly excludes token_hash (R1)
+grant select (
+  id,
+  client_uuid,
+  job_id,
+  rider_name,
+  rider_phone,
+  created_at,
+  expires_at,
+  revoked_at,
+  revoked_by,
+  completed_at,
+  created_by
+) on public.delivery_job_links to authenticated;
 
 create policy delivery_job_links_staff_read on public.delivery_job_links
   for select to authenticated using (
@@ -46,11 +61,11 @@ create policy delivery_job_links_staff_read on public.delivery_job_links
 
 -- Staff RPC: create_rider_link
 create or replace function public.create_rider_link(
+  p_client_uuid uuid,
   p_job_id uuid,
-  p_token_hash text,
   p_rider_name text,
   p_rider_phone text
-) returns uuid
+) returns jsonb
 language plpgsql security definer set search_path = public, pg_temp
 as $$
 declare
@@ -61,9 +76,25 @@ declare
   );
   v_job public.delivery_jobs%rowtype;
   v_link_id uuid;
+  v_raw_token text;
+  v_token_hash text;
 begin
   if v_actor is null or v_role not in ('Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse') then
     raise exception 'Unauthorized to create rider links' using errcode = '42501';
+  end if;
+
+  if p_client_uuid is null then
+    raise exception 'client_uuid is required' using errcode = '22023';
+  end if;
+
+  -- Idempotency replay check (Law 8)
+  select id into v_link_id from public.delivery_job_links where client_uuid = p_client_uuid;
+  if found then
+    return jsonb_build_object(
+      'link_id', v_link_id,
+      'raw_token', null,
+      'already_issued', true
+    );
   end if;
 
   select * into v_job from public.delivery_jobs where id = p_job_id;
@@ -81,10 +112,6 @@ begin
     raise exception 'Cannot create a rider link for a finished delivery job';
   end if;
 
-  if p_token_hash is null or char_length(p_token_hash) <> 64 then
-    raise exception 'Invalid token hash';
-  end if;
-
   if length(btrim(coalesce(p_rider_name, ''))) < 2 then
     raise exception 'Rider name is required (minimum 2 characters)';
   end if;
@@ -93,13 +120,17 @@ begin
     raise exception 'Rider phone is required (minimum 7 characters)';
   end if;
 
+  -- Server generates token and SHA-256 hash (R3)
+  v_raw_token := replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '');
+  v_token_hash := encode(sha256(convert_to(v_raw_token, 'UTF8')), 'hex');
+
   insert into public.delivery_job_links (
-    job_id, token_hash, rider_name, rider_phone, created_by
+    client_uuid, job_id, token_hash, rider_name, rider_phone, created_by
   ) values (
-    p_job_id, p_token_hash, btrim(p_rider_name), btrim(p_rider_phone), v_actor
+    p_client_uuid, p_job_id, v_token_hash, btrim(p_rider_name), btrim(p_rider_phone), v_actor
   ) returning id into v_link_id;
 
-  -- Audit creation
+  -- Audit creation (NEVER record raw token)
   insert into public.audit_events (
     client_uuid, event_class, category, module, action, severity, status,
     table_name, record_id, actor_id, actor_role, branch_id, new_values
@@ -123,7 +154,11 @@ begin
     )
   );
 
-  return v_link_id;
+  return jsonb_build_object(
+    'link_id', v_link_id,
+    'raw_token', v_raw_token,
+    'already_issued', false
+  );
 end;
 $$;
 
@@ -457,16 +492,19 @@ $$;
 
 -- Function grants:
 -- Revoke all execution from public and anon (PG default grants execute on new functions to public)
-revoke all on function public.get_rider_job_by_token(text) from public, anon;
-revoke all on function public.rider_mark_picked_up(text) from public, anon;
-revoke all on function public.rider_complete_delivery(text, text, text, text) from public, anon;
-revoke all on function public.create_rider_link(uuid, text, text, text) from public, anon;
+revoke all on function public.get_rider_job_by_token(text) from public, anon, authenticated;
+revoke all on function public.rider_mark_picked_up(text) from public, anon, authenticated;
+revoke all on function public.rider_complete_delivery(text, text, text, text) from public, anon, authenticated;
+revoke all on function public.create_rider_link(uuid, uuid, text, text) from public, anon;
 revoke all on function public.revoke_rider_link(uuid) from public, anon;
 
-grant execute on function public.get_rider_job_by_token(text) to authenticated, service_role;
-grant execute on function public.rider_mark_picked_up(text) to authenticated, service_role;
-grant execute on function public.rider_complete_delivery(text, text, text, text) to authenticated, service_role;
-grant execute on function public.create_rider_link(uuid, text, text, text) to authenticated, service_role;
+-- Rider RPCs: service_role ONLY (R1) - mediated exclusively via Edge Function
+grant execute on function public.get_rider_job_by_token(text) to service_role;
+grant execute on function public.rider_mark_picked_up(text) to service_role;
+grant execute on function public.rider_complete_delivery(text, text, text, text) to service_role;
+
+-- Staff RPCs: authenticated staff and service_role
+grant execute on function public.create_rider_link(uuid, uuid, text, text) to authenticated, service_role;
 grant execute on function public.revoke_rider_link(uuid) to authenticated, service_role;
 
 -- Verification assertions
@@ -476,13 +514,41 @@ begin
      or has_table_privilege('anon', 'public.delivery_job_links', 'UPDATE')
      or has_table_privilege('anon', 'public.delivery_job_links', 'DELETE')
      or has_table_privilege('anon', 'public.delivery_job_links', 'SELECT')
-     or has_function_privilege('anon', 'public.create_rider_link(uuid, text, text, text)', 'EXECUTE')
+     or has_function_privilege('anon', 'public.create_rider_link(uuid, uuid, text, text)', 'EXECUTE')
      or has_function_privilege('anon', 'public.revoke_rider_link(uuid)', 'EXECUTE')
      or has_function_privilege('anon', 'public.get_rider_job_by_token(text)', 'EXECUTE')
      or has_function_privilege('anon', 'public.rider_mark_picked_up(text)', 'EXECUTE')
      or has_function_privilege('anon', 'public.rider_complete_delivery(text, text, text, text)', 'EXECUTE')
   then
     raise exception '0190: delivery_job_links must not expose table access or management to anon';
+  end if;
+
+  -- authenticated cannot execute the 3 rider RPCs (service_role only, R1)
+  if has_function_privilege('authenticated', 'public.get_rider_job_by_token(text)', 'EXECUTE')
+     or has_function_privilege('authenticated', 'public.rider_mark_picked_up(text)', 'EXECUTE')
+     or has_function_privilege('authenticated', 'public.rider_complete_delivery(text, text, text, text)', 'EXECUTE')
+  then
+    raise exception '0190: rider RPCs must NOT be executable by authenticated (service_role only)';
+  end if;
+
+  -- service_role CAN execute the 3 rider RPCs
+  if not has_function_privilege('service_role', 'public.get_rider_job_by_token(text)', 'EXECUTE')
+     or not has_function_privilege('service_role', 'public.rider_mark_picked_up(text)', 'EXECUTE')
+     or not has_function_privilege('service_role', 'public.rider_complete_delivery(text, text, text, text)', 'EXECUTE')
+  then
+    raise exception '0190: rider RPCs must be executable by service_role';
+  end if;
+
+  -- authenticated cannot select column token_hash on delivery_job_links (R1)
+  if has_column_privilege('authenticated', 'public.delivery_job_links', 'token_hash', 'SELECT') then
+    raise exception '0190: token_hash column must NOT be readable by authenticated';
+  end if;
+
+  -- authenticated CAN select id and client_uuid
+  if not has_column_privilege('authenticated', 'public.delivery_job_links', 'id', 'SELECT')
+     or not has_column_privilege('authenticated', 'public.delivery_job_links', 'client_uuid', 'SELECT')
+  then
+    raise exception '0190: id and client_uuid must be readable by authenticated';
   end if;
 end;
 $verify$;

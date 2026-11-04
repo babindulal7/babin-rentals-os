@@ -107,6 +107,17 @@ export function permittedAllNav(role: SystemRole | undefined): NavSection[] {
   return filterNavByRole(ALL_NAV, role)
 }
 
+export { getRoleHomeRoute } from '../lib/rbac'
+
+/**
+ * Returns the default home navigation path for a role (W61).
+ */
+export function getRoleHomeNav(role: SystemRole | undefined): string {
+  if (!role) return '/today'
+  if (role === 'Client') return '/rentals'
+  return '/today'
+}
+
 /**
  * **The money surfaces — one list, read by every gate.**
  *
@@ -141,6 +152,7 @@ export function permittedAllNav(role: SystemRole | undefined): NavSection[] {
  */
 export const MONEY_ROUTES: readonly string[] = [
   '/finance',
+  '/approvals',
   '/reports',
   '/admin',
   '/tools/pricing',
@@ -247,6 +259,18 @@ export function isStaffSurface(path: string): boolean {
     STAFF_ROUTES.some((r) => base === r || base.startsWith(r + '/')) ||
     FLOOR_ROUTE_SUFFIXES.some((s) => base.endsWith(s))
   )
+}
+
+/**
+ * First screen destination depending on the session role (W61).
+ *
+ * Ruling W61: Each role opens on its own tasks.
+ * Client is external and barred from staff surfaces (STAFF_ROUTES), so lands on /rentals.
+ * Staff roles land on /today, which adapts its primary task dashboard to that role.
+ */
+export function defaultNavTarget(role: SystemRole | undefined): string {
+  if (role === 'Client') return '/rentals'
+  return '/today'
 }
 
 /**

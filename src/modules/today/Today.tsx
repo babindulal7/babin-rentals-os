@@ -20,6 +20,7 @@ import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext
 import type { BookingStatus } from '../../lib/workflow'
 import RawDashboardMovementPanel from './DashboardMovementPanel'
 import LegacyExportCard from './LegacyExportCard'
+import RoleTaskCockpit from './RoleTaskCockpit'
 import './dashboard.css'
 
 const DashboardMovementPanel = RawDashboardMovementPanel as React.ComponentType<
@@ -655,6 +656,8 @@ export default function Today() {
           />
         </div>
       </div>
+
+      <RoleTaskCockpit />
 
       <LegacyExportCard />
 

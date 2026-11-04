@@ -257,7 +257,7 @@ await expectThrows(
 await asUser(ownerId)
 const enrollKey1 = crypto.randomUUID()
 const enroll1 = await sql(`select enroll_client_membership($1, $2, current_date, 50000, 'VIP member', $3) as result`, [client, plan, enrollKey1])
-const mem1Id = enroll1.rows[0].result.membership_id
+const mem1Id = enroll1.rows[0].result.membership_id ?? enroll1.rows[0].result.id
 assert(mem1Id !== undefined, 'First membership enrolled with ID')
 
 // Verify active membership exists
@@ -268,7 +268,7 @@ assert(memDb1.rows[0].id === mem1Id, 'Active membership id matches initial enrol
 // 3.3 Enroll upgrade / new tier -> supersedes initial membership atomically
 const enrollKey2 = crypto.randomUUID()
 const enroll2 = await sql(`select enroll_client_membership($1, $2, current_date, 100000, 'Upgrade to Cinematographer', $3) as result`, [client, plan2, enrollKey2])
-const mem2Id = enroll2.rows[0].result.membership_id
+const mem2Id = enroll2.rows[0].result.membership_id ?? enroll2.rows[0].result.id
 assert(enroll2.rows[0].result.superseded_membership_id === mem1Id, 'Superseded membership ID points to mem1')
 
 // Verify old membership was superseded and new one is the single active membership
