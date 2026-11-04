@@ -1,5 +1,38 @@
 # Progress Log
 
+## 2026-11-04 — The last red gate on `main`: the lock screen's native `window.confirm` is replaced (`lint:shell`)
+
+**Did**
+- `src/modules/auth/ScreenLock.tsx:288` still called `window.confirm('Forget all stored sessions and roster on this device?')`; it was the only native dialog left in `src` (`c5902fbc` had fixed `Header.tsx`). Every push to `main` since `a4372434` that reached that step failed at "Page shell design invariants" because of it.
+- The lock screen now confirms inline (`role="alertdialog"`, Cancel / Forget this device, still two taps). It is inline, not `ConfirmDialog`, because the lock screen sits at `--z-system`, above the modal layer, so a dialog opened from it would render behind it. The `rosterLock` test now asserts the first tap forgets nothing, Cancel backs out, only the explicit confirm calls `forgetThisDevice` once, and no native confirm is used.
+- Two files changed and nothing else: `ScreenLock.tsx` and `rosterLock.test.tsx`. They are the same bytes as `4d094b7b` and `3e79a846`, which already passed a full 22-step run on the runner (`41487111932`, `41493258321`) and in PR #83's runs (`41581948902`, `41581943444`); `main` has not changed either file since 2 Nov.
+
+**Ruled**
+- Nothing. No product, permission, money or migration decision was made.
+
+**Verified**
+- Local, on `main` `c5902fbc` plus these two files: `lint:shell` passes (866 files; it failed before); `tsc` 0 errors; ESLint 0; `lint:ui-copy` passes; auth and shell tests (mock mode) 20 files, 184 tests pass.
+- **Not verified:** a full 22-step run on this exact head (the push run is that check; it also covers `check:contrast`, build and coverage, which are not run locally here); the lock-screen confirmation has not been driven in a browser.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 87 / 87 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 72 / 72 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 207 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed. Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **Babin:** merge this branch when its run is green; it closes the last known red gate on `main`. PR #83 and the branches `fix/shell-native-confirm` and `fix/shell-native-confirm-current-main-20261103` are then redundant (PR #83 also conflicts with `c5902fbc` on `Header.tsx`).
+- Drive the lock-screen "Forget this device" confirmation in `npm run dev`; it has never been seen on screen.
+- Other open items are in `docs/audits/RULE_CONFLICT_AUDIT_2026-11-04.md` (on branch `docs/rules-consolidation-20261104`).
+
 ## 2026-11-03 — T4-07 delivery zones finished on `main` (build notes 3–4) and main's red gates repaired
 
 **Did**
