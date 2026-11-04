@@ -39,6 +39,23 @@
 - `npm run check:contrast` — 106/106 pass, 0 fail.
 - `npm run build` — `tsc --noEmit && vite build` bundled cleanly (dist/).
 
+## 2026-11-05 — CI fix: Law 17 copy ("customer" → "client") in Quotes Waiting card
+
+**Did**
+- `src/modules/today/RoleTaskCockpit.tsx`: subtitle "Pending customer approval or advance" → "Pending client approval or advance", with a `RULING 2026-11-05` comment at the card.
+- `RULINGS-2026-11-05.md` added (conflict C-1, §15.4 table, revert noted).
+- Committed and pushed to `main` at Babin's direct instruction in chat, overriding the W74 cloud read-only default for this change only.
+
+**Ruled**
+- C-1: Law 15/17 ("client, never customer") is stricter than the copy and outranks it (§15.3). One-word change, fully reversible.
+
+**Verified**
+- `npx vitest run src/lib/__tests__/law17.test.ts` (project vitest) — 3/3 passed.
+- `npm run typecheck` — exit 0.
+- `npm run lint:ui-copy` — exit 0.
+- Install: `npm ci` failed in this sandbox because `onnxruntime-node`'s install script is blocked by the proxy (nuget.org 403). Reinstalled with `npm ci --ignore-scripts` (exit 0). This is a sandbox limit, not a repo change. Node here is v22.23.4; CI pins Node 24 — not reproduced.
+- Not run this session: `check:pglite`, `check:lifecycle`, `check:security`, full `npm run test`, `npm run build`. CI on `0f58de5` had passed these except Law 17.
+
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
@@ -61,6 +78,8 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - Lane A: T1-17 (Two-step sign-in for money roles) and T2-18 (Finish evidence capture).
 - Lane C: T3-14c (draft invoice numbering) blocked on accountant decisions O-14/O-17.
 - Babin: apply migrations 0215–0220 to live after backup protocol.
+- Run `check:pglite` and `check:lifecycle` before any migration change or Verified claim.
+- Confirm Node 24 locally or rely on CI for the `bs.ts` ICU check.
 
 ## 2026-11-04 — T6-02: String catalogue and lint infrastructure (Lane B)
 
