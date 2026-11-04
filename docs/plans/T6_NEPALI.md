@@ -55,14 +55,14 @@ column. Approved rows are imported back by a script that refuses any row not mar
 **Done when** — a round trip on 20 strings works; the import refuses unapproved rows.
 **Needs** — T6-02.
 
-### T6-04 · Wave 1 — the floor            status: done — awaiting merge (lane-b/T6-04-wave-1-the-floor) · size: L · lane B + Babin
+### T6-04 · Wave 1 — the floor            status: done (merged) · size: L · lane B + Babin
 **What** — Convert and draft: shell (header, nav, bottom bar, scanner), sign-in, Today, Operations,
 Pack, Handover, Return, Reset, Evidence, delivery (driver view). Babin approves via T6-03.
 **Done when** — 100% approved for these screens; floor layout check passes on the iPad and iPhone
 (T6-08). Target: approved by 3 Jan 2027 (19 Poush).
 **Needs** — T6-01, T6-02, T6-03.
 
-### T6-05 · Wave 2 — the desk            status: todo · size: L · lane B + Babin
+### T6-05 · Wave 2 — the desk            status: doing (lane-b/T6-05-wave-2-the-desk) · size: L · lane B + Babin
 **What** — Rentals list, Booking Detail, New Rental, Calendar, Clients (list, detail, add), crew on
 bookings.
 **Done when** — 100% approved. Target 17 Jan 2027 (3 Magh).
