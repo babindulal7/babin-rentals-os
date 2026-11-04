@@ -1,19 +1,58 @@
 # Progress Log
 
-## 2026-11-04 — Rule collision audit and one shared agent workflow (docs only; draft PR, nothing merged)
+## 2026-11-04 — Rule collision audit and one shared agent workflow (docs; the verified ScreenLock fix is included; draft PR, nothing merged)
 
 **Did**
 - Audited the tracked rules, the ignored local agent configs (names and sizes only) and what actually runs, against `origin/main` `c5902fbc`: [`docs/audits/RULE_CONFLICT_AUDIT_2026-11-04.md`](docs/audits/RULE_CONFLICT_AUDIT_2026-11-04.md). 11 confirmed collisions or stale instructions (CI off vs running, push rights, four authority orderings, gate lists missing `test:local-api-guards`, duplicate CI runs and a drift-guard conflict in the CI-efficiency branch, card status vs merged, Booqable date, migration numbers, a dangling `opencode.jsonc`, `main` red at `lint:shell`, a stale workflow comment), 3 not conflicts, 3 owner decisions.
 - Added [`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md) (one policy: which source wins by topic, who may push, the one gate bound to a SHA, definition of done) and `scripts/check-rule-consistency.mjs` (read-only guard: the 15 B/N rows mirror, gate list vs docs, links in the new files; not wired into CI).
 - Minimal edits to `AGENTS.md`, `CLAUDE.md` (outside §15), `docs/00_READ_FIRST.md`, `PLAN.md` (three CI lines) and `docs/plans/README.md` (added the missing `test:local-api-guards` gate): historical W74/W75 kept and scoped, current text links to the workflow file.
+- Merged the already-verified ScreenLock fix (`48c372dd`, next entry) so `lint:shell` passes on this branch and its CI can go green on its own; no other source file changed.
+- Corrected three card statuses that the audit confirmed were stale, each with its evidence: T0-10 and T0-11 (merged in #64 and #65) and T8-01 (migration `0195` is on `main`).
 
 **Ruled**
 - Nothing. No ruling was made. Text that is not already a cited ruling is labelled **PROPOSAL — NOT YET APPROVED** (the CI-is-on wording; the six-state card model) and takes effect only if Babin merges it.
 
 **Verified**
-- `node scripts/check-rule-consistency.mjs`: 36 checks pass on this tree. Negative control: `main`'s `docs/plans/README.md` and `AGENTS.md` contain 0 mentions of `test:local-api-guards`, so the gate-coverage check fails on `main`'s documents.
-- Evidence behind the audit is local: git history and refs, and the self-hosted runner's own logs (77 jobs: 10 succeeded, 62 failed, 5 cancelled; no push to `main` has completed green). **GitHub's PR list, issues, workflow state, auto-merge and branch protection were not visible** (`gh` not logged in; the private repo returns 404 in the browser), so PR numbers are matched to branches by content and are UNVERIFIED.
-- **Not run:** `npm run gates`, typecheck, lint, tests, build, coverage — no source file changed, so they are not required for this patch and are **not** claimed as passed. `.github/workflows/ci.yml`, `docs/PERMISSIONS.md`, `CLAUDE.md` §15, migrations and `BABIN_ACTIONS.md` are untouched.
+- **Full local gates, 4 Nov:** `npm run gates` (FULL, 17 steps, "CI order verified" by the drift guard) **PASS** on this tree (`9bede5f0` merged with `48c372dd`, plus the card and audit edits): typecheck, lint, local API guards, tests (528 files, 6,544 tests), PGlite migrations (207/207), booking and invoice financial integrity, security regressions, lifecycle, server contracts (58 assertions), partial return (58 assertions), progress blocks, receipt integrity, `lint:shell`, `lint:ui-copy`, contrast, build and coverage. An earlier attempt stopped at the test step after 5.7 s because this fresh worktree had no `node_modules`; `npm ci` from the lockfile fixed the environment and no code changed.
+- `node scripts/check-rule-consistency.mjs`: 36 checks pass. Negative control: `main`'s `docs/plans/README.md` and `AGENTS.md` contain 0 mentions of `test:local-api-guards`, so the gate-coverage check fails on `main`'s documents.
+- The docs branch's first hosted run (`41716047570`, `9bede5f0`) failed at `lint:shell` only because of the inherited `ScreenLock.tsx:288`, which `48c372dd` fixes; the ScreenLock fix alone passed a full hosted run (`41785629736`). Evidence behind the audit is local (git, and the runner's own logs); **GitHub's PR list, issues, workflow state, auto-merge and branch protection were not visible** (`gh` not logged in), so PR numbers are matched to branches by content and are UNVERIFIED.
+- **Not verified:** a hosted run on this exact head (its push run is that check); the changed UI (the lock-screen confirmation) has not been driven in a browser. `.github/workflows/ci.yml`, `docs/PERMISSIONS.md`, `CLAUDE.md` §15, migrations and `BABIN_ACTIONS.md` are untouched.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 87 / 87 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 72 / 72 (100%) | +0 |
+| Lifecycle | steps green / total | 56 / 56 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 207 files · check:pglite 207/207 applied, 0 failed (recorded 2026-11-04T07:30:08.508Z). Suite: PASS — 6544/6544 passed, 0 failed (recorded 2026-11-04T07:40:13.321Z); source fingerprint matches.
+Coverage suite: PASS — 6544/6544 passed, 0 failed (recorded 2026-11-04T07:40:13.321Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-04T07:31:04.618Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **Babin:** approve or change the two proposals (CI wording, card states); merge the owner-rulings branch so the Booqable date and the 2 Nov business figures stop contradicting `main`; decide the cut-over timeline before the 18 Feb 2027 renewal (do not cancel before checking the billing terms).
+- **A separate CI PR** for duplicate push + pull_request runs, which must update `scripts/run-gates.mjs` in the same change (the CI-efficiency branch fails its drift guard today).
+- Card text still to check one by one, with SHAs: T2-07, T2-08, T4-09, T8-06, T4-04, T4-05 (unverified). Ledger: row 0188 and row 0200 status; branch `fix/t4-09-route-branch-hardening-0209` would add a second `0209`.
+- This branch contains `48c372dd`. If the separate ScreenLock PR merges first as a merge commit nothing conflicts; if it is squashed, expect a trivial `PROGRESS.md` conflict (keep both entries).
+
+## 2026-11-04 — The last red gate on `main`: the lock screen's native `window.confirm` is replaced (`lint:shell`)
+
+**Did**
+- `src/modules/auth/ScreenLock.tsx:288` still called `window.confirm('Forget all stored sessions and roster on this device?')`; it was the only native dialog left in `src` (`c5902fbc` had fixed `Header.tsx`). Every push to `main` since `a4372434` that reached that step failed at "Page shell design invariants" because of it.
+- The lock screen now confirms inline (`role="alertdialog"`, Cancel / Forget this device, still two taps). It is inline, not `ConfirmDialog`, because the lock screen sits at `--z-system`, above the modal layer, so a dialog opened from it would render behind it. The `rosterLock` test now asserts the first tap forgets nothing, Cancel backs out, only the explicit confirm calls `forgetThisDevice` once, and no native confirm is used.
+- Two files changed and nothing else: `ScreenLock.tsx` and `rosterLock.test.tsx`. They are the same bytes as `4d094b7b` and `3e79a846`, which already passed a full 22-step run on the runner (`41487111932`, `41493258321`) and in PR #83's runs (`41581948902`, `41581943444`); `main` has not changed either file since 2 Nov.
+
+**Ruled**
+- Nothing. No product, permission, money or migration decision was made.
+
+**Verified**
+- Local, on `main` `c5902fbc` plus these two files: `lint:shell` passes (866 files; it failed before); `tsc` 0 errors; ESLint 0; `lint:ui-copy` passes; auth and shell tests (mock mode) 20 files, 184 tests pass.
+- On the self-hosted runner (runner log; GitHub's page not seen): run `41785629736` at `48c372dd` completed all 22 steps (`Succeeded`, ~31 min), including `lint:shell`, contrast, build and coverage.
+- **Not verified:** the lock-screen confirmation has not been driven in a browser.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -30,10 +69,9 @@ Gates read from .lifecycle-result.json, written not measured — run npm run che
 Counted by `npm run completion`, not typed. Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- **Babin:** approve or change the two proposals (CI wording, card states); merge the owner-rulings branch so the Booqable date and the 2 Nov business figures stop contradicting `main`; decide the cut-over timeline before the 18 Feb 2027 renewal (do not cancel before checking the billing terms).
-- **A one-file fix keeps `main` red:** `src/modules/auth/ScreenLock.tsx:288` still calls `window.confirm`, which fails `lint:shell`; `fix/main-green-20261103` now conflicts with `c5902fbc` on `Header.tsx`.
-- **A separate CI PR** for duplicate push + pull_request runs, which must update `scripts/run-gates.mjs` in the same change (the CI-efficiency branch fails its drift guard today).
-- Card text to fix one by one, with SHAs: T8-01, T0-10, T0-11 (confirmed); T2-07, T2-08, T4-09, T8-06, T4-04, T4-05 (unverified). Ledger: row 0188 and row 0200 status; branch `fix/t4-09-route-branch-hardening-0209` would add a second `0209`.
+- **Babin:** merge this fix; it closes the last known red gate on `main`. PR #83 and the branches `fix/shell-native-confirm` and `fix/shell-native-confirm-current-main-20261103` are then redundant (PR #83 also conflicts with `c5902fbc` on `Header.tsx`).
+- Drive the lock-screen "Forget this device" confirmation in `npm run dev`; it has never been seen on screen.
+- Other open items are in `docs/audits/RULE_CONFLICT_AUDIT_2026-11-04.md`.
 
 ## 2026-11-03 — T4-07 delivery zones finished on `main` (build notes 3–4) and main's red gates repaired
 
