@@ -45,7 +45,7 @@ a column only if it does not).
 report prints per module.
 **Needs** — T6-01 (keys for glossary terms).
 
-### T6-03 · Review sheets            status: done — awaiting merge (lane-b/T6-03-review-sheets) · size: S · lane B
+### T6-03 · Review sheets            status: done · merged on main (bfe8939a) · size: S · lane B
 **What** — For each wave, generate a review sheet Babin can work through on a phone: one row per
 string — key, screen, English, Nepali draft, a screenshot link for context, and an "OK / fix"
 column. Approved rows are imported back by a script that refuses any row not marked OK.
@@ -55,7 +55,7 @@ column. Approved rows are imported back by a script that refuses any row not mar
 **Done when** — a round trip on 20 strings works; the import refuses unapproved rows.
 **Needs** — T6-02.
 
-### T6-04 · Wave 1 — the floor            status: todo · size: L · lane B + Babin
+### T6-04 · Wave 1 — the floor            status: doing (lane-b/T6-04-wave-1-the-floor) · size: L · lane B + Babin
 **What** — Convert and draft: shell (header, nav, bottom bar, scanner), sign-in, Today, Operations,
 Pack, Handover, Return, Reset, Evidence, delivery (driver view). Babin approves via T6-03.
 **Done when** — 100% approved for these screens; floor layout check passes on the iPad and iPhone
