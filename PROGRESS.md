@@ -1,5 +1,69 @@
 # Progress Log
 
+## 2026-11-04 — T6-02: String catalogue and lint infrastructure (Lane B)
+
+**Did**
+- **T6-02: String catalogue infrastructure & module catalogues (S6, S11, W67):**
+  - Established modular translation directories `src/i18n/en/` and `src/i18n/ne/` with module-keyed JSON files (`core.json`, `tools.json`, `today.json`, `rentals.json`, `operations.json`, `inventory.json`, `clients.json`, `finance.json`, `calendar.json`, `crew.json`, `documents.json`, `notes.json`, `reports.json`, `settings.json`, `auth.json`, `admin.json`).
+  - Created `src/i18n/catalogues.ts` bundling all module catalogues for English and Nepali.
+  - Enhanced `src/lib/i18n.ts`:
+    - Extended `t()` to support module keys (`tools.lateFee.dailyRateLabel`), fallback cascades, and named `{param}` string interpolation.
+    - Added `moduleCoverage(lang)` and `screenCoverage(module, screen, lang)` reporting translation coverage breakdown per module and per screen.
+    - Added `detailedCoverage(lang)` embedding the full breakdown alongside total coverage.
+    - Added module-scoped `canEnable(lang, moduleName)` enforcing the 100% threshold per module.
+    - Created `useTranslation()` React hook for reactive component re-rendering on document language changes.
+  - Enhanced `src/lib/bs.ts`:
+    - Added `BS_MONTHS_NE` with the 12 approved Nepali Devanagari BS month names (`बैशाख` through `चैत`) sourced from approved `src/i18n/glossary.ne.json`.
+    - Extended `formatBs()` and `formatBsOrAd()` with `{ lang: 'ne' }` support, rendering Devanagari month names while strictly preserving Latin digits for the calendar days (e.g. `15 श्रावण`).
+    - Added `formatBsMonth(bsMonth, lang)` helper.
+  - Extended UI copy linter `scripts/check-ui-copy.mjs` & `check-ui-copy.test.mjs`:
+    - Added converted module check (`CONVERTED_MODULES`). Converted screens strictly forbid raw JSX text and require translation keys.
+  - Reference module conversion:
+    - Converted `src/modules/tools/LateFeeCalculator.tsx` to use `useTranslation()`. Verified English snapshot tests remain completely unchanged, and verified Nepali view renders approved terms with Latin digits.
+
+**Ruled**
+- S11: All translations adhere strictly to Babin's approved terms in `src/i18n/glossary.ne.json`.
+- R-21 / S6 / Law 6: Numbers, booking IDs, serial numbers, and NPR remain in Latin script in both English and Nepali.
+- Asar single-weight invariant: Devanagari headings clamp to 400 (`safeWeight`), never synthesising bold.
+
+**Verified**
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS (financial integrity verified in isolated PGlite).
+- `npm run check:security` — 18/18 Phase 0 SQL regressions passed, 14/14 Reset branch regression groups passed, operations branch grants verified.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `npm run test:server-contracts` — 58/58 passed.
+- `npm run test:partial-return` — 58/58 passed.
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run lint:shell` — 893 files checked, 0 violations.
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 tests passed including converted module enforcement.
+- `npm run check:contrast` — 106/106 pass, 0 fail.
+- `npm run build` — `tsc --noEmit && vite build` bundled cleanly (dist/).
+- Vitest suites for i18n, bs, and tools passed: `i18n.test.ts` (30/30 passed), `bs.test.ts` (51/51 passed), `glossary.ne.test.ts` (7/7 passed), `calculators.test.tsx` (15/15 passed).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-04T13:22:54.641Z). Suite: Historical suite: 6/6 passed, 0 failed (recorded 2026-11-04T10:03:18.125Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-04T13:24:24.500Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Lane B: T6-03 (Review sheets exporter & importer) followed by Wave 1 (Floor screens).
+- Lane A: T1-17 (Two-step sign-in for money roles) and T2-18 (Finish evidence capture).
+- Lane C: T3-14c (draft invoice numbering) blocked on accountant decisions O-14/O-17.
+- T1-17 stays unmerged and incomplete until its security reset flow, lifecycle assertions and full gates are complete.
+- Reconcile old T0-03/T0-04 branch-triage records separately; they were not folded into this change.
+- Babin: apply migrations 0215–0220 to live after backup protocol.
+
 ## 2026-11-04 — Reconciled completed-card status and migration ledger on `main`
 
 **Did**

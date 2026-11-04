@@ -30,7 +30,7 @@ Babin approves the glossary **in one sitting**; every later wave must use these 
 **Done when** — Babin's approval recorded (date + "approved" per term) — target 6 Dec 2026. **Recorded 1 Nov 2026.**
 **Needs** — none.
 
-### T6-02 · String catalogue and lint            status: todo · size: L · lane B
+### T6-02 · String catalogue and lint            status: done — awaiting merge (lane-b/T6-02-string-catalogue-and-lint) · size: L · lane B
 **What** — Move visible strings out of components into keyed catalogues (`src/i18n/en/*.json`
 source, `src/i18n/ne/*.json` translations), one file per module, keys like
 `rentals.bookingDetail.recordPayment`. Extend `scripts/check-ui-copy.mjs` so new raw JSX text in

@@ -37,6 +37,13 @@
  * face is needed" — the face was never the hard part.
  */
 
+import {
+  MODULE_CATALOGUES_EN,
+  MODULE_CATALOGUES_NE,
+  FULL_CATALOGUE_EN,
+  FULL_CATALOGUE_NE,
+} from '../i18n/catalogues'
+
 export type Language = 'en' | 'ne'
 
 export const LANGUAGES: Language[] = ['en', 'ne']
@@ -204,23 +211,65 @@ const CATALOGUES: Record<Language, Partial<Record<StringKey, string>>> = { en: E
 /**
  * Looks up a string, falling back to English.
  *
+ * Supports core keys (`StringKey`), module keys (`tools.lateFee.dailyRateLabel`),
+ * and parameter interpolation (`{count}`).
+ *
  * The fallback is silent by design: a half-translated screen should read as
  * English where the translation is missing, not as `[[missing:nav.today]]`. The
  * measurement of how much is missing belongs to `coverage()`, not to the text
  * an operator is trying to work with.
  */
-export function t(key: StringKey, lang: Language): string {
-  return CATALOGUES[lang][key] ?? EN[key]
+export function t(
+  key: StringKey | string,
+  lang: Language = 'en',
+  params?: Record<string, string | number>
+): string {
+  let template = ''
+  if (lang === 'ne') {
+    template = FULL_CATALOGUE_NE[key] ?? NE[key as StringKey] ?? FULL_CATALOGUE_EN[key] ?? EN[key as StringKey] ?? key
+  } else {
+    template = FULL_CATALOGUE_EN[key] ?? EN[key as StringKey] ?? key
+  }
+
+  if (params && typeof template === 'string') {
+    return template.replace(/\{(\w+)\}/g, (_, k: string) => {
+      const val = params[k]
+      return val !== undefined ? String(val) : `{${k}}`
+    })
+  }
+
+  return template
 }
 
 export interface Coverage {
   translated: number
   total: number
   percent: number
-  missing: StringKey[]
+  missing: string[]
 }
 
-/** How much of the app a language actually covers. The gap, measured. */
+export interface ScreenCoverage {
+  screen: string
+  translated: number
+  total: number
+  percent: number
+  missing: string[]
+}
+
+export interface ModuleCoverage {
+  module: string
+  translated: number
+  total: number
+  percent: number
+  missing: string[]
+  screens: Record<string, ScreenCoverage>
+}
+
+export interface DetailedCoverage extends Coverage {
+  byModule: Record<string, ModuleCoverage>
+}
+
+/** How much of the app a language actually covers across the core keys. */
 export function coverage(lang: Language): Coverage {
   const keys = Object.keys(EN) as StringKey[]
   const cat = CATALOGUES[lang]
@@ -235,6 +284,81 @@ export function coverage(lang: Language): Coverage {
 }
 
 /**
+ * Returns coverage breakdown per module and per screen.
+ * Evaluates keyed catalogues under `src/i18n/`.
+ */
+export function moduleCoverage(lang: Language): Record<string, ModuleCoverage> {
+  const result: Record<string, ModuleCoverage> = {}
+
+  for (const [moduleName, enCatalogue] of Object.entries(MODULE_CATALOGUES_EN)) {
+    const neCatalogue = MODULE_CATALOGUES_NE[moduleName] || {}
+    const keys = Object.keys(enCatalogue)
+    const screens: Record<string, { total: number; translated: number; missing: string[] }> = {}
+
+    let moduleTranslated = 0
+    const moduleMissing: string[] = []
+
+    for (const key of keys) {
+      const parts = key.split('.')
+      const screenName = parts.length > 2 ? parts[1]! : 'general'
+
+      if (!screens[screenName]) {
+        screens[screenName] = { total: 0, translated: 0, missing: [] }
+      }
+
+      screens[screenName].total++
+
+      const isTranslated = lang === 'en' ? true : Boolean(neCatalogue[key] && neCatalogue[key].trim().length > 0)
+      if (isTranslated) {
+        screens[screenName].translated++
+        moduleTranslated++
+      } else {
+        screens[screenName].missing.push(key)
+        moduleMissing.push(key)
+      }
+    }
+
+    const screenRecords: Record<string, ScreenCoverage> = {}
+    for (const [screenName, stats] of Object.entries(screens)) {
+      screenRecords[screenName] = {
+        screen: screenName,
+        total: stats.total,
+        translated: stats.translated,
+        percent: stats.total === 0 ? 100 : Math.round((stats.translated / stats.total) * 100),
+        missing: stats.missing,
+      }
+    }
+
+    result[moduleName] = {
+      module: moduleName,
+      total: keys.length,
+      translated: moduleTranslated,
+      percent: keys.length === 0 ? 100 : Math.round((moduleTranslated / keys.length) * 100),
+      missing: moduleMissing,
+      screens: screenRecords,
+    }
+  }
+
+  return result
+}
+
+export function screenCoverage(moduleName: string, screenName: string, lang: Language): ScreenCoverage {
+  const mod = moduleCoverage(lang)[moduleName]
+  if (!mod || !mod.screens[screenName]) {
+    return { screen: screenName, total: 0, translated: 0, percent: 100, missing: [] }
+  }
+  return mod.screens[screenName]
+}
+
+export function detailedCoverage(lang: Language): DetailedCoverage {
+  const base = coverage(lang)
+  return {
+    ...base,
+    byModule: moduleCoverage(lang),
+  }
+}
+
+/**
  * Whether a language may be offered to users at all.
  *
  * A toggle that produces a screen half in each language is worse than a toggle
@@ -242,11 +366,16 @@ export function coverage(lang: Language): Coverage {
  * a deliberate English term, and the Settings row already says so out loud.
  *
  * English is always enabled. Everything else has to earn it.
+ * When `moduleName` is provided, checks that module's coverage against threshold.
  */
 export const COVERAGE_THRESHOLD = 100
 
-export function canEnable(lang: Language): boolean {
+export function canEnable(lang: Language, moduleName?: string): boolean {
   if (lang === 'en') return true
+  if (moduleName) {
+    const mod = moduleCoverage(lang)[moduleName]
+    return mod ? mod.percent >= COVERAGE_THRESHOLD : false
+  }
   return coverage(lang).percent >= COVERAGE_THRESHOLD
 }
 
@@ -379,6 +508,17 @@ export function useCurrentLanguage(): Language {
   }, [])
 
   return lang
+}
+
+/**
+ * Reactive translation hook. Automatically updates when document language changes.
+ */
+export function useTranslation() {
+  const lang = useCurrentLanguage()
+  const translate = (key: StringKey | string, params?: Record<string, string | number>) => {
+    return t(key, lang, params)
+  }
+  return { t: translate, lang }
 }
 
 /** Toggles between English and Nepali, persisting to settings and applying fonts immediately. */
