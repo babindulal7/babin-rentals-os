@@ -836,6 +836,64 @@ const STEPS = [
   },
 
   {
+    id: 'L68',
+    title: 'Return completion requires a saved damage photo for each flagged unit',
+    expect: 'green',
+    async run() {
+      const booking = bookingIds.a
+      const actor = U.Warehouse
+      await db.exec('begin')
+      try {
+        const session = await one(`insert into operation_sessions
+          (client_uuid, booking_id, operation, session_no, state, warehouse_staff_id, created_by)
+          values (gen_random_uuid(), $1, 'Return', 1, 'In Progress', $2, $2) returning id`, [booking, actor])
+        const line = await as('Warehouse', () => one(`insert into return_lines
+          (client_uuid, booking_line_id, state, qty_expected, session_id, returned_at, created_by)
+          values (gen_random_uuid(), (select id from booking_lines where booking_id = $1 limit 1),
+            'Returned', 1, $2, now(), $3) returning id`, [booking, session, actor]))
+        for (const unit of UNITS.slice(0, 2)) {
+          await q(`insert into damage_findings
+            (client_uuid, source, return_line_id, unit_id, damage_type, description, severity, created_by)
+            values (gen_random_uuid(), 'Return inspection', $1, $2, 'Damaged', 'Test damage', 'Not assessed', $3)`, [line, unit, actor])
+        }
+        const savePhoto = async (unit) => {
+          const file = await one(`insert into evidence_files
+            (client_uuid, content_hash, storage_path, original_filename, media_type, format, size_bytes, category, created_by)
+            values (gen_random_uuid(), gen_random_uuid()::text, gen_random_uuid()::text, 'damage.jpg',
+              'Image', 'jpeg', 100, 'Damage', $1) returning id`, [actor])
+          await q(`insert into evidence_references
+            (client_uuid, evidence_file_id, operation_stage, booking_id, item_id, created_by)
+            values (gen_random_uuid(), $1, 'Damage', $2, $3, $4)`, [file, booking, unit, actor])
+        }
+        const complete = "update operation_sessions set state = 'Completed' where id = $1"
+        await savePhoto(UNITS[0])
+        await as('Warehouse', async () => {
+          await db.exec('savepoint one_damage_photo')
+          try {
+            await refuses('second unit has no photo', complete, [session], /gate\.return\.damage_photo_per_unit/)
+          } finally {
+            await db.exec('rollback to savepoint one_damage_photo')
+          }
+          try {
+            await refuses('second unit has no photo at stage advance',
+              `insert into booking_stage_transitions
+                 (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role)
+               values (gen_random_uuid(), $1, $2, 'On Rent', 'Returned', $3, 'Warehouse')`,
+              [booking, BRANCH, actor], /gate\.return\.damage_photo_per_unit/)
+          } finally {
+            await db.exec('rollback to savepoint one_damage_photo')
+          }
+        })
+        await savePhoto(UNITS[1])
+        await as('Warehouse', () => q(complete, [session]))
+        assertEq(await one('select state from operation_sessions where id = $1', [session]), 'Completed', 'both unit photos allow completion')
+      } finally {
+        await db.exec('rollback')
+      }
+    },
+  },
+
+  {
     id: 'L7',
     title: 'A partial return: one unit back, one missing',
     expect: 'green',

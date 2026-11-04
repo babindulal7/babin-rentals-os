@@ -1,5 +1,25 @@
 # Progress Log
 
+## 2026-11-04 — T2-18 per-unit Return evidence gate
+
+**Did**
+- Added migration 0222 to check saved per-unit damage evidence before Return stage advance and before session completion.
+- Added lifecycle coverage for two flagged units with one photo, followed by a photo for the second unit.
+
+**Ruled**
+- The gate uses persisted, non-removed Damage images linked to the same booking and unit.
+
+**Verified**
+- PGlite 208/208 and lifecycle 57/57 passed together on the PR branch. Focused evidence suites passed 4/4.
+
+### Completion
+
+Not measured for this change.
+
+### Remaining
+
+- Full gates and manual device/staging checks are pending. Migration is local only.
+
 ## 2026-11-03 — T4-07 delivery zones finished on `main` (build notes 3–4) and main's red gates repaired
 
 **Did**
