@@ -389,10 +389,11 @@ export function RoleTaskCockpit() {
               badge={metrics.coordinator.onlineRequestsCount > 0 ? 'Urgent W66' : undefined}
               badgeTone="warning"
             />
+            {/* RULING 2026-11-05: Law 15/17 — "customer" never appears in UI copy; "client" instead. See RULINGS-2026-11-05.md */}
             <TaskCard
               title="Quotes Waiting"
               count={metrics.coordinator.quotesWaitingCount}
-              subtitle="Pending customer approval or advance"
+              subtitle="Pending client approval or advance"
               actionLabel="View Quotes"
               actionPath="/rentals"
               icon="file"
