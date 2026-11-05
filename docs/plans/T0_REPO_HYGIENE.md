@@ -150,3 +150,11 @@ reached `main` with `lint:ui-copy` red because that step was not in the short li
 pass; 2) a seeded UI-copy violation makes it stop at that step with the file and line; 3) works in Git
 Bash and PowerShell.
 **Needs** — T0-10.
+
+### T0-13 · Remediate the dependency audit            status: doing (lane-a/T0-13-dependency-audit) · size: M · lane A · [go-live]
+**What** — Review the npm audit found during the full go-live gate. Remove unused production dependencies and apply compatible security fixes with a reviewed lockfile.
+**Why** — The 5 November audit reported 36 advisories overall and 19 with development dependencies omitted. Existing PROGRESS identifies opencode-chromium as an unused production dependency.
+**Where** — package.json, package-lock.json and only the call sites required by reviewed dependency changes.
+**Database** — none.
+**Done when** — remaining advisories are explained by package, dependency path and runtime reachability, fresh dependency installation and relevant local gates pass, and Babin merges.
+**Build notes** — Use an isolated installation. Preserve dependency versions outside the remediation. Record before/after audit counts. Major tooling changes need compatibility verification.
