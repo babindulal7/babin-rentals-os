@@ -285,19 +285,20 @@ await expectThrows(
   'GATE:unit.identity.actor_mismatch',
   'Warehouse cannot forge another actor in unit identity audit'
 )
-await expectThrows(
-  () => sql(`update product_units set rack = 'NO-REVISION', updated_by = $2
-    where id = $1`, [identityUnitId, warehouseUserId]),
-  'GATE:unit.identity.revision',
-  'Identity updates must advance the optimistic concurrency revision'
-)
+const oldUnitRevision = (await sql('select updated_at from product_units where id = $1', [identityUnitId])).rows[0].updated_at
 const identityResult = await sql(`update product_units
     set rack = 'B', shelf = '3', asset_tag = 'AML-GUARD-02',
-        updated_at = updated_at + interval '1 minute', updated_by = $2
-    where id = $1
-    returning asset_tag, rack, shelf`, [identityUnitId, warehouseUserId])
+        updated_by = $2
+    where id = $1 and updated_at = $3
+    returning asset_tag, rack, shelf, updated_at`, [identityUnitId, warehouseUserId, oldUnitRevision])
 assert(identityResult.rows.length === 1 && identityResult.rows[0].rack === 'B',
   'Warehouse can save an audited unit identity/location change')
+assert(new Date(identityResult.rows[0].updated_at).getTime() > new Date(oldUnitRevision).getTime(),
+  'Server generated a newer unit revision after the identity change')
+const staleWrite = await sql(`update product_units set shelf = 'STALE', updated_by = $2
+  where id = $1 and updated_at = $3 returning id`, [identityUnitId, warehouseUserId, oldUnitRevision])
+assert(staleWrite.rows.length === 0,
+  'Stale tab cannot overwrite a later unit identity edit via exact revision predicate')
 
 await sql('reset role')
 const guardedUnit = (await sql('select asset_tag, rack, shelf from product_units where id = $1', [identityUnitId])).rows[0]
