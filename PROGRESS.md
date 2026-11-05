@@ -1,5 +1,39 @@
 # Progress Log
 
+## 2026-11-06 — T3-07: Give expense payment authority a unique decision ID
+
+**Did**
+- Renumbered the unanswered expense-payment question from O-21 to O-24 because O-21 is the answered glossary-editing decision on T0-12 (ruling C-6).
+- Updated the decision register, PLAN section 4.2 and the finance query's TODO reference. The shared PLAN change is the decision-index reference only.
+- Earlier progress entries retain the old O-21 identifier as history; the current expense-payment question is O-24.
+
+**Ruled**
+- The question and existing expense transitions are unchanged. The glossary ruling does not grant expense-payment authority.
+
+**Verified**
+- All three current references point to O-24. The sole TypeScript change is a comment; functions, SQL and permission rules are unchanged. No functional test was repeated for this reference correction.
+- Migration 0224's prior local verification is recorded in the preceding entry. Full current-source card gates and staging acceptance remain required.
+- npm run completion returned 1 with unverified suite/coverage evidence and generated the block below. The unchanged dependency audit remains at 36 affected packages; remediation is isolated on T0-13.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 219 files · check:pglite Historical, incomplete or failed receipt (2026-11-05T13:57:24.067Z); current source NOT VERIFIED. Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-05T13:57:46.192Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Resolve O-24 with Babin, attribute paid expenses to settlement accounts, and complete daily/shift carry-forward and reconciliation.
+- Run full local gates and the staging week/device checks. Babin reviews and merges, then applies verified migrations after backup.
+
 ## 2026-11-05 — T3-07: Enforce append-only opening balances in Postgres
 
 **Did**

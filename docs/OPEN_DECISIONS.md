@@ -1,6 +1,10 @@
 # Babin Rentals OS — Open Decisions Register
 
-## 5 November 2026: Who may record an expense payment? (O-21)
+## 5 November 2026: Who may record an expense payment? (O-24)
+
+Renumbered from O-21 on 6 November because O-21 is also the answered glossary
+editing decision on the T0-12 branch (ruling C-6). The expense-payment question
+below remains unanswered; the glossary ruling does not grant payment authority.
 
 D15 requires daily closing to include paid expenses by account. The existing
 expense approval rules govern who approves the expense, and the expense ledger
