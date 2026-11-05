@@ -68,7 +68,7 @@ bookings.
 **Done when** — 100% approved. Target 17 Jan 2027 (3 Magh).
 **Needs** — T6-04.
 
-### T6-06 · Wave 3 — back office            status: todo · size: L · lane B + Babin
+### T6-06 · Wave 3 — back office            status: done — awaiting merge (lane-b/T6-06-wave-3-back-office) · size: L · lane B + Babin
 **What** — Finance (all tabs), Inventory (equipment, bundles, maintenance, stock check), Crew Assist,
 Notes, Tools.
 **Done when** — 100% approved. Target 24 Jan 2027 (10 Magh).
