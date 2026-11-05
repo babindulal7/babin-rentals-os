@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import { applyGlossaryRevisions, type GlossaryRevision } from './glossaryStore'
+import { mergeGlossaryRevisions, type GlossaryRevision } from './glossaryStore'
 
 export async function readGlossaryRevisions(): Promise<GlossaryRevision[]> {
   const rows: GlossaryRevision[] = []
@@ -20,5 +20,5 @@ export async function readGlossaryRevisions(): Promise<GlossaryRevision[]> {
 }
 
 export async function hydrateGlossary(): Promise<void> {
-  applyGlossaryRevisions(await readGlossaryRevisions())
+  mergeGlossaryRevisions(await readGlossaryRevisions())
 }

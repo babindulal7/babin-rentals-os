@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { supabase } from './supabase'
 import { readGlossaryRevisions } from './glossarySync'
-import { applyGlossaryRevisions } from './glossaryStore'
+import { applyGlossaryRevisions, mergeGlossaryRevisions } from './glossaryStore'
 import { captureError } from './monitoring'
 import type { SystemRole } from '../types/database'
 
@@ -14,7 +14,7 @@ export function useSharedGlossary(userId: string | null, role: SystemRole): void
     const refresh = () => {
       const request = ++generation
       void readGlossaryRevisions().then(rows => {
-        if (active && request === generation) applyGlossaryRevisions(rows)
+        if (active && request === generation) mergeGlossaryRevisions(rows)
       }).catch(cause => {
         if (active) captureError(cause instanceof Error ? cause : new Error('Glossary refresh failed'), { where: 'glossarySync' })
       })

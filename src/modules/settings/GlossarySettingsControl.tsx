@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useAuth } from '../../lib/auth'
-import { GLOSSARY_TERMS, applyGlossaryRevisions, appendGlossaryRevision, getGlossaryRevisions, glossaryVersion, subscribeGlossary, validateGlossaryText, type GlossaryTerm } from '../../lib/glossaryStore'
+import { GLOSSARY_TERMS, mergeGlossaryRevisions, appendGlossaryRevision, getGlossaryRevisions, glossaryVersion, subscribeGlossary, validateGlossaryText, type GlossaryTerm } from '../../lib/glossaryStore'
 import { readGlossaryRevisions } from '../../lib/glossarySync'
 import { canManageGlossary } from '../../lib/rbac'
 import { newClientUuid } from '../../lib/supabase'
@@ -43,7 +43,7 @@ export function GlossarySettingsControl({ active = true }: { active?: boolean })
     try {
       const [result] = await Promise.all([readGlossaryRevisions(), loadNepaliFonts()])
       if (request !== loadRequest.current) return
-      applyGlossaryRevisions(result)
+      mergeGlossaryRevisions(result)
     } catch (cause) {
       if (request !== loadRequest.current) return
       setError(cause instanceof Error ? cause.message : 'Could not load glossary changes.')

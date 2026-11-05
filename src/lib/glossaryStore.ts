@@ -25,8 +25,14 @@ export function subscribeGlossary(listener: () => void): () => void {
 }
 export function glossaryVersion(): number { return version }
 export function getGlossaryRevisions(): readonly GlossaryRevision[] { return revisions }
+/** Immutable history only grows; a late read must not undo an approval already observed. */
+export function mergeGlossaryRevisions(rows: readonly GlossaryRevision[]): void {
+  const known = new Map(revisions.map(row => [row.revision, row]))
+  for (const row of rows) if (!known.has(row.revision)) known.set(row.revision, row)
+  applyGlossaryRevisions([...known.values()])
+}
 export function appendGlossaryRevision(row: GlossaryRevision): void {
-  applyGlossaryRevisions([row, ...revisions.filter(item => item.revision !== row.revision)])
+  mergeGlossaryRevisions([row])
 }
 export function applyGlossaryRevisions(rows: readonly GlossaryRevision[]): void {
   revisions = [...rows].sort((a, b) => b.revision - a.revision)

@@ -1,8 +1,17 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { applyGlossaryRevisions, applyGlossaryText, GLOSSARY_TERMS, validateGlossaryText } from '../glossaryStore'
+import { applyGlossaryRevisions, applyGlossaryText, mergeGlossaryRevisions, appendGlossaryRevision, GLOSSARY_TERMS, validateGlossaryText } from '../glossaryStore'
 
 beforeEach(() => applyGlossaryRevisions([]))
 describe('approved glossary replacements', () => {
+  it('does not roll back a new approval when an older or empty read arrives late', () => {
+    const older = { term_key: 'nav.today', original_nepali: 'आज', nepali: 'अहिले', revision: 1 }
+    appendGlossaryRevision({ ...older, nepali: 'आजै', revision: 2 })
+    mergeGlossaryRevisions([])
+    mergeGlossaryRevisions([older])
+    expect(applyGlossaryText('आज', 'ne')).toBe('आजै')
+    applyGlossaryRevisions([]) // Account changes explicitly clear the observed history.
+    expect(applyGlossaryText('आज', 'ne')).toBe('आज')
+  })
   it('updates repeated whole terms and preserves amounts, IDs and English', () => {
     applyGlossaryRevisions([{ term_key: 'msg.pending', original_nepali: 'विचाराधीन', nepali: 'पर्खँदै', revision: 1 }])
     expect(applyGlossaryText('विचाराधीन · विचाराधीन NPR {amount} B-715', 'ne')).toBe('पर्खँदै · पर्खँदै NPR {amount} B-715')
