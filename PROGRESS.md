@@ -1,5 +1,41 @@
 # Progress Log
 
+## 2026-11-05 — T0-13: Remove an unused production dependency
+
+**Did**
+- Removed opencode-chromium from package.json and regenerated package-lock.json. Repository search found no application import or command using it; an earlier progress entry already identified it as unused.
+- Reviewed the lockfile diff: 98 package entries removed, no remaining package version changed.
+- Located a compatible concurrently patch, 10.0.6, that replaces the vulnerable pinned shell-quote with 1.12.0. Apply after the isolated install finishes.
+
+**Ruled**
+- This card addresses dependencies under the existing go-live safety work.
+
+**Verified**
+- Registry npm audit before removal reported 36 advisories (4 critical, 14 high, 15 moderate, 3 low).
+- After removal it reported 30 (4 critical, 9 high, 14 moderate, 3 low).
+- Fresh isolated npm ci with install scripts disabled is running. Its chained typecheck and build have not completed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+
+### Remaining
+- Complete the fresh installation, typecheck and build, then apply and verify the compatible concurrently patch.
+- Review the remaining advisory dependency paths and compatibility requirements for Vite, Vitest, Electron and Workbox before further changes.
+- Run the local gates and merge through Babin. The corrected localization assertions are on the sibling cancellation branch.
+
 ## 2026-11-05 — T6-04: Wave 1 — the floor localization conversion (Lane B)
 
 **Did**
