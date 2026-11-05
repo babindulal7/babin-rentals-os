@@ -293,7 +293,8 @@ const identityResult = await sql(`update product_units
     returning asset_tag, rack, shelf, updated_at`, [identityUnitId, warehouseUserId, oldUnitRevision])
 assert(identityResult.rows.length === 1 && identityResult.rows[0].rack === 'B',
   'Warehouse can save an audited unit identity/location change')
-assert(new Date(identityResult.rows[0].updated_at).getTime() > new Date(oldUnitRevision).getTime(),
+const revisionAdvanced = (await sql('select updated_at > $2::timestamptz as advanced from product_units where id = $1', [identityUnitId, oldUnitRevision])).rows[0]
+assert(revisionAdvanced.advanced === true,
   'Server generated a newer unit revision after the identity change')
 const staleWrite = await sql(`update product_units set shelf = 'STALE', updated_by = $2
   where id = $1 and updated_at = $3 returning id`, [identityUnitId, warehouseUserId, oldUnitRevision])
