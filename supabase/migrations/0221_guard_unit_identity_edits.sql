@@ -7,6 +7,8 @@
 -- could otherwise change asset_tag/serial_no/rack/shelf/bin despite UI gates.
 -- The narrow trigger below protects ONLY changes to these five values; it does
 -- not change product_units_update or block legitimate status/maintenance writes.
+-- The trigger name sorts AFTER trg_product_units_set_updated_at (0097), so
+-- its revision check observes the final server-assigned timestamp.
 
 begin;
 
@@ -51,7 +53,8 @@ end;
 $$;
 
 drop trigger if exists trg_guard_unit_identity_edits on public.product_units;
-create trigger trg_guard_unit_identity_edits
+drop trigger if exists trg_z_guard_unit_identity_edits on public.product_units;
+create trigger trg_z_guard_unit_identity_edits
   before update on public.product_units
   for each row execute function public.guard_unit_identity_edits();
 
