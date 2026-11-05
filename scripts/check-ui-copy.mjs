@@ -12,6 +12,9 @@ export const CONVERTED_MODULES = [
   'src/modules/auth/Login.tsx',
   'src/modules/auth/ScreenLock.tsx',
   'src/modules/operations/RentalOperationShell.tsx',
+  'src/modules/rentals/BookingCrewList.tsx',
+  'src/modules/clients/Clients.tsx',
+  'src/modules/clients/ClientsDirectory.tsx',
 ]
 
 export function isConverted(file) {
