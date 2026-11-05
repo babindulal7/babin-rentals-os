@@ -78,7 +78,7 @@ describe('Login component', () => {
     expect(submitBtn).not.toBeNull()
     expect(rememberCheckbox).not.toBeNull()
     expect(forgotLink).not.toBeNull()
-    expect(forgotLink?.textContent).toContain('Forgot password?')
+    expect(forgotLink?.textContent).toContain('Forgot your password?')
   })
 
   it('contains absolutely zero emojis anywhere in the rendered markup', () => {
