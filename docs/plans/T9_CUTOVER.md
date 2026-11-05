@@ -80,6 +80,23 @@ Review row counts against both exports and resolve mappings before using the rep
 for import approval. Save the report separately from the source exports.
 
 
+#### Available source checked 5 November 2026
+
+The connected [Booqable bridge workbook](https://docs.google.com/spreadsheets/d/1nnD2Xw4gbMAo_mBJBaglCNfAGp_tmIp2Gjeiv899p68/edit)
+contains Equipment_Catalog, Stock_Items, Orders and Rental_Plannings tabs.
+A bounded read of Equipment_Catalog A1:K308 found 307 product rows with 307
+distinct product IDs, no blank IDs, and 273 rows marked Archived = FALSE.
+All catalogue rows carry the sync text `2026-10-13 3:00:44`.
+
+Use Product ID as the external identity when normalizing this export.
+Refresh the catalogue before the cutover match report. The catalogue tab labels
+its amount as `Base Price NPR (provisional)`. It has no store slug, bundle
+membership, pricing structure or seasonal end-date columns, so obtain those
+source fields before checking T9-01's pricing and old-link acceptance.
+The workbook's modification date alone cannot establish when the catalogue
+data was refreshed. This inspection establishes the available export format.
+The OS match report and the 20 three-day quote comparisons remain open.
+
 ### T9-02 · Booqable rentals block the OS calendar            status: todo · size: M · lane A
 **What** — Import every **open and upcoming** Booqable booking (reserved or started) as a read-only
 **external hold** in the OS: product (and serial where Booqable has one), from/to, Booqable number.

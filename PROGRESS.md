@@ -1,5 +1,40 @@
 # Progress Log
 
+## 2026-11-05 — T9-01: Inspect the available Booqable source
+
+**Did**
+- Located the connected Booqable bridge workbook and read its metadata and bounded Equipment_Catalog A1:K308 range.
+- Documented 307 unique product IDs, 273 rows marked active, and the catalogue's recorded sync text of 13 October in the cutover card.
+- Identified that the catalogue tab's provisional price column does not supply the pricing structures, bundle members, seasonal end dates or store slugs required by the card.
+
+**Ruled**
+- Refresh the catalogue and obtain the missing fields before using it for cutover reconciliation.
+
+**Verified**
+- Connected Drive and Google Sheets metadata and bounded range reads succeeded.
+- This inspection establishes the source format and recorded catalogue date. OS counts and the 20 quote comparisons remain unverified.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+
+### Remaining
+- Refresh the source export and obtain bundle, pricing structure, seasonal rule and old-store slug data.
+- Read the scoped OS snapshot and external references, then generate and review the new/updated/unchanged/conflict report.
+- Verify the 20 quote samples and the staging import, then implement external availability holds.
+
 ## 2026-11-05 — T9-01: Read-only catalogue comparison
 
 **Did**
