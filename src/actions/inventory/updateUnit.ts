@@ -91,14 +91,11 @@ export const updateUnitConfig: ActionConfig<UpdateUnitInput, UpdateUnitResult> =
       throw new Error('You are offline. Unit details were not saved; reconnect and retry.')
     }
     const patch = normalizedPatch(input.patch)
-    const revisionMs = Date.parse(input.expectedRevision)
-    const newRevision = new Date(Math.max(Date.now(), revisionMs + 1_000)).toISOString()
-
-    // Only an exact revision match may write. Set updated_at explicitly because
-    // unrelated product_units writers do not all bump it automatically.
+    // The 0097 database trigger owns updated_at. Never send a client clock;
+    // update the row only if the original server revision still matches.
     const { data, error } = await supabase
       .from('product_units')
-      .update({ ...patch, updated_at: newRevision, updated_by: ctx.userId })
+      .update({ ...patch, updated_by: ctx.userId })
       .eq('id', input.unitId)
       .eq('updated_at', input.expectedRevision)
       .select(RETURNING_COLUMNS)
