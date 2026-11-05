@@ -21,7 +21,7 @@ export function MobileHeaderSearch({ config, title }: { config: PageHeaderSearch
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
       const target = event.target instanceof Element ? event.target : null
-      if (event.defaultPrevented || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return
+      if (event.defaultPrevented || event.isComposing || event.keyCode === 229 || event.ctrlKey || event.metaKey || event.altKey) return
       if (target?.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')) return
       if (document.querySelector('[role="dialog"][aria-modal="true"], dialog[open]')) return
       if (event.key === '/') {
@@ -53,6 +53,8 @@ export function MobileHeaderSearch({ config, title }: { config: PageHeaderSearch
     </button>
     {open && <div id={id} className="header-page-search__panel" role="search" aria-label={`Search ${title}`}
       onKeyDown={(event) => {
+        // IME candidate selection (including Nepali) must not dismiss the search.
+        if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return
         if (event.key === 'Escape') {
           event.preventDefault()
           event.stopPropagation()
@@ -63,6 +65,8 @@ export function MobileHeaderSearch({ config, title }: { config: PageHeaderSearch
         aria-label={config.ariaLabel ?? `Search ${title}`} placeholder={config.placeholder ?? 'Search page…'}
         onChange={(event) => config.onChange(event.target.value)}
         onKeyDown={(event) => {
+          // Enter accepts an IME candidate; do not submit or close until composition ends.
+          if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return
           if (event.key !== 'Escape') config.onKeyDown?.(event)
           if (event.key === 'Enter') close()
         }} />

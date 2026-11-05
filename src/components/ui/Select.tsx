@@ -54,10 +54,13 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
            the trigger's open-value comparison read undefined. A bare option's
            value is its text content (that's how a native select answers it),
            so the parse does exactly that. */
+        const label = Array.isArray(child.props.children)
+          ? child.props.children.map((c: unknown) => (typeof c === 'string' || typeof c === 'number' ? String(c) : '')).join('')
+          : child.props.children
         return {
-          value: child.props.value ?? String(child.props.children),
-          label: child.props.children,
-          disabled: child.props.disabled
+          value: child.props.value ?? (typeof label === 'string' ? label : String(label)),
+          label,
+          disabled: child.props.disabled,
         }
       }
       return null

@@ -1,0 +1,154 @@
+key,wave,module,screen,english,nepali_draft,screenshot_link,status,babin_fix,notes
+auth.brandMonogram,1,auth,auth,BR,BR,https://os.babinrentals.com/screenshots/auth/auth.png,OK,,S11 approved wording
+auth.emailLabel,1,auth,auth,Work Email,कार्य ईमेल,https://os.babinrentals.com/screenshots/auth/auth.png,OK,,S11 approved wording
+auth.emailPlaceholder,1,auth,auth,name@babinrentals.com,name@babinrentals.com,https://os.babinrentals.com/screenshots/auth/auth.png,OK,,S11 approved wording
+auth.encryptedBadge,1,auth,auth,Encrypted Session · Babin Rentals OS,इन्क्रिप्टेड सत्र · बबिन रेन्टल्स ओएस,https://os.babinrentals.com/screenshots/auth/auth.png,OK,,S11 approved wording
+auth.forgotPassword,1,auth,auth,Forgot your password?,पासवर्ड बिर्सनुभयो?,https://os.babinrentals.com/screenshots/auth/auth.png,OK,,S11 approved wording
+auth.lockoutMessage,1,auth,auth,Too many sign-in attempts. Please wait {seconds}s before retrying.,धेरै पटक साइन इन प्रयास भयो। कृपया फेरि प्रयास गर्नुअघि {seconds}s पर्खनुहोस्।,https://os.babinrentals.com/screenshots/auth/auth.png,OK,,S11 approved wording
+auth.missingFields,1,auth,auth,Enter your work email and password.,आफ्नो कार्य ईमेल र पासवर्ड प्रविष्ट गर्नुहोस्।,https://os.babinrentals.com/screenshots/auth/auth.png,OK,,S11 approved wording
+auth.passwordLabel,1,auth,auth,Password,पासवर्ड,https://os.babinrentals.com/screenshots/auth/auth.png,OK,,S11 approved wording
+auth.passwordPlaceholder,1,auth,auth,••••••••,••••••••,https://os.babinrentals.com/screenshots/auth/auth.png,OK,,S11 approved wording
+auth.quickSignIn,1,auth,auth,Quick Sign-In (Demo / Offline Mode):,द्रुत साइन इन (डेमो / अफलाइन मोड):,https://os.babinrentals.com/screenshots/auth/auth.png,OK,,S11 approved wording
+auth.rememberEmail,1,auth,auth,Remember work email on this device,यस उपकरणमा कार्य ईमेल सम्झनुहोस्,https://os.babinrentals.com/screenshots/auth/auth.png,OK,,S11 approved wording
+auth.screenLock.accountInactive,1,auth,screenLock,This staff account is no longer active. Sign out to continue.,यो कर्मचारी खाता अब सक्रिय छैन। जारी राख्न साइन आउट गर्नुहोस्।,https://os.babinrentals.com/screenshots/auth/screenLock.png,OK,,S11 approved wording
+auth.screenLock.activeSession,1,auth,screenLock,Active session,सक्रिय सत्र,https://os.babinrentals.com/screenshots/auth/screenLock.png,OK,,S11 approved wording
+auth.screenLock.attemptLeft,1,auth,screenLock,attempt left,प्रयास बाँकी,https://os.babinrentals.com/screenshots/auth/screenLock.png,OK,,S11 approved wording
+auth.screenLock.attemptsLeft,1,auth,screenLock,Incorrect PIN. {attempts} attempts remaining.,गलत PIN। {attempts} प्रयास बाँकी छन्।,https://os.babinrentals.com/screenshots/auth/screenLock.png,OK,,S11 approved wording
+auth.screenLock.attemptsLeftPlural,1,auth,screenLock,attempts left,प्रयास बाँकी,https://os.babinrentals.com/screenshots/auth/screenLock.png,OK,,S11 approved wording
+auth.screenLock.cancel,1,auth,screenLock,Cancel,रद्द गर्नुहोस्,https://os.babinrentals.com/screenshots/auth/screenLock.png,OK,,S11 approved wording
+auth.screenLock.deviceLocked,1,auth,screenLock,Account locked for 15 minutes due to too many failed attempts.,धेरै पटक असफल प्रयासका कारण खाता 15 मिनेटको लागि बन्द गरिएको छ।,https://os.babinrentals.com/screenshots/auth/screenLock.png,OK,,S11 approved wording · R-21: Latin numbers/currency stay Latin
+auth.screenLock.enterPin,1,auth,screenLock,Enter your 4-digit PIN to unlock,अनलक गर्न आफ्नो 4-अङ्कको PIN प्रविष्ट गर्नुहोस्,https://os.babinrentals.com/screenshots/auth/screenLock.png,OK,,S11 approved wording · R-21: Latin numbers/currency stay Latin
+auth.screenLock.forgetConfirm,1,auth,screenLock,Forget device,उपकरण हटाउनुहोस्,https://os.babinrentals.com/screenshots/auth/screenLock.png,OK,,S11 approved wording
+auth.screenLock.forgetDevice,1,auth,screenLock,Forget this device,यो उपकरण हटाउनुहोस्,https://os.babinrentals.com/screenshots/auth/screenLock.png,OK,,S11 approved wording
+auth.screenLock.forgetPrompt,1,auth,screenLock,Forget every stored session and the roster on this device? Everyone will have to sign in again.,यस उपकरणमा भण्डारण गरिएका सबै सत्रहरू र रोस्टर हटाउने? सबैले फेरि साइन इन गर्नुपर्नेछ।,https://os.babinrentals.com/screenshots/auth/screenLock.png,OK,,S11 approved wording
+auth.screenLock.incorrectPinPrefix,1,auth,screenLock,Incorrect PIN —,गलत PIN —,https://os.babinrentals.com/screenshots/auth/screenLock.png,OK,,S11 approved wording
+auth.screenLock.lockedUntil,1,auth,screenLock,Locked until {time},{time} सम्म लक गरिएको,https://os.babinrentals.com/screenshots/auth/screenLock.png,OK,,S11 approved wording
+auth.screenLock.pinLockedUntilPrefix,1,auth,screenLock,PIN locked until,PIN लक गरिएको छ:,https://os.babinrentals.com/screenshots/auth/screenLock.png,OK,,S11 approved wording
+auth.screenLock.signInWithPassword,1,auth,screenLock,Sign in with your password.,आफ्नो पासवर्डबाट साइन इन गर्नुहोस्।,https://os.babinrentals.com/screenshots/auth/screenLock.png,OK,,S11 approved wording
+auth.screenLock.signOutInstead,1,auth,screenLock,Sign out instead,साइन आउट गर्नुहोस्,https://os.babinrentals.com/screenshots/auth/screenLock.png,OK,,S11 approved wording
+auth.screenLock.switchAccount,1,auth,screenLock,Sign in with another account,अर्को खाताबाट साइन इन गर्नुहोस्,https://os.babinrentals.com/screenshots/auth/screenLock.png,OK,,S11 approved wording
+auth.screenLock.tapYourName,1,auth,screenLock,Tap your name to unlock your session,आफ्नो सत्र अनलक गर्न आफ्नो नाममा ट्याप गर्नुहोस्,https://os.babinrentals.com/screenshots/auth/screenLock.png,OK,,S11 approved wording
+auth.screenLock.title,1,auth,screenLock,Session Locked,सत्र बन्द गरिएको छ,https://os.babinrentals.com/screenshots/auth/screenLock.png,OK,,S11 approved wording
+auth.screenLock.whoIsWorking,1,auth,screenLock,Who is working?,को काम गर्दै हुनुहुन्छ?,https://os.babinrentals.com/screenshots/auth/screenLock.png,OK,,S11 approved wording
+auth.signInError,1,auth,auth,Could not sign in,साइन इन गर्न सकिएन,https://os.babinrentals.com/screenshots/auth/auth.png,OK,,S11 approved wording
+auth.submit,1,auth,auth,Sign In,साइन इन गर्नुहोस्,https://os.babinrentals.com/screenshots/auth/auth.png,OK,,S11 approved wording
+auth.submitting,1,auth,auth,Signing in...,साइन इन हुँदैछ...,https://os.babinrentals.com/screenshots/auth/auth.png,OK,,S11 approved wording
+auth.title,1,auth,auth,Sign In,साइन इन गर्नुहोस्,https://os.babinrentals.com/screenshots/auth/auth.png,OK,,S11 approved wording
+auth.welcomeSubtitle,1,auth,auth,Sign in with your work email to continue.,जारी राख्न आफ्नो कार्य ईमेलबाट साइन इन गर्नुहोस्।,https://os.babinrentals.com/screenshots/auth/auth.png,OK,,S11 approved wording
+auth.welcomeTitle,1,auth,auth,Welcome to Babin Rentals,बबिन रेन्टल्समा स्वागत छ,https://os.babinrentals.com/screenshots/auth/auth.png,OK,,S11 approved wording
+action.apply,1,core,action,Apply,लागू गर्नुहोस्,https://os.babinrentals.com/screenshots/core/action.png,OK,,S11 approved wording
+action.back,1,core,action,Back,पछाडि,https://os.babinrentals.com/screenshots/core/action.png,OK,,S11 approved wording
+action.cancel,1,core,action,Cancel,रद्द गर्नुहोस्,https://os.babinrentals.com/screenshots/core/action.png,OK,,S11 approved wording
+action.close,1,core,action,Close,बन्द गर्नुहोस्,https://os.babinrentals.com/screenshots/core/action.png,OK,,S11 approved wording
+action.confirm,1,core,action,Confirm,पुष्टि गर्नुहोस्,https://os.babinrentals.com/screenshots/core/action.png,OK,,S11 approved wording
+action.delete,1,core,action,Delete,मेटाउनुहोस्,https://os.babinrentals.com/screenshots/core/action.png,OK,,S11 approved wording
+action.edit,1,core,action,Edit,सम्पादन गर्नुहोस्,https://os.babinrentals.com/screenshots/core/action.png,OK,,S11 approved wording
+action.filter,1,core,action,Filter,फिल्टर,https://os.babinrentals.com/screenshots/core/action.png,OK,,S11 approved wording
+action.reset,1,core,action,Reset,रिसेट गर्नुहोस्,https://os.babinrentals.com/screenshots/core/action.png,OK,,S11 approved wording
+action.retry,1,core,action,Retry,पुनः प्रयास गर्नुहोस्,https://os.babinrentals.com/screenshots/core/action.png,OK,,S11 approved wording
+action.save,1,core,action,Save,सुरक्षित गर्नुहोस्,https://os.babinrentals.com/screenshots/core/action.png,OK,,S11 approved wording
+action.search,1,core,action,Search,खोज्नुहोस्,https://os.babinrentals.com/screenshots/core/action.png,OK,,S11 approved wording
+nav.calendar,1,core,nav,Calendar,पात्रो,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+nav.clients,1,core,nav,Clients,ग्राहक,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+nav.crewAssist,1,core,nav,Crew Assist,क्रु सहायता,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+nav.finance,1,core,nav,Finance,वित्त,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+nav.inventory,1,core,nav,Inventory,मौज्दात,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+nav.more,1,core,nav,More,थप,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+nav.newRental,1,core,nav,New Rental,नयाँ भाडा,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+nav.operations,1,core,nav,Operations,सञ्चालन,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+nav.rentals,1,core,nav,Rentals,भाडा,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+nav.scan,1,core,nav,Scan,स्क्यान,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+nav.scanAria,1,core,nav,Scan equipment,उपकरण स्क्यान गर्नुहोस्,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+nav.settings,1,core,nav,Settings,सेटिङ,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+nav.today,1,core,nav,Today,आज,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+nav.tools,1,core,nav,Tools,औजार,https://os.babinrentals.com/screenshots/core/nav.png,OK,,S11 approved wording
+scanner.cameraStart,1,core,scanner,Start Camera,क्यामेरा सुरु गर्नुहोस्,https://os.babinrentals.com/screenshots/core/scanner.png,OK,,S11 approved wording
+scanner.cameraStop,1,core,scanner,Stop Camera,क्यामेरा बन्द गर्नुहोस्,https://os.babinrentals.com/screenshots/core/scanner.png,OK,,S11 approved wording
+scanner.close,1,core,scanner,Close,बन्द गर्नुहोस्,https://os.babinrentals.com/screenshots/core/scanner.png,OK,,S11 approved wording
+scanner.context.handover,1,core,context,Handover,हस्तान्तरण,https://os.babinrentals.com/screenshots/core/context.png,OK,,S11 approved wording
+scanner.context.handoverHint,1,core,context,Confirm what physically leaves,भौतिक रूपमा के बाहिर जान्छ पुष्टि गर्नुहोस्,https://os.babinrentals.com/screenshots/core/context.png,OK,,S11 approved wording
+scanner.context.lookup,1,core,context,Lookup,खोज,https://os.babinrentals.com/screenshots/core/context.png,OK,,S11 approved wording
+scanner.context.lookupHint,1,core,context,Find any item by code,कोडद्वारा कुनै पनि सामान खोज्नुहोस्,https://os.babinrentals.com/screenshots/core/context.png,OK,,S11 approved wording
+scanner.context.pack,1,core,context,Packing,प्याकिङ,https://os.babinrentals.com/screenshots/core/context.png,OK,,S11 approved wording
+scanner.context.packHint,1,core,context,Tick items against the packing list,प्याकिङ सूचीअनुसार सामान चिन्ह लगाउनुहोस्,https://os.babinrentals.com/screenshots/core/context.png,OK,,S11 approved wording
+scanner.context.reset,1,core,context,Reset,पुनः तयार,https://os.babinrentals.com/screenshots/core/context.png,OK,,S11 approved wording
+scanner.context.resetHint,1,core,context,Clear items back to Available,सामानहरू पुनः उपलब्ध स्थितिमा ल्याउनुहोस्,https://os.babinrentals.com/screenshots/core/context.png,OK,,S11 approved wording
+scanner.context.return,1,core,context,Return,फिर्ता,https://os.babinrentals.com/screenshots/core/context.png,OK,,S11 approved wording
+scanner.context.returnHint,1,core,context,Receive and count items back,सामान फिर्ता लिई गणना गर्नुहोस्,https://os.babinrentals.com/screenshots/core/context.png,OK,,S11 approved wording
+scanner.context.stock,1,core,context,Stock Check,मौज्दात जाँच,https://os.babinrentals.com/screenshots/core/context.png,OK,,S11 approved wording
+scanner.context.stockHint,1,core,context,Verify shelf against record,रेकर्डअनुसार सामान प्रमाणित गर्नुहोस्,https://os.babinrentals.com/screenshots/core/context.png,OK,,S11 approved wording
+scanner.continuous,1,core,scanner,Continuous,निरन्तर,https://os.babinrentals.com/screenshots/core/scanner.png,OK,,S11 approved wording
+scanner.scanEquipment,1,core,scanner,Scan equipment,उपकरण स्क्यान गर्नुहोस्,https://os.babinrentals.com/screenshots/core/scanner.png,OK,,S11 approved wording
+scanner.scanOrType,1,core,scanner,Scan barcode or enter code,बारकोड स्क्यान वा कोड प्रविष्ट गर्नुहोस्,https://os.babinrentals.com/screenshots/core/scanner.png,OK,,S11 approved wording
+scanner.title,1,core,scanner,Scanner,स्क्यानर,https://os.babinrentals.com/screenshots/core/scanner.png,OK,,S11 approved wording
+status.booked,1,core,status,Booked,बुक भएको,https://os.babinrentals.com/screenshots/core/status.png,OK,,S11 approved wording
+status.cancelled,1,core,status,Cancelled,रद्द,https://os.babinrentals.com/screenshots/core/status.png,OK,,S11 approved wording
+status.completed,1,core,status,Completed,सम्पन्न,https://os.babinrentals.com/screenshots/core/status.png,OK,,S11 approved wording
+status.confirmed,1,core,status,Confirmed,पक्का भयो,https://os.babinrentals.com/screenshots/core/status.png,OK,,S11 approved wording
+status.draft,1,core,status,Draft,मस्यौदा,https://os.babinrentals.com/screenshots/core/status.png,OK,,S11 approved wording
+status.onRent,1,core,status,On Rent,भाडामा,https://os.babinrentals.com/screenshots/core/status.png,OK,,S11 approved wording
+status.overdue,1,core,status,Overdue,म्याद नाघेको,https://os.babinrentals.com/screenshots/core/status.png,OK,,S11 approved wording
+status.quote,1,core,status,Quote,कोटेसन,https://os.babinrentals.com/screenshots/core/status.png,OK,,S11 approved wording
+status.returned,1,core,status,Returned,फिर्ता भयो,https://os.babinrentals.com/screenshots/core/status.png,OK,,S11 approved wording
+operations.action.back,1,operations,action,Back to Queue,पङ्क्तिमा फर्कनुहोस्,https://os.babinrentals.com/screenshots/operations/action.png,OK,,S11 approved wording
+operations.action.completePacking,1,operations,action,Mark Packed,प्याक भएको जनाउनुहोस्,https://os.babinrentals.com/screenshots/operations/action.png,OK,,S11 approved wording
+operations.action.completeReset,1,operations,action,Complete Reset,पुनः तयार सम्पन्न गर्नुहोस्,https://os.babinrentals.com/screenshots/operations/action.png,OK,,S11 approved wording
+operations.action.handOver,1,operations,action,Hand Over Gear,सामान हस्तान्तरण गर्नुहोस्,https://os.babinrentals.com/screenshots/operations/action.png,OK,,S11 approved wording
+operations.action.receiveReturn,1,operations,action,Receive Return,फिर्ता लिनुहोस्,https://os.babinrentals.com/screenshots/operations/action.png,OK,,S11 approved wording
+operations.action.scan,1,operations,action,Scan Item,उपकरण स्क्यान गर्नुहोस्,https://os.babinrentals.com/screenshots/operations/action.png,OK,,S11 approved wording
+operations.action.startPacking,1,operations,action,Start Packing,प्याकिङ सुरु गर्नुहोस्,https://os.babinrentals.com/screenshots/operations/action.png,OK,,S11 approved wording
+operations.blocker.held,1,operations,blocker,Held Booking,रोकिएको बुकिङ,https://os.babinrentals.com/screenshots/operations/blocker.png,OK,,S11 approved wording
+operations.blocker.payment,1,operations,blocker,Deposit or payment pending,धरौटी वा भुक्तानी बाँकी,https://os.babinrentals.com/screenshots/operations/blocker.png,OK,,S11 approved wording
+operations.col.action,1,operations,col,Action,कार्य,https://os.babinrentals.com/screenshots/operations/col.png,OK,,S11 approved wording
+operations.col.booking,1,operations,col,Booking,बुकिङ,https://os.babinrentals.com/screenshots/operations/col.png,OK,,S11 approved wording
+operations.col.client,1,operations,col,Client,ग्राहक,https://os.babinrentals.com/screenshots/operations/col.png,OK,,S11 approved wording
+operations.col.due,1,operations,col,Due Time,तोकिएको समय,https://os.babinrentals.com/screenshots/operations/col.png,OK,,S11 approved wording
+operations.col.items,1,operations,col,Items,सामानहरू,https://os.babinrentals.com/screenshots/operations/col.png,OK,,S11 approved wording
+operations.col.project,1,operations,col,Project,परियोजना,https://os.babinrentals.com/screenshots/operations/col.png,OK,,S11 approved wording
+operations.col.status,1,operations,col,Stage,चरण,https://os.babinrentals.com/screenshots/operations/col.png,OK,,S11 approved wording
+operations.driver.babinDelivery,1,operations,driver,Babin Delivery,बबिनबाट ढुवानी,https://os.babinrentals.com/screenshots/operations/driver.png,OK,,S11 approved wording
+operations.driver.clientPickup,1,operations,driver,Client Pickup,ग्राहक आफैं लिने,https://os.babinrentals.com/screenshots/operations/driver.png,OK,,S11 approved wording
+operations.driver.courier,1,operations,driver,Courier,कुरियर,https://os.babinrentals.com/screenshots/operations/driver.png,OK,,S11 approved wording
+operations.driver.thirdParty,1,operations,driver,Third Party,तेस्रो पक्ष,https://os.babinrentals.com/screenshots/operations/driver.png,OK,,S11 approved wording
+operations.driver.title,1,operations,driver,Delivery & Dispatch,ढुवानी र पठाइएको,https://os.babinrentals.com/screenshots/operations/driver.png,OK,,S11 approved wording
+operations.emptyQueue,1,operations,operations,No bookings currently in this queue,यस पङ्क्तिमा हाल कुनै बुकिङ छैन,https://os.babinrentals.com/screenshots/operations/operations.png,OK,,S11 approved wording
+operations.job.handoverTitle,1,operations,job,Equipment Handover,उपकरण हस्तान्तरण,https://os.babinrentals.com/screenshots/operations/job.png,OK,,S11 approved wording
+operations.job.packTitle,1,operations,job,Packing Checklist,प्याकिङ जाँचसूची,https://os.babinrentals.com/screenshots/operations/job.png,OK,,S11 approved wording
+operations.job.resetTitle,1,operations,job,Cleaning & Reset,सफाइ र पुनः तयार,https://os.babinrentals.com/screenshots/operations/job.png,OK,,S11 approved wording
+operations.job.returnTitle,1,operations,job,Return & Inspection,फिर्ता र जाँच,https://os.babinrentals.com/screenshots/operations/job.png,OK,,S11 approved wording
+operations.jobsCount,1,operations,operations,{count} jobs,{count} कामहरू,https://os.babinrentals.com/screenshots/operations/operations.png,OK,,S11 approved wording
+operations.queue.cases,1,operations,queue,Cases,केसहरू,https://os.babinrentals.com/screenshots/operations/queue.png,OK,,S11 approved wording
+operations.queue.handover,1,operations,queue,Handover,हस्तान्तरण,https://os.babinrentals.com/screenshots/operations/queue.png,OK,,S11 approved wording
+operations.queue.pack,1,operations,queue,Packing,प्याकिङ,https://os.babinrentals.com/screenshots/operations/queue.png,OK,,S11 approved wording
+operations.queue.reset,1,operations,queue,Reset,पुनः तयार,https://os.babinrentals.com/screenshots/operations/queue.png,OK,,S11 approved wording
+operations.queue.return,1,operations,queue,Returns,फिर्ता,https://os.babinrentals.com/screenshots/operations/queue.png,OK,,S11 approved wording
+operations.sticky.allScanned,1,operations,sticky,All items verified,सबै सामान प्रमाणित भयो,https://os.babinrentals.com/screenshots/operations/sticky.png,OK,,S11 approved wording
+operations.sticky.itemsRemaining,1,operations,sticky,{count} items remaining,{count} सामान बाँकी,https://os.babinrentals.com/screenshots/operations/sticky.png,OK,,S11 approved wording
+operations.sticky.packed,1,operations,sticky,Packed,प्याक भयो,https://os.babinrentals.com/screenshots/operations/sticky.png,OK,,S11 approved wording
+operations.subtitle,1,operations,operations,"Daily turnaround workflows: packing, inspection, dispatch, and check-in.","दैनिक कार्यप्रवाह: प्याकिङ, जाँच, ढुवानी र फिर्ता जाँच।",https://os.babinrentals.com/screenshots/operations/operations.png,OK,,S11 approved wording
+operations.title,1,operations,operations,Operations,सञ्चालन,https://os.babinrentals.com/screenshots/operations/operations.png,OK,,S11 approved wording
+today.action.handover,1,today,action,Handover,हस्तान्तरण गर्नुहोस्,https://os.babinrentals.com/screenshots/today/action.png,OK,,S11 approved wording
+today.action.pack,1,today,action,Pack,प्याक गर्नुहोस्,https://os.babinrentals.com/screenshots/today/action.png,OK,,S11 approved wording
+today.action.receive,1,today,action,Receive Return,फिर्ता लिनुहोस्,https://os.babinrentals.com/screenshots/today/action.png,OK,,S11 approved wording
+today.action.scan,1,today,action,Scan,स्क्यान गर्नुहोस्,https://os.babinrentals.com/screenshots/today/action.png,OK,,S11 approved wording
+today.action.viewAll,1,today,action,View All,सबै हेर्नुहोस्,https://os.babinrentals.com/screenshots/today/action.png,OK,,S11 approved wording
+today.alerts.title,1,today,alerts,Alerts & Discrepancies,सचेतना र कैफियत,https://os.babinrentals.com/screenshots/today/alerts.png,OK,,S11 approved wording
+today.cockpit.attentionRequired,1,today,cockpit,Attention Required,ध्यान दिनुपर्ने,https://os.babinrentals.com/screenshots/today/cockpit.png,OK,,S11 approved wording
+today.cockpit.attentionSubtitle,1,today,cockpit,Overdue returns or discrepancies,म्याद नाघेको फिर्ता वा कैफियत,https://os.babinrentals.com/screenshots/today/cockpit.png,OK,,S11 approved wording
+today.cockpit.dueReturns,1,today,cockpit,Due Returns,फिर्ता हुनुपर्ने,https://os.babinrentals.com/screenshots/today/cockpit.png,OK,,S11 approved wording
+today.cockpit.dueReturnsSubtitle,1,today,cockpit,Equipment expected back,फिर्ता आउने अपेक्षित उपकरण,https://os.babinrentals.com/screenshots/today/cockpit.png,OK,,S11 approved wording
+today.cockpit.outToday,1,today,cockpit,Out Today,आज जाने,https://os.babinrentals.com/screenshots/today/cockpit.png,OK,,S11 approved wording
+today.cockpit.outTodaySubtitle,1,today,cockpit,Equipment leaving warehouse,गोदामबाट निस्कने उपकरण,https://os.babinrentals.com/screenshots/today/cockpit.png,OK,,S11 approved wording
+today.cockpit.quotesWaiting,1,today,cockpit,Quotes Waiting,प्रतीक्षारत कोटेसनहरू,https://os.babinrentals.com/screenshots/today/cockpit.png,OK,,S11 approved wording
+today.cockpit.quotesWaitingSubtitle,1,today,cockpit,Pending client approval or advance,ग्राहक स्वीकृति वा पेश्की बाँकी,https://os.babinrentals.com/screenshots/today/cockpit.png,OK,,S11 approved wording
+today.period.next7Days,1,today,period,Next 7 Days,आगामी 7 दिन,https://os.babinrentals.com/screenshots/today/period.png,OK,,S11 approved wording · R-21: Latin numbers/currency stay Latin
+today.period.today,1,today,period,Today,आज,https://os.babinrentals.com/screenshots/today/period.png,OK,,S11 approved wording
+today.period.tomorrow,1,today,period,Tomorrow,भोलि,https://os.babinrentals.com/screenshots/today/period.png,OK,,S11 approved wording
+today.pickups.empty,1,today,pickups,No pickups scheduled for this period,यस अवधिको लागि कुनै सामान लिने तालिका छैन,https://os.babinrentals.com/screenshots/today/pickups.png,OK,,S11 approved wording
+today.pickups.title,1,today,pickups,Pickups & Dispatches,सामान लिने र ढुवानी,https://os.babinrentals.com/screenshots/today/pickups.png,OK,,S11 approved wording
+today.returns.empty,1,today,returns,No returns scheduled for this period,यस अवधिको लागि कुनै फिर्ता तालिका छैन,https://os.babinrentals.com/screenshots/today/returns.png,OK,,S11 approved wording
+today.returns.title,1,today,returns,Returns & Inbounds,फिर्ता र आगमन,https://os.babinrentals.com/screenshots/today/returns.png,OK,,S11 approved wording
+today.shiftHandover.title,1,today,shiftHandover,Shift Handover,सिफ्ट हस्तान्तरण,https://os.babinrentals.com/screenshots/today/shiftHandover.png,OK,,S11 approved wording
+today.subtitle,1,today,today,"Prepare pickups, receive returns, and keep equipment moving.","सामान लिने तयारी गर्नुहोस्, फिर्ता लिनुहोस् र उपकरण चालु राख्नुहोस्।",https://os.babinrentals.com/screenshots/today/today.png,OK,,S11 approved wording
+today.timeline.title,1,today,timeline,Daily Movement Timeline,दैनिक चलखेल समयतालिका,https://os.babinrentals.com/screenshots/today/timeline.png,OK,,S11 approved wording
+today.title,1,today,today,Today,आज,https://os.babinrentals.com/screenshots/today/today.png,OK,,S11 approved wording

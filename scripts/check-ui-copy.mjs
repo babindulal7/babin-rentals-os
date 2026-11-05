@@ -5,10 +5,41 @@ import ts from 'typescript'
 const forbidden = /§|\bLaw\s+\d+|\blib\/|TODO|⭐|query module|\bschema\b|\b(?:booking_lines|booking_transport|booking_stage_transitions|document_registry|security_deposits|deposit_movements)\b/i
 const copyKeys = /^(title|description|reason|message|label|hint|note|tooltip|subtitle|emptyMessage|emptyTitle)$/
 
+export const CONVERTED_MODULES = [
+  'src/modules/tools/LateFeeCalculator.tsx',
+  'src/components/shell/BottomBar.tsx',
+  'src/modules/auth/AuthCard.tsx',
+  'src/modules/auth/Login.tsx',
+  'src/modules/auth/ScreenLock.tsx',
+  'src/modules/operations/RentalOperationShell.tsx',
+]
+
+export function isConverted(file) {
+  const norm = file.replace(/\\/g, '/')
+  return CONVERTED_MODULES.some(m => norm.endsWith(m) || norm.includes(m))
+}
+
 export function copyViolations(file, source) {
   const tree = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
   const found = []
+  const converted = isConverted(file)
+
   function visit(node) {
+    if (converted && ts.isJsxText(node)) {
+      const trimmed = node.text.trim()
+      // Reject raw English words in converted screens/modules (allow layout punctuation/separators)
+      if (/[a-zA-Z]{2,}/.test(trimmed)) {
+        found.push({
+          file,
+          line: tree.getLineAndCharacterOfPosition(node.getStart(tree)).line + 1,
+          start: node.getStart(tree),
+          end: node.end,
+          kind: 'raw-jsx-text',
+          text: `[i18n] Raw JSX text in converted module: "${trimmed}". Move to i18n catalogue.`
+        })
+      }
+    }
+
     const literal = ts.isStringLiteralLike(node) || ts.isJsxText(node) || node.kind === ts.SyntaxKind.TemplateHead || node.kind === ts.SyntaxKind.TemplateMiddle || node.kind === ts.SyntaxKind.TemplateTail
     if (literal && forbidden.test(node.text)) {
       let parent = node.parent

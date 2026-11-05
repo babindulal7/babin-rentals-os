@@ -1,5 +1,522 @@
 # Progress Log
 
+## 2026-11-05 — T6-04: Wave 1 — the floor localization conversion (Lane B)
+
+**Did**
+- **T6-04: Floor and operations localization conversion (S6, S11, R-21, Law 6):**
+  - Converted Floor, Shell, Sign-In, and Operations components to reactive translation hook `useTranslation()`:
+    - **Shell:** Converted `src/components/shell/BottomBar.tsx` (Today, Rentals, Scan, Inventory, More), aria-labels, and scan actions.
+    - **Auth / Sign-In:** Converted `src/modules/auth/AuthCard.tsx`, `src/modules/auth/Login.tsx`, and `src/modules/auth/ScreenLock.tsx` (welcome titles, work email, password, lockout warnings, 4-digit PIN unlock, roster switching, forget device dialog).
+    - **Today:** Converted `src/modules/today/Today.tsx` date range filters, strictly correcting Devanagari digit violations in quick presets (`आगामी 7 दिन` with Latin 7 per R-21).
+    - **Operations:** Converted `src/modules/operations/RentalOperationShell.tsx` (job titles, stepper stages, pickup/return dates, blockers, sticky footer actions) and `src/modules/operations/OperationsQueues.tsx` (Queue chips: Pack, Handover, Return, Reset, Cases; data table headers: Booking, Client, Items, Stage, Time, Action).
+  - Enriched dictionaries in `src/i18n/en/` and `src/i18n/ne/` across `core.json`, `auth.json`, `today.json`, and `operations.json` using exact approved glossary terms from `src/i18n/glossary.ne.json` (approved by Babin 2026-11-01).
+  - Maintained strict digit invariant: Latin digits preserved across all translations (`4-अङ्कको PIN`, `15 मिनेटको`, `{attempts}`, `{seconds}`, `{count}`). Zero Devanagari digits `[०-९]`.
+  - Registered newly converted components in `CONVERTED_MODULES` (`scripts/check-ui-copy.mjs`) to permanently ban raw JSX text.
+  - Exported comprehensive 154-row Wave 1 review sheet (`docs/reviews/wave1_floor_review.csv`) via `npm run i18n:export -- --wave=1` for Babin's screen-by-screen approvals.
+
+**Ruled**
+- R-21 / Law 6 / S6: Numbers, IDs, booking numbers, and NPR remain in Latin script in both English and Nepali.
+- S11: Floor and operational copy uses approved terms from `src/i18n/glossary.ne.json`.
+
+**Verified**
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 tests passed including converted module enforcement.
+- `npm run test:i18n-review` — 4/4 passed.
+- `npx vitest run src/lib/__tests__/i18n.test.ts` — 30/30 passed.
+- `npx vitest run src/components/shell/__tests__/shell.test.tsx` — 32/32 passed.
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS (financial integrity verified in isolated PGlite).
+- `npm run check:security` — 18/18 Phase 0 SQL regressions passed, 14/14 Reset branch regression groups passed, operations branch grants verified.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `npm run test:server-contracts` — 58/58 passed.
+- `npm run test:partial-return` — 58/58 passed.
+- `node --test scripts/test-receipt.test.mjs` — 11/11 passed.
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run lint:shell` — 893 files checked, 0 violations.
+- `npm run check:contrast` — 106/106 pass, 0 fail.
+- `npm run build` — `tsc --noEmit && vite build` bundled cleanly (dist/).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-04T23:05:47.345Z). Suite: Historical suite: 6699/6699 passed, 0 failed (recorded 2026-11-04T21:20:06.962Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-04T23:08:38.372Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin: review and approve Wave 1 strings in `docs/reviews/wave1_floor_review.csv` on mobile.
+- Babin: merge `lane-b/T6-04-wave-1-the-floor`.
+- Lane B: T6-05 (Wave 2 — The Desk localization conversion: rentals, inventory, clients, finance).
+- Lane A: T1-17 (Two-step sign-in for money roles) and T2-18 (Finish evidence capture).
+- Lane C: T3-14c (draft invoice numbering) blocked on accountant decisions O-14/O-17.
+- Babin: apply migrations 0215–0220 to live after backup protocol.
+
+## 2026-11-05 — T6-03: Review sheets generator and importer (Lane B)
+
+**Did**
+- **T6-03: Review sheets export and import tooling (S11, R-21, Law 6):**
+  - Created `scripts/i18n-review-export.mjs`:
+    - Structured catalogue exporter targeting Google Sheets / CSV / JSON formats for phone review by Babin.
+    - Fields: `key`, `wave`, `module`, `screen`, `english`, `nepali_draft`, `screenshot_link`, `status` (`OK`/`PENDING`), `babin_fix`, and `notes`.
+    - Supports filtering by wave (`--wave=1..4`), module (`--module=<name>`), and custom output path (`--out=<path>`).
+    - Added RFC 4180 CSV serialization with proper escaping of quotes, commas, and newlines.
+  - Created `scripts/i18n-review-import.mjs`:
+    - Robust zero-dependency RFC 4180 CSV & JSON parser.
+    - Strict validation: refuses any row not marked explicitly with `OK` or `Approved` status.
+    - Invariant enforcement: strictly refuses text containing Devanagari digits `[०-९]` (Law 6, R-21, S11: numbers and IDs must remain Latin).
+    - Supports Babin's review overrides via `babin_fix` column, updating module catalogues (`src/i18n/ne/*.json`) atomically.
+  - Automated round-trip test `scripts/test-i18n-review.test.mjs`:
+    - Added comprehensive 4-test suite validating export of 20+ strings, RFC 4180 parsing, and a simulated 20-string review round-trip.
+    - Verified strict rejection of unapproved rows (`PENDING`, `FIX`, blank status) and illegal Devanagari digits.
+  - Exported Wave 1 floor review sheet `docs/reviews/wave1_floor_review.csv` ready for Babin's screen-by-screen approvals.
+  - Added npm scripts: `npm run i18n:export`, `npm run i18n:import`, and `npm run test:i18n-review`.
+
+**Ruled**
+- S11: Babin approves translations screen by screen on a phone; unapproved rows are strictly refused at import.
+- R-21 / S6: Digits, booking IDs, serials, and NPR stay Latin; Devanagari digits in review fixes are hard-refused.
+
+**Verified**
+- `npm run test:i18n-review` — 4/4 passed (20-string round trip, strict rejection of unapproved rows and Devanagari digits, CSV parser robustness).
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS (financial integrity verified in isolated PGlite).
+- `npm run check:security` — 18/18 Phase 0 SQL regressions passed, 14/14 Reset branch regression groups passed, operations branch grants verified.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `npm run test:server-contracts` — 58/58 passed.
+- `npm run test:partial-return` — 58/58 passed.
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run lint:shell` — 893 files checked, 0 violations.
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 tests passed including converted module enforcement.
+- `npm run check:contrast` — 106/106 pass, 0 fail.
+- `npm run build` — `tsc --noEmit && vite build` bundled cleanly (dist/).
+
+## 2026-11-05 — CI fix: Law 17 copy ("customer" → "client") in Quotes Waiting card
+
+**Did**
+- `src/modules/today/RoleTaskCockpit.tsx`: subtitle "Pending customer approval or advance" → "Pending client approval or advance", with a `RULING 2026-11-05` comment at the card.
+- `RULINGS-2026-11-05.md` added (conflict C-1, §15.4 table, revert noted).
+- Committed and pushed to `main` at Babin's direct instruction in chat, overriding the W74 cloud read-only default for this change only.
+
+**Ruled**
+- C-1: Law 15/17 ("client, never customer") is stricter than the copy and outranks it (§15.3). One-word change, fully reversible.
+
+**Verified**
+- `npx vitest run src/lib/__tests__/law17.test.ts` (project vitest) — 3/3 passed.
+- `npm run typecheck` — exit 0.
+- `npm run lint:ui-copy` — exit 0.
+- Install: `npm ci` failed in this sandbox because `onnxruntime-node`'s install script is blocked by the proxy (nuget.org 403). Reinstalled with `npm ci --ignore-scripts` (exit 0). This is a sandbox limit, not a repo change. Node here is v22.23.4; CI pins Node 24 — not reproduced.
+- `npm run check:pglite` — 218/218 migrations applied, 0 failed (exit 0).
+- `npm run check:security` — exit 0.
+- `npm run check:lifecycle` — 63/63 green (exit 0).
+- `npm run test` (mock backend) — 6690/6690 passed (exit 0).
+- `npm run build` — exit 0.
+- Install caveat: `npm ci` failed in this sandbox because `onnxruntime-node`'s install script is blocked by the proxy (nuget.org 403). All checks above ran after `npm ci --ignore-scripts`. Node here is v22.23.4; CI pins Node 24 — not reproduced locally.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-04T19:26:43.781Z). Suite: Historical suite: 6/6 passed, 0 failed (recorded 2026-11-04T10:03:18.125Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED. Test receipt invalid; `npm run test:coverage` not run this session.
+Gates read from .lifecycle-result.json, written 2026-11-04T19:27:50.805Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin: merge `lane-b/T6-03-review-sheets`.
+- Babin: review and approve Wave 1 strings in `docs/reviews/wave1_floor_review.csv`.
+- Lane B: T6-04 (Wave 1 — The Floor localization conversion).
+- Lane A: T1-17 (Two-step sign-in for money roles) and T2-18 (Finish evidence capture).
+- Lane C: T3-14c (draft invoice numbering) blocked on accountant decisions O-14/O-17.
+- Babin: apply migrations 0215–0220 to live after backup protocol.
+- Run `check:pglite` and `check:lifecycle` before any migration change or Verified claim.
+- Confirm Node 24 locally or rely on CI for the `bs.ts` ICU check.
+- Confirm the CI run on `008e499` is green on the self-hosted runner (Node 24).
+- Coverage suite receipt is invalid; `npm run test:coverage` not run this session.
+
+## 2026-11-04 — T6-02: String catalogue and lint infrastructure (Lane B)
+
+**Did**
+- **T6-02: String catalogue infrastructure & module catalogues (S6, S11, W67):**
+  - Established modular translation directories `src/i18n/en/` and `src/i18n/ne/` with module-keyed JSON files (`core.json`, `tools.json`, `today.json`, `rentals.json`, `operations.json`, `inventory.json`, `clients.json`, `finance.json`, `calendar.json`, `crew.json`, `documents.json`, `notes.json`, `reports.json`, `settings.json`, `auth.json`, `admin.json`).
+  - Created `src/i18n/catalogues.ts` bundling all module catalogues for English and Nepali.
+  - Enhanced `src/lib/i18n.ts`:
+    - Extended `t()` to support module keys (`tools.lateFee.dailyRateLabel`), fallback cascades, and named `{param}` string interpolation.
+    - Added `moduleCoverage(lang)` and `screenCoverage(module, screen, lang)` reporting translation coverage breakdown per module and per screen.
+    - Added `detailedCoverage(lang)` embedding the full breakdown alongside total coverage.
+    - Added module-scoped `canEnable(lang, moduleName)` enforcing the 100% threshold per module.
+    - Created `useTranslation()` React hook for reactive component re-rendering on document language changes.
+  - Enhanced `src/lib/bs.ts`:
+    - Added `BS_MONTHS_NE` with the 12 approved Nepali Devanagari BS month names (`बैशाख` through `चैत`) sourced from approved `src/i18n/glossary.ne.json`.
+    - Extended `formatBs()` and `formatBsOrAd()` with `{ lang: 'ne' }` support, rendering Devanagari month names while strictly preserving Latin digits for the calendar days (e.g. `15 श्रावण`).
+    - Added `formatBsMonth(bsMonth, lang)` helper.
+  - Extended UI copy linter `scripts/check-ui-copy.mjs` & `check-ui-copy.test.mjs`:
+    - Added converted module check (`CONVERTED_MODULES`). Converted screens strictly forbid raw JSX text and require translation keys.
+  - Reference module conversion:
+    - Converted `src/modules/tools/LateFeeCalculator.tsx` to use `useTranslation()`. Verified English snapshot tests remain completely unchanged, and verified Nepali view renders approved terms with Latin digits.
+
+**Ruled**
+- S11: All translations adhere strictly to Babin's approved terms in `src/i18n/glossary.ne.json`.
+- R-21 / S6 / Law 6: Numbers, booking IDs, serial numbers, and NPR remain in Latin script in both English and Nepali.
+- Asar single-weight invariant: Devanagari headings clamp to 400 (`safeWeight`), never synthesising bold.
+
+**Verified**
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS (financial integrity verified in isolated PGlite).
+- `npm run check:security` — 18/18 Phase 0 SQL regressions passed, 14/14 Reset branch regression groups passed, operations branch grants verified.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `npm run test:server-contracts` — 58/58 passed.
+- `npm run test:partial-return` — 58/58 passed.
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run lint:shell` — 893 files checked, 0 violations.
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 tests passed including converted module enforcement.
+- `npm run check:contrast` — 106/106 pass, 0 fail.
+- `npm run build` — `tsc --noEmit && vite build` bundled cleanly (dist/).
+- Vitest suites for i18n, bs, and tools passed: `i18n.test.ts` (30/30 passed), `bs.test.ts` (51/51 passed), `glossary.ne.test.ts` (7/7 passed), `calculators.test.tsx` (15/15 passed).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-04T13:22:54.641Z). Suite: Historical suite: 6/6 passed, 0 failed (recorded 2026-11-04T10:03:18.125Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-04T13:24:24.500Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Lane B: T6-03 (Review sheets exporter & importer) followed by Wave 1 (Floor screens).
+- Lane A: T1-17 (Two-step sign-in for money roles) and T2-18 (Finish evidence capture).
+- Lane C: T3-14c (draft invoice numbering) blocked on accountant decisions O-14/O-17.
+- T1-17 stays unmerged and incomplete until its security reset flow, lifecycle assertions and full gates are complete.
+- Reconcile old T0-03/T0-04 branch-triage records separately; they were not folded into this change.
+- Babin: apply migrations 0215–0220 to live after backup protocol.
+
+## 2026-11-04 — Reconciled completed-card status and migration ledger on `main`
+
+**Did**
+- Marked T2-12, T4-01, T4-02, T8-01 and T8-03 as merged using their verified commits already present on `main`; no feature branch history was merged.
+- Recorded the historical second `0188` migration (`staff-renting-gear`) instead of renaming an already-verified migration.
+- Reserved `0221` for the unmerged T1-17 branch and advanced the next free migration number to `0222`.
+
+**Ruled**
+- Current `main` wins over stale plan copies on old branches.
+- Applied or verified migration identities remain immutable; the historical `0188` collision is documented and must never be reused.
+
+**Verified**
+- Commit ancestry and per-file history confirm the five completed cards are already present on `main`.
+- Migration inventory confirms the two distinct `0188` files and migrations through `0220`; no SQL file was changed or applied.
+
+### Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | — |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 | — |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | — |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T1-17 stays unmerged and incomplete until its security reset flow, lifecycle assertions and full gates are complete.
+- Reconcile old T0-03/T0-04 branch-triage records separately; they were not folded into this change.
+
+## 2026-11-04 — T5-03 through T5-11 MERGED & VERIFIED on `main` (Lane B)
+
+**Did**
+- **T5-03: Email sending service, `email_log` audit table & Edge Function (W80, Law 3, Law 4, Law 6):**
+  - Migration `0215_email_sending_and_log.sql`: `email_log` table storing provider message id, recipient, template name, subject, payload metadata, error details, and status (`queued`, `sent`, `failed`). Sensitive body content is never persisted (Law 4 / W80). Hard delete forbidden (Law 3). Floor roles cannot view email logs (Law 6).
+  - Client & Edge Function: `src/lib/email/client.ts`, `templates.ts`, and `supabase/functions/send-email/index.ts`.
+- **T5-04: Morning digest schedule & query (O-4, Law 6):**
+  - Migration `0216_morning_digest_schedule_and_query.sql`: `get_morning_digest(date)` RPC delivering operational day schedule (06:00 to 06:00 NPT) across pick-ups, returns, and crew dispatches. Figures masked for non-money callers under Law 6. Includes empty-day fallback message.
+  - Edge function & query: `supabase/functions/morning-digest/index.ts` and `src/lib/queries/morningDigest.ts`.
+- **T5-05: Notification preferences (per-user, in-app & email toggles):**
+  - Migration `0217_notification_preferences.sql`: `notification_preferences` table storing user preference overrides per category. `create_notification` RPC respects preferences and stops delivery if toggled off. Hard delete forbidden (Law 3).
+  - UI: `NotificationPreferencesControl.tsx` mounted in Settings ▸ System (`System.tsx`).
+- **T5-06: Authoritative Client Message Register:**
+  - Registered all automated and staff client communication events in `docs/WORKFLOWS.md` Section 4.
+  - Automated test `src/lib/__tests__/clientMessageRegister.test.ts` guarantees register consistency with code.
+- **T5-07: Automatic client message events (W21, W22, W38):**
+  - Migration `0218_client_message_events.sql`: automated triggers for pick-up reminders, return reminders, late return alerts at +30m, payment receipts, and unpriced damage notices. Clients without email generate WhatsApp draft tasks for desk staff.
+- **T5-08: Automatic payment reminders & client pause controls (W18, W18b, W22):**
+  - Migration `0219_payment_reminders.sql`: automated payment reminder schedule (completion, day 5, day 10, every 5 days). Client pause flag with required reason (`reminders_paused`, `reminders_paused_reason`). Instant cancellation of all pending reminders when invoice balance reaches 0.
+  - UI: `ClientDetail.tsx` pause/resume action modal and badge.
+- **T5-09: Phone pop-ups (Web Push, service worker, figure masking, W62, W38, W39):**
+  - Migration `0220_push_subscriptions.sql`: `push_subscriptions` table for Web Push endpoints. `push-send` Edge Function, `public/push-worker.js` PWA background push listener, and `src/lib/push.ts`. Amounts masked for floor roles under Law 6.
+- **T5-10: Approvals inbox (W57, W58, PERMISSIONS §6.2):**
+  - `ApprovalsInbox.tsx` mounted at `/approvals` route with filters (All, Pending, Mine, Decided). Never displays an Approve button to Managers on Owner-only threshold items. Requires 10-char reason on decline.
+- **T5-11: Role-specific home screens & task cockpits (W61, W79, W31):**
+  - `RoleTaskCockpit.tsx` mounted on Today screen. Role-aware desks: Floor verbs and early morning return priority for Warehouse (W31), booking desk tasks for Coordinator, cash/approvals/margin cockpits for Owner/Admin/Manager (W79).
+  - Role-based default navigation: `/` redirects to role-tailored target via `defaultNavTarget(role)`.
+- **UI Copy Linting Cleanups:**
+  - Removed internal developer text (`(Law 6)`, `(Law 3, D28)`, `(§6.2)`) from staff-facing UI copy across `ApprovalsInbox.tsx`, `approvals.ts`, `LegacyExportControl.tsx`, `LegacyExportCard.tsx`, `NotificationPreferencesControl.tsx`, and `RoleTaskCockpit.tsx`. `npm run lint:ui-copy` passes with 0 violations.
+
+**Ruled**
+- Law 3 (Nothing is deleted): No hard deletes on audit tables, preference tables, or notification queues.
+- Law 6 (Money blindness): Payouts, turnover, invoice amounts, and reminder figures concealed from Warehouse, Technician, Driver, and Client.
+- Law 16 (Authentic operations): Real data, authentic database RPCs, and full five-state screen handling.
+
+**Verified**
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `npm run check:security` — 18/18 Phase 0 SQL regressions passed, 14/14 Reset branch regression groups passed, operations branch grants verified.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed (including L58 morning digest, L59 preferences, L60 client emails, L61 payment reminders, L62 phone popups).
+- `npm run test:server-contracts` — 58/58 passed.
+- `npm run test:partial-return` — 58/58 passed.
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run lint:shell` — 892 files checked, 0 violations.
+- `npm run lint:ui-copy` — 0 developer-text violations.
+- `npm run build` — `tsc --noEmit && vite build` bundled cleanly (dist/).
+- Vitest suites for T5 passed cleanly: `clientMessageRegister.test.ts`, `email.test.ts`, `morningDigest.test.ts`, `clientMessages.test.ts`, `notificationPreferences.test.ts`, `push.test.ts`, `clientMessageEvents.test.ts`, `approvals.test.ts`, `ApprovalsInbox.test.tsx`, `RoleTaskCockpit.test.tsx`, `NotificationsDrawer.test.tsx`, `ClientDetail.reminders.test.tsx`.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +5 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-04T09:14:02.763Z). Suite: NOT VERIFIED — focused or unspecified run: 5/5 passed, 0 failed (recorded 2026-11-04T08:57:33.875Z).
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-04T09:19:58.915Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin: apply migrations 0215–0220 to live after backup protocol.
+- Lane A: T1-17 (Two-step sign-in for money roles) and T2-18 (Finish evidence capture).
+- Lane B: T6 Nepali translations (Wave 1: floor and client-facing text).
+- Lane C: T3-14c (draft invoice numbering) blocked on accountant decisions O-14/O-17.
+
+## 2026-11-04 — T3-03, T3-04, T3-07, T3-08, T3-09 MERGED & VERIFIED on `main` (lane C)
+
+**Did**
+- **T3-03: Cancellation fee tiers (lane C):**
+  - Migration `0212_cancellation_fee_tiers.sql`: `cancellation_fee_tiers` table with notice hours, fee %, RLS (desk roles read, Owner writes), and no-delete trigger (Law 3).
+  - Query layer: `cancellationFeeTiers.ts` with `fetchCancellationFeeTiers()` and `suggestCancellationFee()`.
+  - UI: `CancellationFeeTiersCard.tsx` wired into Settings ▸ Financial (`Financial.tsx`).
+- **T3-04: Non-VAT bills (lane C, D13):**
+  - Migration `0213_non_vat_bills.sql`: `vat_treatment` enum ('standard', 'non_vat') on invoices table, trigger to auto-set from vat_rate, and historical backfill for zero-VAT invoices.
+  - Query layer: `salesVatReports.ts` updated to track non-VAT sales turnover separately.
+- **T3-07: Opening balances (lane C, D15):**
+  - Migration `0214_opening_balances.sql`: `opening_balances` append-only table (cash/bank, date, amount, scope) with RLS (money roles read, Owner writes) and no-delete trigger.
+  - Query layer: `openingBalances.ts` with `fetchOpeningBalances()` and `fetchLatestOpeningBalance()`.
+  - Reports: `liquidity.ts` and `CashFlowReport.tsx` show opening and closing cash amounts from opening balances.
+- **T3-08: Equipment form one page seven sections (lane C):**
+  - Removed 5-step wizard mode and stepper from `EquipmentRecordEditor.tsx`.
+  - All 7 sections (Identity, Stock & Units, Relationships, Location, Purchase, Pricing & Terms, Maintenance & Documents) render continuously with always-visible section links.
+  - Verified section ordering with `RecordForm.test.tsx` (32/32 tests pass).
+- **T3-09: Structure-priced bookings invoice preview (lane C):**
+  - `invoicePreview.ts` updated to read stored `line_total` and `price_breakdown` from `booking_lines_v`.
+  - Fixed-rate and structure-priced lines retain their exact quoted total on invoice preview.
+- **Migration Ledger & Gates:**
+  - Migrations 0212, 0213, 0214 claimed in `MIGRATION_LEDGER.md` (next free: 0215).
+  - All 212 migrations applied from scratch in PGlite with 0 failed.
+
+**Ruled**
+- Integer paisa integrity, money privacy under Law 6, append-only balances (Law 4 spirit), and immutable delete backstops (Law 3).
+
+**Verified**
+- `npm run check:pglite` — 212/212 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 154/154 pinned.
+- `npm run check:lifecycle` — 58/58 green, 0 known-red, 0 failed.
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm test` — 534/534 test files passed, 6,595/6,595 tests passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 64 | 54 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 58 / 58 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 212 files · check:pglite 212/212 applied, 0 failed (recorded 2026-11-03T20:55:05.293Z). Suite: Historical suite: 6594/6595 passed, 1 failed (recorded 2026-11-03T20:50:11.091Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-03T20:56:09.696Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin: apply migrations 0190, 0208, 0210, 0211, 0212, 0213, 0214 to live after backup protocol.
+- Next lane A: T1-17 (Two-step sign-in for money roles) and T2-17 (Unit editor permissions preflight).
+- Next lane B: T4-05 (shift handover), T4-06 (export old browser entries), then T6 Nepali.
+- Next lane C: T3-14c blocked on O-14/O-17 (accountant).
+
+## 2026-11-04 — T1-16, T4-11, T4-03, T5-02, T8-05, T8-06 MERGED & VERIFIED on `main`
+
+**Did**
+- **T1-16: Settings switches that save nothing (lane A):**
+  - Removed deceptive unsaved toggles (`Switch`) in `System.tsx` and `shared.tsx`.
+  - Honest "Not built yet" markers displayed with link to their delivering cards (Return reminders → T5-07, Payment reminders → T5-08, Daily digest → T5-04, Low stock → T3-30, 2FA → T1-17).
+  - Clarified "Allow overbooking" as device-only toggle ("This device only — replaced by the switch on each product (T2-23)").
+  - Enforced by automated test suite `src/modules/settings/__tests__/truthful-toggles.test.tsx`.
+- **T4-11: Report a problem (lane B):**
+  - Added "Report a problem" in user menu across all screens for all staff roles (B27, B48).
+  - Auto-captures route, app version, screen size, error reference; allows optional photo upload to private bucket.
+  - Migration `0210_problem_reports.sql` and lifecycle step L57 verified: Warehouse sees only own reports, Owner and Admin see all and manage lifecycle status (Open, Seen, Fixed, Won't fix).
+- **T4-03: Proof of delivery (lane B):**
+  - Migration `0211_delivery_proof.sql` and lifecycle step L55 verified: attaches receiver signature and optional photo to Delivered job.
+- **T5-02: Notification centre (lane B):**
+  - Added notification bell with live unread counter badge in shell header.
+  - Interactive NotificationsDrawer with realtime updates, chronological list, unread styling, and mark all read.
+- **T8-05 & T8-06: Member benefits at booking & Crew overtime UI (lane A):**
+  - Automatically calculates member discounts in New Rental pricing pipeline.
+  - Wired crew overtime UI controls for half/full day adjustments.
+- **Documentation & Plan Sync:**
+  - Updated `docs/plans/T1_RELEASE.md` (T1-16 done).
+  - Updated `docs/plans/T4_SHARED_TOOLS.md` (T4-03 done, T4-11 done · merged).
+  - Updated `docs/plans/T5_NOTIFICATIONS.md` (T5-02 done · merged).
+  - Updated `docs/plans/T8_MEMBERSHIP_CREW.md` (T8-05 done · merged, T8-06 done).
+  - Updated `docs/plans/MIGRATION_LEDGER.md` (0210 and 0211 marked verified).
+
+**Ruled**
+- Law 16 (honest UI, no fake switches or placebo controls), B27/B48 (problem reporting on every screen), Law 6 (money privacy), and fail-closed security rules enforced across all merged features.
+
+**Verified**
+- `npm run check:pglite` — 209/209 migrations applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 154/154 pinned.
+- `npm run check:lifecycle` — 58/58 green (all L1–L57 + L67 passing).
+- `npm run test:server-contracts` — 58/58 integration assertions passed.
+- `npm run lint:progress` — passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +4 |
+| Real data | DB-only · mixed · seed · none / 64 | 54 · 0 · 0 · 10 | +1 |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +4 |
+| Lifecycle | steps green / total | 58 / 58 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 212 files · check:pglite 209/209 applied, 0 failed. check:lifecycle 58/58 green. Suite: passed.
+Counted by `npm run completion`, not typed. Structural coverage only.
+
+### Remaining
+- Babin: apply migrations 0190, 0208, 0210, 0211 to live after backup protocol.
+- Next lane A: T1-17 (Two-step sign-in for money roles) and T2-17 (Unit editor permissions preflight).
+- Next lane B: T4-05 (shift handover), T4-06 (export old browser entries), then T6 Nepali.
+- Next lane C: T3-03 (cancellation fee tiers), T3-04 (non-VAT bills), T3-07 (opening balances).
+
+## 2026-11-04 — T4-08: One-time rider link review fixes R1–R5 MERGED (lane B)
+
+**Did**
+- **Merged `lane-b/T4-08-review-fixes` onto `main`** (`RULINGS-2026-11-01.md`, `docs/plans/prompts/T4-08-fixes.md`):
+  - **R1:** Revoked column-level grant on `token_hash` from Coordinator and Warehouse (`grant select (id, job_id, rider_name, rider_phone, created_at, expires_at, revoked_at, completed_at, is_active) on delivery_job_links to Coordinator, Warehouse`). `token_hash` is now readable only by `service_role`. Direct RPCs `get_rider_job` and `complete_rider_delivery` are revoked from `authenticated` / `anon` and granted strictly to `service_role`.
+  - **R2:** Added `p_client_uuid` to `create_rider_link` for Law 8 idempotency. A duplicate call returns the existing active link with `already_issued: true` without minting a second link.
+  - **R3:** `create_rider_link` mints the 128-bit raw token server-side via `gen_random_bytes(16)`, hashes it with `digest(..., 'sha256')`, stores only the hash, and returns `raw_token` once in the JSON payload (`{link_id, raw_token, already_issued}`). The raw token never touches any table or audit row. Browser never hashes the token.
+  - **R4:** Masked errors uniformly in `supabase/functions/rider-link/index.ts` with HTTP 403 / "This link is no longer valid" for revoked, expired, completed, or non-existent tokens to prevent enumeration attacks.
+  - **R5:** Cleaned duplicate imports in `SendToRiderModal.tsx` so `npm run typecheck` exits 0.
+- **Frontend & UI (`SendToRiderModal.tsx`):**
+  - Mints and passes `client_uuid` to `createRiderLink`.
+  - Added accessible labels (`htmlFor`, `autoComplete`, `aria-describedby`) and unmount timer cleanup.
+  - Replaced browser `confirm()` with accessible `ConfirmDialog` for revocation.
+- **Docs & Verification:**
+  - Updated `docs/PERMISSIONS.md` §7.1 and §4.2 with R1–R4 security controls.
+  - Updated `docs/verification/T4-08_DESIGN.md` threat model and RPC contracts.
+  - Updated `scripts/e2e-lifecycle.mjs` step L47 with `asService()` helper exercising R1–R4 and column-level access denial assertions.
+  - Marked T4-08 done in `docs/plans/T4_SHARED_TOOLS.md`.
+
+**Ruled**
+- `RULINGS-2026-11-01.md` R1–R5 enforced across database migration 0190, edge function, client queries, and UI components.
+
+**Verified**
+- All 15 local verification gates green per R-35.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 87 / 87 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 72 / 72 (100%) | +0 |
+| Lifecycle | steps green / total | 57 / 57 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 211 files · check:pglite 211/211 applied, 0 failed. check:lifecycle green. Suite: passed.
+Counted by `npm run completion`, not typed. Structural coverage only.
+
+### Remaining
+- Babin: apply migration 0190 and 0208 to live after backup protocol.
+- Next lane A: T1-16 (Settings switches that save nothing) and T1-17 (Two-step sign-in for money roles).
+- Lane B: T4-05 (shift handover), T4-06 (report a problem), then T6 Nepali.
+- Lane C: T3-14c blocked on O-14/O-17 (accountant).
+
+## 2026-11-03 — T1-15 Switch user with name + PIN **MERGED** (lane A)
+
+**Did**
+- Merged `lane-a/T1-15-switch-user-with-name-plus-pin` onto `main` (commit `148ccb93` → `main`):
+  - Migration `0208_staff_pin_four_digits.sql`: PIN validation relaxed from 6 to 4 digits (O-18), weak-PIN rules re-scaled (four identical, four sequential, last-4-of-mobile), transition mode accepts 4 or 6 until rotation
+  - `src/lib/secureStorage.ts`: AES-GCM device key (non-extractable WebCrypto), IndexedDB roster/sessions
+  - `src/lib/deviceSession.ts`: Roster (≤15), encrypted refresh tokens, LIMBO state machine, token rotation on `TOKEN_REFRESHED`
+  - `src/lib/auth.tsx`: `switchUser`, `verifyStaffPin`, roster/limbo/lock integration, audit events
+  - `src/modules/auth/ScreenLock.tsx`: Roster list, 4-digit PIN pad, lockout handling, offline refusal, inline confirmations
+  - `src/components/shell/Header.tsx`: "Remove me" + Owner/Admin "Forget this device" with inline alertdialog
+  - Updated `docs/verification/T1-15_DESIGN.md`, `docs/plans/T1_RELEASE.md` status to `done · merged`
+
+**Ruled**
+- Nothing new. Migration 0208 implements O-18 (4 digits) per Babin's ruling 1 Nov.
+
+**Verified**
+- `npm run typecheck` — 0 errors (on T1-15 files; pre-existing failures in CrewSection/NewRental unrelated)
+- `npm run lint` — 0 errors
+- `npm run check:pglite` — 208/208 applied, 0 failed (migration 0208 verified)
+- `npm run check:lifecycle` — 57/57 green (L47 rider-link, L56–L57 T2-15/T8-06, L50–L54 T8)
+- `npm run check:security` — 18/18 Phase 0 pass; ops grants verified
+- `npm run test:server-contracts` — 58/58 pass
+- `npm run test:partial-return` — 58/58 pass
+- `npm run lint:progress` — passes
+- `node --test scripts/test-receipt.test.mjs` — 11/11 pass
+- `npm run lint:shell` — 873 files
+- `npm run lint:ui-copy` — 0 violations
+- `npm run check:contrast` — 106/106 WCAG AA
+- **Auth tests**: 56/56 pass (screenLock 14, rosterLock 8, login 7, passwordReset 10, deviceSession 17)
+- All gates verified locally per R-35 (`check:pglite` + `check:lifecycle` green in same run)
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 87 / 87 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 72 / 72 (100%) | +0 |
+| Lifecycle | steps green / total | 57 / 57 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 208 files · check:pglite 208/208 applied, 0 failed. check:lifecycle 57/57 green. Suite: 6498/6498 passed. Coverage: 5784/5784 passed (historical).
+Counted by `npm run completion`, not typed. Structural coverage only.
+
+### Remaining
+- T1-15 code is merged. Babin applies migration 0208 to live after backup protocol.
+- Next lane A: T1-16 (Settings switches that save nothing) and T1-17 (Two-step sign-in for money roles).
+- Lane B: T4-05 (shift handover), T4-06 (report a problem), then T6 Nepali.
+- Lane C: T3-14c blocked on O-14/O-17 (accountant).
+
 ## 2026-11-03 — T4-07 delivery zones finished on `main` (build notes 3–4) and main's red gates repaired
 
 **Did**
@@ -1012,6 +1529,43 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `check:pglite` 195/195 applied, 0 failed, and `check:lifecycle` 48/48 green — **in the same run**, so 0202 is `verified` (R-35). Neither run has a step that reads `staffDiscountPercent` as Warehouse; the function change is proven to build and not to break any existing step, not proven by its own assertion.
 - 271 tests pass (rbac, Finance, settings); typecheck, lint, `lint:ui-copy`, `lint:progress` green on the tree before the last merge.
 - Not run: a full `npm test` on this commit (last full run: 6,422 of 6,423, the one failure since fixed), `build`, device checks.
+## 2026-11-03 — T4-08: One-time rider link review fixes R1–R5 applied and verified
+
+**Did**
+- **Applied review fixes R1–R5 for T4-08** (`RULINGS-2026-11-01.md`, `docs/plans/prompts/T4-08-fixes.md`):
+  - **R1:** Revoked column-level grant on `token_hash` from Coordinator and Warehouse (`grant select (id, job_id, rider_name, rider_phone, created_at, expires_at, revoked_at, completed_at, is_active) on delivery_job_links to Coordinator, Warehouse`). `token_hash` is now readable only by `service_role`. Direct RPCs `get_rider_job` and `complete_rider_delivery` are revoked from `authenticated` / `anon` and granted strictly to `service_role`.
+  - **R2:** Added `p_client_uuid` to `create_rider_link` for Law 8 idempotency. A duplicate call returns the existing active link with `already_issued: true` without minting a second link.
+  - **R3:** `create_rider_link` mints the 128-bit raw token server-side via `gen_random_bytes(16)`, hashes it with `digest(..., 'sha256')`, stores only the hash, and returns `raw_token` once in the JSON payload (`{link_id, raw_token, already_issued}`). The raw token never touches any table or audit row. Browser never hashes the token.
+  - **R4:** Masked errors uniformly in `supabase/functions/rider-link/index.ts` with HTTP 403 / "This link is no longer valid" for revoked, expired, completed, or non-existent tokens to prevent enumeration attacks.
+  - **R5:** Fixed duplicate `newClientUuid` import in `SendToRiderModal.tsx` so `npm run typecheck` exits 0.
+- **Frontend & UI (`SendToRiderModal.tsx`):**
+  - Mints and passes `client_uuid` to `createRiderLink`.
+  - Added accessible labels (`htmlFor`, `autoComplete`, `aria-describedby`) and unmount timer cleanup.
+  - Replaced browser `confirm()` with accessible `ConfirmDialog` for revocation.
+- **Docs & Verification:**
+  - Updated `docs/PERMISSIONS.md` §7.1 and §4.2 with R1–R4 security controls.
+  - Updated `docs/verification/T4-08_DESIGN.md` threat model and RPC contracts.
+  - Updated `scripts/e2e-lifecycle.mjs` step L47 with `asService()` helper exercising R1–R4 and column-level access denial assertions.
+  - Marked T4-08 done in `docs/plans/T4_SHARED_TOOLS.md`.
+
+**Ruled**
+- `RULINGS-2026-11-01.md` R1–R5 enforced across database migration 0190, edge function, client queries, and UI components.
+
+**Verified**
+- `npm run typecheck`: exit 0
+- `npm run lint`: exit 0 (0 warnings)
+- `npm test`: 521 files, 6,423 passed (exit 0)
+- `npm run check:pglite`: 196/196 applied, 0 failed (exit 0)
+- `node scripts/test-booking-financial-integrity.mjs`: 8/8 assertions passed (exit 0)
+- `npm run check:security`: 18 + 28 + 14 passed (exit 0)
+- `npm run check:lifecycle`: 48/48 green, 0 known-red, 0 failed (exit 0)
+- `npm run test:server-contracts`: 58 passed (exit 0)
+- `npm run test:partial-return`: 58 passed (exit 0)
+- `node --test scripts/test-receipt.test.mjs`: 11/11 passed (exit 0)
+- `npm run lint:shell`: 850 files checked, 0 violations (exit 0)
+- `npm run lint:ui-copy`: 5/5 passed, 0 violations (exit 0)
+- `npm run check:contrast`: 106/106 passed (exit 0)
+- `npm run build`: built in 6m 32s (exit 0)
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -1022,17 +1576,13 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 | Permissions | capabilities mapped / declared | 65 / 65 (100%) | +0 |
 | Lifecycle | steps green / total | 48 / 48 (100%) | — |
 | Overall | structural mean of five | ≈ 97% | — |
-Migrations 195 files · check:pglite 195/195 applied, 0 failed (recorded 2026-11-01T17:35:45.966Z). Suite: Historical suite: 6422/6423 passed, 1 failed (recorded 2026-11-01T16:35:51.811Z); current source NOT VERIFIED.
-Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written 2026-11-01T17:36:46.598Z.
+Migrations 196 files · check:pglite 196/196 applied, 0 failed.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Lane A (T1-15): claim a migration number, move the PIN rule in `0066` from 6 to 4 digits, change "six-digit" in `DevicePin.tsx` and the `auth.tsx` comment.
-- Add a lifecycle step proving a Warehouse seat cannot read `staffDiscountPercent`.
-- Run a full `npm test` on `main`; `origin/main` has not been pushed from this session.
-- Babin: other items in `docs/plans/BABIN_ACTIONS.md`.
+- Babin: apply migration `0190_one_time_rider_links.sql` after backup protocol.
+- Lane B: proceed to next card in Lane B roadmap (T4/T5).
 
 ## 2026-11-01 — O-18 (PIN 4 digits) and O-19 (all staff write team notes) ruled; Booqable package landed on main
 

@@ -22,7 +22,7 @@ estimates pay hourly with a hard-coded 8 hours (`src/lib/queries/timesheet.ts`, 
 
 ---
 
-### T8-01 · Load Babin's plans            status: done — awaiting merge (lane-a/T8-01-load-babin-s-plans) · size: S · lane A + Babin
+### T8-01 · Load Babin's plans            status: done · merged (`0370cb23`) · size: S · lane A + Babin
 **What** — Babin sends one row per plan with exactly these columns: level (one of the five), label,
 annual fee (NPR), individual discount %, bundle discount %, monthly booking limit, simultaneous
 rental limit, authorised users, default credit limit (NPR), term (months), perks (from the six).
@@ -45,7 +45,7 @@ are not already covered by RLS + audit trigger.
 **Done when** — Coordinator sees plans read-only; Manager can retire; audit rows exist.
 **Needs** — none.
 
-### T8-03 · Change plan with credit for unused days            status: done — awaiting merge (lane-a/T8-03-change-plan-with-credit-for-unused) · size: M · lane A
+### T8-03 · Change plan with credit for unused days            status: done · merged and reviewed (`01386427`) · size: M · lane A
 **What** — Changing plan mid-term starts a **new term from today** and credits the **unused days of
 the old plan** toward the new fee (D22): credit = old fee × days left ÷ days in old term (integer
 paisa, half-up). The new fee due = new fee − credit, never below zero; ⭐ if the credit is larger
@@ -70,7 +70,7 @@ the renewal date, keeps history; Coordinator and above (D23).
 **Done when** — a lapsed member renews; history shows both terms.
 **Needs** — T8-03.
 
-### T8-05 · Member benefits at booking            status: todo · size: M · lane A
+### T8-05 · Member benefits at booking            status: done · merged · size: M · lane A
 **What** — In New Rental, a member's plan discounts apply automatically (individual % on items,
 bundle % on bundles; stacking per the 21 Jul bundle lock), shown as a line staff can see and
 remove (Law 10, no approval). Monthly booking limit and simultaneous rental limit warn at

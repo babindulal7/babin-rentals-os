@@ -337,5 +337,55 @@ describe('deriveRentalAlertsAndNotices', () => {
     expect(noClient.critical.some((c) => c.text.includes('No client selected'))).toBe(true)
     expect(noClient.critical.some((c) => c.text.includes('Select a project type'))).toBe(true)
   })
+
+  it('warns on member monthly booking limit or simultaneous rental limit breach without blocking confirm (soft advisories)', () => {
+    const memberClient = {
+      ...validClient,
+      currentRentalsCount: 2,
+    }
+    const result = deriveRentalAlertsAndNotices({
+      conflictLines: [],
+      availabilitySource: { state: 'ready', byProduct: new Map() },
+      client: memberClient,
+      govId: '123456789',
+      kind: 'Feature Film',
+      discountPct: 0,
+      crew: [],
+      canBookingMoney: true,
+      depositRequiredPaisa: rupees(0) as Paisa,
+      depositReceivedPaisa: rupees(0) as Paisa,
+      depositPendingPaisa: rupees(0) as Paisa,
+      outstandingPaisa: rupees(0) as Paisa,
+      days: 2,
+      clientsAreLive: true,
+      lines: [{ id: PRODUCT_UUID, productId: PRODUCT_UUID, name: 'Sony FX3' }],
+      equipmentLines: [{ id: PRODUCT_UUID, productId: PRODUCT_UUID, name: 'Sony FX3' }],
+      pricing: dummyPricing,
+      clientMembership: {
+        level: 'Creator',
+        label: 'Creator Pass',
+        individualDiscountPct: 15,
+        bundleDiscountPct: 7,
+        monthlyBookingLimit: 4,
+        simultaneousRentalLimit: 2,
+        perks: ['Priority Booking'],
+        status: 'Active',
+        benefitsActive: true,
+      },
+      monthlyBookingsCount: 4,
+    })
+
+    expect(result.confirmBlocked).toBe(false)
+    expect(result.critical).toHaveLength(0)
+    expect(result.blockingNotices).toHaveLength(0)
+
+    const monthlyNotice = result.advisories.find((a) => a.text.includes('Monthly booking limit reached'))
+    expect(monthlyNotice).toBeDefined()
+    expect(monthlyNotice?.text).toContain('Creator (4/4 bookings this month)')
+
+    const simNotice = result.advisories.find((a) => a.text.includes('Simultaneous rental limit reached'))
+    expect(simNotice).toBeDefined()
+    expect(simNotice?.text).toContain('Creator (2/2 active rentals)')
+  })
 })
 

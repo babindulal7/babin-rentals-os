@@ -1,0 +1,18 @@
+{
+  "tools.landing.title": "Tools",
+  "tools.landing.subtitle": "Integrated Workbench",
+  "tools.landing.calculatorsGroup": "Calculators",
+  "tools.landing.commercialGroup": "Commercial Utilities",
+  "tools.landing.cinematographyGroup": "Cinematography",
+  "tools.landing.depreciationLabel": "Depreciation",
+  "tools.landing.depreciationHint": "Book view · IRD pool view (schedule & book value curve)",
+  "tools.landing.pricingLabel": "Pricing",
+  "tools.landing.pricingHint": "Rate, days, discount — quote sandbox engine",
+  "tools.landing.lateFeeLabel": "Late Fee",
+  "tools.landing.lateFeeHint": "Standard policy calculator",
+  "tools.lateFee.ruleDescription": "Up to 30 minutes free. Under 2 hours: half a day. From 2 hours: a full day, with another day charged for each additional 24 hours.",
+  "tools.lateFee.estimateTitle": "Late fee estimate",
+  "tools.lateFee.dailyRateLabel": "Daily rental rate (NPR)",
+  "tools.lateFee.minutesLabel": "Minutes after scheduled return",
+  "tools.lateFee.enterDailyRatePrompt": "Enter a daily rate to calculate the fee."
+}

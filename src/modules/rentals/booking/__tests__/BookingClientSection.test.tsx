@@ -163,4 +163,77 @@ describe('BookingClientSection', () => {
       host.remove()
     }
   })
+
+  it('renders member tier and Priority Booking badge for qualifying members', async () => {
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const root = createRoot(host)
+
+    const mockMembership = {
+      level: 'Creator' as const,
+      label: 'Creator Pass',
+      individualDiscountPct: 15,
+      bundleDiscountPct: 7,
+      monthlyBookingLimit: 4,
+      simultaneousRentalLimit: 2,
+      perks: ['Priority Booking', 'Zero-deposit privilege'],
+      status: 'Active' as const,
+      benefitsActive: true,
+    }
+
+    try {
+      await act(async () => {
+        root.render(
+          <MemoryRouter>
+            <BookingClientSection
+              open={true}
+              onToggle={vi.fn()}
+              client={sampleClient}
+              clientMembership={mockMembership}
+              clientPool={[sampleClient]}
+              selectedClientId={sampleClient.id}
+              clientFieldTouched={false}
+              setClientFieldTouched={vi.fn()}
+              addClientOpen={false}
+              selectClient={vi.fn()}
+              openAddClient={vi.fn()}
+              quickViewOpen={false}
+              setQuickViewOpen={vi.fn()}
+              health={null}
+              days={2}
+              dayWord="days"
+              canClientBalance={true}
+              canBookingMoney={true}
+              gctx={gateContext('Owner')}
+              user={{ id: 'usr-1', name: 'Babin', role: 'Owner', isSharedDevice: false }}
+              onOpenHistory={vi.fn()}
+              suppressClientListOnFocus={{ current: false }}
+              clientFieldRef={{ current: null }}
+              navigate={vi.fn()}
+              isPhone={false}
+              project=""
+              setProject={vi.fn()}
+              kind="Commercial"
+              setKind={vi.fn()}
+              kindOther=""
+              setKindOther={vi.fn()}
+              govId=""
+              setGovId={vi.fn()}
+            />
+          </MemoryRouter>,
+        )
+      })
+
+      const tierBadge = host.querySelector('[data-testid="client-membership-badge"]')
+      expect(tierBadge).not.toBeNull()
+      expect(tierBadge?.textContent).toContain('Creator')
+
+      const priorityBadge = host.querySelector('[data-testid="priority-booking-badge"]')
+      expect(priorityBadge).not.toBeNull()
+      expect(priorityBadge?.textContent).toContain('Priority Booking')
+    } finally {
+      await act(async () => root.unmount())
+      host.remove()
+    }
+  })
 })

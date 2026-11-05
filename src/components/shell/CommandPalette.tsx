@@ -70,6 +70,7 @@ const NAV_SHORTCUTS: Record<string, { shortcut: string; keywords: string[] }> = 
   '/inventory': { shortcut: 'inv', keywords: ['inv', 'gear', 'stock'] },
   '/clients': { shortcut: 'cl', keywords: ['cl', 'client', 'directory'] },
   '/finance': { shortcut: 'fin', keywords: ['fin', 'money', 'invoices', 'closing'] },
+  '/approvals': { shortcut: 'appr', keywords: ['appr', 'approvals', 'inbox', 'waivers', 'refunds', 'overrides'] },
   '/notes': { shortcut: 'notes', keywords: ['notes', 'internal', 'shift', 'handover', 'dispatch', 'gear', 'alert'] },
   '/tools': { shortcut: 'tools', keywords: ['tools', 'calc', 'pricing'] },
   '/settings': { shortcut: 'set', keywords: ['set', 'settings', 'config'] },

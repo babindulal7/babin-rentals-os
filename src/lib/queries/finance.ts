@@ -1681,4 +1681,10 @@ export async function fetchInvoiceLines(invoiceId: string): Promise<InvoiceLineI
   }))
 }
 
+/**
+ * Payment reminder controls (T5-08, W18b)
+ */
+export { pauseClientReminders, resumeClientReminders } from './clientMessages'
+
+
 
