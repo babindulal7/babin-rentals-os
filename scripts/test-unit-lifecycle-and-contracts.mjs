@@ -245,6 +245,74 @@ await expectThrows(
 )
 
 // ---------------------------------------------------------------------------
+console.log('\n--- 2A. Unit identity permission, audit and revision regression ---')
+// 0180 permits Technician product_units updates for floor verbs. Identity changes
+// must remain server-side restricted even if a client bypasses the React UI.
+await sql('reset role')
+const warehouseUserId = '00000000-0000-0000-0000-000000000903'
+const technicianUserId = '00000000-0000-0000-0000-000000000904'
+for (const [id, code, role, mobile] of [
+  [warehouseUserId, 'EMP-WAREHOUSE-903', 'Warehouse', '+977-9800000903'],
+  [technicianUserId, 'EMP-TECH-904', 'Technician', '+977-9800000904'],
+]) {
+  await sql(`insert into users
+    (id, client_uuid, employee_code, email, full_name, mobile, primary_role, branch_id, is_active, created_by)
+    values ($1, gen_random_uuid(), $2, $2 || '@example.invalid', $2, $4, $3::system_role, $5, true, $6)
+    on conflict (id) do update set primary_role = excluded.primary_role`,
+    [id, code, role, mobile, branch, ownerId])
+}
+await asUser(ownerId)
+const identityUnitId = (await sql(`insert into product_units
+  (client_uuid, product_id, asset_tag, serial_no, branch_id, warehouse_id, created_by, updated_by)
+  values (gen_random_uuid(), $1, 'AML-GUARD-01', 'GUARD-001', $2, $3, $4, $4)
+  returning id`, [productId, branch, warehouse, ownerId])).rows[0].id
+
+await sql('set role authenticated')
+await asUser(technicianUserId)
+await expectThrows(
+  () => sql(`update product_units
+    set rack = 'TECH-EDIT', updated_at = updated_at + interval '1 minute', updated_by = $2
+    where id = $1`, [identityUnitId, technicianUserId]),
+  'GATE:unit.identity.role_denied',
+  'Technician cannot edit unit identity through direct database access'
+)
+
+await asUser(warehouseUserId)
+await expectThrows(
+  () => sql(`update product_units
+    set rack = 'SPOOF', updated_at = updated_at + interval '1 minute', updated_by = $2
+    where id = $1`, [identityUnitId, ownerId]),
+  'GATE:unit.identity.actor_mismatch',
+  'Warehouse cannot forge another actor in unit identity audit'
+)
+await expectThrows(
+  () => sql(`update product_units set rack = 'NO-REVISION', updated_by = $2
+    where id = $1`, [identityUnitId, warehouseUserId]),
+  'GATE:unit.identity.revision',
+  'Identity updates must advance the optimistic concurrency revision'
+)
+const identityResult = await sql(`update product_units
+    set rack = 'B', shelf = '3', asset_tag = 'AML-GUARD-02',
+        updated_at = updated_at + interval '1 minute', updated_by = $2
+    where id = $1
+    returning asset_tag, rack, shelf`, [identityUnitId, warehouseUserId])
+assert(identityResult.rows.length === 1 && identityResult.rows[0].rack === 'B',
+  'Warehouse can save an audited unit identity/location change')
+
+await sql('reset role')
+const guardedUnit = (await sql('select asset_tag, rack, shelf from product_units where id = $1', [identityUnitId])).rows[0]
+assert(guardedUnit.asset_tag === 'AML-GUARD-02' && guardedUnit.rack === 'B' && guardedUnit.shelf === '3',
+  'Denied Technician and forged-actor writes did not overwrite the persisted unit')
+const unitAudit = (await sql(`select actor_id from audit_events
+  where table_name = 'product_units' and record_id = $1 and action = 'Update'
+  order by created_at desc limit 1`, [identityUnitId])).rows[0]
+assert(unitAudit?.actor_id === warehouseUserId, 'Unit identity edit is attributed to its real signed-in actor')
+const floorPolicy = (await sql(`select qual from pg_policies
+  where schemaname = 'public' and tablename = 'product_units' and policyname = 'product_units_update'`)).rows[0]
+assert(floorPolicy?.qual?.includes('Technician') === true,
+  'Technician floor UPDATE row policy is preserved by the narrow identity trigger')
+
+// ---------------------------------------------------------------------------
 console.log('\n--- 3. Testing enroll_client_membership ---')
 // ---------------------------------------------------------------------------
 
