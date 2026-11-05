@@ -28,7 +28,7 @@
 - `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`)
 - `npm run test` (mock backend) — 6731/6731 passed (exit 0)
 - `src/lib/__tests__/gearListParser.test.ts` — 30/30 passed, **59/65 lines auto-matched (90.8%)** · 2 ambiguous · 4 not found
-- `npm run check:pglite` — 219/219 applied, 0 failed (0223 included). View leaks: 0; anon function leaks: 0; definer hygiene: 182/182 pinned `search_path`.
+- `npm run check:pglite` - 220/220 applied, 0 failed (0223 included, after rebasing onto main's 0222). View leaks: 0; anon function leaks: 0; definer hygiene: 182/182 pinned `search_path`.
 - `npm run check:security` — 14/14 reset-branch regression groups passed; operations branch grants verified.
 - `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
 - `npm run test:server-contracts` — 58/58 passed.
@@ -38,7 +38,7 @@
 - `npm run check:contrast` — 106/106 pass, 0 fail.
 - `npm run build` — `tsc --noEmit && vite build` bundled cleanly (dist/, PWA 281 precache entries).
 - `node --test scripts/test-receipt.test.mjs` — 11/11 passed.
-- Migration 0223: **VERIFIED** (check:pglite 219/219 + check:lifecycle 63/63 = R-35 met). Ledger row status `verified`.
+- Migration 0223: **VERIFIED** (check:pglite 220/220 + check:lifecycle 63/63 = R-35 met). Ledger row status `verified`.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
