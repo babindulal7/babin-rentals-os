@@ -3264,6 +3264,8 @@ function BookingDetailView() {
             amount: formatMoney(inv.totalAmount),
             status: inv.status,
             booking: inv.bookingNo,
+            // T3-15 — the client whose last payment method the form opens on.
+            clientId: inv.clientId,
             // R-39 D1 — the Amount field prefill is what the invoice still
             // owes; the operator edits it, the prefill only removes typing.
             outstandingRupees: toRupees(inv.outstandingAmount),
