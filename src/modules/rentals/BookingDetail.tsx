@@ -1678,6 +1678,7 @@ function BookingDetailView() {
         {
           bookingRef: id,
           releasePaisa: summary.depositRefundPaisa,
+          bankAccountId: summary.refundAccountId,
           appliedPaisa: appliedPaisa > 0 ? appliedPaisa : undefined,
           chargeType,
           appliedReason,
@@ -3554,14 +3555,15 @@ function BookingDetailView() {
         />
       )}
 
-      {settlementModalOpen && booking && (
+      {settlementModalOpen && canBookingMoney && booking && (
         <ReturnSettlementModal
+          key={booking.id}
           isOpen={settlementModalOpen}
           onClose={() => setSettlementModalOpen(false)}
           bookingNo={booking.bookingNo}
           clientName={booking.clientName}
           clientPhone={clientPhone}
-          depositHeldPaisa={canBookingMoney ? booking.depositRequired : null}
+          bookingId={booking.id}
           scheduledReturnIso={booking.returnAtAd}
           actualReturnIso={booking.actualReturnAtAd ?? new Date().toISOString()}
           dayRatePaisa={

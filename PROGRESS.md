@@ -1,5 +1,42 @@
 # Progress Log
 
+## 2026-11-05 — T3-07: Record the payment account used for a deposit refund
+
+**Did**
+- Return Settlement now reads the amount held from the deposit ledger and offers active payment accounts for a refund.
+- Defaults to the original receipt account when all receipt movements agree and the account is active. Staff can change the default. Mixed, unallocated, inactive or incomplete receipts require a choice.
+- Passed the selected account to the existing deposit release action. Added inline load and submit errors and used the existing deposit release capability and online check.
+
+**Ruled**
+- W83 gives staff the choice of refund method. D15 relies on the account recorded on the release movement. Law 5 keeps the refund in the deposit ledger.
+
+**Verified**
+- Focused deposit query, settlement modal, settlement action and floor-loop suites passed (17/17 total).
+- Typecheck and changed-file ESLint passed.
+- npm audit could not resolve the npm registry.
+- Full release gates and staging acceptance pending.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Allocate paid expenses by account, enter dated opening balances, carry the reconciled balance into the next day and wire it into Daily Closing, Cash Flow and Working Capital.
+- Finish the shift closing preference. Reconcile a staging week against hand calculations and exercise money-blind role denial.
+- Exercise the refund picker on staff devices with same-account, switched-account and split receipts.
+
+
 ## 2026-11-05 — T3-07: Scope Cash Flow opening balances to the period
 
 **Did**
