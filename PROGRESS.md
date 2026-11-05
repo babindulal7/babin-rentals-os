@@ -1,5 +1,40 @@
 # Progress Log
 
+## 2026-11-05 — T0-13: Patch the desktop development launcher
+
+**Did**
+- Updated concurrently from 10.0.5 to 10.0.6, replacing its vulnerable shell-quote 1.9.0 pin with 1.12.0. Only these two package versions changed in this patch.
+- Added docs/plans/evidence/dependency-review.md, covering all remaining affected packages, dependency paths, inferred execution surfaces and required compatibility checks.
+
+**Ruled**
+- This uses the existing dependency-remediation scope; no product or permission rules changed.
+
+**Verified**
+- The isolated installation completed. The unused opencode-chromium package is absent.
+- Registry audit: 28 affected packages (2 critical, 9 high, 14 moderate, 3 low), compared with 36 before remediation and 30 after removing the unused dependency.
+- Typecheck and production build passed. Both application entry documents and PWA output were generated.
+- concurrently successfully launched Node and npm commands and returned success.
+- Full local gates and desktop acceptance remain open. The isolated install disabled package install scripts.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Apply and verify compatible transitive patches, then review the Vitest/Vite and Workbox changes needed for remaining advisories.
+- Run the full local gates on the final dependency set and complete desktop acceptance. Babin merges locally.
+
 ## 2026-11-05 — T0-13: Remove an unused production dependency
 
 **Did**
