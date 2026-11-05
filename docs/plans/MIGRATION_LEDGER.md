@@ -68,7 +68,7 @@ T3-03 cancellation branch. Reconcile their ledger rows when those branches merge
 | 0219 | T5-08 | payment-reminders | lane-b/T5-08-payment-reminders | written |
 | 0220 | T5-09 | push-subscriptions | lane-b/T5-09-phone-pop-ups | written |
 | 0221 | T1-17 | two-step-sign-in | lane-a/T1-17-two-step-sign-in-for-every | claimed; branch not merged |
-| 0224 | T3-07 | opening-balances-append-only | lane-c/T3-07-daily-closing | claimed |
+| 0224 | T3-07 | opening-balances-append-only | lane-c/T3-07-daily-closing | verified locally (219/219 migrations, 64/64 lifecycle); not applied live |
 
 ## Expected migrations (not yet claimed)
 

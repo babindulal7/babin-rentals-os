@@ -1,5 +1,38 @@
 # Progress Log
 
+## 2026-11-05 — T3-07: Enforce append-only opening balances in Postgres
+
+**Did**
+- Claimed migration 0224 before writing SQL. Added the existing append-only UPDATE trigger to opening_balances; the earlier migration documented immutability but only prevented deletion.
+- Extended lifecycle L63 to reject Owner amount/date edits, retirement and deletion. A correction appends a new row, preserves the original, and becomes the latest balance without being added to the old amount. Accounts remains read-only and Warehouse remains unable to read amounts.
+
+**Ruled**
+- Implements the append-only requirement already specified by T3-07. No role or capability was widened.
+
+**Verified**
+- Migration 0224: WRITTEN and VERIFIED locally, not APPLIED or PRODUCTION-VERIFIED.
+- JavaScript syntax check passed. check:pglite rebuilt 219/219 migrations; check:lifecycle passed 64/64 in the same run, including the new assertions.
+- No screen changed in this increment. Full card gates and staging reconciliation remain open.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 64 / 64 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 219 files · check:pglite 219/219 applied, 0 failed (recorded 2026-11-05T13:57:24.067Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-05T13:57:46.192Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Implement account-level daily carry-forward including paid expenses once expense payment authority and account attribution are settled (O-21).
+- Complete the shift/daily closing setting, staging week reconciliation, device checks and full local gates. Babin merges and applies verified migrations after the backup procedure.
+
 ## 2026-11-05 — T3-07: Record dated opening balances
 
 **Did**
