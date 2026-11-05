@@ -12,7 +12,10 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0222**
+**Next free number: 0225**
+
+0222 is already used by other local lane branches, and 0223 is reserved by the
+T3-03 cancellation branch. Reconcile their ledger rows when those branches merge.
 
 > **Legacy exception:** `0188` exists as two distinct, locally verified migration files
 > (`0188_smart_reservation_holds.sql` and `0188_staff_renting_gear.sql`). Both are preserved because
@@ -65,6 +68,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0219 | T5-08 | payment-reminders | lane-b/T5-08-payment-reminders | written |
 | 0220 | T5-09 | push-subscriptions | lane-b/T5-09-phone-pop-ups | written |
 | 0221 | T1-17 | two-step-sign-in | lane-a/T1-17-two-step-sign-in-for-every | claimed; branch not merged |
+| 0224 | T3-07 | opening-balances-append-only | lane-c/T3-07-daily-closing | claimed |
 
 ## Expected migrations (not yet claimed)
 
