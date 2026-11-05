@@ -105,7 +105,7 @@ interface UnitDraft {
  * draft for **one** record, and a table-wide instance would make the drafts of
  * two half-edited units share a namespace. One row, one hook, one draft.
  */
-function UnitEditor({
+export function UnitEditor({
   unit, money, onDone, onPersisted, onOpenLabel,
 }: {
   unit: InventoryUnitRow
