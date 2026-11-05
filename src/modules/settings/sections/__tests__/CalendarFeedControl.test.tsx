@@ -26,7 +26,7 @@ vi.mock('../../../../lib/rbac', () => ({
 }))
 vi.mock('../../../../components/ui/Page', () => ({
   Card: ({ title, children }: { title: string; children: React.ReactNode }) => <section aria-label={title}>{children}</section>,
-  Button: ({ children, onClick, loading }: { children: React.ReactNode; onClick: () => void; loading?: boolean }) => <button disabled={loading} onClick={onClick}>{children}</button>,
+  Button: ({ children, onClick, loading, ...props }: React.ComponentProps<'button'> & { loading?: boolean }) => <button disabled={loading} onClick={onClick} {...props}>{children}</button>,
 }))
 vi.mock('../../../../components/ui/Icon', () => ({ default: () => <span aria-hidden="true" /> }))
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
@@ -66,7 +66,8 @@ describe('Calendar feed link recovery', () => {
     expect(container.textContent).toContain('Revoke link')
   })
   it('shows a new URL after creation and hides it again after remount', async () => {
-    getStatus.mockResolvedValue({ hasToken: false, createdAt: null, revokedAt: null })
+    getStatus.mockResolvedValueOnce({ hasToken: false, createdAt: null, revokedAt: null })
+    getStatus.mockResolvedValue({ hasToken: true, createdAt: '2026-11-05T04:00:00Z', revokedAt: null })
     await mount()
     await click('Create calendar feed link')
     expect(container.querySelector('input')?.value).toContain('private-test-token')
@@ -93,5 +94,23 @@ describe('Calendar feed link recovery', () => {
     expect(getStatus).not.toHaveBeenCalled()
     expect(container.textContent).toContain('cannot view')
     expect(container.querySelector('input')).toBeNull()
+  })
+  it('handles clipboard failure gracefully with inline error', async () => {
+    getStatus.mockResolvedValueOnce({ hasToken: false, createdAt: null, revokedAt: null })
+    getStatus.mockResolvedValue({ hasToken: true, createdAt: '2026-11-05T04:00:00Z', revokedAt: null })
+    const originalClipboard = navigator.clipboard
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: vi.fn().mockRejectedValue(new Error('Permission denied')) },
+      configurable: true,
+    })
+    await mount()
+    await click('Create calendar feed link')
+    const copyBtn = container.querySelector('button[aria-label="Copy calendar feed link"]') as HTMLButtonElement | null
+    expect(copyBtn).not.toBeNull()
+    await act(async () => {
+      copyBtn!.click()
+    })
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain('Could not copy to clipboard')
+    Object.defineProperty(navigator, 'clipboard', { value: originalClipboard, configurable: true })
   })
 })

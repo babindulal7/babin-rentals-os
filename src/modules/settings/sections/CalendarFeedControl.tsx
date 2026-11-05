@@ -86,9 +86,13 @@ export function CalendarFeedControl() {
     }
   }
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    showSuccessToast('Copied to clipboard')
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      showSuccessToast('Copied to clipboard')
+    } catch {
+      setError('Could not copy to clipboard. Please copy the URL manually.')
+    }
   }
 
   if (!canView) {
@@ -168,7 +172,13 @@ export function CalendarFeedControl() {
                 <Button variant="secondary" size="sm" onClick={() => setShowToken(!showToken)}>
                   {showToken ? 'Hide' : 'Show'}
                 </Button>
-                <Button variant="secondary" size="sm" onClick={() => copyToClipboard(feedUrl)}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  aria-label="Copy calendar feed link"
+                  title="Copy link"
+                  onClick={() => void copyToClipboard(feedUrl)}
+                >
                   <Icon name="copy" size={16} fill />
                 </Button>
               </div>}
