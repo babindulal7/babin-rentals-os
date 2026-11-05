@@ -1,5 +1,41 @@
 # Progress Log
 
+## 2026-11-05 — T0-13: Apply compatible security patches
+
+**Did**
+- Updated 15 installed package entries: the vulnerable brace-expansion copies, fast-uri, follow-redirects, joi, nanoid, serialize-javascript, source-map-js, both undici majors, and Electron 44.4.5 to 44.10.2.
+- Kept the transitive updates within their parent ranges; raised Electron's direct lower bound. No forced audit fix or dependency override was used.
+- Updated docs/plans/evidence/dependency-review.md with the version changes, audit counts and remaining dependency paths.
+
+**Ruled**
+- This implements T0-13's compatible-first remediation. Product and permission rules are unchanged.
+
+**Verified**
+- Registry audit is now 19 affected packages: 2 critical, 1 high, 14 moderate, 2 low. The baseline was 36 affected packages, including 4 critical and 14 high.
+- Typecheck, all 47 focused UI tests and production build passed in the isolated installation. concurrently and wait-on smoke checks passed.
+- Both HTML entry documents were built, Hind and Asar Devanagari fonts remain in the service-worker precache, and the assets directory contains no source maps.
+- The remaining critical findings are Vitest/worker tooling; the remaining high finding is Vite. Neither full gate completion nor desktop acceptance is claimed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite not run this session (pass --migrations to run). Suite: NOT VERIFIED — focused or unspecified run: 47/47 passed, 0 failed (recorded 2026-11-05T13:57:58.937Z).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Resolve Vite, Vitest/coverage and Workbox/matching dependency compatibility, then run all local gates against the final dependency set.
+- Complete desktop acceptance with the patched Electron binary; install scripts were disabled for this isolated dependency review.
+- Babin reviews and merges locally.
+
 ## 2026-11-05 — T0-13: Patch the desktop development launcher
 
 **Did**

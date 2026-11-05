@@ -19,10 +19,30 @@ This is evidence for T0-13, not a release approval.
 | Before changes | 4 | 14 | 15 | 3 | 36 |
 | After removing unused dependency | 4 | 9 | 14 | 3 | 30 |
 | After launcher patch | 2 | 9 | 14 | 3 | 28 |
+| After compatible transitive and Electron patches | 2 | 1 | 14 | 2 | 19 |
 
 These are npm's affected-package counts, including propagated dependency
 findings. They are not counts of independently exploitable application flaws.
 The raw registry responses are under the ignored local `artifacts/` directory.
+
+The compatible batch updates these installed versions within their existing
+parent ranges. Electron's direct lower bound is raised to 44.10.2. No override
+or forced audit fix was introduced.
+
+| Package | Before → after |
+|---|---|
+| `brace-expansion` nested copies | 1.1.18 → 1.1.21; 2.1.4 → 2.1.7; 5.0.9 → 5.0.12 |
+| `fast-uri` | 3.1.5 → 3.1.9 |
+| `follow-redirects` | 1.16.0 → 1.16.2 |
+| `joi` | 18.2.9 → 18.3.2 |
+| `nanoid` | 3.3.17 → 3.3.20 |
+| `serialize-javascript` | 7.0.7 → 7.1.4 |
+| `source-map-js` | 1.2.1 → 1.2.2 |
+| `undici` nested copies | 7.30.0 → 7.30.2; 8.10.0 → 8.12.4 |
+| `electron` | 44.4.5 → 44.10.2 |
+
+Registry audit no longer reports these packages. Build and test verification for
+this batch is recorded separately below.
 
 ## Remaining dependency paths
 
@@ -38,15 +58,6 @@ building the application. This review does not establish exploitability.
 | `typescript-eslint`, `@typescript-eslint/eslint-plugin`, `@typescript-eslint/parser`, `@typescript-eslint/type-utils`, `@typescript-eslint/typescript-estree`, `@typescript-eslint/utils` (moderate) | ESLint → TypeScript parser → `minimatch`. Runs in source lint. | Resolve the vulnerable matching dependency with supported parent versions; rerun source lint. |
 | `minimatch`, `glob`, `test-exclude` (moderate) | Workbox build and Vitest coverage selection; `minimatch` also reaches the TypeScript lint parser. | Audit parent ranges. Fixed major versions may require changes in Workbox and coverage rather than an override. |
 | `workbox-build`, `vite-plugin-pwa` (moderate); `@rollup/plugin-node-resolve`, `deepmerge` (low) | `vite-plugin-pwa` → Workbox build → Rollup node resolver → `deepmerge`. Used while generating the service worker. | Review supported Workbox/plugin versions and verify offline assets. Do not accept npm's suggested plugin downgrade without compatibility checks. |
-| `brace-expansion` (high) | ESLint and coverage matching; Workbox → `glob`/`minimatch`; Workbox → EJS → file matching. | Update compatible transitive versions and inspect every nested copy. |
-| `fast-uri` (high) | Workbox build → Ajv → URI parser. The lint tree also contains an older Ajv major with a different dependency tree. | Update within the installed Ajv 8 range. |
-| `electron` (high) | Desktop runtime, although declared in devDependencies. It hosts the application when the desktop commands run. | Use a patched Electron 44 version and complete desktop acceptance. |
-| `undici` (high) | Electron binary downloader and jsdom test environment. | Update each installed major within its parent range; verify the test environment. |
-| `follow-redirects` (high) | `wait-on` → Axios → HTTP redirects. Used by the desktop development launcher. | Update within the installed Axios range; smoke-test the launcher. |
-| `joi` (high) | `wait-on` option validation. | Update the compatible Joi 18 patch and verify `wait-on`. |
-| `nanoid` (high) | Vite → PostCSS → identifier generator. Build execution. | Update compatible Nano ID 3 and rebuild styles. |
-| `source-map-js` (high) | PostCSS, Tailwind, jsdom CSS parsing and Vitest coverage utilities. | Update the compatible patch and verify build and tests. Production sourcemaps remain disabled. |
-| `serialize-javascript` (low) | Workbox build → Rollup terser plugin → serializer. Build execution. | Update the compatible patch and verify generated service worker. |
 
 The remaining critical worker findings are documented by the upstream advisories
 [worker options](https://github.com/advisories/GHSA-5gmw-xhrv-c9v3) and
@@ -62,7 +73,10 @@ for compatibility testing.
 
 - Typecheck and production build passed for the launcher patch. Both HTML
   entry documents and the generated service worker are present.
-- Apply and verify the remaining compatible patches before changing tooling majors.
+- The compatible batch passed typecheck, all 47 tests in the three focused UI
+  suites, the launcher plus `wait-on` smoke check, and production build with PWA
+  generation. Desktop launch remains unverified because install scripts were
+  disabled.
 - Run the local gates against the final dependency set. Test assertion corrections
   for current catalogue labels are on the sibling cancellation branch.
 - Electron installation scripts were disabled; no desktop launch or device
