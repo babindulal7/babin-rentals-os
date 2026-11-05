@@ -335,7 +335,7 @@ model**. Nothing is stored: `product_units_service_v` derives it at read time.
 | `inventory.view` | all staff | money columns per §5 | ✓ |
 | `inventory.create` (Quick Add) | M+ · Warehouse | ⭐ Coordinator I-a | ✓ |
 | `inventory.edit_identity` (name, serial, tag, location, condition-at-intake, labels) | M+ · Warehouse · Technician (condition/meters only) | | ✓ |
-| `inventory.update_unit_identity` (T2-17: unit tag, serial, rack, shelf, bin only) | Owner · Admin · Manager · Warehouse; **not Technician or Coordinator** | `product_units_update` (0018), strict revision CAS, audit trigger (0010) | ○ new action; staging proof pending |
+| `inventory.update_unit_identity` (T2-17: unit tag, serial, rack, shelf, bin only) | Owner · Admin · Manager · Warehouse; **not Technician or Coordinator** | action capability + draft 0221 column-change trigger; 0180 RLS separately permits Technician **floor** updates. Server-owned revision (0097), audit trigger (0010) | ○ draft; isolated and staging proof pending |
 | `inventory.edit_pricing` (rates, deposit, min days) | M+ | Coordinator view | ✓ |
 | `inventory.edit_purchase` (purchase price, replacement value, supplier, warranty, depreciation) | M+ · Accounts | | ✓ |
 | `inventory.retire` / `inventory.dispose` | M+ (Owner above write-off threshold) | never delete | ✓ |
