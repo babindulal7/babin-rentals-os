@@ -20,7 +20,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
-| 0222 | T0-12 / T6 glossary | owner-approved-glossary-revisions | lane-a/T0-12-rules-and-app-conflicts | claimed; local only |
+| 0222 | T0-12 / T6 glossary | owner-approved-glossary-revisions | lane-a/T0-12-rules-and-app-conflicts | written; final unchanged-source local gates pending; not applied |
 | 0178 | T2-reset | quantity-only-reset | lane-a/T2-quantity-reset | verified |
 | 0179 | T2-04 | gate1-override-by-handover-staff | lane-a/T2-04-gate1-override | verified |
 | 0180 | T2-05 | technician-floor-verbs | lane-a/T2-05-technician-floor | verified |

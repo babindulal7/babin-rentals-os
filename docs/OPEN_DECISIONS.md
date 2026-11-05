@@ -1,5 +1,9 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 5 November 2026 — Glossary editing in Settings (O-21)
+
+Babin requested glossary changes from Settings during the conflict repair. **Answered 5 Nov 2026:** editing is **Owner only** and **approved term changes apply throughout the app immediately**. The glossary's existing 1 Nov approval remains recorded; automatic OK statuses from the faulty wave exporter are not review evidence. T0-12 implements an explicit Owner approval action, append-only shared revisions and immediate text refresh. Whole-app Nepali activation remains gated independently. No hosted write path is enabled until Babin applies the locally verified migration (N-5).
+
 ## 28 October 2026: switch-user PIN length (T1-15) — ANSWERED 1 Nov: 4 digits (O-18)
 
 **Answered 1 Nov 2026 by Babin ("4 pin"): the switch-user PIN is 4 digits.** T1-15 carries the migration

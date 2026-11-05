@@ -41,6 +41,8 @@ import {
 } from '../../lib/queries/settings'
 import type { Branch, TabKey } from '../../lib/queries/settings'
 import { useSettingsLoad } from './useSettingsLoad'
+import { LanguagePreference } from './LanguagePreference'
+import { GlossarySettingsControl } from './GlossarySettingsControl'
 import {
   DestControl,
   EditCtx,
@@ -588,7 +590,7 @@ export default function Settings() {
                   </div>
                 </div>
 
-                <div className="app-settings-profile-right">
+                <div className="app-settings-profile-right" style={{ flexWrap: 'wrap', maxWidth: '100%', minWidth: 0 }}>
                   <div className="app-settings-quick-theme" role="group" aria-label="Theme preference">
                     <button
                       type="button"
@@ -668,8 +670,7 @@ export default function Settings() {
                 >
                   <Icon name="info" size={14} style={{ flexShrink: 0, marginTop: 2, color: 'var(--muted)' }} />
                   <span>
-                    Changes save to this browser and survive a reload. No <code>settings</code> table is connected yet, so they
-                    do not reach other users or other devices.
+                    Shared settings save for everyone. Display density stays on this device; language follows your account.
                   </span>
                 </div>
               )}
@@ -687,6 +688,8 @@ export default function Settings() {
                 />
               )}
 
+              {active === 'system' && !onPhoneList && <LanguagePreference />}
+              <GlossarySettingsControl active={active === 'system' && !onPhoneList} />
               {body}
 
             </div>

@@ -1,5 +1,43 @@
 # Progress Log
 
+## 2026-11-05 — T0-12: rules, task acceptance, language safety and Owner glossary editing
+
+**Did**
+- Repaired translation review evidence, whole-app Nepali activation, account language preferences, task statuses/prompts, layout dependencies, authority text, floor/portal permission descriptions and navigation/current-state drift.
+- Added Owner-only Settings glossary approval with immutable shared revisions, idempotent RPC, stale-edit guards and immediate reactive wording refresh. Migration 0222 is WRITTEN locally; fresh final gates pending. No live apply, push or merge.
+- Shared-file scope: PLAN.md, docs/PERMISSIONS.md, src/lib/rbac.ts, src/actions/core.ts, src/types/database.ts; no money-engine changes.
+
+**Ruled**
+- Babin answered interactively: latest explicit product ruling wins over Foundation; new product decisions go to Babin; whole-app acceptance gates Nepali; glossary editing is Owner only and approved changes apply immediately. RULINGS-2026-11-05 C-2–C-6 records the answers, with comments at readiness/RBAC/SQL sites.
+
+**Verified**
+- Draft-export regression failed before repair; six review-script tests now pass.
+- Targeted account/readiness/auth/settings checks passed (77 tests); additional glossary engine, reactive rendering and UI checks passed. Refused drafts remain visible; other roles never get the editor.
+- Local chain rebuilt 219/219 and lifecycle 64/64, including glossary L63. Final unchanged-source verification is pending below; no hosted/device claim.
+- Headless mock browser: nine checks passed at 375/820/1440 for Owner/Warehouse, including actual Owner glossary approvals and blocked premature Nepali activation. Screenshots in artifacts/conflict-resolution/browser/.
+- npm audit before claim commit: exit 1, 36 existing advisories (3 low, 15 moderate, 14 high, 4 critical). No dependency upgrades in this task.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 92 / 92 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 77 / 77 (100%) | +1 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 219 files · check:pglite Historical, incomplete or failed receipt (2026-11-05T13:41:59.410Z); current source NOT VERIFIED. Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-05T13:48:30.774Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Finish full local gates on unchanged final source and update the generated completion block/results.
+- Babin merges the reviewed branch and applies 0222 after backup; no agent live apply.
+- Actual wave approvals and physical-device Nepali layout acceptance remain pending; Nepali stays unavailable until complete. Production HOLD remains.
+- Dependency advisories are separate maintenance work.
+
 ## 2026-11-05 — T6-05: Wave 2 — the desk localization conversion (Lane B)
 
 **Did**

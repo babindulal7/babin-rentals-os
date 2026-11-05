@@ -1,5 +1,7 @@
 # Babin Rentals OS — Current State
 
+> **5 November 2026 — current evidence index.** Current implementation and newest local receipts are in the newest `PROGRESS.md` entry. The 5 Nov Wave 2 entry reports 218 migration files and 63 lifecycle checks; those are recorded receipts, not a fresh run by this document update. Production remains HOLD; no hosted application or device acceptance is implied. T0-12 repairs whole-app Nepali acceptance and account preferences; see `docs/verification/CONFLICT_RESOLUTION_2026-11-05.md` for repair results and remaining checks. Older banners below are historical source checkpoints.
+
 > **26 October 2026 — shadcn on main:** committed integration `2a4b032d` matches the isolated candidate with all 14 local gates passing: 5739 tests with V8 coverage in 463 files, 174 migrations, 33 lifecycle steps, 58 RPC contracts and 58 partial Return assertions; security, financial integrity, lint, 106 contrast pairs and production build/PWA pass. Source `b594f9948385f7426d5c39fc43889a2f4629bbf0fb798daf3d0db3592a03ed42`. Unrelated uncommitted primary drafts are outside this proof. Return migrations 0176/0177 are WRITTEN + VERIFIED locally only; hosted/device/offline acceptance and production HOLD remain. [Integration report](verification/SHADCN_MAIN_INTEGRATION_2026-10-26.md).
 
 > **26 October 2026 — fresh measurement on a clean clone of `main` `34cce2d` (Linux, Node 22), and a
