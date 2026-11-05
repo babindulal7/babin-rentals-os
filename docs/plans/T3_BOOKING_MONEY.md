@@ -101,7 +101,7 @@ Babin's terms text (O-11), signed at Handover (T2-02). 3) Quote PDF uses the sam
 booking.
 **Needs** — T2-02; Babin's terms text; accountant.
 
-### T3-07 · Opening balances and daily closing carry-forward            status: todo · size: M · lane C
+### T3-07 · Opening balances and daily closing carry-forward            status: doing (lane-c/T3-07-daily-closing) · size: M · lane C
 **What** — Accounts (or Owner) enters an **opening balance** once per cash drawer and per bank
 account, with the date. Daily closing then shows *opening + money in − money out = closing* per
 account and carries the closing to the next day. Money in/out includes rental payments, payment
