@@ -6965,6 +6965,30 @@ STEPS.push({
 })
 
 
+STEPS.push({
+  id: 'L68',
+  title: 'Owner can configure cancellation tiers with unique active thresholds (T3-03)',
+  expect: 'green',
+  run: async () => {
+    const insert = `insert into cancellation_fee_tiers (client_uuid, notice_hours, fee_percent, created_by)
+      values (gen_random_uuid(), 48, 12.25, $1)`
+    await as('Owner', async () => {
+      await q(insert, [U.Owner])
+      await refuses('Duplicate active threshold', insert, [U.Owner], /cancellation_fee_tiers_active_notice_key/i)
+    })
+    await as('Coordinator', async () => {
+      assertEq(Number(await one('select fee_percent from cancellation_fee_tiers where notice_hours = 48')), 12.25,
+        'Coordinator reads the configured tier')
+      await refuses('Coordinator cannot configure tiers', insert, [U.Coordinator], /row-level security/i)
+    })
+    await as('Warehouse', async () => {
+      assertEq(await one('select fee_percent from cancellation_fee_tiers where notice_hours = 48'), null,
+        'Warehouse cannot read tiers')
+    })
+  },
+})
+
+
 /* ΓöÇΓöÇ Run ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
 await seed()

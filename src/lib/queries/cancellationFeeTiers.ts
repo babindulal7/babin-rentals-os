@@ -50,3 +50,41 @@ export async function suggestCancellationFee(
   }
   return best ? best.feePercent : null
 }
+
+export async function recordCancellationFeeTier(input: {
+  noticeHours: number
+  feePercent: number
+  clientUuid: string
+  createdBy: string
+}): Promise<void> {
+  if (!Number.isInteger(input.noticeHours) || input.noticeHours < 0 || input.noticeHours > 2_147_483_647) {
+    throw new Error('Enter a whole number of notice hours.')
+  }
+  if (!Number.isFinite(input.feePercent) || input.feePercent < 0 || input.feePercent > 100 ||
+      Number(input.feePercent.toFixed(2)) !== input.feePercent) {
+    throw new Error('Enter a fee from 0 to 100% with up to two decimal places.')
+  }
+
+  const { error } = await supabase.from('cancellation_fee_tiers').insert({
+    notice_hours: input.noticeHours,
+    fee_percent: input.feePercent,
+    client_uuid: input.clientUuid,
+    created_by: input.createdBy,
+  })
+  if (!error) return
+
+  if (error.code === '23505') {
+    const { data: prior, error: readError } = await supabase.from('cancellation_fee_tiers')
+      .select('notice_hours, fee_percent, created_by')
+      .eq('client_uuid', input.clientUuid)
+      .maybeSingle()
+    if (readError) throw new Error(`Could not confirm the cancellation tier: ${readError.message}`)
+    if (prior && prior.notice_hours === input.noticeHours && Number(prior.fee_percent) === input.feePercent &&
+        prior.created_by === input.createdBy) return
+    if (error.message.includes('cancellation_fee_tiers_active_notice_key')) {
+      throw new Error('An active tier already uses that notice period.')
+    }
+  }
+
+  throw new Error(`Could not record cancellation tier: ${error.message}`)
+}

@@ -1,5 +1,41 @@
 # Progress Log
 
+## 2026-11-05 — T3-03: Configure cancellation fee tiers
+
+**Did**
+- Added an Owner-only form to Settings ▸ Financial to enter minimum notice hours and fee percentage.
+- Reused the request ID on a retry and confirmed matching duplicate requests. Migration 0223 enforces one active tier per notice threshold.
+
+**Ruled**
+- D12 and O-10 leave tier values to Babin. Kept migration 0212's existing read and write permissions.
+
+**Verified**
+- Typecheck, changed-file lint and 11 focused tests passed.
+- PGlite 219/219 migrations and lifecycle 64/64 passed on the final source. L68 covers Owner insert, duplicate rejection, Coordinator read and write refusal, and Warehouse read isolation.
+- Migration 0223 WRITTEN and VERIFIED locally. Hosted application and staging verification pending.
+- npm audit could not resolve the registry.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 64 / 64 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 219 files · check:pglite 219/219 applied, 0 failed (recorded 2026-11-05T00:58:49.168Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-05T00:55:56.053Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Add tier editing and retirement, and exercise the form on staff devices.
+- Babin enters the real tiers and confirms the accountant's VAT treatment. Check for existing duplicate thresholds before applying 0223.
+- Wire the paid-advance cancellation preview and atomic fee invoicing and reversal, then reconcile the staging examples.
+
+
 ## 2026-11-05 — T6-04: Wave 1 — the floor localization conversion (Lane B)
 
 **Did**

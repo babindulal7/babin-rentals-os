@@ -65,7 +65,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0219 | T5-08 | payment-reminders | lane-b/T5-08-payment-reminders | written |
 | 0220 | T5-09 | push-subscriptions | lane-b/T5-09-phone-pop-ups | written |
 | 0221 | T1-17 | two-step-sign-in | lane-a/T1-17-two-step-sign-in-for-every | claimed; branch not merged |
-| 0223 | T3-03 | unique-active-cancellation-fee-thresholds | lane-c/T3-03-cancellation-fee-tiers | claimed |
+| 0223 | T3-03 | unique-active-cancellation-fee-thresholds | lane-c/T3-03-cancellation-fee-tiers | verified locally |
 
 ## Expected migrations (not yet claimed)
 
