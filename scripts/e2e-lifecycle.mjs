@@ -6985,6 +6985,18 @@ STEPS.push({
       assertEq(await one('select fee_percent from cancellation_fee_tiers where notice_hours = 48'), null,
         'Warehouse cannot read tiers')
     })
+    await as('Owner', async () => {
+      const id = await one('select id from cancellation_fee_tiers where notice_hours = 48')
+      await q('update cancellation_fee_tiers set fee_percent = 15 where id = $1', [id])
+      assertEq(Number(await one('select fee_percent from cancellation_fee_tiers where id = $1', [id])), 15,
+        'Owner can correct the active fee')
+      await q('update cancellation_fee_tiers set retired_at = now() where id = $1', [id])
+      await q(insert, [U.Owner])
+      assertEq(Number(await one('select count(*) from cancellation_fee_tiers where notice_hours = 48')), 2,
+        'The original tier remains in the records')
+      assertEq(Number(await one('select count(*) from cancellation_fee_tiers where notice_hours = 48 and retired_at is null')), 1,
+        'A replacement threshold can be configured after retirement')
+    })
   },
 })
 

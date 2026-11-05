@@ -1,9 +1,10 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { Button, Card } from '../../../components/ui/Page'
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog'
 import { Input } from '../../../components/ui/Input'
 import { useAuth } from '../../../lib/auth'
 import { useNetwork } from '../../../lib/network'
-import { fetchCancellationFeeTiers, recordCancellationFeeTier } from '../../../lib/queries/cancellationFeeTiers'
+import { fetchCancellationFeeTiers, recordCancellationFeeTier, updateCancellationFeeTier, type CancellationFeeTier } from '../../../lib/queries/cancellationFeeTiers'
 import { useLoad } from '../../../lib/queries/useLoad'
 import { newClientUuid } from '../../../lib/supabase'
 
@@ -16,32 +17,30 @@ export function CancellationFeeTiersCard() {
   const [fee, setFee] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [saved, setSaved] = useState(false)
+  const [saved, setSaved] = useState<string | null>(null)
+  const [editing, setEditing] = useState<CancellationFeeTier | null>(null)
+  const [retiring, setRetiring] = useState<CancellationFeeTier | null>(null)
   const pending = useRef<{ key: string; uuid: string } | null>(null)
   const submitting = useRef(false)
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  function resetForm() {
+    pending.current = null
+    setEditing(null)
+    setNotice('')
+    setFee('')
+  }
+
+  async function save(write: () => Promise<void>, message: string) {
     if (!ownerId || !online || tiers.loading || tiers.error || submitting.current) return
     setError(null)
-    setSaved(false)
-    if (!/^\d+$/.test(notice.trim()) || !/^\d+(\.\d{1,2})?$/.test(fee.trim())) {
-      setError('Enter whole notice hours and a percentage with up to two decimal places.')
-      return
-    }
-    const noticeHours = Number(notice)
-    const feePercent = Number(fee)
-    const key = JSON.stringify([ownerId, noticeHours, feePercent])
-    if (pending.current?.key !== key) pending.current = { key, uuid: newClientUuid() }
-
+    setSaved(null)
     submitting.current = true
     setSaving(true)
     try {
-      await recordCancellationFeeTier({ noticeHours, feePercent, clientUuid: pending.current.uuid, createdBy: ownerId })
-      pending.current = null
-      setNotice('')
-      setFee('')
-      setSaved(true)
+      await write()
+      resetForm()
+      setRetiring(null)
+      setSaved(message)
       tiers.reload()
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not record the cancellation tier.')
@@ -50,6 +49,29 @@ export function CancellationFeeTiersCard() {
       setSaving(false)
     }
   }
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!ownerId) return
+    if (!/^\d+$/.test(notice.trim()) || !/^\d+(\.\d{1,2})?$/.test(fee.trim())) {
+      setSaved(null)
+      setError('Enter whole notice hours and a percentage with up to two decimal places.')
+      return
+    }
+    const noticeHours = Number(notice)
+    const feePercent = Number(fee)
+    if (editing) {
+      void save(() => updateCancellationFeeTier(editing, { noticeHours, feePercent }), 'Cancellation fee tier updated.')
+      return
+    }
+    const key = JSON.stringify([ownerId, noticeHours, feePercent])
+    if (pending.current?.key !== key) pending.current = { key, uuid: newClientUuid() }
+    const clientUuid = pending.current.uuid
+    void save(() => recordCancellationFeeTier({ noticeHours, feePercent, clientUuid, createdBy: ownerId }),
+      'Cancellation fee tier recorded.')
+  }
+
+  const actionsDisabled = saving || tiers.loading || !!tiers.error || !online
 
   return (
     <Card title="Cancellation fee tiers">
@@ -63,7 +85,25 @@ export function CancellationFeeTiersCard() {
       {tiers.data && (
         tiers.data.length === 0 ? <p>No cancellation fee tiers are configured.</p> : (
           <ul>
-            {tiers.data.map(tier => <li key={tier.id}>{tier.noticeHours}h notice · {tier.feePercent}% fee</li>)}
+            {tiers.data.map(tier => (
+              <li key={tier.id}>
+                {tier.noticeHours}h notice · {tier.feePercent}% fee
+                {ownerId && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--sp-sm)' }}>
+                    <Button disabled={actionsDisabled} aria-label={`Edit ${tier.noticeHours}-hour tier`}
+                      onClick={() => {
+                        setEditing(tier)
+                        setNotice(String(tier.noticeHours))
+                        setFee(String(tier.feePercent))
+                        setError(null)
+                        setSaved(null)
+                      }}>Edit</Button>
+                    <Button disabled={actionsDisabled} aria-label={`Retire ${tier.noticeHours}-hour tier`}
+                      onClick={() => { setError(null); setRetiring(tier) }}>Retire</Button>
+                  </div>
+                )}
+              </li>
+            ))}
           </ul>
         )
       )}
@@ -73,11 +113,29 @@ export function CancellationFeeTiersCard() {
             onChange={event => setNotice(event.target.value)} disabled={saving} />
           <Input label="Fee (%)" type="number" min={0} max={100} step={0.01} required value={fee}
             onChange={event => setFee(event.target.value)} disabled={saving} />
-          <div><Button type="submit" disabled={saving || tiers.loading || !online}>{saving ? 'Recording…' : 'Add fee tier'}</Button></div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--sp-sm)' }}>
+            <Button type="submit" disabled={actionsDisabled}>
+              {saving ? 'Recording…' : editing ? 'Save tier changes' : 'Add fee tier'}
+            </Button>
+            {editing && <Button onClick={resetForm} disabled={saving}>Cancel edit</Button>}
+            {error && <Button disabled={saving} onClick={() => { resetForm(); setError(null); tiers.reload() }}>Reload tiers</Button>}
+          </div>
           {!online && <p role="status">Reconnect to record a cancellation tier.</p>}
           {error && <p role="alert">{error}</p>}
-          {saved && <p role="status">Cancellation fee tier recorded.</p>}
+          {saved && <p role="status">{saved}</p>}
         </form>
+      )}
+      {ownerId && retiring && (
+        <ConfirmDialog
+          isOpen
+          title={`Retire the ${retiring.noticeHours}-hour tier?`}
+          description={error ? <p role="alert">{error}</p> : 'This tier will be removed from the active schedule and kept in the records.'}
+          confirmLabel="Retire tier"
+          variant="danger"
+          isSubmitting={actionsDisabled}
+          onClose={() => { if (!saving) setRetiring(null) }}
+          onConfirm={() => { void save(() => updateCancellationFeeTier(retiring, 'retire'), 'Cancellation fee tier retired.') }}
+        />
       )}
       <p>These tiers define the fee before tax. Fee invoicing and refunds still require the cancellation settlement workflow.</p>
     </Card>

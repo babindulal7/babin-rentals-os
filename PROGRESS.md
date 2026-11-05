@@ -1,5 +1,41 @@
 # Progress Log
 
+## 2026-11-05 — T3-03: Correct and retire cancellation fee tiers
+
+**Did**
+- Added Owner controls to edit and retire a configured tier. Retirement keeps the row in the records.
+- Uses the original revision and values for an update so that a stale form cannot overwrite a changed tier. A repeated request with matching resulting values succeeds.
+- Verified exact notice thresholds and excluded retired tiers from suggestions.
+
+**Ruled**
+- Followed D12 and Law 3 under the existing Owner-only policy.
+
+**Verified**
+- Typecheck, changed-file lint, and 15 focused tests passed.
+- Local database rebuild passed 219/219 migrations. Lifecycle passed 64/64, including correction, retirement, retained history and a replacement threshold.
+- The full local gate run is in progress. npm audit could not resolve the registry.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 64 / 64 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 219 files · check:pglite 219/219 applied, 0 failed (recorded 2026-11-05T01:04:21.269Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-05T01:04:58.196Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+
+### Remaining
+- Finish the full gate run and phone/tablet/desktop screen checks.
+- Babin supplies the real tiers. Confirm the accountant's VAT treatment, then implement paid-advance cancellation preview, fee invoicing and reversal in one transaction.
+- Run the staging cancellation and refund examples and merge through Babin.
+
 ## 2026-11-05 — T3-03: Configure cancellation fee tiers
 
 **Did**
