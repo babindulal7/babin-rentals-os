@@ -81,7 +81,7 @@ templates for staff.
 (15 Magh, go/no-go day).
 **Needs** — T6-06.
 
-### T6-08 · Nepali layout pass            status: todo · size: M · lane B
+### T6-08 · Nepali layout pass            status: doing (lane-b/T6-08-nepali-layout-pass) · size: M · lane B
 **What** — With Nepali on, check every converted screen at 360 / 820 / 1280: no clipped buttons or
 headings, tables still fit (Hind is wider than Source Sans 3), Asar headings never bold
 (`safeWeight()`), no fallback boxes. Check the all-Outfit typography ruling (RULINGS-2026-10-23)
