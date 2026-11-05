@@ -74,7 +74,7 @@ Notes, Tools.
 **Done when** — 100% approved. Target 24 Jan 2027 (10 Magh).
 **Needs** — T6-05.
 
-### T6-07 · Wave 4 — reports, settings, admin            status: todo · size: L · lane B + Babin
+### T6-07 · Wave 4 — reports, settings, admin            status: doing (lane-b/T6-07-wave-4-reports-settings-admin) · size: L · lane B + Babin
 **What** — All report pages, Settings, Audit/Activity/Backup screens, notifications (T5) and email
 templates for staff.
 **Done when** — 100% approved; `canEnable()` true for the whole staff app. Target 29 Jan 2027
