@@ -86,14 +86,14 @@ describe('T2-17 updateUnit', () => {
       await expect(updateUnit(valid, { ...warehouse, role })).rejects.toThrow()
     }
   })
-  it('updates only whitelisted non-money columns and the revision/actor, atomically keyed by old revision', async () => {
+  it('updates only whitelisted non-money columns and the actor, atomically keyed by old server revision', async () => {
     await updateUnitConfig.execute(valid, warehouse)
     expect(db.state.filters).toContainEqual(['id', 'unit-1'])
     expect(db.state.filters).toContainEqual(['updated_at', valid.expectedRevision])
     expect(db.state.updates).toHaveLength(1)
     const patch = db.state.updates[0]!
     expect(patch).toMatchObject({ asset_tag: 'FX3-02', rack: 'A', shelf: 'B2', updated_by: 'actor-1' })
-    expect(Object.keys(patch).sort()).toEqual(['asset_tag', 'rack', 'shelf', 'updated_at', 'updated_by'])
+    expect(Object.keys(patch).sort()).toEqual(['asset_tag', 'rack', 'shelf', 'updated_by'])
     expect(db.state.selected).toEqual(['id, asset_tag, serial_no, rack, shelf, bin, updated_at'])
     expect(JSON.stringify(patch)).not.toMatch(/replacement|price|cost|amount|rate|status|condition/)
   })
