@@ -33,10 +33,16 @@ begin
     end if;
 
     -- The universal audit trigger records NEW.updated_by as its actor.
-    -- Refuse a spoofed audit actor; the signed-in JWT is the authority.
+    -- Legacy save_record_editor writes a unit patch without updated_by.
+    -- Stamp that unchanged/omitted field from the JWT, never the prior actor;
+    -- reject an explicit attempt to select a different new actor.
     if new.updated_by is distinct from auth.uid() then
-      raise exception 'GATE:unit.identity.actor_mismatch|Unit identity changes must name the authenticated actor.'
-        using errcode = '42501';
+      if new.updated_by is not distinct from old.updated_by then
+        new.updated_by := auth.uid();
+      else
+        raise exception 'GATE:unit.identity.actor_mismatch|Unit identity changes cannot name a different actor.'
+          using errcode = '42501';
+      end if;
     end if;
 
     -- Unit editor uses a revision-matched UPDATE. The new revision must advance
