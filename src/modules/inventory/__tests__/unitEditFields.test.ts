@@ -9,7 +9,7 @@ const roles: SystemRole[] = [
 ]
 
 describe('T2-17 unit identity role gate', () => {
-  it('matches product_units_update RLS without admitting Coordinator or Technician', () => {
+  it('enforces the narrow identity role set even though 0180 has broader Technician floor UPDATE', () => {
     expect(roles.filter(canEditUnitIdentity)).toEqual(['Owner', 'Admin', 'Manager', 'Warehouse'])
   })
   it('allows Warehouse but does not require financial visibility', () => {
