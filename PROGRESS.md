@@ -4,6 +4,7 @@
 
 **Did**
 - Aligned sign-in, roster lock and operations queue tests with the current English catalogue labels. Retained the roster navigation and explicit device-forget confirmation assertions.
+- Babin confirmed VAT registration and no accountant. Recorded O-22 with a Nepali inquiry for the registered Inland Revenue Office and official source links.
 
 **Ruled**
 - This follow-up changes test expectations for the current translated labels.
@@ -30,7 +31,7 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 
 ### Remaining
 - Finish the restarted full local gate and record its terminal result.
-- Complete browser and device acceptance when the browser can attach. Implement paid-advance cancellation settlement after the accountant's VAT answer.
+- Complete browser and device acceptance when the browser can attach. Implement paid-advance cancellation settlement after written clarification of the retained fee's tax classification (O-22).
 - Review the dependency audit findings recorded in the preceding entry.
 
 ## 2026-11-05 — T3-03: Correct and retire cancellation fee tiers
