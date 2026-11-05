@@ -1,5 +1,41 @@
 # Progress Log
 
+## 2026-11-06 — T9-01: Check dataset freshness and prepare the source export request
+
+**Did**
+- Rechecked the connected Booqable bridge metadata, full catalogue header through column N, recorded sync status and field-map keys. Orders and client metrics refreshed on 6 November; catalogue, stock, rental-line and planning datasets still report 13 October.
+- Added docs/plans/evidence/cutover-export-requirements.md with the observed dataset timestamps, missing fields, complete export scope and the required 20-product three-day quote evidence. No quote comparison or import is claimed by the checklist.
+- Found conflicting renewal/cancellation dates in PLAN and S8/T9-08. Recorded O-23 in the decision register and PLAN section 4.2; asked Babin for the actual Account & Billing date. PLAN's shared-file change is the decision index only; no deadline was changed.
+
+**Ruled**
+- Followed the existing read-only-first import scope and B45's exclusion of product photos. The billing-date conflict remains unresolved.
+
+**Verified**
+- Connected metadata and bounded header/sync/field-map reads succeeded. The full-width catalogue header has no hidden extra slug or pricing columns. Recorded schema keys do not prove current source values or API response format.
+- Only metadata and aggregate counts were read for this follow-up; individual client records and source write paths were not accessed.
+- npm run completion generated the block below and returned 1 because verified suite/coverage receipts are absent. This documentation change does not establish runtime acceptance.
+- The unchanged branch dependency audit reports 36 affected packages; remediation remains on the separate T0-13 branch.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Obtain the refreshed scoped source exports and required slug, bundle, pricing and seasonal data, plus the matching OS snapshot and external references.
+- Produce the actual comparison and 20 quote checks; verify staging imports after the card prerequisites. Implement and reconcile external rental holds under T9-02.
+- Resolve O-23 using the actual billing date and align the run-off/cancellation schedule. Babin reviews and merges locally.
+
 ## 2026-11-05 — T9-01: Inspect the available Booqable source
 
 **Did**

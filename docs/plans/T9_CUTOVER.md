@@ -93,6 +93,18 @@ Refresh the catalogue before the cutover match report. The catalogue tab labels
 its amount as `Base Price NPR (provisional)`. It has no store slug, bundle
 membership, pricing structure or seasonal end-date columns, so obtain those
 source fields before checking T9-01's pricing and old-link acceptance.
+
+#### Source rechecked 6 November 2026
+
+The bridge's Sync_Status records Orders refreshed on 6 November, but catalogue,
+stock, rental-line and planning datasets still record 13 October. Reading the
+full catalogue header through column N confirms that no extra slug or pricing
+columns were missed. The recorded API field map lists slug and pricing identity
+keys that are absent from this catalogue projection.
+
+Use the [export requirements and recorded dataset timestamps](evidence/cutover-export-requirements.md)
+to prepare the complete source snapshot. The conflicting renewal/cancellation
+dates in PLAN.md and S8/T9-08 are tracked as O-23; no date was changed by this review.
 The workbook's modification date alone cannot establish when the catalogue
 data was refreshed. This inspection establishes the available export format.
 The OS match report and the 20 three-day quote comparisons remain open.

@@ -1,5 +1,21 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 6 November 2026: Confirm the Booqable renewal date (O-23)
+
+**TODO(decision):** Confirm the renewal date shown in Booqable Account & Billing.
+`PLAN.md` §1 says 18 February 2027, and §5 M7 says cancel on 8 February. Ruling
+S8 in `RULINGS-2026-10-26.md` says renewal on 20 March 2027, and T9-08 says cancel
+on 10 March after the run-off. PLAN §5 M6 and T9-06 target the last Booqable return
+on 1 March, which is later than PLAN's cancellation date.
+
+The actual billing date is awaiting Babin's answer. Once confirmed, reconcile
+PLAN §1/§5, the run-off dependency and T9-08 together. Do not resolve the conflict
+by inventing a renewal date, accepting another charge, or silently changing
+where existing Booqable rentals are returned, paid and closed.
+
+Source export preparation and read-only comparison can continue. No billing or
+cancellation action has been taken. Indexed in PLAN §4.2.
+
 ## 28 October 2026: switch-user PIN length (T1-15) — ANSWERED 1 Nov: 4 digits (O-18)
 
 **Answered 1 Nov 2026 by Babin ("4 pin"): the switch-user PIN is 4 digits.** T1-15 carries the migration
