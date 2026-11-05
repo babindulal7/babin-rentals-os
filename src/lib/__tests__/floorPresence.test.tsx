@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { getTerminalId, useFloorPresence, type FloorPresenceMessage, type UseFloorPresenceResult } from '../floorPresence'
@@ -26,8 +26,8 @@ describe('getTerminalId', () => {
 describe('useFloorPresence hook', () => {
   let container: HTMLDivElement
   let root: Root
-  let mockPostMessage: ReturnType<typeof vi.fn>
-  let mockClose: ReturnType<typeof vi.fn>
+  let mockPostMessage: Mock<(data: FloorPresenceMessage) => void>
+  let mockClose: Mock<() => void>
   let listeners: ((event: MessageEvent<FloorPresenceMessage>) => void)[] = []
 
   class MockBroadcastChannel {
@@ -70,8 +70,8 @@ describe('useFloorPresence hook', () => {
     container = document.createElement('div')
     document.body.appendChild(container)
     root = createRoot(container)
-    mockPostMessage = vi.fn()
-    mockClose = vi.fn()
+    mockPostMessage = vi.fn<(data: FloorPresenceMessage) => void>()
+    mockClose = vi.fn<() => void>()
     listeners = []
     hookResult = null
     vi.stubGlobal('BroadcastChannel', MockBroadcastChannel)

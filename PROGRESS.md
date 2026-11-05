@@ -1,5 +1,41 @@
 # Progress Log
 
+## 2026-11-05 — T0-13: Upgrade the test and build toolchain for security
+
+**Did**
+- Upgraded Vite to 6.4.5 and Vitest plus its matching coverage provider to 4.1.12 after reviewing their migration guides and installed plugin peer ranges. The old tinypool worker dependency is removed.
+- Gave the barcode and floor-presence test mocks explicit callable types for the new Vitest types. No test behavior changed.
+- Reused the three test-label corrections already verified on the cancellation branch as a separate prerequisite commit.
+- Bounded Vitest to two workers to reduce shared-machine contention. CLI overrides remain available; timeout values and assertions are unchanged.
+
+**Ruled**
+- Implements the existing dependency and local verification scope. No product rule, permission or application configuration was changed.
+
+**Verified**
+- Registry audit after this candidate installation reports 12 affected packages: 0 critical, 0 high, 10 moderate, 2 low. Remaining paths and supported-parent constraints are in docs/plans/evidence/dependency-review.md.
+- The initial typecheck found four mock type errors; the explicit function types corrected them. Typecheck then passed in the full gate run.
+- The complete 17-step gate sequence is RUNNING, logged to artifacts/toolchain-gates.log. Its lint, tests, database checks, final build and coverage are not yet certified by this entry.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite not run this session (pass --migrations to run). Suite: Historical suite: 47/47 passed, 0 failed (recorded 2026-11-05T13:57:58.937Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Finish the full gate run, correct any reproducible migration regressions and record terminal results. The prior 47-test pass and build were on the preceding compatible-patch dependency set.
+- Complete desktop acceptance with the patched Electron binary; installation scripts were disabled.
+- Review remaining supported-parent constraints for lint and PWA build findings. Babin reviews and merges locally.
+
 ## 2026-11-05 — T0-13: Apply compatible security patches
 
 **Did**

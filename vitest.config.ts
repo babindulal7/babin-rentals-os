@@ -53,6 +53,9 @@ export default defineConfig({
     // Explicit imports from 'vitest' in every file — no ambient globals, so
     // `tsc --noEmit` typechecks the suites with the same strictness as `src/`.
     globals: false,
+    // Bound jsdom memory/CPU contention on shared workstations and in CI.
+    // Callers can override this with --maxWorkers for their own machine.
+    maxWorkers: 2,
     /*
      * Raised from vitest's 5000ms default, 16 Aug 2026, after the same failure
      * shape appeared four separate times: `numberingPreview`,

@@ -20,6 +20,7 @@ This is evidence for T0-13, not a release approval.
 | After removing unused dependency | 4 | 9 | 14 | 3 | 30 |
 | After launcher patch | 2 | 9 | 14 | 3 | 28 |
 | After compatible transitive and Electron patches | 2 | 1 | 14 | 2 | 19 |
+| After Vite/Vitest candidate installation | 0 | 0 | 10 | 2 | 12 |
 
 These are npm's affected-package counts, including propagated dependency
 findings. They are not counts of independently exploitable application flaws.
@@ -44,6 +45,12 @@ or forced audit fix was introduced.
 Registry audit no longer reports these packages. Build and test verification for
 this batch is recorded separately below.
 
+The next candidate upgrades Vite 5.4.21 → 6.4.5, Vitest 3.2.7 → 4.1.12, and
+`@vitest/coverage-v8` 3.2.7 → 4.1.12. This removes `tinypool`, `vite-node` and the
+old coverage exclusion tree, and updates esbuild to 0.25.12. Installed plugin peer
+ranges support Vite 6. The registry audit has no high or critical findings for
+this candidate; application compatibility is still being verified.
+
 ## Remaining dependency paths
 
 The execution descriptions below are inferences from `package-lock.json`,
@@ -53,21 +60,26 @@ building the application. This review does not establish exploitability.
 
 | Affected package(s) | Dependency path and execution surface | Next change |
 |---|---|---|
-| `vitest`, `tinypool` (critical); `@vitest/mocker`, `@vitest/coverage-v8` (moderate) | Test runner, worker options, mock server and coverage. Referenced by the test scripts; not the shipped browser entrypoint. | Upgrade Vitest and its matching coverage provider together; verify runner receipts, mocks, full tests and coverage. |
-| `vite` (high), `esbuild` (moderate) | Vite development server and build pipeline. `dev` exposes the server on the network; preview is a separate command. | Upgrade Vite with its plugin peers and verify both HTML entries, fonts and PWA output. |
 | `typescript-eslint`, `@typescript-eslint/eslint-plugin`, `@typescript-eslint/parser`, `@typescript-eslint/type-utils`, `@typescript-eslint/typescript-estree`, `@typescript-eslint/utils` (moderate) | ESLint → TypeScript parser → `minimatch`. Runs in source lint. | Resolve the vulnerable matching dependency with supported parent versions; rerun source lint. |
-| `minimatch`, `glob`, `test-exclude` (moderate) | Workbox build and Vitest coverage selection; `minimatch` also reaches the TypeScript lint parser. | Audit parent ranges. Fixed major versions may require changes in Workbox and coverage rather than an override. |
+| `minimatch`, `glob` (moderate) | Workbox build selection; `minimatch` also reaches the TypeScript lint parser. | Audit parent ranges. Fixed major versions require parent compatibility checks rather than an override. |
 | `workbox-build`, `vite-plugin-pwa` (moderate); `@rollup/plugin-node-resolve`, `deepmerge` (low) | `vite-plugin-pwa` → Workbox build → Rollup node resolver → `deepmerge`. Used while generating the service worker. | Review supported Workbox/plugin versions and verify offline assets. Do not accept npm's suggested plugin downgrade without compatibility checks. |
 
-The remaining critical worker findings are documented by the upstream advisories
+Registry metadata checked during this review: the latest TypeScript lint parser
+8.72.1 still requests `minimatch ^10.2.2`; Workbox build 7.4.1 requests
+`glob ^11.0.1`; glob 11 currently ends at 11.1.0; the latest Rollup node resolver
+16.0.3 requests `deepmerge ^4.2.2`, and deepmerge currently ends at 4.3.1.
+Consequently, another compatible parent update does not remove these findings.
+No out-of-range transitive override was installed.
+
+The removed critical worker findings are documented by the upstream advisories
 [worker options](https://github.com/advisories/GHSA-5gmw-xhrv-c9v3) and
 [run options](https://github.com/advisories/GHSA-85c8-ppgw-ccpr).
-The [Vitest migration guide](https://vitest.dev/guide/migration/) requires Vite
-6.4.0 or newer and Node 22.12.0 or newer for Vitest 5. Its changes to mock
-clearing and reporting need verification against this repository's test runner.
-The [Vite migration guide](https://vite.dev/guide/migration.html) also describes
-the build-tool changes in Vite 8, so a latest-version install is not a substitute
-for compatibility testing.
+The [Vitest 4 migration guide](https://v4.vitest.dev/guide/migration.html)
+requires Vite 6 or newer and Node 20 or newer. Its mock and coverage changes need
+verification against this repository's test runner. The existing explicit
+coverage include list is retained. The [Vite 6 migration guide](https://v6.vite.dev/guide/migration.html)
+documents the changes from Vite 5. No application configuration was changed merely
+to suppress a migration check.
 
 ## Verification still required
 
@@ -79,6 +91,9 @@ for compatibility testing.
   disabled.
 - Run the local gates against the final dependency set. Test assertion corrections
   for current catalogue labels are on the sibling cancellation branch.
+- Verify typecheck, lint, full tests, receipt integrity, coverage, both HTML entry
+  documents and PWA generation against the Vite/Vitest candidate before treating
+  it as a completed upgrade.
 - Electron installation scripts were disabled; no desktop launch or device
   acceptance is claimed by the clean installation.
 - Babin reviews and merges the branch locally.

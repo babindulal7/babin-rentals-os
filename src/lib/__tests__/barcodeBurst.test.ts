@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest'
 import { act, createElement, Suspense, useRef } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BarcodeBurstDetector, useBarcodeBurst } from '../barcodeBurst'
@@ -8,14 +8,14 @@ import { BarcodeBurstDetector, useBarcodeBurst } from '../barcodeBurst'
 
 describe('BarcodeBurstDetector (T2-09)', () => {
   let detector: BarcodeBurstDetector
-  let onScan: ReturnType<typeof vi.fn>
+  let onScan: Mock<(code: string) => void>
   let virtualTime = 100000
   let nowSpy: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
     virtualTime = 100000
     nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => virtualTime)
-    onScan = vi.fn()
+    onScan = vi.fn<(code: string) => void>()
     detector = new BarcodeBurstDetector({ onScan, minChars: 3, maxIntervalMs: 50, cooldownMs: 1000 })
   })
 
