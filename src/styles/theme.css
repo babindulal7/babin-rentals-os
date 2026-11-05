@@ -1191,7 +1191,9 @@ td,
 :root[lang='ne'] input,
 :root[lang='ne'] select,
 :root[lang='ne'] textarea,
-:root[lang='ne'] .badge {
+:root[lang='ne'] .badge,
+:root[lang='ne'] .module-status-pill,
+:root[lang='ne'] .status-pill {
   font-family: var(--font-ne-body);
   /* Devanagari matras need the vertical room (§4.3.6). */
   line-height: 1.6;
@@ -1205,10 +1207,15 @@ td,
 :root[lang='ne'] h1,
 :root[lang='ne'] h2,
 :root[lang='ne'] h3,
+:root[lang='ne'] h4,
+:root[lang='ne'] h5,
+:root[lang='ne'] h6,
+:root[lang='ne'] .heading,
+:root[lang='ne'] [role='heading'],
 :root[lang='ne'] .title,
 :root[lang='ne'] .kpi-value {
   font-family: var(--font-ne-display);
-  font-weight: 400;
+  font-weight: 400 !important;
 }
 
 /* Focus ring 2px, theme-aware — matches the input focus colour. */

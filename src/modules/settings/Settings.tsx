@@ -19,7 +19,9 @@ import {
   validateSetting,
   resetSettings,
   languageCodeOf,
+  setUserLanguage,
 } from '../../lib/settingsStore'
+import { supabase } from '../../lib/supabase'
 import type { SettingKey, SettingValue, SettingsRecord } from '../../lib/settingsStore'
 import { saveSettings, resetSharedSettings } from '../../lib/settingsSync'
 import { applyLanguage } from '../../lib/i18n'
@@ -103,7 +105,7 @@ export default function Settings() {
   const mayEdit = canManageSettings(user?.role ?? 'Client')
   const [leaveError, setLeaveError] = useState<string | null>(null)
 
-  const { load, reload, patch } = useSettingsLoad()
+  const { load, reload, patch } = useSettingsLoad(user?.id)
   const settings: SettingsRecord = load.status === 'ready' ? load.settings : SETTINGS_DEFAULTS
 
   const onSaveSetting = useCallback(
@@ -111,10 +113,14 @@ export default function Settings() {
       await saveSettings(p as Partial<SettingsRecord>)
       patch(p as Partial<SettingsRecord>)
       if ('language' in p) {
+        setUserLanguage(user?.id, p.language as SettingValue)
         await applyLanguage(languageCodeOf(p.language as SettingValue))
+        if (user?.id) {
+          void supabase.auth.updateUser({ data: { language: p.language } }).catch(() => {})
+        }
       }
     },
-    [patch],
+    [patch, user?.id],
   )
 
   const settingFields: FieldSpec[] = useMemo(

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback, ReactNode } from 'react'
 import { supabase, IS_MOCK, newClientUuid } from './supabase'
-import { getSetting } from './settingsStore'
+import { getSetting, getUserLanguage, languageCodeOf } from './settingsStore'
+import { applyLanguage } from './i18n'
 import { hydrateSharedSettings } from './settingsSync'
 import { recordLogin, recordLogout } from './authAudit'
 import { captureError } from './monitoring'
@@ -301,6 +302,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role: data.primary_role as Role,
       isSharedDevice: false,
     })
+    const userLang = getUserLanguage(data.id)
+    void applyLanguage(languageCodeOf(userLang))
     void createRosterEntryFromUser({
       id: data.id,
       name: data.full_name,
@@ -730,6 +733,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setTimeout(() => setLimboState('idle'), 100)
 
       await loadProfile(sessionData.session.user.id, sessionData.session.user.email)
+      const targetUserLang = getUserLanguage(targetUserId)
+      await applyLanguage(languageCodeOf(targetUserLang))
       await refreshRoster()
       setLocked(false)
 

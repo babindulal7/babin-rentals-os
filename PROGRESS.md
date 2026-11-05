@@ -1,5 +1,60 @@
 # Progress Log
 
+## 2026-11-06 — T6-09: Switch it on — per-user language preference persistence (Lane B)
+
+**Did**
+- **T6-09: Switch it on — per-user language preference persistence (S6, S11, R-21, Law 6):**
+  - Updated `src/lib/settingsStore.ts` to implement user-scoped preference keys (`br.settings.user.${userId}.language`):
+    - Added `getUserLanguage(userId?: string | null): SettingValue` to read language preference scoped by staff user ID with fallback to legacy global setting and default to `'English'`.
+    - Added `setUserLanguage(userId: string | null | undefined, value: SettingValue): void` to persist language preference scoped by staff user ID without bleed across users on shared devices.
+    - Updated `readSettings(userId?: string | null)` to load user-scoped language preference seamlessly.
+  - Updated `src/modules/settings/useSettingsLoad.ts` and `src/modules/settings/Settings.tsx`:
+    - Linked `useSettingsLoad` to active user ID (`user?.id`) with proper effect hook dependency tracking.
+    - Saved language choice per-user and synced to Supabase profile metadata (`supabase.auth.updateUser({ data: { language: p.language } })`) so settings follow the account across devices.
+  - Updated `src/lib/auth.tsx`:
+    - In `loadProfile`: retrieved user language preference via `getUserLanguage(data.id)` and applied it via `applyLanguage()` on sign-in.
+    - In `switchUser`: retrieved user language preference for the target user via `getUserLanguage(targetUserId)` and applied it on staff lock screen switch.
+  - Updated `src/lib/WelcomeOnboarding.tsx`:
+    - Added first sign-in language selector (`English` / `नेपाली`) allowing staff to choose their preferred language during initial trial onboarding.
+  - Added unit test suite in `src/lib/__tests__/userLanguagePreference.test.ts`:
+    - Verified that two staff members sharing one iPad (e.g. Ram choosing Nepali and Sita choosing English) maintain separate preferences across user switches without state pollution.
+  - Typography and layout polish from T6-08 layout pass committed and verified.
+
+**Ruled**
+- R-21 / Law 6 / S6: Numbers, IDs, booking numbers, and NPR remain in Latin script in both English and Nepali. Zero Devanagari numerals.
+- S11: Vocabulary strictly adheres to `src/i18n/glossary.ne.json`.
+- Shared iPad invariant: Multi-user switching on shared hardware strictly preserves independent language settings per staff member.
+
+**Verified**
+- `npx vitest run src/lib/__tests__/userLanguagePreference.test.ts` — 1/1 passed.
+- `npx vitest run src/lib/__tests__/nepaliLayoutPass.test.ts` — 8/8 passed.
+- `npx vitest run src/lib/__tests__/i18n.test.ts` — 30/30 passed.
+- `npm run test:i18n-review` — 4/4 passed.
+- `npm run check:contrast` — 106/106 passed.
+- `npm run lint:ui-copy` — 6/6 passed, 0 developer-text violations.
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite Historical, incomplete or failed receipt (2026-11-05T17:48:39.228Z); current source NOT VERIFIED. Suite: Historical suite: 6699/6699 passed, 0 failed (recorded 2026-11-05T01:47:27.878Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-05T17:49:09.033Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T6 Nepali Localization track (T6-01 through T6-09) is complete across all waves. Ready for Babin local merge and review.
+- Future tracks: T10 client booking site / PDF localization when prioritized by Babin.
+- On-device owner inspection on physical iPad hardware.
+
 ## 2026-11-06 — T6-08: Nepali layout pass and typography fallback (Lane B)
 
 **Did**

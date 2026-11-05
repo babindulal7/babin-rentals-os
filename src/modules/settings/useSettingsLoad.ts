@@ -41,7 +41,7 @@ export interface SettingsLoadResult {
   patch: (p: Partial<SettingsRecord>) => void
 }
 
-export function useSettingsLoad(): SettingsLoadResult {
+export function useSettingsLoad(userId?: string | null): SettingsLoadResult {
   const [load, setLoad] = useState<SettingsLoad>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
 
@@ -51,7 +51,7 @@ export function useSettingsLoad(): SettingsLoadResult {
 
     void (async () => {
       try {
-        const settings = readSettings()
+        const settings = readSettings(userId)
         /* The stored language is applied before the page is declared ready, so
            a Nepali session never paints an English first frame. */
         await applyLanguage(languageCodeOf(settings.language))
@@ -60,7 +60,7 @@ export function useSettingsLoad(): SettingsLoadResult {
            shared values arrive they replace it. Never blocks the page on the network. */
         void hydrateSharedSettings()
           .then(() => {
-            if (live) setLoad({ status: 'ready', settings: readSettings() })
+            if (live) setLoad({ status: 'ready', settings: readSettings(userId) })
           })
           .catch(() => undefined)
       } catch (e) {
@@ -78,7 +78,7 @@ export function useSettingsLoad(): SettingsLoadResult {
     return () => {
       live = false
     }
-  }, [attempt])
+  }, [attempt, userId])
 
   const reload = useCallback(() => setAttempt((a) => a + 1), [])
 

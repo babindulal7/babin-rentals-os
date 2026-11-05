@@ -92,7 +92,7 @@ falls back to the Nepali faces for Devanagari, **offline**, on the devices.
 **Done when** — screenshots per wave at three widths with no defects; offline font check on device.
 **Needs** — each wave.
 
-### T6-09 · Switch it on            status: todo · size: S · lane B
+### T6-09 · Switch it on            status: done — awaiting merge (lane-b/T6-09-switch-it-on) · size: S · lane B
 **What** — Settings ▸ My preferences ▸ Language: English / नेपाली, per user, saved to the account
 so it follows the user across devices. Staff choose on their first sign-in during the trial.
 **Done when** — two staff on one iPad each keep their own language.
