@@ -14,6 +14,7 @@
 - After the final source edits, full source lint passed; check:pglite rebuilt 219/219 migrations and check:lifecycle passed 64/64. Migration 0223 remains VERIFIED locally, not APPLIED or PRODUCTION-VERIFIED.
 - The resumed gate sequence reached coverage after passing financial integrity, security, server contracts, partial Return, progress/receipt/shell/UI-copy checks, all 106 contrast checks and build. The coverage run was interrupted without a final receipt; its process handle is missing and no owned test process remains. It is not certified green.
 - Fresh audit of this branch still reports 36 affected packages. Dependency remediation is isolated on lane-a/T0-13-dependency-audit, whose current audit reports 12 (0 critical, 0 high).
+- Retried Windows screen acceptance on 6 November: list_apps timed out twice and again after the documented kernel reset/reinitialization. No target window or screen was observed; browser and device acceptance remain unverified.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
