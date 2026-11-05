@@ -22,7 +22,7 @@ archived; by 10 Mar Booqable is cancelled.
 
 ---
 
-### T9-01 · Bring the catalogue and clients across            status: todo · size: M · lane A
+### T9-01 · Bring the catalogue and clients across            status: doing (lane-a/T9-01-catalogue-reconciliation) · size: M · lane A
 **What** — From Booqable exports (CSV/API, read-only): clients created or changed since the earlier
 import, products, bundles (and the kit-style products that are bundles — 18 Aug), **pricing
 structures** ("Babin Daily", "Days wise discount", "Rental Rate Card", … — 0160) and the **four
