@@ -1,8 +1,8 @@
--- 0222_product_aliases.sql
--- T3-12 · Paste a WhatsApp gear list — the spellings staff teach us (W1, W9, lane C)
--- Ledger: docs/plans/MIGRATION_LEDGER.md row 0222, status claimed.
+-- 0223_product_aliases.sql
+-- T3-12 Â· Paste a WhatsApp gear list â€” the spellings staff teach us (W1, W9, lane C)
+-- Ledger: docs/plans/MIGRATION_LEDGER.md row 0223, status verified (renumbered from 0222 after main took that number).
 --
--- The paste-list matcher matches plain text over product names, aliases and asset codes —
+-- The paste-list matcher matches plain text over product names, aliases and asset codes â€”
 -- no AI service anywhere (Law 16). When staff correct a match, the spelling they typed is
 -- stored here, so the next paste with the same shorthand matches without a correction.
 --
@@ -10,8 +10,8 @@
 --
 --   * `alias_normalised` is STORED, not derived on read. It must be the exact string
 --     `normaliseGearText()` in `src/lib/gearListParser.ts` produces, or a saved alias
---     would never match the paste that created it and the whole promise — "the next paste
---     matches better" — would be a lie. `src/lib/__tests__/gearListParser.test.ts` pins
+--     would never match the paste that created it and the whole promise â€” "the next paste
+--     matches better" â€” would be a lie. `src/lib/__tests__/gearListParser.test.ts` pins
 --     both sides of that contract; `product_aliases_normalised_is_lower` catches a client
 --     that sends an unfolded string.
 --   * One spelling points at exactly ONE product (`product_aliases_one_spelling`). If two
@@ -21,14 +21,14 @@
 --     wins" means to the person who made it.
 --   * **There is no delete.** A wrong alias is retired with `is_active = false` (Law 3);
 --     `delete` is revoked from every role below.
---   * Roles are exactly `rental.create`'s set — Owner · Admin · Manager · Coordinator ·
---     Warehouse (PERMISSIONS §4.1). The people who build bookings are the people who
+--   * Roles are exactly `rental.create`'s set â€” Owner Â· Admin Â· Manager Â· Coordinator Â·
+--     Warehouse (PERMISSIONS Â§4.1). The people who build bookings are the people who
 --     correct matches; nothing here is wider than the booking write those five already
---     hold (N-3, B-1 — stricter wins).
+--     hold (N-3, B-1 â€” stricter wins).
 --   * **No money column, by construction.** An alias is text on a product name, so no
 --     Law 6 mask is needed and a money-blind role cannot be leaked a figure through it.
 --   * Every write carries `client_uuid` (Law 8) and the table carries the audit trigger,
---     so the database row is the audit of record (PLAN §4.36).
+--     so the database row is the audit of record (PLAN Â§4.36).
 --
 -- REVERT: drop trigger if exists trg_audit_product_aliases on public.product_aliases;
 --         drop function if exists public.remember_product_alias(uuid, text, text, uuid);
@@ -39,7 +39,7 @@ begin;
 create table if not exists public.product_aliases (
   id               uuid primary key default gen_random_uuid(),
   product_id       uuid not null references public.products (id) on delete restrict,
-  -- The spelling exactly as staff typed it — shown back to them, never matched on.
+  -- The spelling exactly as staff typed it â€” shown back to them, never matched on.
   alias            text not null,
   -- The comparison key. See the header: this is `normaliseGearText(alias)`.
   alias_normalised text not null,
@@ -79,7 +79,7 @@ create index if not exists product_aliases_client_uuid_idx
 
 alter table public.product_aliases enable row level security;
 
--- 3. Policies — the five booking-building roles, and nobody else.
+-- 3. Policies â€” the five booking-building roles, and nobody else.
 drop policy if exists product_aliases_select on public.product_aliases;
 create policy product_aliases_select on public.product_aliases
 for select to authenticated
@@ -111,7 +111,7 @@ revoke all on public.product_aliases from anon;
 revoke delete on public.product_aliases from public, anon, authenticated;
 grant select, insert, update on public.product_aliases to authenticated;
 
--- 5. The audit trigger. The database row is the audit of record (PLAN §4.36).
+-- 5. The audit trigger. The database row is the audit of record (PLAN Â§4.36).
 drop trigger if exists trg_audit_product_aliases on public.product_aliases;
 create trigger trg_audit_product_aliases
 after insert or update on public.product_aliases

@@ -4,11 +4,11 @@ import type { SystemRole } from '../../types/database'
 
 /**
  * The dispatcher's whole job now is to refuse. These assert the refusals,
- * because the failure they exist to prevent — an action reporting success for a
- * write it never made — is silent by construction and cannot be caught by
+ * because the failure they exist to prevent â€” an action reporting success for a
+ * write it never made â€” is silent by construction and cannot be caught by
  * reading the screen.
  */
-describe('createAction — fails closed', () => {
+describe('createAction â€” fails closed', () => {
   const ctx = { userId: 'u-1', role: 'Owner' as const }
 
   it('refuses an action with no `implemented` flag, before validate or execute', async () => {
@@ -70,7 +70,7 @@ describe('createAction — fails closed', () => {
     expect(execute).not.toHaveBeenCalled()
   })
 
-  it('denies payment.create to Warehouse — Law 6, through lib/rbac not a local matrix', async () => {
+  it('denies payment.create to Warehouse â€” Law 6, through lib/rbac not a local matrix', async () => {
     const execute = vi.fn()
     const action = createAction({
       name: 'RECORD_PAYMENT',
@@ -85,8 +85,8 @@ describe('createAction — fails closed', () => {
 
   /*
    * Until 15 Aug these four resolved to no rule and were denied for EVERY role,
-   * Owner included — four implemented actions with real bodies that no session
-   * could reach. PLAN.md §4.20. These assert both halves of the ruling: the
+   * Owner included â€” four implemented actions with real bodies that no session
+   * could reach. PLAN.md Â§4.20. These assert both halves of the ruling: the
    * capability now resolves, and it resolves to the RLS role set rather than to
    * "anyone who asks".
    */
@@ -112,7 +112,7 @@ describe('createAction — fails closed', () => {
       },
     )
 
-    it('admits Coordinator to rental.confirm — the seat that confirms bookings', async () => {
+    it('admits Coordinator to rental.confirm â€” the seat that confirms bookings', async () => {
       const { run } = reach('rental.confirm', 'Coordinator')
       await expect(run()).resolves.toEqual({ ok: true })
     })
@@ -157,7 +157,7 @@ describe('createAction — fails closed', () => {
       await expect(changed.run()).rejects.toBeInstanceOf(ActionPermissionError)
     })
 
-    it('denies inventory.create to Warehouse — bundles_manage, not bundle_items_all', async () => {
+    it('denies inventory.create to Warehouse â€” bundles_manage, not bundle_items_all', async () => {
       const { run, execute } = reach('inventory.create', 'Warehouse')
       await expect(run()).rejects.toBeInstanceOf(ActionPermissionError)
       expect(execute).not.toHaveBeenCalled()
@@ -166,7 +166,7 @@ describe('createAction — fails closed', () => {
 
   /*
    * The 21 ruled 16 Aug 2026, closing the same trap for every capability that
-   * had not sprung it yet. Derivation: CAPABILITY_MAPPING_2026-08-16.md §4.
+   * had not sprung it yet. Derivation: CAPABILITY_MAPPING_2026-08-16.md Â§4.
    *
    * Grouped by role set rather than listed one-per-test, because four rules do
    * all the work and a flat list of 21 would hide that.
@@ -206,7 +206,7 @@ describe('createAction — fails closed', () => {
       'inventory.reserve',
       'document.create',
       'subrental.create',
-      // T3-12 / 0222: the alias write rides the same five-role set as the
+      // T3-12 / 0223: the alias write rides the same five-role set as the
       // booking write it supports, so it is asserted with them (B-3).
       'inventory.edit_product_aliases',
     ]
@@ -255,17 +255,17 @@ describe('createAction — fails closed', () => {
 
     /* The A/B split, asserted at the dispatcher and not only in lib/rbac:
        Coordinator takes the booking, and does not touch the gear. */
-    it.each(DESK)('admits Coordinator to %s — desk work', async (capability) => {
+    it.each(DESK)('admits Coordinator to %s â€” desk work', async (capability) => {
       await expect(probe(capability, 'Coordinator').run()).resolves.toEqual({ ok: true })
     })
 
-    it.each(FLOOR)('denies Coordinator %s — floor work', async (capability) => {
+    it.each(FLOOR)('denies Coordinator %s â€” floor work', async (capability) => {
       const { run, execute } = probe(capability, 'Coordinator')
       await expect(run()).rejects.toBeInstanceOf(ActionPermissionError)
       expect(execute).not.toHaveBeenCalled()
     })
 
-    /* RULING 2026-09-08 (R-25) — `case.resolve` sets a damage disposition AND a
+    /* RULING 2026-09-08 (R-25) â€” `case.resolve` sets a damage disposition AND a
        cost, so it is a money write. It used to resolve to `isStaff()`, which
        admitted the three money-blind roles (P4, N-1). The suite above never
        caught it because TRIAGE is only asserted for Owner, and Owner passes
@@ -273,7 +273,7 @@ describe('createAction — fails closed', () => {
     const MONEY_BLIND_ROLES = ['Warehouse', 'Technician', 'Driver'] as const
 
     it.each(MONEY_BLIND_ROLES)(
-      'denies %s case.resolve — a money-blind role may not price damage (P4/N-1)',
+      'denies %s case.resolve â€” a money-blind role may not price damage (P4/N-1)',
       async (role) => {
         const { run, execute } = probe('case.resolve', role)
         await expect(run()).rejects.toBeInstanceOf(ActionPermissionError)
@@ -281,21 +281,21 @@ describe('createAction — fails closed', () => {
       },
     )
 
-    it('admits Manager to case.resolve — PERMISSIONS.md §4.3 as corrected', async () => {
+    it('admits Manager to case.resolve â€” PERMISSIONS.md Â§4.3 as corrected', async () => {
       await expect(probe('case.resolve', 'Manager').run()).resolves.toEqual({ ok: true })
     })
 
     it.each(['Admin', 'Coordinator', 'Accounts'] as const)(
-      'denies %s case.resolve — the damage ladder is Owner · Manager, not M+',
+      'denies %s case.resolve â€” the damage ladder is Owner Â· Manager, not M+',
       async (role) => {
-        // §16 V-3: `auth_can_approve_damage()` refuses Admin at every amount,
+        // Â§16 V-3: `auth_can_approve_damage()` refuses Admin at every amount,
         // identically in 0057 and on live. The doc's original "M+" was wrong.
         const { run } = probe('case.resolve', role)
         await expect(run()).rejects.toBeInstanceOf(ActionPermissionError)
       },
     )
 
-    it('still admits every staff role to crew.assign — FILED, not fixed (R-25)', async () => {
+    it('still admits every staff role to crew.assign â€” FILED, not fixed (R-25)', async () => {
       // Documents the known gap so the day it is narrowed to C+ this test fails
       // and is updated deliberately rather than by accident.
       await expect(probe('crew.assign', 'Warehouse').run()).resolves.toEqual({ ok: true })
@@ -317,10 +317,10 @@ describe('createAction — fails closed', () => {
     /*
      * The old pin here admitted Driver on purpose so an RLS narrowing would
      * fail loudly. It did: purchase_requests_approval_rank (0064, RESTRICTIVE)
-     * went live 23 Aug 2026 and purchase.approve moved to canApprovePurchase —
+     * went live 23 Aug 2026 and purchase.approve moved to canApprovePurchase â€”
      * the finance/admin five. Same pinning discipline, new rule.
      */
-    it('denies Driver, Technician and Warehouse purchase.approve — 0064 live since 23 Aug 2026', async () => {
+    it('denies Driver, Technician and Warehouse purchase.approve â€” 0064 live since 23 Aug 2026', async () => {
       for (const role of ['Driver', 'Technician', 'Warehouse'] as const) {
         const { run, execute } = probe('purchase.approve', role)
         await expect(run()).rejects.toBeInstanceOf(ActionPermissionError)
@@ -328,7 +328,7 @@ describe('createAction — fails closed', () => {
       }
     })
 
-    it('admits only Owner and Manager to purchase.approve — mirroring 0069', async () => {
+    it('admits only Owner and Manager to purchase.approve â€” mirroring 0069', async () => {
       for (const role of ['Owner', 'Manager'] as const) {
         await expect(probe('purchase.approve', role).run()).resolves.toEqual({ ok: true })
       }
@@ -339,7 +339,7 @@ describe('createAction — fails closed', () => {
      * may SEE the cost and do every non-deciding verb, but landing the request
      * on Approved or Rejected is an owner/manager act.
      */
-    it('denies Admin, Coordinator and Accounts purchase.approve — 0069 live since 25 Aug 2026', async () => {
+    it('denies Admin, Coordinator and Accounts purchase.approve â€” 0069 live since 25 Aug 2026', async () => {
       for (const role of ['Admin', 'Coordinator', 'Accounts'] as const) {
         const { run, execute } = probe('purchase.approve', role)
         await expect(run()).rejects.toBeInstanceOf(ActionPermissionError)
@@ -347,7 +347,7 @@ describe('createAction — fails closed', () => {
       }
     })
 
-    it('allows inspection.* to floor roles and denies to non-floor roles (PLAN.md §4.29, D3)', async () => {
+    it('allows inspection.* to floor roles and denies to non-floor roles (PLAN.md Â§4.29, D3)', async () => {
       const floorRoles = ['Owner', 'Admin', 'Manager', 'Warehouse', 'Technician'] as const
       const nonFloorRoles = ['Driver', 'Accounts', 'Coordinator'] as const
 
@@ -388,15 +388,15 @@ describe('createAction — fails closed', () => {
 })
 
 /*
- * T4-07 · delivery zones (migration 0189, amended 3 Nov 2026).
+ * T4-07 Â· delivery zones (migration 0189, amended 3 Nov 2026).
  *
  * The T-1 round-trip for the three zone capabilities: the dispatcher must
- * resolve each to the role set in PERMISSIONS.md §4.10 and its RLS policy, not
- * to a broader default. Coordinator is the regression this pins — 0189 shipped
- * Coordinator+, the card's role set is Owner · Admin · Manager (build note 3),
+ * resolve each to the role set in PERMISSIONS.md Â§4.10 and its RLS policy, not
+ * to a broader default. Coordinator is the regression this pins â€” 0189 shipped
+ * Coordinator+, the card's role set is Owner Â· Admin Â· Manager (build note 3),
  * and `checkCapability` had no case for these strings at all until T4-07.
  */
-describe('delivery_zone capabilities — T-1 matrix round-trip (T4-07)', () => {
+describe('delivery_zone capabilities â€” T-1 matrix round-trip (T4-07)', () => {
   const probe = (capability: string, role: SystemRole) => {
     const execute = vi.fn(async () => ({ result: { ok: true }, events: [] }))
     const action = createAction({
@@ -413,7 +413,7 @@ describe('delivery_zone capabilities — T-1 matrix round-trip (T4-07)', () => {
   const NOT_ZONE_WRITERS = ['Coordinator', 'Accounts', 'Warehouse', 'Technician', 'Driver', 'Client'] as const
 
   it.each(['delivery_zone.create', 'delivery_zone.manage'] as const)(
-    '%s admits exactly Owner · Admin · Manager',
+    '%s admits exactly Owner Â· Admin Â· Manager',
     async (capability) => {
       for (const role of ZONE_WRITERS) {
         await expect(probe(capability, role).run()).resolves.toEqual({ ok: true })
@@ -437,7 +437,7 @@ describe('delivery_zone capabilities — T-1 matrix round-trip (T4-07)', () => {
   })
 })
 
-describe('problem_report capabilities — T-1 matrix round-trip (T4-11)', () => {
+describe('problem_report capabilities â€” T-1 matrix round-trip (T4-11)', () => {
   const probe = (capability: string, role: SystemRole) => {
     const execute = vi.fn(async () => ({ result: { ok: true }, events: [] }))
     const action = createAction({
@@ -488,14 +488,14 @@ describe('problem_report capabilities — T-1 matrix round-trip (T4-11)', () => 
 /**
  * ## The guard that should have existed first
  *
- * Every capability gap so far — the four found on 15 Aug, the 24 on 16 Aug —
+ * Every capability gap so far â€” the four found on 15 Aug, the 24 on 16 Aug â€”
  * was found by a person grepping `permissions:` arrays against the switch. Both
  * times the gap had been sitting there for days, and the second time only the
  * first four had bodies, which is the only reason it was survivable.
  *
  * The defect is invisible by construction: a declared-but-unhandled capability
  * falls to `default: undefined`, which the dispatcher reads as a denial, so the
- * symptom is "your role cannot do this" for **every role including Owner** —
+ * symptom is "your role cannot do this" for **every role including Owner** â€”
  * a permission error whose true cause is a missing `case`. Nothing in the type
  * system connects the two files, so nothing else can catch it.
  *
@@ -503,12 +503,12 @@ describe('problem_report capabilities — T-1 matrix round-trip (T4-11)', () => 
  * a mismatch between two files, and only a text comparison of both sees it.
  *
  * `import.meta.glob` rather than `node:fs` because `@types/node` is not a
- * dependency and `tsconfig` carries no `"types": ["node"]` — adding one to
+ * dependency and `tsconfig` carries no `"types": ["node"]` â€” adding one to
  * satisfy a test would widen the whole program's global scope. Vite's glob is
  * already typed here via `src/vite-env.d.ts`.
  */
 describe('every declared capability resolves to a rule', () => {
-  /* Eager + ?raw gives path → file text at transform time. The pattern reaches
+  /* Eager + ?raw gives path â†’ file text at transform time. The pattern reaches
      every action, at any nesting depth; the `__tests__` filter keeps this
      file's own probe strings out of the declared set. */
   const sources: Record<string, string> = import.meta.glob('../**/*.ts', {
@@ -520,7 +520,7 @@ describe('every declared capability resolves to a rule', () => {
   const actionSources = Object.entries(sources).filter(([path]) => !path.includes('__tests__'))
 
   /**
-   * Closed 2026-09-12 per PLAN.md §4.29(a) and migration 0122.
+   * Closed 2026-09-12 per PLAN.md Â§4.29(a) and migration 0122.
    * All declared capabilities under src/actions now resolve to an RBAC rule.
    */
   const KNOWN_OPEN: string[] = []
@@ -531,7 +531,7 @@ describe('every declared capability resolves to a rule', () => {
    * Found by mutation-testing this guard on 16 Aug 2026: commenting out
    * `case 'inventory.transfer':` left the guard green, because `// case 'x':`
    * still matches the pattern. A commented-out case is *exactly* the shape of
-   * the bug — the capability stops resolving while the text still says it does —
+   * the bug â€” the capability stops resolving while the text still says it does â€”
    * so the one mutation most likely to happen in practice was the one this
    * could not see. Both scans strip first now, and both the block-comment and
    * line-comment forms are removed since `core.ts` documents each ruling in a
@@ -554,11 +554,11 @@ describe('every declared capability resolves to a rule', () => {
 
   const handled = (): string[] => {
     const source = actionSources.find(([path]) => path.endsWith('/core.ts'))?.[1]
-    if (!source) throw new Error('core.ts was not matched by the glob — the pattern is wrong')
+    if (!source) throw new Error('core.ts was not matched by the glob â€” the pattern is wrong')
     return [...stripComments(source).matchAll(/case '([^']+)':/g)].map((m) => m[1] as string).sort()
   }
 
-  it('finds the capability declarations at all — the scan is not vacuously passing', () => {
+  it('finds the capability declarations at all â€” the scan is not vacuously passing', () => {
     /* A regex that silently matched nothing would make every assertion below
        pass while checking nothing. Pin a floor and two known members. */
     const all = declared()
@@ -577,9 +577,9 @@ describe('every declared capability resolves to a rule', () => {
        Anything else handled-but-undeclared is a dead `case` or a renamed
        capability that left its old spelling behind.
 
-       ⚠ `money.view` was in the prose here and missing from the list, so this
+       âš  `money.view` was in the prose here and missing from the list, so this
        assertion failed on a capability the comment itself called app-level. It
-       is the Law 6 read gate — `lib/moneyVisibility` and every screen that hides
+       is the Law 6 read gate â€” `lib/moneyVisibility` and every screen that hides
        a figure call it, and no action declares it, by design. Added 16 Aug 2026.
        The payment pair IS declared (`recordPayment`, `refundPayment`), so it
        correctly stays out of this list. */

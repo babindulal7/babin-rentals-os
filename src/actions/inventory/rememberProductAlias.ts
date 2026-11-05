@@ -4,28 +4,28 @@ import { newClientUuid, supabase } from '../../lib/supabase'
 import { normaliseGearText } from '../../lib/gearListParser'
 
 /**
- * **T3-12 — remember the spelling a staff member corrected a paste-list match to.**
+ * **T3-12 â€” remember the spelling a staff member corrected a paste-list match to.**
  *
  * This is the whole of "staff corrections are saved as aliases so the next paste matches
  * better": the matcher suggested the wrong product for a line, a person picked the right
  * one, and the words they typed are recorded against that product so the next paste with
  * the same shorthand matches without a correction.
  *
- * The write is one RPC (`remember_product_alias`, migration 0222) rather than a client-side
+ * The write is one RPC (`remember_product_alias`, migration 0223) rather than a client-side
  * insert, because the row must be unique per spelling and a correction must MOVE that
  * spelling rather than add a rival. Two tabs inserting "fx3" against two different products
  * would otherwise leave the matcher with two exact hits and turn every future paste into a
  * question. The RPC re-checks the role set in Postgres as well, so the rule holds even for
  * a caller that never went through `checkCapability` (N-3, B-1).
  *
- * `alias_normalised` is computed here by `normaliseGearText()` — the same function the
+ * `alias_normalised` is computed here by `normaliseGearText()` â€” the same function the
  * matcher compares with. The database refuses a key that is not already lower-case, so a
  * future refactor that sends an unfolded string fails loudly instead of storing a row that
  * can never match.
  */
 
 export type RememberProductAliasInput = {
-  /** The product the person chose — the one the alias should point at. */
+  /** The product the person chose â€” the one the alias should point at. */
   productId: string
   /** The spelling as it appeared in the pasted list, or as the person retyped it. */
   alias: string
@@ -75,7 +75,7 @@ export const rememberProductAliasConfig: ActionConfig<
 
     /*
      * The RPC returns the row id. A success with no id means the database did not do what
-     * we asked — the same "read it back" rule the floor verbs follow: never tell the
+     * we asked â€” the same "read it back" rule the floor verbs follow: never tell the
      * operator a spelling was saved when nothing was written (Law 16).
      */
     if (typeof data !== 'string' || data.length === 0) {

@@ -42,29 +42,29 @@ import type { SystemRole } from '../types/database';
  *    rules, rather than a matrix invented here. A permission with no known
  *    check is refused, not waved through -- the fail-closed direction.
  *
- * ## The capability matrix — closed 16 Aug 2026, except three
+ * ## The capability matrix â€” closed 16 Aug 2026, except three
  *
  * `checkCapability` resolves **32 of the 35** strings it knows about: the seven
- * app-level rules (money, operations, payment ×2, invoice-void,
+ * app-level rules (money, operations, payment Ã—2, invoice-void,
  * credit-override, settings), the four ruled on 15 Aug, and the 24 ruled on
  * 16 Aug. **Every capability declared anywhere under `src/actions/` now
  * resolves, except the three named below.**
  *
  * This was done *ahead of* the bodies rather than behind them. The 15 Aug four
  * were ruled after their actions shipped, and the gap denied them to every role
- * including Owner for three days — a permission error where the truth was a
+ * including Owner for three days â€” a permission error where the truth was a
  * missing switch case. Twenty-four more sat in exactly that state, each one
  * springing the moment someone wrote its body.
  *
  * The rule for answering them is the one that worked on 15 Aug and is now
- * ruled in PLAN.md §4.20: find the RLS policy on the table the action writes
+ * ruled in PLAN.md Â§4.20: find the RLS policy on the table the action writes
  * and mirror it. A capability can then never be granted here and denied at the
  * row, or the reverse.
  *
  * ## Capability rulings
  *
  * `inspection.create`, `inspection.pass`, `inspection.fail` ruled 2026-09-12
- * (PLAN.md §4.29(a), migration 0122): 'Inspection' added to operation_kind and
+ * (PLAN.md Â§4.29(a), migration 0122): 'Inspection' added to operation_kind and
  * operation_sessions check constraint, mirroring operation_sessions_all (canWriteFloor).
  */
 
@@ -117,13 +117,13 @@ export class ActionPermissionError extends Error {
 
 /**
  * Thrown when an action is blocked specifically because the device is offline
- * (e.g. money operations, voiding invoices, closing approvals — Law 6 / PLAN.md §4.27).
+ * (e.g. money operations, voiding invoices, closing approvals â€” Law 6 / PLAN.md Â§4.27).
  */
 export class ActionOfflineError extends Error {
   readonly action: string;
   readonly capability: string;
   constructor(action: string, capability: string) {
-    super(`"${action}" cannot be performed while offline — requires ${capability} with an active server connection.`);
+    super(`"${action}" cannot be performed while offline â€” requires ${capability} with an active server connection.`);
     this.name = 'ActionOfflineError';
     this.action = action;
     this.capability = capability;
@@ -163,7 +163,7 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'money.view':
       return rbac.canViewMoney(ctx.role);
     /*
-     * ── Ruled 15 Aug 2026, closing PLAN.md §4.20 ────────────────────────────
+     * â”€â”€ Ruled 15 Aug 2026, closing PLAN.md Â§4.20 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
      *
      * These four were declared by actions carrying REAL bodies and handled by
      * nothing here, so each fell through to `undefined` and was denied for every
@@ -172,11 +172,11 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
      *
      * The answer was not invented. Each capability is now the role set of the
      * RLS policy on the table its action actually writes, read off the live
-     * project on 15 Aug — so a capability still cannot be granted here and
+     * project on 15 Aug â€” so a capability still cannot be granted here and
      * denied at the row, which is what this file's rules exist to prevent. The
      * derivation for each sits in `lib/rbac`, next to the rule.
      *
-     * ⚠ `inventory.create` was the fourth, and no document had it: §4.20 named
+     * âš  `inventory.create` was the fourth, and no document had it: Â§4.20 named
      * only the other three. It surfaced by checking every `permissions:` string
      * against this switch rather than by reading the register.
      */
@@ -188,15 +188,15 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
       return rbac.canManageClientCollectors(ctx.role);
     case 'client.block':
       return rbac.canBlockClient(ctx.role);
-    // RULING 2026-10-22: new capability, mirrors `client_memberships_all` (0037) — Owner, Admin, Manager, Coordinator.
+    // RULING 2026-10-22: new capability, mirrors `client_memberships_all` (0037) â€” Owner, Admin, Manager, Coordinator.
     case 'client.change_membership':
       return rbac.canChangeMembership(ctx.role);
     case 'inventory.create':
       return rbac.canCreateBundle(ctx.role);
     /*
-     * `inventory.update` — added 8 Sep 2026 with `updateBundle`, by the same
+     * `inventory.update` â€” added 8 Sep 2026 with `updateBundle`, by the same
      * method: the role set is the intersection of the RLS policies on the two
-     * tables the action writes (`bundles_manage` ∩ `bundle_items_all`), re-read
+     * tables the action writes (`bundles_manage` âˆ© `bundle_items_all`), re-read
      * from the live project rather than copied from the line above. It lands on
      * the same three roles as `inventory.create`; the derivation sits in
      * `lib/rbac.canUpdateBundle`, next to the policies it mirrors.
@@ -205,8 +205,8 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'inventory.update':
       return rbac.canUpdateBundle(ctx.role);
     /*
-     * `inventory.edit_service_plan` — R-28, 8 Sep 2026. Owner · Admin · Manager,
-     * as `PERMISSIONS.md` §4.3 states it. Ruled with the action rather than
+     * `inventory.edit_service_plan` â€” R-28, 8 Sep 2026. Owner Â· Admin Â· Manager,
+     * as `PERMISSIONS.md` Â§4.3 states it. Ruled with the action rather than
      * after it: an unmapped capability resolves to `undefined`, which this
      * function's caller reads as a denial for EVERY role including Owner, and
      * that gap is what made `rental.confirm` unreachable for three days.
@@ -217,11 +217,11 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'inventory.stock_adjust':
       return online && rbac.canAdjustStock(ctx.role);
     /*
-     * ── Ruled 16 Aug 2026 — the remaining 24, same method as the four above ──
+     * â”€â”€ Ruled 16 Aug 2026 â€” the remaining 24, same method as the four above â”€â”€
      *
      * Role sets read from `pg_policies` on the live project, per capability,
      * from the table that capability's action writes. Derivation table:
-     * `CAPABILITY_MAPPING_2026-08-16.md` §4; the rules themselves sit in
+     * `CAPABILITY_MAPPING_2026-08-16.md` Â§4; the rules themselves sit in
      * `lib/rbac` next to the policy each one cites.
      *
      * Done BEFORE any of these actions gets a body, deliberately. The four
@@ -233,27 +233,27 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'rental.draft':
     case 'rental.cancel':
     case 'rental.extend':
-    // `rental.update_project` (0144) mirrors `bookings_update` (0018) — the
+    // `rental.update_project` (0144) mirrors `bookings_update` (0018) â€” the
     // desk five. The action writes two non-money text columns only (the 0102
     // trigger guards numeric money columns), and the screens offer the control
-    // to Coordinator+ while floor roles view the type (UI grants less — the
+    // to Coordinator+ while floor roles view the type (UI grants less â€” the
     // safe direction, same as `rental.close` below).
     case 'rental.update_project':
     case 'client.update':
     case 'inventory.reserve':
     case 'document.create':
     case 'subrental.create':
-    // `note.create` (31 Aug) mirrors `booking_notes_all` (0024:73-76) — the
-    // same five-role set, per the §4.20 method. Reading notes is broader
+    // `note.create` (31 Aug) mirrors `booking_notes_all` (0024:73-76) â€” the
+    // same five-role set, per the Â§4.20 method. Reading notes is broader
     // (`booking_notes_select` = all staff); this gates only the write.
     case 'note.create':
-    // `unit.release` (31 Aug, §4.39a) mirrors `booking_line_units_all` (0024)
-    // — the identical five-role set, confirmed against pg_policies the same
+    // `unit.release` (31 Aug, Â§4.39a) mirrors `booking_line_units_all` (0024)
+    // â€” the identical five-role set, confirmed against pg_policies the same
     // day. The release is an UPDATE on that table; no narrower policy exists.
     case 'unit.release':
-    // `inventory.edit_product_aliases` (T3-12, 0222) mirrors the
+    // `inventory.edit_product_aliases` (T3-12, 0223) mirrors the
     // `product_aliases_select/insert/update` policies, whose role list IS this
-    // five (Owner · Admin · Manager · Coordinator · Warehouse): the people who
+    // five (Owner Â· Admin Â· Manager Â· Coordinator Â· Warehouse): the people who
     // build bookings are the people who correct what the paste-list matcher
     // suggested. Storing a spelling is narrower than the booking write they
     // already hold, so this set is the ceiling and not an extension of it
@@ -262,47 +262,47 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'inventory.edit_product_aliases':
       return rbac.canWriteBookingDesk(ctx.role);
 
-    /* `closing.approve` (1 Sep, §5.4) mirrors `daily_closings_finance_insert`
-       (0078) — `auth_is_finance_or_admin()`, read off the live project the day
+    /* `closing.approve` (1 Sep, Â§5.4) mirrors `daily_closings_finance_insert`
+       (0078) â€” `auth_is_finance_or_admin()`, read off the live project the day
        it applied. It is its OWN rule rather than one of the sets below because
        no existing helper carries that exact five: `canRecordPayment` is
        Owner/Coordinator/Accounts and `canPerformOperations` is a floor set.
-       §4.40(a) records that a narrower Owner/Manager reading is open. */
+       Â§4.40(a) records that a narrower Owner/Manager reading is open. */
     case 'closing.approve':
       return rbac.canApproveDailyClosing(ctx.role, online);
 
     /*
-     * `deposit.release` (docs/PERMISSIONS.md §4.6) — Owner · Admin · Manager · Accounts.
+     * `deposit.release` (docs/PERMISSIONS.md Â§4.6) â€” Owner Â· Admin Â· Manager Â· Accounts.
      * Settling or releasing a security deposit (Law 5 liability held on client's behalf).
      */
     case 'deposit.release':
       return rbac.canReleaseDeposit(ctx.role, online);
 
     /*
-     * ── Ruled 4 Sep 2026 by `RULINGS-2026-09-04.md`, which is BINDING ────────
+     * â”€â”€ Ruled 4 Sep 2026 by `RULINGS-2026-09-04.md`, which is BINDING â”€â”€â”€â”€â”€â”€â”€â”€
      *
      * These two are the exception to the mirror method above, and the exception
      * is itself a rule: R-00 puts the rulings file above PLAN.md, so where it
-     * names a role set outright that set wins over the live policy. §4.20 then
-     * says which way to reconcile them — **change the POLICY first, then the
-     * predicate** — and that is what
+     * names a role set outright that set wins over the live policy. Â§4.20 then
+     * says which way to reconcile them â€” **change the POLICY first, then the
+     * predicate** â€” and that is what
      * `0086_invoice_write_rights_and_draft_without_number.sql` does.
      *
-     * `invoice.create` — R-05 and SPEC-P0-1 §3.1: Owner, Admin, Manager,
+     * `invoice.create` â€” R-05 and SPEC-P0-1 Â§3.1: Owner, Admin, Manager,
      * Accounts. Live said Owner/Admin/Manager/**Coordinator** on 4 Sep, so the
      * migration realigns `invoices_insert`/`invoices_update` and gives
      * `invoice_lines` the write policy it never had. Until 0086 applies, this
-     * capability grants what Postgres still refuses — which is exactly why the
+     * capability grants what Postgres still refuses â€” which is exactly why the
      * migration and this line ship together.
      */
     case 'invoice.create':
       return rbac.canIssueInvoice(ctx.role, online);
 
     /*
-     * `rental.close` — R-08, the same four as R-05. Deliberately NOT the §4.20
+     * `rental.close` â€” R-08, the same four as R-05. Deliberately NOT the Â§4.20
      * mirror: `closeRental` writes a `booking_stage_transitions` row whose
      * policy is the desk five including Warehouse, and R-08 does not admit
-     * Warehouse. R-07 explains why — the close gate is a hard block on money
+     * Warehouse. R-07 explains why â€” the close gate is a hard block on money
      * (outstanding 0, deposit resolved), so closing is a finance act that
      * happens to be recorded as a stage move.
      *
@@ -329,7 +329,7 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'inventory.transfer':
     case 'maintenance.create':
     case 'evidence.review':
-    // RULING 2026-09-12 (PLAN.md §4.29(a), migration 0122): 'Inspection' added
+    // RULING 2026-09-12 (PLAN.md Â§4.29(a), migration 0122): 'Inspection' added
     // to operation_kind and operation_sessions; mirrors operation_sessions_all.
     case 'inspection.create':
     case 'inspection.pass':
@@ -344,18 +344,18 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
       return rbac.canMergeClients(ctx.role);
 
     // RULING 2026-09-08 (R-25): `case.resolve` sets a damage disposition AND a
-    // cost, so it is a money write and may not resolve to `isStaff()` — that
+    // cost, so it is a money write and may not resolve to `isStaff()` â€” that
     // admitted Warehouse, Technician and Driver, the three money-blind roles
-    // (P4, N-1). PERMISSIONS.md §4.3 as corrected: Owner · Manager under
+    // (P4, N-1). PERMISSIONS.md Â§4.3 as corrected: Owner Â· Manager under
     // Rs 25,000, Owner at or above. `canApproveDamage` already encodes exactly
     // that and was called from nowhere; this is its first caller.
     //
     // `'Manager'` is passed as the band because `checkCapability` receives only
-    // the role — the charge is not in scope here. So this gate is the WIDEST
+    // the role â€” the charge is not in scope here. So this gate is the WIDEST
     // legal set, and the Rs 25,000 banding is enforced where the amount is
     // known: `lib/damage`'s `approverFor(chargePaisa)` on the way in, and
-    // `auth_can_approve_damage(charge)` in the database. UI ⊆ DB (P3) holds
-    // either way — this can only ever be narrower than the policy, never wider.
+    // `auth_can_approve_damage(charge)` in the database. UI âŠ† DB (P3) holds
+    // either way â€” this can only ever be narrower than the policy, never wider.
     //
     // Revert: `return rbac.canWriteSharedTriage(ctx.role);`
     case 'case.create':
@@ -432,9 +432,9 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'problem_report.manage':
       return rbac.canManageProblemReports(ctx.role);
 
-    // ⚠ FILED, not fixed: `crew.assign` is still `isStaff()`, but PERMISSIONS.md
-    // §4.7 says `C+` and the §3 grid marks Crew Assist ✕ for Warehouse,
-    // Technician and Driver. Left alone deliberately — there is no C+ role set
+    // âš  FILED, not fixed: `crew.assign` is still `isStaff()`, but PERMISSIONS.md
+    // Â§4.7 says `C+` and the Â§3 grid marks Crew Assist âœ• for Warehouse,
+    // Technician and Driver. Left alone deliberately â€” there is no C+ role set
     // in this file, and every set here mirrors a live RLS policy by convention.
     // Inventing one without reading `crew_assignments`' policy would break that
     // convention. `bookCrew` is `implemented: false`, so nothing can reach it
@@ -443,7 +443,7 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
       return rbac.canWriteSharedTriage(ctx.role);
 
     // Split off shared triage 23 Aug 2026 when 0064's restrictive policy went
-    // live — the finance/admin five decide purchases; the mirror rule moved
+    // live â€” the finance/admin five decide purchases; the mirror rule moved
     // this the same day the database did.
     case 'purchase.approve':
       return rbac.canApprovePurchase(ctx.role);
