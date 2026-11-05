@@ -218,7 +218,7 @@ invoice refuses silent edits".
 number minted once; Close works with no by-hand invoice step; Warehouse sees none of it.
 **Needs** — accountant answers O-14 (step 4) and O-17 (numbering moment); build steps 1–3 and 5 first.
 
-### T3-15 · Payment method default            status: todo · size: S · lane C · [go-live]
+### T3-15 · Payment method default            status: doing · size: S · lane C · [go-live]
 **What** — Record Payment preselects **the method this client used last** (L2); a new client gets no
 preselection and four large one-tap method buttons (Cash · Bank transfer · Fonepay · eSewa/Khalti).
 Keep the bank account default for Bank transfer (R-39 D3).
