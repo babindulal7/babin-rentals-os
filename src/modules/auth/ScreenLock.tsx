@@ -390,7 +390,7 @@ export default function ScreenLock({ onUnlock }: { onUnlock: () => void }) {
                   }}
                 >
                   <Icon name="arrow_left" size={16} />
-                  {t('action.back', 'Back to staff list')}
+                  {t('auth.screenLock.backToStaff', 'Back to staff list')}
                 </button>
               </div>
             )}

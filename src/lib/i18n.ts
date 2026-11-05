@@ -476,7 +476,7 @@ export async function applyLanguage(lang: Language): Promise<void> {
   }
 }
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 
 /** Synchronously checks active document language. */
 export function getCurrentLanguage(): Language {
@@ -515,18 +515,21 @@ export function useCurrentLanguage(): Language {
  */
 export function useTranslation() {
   const lang = useCurrentLanguage()
-  function translate(
-    key: StringKey | string,
-    fallbackOrParams?: string | Record<string, string | number>,
-    params?: Record<string, string | number>
-  ): string {
-    if (typeof fallbackOrParams === 'string') {
-      const translated = t(key, lang, params)
-      return translated === key ? fallbackOrParams : translated
-    }
-    return t(key, lang, fallbackOrParams)
-  }
-  return { t: translate, lang }
+  const translate = useCallback(
+    (
+      key: StringKey | string,
+      fallbackOrParams?: string | Record<string, string | number>,
+      params?: Record<string, string | number>
+    ): string => {
+      if (typeof fallbackOrParams === 'string') {
+        const translated = t(key, lang, params)
+        return translated === key ? fallbackOrParams : translated
+      }
+      return t(key, lang, fallbackOrParams)
+    },
+    [lang]
+  )
+  return useMemo(() => ({ t: translate, lang }), [translate, lang])
 }
 
 /** Toggles between English and Nepali, persisting to settings and applying fonts immediately. */

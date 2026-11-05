@@ -469,7 +469,7 @@ const TABLE_HEADINGS: Record<string, string> = {
   Client: 'operations.col.client',
   Items: 'operations.col.items',
   Stage: 'operations.col.status',
-  Time: 'operations.col.due',
+  Time: 'operations.col.time',
   Action: 'operations.col.action',
 }
 

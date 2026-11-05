@@ -1613,7 +1613,7 @@ export default function RentalsList() {
       }] : []),
     ]
     return { count: selectedIds.size, onClear: clearRentalSelection, actions }
-  }, [selectedIds.size, handleBulkExport, canOperate, bulkProcessing, clearRentalSelection])
+  }, [selectedIds.size, handleBulkExport, canOperate, bulkProcessing, clearRentalSelection, t])
 
   // Bulk Pack & Bulk Handover removed per Steps 2 & 3: packing and handover are
   // physical floor operations requiring equipment resolution and stage gates in

@@ -252,7 +252,10 @@ rentals.views.overdue,2,rentals,views,Overdue,म्याद नाघेको
 rentals.views.completed,2,rentals,views,Completed,सम्पन्न,https://os.babinrentals.com/screenshots/rentals/views.png,OK,,S11 approved wording
 rentals.views.cancelled,2,rentals,views,Cancelled,रद्द भएको,https://os.babinrentals.com/screenshots/rentals/views.png,OK,,S11 approved wording
 rentals.actions.newRental,2,rentals,actions,New Rental,नयाँ भाडा,https://os.babinrentals.com/screenshots/rentals/actions.png,OK,,S11 approved wording
+rentals.actions.newShort,2,rentals,actions,New,नयाँ,https://os.babinrentals.com/screenshots/rentals/actions.png,OK,,S11 approved wording
 rentals.actions.exportCsv,2,rentals,actions,Export CSV,CSV निर्यात गर्नुहोस्,https://os.babinrentals.com/screenshots/rentals/actions.png,OK,,S11 approved wording
+rentals.searchAria,2,rentals,rentals,Search rentals,भाडा खोज्नुहोस्,https://os.babinrentals.com/screenshots/rentals/rentals.png,OK,,S11 approved wording
+rentals.searchPlaceholder,2,rentals,rentals,Search rentals…,भाडा खोज्नुहोस्…,https://os.babinrentals.com/screenshots/rentals/rentals.png,OK,,S11 approved wording
 rentals.actions.filter,2,rentals,actions,Filters,फिल्टरहरू,https://os.babinrentals.com/screenshots/rentals/actions.png,OK,,S11 approved wording
 rentals.actions.viewDetail,2,rentals,actions,View Booking,बुकिङ हेर्नुहोस्,https://os.babinrentals.com/screenshots/rentals/actions.png,OK,,S11 approved wording
 rentals.actions.duplicate,2,rentals,actions,Duplicate,प्रतिलिपि बनाउनुहोस्,https://os.babinrentals.com/screenshots/rentals/actions.png,OK,,S11 approved wording

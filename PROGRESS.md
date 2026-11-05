@@ -6,11 +6,12 @@
 - **T6-05: Wave 2 desk localization conversion (S6, S11, R-21, Law 6):**
   - Converted Desk and Clients components to reactive translation hook `useTranslation()`:
     - **Clients:** Converted `src/modules/clients/Clients.tsx` (titles, tabs, count pills, search placeholders, export toasts, credit policy cards, KPIs, empty states) and `src/modules/clients/ClientsDirectory.tsx` (table headers, bulk block/unblock modals, action buttons).
-    - **Rentals / Crew:** Converted `src/modules/rentals/BookingCrewList.tsx` (crew name, role, call/wrap times, days count, daily rate, total pay, retry states).
-  - Enriched dictionaries in `src/i18n/en/` and `src/i18n/ne/` across `clients.json` (171 keys), `crew.json` (35 keys), `calendar.json` (28 keys), and `rentals.json` (49 keys).
+    - **Rentals / Crew:** Converted `src/modules/rentals/BookingCrewList.tsx` (crew name, role, call/wrap times, days count, daily rate, total pay, retry states) and stabilized `RentalsList.tsx` memoized bulk selections.
+  - Enriched dictionaries in `src/i18n/en/` and `src/i18n/ne/` across `clients.json` (171 keys), `crew.json` (35 keys), `calendar.json` (28 keys), `rentals.json` (49 keys), `auth.json` and `operations.json`.
+  - Fixed React hook reference stability in `src/lib/i18n.ts` by memoizing `translate` (`useCallback`) and `useTranslation` return (`useMemo`), preventing infinite re-render cascades in consumers.
   - Maintained strict digit invariant: Latin digits preserved across all translations (`3-दिन`, `1 दिन`, `{count} दिन`, `{time}`, `{rate}`, `{total}`). Zero Devanagari digits `[०-९]`.
   - Registered newly converted components (`BookingCrewList.tsx`, `Clients.tsx`, `ClientsDirectory.tsx`) in `CONVERTED_MODULES` (`scripts/check-ui-copy.mjs`) to permanently ban raw JSX text.
-  - Exported comprehensive 283-row Wave 2 review sheet (`docs/reviews/wave2_desk_review.csv`) via `npm run i18n:export -- --wave=2` for Babin's screen-by-screen approvals.
+  - Exported comprehensive Wave 2 review sheet (`docs/reviews/wave2_desk_review.csv`) via `npm run i18n:export -- --wave=2` for Babin's screen-by-screen approvals.
 
 **Ruled**
 - R-21 / Law 6 / S6: Numbers, IDs, booking numbers, and NPR remain in Latin script in both English and Nepali.
@@ -18,12 +19,11 @@
 - Shared-file rule: Skipped `Rentals.tsx`, `BookingDetail.tsx`, `NewRental.tsx`, and `Calendar.tsx` from in-place JSX conversion as they are concurrently touched by open Lane C (T3-02, T3-12) and floor/calendar worktrees. Full dictionary entries and review keys are authored and verified in `src/i18n/`.
 
 **Verified**
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm test` — 548/548 test files passed, 6699/6699 tests passed (duration: 778.21s, live Supabase configuration masked).
 - `npm run lint:ui-copy` — 0 developer-text violations, 6/6 tests passed including converted module enforcement.
 - `npm run test:i18n-review` — 4/4 passed.
-- `npx vitest run src/lib/__tests__/i18n.test.ts` — 30/30 passed.
-- `npx vitest run src/modules/clients/` — 16 files passed, 173/173 tests passed.
-- `npx vitest run src/modules/rentals/__tests__/bookingCrew.test.tsx` — 8/8 passed.
-- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
 - `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
 - `node scripts/test-booking-financial-integrity.mjs` — PASS (financial integrity verified in isolated PGlite).
 - `npm run check:security` — 18/18 Phase 0 SQL regressions passed, 14/14 Reset branch regression groups passed, operations branch grants verified.
@@ -33,6 +33,7 @@
 - `node --test scripts/test-receipt.test.mjs` — 11/11 passed.
 - `npm run lint:shell` — 893 files checked, 0 violations.
 - `npm run check:contrast` — 106/106 pass, 0 fail.
+- `npm run build` — PASS (`tsc --noEmit && vite build`, dist generated with PWA service worker).
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -43,9 +44,9 @@
 | Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
 | Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
 | Overall | structural mean of five | ≈ 97% | — |
-Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-05T00:29:09.384Z). Suite: Historical suite: 6699/6699 passed, 0 failed (recorded 2026-11-04T21:20:06.962Z); current source NOT VERIFIED.
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-05T01:48:45.560Z). Suite: PASS — 6699/6699 passed, 0 failed (recorded 2026-11-05T01:47:27.878Z); source fingerprint matches.
 Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written 2026-11-05T00:32:31.646Z.
+Gates read from .lifecycle-result.json, written 2026-11-05T01:49:11.324Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
