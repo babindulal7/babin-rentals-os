@@ -1,5 +1,38 @@
 # Progress Log
 
+## 2026-11-05 — T3-03: Repair localization assertions found by the full gate
+
+**Did**
+- Aligned sign-in, roster lock and operations queue tests with the current English catalogue labels. Retained the roster navigation and explicit device-forget confirmation assertions.
+
+**Ruled**
+- This follow-up changes test expectations for the current translated labels.
+
+**Verified**
+- The first full gate passed typecheck, source lint and local API safety checks, then stopped at the test suite with 6709 passed and 5 failed across 3 files.
+- After correcting the assertions, all 56 tests in the affected files passed. A second full gate run is in progress, logged to artifacts/local-gates-T3-03.log.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 219 files · check:pglite Historical, incomplete or failed receipt (2026-11-05T01:04:21.269Z); current source NOT VERIFIED. Suite: Historical suite: 6709/6714 passed, 5 failed (recorded 2026-11-05T08:49:41.528Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-05T01:04:58.196Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+
+### Remaining
+- Finish the restarted full local gate and record its terminal result.
+- Complete browser and device acceptance when the browser can attach. Implement paid-advance cancellation settlement after the accountant's VAT answer.
+- Review the dependency audit findings recorded in the preceding entry.
+
 ## 2026-11-05 — T3-03: Correct and retire cancellation fee tiers
 
 **Did**
@@ -13,7 +46,9 @@
 **Verified**
 - Typecheck, changed-file lint, and 15 focused tests passed.
 - Local database rebuild passed 219/219 migrations. Lifecycle passed 64/64, including correction, retirement, retained history and a replacement threshold.
-- The full local gate run is in progress. npm audit could not resolve the registry.
+- The full local gate run is in progress.
+- npm audit reached the registry with elevated network access and reported 36 advisories (4 critical, 14 high, 15 moderate, 3 low). With dev dependencies omitted, it reported 19 (10 high, 6 moderate, 3 low). Reachability and remediation need a separate dependency review.
+- Browser attachment timed out during the local screen check. Phone/tablet/desktop acceptance remains open.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
