@@ -53,6 +53,10 @@ export default defineConfig({
     // Explicit imports from 'vitest' in every file — no ambient globals, so
     // `tsc --noEmit` typechecks the suites with the same strictness as `src/`.
     globals: false,
+    // The Vitest 4 forks pool stalls during rental-list worker startup on
+    // Windows, including isolated runs. Threads preserve test isolation and
+    // complete the same suite without changing test timeouts or assertions.
+    pool: 'threads',
     // Bound jsdom memory/CPU contention on shared workstations and in CI.
     // Callers can override this with --maxWorkers for their own machine.
     maxWorkers: 2,

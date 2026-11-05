@@ -51,6 +51,20 @@ old coverage exclusion tree, and updates esbuild to 0.25.12. Installed plugin pe
 ranges support Vite 6. The registry audit has no high or critical findings for
 this candidate; application compatibility is still being verified.
 
+The first full candidate run passed typecheck, lint and API guards, then failed
+five audio tests and timed out starting the rental-list fork worker. The audio
+fixture now uses a constructible function, matching the browser API, and restores
+its stubbed globals. The fork-start failure reproduced with one worker. The same
+two files passed all 49 assertions using worker threads; the candidate now uses
+that pool while retaining isolation, two-worker concurrency and existing timeouts.
+Full gates remain required after these changes.
+
+On 6 November the configured two-thread pool passed all 96 tests in the audio,
+rental list, list toolbar, record form and real workspace guidance regression
+suites. The dependency audit was refreshed and still reports 12 affected
+packages (0 critical, 0 high, 10 moderate, 2 low). This focused pass does not
+certify the full suite or coverage.
+
 ## Remaining dependency paths
 
 The execution descriptions below are inferences from `package-lock.json`,

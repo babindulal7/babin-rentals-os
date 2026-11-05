@@ -1,5 +1,41 @@
 # Progress Log
 
+## 2026-11-06 — T0-13: Repair Vitest migration fixtures and worker startup
+
+**Did**
+- Changed the audio API test mock to a constructible function and restored stubbed globals in teardown. Production audio behavior and all assertions are unchanged.
+- Switched the Vitest 4 worker pool to threads after the rental-list fork startup timeout reproduced in isolation with one worker. Preserved isolation, the two-worker limit and the existing test timeouts.
+- Reused the corrected server-contract reservation fixture from the cancellation branch: dates follow the database clock and the Reserved-status refusal is asserted before and after retirement.
+
+**Ruled**
+- This follows the existing tooling and verification scope; no product or permission decisions were introduced.
+
+**Verified**
+- The first candidate full gate passed typecheck, source lint and API guards, then stopped with five audio mock failures and one worker-start error. Its 13 remaining steps did not run.
+- The audio and rental-list suites passed 49/49 assertions with threads after the constructor correction. All 96 tests across the five audio/rental-list/toolbar/record-form/workspace regression files then passed using the configured two-thread pool.
+- Fresh registry audit remains 12 affected packages: 0 critical, 0 high, 10 moderate, 2 low. The baseline was 36, including 4 critical and 14 high.
+- Full gates after these final corrections remain pending. The cancellation branch's interrupted coverage has been restarted separately; full-suite jobs are being serialized.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite not run this session (pass --migrations to run). Suite: NOT VERIFIED — focused or unspecified run: 96/96 passed, 0 failed (recorded 2026-11-05T18:46:42.179Z).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Finish the cancellation branch's active coverage run, then run the complete dependency-branch gate sequence on the final committed source. A focused test pass is not a full-suite certification.
+- Review the remaining lint/PWA dependency constraints and complete desktop acceptance with the patched Electron binary; installation scripts were disabled.
+- Babin reviews and merges locally. No live database or external resource was changed.
+
 ## 2026-11-05 — T0-13: Upgrade the test and build toolchain for security
 
 **Did**

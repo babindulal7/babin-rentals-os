@@ -65,11 +65,15 @@ describe('acousticFeedback engine', () => {
       createGain: vi.fn().mockImplementation(() => mockGain),
     }
 
-    const MockAudioCtx = vi.fn().mockImplementation(() => mockAudioContext)
+    const MockAudioCtx = vi.fn().mockImplementation(function MockAudioContext() {
+      return mockAudioContext
+    })
     vi.stubGlobal('AudioContext', MockAudioCtx)
   })
 
   afterEach(() => {
+    _resetAudioContextForTesting()
+    vi.unstubAllGlobals()
     vi.restoreAllMocks()
   })
 
