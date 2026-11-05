@@ -38,16 +38,25 @@ export async function fetchOpeningBalances(): Promise<OpeningBalance[]> {
 
 export async function fetchLatestOpeningBalance(
   accountType: 'cash' | 'bank',
-  _accountId: string | null,
+  accountId: string | null,
   asOfDate: string,
+  locationId?: string,
 ): Promise<OpeningBalance | null> {
-  const { data, error } = await supabase
+  let query = supabase
     .from('opening_balances')
     .select('id, account_type, account_id, opening_date, amount, created_at')
     .eq('account_type', accountType)
+    .eq('scope', locationId ? 'location' : 'org')
     .is('retired_at', null)
     .lte('opening_date', asOfDate)
+
+  query = accountId === null ? query.is('account_id', null) : query.eq('account_id', accountId)
+  query = locationId ? query.eq('location_id', locationId) : query.is('location_id', null)
+
+  const { data, error } = await query
     .order('opening_date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
     .limit(1)
 
   if (error) throw new Error(`Could not read opening balance: ${error.message}`)

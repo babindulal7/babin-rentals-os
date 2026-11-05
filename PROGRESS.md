@@ -1,5 +1,42 @@
 # Progress Log
 
+## 2026-11-05 — T3-07: Scope Cash Flow opening balances to the period
+
+**Did**
+- Scoped opening-balance reads to the requested account and organisation or branch. Corrections on the same date now read newest first.
+- Cash Flow shows an opening snapshot for the selected start date. Removed the closing estimate that applied report-wide operating movements to a cash snapshot.
+- Added focused regressions for branch and organisation scope, stale opening snapshots and read errors.
+
+**Ruled**
+- D15 requires balances to reconcile by account. An older snapshot requires intervening movements before it can open a later period. Existing expenses do not identify the account they were paid from.
+
+**Verified**
+- `git diff --check` passed.
+- Changed-file ESLint and lint:progress passed.
+- npm audit could not resolve the npm registry.
+- Typecheck passed. Report query regressions passed (49/49).
+- Report screen state suite passed (40/40).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Add account allocation for paid expenses, dated opening entry, and a per-account ledger read that carries balances into the next day. Wire that read into Daily Closing, Cash Flow and Working Capital.
+- Finish the shift closing preference and deposit refund method selection. Verify a staging week against hand calculations and exercise the money-blind role denial.
+
+
 ## 2026-11-05 — T6-04: Wave 1 — the floor localization conversion (Lane B)
 
 **Did**

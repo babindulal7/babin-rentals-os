@@ -242,3 +242,38 @@ describe('the fixes that made live reads impossible stay fixed', () => {
     expect(calls.some((c) => c.table === 'invoices')).toBe(false)
   })
 })
+
+describe('Cash Flow opening balance', () => {
+  const from = '2026-11-03'
+  const opening = { account_type: 'cash', account_id: null, amount: 125, opening_date: from }
+
+  it('reads the period start in the selected branch and leaves closing unreconciled', async () => {
+    useTables({
+      opening_balances: [opening],
+      payments: [{ payment_type: 'Advance Payment', amount: 60 }],
+    })
+    const result = await getCashFlowSummary({ from, to: '2026-11-05', branchId: 'branch-a' })
+    expect(result.openingCash).toBe(rupees(125))
+    expect(result.closingCash).toBeNull()
+    expect(filtersOn('opening_balances')).toEqual(expect.arrayContaining([
+      expect.objectContaining({ method: 'lte', args: ['opening_date', from] }),
+      expect.objectContaining({ method: 'is', args: ['account_id', null] }),
+      expect.objectContaining({ method: 'eq', args: ['scope', 'location'] }),
+      expect.objectContaining({ method: 'eq', args: ['location_id', 'branch-a'] }),
+    ]))
+  })
+
+  it('does not present a prior snapshot as the opening balance', async () => {
+    useTables({ opening_balances: [{ ...opening, opening_date: '2026-11-02' }] })
+    expect((await getCashFlowSummary({ from })).openingCash).toBeNull()
+    expect(filtersOn('opening_balances')).toEqual(expect.arrayContaining([
+      expect.objectContaining({ method: 'eq', args: ['scope', 'org'] }),
+      expect.objectContaining({ method: 'is', args: ['location_id', null] }),
+    ]))
+  })
+
+  it('surfaces a failed opening balance read', async () => {
+    useTables({ opening_balances: DOWN })
+    await expect(getCashFlowSummary({ from })).rejects.toThrow('Could not read opening balance')
+  })
+})
