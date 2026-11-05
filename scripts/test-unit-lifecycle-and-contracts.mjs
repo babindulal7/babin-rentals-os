@@ -281,7 +281,7 @@ await asUser(warehouseUserId)
 await expectThrows(
   () => sql(`update product_units
     set rack = 'SPOOF', updated_at = updated_at + interval '1 minute', updated_by = $2
-    where id = $1`, [identityUnitId, ownerId]),
+    where id = $1`, [identityUnitId, technicianUserId]),
   'GATE:unit.identity.actor_mismatch',
   'Warehouse cannot forge another actor in unit identity audit'
 )
@@ -313,6 +313,17 @@ const floorPolicy = (await sql(`select qual from pg_policies
   where schemaname = 'public' and tablename = 'product_units' and policyname = 'product_units_update'`)).rows[0]
 assert(floorPolicy?.qual?.includes('Technician') === true,
   'Technician floor UPDATE row policy is preserved by the narrow identity trigger')
+
+// The existing save_record_editor does not explicitly patch updated_by on unit
+// children. The guard must stamp the actual signed-in actor, not block this
+// legitimate Owner operation or misattribute it to a previous Warehouse editor.
+await sql('set role authenticated')
+await asUser(ownerId)
+const legacyEditorWrite = await sql(`update product_units
+  set bin = '04' where id = $1 returning bin, updated_by`, [identityUnitId])
+assert(legacyEditorWrite.rows[0]?.bin === '04' && legacyEditorWrite.rows[0]?.updated_by === ownerId,
+  'Existing editor-style unit write stamps the authenticated actor without a supplied updated_by')
+await sql('reset role')
 
 // ---------------------------------------------------------------------------
 console.log('\n--- 3. Testing enroll_client_membership ---')
