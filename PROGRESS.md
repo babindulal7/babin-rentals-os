@@ -1,5 +1,41 @@
 # Progress Log
 
+## 2026-11-05 — T3-07: Record dated opening balances
+
+**Did**
+- Added an Owner-only opening balance form in Settings ▸ Financial for organisation cash, branch cash and active bank accounts.
+- Writes use the existing opening balance table and an idempotency key. Repeating the same request confirms the prior entry. Corrections from the form append another entry.
+- Indexed O-21 in PLAN.md and the decision register for expense payment authority.
+
+**Ruled**
+- D15 requires an opening balance for each account. Kept migration 0214's existing Owner-only write policy.
+
+**Verified**
+- Typecheck, changed-file ESLint, and 54 focused query and report tests passed.
+- PGlite 218/218 migrations and lifecycle 64/64 passed together. L63 verifies Owner insert and exact amount, duplicate refusal, Accounts read and write refusal, and Warehouse read isolation.
+- npm audit could not resolve the registry. Hosted and device acceptance pending.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 64 / 64 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-05T00:48:22.007Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-05T00:48:49.078Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Resolve O-21, record paid expenses by account, and reconcile per-account movements with opening balances across days and shifts.
+- Connect the reconciled totals to Daily Closing, Cash Flow and Working Capital and verify a staging week.
+- Verify the new form on staff devices and enforce append-only corrections at the database boundary.
+
+
 ## 2026-11-05 — T3-07: Record the payment account used for a deposit refund
 
 **Did**

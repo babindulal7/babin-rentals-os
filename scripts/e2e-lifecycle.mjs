@@ -6965,6 +6965,37 @@ STEPS.push({
 })
 
 
+STEPS.push({
+  id: 'L63',
+  title: 'Opening cash balance is recorded by Owner and hidden from floor roles (T3-07)',
+  expect: 'green',
+  run: async () => {
+    const entry = '00000000-0000-4000-8000-000000006301'
+    const openingDate = '2026-11-05'
+    const insert = `insert into opening_balances
+      (client_uuid, account_type, opening_date, amount, created_by)
+      values ($1, 'cash', $2, 1250.25, $3)`
+    await as('Owner', async () => {
+      await q(insert, [entry, openingDate, U.Owner])
+      assertEq(Number(await one('select amount from opening_balances where client_uuid = $1', [entry])), 1250.25,
+        'Owner reads the recorded amount without losing paisa')
+      await refuses('The same opening balance request cannot insert twice', insert,
+        [entry, openingDate, U.Owner], /opening_balances_client_uuid_key/i)
+    })
+    await as('Accounts', async () => {
+      assertEq(Number(await one('select amount from opening_balances where client_uuid = $1', [entry])), 1250.25,
+        'Accounts can read the balance')
+      await refuses('Accounts cannot insert under the existing Owner-only policy', insert,
+        ['00000000-0000-4000-8000-000000006302', openingDate, U.Accounts], /row-level security/i)
+    })
+    await as('Warehouse', async () => {
+      assertEq(await one('select amount from opening_balances where client_uuid = $1', [entry]), null,
+        'Warehouse cannot read an opening balance')
+    })
+  },
+})
+
+
 /* ΓöÇΓöÇ Run ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
 await seed()

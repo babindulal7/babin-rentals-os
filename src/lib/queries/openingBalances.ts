@@ -1,5 +1,5 @@
 import { supabase } from '../supabase'
-import { rupees, type Paisa } from '../money'
+import { rupees, toRupees, type Paisa } from '../money'
 
 export interface OpeningBalance {
   id: string
@@ -81,4 +81,52 @@ export async function fetchLatestOpeningBalance(
     amountPaisa: rupees(Number(row.amount)) as Paisa,
     createdAt: row.created_at,
   }
+}
+export interface RecordOpeningBalanceInput {
+  account: { type: 'cash'; locationId: string | null } | { type: 'bank'; accountId: string }
+  openingDate: string
+  amountPaisa: Paisa
+  clientUuid: string
+  createdBy: string
+}
+
+export async function recordOpeningBalance(input: RecordOpeningBalanceInput): Promise<void> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.openingDate)) {
+    throw new Error('Choose an opening date.')
+  }
+  const date = new Date(input.openingDate)
+  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== input.openingDate) {
+    throw new Error('Choose a valid opening date.')
+  }
+  if (!Number.isSafeInteger(input.amountPaisa) || Math.abs(input.amountPaisa) > 99_999_999_999_999) {
+    throw new Error('Enter a valid opening amount.')
+  }
+
+  const locationId = input.account.type === 'cash' ? input.account.locationId : null
+  const payload = {
+    client_uuid: input.clientUuid,
+    account_type: input.account.type,
+    account_id: input.account.type === 'bank' ? input.account.accountId : null,
+    opening_date: input.openingDate,
+    amount: toRupees(input.amountPaisa),
+    scope: locationId ? 'location' : 'org',
+    location_id: locationId,
+    created_by: input.createdBy,
+  }
+  const { error } = await supabase.from('opening_balances').insert(payload)
+  if (!error) return
+
+  if (error.code === '23505' && error.message.includes('opening_balances_client_uuid_key')) {
+    const { data: existing, error: readError } = await supabase.from('opening_balances')
+      .select('account_type, account_id, opening_date, amount, scope, location_id, created_by')
+      .eq('client_uuid', input.clientUuid)
+      .maybeSingle()
+    if (!readError && existing &&
+        existing.account_type === payload.account_type && existing.account_id === payload.account_id &&
+        existing.opening_date === payload.opening_date && rupees(Number(existing.amount)) === input.amountPaisa &&
+        existing.scope === payload.scope && existing.location_id === payload.location_id &&
+        existing.created_by === payload.created_by) return
+  }
+
+  throw new Error(`Could not record opening balance: ${error.message}`)
 }

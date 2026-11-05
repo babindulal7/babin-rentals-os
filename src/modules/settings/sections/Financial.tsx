@@ -6,6 +6,7 @@ import {
 } from '../../../lib/queries/settings'
 import type { Dest } from '../../../lib/queries/settings'
 import { NotTrackedYet, SectionCards } from './shared'
+import { OpeningBalanceCard } from './OpeningBalanceCard'
 import { CancellationFeeTiersCard } from './CancellationFeeTiersCard'
 import { CreditPolicyCard } from '../../clients/CreditPolicyCard'
 import type { Section } from './shared'
@@ -197,6 +198,7 @@ export function FinancialPane() {
       <CreditPolicyCard />
 
       <CancellationFeeTiersCard />
+      <OpeningBalanceCard />
     </>
   )
 }
