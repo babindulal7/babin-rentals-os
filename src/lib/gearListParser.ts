@@ -87,14 +87,25 @@ export function foldNepaliDigits(text: string): string {
 const BULLETS = /^[\s\u2022\u00B7\u2023\u25AA\u25CF\u25CB\u25B8\u25BA\u2192\u27A4>*\u2043\u2013\u2014-]+/
 
 /**
- * Emoji, pictographs and their joiners/variation selectors.
+ * Emoji and pictographs, by code-point range.
  *
  * Deliberately **not** `\p{Emoji}` — that class also matches `#`, `*` and the ASCII
  * digits, because those are Emoji-capable. Stripping them would eat the quantities and
  * the `*` bullets this very function exists to remove.
  */
-const EMOJI =
-  /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}\u{20E3}\u{1F1E6}-\u{1F1FF}]/gu
+const EMOJI_RANGES =
+  /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{1F1E6}-\u{1F1FF}]/gu
+
+/**
+ * The invisible code points a pasted emoji leaves behind: the variation selector, the
+ * zero-width joiner and the keycap mark.
+ *
+ * Kept out of the range class above on purpose. A character class matches one code point,
+ * so putting the joiner and selector inside it does not describe an emoji sequence — it
+ * describes "any of these single points", which is exactly the misleading class
+ * `no-misleading-character-class` warns about. As alternations the intent is literal.
+ */
+const EMOJI_JOINERS = /\uFE0F|\u200D|\u20E3/gu
 
 /** A keycap ordinal (`1️⃣`) is list numbering, never a quantity — see judgement call 1. */
 const KEYCAP_ORDINAL = /^(\d)\uFE0F?\u20E3\s*/
@@ -153,7 +164,7 @@ export function parseGearList(text: string): ParsedGearLine[] {
     // Bullets first, then a keycap ordinal (`1️⃣`), then any remaining emoji.
     rest = rest.replace(BULLETS, '')
     rest = rest.replace(KEYCAP_ORDINAL, '')
-    rest = rest.replace(EMOJI, ' ')
+    rest = rest.replace(EMOJI_RANGES, ' ').replace(EMOJI_JOINERS, '')
     rest = rest.trim()
     if (rest === '') return
 
@@ -328,7 +339,11 @@ const MIN_TOKEN = 2
 export function normaliseGearText(text: string): string {
   return foldNepaliDigits(text)
     .toLowerCase()
-    .replace(EMOJI, ' ')
+    .replace(EMOJI_RANGES, ' ')
+    .replace(EMOJI_JOINERS, '')
+    // The Devanagari block is kept whole, combining marks included: a matra is part of
+    // the letter it sits on, so dropping it would turn "माउंट" into a different word.
+    // eslint-disable-next-line no-misleading-character-class -- Devanagari kept as a range deliberately; the matras inside it are the point, not an accident
     .replace(/[^a-z0-9\u0900-\u097F]+/g, ' ')
     .replace(/\s{2,}/g, ' ')
     .trim()

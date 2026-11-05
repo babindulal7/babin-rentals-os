@@ -251,6 +251,15 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     // — the identical five-role set, confirmed against pg_policies the same
     // day. The release is an UPDATE on that table; no narrower policy exists.
     case 'unit.release':
+    // `inventory.edit_product_aliases` (T3-12, 0222) mirrors the
+    // `product_aliases_select/insert/update` policies, whose role list IS this
+    // five (Owner · Admin · Manager · Coordinator · Warehouse): the people who
+    // build bookings are the people who correct what the paste-list matcher
+    // suggested. Storing a spelling is narrower than the booking write they
+    // already hold, so this set is the ceiling and not an extension of it
+    // (N-3). The `remember_product_alias` RPC re-checks the same five in
+    // Postgres, so the rule survives a caller that skips `checkCapability`.
+    case 'inventory.edit_product_aliases':
       return rbac.canWriteBookingDesk(ctx.role);
 
     /* `closing.approve` (1 Sep, §5.4) mirrors `daily_closings_finance_insert`

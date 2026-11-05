@@ -312,6 +312,7 @@ model**. Nothing is stored: `product_units_service_v` derives it at read time.
 |---|---|---|---|
 | `inventory.edit_service_plan` | Owner · Admin · Manager | the three intervals + grace on `products`; `products_update` policy | ○ |
 | `inventory.record_meter` | M+ · Warehouse · Technician | `product_units.meter_hours` / `meter_hours_recorded_at`, written at intake and at Return only | ○ |
+| `inventory.edit_product_aliases` | C+ · Warehouse | `product_aliases` `select`/`insert`/`update` policies (0222, T3-12) — one spelling maps to one product, `delete` revoked for every role (Law 3); the `remember_product_alias` RPC re-checks the same five and pins `search_path`. Rides `canWriteBookingDesk`: storing a spelling is narrower than the booking write these five already hold (N-3). No money column, so no Law 6 mask. | ✓ |
 | view `product_units_service_v` | all staff | carries no money column, so no Law 6 mask is needed — the view is money-free by construction | ○ |
 
 
