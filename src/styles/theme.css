@@ -865,13 +865,13 @@ body,
 /* ── Foundation v2.2 §4.3.8 · reference declaration ────────────────────── */
 
 :root {
-  --font-display: 'Outfit', system-ui, sans-serif;
-  --font-body: 'Outfit', system-ui, sans-serif;
+  --font-display: 'Outfit', 'Asar', system-ui, sans-serif;
+  --font-body: 'Outfit', 'Hind', system-ui, sans-serif;
   --font-mono: 'Outfit', system-ui, sans-serif;
   --font-id: 'Outfit', system-ui, sans-serif;
   --font-num: 'Outfit', system-ui, sans-serif;
-  --font-ne-display: 'Outfit', system-ui, sans-serif;
-  --font-ne-body: 'Outfit', system-ui, sans-serif;
+  --font-ne-display: 'Asar', 'Outfit', 'Noto Sans Devanagari', system-ui, sans-serif;
+  --font-ne-body: 'Hind', 'Outfit', 'Noto Sans Devanagari', system-ui, sans-serif;
 
   /*
     §4.3.6 — **fluid, not fixed.** Every value is `rem`, so the whole scale
@@ -1187,7 +1187,11 @@ td,
 :root[lang='ne'] td,
 :root[lang='ne'] th,
 :root[lang='ne'] button,
-:root[lang='ne'] label {
+:root[lang='ne'] label,
+:root[lang='ne'] input,
+:root[lang='ne'] select,
+:root[lang='ne'] textarea,
+:root[lang='ne'] .badge {
   font-family: var(--font-ne-body);
   /* Devanagari matras need the vertical room (§4.3.6). */
   line-height: 1.6;

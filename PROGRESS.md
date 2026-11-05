@@ -1,5 +1,47 @@
 # Progress Log
 
+## 2026-11-06 — T6-08: Nepali layout pass and typography fallback (Lane B)
+
+**Did**
+- **T6-08: Nepali layout pass and typography fallback (S6, S11, R-21, Law 6):**
+  - Updated font-family declarations in `src/styles/theme.css` to ensure the all-Outfit typography ruling falls back truthfully to self-hosted Nepali faces (`Asar` for display/headings, `Hind` for body/inputs) offline and across devices:
+    - `--font-display: 'Outfit', 'Asar', system-ui, sans-serif;`
+    - `--font-body: 'Outfit', 'Hind', system-ui, sans-serif;`
+    - `--font-ne-display: 'Asar', 'Outfit', 'Noto Sans Devanagari', system-ui, sans-serif;`
+    - `--font-ne-body: 'Hind', 'Outfit', 'Noto Sans Devanagari', system-ui, sans-serif;`
+  - Extended `:root[lang='ne']` typography rules to apply `var(--font-ne-body)` with `line-height: 1.6` to inputs, selects, textareas, and badges in addition to body, tables, buttons, and labels — providing proper vertical space for Devanagari matras and preventing conjunct smearing.
+  - Preserved single-weight `font-weight: 400` constraint for Asar headings (`safeWeight()`) under `:root[lang='ne']`, preventing fake bold outline synthesis.
+  - Maintained Latin numeral and currency invariants (`R-21 / Law 6 / S6`): mono stack remains strictly on Latin numerals and Latin NPR currency in both English and Nepali.
+
+**Ruled**
+- R-21 / Law 6 / S6: Numbers, IDs, booking numbers, and NPR remain in Latin script in both English and Nepali.
+- S11: Typography and layout adhere strictly to Babin-approved standards with self-hosted offline font fallbacks.
+
+**Verified**
+- `npm run check:contrast` — 106/106 passed (all WCAG AA color ratios verified across light, dark, and glass variants).
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npx vitest run src/lib/__tests__/i18n.test.ts` — 30/30 passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-05T01:48:45.560Z). Suite: PASS — 6699/6699 passed, 0 failed (recorded 2026-11-05T01:47:27.878Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-05T01:49:11.324Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Switch it on (T6-09): User profile language preference persistence.
+- Owner physical device verification: on-device visual layout inspection on iPad / physical hardware.
+
 ## 2026-11-05 — T6-07: Wave 4 — reports, settings, admin localization conversion (Lane B)
 
 **Did**
