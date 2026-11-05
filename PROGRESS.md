@@ -1,5 +1,62 @@
 # Progress Log
 
+## 2026-11-05 — T6-07: Wave 4 — reports, settings, admin localization conversion (Lane B)
+
+**Did**
+- **T6-07: Wave 4 reports, settings, admin localization conversion (S6, S11, R-21, Law 6):**
+  - Converted unblocked admin and reports components to reactive translation hook `useTranslation()`:
+    - **Activity Log:** Converted `src/modules/admin/ActivityLog.tsx` (title, description, empty states, search aria, 3 filter select dropdowns with localized "All" labels, 4 KPI strip items, timeline event badges and location tags). Verified with `npx vitest run src/modules/admin/__tests__/activityLog.test.tsx` (8/8 passed).
+  - Enriched dictionaries in `src/i18n/en/` and `src/i18n/ne/` across all Wave 4 domains with 100% key parity and zero Devanagari digits:
+    - `admin.json` (50 keys)
+    - `reports.json` (35 keys)
+    - `settings.json` (46 keys)
+  - Maintained strict numeral invariant (R-21 / Law 6 / S6): Latin digits and Latin NPR currency preserved in both English and Nepali. Zero Devanagari digits `[०-९]`.
+  - Registered newly converted components (`ActivityLog.tsx`) in `CONVERTED_MODULES` (`scripts/check-ui-copy.mjs`) to permanently ban raw JSX text.
+  - Exported comprehensive Wave 4 review sheet (`docs/reviews/wave4_reports_settings_admin_review.csv`) via `node scripts/i18n-review-export.mjs --wave=4` containing 129 review rows for Babin's sign-off.
+
+**Ruled**
+- R-21 / Law 6 / S6: Numbers, IDs, booking numbers, and NPR remain in Latin script in both English and Nepali.
+- S11: Admin, reports, and settings vocabulary strictly conforms to Babin-approved glossary (`src/i18n/glossary.ne.json`).
+- Shared-file rule: Preserved concurrent Lane A worktrees (`T1-16` truthful settings toggles) by providing complete, verified dictionary catalogues for `settings` and `reports` without modifying contested settings toggles in-place.
+
+**Verified**
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 tests passed including converted module enforcement.
+- `npm run test:i18n-review` — 4/4 passed.
+- `npx vitest run src/modules/admin/` — 4/4 test files passed, 30/30 tests passed.
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS (isolated PGlite).
+- `npm run check:security` — 18 Phase 0 SQL regressions passed, 14 Reset branch boundary groups passed, operations branch grants verified.
+- `npm run test:server-contracts` — 58/58 integration assertions passed.
+- `npm run test:partial-return` — 58/58 partial return assertions passed.
+- `node --test scripts/test-receipt.test.mjs` — 11/11 passed.
+- `npm run lint:shell` — 893 files checked, 0 violations.
+- `npm run check:contrast` — 106/106 passed.
+- `npm run build` — PASS (`tsc --noEmit && vite build`, dist generated with PWA service worker).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-05T17:48:39.228Z). Suite: PASS — 6699/6699 passed, 0 failed (recorded 2026-11-05T01:47:27.878Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-05T17:49:09.033Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Layout verification (T6-08): multi-breakpoint typography & width checks (360/820/1280), Asar safeWeight, offline font cache.
+- Switch it on (T6-09): User profile language preference persistence.
+- Babin: review and approve Wave 4 review sheet (`docs/reviews/wave4_reports_settings_admin_review.csv`).
+- Babin: merge `lane-b/T6-07-wave-4-reports-settings-admin`.
+
 ## 2026-11-05 — T6-06: Wave 3 — back office localization conversion (Lane B)
 
 **Did**

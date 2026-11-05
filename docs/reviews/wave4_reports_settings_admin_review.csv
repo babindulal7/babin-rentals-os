@@ -1,0 +1,129 @@
+key,wave,module,screen,english,nepali_draft,screenshot_link,status,babin_fix,notes
+admin.title,4,admin,admin,Administration,प्रशासन,https://os.babinrentals.com/screenshots/admin/admin.png,OK,,S11 approved wording
+admin.subtitle,4,admin,admin,"Audit, security, activity log and system restore utilities","लेखापरीक्षण, सुरक्षा, गतिविधि लग र प्रणाली पुनर्स्थापना सुविधाहरू",https://os.babinrentals.com/screenshots/admin/admin.png,OK,,S11 approved wording
+admin.activity.title,4,admin,activity,Activity,गतिविधि,https://os.babinrentals.com/screenshots/admin/activity.png,OK,,S11 approved wording
+admin.activity.description,4,admin,activity,"Who did what, where — newest first. Usage, not state changes; those live in the Audit Log.","कसले के गर्यो र कहाँ — नयाँ पहिले। प्रयोग, स्थिति परिवर्तन होइन; ती लेखापरीक्षण लगमा रहन्छन्।",https://os.babinrentals.com/screenshots/admin/activity.png,OK,,S11 approved wording
+admin.activity.emptyTitle,4,admin,activity,No activity recorded yet,अहिलेसम्म कुनै गतिविधि रेकर्ड गरिएको छैन,https://os.babinrentals.com/screenshots/admin/activity.png,OK,,S11 approved wording
+admin.activity.emptyMessage,4,admin,activity,"Sign-ins, exports and other usage appear here as they happen.","साइन-इन, निर्यात र अन्य प्रयोगहरू यहाँ हुने बित्तिकै देखिन्छन्।",https://os.babinrentals.com/screenshots/admin/activity.png,OK,,S11 approved wording
+admin.activity.kpi.entries,4,admin,activity,Entries,प्रविष्टिहरू,https://os.babinrentals.com/screenshots/admin/activity.png,OK,,S11 approved wording
+admin.activity.kpi.entriesNote,4,admin,activity,In this log,यस लगमा,https://os.babinrentals.com/screenshots/admin/activity.png,OK,,S11 approved wording
+admin.activity.kpi.failed,4,admin,activity,Failed,असफल,https://os.babinrentals.com/screenshots/admin/activity.png,OK,,S11 approved wording
+admin.activity.kpi.failedNote,4,admin,activity,Errors or refusals,त्रुटि वा अस्वीकृतिहरू,https://os.babinrentals.com/screenshots/admin/activity.png,OK,,S11 approved wording
+admin.activity.kpi.people,4,admin,activity,People,व्यक्तिहरू,https://os.babinrentals.com/screenshots/admin/activity.png,OK,,S11 approved wording
+admin.activity.kpi.peopleNote,4,admin,activity,Distinct actors,विशिष्ट कर्ताहरू,https://os.babinrentals.com/screenshots/admin/activity.png,OK,,S11 approved wording
+admin.activity.kpi.modules,4,admin,activity,Modules,मोड्युलहरू,https://os.babinrentals.com/screenshots/admin/activity.png,OK,,S11 approved wording
+admin.activity.kpi.modulesNote,4,admin,activity,Touched,छोइएका,https://os.babinrentals.com/screenshots/admin/activity.png,OK,,S11 approved wording
+admin.activity.searchAria,4,admin,activity,Filter activity,गतिविधि फिल्टर गर्नुहोस्,https://os.babinrentals.com/screenshots/admin/activity.png,OK,,S11 approved wording
+admin.activity.filterUser,4,admin,activity,User,प्रयोगकर्ता,https://os.babinrentals.com/screenshots/admin/activity.png,OK,,S11 approved wording
+admin.activity.filterModule,4,admin,activity,Module,मोड्युल,https://os.babinrentals.com/screenshots/admin/activity.png,OK,,S11 approved wording
+admin.activity.filterDate,4,admin,activity,Date,मिति,https://os.babinrentals.com/screenshots/admin/activity.png,OK,,S11 approved wording
+admin.activity.allUsers,4,admin,activity,All users,सबै प्रयोगकर्ताहरू,https://os.babinrentals.com/screenshots/admin/activity.png,OK,,S11 approved wording
+admin.activity.allModules,4,admin,activity,All modules,सबै मोड्युलहरू,https://os.babinrentals.com/screenshots/admin/activity.png,OK,,S11 approved wording
+admin.activity.allDates,4,admin,activity,All dates,सबै मितिहरू,https://os.babinrentals.com/screenshots/admin/activity.png,OK,,S11 approved wording
+admin.activity.noResultsTitle,4,admin,activity,No activity matches this filter,यस फिल्टरसँग कुनै गतिविधि मेल खाएन,https://os.babinrentals.com/screenshots/admin/activity.png,OK,,S11 approved wording
+admin.activity.noResultsDesc,4,admin,activity,"Try a wider date, another module, or clear the filters to see the whole timeline.","फराकिलो मिति, अर्को मोड्युल प्रयास गर्नुहोस् वा सम्पूर्ण समयरेखा हेर्न फिल्टरहरू हटाउनुहोस्।",https://os.babinrentals.com/screenshots/admin/activity.png,OK,,S11 approved wording
+admin.activity.clearFilters,4,admin,activity,Clear filters,फिल्टरहरू हटाउनुहोस्,https://os.babinrentals.com/screenshots/admin/activity.png,OK,,S11 approved wording
+admin.activity.inLocation,4,admin,activity,in {where},{where} मा,https://os.babinrentals.com/screenshots/admin/activity.png,OK,,S11 approved wording
+admin.audit.title,4,admin,audit,Audit Log,लेखापरीक्षण लग,https://os.babinrentals.com/screenshots/admin/audit.png,OK,,S11 approved wording
+admin.audit.description,4,admin,audit,Append-only record of system state changes — view-only for every role.,प्रणाली स्थिति परिवर्तनहरूको थप-मात्र अभिलेख — सबै भूमिकाका लागि हेर्न मात्र मिल्ने।,https://os.babinrentals.com/screenshots/admin/audit.png,OK,,S11 approved wording
+admin.audit.notice,4,admin,audit,"Append-only. View-only for every role including Owner. No edit, no delete, no bulk action anywhere on this page.","थप-मात्र। मालिक लगायत सबै भूमिकाका लागि हेर्न मात्र मिल्ने। यस पृष्ठमा कतै पनि सम्पादन, मेटाउने वा थोक कार्य छैन।",https://os.babinrentals.com/screenshots/admin/audit.png,OK,,S11 approved wording
+admin.audit.filterEntity,4,admin,audit,Entity,निकाय,https://os.babinrentals.com/screenshots/admin/audit.png,OK,,S11 approved wording
+admin.audit.filterActor,4,admin,audit,Role,भूमिका,https://os.babinrentals.com/screenshots/admin/audit.png,OK,,S11 approved wording
+admin.audit.filterPeriod,4,admin,audit,Period,अवधि,https://os.babinrentals.com/screenshots/admin/audit.png,OK,,S11 approved wording
+admin.audit.colTimestamp,4,admin,audit,When,समय,https://os.babinrentals.com/screenshots/admin/audit.png,OK,,S11 approved wording
+admin.audit.colActor,4,admin,audit,Who,कसले,https://os.babinrentals.com/screenshots/admin/audit.png,OK,,S11 approved wording
+admin.audit.colRole,4,admin,audit,Role,भूमिका,https://os.babinrentals.com/screenshots/admin/audit.png,OK,,S11 approved wording
+admin.audit.colAction,4,admin,audit,Action,कार्य,https://os.babinrentals.com/screenshots/admin/audit.png,OK,,S11 approved wording
+admin.audit.colEntity,4,admin,audit,Entity,निकाय,https://os.babinrentals.com/screenshots/admin/audit.png,OK,,S11 approved wording
+admin.audit.colChanges,4,admin,audit,Changes,परिवर्तनहरू,https://os.babinrentals.com/screenshots/admin/audit.png,OK,,S11 approved wording
+admin.audit.emptyTitle,4,admin,audit,No audit events recorded,कुनै लेखापरीक्षण घटना रेकर्ड गरिएको छैन,https://os.babinrentals.com/screenshots/admin/audit.png,OK,,S11 approved wording
+admin.audit.emptyMessage,4,admin,audit,"State transitions, financial adjustments, and administrative events appear here.","स्थिति परिवर्तन, वित्तीय समायोजन, र प्रशासनिक घटनाहरू यहाँ देखिन्छन्।",https://os.babinrentals.com/screenshots/admin/audit.png,OK,,S11 approved wording
+admin.backup.title,4,admin,backup,Backup & Restore,ब्याकअप र पुनर्स्थापना,https://os.babinrentals.com/screenshots/admin/backup.png,OK,,S11 approved wording
+admin.backup.description,4,admin,backup,"Database snapshots, point-in-time recovery, and verified system restore.","डाटाबेस स्न्यापसटहरू, पोइन्ट-इन-टाइम रिकभरी, र प्रमाणित प्रणाली पुनर्स्थापना।",https://os.babinrentals.com/screenshots/admin/backup.png,OK,,S11 approved wording
+admin.backup.createBackup,4,admin,backup,Create Backup,ब्याकअप बनाउनुहोस्,https://os.babinrentals.com/screenshots/admin/backup.png,OK,,S11 approved wording
+admin.backup.restoreBackup,4,admin,backup,Restore Backup,ब्याकअप पुनर्स्थापना गर्नुहोस्,https://os.babinrentals.com/screenshots/admin/backup.png,OK,,S11 approved wording
+admin.backup.download,4,admin,backup,Download,डाउनलोड गर्नुहोस्,https://os.babinrentals.com/screenshots/admin/backup.png,OK,,S11 approved wording
+admin.backup.warning,4,admin,backup,Restoring a backup will overwrite current database state. This action cannot be reversed.,ब्याकअप पुनर्स्थापना गर्दा हालको डाटाबेस स्थिति अधिलेखन हुनेछ। यो कार्य उल्टाउन सकिँदैन।,https://os.babinrentals.com/screenshots/admin/backup.png,OK,,S11 approved wording
+admin.numbering.title,4,admin,numbering,Document Numbering,कागजात नम्बरिङ,https://os.babinrentals.com/screenshots/admin/numbering.png,OK,,S11 approved wording
+admin.numbering.description,4,admin,numbering,"Sequential document prefixes and numbering rules for bookings, invoices, and payments.","बुकिङ, बिल र भुक्तानीका लागि अनुक्रमिक कागजात उपसर्ग र नम्बरिङ नियमहरू।",https://os.babinrentals.com/screenshots/admin/numbering.png,OK,,S11 approved wording
+admin.problemReports.title,4,admin,problemReports,Problem Reports,समस्या प्रतिवेदनहरू,https://os.babinrentals.com/screenshots/admin/problemReports.png,OK,,S11 approved wording
+admin.problemReports.description,4,admin,problemReports,"Staff feedback, error telemetry, and defect logs.","कर्मचारी प्रतिक्रिया, त्रुटि टेलिमेट्री, र खराबी लगहरू।",https://os.babinrentals.com/screenshots/admin/problemReports.png,OK,,S11 approved wording
+reports.title,4,reports,reports,Reports,प्रतिवेदनहरू,https://os.babinrentals.com/screenshots/reports/reports.png,OK,,S11 approved wording
+reports.subtitle,4,reports,reports,"Analytical registers, performance metrics, and compliance ledgers","विश्लेषणात्मक खाताहरू, कार्यसम्पादन मापदण्ड, र अनुपालन विवरणहरू",https://os.babinrentals.com/screenshots/reports/reports.png,OK,,S11 approved wording
+reports.catalog.title,4,reports,catalog,Report Catalog,प्रतिवेदन सूची,https://os.babinrentals.com/screenshots/reports/catalog.png,OK,,S11 approved wording
+reports.catalog.back,4,reports,catalog,Back to Report Catalog,प्रतिवेदन सूचीमा फर्कनुहोस्,https://os.babinrentals.com/screenshots/reports/catalog.png,OK,,S11 approved wording
+reports.catalog.viewAria,4,reports,catalog,Report view,प्रतिवेदन दृश्य,https://os.babinrentals.com/screenshots/reports/catalog.png,OK,,S11 approved wording
+reports.catalog.simple,4,reports,catalog,Simple,सरल,https://os.babinrentals.com/screenshots/reports/catalog.png,OK,,S11 approved wording
+reports.catalog.detailed,4,reports,catalog,Detailed,विस्तृत,https://os.babinrentals.com/screenshots/reports/catalog.png,OK,,S11 approved wording
+reports.catalog.searchPlaceholder,4,reports,catalog,Find a report…,प्रतिवेदन खोज्नुहोस्…,https://os.babinrentals.com/screenshots/reports/catalog.png,OK,,S11 approved wording
+reports.catalog.searchAria,4,reports,catalog,Find a report by name or group,नाम वा समूह अनुसार प्रतिवेदन खोज्नुहोस्,https://os.babinrentals.com/screenshots/reports/catalog.png,OK,,S11 approved wording
+reports.catalog.noResults,4,reports,catalog,No reports match your search.,तपाईंको खोजीसँग कुनै प्रतिवेदन मेल खाएन।,https://os.babinrentals.com/screenshots/reports/catalog.png,OK,,S11 approved wording
+reports.catalog.group,4,reports,catalog,Group,समूह,https://os.babinrentals.com/screenshots/reports/catalog.png,OK,,S11 approved wording
+reports.groups.01,4,reports,groups,Overview,सिंहावलोकन,https://os.babinrentals.com/screenshots/reports/groups.png,OK,,S11 approved wording
+reports.groups.02,4,reports,groups,Rentals,भाडा,https://os.babinrentals.com/screenshots/reports/groups.png,OK,,S11 approved wording
+reports.groups.03,4,reports,groups,Equipment,उपकरण,https://os.babinrentals.com/screenshots/reports/groups.png,OK,,S11 approved wording
+reports.groups.04,4,reports,groups,Inventory,मौज्दात,https://os.babinrentals.com/screenshots/reports/groups.png,OK,,S11 approved wording
+reports.groups.05,4,reports,groups,Clients,ग्राहक,https://os.babinrentals.com/screenshots/reports/groups.png,OK,,S11 approved wording
+reports.groups.06,4,reports,groups,Finance,वित्त,https://os.babinrentals.com/screenshots/reports/groups.png,OK,,S11 approved wording
+reports.groups.07,4,reports,groups,Operations,सञ्चालन,https://os.babinrentals.com/screenshots/reports/groups.png,OK,,S11 approved wording
+reports.groups.08,4,reports,groups,Damage & Maintenance,क्षति तथा मर्मत,https://os.babinrentals.com/screenshots/reports/groups.png,OK,,S11 approved wording
+reports.groups.09,4,reports,groups,Staff,कर्मचारी,https://os.babinrentals.com/screenshots/reports/groups.png,OK,,S11 approved wording
+reports.groups.10,4,reports,groups,Management,व्यवस्थापन,https://os.babinrentals.com/screenshots/reports/groups.png,OK,,S11 approved wording
+reports.template.dateRange,4,reports,template,Date Range,मिति दायरा,https://os.babinrentals.com/screenshots/reports/template.png,OK,,S11 approved wording
+reports.template.exportCsv,4,reports,template,Export CSV,CSV निर्यात गर्नुहोस्,https://os.babinrentals.com/screenshots/reports/template.png,OK,,S11 approved wording
+reports.template.print,4,reports,template,Print,प्रिन्ट गर्नुहोस्,https://os.babinrentals.com/screenshots/reports/template.png,OK,,S11 approved wording
+reports.template.notTracked,4,reports,template,Not tracked yet,अहिलेसम्म ट्र्याक गरिएको छैन,https://os.babinrentals.com/screenshots/reports/template.png,OK,,S11 approved wording
+reports.template.total,4,reports,template,Total,जम्मा,https://os.babinrentals.com/screenshots/reports/template.png,OK,,S11 approved wording
+reports.template.average,4,reports,template,Average,औसत,https://os.babinrentals.com/screenshots/reports/template.png,OK,,S11 approved wording
+reports.template.count,4,reports,template,Count,संख्या,https://os.babinrentals.com/screenshots/reports/template.png,OK,,S11 approved wording
+reports.pulse.title,4,reports,pulse,Pulse Dashboard,पल्स ड्यासबोर्ड,https://os.babinrentals.com/screenshots/reports/pulse.png,OK,,S11 approved wording
+reports.revenue.title,4,reports,revenue,Revenue & Invoicing,आम्दानी तथा बिलिङ,https://os.babinrentals.com/screenshots/reports/revenue.png,OK,,S11 approved wording
+reports.expenses.title,4,reports,expenses,Expense Reports,खर्च प्रतिवेदनहरू,https://os.babinrentals.com/screenshots/reports/expenses.png,OK,,S11 approved wording
+reports.vat.title,4,reports,vat,Sales & VAT Register,बिक्री तथा भ्याट खाता,https://os.babinrentals.com/screenshots/reports/vat.png,OK,,S11 approved wording
+reports.cashflow.title,4,reports,cashflow,Cash Flow,नगद प्रवाह,https://os.babinrentals.com/screenshots/reports/cashflow.png,OK,,S11 approved wording
+reports.workingCapital.title,4,reports,workingCapital,Working Capital,चालू पुँजी,https://os.babinrentals.com/screenshots/reports/workingCapital.png,OK,,S11 approved wording
+settings.title,4,settings,settings,Settings,सेटिङ,https://os.babinrentals.com/screenshots/settings/settings.png,OK,,S11 approved wording
+settings.subtitle,4,settings,settings,"Identity, policy, directory and hardware configuration","पहिचान, नीति, कर्मचारी सूची र उपकरण कन्फिगरेसन",https://os.babinrentals.com/screenshots/settings/settings.png,OK,,S11 approved wording
+settings.tabs.business,4,settings,tabs,Business & Financial,व्यापार र वित्तीय,https://os.babinrentals.com/screenshots/settings/tabs.png,OK,,S11 approved wording
+settings.tabs.people,4,settings,tabs,Staff & Permissions,कर्मचारी र अनुमतिहरू,https://os.babinrentals.com/screenshots/settings/tabs.png,OK,,S11 approved wording
+settings.tabs.branches,4,settings,tabs,Branches & Fleet,शाखाहरू र फ्लीट,https://os.babinrentals.com/screenshots/settings/tabs.png,OK,,S11 approved wording
+settings.tabs.system,4,settings,tabs,System & Hardware,प्रणाली र उपकरण,https://os.babinrentals.com/screenshots/settings/tabs.png,OK,,S11 approved wording
+settings.sections.organisation,4,settings,sections,Organisation Identity,संस्थाको पहिचान,https://os.babinrentals.com/screenshots/settings/sections.png,OK,,S11 approved wording
+settings.sections.financial,4,settings,sections,Financial Policy,वित्तीय नीति,https://os.babinrentals.com/screenshots/settings/sections.png,OK,,S11 approved wording
+settings.sections.staff,4,settings,sections,Staff Directory,कर्मचारी सूची,https://os.babinrentals.com/screenshots/settings/sections.png,OK,,S11 approved wording
+settings.sections.roles,4,settings,sections,Roles & Permissions,भूमिका र अनुमतिहरू,https://os.babinrentals.com/screenshots/settings/sections.png,OK,,S11 approved wording
+settings.sections.delivery,4,settings,sections,Delivery Zones & Fees,डेलिभरी क्षेत्र र शुल्क,https://os.babinrentals.com/screenshots/settings/sections.png,OK,,S11 approved wording
+settings.sections.warehouses,4,settings,sections,Warehouses,गोदामहरू,https://os.babinrentals.com/screenshots/settings/sections.png,OK,,S11 approved wording
+settings.sections.preferences,4,settings,sections,My Preferences,मेरा प्राथमिकताहरू,https://os.babinrentals.com/screenshots/settings/sections.png,OK,,S11 approved wording
+settings.sections.language,4,settings,sections,Language,भाषा,https://os.babinrentals.com/screenshots/settings/sections.png,OK,,S11 approved wording
+settings.sections.theme,4,settings,sections,Theme,थिम,https://os.babinrentals.com/screenshots/settings/sections.png,OK,,S11 approved wording
+settings.sections.density,4,settings,sections,Display Density,प्रदर्शन घनत्व,https://os.babinrentals.com/screenshots/settings/sections.png,OK,,S11 approved wording
+settings.sections.security,4,settings,sections,Security & PIN,सुरक्षा र PIN,https://os.babinrentals.com/screenshots/settings/sections.png,OK,,S11 approved wording
+settings.sections.backup,4,settings,sections,Backup & Audit,ब्याकअप र लेखापरीक्षण,https://os.babinrentals.com/screenshots/settings/sections.png,OK,,S11 approved wording
+settings.actions.edit,4,settings,actions,Edit,सम्पादन गर्नुहोस्,https://os.babinrentals.com/screenshots/settings/actions.png,OK,,S11 approved wording
+settings.actions.save,4,settings,actions,Save Changes,परिवर्तनहरू सुरक्षित गर्नुहोस्,https://os.babinrentals.com/screenshots/settings/actions.png,OK,,S11 approved wording
+settings.actions.cancel,4,settings,actions,Cancel,रद्द गर्नुहोस्,https://os.babinrentals.com/screenshots/settings/actions.png,OK,,S11 approved wording
+settings.actions.reset,4,settings,actions,Reset to Defaults,पूर्वनिर्धारितमा रिसेट गर्नुहोस्,https://os.babinrentals.com/screenshots/settings/actions.png,OK,,S11 approved wording
+settings.actions.export,4,settings,actions,Export Configuration,कन्फिगरेसन निर्यात गर्नुहोस्,https://os.babinrentals.com/screenshots/settings/actions.png,OK,,S11 approved wording
+settings.actions.add,4,settings,actions,Add,थप्नुहोस्,https://os.babinrentals.com/screenshots/settings/actions.png,OK,,S11 approved wording
+settings.status.saved,4,settings,status,Settings saved,सेटिङ सुरक्षित गरियो,https://os.babinrentals.com/screenshots/settings/status.png,OK,,S11 approved wording
+settings.status.error,4,settings,status,Could not save settings,सेटिङ सुरक्षित गर्न सकिएन,https://os.babinrentals.com/screenshots/settings/status.png,OK,,S11 approved wording
+settings.language.en,4,settings,language,English,English,https://os.babinrentals.com/screenshots/settings/language.png,OK,,S11 approved wording
+settings.language.ne,4,settings,language,नेपाली,नेपाली,https://os.babinrentals.com/screenshots/settings/language.png,OK,,S11 approved wording
+settings.language.note,4,settings,language,"Nepali language is in trial. Serials, codes and currency remain in standard Latin format.","नेपाली भाषा परीक्षणमा छ। सिरियल, कोड र मुद्रा मानक ल्याटिन ढाँचामा रहनेछन्।",https://os.babinrentals.com/screenshots/settings/language.png,OK,,S11 approved wording
+settings.financial.taxRate,4,settings,financial,Tax Rate (VAT),कर दर (भ्याट),https://os.babinrentals.com/screenshots/settings/financial.png,OK,,S11 approved wording
+settings.financial.currency,4,settings,financial,Currency,मुद्रा,https://os.babinrentals.com/screenshots/settings/financial.png,OK,,S11 approved wording
+settings.financial.paymentTerms,4,settings,financial,Payment Terms,भुक्तानी सर्तहरू,https://os.babinrentals.com/screenshots/settings/financial.png,OK,,S11 approved wording
+settings.financial.securityDeposit,4,settings,financial,Security Deposit Policy,धरौटी नीति,https://os.babinrentals.com/screenshots/settings/financial.png,OK,,S11 approved wording
+settings.financial.lateFee,4,settings,financial,Late Fee Policy,विलम्ब शुल्क नीति,https://os.babinrentals.com/screenshots/settings/financial.png,OK,,S11 approved wording
+settings.organisation.companyName,4,settings,organisation,Company Name,कम्पनीको नाम,https://os.babinrentals.com/screenshots/settings/organisation.png,OK,,S11 approved wording
+settings.organisation.panVat,4,settings,organisation,PAN / VAT Number,प्यान / भ्याट नम्बर,https://os.babinrentals.com/screenshots/settings/organisation.png,OK,,S11 approved wording
+settings.organisation.phone,4,settings,organisation,Phone Number,फोन नम्बर,https://os.babinrentals.com/screenshots/settings/organisation.png,OK,,S11 approved wording
+settings.organisation.email,4,settings,organisation,Email Address,इमेल ठेगाना,https://os.babinrentals.com/screenshots/settings/organisation.png,OK,,S11 approved wording
+settings.organisation.address,4,settings,organisation,Business Address,व्यावसायिक ठेगाना,https://os.babinrentals.com/screenshots/settings/organisation.png,OK,,S11 approved wording
+settings.staff.member,4,settings,staff,Staff Member,कर्मचारी,https://os.babinrentals.com/screenshots/settings/staff.png,OK,,S11 approved wording
+settings.staff.role,4,settings,staff,Role,भूमिका,https://os.babinrentals.com/screenshots/settings/staff.png,OK,,S11 approved wording
+settings.staff.status,4,settings,staff,Status,स्थिति,https://os.babinrentals.com/screenshots/settings/staff.png,OK,,S11 approved wording
+settings.staff.active,4,settings,staff,Active,सक्रिय,https://os.babinrentals.com/screenshots/settings/staff.png,OK,,S11 approved wording
+settings.staff.inactive,4,settings,staff,Inactive,निष्क्रिय,https://os.babinrentals.com/screenshots/settings/staff.png,OK,,S11 approved wording
+settings.staff.addStaff,4,settings,staff,Add Staff Member,कर्मचारी थप्नुहोस्,https://os.babinrentals.com/screenshots/settings/staff.png,OK,,S11 approved wording
