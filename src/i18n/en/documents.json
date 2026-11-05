@@ -1,3 +1,14 @@
 {
-  "documents.title": "Documents"
+  "documents.title": "Documents",
+  "documents.subtitle": "Agreements & Paperwork",
+  "documents.tabs.agreements": "Rental Agreements",
+  "documents.tabs.idCards": "ID Proofs",
+  "documents.tabs.invoices": "Invoices",
+  "documents.tabs.receipts": "Receipts",
+  "documents.actions.upload": "Upload Document",
+  "documents.actions.preview": "Preview",
+  "documents.actions.download": "Download",
+  "documents.status.verified": "Verified",
+  "documents.status.pending": "Pending",
+  "documents.status.rejected": "Rejected"
 }

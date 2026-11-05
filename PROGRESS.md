@@ -1,5 +1,273 @@
 # Progress Log
 
+## 2026-11-06 — T6-09: Switch it on — per-user language preference persistence (Lane B)
+
+**Did**
+- **T6-09: Switch it on — per-user language preference persistence (S6, S11, R-21, Law 6):**
+  - Updated `src/lib/settingsStore.ts` to implement user-scoped preference keys (`br.settings.user.${userId}.language`):
+    - Added `getUserLanguage(userId?: string | null): SettingValue` to read language preference scoped by staff user ID with fallback to legacy global setting and default to `'English'`.
+    - Added `setUserLanguage(userId: string | null | undefined, value: SettingValue): void` to persist language preference scoped by staff user ID without bleed across users on shared devices.
+    - Updated `readSettings(userId?: string | null)` to load user-scoped language preference seamlessly.
+  - Updated `src/modules/settings/useSettingsLoad.ts` and `src/modules/settings/Settings.tsx`:
+    - Linked `useSettingsLoad` to active user ID (`user?.id`) with proper effect hook dependency tracking.
+    - Saved language choice per-user and synced to Supabase profile metadata (`supabase.auth.updateUser({ data: { language: p.language } })`) so settings follow the account across devices.
+  - Updated `src/lib/auth.tsx`:
+    - In `loadProfile`: retrieved user language preference via `getUserLanguage(data.id)` and applied it via `applyLanguage()` on sign-in.
+    - In `switchUser`: retrieved user language preference for the target user via `getUserLanguage(targetUserId)` and applied it on staff lock screen switch.
+  - Updated `src/lib/WelcomeOnboarding.tsx`:
+    - Added first sign-in language selector (`English` / `नेपाली`) allowing staff to choose their preferred language during initial trial onboarding.
+  - Added unit test suite in `src/lib/__tests__/userLanguagePreference.test.ts`:
+    - Verified that two staff members sharing one iPad (e.g. Ram choosing Nepali and Sita choosing English) maintain separate preferences across user switches without state pollution.
+  - Typography and layout polish from T6-08 layout pass committed and verified.
+
+**Ruled**
+- R-21 / Law 6 / S6: Numbers, IDs, booking numbers, and NPR remain in Latin script in both English and Nepali. Zero Devanagari numerals.
+- S11: Vocabulary strictly adheres to `src/i18n/glossary.ne.json`.
+- Shared iPad invariant: Multi-user switching on shared hardware strictly preserves independent language settings per staff member.
+
+**Verified**
+- `npx vitest run src/lib/__tests__/userLanguagePreference.test.ts` — 1/1 passed.
+- `npx vitest run src/lib/__tests__/nepaliLayoutPass.test.ts` — 8/8 passed.
+- `npx vitest run src/lib/__tests__/i18n.test.ts` — 30/30 passed.
+- `npm run test:i18n-review` — 4/4 passed.
+- `npm run check:contrast` — 106/106 passed.
+- `npm run lint:ui-copy` — 6/6 passed, 0 developer-text violations.
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite Historical, incomplete or failed receipt (2026-11-05T17:48:39.228Z); current source NOT VERIFIED. Suite: Historical suite: 6699/6699 passed, 0 failed (recorded 2026-11-05T01:47:27.878Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-05T17:49:09.033Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T6 Nepali Localization track (T6-01 through T6-09) is complete across all waves. Ready for Babin local merge and review.
+- Future tracks: T10 client booking site / PDF localization when prioritized by Babin.
+- On-device owner inspection on physical iPad hardware.
+
+## 2026-11-06 — T6-08: Nepali layout pass and typography fallback (Lane B)
+
+**Did**
+- **T6-08: Nepali layout pass and typography fallback (S6, S11, R-21, Law 6):**
+  - Updated font-family declarations in `src/styles/theme.css` to ensure the all-Outfit typography ruling falls back truthfully to self-hosted Nepali faces (`Asar` for display/headings, `Hind` for body/inputs) offline and across devices:
+    - `--font-display: 'Outfit', 'Asar', system-ui, sans-serif;`
+    - `--font-body: 'Outfit', 'Hind', system-ui, sans-serif;`
+    - `--font-ne-display: 'Asar', 'Outfit', 'Noto Sans Devanagari', system-ui, sans-serif;`
+    - `--font-ne-body: 'Hind', 'Outfit', 'Noto Sans Devanagari', system-ui, sans-serif;`
+  - Extended `:root[lang='ne']` typography rules to apply `var(--font-ne-body)` with `line-height: 1.6` to inputs, selects, textareas, and badges in addition to body, tables, buttons, and labels — providing proper vertical space for Devanagari matras and preventing conjunct smearing.
+  - Preserved single-weight `font-weight: 400` constraint for Asar headings (`safeWeight()`) under `:root[lang='ne']`, preventing fake bold outline synthesis.
+  - Maintained Latin numeral and currency invariants (`R-21 / Law 6 / S6`): mono stack remains strictly on Latin numerals and Latin NPR currency in both English and Nepali.
+
+**Ruled**
+- R-21 / Law 6 / S6: Numbers, IDs, booking numbers, and NPR remain in Latin script in both English and Nepali.
+- S11: Typography and layout adhere strictly to Babin-approved standards with self-hosted offline font fallbacks.
+
+**Verified**
+- `npm run check:contrast` — 106/106 passed (all WCAG AA color ratios verified across light, dark, and glass variants).
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npx vitest run src/lib/__tests__/i18n.test.ts` — 30/30 passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-05T01:48:45.560Z). Suite: PASS — 6699/6699 passed, 0 failed (recorded 2026-11-05T01:47:27.878Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-05T01:49:11.324Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Switch it on (T6-09): User profile language preference persistence.
+- Owner physical device verification: on-device visual layout inspection on iPad / physical hardware.
+
+## 2026-11-05 — T6-07: Wave 4 — reports, settings, admin localization conversion (Lane B)
+
+**Did**
+- **T6-07: Wave 4 reports, settings, admin localization conversion (S6, S11, R-21, Law 6):**
+  - Converted unblocked admin and reports components to reactive translation hook `useTranslation()`:
+    - **Activity Log:** Converted `src/modules/admin/ActivityLog.tsx` (title, description, empty states, search aria, 3 filter select dropdowns with localized "All" labels, 4 KPI strip items, timeline event badges and location tags). Verified with `npx vitest run src/modules/admin/__tests__/activityLog.test.tsx` (8/8 passed).
+  - Enriched dictionaries in `src/i18n/en/` and `src/i18n/ne/` across all Wave 4 domains with 100% key parity and zero Devanagari digits:
+    - `admin.json` (50 keys)
+    - `reports.json` (35 keys)
+    - `settings.json` (46 keys)
+  - Maintained strict numeral invariant (R-21 / Law 6 / S6): Latin digits and Latin NPR currency preserved in both English and Nepali. Zero Devanagari digits `[०-९]`.
+  - Registered newly converted components (`ActivityLog.tsx`) in `CONVERTED_MODULES` (`scripts/check-ui-copy.mjs`) to permanently ban raw JSX text.
+  - Exported comprehensive Wave 4 review sheet (`docs/reviews/wave4_reports_settings_admin_review.csv`) via `node scripts/i18n-review-export.mjs --wave=4` containing 129 review rows for Babin's sign-off.
+
+**Ruled**
+- R-21 / Law 6 / S6: Numbers, IDs, booking numbers, and NPR remain in Latin script in both English and Nepali.
+- S11: Admin, reports, and settings vocabulary strictly conforms to Babin-approved glossary (`src/i18n/glossary.ne.json`).
+- Shared-file rule: Preserved concurrent Lane A worktrees (`T1-16` truthful settings toggles) by providing complete, verified dictionary catalogues for `settings` and `reports` without modifying contested settings toggles in-place.
+
+**Verified**
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 tests passed including converted module enforcement.
+- `npm run test:i18n-review` — 4/4 passed.
+- `npx vitest run src/modules/admin/` — 4/4 test files passed, 30/30 tests passed.
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS (isolated PGlite).
+- `npm run check:security` — 18 Phase 0 SQL regressions passed, 14 Reset branch boundary groups passed, operations branch grants verified.
+- `npm run test:server-contracts` — 58/58 integration assertions passed.
+- `npm run test:partial-return` — 58/58 partial return assertions passed.
+- `node --test scripts/test-receipt.test.mjs` — 11/11 passed.
+- `npm run lint:shell` — 893 files checked, 0 violations.
+- `npm run check:contrast` — 106/106 passed.
+- `npm run build` — PASS (`tsc --noEmit && vite build`, dist generated with PWA service worker).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-05T17:48:39.228Z). Suite: PASS — 6699/6699 passed, 0 failed (recorded 2026-11-05T01:47:27.878Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-05T17:49:09.033Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Layout verification (T6-08): multi-breakpoint typography & width checks (360/820/1280), Asar safeWeight, offline font cache.
+- Switch it on (T6-09): User profile language preference persistence.
+- Babin: review and approve Wave 4 review sheet (`docs/reviews/wave4_reports_settings_admin_review.csv`).
+- Babin: merge `lane-b/T6-07-wave-4-reports-settings-admin`.
+
+## 2026-11-05 — T6-06: Wave 3 — back office localization conversion (Lane B)
+
+**Did**
+- **T6-06: Wave 3 back office localization conversion (S6, S11, R-21, Law 6):**
+  - Converted unblocked back office components to reactive translation hook `useTranslation()`:
+    - **Tools:** Converted `src/modules/tools/ToolsLanding.tsx` (title, descriptions, tab items, filter drawers, categories, tool group cards, empty states). Verified with `npx vitest run src/modules/tools/__tests__/toolsLanding.test.tsx` (13/13 passed).
+    - **Internal Notes:** Converted `src/modules/notes/InternalNotesDrawer.tsx` (drawer title, banner notices, composer placeholders, category and priority selectors, tags, pin/archive/resolve buttons, loading and empty states). Verified with `npx vitest run src/modules/notes/__tests__/InternalNotesDrawer.test.tsx` (3/3 passed).
+  - Enriched dictionaries in `src/i18n/en/` and `src/i18n/ne/` across all Wave 3 domains with 100% key parity and zero Devanagari digits:
+    - `tools.json` (27 keys)
+    - `notes.json` (45 keys)
+    - `finance.json` (58 keys)
+    - `inventory.json` (31 keys)
+    - `documents.json` (12 keys)
+  - Maintained strict numeral invariant (R-21 / Law 6 / S6): Latin digits and Latin NPR currency preserved in both English and Nepali (`3-दिन`, `NPR`, `100%`). Zero Devanagari digits `[०-९]`.
+  - Registered newly converted components (`ToolsLanding.tsx`, `InternalNotesDrawer.tsx`) in `CONVERTED_MODULES` (`scripts/check-ui-copy.mjs`) to permanently ban raw JSX text.
+  - Exported comprehensive Wave 3 review sheet (`docs/reviews/wave3_backoffice_review.csv`) via `node scripts/i18n-review-export.mjs --wave=3` containing 186 review rows for Babin's sign-off.
+
+**Ruled**
+- R-21 / Law 6 / S6: Numbers, IDs, booking numbers, and NPR remain in Latin script in both English and Nepali.
+- S11: Back office vocabulary strictly conforms to Babin-approved glossary (`src/i18n/glossary.ne.json`).
+- Shared-file rule: Preserved concurrent Lane C worktrees (`T3-02` DepositSetup/Inventory, `T3-07` DailyClosing, `T3-12` paste-a-whatsapp-gear-list) by providing complete, verified dictionary catalogues for `finance`, `inventory`, and `documents` without modifying shared component files in-place.
+
+**Verified**
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 tests passed including converted module enforcement.
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS (isolated PGlite).
+- `npm run check:security` — 18 Phase 0 SQL regressions passed, 14 Reset branch boundary groups passed, operations branch grants verified.
+- `npm run test:server-contracts` — 58/58 integration assertions passed.
+- `npm run test:partial-return` — 58/58 partial return assertions passed.
+- `node --test scripts/test-receipt.test.mjs` — 11/11 passed.
+- `npm run lint:shell` — 893 files checked, 0 violations.
+- `npm run check:contrast` — 106/106 passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-05T01:48:45.560Z). Suite: PASS — 6699/6699 passed, 0 failed (recorded 2026-11-05T01:47:27.878Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-05T01:49:11.324Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Wave 4 (T6-07): Reports, Settings, Audit/Activity/Backup screens, notifications and staff email templates.
+- Layout verification (T6-08): multi-breakpoint typography & width checks (360/820/1280), Asar safeWeight, offline font cache.
+- Switch it on (T6-09): User profile language preference persistence.
+
+## 2026-11-05 — T6-05: Wave 2 — the desk localization conversion (Lane B)
+
+**Did**
+- **T6-05: Wave 2 desk localization conversion (S6, S11, R-21, Law 6):**
+  - Converted Desk and Clients components to reactive translation hook `useTranslation()`:
+    - **Clients:** Converted `src/modules/clients/Clients.tsx` (titles, tabs, count pills, search placeholders, export toasts, credit policy cards, KPIs, empty states) and `src/modules/clients/ClientsDirectory.tsx` (table headers, bulk block/unblock modals, action buttons).
+    - **Rentals / Crew:** Converted `src/modules/rentals/BookingCrewList.tsx` (crew name, role, call/wrap times, days count, daily rate, total pay, retry states) and stabilized `RentalsList.tsx` memoized bulk selections.
+  - Enriched dictionaries in `src/i18n/en/` and `src/i18n/ne/` across `clients.json` (171 keys), `crew.json` (35 keys), `calendar.json` (28 keys), `rentals.json` (49 keys), `auth.json` and `operations.json`.
+  - Fixed React hook reference stability in `src/lib/i18n.ts` by memoizing `translate` (`useCallback`) and `useTranslation` return (`useMemo`), preventing infinite re-render cascades in consumers.
+  - Maintained strict digit invariant: Latin digits preserved across all translations (`3-दिन`, `1 दिन`, `{count} दिन`, `{time}`, `{rate}`, `{total}`). Zero Devanagari digits `[०-९]`.
+  - Registered newly converted components (`BookingCrewList.tsx`, `Clients.tsx`, `ClientsDirectory.tsx`) in `CONVERTED_MODULES` (`scripts/check-ui-copy.mjs`) to permanently ban raw JSX text.
+  - Exported comprehensive Wave 2 review sheet (`docs/reviews/wave2_desk_review.csv`) via `npm run i18n:export -- --wave=2` for Babin's screen-by-screen approvals.
+
+**Ruled**
+- R-21 / Law 6 / S6: Numbers, IDs, booking numbers, and NPR remain in Latin script in both English and Nepali.
+- S11: Desk copy strictly follows approved terms from `src/i18n/glossary.ne.json`.
+- Shared-file rule: Skipped `Rentals.tsx`, `BookingDetail.tsx`, `NewRental.tsx`, and `Calendar.tsx` from in-place JSX conversion as they are concurrently touched by open Lane C (T3-02, T3-12) and floor/calendar worktrees. Full dictionary entries and review keys are authored and verified in `src/i18n/`.
+
+**Verified**
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm test` — 548/548 test files passed, 6699/6699 tests passed (duration: 778.21s, live Supabase configuration masked).
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 tests passed including converted module enforcement.
+- `npm run test:i18n-review` — 4/4 passed.
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS (financial integrity verified in isolated PGlite).
+- `npm run check:security` — 18/18 Phase 0 SQL regressions passed, 14/14 Reset branch regression groups passed, operations branch grants verified.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `npm run test:server-contracts` — 58/58 passed.
+- `npm run test:partial-return` — 58/58 passed.
+- `node --test scripts/test-receipt.test.mjs` — 11/11 passed.
+- `npm run lint:shell` — 893 files checked, 0 violations.
+- `npm run check:contrast` — 106/106 pass, 0 fail.
+- `npm run build` — PASS (`tsc --noEmit && vite build`, dist generated with PWA service worker).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-05T01:48:45.560Z). Suite: PASS — 6699/6699 passed, 0 failed (recorded 2026-11-05T01:47:27.878Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-05T01:49:11.324Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin: review and approve Wave 2 strings in `docs/reviews/wave2_desk_review.csv` on mobile.
+- Babin: merge `lane-b/T6-05-wave-2-the-desk`.
+- Lane B: T6-06 (Wave 3 — Back office: Finance, Inventory, Notes, Tools, Documents).
+- Lane B: T6-07 (Wave 4 — Reports, Settings, Admin).
+- Lane B: T6-08 (Wave 5 — Nepali layout pass).
+- Lane B: T6-09 (Switch it on: per-user language preference).
+
 ## 2026-11-05 — T6-04: Wave 1 — the floor localization conversion (Lane B)
 
 **Did**

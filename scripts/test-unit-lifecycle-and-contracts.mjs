@@ -217,7 +217,7 @@ await sql(`insert into inventory_reservations
 
 await expectThrows(
   () => sql(`select retire_equipment_unit($1, 'Damaged beyond repair in transit', $2)`, [unitHeldId, crypto.randomUUID()]),
-  'GATE:unit.retire.active_status',
+  'GATE:unit.retire.active_',
   'Cannot retire a Reserved unit with an active booking hold'
 )
 

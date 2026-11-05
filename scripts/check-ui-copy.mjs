@@ -7,11 +7,17 @@ const copyKeys = /^(title|description|reason|message|label|hint|note|tooltip|sub
 
 export const CONVERTED_MODULES = [
   'src/modules/tools/LateFeeCalculator.tsx',
+  'src/modules/tools/ToolsLanding.tsx',
+  'src/modules/notes/InternalNotesDrawer.tsx',
+  'src/modules/admin/ActivityLog.tsx',
   'src/components/shell/BottomBar.tsx',
   'src/modules/auth/AuthCard.tsx',
   'src/modules/auth/Login.tsx',
   'src/modules/auth/ScreenLock.tsx',
   'src/modules/operations/RentalOperationShell.tsx',
+  'src/modules/rentals/BookingCrewList.tsx',
+  'src/modules/clients/Clients.tsx',
+  'src/modules/clients/ClientsDirectory.tsx',
 ]
 
 export function isConverted(file) {

@@ -28,6 +28,7 @@ import { useInspectorTraversal } from '../../components/ui/useInspectorTraversal
 import { DataTableShell } from '../../components/ui/DataTable'
 import { ActiveFilterChips, FilterButton } from '../../components/ui/FilterDrawer'
 import { SavedViewsMenu, type SavedListView } from '../../components/ui/SavedViewsMenu'
+import { useTranslation } from '../../lib/i18n'
 import { Pagination } from '../../components/ui/Pagination'
 import { BsAdDate } from '../../components/ui/BsAdDate'
 import { Badge } from '../../components/ui/Badge'
@@ -863,6 +864,7 @@ function ColumnMenu({
 const rentalInspectorId = (row: RentalListRow) => row.id
 
 export default function RentalsList() {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const { density } = useDisplayDensity()
   const isCompact = density === 'compact'
@@ -1594,7 +1596,7 @@ export default function RentalsList() {
     const actions: PageHeaderBulkSelection['actions'] = [
       {
         id: 'export-selected-rentals',
-        label: 'Export CSV',
+        label: t('rentals.actions.exportCsv', 'Export CSV'),
         icon: 'download',
         onClick: handleBulkExport,
         enabled: !bulkProcessing,
@@ -1611,7 +1613,7 @@ export default function RentalsList() {
       }] : []),
     ]
     return { count: selectedIds.size, onClear: clearRentalSelection, actions }
-  }, [selectedIds.size, handleBulkExport, canOperate, bulkProcessing, clearRentalSelection])
+  }, [selectedIds.size, handleBulkExport, canOperate, bulkProcessing, clearRentalSelection, t])
 
   // Bulk Pack & Bulk Handover removed per Steps 2 & 3: packing and handover are
   // physical floor operations requiring equipment resolution and stage gates in
@@ -1775,7 +1777,7 @@ export default function RentalsList() {
     <PageShell className="rentals-v2">
       {workspace && headerBulkSelection && (
         <PageHeader
-          title="Rentals"
+          title={t('rentals.title', 'Rentals')}
           bulkSelection={headerBulkSelection}
           showAddMenu={false}
         />
@@ -1792,8 +1794,8 @@ export default function RentalsList() {
             onClear={() => f.setSearch('')}
             autoFocusShortcut={true}
             shortcutHint="Ctrl+K"
-            aria-label="Search rentals"
-            placeholder="Search rentals…"
+            aria-label={t('rentals.searchAria', 'Search rentals')}
+            placeholder={t('rentals.searchPlaceholder', 'Search rentals…')}
             wrapperStyle={{ width: '100%', minWidth: 0 }}
           />
         </div>
@@ -1941,10 +1943,10 @@ export default function RentalsList() {
               variant="primary"
               size="sm"
               icon="plus"
-              aria-label="New Rental"
+              aria-label={t('rentals.actions.newRental', 'New Rental')}
               onClick={() => navigate('/rentals/new')}
             >
-              {viewport === 'phone' ? 'New' : 'New Rental'}
+              {viewport === 'phone' ? t('rentals.actions.newShort', 'New') : t('rentals.actions.newRental', 'New Rental')}
             </Button>
           )}
 
@@ -2285,7 +2287,7 @@ export default function RentalsList() {
                  next step. Gated like `rental.create` so a role that cannot
                  create is not offered a page that refuses it. */
               {...(!isFiltered && canWriteDesk
-                ? { emptyActionLabel: 'New Rental', onEmptyAction: () => navigate('/rentals/new') }
+                ? { emptyActionLabel: t('rentals.actions.newRental', 'New Rental'), onEmptyAction: () => navigate('/rentals/new') }
                 : {})}
             >
               {view === 'Timeline' && (

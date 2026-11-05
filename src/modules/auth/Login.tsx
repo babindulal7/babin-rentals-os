@@ -251,7 +251,7 @@ function LoginFooter() {
         to="/forgot-password"
         className="auth-footer-link"
       >
-        {t('auth.forgotPassword', 'Forgot your password?')}
+        {t('auth.forgotPassword', 'Forgot password?')}
       </Link>
     </>
   )

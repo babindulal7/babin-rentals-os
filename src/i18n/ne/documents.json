@@ -1,3 +1,14 @@
 {
-  "documents.title": "कागजात"
+  "documents.title": "कागजातहरू",
+  "documents.subtitle": "सम्झौता तथा कागजात",
+  "documents.tabs.agreements": "भाडा सम्झौताहरू",
+  "documents.tabs.idCards": "परिचयपत्रहरू",
+  "documents.tabs.invoices": "बिलहरू",
+  "documents.tabs.receipts": "रसिदहरू",
+  "documents.actions.upload": "कागजात अपलोड गर्नुहोस्",
+  "documents.actions.preview": "पूर्वावलोकन गर्नुहोस्",
+  "documents.actions.download": "डाउनलोड गर्नुहोस्",
+  "documents.status.verified": "प्रमाणित",
+  "documents.status.pending": "प्रमाणीकरण बाँकी",
+  "documents.status.rejected": "अस्वीकृत"
 }

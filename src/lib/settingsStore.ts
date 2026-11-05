@@ -496,6 +496,30 @@ export const SETTINGS_DEFAULTS: SettingsRecord = Object.fromEntries(
 const PREFIX = 'br.settings.'
 
 /**
+ * Reads user-scoped language preference, falling back to device setting.
+ * Allows multiple staff sharing a single device (e.g. iPad) to keep their own language (T6-09).
+ */
+export function getUserLanguage(userId?: string | null): SettingValue {
+  if (userId) {
+    const userSpecific = readLocal(`${PREFIX}user.${userId}.language`)
+    if (userSpecific && (userSpecific === 'English' || userSpecific === 'नेपाली')) {
+      return userSpecific
+    }
+  }
+  return getSetting('language')
+}
+
+/**
+ * Saves user-scoped language preference and updates active local setting.
+ */
+export function setUserLanguage(userId: string | null | undefined, value: SettingValue): void {
+  if (userId) {
+    writeLocal(`${PREFIX}user.${userId}.language`, String(value))
+  }
+  writeLocal(`${PREFIX}language`, String(value))
+}
+
+/**
  * Validates a value against its own spec. Exported because the screen runs it
  * before writing and the store runs it again on read — a value that stopped
  * being valid (a spec tightened, a hand-edited localStorage) falls back to the
@@ -582,10 +606,14 @@ export function getSettingForLocation(key: SettingKey, locationId: string | null
   return override ?? getSetting(key)
 }
 
-export function readSettings(): SettingsRecord {
+export function readSettings(userId?: string | null): SettingsRecord {
   if (typeof window === 'undefined') return { ...SETTINGS_DEFAULTS, ...remoteOrg }
   const out = { ...SETTINGS_DEFAULTS }
   for (const key of Object.keys(SETTING_SPECS) as SettingKey[]) {
+    if (key === 'language' && userId) {
+      out.language = getUserLanguage(userId)
+      continue
+    }
     /* A shared value wins over this device's old localStorage copy. A key the database has no row for
        yet falls through to the local value, so nothing reverts the day this ships. */
     const shared = isDeviceLocalKey(key) ? undefined : remoteOrg[key]
