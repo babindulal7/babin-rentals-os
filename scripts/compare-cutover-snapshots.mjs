@@ -39,6 +39,7 @@ export function compareCutoverSnapshots(sourceRows, stagingRows) {
     const [entity, externalId] = JSON.parse(key)
     let status
     let reason
+    let changedFields
 
     if (sourceMatches.length > 1 || stagingMatches.length > 1) {
       status = 'conflict'
@@ -51,10 +52,19 @@ export function compareCutoverSnapshots(sourceRows, stagingRows) {
       status = isDeepStrictEqual(sourceMatches[0].fields, stagingMatches[0].fields)
         ? 'unchanged'
         : 'updated'
+      if (status === 'updated') {
+        const sourceFields = sourceMatches[0].fields
+        const stagingFields = stagingMatches[0].fields
+        changedFields = [...new Set([...Object.keys(sourceFields), ...Object.keys(stagingFields)])]
+          .filter(field => Object.hasOwn(sourceFields, field) !== Object.hasOwn(stagingFields, field) ||
+            !isDeepStrictEqual(sourceFields[field], stagingFields[field]))
+          .sort()
+      }
     }
 
     counts[entity][status]++
-    rows.push({ entity, externalId, status, ...(reason ? { reason } : {}) })
+    rows.push({ entity, externalId, status,
+      ...(reason ? { reason } : {}), ...(changedFields ? { changedFields } : {}) })
   }
 
   return { counts, rows }

@@ -73,6 +73,9 @@ node scripts/compare-cutover-snapshots.mjs "$env:TEMP/booqable.json" "$env:TEMP/
 ```
 
 The report lists each external ID once with its status and totals by entity.
+Updated rows also list the sorted top-level field names that changed, were added
+or were removed. Field values stay in the private input files; a changed nested
+pricing rule or bundle membership lists its containing field for review.
 `osOnly` means the ID was present only in the OS snapshot, which is expected when the
 Booqable export covers only changes since the earlier import. Duplicate IDs within
 an entity produce conflicts and exit code 2. Invalid input exits with code 1.
@@ -107,6 +110,12 @@ to prepare the complete source snapshot. The conflicting renewal/cancellation
 dates in PLAN.md and S8/T9-08 are tracked as O-23; no date was changed by this review.
 The workbook's modification date alone cannot establish when the catalogue
 data was refreshed. This inspection establishes the available export format.
+Read-only inspection of the configured hosted OS found 205 active products, one
+client, one active bundle and zero external references. Its four 0160 pricing
+relations are absent, and external_refs has no store-slug column. These are
+deployment, identity-mapping and old-link prerequisites, not authority to apply
+migrations or treat every source product as new. The export requirements document
+records the evidence and a repeatable metadata-only preflight query.
 The OS match report and the 20 three-day quote comparisons remain open.
 
 ### T9-02 · Booqable rentals block the OS calendar            status: todo · size: M · lane A

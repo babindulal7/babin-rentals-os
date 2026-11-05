@@ -45,3 +45,16 @@ test('compares bundle membership and pricing steps as normalized fields', () => 
   const report = compareCutoverSnapshots(source, os)
   assert.deepEqual(report.rows.map(item => item.status), ['updated', 'unchanged'])
 })
+
+test('identifies changed, added and removed field names without exposing values', () => {
+  const report = compareCutoverSnapshots([
+    row('client', 'c1', { name: 'Private new name', email: 'private@example.test',
+      address: { city: 'Private new city' }, phone: 'Private unchanged phone' }),
+  ], [
+    row('client', 'c1', { name: 'Private old name', company: 'Private old company',
+      address: { city: 'Private old city' }, phone: 'Private unchanged phone' }),
+  ])
+  assert.deepEqual(report.rows, [{ entity: 'client', externalId: 'c1', status: 'updated',
+    changedFields: ['address', 'company', 'email', 'name'] }])
+  assert.doesNotMatch(JSON.stringify(report), /Private|private@example/)
+})

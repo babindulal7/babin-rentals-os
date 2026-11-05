@@ -1,5 +1,43 @@
 # Progress Log
 
+## 2026-11-06 — T9-01: Check hosted prerequisites and make comparison changes reviewable
+
+**Did**
+- Matched the repository's configured Supabase hostname to the connected project, then inspected only schema metadata and aggregate counts. The project has 205 active products, one client, one active bundle and zero external-reference rows across all providers.
+- Verified that the four pricing relations from local migration 0160 are absent. The deployed external_refs schema also has no store-slug column. Recorded these as deployment, identity-mapping and old-link prerequisites in the card and export requirements.
+- Added docs/plans/evidence/cutover-readonly-preflight.sql: a single SELECT returning counts and metadata, with no individual client data or prices. It makes this inspection repeatable without an import or mutation.
+- Improved the local comparison report: updated rows list sorted top-level field names for changed, added or removed fields. The report still omits their values, including nested client details.
+
+**Ruled**
+- No product, tax or import decision was made. The older bridge catalogue and hosted OS counts have different freshness and potentially different scope; their difference is not a missing-product count. Zero mappings do not authorize creating every source record again.
+
+**Verified**
+- Executed the exact saved SELECT through the connected Supabase tool. Its aggregate result confirmed the counts, zero mappings, four absent pricing relations and external-reference column list. Raw observation time: 2026-11-05T19:56:17.912343Z (6 November NPT).
+- No hosted records, schema, credentials or source workbook were modified. No individual client record was fetched.
+- The comparer passed Node syntax checking and all five Node tests, including a new regression for changed/added/removed field names and exclusion of private values. Full card gates and app/device acceptance remain open.
+- npm audit reports the unchanged branch baseline of 36 affected packages (4 critical, 14 high, 15 moderate, 3 low). Dependency remediation remains isolated on T0-13; this branch has not received those changes.
+- npm run completion returned 1 with the generated block below because suite/coverage verification is absent on this branch. No full runtime or device acceptance is claimed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Obtain fresh scoped exports and reconcile existing OS identities before producing the real match report or proposing an import.
+- Meet Batch 1 and T3-09 prerequisites, verify the pricing schema on staging, and establish the supported slug-storage/old-link path with T7-17. Babin applies any approved live batch after backup; none was applied here.
+- Complete the 20-product three-day quote check and staging acceptance. O-23's actual billing date is still awaiting Babin; card status remains doing and Babin merges locally.
+
 ## 2026-11-06 — T9-01: Check dataset freshness and prepare the source export request
 
 **Did**

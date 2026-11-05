@@ -34,6 +34,43 @@ products. Product groups also list `structure_price_in_cents` and
 `flat_fee_price_in_cents`. These are recorded schema keys, not exported current
 values or proof of the current API response format.
 
+## Configured OS project checked 6 November 2026
+
+Read-only metadata and aggregate queries against the project matching the
+repository's configured Supabase hostname found:
+
+| OS dataset | Total rows | Active rows |
+|---|---:|---:|
+| Products | 205 | 205 |
+| Clients | 1 | Not measured; no active flag assumed |
+| Bundles | 1 | 1 |
+| External references, all providers | 0 | Not applicable |
+
+The four relations introduced by local migration 0160 are absent from the
+configured hosted database: `pricing_structures`, `pricing_structure_tiles`,
+`pricing_rulesets` and `pricing_rules`. This establishes a deployment prerequisite
+for the pricing import. A later-numbered entry in migration history does not
+prove that every earlier migration was applied. No migration was applied by this
+inspection.
+
+The deployed `external_refs` columns contain the provider/entity/external/local
+IDs, timestamps and payload hash, but no store-slug field. Local migration 0040
+has the same shape. T9-01's requirement to preserve old product links therefore
+needs an explicit supported storage path and verification with T7-17 before
+importing those slugs.
+
+There is no mapped OS snapshot to compare yet. Do not classify every source row
+as new simply because all mappings are absent. Reconcile the existing OS records
+and retain stable identity links through the import path first. The older bridge
+catalogue's 307 rows (273 marked active on 5 November) and these 205 OS rows have
+different freshness and potentially different scope; their difference is not a
+count of missing products.
+
+The repeatable [read-only preflight query](cutover-readonly-preflight.sql)
+returns counts and metadata only. Individual client records, prices and
+credentials are not included. It supplies prerequisites for the match report,
+not the match report or production acceptance itself.
+
 ## Required export contents
 
 Keep the exports and individual client data outside Git. Record the source
