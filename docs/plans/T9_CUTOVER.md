@@ -42,6 +42,44 @@ per batch; rejected rows are listed with the reason; a failed batch leaves nothi
 20 products prices the same 3-day quote in both systems (allowing the known rounding difference).
 **Needs** — Batch 1 live; T3-09.
 
+#### Read-only comparison
+
+Prepare two local JSON snapshots with the same field names and types. One comes from the
+Booqable export and the other from the OS records in scope joined to their Booqable
+external references. Review OS rows without a mapping separately before treating a
+source row as new. Keep the input files outside Git.
+
+Each snapshot is a JSON array of records with the following shape:
+
+```json
+[
+  {
+    "entity": "product",
+    "externalId": "example-product-id",
+    "fields": { "name": "Example camera", "storeSlug": "example-camera" }
+  }
+]
+```
+
+Use entity names `client`, `product`, `bundle`, `pricing_structure`, and `seasonal_rule`.
+Include the importable fields in both snapshots, including bundle members, pricing
+rules, seasonal end dates and product store slugs. Exclude photo data and
+export-generated metadata. Keep arrays in the same order where the business order
+matters and normalize the order where it does not. Use integer paisa for normalized
+amounts. Preserve source values separately for the import and quote checks.
+
+```powershell
+node scripts/compare-cutover-snapshots.mjs "$env:TEMP/booqable.json" "$env:TEMP/os.json"
+```
+
+The report lists each external ID once with its status and totals by entity.
+`osOnly` means the ID was present only in the OS snapshot, which is expected when the
+Booqable export covers only changes since the earlier import. Duplicate IDs within
+an entity produce conflicts and exit code 2. Invalid input exits with code 1.
+Review row counts against both exports and resolve mappings before using the report
+for import approval. Save the report separately from the source exports.
+
+
 ### T9-02 · Booqable rentals block the OS calendar            status: todo · size: M · lane A
 **What** — Import every **open and upcoming** Booqable booking (reserved or started) as a read-only
 **external hold** in the OS: product (and serial where Booqable has one), from/to, Booqable number.

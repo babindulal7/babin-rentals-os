@@ -1,5 +1,39 @@
 # Progress Log
 
+## 2026-11-05 — T9-01: Read-only catalogue comparison
+
+**Did**
+- Started T9-01 in its lane A worktree. Added a local comparison of normalized Booqable and OS snapshots for clients, products, bundles, pricing structures and seasonal rules.
+- Documented the input format and review steps in the card. The report classifies records by entity and external ID, flags duplicate IDs and omits compared field values.
+
+**Ruled**
+- Followed T9-01's dry-run-first order and B45's exclusion of product photos.
+
+**Verified**
+- `node --test scripts/compare-cutover-snapshots.test.mjs` — 4/4 passed.
+- CLI smoke with synthetic snapshots — exit 0 for a new product, exit 2 for a duplicate ID.
+- `git diff --check` passed. This increment contains a standalone Node script and documentation. The application release gates were not run.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Obtain the source export and scoped OS snapshot, normalize the fields, review unmapped OS records and reconcile the report against both exports.
+- Complete T3-09 staging quote verification and Batch 1 prerequisites. Review the match report with Babin before using the import paths. Verify the 20 sample quotes and then exercise T9-02 availability holds.
+
+
 ## 2026-11-05 — T6-04: Wave 1 — the floor localization conversion (Lane B)
 
 **Did**
