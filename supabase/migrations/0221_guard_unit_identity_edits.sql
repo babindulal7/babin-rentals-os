@@ -1,0 +1,58 @@
+-- T2-17: preserve Technician floor updates without granting Technician unit-identity edits.
+-- Forward-only, isolated-branch migration. Do NOT apply to live Supabase without
+-- the independent permission/audit preflight and owner release approval.
+--
+-- 0180 broadens product_units_update RLS to Technician for floor operations.
+-- RLS controls rows, not individual changed columns. A Technician with API access
+-- could otherwise change asset_tag/serial_no/rack/shelf/bin despite UI gates.
+-- The narrow trigger below protects ONLY changes to these five values; it does
+-- not change product_units_update or block legitimate status/maintenance writes.
+
+begin;
+
+create or replace function public.guard_unit_identity_edits()
+returns trigger
+language plpgsql
+security invoker
+set search_path = public, pg_temp
+as $$
+begin
+  if new.asset_tag is distinct from old.asset_tag
+     or new.serial_no is distinct from old.serial_no
+     or new.rack is distinct from old.rack
+     or new.shelf is distinct from old.shelf
+     or new.bin is distinct from old.bin
+  then
+    if auth.uid() is null
+       or coalesce(auth_user_role()::text, '') not in ('Owner', 'Admin', 'Manager', 'Warehouse')
+    then
+      raise exception 'GATE:unit.identity.role_denied|Only Owner, Admin, Manager or Warehouse may change unit identity or shelf location.'
+        using errcode = '42501';
+    end if;
+
+    -- The universal audit trigger records NEW.updated_by as its actor.
+    -- Refuse a spoofed audit actor; the signed-in JWT is the authority.
+    if new.updated_by is distinct from auth.uid() then
+      raise exception 'GATE:unit.identity.actor_mismatch|Unit identity changes must name the authenticated actor.'
+        using errcode = '42501';
+    end if;
+
+    -- Unit editor uses a revision-matched UPDATE. The new revision must advance
+    -- for a second tab to detect the write; never allow a timestamp downgrade.
+    if new.updated_at is null or old.updated_at is null
+       or new.updated_at <= old.updated_at
+    then
+      raise exception 'GATE:unit.identity.revision|Unit identity updates must advance the unit revision.'
+        using errcode = '23514';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_guard_unit_identity_edits on public.product_units;
+create trigger trg_guard_unit_identity_edits
+  before update on public.product_units
+  for each row execute function public.guard_unit_identity_edits();
+
+commit;
