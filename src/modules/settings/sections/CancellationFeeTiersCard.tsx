@@ -30,7 +30,7 @@ export function CancellationFeeTiersCard() {
     setFee('')
   }
 
-  async function save(write: () => Promise<void>, message: string) {
+  async function save(write: () => Promise<void>, message: string, clearForm = true) {
     if (!ownerId || !online || tiers.loading || tiers.error || submitting.current) return
     setError(null)
     setSaved(null)
@@ -38,7 +38,7 @@ export function CancellationFeeTiersCard() {
     setSaving(true)
     try {
       await write()
-      resetForm()
+      if (clearForm) resetForm()
       setRetiring(null)
       setSaved(message)
       tiers.reload()
@@ -134,7 +134,7 @@ export function CancellationFeeTiersCard() {
           variant="danger"
           isSubmitting={actionsDisabled}
           onClose={() => { if (!saving) setRetiring(null) }}
-          onConfirm={() => { void save(() => updateCancellationFeeTier(retiring, 'retire'), 'Cancellation fee tier retired.') }}
+          onConfirm={() => { void save(() => updateCancellationFeeTier(retiring, 'retire'), 'Cancellation fee tier retired.', editing?.id === retiring.id) }}
         />
       )}
       <p>These tiers define the fee before tax. Fee invoicing and refunds still require the cancellation settlement workflow.</p>

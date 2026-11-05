@@ -1,5 +1,40 @@
 # Progress Log
 
+## 2026-11-06 — T3-03: Preserve tier drafts and repair the dated contract fixture
+
+**Did**
+- Retirement now preserves an unrelated tier editor or new-tier draft. Retiring the tier currently being edited still clears that editor. Added two focused regression tests.
+- Replaced the server-contract test's fixed November reservation window with dates relative to the database clock. It asserts Reserved status before retirement and verifies that the refusal preserves that status; the specific active-status refusal is unchanged.
+
+**Ruled**
+- These are form-state and verification-fixture corrections under the existing card. No fee, VAT or permission decision was introduced.
+
+**Verified**
+- The preceding full suite passed 6714/6714 tests in 549 files before these last changes. Both new tier-editor tests passed, and the corrected server-contract suite passed all 60 integration assertions.
+- After the final source edits, full source lint passed; check:pglite rebuilt 219/219 migrations and check:lifecycle passed 64/64. Migration 0223 remains VERIFIED locally, not APPLIED or PRODUCTION-VERIFIED.
+- The resumed gate sequence reached coverage after passing financial integrity, security, server contracts, partial Return, progress/receipt/shell/UI-copy checks, all 106 contrast checks and build. The coverage run was interrupted without a final receipt; its process handle is missing and no owned test process remains. It is not certified green.
+- Fresh audit of this branch still reports 36 affected packages. Dependency remediation is isolated on lane-a/T0-13-dependency-audit, whose current audit reports 12 (0 critical, 0 high).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 64 / 64 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 219 files · check:pglite 219/219 applied, 0 failed (recorded 2026-11-05T14:56:43.650Z). Suite: NOT VERIFIED — invalid test receipt.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-05T14:57:29.733Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Complete full current-source coverage and record its terminal result; do not use the earlier full-suite pass as evidence for the final source changes.
+- Complete browser/device acceptance, enter the real tiers (O-10), and obtain written clarification of retained cancellation-fee VAT treatment (O-22) before implementing fee invoicing and refund settlement.
+- Babin reviews and merges the branch locally. No live database changes were made.
+
 ## 2026-11-05 — T3-03: Repair localization assertions found by the full gate
 
 **Did**
