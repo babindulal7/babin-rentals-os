@@ -148,13 +148,13 @@ describe('RosterLock — shared device lock and user switching', () => {
 
     expect(text()).toContain('Signed in as Sita Sharma')
     expect(text()).toContain('Enter your PIN to resume this session')
-    expect(text()).toContain('Back to staff list')
+    expect(Array.from(container.querySelectorAll('button')).some(button => button.textContent?.trim() === 'Back')).toBe(true)
     // 4 dots for 4-digit PIN pad
     const digit1 = container.querySelector('button[aria-label="Digit 1"]')
     expect(digit1).toBeTruthy()
   })
 
-  it('clicking "Back to staff list" returns from PIN pad to the roster', async () => {
+  it('clicking "Back" returns from PIN pad to the roster', async () => {
     await mount()
 
     const sitaBtn = container.querySelector<HTMLButtonElement>('button[aria-label="Unlock as Sita Sharma"]')
@@ -164,7 +164,7 @@ describe('RosterLock — shared device lock and user switching', () => {
     expect(text()).toContain('Signed in as Sita Sharma')
 
     const backBtn = Array.from(container.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Back to staff list'),
+      b.textContent?.trim() === 'Back',
     )
     expect(backBtn).toBeTruthy()
 
@@ -266,7 +266,7 @@ describe('RosterLock — shared device lock and user switching', () => {
 
     // Ask again, then confirm: exactly one forget.
     await click(findButton('Forget this device'))
-    await click(findButton('Forget this device', container.querySelector('[role="alertdialog"]')!))
+    await click(findButton('Forget device', container.querySelector('[role="alertdialog"]')!))
     expect(mockForgetThisDevice).toHaveBeenCalledTimes(1)
     expect(nativeConfirm).not.toHaveBeenCalled()
   })
