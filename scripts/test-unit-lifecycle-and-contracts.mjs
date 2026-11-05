@@ -195,8 +195,8 @@ await expectThrows(
 )
 
 // 2.3 Refusal when unit is reserved by an active booking.
-// Reservation triggers set the unit status to Reserved; the active-status gate
-// runs before the explicit active-reservation gate. Both prevent retirement.
+// The reservation insert may leave the unit's status unchanged, so the explicit
+// active-reservation gate must still refuse retirement, independently of status.
 // Create a booking holding unitHeldId
 const bkRes = await sql(`insert into bookings
   (client_uuid, booking_no, client_id, branch_id, stage, pickup_at, return_at, delivery_type, created_by, updated_by)
@@ -217,9 +217,12 @@ await sql(`insert into inventory_reservations
 
 await expectThrows(
   () => sql(`select retire_equipment_unit($1, 'Damaged beyond repair in transit', $2)`, [unitHeldId, crypto.randomUUID()]),
-  'GATE:unit.retire.active_status',
-  'Cannot retire a Reserved unit with an active booking hold'
+  'GATE:unit.retire.active_reservation',
+  'Cannot retire a unit with an active booking hold'
 )
+
+const heldAfterRefusal = await sql(`select retired_at from product_units where id = $1`, [unitHeldId])
+assert(heldAfterRefusal.rows[0]?.retired_at === null, 'Refused retirement leaves the reserved unit unretired')
 
 // 2.4 Successfully retire unheld unit
 const retireKey = crypto.randomUUID()
