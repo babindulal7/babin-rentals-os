@@ -85,6 +85,10 @@ Registry metadata checked during this review: the latest TypeScript lint parser
 Consequently, another compatible parent update does not remove these findings.
 No out-of-range transitive override was installed.
 
+TypeScript lint parser, Workbox build, Rollup node resolver and deepmerge registry
+metadata were rechecked on 6 November; their versions and dependency ranges above
+were unchanged.
+
 The removed critical worker findings are documented by the upstream advisories
 [worker options](https://github.com/advisories/GHSA-5gmw-xhrv-c9v3) and
 [run options](https://github.com/advisories/GHSA-85c8-ppgw-ccpr).
