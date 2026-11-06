@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest'
 import { shouldNavigateInspector } from './InspectorNavigator'
 import { BP } from '../../lib/breakpoints'
