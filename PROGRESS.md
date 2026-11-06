@@ -1,5 +1,39 @@
 # Progress Log
 
+## 2026-11-06 — T3-03: Finish full current-source coverage
+
+**Did**
+- Completed the replacement full coverage run without restarting it during observation timeouts. All 550 test files and 6716 tests passed with one worker and file parallelism disabled.
+- Validated the terminal coverage receipt against the current source fingerprint, full-suite scope and successful exit. The earlier interrupted attempt remains historical.
+
+**Ruled**
+- No fee, tax, permission or live-data decision was made. The tier editor and retirement corrections retain their existing scope; VAT registration does not settle the retained-fee tax question.
+
+**Verified**
+- npm run test:coverage -- --maxWorkers=1 --no-file-parallelism exited 0: 6716/6716 tests, 550/550 files. Receipt 75cd85e0-4fde-439a-8956-f688b2e10613 is valid, successful, full-suite and current-source; sourceChanged is false.
+- npm run completion exited 0 and generated the block below. It recognizes the same current-source suite/coverage receipt, the 219/219 local migration rebuild and 64/64 lifecycle steps.
+- These receipts verify local execution. Fee invoicing/refund settlement, real tier values, written VAT clarification and hosted/device acceptance remain incomplete; this is not a completed card or a delivery percentage.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 64 / 64 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 219 files · check:pglite 219/219 applied, 0 failed (recorded 2026-11-05T14:56:43.650Z). Suite: PASS — 6716/6716 passed, 0 failed (recorded 2026-11-05T20:46:08.942Z); source fingerprint matches.
+Coverage suite: PASS — 6716/6716 passed, 0 failed (recorded 2026-11-05T20:46:08.942Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-05T14:57:29.733Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Complete fee invoicing and immutable refund settlement after written clarification of retained cancellation-fee VAT treatment (O-22). Obtain the real tiers (O-10); example tiers are not business policy.
+- Complete browser/device and staging acceptance, then run all required final card gates before requesting merge. Babin reviews and merges locally.
+- No migration was applied to live; migration 0223 is VERIFIED locally, not APPLIED or PRODUCTION-VERIFIED.
+
 ## 2026-11-06 — T3-03: Preserve tier drafts and repair the dated contract fixture
 
 **Did**
