@@ -1,5 +1,32 @@
 # Babin Rentals OS — Open Decisions Register
 
+
+## 5 November 2026: VAT on a retained cancellation fee (O-22)
+
+Babin confirmed in chat that Babin Rentals is VAT registered and currently has
+no accountant. Obtain the remaining clarification from the registered Inland
+Revenue Office or another qualified Nepal tax adviser. This item requires a
+tax classification, rather than a choice of fee percentage.
+
+The [IRD taxpayer education booklet](https://ird.gov.np/public/pdf/545884652.pdf)
+explains credit and debit notes for changes to a supply's quantity or value.
+The [IRD office directory](https://ird.gov.np/contact-info/) identifies the
+official contact route. These sources do not settle the classification of the
+retained cancellation fee for this rental workflow. Search results for general
+contract penalties are insufficient to select the tax treatment.
+
+Draft question for the registered tax office
+
+> हाम्रो व्यवसाय मूल्य अभिवृद्धि करमा दर्ता भएको उपकरण भाडामा दिने व्यवसाय हो।
+> ग्राहकले उपकरण लिनुअघि बुकिङ रद्द गर्दा अग्रिम रकमबाट राखिने रद्द शुल्कमा
+> मू.अ.कर लाग्छ कि लाग्दैन? अग्रिम रकममा कर बीजक जारी भइसकेको भए रद्द शुल्क
+> राखी बाँकी रकम फिर्ता गर्दा मूल बीजकसँग सम्बन्धित क्रेडिट वा डेबिट नोट कसरी
+> जारी गर्ने? कृपया सम्बन्धित कानुनी व्यवस्था सहित लिखित जानकारी दिनुहोस्।
+
+Keep the reply and the applicable date with the cancellation implementation.
+Fee tier configuration and notice calculations can continue while this is open.
+
+
 ## 28 October 2026: switch-user PIN length (T1-15) — ANSWERED 1 Nov: 4 digits (O-18)
 
 **Answered 1 Nov 2026 by Babin ("4 pin"): the switch-user PIN is 4 digits.** T1-15 carries the migration

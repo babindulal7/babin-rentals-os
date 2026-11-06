@@ -6965,6 +6965,42 @@ STEPS.push({
 })
 
 
+STEPS.push({
+  id: 'L68',
+  title: 'Owner can configure cancellation tiers with unique active thresholds (T3-03)',
+  expect: 'green',
+  run: async () => {
+    const insert = `insert into cancellation_fee_tiers (client_uuid, notice_hours, fee_percent, created_by)
+      values (gen_random_uuid(), 48, 12.25, $1)`
+    await as('Owner', async () => {
+      await q(insert, [U.Owner])
+      await refuses('Duplicate active threshold', insert, [U.Owner], /cancellation_fee_tiers_active_notice_key/i)
+    })
+    await as('Coordinator', async () => {
+      assertEq(Number(await one('select fee_percent from cancellation_fee_tiers where notice_hours = 48')), 12.25,
+        'Coordinator reads the configured tier')
+      await refuses('Coordinator cannot configure tiers', insert, [U.Coordinator], /row-level security/i)
+    })
+    await as('Warehouse', async () => {
+      assertEq(await one('select fee_percent from cancellation_fee_tiers where notice_hours = 48'), null,
+        'Warehouse cannot read tiers')
+    })
+    await as('Owner', async () => {
+      const id = await one('select id from cancellation_fee_tiers where notice_hours = 48')
+      await q('update cancellation_fee_tiers set fee_percent = 15 where id = $1', [id])
+      assertEq(Number(await one('select fee_percent from cancellation_fee_tiers where id = $1', [id])), 15,
+        'Owner can correct the active fee')
+      await q('update cancellation_fee_tiers set retired_at = now() where id = $1', [id])
+      await q(insert, [U.Owner])
+      assertEq(Number(await one('select count(*) from cancellation_fee_tiers where notice_hours = 48')), 2,
+        'The original tier remains in the records')
+      assertEq(Number(await one('select count(*) from cancellation_fee_tiers where notice_hours = 48 and retired_at is null')), 1,
+        'A replacement threshold can be configured after retirement')
+    })
+  },
+})
+
+
 /* ΓöÇΓöÇ Run ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
 await seed()

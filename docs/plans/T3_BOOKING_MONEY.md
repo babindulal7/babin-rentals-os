@@ -49,7 +49,7 @@ nothing under it); build the editor in it. Its two `// @ts-ignore` lines fail `n
 until Claude's `fix-red-checks.patch` (31 Oct) or this card removes them.
 **Needs** — none. Data entry: BABIN_ACTIONS (staff, December).
 
-### T3-03 · Cancellation fee tiers            status: todo · size: M · lane C + Babin
+### T3-03 · Cancellation fee tiers            status: doing (lane-c/T3-03-cancellation-fee-tiers) · size: M · lane C + Babin
 **What** — Settings ▸ Financial ▸ "Cancellation fee tiers": rows of *notice before pickup* → *fee %*.
 ⭐ Fee base: the booking's rental total **before VAT**. When a booking with a paid advance is
 cancelled, the cancel sheet **suggests** the fee from the tiers (staff may lower it with a reason —
