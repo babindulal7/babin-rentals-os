@@ -15,9 +15,11 @@ begin;
 create or replace function public.guard_unit_identity_edits()
 returns trigger
 language plpgsql
-security invoker
+security definer
 set search_path = public, pg_temp
 as $$
+declare
+  v_actor uuid := auth_user_id();
 begin
   if new.asset_tag is distinct from old.asset_tag
      or new.serial_no is distinct from old.serial_no
@@ -25,7 +27,7 @@ begin
      or new.shelf is distinct from old.shelf
      or new.bin is distinct from old.bin
   then
-    if auth.uid() is null
+    if v_actor is null
        or coalesce(auth_user_role()::text, '') not in ('Owner', 'Admin', 'Manager', 'Warehouse')
     then
       raise exception 'GATE:unit.identity.role_denied|Only Owner, Admin, Manager or Warehouse may change unit identity or shelf location.'
@@ -36,9 +38,9 @@ begin
     -- Legacy save_record_editor writes a unit patch without updated_by.
     -- Stamp that unchanged/omitted field from the JWT, never the prior actor;
     -- reject an explicit attempt to select a different new actor.
-    if new.updated_by is distinct from auth.uid() then
+    if new.updated_by is distinct from v_actor then
       if new.updated_by is not distinct from old.updated_by then
-        new.updated_by := auth.uid();
+        new.updated_by := v_actor;
       else
         raise exception 'GATE:unit.identity.actor_mismatch|Unit identity changes cannot name a different actor.'
           using errcode = '42501';
