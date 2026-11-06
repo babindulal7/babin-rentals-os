@@ -1,5 +1,62 @@
 # Progress Log
 
+## 2026-11-06 — Fix overbooking control bypass in equipment picker and modal (Issue #11)
+
+**Did**
+- **Overbooking Control Enforcement (#11):**
+  - Updated `src/modules/rentals/booking/AddItemPanel.tsx`:
+    - Forwarded `allowOverbooking={allowOverbooking}` prop to `<OverbookingOverrideModal />`.
+    - Replaced the hardcoded bypass `!group.autoPick && (allowOverbooking || true)` with `canFallback = allowOverbooking || Boolean(onSubRent)`, ensuring unavailable equipment groups only present interactive override affordances when at least one fallback path is enabled.
+    - Updated per-unit chip controls with `canFallbackUnit = allowOverbooking || Boolean(onSubRent)` and `opensOverride = !free && !onBooking && canFallbackUnit`. Booked chips without an allowed fallback remain non-tappable with truthful tooltips.
+    - Refactored `aria-label` screen reader announcements to dynamically state whether a row or chip opens "sub-rent options", "overbooking options", "sub-rent and overbooking options", or is unavailable.
+  - Updated `src/modules/rentals/booking/OverbookingOverrideModal.tsx`:
+    - Added `allowOverbooking?: boolean` to `OverbookingOverrideModalProps`.
+    - Separated sub-rental as an alternate sourcing channel (`hasSubRent = Boolean(onSubRent)`) from overbooking as a guarded override (`hasOverbook = allowOverbooking !== false && Boolean(onOverbook)`).
+    - When overbooking is turned off (`allowOverbooking === false`), disabled the overbooking radio choice, styled it with `cursor: not-allowed` and reduced opacity, and added explanatory text: `"Disabled in Settings ▸ Financial ▸ Booking rules"`.
+    - Automatically synchronized default radio selection to `'sub-rent'` if supported, or `'overbook'` if allowed.
+    - Disabled the modal submit button when neither action is permitted (`!isActionAllowed`).
+    - Eliminated silent fallback: confirming `'sub-rent'` strictly calls `onSubRent(unit)` and never silently routes to `onOverbook`.
+- **Test Suites:**
+  - Added `src/modules/rentals/booking/__tests__/OverbookingOverrideModal.test.tsx` (5 unit tests covering disabled overbooking, omitted sub-rent, switching choices, and default selection).
+  - Added `src/modules/rentals/booking/__tests__/AddItemPanel.overbooking.test.tsx` (3 integration tests covering free unit direct pick, unavailable unit sub-rent fallback, and overbooking override).
+
+**Ruled**
+- Truthfulness of State: Overbooking setting in Settings ▸ Financial ▸ Booking rules must be strictly respected by the UI; an unavailable equipment row or chip must never present an active "Add it anyway" overbook path when overbooking is disabled.
+- Alternate Sourcing vs Override: Sub-rental is an alternate sourcing channel, not an internal clash override; selecting "Add as Sub-Rental" must never silently fall back to internal overbooking.
+- Database Reservation Gate: Reserving remains strictly fail-closed at the Postgres GiST exclusion constraint on stage transitions; drafting conflicted equipment on quote/draft only holds items while clashes are resolved.
+
+**Verified**
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npx vitest run src/modules/rentals/booking` — 26 files, 155 tests passed.
+- `npm run check:pglite` — 219/219 migrations applied, 0 failed, 0 leaks, 181 definers pinned.
+- `npm run check:lifecycle` — 63/63 steps green, real Postgres + RLS.
+- `npm run check:contrast` — 106/106 WCAG AA checks pass.
+- `npm run check:security` — 18 Phase 0 SQL regressions + 28 operations grants + 14 Reset branch regressions passed.
+- `npm run build` — `tsc --noEmit && vite build` clean build in 14m 24s.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 219 files · check:pglite 219/219 applied, 0 failed (recorded 2026-11-06T04:42:21.763Z). Suite: NOT VERIFIED — invalid test receipt.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-06T04:43:49.885Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Issue #12 (P1): Warehouse summary mixes seeded facilities/capacity with real transfers.
+- Issue #13 (P1): Stock-take scanning only identifies a unit; cannot record verification.
+- Issue #14 (P1): Staff cannot persist a confirmed-missing stock-take finding.
+- Issue #15 (P1): Stock transfers lifecycle controls (dispatch, receive, reconcile, cancel).
+- Remaining UI/UX issues #16–#20 in audit backlog.
+
 ## 2026-11-06 — T6-09: Switch it on — per-user language preference persistence (Lane B)
 
 **Did**
