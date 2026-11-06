@@ -324,8 +324,15 @@ function RowMenu({ onClose, m, up }: { onClose: () => void; m: MovementRow; up: 
     'Packing List': () => openOperations(m.bookingNo, m.status, 'Pack'),
     Invoice: () => navigate('/documents'),
     'Copy Booking Number': () => {
-      void navigator.clipboard?.writeText(m.bookingNo)
-      showSuccessToast('Copied', `Booking number ${m.bookingNo} copied to clipboard.`)
+      if (!navigator.clipboard?.writeText) return
+      navigator.clipboard
+        .writeText(m.bookingNo)
+        .then(() => {
+          showSuccessToast('Copied', `Booking number ${m.bookingNo} copied to clipboard.`)
+        })
+        .catch(() => {
+          // Never fire false success toast if clipboard permission or write failed (UX-24)
+        })
     },
   }
   /*

@@ -19,7 +19,7 @@ interface ShiftBriefModalProps {
   notes: InternalNote[]
 }
 
-export default function ShiftBriefModal({ isOpen, onClose, notes }: ShiftBriefModalProps) {
+export function ShiftBriefModal({ isOpen, onClose, notes }: ShiftBriefModalProps) {
   const toast = useOptionalToast()
   const [includeGearAlerts, setIncludeGearAlerts] = useState(true)
   const [includeHandovers, setIncludeHandovers] = useState(true)
@@ -44,12 +44,22 @@ export default function ShiftBriefModal({ isOpen, onClose, notes }: ShiftBriefMo
     return formatShiftHandoverMarkdown(filteredNotes)
   }, [filteredNotes])
 
+  const [copyError, setCopyError] = useState<string | null>(null)
+
   const handleCopy = () => {
-    if (navigator.clipboard) {
-      void navigator.clipboard.writeText(briefText).then(() => {
+    setCopyError(null)
+    if (!navigator.clipboard?.writeText) {
+      setCopyError('Clipboard access is unavailable on this browser. Please select and copy the text below.')
+      return
+    }
+    navigator.clipboard
+      .writeText(briefText)
+      .then(() => {
         toast?.showSuccessToast('Brief Copied', 'Shift handover brief copied for WhatsApp / Telegram.')
       })
-    }
+      .catch(() => {
+        setCopyError('Could not copy automatically. Please select and copy the text below.')
+      })
   }
 
   return (
@@ -71,6 +81,22 @@ export default function ShiftBriefModal({ isOpen, onClose, notes }: ShiftBriefMo
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {copyError && (
+          <div
+            role="alert"
+            style={{
+              padding: '8px 12px',
+              borderRadius: 'var(--r-sm)',
+              background: 'var(--st-danger-bg)',
+              border: '1px solid var(--st-danger-border, var(--border))',
+              color: 'var(--st-danger-fg)',
+              fontSize: 'var(--t-meta)',
+            }}
+          >
+            {copyError}
+          </div>
+        )}
+
         {/* Category Toggles */}
         <div
           style={{
@@ -155,3 +181,5 @@ export default function ShiftBriefModal({ isOpen, onClose, notes }: ShiftBriefMo
     </Modal>
   )
 }
+
+export default ShiftBriefModal
