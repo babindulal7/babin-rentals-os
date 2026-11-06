@@ -326,6 +326,67 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - Lane B: T6-08 (Wave 5 — Nepali layout pass).
 - Lane B: T6-09 (Switch it on: per-user language preference).
 
+## 2026-11-05 — T3-12: Paste a WhatsApp gear list (Lane C)
+
+**Did**
+- **T3-12: Paste a WhatsApp gear list (M, [go-live], lane C)**
+  - **src/lib/gearListParser.ts** — pure text engine that reads a pasted WhatsApp gear list into lines, quantities (before/after, `x2`, `2x`, `2pcs`, Nepali digits, emoji bullets, keycap ordinals) and matches each line against the catalogue with a confidence mark. Pure text, no AI service (Law 16), no money field (Law 6), nothing added without the caller's confirm tap (W9).
+    - Three quantity decisions, each unit-tested:
+      - A leading bare number is a quantity; a list ordinal (`2.`) is not.
+      - A quantity must be 1–99, so `Aputure 600x` keeps its model number.
+      - A bare trailing number is never a quantity, so `DJI Mavic 3` is one drone.
+    - 30 tests, including the card's 20 real-shaped lists: **59/65 lines auto-matched (90.8%)**, with 2 ambiguous and 4 not-found left honest.
+  - **src/lib/queries/productAliases.ts** — the matcher's read path for staff-taught spellings. Fails soft and reports to monitoring; an unreachable teaching aid does not take New Rental down (unlike a deposit read where a swallow would weaken a money rule).
+  - **actions/inventory/rememberProductAlias.ts** — one RPC, validated, refusing to claim a save the database did not confirm. The alias is stored with `normaliseGearText()` so the matcher and the writer are contract-bound.
+  - **eventBus.ts** — `inventory.product_alias_remembered`.
+  - **0223_product_aliases.sql** — migration (renumbered from 0222 after main took that number): `product_aliases` table, RLS for the five `rental.create` roles, no delete (Law 3), audit trigger, idempotent `remember_product_alias()` RPC (Law 8) that moves a spelling on correction. Not applied anywhere (N-5).
+  - **PERMISSIONS.md §4.3** — capability row with DB enforcement and the reason it rides `canWriteBookingDesk`: storing a spelling is narrower than the booking write those five already hold (N-3), and no money column (Law 6).
+  - Capability `inventory.edit_product_aliases` joined the `rental.create`/`canWriteBookingDesk` group in `src/actions/core.ts` and the T-1 `DESK` fixture (`src/actions/__tests__/core.test.ts`), so the T-1 round-trip asserts its roles with the rest of the set (B-3).
+  - Fixed a regex lint error the new a11y/lint pass caught: the emoji joiner, variation selector and keycap mark were inside a range class, which cannot describe an emoji sequence.
+
+**Ruled**
+- W1 / W9: most bookings arrive on WhatsApp; nothing is added until the person confirms.
+- Law 16: matching is plain text search over names, aliases and asset codes — no AI service anywhere.
+- Law 6: the parser carries no money field; the matcher returns only ids, names and scores.
+
+**Verified**
+- `npm run typecheck` — 0 errors (`tsc --noEmit`)
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`)
+- `npm run test` (mock backend) — 6731/6731 passed (exit 0)
+- `src/lib/__tests__/gearListParser.test.ts` — 30/30 passed, **59/65 lines auto-matched (90.8%)** · 2 ambiguous · 4 not found
+- `npm run check:pglite` - 220/220 applied, 0 failed (0223 included, after rebasing onto main's 0222). View leaks: 0; anon function leaks: 0; definer hygiene: 182/182 pinned `search_path`.
+- `npm run check:security` — 14/14 reset-branch regression groups passed; operations branch grants verified.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `npm run test:server-contracts` — 58/58 passed.
+- `npm run test:partial-return` — 58/58 passed.
+- `npm run lint:shell` — 896 files checked, 0 violations.
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 tests passed.
+- `npm run check:contrast` — 106/106 pass, 0 fail.
+- `npm run build` — `tsc --noEmit && vite build` bundled cleanly (dist/, PWA 281 precache entries).
+- `node --test scripts/test-receipt.test.mjs` — 11/11 passed.
+- Migration 0223: **VERIFIED** (check:pglite 220/220 + check:lifecycle 63/63 = R-35 met). Ledger row status `verified`.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 92 / 92 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 77 / 77 (100%) | +1 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Counted by `npm run completion`, not typed. Structural coverage only; functional, hosted, integration and device acceptance are **not** verified by this counter.
+
+### Remaining
+- **Babin:** merge `lane-c/T3-12-paste-a-whatsapp-gear-list` (this card).
+- **Babin:** merge `lane-b/T6-04` and approve Wave 1 strings in `docs/reviews/wave1_floor_review.csv`.
+- **Lane C:** T3-13, T3-15, T3-21, T3-26, T3-30 still `todo`.
+- **Lane C:** T3-14c (draft invoice numbering) blocked on accountant decisions O-14/O-17.
+- **Lane A:** T1-17 (two-step sign-in) and T2-18 (finish evidence capture).
+- **Babin:** apply migrations 0215–0220 to live after the backup protocol.
+- Coverage suite receipt is invalid; `npm run test:coverage` not run this session.
+
 ## 2026-11-05 — T6-04: Wave 1 — the floor localization conversion (Lane B)
 
 **Did**
