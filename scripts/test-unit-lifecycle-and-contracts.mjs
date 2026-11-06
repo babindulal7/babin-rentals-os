@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Test Server Contracts: save_record_section, add_equipment_units, retire_equipment_unit, enroll_client_membership
-// Run against real isolated PGlite Postgres with migrations 0001 through 0173.
+// Run against real isolated PGlite Postgres with the current migration chain.
 import { PGlite } from '@electric-sql/pglite'
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto'
 import { btree_gist } from '@electric-sql/pglite/contrib/btree_gist'
@@ -195,12 +195,14 @@ await expectThrows(
 )
 
 // 2.3 Refusal when unit is reserved by an active booking.
-// The reservation insert may leave the unit's status unchanged, so the explicit
-// active-reservation gate must still refuse retirement, independently of status.
-// Create a booking holding unitHeldId
+// Reservation triggers set the unit status to Reserved; the active-status gate
+// runs before the explicit active-reservation gate. Both prevent retirement.
+// Keep the reservation active whenever the test runs. A fixed return date
+// eventually changes the status gate into the separate unreleased-hold gate.
+// Create a booking holding unitHeldId.
 const bkRes = await sql(`insert into bookings
   (client_uuid, booking_no, client_id, branch_id, stage, pickup_at, return_at, delivery_type, created_by, updated_by)
-  values (gen_random_uuid(), '9000101', $1, $2, 'Booked', '2026-11-01 10:00:00+00', '2026-11-05 10:00:00+00', 'Client Pickup', $3, $3)
+  values (gen_random_uuid(), '9000101', $1, $2, 'Booked', now() - interval '1 day', now() + interval '3 days', 'Client Pickup', $3, $3)
   returning id`, [client, branch, ownerId])
 const bookingId = bkRes.rows[0].id
 
@@ -212,17 +214,39 @@ const bookingLineId = blRes.rows[0].id
 
 await sql(`insert into inventory_reservations
   (client_uuid, booking_id, booking_line_id, asset_id, period, created_by)
-  values (gen_random_uuid(), $1, $2, $3, tstzrange('2026-11-01 10:00:00+00', '2026-11-05 10:00:00+00', '[)'), $4)`,
+  select gen_random_uuid(), $1, $2, $3, tstzrange(pickup_at, return_at, '[)'), $4
+  from bookings where id = $1`,
   [bookingId, bookingLineId, unitHeldId, ownerId])
+
+const heldBeforeRetirement = await sql('select status from product_units where id = $1', [unitHeldId])
+assert(heldBeforeRetirement.rows[0].status === 'Reserved', 'The active reservation fixture puts the unit in Reserved status')
 
 await expectThrows(
   () => sql(`select retire_equipment_unit($1, 'Damaged beyond repair in transit', $2)`, [unitHeldId, crypto.randomUUID()]),
-  'GATE:unit.retire.active_reservation',
-  'Cannot retire a unit with an active booking hold'
+  'GATE:unit.retire.active_status',
+  'Cannot retire a Reserved unit with an active booking hold'
 )
+const heldAfterRetirement = await sql('select status, retired_at from product_units where id = $1', [unitHeldId])
+assert(heldAfterRetirement.rows[0].status === 'Reserved', 'The refused retirement preserves the reserved unit')
+assert(heldAfterRetirement.rows[0].retired_at === null, 'Refused retirement leaves the reserved unit unretired')
 
-const heldAfterRefusal = await sql(`select retired_at from product_units where id = $1`, [unitHeldId])
-assert(heldAfterRefusal.rows[0]?.retired_at === null, 'Refused retirement leaves the reserved unit unretired')
+// An ended period does not release a confirmed hold. Exercise that independent
+// refusal after the status engine no longer classifies the unit as Reserved.
+await sql(`update bookings
+  set pickup_at = now() - interval '3 days', return_at = now() - interval '1 day'
+  where id = $1`, [bookingId])
+await sql(`update inventory_reservations
+  set period = (select tstzrange(pickup_at, return_at, '[)') from bookings where id = $1)
+  where booking_id = $1 and asset_id = $2`, [bookingId, unitHeldId])
+const pastHoldUnit = await sql('select status from product_units where id = $1', [unitHeldId])
+assert(pastHoldUnit.rows[0].status !== 'Reserved', 'An ended reservation period no longer sets Reserved status')
+await expectThrows(
+  () => sql(`select retire_equipment_unit($1, 'Damaged beyond repair in transit', $2)`, [unitHeldId, crypto.randomUUID()]),
+  'GATE:unit.retire.active_reservation',
+  'An unreleased hold still prevents retirement after its scheduled period ends'
+)
+const pastHoldAfterRefusal = await sql('select retired_at from product_units where id = $1', [unitHeldId])
+assert(pastHoldAfterRefusal.rows[0].retired_at === null, 'The refused retirement preserves the unit with the unreleased hold')
 
 // 2.4 Successfully retire unheld unit
 const retireKey = crypto.randomUUID()

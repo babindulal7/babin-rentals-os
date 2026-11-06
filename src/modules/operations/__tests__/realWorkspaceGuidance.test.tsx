@@ -29,6 +29,14 @@ vi.mock('../../../lib/floorPresence', () => ({ useFloorPresence: () => ({ presen
 vi.mock('../../../lib/queries/serviceDue', () => ({ readServiceDue: async () => new Map() }))
 vi.mock('../../../lib/acousticFeedback', () => ({ playScanSuccess: vi.fn(), playScanError: vi.fn(), playCaseComplete: vi.fn(), playDamageAlert: vi.fn(), unlockAudioContext: vi.fn() }))
 
+// Preload the real lazy workspaces during collection, before interaction timers start.
+await Promise.all([
+  import('../../rentals/PackingWorkspace'),
+  import('../../rentals/HandoverWorkspace'),
+  import('../../rentals/ReturnWorkspace'),
+  import('../../rentals/ResetWorkspace'),
+])
+
 let root: Root
 let host: HTMLDivElement
 const buttons = () => [...document.querySelectorAll<HTMLButtonElement>('button')]
