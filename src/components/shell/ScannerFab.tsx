@@ -27,7 +27,8 @@ const CONTEXTS = [
   { key: 'lookup', label: 'Lookup', hint: 'Find any item by code' },
 ] as const
 
-type Feedback = { tone: 'ok' | 'wrong-job' | 'unknown' | 'duplicate'; text: string } | null
+type FeedbackTone = 'ok' | 'wrong-job' | 'unknown' | 'duplicate' | 'recognized'
+type Feedback = { tone: FeedbackTone; text: string } | null
 
 /**
  * The one way another surface reaches this scanner.
@@ -62,6 +63,39 @@ function isInsideFloorWorkspace(): boolean {
   if (typeof window === 'undefined') return false
   const path = window.location.pathname || ''
   return FLOOR_ROUTE_SUFFIXES.some((s) => path.endsWith(s))
+}
+
+function dispatchToActiveWorkspaceInput(code: string): boolean {
+  if (typeof document === 'undefined') return false
+  const target = document.querySelector<HTMLInputElement>(
+    '.floor-scanner-input, #operations-command-input, [data-scanner-input="true"]'
+  )
+  if (!target) return false
+
+  const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set
+  if (nativeSetter) {
+    nativeSetter.call(target, code)
+  }
+  target.value = code
+
+  target.dispatchEvent(new Event('input', { bubbles: true }))
+  target.dispatchEvent(new Event('change', { bubbles: true }))
+
+  const form = target.form || target.closest('form')
+  if (form) {
+    try {
+      if (typeof form.requestSubmit === 'function') {
+        form.requestSubmit()
+      } else {
+        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+      }
+    } catch {
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    }
+  } else {
+    target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }))
+  }
+  return true
 }
 
 export default function ScannerFab() {
@@ -245,6 +279,14 @@ export default function ScannerFab() {
         gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1)
         osc.start(ctx.currentTime)
         osc.stop(ctx.currentTime + 0.1)
+      } else if (type === 'recognized') {
+        // Distinct non-authoritative chime for recognition without custody write (UX-01)
+        osc.type = 'sine'
+        osc.frequency.setValueAtTime(587, ctx.currentTime)
+        gain.gain.setValueAtTime(0.3, ctx.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08)
+        osc.start(ctx.currentTime)
+        osc.stop(ctx.currentTime + 0.08)
       } else if (type === 'duplicate') {
         osc.type = 'sine'
         osc.frequency.setValueAtTime(440, ctx.currentTime)
@@ -277,7 +319,17 @@ export default function ScannerFab() {
 
   const fire = useCallback((tone: NonNullable<Feedback>['tone'], text: string) => {
     playTone(tone)
-    if ('vibrate' in navigator) navigator.vibrate(tone === 'ok' ? 30 : tone === 'duplicate' ? [30, 40, 30] : [40, 60, 40])
+    if ('vibrate' in navigator) {
+      navigator.vibrate(
+        tone === 'ok'
+          ? 30
+          : tone === 'recognized'
+            ? [20, 30, 20]
+            : tone === 'duplicate'
+              ? [30, 40, 30]
+              : [40, 60, 40]
+      )
+    }
     
     setFeedback({ tone, text })
     window.setTimeout(() => setFeedback(null), 2600)
@@ -366,13 +418,20 @@ export default function ScannerFab() {
     const c = code.trim().toUpperCase()
     if (!c) return
 
-    // Cooldown: 2s on identical code
+    // Offline check: fail-closed with honest status per Law 16 / UX-01
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      fire('unknown', `Offline — scan not recorded: ${c}`)
+      return
+    }
+
+    // Cooldown: 2s on identical code to prevent duplicate writes
     const now = Date.now()
     if (
       lastScanRef.current &&
       lastScanRef.current.code === c &&
       now - lastScanRef.current.time < 2000
     ) {
+      fire('duplicate', `${c} already scanned — wait 2s`)
       return
     }
     lastScanRef.current = { code: c, time: now }
@@ -388,19 +447,26 @@ export default function ScannerFab() {
       // Outside a floor workspace: scanning opens item card! (T2-14, W91)
       await openCardForCode(c)
     } else {
-      // Real database / unit lookup via canonical resolveScannedCode (AUD-002)
-      const res = await resolveScannedCode(c)
-      if (res.status === 'unit_matched') {
-        fire('ok', `${res.label} (${res.serialNo || res.assetTag || c}) — ${context}`)
-      } else if (res.status === 'product_matched') {
-        fire('ok', `${res.label} (${res.assetCode}) — ${context}`)
-      } else if (res.status === 'booking_matched') {
-        fire('ok', `${res.label}`)
-      } else if (res.status === 'query_failed') {
-        fire('unknown', `Query error: ${res.error}`)
+      // Inside a floor workspace: check if an active floor input exists to record custody
+      const dispatched = dispatchToActiveWorkspaceInput(c)
+      if (dispatched) {
+        fire('ok', `Dispatched to active workspace: ${c}`)
       } else {
-        // Honest: not found
-        fire('unknown', `${c} — not found in inventory`)
+        // Floor route but no active workspace input: lookup only!
+        // Distinct recognition state: never claim custody was recorded.
+        const res = await resolveScannedCode(c)
+        if (res.status === 'unit_matched') {
+          fire('recognized', `Item recognized — not yet checked in/out: ${res.label} (${res.serialNo || res.assetTag || c})`)
+        } else if (res.status === 'product_matched') {
+          fire('recognized', `Product recognized — not yet checked in/out: ${res.label} (${res.assetCode})`)
+        } else if (res.status === 'booking_matched') {
+          fire('recognized', `Booking recognized: ${res.label}`)
+        } else if (res.status === 'query_failed') {
+          fire('unknown', `Save failed or query error: ${res.error}`)
+        } else {
+          // Honest: not found
+          fire('unknown', `${c} — not found in inventory`)
+        }
       }
     }
 
@@ -412,8 +478,22 @@ export default function ScannerFab() {
   })
 
   const tone = feedback?.tone
-  const bannerBg = tone === 'ok' ? 'var(--st-in-bg)' : tone === 'wrong-job' ? 'var(--st-danger-bg)' : 'var(--st-progress-bg)'
-  const bannerFg = tone === 'ok' ? 'var(--st-in-fg)' : tone === 'wrong-job' ? 'var(--st-danger-fg)' : 'var(--st-progress-fg)'
+  const bannerBg =
+    tone === 'ok'
+      ? 'var(--st-in-bg)'
+      : tone === 'wrong-job'
+        ? 'var(--st-danger-bg)'
+        : tone === 'recognized'
+          ? 'var(--st-progress-bg)'
+          : 'var(--st-progress-bg)'
+  const bannerFg =
+    tone === 'ok'
+      ? 'var(--st-in-fg)'
+      : tone === 'wrong-job'
+        ? 'var(--st-danger-fg)'
+        : tone === 'recognized'
+          ? 'var(--st-progress-fg)'
+          : 'var(--st-progress-fg)'
 
   return (
     <div
@@ -435,6 +515,10 @@ export default function ScannerFab() {
             }
       }
     >
+      {/* Permanent screen-reader live region: announces scan outcome regardless of drawer state */}
+      <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {feedback?.text ?? ''}
+      </div>
       {phone && open && (
         <div
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 0 }}
@@ -638,6 +722,8 @@ export default function ScannerFab() {
           {feedback && (
             <div
               role="status"
+              aria-live="polite"
+              aria-atomic="true"
               style={{
                 marginTop: 10,
                 padding: '8px 10px',
@@ -651,7 +737,21 @@ export default function ScannerFab() {
                 gap: 7,
               }}
             >
-              <Icon name={tone === 'ok' ? 'checklist' : tone === 'wrong-job' ? 'alert_triangle' : 'error'} size={14} fill />
+              <Icon
+                name={
+                  tone === 'ok'
+                    ? 'checklist'
+                    : tone === 'wrong-job'
+                      ? 'alert_triangle'
+                      : tone === 'recognized'
+                        ? 'info'
+                        : tone === 'duplicate'
+                          ? 'copy'
+                          : 'error'
+                }
+                size={14}
+                fill
+              />
               {feedback.text}
             </div>
           )}
