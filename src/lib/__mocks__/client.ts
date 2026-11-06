@@ -1606,6 +1606,114 @@ export const mockSupabase = {
         return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
       }
     }
+    if (name === 'bulk_update_products') {
+      try {
+        const actor = readSession()?.user.id
+        const user = store['users']?.find(row => row['id'] === actor)
+        const role = user?.['primary_role'] as string | undefined
+        if (!role || !['Owner', 'Admin', 'Manager'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'Permission denied: bulk product updates require Manager, Admin or Owner role.') })
+        }
+        const field = args?.['p_field'] as string
+        const clientUuid = args?.['p_client_uuid'] as string
+        const productIds = (args?.['p_product_ids'] ?? []) as string[]
+        const value = args?.['p_value'] as Record<string, unknown> | number | string | boolean
+
+        if (!clientUuid) {
+          return Promise.resolve({ data: null, error: pgErr('22023', 'client_uuid is required for bulk updates.') })
+        }
+        if (!productIds || productIds.length === 0) {
+          return Promise.resolve({ data: null, error: pgErr('22023', 'At least one product ID must be provided.') })
+        }
+
+        const moneyFields = [
+          'rates_percentage', 'daily_rate', 'weekly_rate', 'monthly_rate',
+          'hourly_rate', 'weekend_rate', 'deposit_percent', 'deposit_fixed',
+          'purchase_price', 'replacement_value',
+        ]
+        const allowedFields = [
+          'rates_percentage', 'name', 'short_name', 'category_id', 'brand', 'model',
+          'manufacturer', 'description', 'reorder_level', 'quantity_unit', 'purchase_date',
+          'purchase_price', 'replacement_value', 'daily_rate', 'weekly_rate', 'monthly_rate',
+          'hourly_rate', 'weekend_rate', 'deposit_percent', 'deposit_fixed', 'min_rental_days',
+          'rental_enabled', 'prep_time_minutes', 'cleaning_time_minutes', 'inspection_required',
+          'packing_required', 'notes_internal', 'notes_warehouse', 'is_active',
+        ]
+        if (!allowedFields.includes(field)) {
+          return Promise.resolve({ data: null, error: pgErr('42703', `Field ${field} cannot be updated in bulk.`) })
+        }
+
+        const canMoney = ['Owner', 'Admin', 'Manager', 'Coordinator', 'Accounts'].includes(role)
+        if (moneyFields.includes(field) && !canMoney) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'Permission denied: Warehouse and money-blind roles cannot modify financial fields.') })
+        }
+        if (field === 'rates_percentage' && role !== 'Owner') {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'Permission denied: Only the Owner can adjust product rental rates by percentage.') })
+        }
+
+        const receipts = (store['record_editor_receipts'] = store['record_editor_receipts'] ?? [])
+        const saved = receipts.find(r => r['key'] === clientUuid)
+        if (saved) {
+          return Promise.resolve({ data: saved['response'], error: null })
+        }
+
+        const products = store['products'] ?? []
+        let updatedCount = 0
+        const results = []
+
+        for (const prodId of productIds) {
+          const prod = products.find(p => p['id'] === prodId)
+          if (!prod) {
+            results.push({ id: prodId, success: false, error: 'Product not found' })
+            continue
+          }
+
+          let oldVal: unknown
+          let newVal: unknown
+
+          if (field === 'rates_percentage') {
+            const pct = typeof value === 'object' && value !== null && 'percentage' in value
+              ? Number((value as { percentage: number }).percentage)
+              : Number(value)
+            const oldDaily = Number(prod['daily_rate'] ?? 0)
+            const oldWeekly = prod['weekly_rate'] != null ? Number(prod['weekly_rate']) : null
+            const oldMonthly = prod['monthly_rate'] != null ? Number(prod['monthly_rate']) : null
+            const newDaily = Math.round(oldDaily * (1 + pct / 100))
+            const newWeekly = oldWeekly != null ? Math.round(oldWeekly * (1 + pct / 100)) : null
+            const newMonthly = oldMonthly != null ? Math.round(oldMonthly * (1 + pct / 100)) : null
+
+            oldVal = { daily_rate: oldDaily, weekly_rate: oldWeekly, monthly_rate: oldMonthly }
+            newVal = { daily_rate: newDaily, weekly_rate: newWeekly, monthly_rate: newMonthly, percentage: pct }
+
+            prod['daily_rate'] = newDaily
+            if (newWeekly != null) prod['weekly_rate'] = newWeekly
+            if (newMonthly != null) prod['monthly_rate'] = newMonthly
+          } else {
+            oldVal = prod[field]
+            const rawVal = typeof value === 'object' && value !== null && field in value
+              ? (value as Record<string, unknown>)[field]
+              : value
+            prod[field] = rawVal
+            newVal = rawVal
+          }
+          prod['updated_at'] = new Date().toISOString()
+          updatedCount++
+          results.push({ id: prodId, success: true, old_value: oldVal, new_value: newVal })
+        }
+
+        const response = {
+          batch_id: clientUuid,
+          field,
+          total_requested: productIds.length,
+          updated_count: updatedCount,
+          results,
+        }
+        receipts.push({ key: clientUuid, actor, response, created_at: new Date().toISOString() })
+        return Promise.resolve({ data: response, error: null })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
     /* ⛔ Was `{ data: null, error: null }` — a silent null that every caller
      * would read as success with an empty result. That is the
      * success-fabrication class this repo has a register for, sitting in the

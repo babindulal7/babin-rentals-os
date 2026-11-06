@@ -6964,6 +6964,107 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L63',
+  title: 'Bulk edit products: rates by % is Owner-only, rounded to whole rupees, Manager refused, Warehouse money column refused, re-sent batch idempotent (T4-12, B32, B33, 0223)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      // Pick two products from seeded products
+      const prods = (await q(`select id, name, daily_rate, weekly_rate, monthly_rate from products where daily_rate is not null and daily_rate > 0 order by name limit 2`)).rows
+      assert(prods.length >= 2, 'Found at least 2 products for bulk edit')
+      const p1 = prods[0]
+      const p2 = prods[1]
+      const batchKey1 = '88888888-0001-4000-8000-000000000063'
+      const batchKey2 = '88888888-0002-4000-8000-000000000063'
+      const batchKey3 = '88888888-0003-4000-8000-000000000063'
+
+      // 1. Manager attempts rate adjustment by percentage -> REFUSED (B32: Owner-only)
+      await as('Manager', async () => {
+        let denied = false
+        try {
+          await q(
+            `select bulk_update_products($1::uuid[], 'rates_percentage', $2::jsonb, $3::uuid)`,
+            [[p1.id, p2.id], JSON.stringify({ percentage: 5 }), batchKey1]
+          )
+        } catch (e) {
+          denied = true
+          assert(
+            String(e.message).includes('Only the Owner can adjust product rental rates by percentage') ||
+            String(e.message).includes('Permission denied'),
+            `Manager rate percentage change refused with permission error: ${e.message}`
+          )
+        }
+        assert(denied, 'Manager rate change by percentage was refused by database')
+      })
+
+      // 2. Warehouse attempts to touch a money column (daily_rate) -> REFUSED (Law 6)
+      await as('Warehouse', async () => {
+        let denied = false
+        try {
+          await q(
+            `select bulk_update_products($1::uuid[], 'daily_rate', $2::jsonb, $3::uuid)`,
+            [[p1.id], JSON.stringify({ daily_rate: 9999 }), batchKey1]
+          )
+        } catch (e) {
+          denied = true
+          assert(
+            String(e.message).includes('Permission denied'),
+            `Warehouse money update refused with permission error: ${e.message}`
+          )
+        }
+        assert(denied, 'Warehouse touching a money column was refused by database')
+      })
+
+      // 3. Owner applies rate increase (+5%) -> SUCCEEDS, rates rounded to whole rupees (B32)
+      let ownerResult
+      await as('Owner', async () => {
+        const res = await q(
+          `select bulk_update_products($1::uuid[], 'rates_percentage', $2::jsonb, $3::uuid)`,
+          [[p1.id, p2.id], JSON.stringify({ percentage: 5 }), batchKey2]
+        )
+        ownerResult = res.rows[0].bulk_update_products
+        assertEq(ownerResult.updated_count, 2, 'Owner updated 2 products')
+
+        // Verify rounding to whole rupees via products_v
+        const updated1 = (await q(`select daily_rate from products_v where id = $1`, [p1.id])).rows[0]
+        const expected1 = Math.round(Number(p1.daily_rate) * 1.05)
+        assertEq(Number(updated1.daily_rate), expected1, 'daily_rate is rounded to whole rupees')
+      })
+
+      // Verify audit rows created with batch_id (checked with system connection)
+      const auditRows = (await q(`select * from audit_events where record_id in ($1, $2) and (new_values->>'batch_id') = $3`, [p1.id, p2.id, batchKey2])).rows
+      assertEq(auditRows.length, 2, 'One audit row per product created with batch_id')
+
+      // 4. Idempotency: Re-sending the same batch changes nothing and returns the cached receipt
+      const auditCountBefore = (await q(`select count(*) as c from audit_events where (new_values->>'batch_id') = $1`, [batchKey2])).rows[0].c
+      await as('Owner', async () => {
+        const resReplay = await q(
+          `select bulk_update_products($1::uuid[], 'rates_percentage', $2::jsonb, $3::uuid)`,
+          [[p1.id, p2.id], JSON.stringify({ percentage: 5 }), batchKey2]
+        )
+        const replayResult = resReplay.rows[0].bulk_update_products
+        assertEq(replayResult.batch_id, ownerResult.batch_id, 'Replay returned identical cached batch_id')
+        assertEq(replayResult.updated_count, ownerResult.updated_count, 'Replay returned identical updated_count')
+      })
+      const auditCountAfter = (await q(`select count(*) as c from audit_events where (new_values->>'batch_id') = $1`, [batchKey2])).rows[0].c
+      assertEq(auditCountBefore, auditCountAfter, 'Re-sent batch created no additional audit rows')
+
+      // 5. Manager updates a non-financial allowed field (prep_time_minutes) -> SUCCEEDS
+      await as('Manager', async () => {
+        const res = await q(
+          `select bulk_update_products($1::uuid[], 'prep_time_minutes', $2::jsonb, $3::uuid)`,
+          [[p1.id], JSON.stringify({ prep_time_minutes: 25 }), batchKey3]
+        )
+        const managerResult = res.rows[0].bulk_update_products
+        assertEq(managerResult.updated_count, 1, 'Manager successfully updated non-financial field in bulk')
+        const updated = (await q(`select prep_time_minutes from products_v where id = $1`, [p1.id])).rows[0]
+        assertEq(Number(updated.prep_time_minutes), 25, 'prep_time_minutes updated to 25')
+      })
+    })
+  },
+})
+
 
 /* ΓöÇΓöÇ Run ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 

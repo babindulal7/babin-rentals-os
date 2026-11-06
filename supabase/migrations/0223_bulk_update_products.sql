@@ -135,7 +135,7 @@ begin
         where id = v_prod_id;
 
       else
-        execute format('select to_jsonb($1.%I)', p_field) into v_old_val using v_prod;
+        v_old_val := to_jsonb(v_prod)->p_field;
         v_new_val := case when jsonb_typeof(p_value) = 'object' and p_value ? p_field then p_value->p_field else p_value end;
         perform record_editor_private.write_row(
           'products',

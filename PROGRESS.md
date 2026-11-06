@@ -1,5 +1,78 @@
 # Progress Log
 
+## 2026-11-06 — Card T4-12 · Bulk Edit Products: Migration 0223, Preview UI, Rounded Rate %, Owner-Only Enforcement & Audit Events (Lane B)
+
+**Did**
+- **Migration 0223 (`supabase/migrations/0223_bulk_update_products.sql`):**
+  - Implemented `bulk_update_products(p_product_ids uuid[], p_field text, p_value jsonb, p_client_uuid uuid)` security-definer RPC.
+  - Enforced role gate: Owner, Admin, Manager only.
+  - Enforced Law 6 money blindness: money columns (`daily_rate`, `weekly_rate`, `monthly_rate`, `deposit_percent`, `deposit_fixed`, `rates_percentage`, etc.) denied to non-money roles (`auth_can_view_money()`).
+  - Enforced Rule B32: `rates_percentage` adjustment is strictly Owner-only. Rates are rounded to whole rupees (NPR).
+  - Enforced column allowlist via `record_editor_private.fields('equipment')` without duplicating validation rules.
+  - Implemented transactional advisory lock and idempotency receipt via `record_editor_private.receipts`.
+  - Emitted one `audit_events` row per updated product containing the batch ID in `new_values` with unique client UUID `md5(p_client_uuid::text || ':bulk:' || v_prod_id::text)::uuid`.
+- **Backend Action & Client Mocks (`src/actions/inventory/bulkUpdateProducts.ts`):**
+  - Created `bulkUpdateProducts` action with role permissions, online check, and toast dispatch.
+  - Added `bulk_update_products` RPC handler in `src/lib/__mocks__/client.ts` with local mock state updates and cached idempotency receipts.
+  - Added unit test suite `src/actions/inventory/__tests__/bulkUpdateProducts.test.ts` (6 tests).
+- **Frontend Modal & Inventory Integration (`src/modules/inventory/modals/BulkEditProductsModal.tsx`):**
+  - Built interactive bulk edit modal with live preview of old -> new values across selected products.
+  - Displayed category names, money formatting, boolean switches, and time inputs.
+  - Displayed post-save result view showing succeeded and refused products with specific reasons.
+  - Gated rate percentage option to Owner with money view capability.
+  - Wired into `src/modules/inventory/Inventory.tsx` for multi-selection "Change..." button.
+  - Added component test suite `src/modules/inventory/__tests__/BulkEditProductsModal.test.tsx` (4 tests).
+- **Test Fix:**
+  - Updated `src/modules/inventory/__tests__/DamageTab.test.tsx` to align with authoritative damage resolution write from commit `6e82b9d2`.
+- **E2E Lifecycle:**
+  - Added step `L63` to `scripts/e2e-lifecycle.mjs` verifying:
+    1. Manager rate % adjustment refused.
+    2. Warehouse money column edit refused.
+    3. Owner +5% rate adjustment rounded to whole rupees and audited.
+    4. Re-sent batch returns cached response without duplicate audits.
+    5. Manager non-money update (`prep_time_minutes`) accepted.
+
+**Ruled**
+- Rule B32: Rate adjustment by percentage is Owner-only, rounded to whole rupees (NPR).
+- Law 6: Money fields are masked and direct edits are denied to money-blind roles.
+- Migration Ledger: Migration 0223 claimed, written, and verified in PGlite.
+
+**Verified**
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npx vitest run src/actions/inventory/__tests__/bulkUpdateProducts.test.ts src/modules/inventory/__tests__/BulkEditProductsModal.test.tsx` — 10/10 passed.
+- `npx vitest run src/modules/inventory/__tests__/DamageTab.test.tsx` — 12/12 passed.
+- `npm run check:pglite` — 220/220 applied, 0 failed, 0 leaks, 182 definers pinned.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS.
+- `npm run check:security` — 18 Phase 0 SQL regressions + 28 operations grants + 14 Reset branch regressions passed.
+- `npm run check:lifecycle` — 64/64 steps green (including L63), 0 red, 0 failed.
+- `npm run test:server-contracts` — 59/59 assertions passed.
+- `npm run test:partial-return` — 58/58 assertions passed.
+- `node --test scripts/test-receipt.test.mjs` — 11/11 passed.
+- `npm run lint:shell` — 899 files checked, 0 violations.
+- `npm run lint:ui-copy` — 0 violations, 6 tests passed.
+- `npm run check:contrast` — 106/106 passed.
+- `npm run build` — `tsc --noEmit && vite build` clean build in 4m 7s.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 92 / 92 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 64 / 64 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 220 files · check:pglite 220/220 applied, 0 failed (recorded 2026-11-06T11:48:02.525Z). Suite: NOT VERIFIED — invalid test receipt.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-06T11:51:25.191Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Fields from unmerged cards (`show_online` from T7-02, `allow_overbooking` from T2-23, `recommended_items` from T7-12) to be connected once their cards merge.
+- Babin local merge of branch `lane-b/T4-12-bulk-edit-products`.
+
 ## 2026-11-06 — Wave A UI/UX Repairs: Fail-Closed Offline State, Overbooking Gate & Alternative Separation, Read Error Handling (Sub-Rentals, Damage, Cancellation Tiers, Collaterals) (Lane B)
 
 **Did**
