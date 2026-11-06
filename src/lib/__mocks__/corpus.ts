@@ -456,7 +456,14 @@ export function buildStore(options?: BuildStoreOptions): Store {
         // Finance's collected filter use 'Advance Payment', so every report that
         // filters the enum read Rs 0 collected in the mock build.
         payment_type: 'Advance Payment',
-        method: 'Bank Transfer',
+        /*
+         * `payments` has no `method` column (0006:176-190); the operator's word
+         * lives in `notes` as a first line `Method: <label>` written by
+         * `composeNotes()` in `actions/finance/recordPayment.ts`. The corpus used
+         * to carry a `method` field that no table has, so the mock build could
+         * never show T3-15's default on a seeded client. Same fact, real shape.
+         */
+        notes: 'Method: Bank Transfer',
         status: 'Received',
         payment_date: day(b.spec.pickupAt),
         reference: b.bookingNo,
