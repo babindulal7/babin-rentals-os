@@ -152,7 +152,7 @@ pass; 2) a seeded UI-copy violation makes it stop at that step with the file and
 Bash and PowerShell.
 **Needs** — T0-10.
 
-### T0-12 · Resolve the 5 November rules and application conflicts            status: doing (lane-a/T0-12-rules-and-app-conflicts) · size: L · lane A · [go-live]
+### T0-12 · Resolve the 5 November rules and application conflicts            status: ready — awaiting Babin review/merge (lane-a/T0-12-rules-and-app-conflicts) · size: L · lane A · [go-live]
 **What** — Repair translation approval, whole-app activation and account language preferences; reconcile conflicting authority text, floor permission descriptions, task statuses/dependencies and current-state navigation.
 **Why** — Babin requested every finding in the 5 Nov conflict audit fixed; his interactive answers establish ruling precedence, whole-app Nepali acceptance and owner decisions.
 **Where** — `src/lib/i18n.ts`, language readiness/preference/glossary modules, auth/settings integration, Owner glossary Settings control and action, review scripts/tests, `src/i18n/`, `AGENTS.md`, `CLAUDE.md`, `docs/00_READ_FIRST.md`, `docs/PERMISSIONS.md`, `PLAN.md`, affected task cards, current-state/navigation docs and verification report. Shared files authorized here: `PLAN.md`, `docs/PERMISSIONS.md`, `src/lib/rbac.ts`, `src/actions/core.ts`, `src/types/database.ts` for the Owner-only glossary capability/contract. No money-engine changes.
