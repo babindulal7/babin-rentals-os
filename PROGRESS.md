@@ -1,6 +1,6 @@
 # Progress Log
 
-## 2026-11-06 — T0-12: integrate current main and apply the Owner glossary migration
+## 2026-11-07 — T0-12: integrate current main and apply the Owner glossary migration
 
 **Did**
 - Integrated the conflict repair with main base 4a669104 in an isolated checkout, preserving Gemini's later translations, typography and onboarding language choice. Shared account-save control replaces duplicate device-cache writes. Main's three existing test edits were preserved and included through their own commit 66ec690a.
@@ -15,25 +15,25 @@
 - Typecheck passed; targeted account/readiness/Auth/glossary run passed 50 tests across 6 files. Server contracts passed all 59 assertions on combined source.
 - Backup validation PASS: production_backup_2026-11-06T04-45-29-638Z.sql, 23,497,610 bytes, SHA-256 2ef64e76ef8c188a5ed906205ff0ac0f4c7bd60065e45c326f57a8d27fe33e94, ignored backups directory. Restore rehearsal NOT VERIFIED. Live glossary dependencies inspected read-only; tables absent before application.
 - Browser checks passed all 12 cases: nine Owner/Warehouse screen/approval checks plus first-sign-in language gating at 375/820/1440. Preview was restarted to eliminate stale compiled modules; served source was verified before the passing checks. First-run/account regression rerun: 10 tests passed.
-- Full combined-source gates are pending. Migration 0223 WRITTEN, NOT APPLIED. Original branch gates do not certify this source.
+- Full candidate gates: 17/17 PASS on ca473317, fingerprint b4a9c26020640d95ef7331efeb2f5c7e715458c03b65c637b8ce32dc7c6d313a. Both normal and coverage runs passed 6,740 tests in 559 files. PGlite 220/220, lifecycle 64/64, financial/security, 59 server contracts, 58 partial-return assertions, progress/receipt/shell/UI-copy checks, 106 contrast pairs and build/PWA passed. V8 statements 66.42%, branches 74.32%, functions 51.4%, lines 66.35%. Migration remains NOT APPLIED.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
 | Backend | actions implemented / total | 92 / 92 (100%) | +0 |
 | Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
-| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
 | Permissions | capabilities mapped / declared | 77 / 77 (100%) | +0 |
-| Lifecycle | steps green / total | not measured — current receipt required | — |
-| Overall | structural mean of five | not measured | — |
-Migrations 220 files · check:pglite not run this session (pass --migrations to run). Suite: Historical suite: 50/50 passed, 0 failed (recorded 2026-11-06T04:46:23.667Z); current source NOT VERIFIED.
-Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+| Lifecycle | steps green / total | 64 / 64 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 220 files · check:pglite 220/220 applied, 0 failed (recorded 2026-11-06T08:46:05.904Z). Suite: PASS — 6740/6740 passed, 0 failed (recorded 2026-11-06T09:16:10.814Z); source fingerprint matches.
+Coverage suite: PASS — 6740/6740 passed, 0 failed (recorded 2026-11-06T09:16:10.814Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-06T08:48:43.363Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Complete combined-source gates and browser check, merge locally without disturbing main drafts, refresh backup and apply only 0223, then verify live schema/RLS/RPC behavior.
+- Main advanced during verification to b2f5bb47 with 60 changed files and its own 0223 product-alias migration. Active uncommitted offer-email work overlaps the merge. Babin was asked to pause all main writers/mergers; no drafts were stashed/reset/overwritten. After coordination, preserve drafts, integrate the latest main, renumber the glossary migration (current next free 0225; 0224 is claimed), reverify the combined source, merge locally, refresh backup, apply only the glossary migration and run live post-checks. Candidate receipts do not certify the newer main.
 - Actual translation review, physical-device acceptance, hosted Auth/account preference and cross-client realtime acceptance remain separate. Production HOLD remains.
 
 ## 2026-11-06 — T0-12: rules, task acceptance, language safety and Owner glossary editing
