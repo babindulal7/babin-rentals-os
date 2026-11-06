@@ -1,5 +1,47 @@
 # Progress Log
 
+## 2026-11-06 — Card T5-12 · Offer Emails to Clients: Security Design Note & Migration 0224 Claimed (Lane B)
+
+**Did**
+- **Security-Sensitive Gate:** Authored comprehensive security design note `docs/verification/T5-12_DESIGN.md` covering:
+  - Threat model and mitigations for bulk broadcast, consent bypass, data harvesting, unsubscribe token forgery, double sending, and provider rate limits.
+  - Strict RBAC gating: Owner, Admin, and Manager only (B43); Coordinator, Warehouse, Technician, Driver, and Client completely denied.
+  - Server-side recipient resolution: SQL-only computation excluding opted-out, Do Not Disturb, and bounced addresses without browser email leakage (Law 1, Law 6).
+  - Cryptographic tokenized unsubscribe mechanism: SHA-256 hashed 128-bit random tokens with one-click `List-Unsubscribe` headers (RFC 8058 / RFC 2369) and immediate `client_marketing_consents` (0005) opt-out (K6).
+  - Mandatory pre-flight test send requirement before audience broadcast.
+  - English language standard for all client communications (W80).
+- **Migration Ledger:** Claimed migration `0224` (`0224_offer_campaigns_and_recipients.sql`) in `docs/plans/MIGRATION_LEDGER.md`.
+- **Roadmap:** Set `T5-12` in `docs/plans/T5_NOTIFICATIONS.md` to doing with design note submitted.
+
+**Ruled**
+- B31 / B34: Offer emails at go-live to every client with an email address who has not unsubscribed.
+- B43: Only Owner, Admin, and Manager may author or send offer campaigns.
+- B50: Sent directly from the app.
+- K6: Every offer email must carry an unsubscribe link and the one-click `List-Unsubscribe` header; an opted-out client is never sent another; test send to sender required.
+- W80: Client email communications in English.
+
+**Verified**
+- Security design note submitted at `docs/verification/T5-12_DESIGN.md` for Claude and Babin check-in review prior to implementation code.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 219 files · check:pglite Historical, incomplete or failed receipt (2026-11-06T11:48:02.525Z); current source NOT VERIFIED. Suite: Historical suite: 6756/6756 passed, 0 failed (recorded 2026-11-06T12:06:27.788Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-06T11:51:25.191Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Claude and Babin review of `docs/verification/T5-12_DESIGN.md` at 7:38 check-in.
+- Once reviewed, proceed with migration `0224_offer_campaigns_and_recipients.sql`, lifecycle step L64, action, and UI screen.
+
 ## 2026-11-06 — T6-09: Switch it on — per-user language preference persistence (Lane B)
 
 **Did**
