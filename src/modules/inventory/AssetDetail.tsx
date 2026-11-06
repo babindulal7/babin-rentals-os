@@ -219,13 +219,13 @@ export function UnitEditor({
       <EditableRows
         edit={edit}
         rows={[
-          { key: 'assetTag', label: 'Asset tag', value: draft.assetTag },
-          { key: 'serialNo', label: 'Manufacturer serial', value: draft.serialNo || '—' },
-          { key: 'state', label: 'Status', value: draft.state },
-          { key: 'rack', label: 'Rack', value: draft.rack || '—' },
-          { key: 'shelf', label: 'Shelf', value: draft.shelf || '—' },
-          { key: 'bin', label: 'Bin', value: draft.bin || '—' },
-          { key: 'condition', label: 'Condition', value: draft.condition },
+          { key: 'assetTag', label: 'Asset tag', value: saved.assetTag },
+          { key: 'serialNo', label: 'Manufacturer serial', value: saved.serialNo || '—' },
+          { key: 'state', label: 'Status', value: saved.state },
+          { key: 'rack', label: 'Rack', value: saved.rack || '—' },
+          { key: 'shelf', label: 'Shelf', value: saved.shelf || '—' },
+          { key: 'bin', label: 'Bin', value: saved.bin || '—' },
+          { key: 'condition', label: 'Condition', value: saved.condition },
           /* Law 6 — the replacement row is OMITTED for money-blind roles, not
              disabled or masked. It used to render `formatMoney` unconditionally,
              which was the one ungated rupee figure on this page. */
