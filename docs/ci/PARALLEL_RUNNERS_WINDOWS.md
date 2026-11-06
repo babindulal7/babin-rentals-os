@@ -30,9 +30,9 @@ Get-PSDrive C | Select-Object Name,Free,Used
 
 | Resource | Metric / Specification | Status & Evaluation |
 |---|---|---|
-| **CPU** | 11th Gen Intel(R) Core(TM) i5-1145G7 @ 2.60GHz | 4 physical cores, 8 logical processors. Sufficient for 1-2 Node/V8 jobs. |
+| **CPU** | 11th Gen Intel(R) Core(TM) i5-1145G7 @ 2.60GHz | 4 physical cores, 8 logical processors. Parallel performance must be measured. |
 | **Total Physical RAM** | 15.73 GB (~16 GB) | Fixed capacity on host. |
-| **Free Physical RAM** | ~0.39 GB (~400 MB) | **CRITICAL WARNING:** Host memory is heavily utilized under current desktop workload. |
+| **Free Physical RAM** | ~0.39 GB (~400 MB) in one diagnostic snapshot | **Recheck under load.** Free memory is not a continuous measurement. |
 | **Total Disk Space (C:)** | 237.09 GB | Host NVMe drive. |
 | **Free Disk Space (C:)** | 33.74 GB | Headroom exists for one additional runner directory (~5-10 GB for repo + `node_modules` + cache). |
 | **Used Disk Space (C:)** | 203.35 GB | Requires periodic workspace pruning (`_work`). |
@@ -43,7 +43,7 @@ Get-PSDrive C | Select-Object Name,Free,Used
 > **RAM Contention Risk on a Single Machine:**
 > A full run of the Babin Rentals OS suite executes TypeScript typecheck (`tsc --noEmit`), Vite production build, Vitest mock engine tests, PGlite in-process Postgres instance, and V8 coverage instrumentation. During peak test execution, Node.js worker processes can consume 3–6 GB of memory per run.
 > 
-> Because the current host has 15.73 GB total RAM with less than 1 GB currently free, running two full CI jobs concurrently on this single PC risks heavy disk paging (swap thrashing), sluggishness, or process terminations.
+> This 16 GB host had less than 1 GB free at one observed moment. This does **not** prove that two runners are unsafe if the desktop is currently stable. Monitor memory, paging and full-job completion while running two jobs; do not add a third runner until sustained stability is proven.
 > 
 > **Recommendation:**
 > - If adding a second runner on this PC, benchmark carefully and close background applications.
@@ -77,7 +77,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 ```
 
@@ -87,7 +87,7 @@ concurrency:
 3. **Repeated push to the same PR:** Cancels obsolete in-progress runs for that PR (`${{ github.workflow }}-${{ github.event.pull_request.number }}`), saving runner cycles.
 4. **Independent PRs:** Have distinct concurrency groups (`CI-101`, `CI-102`), so they do not cancel each other and can execute concurrently when multiple runners are online.
 5. **Non-PR branches:** Do not trigger automatic duplicate runs on push, preventing double-queuing.
-6. **Manual checks:** Can still be triggered on any branch using `workflow_dispatch`.
+6. **Manual checks:** Can still be triggered on any branch using `workflow_dispatch`, with their own event-specific concurrency group. Manual runs on `main` must not cancel the required push CI run.
 7. **Fork Security:** Untrusted pull requests from external forks remain forbidden on the self-hosted runner via the gate:
    ```yaml
    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
@@ -107,56 +107,20 @@ concurrency:
 2. Select **Windows** and **x64**.
 3. Note the short-lived registration token displayed in the UI (tokens expire after 1 hour). Never commit this token or expose it in pull requests or chat.
 
-### Step 2: Prepare Isolated Directory
-Create a dedicated directory `C:\actions-runner-2`. It must be completely separate from `C:\actions-runner`:
+### Step 2: Install a Separate Runner (Only If Not Already Installed)
+**Important:** If `BABIN-CI-2` is already registered and executing jobs, **do not reinstall or reconfigure it**. Use section 6 to verify it instead.
 
-```powershell
-# Create new isolated directory
-New-Item -ItemType Directory -Path "C:\actions-runner-2" -Force
-Set-Location -Path "C:\actions-runner-2"
-
-# Use the existing cached runner zip from C:\actions-runner or download fresh
-if (Test-Path "C:\actions-runner\actions-runner-win-x64-2.338.0.zip") {
-    Copy-Item "C:\actions-runner\actions-runner-win-x64-2.338.0.zip" "C:\actions-runner-2\"
-    Expand-Archive -Path ".\actions-runner-win-x64-2.338.0.zip" -DestinationPath . -Force
-} else {
-    Invoke-WebRequest -Uri https://github.com/actions/runner/releases/download/v2.338.0/actions-runner-win-x64-2.338.0.zip -OutFile "actions-runner-win-x64-2.338.0.zip"
-    Expand-Archive -Path ".\actions-runner-win-x64-2.338.0.zip" -DestinationPath . -Force
-}
-```
+For a fresh installation, prepare `C:\actions-runner-2` as a completely isolated directory. Download the **current Windows x64 runner package** via GitHub repository **Settings → Actions → Runners → New self-hosted runner** and follow its generated extraction and checksum verification instructions. Do **not** use a hardcoded historical package version or copy a running runner's credentials/work folder. Never overwrite `C:\actions-runner` or its existing listener.
 
 ### Step 3: Configure Runner #2
-Run `config.cmd` to register the runner with the specific name `BABIN-CI-2`:
+Follow the fresh `config.cmd` instructions GitHub generates. Give the new runner the unique name `BABIN-CI-2`, use its **own** `_work` folder, and retain the automatic `self-hosted`, `Windows` and `X64` labels. Never publish the registration/removal token or the runner credentials files (`.runner`, `.credentials`, `.credentials_rsaparams`).
 
-```powershell
-Set-Location -Path "C:\actions-runner-2"
+### Step 4: Choose Interactive or Service Mode During Setup
+- **Interactive:** run `.\run.cmd` from the separate `C:\actions-runner-2` directory after registration, following GitHub's instructions.
+- **Windows service:** choose the Windows service option **during runner configuration**, following the official prompt/installation process. Do not assume executing `config.cmd --runasservice` later installs a service.
+- **Already configured:** if a change to service mode is needed, do not reconfigure a busy runner. Stop Runner #2 only and use GitHub's supported removal/re-registration procedure with fresh authorization. Leave Runner #1 untouched.
 
-# Execute configuration with the fresh short-lived token from Step 1
-.\config.cmd --url https://github.com/babindulal7/babin-rentals-os `
-             --token <SHORT_LIVED_TOKEN_FROM_GITHUB_UI> `
-             --name "BABIN-CI-2" `
-             --work "_work" `
-             --labels "self-hosted,Windows,X64" `
-             --unattended
-```
-
-*Note: Keep the standard labels `[self-hosted, Windows, X64]` so that either runner can naturally pick up queued verification jobs without changing the workflow file.*
-
-### Step 4: Run the Second Runner
-Depending on owner preference:
-
-**Option 1: Interactive Execution (Matching Runner #1)**
-```powershell
-Set-Location -Path "C:\actions-runner-2"
-.\run.cmd
-```
-
-**Option 2: Windows Service Setup (Persistent)**
-If running as a background Windows service, check the configuration prompt options provided by the runner package or register via:
-```powershell
-# If using Windows service mode, configure under an authorized service account:
-# .\config.cmd --runasservice
-```
+Service installation is optional and must be explicitly authorized by the owner.
 
 ---
 
@@ -164,15 +128,11 @@ If running as a background Windows service, check the configuration prompt optio
 
 ### Acceptance Checks
 1. In GitHub UI (`Settings -> Actions -> Runners`), both `DESKTOP-99FC3AO` and `BABIN-CI-2` show as **Idle / Online**.
-2. When two distinct PRs are opened, GitHub Actions assigns Job 1 to `DESKTOP-99FC3AO` and Job 2 to `BABIN-CI-2`.
-3. Open Task Manager or PowerShell `Get-Process` to monitor CPU and Memory usage during simultaneous runs.
+2. For two concurrent PR jobs, inspect each job's runner assignment in the GitHub Actions UI or the runner logs. Some connected APIs omit runner identities.
+3. Use Task Manager to monitor CPU, available RAM, paging and disk I/O under simultaneous load. Both jobs must **complete successfully** before considering the setup verified.
 
 ### If Performance Degrades or Jobs Fail
-If memory pressure causes OOM crashes, Node timeouts, or database connection drops:
-1. Stop `BABIN-CI-2` (`Ctrl+C` or stop the service).
-2. Remove runner registration:
-   ```powershell
-   Set-Location -Path "C:\actions-runner-2"
-   .\config.cmd remove --token <REMOVAL_TOKEN_FROM_GITHUB_UI>
-   ```
-3. Deploy `BABIN-CI-2` on a second physical machine or dedicated VM following the same steps.
+If memory pressure causes out-of-memory crashes, Node timeouts, or database errors:
+1. Stop only `BABIN-CI-2` (`Ctrl+C` or stop its service) once it is safe.
+2. Diagnose whether the failure is infrastructure contention or a real test failure; do not weaken quality gates.
+3. If relocating Runner #2, follow GitHub's authorized removal process and set it up on a separate machine. Leave Runner #1 untouched.
