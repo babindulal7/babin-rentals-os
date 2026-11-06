@@ -570,7 +570,7 @@ export function OfferCampaigns(): React.ReactElement {
               </div>
             </div>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Recipient roster is compiled strictly inside Postgres from live marketing consent (B34, Law 1). Addresses that have opted out or bounced are never contacted.
+              Recipient roster is compiled automatically from active marketing consent. Addresses that have opted out or bounced are never contacted.
             </p>
           </div>
 
