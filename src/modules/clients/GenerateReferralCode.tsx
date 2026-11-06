@@ -203,9 +203,26 @@ export default function GenerateReferralCode({ embedded = false, onDone }: Gener
       >
         <Icon name="alert_triangle" size={16} style={{ color: 'var(--warn-text)', flexShrink: 0, marginTop: 2 }} />
         <div>
-          <strong style={{ display: 'block', color: 'var(--warn-text)', marginBottom: 2 }}>
-            Preview / Specification Mode — Issuing Action Not Connected
-          </strong>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', marginBottom: 4, flexWrap: 'wrap' }}>
+            <span
+              style={{
+                fontSize: 'var(--t-caption)',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                padding: '2px 8px',
+                borderRadius: 'var(--r-badge)',
+                background: 'rgba(234, 179, 8, 0.2)',
+                color: 'var(--warn-text)',
+                border: '1px solid var(--warn-border)',
+              }}
+            >
+              Preview / Specification Only
+            </span>
+            <strong style={{ color: 'var(--warn-text)' }}>
+              Preview / Specification Mode — Issuing Action Not Connected
+            </strong>
+          </div>
           <span>
             This workspace provides a specification sandbox for composing and validating referral code formats and reward parameters.
             Referral code issuance is not connected in the backend (<code>src/actions/</code>), so codes cannot be saved or issued to clients.
