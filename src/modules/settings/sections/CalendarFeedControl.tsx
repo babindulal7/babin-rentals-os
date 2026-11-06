@@ -56,9 +56,9 @@ export function CalendarFeedControl() {
       const result = await createCalendarFeedToken({})
       setRawToken(result.rawToken)
       setHasToken(true)
+      setCreatedAt(new Date().toISOString())
       setRevokedAt(null)
       setError(null)
-      loadStatus()
       showSuccessToast('Calendar feed link created. Copy it now — it won\'t be shown again.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create calendar feed link')
@@ -75,8 +75,8 @@ export function CalendarFeedControl() {
       if (result.revoked) {
         setRawToken(null)
         setHasToken(false)
+        setRevokedAt(new Date().toISOString())
         setError(null)
-        loadStatus()
         showSuccessToast('Calendar feed link revoked. The old link no longer works.')
       }
     } catch (err) {
