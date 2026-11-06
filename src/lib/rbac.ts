@@ -749,7 +749,7 @@ export function canManageSettings(role: SystemRole): boolean {
   return role === 'Owner'
 }
 
-/** RULING 2026-11-05 C-6: only Owner approves glossary wording; DB 0223 enforces it. */
+/** RULING 2026-11-05 C-6: only Owner approves glossary wording; DB 0225 enforces it. */
 export function canManageGlossary(role: SystemRole, online = true): boolean {
   return role === 'Owner' && online
 }

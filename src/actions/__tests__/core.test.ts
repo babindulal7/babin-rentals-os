@@ -206,6 +206,9 @@ describe('createAction — fails closed', () => {
       'inventory.reserve',
       'document.create',
       'subrental.create',
+      // T3-12 / 0223: the alias write rides the same five-role set as the
+      // booking write it supports, so it is asserted with them (B-3).
+      'inventory.edit_product_aliases',
     ]
     const FLOOR = [
       'rental.pickup',

@@ -1,5 +1,5 @@
 -- RULING 2026-11-05 C-6: Owner only; approved glossary changes apply immediately.
--- Renumbered from branch-local 0222 at integration. Restore wording by adding a revision.
+-- Renumbered from branch-local 0222 via 0223 to final 0225 at integration. Restore wording by adding a revision.
 -- Babin explicitly authorized live application on 6 Nov 2026, after backup and verification.
 begin;
 

@@ -1637,6 +1637,8 @@ export default function RentalsList() {
       amount: string
       status: string
       booking?: string
+      /** T3-15 — `invoices.client_id`, for the "how did this client pay last?" default. */
+      clientId?: string
       outstandingRupees?: number
     }>
   >([])
@@ -1653,6 +1655,8 @@ export default function RentalsList() {
           amount: formatMoney(inv.totalAmount),
           status: inv.status,
           booking: inv.bookingNo,
+          // T3-15 — the client whose last payment method the form opens on.
+          clientId: inv.clientId,
           // R-39 D1 — feeds the Amount prefill; undefined only if the column
           // never comes back, in which case the field opens empty as before.
           outstandingRupees: toRupees(inv.outstandingAmount),

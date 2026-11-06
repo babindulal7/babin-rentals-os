@@ -159,7 +159,7 @@ day); staff apply; a waiver needs Manager or Owner approval (D6 — unchanged).
 **Done when** — three returns (20 min, 90 min, 3 h late) produce 0, half and full day.
 **Needs** — Batch 1 on staging.
 
-### T3-12 · Paste a WhatsApp gear list            status: todo · size: M · lane C · [go-live]
+### T3-12 · Paste a WhatsApp gear list            status: done (branch `lane-c/T3-12-paste-a-whatsapp-gear-list`, awaiting merge) · size: M · lane C · [go-live]
 **What** — In New Rental, "Paste list": staff paste the client's WhatsApp text ("FX3 x2, 24-70 GM,
 2 Aputure 600x, V-mount x6 …"). The app splits it into lines, reads quantities, and suggests the
 best product or bundle match for each line with a confidence mark; unmatched lines stay visible.
@@ -218,7 +218,7 @@ invoice refuses silent edits".
 number minted once; Close works with no by-hand invoice step; Warehouse sees none of it.
 **Needs** — accountant answers O-14 (step 4) and O-17 (numbering moment); build steps 1–3 and 5 first.
 
-### T3-15 · Payment method default            status: todo · size: S · lane C · [go-live]
+### T3-15 · Payment method default            status: done — awaiting merge (lane-c/T3-15-payment-method-default) · size: S · lane C · [go-live]
 **What** — Record Payment preselects **the method this client used last** (L2); a new client gets no
 preselection and four large one-tap method buttons (Cash · Bank transfer · Fonepay · eSewa/Khalti).
 Keep the bank account default for Bank transfer (R-39 D3).

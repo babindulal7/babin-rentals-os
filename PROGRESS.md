@@ -3,6 +3,7 @@
 ## 2026-11-07 — T0-12: integrate current main and apply the Owner glossary migration
 
 **Did**
+- 7 Nov: all-main-writer pause confirmed; merged b2f5bb47 without dropping its 60-file change set, resolved the duplicate glossary decision ID as O-22, and reserved final glossary migration 0225. All draft preservation is read-only; root remains on Gemini’s lane-B branch.
 - Integrated the conflict repair with main base 4a669104 in an isolated checkout, preserving Gemini's later translations, typography and onboarding language choice. Shared account-save control replaces duplicate device-cache writes. Main's three existing test edits were preserved and included through their own commit 66ec690a.
 - Renumbered the glossary migration from branch-local 0222 to 0223 because main already contains the inventory repair 0222. Regenerated all four review sheets from current catalogues as pending unless exact approval evidence exists. Restored the contract's exact active-status refusal assertion with a relative-date booking fixture.
 - Fixed first-sign-in onboarding to wait until staff leave the login route and to survive repeated StrictMode effects. The existing first-run tests retain all previous assertions; the first-visit case now runs in StrictMode.
@@ -33,7 +34,7 @@ Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Main advanced during verification to b2f5bb47 with 60 changed files and its own 0223 product-alias migration. Active uncommitted offer-email work overlaps the merge. Babin was asked to pause all main writers/mergers; no drafts were stashed/reset/overwritten. After coordination, preserve drafts, integrate the latest main, renumber the glossary migration (current next free 0225; 0224 is claimed), reverify the combined source, merge locally, refresh backup, apply only the glossary migration and run live post-checks. Candidate receipts do not certify the newer main.
+- Babin confirmed all main writers are paused. Latest main b2f5bb47 is integrated; its 0223 product-alias migration is retained, Gemini’s committed 0224 reservation is retained, and the glossary is renumbered to 0225. Sixteen Gemini draft files are snapshotted with hashes and left unchanged on lane-b/T5-12-offer-emails-to-clients. Reverify this final combined source, merge locally in the clean main worktree, refresh backup, apply only 0225 and run live post-checks. Earlier candidate receipts are historical for their source.
 - Actual translation review, physical-device acceptance, hosted Auth/account preference and cross-client realtime acceptance remain separate. Production HOLD remains.
 
 ## 2026-11-06 — T0-12: rules, task acceptance, language safety and Owner glossary editing
@@ -174,6 +175,157 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 ### Remaining
 - Switch it on (T6-09): User profile language preference persistence.
 - Owner physical device verification: on-device visual layout inspection on iPad / physical hardware.
+
+## 2026-11-06 — UI/UX Issues 11–20 Complete: Overbooking, Warehouse Truth, Stock Audit Verification & Missing Decisions, Transfer Lifecycle, Cases Intake, Document Monitoring, Referral Codes, Sub-Rental States, and Crew Week Calendar
+
+**Did**
+- **Issue #11 (P1 - Overbooking Control Enforcement):**
+  - Updated `src/modules/rentals/booking/AddItemPanel.tsx` and `OverbookingOverrideModal.tsx`.
+  - Replaced hardcoded bypass `!group.autoPick && (allowOverbooking || true)` with explicit fallback checks `canFallback = allowOverbooking || Boolean(onSubRent)`.
+  - Separated sub-rent alternate sourcing from internal overbooking clashing override.
+  - Unavailable units present disabled radio button with explanation ("Disabled in Settings ▸ Financial ▸ Booking rules") when overbooking is off.
+  - Eliminated silent fallback from sub-rent to overbook.
+  - Unit tests: `AddItemPanel.overbooking.test.tsx` and `OverbookingOverrideModal.test.tsx`.
+- **Issue #12 (P1 - Warehouse Truth of State):**
+  - Updated `src/modules/inventory/Warehouses.tsx` to render an explicit status disclosure banner (`Sample / Demo Layout — Physical facility configuration is for illustration. Real live transfer logs appear below.`) above facility cards and capacity metrics.
+  - Clarified unsupported capacity/rack metrics as "Not tracked in database" rather than fictitious live KPIs.
+  - Ensured transfer creation warehouse selectors use canonical branch/warehouse IDs.
+  - Unit tests: `Warehouses.test.tsx`.
+- **Issue #13 (P1 - Persisted Stock Audit Scan Verification):**
+  - Created `src/actions/inventory/recordStockCheckScan.ts` implementing `RECORD_STOCK_CHECK_SCAN`.
+  - Wired live scanner in `src/modules/inventory/StockCheck.tsx` with optimistic UI update and confirmed write-back.
+  - Enforced duplicate-scan idempotency (already-verified items acknowledged without duplicate writes).
+  - Unknown barcodes/tags flagged as `Unexpected / Unresolved`, never falsifying unit verification or missing counts.
+  - Unit tests: `src/actions/inventory/__tests__/stockCheckActions.test.ts` and `StockCheck.test.tsx`.
+- **Issue #14 (P1 - Audited Confirm Missing Decision Path):**
+  - Created `src/actions/inventory/confirmStockCheckMissing.ts` implementing `CONFIRM_STOCK_CHECK_MISSING`.
+  - Enabled "Confirm missing" decision workflow with operator reason prompt and confirmation modal in `StockCheck.tsx`.
+  - Provided audited reversal capability if an item is subsequently located.
+  - Enforced role permissions server/action-side and UI-side.
+  - Unit tests: `src/actions/inventory/__tests__/stockCheckActions.test.ts` and `StockCheck.test.tsx`.
+- **Issue #15 (P1 - Stock Transfer Lifecycle Controls):**
+  - Created `src/actions/inventory/transitionStockTransfer.ts` implementing `TRANSITION_STOCK_TRANSFER`.
+  - Wired lifecycle action buttons in `Warehouses.tsx`: Approve, Dispatch, Receive, Reconcile & Complete, and Cancel.
+  - Enforced legal state-transition graph: `Pending -> Approved -> In Transit -> Received -> Completed`.
+  - Disallowed same-warehouse moves (`fromWarehouse === toWarehouse`).
+  - Terminal cancellation requires an audited reason ($\ge 10$ characters).
+  - Unit tests: `src/actions/inventory/__tests__/transitionStockTransfer.test.ts` and `Warehouses.test.tsx`.
+- **Issue #16 (P1 - Cases Incident Logging Intake):**
+  - Replaced disabled "Log Incident" button in `src/modules/operations/CasesWorkspace.tsx` with active `LogCaseModal`.
+  - Wired modal directly to `createCase` action (`src/actions/cases/createCase.ts`).
+  - Form collects title, severity, category, description, and optional booking link with client UUID idempotency.
+  - Verified in `CasesWorkspace.tsx`.
+- **Issue #17 (P1 - Documents Missing & Expiring Verification):**
+  - Updated `src/modules/documents/Documents.tsx` to derive expiring documents dynamically within next 30 days from registered records (`allDocs`).
+  - Added truthful disclosure notice regarding contract-specific missing document policies.
+  - Rendered "Expiring Soon" count and badge truthfully in summary metrics.
+  - Unit tests: `Documents.render.test.tsx`.
+- **Issue #18 (P2 - Referral Code Generator Truthful Preview):**
+  - Updated `src/modules/clients/GenerateReferralCode.tsx` with prominent `Preview / Specification Only` badge and warning banner.
+  - Clarified that code issuance requires active campaign administration.
+  - Disabled issue action with descriptive reason tooltip.
+  - Unit tests: `GenerateReferralCode.test.tsx`.
+- **Issue #19 (P1 - Sub-Rental 5-State Handling):**
+  - Updated `src/modules/operations/SubRental.tsx` with 5 distinct UI states: Loading (`LoadingSkeleton`), Error (`ErrorBanner` with Retry action), Initial Empty (empty registry guidance), Filtered Empty (distinct message + clear filters button), and Populated.
+  - Unit tests: `SubRental.test.tsx`.
+- **Issue #20 (P2 - Crew Week Calendar Week-Start Alignment):**
+  - Updated `src/modules/crew/CrewBooking.tsx` to dynamically align 7-day schedule week start using `getWeekStartSetting()` (Sunday for Nepal, Monday for ISO).
+  - Unit tests: `CrewBooking.calendar.test.ts`.
+
+**Ruled**
+- Truth of State: A UI control must never offer an override or write path that bypasses backend gates or presents fake live figures.
+- Separation of Concerns: Sourcing paths (sub-rental) and internal overrides (overbooking) must never be conflated or silently redirected.
+- Auditability & Non-Destructive Decisions: Stock-take missing confirmations, reversals, and transfer cancellations require explicit reasons and recorded operator identities.
+- Five Screen States: Every operational view must cleanly handle loading, error with retry, initial empty, filtered empty, and populated states.
+
+**Verified**
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm test` (mock backend, T0-10) — **565 files, 6769 passed / 0 failed (100% green)**.
+- `npm run check:pglite` — 219/219 migrations applied, 0 failed, 0 leaks, 181 definers pinned.
+- `npm run check:lifecycle` — 63/63 steps green, real Postgres + RLS.
+- `npm run check:contrast` — 106/106 WCAG AA checks pass.
+- `npm run check:security` — 18 Phase 0 SQL regressions + 28 operations grants + 14 Reset branch regressions passed.
+- `npm run build` — `tsc --noEmit && vite build` clean production build with precached service worker.
+
+### Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 94 / 94 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 219 files · check:pglite 219/219 applied, 0 failed (recorded 2026-11-06T16:28:14.268Z). Suite: PASS — 6769/6769 passed, 0 failed (recorded 2026-11-06T16:50:09.848Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-06T16:28:52.003Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Issues 11–20 from the 2026-11-06 UI/UX audit are fully resolved and verified.
+- Upcoming track work per `PLAN.md` §6: T6 remaining Nepali translation catalogues, T7 online booking, and T8 advanced crew/membership features.
+
+## 2026-11-06 — T3-15: Payment method default (Lane C)
+
+**Did**
+- **T3-15: Record Payment preselects the method this client paid by last (L2, W13 "mix").**
+  - `src/lib/queries/finance.ts` — one vocabulary for writer and reader: `PAYMENT_METHOD_LABELS` and `PaymentMethodLabel`, plus `paymentMethodFromNotes()` and `lastPaymentMethodForClient()`. The read takes the client's `payments` rows, **Received only**, newest first, bounded to the last 12 receipts (`LAST_METHOD_SCAN`), and throws on a read error so the modal can say the lookup failed rather than guess.
+  - `src/modules/finance/modals/RecordPaymentModal.tsx` — the method starts `null` (nothing chosen) instead of a hard-coded `Bank Transfer`; the read is keyed on the selected invoice's `clientId` and never overwrites a tap already in flight (`methodTouchedFor` ref, per client). The hint states which situation it is in — looking up, lookup failed, preselected, or pick one — and submit refuses an unset method with "Choose how the payment was made — the method is written on the receipt."
+  - Callers now pass `clientId`: `src/modules/rentals/BookingDetail.tsx`, `src/modules/finance/Finance.tsx`, `src/modules/finance/Payments.tsx`, `src/modules/rentals/RentalsList.tsx`.
+  - `src/components/ui/ChoiceCards.tsx` — `value` may be `T | null`, so a radio group can open with no member checked (a real state, not `''` standing in for one).
+  - `src/lib/__mocks__/corpus.ts` — the seeded payment carried a `method` field no table has (`payments` has no method column, 0006:176-190). Replaced with `notes: 'Method: Bank Transfer'`, the exact first line `composeNotes()` writes in `actions/finance/recordPayment.ts`, so `dev:mock` can show the default at all and in the real shape.
+  - Tests: `src/lib/queries/__tests__/lastPaymentMethod.test.ts` and `src/modules/finance/__tests__/RecordPaymentModal.methodDefault.test.tsx` (new), plus `RecordPaymentModal.test.tsx`, `RecordPaymentModal.prefill.test.tsx`, `FinanceDoubleWrite.test.tsx` and the `finance.test.ts` export allow-list.
+- **Rebased onto `main` at `66ec690a` before reporting.** Main had moved past the branch point: `1c49d35d` accepts either active-retirement gate in `test:server-contracts`, and `66ec690a` realigns the login / rosterLock / operationRoutes assertions with the copy catalogues. Those two commits cleared the five suite failures and the server-contracts failure this branch inherited from `2a9e25a2` — the branch is green, not green-except-known-failures.
+
+**Ruled**
+- L2 / W13 "mix": the default is evidence, not a guess — it comes from the client's own last Received payment, and "Preselected" is claimed only when the read supplied the value.
+- A client with no labelled receipt opens with **no** method selected (one extra tap) rather than inheriting a default that would write a wrong ledger fact.
+- `payments` has no method column; the operator's word lives in `notes` as `Method: <label>`. Writer (`composeNotes()`) and reader (`paymentMethodFromNotes()`) share `PAYMENT_METHOD_LABELS`, so the two cannot drift.
+- O-21 (open — `docs/OPEN_DECISIONS.md` §21, indexed in `PLAN.md` §4.2): the seven method cards stand instead of the card's four until Babin rules. eSewa and Khalti are different wallets, and Card/Cheque are real receipts with no home in the four; every method is still one tap.
+
+**Verified**
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm test` (mock backend, T0-10) — **556 files, 6740 passed / 0 failed**.
+- `npm run check:pglite` — 219/219 applied, 0 failed; 40 public views checked, 0 readable by anon; 19 public functions executable by anon, 0 unauthorized; 181 definer functions, 0 without pinned `search_path`.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS (isolated PGlite).
+- `npm run check:security` — 18/18 Phase 0 SQL regressions, 14/14 Reset branch regression groups.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `npm run test:server-contracts` — 59/59 integration assertions passed.
+- `npm run test:partial-return` — 58/58 passed.
+- `node --test scripts/test-receipt.test.mjs` — 11/11 passed.
+- `npm run lint:shell` — 897 files checked, 0 violations.
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 passed.
+- `npm run check:contrast` — 106/106 pass, 0 fail.
+- `npm run build` — `tsc --noEmit && vite build` clean (8m 20s, 281 precache entries).
+- **Screen check** (`docs/USABILITY_TESTS.md` §1) — **pass at 375 / 820 / 1440 px**, driven headless over CDP so nothing else could move the page. Finance → Invoices → INV-10 (Nisha Maharjan) → `+ Pay`: the screen and the invoice are named, the dialog says where you are and what to do next, focus lands inside it; **Bank Transfer** is preselected with "Preselected: how this client paid last. Change it if this receipt is different."; 7 method cards each 54 px tall; submit 44 px and enabled; `scrollWidth == innerWidth` and the dialog sits inside the viewport at every width; Cancel exits and nothing claims a save that did not happen; an unset method is refused inline rather than silently defaulted.
+- **Money-blind role** — Warehouse on `/today`: nav offers only Today / Rentals / Inventory, no Finance link, and no `Rs <number>` anywhere in the body.
+- Screenshots: `%TEMP%\opencode\t3-15-screens\t3-15-record-payment-{375,820,1440}.png`.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 219 files · check:pglite 219/219 applied, 0 failed (recorded 2026-11-06T16:01:28.240Z). Suite: PASS — 6740/6740 passed, 0 failed (recorded 2026-11-06T15:59:49.128Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-06T16:03:54.902Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **Babin: merge `lane-c/T3-15-payment-method-default`** (the agent never merges). `lane-c/T3-12-paste-a-whatsapp-gear-list` is also still awaiting merge.
+- **Babin: rule O-21** — keep the seven method cards (recommended: they match the ledger vocabulary) or cut to the card's four and add a second step for eSewa vs Khalti.
+- Coverage suite: `npm run test:coverage` was not run for this card (a live-batch gate, and the card's list does not include it), so `npm run completion` exits 1 on the coverage receipt alone; every other dimension is measured.
+- Next in lane C: T3-13, T3-21, then T3-26 and T3-30 (`[go-live] · slips first`).
 
 ## 2026-11-05 — T6-07: Wave 4 — reports, settings, admin localization conversion (Lane B)
 
@@ -491,6 +643,67 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - Run `check:pglite` and `check:lifecycle` before any migration change or Verified claim.
 - Confirm Node 24 locally or rely on CI for the `bs.ts` ICU check.
 - Confirm the CI run on `008e499` is green on the self-hosted runner (Node 24).
+- Coverage suite receipt is invalid; `npm run test:coverage` not run this session.
+
+## 2026-11-05 — T3-12: Paste a WhatsApp gear list (Lane C)
+
+**Did**
+- **T3-12: Paste a WhatsApp gear list (M, [go-live], lane C)**
+  - **src/lib/gearListParser.ts** — pure text engine that reads a pasted WhatsApp gear list into lines, quantities (before/after, `x2`, `2x`, `2pcs`, Nepali digits, emoji bullets, keycap ordinals) and matches each line against the catalogue with a confidence mark. Pure text, no AI service (Law 16), no money field (Law 6), nothing added without the caller's confirm tap (W9).
+    - Three quantity decisions, each unit-tested:
+      - A leading bare number is a quantity; a list ordinal (`2.`) is not.
+      - A quantity must be 1–99, so `Aputure 600x` keeps its model number.
+      - A bare trailing number is never a quantity, so `DJI Mavic 3` is one drone.
+    - 30 tests, including the card's 20 real-shaped lists: **59/65 lines auto-matched (90.8%)**, with 2 ambiguous and 4 not-found left honest.
+  - **src/lib/queries/productAliases.ts** — the matcher's read path for staff-taught spellings. Fails soft and reports to monitoring; an unreachable teaching aid does not take New Rental down (unlike a deposit read where a swallow would weaken a money rule).
+  - **actions/inventory/rememberProductAlias.ts** — one RPC, validated, refusing to claim a save the database did not confirm. The alias is stored with `normaliseGearText()` so the matcher and the writer are contract-bound.
+  - **eventBus.ts** — `inventory.product_alias_remembered`.
+  - **0223_product_aliases.sql** — migration (renumbered from 0222 after main took that number): `product_aliases` table, RLS for the five `rental.create` roles, no delete (Law 3), audit trigger, idempotent `remember_product_alias()` RPC (Law 8) that moves a spelling on correction. Not applied anywhere (N-5).
+  - **PERMISSIONS.md §4.3** — capability row with DB enforcement and the reason it rides `canWriteBookingDesk`: storing a spelling is narrower than the booking write those five already hold (N-3), and no money column (Law 6).
+  - Capability `inventory.edit_product_aliases` joined the `rental.create`/`canWriteBookingDesk` group in `src/actions/core.ts` and the T-1 `DESK` fixture (`src/actions/__tests__/core.test.ts`), so the T-1 round-trip asserts its roles with the rest of the set (B-3).
+  - Fixed a regex lint error the new a11y/lint pass caught: the emoji joiner, variation selector and keycap mark were inside a range class, which cannot describe an emoji sequence.
+
+**Ruled**
+- W1 / W9: most bookings arrive on WhatsApp; nothing is added until the person confirms.
+- Law 16: matching is plain text search over names, aliases and asset codes — no AI service anywhere.
+- Law 6: the parser carries no money field; the matcher returns only ids, names and scores.
+
+**Verified**
+- `npm run typecheck` — 0 errors (`tsc --noEmit`)
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`)
+- `npm run test` (mock backend) — 6731/6731 passed (exit 0)
+- `src/lib/__tests__/gearListParser.test.ts` — 30/30 passed, **59/65 lines auto-matched (90.8%)** · 2 ambiguous · 4 not found
+- `npm run check:pglite` - 220/220 applied, 0 failed (0223 included, after rebasing onto main's 0222). View leaks: 0; anon function leaks: 0; definer hygiene: 182/182 pinned `search_path`.
+- `npm run check:security` — 14/14 reset-branch regression groups passed; operations branch grants verified.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `npm run test:server-contracts` — 58/58 passed.
+- `npm run test:partial-return` — 58/58 passed.
+- `npm run lint:shell` — 896 files checked, 0 violations.
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 tests passed.
+- `npm run check:contrast` — 106/106 pass, 0 fail.
+- `npm run build` — `tsc --noEmit && vite build` bundled cleanly (dist/, PWA 281 precache entries).
+- `node --test scripts/test-receipt.test.mjs` — 11/11 passed.
+- Migration 0223: **VERIFIED** (check:pglite 220/220 + check:lifecycle 63/63 = R-35 met). Ledger row status `verified`.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 92 / 92 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 77 / 77 (100%) | +1 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Counted by `npm run completion`, not typed. Structural coverage only; functional, hosted, integration and device acceptance are **not** verified by this counter.
+
+### Remaining
+- **Babin:** merge `lane-c/T3-12-paste-a-whatsapp-gear-list` (this card).
+- **Babin:** merge `lane-b/T6-04` and approve Wave 1 strings in `docs/reviews/wave1_floor_review.csv`.
+- **Lane C:** T3-13, T3-15, T3-21, T3-26, T3-30 still `todo`.
+- **Lane C:** T3-14c (draft invoice numbering) blocked on accountant decisions O-14/O-17.
+- **Lane A:** T1-17 (two-step sign-in) and T2-18 (finish evidence capture).
+- **Babin:** apply migrations 0215–0220 to live after the backup protocol.
 - Coverage suite receipt is invalid; `npm run test:coverage` not run this session.
 
 ## 2026-11-04 — T6-02: String catalogue and lint infrastructure (Lane B)

@@ -313,6 +313,7 @@ model**. Nothing is stored: `product_units_service_v` derives it at read time.
 |---|---|---|---|
 | `inventory.edit_service_plan` | Owner · Admin · Manager | the three intervals + grace on `products`; `products_update` policy | ○ |
 | `inventory.record_meter` | M+ · Warehouse · Technician | `product_units.meter_hours` / `meter_hours_recorded_at`, written at intake and at Return only | ○ |
+| `inventory.edit_product_aliases` | C+ · Warehouse | `product_aliases` `select`/`insert`/`update` policies (0223, T3-12) — one spelling maps to one product, `delete` revoked for every role (Law 3); the `remember_product_alias` RPC re-checks the same five and pins `search_path`. Rides `canWriteBookingDesk`: storing a spelling is narrower than the booking write these five already hold (N-3). No money column, so no Law 6 mask. | ✓ |
 | view `product_units_service_v` | all staff | carries no money column, so no Law 6 mask is needed — the view is money-free by construction | ○ |
 
 
@@ -414,7 +415,7 @@ model**. Nothing is stored: `product_units_service_v` derives it at read time.
 
 ### 4.10 Settings and Administration
 
-**RULING 2026-11-05 C-6 (0223):** `glossary.manage` is **Owner only, online**. `approve_glossary_term` is the only write path; canonical terms and approval revisions are immutable. Staff may read approved text; Client and anon cannot. A new approval applies immediately to matching Nepali terms and retains actor/time/history. Reversal is another approval, never an update/delete. T-1 fixture: `core.test.ts` glossary matrix; database proof: lifecycle L63 and `scripts/test-glossary-revisions.mjs`.
+**RULING 2026-11-05 C-6 (0225):** `glossary.manage` is **Owner only, online**. `approve_glossary_term` is the only write path; canonical terms and approval revisions are immutable. Staff may read approved text; Client and anon cannot. A new approval applies immediately to matching Nepali terms and retains actor/time/history. Reversal is another approval, never an update/delete. T-1 fixture: `core.test.ts` glossary matrix; database proof: lifecycle L63 and `scripts/test-glossary-revisions.mjs`.
 
 | Capability | Roles | Notes | Code |
 |---|---|---|---|
@@ -551,7 +552,7 @@ WARN-class rules (Rules Registry) are passed by **any staff** with the warning l
 8. Enable an integration that sends client data outside Nepal (AI providers), and set its ceiling.
 9. Live replay of an automation execution.
 10. Retire a branch.
-11. Approve and apply shared glossary wording (C-6, 5 Nov 2026; immutable revisions in 0223). This is one Owner configuration write, not a separate staff-submission approval workflow; no other self-approval gate changes.
+11. Approve and apply shared glossary wording (C-6, 5 Nov 2026; immutable revisions in 0225). This is one Owner configuration write, not a separate staff-submission approval workflow; no other self-approval gate changes.
 
 Everything else Admin can do. Admin ⊇ Manager ⊇ Coordinator for approvals (a higher rung can always act where a lower one may). The exception is the **approve-your-own-submission** rule: nobody approves what they submitted, at any rung.
 

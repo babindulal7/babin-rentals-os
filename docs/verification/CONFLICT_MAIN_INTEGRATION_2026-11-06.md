@@ -33,3 +33,9 @@ Backup validation PASS: `backups/production_backup_2026-11-06T04-45-29-638Z.sql`
 Live dependency inspection found the staff/role/identity helpers, append-only triggers and required audit columns. The live role helper excludes inactive/deactivated users. Glossary tables do not yet exist. Existing security-advisor findings were recorded before application for comparison; this integration does not remediate unrelated live schema findings. Dependency audit still reports 36 existing advisories (3 low, 15 moderate, 14 high, 4 critical).
 
 No unrelated migration, deployment or remote Git push is authorized by this integration. Production HOLD and whole-app Nepali review/device acceptance remain separate.
+
+## 7 November — final combined source
+
+Babin confirmed all main writers/mergers are paused. The latest committed main b2f5bb47 has now been merged into the candidate, preserving all 60 changed files. Both progress histories are retained; main’s O-21 payment-method decision stays O-21 and the answered glossary decision becomes O-22. The glossary migration is now **0225**, main’s product-alias 0223 stays unchanged, and Gemini’s committed 0224 reservation is carried into the shared ledger. Apply only 0225 under C-7/C-8. Fresh verification of this final combined source is pending.
+
+Correction to the earlier concurrency note: the root checkout is on Gemini’s lane-b/T5-12-offer-emails-to-clients branch, not main. All 16 tracked/untracked draft files were copied with SHA-256 hashes plus a tracked binary patch to ignored artifacts/main-integration/gemini-draft-snapshot-2026-11-07/. Their originals remain untouched. Main is checked out cleanly at .worktrees/t3-07-expense-payment-authority; it is the authorized local landing checkout. No stash/reset of another lane’s work was needed.

@@ -578,6 +578,8 @@ export default function Payments({ embedded = false }: { embedded?: boolean }) {
         amount: formatMoney(r.totalAmount),
         status: r.status,
         booking: r.bookingNo,
+        // T3-15 — the client whose last payment method the form opens on.
+        clientId: r.clientId,
         // R-39 D1 — prefills the Amount field with what the invoice still owes.
         outstandingRupees: toRupees(r.outstandingAmount),
       })),

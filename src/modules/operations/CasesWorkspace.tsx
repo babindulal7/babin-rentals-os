@@ -7,7 +7,6 @@ import { DataTableShell } from '../../components/ui/DataTable'
 import { PageShell } from '../../components/ui/PageShell'
 import { Button } from '../../components/ui/Button'
 import { PageBody } from '../../components/ui/PageBody'
-import { Unavailable } from '../../components/ui/Unavailable'
 import { Badge } from '../../components/ui/Badge'
 import Icon from '../../components/ui/Icon'
 import { formatMoney } from '../../lib/money'
@@ -27,7 +26,6 @@ import {
   recoveredThisMonthPaisa,
   outstandingOf,
   ageDays,
-  NEW_CASE_UNAVAILABLE_REASON,
   type Case,
   type CaseStatus,
   type CasePriority,
@@ -519,16 +517,16 @@ export function CasesWorkspace({ embedded = false, searchControl }: {
               Export{selectedRowIds.size > 0 ? ` (${selectedRowIds.size})` : ''}
             </Button>
           )}
-          {/* RS-06 — LogCaseModal mints CASE-2026-${random}, writes nothing and
-              closes as a success. Until a case-creation action exists the
-              opener is Unavailable with the reason data/cases.ts already
-              states; the modal stays mounted below, unreachable from here. */}
+          {/* GAP-04 / Owner Ruling 6 Nov 2026: Log Incident wired to authenticated createCase action */}
           {!phone && (
-            <Unavailable reason={NEW_CASE_UNAVAILABLE_REASON}>
-              <Button variant="primary" icon={<IconPlus size={16} />} disabled style={{ flexShrink: 0 }} onClick={() => setIsLogCaseOpen(true)}>
-                Log Incident
-              </Button>
-            </Unavailable>
+            <Button
+              variant="primary"
+              icon={<IconPlus size={16} />}
+              style={{ flexShrink: 0 }}
+              onClick={() => setIsLogCaseOpen(true)}
+            >
+              Log Incident
+            </Button>
           )}
         </div>
       </div>
