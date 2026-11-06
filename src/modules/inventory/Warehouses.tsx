@@ -56,6 +56,7 @@ import {
 } from '../../lib/queries/warehouses'
 import { listInventory } from '../../lib/queries/inventory'
 import { gateContext } from '../../lib/fieldGating'
+import { canWriteFloor } from '../../lib/rbac'
 import { IntelCard } from '../../components/ui/IntelCard'
 import type { ActionContext } from '../../actions/core'
 
@@ -523,7 +524,7 @@ const TRANSFER_TRANSITION_UNAVAILABLE =
 
 /* ── screen ────────────────────────────────────────────────────────────── */
 
-export default function Warehouses() {
+export function Warehouses() {
   const { user } = useAuth()
   const online = useNetwork()
   /* Stable identity so the `rackGlance`/`rackDetailGroups` memo below (and
@@ -563,9 +564,9 @@ export default function Warehouses() {
    * side by side with nothing to tell them apart.
    */
   const live = useStockTransfers()
-  const [transfers, setTransfers] = useState<StockTransfer[]>([])
+  const [transfers, setTransfers] = useState<StockTransfer[]>(live.rows ?? [])
   useEffect(() => {
-    setTransfers(live.rows)
+    setTransfers(live.rows ?? [])
   }, [live.rows])
   const [modalOpen, setModalOpen] = useState(false)
   /* Law 12 — a create that did not land says so, in the modal's own existing
@@ -754,36 +755,66 @@ export default function Warehouses() {
   const dispatchContext = (): ActionContext | null =>
     user ? { userId: user.id, role: user.role, isOnline: online } : null
 
-  /**
-   * ⛔ `advance(id, next)` lived here and is **deleted**.
-   *
-   * It wrote the new transfer status into local state — plus a
-   * `dispatchedAt` / `receivedAt` timestamp built from `TODAY` and a literal
-   * clock time — and then fired `createStockTransfer` fire-and-forget with no
-   * `ActionContext` and no `.catch()`. An operator marking a branch transfer
-   * Received at 18:00 saw the card say Received, with a time on it, while
-   * nothing persisted: the destination's stock never incremented and the
-   * source's never decremented, so two warehouses disagreed about where the
-   * gear was with no error anywhere.
-   *
-   * It is not re-pointed at another action, because there is no action for
-   * this operation. `src/actions/inventory/` holds `createStockTransfer`
-   * (`CREATE_STOCK_TRANSFER`) and nothing that advances or cancels an existing
-   * transfer. That input happens to carry optional `transferId`/`status`
-   * fields, which is what made the original call typecheck — but a create is
-   * not a transition, and deciding that `CREATE_STOCK_TRANSFER` also means
-   * "move TR-2026-0045 from In Transit to Received" would be inventing a
-   * semantic mapping that produces wrong data the moment the action is wired
-   * to the database. So the Transfer Center's step buttons are stated as
-   * unbuilt (`TRANSFER_TRANSITION_UNAVAILABLE`) in the same
-   * `Unavailable`-with-a-reason idiom this screen already uses for Add
-   * Warehouse, Print Labels and Refresh, rather than moving a card that
-   * nothing behind it has moved.
-   *
-   * Cancel goes with them: Law 3 makes cancelling a *named state change*, so
-   * it needs the same missing transition action — it is not a delete and it is
-   * not a create either.
-   */
+  const [transitionBusyId, setTransitionBusyId] = useState<string | null>(null)
+  const [cancelModalTransfer, setCancelModalTransfer] = useState<StockTransfer | null>(null)
+  const [cancelReason, setCancelReason] = useState('')
+  const [cancelError, setCancelError] = useState<string | null>(null)
+
+  const handleAdvanceTransfer = async (id: string, nextStatus: TransferStatus) => {
+    const ctx = dispatchContext()
+    if (!ctx) return
+    setTransitionBusyId(id)
+    setTransferError(null)
+    try {
+      const { transitionStockTransfer } = await import('../../actions/inventory/transitionStockTransfer')
+      await transitionStockTransfer(
+        { transferId: id, targetStatus: nextStatus },
+        ctx,
+      )
+      setTransfers((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, status: nextStatus } : t)),
+      )
+      live.refetch()
+    } catch (err: unknown) {
+      setTransferError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setTransitionBusyId(null)
+    }
+  }
+
+  const handleCancelTransfer = async () => {
+    if (!cancelModalTransfer) return
+    const trimmedReason = cancelReason.trim()
+    if (trimmedReason.length < 10) {
+      setCancelError('Cancellation reason must be at least 10 characters long.')
+      return
+    }
+    const ctx = dispatchContext()
+    if (!ctx) return
+    setTransitionBusyId(cancelModalTransfer.id)
+    setCancelError(null)
+    try {
+      const { transitionStockTransfer } = await import('../../actions/inventory/transitionStockTransfer')
+      await transitionStockTransfer(
+        {
+          transferId: cancelModalTransfer.id,
+          targetStatus: 'Cancelled',
+          cancellationReason: trimmedReason,
+        },
+        ctx,
+      )
+      setTransfers((prev) =>
+        prev.map((t) => (t.id === cancelModalTransfer.id ? { ...t, status: 'Cancelled' } : t)),
+      )
+      live.refetch()
+      setCancelModalTransfer(null)
+      setCancelReason('')
+    } catch (err: unknown) {
+      setCancelError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setTransitionBusyId(null)
+    }
+  }
 
   /*
    * `source` / `destination` are `warehouses.id`, and `item` is `products.id` —
@@ -1978,18 +2009,43 @@ export default function Warehouses() {
                                   <td style={{ ...td, textAlign: 'right' }}>
                                     <span style={{ display: 'inline-flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
                                       {!TRANSFER_TERMINAL.has(t.status) && (
-                                        <Unavailable reason={TRANSFER_TRANSITION_UNAVAILABLE}>
-                                          <Button icon="close" disabled>
+                                        canWriteFloor(user?.role ?? 'Client') ? (
+                                          <Button
+                                            icon="close"
+                                            disabled={transitionBusyId === t.id}
+                                            onClick={() => {
+                                              setCancelModalTransfer(t)
+                                              setCancelReason('')
+                                              setCancelError(null)
+                                            }}
+                                          >
                                             Cancel
                                           </Button>
-                                        </Unavailable>
+                                        ) : (
+                                          <Unavailable reason="Your role cannot cancel stock transfers.">
+                                            <Button icon="close" disabled>
+                                              Cancel
+                                            </Button>
+                                          </Unavailable>
+                                        )
                                       )}
                                       {flow ? (
-                                        <Unavailable reason={TRANSFER_TRANSITION_UNAVAILABLE}>
-                                          <Button variant="primary" icon="arrow_right" disabled>
+                                        canWriteFloor(user?.role ?? 'Client') ? (
+                                          <Button
+                                            variant="primary"
+                                            icon="arrow_right"
+                                            disabled={transitionBusyId === t.id}
+                                            onClick={() => handleAdvanceTransfer(t.id, flow.next)}
+                                          >
                                             {flow.label}
                                           </Button>
-                                        </Unavailable>
+                                        ) : (
+                                          <Unavailable reason="Your role cannot advance stock transfers.">
+                                            <Button variant="primary" icon="arrow_right" disabled>
+                                              {flow.label}
+                                            </Button>
+                                          </Unavailable>
+                                        )
                                       ) : (
                                         <span style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>Closed</span>
                                       )}
@@ -2341,9 +2397,8 @@ export default function Warehouses() {
                 describes the old behaviour sends the operator looking for
                 controls that will not act. */}
             <p style={{ margin: 0, fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-              A transfer that is created opens at <strong>Pending</strong> and stays there. Advancing or
-              cancelling one is not built in this release — the Transfer Center's step buttons are
-              disabled with the reason on them.
+              A transfer that is created opens at <strong>Pending</strong>. Authorized staff can advance it through its lifecycle
+              (Approved → Packing → In Transit → Received → Completed) or Cancel it with an audited reason from the Transfer Center.
             </p>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--sp-sm)' }}>
@@ -2355,6 +2410,97 @@ export default function Warehouses() {
           </div>
         </div>
       )}
+
+      {cancelModalTransfer && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="cancel-transfer-title"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+            padding: 'var(--sp-md)',
+          }}
+        >
+          <div
+            style={{
+              background: 'var(--card-bg, #1a1d21)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--r-card)',
+              width: '100%',
+              maxWidth: 480,
+              padding: 20,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 16,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h3 id="cancel-transfer-title" style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>
+                Cancel Stock Transfer {cancelModalTransfer.transferNo}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setCancelModalTransfer(null)}
+                style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer' }}
+                aria-label="Close"
+              >
+                <Icon name="close" size={16} />
+              </button>
+            </div>
+
+            <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+              Cancelling a stock transfer is a permanent audited state change. Please provide the operational reason for cancellation (at least 10 characters required).
+            </p>
+
+            {cancelError && <ErrorBanner title="Could not cancel transfer" message={cancelError} />}
+
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 'var(--t-meta)' }}>
+              <span style={{ fontWeight: 600 }}>Cancellation Reason</span>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => {
+                  setCancelReason(e.target.value)
+                  if (cancelError) setCancelError(null)
+                }}
+                rows={3}
+                placeholder="e.g. Booking cancelled, equipment no longer required at Pokhara branch"
+                style={{
+                  width: '100%',
+                  padding: 8,
+                  borderRadius: 'var(--r-input)',
+                  border: '1px solid var(--input-border)',
+                  background: 'var(--input-bg)',
+                  color: 'var(--text)',
+                  fontSize: 'var(--t-meta)',
+                  fontFamily: 'inherit',
+                  resize: 'vertical',
+                }}
+              />
+            </label>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--sp-sm)' }}>
+              <Button onClick={() => setCancelModalTransfer(null)}>Close</Button>
+              <Button
+                variant="primary"
+                icon="close"
+                disabled={cancelReason.trim().length < 10 || transitionBusyId !== null}
+                onClick={handleCancelTransfer}
+              >
+                Confirm Cancellation
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </PageShell>
   )
 }
+
+export default Warehouses
+
