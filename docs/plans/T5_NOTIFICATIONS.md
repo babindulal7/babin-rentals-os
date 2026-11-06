@@ -205,7 +205,7 @@ next offer skips them; 3) Coordinator and Warehouse cannot send (the database re
 shows the link and has the header; 5) a double tap on Send sends once.
 **Needs** — T5-03, T1-09.
 
-### T5-13 · Edit email and document texts            status: todo · size: M · lane B · [go-live] · slips first
+### T5-13 · Edit email and document texts            status: doing (lane-b/T5-13-edit-email-and-document-texts) · size: M · lane B · [go-live] · slips first
 **What** — Settings ▸ **Texts**, Owner and Admin only (B20): edit the wording of the automatic client
 emails (T5-07), payment reminders (T5-08), the offer email footer (T5-12) and the fixed texts on
 documents (invoice footer, the pro forma note, the rental agreement terms — O-11 — and the packing list
