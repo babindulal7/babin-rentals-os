@@ -67,7 +67,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0221 | T1-17 | two-step-sign-in | lane-a/T1-17-two-step-sign-in-for-every | claimed; branch not merged |
 | 0222 | T3-smart-reservations | repair-confirm-booking-atomic-and-reservation-dedup | audit/system-design-consistency-20261105 | verified |
 | 0223 | T4-12 | bulk-update-products | lane-b/T4-12-bulk-edit-products | verified |
-| 0224 | T5-12 | offer-campaigns-and-recipients | lane-b/T5-12-offer-emails-to-clients | claimed |
+| 0224 | T5-12 | offer-campaigns-and-recipients | lane-b/T5-12-offer-emails-to-clients | verified |
 
 ## Expected migrations (not yet claimed)
 

@@ -1,5 +1,58 @@
 # Progress Log
 
+## 2026-11-07 — Card T5-12 · Offer Emails to Clients: Migration 0224, Resend Edge Function, Security Definer RPCs, RBAC & Consent Architecture (Lane B)
+
+**Did**
+- **Migration 0224 (`supabase/migrations/0224_offer_campaigns_and_recipients.sql`):**
+  - Created tables `offer_campaigns` and `offer_campaign_recipients` with immutable timestamps, JSONB audience filters, counters, and foreign keys.
+  - Role-gated authoring and management strictly to Owner, Admin, and Manager (B43, B50); strictly denied to Coordinator, Warehouse, Technician, Driver, and Client.
+  - Implemented `save_offer_campaign` RPC with audit logging, validation, and revision/idempotency tracking.
+  - Implemented `preview_offer_campaign_audience` RPC resolving recipient counts server-side strictly from active, consented, non-DND client emails without browser leakage.
+  - Implemented `queue_offer_campaign` RPC with transactional locking, mandatory pre-flight test send check, and SHA-256 unsubscribe token minting.
+  - Implemented public `unsubscribe_offer_campaign` RPC updating `client_marketing_consents` (0005) immediately and atomically.
+- **Edge Function (`supabase/functions/send-email/index.ts`):**
+  - Added Resend API integration for offer campaigns with RFC 8058 / RFC 2369 `List-Unsubscribe` headers, HTML Markdown parsing, batch pacing, and cryptographic tokenized unsubscribe endpoints.
+- **Action & Engine (`src/actions/marketing/offerCampaigns.ts`):**
+  - Built `saveOfferCampaign`, `testOfferCampaign`, `previewOfferAudience`, `queueOfferCampaign`, and `unsubscribeClient`.
+  - Added unit test suite `src/actions/marketing/__tests__/offerCampaigns.test.ts` (17 tests).
+- **Communication UI (`src/modules/communication/`):**
+  - Created `OfferCampaigns.tsx` dashboard and composer with live Markdown preview, audience filtering, test send modal, and broadcast queueing.
+  - Created public `UnsubscribePage.tsx` route mounted in `App.tsx` (`/unsubscribe`).
+  - Added test suites `OfferCampaigns.test.tsx` and `UnsubscribePage.test.tsx` (6 tests).
+- **Lifecycle Integration:**
+  - Added step `L64` in `scripts/e2e-lifecycle.mjs` verifying RBAC gating, pre-flight test send requirement, server-side consent filtering, and cryptographic unsubscribe.
+
+**Ruled**
+- B31 / B34 / B43 / B50: Offer campaigns authored by Owner, Admin, Manager only; sent directly from the app to clients with email who have not opted out.
+- K6: Mandatory pre-flight test send; one-click `List-Unsubscribe` headers and cryptographic unsubscribe token.
+- W80: Client email communications in English.
+
+**Verified**
+- `npm run typecheck` — 0 errors.
+- `npx vitest run src/modules/communication src/actions/marketing src/lib/queries/__tests__/offerCampaigns.test.ts` — 23/23 passed.
+- `npm run check:pglite` — 220/220 applied, 0 failed, 186 definers pinned.
+- `npm run check:lifecycle` — 64/64 green (including L64), 0 failed.
+- `npm run lint` — 0 errors, 0 warnings.
+- `npm run build` — `tsc --noEmit && vite build` clean build.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 92 / 92 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 67 | 57 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 78 / 78 (100%) | +2 |
+| Lifecycle | steps green / total | 64 / 64 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 220 files · check:pglite 220/220 applied, 0 failed (recorded 2026-11-06T19:18:48.561Z). Suite: Historical suite: 6756/6756 passed, 0 failed (recorded 2026-11-06T12:06:27.788Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-06T19:20:12.480Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Card T5-13: Edit email and document texts (Owner and Admin only).
+
 ## 2026-11-06 — Card T5-12 · Offer Emails to Clients: Security Design Note & Migration 0224 Claimed (Lane B)
 
 **Did**

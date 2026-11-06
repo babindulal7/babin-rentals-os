@@ -6964,6 +6964,183 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L64',
+  title: 'Offer emails to clients: RBAC gating, pre-flight test send, server-side consent filtering, and cryptographic unsubscribe (T5-12, B31, B34, B43, B50, K6, W80)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      const client1Id = '11111111-0005-4000-8000-000000000001'
+      const client2Id = '11111111-0005-4000-8000-000000000002'
+      const client3Id = '11111111-0005-4000-8000-000000000003'
+
+      // Seed 3 test clients
+      // Client 1: Active, email, consent 'Not asked' (eligible)
+      // Client 2: Active, email, consent 'Opted in' (eligible)
+      // Client 3: Active, email, consent 'Opted out' on 'Email' (ineligible)
+      await q(`
+        insert into clients (id, client_uuid, client_code, name, email, phone, status, created_by)
+        values ($1, gen_random_uuid(), 'C-9901', 'Eligible Client Alpha', 'alpha@client.test', '+9779811111101', 'Active', $2)
+        on conflict (id) do update set email = excluded.email, status = 'Active'
+      `, [client1Id, U.Owner])
+      await q(`
+        insert into clients (id, client_uuid, client_code, name, email, phone, status, created_by)
+        values ($1, gen_random_uuid(), 'C-9902', 'Eligible Client Beta', 'beta@client.test', '+9779811111102', 'Active', $2)
+        on conflict (id) do update set email = excluded.email, status = 'Active'
+      `, [client2Id, U.Owner])
+      await q(`
+        insert into clients (id, client_uuid, client_code, name, email, phone, status, created_by)
+        values ($1, gen_random_uuid(), 'C-9903', 'Opted Out Client Gamma', 'gamma@client.test', '+9779811111103', 'Active', $2)
+        on conflict (id) do update set email = excluded.email, status = 'Active'
+      `, [client3Id, U.Owner])
+
+      // Explicitly set Client 2 to 'Opted in' with provenance
+      await q(`
+        insert into client_marketing_consents (id, client_uuid, client_id, channel, state, opted_in_at, opt_in_source, opt_in_actor_id)
+        values (gen_random_uuid(), gen_random_uuid(), $1, 'Email', 'Opted in', now(), 'booking_contract', $2)
+        on conflict (client_id, channel) do update set state = 'Opted in', opted_in_at = now()
+      `, [client2Id, U.Owner])
+
+      // Explicitly set Client 3 to 'Opted out'
+      await q(`
+        insert into client_marketing_consents (id, client_uuid, client_id, channel, state, opted_out_at, opt_out_origin_channel)
+        values (gen_random_uuid(), gen_random_uuid(), $1, 'Email', 'Opted out', now(), 'Email')
+        on conflict (client_id, channel) do update set state = 'Opted out', opted_out_at = now()
+      `, [client3Id])
+
+      // 1. RBAC: Coordinator cannot create or queue offer campaigns (42501)
+      await as('Coordinator', async () => {
+        await q('savepoint coord_probe')
+        try {
+          await refuses(
+            'Coordinator cannot create an offer campaign',
+            `select save_offer_campaign(gen_random_uuid(), 'Special Promo', 'Body markdown content here...', null, 'Book', 'https://book.babinrentals.com', '{}'::jsonb)`,
+            [],
+            /42501|Permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint coord_probe')
+        }
+      })
+
+      // 2. RBAC: Warehouse cannot view campaigns or preview audiences (42501)
+      await as('Warehouse', async () => {
+        await q('savepoint wh_probe')
+        try {
+          await refuses(
+            'Warehouse cannot preview offer campaign audience',
+            `select * from preview_offer_campaign_audience('{}'::jsonb)`,
+            [],
+            /42501|Permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint wh_probe')
+        }
+      })
+
+      // 3. Manager creates a draft campaign
+      let campaignId = null
+      const campaignUuid = '99999999-0005-4000-8000-000000000088'
+      await as('Manager', async () => {
+        const rows = (await q(`
+          select save_offer_campaign(
+            $1::uuid,
+            'Monsoon Lighting Sale — 25% Off ARRI SkyPanels',
+            'Upgrade your production with our soft daylight fixtures this week only.',
+            'https://babinrentals.com/assets/promo-skypanel.jpg',
+            'Reserve Now',
+            'https://book.babinrentals.com',
+            '{}'::jsonb
+          ) as id
+        `, [campaignUuid])).rows
+        campaignId = rows[0].id
+        assert(campaignId, 'Manager successfully created draft offer campaign')
+
+        // Preview audience: Client 1 and Client 2 eligible, Client 3 opted out
+        const preview = (await q(`select * from preview_offer_campaign_audience('{}'::jsonb)`)).rows[0]
+        assertEq(preview.opted_out_count, 1, 'Audience preview accurately counted 1 opted-out client')
+        assert(preview.eligible_count >= 2, 'Audience preview found at least 2 eligible clients')
+
+        // 4. Pre-flight gate: queueing without a test send is refused
+        await q('savepoint preflight_probe')
+        try {
+          await refuses(
+            'Queueing an offer campaign without a test send is refused by database gate (P0001)',
+            `select queue_offer_campaign($1::uuid, gen_random_uuid())`,
+            [campaignId],
+            /P0001|A test email must be sent/i,
+          )
+        } finally {
+          await q('rollback to savepoint preflight_probe')
+        }
+
+        // 5. Manager records a test send to self
+        const testSent = (await q(`
+          select record_offer_campaign_test_send($1::uuid, 'manager@babinrentals.test')
+        `, [campaignId])).rows[0].record_offer_campaign_test_send
+        assertEq(testSent, true, 'Manager recorded pre-flight test send')
+
+        // 6. Manager queues the campaign
+        const queueUuid = '99999999-0005-4000-8000-000000000089'
+        const queueResult = (await q(`
+          select queue_offer_campaign($1::uuid, $2::uuid) as res
+        `, [campaignId, queueUuid])).rows[0].res
+        assertEq(queueResult.status, 'queued', 'Campaign status is now queued')
+        assert(queueResult.recipient_count >= 2, 'Campaign queued at least 2 recipients')
+
+        // Verify opted-out Client 3 was NEVER queued
+        const c3Rows = (await q(`
+          select * from offer_campaign_recipients where campaign_id = $1 and client_id = $2
+        `, [campaignId, client3Id])).rows
+        assertEq(c3Rows.length, 0, 'Opted-out Client Gamma was strictly excluded from recipient roster (B34)')
+
+        // 7. Idempotency: double tap on Send returns cached receipt without duplicating recipients
+        const replayResult = (await q(`
+          select queue_offer_campaign($1::uuid, $2::uuid) as res
+        `, [campaignId, queueUuid])).rows[0].res
+        assertEq(replayResult.idempotent_replay, true, 'Replaying queue returns idempotent replay')
+
+        // 8. One-click cryptographic unsubscribe: Client 1 clicks unsubscribe link
+        // Manager cannot directly update recipient rows (proving RLS denies direct writes).
+        // For test setup of known raw token, reset role to postgres, update token hash, then call process_client_unsubscribe.
+        const testRawToken = 'unsub-test-token-client-1-secret'
+        const testTokenHash = (await q(`select encode(sha256(convert_to($1, 'UTF8')), 'hex') as h`, [testRawToken])).rows[0].h
+        await db.exec('reset role;')
+        await q(`
+          update offer_campaign_recipients
+          set unsubscribe_token_hash = $1
+          where campaign_id = $2 and client_id = $3
+        `, [testTokenHash, campaignId, client1Id])
+
+        // Call unauthenticated unsubscribe (service_role / anon via edge function)
+        const unsubResult = (await q(`
+          select process_client_unsubscribe($1) as res
+        `, [testRawToken])).rows[0].res
+        assertEq(unsubResult.ok, true, 'Unsubscribe call returned ok')
+
+        // Switch back to Manager session to verify view reads
+        await db.exec(`set role authenticated; select set_config('app.current_user_id', '${U.Manager}', false);`)
+
+        // Verify recipient status updated to unsubscribed
+        const c1Recipient = (await q(`
+          select status from offer_campaign_recipients where campaign_id = $1 and client_id = $2
+        `, [campaignId, client1Id])).rows[0]
+        assertEq(c1Recipient.status, 'unsubscribed', 'Client 1 recipient row marked unsubscribed')
+
+        // Verify Client 1 marketing consent transitioned to Opted out
+        const c1Consent = (await q(`
+          select state from client_marketing_consents where client_id = $1 and channel = 'Email'
+        `, [client1Id])).rows[0]
+        assertEq(c1Consent.state, 'Opted out', 'Client 1 email marketing consent is now Opted out')
+
+        // 9. Subsequent campaign audience automatically skips Client 1
+        const preview2 = (await q(`select * from preview_offer_campaign_audience('{}'::jsonb)`)).rows[0]
+        assertEq(preview2.opted_out_count, 2, 'Subsequent campaign accurately counts both Client 1 and Client 3 as opted out')
+      })
+    })
+  },
+})
+
 
 /* ΓöÇΓöÇ Run ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 

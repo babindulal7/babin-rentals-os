@@ -1606,6 +1606,177 @@ export const mockSupabase = {
         return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
       }
     }
+    if (name === 'save_offer_campaign') {
+      try {
+        const actor = readSession()?.user.id
+        const user = store['users']?.find(row => row['id'] === actor)
+        const role = user?.['primary_role'] as string | undefined
+        if (!role || !['Owner', 'Admin', 'Manager'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'GATE:offer_campaign.forbidden: Only Owner, Admin, or Manager can create or edit offer campaigns.') })
+        }
+        const campaigns = store['offer_campaigns'] ?? (store['offer_campaigns'] = [])
+        const campaignId = (args?.['p_campaign_id'] as string) || crypto.randomUUID()
+        const clientUuid = (args?.['p_client_uuid'] as string) || crypto.randomUUID()
+        const existing = campaigns.find(c => c['id'] === campaignId)
+        const now = new Date().toISOString()
+        if (existing) {
+          if (!['draft', 'test_sent'].includes(existing['status'] as string)) {
+            return Promise.resolve({ data: null, error: pgErr('P0001', 'GATE:offer_campaign.immutable: Only draft or test_sent campaigns can be edited.') })
+          }
+          existing['subject'] = args?.['p_subject']
+          existing['body_markdown'] = args?.['p_body_markdown']
+          existing['hero_image_url'] = args?.['p_hero_image_url'] ?? null
+          existing['cta_button_text'] = args?.['p_cta_button_text'] ?? 'Book Gear Online'
+          existing['cta_button_url'] = args?.['p_cta_button_url'] ?? 'https://book.babinrentals.com'
+          existing['audience_filter'] = args?.['p_audience_filter'] ?? {}
+          existing['updated_at'] = now
+          return Promise.resolve({ data: existing, error: null })
+        }
+        const newCampaign: Row = {
+          id: campaignId,
+          client_uuid: clientUuid,
+          subject: args?.['p_subject'] as string,
+          body_markdown: args?.['p_body_markdown'] as string,
+          hero_image_url: args?.['p_hero_image_url'] ?? null,
+          cta_button_text: args?.['p_cta_button_text'] ?? 'Book Gear Online',
+          cta_button_url: args?.['p_cta_button_url'] ?? 'https://book.babinrentals.com',
+          audience_filter: args?.['p_audience_filter'] ?? {},
+          status: 'draft',
+          test_recipient_email: null,
+          test_sent_at: null,
+          recipient_count: 0,
+          sent_count: 0,
+          failed_count: 0,
+          bounced_count: 0,
+          unsubscribed_count: 0,
+          created_by: actor,
+          created_at: now,
+          updated_at: now,
+        }
+        campaigns.unshift(newCampaign)
+        return Promise.resolve({ data: newCampaign, error: null })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
+    if (name === 'record_offer_campaign_test_send') {
+      try {
+        const actor = readSession()?.user.id
+        const user = store['users']?.find(row => row['id'] === actor)
+        const role = user?.['primary_role'] as string | undefined
+        if (!role || !['Owner', 'Admin', 'Manager'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'GATE:offer_campaign.forbidden: Only Owner, Admin, or Manager can test offer campaigns.') })
+        }
+        const campaigns = store['offer_campaigns'] ?? []
+        const campaign = campaigns.find(c => c['id'] === args?.['p_campaign_id'])
+        if (!campaign) {
+          return Promise.resolve({ data: null, error: pgErr('P0002', 'Campaign not found.') })
+        }
+        const now = new Date().toISOString()
+        campaign['status'] = 'test_sent'
+        campaign['test_recipient_email'] = args?.['p_test_email']
+        campaign['test_sent_at'] = now
+        campaign['updated_at'] = now
+        return Promise.resolve({
+          data: {
+            campaign_id: campaign['id'],
+            status: 'test_sent',
+            test_recipient_email: campaign['test_recipient_email'],
+            test_sent_at: campaign['test_sent_at'],
+          },
+          error: null,
+        })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
+    if (name === 'preview_offer_campaign_audience') {
+      try {
+        const clients = store['clients'] ?? []
+        const consents = store['client_marketing_consents'] ?? []
+        let eligible = 0
+        let optedOut = 0
+        let noEmail = 0
+        for (const cl of clients) {
+          if (cl['status'] === 'Deactivated') continue
+          const email = cl['email'] as string | undefined
+          if (!email || !email.includes('@')) {
+            noEmail++
+            continue
+          }
+          const consent = consents.find(c => c['client_id'] === cl['id'] && c['channel'] === 'Email')
+          if (consent && consent['consent_state'] === 'Opted out') {
+            optedOut++
+            continue
+          }
+          eligible++
+        }
+        return Promise.resolve({
+          data: {
+            eligible_count: eligible || 3,
+            opted_out_count: optedOut || 1,
+            no_email_count: noEmail || 0,
+          },
+          error: null,
+        })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
+    if (name === 'queue_offer_campaign') {
+      try {
+        const actor = readSession()?.user.id
+        const user = store['users']?.find(row => row['id'] === actor)
+        const role = user?.['primary_role'] as string | undefined
+        if (!role || !['Owner', 'Admin', 'Manager'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'GATE:offer_campaign.forbidden: Only Owner, Admin, or Manager can queue offer campaigns.') })
+        }
+        const campaigns = store['offer_campaigns'] ?? []
+        const campaign = campaigns.find(c => c['id'] === args?.['p_campaign_id'])
+        if (!campaign) {
+          return Promise.resolve({ data: null, error: pgErr('P0002', 'Campaign not found.') })
+        }
+        if (campaign['status'] === 'queued' || campaign['status'] === 'completed') {
+          return Promise.resolve({
+            data: {
+              campaign_id: campaign['id'],
+              recipient_count: campaign['recipient_count'] || 2,
+              status: campaign['status'],
+              replayed: true,
+            },
+            error: null,
+          })
+        }
+        if (campaign['status'] !== 'test_sent') {
+          return Promise.resolve({ data: null, error: pgErr('P0001', 'GATE:offer_campaign.test_required: Campaign must be verified via test send before queueing.') })
+        }
+        campaign['status'] = 'queued'
+        campaign['recipient_count'] = 2
+        campaign['queued_at'] = new Date().toISOString()
+        return Promise.resolve({
+          data: {
+            campaign_id: campaign['id'],
+            recipient_count: 2,
+            status: 'queued',
+            replayed: false,
+          },
+          error: null,
+        })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
+    if (name === 'process_client_unsubscribe') {
+      return Promise.resolve({
+        data: {
+          client_id: 'client-mock-1',
+          client_code: 'C-9901',
+          recipient_row_id: 'recip-mock-1',
+          unsubscribed_at: new Date().toISOString(),
+        },
+        error: null,
+      })
+    }
     /* ⛔ Was `{ data: null, error: null }` — a silent null that every caller
      * would read as success with an empty result. That is the
      * success-fabrication class this repo has a register for, sitting in the
@@ -1619,7 +1790,25 @@ export const mockSupabase = {
   },
   auth,
   functions: {
-    invoke(name: string) {
+    invoke(name: string, options?: { body?: Record<string, unknown> }) {
+      if (name === 'send-email' && options?.body?.['action'] === 'unsubscribe') {
+        const token = typeof options.body['token'] === 'string' ? options.body['token'].trim() : ''
+        if (!token) {
+          return Promise.resolve({
+            data: { success: false, error: 'A valid unsubscribe token is required.' },
+            error: null,
+          })
+        }
+        return Promise.resolve({
+          data: {
+            success: true,
+            client_code: 'C-9901',
+            client_name: 'Babin Test Client',
+            unsubscribed_at: new Date().toISOString(),
+          },
+          error: null,
+        })
+      }
       return Promise.resolve({
         data: null,
         error: {

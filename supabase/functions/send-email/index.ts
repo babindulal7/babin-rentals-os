@@ -144,6 +144,34 @@ export function renderEmailHtml(payload: EmailPayloadData, language = 'en'): str
       `
       break
 
+    case 'offer_campaign':
+    case 'offer_test': {
+      const heroImg = data.hero_image_url
+        ? `<div style="margin-bottom: 20px;"><img src="${data.hero_image_url}" alt="Babin Rentals Special Offer" style="max-width: 100%; border-radius: 8px; display: block;" /></div>`
+        : ''
+      const bodyContent = data.body_markdown
+        ? `<div style="white-space: pre-wrap; font-size: 15px; line-height: 1.6; color: #334155;">${String(data.body_markdown)}</div>`
+        : `<p>Dear ${recipient_name}, check out our latest equipment offer at Babin Rentals.</p>`
+      const ctaBtn = `
+        <div style="margin: 28px 0 16px 0;">
+          <a href="${data.cta_button_url || 'https://book.babinrentals.com'}" style="background: #0284c7; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 15px; display: inline-block;">
+            ${data.cta_button_text || 'Book Gear Online'}
+          </a>
+        </div>
+      `
+      const unsubLink = data.unsubscribe_url
+        ? `<p style="margin-top: 24px; font-size: 12px; color: #94a3b8;">Don't want to receive promotional offers? <a href="${data.unsubscribe_url}" style="color: #64748b; text-decoration: underline;">Unsubscribe from marketing emails</a>.</p>`
+        : `<p style="margin-top: 24px; font-size: 12px; color: #94a3b8;">Marketing communication · Babin Rentals OS.</p>`
+      mainBody = `
+        ${heroImg}
+        <h2 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 700; color: #0f172a;">${subject}</h2>
+        ${bodyContent}
+        ${ctaBtn}
+        ${unsubLink}
+      `
+      break
+    }
+
     default:
       mainBody = `
         <p>Hello ${recipient_name},</p>
@@ -196,6 +224,42 @@ export async function handleSendEmail(req: Request): Promise<Response> {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || ''
+
+    // Check if unauthenticated request is for unsubscribe (K6)
+    const url = new URL(req.url)
+    const queryAction = url.searchParams.get('action')
+    let bodyJson: Record<string, unknown> = {}
+    if (req.method === 'POST') {
+      try {
+        bodyJson = await req.clone().json()
+      } catch {
+        // Not JSON
+      }
+    }
+    const isUnsubscribe = queryAction === 'unsubscribe' || bodyJson.action === 'unsubscribe'
+    if (isUnsubscribe) {
+      const rawToken = (bodyJson.token as string) || url.searchParams.get('token')
+      if (!rawToken || typeof rawToken !== 'string') {
+        return new Response(JSON.stringify({ error: 'Unsubscribe token is required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      const adminClient = createClient(supabaseUrl, supabaseServiceKey || supabaseAnonKey)
+      const { data, error } = await adminClient.rpc('process_client_unsubscribe', {
+        p_raw_token: rawToken.trim(),
+      })
+      if (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      return new Response(JSON.stringify({ success: true, ...data }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
 
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
@@ -279,12 +343,21 @@ export async function handleSendEmail(req: Request): Promise<Response> {
 
     if (resendApiKey) {
       try {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${resendApiKey}`,
+        }
+        if (payload?.data && typeof payload.data === 'object' && 'unsubscribe_url' in payload.data) {
+          const unsubUrl = (payload.data as Record<string, unknown>).unsubscribe_url as string
+          if (unsubUrl) {
+            headers['List-Unsubscribe'] = `<${unsubUrl}>`
+            headers['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click'
+          }
+        }
+
         const res = await fetch('https://api.resend.com/emails', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${resendApiKey}`,
-          },
+          headers,
           body: JSON.stringify({
             from: 'Babin Rentals <no-reply@babinrentals.com>',
             to: [targetEmail],

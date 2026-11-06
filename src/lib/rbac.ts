@@ -1025,6 +1025,15 @@ export function canManageProblemReports(role: SystemRole | null | undefined): bo
 }
 
 /**
+ * Offer campaigns to clients (T5-12, B43, B50, migration 0224).
+ * Owner · Admin · Manager only. Floor roles, Coordinator, and Client are denied.
+ */
+export function canManageOfferCampaigns(role: SystemRole | null | undefined): boolean {
+  if (!role) return false
+  return role === 'Owner' || role === 'Admin' || role === 'Manager'
+}
+
+/**
  * Role Home & Default Task Surface (W61, W79).
  * Every role opens on its own tasks; this path is where the role lands or defaults.
  */
