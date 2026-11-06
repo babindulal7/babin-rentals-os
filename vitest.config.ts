@@ -57,9 +57,10 @@ export default defineConfig({
     // Windows, including isolated runs. Threads preserve test isolation and
     // complete the same suite without changing test timeouts or assertions.
     pool: 'threads',
-    // Bound jsdom memory/CPU contention on shared workstations and in CI.
+    // Serialize jsdom workers on shared lane workstations: two workers
+    // repeatedly exceeded Vitest's worker-start budget under memory pressure.
     // Callers can override this with --maxWorkers for their own machine.
-    maxWorkers: 2,
+    maxWorkers: 1,
     /*
      * Raised from vitest's 5000ms default, 16 Aug 2026, after the same failure
      * shape appeared four separate times: `numberingPreview`,

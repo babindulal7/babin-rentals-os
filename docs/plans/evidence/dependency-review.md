@@ -101,6 +101,18 @@ to suppress a migration check.
 
 ## Verification still required
 
+A further full attempt on 6 November passed typecheck, lint and API safety
+guards, but failed at tests: 533 files passed, one failed, and fourteen workers
+failed to start. The workspace-guidance suite's first interaction test reached
+its existing 60-second limit; its following six tests also failed.
+
+The candidate now defaults to one worker. The guidance fixture preloads its
+four real lazy workspace modules during collection, before interaction budgets
+start. It keeps every workflow assertion and the existing timeouts. Typecheck,
+changed-file lint and all 56 assertions across guidance, rental-list and acoustic
+feedback suites passed after these changes. This focused result still requires
+full-suite and coverage verification on the final integrated source.
+
 The final lockfile also completed a new isolated installation on 6 November:
 `npm ci --ignore-scripts --no-audit --no-fund` installed 749 packages and exited
 zero. The copied lockfile remained byte-for-byte identical to the candidate

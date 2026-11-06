@@ -1,5 +1,41 @@
 # Progress Log
 
+## 2026-11-06 — T0-13: Serialize workers and preload the real guidance workspaces
+
+**Did**
+- Reduced the candidate's default worker count from two to one after repeated worker-startup failures under memory pressure. The full file selection, isolation and existing timeouts remain unchanged; callers can still override worker count explicitly.
+- Preloaded Packing, Handover, Return and Reset's real modules during test collection. The guidance tests retain every workflow assertion; interaction budgets begin after the lazy module code is available.
+- Updated the dependency review with the failed full attempt and the verified targeted repair.
+
+**Ruled**
+- Engineering-only test execution changes. No application behavior, fee, tax or permission policy changed; no test or assertion was removed.
+
+**Verified**
+- The preceding full attempt passed typecheck, source lint and API safety guards, then failed with 533 passing files, one failing file and fourteen worker-startup errors. The guidance suite's first test reached its existing 60-second limit; its following six tests also failed. Thirteen later gate steps were not run.
+- After the fixes, typecheck, changed-file lint and all 56 tests in the guidance, rental-list and acoustic suites passed. This is a focused current-source result, not a full-suite or coverage certificate.
+- Fresh npm audit reports 12 affected packages: zero critical/high, ten moderate and two low. The installed package/lock pair is unchanged from the successful isolated installation.
+- npm run completion returned 1 and generated the block below because full-suite/coverage verification remains incomplete.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite not run this session (pass --migrations to run). Suite: NOT VERIFIED — focused or unspecified run: 56/56 passed, 0 failed (recorded 2026-11-06T08:02:48.215Z).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Verify all 17 gates, including every test file and coverage, on the combined integration candidate before merging to main. The one-worker configuration still needs that full-run proof.
+- Complete native Electron and device acceptance; the clean installation used disabled install scripts. Review remaining supported-parent dependency constraints with Babin.
+- This branch remains doing. No merge, push, live migration or modification of Antigravity's checkout occurred.
+
 ## 2026-11-06 — T0-13: Verify a clean final installation and investigate worker startup failures
 
 **Did**
