@@ -366,21 +366,39 @@ export default function EvidenceWorkspace() {
   const [uploadProgressText, setUploadProgressText] = useState<string | null>(null)
   const [uploadErrorText, setUploadErrorText] = useState<string | null>(null)
   const [savedFiles, setSavedFiles] = useState<SavedEvidenceFile[]>([])
+  const [evidenceLoading, setEvidenceLoading] = useState(false)
+  const [evidenceError, setEvidenceError] = useState<string | null>(null)
+  const [evidenceReload, setEvidenceReload] = useState(0)
+  const [showSampleDemo, setShowSampleDemo] = useState(false)
 
   useEffect(() => {
-    if (!floorId) return
-    let active = true
+    if (!floorId) {
+      setSavedFiles([])
+      setEvidenceLoading(false)
+      setEvidenceError(null)
+      return
+    }
+    let activeEffect = true
+    setEvidenceLoading(true)
+    setEvidenceError(null)
     fetchBookingEvidenceFiles(floorId)
       .then((files) => {
-        if (active) setSavedFiles(files)
+        if (activeEffect) {
+          setSavedFiles(files)
+          setEvidenceLoading(false)
+        }
       })
-      .catch(() => {
-        if (active) setSavedFiles([])
+      .catch((err: unknown) => {
+        if (activeEffect) {
+          setSavedFiles([])
+          setEvidenceError(err instanceof Error ? err.message : String(err))
+          setEvidenceLoading(false)
+        }
       })
     return () => {
-      active = false
+      activeEffect = false
     }
-  }, [floorId])
+  }, [floorId, evidenceReload])
 
   const handleUploadFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? [])
@@ -451,7 +469,7 @@ export default function EvidenceWorkspace() {
 
   useEffect(() => {
     setSelected([])
-    setActive('p1')
+    setActive('')
     setFilter('All')
     setCategory('Packing')
     setHidden({})
@@ -460,32 +478,31 @@ export default function EvidenceWorkspace() {
     setDispatchError(null)
   }, [floorId])
 
-  /*
-   * ⛔ This was `!hidden[p.id]` — a TRUTHINESS test on the stored note, at a
-   * moment when the note had just been made optional. A blank note stores `''`,
-   * `!'' === true`, and the photo stayed in the gallery while the rail card
-   * announced it hidden and the counts still included it. The old code could not
-   * hit it (the note was mandatory, `length < 5` returned early), so making the
-   * note optional is what reopened it — the predicate has to test PRESENCE.
-   */
-  const live = PHOTOS.filter((p) => !(p.id in hidden))
+  const live = savedFiles.filter((p) => !(p.id in hidden))
+
+  useEffect(() => {
+    if (live.length > 0 && !live.some((f) => f.id === active)) {
+      setActive(live[0]?.id ?? '')
+    }
+  }, [live, active])
 
   const counts = useMemo(() => {
     const c = { Matched: 0, Review: 0, Unmatched: 0 }
-    live.forEach((p) => (c[matchState(p)] += 1))
+    live.forEach((p) => {
+      const st = p.matchState ?? 'Unmatched'
+      c[st] += 1
+    })
     return c
   }, [live])
   const total = live.length
   /** §6 invariant — Matched + Review + Unmatched = Total. */
   const reconciles = counts.Matched + counts.Review + counts.Unmatched === total
 
-  /*
-   * ⭐ FIXED 12 Aug 2026 — `category` was set by the Categories rail and by
-   * nothing else read it, so picking a category changed the highlight and not
-   * the gallery. §3.6 is explicit that the grid is filtered by stage, so the
-   * category now actually narrows `visible`, alongside the match filter.
-   */
-  const visible = live.filter((p) => (filter === 'All' || matchState(p) === filter) && p.category === category)
+  const visible = live.filter(
+    (p) =>
+      (filter === 'All' || (p.matchState ?? 'Unmatched') === filter) &&
+      (p.category === category || (STAGE_FILTERS.includes(category as (typeof STAGE_FILTERS)[number]) && p.operationStage === category)),
+  )
   const current = live.find((p) => p.id === active) ?? live[0]
   const pct = (n: number) => (total ? `${((n / total) * 100).toFixed(1)}%` : '0%')
 
@@ -614,15 +631,12 @@ export default function EvidenceWorkspace() {
               ))}
             </div>
 
-            {/* ── everything from here down is the sample set ─────────────── */}
-            <SampleEvidenceNotice bookingNo={floor.bookingNo} />
-
             {/* §3.6 header — `[Packing][Return][Damage]`, the stage the grid is
                 filtered by. Same state as the Categories rail's eleven. */}
-            <div role="group" aria-label="Filter the sample gallery by stage" style={{ display: 'flex', gap: 'var(--sp-sm)', flexWrap: 'wrap' }}>
+            <div role="group" aria-label="Filter evidence gallery by stage" style={{ display: 'flex', gap: 'var(--sp-sm)', flexWrap: 'wrap' }}>
               {STAGE_FILTERS.map((s) => {
                 const on = category === s
-                const n = live.filter((p) => p.category === s).length
+                const n = live.filter((p) => p.category === s || p.operationStage === s).length
                 return (
                   <button
                     key={s}
@@ -657,39 +671,6 @@ export default function EvidenceWorkspace() {
                   Showing {category} — chosen from the Categories rail
                 </span>
               )}
-            </div>
-
-            {/* §4 — ONE progress indicator, four steps. The four states are
-                DRAWN, not measured: no file has been uploaded, processed,
-                matched or synced in this build, so there is nothing to read
-                them from. The line beneath says so rather than letting four
-                confident pills imply a pipeline that ran. */}
-            <div style={{ ...cardStyle, padding: '12px 14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'wrap' }}>
-                {STEPS.map((s, i) => {
-                  const state = i < 2 ? 'Complete' : i === 2 ? 'In Progress' : 'Pending'
-                  const tone = state === 'Complete' ? 'var(--success-text)' : state === 'In Progress' ? 'var(--progress-text)' : 'var(--muted)'
-                  return (
-                    <span key={s} style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 1, minWidth: 150 }}>
-                      <span
-                        className="figure"
-                        style={{ width: 22, height: 22, borderRadius: 'var(--r-badge)', display: 'grid', placeItems: 'center', border: `1.5px solid ${tone}`, color: tone, fontSize: 'var(--t-meta)', fontWeight: 700, flexShrink: 0 }}
-                      >
-                        {i + 1}
-                      </span>
-                      <span style={{ minWidth: 0 }}>
-                        <span style={{ display: 'block', fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>{s}</span>
-                        <span style={{ display: 'block', fontSize: 'var(--t-meta)', color: tone, fontWeight: 600 }}>{state}</span>
-                      </span>
-                      {i < STEPS.length - 1 && <span aria-hidden style={{ flex: 1, height: 1, background: 'var(--border)', minWidth: 16 }} />}
-                    </span>
-                  )
-                })}
-              </div>
-              <p style={{ margin: '9px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.5 }}>
-                A fixed illustration of the four steps. Nothing has been uploaded, processed, matched or synced for{' '}
-                <span className="identifier">{floor.bookingNo}</span> — these four states are drawn, not measured.
-              </p>
             </div>
 
             <div
@@ -832,98 +813,71 @@ export default function EvidenceWorkspace() {
 
               {/* ── §6 / §8 centre ──────────────────────────────────────────── */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0, ...place.list }}>
-                {savedFiles.length > 0 && (
-                  <Card title={`Saved Booking Evidence (${savedFiles.length})`}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {savedFiles.map((sf) => (
+                {evidenceError && (
+                  <ErrorBanner
+                    title="Failed to load evidence files"
+                    message={evidenceError}
+                    onRetry={() => setEvidenceReload((n) => n + 1)}
+                  />
+                )}
+
+                {total > 0 && (
+                  <Card title="Processing Status">
+                    <div style={{ display: 'grid', gridTemplateColumns: phone ? 'repeat(2, minmax(0,1fr))' : 'repeat(4, minmax(0,1fr))', gap: 'var(--sp-md)' }}>
+                      {[
+                        { l: 'Total Photos', v: total, tone: 'var(--text)', bg: 'var(--card2)' },
+                        { l: 'Matched', v: counts.Matched, tone: 'var(--success-text)', p: pct(counts.Matched), bg: 'var(--st-in-bg)' },
+                        { l: 'Need Review', v: counts.Review, tone: 'var(--progress-text)', p: pct(counts.Review), bg: 'var(--st-progress-bg)' },
+                        { l: 'Unmatched', v: counts.Unmatched, tone: 'var(--danger-text)', p: pct(counts.Unmatched), bg: 'var(--st-danger-bg)' },
+                      ].map((k) => (
                         <div
-                          key={sf.id}
+                          key={k.l}
                           style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '8px 12px',
-                            background: 'var(--card2)',
-                            borderRadius: 'var(--r-sm, 6px)',
+                            padding: '11px 13px',
+                            borderRadius: 'var(--r-sm)',
                             border: '1px solid var(--border)',
-                            fontSize: 'var(--t-meta)',
+                            background: k.bg,
+                            transition: 'border-color var(--dur) ease',
                           }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <Icon name="camera" size={16} style={{ color: 'var(--success-text)' }} />
-                            <div>
-                              <div style={{ fontWeight: 600 }}>{sf.filename}</div>
-                              <div style={{ color: 'var(--muted)', fontSize: 'var(--t-caption, 12px)' }}>
-                                Stage: {sf.operationStage} · {Math.round(sf.fileSizeBytes / 1024)} KB · {sf.createdAt ? new Date(sf.createdAt).toLocaleTimeString() : ''}
-                              </div>
-                            </div>
-                          </div>
-                          <span style={{ fontSize: 'var(--t-caption, 12px)', padding: '2px 8px', borderRadius: 4, background: 'var(--success-bg)', color: 'var(--success-text)' }}>
-                            Saved
-                          </span>
+                          <div style={{ fontSize: 'var(--t-meta)', fontWeight: 500, color: 'var(--text2)' }}>{k.l}</div>
+                          <div className="figure" style={{ fontSize: 'var(--t-h2)', fontWeight: 700, color: k.tone, marginTop: 4 }}>{k.v}</div>
+                          {k.p && <div className="figure" style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)', marginTop: 2 }}>{k.p}</div>}
                         </div>
                       ))}
                     </div>
+                    <p style={{ margin: '9px 0 0', fontSize: 'var(--t-meta)', color: reconciles ? 'var(--muted)' : 'var(--danger-text)', fontWeight: reconciles ? 400 : 700 }}>
+                      {reconciles
+                        ? `Matched + Review + Unmatched = Total. Real-time count for booking ${floor.bookingNo}.`
+                        : 'Counts do not reconcile to the total.'}
+                    </p>
                   </Card>
                 )}
 
-                <Card title="Processing — sample files">
-                  <div style={{ display: 'grid', gridTemplateColumns: phone ? 'repeat(2, minmax(0,1fr))' : 'repeat(4, minmax(0,1fr))', gap: 'var(--sp-md)' }}>
-                    {[
-                      { l: 'Total Photos', v: total, tone: 'var(--text)', bg: 'var(--card2)' },
-                      { l: 'Matched', v: counts.Matched, tone: 'var(--success-text)', p: pct(counts.Matched), bg: 'var(--st-in-bg)' },
-                      { l: 'Need Review', v: counts.Review, tone: 'var(--progress-text)', p: pct(counts.Review), bg: 'var(--st-progress-bg)' },
-                      { l: 'Unmatched', v: counts.Unmatched, tone: 'var(--danger-text)', p: pct(counts.Unmatched), bg: 'var(--st-danger-bg)' },
-                    ].map((k) => (
-                      <div
-                        key={k.l}
-                        style={{
-                          padding: '11px 13px',
-                          borderRadius: 'var(--r-sm)',
-                          border: '1px solid var(--border)',
-                          background: k.bg,
-                          transition: 'border-color var(--dur) ease',
-                        }}
-                      >
-                        <div style={{ fontSize: 'var(--t-meta)', fontWeight: 500, color: 'var(--text2)' }}>{k.l}</div>
-                        <div className="figure" style={{ fontSize: 'var(--t-h2)', fontWeight: 700, color: k.tone, marginTop: 4 }}>{k.v}</div>
-                        {k.p && <div className="figure" style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)', marginTop: 2 }}>{k.p}</div>}
-                      </div>
-                    ))}
-                  </div>
-                  {/* §6 — percentages are derived, and the invariant is checked. */}
-                  <p style={{ margin: '9px 0 0', fontSize: 'var(--t-meta)', color: reconciles ? 'var(--muted)' : 'var(--danger-text)', fontWeight: reconciles ? 400 : 700 }}>
-                    {reconciles
-                      ? 'Matched + Review + Unmatched = Total. Percentages are derived, never stored. Counted over the sample files above, not over this booking.'
-                      : 'Counts do not reconcile to the total.'}
-                  </p>
-                </Card>
-
                 <Card
-                  title="Gallery — sample files"
+                  title="Evidence Gallery"
                   bodyStyle={{ padding: 0 }}
                   action={
-                    <>
-                      {(['All', 'Matched', 'Review', 'Unmatched'] as const).map((f) => {
-                        const on = filter === f
-                        return (
-                          <button
-                            key={f}
-                            type="button"
-                            onClick={() => setFilter(f)}
-                            aria-pressed={on}
-                            style={{ minHeight: 44, padding: '0 12px', borderRadius: 'var(--r-btn, 7px)', border: `1px solid ${on ? 'var(--nav-active-accent)' : 'var(--border)'}`, background: on ? 'var(--select-bg)' : 'transparent', color: on ? 'var(--select-fg)' : 'var(--text2)', fontSize: 'var(--t-meta)', fontWeight: on ? 600 : 500, cursor: 'pointer', fontFamily: 'inherit' }}
-                          >
-                            {f}
-                          </button>
-                        )
-                      })}
-                    </>
+                    total > 0 ? (
+                      <>
+                        {(['All', 'Matched', 'Review', 'Unmatched'] as const).map((f) => {
+                          const on = filter === f
+                          return (
+                            <button
+                              key={f}
+                              type="button"
+                              onClick={() => setFilter(f)}
+                              aria-pressed={on}
+                              style={{ minHeight: 44, padding: '0 12px', borderRadius: 'var(--r-btn, 7px)', border: `1px solid ${on ? 'var(--nav-active-accent)' : 'var(--border)'}`, background: on ? 'var(--select-bg)' : 'transparent', color: on ? 'var(--select-fg)' : 'var(--text2)', fontSize: 'var(--t-meta)', fontWeight: on ? 600 : 500, cursor: 'pointer', fontFamily: 'inherit' }}
+                            >
+                              {f}
+                            </button>
+                          )
+                        })}
+                      </>
+                    ) : undefined
                   }
                 >
-                  {/* §9 — the bulk bar appears on selection and states the count.
-                      HO-10: all seven were enabled and none had a handler. See
-                      BULK_UNAVAILABLE for the reason each one carries. */}
                   {selected.length > 0 && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 12px', borderBottom: '1px solid var(--border)', background: 'var(--select-bg)', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--nav-active-accent)' }}>{selected.length} selected</span>
@@ -942,125 +896,108 @@ export default function EvidenceWorkspace() {
                     </div>
                   )}
 
-                  {/* §3.6 — desktop fills, tablet is 3-up, phone is 2-up. */}
-                  <div style={{ display: 'grid', gridTemplateColumns: GRID_COLUMNS[viewport], gap: 10, padding: 'var(--sp-md)' }}>
-                    {visible.map((p) => {
-                      const st = matchState(p)
-                      const on = selected.includes(p.id)
-                      return (
-                        <div
-                          key={p.id}
-                          style={{
-                            borderRadius: 'var(--r-btn)',
-                            border: `1.5px solid ${active === p.id ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-                            overflow: 'hidden',
-                            background: 'var(--card2)',
-                          }}
-                        >
-                          <div style={{ position: 'relative' }}>
-                            <button
-                              type="button"
-                              onClick={() => setActive(p.id)}
-                              aria-label={`Preview ${p.file}, ${st}`}
-                              style={{ display: 'grid', placeItems: 'center', width: '100%', height: 92, border: 'none', background: 'var(--card2)', color: 'var(--muted)', cursor: 'pointer' }}
-                            >
-                              <Icon name="camera" size={22} />
-                            </button>
-                            <input
-                              type="checkbox"
-                              checked={on}
-                              aria-label={`Select ${p.file}`}
-                              onChange={() => setSelected((s) => (on ? s.filter((x) => x !== p.id) : [...s, p.id]))}
-                              style={{ position: 'absolute', top: 7, left: 7 }}
-                            />
-                          </div>
-                          <div style={{ padding: '8px 9px' }}>
-                            <div className="figure" style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', display: 'flex', gap: 6 }}>
-                              <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.file}</span>
-                              <span style={{ color: 'var(--muted)' }}>{p.at}</span>
+                  {evidenceLoading ? (
+                    <div style={{ padding: 'var(--sp-md)', color: 'var(--text2)', fontSize: 'var(--t-meta)' }}>
+                      Loading evidence files…
+                    </div>
+                  ) : total === 0 && !evidenceError ? (
+                    <div style={{ padding: 'var(--sp-md)' }}>
+                      <EmptyState
+                        title="No evidence photos uploaded yet"
+                        description={`No evidence photos have been uploaded for booking ${floor.bookingNo} yet. Use Take Photo or Upload Files to attach evidence.`}
+                      />
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: GRID_COLUMNS[viewport], gap: 10, padding: 'var(--sp-md)' }}>
+                      {visible.map((p) => {
+                        const st = p.matchState ?? 'Unmatched'
+                        const on = selected.includes(p.id)
+                        return (
+                          <div
+                            key={p.id}
+                            style={{
+                              borderRadius: 'var(--r-btn)',
+                              border: `1.5px solid ${active === p.id ? 'var(--nav-active-accent)' : 'var(--border)'}`,
+                              overflow: 'hidden',
+                              background: 'var(--card2)',
+                            }}
+                          >
+                            <div style={{ position: 'relative' }}>
+                              <button
+                                type="button"
+                                onClick={() => setActive(p.id)}
+                                aria-label={`Preview ${p.filename}, ${st}`}
+                                style={{ display: 'grid', placeItems: 'center', width: '100%', height: 92, border: 'none', background: 'var(--card2)', color: 'var(--muted)', cursor: 'pointer' }}
+                              >
+                                <Icon name="camera" size={22} />
+                              </button>
+                              <input
+                                type="checkbox"
+                                checked={on}
+                                aria-label={`Select ${p.filename}`}
+                                onChange={() => setSelected((s) => (on ? s.filter((x) => x !== p.id) : [...s, p.id]))}
+                                style={{ position: 'absolute', top: 7, left: 7 }}
+                              />
                             </div>
-                            {/* §7.3 — an Unmatched card shows no product and no serial. */}
-                            {p.product ? (
-                              <>
-                                <div style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                  {p.product.name}
-                                </div>
-                                <div className="identifier" style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>{p.product.serial}</div>
-                              </>
-                            ) : (
-                              <div style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)', marginTop: 4, fontStyle: 'italic', lineHeight: '1.5' }}>No product resolved</div>
-                            )}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
-                              <span style={{ display: 'inline-flex', alignItems: 'center', height: 19, padding: '0 7px', borderRadius: 5, background: TONE[st].bg, color: TONE[st].fg, fontSize: 'var(--t-meta)', fontWeight: 700 }}>
-                                {st}
-                              </span>
-                              {/* §8 — confidence is shown for Review only. */}
-                              {st === 'Review' && p.confidence && (
-                                <span className="figure" style={{ fontSize: 'var(--t-meta)', color: 'var(--progress-text)', fontWeight: 600 }}>{p.confidence}%</span>
+                            <div style={{ padding: '8px 9px' }}>
+                              <div className="figure" style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', display: 'flex', gap: 6 }}>
+                                <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.filename}</span>
+                                <span style={{ color: 'var(--muted)' }}>{p.createdAt ? new Date(p.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                              </div>
+                              {p.matchedSerial ? (
+                                <>
+                                  <div style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    Item {p.matchedSerial}
+                                  </div>
+                                  <div className="identifier" style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>{p.operationStage}</div>
+                                </>
+                              ) : (
+                                <div style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)', marginTop: 4, fontStyle: 'italic', lineHeight: '1.5' }}>Stage: {p.operationStage}</div>
                               )}
-                              {st === 'Review' && (
-                                <span style={{ marginLeft: 'auto', display: 'flex', gap: 'var(--sp-xs)' }}>
-                                  <MiniBtn label="Accept" reason={MATCH_EDIT_UNAVAILABLE.accept} />
-                                  <MiniBtn label="Change" reason={MATCH_EDIT_UNAVAILABLE.change} />
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', height: 19, padding: '0 7px', borderRadius: 5, background: TONE[st].bg, color: TONE[st].fg, fontSize: 'var(--t-meta)', fontWeight: 700 }}>
+                                  {st}
                                 </span>
-                              )}
-                              {st === 'Unmatched' && (
-                                <span style={{ marginLeft: 'auto' }}>
-                                  <MiniBtn label="Assign Product" reason={MATCH_EDIT_UNAVAILABLE.assign} />
-                                </span>
-                              )}
+                                {st === 'Review' && p.confidence && (
+                                  <span className="figure" style={{ fontSize: 'var(--t-meta)', color: 'var(--progress-text)', fontWeight: 600 }}>{p.confidence}%</span>
+                                )}
+                                {st === 'Review' && (
+                                  <span style={{ marginLeft: 'auto', display: 'flex', gap: 'var(--sp-xs)' }}>
+                                    <MiniBtn label="Accept" reason={MATCH_EDIT_UNAVAILABLE.accept} />
+                                    <MiniBtn label="Change" reason={MATCH_EDIT_UNAVAILABLE.change} />
+                                  </span>
+                                )}
+                                {st === 'Unmatched' && (
+                                  <span style={{ marginLeft: 'auto' }}>
+                                    <MiniBtn label="Assign Product" reason={MATCH_EDIT_UNAVAILABLE.assign} />
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            {p.reason && (
-                              <div style={{ fontSize: 'var(--t-meta)', color: 'var(--danger-text)', marginTop: 5, lineHeight: 1.4 }}>{p.reason}</div>
-                            )}
                           </div>
+                        )
+                      })}
+                      {visible.length === 0 && total > 0 && (
+                        <div style={{ gridColumn: '1 / -1' }}>
+                          <EmptyState
+                            title={
+                              filter === 'All'
+                                ? `No evidence files are filed under ${category}`
+                                : `No ${filter} evidence files under ${category}`
+                            }
+                            description={
+                              filter === 'All'
+                                ? 'The gallery always shows selected category/stage. Pick another from the Categories rail or the stage chips above.'
+                                : `Category is a separate filter and stays on ${category}.`
+                            }
+                            {...(filter === 'All'
+                              ? {}
+                              : { actionLabel: 'Show all match states', onAction: () => setFilter('All') })}
+                          />
                         </div>
-                      )
-                    })}
-                    {visible.length === 0 && (
-                      /*
-                       * HO-10, part 3. The action said "Clear all filters" and
-                       * cleared one: `setFilter('All')` ran and `category` was
-                       * left exactly where it was, so an operator could press
-                       * it and still see nothing.
-                       *
-                       * Category cannot be cleared — the gallery renders
-                       * `p.category === category`, so exactly one category is
-                       * always in force and there is no "no category" state to
-                       * return to. So the control now names the one filter it
-                       * clears and the copy names the one that stays.
-                       *
-                       * TODO(decision) — should the Categories rail carry an
-                       * "All Photos" row? `data/evidence.ts`'s §5.2 comment
-                       * says the eleven counts "sum to the All Photos total",
-                       * which implies the render had such a row, but §5.2's
-                       * `CATEGORY_NAMES` does not list one and no spec text in
-                       * this workspace adds it. Adding it would make "clear all
-                       * filters" honest again in one press; adding it here
-                       * would be inventing the product decision, so it is not
-                       * added. Whoever rules it: the change is one entry in
-                       * `CATEGORY_NAMES`' consumers plus dropping the
-                       * `p.category === category` clause when it is selected.
-                       */
-                      <div style={{ gridColumn: '1 / -1' }}>
-                        <EmptyState
-                          title={
-                            filter === 'All'
-                              ? `No sample files are filed under ${category}`
-                              : `No ${filter} sample files under ${category}`
-                          }
-                          description={
-                            filter === 'All'
-                              ? 'The gallery always shows exactly one category, so this is everything under it. Pick another from the Categories rail or the stage chips above.'
-                              : `Category is a separate filter and stays on ${category} — the gallery always shows exactly one category, so it cannot be cleared from here.`
-                          }
-                          {...(filter === 'All'
-                            ? {}
-                            : { actionLabel: 'Show all match states', onAction: () => setFilter('All') })}
-                        />
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  )}
                 </Card>
               </div>
 
@@ -1068,48 +1005,32 @@ export default function EvidenceWorkspace() {
                    and timestamp"; below 1280 it reflows beneath the grid so the
                    lightbox is still on screen (Rulings §7). ─────────────────── */}
               <FloorAside collapsible={desktop} side="right" width={290} label="Selected photo" style={place.rail}>
-                <Card title="Selected Photo — sample file">
+                <Card title="Selected Photo">
                   {current ? (
                     <>
                       <div aria-hidden style={{ height: 120, borderRadius: 'var(--r-btn)', background: 'var(--card2)', display: 'grid', placeItems: 'center', color: 'var(--muted)' }}>
                         <Icon name="camera" size={28} />
                       </div>
-                      <div className="figure" style={{ fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--text)', marginTop: 8 }}>{current.file}</div>
-                      {/*
-                        HO-09 — this read `{current.size} · 16 Jul 2026, {current.at}`.
-                        The date was a literal: `Photo` carries no date field at
-                        all, so there was nothing for it to be a formatting OF.
-                        Law 7 — a timestamp is an instant, and `at` is a clock
-                        string with no day and no zone behind it. The line now
-                        prints only what the record holds, and says what it
-                        does not.
-                      */}
+                      <div className="figure" style={{ fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--text)', marginTop: 8 }}>{current.filename}</div>
                       <div className="figure" style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
-                        {current.size} · {current.at}
+                        {Math.round(current.fileSizeBytes / 1024)} KB · {current.createdAt ? new Date(current.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'No timestamp'}
                       </div>
-                      <div style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>No date is recorded for this file.</div>
 
                       <div style={{ marginTop: 11, paddingTop: 9, borderTop: '1px solid var(--border)' }}>
-                        <div style={{ fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--text)', marginBottom: 7 }}>Matched Product</div>
-                        {current.product ? (
-                          [
-                            ['Product', current.product.name],
-                            ['Serial Number', current.product.serial],
-                            ['Category', current.product.category],
-                            ['Bundle', current.product.bundle],
-                            ['Source', current.source ?? '—'],
-                          ].map(([l, v]) => (
-                            <div key={l} style={{ display: 'flex', gap: 'var(--sp-sm)', padding: '3px 0', fontSize: 'var(--t-meta)' }}>
-                              <span style={{ flex: 1, color: 'var(--text2)' }}>{l}</span>
-                              <span style={{ fontWeight: 600, color: 'var(--text)', textAlign: 'right', minWidth: 0 }}>{v}</span>
-                            </div>
-                          ))
-                        ) : (
-                          <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.5 }}>
-                            No product resolved. {current.reason}
-                          </p>
-                        )}
-                        {matchState(current) === 'Review' && current.confidence && (
+                        <div style={{ fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--text)', marginBottom: 7 }}>Photo Details</div>
+                        {[
+                          ['Category', current.category],
+                          ['Stage', current.operationStage],
+                          ['Item ID', current.itemId ?? 'None'],
+                          ['Matched Serial', current.matchedSerial ?? 'None'],
+                          ['Status', current.matchState ?? 'Unmatched'],
+                        ].map(([l, v]) => (
+                          <div key={l} style={{ display: 'flex', gap: 'var(--sp-sm)', padding: '3px 0', fontSize: 'var(--t-meta)' }}>
+                            <span style={{ flex: 1, color: 'var(--text2)' }}>{l}</span>
+                            <span style={{ fontWeight: 600, color: 'var(--text)', textAlign: 'right', minWidth: 0 }}>{v}</span>
+                          </div>
+                        ))}
+                        {current.confidence && (
                           <div style={{ marginTop: 8 }}>
                             <div style={{ display: 'flex', gap: 'var(--sp-sm)', fontSize: 'var(--t-meta)' }}>
                               <span style={{ flex: 1, color: 'var(--text2)' }}>Confidence</span>
@@ -1118,42 +1039,14 @@ export default function EvidenceWorkspace() {
                             <div aria-hidden style={{ height: 5, borderRadius: 'var(--r-badge)', background: 'var(--card2)', marginTop: 5, overflow: 'hidden' }}>
                               <div style={{ width: `${current.confidence}%`, height: '100%', background: 'var(--progress)', borderRadius: 'var(--r-badge)' }} />
                             </div>
-                            <p style={{ margin: '6px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
-                              ≥{THRESHOLDS.matched}% auto-matches · {THRESHOLDS.review}–{THRESHOLDS.matched - 1}% needs a human accept.
-                              Thresholds live in Settings ▸ Evidence.
-                            </p>
                           </div>
                         )}
                       </div>
 
-                      {/* §10 — there is no hard delete here and never was; the
-                          soft delete it describes is not built either, which is
-                          what the fourth control below now says. */}
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7, marginTop: 11 }}>
-                        {/* The full-size twin of the card-level `Change` MiniBtn, and
-                            dead for the identical reason — see MATCH_EDIT_UNAVAILABLE. */}
                         <Unavailable reason={MATCH_EDIT_UNAVAILABLE.change} style={{ display: 'block' }}>
                           <Button icon="refresh" disabled>Change Product</Button>
                         </Unavailable>
-                        {/*
-                          The identity is the signed-in operator or there is no
-                          dispatch — this file had no `useAuth` at all, so the call
-                          went out with no `ActionContext` and `actions/core.ts`
-                          rejected it before `execute`. With no `.catch()` the
-                          rejection was an unhandled promise nobody saw: the operator
-                          pressed Mark as Review and the flag was never recorded.
-
-                          Nothing is committed locally on the resolved path either,
-                          because there is nothing true to commit — the gallery reads
-                          `data/evidence`'s seeded `PHOTOS`, not local state, so a
-                          badge flipped here would be this screen agreeing with
-                          itself about a write that has not happened. REVIEW_EVIDENCE
-                          is still a stub — `reviewEvidence.ts` now sets
-                          `implemented: false` explicitly, where this comment used
-                          to say the flag was merely absent — so `createAction`
-                          fails it closed and every press lands on the `.catch()`
-                          and says so.
-                        */}
                         <Button
                           icon="eye"
                           onClick={() => {
@@ -1179,28 +1072,16 @@ export default function EvidenceWorkspace() {
                         >
                           Mark as Review
                         </Button>
-                        {/* See UNMATCH_UNAVAILABLE_REASON — the verb this needs does not exist. */}
                         <Unavailable reason={UNMATCH_UNAVAILABLE_REASON} style={{ width: '100%' }}>
                           <Button icon="close" disabled>
                             Unmatch
                           </Button>
                         </Unavailable>
-                        {/*
-                          HO-10, part 2. This said **Remove**, and PK-07's
-                          precedent is that a control is named for what it does:
-                          it wrote `setRemoved(...)` and nothing else. There is
-                          no dispatch on this path, `REVIEW_EVIDENCE`'s "remove"
-                          verb is `implemented: false`, and the Archived filter
-                          its copy promised does not exist anywhere in the app.
-                          The promise itself is right and is kept, one card
-                          down, as the thing still to be built.
-                        */}
                         <Button icon="eye_off" onClick={() => { setHiding(current.id); setNote('') }}>
                           Hide on This Screen
                         </Button>
                       </div>
 
-                      {/* Law 12 — inline, persistent, never a toast. */}
                       {dispatchError && (
                         <div style={{ marginTop: 9 }}>
                           <ErrorBanner title="Nothing was recorded" message={dispatchError} />
@@ -1208,19 +1089,14 @@ export default function EvidenceWorkspace() {
                       )}
 
                       {hiding === current.id && (
-                        /* Not `--st-danger-bg`: red said "destructive" over an
-                           action that destroys nothing. Icon + heading + colour,
-                           never colour alone (Law 11). */
                         <div style={{ marginTop: 9, padding: 10, borderRadius: 'var(--r-btn)', border: '1px solid var(--border)', background: 'var(--card2)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--text)' }}>
                             <Icon name="eye_off" size={13} />
                             This hides the card in your browser. Nothing is recorded.
                           </div>
                           <p style={{ margin: '5px 0 0', fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.45 }}>
-                            {/* §10&apos;s Remove is a soft delete — the file is kept, the removal is audited, and Owner and
-                            Manager see it again in an Archived filter. None of that is built yet: REVIEW_EVIDENCE&apos;s
-                            &quot;remove&quot; verb is a stub and the app has no Archived filter. So this card comes back
-                            when the page reloads, and nobody else sees it go. */}Removing evidence is not available yet. </p>
+                            Removing evidence is not available yet.
+                          </p>
                           <input
                             value={note}
                             onChange={(e) => setNote(e.target.value)}
@@ -1249,38 +1125,33 @@ export default function EvidenceWorkspace() {
                   )}
                 </Card>
 
-                <Card title="Match Breakdown — sample files">
-                  <div style={{ display: 'flex', gap: 11, alignItems: 'center' }}>
-                    <Donut slices={slices} centreLabel="Total" centreValue={String(total)} size={96} />
-                    <Legend slices={slices} />
-                  </div>
+                <Card title="Match Breakdown">
+                  {total > 0 ? (
+                    <div style={{ display: 'flex', gap: 11, alignItems: 'center' }}>
+                      <Donut slices={slices} centreLabel="Total" centreValue={String(total)} size={96} />
+                      <Legend slices={slices} />
+                    </div>
+                  ) : (
+                    <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>No photos uploaded for this booking.</p>
+                  )}
                 </Card>
 
                 {hiddenIds.length > 0 && (
                   <Card title={`Hidden on this screen (${hiddenIds.length})`}>
                     {hiddenIds.map((pid) => {
-                      const p = PHOTOS.find((x) => x.id === pid)
+                      const p = savedFiles.find((x) => x.id === pid)
                       return (
                         <div key={pid} style={{ fontSize: 'var(--t-meta)', padding: '4px 0' }}>
-                          <span className="figure" style={{ color: 'var(--text)' }}>{p?.file ?? pid}</span>
+                          <span className="figure" style={{ color: 'var(--text)' }}>{p?.filename ?? pid}</span>
                           {hidden[pid] ? (
                             <span style={{ display: 'block', fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>{hidden[pid]}</span>
                           ) : null}
                         </div>
                       )
                     })}
-                    {/*
-                      The card used to be titled `Archived (n)` and to close with
-                      "Retained and audited. Visible to Owner and Manager in the
-                      Archived filter." — a description of a soft delete that
-                      never happened. Law 3 makes that the right behaviour, so
-                      the sentence stays; what changed is that it now says
-                      whether it has been built.
-                    */}
                     <p style={{ margin: '7px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.45 }}>
-                      {/* Nothing here was recorded and nobody else sees it — these come back on the next page load. When
-                      §10&apos;s Remove is built the file will be retained, the removal audited, and Owner and Manager
-                      will see it again in an Archived filter. That write does not exist yet. */}These changes are local to this session and will reset when the page reloads. </p>
+                      These changes are local to this session and will reset when the page reloads.
+                    </p>
                     <div style={{ marginTop: 7 }}>
                       <Button icon="eye" onClick={() => setHidden({})}>
                         Show them again
@@ -1289,20 +1160,45 @@ export default function EvidenceWorkspace() {
                   </Card>
                 )}
 
-                {/*
-                  Present tense here ("a photo is stored once… evidence locks at
-                  Closed") described a system that does not run yet, on the one
-                  screen whose whole defect was exactly that. The schema half is
-                  real — `evidence_files` and `evidence_references` are live
-                  tables — so the design is stated as the design.
-                */}
                 <div style={{ ...cardStyle, padding: 11, fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.5 }}>
                   The design: one file, many references — a photo stored once and referenced by booking, item, serial,
-                  bundle and stage, with evidence locking at status Closed. The tables exist; nothing writes to them
-                  yet.
+                  bundle and stage, with evidence locking at status Closed.
                 </div>
               </FloorAside>
             </div>
+
+            <div style={{ marginTop: 'var(--sp-md)', textAlign: 'center' }}>
+              <Button
+                onClick={() => setShowSampleDemo((v) => !v)}
+                style={{ fontSize: 'var(--t-meta)' }}
+              >
+                {showSampleDemo ? 'Hide Sample Demo' : 'View Sample Layout Demo'}
+              </Button>
+            </div>
+
+            {showSampleDemo && (
+              <div
+                role="region"
+                aria-label="Sample layout demo preview"
+                style={{
+                  marginTop: 'var(--sp-md)',
+                  padding: 'var(--sp-md)',
+                  borderRadius: 'var(--r-card)',
+                  border: '2px dashed var(--border)',
+                  background: 'var(--card2)',
+                }}
+              >
+                <SampleEvidenceNotice bookingNo={floor.bookingNo} />
+                <div style={{ display: 'grid', gridTemplateColumns: GRID_COLUMNS[viewport], gap: 10, marginTop: 12 }}>
+                  {PHOTOS.map((p) => (
+                    <div key={p.id} style={{ padding: 8, borderRadius: 'var(--r-btn)', background: 'var(--card)', border: '1px solid var(--border)' }}>
+                      <div className="figure" style={{ fontSize: 'var(--t-meta)', fontWeight: 600 }}>{p.file}</div>
+                      <div style={{ fontSize: 'var(--t-caption, 12px)', color: 'var(--muted)' }}>Sample · {p.category}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </PageBody>

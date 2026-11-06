@@ -24,6 +24,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { formatAd } from '../../../lib/bs'
 import type { FloorBooking } from '../../../lib/queries/bookings'
+import type { SavedEvidenceFile } from '../../../lib/queries/evidence'
 
 vi.mock('../../../lib/device', async (orig) => ({
   ...(await orig<typeof import('../../../lib/device')>()),
@@ -71,6 +72,19 @@ vi.mock('../../../lib/queries/bookings', async (orig) => ({
   ...(await orig<typeof import('../../../lib/queries/bookings')>()),
   fetchFloorBooking: async () => answer,
 }))
+
+let evidenceAnswer: SavedEvidenceFile[] | Error = []
+
+vi.mock('../../../lib/queries/evidence', async (orig) => {
+  const actual = await orig<typeof import('../../../lib/queries/evidence')>()
+  return {
+    ...actual,
+    fetchBookingEvidenceFiles: vi.fn(async () => {
+      if (evidenceAnswer instanceof Error) throw evidenceAnswer
+      return evidenceAnswer
+    }),
+  }
+})
 
 ;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
 
@@ -140,8 +154,23 @@ const click = async (el: HTMLElement) => {
   })
 }
 
+const MOCK_SAVED_FILE: SavedEvidenceFile = {
+  id: 'ev-test-1',
+  referenceId: 'ref-test-1',
+  storagePath: 'evidence/booking/real_photo.jpg',
+  filename: 'real_photo.jpg',
+  fileSizeBytes: 204800,
+  category: 'Packing',
+  operationStage: 'Packing',
+  createdAt: '2026-11-06T10:00:00.000Z',
+  itemId: 'item-uuid-1',
+  matchState: 'Matched',
+  matchedSerial: 'CAM-FX3-001',
+}
+
 beforeEach(() => {
   answer = FLOOR
+  evidenceAnswer = []
 })
 
 afterEach(async () => {
@@ -149,7 +178,7 @@ afterEach(async () => {
   container.remove()
 })
 
-describe('HO-09 — the booking head is read, never printed', () => {
+describe('HO-09 & UX-04 — the booking head is read, and real evidence is isolated from sample fixtures', () => {
   it('shows the query stage, not the literal "Booked"', async () => {
     await mountAt('B-812')
     expect(text()).toContain('Packed')
@@ -189,12 +218,24 @@ describe('HO-09 — the booking head is read, never printed', () => {
     expect(text()).not.toContain('3 Days')
   })
 
-  it('says the photographs are not this booking’s', async () => {
+  it('shows clean empty state when booking has 0 evidence files, without sample photos or fake pipeline', async () => {
+    evidenceAnswer = []
     await mountAt('B-812')
-    expect(text()).toContain('The photographs below are not')
-    expect(text()).toContain('No evidence has been uploaded for this booking or any other')
-    // The claim is attached to THIS booking number, not to a generic screen.
-    expect(text()).toContain('B-812')
+    expect(text()).toContain('No evidence photos uploaded yet')
+    expect(text()).toContain('No evidence photos have been uploaded for booking B-812 yet')
+    // Sample fixtures and fake pipeline are NOT on the real booking page
+    expect(text()).not.toContain('IMG_0001.JPG')
+    expect(text()).not.toContain('The photographs below are not')
+    expect(text()).not.toContain('A fixed illustration of the four steps')
+  })
+
+  it('renders real saved evidence files and updates counts', async () => {
+    evidenceAnswer = [MOCK_SAVED_FILE]
+    await mountAt('B-812')
+    expect(text()).toContain('real_photo.jpg')
+    expect(text()).toContain('Item CAM-FX3-001')
+    expect(text()).toContain('Total Photos')
+    expect(text()).toContain('1')
   })
 
   it('an unresolved booking reaches none of the sample gallery', async () => {
@@ -204,9 +245,46 @@ describe('HO-09 — the booking head is read, never printed', () => {
     expect(text()).not.toContain('IMG_0001.JPG')
     expect(text()).not.toContain('Sony FX3')
   })
+
+  it('allows viewing sample demo only when explicitly toggled', async () => {
+    evidenceAnswer = []
+    await mountAt('B-812')
+    expect(text()).not.toContain('IMG_0001.JPG')
+    const toggle = byText('View Sample Layout Demo')
+    expect(toggle.length).toBe(1)
+    await click(toggle[0] as HTMLButtonElement)
+    expect(text()).toContain("The photographs below are not B-812's")
+    expect(text()).toContain('IMG_0001.JPG')
+  })
+})
+
+describe('UX-05 — Fail-closed error handling for evidence file queries', () => {
+  it('displays error banner with retry option on query failure and recovers on retry', async () => {
+    evidenceAnswer = new Error('Database connection failed')
+    await mountAt('B-812')
+    expect(text()).toContain('Failed to load evidence files')
+    expect(text()).toContain('Database connection failed')
+    const retryBtn = byText('Retry')
+    expect(retryBtn.length).toBe(1)
+
+    // Recovery
+    evidenceAnswer = [MOCK_SAVED_FILE]
+    await click(retryBtn[0] as HTMLButtonElement)
+    for (let i = 0; i < 50 && !text().includes('real_photo.jpg'); i++) {
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 10))
+      })
+    }
+    expect(text()).toContain('real_photo.jpg')
+    expect(text()).not.toContain('Failed to load evidence files')
+  })
 })
 
 describe('HO-10 — the controls state what they do', () => {
+  beforeEach(() => {
+    evidenceAnswer = [MOCK_SAVED_FILE]
+  })
+
   /** Tick the first gallery card so §9's bulk bar appears. */
   async function selectOnePhoto() {
     const box = container.querySelector('input[type="checkbox"]')
@@ -225,8 +303,6 @@ describe('HO-10 — the controls state what they do', () => {
       for (const b of found) expect(b.disabled, `${label} must be disabled`).toBe(true)
     }
 
-    // `Unavailable` puts the reason on the wrapper as its accessible name, so
-    // a disabled control can never ship without one.
     const reasons = [...container.querySelectorAll('[aria-disabled]')].map((el) => el.getAttribute('aria-label') ?? '')
     expect(reasons.some((r) => r.includes('no zip library'))).toBe(true)
     expect(reasons.some((r) => r.includes('no PDF library'))).toBe(true)
@@ -236,7 +312,6 @@ describe('HO-10 — the controls state what they do', () => {
     await mountAt('B-812')
     expect(byText('Hide on This Screen').length).toBe(1)
     expect(byText('Hide on This Screen')[0]?.disabled).toBe(false)
-    // The only "Remove" left is the disabled bulk action, which appears with a selection.
     expect(buttons().filter((b) => (b.textContent ?? '').trim() === 'Remove' && !b.disabled).length).toBe(0)
   })
 
@@ -244,7 +319,6 @@ describe('HO-10 — the controls state what they do', () => {
     await mountAt('B-812')
     await click(byText('Hide on This Screen')[0] as HTMLButtonElement)
     expect(text()).toContain('This hides the card in your browser. Nothing is recorded.')
-    // Law 3's behaviour is stated, and stated as unbuilt — not deleted, not faked.
     expect(text()).toContain('Removing evidence is not available yet')
 
     await click(byText('Hide it')[0] as HTMLButtonElement)
@@ -253,23 +327,12 @@ describe('HO-10 — the controls state what they do', () => {
     expect(text()).not.toContain('Retained and audited.')
   })
 
-  /*
-   * ⛔ The case above asserts the RAIL and never asserted the gallery, which is
-   * exactly how the empty-note defect shipped green: "Hide it" with the note
-   * left blank stored `''`, the predicate was `!hidden[p.id]`, and `!'' === true`
-   * — so the rail announced the file hidden while the card stayed in the grid
-   * and in every count. The note had just been made optional, which is what
-   * reopened a hole the old mandatory-reason code could not reach.
-   *
-   * The blank note is the case that matters, so it is the one pinned.
-   */
   it('actually removes the card from the gallery — including when the note is left blank', async () => {
     await mountAt('B-812')
     const before = container.querySelectorAll('input[type="checkbox"]').length
     expect(before).toBeGreaterThan(0)
 
     await click(byText('Hide on This Screen')[0] as HTMLButtonElement)
-    // Deliberately type nothing: the note is optional, and blank is the regression.
     await click(byText('Hide it')[0] as HTMLButtonElement)
 
     expect(text()).toContain('Hidden on this screen (1)')
@@ -279,19 +342,18 @@ describe('HO-10 — the controls state what they do', () => {
 
   it('the empty state clears the filter it names and says which one stays', async () => {
     await mountAt('B-812')
-    // Damage holds none of the ten samples, so the gallery empties.
+    // Damage holds no files for this mock, so the gallery empties.
     const damage = buttons().find((b) => (b.textContent ?? '').startsWith('Damage'))
     await click(damage as HTMLButtonElement)
     await click(byText('Unmatched')[0] as HTMLButtonElement)
 
-    expect(text()).toContain('No Unmatched sample files under Damage')
+    expect(text()).toContain('No Unmatched evidence files under Damage')
     expect(text()).toContain('stays on Damage')
     const action = byText('Show all match states')
     expect(action.length).toBe(1)
 
     await click(action[0] as HTMLButtonElement)
-    // It cleared exactly what it said: the match filter, and not the category.
-    expect(text()).toContain('No sample files are filed under Damage')
+    expect(text()).toContain('No evidence files are filed under Damage')
     expect(byText('Show all match states').length).toBe(0)
   })
 })
