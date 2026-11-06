@@ -8,6 +8,8 @@ import { useAuth } from '../../../lib/auth'
 import { useCanViewMoney } from '../../../lib/moneyVisibility'
 import { useToast } from '../../../components/ui/Toast'
 import type { Case, CasePriority, CaseType } from '../../../lib/queries/cases'
+import { createCase } from '../../../actions/cases/createCase'
+import { generateClientUuid } from '../../../lib/dataAccess'
 
 export interface LogCaseModalProps {
   isOpen: boolean
@@ -60,11 +62,34 @@ export function LogCaseModal({
       return
     }
 
+    if (!user) {
+      setError('You must be signed in to log an incident case.')
+      return
+    }
+
     setSubmitting(true)
     setError(null)
 
     try {
-      const caseNo = `CASE-2026-${Math.floor(1000 + Math.random() * 9000)}`
+      const res = await createCase(
+        {
+          type: caseType,
+          title: title.trim(),
+          counterpartyKind: 'Client',
+          counterpartyName: client?.trim() || 'Client',
+          linkedBookingId: booking?.trim() || undefined,
+          priority,
+          status: 'Open',
+          description: description?.trim() || undefined,
+          clientUuid: generateClientUuid(),
+        },
+        {
+          role: user.role,
+          userId: user.id,
+          isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
+        },
+      )
+
       const costPaisa = money ? rupees(estimatedCostRupees) : (0 as Paisa)
       // TODO(decision): "hold amount defaults to the estimated cost" is deposit
       // logic on a page. It belongs in the engine (src/lib/money.ts, beside the
@@ -72,11 +97,11 @@ export function LogCaseModal({
       const holdPaisa = money && holdDeposit ? rupees(depositHoldRupees || estimatedCostRupees) : (0 as Paisa)
 
       const newCase: Case = {
-        id: caseNo,
+        id: res.caseNo || res.id || '',
         type: caseType,
         title: title.trim(),
         counterpartyKind: 'Client',
-        counterpartyName: client || 'Walk-in Client',
+        counterpartyName: client || 'Client',
         equipment: equipmentList.length > 0
           ? equipmentList.map((e) => ({ name: e.name, serial: e.serial ?? 'N/A' }))
           : [{ name: 'Equipment Batch', serial: 'N/A' }],
@@ -97,8 +122,8 @@ export function LogCaseModal({
         flags: ['Under Investigation'],
         linked: {
           linkedRecordKind: 'Booking',
-          linkedRecordId: booking || 'B-715',
-          clientName: client || 'Walk-in Client',
+          linkedRecordId: booking || '',
+          clientName: client || 'Client',
         },
         evidence: {},
       }

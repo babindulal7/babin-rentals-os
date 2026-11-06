@@ -53,7 +53,8 @@ export default function CouponsManager() {
   const [newStackable, setNewStackable] = useState(true)
   const [createError, setCreateError] = useState('')
 
-  const todayIso = useMemo(() => getBusinessToday().toISOString().slice(0, 10), [])
+  // Dynamically evaluate business today across Kathmandu midnight (UX-22)
+  const todayIso = getBusinessToday().toISOString().slice(0, 10)
 
   const refreshedCoupons = () => {
     setCoupons(listCoupons())
@@ -65,9 +66,15 @@ export default function CouponsManager() {
     showSuccessToast('Coupon Updated', `Status changed for voucher ${code}`)
   }
 
-  const handleCopy = (code: string) => {
-    navigator.clipboard.writeText(code)
-    showSuccessToast('Copied to Clipboard', `Voucher code ${code} is ready to paste`)
+  const handleCopy = async (code: string) => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(code)
+        showSuccessToast('Copied to Clipboard', `Voucher code ${code} is ready to paste`)
+      }
+    } catch {
+      // Do not fire false success toast on clipboard write failure (UX-23)
+    }
   }
 
   const handleTestValidate = () => {
@@ -107,7 +114,7 @@ export default function CouponsManager() {
       })
       refreshedCoupons()
       setIsModalOpen(false)
-      showSuccessToast('Coupon Created', `Promo voucher ${newCode.toUpperCase()} is now live.`)
+      showSuccessToast('Coupon Created (Simulator)', `Promo voucher ${newCode.toUpperCase()} saved to local simulator.`)
       // reset form
       setNewCode('')
       setNewValue('10')
@@ -190,6 +197,25 @@ export default function CouponsManager() {
           </Button>
         }
       />
+
+      {/* Truth-of-state disclosure (UX-03 / Owner Ruling 6 Nov 2026) */}
+      <div
+        role="status"
+        style={{
+          padding: '10px 14px',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 'var(--sp-sm)',
+          background: 'var(--surface2)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--r-card)',
+        }}
+      >
+        <Icon name="info" size={16} style={{ flexShrink: 0, marginTop: 2, color: 'var(--muted)' }} />
+        <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.45 }}>
+          <strong>Local Pricing Simulator:</strong> Codes created and tested here are stored in local browser storage for modeling checkout discounts. They are not yet synced to a server-side promotion registry across other staff devices.
+        </span>
+      </div>
 
       <KpiStrip items={kpiItems} />
 

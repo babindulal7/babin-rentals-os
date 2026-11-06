@@ -13,7 +13,7 @@ import { EmptyState } from '../../components/ui/StateViews'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
 import { formatMoney } from '../../lib/money'
-import { getCrewPayoutTdsPercent } from '../../lib/settingsStore'
+import { getSetting, getCrewPayoutTdsPercent } from '../../lib/settingsStore'
 import { useAuth } from '../../lib/auth'
 import { gateContext, canViewMoneyField, canViewPII } from '../../lib/fieldGating'
 import { IntelCard } from '../../components/ui/IntelCard'
@@ -856,19 +856,22 @@ function Tag({ label, tone }: { label: string; tone: StatusKey }) {
 
 const DAY_MS = 86400000
 
-function mondayOf(d: Date): Date {
+export function startOfWeek(d: Date, startDay: string = 'Sunday'): Date {
   const day = d.getUTCDay() // 0=Sun..6=Sat
-  const diff = day === 0 ? -6 : 1 - day
+  const diff = startDay === 'Sunday' ? -day : (day === 0 ? -6 : 1 - day)
   return new Date(d.getTime() + diff * DAY_MS)
 }
 
 function WeekCalendar({ assignments, conflictIds }: { assignments: CrewAssignment[]; conflictIds: Set<string> }) {
   /* The week shown, and the column the grid highlights, both come from ONE
-     reading of the clock taken while this renders (X-05). They were derived
-     from a module-scope `TODAY`, so the grid kept last-loaded week's columns
-     with the highlight stuck on a day that had passed. */
+     reading of the clock taken while this renders (X-05) and honor the organization's
+     configured week start day (Sunday by default in Nepal, UX-27). */
   const todayUtc = getBusinessToday().getTime()
-  const weekStart = useMemo(() => mondayOf(new Date(todayUtc)), [todayUtc])
+  const weekStartsSetting = String(getSetting('weekStarts') || 'Sunday')
+  const weekStart = useMemo(
+    () => startOfWeek(new Date(todayUtc), weekStartsSetting === 'Monday' ? 'Monday' : 'Sunday'),
+    [todayUtc, weekStartsSetting],
+  )
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => new Date(weekStart.getTime() + i * DAY_MS)), [weekStart])
   const weekEnd = days[6] as Date
 
@@ -889,7 +892,7 @@ function WeekCalendar({ assignments, conflictIds }: { assignments: CrewAssignmen
   }, [assignments, weekStart, weekEnd])
 
   const monthDay = (d: Date) => `${d.getUTCDate()} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getUTCMonth()]}`
-  const weekday = (d: Date) => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d.getUTCDay() === 0 ? 6 : d.getUTCDay() - 1]
+  const weekday = (d: Date) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()]
 
   return (
     <Card title="Crew Calendar" action={<span style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>Week view</span>}>
