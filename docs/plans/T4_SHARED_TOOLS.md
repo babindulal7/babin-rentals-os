@@ -214,7 +214,7 @@ is notified; state changes are audited; no query string, token or password in a 
 screen check.
 **Needs** — T5-01 for the notification (until then the list only).
 
-### T4-12 · Bulk edit products            status: todo · size: L · lane B · [go-live] · slips first
+### T4-12 · Bulk edit products            status: doing (lane-b/T4-12-bulk-edit-products) · size: L · lane B · [go-live] · slips first
 **What** — On the inventory list, select many products (or "all in this filter") → "**Change …**" →
 a **preview** of every product's old → new value → Save once; the result lists each product as saved
 or refused with the reason (B32, B33). Fields: **Show online** and **Only inside bundles** (T7-02),
