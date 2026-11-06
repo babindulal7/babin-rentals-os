@@ -51,6 +51,7 @@ import {
   insightsOf,
   type Warehouse,
   type StockTransfer,
+  type TransferStatus,
   type TransferType,
   type AlertKey,
 } from '../../lib/queries/warehouses'
@@ -513,14 +514,6 @@ const COLUMNS: Array<{ key: SortKey; header: string; numeric?: boolean }> = [
 ]
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50]
-
-/**
- * Why every Transfer Center step button is stated as unbuilt — see the note
- * where `advance()` used to be. One string so the Cancel and the Next Step
- * button can never drift apart in what they claim.
- */
-const TRANSFER_TRANSITION_UNAVAILABLE =
-  'Advancing a transfer is not built — src/actions/inventory has no state-change action for a stock transfer, and the create action is not one. This button would move nothing.'
 
 /* ── screen ────────────────────────────────────────────────────────────── */
 

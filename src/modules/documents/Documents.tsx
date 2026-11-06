@@ -45,6 +45,7 @@ import {
   missingFor,
   type CategoryKey,
   type DocRow,
+  type ExpiringDoc,
   type RelatedKind,
   type SortKey,
 } from '../../lib/queries/documents'
@@ -306,7 +307,7 @@ export default function Documents({
         what,
         when,
         action,
-        finance: d.finance,
+        ...(d.finance ? { finance: true } : {}),
       }
     })
   }, [money, allDocs])

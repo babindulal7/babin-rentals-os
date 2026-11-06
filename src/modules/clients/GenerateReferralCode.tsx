@@ -165,26 +165,7 @@ export default function GenerateReferralCode({ embedded = false, onDone }: Gener
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
       <ScreenHeader
         embedded={embedded}
-        title={
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--sp-sm)', flexWrap: 'wrap' }}>
-            <span>Generate Referral Code</span>
-            <span
-              style={{
-                fontSize: 'var(--t-caption)',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                padding: '2px 8px',
-                borderRadius: 'var(--r-badge)',
-                background: 'rgba(234, 179, 8, 0.15)',
-                color: 'var(--warn-text)',
-                border: '1px solid var(--warn-border)',
-              }}
-            >
-              Preview / Specification Only
-            </span>
-          </span>
-        }
+        title="Generate Referral Code"
         description="Compose and preview a referral code pattern. Code issuance and storage are not connected in this build — codes composed here cannot be issued to clients."
         actions={
           <PageActions

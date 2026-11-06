@@ -86,15 +86,6 @@ import './inventory.css'
  * reflow, not hide).
  */
 
-/**
- * Named reason, per the Unavailable rule: no `src/actions/` file exists for
- * confirming a unit missing, and no capability string is declared for it —
- * so the assertion cannot land anywhere. The old build set a local flag and
- * showed the badge, which is a fabricated write on what is now a real record.
- */
-const CONFIRM_MISSING_UNAVAILABLE =
-  'Confirming a unit missing is not wired yet — no confirm-missing action exists, so the assertion would not be recorded. Phase 2 adds the write; until then the unit stays Unverified, which is the truthful state.'
-
 type FilterMode = 'all' | 'verified' | 'unverified' | 'missing' | 'unexpected'
 
 /** Which screen-state each narrowing chip means. The outcome it sends is `OUTCOME_OF_STATE`'s single mapping. */

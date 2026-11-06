@@ -213,6 +213,6 @@ describe('transitionStockTransfer action (#15 Stock Transfer Lifecycle)', () => 
     expect(update?.patch.cancelled_by).toBe('user-wh-1')
     expect(update?.patch.cancelled_at).toBeDefined()
 
-    expect(events[0]?.payload.newStatus).toBe('Cancelled')
+    expect((events[0]?.payload as { newStatus?: string })?.newStatus).toBe('Cancelled')
   })
 })
