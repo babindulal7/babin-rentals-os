@@ -1,5 +1,90 @@
 # Progress Log
 
+## 2026-11-06 — Top 10 UI/UX Repairs: Scanner Floor Outcome, QR/Barcode Generation, Real Evidence Files, Push Truth, Freshness Timestamps, Calendar Feeds, Touch Targets (Lane B)
+
+**Did**
+- **UX-01 (Global Scanner / Floor Recognition vs Custody):**
+  - Updated `src/components/shell/ScannerFab.tsx` to distinguish recognition from executed custody.
+  - Mapped scans on floor routes to active ambient inputs (`.floor-scanner-input`) so the authoritative workspace form processes the custody action.
+  - When no active input is present, explicitly labels scans as `"Item recognized — not yet checked in/out: <label> (<serial>)"` with a dedicated 587Hz chime and informative badge, never playing the completion chime or claiming custody changed.
+  - Added fail-closed offline status check (`navigator.onLine === false`) returning `"Offline — scan not recorded: <code>"`.
+  - Added duplicate cooldown warning (`"<code> already scanned — wait 2s"`) preventing rapid double writes.
+  - Added permanent `<div className="sr-only" role="status" aria-live="polite" aria-atomic="true">` region for screen reader accessibility.
+  - Added unit test suite `src/components/shell/__tests__/ScannerFab.floorScan.test.tsx` (7 tests).
+- **UX-02 (Genuine QR/Barcode Label Generator):**
+  - Updated `src/modules/tools/QrGeneratorModal.tsx` and `src/lib/labelPrinter.ts` to replace pseudo-random SVGs with authentic `qrcode` and `jsbarcode` Code 128 generators.
+  - Honors active symbology selection (`format: 'qr' | 'barcode' | 'both'`) during print execution.
+  - Added unit test suite `src/lib/__tests__/labelPrinter.test.ts` (7 tests).
+- **UX-03 (Inventory Unit Editor Persistence):**
+  - Audited PR #90 and active Codex-1 commits on `lane-a/T2-17-unit-editor-permissions-preflight` (`604a769d`, `e94837b3`, `2e207042`).
+  - Confirmed `updateUnit` action, permission checking, and optimistic revision guards are implemented in Lane A; avoided duplicate commits per AGENTS.md Lane rules.
+- **UX-04 & UX-05 (Booking Evidence Cleanliness & Fail-Closed File Reads):**
+  - Updated `src/modules/rentals/EvidenceWorkspace.tsx` to remove misleading `SampleEvidenceNotice`, hardcoded 10 sample photos, and drawn 4-step pipeline graphic from real booking context.
+  - Rendered genuine booking evidence from `savedFiles` with real stage/category photo counts, showing an honest `EmptyState` when 0 photos exist.
+  - Updated `src/lib/queries/evidence.ts` `fetchSavedEvidenceFiles` to throw descriptive error instead of treating failures as `[]`; displays `ErrorBanner` with functional `onRetry` callback.
+  - Isolated sample photos into an explicit developer demo toggle with warning disclaimers.
+  - Added unit test suites `src/lib/queries/__tests__/evidence.test.ts` (7 tests) and `src/modules/rentals/__tests__/evidenceWorkspace.test.tsx` (15 tests).
+- **UX-06 (Push Notification Subscription Truth & Config Guard):**
+  - Updated `src/lib/push.ts` to remove placeholder `push.example.com` endpoints and verify `isVapidConfigured()` before offering push subscriptions.
+  - Updated `src/modules/settings/sections/NotificationPreferencesControl.tsx` to verify active subscription via `registration.pushManager.getSubscription()` before indicating active status.
+  - Added unit test suite `src/modules/settings/sections/__tests__/NotificationPreferencesControl.push.test.tsx` (6 tests).
+- **UX-07 (Data Freshness Timestamp NaN & Stale Badge):**
+  - Updated `src/components/ui/DataAgeBadge.tsx` with strict timestamp validation preventing `NaN` minutes or false fresh badges on invalid/skewed dates.
+  - Displays "Time unavailable" with warning badge styling and manual refresh button; handles epoch 0 cleanly.
+  - Added unit test suite `src/components/ui/__tests__/DataAgeBadge.test.tsx` (15 tests).
+- **UX-08 (Calendar Feed URL Recovery & Revocation Guard):**
+  - Updated `src/modules/settings/sections/CalendarFeedControl.tsx` to hide dead copy/open buttons when feed is active but token is unrecoverable from session memory.
+  - Handled clipboard promise rejections gracefully; added role-gated token revocation with confirmation dialog.
+  - Added unit test suite `src/modules/settings/sections/__tests__/CalendarFeedControl.test.tsx` (5 tests).
+- **UX-09 (Expense Receipt Uploads Audit):**
+  - Confirmed `Expenses.tsx` truthfully renders `<Unavailable reason={ATTACHMENT_UNAVAILABLE}>`. Schema audit verified no `receipts` or `expenses` storage bucket exists; refusal is honest per Law 16 / Rule N-5.
+- **UX-10 (Touch Targets & FilterBar Semantics):**
+  - Updated `src/modules/rentals/EvidenceWorkspace.tsx` to elevate category filter buttons from 30px to `minHeight: 44px`.
+  - Updated `src/components/ui/FilterBar.tsx` to mark inert quick options as `disabled={!canSelect}` without fake `aria-pressed`.
+  - Added unit test suite `src/components/ui/FilterBar.test.tsx` (3 tests).
+
+**Ruled**
+- Law 16: Never claim an item was packed, handed over, or returned merely because an audio tone played or an asset code was resolved. Global scanner lookups must clearly identify themselves as non-authoritative recognition unless dispatched to an active floor workspace action.
+- Truthfulness of State: Stale tokens must not show copy actions; unconfigured VAPID must not claim active push deliverability; sample photos must not contaminate real booking evidence; invalid dates must never claim fresh data.
+- Rule N-5: No live Supabase migrations or storage bucket creation without explicit owner authorization; unavailable capabilities must fail closed with truthful refusal copy.
+
+**Verified**
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- Vitest suites:
+  - `src/components/shell/__tests__/ScannerFab.floorScan.test.tsx` — 7/7 passed.
+  - `src/components/shell/__tests__/ScannerFab.itemCard.test.tsx` — 3/3 passed.
+  - `src/components/shell/__tests__/ScannerFab.viewport.test.tsx` — 4/4 passed.
+  - `src/components/shell/__tests__/ScannerFab.loading.test.tsx` — 1/1 passed.
+  - `src/modules/rentals/__tests__/evidenceWorkspace.test.tsx` — 15/15 passed.
+  - `src/lib/queries/__tests__/evidence.test.ts` — 7/7 passed.
+  - `src/components/ui/__tests__/DataAgeBadge.test.tsx` — 15/15 passed.
+  - `src/modules/settings/sections/__tests__/CalendarFeedControl.test.tsx` — 5/5 passed.
+  - `src/lib/__tests__/labelPrinter.test.ts` — 7/7 passed.
+  - `src/components/ui/FilterBar.test.tsx` — 3/3 passed.
+  - `src/modules/settings/sections/__tests__/NotificationPreferencesControl.push.test.tsx` — 6/6 passed.
+  - `src/lib/__tests__/push.test.ts` — 11/11 passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 219 files · check:pglite 219/219 applied, 0 failed (recorded 2026-11-06T08:33:28.510Z). Suite: Historical suite: 6713/6713 passed, 0 failed (recorded 2026-11-06T05:33:20.763Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-06T08:34:33.315Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Lane A PR #90 (Unit editor persistence) merge by Babin.
+- Dedicated storage bucket migration for expense receipt uploads (UX-09) if desired.
+- Physical iPad floor testing for scanner camera & wedge burst workflows.
+
 ## 2026-11-06 — UI/UX Truthfulness of State: Warehouse, Coupons Simulator, Scanner Feedback, Push Subscriptions, Sunday Week Start, Clipboard Verification & Cases Intake (Lane B)
 
 **Did**
