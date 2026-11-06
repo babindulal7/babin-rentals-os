@@ -99,7 +99,24 @@ coverage include list is retained. The [Vite 6 migration guide](https://v6.vite.
 documents the changes from Vite 5. No application configuration was changed merely
 to suppress a migration check.
 
-## Verification still required
+## Integrated verification — 6 November 2026
+
+The isolated candidate codex/owned-work-integration-20261106 passed all 17 local
+gates in CI order, including typecheck, lint, full suite, database/financial/
+security/lifecycle/contracts checks, production build and full coverage. Both
+full passes completed 6,759/6,759 tests in 558 files with no worker-start errors.
+The serial worker and real-module preload changes retained existing assertions
+and timeouts. Current source SHA256:
+
+`c30092384f30fd82f3c60776b6185c53d7adc911c9f490422933411415d2a5e1`
+
+Fresh audit: 12 findings (0 critical, 0 high, 10 moderate, 2 low). Remaining
+paths and parent constraints above still apply. Both HTML entry documents and
+PWA generation passed (283 precache entries). Native Electron launch, staging
+and device acceptance remain unverified. Earlier attempts below are historical
+evidence, not the current candidate result. Babin merges locally; card stays doing.
+
+## Earlier verification attempts and acceptance still required
 
 A further full attempt on 6 November passed typecheck, lint and API safety
 guards, but failed at tests: 533 files passed, one failed, and fourteen workers

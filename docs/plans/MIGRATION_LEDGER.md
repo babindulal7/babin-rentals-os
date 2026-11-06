@@ -66,8 +66,8 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0220 | T5-09 | push-subscriptions | lane-b/T5-09-phone-pop-ups | written |
 | 0221 | T1-17 | two-step-sign-in | lane-a/T1-17-two-step-sign-in-for-every | claimed; branch not merged |
 | 0222 | T3-smart-reservations | repair-confirm-booking-atomic-and-reservation-dedup | audit/system-design-consistency-20261105 | verified |
-| 0223 | T3-03 | unique-active-cancellation-fee-thresholds | lane-c/T3-03-cancellation-fee-tiers | verified locally |
-| 0224 | T3-07 | opening-balances-append-only | lane-c/T3-07-daily-closing | verified locally (219/219 migrations, 64/64 lifecycle); not applied live |
+| 0223 | T3-03 | unique-active-cancellation-fee-thresholds | lane-c/T3-03-cancellation-fee-tiers | verified locally in integration (221/221 migrations, 65/65 lifecycle); not applied live |
+| 0224 | T3-07 | opening-balances-append-only | lane-c/T3-07-daily-closing | verified locally in integration (221/221 migrations, 65/65 lifecycle); not applied live |
 
 ## Expected migrations (not yet claimed)
 

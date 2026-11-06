@@ -1,5 +1,74 @@
 # Progress Log
 
+## 2026-11-06 — Owned-work integration: all 17 local gates pass on combined source
+
+**Did**
+- Finished the isolated candidate codex/owned-work-integration-20261106 from committed main 66ec690a. Combined only the four owned work branches (T0-13, T3-03, T3-07 and T9-01); main and Antigravity's working files remain untouched.
+- Resolved integration conflicts while retaining main's canonical-label tests, both retirement refusal guards, L63 immutable opening-balance history and L68 cancellation-tier permissions/uniqueness. Retained every baseline PROGRESS entry verbatim, including its spacing.
+- Updated the dependency verification note and migration ledger with combined-source results. PLAN.md's shared-file changes remain the O-22/O-23/O-24 decision index only.
+
+**Ruled**
+- No product, role, fee, tax or cutover-date decision was made. All four cards remain doing. This is a locally committed review candidate; Babin merges locally. No push, main merge, live migration or hosted-data mutation was performed.
+
+**Verified**
+- npm run gates exited 0: all 17 CI-equivalent checks passed in order. The full mock suite and full coverage suite each passed 6759/6759 tests in 558 files, with no skipped tests or worker startup errors. No assertion or timeout was relaxed for the serial-worker/preload fix.
+- Current source SHA256: c30092384f30fd82f3c60776b6185c53d7adc911c9f490422933411415d2a5e1. Full-suite receipt 832585c1-ab0e-4817-847e-5e3ed6b31e00; coverage receipt 4623be4f-3ffc-4c50-acd7-52156be3dabb. Both are valid, successful, full-suite receipts with sourceChanged=false.
+- Local PGlite rebuilt 221/221 migrations; lifecycle 65/65, zero failed. Migrations 0223/0224 are VERIFIED locally, not APPLIED or PRODUCTION-VERIFIED. RPC contracts passed 64/64 assertions; partial Return, financial integrity and authenticated security passed.
+- Production Vite 6.4.5 build passed; index.html, marketing.html and generated service worker are present with 283 precache entries. No native Electron launch or device acceptance is claimed.
+- The cutover comparer separately passed 5/5 Node tests. Fresh npm audit reports 12 findings: 0 critical, 0 high, 10 moderate, 2 low (audit exits 1 because these remain). The dependency paths and parent-version constraints are documented in docs/plans/evidence/dependency-review.md.
+- npm run completion exited 0 with current-source matching receipts. The generated structural figure below is not a delivery percentage.
+
+```text
+[gates] Results
+  PASS  Typecheck  82.6s
+  PASS  Lint source  65.5s
+  PASS  Local API verification safety guards  1.8s
+  PASS  Test (offline mock backend)  670.4s
+  PASS  Migrations build from scratch  9.5s
+  PASS  Booking and invoice financial integrity  7.2s
+  PASS  Authenticated security and branch-Reset regressions  31.2s
+  PASS  Lifecycle  10.3s
+  PASS  Record sections, equipment lifecycle and membership RPC contracts  9.6s
+  PASS  Verified partial serial and quantity Return reservations  8.5s
+  PASS  PROGRESS.md carries Completion and Remaining  0.8s
+  PASS  Completion receipt integrity  0.3s
+  PASS  Page shell design invariants  1.0s
+  PASS  Staff UI contains no developer notes  3.3s
+  PASS  Contrast (WCAG AA, light + dark)  0.7s
+  PASS  Build  165.9s
+  PASS  Coverage (offline mock backend)  743.6s
+[gates] PASS
+```
+
+```text
+=============================== Coverage summary ===============================
+Statements   : 63.7% ( 27931/43847 )
+Branches     : 56.7% ( 27257/48069 )
+Functions    : 54.69% ( 5743/10500 )
+Lines        : 65.97% ( 25082/38015 )
+```
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 65 / 65 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 221 files · check:pglite 221/221 applied, 0 failed (recorded 2026-11-06T13:42:04.405Z). Suite: PASS — 6759/6759 passed, 0 failed (recorded 2026-11-06T13:58:25.683Z); source fingerprint matches.
+Coverage suite: PASS — 6759/6759 passed, 0 failed (recorded 2026-11-06T13:58:25.683Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-06T13:42:52.913Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T3-03: actual fee invoice/reversal settlement still needs implementation, O-10's real tier values and O-22's written VAT classification. VAT registration and the absence of an accountant are already recorded.
+- T3-07: complete the per-account daily-closing ledger, carry-forward and shift schedule after O-24 confirms expense-payment authority; allocate legacy Paid expenses to actual accounts/payment dates. Current report corrections do not complete daily closing.
+- T9-01: fresh complete exports and identity reconciliation, real 20-product quote comparisons, staging import acceptance and O-23's actual billing date remain. No import was authorized or performed.
+- Complete changed-screen checks at phone/tablet/desktop sizes, staging/hosted acceptance and native desktop launch. These are not certified by unit, local PGlite or build checks. Babin reviews the local candidate before merging.
+
 ## 2026-11-06 — Owned-work integration candidate: resolve conflicts before full verification
 
 **Did**
@@ -2452,7 +2521,6 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `npm run lint`: passed with 0 warnings (`eslint src --max-warnings 0`).
 - `npm run build`: built in 10m 52s, 8154 modules transformed, dist generated cleanly.
 - `npm run completion`: counted and verified.
-
 ## 2026-11-03 — Full verification gate run: ALL GREEN (typecheck → test → check:pglite + check:lifecycle → build)
 
 **Did**
@@ -2615,7 +2683,6 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `check:pglite` 195/195 applied, 0 failed, and `check:lifecycle` 48/48 green — **in the same run**, so 0202 is `verified` (R-35). Neither run has a step that reads `staffDiscountPercent` as Warehouse; the function change is proven to build and not to break any existing step, not proven by its own assertion.
 - 271 tests pass (rbac, Finance, settings); typecheck, lint, `lint:ui-copy`, `lint:progress` green on the tree before the last merge.
 - Not run: a full `npm test` on this commit (last full run: 6,422 of 6,423, the one failure since fixed), `build`, device checks.
-
 ## 2026-11-03 — T4-08: One-time rider link review fixes R1–R5 applied and verified
 
 **Did**
@@ -2918,7 +2985,6 @@ Migrations 189 files · check:pglite not run this session. Counted by `npm run c
 - **T7-02…T7-11 are unblocked on the spec** but still need their own cards built; T7-03 needs T1-05 and T1-09, T7-02 needs T1-07.
 - The four `lint:ui-copy` violations above need their owner.
 - Every other open card belongs to a build lane (Codex-1, Gemini, Codex-2) or to Babin; Claude's role for those is review (PLAN §6), so they were not started here.
-
 ## 2026-11-01 — Audit §15 follow-ups: Law 15 copy fix + the three lint errors — suite down to 4 failing tests
 
 **Did**
@@ -5168,7 +5234,6 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - Whole-project `tsc`, `lint:ui-copy` and `build` on a machine with free memory.
 
 <!-- gemini-implementation-review-20261024:start -->
-
 ## 2026-10-24 — Independent review of Gemini implementation
 
 **Did**
@@ -5368,7 +5433,6 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 
 
 <!-- booking-operations-20261024:delivery-start -->
-
 ## 2026-10-24 — Booking Operations v1.1 local recovery and verification
 
 **Did**
@@ -5414,7 +5478,6 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 <!-- booking-operations-20261024:delivery-end -->
 
 <!-- coss-booking-search-20261024:start -->
-
 ## 2026-10-24 — New Rental coss search and Operations status readback
 
 **Did**
@@ -5694,6 +5757,7 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - Obtain a clean complete current-source suite and current coverage; the Calendar recheck alone does not certify all app changes. Recheck all gates affected by later source changes and verify current layouts across broader routes/roles and actual desktop/iPad/mobile hardware.
 - Hosted JWT/Storage acceptance, legacy outbox ownership/recovery, shared operational backends, VAT/document/evidence decisions, restoration and measured performance remain open in docs/OPEN_DECISIONS.md and docs/REMAINING_WORK.md. No publication or hosted application is authorized.
 
+
 ## 2026-10-23 16:10 NPT — Intentional 300ms Global Hover Delay Everywhere
 
 **Did**
@@ -5888,6 +5952,7 @@ Pending the final `npm run completion` output after verification; no current per
 - Finish the final ordered gates and refreshed Operations/Cases browser evidence, then replace this pending verification/counter block with executed results.
 - Physical-device and hosted acceptance remain outside these local mock checks; the repository's existing release HOLD remains governed by `docs/CURRENT_STATE.md`.
 
+
 ## 2026-10-23 02:49 NPT — ASTRA Reset cleaner integrity follow-up
 
 **Did**
@@ -5926,6 +5991,8 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - Original offline revision/branch provenance and legacy recovery; full role/branch/active API acceptance and Technician Pack contract; real financial attribution and shared operational backend decisions remain open in OPEN_DECISIONS §§13–17.
 - Hosted JWT/Storage, every route/device including 430px and physical iPad, scanner/signatures/PDF/integrations, real PostgreSQL concurrency, restoration and measured p75 performance acceptance remain open.
 - No GitHub push/PR/merge, live Supabase operation or deployment by this task. Existing project retained.
+
+
 
 ## 2026-10-23 — Repeated information buttons removed (page footer and per-field (i))
 
@@ -6192,6 +6259,8 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
   - Audit Bikram Sambat (BS) date picker edge cases around Chaitra/Baisakh boundaries.
   - Review screen reader ARIA roles and labels on all newly code-split modals and drawers.
 
+
+
 ## 2026-10-22 — Performance & Bundle Optimization (Pillar 3): Code-Splitting, Vendor Isolation & Critical Path Reduction
 
 **Did**
@@ -6245,6 +6314,7 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
   - Audit Bikram Sambat (BS) date picker edge cases around Chaitra/Baisakh boundaries.
   - Review screen reader ARIA roles and labels on all newly code-split modals and drawers.
 
+
 ## 2026-10-22 — "Fix all": the crew timesheet reads real data; the hard-coded Membership matrix is gone
 
 **Did**
@@ -6284,6 +6354,7 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - The Crew Assist rail row "Timesheets outstanding: —" is unchanged: "outstanding" has no ruled definition.
 - Clients ▸ Membership still renders the hard-coded `PLANS` catalogue and comparison table; the same 0005 rule applies. A separate, larger change.
 - The mock has no mapping for `crew_bookings_v` / `crew_members_v`, so mock mode shows an empty timesheet unless those rows are seeded.
+
 
 ## 2026-10-22 — PDF ASCII Normalization, Global Search Code-Splitting & Rentals Compact Layout
 
@@ -6432,6 +6503,7 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - Proceed to Pillar 2 (Delivery Workspace & Dexie outbox persistence) or Pillar 3 (bundle optimization & code-splitting).
 - Physical device testing (budget 360px Android, 820px iPad) and live Supabase migration cutover remain pending under Rule N-5.
 
+
 ## 2026-10-22 — Review finding 4: saved invoice company identity
 
 **Did**
@@ -6505,6 +6577,7 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - The saved f25235dd checkpoint passes the required local gates. Later source edits, including confirmation completeness, require fresh verification; see ASTRA_CONFIRM_LINES_2026-10-21.json. This is not hosted or complete device acceptance.
 - Finish physical-device and offline acceptance, nested drawers, complete tablet workflows and remaining layout/contrast variants. Desktop Today footer, clean 820px Today layout and 360px booking-header/catalogue browser regressions passed; broader screenshots remain scoped observations.
 - Review pre-commit confirmation line-count completeness; complete shared operational tools and explicit legacy outbox ownership recovery. VAT classification, document numbering/atomicity, floor evidence persistence, hosted JWT/Storage and measured performance remain open in docs/REMAINING_WORK.md.
+
 
 ## 2026-10-21 — Premium design recovery: local presentation and browser verification
 
@@ -6626,6 +6699,8 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 ### Remaining
 - Finish current-source full suite, coverage, SQL gates, lints and live-default build; repair any failures and refresh this entry with actual results.
 - Shared backends and legacy ownership recovery; VAT/per-unit revenue/branch scope acceptance; authenticated hosted API, device, document/evidence and performance acceptance remain open. Production launch HOLD. No GitHub write, deployment or live Supabase operation was performed.
+
+
 
 ## 2026-10-21 — Review findings 1–3: honest floor shortcuts and recorded invoice exports
 
@@ -7741,6 +7816,7 @@ Counted by `npm run completion`, not typed.
 ## Remaining
 - Continue field testing on touch devices at standard breakpoints (390px phone, 800px portrait tablet, 1194px landscape tablet).
 
+
 ## 2026-10-20 — ASTRA Phase 0 integrated into current main
 
 **Did**
@@ -7832,6 +7908,7 @@ Counted by `npm run completion`, not typed.
 - Seven tests fail on `main` itself (listed above), independent of this work.
 - Crew Timesheet still runs on fabricated rows; rebuild on the migration-0003 crew-day table before giving it an entry point.
 
+
 ## 2026-10-19 — Rentals header at 768px: duplicate filter toggle and an over-wide search box
 
 **Did**
@@ -7862,6 +7939,7 @@ UI-only change; no migration or action touched.
 - The 15 re-layered z-index overlays from the earlier entry are still not driven in a browser.
 - Phone width (390/320) not re-measured on Rentals after this change.
 - Physical iPad Safari and the status × role × persistence matrix remain untested.
+
 
 ## 2026-10-17 — Phase 6 Task 3.4: the 13 Law 16 reports — real figures, then five states
 
@@ -7936,6 +8014,7 @@ Counted by `npm run completion`, not typed.
 - 768px header crowding between Search and More (13–16 Oct notes) not re-measured here.
 - `RentalsOperationsHeader` test failures: confirm pre-existing on `main`.
 - Physical iPad Safari and the status × role × persistence matrix remain untested.
+
 
 ## 2026-10-16 — Phase 6 Task 3.4: five states on the routed secondary views (inventory + fixes)
 
@@ -8154,6 +8233,8 @@ Counted by `npm run completion`, not typed. (Its suite line is main's committed 
 - Pre-existing on main: `lint:shell` fails at `Bundles.tsx:1494` (36px control).
 - Observed, not chased: a route in the sweep rewrote the user's sidebar preference (`br-collapsed:sidebar:main`). Reports titles truncate at their own zone caps. At 911×387 the first table row starts below the fold.
 - Physical-laptop confirmation belongs to Task 4.1. Landing this on `main` needs Babin's go-ahead.
+
+
 
 ## 2026-10-18 — Booqable audit adoptions (duplication hygiene BQ-207, shortage action BQ-408, dashboard deep links BQ-205)
 
@@ -8426,6 +8507,8 @@ Counted by `npm run completion`, not typed.
 - Suite cache still reads the older 4646 count; the fresh full run supersedes it on the next counter refresh. Full `lint` rerun on a faster machine.
 - Physical iPad/Safari + native zoom; app-wide status/role matrix; open product calls (§4.64/§4.65, D-2); border-merge decision.
 
+
+
 ## 2026-10-17 — Operations View Light/Glass mode audit remediation & floor workflow refinement
 
 **Did**
@@ -8564,7 +8647,6 @@ Counted by `npm run completion`, not typed.
 ### Remaining
 - Authenticated Warehouse/Accounts/Manager PostgREST, payload and card DOM checks require real application sessions. No note contents, custom-field values or financial rows were read through the administrative connector.
 - Isolated staging acceptance, physical iPad/Safari, and production release sign-off remain pending the existing backup/application process.
-
 ## 2026-10-16 — Smart Intel role acceptance preflight
 
 **Did**
@@ -8594,7 +8676,6 @@ Counted by `npm run completion`, not typed.
 ### Remaining
 - Real Warehouse/Accounts/Manager card acceptance requires the app URL and authenticated sessions. Staging sign-off additionally requires an active isolated project and known-record fixtures; the provided origin is production.
 - Physical iPad/Safari verification remains pending an available device/session. Deployment and production verification remain pending the established backup/application process.
-
 ## 2026-10-16 — Phone header acceptance and staging access preflight
 
 **Did**
@@ -8689,7 +8770,6 @@ Counted by `npm run completion`, not typed.
 ### Remaining
 - Live Supabase role/JWT acceptance and production verification remain pending the established application process; this pass used an isolated local mock origin.
 - Physical iPad/Safari acceptance remains pending. Other sessions' in-progress changes are preserved.
-
 ## 2026-10-16 — New Rental validation, draft restore and confirmation acceptance
 
 **Did**
@@ -8784,6 +8864,7 @@ Counted by `npm run completion`, not typed.
 - Production deployment of migrations 0163 and 0164 following BACKUP_PROTOCOL.md by Babin.
 - Continue responsive verification of floor stage workspaces and tablet header layouts across remaining secondary modules.
 
+
 ## 2026-10-16 — Eliminate jumping buttons, rogue hover/active transforms, and border layout shifts across app
 
 **Did**
@@ -8837,6 +8918,7 @@ Counted by `npm run completion`, not typed.
 - Production deployment of migrations 0163 and 0164 following BACKUP_PROTOCOL.md by Babin.
 - Continue responsive verification of floor stage workspaces and tablet header layouts across remaining secondary modules.
 
+
 ## 2026-10-16 — Enhance UI, color palette, and ergonomics across All Creation Actions subsystem
 
 **Did**
@@ -8883,6 +8965,7 @@ Counted by `npm run completion`, not typed.
 ### Remaining
 - Production deployment of migrations 0163 and 0164 following BACKUP_PROTOCOL.md by Babin.
 - Continue responsive verification of floor stage workspaces and tablet header layouts across remaining secondary modules.
+
 
 ## 2026-10-16 — Responsive UI/UX layout improvements: header clearance at 768px, 44px/56px touch ergonomics, and mobile overflow fixes
 
@@ -8934,6 +9017,7 @@ Counted by `npm run completion`, not typed.
 - Production deployment of migrations 0163 and 0164 following BACKUP_PROTOCOL.md by Babin.
 - Continue responsive verification of floor stage workspaces and tablet header layouts across remaining secondary modules.
 
+
 ## 2026-10-16 — Eliminate jumping buttons across the app: enforce tactile physics without transforms or border jumps
 
 **Did**
@@ -8982,6 +9066,7 @@ Counted by `npm run completion`, not typed.
 - Production deployment of migrations 0163 and 0164 following BACKUP_PROTOCOL.md by Babin.
 - Continue responsive verification of floor stage workspaces (Pack, Handover, Return, Reset) and tablet header search/more menu layout.
 
+
 ## 2026-10-16 — Fix New Booking quote-save fallback: equipment line description preservation and robust availability product mode queries
 
 **Did**
@@ -9020,6 +9105,7 @@ Counted by `npm run completion`, not typed.
 - Production deployment of migrations 0163 and 0164 following BACKUP_PROTOCOL.md by Babin.
 - Continue responsive verification of floor stage workspaces (Pack, Handover, Return, Reset) and tablet header search/more menu layout.
 
+
 ## 2026-10-16 — Per-panel date filters on Today, filter slot alignment, and full test suite verification
 
 **Did**
@@ -9055,6 +9141,7 @@ Counted by `npm run completion`, not typed.
 ### Remaining
 - Production deployment of migrations 0163 and 0164 following BACKUP_PROTOCOL.md by Babin.
 - Continue responsive verification of floor stage workspaces (Pack, Handover, Return, Reset) and tablet header search/more menu layout.
+
 
 ## 2026-10-16 — Selected rental items: responsive cards and interaction verification
 
@@ -9319,7 +9406,6 @@ Counted by `npm run completion`, not typed.
 ## Remaining
 - Complete the broader status/role/persisted-save matrix in docs/UI_UX_IMPROVEMENT_PLAN.md. Physical phone/iPad Safari, keyboard and native zoom acceptance remain unverified.
 - Reconcile the bundle add message: the mock notice currently states both bundle billing with zero-priced components and components billed at their own rates. This pre-existing contradictory copy needs a focused follow-up against the authoritative bundle pricing behavior.
-
 ## 2026-10-15 — Merged payment preselection safety, interactive revenue charts & clean UI verified
 
 **Did**
@@ -9679,7 +9765,6 @@ Counted by `npm run completion`, not typed.
 ### Remaining
 - Live app checks at desktop, tablet and phone widths remain pending, per the user's automated-check preference. Automated DOM checks do not certify visual overflow in a real browser.
 - Live Supabase JWT/PostgREST and production verification remain pending Babin's application process. No migration application or production deployment was performed.
-
 ## 2026-10-14 — Release baseline audit and Calendar phone header acceptance
 
 **Did**
@@ -9753,7 +9838,6 @@ Counted by `npm run completion`, not typed.
 - Recheck the newest shared-button build and enlarge New Rental catalogue View/Add Bundle controls: the earlier preview measured 26px height.
 - Complete remaining page, status, role, persistence and error-state acceptance in docs/UI_UX_IMPROVEMENT_PLAN.md; full-app acceptance is incomplete.
 - Physical iPad Safari, native browser zoom and staging JWT/PostgREST checks remain pending. No live migration was applied.
-
 ## 2026-10-14 — Scrape adoption completed: client CSV saving, export scope and shortage drill-downs
 
 **Did**
@@ -9967,6 +10051,8 @@ Counted by `npm run completion`, not typed.
 - On `main` (fast-forward, 13 Oct). Step 2 shrank: New Rental stays in the phone More sheet (nav item 1, locked eleven); Rentals header extras wait for `RentalsOperationsHeader.tsx` to be free.
 - Steps 2–4 of the reorganization plan (phone More sheet, Rentals extras, sub-rentals, Timesheet entry, Promotions/policies/Tools) — wait for the Desktop session to commit.
 
+
+
 ## 2026-10-13 — Glass on Light ("frosted"); Glass becomes a finish
 
 **Did**
@@ -10109,7 +10195,6 @@ Counted by `npm run completion`, not typed.
 - At 768px the shared header shortens Today to Tod…; resolve in the shared-header pass. Phone/tablet queue layout itself fits.
 - Continue the app-wide plan: Rentals/New Rental/Detail, lifecycle states, Calendar and remaining modules; inspect each enabled action, permissions and error/empty/stale states.
 - Physical iPad Safari, native 100%/125% zoom, full role matrix and persisted writes/reload remain unverified. Live staging JWT/PostgREST acceptance remains required; no live migration was applied.
-
 ## 2026-10-13 — Attached button audit Markdown review
 
 **Did**
@@ -11590,6 +11675,7 @@ With explicit user approval, applied `0062_law6_column_grants_arm_the_mask.sql`:
 
 Law 6 is now strictly enforced by PostgreSQL privileges and views at the database layer.
 
+
 ## 2026-10-07 — Booqable adoption spec: promo leak, shared settings, shared views, kit capacity, export + auth audit, pricing structures (migrations 0158–0160)
 
 **Did**
@@ -11768,7 +11854,6 @@ Counted by `npm run completion`, not typed.
 
 ### Remaining
 - No remaining application font-clarity work. Broader audit data/read-model boundaries remain in docs/UI_UX_AUDIT_DISPOSITION_2026-10-07.md.
-
 ## 2026-10-07 — New Rental reorganization
 
 **Did**
@@ -11799,7 +11884,6 @@ Counted by `npm run completion`, not typed.
 
 ### Remaining
 - No remaining New Rental reorganization work. Broader audit data/read-model boundaries remain in docs/UI_UX_AUDIT_DISPOSITION_2026-10-07.md.
-
 ## 2026-10-07 — Today color accents
 
 **Did**
@@ -11830,7 +11914,6 @@ Counted by `npm run completion`, not typed.
 
 ### Remaining
 - No remaining Today color work. Broader audit data/read-model boundaries remain in `docs/UI_UX_AUDIT_DISPOSITION_2026-10-07.md`.
-
 ## 2026-10-07 — UI/UX audit and restored navigation
 
 **Did**
@@ -11872,7 +11955,6 @@ Counted by `npm run completion`, not typed.
 - Imported stock/tracking/brand values, missing actual serial units, payment account and historical invoice-state inconsistencies require verified source data and owner reconciliation.
 - Missing scan/QC/crew/signature sources remain honestly unknown. No new money-blind live login or complete live custody/financial workflow was performed.
 - Completion figures describe repository structure, not closure of these audit boundaries.
-
 ## 2026-10-07 — Compact dates across the app
 
 **Did**
@@ -11966,6 +12048,7 @@ Counted by `npm run completion`, not typed.
 ### Remaining
 - Apply 0157 to live. Refresh the stale audit-view script.
 - Real two-connection concurrency test; decide bundle quantity > 1 before wiring `bundleCapacity`.
+
 
 ## 2026-10-06 — Membership list navigation retains context
 
@@ -12128,6 +12211,7 @@ Counted by `npm run completion`, not typed.
 - Audit triggers for the four trigger-less tables.
 - Real two-connection concurrency test; decide bundle quantity > 1 before wiring `bundleCapacity`.
 
+
 ## 2026-10-06 — Shared record workflows: save fidelity and responsive verification
 
 **Did**
@@ -12162,7 +12246,6 @@ Counted by `npm run completion`, not typed.
 - End-to-end save/reload tests through a local Supabase/PostgREST browser session remain unverified; the inspected preview was connected to live data, so browser checks avoided writes.
 - The broader plan is not yet fully certified: quote VAT/promo settings still need canonical persistence parity, and browser history navigation needs the same dirty-draft protection as link/Cancel navigation. These are not covered by the current passing quote transaction tests.
 - Production migration application remains outside this task; follow the backup protocol and existing deployment ledger.
-
 ## 2026-10-06 (j) — Bug review of the Deep Spec adoptions: demo corpus was shipping in production; 0154 audit had no actor
 
 **Did**
@@ -12199,6 +12282,7 @@ Counted by `npm run completion`, not typed.
 ### Remaining
 - Apply 0156 to live; record 0150/0153/0155 in `schema_migrations`.
 - Real two-connection concurrency test; decide bundle quantity > 1 before wiring `bundleCapacity`; rule §4.36.
+
 
 ## 2026-10-06 (i) — C4 local copy of an unsaved New Rental; C2 not built (conflicts with Law 15)
 
@@ -14924,6 +15008,7 @@ Counted by `npm run completion`, not typed.
 - Full `npm test` and repo-wide `typecheck` green once the concurrent tree work (Trial 13 / Smart Hover uncommitted files) lands.
 - Nothing functional remaining for this change: header chrome is layout-stable and press feedback is motion-free on all viewports.
 
+
 ## 2026-09-29 — Smart Hover Cards v2 foundation (engines + shared card system)
 
 **Did**
@@ -14960,6 +15045,7 @@ Counted by `npm run completion`, not typed.
 - Wire loaders to live gated preview queries per surface (§69 `GET /preview/...` equivalent: role-scoped selectors returning clearance-only payloads for money-blind roles) and adopt `SmartHoverTrigger` on identifier cells across the §86 context matrix.
 - Packing/audit invalidation on mutation (§78), optimistic packed-state with fail-closed payments (§79), AD+BS date rendering via `lib/bs.ts` in card headers (§18), and tablet/phone sheet gesture checks.
 - Full `npm test`, `check:pglite` + `check:lifecycle` (R-35), `lint:progress`, `check:contrast`, `build` before merge.
+
 
 ## 2026-09-29 — Smart Intel Cards v1 core workflow release (local build)
 
@@ -15001,6 +15087,7 @@ Counted by `npm run completion`, not typed.
 - Babin applies 0143 to live Supabase only after `BACKUP_PROTOCOL.md`; then verify authenticated role reads/writes, audit rows, and archived-note behavior on the live stack. This task does not apply migrations to production (N-5).
 - Finish hands-on tablet/phone pointer and sheet checks, and isolate the pre-existing full-suite worker hang.
 - Cross-entity links currently route to the linked record and retain the browser back path. In-card replacement with visible navigation history remains to be completed.
+
 
 ## 2026-09-29 — Consumable Return exemption + Handover deduction (Trial 13 gaps #3-consumable, #5)
 
@@ -15046,6 +15133,7 @@ Counted by `npm run completion`, not typed.
 - Full-suite hang: isolate which file never settles (reproduces without these changes).
 - 0138 CHECK is NOT VALID: obtain real return-by dates for existing Sub-rental lines and validate after backfill.
 
+
 ## 2026-09-29 — Booqable Trial 13 Gaps addendum
 
 **Did**
@@ -15082,6 +15170,7 @@ Counted by `npm run completion`, not typed.
 - Finish a clean full-suite run; the earlier run did not produce a final summary.
 - Babin: after backup, apply the pending migrations to live Supabase; obtain real return-by dates for existing Sub-rental lines and validate the 0138 CHECK after backfill. Re-run role and stock smoke tests on live (N-5).
 - `TODO(decision)` §4.59: the current Pack/Handover floor flow can still hold bookings containing non-physical lines before Return; a non-physical-only booking also lacks a Return session path. Separate 0141–0142 consumable work now appears in the shared tree.
+
 
 ## 2026-09-29 — Collapsed-nav More flyout hidden behind page content (fix)
 
@@ -16190,6 +16279,8 @@ Counted by `npm run completion`, not typed.
 - Visual acceptance testing on physical mobile and tablet devices.
 - Continued refinement of downstream screens opening the Operations popup.
 
+
+
 ## 2026-09-17 — Task 4: Simplify Dashboard/Today and Global Navigation
 
 Simplified Dashboard to a fast daily operational screen (Pickups and Returns) and streamlined global navigation from 11 items down to 7 canonical primary items + More:
@@ -16462,6 +16553,7 @@ Reviewed current source after the code graph returned a closed transport. Preser
 - `npm run typecheck`: **passed, exit 0**. Progress-file whitespace check passed; repository-wide whitespace check reports pre-existing trailing spaces in `PLAN.md`.
 - Fresh isolated PGlite booking lifecycle: **17/17 passed, zero known-red, zero failed**. No live database changes. This is not Supabase/PostgREST or browser acceptance coverage.
 - Confirmed crew booking UI remains unavailable despite an implemented action, and native shell scaffolds still require implementation and device checks. The earlier 100% score measures its five counted dimensions, not complete AV workflows or native release readiness.
+
 
 ## 2026-09-12 — 100% Completion: Inspection Capabilities Mapped (§4.29) & Phase 10 Native Shells Scaffolding (192 Test Files Green)
 
@@ -20033,6 +20125,7 @@ catalogue, so `createBundle` refuses a product that is not in `products`. The de
 reachable from the list, the hover card and a successful create, but the create itself still
 fails. Bundle EDIT (`/inventory/bundles/:id/edit`) remains absent — no route, no `updateBundle`.
 
+
 ## 2026-09-07 (cont.) — Confirm can work on the live catalogue: the availability engine grows its quantity half
 
 **Phase:** Phase 0 · **Status:** INV-02 (P0) and INV-05 (P1) implemented · app-side only, no migration · `check:rebuild` still BLOCKED
@@ -20697,7 +20790,6 @@ that exists. Both branches now coalesce after the select. Observed on booking 86
 Local corpus was rebuilt mid-session: two probes left rows that Law 3 forbids deleting
 (a frozen booking, a reversal transition). Worth knowing before probing again — an
 irreversible-by-design corpus punishes careless tests.
-
 ## 2026-09-06 (cont.) — New Rental answers the booking's dates, not today's stock
 
 **Phase:** Phase 0 · **Status:** 3 register items closed · 1 register claim corrected · 6 leftovers filed
@@ -20821,7 +20913,6 @@ approximation of it.
 `0093` re-applied locally; column probes match live exactly (`bookings.stage` S, `bookings.id` S,
 `deposit_required` masked, `products.name` S, `daily_rate` masked, `booking_lines.rate` masked,
 `qty` S) · the 0092 disable/enable pair above · trigger confirmed re-enabled afterwards.
-
 ## 2026-09-06 — Clients: a label, a rescinded cap, and a feature switched off by a stale comment
 
 **Phase:** Phase 0 · **Status:** 7 register items closed · 1 closed as already-fixed · 4 filed
@@ -20962,7 +21053,6 @@ REST after the reshape: owner reads `users` 200, anon `audit_events` **401**, ow
 
 ⚠ `tsc` and one test still fail from another session's in-flight warehouse and Today-segment
 edits; nothing I touched is in `src/`. **Five migrations wait on the Step 0 dump: 0089–0093.**
-
 ## 2026-09-06 — Remediation audit (Spec v1.0): 147 issues, 7 P0, NOT READY; nothing fixed
 
 **Phase:** Phase 0 · **Status:** audit delivered · 0 fixes applied (by rule) · report at `REMEDIATION_AUDIT_2026-09-05.md`
@@ -21015,7 +21105,6 @@ https://claude.ai/code/artifact/e9468676-451c-4e10-936a-e140f066118b
 **Not done, by rule:** nothing edited, applied or deployed. **Left out:** the critic's eight
 standalone severity upgrades are reported inline, not applied (no refuter measured them);
 P2–P4 are single-auditor findings. **Next:** approve the roadmap, then Step 0.
-
 ## 2026-09-05 (cont. 2) — New Rental stops claiming work it did not do
 
 **Phase:** Phase 0 · **Status:** 8 register items closed · 2 filed · 3 rulings raised
@@ -21147,6 +21236,7 @@ Mock build, Owner, `/inventory/warehouses`:
 `cost` column behind two figures, (c) whether warehouses should record capacity and a manager.
 Ruling them unblocks the last of this cluster.
 
+
 ## 2026-09-05 — two security holes closed, and the verification pass corrected one of my own findings
 
 **Phase:** Phase 0 · **Status:** `0091` + `0092` written and verified · audit report reconciled ·
@@ -21232,7 +21322,6 @@ message while its own fields and Owner's pricing both still work · `check:rebui
 work — 68 errors in `src/data/warehouse.ts` (dirty) and its consumer, and a Today segment rename
 mid-edit. **Zero errors in any file I touched.** Nothing here has been applied to live: `0089`,
 `0090`, `0091` and `0092` all wait on the Step 0 dump.
-
 ## 2026-09-05 — Four in-session rulings; Dashboard "Still out"; New Rental shows what a bundle add did
 **Phase:** Phase 4/5 — UX · **Status:** built and driven; committed 5 Sep (the commit carrying this entry)
 
@@ -21311,7 +21400,6 @@ the other session's entries in a different order than HEAD plus its uncommitted 
 index blob was built as HEAD + my two entries inserted (checked: HEAD ⊂ index, index − HEAD == my
 entries, tree − index == their WH-P1 entry). Left unstaged, theirs: `PLAN.md`, `mock/corpus.ts`,
 `Warehouses.tsx`, untracked `queries/warehouses.ts`, `users`, four zero-byte root files.
-
 ## 2026-09-05 (cont.) — Booking Detail stops asserting things it does not know
 
 **Phase:** Phase 0 · **Status:** 10 register items closed · 3 filed (one in another session's migration)
@@ -21562,7 +21650,6 @@ this work: another session's in-flight edits removed `NOW_AD` from `src/data/tod
 `getClientRecordByCode` from `lib/queries/clients`. To prove that, I re-verified these changes
 alone on a clean worktree at HEAD — `eslint` 0, my tests green, and the only failing file there
 is `clientsQuery.test.ts`, which is theirs.
-
 ## 2026-09-04 (cont.) — PR-P0: Purchase Requests reads the database
 **Phase:** inventory · **Status:** built, tested, driven
 
@@ -21631,6 +21718,7 @@ Maintenance and Warehouses remain read-frozen. Maintenance is blocked on **§4.4
 renders `costEst` and `costActual` from a single `cost` column. Add Bundle is blocked on
 **§4.45(a)**. Warehouses is not blocked and is the next clean one.
 
+
 ## 2026-09-04 (cont. 5) — Two of my own "dead module" findings were stale; documents corrected
 **Phase:** correction (docs only, no code) · **Status:** complete
 
@@ -21675,7 +21763,6 @@ believing 'we already do X' **or** 'we don't have X'" — I followed it on 31 Au
 The facet-counts wiring itself — it was the premise of the task and it does not need doing. What
 remains is genuinely narrower: `/rentals`' **status group has counts; its other filter groups do
 not**. That is a smaller, real piece of work, not the "engine is dead" story I had been telling.
-
 ## 2026-09-04 (cont. 4) — Calendar: from 100% seed to the bookings it can honestly draw
 **Phase:** UI · data layer · **Status:** built, reviewed three ways, blockers fixed, driven
 
@@ -21800,7 +21887,6 @@ Editor 2 was right to skip it; the instruction was wrong. Left as-is.
   stage-by-hunk split used for `PROGRESS.md` at `b7356ce`.
 - `captureError` call sites: 26 at `b7356ce` → **30** now (+4 here; `devicePurge.ts` and `ErrorBoundary`
   are others' / pre-existing).
-
 ## 2026-09-04 (cont. 3) — Equipment rows only added when you hit the name
 **Phase:** UI · **Status:** fixed and driven
 
@@ -22713,6 +22799,7 @@ flagged, A2-A13 fixed") and staged the stub files whole. Measured with `git show
   left in the tree untouched — they are a third session's.
 - The `mock/*` `eslint-disable no-console` lines were kept as ruled here; TODO_SWEEP line 130
   questions them. One decision, not two — either keep the disables or turn `no-console` on.
+
 
 ## 2026-09-03 — cad819c audited adversarially; option (c) replaced by a better design; 0062 was live all along
 **Phase:** Phase 4/5 — persistence · **Status:** from-scratch fix REDESIGNED and re-proved both ways · one HIGH finding fixed · one defect found in another session's draft
@@ -24465,7 +24552,6 @@ family, commit-model ruling, open decisions 1–3) is verbatim v1.0.
   correction BS-large is the *default*, so the open decision is really whether an
   AD-primary comfort toggle exists. Kept verbatim (not our decision to rewrite);
   flag when decision 2 is ruled.
-
 ## 2026-09-01 (cont. 3) — BS dates stop hiding: the em dash is gone from eight sites · the month-length table stays open
 **Phase:** Phase 4/5 — date engine consumers · **Status:** fixed and verified in the running app;
 the underlying BS table is **still open and needs Babin**
@@ -26555,6 +26641,7 @@ the page. The screenshot is what caught it.
    - TypeScript Typecheck (`tsc --noEmit`): 0 errors.
    - Test Suite (`vitest`): 100% passing across all 88 test suites (2,174 / 2,174 tests).
 
+
 ## 2026-08-28 (cont. 10) — Maintenance exactOptionalPropertyTypes Type Safety & 100% Full Suite Verification
 **Phase:** Phase 4/5 — Quality Assurance & Type Safety · **Status:** complete
 
@@ -26593,6 +26680,8 @@ the page. The screenshot is what caught it.
 - Verified shell test suite (`shell.test.tsx`, 16 tests) passed 100%.
 - Verified TypeScript build (`tsc --noEmit`) clean exit code 0.
 
+
+
 ## 2026-08-28 (cont. 8) — Modularized Documents Monolith (1,528 lines → 36 lines) & 100% Tests Passing (2,174 / 2,174)
 
 **Did.**
@@ -26619,6 +26708,8 @@ the page. The screenshot is what caught it.
 - Restored original working self-contained `Documents.tsx` and removed partial scratch components.
 - Ran full repository test suite: **88 of 88 test files (2,174 / 2,174 tests) passed 100%**.
 - Verified 100% clean TypeScript build with exit code 0 (`tsc --noEmit`).
+
+
 
 ## 2026-08-28 (cont. 7) — Modularized Tools Monolith (1,656 lines → 30 lines) & 100% Tests Passing (2,174 / 2,174)
 
@@ -30547,6 +30638,8 @@ A live pass on both screens once someone can get past login (either real credent
 - **Hover Physics & Layout Polish:** Added smooth CSS scale physics (`className="lift"`) and background transitions to all list items, alerts, and timeline links (`AlertsPanel.tsx`, `TimelinePanel.tsx`, `CalendarPanel.tsx`).
 - **Verified:** `tsc --noEmit` build exit 0.
 
+
+
 ## 2026-08-11 — Design audit Phases 3-7 done, plus the two previously-deferred token sweeps
 **Phase:** UI polish (user-requested — "RUN ALL PHASE WITH DIFFRENT AGENT," the rest of the
 7-phase roadmap from the earlier published audit) · **Status:** all 7 phases of the roadmap now
@@ -32238,6 +32331,7 @@ fixes.
 ### Status
 - **All AUDIT_FINDINGS backlog items (P0, P1, P2, P3) are 100% resolved and verified.**
 
+
 ## 2026-08-10 — GO-LIVE: all 42 migrations applied to the real Supabase project; auth + RLS
      verified working end-to-end over the live API
 **Phase:** 1 gate materially advanced (schema exists on a real database for the first time) ·
@@ -32349,6 +32443,7 @@ Updated section §6.3 text reference from "12-stage status engine" to "canonical
 - **P0 #9** — 142 `references users (id)` forward FKs in migrations 0002–0006
 - **P1 #1** — ~95 tables with RLS enabled but no policy
 - **P1 #11** — `AddBundle.tsx` discount UI — Law-10 backing DB columns missing
+
 
 ## 2026-08-10 — Booqable bridge scaffold built to spec v1.0 (14 artifacts); two Law-5 deposit
 defects and a Law-9 duplicate-on-resync defect caught by adversarial review and fixed
@@ -35456,6 +35551,7 @@ elsewhere this session rather than inventing new ones.
   pre-existing ones already seen earlier this session, not new ones this change
   introduced).
 
+
 ## 2026-08-08 — Duplicate & Merge Center (`/clients/duplicates`)
 
 **Phase:** post-shell feature work · **Status:** done
@@ -35506,6 +35602,7 @@ check into a real, standalone detector over the whole directory.
   already-verified pieces (the `Modal`-confirm pattern proven in `ClientDetail`'s Block
   flow, and the now-proven detection function), so this is a reasoned-correct claim, not
   a "works" claim — flagging the difference rather than blurring it.
+
 
 ## 2026-08-08 — Client Detail page (`/clients/:id`)
 
