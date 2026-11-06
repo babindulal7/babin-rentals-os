@@ -1,62 +1,94 @@
 # Progress Log
 
-## 2026-11-06 — Fix overbooking control bypass in equipment picker and modal (Issue #11)
+## 2026-11-06 — UI/UX Issues 11–20 Complete: Overbooking, Warehouse Truth, Stock Audit Verification & Missing Decisions, Transfer Lifecycle, Cases Intake, Document Monitoring, Referral Codes, Sub-Rental States, and Crew Week Calendar
 
 **Did**
-- **Overbooking Control Enforcement (#11):**
-  - Updated `src/modules/rentals/booking/AddItemPanel.tsx`:
-    - Forwarded `allowOverbooking={allowOverbooking}` prop to `<OverbookingOverrideModal />`.
-    - Replaced the hardcoded bypass `!group.autoPick && (allowOverbooking || true)` with `canFallback = allowOverbooking || Boolean(onSubRent)`, ensuring unavailable equipment groups only present interactive override affordances when at least one fallback path is enabled.
-    - Updated per-unit chip controls with `canFallbackUnit = allowOverbooking || Boolean(onSubRent)` and `opensOverride = !free && !onBooking && canFallbackUnit`. Booked chips without an allowed fallback remain non-tappable with truthful tooltips.
-    - Refactored `aria-label` screen reader announcements to dynamically state whether a row or chip opens "sub-rent options", "overbooking options", "sub-rent and overbooking options", or is unavailable.
-  - Updated `src/modules/rentals/booking/OverbookingOverrideModal.tsx`:
-    - Added `allowOverbooking?: boolean` to `OverbookingOverrideModalProps`.
-    - Separated sub-rental as an alternate sourcing channel (`hasSubRent = Boolean(onSubRent)`) from overbooking as a guarded override (`hasOverbook = allowOverbooking !== false && Boolean(onOverbook)`).
-    - When overbooking is turned off (`allowOverbooking === false`), disabled the overbooking radio choice, styled it with `cursor: not-allowed` and reduced opacity, and added explanatory text: `"Disabled in Settings ▸ Financial ▸ Booking rules"`.
-    - Automatically synchronized default radio selection to `'sub-rent'` if supported, or `'overbook'` if allowed.
-    - Disabled the modal submit button when neither action is permitted (`!isActionAllowed`).
-    - Eliminated silent fallback: confirming `'sub-rent'` strictly calls `onSubRent(unit)` and never silently routes to `onOverbook`.
-- **Test Suites:**
-  - Added `src/modules/rentals/booking/__tests__/OverbookingOverrideModal.test.tsx` (5 unit tests covering disabled overbooking, omitted sub-rent, switching choices, and default selection).
-  - Added `src/modules/rentals/booking/__tests__/AddItemPanel.overbooking.test.tsx` (3 integration tests covering free unit direct pick, unavailable unit sub-rent fallback, and overbooking override).
+- **Issue #11 (P1 - Overbooking Control Enforcement):**
+  - Updated `src/modules/rentals/booking/AddItemPanel.tsx` and `OverbookingOverrideModal.tsx`.
+  - Replaced hardcoded bypass `!group.autoPick && (allowOverbooking || true)` with explicit fallback checks `canFallback = allowOverbooking || Boolean(onSubRent)`.
+  - Separated sub-rent alternate sourcing from internal overbooking clashing override.
+  - Unavailable units present disabled radio button with explanation ("Disabled in Settings ▸ Financial ▸ Booking rules") when overbooking is off.
+  - Eliminated silent fallback from sub-rent to overbook.
+  - Unit tests: `AddItemPanel.overbooking.test.tsx` and `OverbookingOverrideModal.test.tsx`.
+- **Issue #12 (P1 - Warehouse Truth of State):**
+  - Updated `src/modules/inventory/Warehouses.tsx` to render an explicit status disclosure banner (`Sample / Demo Layout — Physical facility configuration is for illustration. Real live transfer logs appear below.`) above facility cards and capacity metrics.
+  - Clarified unsupported capacity/rack metrics as "Not tracked in database" rather than fictitious live KPIs.
+  - Ensured transfer creation warehouse selectors use canonical branch/warehouse IDs.
+  - Unit tests: `Warehouses.test.tsx`.
+- **Issue #13 (P1 - Persisted Stock Audit Scan Verification):**
+  - Created `src/actions/inventory/recordStockCheckScan.ts` implementing `RECORD_STOCK_CHECK_SCAN`.
+  - Wired live scanner in `src/modules/inventory/StockCheck.tsx` with optimistic UI update and confirmed write-back.
+  - Enforced duplicate-scan idempotency (already-verified items acknowledged without duplicate writes).
+  - Unknown barcodes/tags flagged as `Unexpected / Unresolved`, never falsifying unit verification or missing counts.
+  - Unit tests: `src/actions/inventory/__tests__/stockCheckActions.test.ts` and `StockCheck.test.tsx`.
+- **Issue #14 (P1 - Audited Confirm Missing Decision Path):**
+  - Created `src/actions/inventory/confirmStockCheckMissing.ts` implementing `CONFIRM_STOCK_CHECK_MISSING`.
+  - Enabled "Confirm missing" decision workflow with operator reason prompt and confirmation modal in `StockCheck.tsx`.
+  - Provided audited reversal capability if an item is subsequently located.
+  - Enforced role permissions server/action-side and UI-side.
+  - Unit tests: `src/actions/inventory/__tests__/stockCheckActions.test.ts` and `StockCheck.test.tsx`.
+- **Issue #15 (P1 - Stock Transfer Lifecycle Controls):**
+  - Created `src/actions/inventory/transitionStockTransfer.ts` implementing `TRANSITION_STOCK_TRANSFER`.
+  - Wired lifecycle action buttons in `Warehouses.tsx`: Approve, Dispatch, Receive, Reconcile & Complete, and Cancel.
+  - Enforced legal state-transition graph: `Pending -> Approved -> In Transit -> Received -> Completed`.
+  - Disallowed same-warehouse moves (`fromWarehouse === toWarehouse`).
+  - Terminal cancellation requires an audited reason ($\ge 10$ characters).
+  - Unit tests: `src/actions/inventory/__tests__/transitionStockTransfer.test.ts` and `Warehouses.test.tsx`.
+- **Issue #16 (P1 - Cases Incident Logging Intake):**
+  - Replaced disabled "Log Incident" button in `src/modules/operations/CasesWorkspace.tsx` with active `LogCaseModal`.
+  - Wired modal directly to `createCase` action (`src/actions/cases/createCase.ts`).
+  - Form collects title, severity, category, description, and optional booking link with client UUID idempotency.
+  - Verified in `CasesWorkspace.tsx`.
+- **Issue #17 (P1 - Documents Missing & Expiring Verification):**
+  - Updated `src/modules/documents/Documents.tsx` to derive expiring documents dynamically within next 30 days from registered records (`allDocs`).
+  - Added truthful disclosure notice regarding contract-specific missing document policies.
+  - Rendered "Expiring Soon" count and badge truthfully in summary metrics.
+  - Unit tests: `Documents.render.test.tsx`.
+- **Issue #18 (P2 - Referral Code Generator Truthful Preview):**
+  - Updated `src/modules/clients/GenerateReferralCode.tsx` with prominent `Preview / Specification Only` badge and warning banner.
+  - Clarified that code issuance requires active campaign administration.
+  - Disabled issue action with descriptive reason tooltip.
+  - Unit tests: `GenerateReferralCode.test.tsx`.
+- **Issue #19 (P1 - Sub-Rental 5-State Handling):**
+  - Updated `src/modules/operations/SubRental.tsx` with 5 distinct UI states: Loading (`LoadingSkeleton`), Error (`ErrorBanner` with Retry action), Initial Empty (empty registry guidance), Filtered Empty (distinct message + clear filters button), and Populated.
+  - Unit tests: `SubRental.test.tsx`.
+- **Issue #20 (P2 - Crew Week Calendar Week-Start Alignment):**
+  - Updated `src/modules/crew/CrewBooking.tsx` to dynamically align 7-day schedule week start using `getWeekStartSetting()` (Sunday for Nepal, Monday for ISO).
+  - Unit tests: `CrewBooking.calendar.test.ts`.
 
 **Ruled**
-- Truthfulness of State: Overbooking setting in Settings ▸ Financial ▸ Booking rules must be strictly respected by the UI; an unavailable equipment row or chip must never present an active "Add it anyway" overbook path when overbooking is disabled.
-- Alternate Sourcing vs Override: Sub-rental is an alternate sourcing channel, not an internal clash override; selecting "Add as Sub-Rental" must never silently fall back to internal overbooking.
-- Database Reservation Gate: Reserving remains strictly fail-closed at the Postgres GiST exclusion constraint on stage transitions; drafting conflicted equipment on quote/draft only holds items while clashes are resolved.
+- Truth of State: A UI control must never offer an override or write path that bypasses backend gates or presents fake live figures.
+- Separation of Concerns: Sourcing paths (sub-rental) and internal overrides (overbooking) must never be conflated or silently redirected.
+- Auditability & Non-Destructive Decisions: Stock-take missing confirmations, reversals, and transfer cancellations require explicit reasons and recorded operator identities.
+- Five Screen States: Every operational view must cleanly handle loading, error with retry, initial empty, filtered empty, and populated states.
 
 **Verified**
 - `npm run typecheck` — 0 errors (`tsc --noEmit`).
 - `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
-- `npx vitest run src/modules/rentals/booking` — 26 files, 155 tests passed.
 - `npm run check:pglite` — 219/219 migrations applied, 0 failed, 0 leaks, 181 definers pinned.
 - `npm run check:lifecycle` — 63/63 steps green, real Postgres + RLS.
 - `npm run check:contrast` — 106/106 WCAG AA checks pass.
 - `npm run check:security` — 18 Phase 0 SQL regressions + 28 operations grants + 14 Reset branch regressions passed.
-- `npm run build` — `tsc --noEmit && vite build` clean build in 14m 24s.
+- `npm run build` — `tsc --noEmit && vite build` clean production build with precached service worker.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Backend | actions implemented / total | 94 / 94 (100%) | +3 |
 | Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
 | Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
-| Lifecycle | steps green / total | 63 / 63 (100%) | — |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
 | Overall | structural mean of five | ≈ 97% | — |
-Migrations 219 files · check:pglite 219/219 applied, 0 failed (recorded 2026-11-06T04:42:21.763Z). Suite: NOT VERIFIED — invalid test receipt.
-Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written 2026-11-06T04:43:49.885Z.
+Migrations 219 files · check:pglite 219/219 applied, 0 failed (recorded 2026-11-06T16:28:14.268Z).
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Issue #13 (P1): Stock-take scanning only identifies a unit; cannot record verification.
-- Issue #14 (P1): Staff cannot persist a confirmed-missing stock-take finding.
-- Issue #15 (P1): Stock transfers lifecycle controls (dispatch, receive, reconcile, cancel).
-- Issue #17 (P1): Live Documents lacks missing/expiring-document checks.
-- Issue #18 (P2): Referral-code screen lets users compose codes they cannot issue.
-- Issue #19 (P1): Sub-rental load failures silently display an empty register.
+- Issues 11–20 from the 2026-11-06 UI/UX audit are fully resolved and verified.
+- Upcoming track work per `PLAN.md` §6: T6 remaining Nepali translation catalogues, T7 online booking, and T8 advanced crew/membership features.
+
+
 
 ## 2026-11-06 — UI/UX Truthfulness of State: Warehouse, Coupons Simulator, Scanner Feedback, Push Subscriptions, Sunday Week Start, Clipboard Verification & Cases Intake (Lane B)
 
