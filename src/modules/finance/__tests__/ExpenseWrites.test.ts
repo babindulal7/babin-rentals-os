@@ -281,7 +281,7 @@ describe('setExpenseStatus — the workflow moves, the history does not', () => 
     ).rejects.toThrow(/no longer Pending Approval/)
   })
 
-  it('refuses a transition nothing ruled, without touching the database', async () => {
+  it('refuses a payment without settlement records and skipped approval, without touching the database', async () => {
     await expect(
       setExpenseStatus('11111111-1111-4111-8111-111111111111', 'Approved', 'Paid'),
     ).rejects.toThrow(/Approved is terminal/)

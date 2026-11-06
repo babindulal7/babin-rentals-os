@@ -400,8 +400,7 @@ function RowMenu({
         <div role="menu" style={menuStyle}>
           {moves.length === 0 ? (
             <div style={{ padding: '6px 9px', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.5 }}>
-              {row.status} is terminal on this screen. Paid and Cancelled are not written here — nothing rules who may set
-              them, and Paid would assert money moved that this table does not record.
+              {row.status} has no available status change here. Payment recording is not available yet.
             </div>
           ) : (
             moves.map((to) => (

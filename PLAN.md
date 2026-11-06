@@ -202,7 +202,7 @@ stay in [`docs/OPEN_DECISIONS.md`](docs/OPEN_DECISIONS.md).
 | O-23 | Which Booqable renewal date is shown in Account & Billing? PLAN says 18 Feb 2027; S8 and T9-08 say 20 Mar 2027. The 1 Mar run-off also conflicts with PLAN's 8 Feb cancellation. | TODO(decision): Babin confirms the billing date; then reconcile the schedule and run-off without inventing another charge or changing the closing system | T9-01, T9-06, T9-08 |
 
 | O-22 | VAT treatment and adjustment documents for a retained cancellation fee | Babin confirmed VAT registration and has no accountant. Obtain a written clarification from the registered Inland Revenue Office or a qualified Nepal tax adviser. | T3-03 |
-| O-24 | Who may record payment of an approved expense, and can they be its submitter or approver? (Renumbered from O-21 to avoid the glossary decision's ID.) | Babin decides. Existing approval permissions remain in effect. | T3-07 |
+| O-24 | **Answered 6 Nov:** Owner, Admin, Manager and Accounts may record payment of an approved expense, including one they submitted or approved. | Approval remains separate: no self-approval and existing thresholds. Database settlement implementation pending (EP-1). | T3-07 |
 
 ### §4.3 How a new decision gets in
 

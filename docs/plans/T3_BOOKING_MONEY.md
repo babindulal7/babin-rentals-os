@@ -101,7 +101,7 @@ Babin's terms text (O-11), signed at Handover (T2-02). 3) Quote PDF uses the sam
 booking.
 **Needs** — T2-02; Babin's terms text; accountant.
 
-### T3-07 · Opening balances and daily closing carry-forward            status: doing (lane-c/T3-07-daily-closing) · size: M · lane C
+### T3-07 · Opening balances and daily closing carry-forward            status: doing (lane-c/T3-07-daily-closing; O-24 decision follow-up: lane-c/T3-07-expense-payment-authority) · size: M · lane C
 **What** — Accounts (or Owner) enters an **opening balance** once per cash drawer and per bank
 account, with the date. Daily closing then shows *opening + money in − money out = closing* per
 account and carries the closing to the next day. Money in/out includes rental payments, payment
@@ -112,6 +112,7 @@ shift" or "once a day"** (W59); with "per shift" the closing follows the three s
 22–07 (W32) and the cash count is part of the shift handover (T4-05). Deposit refunds: staff pick
 the method each time (W83) — the refund dialog offers the method the deposit came in, preselected.
 **Why** — D15; W32; W59; W83; OPEN_DECISIONS §13 (bank/cash balance).
+**Decision update, 6 Nov (EP-1 / O-24)** — Owner, Admin, Manager and Accounts may record payment of an approved expense, including one they submitted or approved. Approval still forbids self-approval. Build the database settlement account/time/audit path and matching role fixtures before enabling payment recording; O-24 is answered, implementation remains.
 **Where** — `src/modules/finance/DailyClosing.tsx`, `src/lib/queries/closing.ts`,
 `src/modules/reports/CashFlowReport.tsx`, `WorkingCapitalReport.tsx`, `bank_accounts`.
 **Database** — migration (claim number): opening balance table (append-only; a correction is a new

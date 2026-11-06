@@ -1491,7 +1491,10 @@ async function expenseByClientUuid(clientUuid: string): Promise<ExpenseListRow |
  * asserting money moved. 'Cancelled' is a terminal state whose rule (who may,
  * and whether an approved expense may be cancelled at all) nothing has ruled.
  * Both are still readable and still filterable; they are just not writable
- * here. TODO(decision): O-24 covers who may record an expense payment.
+ * here. RULING 2026-11-06 (EP-1 / O-24): Owner, Admin, Manager and Accounts may
+ * record payment of an approved expense, including their own submission or one
+ * they approved. TODO(implementation): add the database account/time/audit
+ * settlement path before exposing Paid; generic status updates cannot record it.
  */
 export const EXPENSE_TRANSITIONS: Readonly<Record<ExpenseStatusDb, readonly ExpenseStatusDb[]>> = {
   Draft: ['Pending Approval'],

@@ -2,6 +2,20 @@
 **v1.0 · 22 Bhadra 2083 BS · 7 Sep 2026**
 Location: `docs/PERMISSIONS.md` (beside Foundation v3.0 and UI_UX.md)
 
+> ## Ruled 6 Nov 2026, implementation pending — expense payment (O-24 / EP-1)
+>
+> Babin explicitly authorizes **Owner · Admin · Manager · Accounts** to record
+> payment of an **already approved** expense, including one they submitted or
+> approved. Coordinator and all money-blind roles are excluded. This is payment
+> recording, not approval: P7, §4.6 expense approval and §6.1's no-self-approval
+> rule and approval thresholds stay in force.
+>
+> [EP-1](../RULINGS-2026-11-06-expense-payment.md) settles the role decision.
+> T3-07 must add the database settlement/account/time/audit path before exposing
+> payment recording. In that implementation commit update §3/§4/§6, the role
+> predicate and T-1 fixture together (B-3). This note does not claim enforcement
+> or enable a Paid status shortcut.
+
 > ## ⏳ Ruled 26–27 Oct 2026, not yet in code — these cells change when their task lands
 >
 > Babin's rulings in [`RULINGS-2026-10-26.md`](../RULINGS-2026-10-26.md),
