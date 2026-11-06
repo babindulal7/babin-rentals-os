@@ -1,5 +1,77 @@
 # Progress Log
 
+## 2026-11-06 — T3-07: Read complete liquidity periods and keep deposit movements in their branch
+
+**Did**
+- Cash Flow and Working Capital now page every matching ledger and category dataset through the existing complete-read guard. Added a capped-server regression with 1001 records so a busy period cannot silently report only the first page.
+- Cash Flow normalizes bare dates and the report toolbar's zoned bounds to Kathmandu calendar dates. Timestamp ledgers use an exclusive next-midnight upper bound; expense/invoice date columns and opening-balance lookups use bare dates. UTC-equivalent toolbar bounds find the same recorded opening balance.
+- Deposit movements are filtered through their parent deposit's branch. Added regressions for period endpoints, branch scoping and invalid dates.
+- Reused the already-verified server-contract reservation fixture correction from T3-03: its reservation remains active relative to the database clock, with Reserved status asserted before and after the refused retirement.
+
+**Ruled**
+- No fee, VAT, expense-payment authority or other product policy was invented. Finance calendar periods remain independent of the floor-day setting. Deposit flows remain separate from rental revenue.
+
+**Verified**
+- Typecheck and changed-file lint passed. The final report regression run passed 82/82 assertions in four files, including the real mock-corpus report reads and capped datasets.
+- The final verification sequence passed all 60 server-contract assertions and production build. One earlier build was deliberately stopped after its input code changed; that superseded attempt is not evidence of a source failure.
+- Refreshed check:pglite and check:lifecycle after the last source edit: 219/219 migrations and 64/64 lifecycle steps green together. Migration 0224 remains VERIFIED locally, not APPLIED or PRODUCTION-VERIFIED.
+- Fresh npm audit reports the unchanged branch baseline of 36 affected packages; the dependency upgrade is isolated on T0-13 and will be verified with these fixes in the integration candidate.
+- npm run completion returned 1 and generated the block below because a focused test pass does not certify the full suite or coverage. All final card gates and functional acceptance remain required.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 64 / 64 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 219 files · check:pglite 219/219 applied, 0 failed (recorded 2026-11-06T08:42:49.252Z). Suite: NOT VERIFIED — focused or unspecified run: 82/82 passed, 0 failed (recorded 2026-11-06T08:30:39.942Z).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-06T08:43:23.427Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Run every gate, full suite and coverage on the combined source before any main merge. Complete phone/tablet/desktop and staging-week reconciliation acceptance.
+- Implement the per-account daily-closing ledger, carry-forward and closing schedule. Paid expenses still need actual payment accounts/times and the unanswered O-24 authority decision; report fixes do not complete that workflow.
+- Babin reviews and merges locally. No live migration or change to Antigravity's checkout occurred; the card remains doing.
+
+## 2026-11-06 — T3-07: Give expense payment authority a unique decision ID
+
+**Did**
+- Renumbered the unanswered expense-payment question from O-21 to O-24 because O-21 is the answered glossary-editing decision on T0-12 (ruling C-6).
+- Updated the decision register, PLAN section 4.2 and the finance query's TODO reference. The shared PLAN change is the decision-index reference only.
+- Earlier progress entries retain the old O-21 identifier as history; the current expense-payment question is O-24.
+
+**Ruled**
+- The question and existing expense transitions are unchanged. The glossary ruling does not grant expense-payment authority.
+
+**Verified**
+- All three current references point to O-24. The sole TypeScript change is a comment; functions, SQL and permission rules are unchanged. No functional test was repeated for this reference correction.
+- Migration 0224's prior local verification is recorded in the preceding entry. Full current-source card gates and staging acceptance remain required.
+- npm run completion returned 1 with unverified suite/coverage evidence and generated the block below. The unchanged dependency audit remains at 36 affected packages; remediation is isolated on T0-13.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 219 files · check:pglite Historical, incomplete or failed receipt (2026-11-05T13:57:24.067Z); current source NOT VERIFIED. Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-05T13:57:46.192Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Resolve O-24 with Babin, attribute paid expenses to settlement accounts, and complete daily/shift carry-forward and reconciliation.
+- Run full local gates and the staging week/device checks. Babin reviews and merges, then applies verified migrations after backup.
+
 ## 2026-11-06 — T3-03: Finish full current-source coverage
 
 **Did**
@@ -274,6 +346,146 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 ### Remaining
 - Switch it on (T6-09): User profile language preference persistence.
 - Owner physical device verification: on-device visual layout inspection on iPad / physical hardware.
+
+## 2026-11-05 — T3-07: Enforce append-only opening balances in Postgres
+
+**Did**
+- Claimed migration 0224 before writing SQL. Added the existing append-only UPDATE trigger to opening_balances; the earlier migration documented immutability but only prevented deletion.
+- Extended lifecycle L63 to reject Owner amount/date edits, retirement and deletion. A correction appends a new row, preserves the original, and becomes the latest balance without being added to the old amount. Accounts remains read-only and Warehouse remains unable to read amounts.
+
+**Ruled**
+- Implements the append-only requirement already specified by T3-07. No role or capability was widened.
+
+**Verified**
+- Migration 0224: WRITTEN and VERIFIED locally, not APPLIED or PRODUCTION-VERIFIED.
+- JavaScript syntax check passed. check:pglite rebuilt 219/219 migrations; check:lifecycle passed 64/64 in the same run, including the new assertions.
+- No screen changed in this increment. Full card gates and staging reconciliation remain open.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 64 / 64 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 219 files · check:pglite 219/219 applied, 0 failed (recorded 2026-11-05T13:57:24.067Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-05T13:57:46.192Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Implement account-level daily carry-forward including paid expenses once expense payment authority and account attribution are settled (O-21).
+- Complete the shift/daily closing setting, staging week reconciliation, device checks and full local gates. Babin merges and applies verified migrations after the backup procedure.
+
+## 2026-11-05 — T3-07: Record dated opening balances
+
+**Did**
+- Added an Owner-only opening balance form in Settings ▸ Financial for organisation cash, branch cash and active bank accounts.
+- Writes use the existing opening balance table and an idempotency key. Repeating the same request confirms the prior entry. Corrections from the form append another entry.
+- Indexed O-21 in PLAN.md and the decision register for expense payment authority.
+
+**Ruled**
+- D15 requires an opening balance for each account. Kept migration 0214's existing Owner-only write policy.
+
+**Verified**
+- Typecheck, changed-file ESLint, and 54 focused query and report tests passed.
+- PGlite 218/218 migrations and lifecycle 64/64 passed together. L63 verifies Owner insert and exact amount, duplicate refusal, Accounts read and write refusal, and Warehouse read isolation.
+- npm audit could not resolve the registry. Hosted and device acceptance pending.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 64 / 64 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-05T00:48:22.007Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-05T00:48:49.078Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Resolve O-21, record paid expenses by account, and reconcile per-account movements with opening balances across days and shifts.
+- Connect the reconciled totals to Daily Closing, Cash Flow and Working Capital and verify a staging week.
+- Verify the new form on staff devices and enforce append-only corrections at the database boundary.
+
+## 2026-11-05 — T3-07: Record the payment account used for a deposit refund
+
+**Did**
+- Return Settlement now reads the amount held from the deposit ledger and offers active payment accounts for a refund.
+- Defaults to the original receipt account when all receipt movements agree and the account is active. Staff can change the default. Mixed, unallocated, inactive or incomplete receipts require a choice.
+- Passed the selected account to the existing deposit release action. Added inline load and submit errors and used the existing deposit release capability and online check.
+
+**Ruled**
+- W83 gives staff the choice of refund method. D15 relies on the account recorded on the release movement. Law 5 keeps the refund in the deposit ledger.
+
+**Verified**
+- Focused deposit query, settlement modal, settlement action and floor-loop suites passed (17/17 total).
+- Typecheck and changed-file ESLint passed.
+- npm audit could not resolve the npm registry.
+- Full release gates and staging acceptance pending.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Allocate paid expenses by account, enter dated opening balances, carry the reconciled balance into the next day and wire it into Daily Closing, Cash Flow and Working Capital.
+- Finish the shift closing preference. Reconcile a staging week against hand calculations and exercise money-blind role denial.
+- Exercise the refund picker on staff devices with same-account, switched-account and split receipts.
+
+## 2026-11-05 — T3-07: Scope Cash Flow opening balances to the period
+
+**Did**
+- Scoped opening-balance reads to the requested account and organisation or branch. Corrections on the same date now read newest first.
+- Cash Flow shows an opening snapshot for the selected start date. Removed the closing estimate that applied report-wide operating movements to a cash snapshot.
+- Added focused regressions for branch and organisation scope, stale opening snapshots and read errors.
+
+**Ruled**
+- D15 requires balances to reconcile by account. An older snapshot requires intervening movements before it can open a later period. Existing expenses do not identify the account they were paid from.
+
+**Verified**
+- `git diff --check` passed.
+- Changed-file ESLint and lint:progress passed.
+- npm audit could not resolve the npm registry.
+- Typecheck passed. Report query regressions passed (49/49).
+- Report screen state suite passed (40/40).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Add account allocation for paid expenses, dated opening entry, and a per-account ledger read that carries balances into the next day. Wire that read into Daily Closing, Cash Flow and Working Capital.
+- Finish the shift closing preference and deposit refund method selection. Verify a staging week against hand calculations and exercise the money-blind role denial.
 
 ## 2026-11-05 — T3-03: Repair localization assertions found by the full gate
 

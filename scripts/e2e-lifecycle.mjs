@@ -6966,6 +6966,59 @@ STEPS.push({
 
 
 STEPS.push({
+  id: 'L63',
+  title: 'Opening balances preserve history and remain hidden from floor roles (T3-07)',
+  expect: 'green',
+  run: async () => {
+    const entry = '00000000-0000-4000-8000-000000006301'
+    const openingDate = '2026-11-05'
+    const insert = `insert into opening_balances
+      (client_uuid, account_type, opening_date, amount, created_by)
+      values ($1, 'cash', $2, 1250.25, $3)`
+    await as('Owner', async () => {
+      await q(insert, [entry, openingDate, U.Owner])
+      assertEq(Number(await one('select amount from opening_balances where client_uuid = $1', [entry])), 1250.25,
+        'Owner reads the recorded amount without losing paisa')
+      await refuses('The same opening balance request cannot insert twice', insert,
+        [entry, openingDate, U.Owner], /opening_balances_client_uuid_key/i)
+      await refuses('Owner cannot rewrite the opening amount',
+        'update opening_balances set amount = 9999 where client_uuid = $1', [entry], /append-only/i)
+      await refuses('Owner cannot move the opening balance to a different date',
+        "update opening_balances set opening_date = '2026-11-06' where client_uuid = $1", [entry], /append-only/i)
+      await refuses('Owner cannot retire a balance to remove it from the active history',
+        'update opening_balances set retired_at = now() where client_uuid = $1', [entry], /append-only/i)
+      await refuses('Owner cannot delete the opening balance',
+        'delete from opening_balances where client_uuid = $1', [entry], /Law 3/i)
+      const correction = '00000000-0000-4000-8000-000000006303'
+      await q(`insert into opening_balances
+        (client_uuid, account_type, opening_date, amount, created_by, created_at)
+        values ($1, 'cash', $2, 1300.50, $3, now() + interval '1 second')`,
+      [correction, openingDate, U.Owner])
+      assertEq(Number(await one('select amount from opening_balances where client_uuid = $1', [entry])), 1250.25,
+        'Correction preserves the original amount')
+      assertEq(Number(await one(`select amount from opening_balances
+        where account_type = 'cash' and account_id is null and scope = 'org'
+          and location_id is null and opening_date = $1 and retired_at is null
+        order by opening_date desc, created_at desc, id desc limit 1`, [openingDate])), 1300.50,
+      'The latest appended correction is used without adding it to the original')
+    })
+    await as('Accounts', async () => {
+      assertEq(Number(await one('select amount from opening_balances where client_uuid = $1', [entry])), 1250.25,
+        'Accounts can read the balance')
+      await refuses('Accounts cannot insert under the existing Owner-only policy', insert,
+        ['00000000-0000-4000-8000-000000006302', openingDate, U.Accounts], /row-level security/i)
+      const changed = await q('update opening_balances set amount = 8888 where client_uuid = $1 returning id', [entry])
+      assertEq(changed.rows.length, 0, 'Accounts cannot update opening balances through RLS')
+    })
+    await as('Warehouse', async () => {
+      assertEq(await one('select amount from opening_balances where client_uuid = $1', [entry]), null,
+        'Warehouse cannot read an opening balance')
+    })
+  },
+})
+
+
+STEPS.push({
   id: 'L68',
   title: 'Owner can configure cancellation tiers with unique active thresholds (T3-03)',
   expect: 'green',

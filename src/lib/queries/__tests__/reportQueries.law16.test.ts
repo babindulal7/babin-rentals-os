@@ -18,8 +18,8 @@ vi.mock('../../supabase', () => ({
 }))
 
 let calls: FakeCall[] = []
-function useTables(tables: Record<string, TableAnswer>) {
-  const fake = fakeSupabase(tables)
+function useTables(tables: Record<string, TableAnswer>, maxRows?: number) {
+  const fake = fakeSupabase(tables, maxRows)
   state.client = fake.client
   calls = fake.calls
 }
@@ -240,5 +240,124 @@ describe('the fixes that made live reads impossible stay fixed', () => {
     const s = await getClientReportsSummary({}, { includeMoney: false })
     expect(s.money).toBeNull()
     expect(calls.some((c) => c.table === 'invoices')).toBe(false)
+  })
+})
+
+describe('Cash Flow opening balance', () => {
+  const from = '2026-11-03'
+  const opening = { account_type: 'cash', account_id: null, amount: 125, opening_date: from }
+
+  it('reads the period start in the selected branch and leaves closing unreconciled', async () => {
+    useTables({
+      opening_balances: [opening],
+      payments: [{ payment_type: 'Advance Payment', amount: 60 }],
+    })
+    const result = await getCashFlowSummary({ from, to: '2026-11-05', branchId: 'branch-a' })
+    expect(result.openingCash).toBe(rupees(125))
+    expect(result.closingCash).toBeNull()
+    expect(filtersOn('opening_balances')).toEqual(expect.arrayContaining([
+      expect.objectContaining({ method: 'lte', args: ['opening_date', from] }),
+      expect.objectContaining({ method: 'is', args: ['account_id', null] }),
+      expect.objectContaining({ method: 'eq', args: ['scope', 'location'] }),
+      expect.objectContaining({ method: 'eq', args: ['location_id', 'branch-a'] }),
+    ]))
+  })
+
+  it('does not present a prior snapshot as the opening balance', async () => {
+    useTables({ opening_balances: [{ ...opening, opening_date: '2026-11-02' }] })
+    expect((await getCashFlowSummary({ from })).openingCash).toBeNull()
+    expect(filtersOn('opening_balances')).toEqual(expect.arrayContaining([
+      expect.objectContaining({ method: 'eq', args: ['scope', 'org'] }),
+      expect.objectContaining({ method: 'is', args: ['location_id', null] }),
+    ]))
+  })
+
+  it('surfaces a failed opening balance read', async () => {
+    useTables({ opening_balances: DOWN })
+    await expect(getCashFlowSummary({ from })).rejects.toThrow('Could not read opening balance')
+  })
+})
+
+describe('Cash Flow complete ledger reads', () => {
+  it('includes every payment, expense, deposit movement and invoice beyond one server page', async () => {
+    useTables({
+      payments: Array.from({ length: 1001 }, () => ({ payment_type: 'Advance Payment', amount: 1 })),
+      expenses: Array.from({ length: 1001 }, () => ({ category_id: 'category-a', amount: 2 })),
+      expense_categories: [{ id: 'category-a', name: 'Transport' }],
+      deposit_movements: Array.from({ length: 1001 }, () => ({ movement_type: 'Received', amount: 3 })),
+      invoices: Array.from({ length: 1001 }, () => ({ total_amount: 4 })),
+    }, 100)
+    const result = await getCashFlowSummary()
+    expect(result).toMatchObject({
+      collected: rupees(1001), expensesPaid: rupees(2002),
+      netOperatingCash: rupees(-1001), depositsReceived: rupees(3003), invoiced: rupees(4004),
+      expensesByCategory: [{ category: 'Transport', amount: rupees(2002) }],
+    })
+  })
+
+  it('includes all receivables, deposits and approved expenses in Working Capital', async () => {
+    useTables({
+      invoices: Array.from({ length: 1001 }, () => ({
+        outstanding_amount: 1, total_amount: 4, due_date: '2026-12-01',
+      })),
+      security_deposits: Array.from({ length: 1001 }, () => ({
+        received_amount: 3, refunded_amount: 1, applied_amount: 1,
+      })),
+      expenses: Array.from({ length: 1001 }, () => ({ amount: 2 })),
+    }, 100)
+    const result = await getWorkingCapitalSummary({}, new Date('2026-11-06T12:00:00Z'))
+    expect(result).toMatchObject({
+      receivables: rupees(1001), depositsHeld: rupees(1001),
+      approvedUnpaidExpenses: rupees(2002), daysSalesOutstanding: 23,
+    })
+    expect(result.ageing[0]).toMatchObject({ amount: rupees(1001), invoices: 1001 })
+  })
+})
+
+describe('Cash Flow period and branch boundaries', () => {
+  it.each([
+    ['2026-11-03T00:00:00.000+05:45', '2026-11-05T23:59:59.999+05:45'],
+    ['2026-11-02T18:15:00.000Z', '2026-11-05T18:14:59.999Z'],
+  ])('accepts toolbar bounds and equivalent UTC instants (%s)', async (from, to) => {
+    useTables({ opening_balances: [{
+      account_type: 'cash', account_id: null, amount: 125, opening_date: '2026-11-03',
+    }] })
+    const result = await getCashFlowSummary({ from, to })
+    expect(result.openingCash).toBe(rupees(125))
+    expect(filtersOn('opening_balances')).toContainEqual({
+      table: 'opening_balances', method: 'lte', args: ['opening_date', '2026-11-03'],
+    })
+    expect(filtersOn('payments')).toEqual(expect.arrayContaining([
+      { table: 'payments', method: 'gte', args: ['payment_date', '2026-11-03T00:00:00.000+05:45'] },
+      { table: 'payments', method: 'lt', args: ['payment_date', '2026-11-06T00:00:00.000+05:45'] },
+    ]))
+    expect(filtersOn('expenses')).toContainEqual({ table: 'expenses', method: 'gte', args: ['expense_date', '2026-11-03'] })
+    expect(filtersOn('invoices')).toContainEqual({ table: 'invoices', method: 'lte', args: ['issue_date', '2026-11-05'] })
+  })
+
+  it('includes the entire final Kathmandu day without moving finance to the floor shift', async () => {
+    await getCashFlowSummary({ from: '2026-11-03', to: '2026-11-05' })
+    for (const [table, column] of [['payments', 'payment_date'], ['deposit_movements', 'created_at']]) {
+      expect(filtersOn(table!)).toEqual(expect.arrayContaining([
+        { table, method: 'gte', args: [column, '2026-11-03T00:00:00.000+05:45'] },
+        { table, method: 'lt', args: [column, '2026-11-06T00:00:00.000+05:45'] },
+      ]))
+    }
+    expect(filtersOn('expenses')).toContainEqual({ table: 'expenses', method: 'lte', args: ['expense_date', '2026-11-05'] })
+    expect(filtersOn('invoices')).toContainEqual({ table: 'invoices', method: 'lte', args: ['issue_date', '2026-11-05'] })
+  })
+
+  it('restricts deposit movements to the selected branch through their deposit', async () => {
+    await getCashFlowSummary({ branchId: 'branch-a' })
+    expect(filtersOn('deposit_movements')).toEqual(expect.arrayContaining([
+      { table: 'deposit_movements', method: 'select', args: ['id, movement_type, amount, security_deposits!inner(branch_id)'] },
+      { table: 'deposit_movements', method: 'eq', args: ['security_deposits.branch_id', 'branch-a'] },
+    ]))
+  })
+
+  it('refuses an impossible calendar date before reading the ledgers', async () => {
+    await expect(getCashFlowSummary({ from: '2026-02-30' })).rejects.toThrow('valid report date')
+    await expect(getCashFlowSummary({ from: '2026-02-30T00:00:00.000+05:45' })).rejects.toThrow('valid report date')
+    expect(calls).toEqual([])
   })
 })

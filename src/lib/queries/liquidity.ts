@@ -1,6 +1,8 @@
 import { supabase } from '../supabase'
 import { rupees, type Paisa } from '../money'
-import { rowsOf, type ReportFilterOptions } from './reportSupport'
+import { kathmanduCivil } from '../bs'
+import { NPT_OFFSET_STRING } from '../operationalDay'
+import { completeReportRead, rowsOf, type ReportFilterOptions } from './reportSupport'
 import { fetchLatestOpeningBalance } from './openingBalances'
 
 /**
@@ -31,6 +33,29 @@ const money = (v: number | string | null | undefined): Paisa => rupees(Number(v 
 const sum = <T,>(rows: T[], f: (r: T) => number): Paisa => rows.reduce((a, r) => a + f(r), 0) as Paisa
 const DAY = 86_400_000
 
+/** The toolbar emits zoned instants; date columns and opening balances need their Kathmandu day. */
+function reportDay(bound: string): string {
+  const day = bound.slice(0, 10)
+  const date = new Date(`${day}T00:00:00.000Z`)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !Number.isFinite(date.getTime()) ||
+      date.toISOString().slice(0, 10) !== day) {
+    throw new Error('Choose a valid report date.')
+  }
+  if (bound === day) return day
+  const instant = Date.parse(bound)
+  if (!/^\d{4}-\d{2}-\d{2}T.+(?:Z|[+-]\d{2}:\d{2})$/.test(bound) || !Number.isFinite(instant)) {
+    throw new Error('Choose a valid report date.')
+  }
+  return new Date(kathmanduCivil(new Date(instant))).toISOString().slice(0, 10)
+}
+
+/** Finance periods use Kathmandu calendar dates, independently of floor shifts. */
+function calendarDayStart(day: string, followingDay = false): string {
+  const date = new Date(`${day}T00:00:00.000Z`)
+  const boundaryDay = followingDay ? new Date(date.getTime() + DAY).toISOString().slice(0, 10) : day
+  return `${boundaryDay}T00:00:00.000${NPT_OFFSET_STRING}`
+}
+
 export interface ExpenseCategoryLine {
   category: string
   amount: Paisa
@@ -55,41 +80,46 @@ export interface CashFlowSummary {
   collectionRatePct: number | null
   /** Opening cash balance for the period (from opening_balances table). Null if not set. */
   openingCash: Paisa | null
-  /** Closing cash = opening + netOperatingCash. Null if opening is not set. */
+  /** Reconciled closing cash. Null until the account ledger can supply it. */
   closingCash: Paisa | null
   capitalSpend: null
   runwayMonths: null
 }
 
 export async function getCashFlowSummary(options: ReportFilterOptions = {}): Promise<CashFlowSummary> {
-  let paymentsQ = supabase.from('payments').select('amount, payment_type').eq('status', 'Received')
-  let expensesQ = supabase.from('expenses').select('amount, category_id').eq('status', 'Paid')
-  let movementsQ = supabase.from('deposit_movements').select('movement_type, amount')
-  let invoicesQ = supabase.from('invoices').select('total_amount').neq('status', 'Draft').neq('status', 'Void').is('voided_at', null)
-  if (options.from) {
-    paymentsQ = paymentsQ.gte('payment_date', options.from)
-    expensesQ = expensesQ.gte('expense_date', options.from)
-    movementsQ = movementsQ.gte('created_at', options.from)
-    invoicesQ = invoicesQ.gte('issue_date', options.from)
+  const fromDay = options.from ? reportDay(options.from) : null
+  const toDay = options.to ? reportDay(options.to) : null
+  let paymentsQ = supabase.from('payments').select('id, amount, payment_type').eq('status', 'Received')
+  let expensesQ = supabase.from('expenses').select('id, amount, category_id').eq('status', 'Paid')
+  let movementsQ = supabase.from('deposit_movements').select('id, movement_type, amount, security_deposits!inner(branch_id)')
+  let invoicesQ = supabase.from('invoices').select('id, total_amount').neq('status', 'Draft').neq('status', 'Void').is('voided_at', null)
+  if (fromDay) {
+    const fromInstant = calendarDayStart(fromDay)
+    paymentsQ = paymentsQ.gte('payment_date', fromInstant)
+    expensesQ = expensesQ.gte('expense_date', fromDay)
+    movementsQ = movementsQ.gte('created_at', fromInstant)
+    invoicesQ = invoicesQ.gte('issue_date', fromDay)
   }
-  if (options.to) {
-    paymentsQ = paymentsQ.lte('payment_date', options.to)
-    expensesQ = expensesQ.lte('expense_date', options.to)
-    movementsQ = movementsQ.lte('created_at', options.to)
-    invoicesQ = invoicesQ.lte('issue_date', options.to)
+  if (toDay) {
+    const untilInstant = calendarDayStart(toDay, true)
+    paymentsQ = paymentsQ.lt('payment_date', untilInstant)
+    expensesQ = expensesQ.lte('expense_date', toDay)
+    movementsQ = movementsQ.lt('created_at', untilInstant)
+    invoicesQ = invoicesQ.lte('issue_date', toDay)
   }
   if (options.branchId) {
     paymentsQ = paymentsQ.eq('branch_id', options.branchId)
     expensesQ = expensesQ.eq('branch_id', options.branchId)
     invoicesQ = invoicesQ.eq('branch_id', options.branchId)
+    movementsQ = movementsQ.eq('security_deposits.branch_id', options.branchId)
   }
 
   const [paymentsRes, expensesRes, categoriesRes, movementsRes, invoicesRes] = await Promise.all([
-    paymentsQ,
-    expensesQ,
-    supabase.from('expense_categories').select('id, name'),
-    movementsQ,
-    invoicesQ,
+    completeReportRead(paymentsQ, 'Payments read failed'),
+    completeReportRead(expensesQ, 'Expenses read failed'),
+    completeReportRead(supabase.from('expense_categories').select('id, name'), 'Expense categories read failed'),
+    completeReportRead(movementsQ, 'Deposit movements read failed'),
+    completeReportRead(invoicesQ, 'Invoices read failed'),
   ])
   const payments = rowsOf<{ amount: number | string | null; payment_type: string }>(paymentsRes, 'Payments read failed')
   const expenses = rowsOf<{ amount: number | string | null; category_id: string | null }>(expensesRes, 'Expenses read failed')
@@ -109,11 +139,14 @@ export async function getCashFlowSummary(options: ReportFilterOptions = {}): Pro
     byCat.set(name, (byCat.get(name) ?? 0) + money(e.amount))
   }
 
-  // Fetch opening balance for the period (T3-07)
-  const asOfDate = options.to ?? new Date().toISOString().slice(0, 10)
-  const openingBalance = await fetchLatestOpeningBalance('cash', null, asOfDate).catch(() => null)
-  const openingCash = openingBalance?.amountPaisa ?? null
-  const closingCash = openingCash !== null ? (openingCash + (collected - refunds - expensesPaid)) as Paisa : null
+  const openingBalance = fromDay
+    ? await fetchLatestOpeningBalance('cash', null, fromDay, options.branchId)
+    : null
+  // Older snapshots need the intervening account movements before they can
+  // be used as the opening of this period.
+  const openingCash = openingBalance && openingBalance.openingDate === fromDay
+    ? openingBalance.amountPaisa
+    : null
 
   return {
     collected,
@@ -126,7 +159,7 @@ export async function getCashFlowSummary(options: ReportFilterOptions = {}): Pro
     invoiced,
     collectionRatePct: invoiced > 0 ? Math.round((collected / invoiced) * 100) : null,
     openingCash,
-    closingCash,
+    closingCash: null,
     capitalSpend: null,
     runwayMonths: null,
   }
@@ -162,17 +195,22 @@ export async function getWorkingCapitalSummary(
   now: Date = new Date(),
 ): Promise<WorkingCapitalSummary> {
   const since = new Date(now.getTime() - 90 * DAY).toISOString().slice(0, 10)
-  let openQ = supabase.from('invoices').select('outstanding_amount, due_date').in('status', OPEN_STATUSES).is('voided_at', null)
-  let recentQ = supabase.from('invoices').select('total_amount').neq('status', 'Draft').neq('status', 'Void').is('voided_at', null).gte('issue_date', since)
-  let depositsQ = supabase.from('security_deposits').select('received_amount, refunded_amount, applied_amount')
-  let expensesQ = supabase.from('expenses').select('amount').eq('status', 'Approved')
+  let openQ = supabase.from('invoices').select('id, outstanding_amount, due_date').in('status', OPEN_STATUSES).is('voided_at', null)
+  let recentQ = supabase.from('invoices').select('id, total_amount').neq('status', 'Draft').neq('status', 'Void').is('voided_at', null).gte('issue_date', since)
+  let depositsQ = supabase.from('security_deposits').select('id, received_amount, refunded_amount, applied_amount')
+  let expensesQ = supabase.from('expenses').select('id, amount').eq('status', 'Approved')
   if (options.branchId) {
     openQ = openQ.eq('branch_id', options.branchId)
     recentQ = recentQ.eq('branch_id', options.branchId)
     depositsQ = depositsQ.eq('branch_id', options.branchId)
     expensesQ = expensesQ.eq('branch_id', options.branchId)
   }
-  const [openRes, recentRes, depositsRes, expensesRes] = await Promise.all([openQ, recentQ, depositsQ, expensesQ])
+  const [openRes, recentRes, depositsRes, expensesRes] = await Promise.all([
+    completeReportRead(openQ, 'Open invoices read failed'),
+    completeReportRead(recentQ, 'Recent invoices read failed'),
+    completeReportRead(depositsQ, 'Security deposits read failed'),
+    completeReportRead(expensesQ, 'Expenses read failed'),
+  ])
   const open = rowsOf<{ outstanding_amount: number | string | null; due_date: string | null }>(openRes, 'Open invoices read failed')
   const recent = rowsOf<{ total_amount: number | string | null }>(recentRes, 'Recent invoices read failed')
   const deposits = rowsOf<{ received_amount: number | string | null; refunded_amount: number | string | null; applied_amount: number | string | null }>(

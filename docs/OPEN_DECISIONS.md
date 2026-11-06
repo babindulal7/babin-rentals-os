@@ -26,6 +26,21 @@ Draft question for the registered tax office
 Keep the reply and the applicable date with the cancellation implementation.
 Fee tier configuration and notice calculations can continue while this is open.
 
+## 5 November 2026: Who may record an expense payment? (O-24)
+
+Renumbered from O-21 on 6 November because O-21 is also the answered glossary
+editing decision on the T0-12 branch (ruling C-6). The expense-payment question
+below remains unanswered; the glossary ruling does not grant payment authority.
+
+D15 requires daily closing to include paid expenses by account. The existing
+expense approval rules govern who approves the expense, and the expense ledger
+has no settlement account or payment timestamp. Babin must confirm which roles
+may record the actual payment of an approved expense and whether the person
+who submitted or approved it may also record payment. Existing Paid rows lack
+the account data needed for reconciliation and need explicit allocation.
+
+Until the decision is recorded, keep the existing expense transitions. T3-07
+can still record opening balances under the existing Owner-only database policy.
 
 ## 28 October 2026: switch-user PIN length (T1-15) — ANSWERED 1 Nov: 4 digits (O-18)
 

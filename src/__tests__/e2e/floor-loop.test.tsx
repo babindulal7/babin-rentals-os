@@ -53,6 +53,12 @@ vi.mock('../../lib/device', () => ({
   useTabularLayout: () => true,
 }))
 
+vi.mock('../../lib/queries/bankAccounts', () => ({
+  listBankAccounts: async () => [{
+    id: 'drawer', accountName: 'Front drawer', bankName: '', channelGroup: 'Cash', isPrimary: true,
+  }],
+}))
+
 vi.mock('../../lib/network', () => ({
   useNetwork: () => true,
 }))
@@ -172,6 +178,11 @@ vi.mock('../../lib/supabase', () => {
                 error: null,
               }).then(onFulfill)
             }
+            if (table === 'deposit_movements') {
+              return Promise.resolve({
+                data: [{ bank_account_id: 'drawer' }], count: 1, error: null,
+              }).then(onFulfill)
+            }
             if (table === 'cases') {
               return Promise.resolve({
                 data: [],
@@ -244,6 +255,7 @@ describe('E2E Full Floor Loop: Pack -> Handover -> Return -> Reset -> Deposit Se
     expect(typeof closeRental).toBe('function')
 
     // 2. Return Settlement Modal renders truthfully and enforces reason validation
+    currentRole = 'Owner'
     const handleConfirm = vi.fn()
     const handleClose = vi.fn()
 
@@ -256,7 +268,7 @@ describe('E2E Full Floor Loop: Pack -> Handover -> Return -> Reset -> Deposit Se
             bookingNo="BK-2026-0715"
             clientName="Himalayan Films Pvt. Ltd."
             clientPhone="+9779800000001"
-            depositHeldPaisa={rupees(15000)}
+            bookingId={BOOKING_ID}
             scheduledReturnIso="2026-07-18T18:00:00.000Z"
             totalItemCount={4}
             onConfirmSettlement={handleConfirm}

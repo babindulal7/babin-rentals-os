@@ -8,6 +8,16 @@ import {
   type ReturnSettlementSummary,
 } from '../modals/ReturnSettlementModal'
 import { rupees } from '../../../lib/money'
+import { fetchDepositSettlementDetails } from '../../../lib/queries/depositSettlement'
+
+vi.mock('../../../lib/queries/depositSettlement', () => ({
+  fetchDepositSettlementDetails: vi.fn(),
+}))
+
+const refundAccounts = [
+  { id: 'cash', accountName: 'Front drawer', bankName: '', channelGroup: 'Cash', isPrimary: false },
+  { id: 'bank', accountName: 'Operating account', bankName: 'Example Bank', channelGroup: 'Bank', isPrimary: true },
+] as const
 
 ;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
 
@@ -38,6 +48,9 @@ describe('ReturnSettlementModal (Deposit Reconciliation & Damage Invoicing)', ()
   let root: Root
 
   beforeEach(() => {
+    vi.mocked(fetchDepositSettlementDetails).mockResolvedValue({
+      heldPaisa: rupees(20000), accounts: [...refundAccounts], originalAccountId: 'cash',
+    })
     container = document.createElement('div')
     document.body.appendChild(container)
     root = createRoot(container)
@@ -58,7 +71,7 @@ describe('ReturnSettlementModal (Deposit Reconciliation & Damage Invoicing)', ()
     bookingNo: 'BK-2026-0801',
     clientName: 'Sagarmatha Films',
     clientPhone: '9841234567',
-    depositHeldPaisa: rupees(20000),
+    bookingId: 'booking-id',
     scheduledReturnIso: '2026-08-05T06:00:00.000Z',
     actualReturnIso: '2026-08-05T06:00:00.000Z', // on time
     dayRatePaisa: rupees(5000),
@@ -68,8 +81,8 @@ describe('ReturnSettlementModal (Deposit Reconciliation & Damage Invoicing)', ()
     onConfirmSettlement: vi.fn(),
   }
 
-  it('renders deposit held tile and cleanly refunds full deposit when no issues', () => {
-    act(() => {
+  it('renders deposit held tile and cleanly refunds full deposit when no issues', async () => {
+    await act(async () => {
       root.render(<ReturnSettlementModal {...baseProps} />)
     })
 
@@ -80,13 +93,13 @@ describe('ReturnSettlementModal (Deposit Reconciliation & Damage Invoicing)', ()
     expect(text).toContain('Net Deposit Refund')
   })
 
-  it('calculates late fee when return is overdue and allows charging it', () => {
+  it('calculates late fee when return is overdue and allows charging it', async () => {
     const overdueProps = {
       ...baseProps,
       actualReturnIso: '2026-08-05T09:15:00.000Z',
     }
 
-    act(() => {
+    await act(async () => {
       root.render(<ReturnSettlementModal {...overdueProps} />)
     })
 
@@ -103,7 +116,7 @@ describe('ReturnSettlementModal (Deposit Reconciliation & Damage Invoicing)', ()
       actualReturnIso: '2026-08-05T09:15:00.000Z',
     }
 
-    act(() => {
+    await act(async () => {
       root.render(<ReturnSettlementModal {...overdueProps} />)
     })
 
@@ -123,7 +136,7 @@ describe('ReturnSettlementModal (Deposit Reconciliation & Damage Invoicing)', ()
     const submitBtn = buttons.find((b) => b.textContent?.includes('Record Settlement'))
     expect(submitBtn).toBeTruthy()
 
-    act(() => {
+    await act(async () => {
       submitBtn?.click()
     })
 
@@ -140,7 +153,7 @@ describe('ReturnSettlementModal (Deposit Reconciliation & Damage Invoicing)', ()
       }
     })
 
-    act(() => {
+    await act(async () => {
       submitBtn?.click()
     })
 
@@ -148,15 +161,18 @@ describe('ReturnSettlementModal (Deposit Reconciliation & Damage Invoicing)', ()
     const callArgs = overdueProps.onConfirmSettlement.mock.calls[0]
     expect(callArgs).toBeDefined()
     const summary = callArgs![0] as ReturnSettlementSummary
+    expect(summary.refundAccountId).toBe('cash')
     expect(summary.lateFeeChargedPaisa).toBe(rupees(0))
     expect(summary.lateFeeWaiver?.reason).toBe('Traffic roadblock delayed crew return')
     expect(summary.lateFeeWaiver?.approverName).toBe('Babin Shrestha')
   })
 
-  it('computes balance owed by client when damage charges exceed deposit held', () => {
+  it('computes balance owed by client when damage charges exceed deposit held', async () => {
+    vi.mocked(fetchDepositSettlementDetails).mockResolvedValueOnce({
+      heldPaisa: rupees(10000), accounts: [...refundAccounts], originalAccountId: 'cash',
+    })
     const damagedProps = {
       ...baseProps,
-      depositHeldPaisa: rupees(10000),
       itemsWithIssues: [
         {
           key: 'item-1',
@@ -169,7 +185,7 @@ describe('ReturnSettlementModal (Deposit Reconciliation & Damage Invoicing)', ()
       ],
     }
 
-    act(() => {
+    await act(async () => {
       root.render(<ReturnSettlementModal {...damagedProps} />)
     })
 
@@ -190,8 +206,8 @@ describe('ReturnSettlementModal (Deposit Reconciliation & Damage Invoicing)', ()
     expect(text).toContain('Rs 15,000')
   })
 
-  it('renders WhatsApp return receipt share button', () => {
-    act(() => {
+  it('renders WhatsApp return receipt share button', async () => {
+    await act(async () => {
       root.render(<ReturnSettlementModal {...baseProps} />)
     })
 
@@ -200,4 +216,25 @@ describe('ReturnSettlementModal (Deposit Reconciliation & Damage Invoicing)', ()
     expect(waLink).toBeTruthy()
     expect(waLink?.getAttribute('href')).toContain('https://wa.me/9779841234567')
   })
+
+  it('requires a choice for an ambiguous receipt and records the selected account', async () => {
+    const onConfirmSettlement = vi.fn()
+    vi.mocked(fetchDepositSettlementDetails).mockResolvedValueOnce({
+      heldPaisa: rupees(8000), accounts: [...refundAccounts], originalAccountId: null,
+    })
+    await act(async () => {
+      root.render(<ReturnSettlementModal {...baseProps} onConfirmSettlement={onConfirmSettlement} />)
+    })
+    const submit = [...document.body.querySelectorAll('button')]
+      .find(button => button.textContent?.includes('Record Settlement'))
+    expect(submit?.disabled).toBe(true)
+    const select = document.getElementById('refund-payment-account') as HTMLSelectElement
+    act(() => setNativeValue(select, 'bank'))
+    expect(submit?.disabled).toBe(false)
+    await act(async () => submit?.click())
+    expect(onConfirmSettlement).toHaveBeenCalledWith(expect.objectContaining({
+      depositRefundPaisa: rupees(8000), refundAccountId: 'bank',
+    }))
+  })
+
 })

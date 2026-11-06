@@ -1,6 +1,10 @@
 import { useState, useMemo } from 'react'
 import { Modal } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Button'
+import { Select } from '../../../components/ui/Select'
+import { useLoad } from '../../../lib/queries/useLoad'
+import { fetchDepositSettlementDetails } from '../../../lib/queries/depositSettlement'
+import { useNetwork } from '../../../lib/network'
 import Icon from '../../../components/ui/Icon'
 import { formatMoney, rupees, grouped, type Paisa } from '../../../lib/money'
 import {
@@ -14,7 +18,7 @@ import {
 import { returnReceipt } from '../../../lib/whatsappTemplates'
 import { buildWaLink, normalisePhone, NO_PHONE_REASON } from '../../../lib/whatsapp'
 import { useAuth } from '../../../lib/auth'
-import { canApproveLateFeeWaiver } from '../../../lib/rbac'
+import { canApproveLateFeeWaiver, canReleaseDeposit } from '../../../lib/rbac'
 
 export interface ReturnSettlementDamageItem {
   key: string
@@ -38,6 +42,7 @@ export interface ReturnSettlementSummary {
   damageChargesPaisa: Paisa
   totalPenaltiesPaisa: Paisa
   depositRefundPaisa: Paisa
+  refundAccountId: string | null
   balanceDuePaisa: Paisa
   settledAtIso: string
 }
@@ -48,8 +53,7 @@ export interface ReturnSettlementModalProps {
   bookingNo: string
   clientName: string
   clientPhone?: string | null | undefined
-  /** Security deposit currently held (Law 5 liability). */
-  depositHeldPaisa?: Paisa | null | undefined
+  bookingId: string
   scheduledReturnIso: string
   actualReturnIso?: string | undefined
   /** 1-day rate in Paisa for late fee calculation */
@@ -67,7 +71,7 @@ export function ReturnSettlementModal({
   bookingNo,
   clientName,
   clientPhone,
-  depositHeldPaisa,
+  bookingId,
   scheduledReturnIso,
   actualReturnIso,
   dayRatePaisa,
@@ -77,6 +81,15 @@ export function ReturnSettlementModal({
   onConfirmSettlement,
 }: ReturnSettlementModalProps) {
   const { user } = useAuth()
+  const online = useNetwork()
+  const settlement = useLoad(() => fetchDepositSettlementDetails(bookingId), {
+    enabled: isOpen,
+    key: bookingId,
+  })
+  const [refundChoice, setRefundChoice] = useState<string | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const refundAccountId = refundChoice ?? settlement.data?.originalAccountId ?? ''
+  const mayRelease = user ? canReleaseDeposit(user.role, online) : false
   const resolvedDayRate = dayRatePaisa ?? rupees(0)
 
   // 1. Damage charge estimates in whole Rupees (Law 1: converted to Paisa via rupees())
@@ -130,7 +143,7 @@ export function ReturnSettlementModal({
   }, [lateFeeChargedPaisa, totalDamagePaisa])
 
   // Security Deposit Reconciliation (Law 5)
-  const depositHeld = depositHeldPaisa ?? (0 as Paisa)
+  const depositHeld = settlement.data?.heldPaisa ?? (0 as Paisa)
 
   const { depositRefundPaisa, balanceDuePaisa } = useMemo(() => {
     const held = depositHeld
@@ -200,7 +213,13 @@ export function ReturnSettlementModal({
     }))
   }
 
+  const refundNeeded = depositRefundPaisa > 0
+  const hasRefundAccount = settlement.data?.accounts.some(account => account.id === refundAccountId)
+  const canSubmit = mayRelease && depositHeld > 0 && (!refundNeeded || hasRefundAccount) && !submitting
+
   const handleConfirm = async () => {
+    if (!canSubmit || !onConfirmSettlement) return
+    setSubmitError(null)
     if (lateDecision === 'Waive' && lateResult.feePaisa > 0) {
       const check = validateWaiver({
         staffName,
@@ -236,18 +255,32 @@ export function ReturnSettlementModal({
       damageChargesPaisa: totalDamagePaisa,
       totalPenaltiesPaisa,
       depositRefundPaisa,
+      refundAccountId: refundNeeded ? refundAccountId : null,
       balanceDuePaisa,
       settledAtIso: new Date().toISOString(),
     }
 
     try {
-      if (onConfirmSettlement) {
-        await onConfirmSettlement(summary)
-      }
+      await onConfirmSettlement(summary)
       setSettled(true)
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Could not record the deposit settlement.')
     } finally {
       setSubmitting(false)
     }
+  }
+
+  if (settlement.loading || settlement.error || !settlement.data) {
+    return (
+      <Modal isOpen={isOpen} onClose={onClose} title="Return Settlement & Deposit Reconciliation">
+        {settlement.error ? (
+          <div role="alert">
+            <p>{settlement.error}</p>
+            <Button onClick={settlement.reload}>Retry</Button>
+          </div>
+        ) : <p role="status">Loading deposit balance…</p>}
+      </Modal>
+    )
   }
 
   return (
@@ -310,11 +343,11 @@ export function ReturnSettlementModal({
               </button>
             )}
 
-            {!settled && (
+            {!settled && onConfirmSettlement && (
               <Button
                 variant="primary"
                 onClick={handleConfirm}
-                disabled={submitting}
+                disabled={!canSubmit}
                 style={{ minHeight: 44, padding: '0 18px', fontWeight: 600 }}
               >
                 {submitting ? 'Recording Settlement…' : 'Record Settlement & Release'}
@@ -325,6 +358,25 @@ export function ReturnSettlementModal({
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {submitError && <p role="alert">{submitError}</p>}
+        {!online && <p role="status">Reconnect to record the settlement.</p>}
+        {online && !mayRelease && <p>Only staff authorised to release deposits can record this settlement.</p>}
+        {mayRelease && !settled && refundNeeded && (
+          <Select
+            label="Refund payment account"
+            value={refundAccountId}
+            onChange={event => setRefundChoice(event.target.value)}
+            placeholder="Choose an account"
+            disabled={submitting || settlement.data.accounts.length === 0}
+            options={settlement.data.accounts.map(account => ({
+              value: account.id,
+              label: `${account.accountName} · ${account.channelGroup}`,
+            }))}
+          />
+        )}
+        {mayRelease && !settled && refundNeeded && settlement.data.accounts.length === 0 && (
+          <p>Set up an active payment account to record the refund.</p>
+        )}
         {settled && (
           <div
             role="status"

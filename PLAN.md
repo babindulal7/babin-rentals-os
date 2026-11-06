@@ -201,6 +201,7 @@ stay in [`docs/OPEN_DECISIONS.md`](docs/OPEN_DECISIONS.md).
 | O-20 | What fee sits on a custom-fee plan (Elite's annual fee is blank in the plans Babin sent) — a listed fee, or per-client negotiation? (D22 implementation, T8-03 review) | ⭐ Per-client negotiation kept: the change into the plan is refused without a negotiated fee (`GATE:membership.custom_fee`), the negotiated fee is recorded on the membership row and prices later changes out of it (a renewal carries it onto the new term), and a membership with no fee on record anywhere is refused (`GATE:membership.fee_unknown`). Babin answers to unblock | T8-03 |
 
 | O-22 | VAT treatment and adjustment documents for a retained cancellation fee | Babin confirmed VAT registration and has no accountant. Obtain a written clarification from the registered Inland Revenue Office or a qualified Nepal tax adviser. | T3-03 |
+| O-24 | Who may record payment of an approved expense, and can they be its submitter or approver? (Renumbered from O-21 to avoid the glossary decision's ID.) | Babin decides. Existing approval permissions remain in effect. | T3-07 |
 
 ### §4.3 How a new decision gets in
 

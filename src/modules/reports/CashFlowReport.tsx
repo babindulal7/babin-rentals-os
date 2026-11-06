@@ -25,13 +25,13 @@ interface StatementLine {
 
 function statement(s: CashFlowSummary): StatementLine[] {
   return [
-    { label: 'Opening cash', amount: s.openingCash, note: s.openingCash === null ? 'No bank balance is recorded' : undefined },
+    { label: 'Opening cash', amount: s.openingCash, note: s.openingCash === null ? 'No opening cash balance for the start of this period' : undefined },
     { label: 'Cash in — rental collections', amount: s.collected },
     { label: 'Cash out — refunds', amount: -s.refunds as Paisa },
     { label: 'Cash out — expenses paid', amount: -s.expensesPaid as Paisa },
     { label: 'Net operating cash', amount: s.netOperatingCash },
     { label: 'Cash out — equipment purchase', amount: null, note: 'Capital spend is not recorded' },
-    { label: 'Closing cash', amount: s.closingCash, note: s.closingCash === null ? 'Needs the opening balance' : undefined },
+    { label: 'Closing cash', amount: s.closingCash, note: s.closingCash === null ? 'Account reconciliation is pending' : undefined },
   ]
 }
 
@@ -59,8 +59,8 @@ function cashFlowCsv(s: CashFlowSummary | null): ReportCsvRow[] {
  * `data/liquidityReports` whatever the read returned (and the read itself
  * could not succeed — see `liquidity.ts`). It now draws the period's real
  * collections, refunds, paid expenses and deposit movements through `useLoad`
- * + `PageBody`; opening/closing cash, capital spend and runway say "Not
- * tracked yet". Deposits are shown apart from own cash (Law 4).
+ * + `PageBody`. Opening cash uses a recorded balance for the start date.
+ * Deposits are shown separately from operating cash (Law 5).
  */
 export default function CashFlowReport() {
   const canSeeMoney = useCanViewMoney()

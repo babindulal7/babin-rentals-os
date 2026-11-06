@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { settleDeposit, settleDepositConfig } from '../settleDeposit'
 import { rupees } from '../../../lib/money'
+import { idempotentInsert } from '../../../lib/dataAccess'
 import type { ActionContext } from '../../core'
 
 const rpcMock = vi.fn()
@@ -167,6 +168,7 @@ describe('settleDeposit', () => {
       {
         bookingRef: 'B-715',
         releasePaisa: rupees(20000),
+        bankAccountId: 'refund-account',
         appliedPaisa: rupees(5000),
         chargeType: 'Damage',
         appliedReason: 'Scratch on lens front element',
@@ -182,5 +184,8 @@ describe('settleDeposit', () => {
     expect(result.appliedPaisa).toBe(rupees(5000))
     expect(result.remainingHeldPaisa).toBe(rupees(0))
     expect(result.movementNos).toEqual(['DEP-1-M2', 'DEP-1-M3'])
+    expect(idempotentInsert).toHaveBeenCalledWith('deposit_movements', expect.objectContaining({
+      movement_type: 'Released', bank_account_id: 'refund-account',
+    }), { queueOnFailure: false })
   })
 })
