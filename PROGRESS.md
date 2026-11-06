@@ -1,5 +1,73 @@
 # Progress Log
 
+## 2026-11-06 — Wave A UI/UX Repairs: Fail-Closed Offline State, Overbooking Gate & Alternative Separation, Read Error Handling (Sub-Rentals, Damage, Cancellation Tiers, Collaterals) (Lane B)
+
+**Did**
+- **UX-02 (Global Offline State):**
+  - Updated `OfflineBanner` in `src/App.tsx` from over-promising *"Changes will be saved locally and synced when you reconnect"* to truthful state: *"You are offline. Scans and team notes queue locally. Custodial handovers, returns, and stage transitions require an online connection."*
+- **UX-01 (Overbooking Gate & Sub-Rent Separation):**
+  - Removed `|| true` bypass in `src/modules/rentals/booking/AddItemPanel.tsx`.
+  - Cleanly separated overbooking permission (`allowOverbooking`) from partner cross-hiring / alternative selection (`onSubRent`).
+  - Passed `allowOverbooking` to `OverbookingOverrideModal.tsx` and disabled overbooking action with clear explanatory text when overbooking is turned off in Settings.
+- **UX-13 (Sub-Rentals Read Failures):**
+  - In `src/modules/operations/SubRental.tsx`, replaced silent `.catch(() => {})` read swallow with explicit loading state and `ErrorBanner` with Retry button, eliminating false "No records found" empty states on database failure.
+- **UX-14, UX-15, UX-16 (Damage Read Failures, Persisted Rejection & Truthful Feedback):**
+  - Handled read failure in `src/modules/inventory/DamageTab.tsx` with `ErrorBanner` and Retry button for both money-blind and finance roles.
+  - Connected the "Reject" button to authoritative backend action `resolveDamageFinding({ findingId: f.id, disposition: 'Absorb', chargePaisa: 0 as Paisa, clientUuid: generateClientUuid() })`, persisting the waiver/absorption in the database instead of leaving it in unpersisted component state.
+  - Updated `justApproved` status feedback to confirm that damage resolution has been recorded on the database.
+- **UX-17 (Cancellation Fee Tiers Read Failure):**
+  - In `src/modules/settings/sections/CancellationFeeTiersCard.tsx`, replaced silent swallow with explicit `role="alert"` error message and Retry action, preventing false claims that no cancellation policies exist.
+- **UX-19 (Collateral Documents Fail-Closed Verification):**
+  - In `src/modules/rentals/BookingDetail.tsx`, added `collateralsError` tracking and fail-closed gate check: close action and blockers now halt on collateral query failure rather than falsely assuming zero collateral documents are held.
+- **Test Coverage:**
+  - Added `src/modules/operations/__tests__/SubRental.error.test.tsx` (2 tests).
+  - Added `src/modules/inventory/__tests__/DamageTab.error.test.tsx` (2 tests).
+  - Added `src/modules/settings/sections/__tests__/CancellationFeeTiersCard.error.test.tsx` (2 tests).
+  - Added `src/modules/rentals/booking/__tests__/AddItemPanel.overbooking.test.tsx` (3 tests).
+  - Added `src/modules/rentals/booking/__tests__/OverbookingOverrideModal.test.tsx` (5 tests).
+
+**Ruled**
+- R-40 / Law 1: Custody transitions and stage mutations fail closed online and are never queued offline; global messaging must reflect this truth.
+- Truthfulness of State: Empty state ("No records found") must never disguise a network or query error; failed reads must render explicit error alerts with retry affordances.
+- Gate Integrity: Collateral document verification must fail closed before close gates evaluate.
+
+**Verified**
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- Vitest suites:
+  - `src/modules/rentals/booking/__tests__/OverbookingOverrideModal.test.tsx` — 5/5 passed.
+  - `src/modules/rentals/booking/__tests__/AddItemPanel.overbooking.test.tsx` — 3/3 passed.
+  - `src/modules/operations/__tests__/SubRental.error.test.tsx` — 2/2 passed.
+  - `src/modules/inventory/__tests__/DamageTab.error.test.tsx` — 2/2 passed.
+  - `src/modules/settings/sections/__tests__/CancellationFeeTiersCard.error.test.tsx` — 2/2 passed.
+  - `src/modules/settings/sections/__tests__/NotificationPreferencesControl.push.test.tsx` — 5/5 passed.
+  - `src/modules/crew/__tests__/CrewBooking.calendar.test.ts` — 5/5 passed.
+  - `src/modules/notes/__tests__/ShiftBriefModal.test.tsx` — 1/1 passed.
+- `npm run check:pglite` — 220/220 applied, 0 failed, 0 leaks, 182 definers pinned.
+- `npm run check:lifecycle` — 63/63 steps green, 0 red, 0 failed.
+- `npm run check:security` — 18 Phase 0 SQL regressions + 28 operations grants + 14 Reset branch regressions passed.
+- `npm run check:contrast` — 106/106 passed.
+- `npm run build` — `tsc --noEmit && vite build` clean build in 4m 37s.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 219 files · check:pglite 219/219 applied, 0 failed (recorded 2026-11-06T10:49:02.731Z). Suite: Historical suite: 49/49 passed, 0 failed (recorded 2026-11-06T10:16:49.801Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-06T10:49:51.739Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Wave B & C items awaiting triage or local merge by Babin.
+- On-device owner inspection on physical iPad hardware.
+
 ## 2026-11-06 — Top 10 UI/UX Repairs: Scanner Floor Outcome, QR/Barcode Generation, Real Evidence Files, Push Truth, Freshness Timestamps, Calendar Feeds, Touch Targets (Lane B)
 
 **Did**
@@ -129,7 +197,7 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
   - `src/modules/notes/__tests__/ShiftBriefModal.test.tsx` — 1/1 passed.
   - `src/lib/__tests__/push.test.ts` — 11/11 passed.
   - `src/lib/__tests__/scannerLookup.test.ts` — 6/6 passed.
-- `npm run check:pglite` — 219/219 applied, 0 failed, 0 leaks, 181 definers pinned.
+- `npm run check:pglite` — 220/220 applied, 0 failed, 0 leaks, 182 definers pinned.
 - `npm run check:lifecycle` — 63/63 steps green, 0 red, 0 failed.
 - `npm run check:security` — 18 Phase 0 regressions + 28 operations grants + 14 Reset branch regressions passed.
 - `npm run check:contrast` — 106/106 passed.
