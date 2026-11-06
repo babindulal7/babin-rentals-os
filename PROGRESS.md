@@ -1,5 +1,43 @@
 # Progress Log
 
+## 2026-11-06 — T3-07: Read complete liquidity periods and keep deposit movements in their branch
+
+**Did**
+- Cash Flow and Working Capital now page every matching ledger and category dataset through the existing complete-read guard. Added a capped-server regression with 1001 records so a busy period cannot silently report only the first page.
+- Cash Flow normalizes bare dates and the report toolbar's zoned bounds to Kathmandu calendar dates. Timestamp ledgers use an exclusive next-midnight upper bound; expense/invoice date columns and opening-balance lookups use bare dates. UTC-equivalent toolbar bounds find the same recorded opening balance.
+- Deposit movements are filtered through their parent deposit's branch. Added regressions for period endpoints, branch scoping and invalid dates.
+- Reused the already-verified server-contract reservation fixture correction from T3-03: its reservation remains active relative to the database clock, with Reserved status asserted before and after the refused retirement.
+
+**Ruled**
+- No fee, VAT, expense-payment authority or other product policy was invented. Finance calendar periods remain independent of the floor-day setting. Deposit flows remain separate from rental revenue.
+
+**Verified**
+- Typecheck and changed-file lint passed. The final report regression run passed 82/82 assertions in four files, including the real mock-corpus report reads and capped datasets.
+- The final verification sequence passed all 60 server-contract assertions and production build. One earlier build was deliberately stopped after its input code changed; that superseded attempt is not evidence of a source failure.
+- Refreshed check:pglite and check:lifecycle after the last source edit: 219/219 migrations and 64/64 lifecycle steps green together. Migration 0224 remains VERIFIED locally, not APPLIED or PRODUCTION-VERIFIED.
+- Fresh npm audit reports the unchanged branch baseline of 36 affected packages; the dependency upgrade is isolated on T0-13 and will be verified with these fixes in the integration candidate.
+- npm run completion returned 1 and generated the block below because a focused test pass does not certify the full suite or coverage. All final card gates and functional acceptance remain required.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 64 / 64 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 219 files · check:pglite 219/219 applied, 0 failed (recorded 2026-11-06T08:42:49.252Z). Suite: NOT VERIFIED — focused or unspecified run: 82/82 passed, 0 failed (recorded 2026-11-06T08:30:39.942Z).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-06T08:43:23.427Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Run every gate, full suite and coverage on the combined source before any main merge. Complete phone/tablet/desktop and staging-week reconciliation acceptance.
+- Implement the per-account daily-closing ledger, carry-forward and closing schedule. Paid expenses still need actual payment accounts/times and the unanswered O-24 authority decision; report fixes do not complete that workflow.
+- Babin reviews and merges locally. No live migration or change to Antigravity's checkout occurred; the card remains doing.
+
 ## 2026-11-06 — T3-07: Give expense payment authority a unique decision ID
 
 **Did**

@@ -15,7 +15,7 @@ export interface FakeCall {
   args: unknown[]
 }
 
-export function fakeSupabase(tables: Record<string, TableAnswer>) {
+export function fakeSupabase(tables: Record<string, TableAnswer>, maxRows = Number.POSITIVE_INFINITY) {
   const calls: FakeCall[] = []
   const from = (table: string) => {
     const answer = tables[table] ?? []
@@ -39,7 +39,7 @@ export function fakeSupabase(tables: Record<string, TableAnswer>) {
       return builder
     }
     builder['then'] = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
-      Promise.resolve(result.data === null ? result : { ...result, data: result.data.slice(fromRow, toRow + 1) }).then(resolve, reject)
+      Promise.resolve(result.data === null ? result : { ...result, data: result.data.slice(fromRow, Math.min(toRow + 1, fromRow + maxRows)) }).then(resolve, reject)
     return builder
   }
   return { client: { from }, calls }
