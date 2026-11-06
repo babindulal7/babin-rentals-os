@@ -38,15 +38,15 @@
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 92 / 92 (100%) | +1 |
+| Backend | actions implemented / total | 92 / 92 (100%) | +0 |
 | Real data | DB-only · mixed · seed · none / 67 | 57 · 0 · 0 · 10 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
-| Permissions | capabilities mapped / declared | 78 / 78 (100%) | +2 |
-| Lifecycle | steps green / total | 64 / 64 (100%) | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 78 / 78 (100%) | +0 |
+| Lifecycle | steps green / total | 64 / 64 (100%) | +0 |
 | Overall | structural mean of five | ≈ 97% | — |
-Migrations 220 files · check:pglite 220/220 applied, 0 failed (recorded 2026-11-06T19:18:48.561Z). Suite: Historical suite: 6756/6756 passed, 0 failed (recorded 2026-11-06T12:06:27.788Z); current source NOT VERIFIED.
+Migrations 220 files · check:pglite 220/220 applied, 0 failed (recorded 2026-11-06T19:54:54.651Z). Suite: Historical suite: 6756/6756 passed, 0 failed (recorded 2026-11-06T12:06:27.788Z); current source NOT VERIFIED.
 Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written 2026-11-06T19:20:12.480Z.
+Gates read from .lifecycle-result.json, written 2026-11-06T19:55:36.877Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
