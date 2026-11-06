@@ -9,7 +9,7 @@ import { PageShell } from '../../components/ui/PageShell'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { Button } from '../../components/ui/Button'
 import { SearchInput } from '../../components/ui/SearchInput'
-import { EmptyState } from '../../components/ui/StateViews'
+import { EmptyState, ErrorBanner, LoadingSkeleton } from '../../components/ui/StateViews'
 import { Unavailable } from '../../components/ui/Unavailable'
 import Icon from '../../components/ui/Icon'
 import { Badge } from '../../components/ui/Badge'
@@ -396,18 +396,27 @@ export function SubRental({
   const canSeeFinance = canViewMoneyField(gctx, 'asset-finance')
 
   const [records, setRecords] = useState<SubRentalRecord[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  const loadSubRentals = useCallback(() => {
+    setLoading(true)
+    setLoadError(null)
+    listSubRentals()
+      .then((res) => {
+        setRecords(res.rows)
+      })
+      .catch((err) => {
+        setLoadError(err instanceof Error ? err.message : 'Failed to load sub-rentals')
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [])
 
   useEffect(() => {
-    let active = true
-    listSubRentals().then((res) => {
-      if (active) {
-        setRecords(res.rows)
-      }
-    }).catch(() => {})
-    return () => {
-      active = false
-    }
-  }, [])
+    loadSubRentals()
+  }, [loadSubRentals])
 
   const supplierGroups = useMemo(() => groupByCounterparty(records), [records])
 
@@ -693,7 +702,19 @@ export function SubRental({
 
       {/* Main Table */}
       <Card padding="none" style={{ overflow: 'hidden' }}>
-        {filteredData.length === 0 ? (
+        {loadError ? (
+          <div style={{ padding: 'var(--sp-md)' }}>
+            <ErrorBanner
+              title="Could not load sub-rentals"
+              message={loadError}
+              onRetry={loadSubRentals}
+            />
+          </div>
+        ) : loading ? (
+          <div style={{ padding: 'var(--sp-md)' }}>
+            <LoadingSkeleton rows={5} label="Loading sub-rentals…" />
+          </div>
+        ) : filteredData.length === 0 ? (
           <EmptyState
             title="No records found"
             description="Adjust your filters or search query to find sub-rental records."
