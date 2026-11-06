@@ -101,6 +101,26 @@ to suppress a migration check.
 
 ## Verification still required
 
+The final lockfile also completed a new isolated installation on 6 November:
+`npm ci --ignore-scripts --no-audit --no-fund` installed 749 packages and exited
+zero. The copied lockfile remained byte-for-byte identical to the candidate
+(SHA256 `9b82d6ca5a69b481406be23a6ca650dff76961ff1b2ab0882458f3accfdb8300`).
+The fixture has its own node_modules directory. Vite 6.4.5, Vitest 4.1.12 and
+concurrently 10.0.6 loaded their version commands; concurrently launched Node
+and npm successfully. Electron installation scripts remain disabled, so this
+does not certify its native binary or application launch.
+
+The next complete gate attempt passed typecheck, source lint and local API
+safety checks, then failed during Vitest worker startup: 545 files and 6675
+tests passed, but three other files never ran. The runner correctly returned
+failure despite the JSON reporter listing every reported assertion as passed.
+The three affected files subsequently passed all 24 tests using the unchanged
+two-thread configuration. A host sample showed 100% CPU and roughly 250 MB free
+physical memory out of 16 GB while several other test runs were active. This
+supports resource pressure as a cause; it does not certify the whole upgrade.
+No test was skipped and no timeout or assertion was relaxed. A complete gate
+pass remains required after the host settles.
+
 - Typecheck and production build passed for the launcher patch. Both HTML
   entry documents and the generated service worker are present.
 - The compatible batch passed typecheck, all 47 tests in the three focused UI

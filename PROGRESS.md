@@ -1,5 +1,41 @@
 # Progress Log
 
+## 2026-11-06 — T0-13: Verify a clean final installation and investigate worker startup failures
+
+**Did**
+- Installed the final package/lock pair in artifacts/final-install-20261106 using npm ci with installation scripts disabled. Its 749-package installation exited zero and has its own node_modules directory; the copied lockfile SHA256 stayed identical to the candidate.
+- Verified Vite 6.4.5, Vitest 4.1.12 and concurrently 10.0.6 version commands from that installation. Concurrently launched Node and npm successfully. No Electron native binary or app launch is claimed.
+- Investigated the completed full gate failure: three Vitest workers did not start, rather than assertion failures. Reran exactly those three files with the existing two-thread configuration; all 24 tests passed. Updated the dependency review with the installation and failure evidence.
+
+**Ruled**
+- No dependency, product or permission change was made in this follow-up. No test was skipped and no assertion or timeout was relaxed.
+
+**Verified**
+- Full gates passed typecheck, source lint and local API safety guards, then stopped at tests with 545 passing files, 6675 passing assertions and three worker-startup errors. The remaining 13 gates were not run; the complete attempt is not passing.
+- The targeted retry passed all 24 assertions in the three affected files. A host sample showed 100% CPU and about 250 MB free RAM out of 16 GB while several other Vitest runs were active. Resource pressure is supported by this observation; a complete rerun is still required.
+- Fresh npm audit: 12 affected packages, zero critical/high, ten moderate and two low. The remaining supported-parent constraints are documented in docs/plans/evidence/dependency-review.md.
+- npm run completion returned 1 and generated the block below: a focused pass cannot certify the full suite or coverage. The unchanged final dependency candidate still needs the entire local gate sequence and device acceptance.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite not run this session (pass --migrations to run). Suite: NOT VERIFIED — focused or unspecified run: 24/24 passed, 0 failed (recorded 2026-11-06T04:25:44.601Z).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Run the full 17-step gate sequence when other test runs have finished and the host has sufficient free memory; retain the worker failures as failed evidence until a complete run passes.
+- Verify final production/PWA output and coverage, then complete native Electron and device acceptance. Installation scripts remain disabled in the clean fixture.
+- The remaining 12 dependency findings need supported upstream fixes or a separately reviewed change; no forced overrides were installed. Babin reviews and merges locally; no push or live migration occurred.
+
 ## 2026-11-06 — T0-13: Repair Vitest migration fixtures and worker startup
 
 **Did**
