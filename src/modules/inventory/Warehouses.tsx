@@ -1058,6 +1058,27 @@ export default function Warehouses() {
       */}
       <div style={{ display: 'flex', gap: 'var(--sp-md)', alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0, flex: '1 1 560px' }}>
+          {/* Truth-of-state disclosure (UX-04 / Owner Ruling 6 Nov 2026):
+              Discloses that facility cards, rack map, and capacity meters are sample data
+              until the multi-location database schema lands, avoiding conflict with the live Transfer Center below. */}
+          <div
+            role="status"
+            style={{
+              ...cardStyle,
+              padding: '10px 14px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 'var(--sp-sm)',
+              background: 'var(--surface2)',
+              border: '1px solid var(--border)',
+            }}
+          >
+            <Icon name="info" size={15} style={{ flexShrink: 0, marginTop: 2, color: 'var(--muted)' }} />
+            <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.45 }}>
+              <strong>Sample Facility Layout:</strong> Warehouse facility cards, rack maps, and storage capacity metrics shown here are reference demo layouts. Live multi-facility stock movement is authoritatively recorded in the <strong>Transfer Center</strong> below.
+            </span>
+          </div>
+
           {/* ── six KPI cards ─────────────────────────────────────────── */}
           <section
             aria-label="Key figures"

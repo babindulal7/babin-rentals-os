@@ -51,11 +51,79 @@ Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Issue #12 (P1): Warehouse summary mixes seeded facilities/capacity with real transfers.
 - Issue #13 (P1): Stock-take scanning only identifies a unit; cannot record verification.
 - Issue #14 (P1): Staff cannot persist a confirmed-missing stock-take finding.
 - Issue #15 (P1): Stock transfers lifecycle controls (dispatch, receive, reconcile, cancel).
-- Remaining UI/UX issues #16–#20 in audit backlog.
+- Issue #17 (P1): Live Documents lacks missing/expiring-document checks.
+- Issue #18 (P2): Referral-code screen lets users compose codes they cannot issue.
+- Issue #19 (P1): Sub-rental load failures silently display an empty register.
+
+## 2026-11-06 — UI/UX Truthfulness of State: Warehouse, Coupons Simulator, Scanner Feedback, Push Subscriptions, Sunday Week Start, Clipboard Verification & Cases Intake (Lane B)
+
+**Did**
+- **Warehouse Reality (UX-04 / GAP-12):**
+  - Updated `src/modules/inventory/Warehouses.tsx` to display an explicit status disclosure banner (`Sample / Demo Layout — Physical facility configuration is for illustration. Real live transfer logs appear below.`) above the warehouse cards and KPI section, resolving the conflicting truth between seeded rack layouts and live database transfers.
+- **Coupons Truthfulness (UX-03, UX-22, UX-23):**
+  - Updated `src/modules/tools/CouponsManager.tsx` to explicitly disclose that coupon codes are evaluated within a local browser pricing simulator and are not authoritative server-backed promos (`Offline Pricing Simulator — Coupon rules and discounts are simulated in local browser storage. Authoritative promotions are evaluated server-side upon booking creation.`).
+  - Removed misleading "is now live" notification copy, replacing it with truthful simulator messaging.
+  - Replaced stale module-load `todayIso` with dynamic `new Date().toISOString().slice(0, 10)` evaluation on coupon creation and reset.
+  - Awaited clipboard operations (`navigator.clipboard.writeText`) with defensive `try/catch` and user feedback on copy errors.
+  - Updated `src/lib/queries/coupons.ts` `saveCoupons` to throw an explicit error on `localStorage` quota or access failures instead of silently swallowing storage exceptions.
+- **Scanner Recognition vs Custody State (UX-06):**
+  - Updated `src/components/shell/ScannerFab.tsx` resolution feedback to `"Recognized: ${label} — open workspace to pack/return"`, ensuring camera recognition is not confused with executed custody transitions (Pack / Handover / Return / Reset).
+- **Push Notification Subscriptions (UX-10):**
+  - Updated `src/lib/push.ts` to export `getActiveDevicePushSubscription()` and provide mock-safe operational paths for device subscription checks.
+  - Refactored `src/modules/settings/sections/NotificationPreferencesControl.tsx` to bind directly to `subscribeCurrentDevice()`, `unsubscribeCurrentDevice()`, and `getActiveDevicePushSubscription()`.
+  - Truthfully distinguishes browser notification permission from active push deliverability, rendering `Subscribed` vs `Off` status with proper error handling and unsubscription tracking.
+- **Crew Week Calendar Alignment (UX-27):**
+  - Updated `src/modules/crew/CrewBooking.tsx` to implement `startOfWeek(d, startDay)` that respects the configured `weekStarts` setting (`Sunday` vs `Monday`), matching Nepali and custom weekly schedules.
+- **Awaited Clipboard Operations (UX-24, UX-25):**
+  - Updated `src/modules/today/MovementList.tsx` to await `navigator.clipboard.writeText` and catch permission errors before triggering success toasts.
+  - Updated `src/modules/notes/ShiftBriefModal.tsx` to await clipboard copying and render an accessible inline alert fallback (`role="alert"`) when clipboard access is rejected.
+- **Authoritative Incident Creation (GAP-04):**
+  - Connected "Log Incident" in `src/modules/operations/CasesWorkspace.tsx` and `src/modules/operations/modals/LogCaseModal.tsx` directly to the canonical `createCase` action (`src/actions/cases/createCase.ts`).
+  - Ensured authenticated context (`user.role`, `user.id`), client UUID idempotency, and authentic case ID assignment instead of fabricated random identifiers.
+- **Test Suites:**
+  - Added `src/modules/settings/sections/__tests__/NotificationPreferencesControl.push.test.tsx` (5 tests).
+  - Added `src/modules/crew/__tests__/CrewBooking.calendar.test.ts` (5 tests).
+  - Added `src/modules/notes/__tests__/ShiftBriefModal.test.tsx` (1 test).
+
+**Ruled**
+- Truthfulness of State: Recognition is not recorded custody; browser permission granted is not push subscription active; demo warehouse layout is not live warehouse capacity; simulated coupon is not server-backed promotion.
+- R-40 / Law 1: Custody transitions and mutations must use authoritative actions/RPCs; non-custodial operations must handle failures and never misrepresent local state as persisted server state.
+- Law 6: Non-money roles remain money-blind; UI errors must render inline with `role="alert"`; toasts are reserved exclusively for verified successful writes.
+
+**Verified**
+- Vitest suites:
+  - `src/modules/settings/sections/__tests__/NotificationPreferencesControl.push.test.tsx` — 5/5 passed.
+  - `src/modules/crew/__tests__/CrewBooking.calendar.test.ts` — 5/5 passed.
+  - `src/modules/notes/__tests__/ShiftBriefModal.test.tsx` — 1/1 passed.
+  - `src/lib/__tests__/push.test.ts` — 11/11 passed.
+  - `src/lib/__tests__/scannerLookup.test.ts` — 6/6 passed.
+- `npm run check:pglite` — 219/219 applied, 0 failed, 0 leaks, 181 definers pinned.
+- `npm run check:lifecycle` — 63/63 steps green, 0 red, 0 failed.
+- `npm run check:security` — 18 Phase 0 regressions + 28 operations grants + 14 Reset branch regressions passed.
+- `npm run check:contrast` — 106/106 passed.
+- `npm run build` — `tsc --noEmit && vite build` clean build in 3m 15s.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 219 files · check:pglite 219/219 applied, 0 failed (recorded 2026-11-06T08:33:28.510Z). Suite: Historical suite: 6713/6713 passed, 0 failed (recorded 2026-11-06T05:33:20.763Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-06T08:34:33.315Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Wave A / B / C items awaiting triage or PR merge by Babin (PR #80, PR #90, PR #93, PR #95, PR #105).
+- On-device owner inspection on physical iPad hardware.
 
 ## 2026-11-06 — T6-09: Switch it on — per-user language preference persistence (Lane B)
 

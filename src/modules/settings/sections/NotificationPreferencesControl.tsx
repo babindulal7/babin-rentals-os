@@ -12,9 +12,9 @@ import {
 import {
   isPushSupported,
   getNotificationPermission,
-  requestPushPermission,
-  registerPushSubscription,
-  unregisterPushSubscription,
+  subscribeCurrentDevice,
+  unsubscribeCurrentDevice,
+  getActiveDevicePushSubscription,
   detectDeviceLabel,
 } from '../../../lib/push'
 
@@ -109,7 +109,11 @@ export function NotificationPreferencesControl() {
     setPushSupported(supported)
     setDeviceLabel(detectDeviceLabel())
     if (supported) {
-      setPushEnabled(getNotificationPermission() === 'granted')
+      void getActiveDevicePushSubscription().then((sub) => {
+        setPushEnabled(sub !== null)
+      }).catch(() => {
+        setPushEnabled(false)
+      })
     }
   }, [])
 
@@ -118,25 +122,15 @@ export function NotificationPreferencesControl() {
     setError(null)
     try {
       if (nextVal) {
-        const perm = await requestPushPermission()
-        if (perm === 'granted') {
-          await registerPushSubscription({
-            endpoint: `https://push.example.com/client-${user?.id || 'staff'}-${Date.now()}`,
-            p256dh: 'browser-p256dh-key',
-            auth: 'browser-auth-key',
-            deviceLabel,
-          })
-          setPushEnabled(true)
-        } else {
-          setPushEnabled(false)
-          setError('Browser notification permission was not granted.')
-        }
+        await subscribeCurrentDevice()
+        setPushEnabled(true)
       } else {
-        await unregisterPushSubscription(`https://push.example.com/client-${user?.id || 'staff'}-${Date.now()}`)
+        await unsubscribeCurrentDevice()
         setPushEnabled(false)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Push registration failed')
+      setPushEnabled(false)
     } finally {
       setPushBusy(false)
     }
@@ -291,12 +285,16 @@ export function NotificationPreferencesControl() {
                 color: pushEnabled ? 'var(--success)' : 'var(--muted)',
               }}
             >
-              {pushEnabled ? 'Active' : 'Off'}
+              {pushEnabled ? 'Subscribed' : 'Off'}
             </span>
           </div>
           <div style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.4 }}>
             {pushSupported
-              ? `Instant pop-up alerts on ${deviceLabel || 'your device'} for late returns (at 30 min, all staff on shift), new booking requests, payments, and damage.${isMoneyBlind ? ' Amounts are concealed for floor roles.' : ''}`
+              ? `Instant pop-up alerts on ${deviceLabel || 'your device'} for late returns (at 30 min, all staff on shift), new booking requests, payments, and damage.${isMoneyBlind ? ' Amounts are concealed for floor roles.' : ''}${
+                  getNotificationPermission() === 'denied'
+                    ? ' (Notifications are blocked in browser settings — enable permissions to receive alerts.)'
+                    : ''
+                }`
               : 'Push notifications are not supported on this browser or platform.'}
           </div>
         </div>
