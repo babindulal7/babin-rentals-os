@@ -57,7 +57,7 @@ import { parseMoney, formatMoney, type Paisa } from '../../lib/money'
 
 /** Short form — `Unavailable`'s popover is capped at 220px, so the full explanation lives in the form's notice line. */
 const ISSUE_UNAVAILABLE_REASON =
-  'Issuing is not connected in this build — no referral action exists, so this code cannot be stored.'
+  'Preview only: Issuing is not connected in this build — no referral action exists, so this code cannot be stored.'
 
 const inputStyle = {
   width: '100%',
@@ -165,8 +165,27 @@ export default function GenerateReferralCode({ embedded = false, onDone }: Gener
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
       <ScreenHeader
         embedded={embedded}
-        title="Generate Referral Code"
-        description="Compose a referral code for an existing client. Issuing it is not connected yet — nothing here is stored."
+        title={
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--sp-sm)', flexWrap: 'wrap' }}>
+            <span>Generate Referral Code</span>
+            <span
+              style={{
+                fontSize: 'var(--t-caption)',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                padding: '2px 8px',
+                borderRadius: 'var(--r-badge)',
+                background: 'rgba(234, 179, 8, 0.15)',
+                color: 'var(--warn-text)',
+                border: '1px solid var(--warn-border)',
+              }}
+            >
+              Preview / Specification Only
+            </span>
+          </span>
+        }
+        description="Compose and preview a referral code pattern. Code issuance and storage are not connected in this build — codes composed here cannot be issued to clients."
         actions={
           <PageActions
             secondary={
@@ -184,6 +203,34 @@ export default function GenerateReferralCode({ embedded = false, onDone }: Gener
           />
         }
       />
+
+      <div
+        role="status"
+        aria-label="Referral code preview notice"
+        style={{
+          padding: '12px 16px',
+          borderRadius: 'var(--r-card)',
+          border: '1px solid var(--warn-border)',
+          background: 'rgba(234, 179, 8, 0.08)',
+          color: 'var(--text)',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 'var(--sp-sm)',
+          fontSize: 'var(--t-meta)',
+          lineHeight: 1.5,
+        }}
+      >
+        <Icon name="alert_triangle" size={16} style={{ color: 'var(--warn-text)', flexShrink: 0, marginTop: 2 }} />
+        <div>
+          <strong style={{ display: 'block', color: 'var(--warn-text)', marginBottom: 2 }}>
+            Preview / Specification Mode — Issuing Action Not Connected
+          </strong>
+          <span>
+            This workspace provides a specification sandbox for composing and validating referral code formats and reward parameters.
+            Referral code issuance is not connected in the backend (<code>src/actions/</code>), so codes cannot be saved or issued to clients.
+          </span>
+        </div>
+      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,320px)', gap: 'var(--sp-md)', alignItems: 'start' }}>
         <Card title="Code details">
