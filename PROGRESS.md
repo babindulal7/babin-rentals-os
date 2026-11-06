@@ -1,5 +1,55 @@
 # Progress Log
 
+## 2026-11-07 — T3-15 and T3-12 merged to `main`; post-merge gates green (Lane C)
+
+**Did**
+- **Merged both lane C branches locally; nothing pushed.** `lane-c/T3-15-payment-method-default` → `21698b57` (clean). `lane-c/T3-12-paste-a-whatsapp-gear-list` → `174d2de5`, one `PROGRESS.md` conflict.
+- **Resolved the `PROGRESS.md` conflict exactly.** Both branches prepended a 2026-11-05 entry, and git matched the identical `### Completion` + table-header lines inside T3-15's and T3-12's entries as common context, splitting T3-12's entry across two hunks. Resolved by taking main's file verbatim and inserting the whole T3-12 entry after T6-05. Proof: disk minus that entry is byte-identical to main's file, and the entry is byte-identical to the branch copy.
+- **Repaired double-encoded UTF-8 on the T3-12 branch before merging.** `docs/PERMISSIONS.md`, `src/actions/core.ts`, `src/actions/__tests__/core.test.ts`, `src/actions/inventory/rememberProductAlias.ts`, `src/lib/queries/productAliases.ts` and `supabase/migrations/0223_product_aliases.sql` had been re-saved through a cp1252 pipeline, turning `—`, `·`, `’`, `“` and `§` into mojibake across 536 lines. The repair is line-scoped and accepted only on a lossless cp1252→UTF-8 round-trip, so correctly encoded lines were untouched; `PERMISSIONS.md` now differs from main by exactly the one new capability row and `core.ts` by the capability case + comment.
+- **Corrected the record:** `MIGRATION_LEDGER.md` 0223 row said `check:pglite 219/219`; the branch and the merged tree both build **220/220**. T3-12 and T3-15 cards marked `done (merged 6 Nov, <sha>)`.
+
+**Ruled**
+- No new product decisions. O-21 (seven payment-method cards vs the card's four) remains open for Babin.
+
+**Verified** — full gate list on merged `main` at `b2f5bb47` (which also carries Babin's UI/UX 11–20 merge), vitest 3.2.7:
+- `npm run typecheck` — 0 errors.
+- `npm run lint` — 0 errors, 0 warnings.
+- `npm test` (mock backend) — **568 files, 6820/6820 passed, 0 failed**.
+- `npm run check:pglite` — **220/220 applied, 0 failed**; view leaks 0 of 40 views, anon function leaks 0 of 19, definer hygiene **182/182** pinned `search_path`.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS.
+- `npm run check:security` — PASS, 14/14 Reset branch regression groups (local only).
+- `npm run check:lifecycle` — **63/63** green, 0 known-red.
+- `npm run test:server-contracts` — **59/59**.
+- `npm run test:partial-return` — **58/58**.
+- `node --test scripts/test-receipt.test.mjs` — **11/11**.
+- `npm run lint:shell` — **903 files**, 0 violations.
+- `npm run lint:ui-copy` — 0 failures.
+- `npm run check:contrast` — **106/106** pass.
+- `npm run build` — clean, 9m 28s, PWA 284 precache entries.
+- Migration 0223 `product_aliases`: **VERIFIED** locally (check:pglite 220/220 + check:lifecycle 63/63 = R-35 met). **Not applied** to live (N-5).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 95 / 95 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 77 / 77 (100%) | +1 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 220 files · check:pglite 220/220 applied, 0 failed (recorded 2026-11-06T18:29:46.078Z). Suite: PASS — 6820/6820 passed, 0 failed (recorded 2026-11-06T18:27:40.700Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-06T18:30:48.150Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **Babin:** apply 0223 (and the earlier 0215–0220 batch) to live after the backup protocol; nothing is pushed.
+- **Babin:** rule O-21.
+- **Lane C:** T3-13, T3-21, then T3-26 and T3-30 (`[go-live] · slips first`).
+- **Lane C:** T3-14c blocked on accountant decisions O-14/O-17.
+- Coverage suite not run (a live-batch gate, and the card list does not include it).
+
 ## 2026-11-06 — UI/UX Issues 11–20 Complete: Overbooking, Warehouse Truth, Stock Audit Verification & Missing Decisions, Transfer Lifecycle, Cases Intake, Document Monitoring, Referral Codes, Sub-Rental States, and Crew Week Calendar
 
 **Did**
