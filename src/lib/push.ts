@@ -68,6 +68,34 @@ export function isPushSupported(): boolean {
   )
 }
 
+/** Check if VAPID public key and push backend infrastructure are configured. */
+export function isVapidConfigured(): boolean {
+  if (import.meta.env.VITE_DATA_SOURCE === 'mock') return true
+  const key = import.meta.env.VITE_VAPID_PUBLIC_KEY
+  return Boolean(key && key.trim().length > 0)
+}
+
+/** Retrieve active browser PushSubscription if one exists on this device. */
+export async function getActiveDeviceSubscription(): Promise<{ endpoint: string; p256dh: string; auth: string } | null> {
+  if (!isPushSupported()) return null
+  try {
+    const registration = await navigator.serviceWorker.ready
+    const sub = await registration.pushManager?.getSubscription()
+    if (!sub) return null
+    const rawKey = sub.getKey('p256dh')
+    const rawAuth = sub.getKey('auth')
+    const p256dh = rawKey ? btoa(String.fromCharCode(...new Uint8Array(rawKey))) : ''
+    const auth = rawAuth ? btoa(String.fromCharCode(...new Uint8Array(rawAuth))) : ''
+    return {
+      endpoint: sub.endpoint,
+      p256dh,
+      auth,
+    }
+  } catch {
+    return null
+  }
+}
+
 /** Check notification permission status. */
 export function getNotificationPermission(): NotificationPermission | 'unsupported' {
   if (typeof window === 'undefined' || !('Notification' in window)) {
@@ -463,7 +491,13 @@ export async function subscribeCurrentDevice(vapidPublicKey?: string): Promise<b
   const key =
     vapidPublicKey ||
     import.meta.env.VITE_VAPID_PUBLIC_KEY ||
-    'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U'
+    (import.meta.env.VITE_DATA_SOURCE === 'mock'
+      ? 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U'
+      : '')
+
+  if (!key) {
+    throw new Error('Push not configured: missing VAPID public key.')
+  }
 
   const sub = await registration.pushManager.subscribe({
     userVisibleOnly: true,

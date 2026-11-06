@@ -11,10 +11,10 @@ import {
 } from '../../../lib/queries/notificationPreferences'
 import {
   isPushSupported,
-  getNotificationPermission,
-  requestPushPermission,
-  registerPushSubscription,
-  unregisterPushSubscription,
+  isVapidConfigured,
+  getActiveDeviceSubscription,
+  subscribeCurrentDevice,
+  unsubscribeCurrentDevice,
   detectDeviceLabel,
 } from '../../../lib/push'
 
@@ -100,16 +100,23 @@ export function NotificationPreferencesControl() {
   const [savingKey, setSavingKey] = useState<NotificationCategory | null>(null)
 
   const [pushSupported, setPushSupported] = useState(false)
+  const [pushConfigured, setPushConfigured] = useState(true)
   const [pushEnabled, setPushEnabled] = useState(false)
   const [pushBusy, setPushBusy] = useState(false)
   const [deviceLabel, setDeviceLabel] = useState('')
 
   useEffect(() => {
     const supported = isPushSupported()
+    const configured = isVapidConfigured()
     setPushSupported(supported)
+    setPushConfigured(configured)
     setDeviceLabel(detectDeviceLabel())
-    if (supported) {
-      setPushEnabled(getNotificationPermission() === 'granted')
+    if (supported && configured) {
+      void getActiveDeviceSubscription().then((sub) => {
+        setPushEnabled(sub !== null)
+      })
+    } else {
+      setPushEnabled(false)
     }
   }, [])
 
@@ -118,24 +125,17 @@ export function NotificationPreferencesControl() {
     setError(null)
     try {
       if (nextVal) {
-        const perm = await requestPushPermission()
-        if (perm === 'granted') {
-          await registerPushSubscription({
-            endpoint: `https://push.example.com/client-${user?.id || 'staff'}-${Date.now()}`,
-            p256dh: 'browser-p256dh-key',
-            auth: 'browser-auth-key',
-            deviceLabel,
-          })
-          setPushEnabled(true)
-        } else {
-          setPushEnabled(false)
-          setError('Browser notification permission was not granted.')
+        if (!pushConfigured) {
+          throw new Error('Push not configured: server VAPID keys are missing.')
         }
+        await subscribeCurrentDevice()
+        setPushEnabled(true)
       } else {
-        await unregisterPushSubscription(`https://push.example.com/client-${user?.id || 'staff'}-${Date.now()}`)
+        await unsubscribeCurrentDevice()
         setPushEnabled(false)
       }
     } catch (err) {
+      setPushEnabled(false)
       setError(err instanceof Error ? err.message : 'Push registration failed')
     } finally {
       setPushBusy(false)
@@ -295,15 +295,17 @@ export function NotificationPreferencesControl() {
             </span>
           </div>
           <div style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.4 }}>
-            {pushSupported
-              ? `Instant pop-up alerts on ${deviceLabel || 'your device'} for late returns (at 30 min, all staff on shift), new booking requests, payments, and damage.${isMoneyBlind ? ' Amounts are concealed for floor roles.' : ''}`
-              : 'Push notifications are not supported on this browser or platform.'}
+            {!pushSupported
+              ? 'Push notifications are not supported on this browser or platform.'
+              : !pushConfigured
+              ? 'Push not configured — server VAPID keys are missing.'
+              : `Instant pop-up alerts on ${deviceLabel || 'your device'} for late returns (at 30 min, all staff on shift), new booking requests, payments, and damage.${isMoneyBlind ? ' Amounts are concealed for floor roles.' : ''}`}
           </div>
         </div>
         <div style={{ flexShrink: 0 }}>
           <ToggleSwitch
             checked={pushEnabled}
-            disabled={pushBusy || !pushSupported}
+            disabled={pushBusy || !pushSupported || !pushConfigured}
             label="Phone & iPad Pop-ups"
             onChange={handlePushToggle}
           />
