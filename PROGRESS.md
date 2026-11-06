@@ -1,5 +1,63 @@
 # Progress Log
 
+## 2026-11-06 — T3-15: Payment method default (Lane C)
+
+**Did**
+- **T3-15: Record Payment preselects the method this client paid by last (L2, W13 "mix").**
+  - `src/lib/queries/finance.ts` — one vocabulary for writer and reader: `PAYMENT_METHOD_LABELS` and `PaymentMethodLabel`, plus `paymentMethodFromNotes()` and `lastPaymentMethodForClient()`. The read takes the client's `payments` rows, **Received only**, newest first, bounded to the last 12 receipts (`LAST_METHOD_SCAN`), and throws on a read error so the modal can say the lookup failed rather than guess.
+  - `src/modules/finance/modals/RecordPaymentModal.tsx` — the method starts `null` (nothing chosen) instead of a hard-coded `Bank Transfer`; the read is keyed on the selected invoice's `clientId` and never overwrites a tap already in flight (`methodTouchedFor` ref, per client). The hint states which situation it is in — looking up, lookup failed, preselected, or pick one — and submit refuses an unset method with "Choose how the payment was made — the method is written on the receipt."
+  - Callers now pass `clientId`: `src/modules/rentals/BookingDetail.tsx`, `src/modules/finance/Finance.tsx`, `src/modules/finance/Payments.tsx`, `src/modules/rentals/RentalsList.tsx`.
+  - `src/components/ui/ChoiceCards.tsx` — `value` may be `T | null`, so a radio group can open with no member checked (a real state, not `''` standing in for one).
+  - `src/lib/__mocks__/corpus.ts` — the seeded payment carried a `method` field no table has (`payments` has no method column, 0006:176-190). Replaced with `notes: 'Method: Bank Transfer'`, the exact first line `composeNotes()` writes in `actions/finance/recordPayment.ts`, so `dev:mock` can show the default at all and in the real shape.
+  - Tests: `src/lib/queries/__tests__/lastPaymentMethod.test.ts` and `src/modules/finance/__tests__/RecordPaymentModal.methodDefault.test.tsx` (new), plus `RecordPaymentModal.test.tsx`, `RecordPaymentModal.prefill.test.tsx`, `FinanceDoubleWrite.test.tsx` and the `finance.test.ts` export allow-list.
+- **Rebased onto `main` at `66ec690a` before reporting.** Main had moved past the branch point: `1c49d35d` accepts either active-retirement gate in `test:server-contracts`, and `66ec690a` realigns the login / rosterLock / operationRoutes assertions with the copy catalogues. Those two commits cleared the five suite failures and the server-contracts failure this branch inherited from `2a9e25a2` — the branch is green, not green-except-known-failures.
+
+**Ruled**
+- L2 / W13 "mix": the default is evidence, not a guess — it comes from the client's own last Received payment, and "Preselected" is claimed only when the read supplied the value.
+- A client with no labelled receipt opens with **no** method selected (one extra tap) rather than inheriting a default that would write a wrong ledger fact.
+- `payments` has no method column; the operator's word lives in `notes` as `Method: <label>`. Writer (`composeNotes()`) and reader (`paymentMethodFromNotes()`) share `PAYMENT_METHOD_LABELS`, so the two cannot drift.
+- O-21 (open — `docs/OPEN_DECISIONS.md` §21, indexed in `PLAN.md` §4.2): the seven method cards stand instead of the card's four until Babin rules. eSewa and Khalti are different wallets, and Card/Cheque are real receipts with no home in the four; every method is still one tap.
+
+**Verified**
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm test` (mock backend, T0-10) — **556 files, 6740 passed / 0 failed**.
+- `npm run check:pglite` — 219/219 applied, 0 failed; 40 public views checked, 0 readable by anon; 19 public functions executable by anon, 0 unauthorized; 181 definer functions, 0 without pinned `search_path`.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS (isolated PGlite).
+- `npm run check:security` — 18/18 Phase 0 SQL regressions, 14/14 Reset branch regression groups.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `npm run test:server-contracts` — 59/59 integration assertions passed.
+- `npm run test:partial-return` — 58/58 passed.
+- `node --test scripts/test-receipt.test.mjs` — 11/11 passed.
+- `npm run lint:shell` — 897 files checked, 0 violations.
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 passed.
+- `npm run check:contrast` — 106/106 pass, 0 fail.
+- `npm run build` — `tsc --noEmit && vite build` clean (8m 20s, 281 precache entries).
+- **Screen check** (`docs/USABILITY_TESTS.md` §1) — **pass at 375 / 820 / 1440 px**, driven headless over CDP so nothing else could move the page. Finance → Invoices → INV-10 (Nisha Maharjan) → `+ Pay`: the screen and the invoice are named, the dialog says where you are and what to do next, focus lands inside it; **Bank Transfer** is preselected with "Preselected: how this client paid last. Change it if this receipt is different."; 7 method cards each 54 px tall; submit 44 px and enabled; `scrollWidth == innerWidth` and the dialog sits inside the viewport at every width; Cancel exits and nothing claims a save that did not happen; an unset method is refused inline rather than silently defaulted.
+- **Money-blind role** — Warehouse on `/today`: nav offers only Today / Rentals / Inventory, no Finance link, and no `Rs <number>` anywhere in the body.
+- Screenshots: `%TEMP%\opencode\t3-15-screens\t3-15-record-payment-{375,820,1440}.png`.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 219 files · check:pglite 219/219 applied, 0 failed (recorded 2026-11-06T16:01:28.240Z). Suite: PASS — 6740/6740 passed, 0 failed (recorded 2026-11-06T15:59:49.128Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-06T16:03:54.902Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **Babin: merge `lane-c/T3-15-payment-method-default`** (the agent never merges). `lane-c/T3-12-paste-a-whatsapp-gear-list` is also still awaiting merge.
+- **Babin: rule O-21** — keep the seven method cards (recommended: they match the ledger vocabulary) or cut to the card's four and add a second step for eSewa vs Khalti.
+- Coverage suite: `npm run test:coverage` was not run for this card (a live-batch gate, and the card's list does not include it), so `npm run completion` exits 1 on the coverage receipt alone; every other dimension is measured.
+- Next in lane C: T3-13, T3-21, then T3-26 and T3-30 (`[go-live] · slips first`).
+
 ## 2026-11-06 — T6-09: Switch it on — per-user language preference persistence (Lane B)
 
 **Did**
