@@ -749,6 +749,11 @@ export function canManageSettings(role: SystemRole): boolean {
   return role === 'Owner'
 }
 
+/** RULING 2026-11-05 C-6: only Owner approves glossary wording; DB 0223 enforces it. */
+export function canManageGlossary(role: SystemRole, online = true): boolean {
+  return role === 'Owner' && online
+}
+
 /**
  * Publish a saved view to the whole team (0159 `save_view`). Anyone on staff may keep a private one.
  * RULING 2026-10-07 (D-3 proposal, ⭐): Manager and above. The database enforces the same list.

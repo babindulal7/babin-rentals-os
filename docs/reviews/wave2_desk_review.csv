@@ -1,295 +1,295 @@
-key,wave,module,screen,english,nepali_draft,screenshot_link,status,babin_fix,notes
-calendar.title,2,calendar,calendar,Calendar,पात्रो,https://os.babinrentals.com/screenshots/calendar/calendar.png,OK,,S11 approved wording
-calendar.subtitle,2,calendar,calendar,"Schedule, operational timelines, pickups, and equipment availability","कार्यतालिका, उपकरण उपलब्धता, बुकिङ तथा फिर्ता विवरण",https://os.babinrentals.com/screenshots/calendar/calendar.png,OK,,S11 approved wording
-calendar.views.month,2,calendar,views,Month,महिना,https://os.babinrentals.com/screenshots/calendar/views.png,OK,,S11 approved wording
-calendar.views.week,2,calendar,views,Week,हप्ता,https://os.babinrentals.com/screenshots/calendar/views.png,OK,,S11 approved wording
-calendar.views.threeDay,2,calendar,views,3-Day,3-दिन,https://os.babinrentals.com/screenshots/calendar/views.png,OK,,S11 approved wording · R-21: Latin numbers/currency stay Latin
-calendar.views.day,2,calendar,views,Day,दिन,https://os.babinrentals.com/screenshots/calendar/views.png,OK,,S11 approved wording
-calendar.views.timeline,2,calendar,views,Timeline,समयरेखा,https://os.babinrentals.com/screenshots/calendar/views.png,OK,,S11 approved wording
-calendar.views.resource,2,calendar,views,Resource,उपकरण,https://os.babinrentals.com/screenshots/calendar/views.png,OK,,S11 approved wording
-calendar.actions.today,2,calendar,actions,Today,आज,https://os.babinrentals.com/screenshots/calendar/actions.png,OK,,S11 approved wording
-calendar.actions.checkAvailability,2,calendar,actions,Check availability,उपलब्धता जाँच्नुहोस्,https://os.babinrentals.com/screenshots/calendar/actions.png,OK,,S11 approved wording
-calendar.actions.availabilityShort,2,calendar,actions,Availability,उपलब्धता,https://os.babinrentals.com/screenshots/calendar/actions.png,OK,,S11 approved wording
-calendar.actions.fullView,2,calendar,actions,Full View,पूर्ण दृश्य,https://os.babinrentals.com/screenshots/calendar/actions.png,OK,,S11 approved wording
-calendar.actions.exitFullView,2,calendar,actions,Exit Full View,पूर्ण दृश्यबाट बाहिरिनुहोस्,https://os.babinrentals.com/screenshots/calendar/actions.png,OK,,S11 approved wording
-calendar.actions.search,2,calendar,actions,Search,खोज्नुहोस्,https://os.babinrentals.com/screenshots/calendar/actions.png,OK,,S11 approved wording
-calendar.actions.filters,2,calendar,actions,Filters,फिल्टरहरू,https://os.babinrentals.com/screenshots/calendar/actions.png,OK,,S11 approved wording
-calendar.actions.filtersWithCount,2,calendar,actions,Filters ({count}),फिल्टरहरू ({count}),https://os.babinrentals.com/screenshots/calendar/actions.png,OK,,S11 approved wording
-calendar.searchPlaceholder,2,calendar,calendar,Search calendar events (press /),कार्यतालिका घटनाहरू खोज्नुहोस् (/ थिच्नुहोस्),https://os.babinrentals.com/screenshots/calendar/calendar.png,OK,,S11 approved wording
-calendar.searchAria,2,calendar,calendar,Search calendar,कार्यतालिका खोज्नुहोस्,https://os.babinrentals.com/screenshots/calendar/calendar.png,OK,,S11 approved wording
-calendar.actions.newRental,2,calendar,actions,New Rental,नयाँ भाडा,https://os.babinrentals.com/screenshots/calendar/actions.png,OK,,S11 approved wording
-calendar.actions.prevMonth,2,calendar,actions,Previous month,अघिल्लो महिना,https://os.babinrentals.com/screenshots/calendar/actions.png,OK,,S11 approved wording
-calendar.actions.nextMonth,2,calendar,actions,Next month,पछिल्लो महिना,https://os.babinrentals.com/screenshots/calendar/actions.png,OK,,S11 approved wording
-calendar.actions.filter,2,calendar,actions,Filters,फिल्टरहरू,https://os.babinrentals.com/screenshots/calendar/actions.png,OK,,S11 approved wording
-calendar.legend.confirmed,2,calendar,legend,Confirmed,पुष्टि भएको,https://os.babinrentals.com/screenshots/calendar/legend.png,OK,,S11 approved wording
-calendar.legend.onRent,2,calendar,legend,On Rent,भाडामा,https://os.babinrentals.com/screenshots/calendar/legend.png,OK,,S11 approved wording
-calendar.legend.ready,2,calendar,legend,Ready,तयार,https://os.babinrentals.com/screenshots/calendar/legend.png,OK,,S11 approved wording
-calendar.legend.returnDue,2,calendar,legend,Return Due,फिर्ता हुनुपर्ने,https://os.babinrentals.com/screenshots/calendar/legend.png,OK,,S11 approved wording
-calendar.legend.returned,2,calendar,legend,Returned,फिर्ता भयो,https://os.babinrentals.com/screenshots/calendar/legend.png,OK,,S11 approved wording
-calendar.legend.quote,2,calendar,legend,Quote,कोटेसन,https://os.babinrentals.com/screenshots/calendar/legend.png,OK,,S11 approved wording
-calendar.legend.draft,2,calendar,legend,Draft,मस्यौदा,https://os.babinrentals.com/screenshots/calendar/legend.png,OK,,S11 approved wording
-calendar.summary.pickups,2,calendar,summary,Pickups Today,आज डेलिभरी,https://os.babinrentals.com/screenshots/calendar/summary.png,OK,,S11 approved wording
-calendar.summary.returns,2,calendar,summary,Returns Today,आज फिर्ता,https://os.babinrentals.com/screenshots/calendar/summary.png,OK,,S11 approved wording
-calendar.summary.overdue,2,calendar,summary,Overdue,म्याद नाघेको,https://os.babinrentals.com/screenshots/calendar/summary.png,OK,,S11 approved wording
-calendar.summary.totalActive,2,calendar,summary,Active Bookings,सक्रिय बुकिङहरू,https://os.babinrentals.com/screenshots/calendar/summary.png,OK,,S11 approved wording
-calendar.filter.allStages,2,calendar,filter,All Stages,सबै चरणहरू,https://os.babinrentals.com/screenshots/calendar/filter.png,OK,,S11 approved wording
-calendar.filter.allCategories,2,calendar,filter,All Categories,सबै वर्गहरू,https://os.babinrentals.com/screenshots/calendar/filter.png,OK,,S11 approved wording
-calendar.empty,2,calendar,calendar,No bookings scheduled for this date range.,यस मिति अवधिमा कुनै बुकिङ तालिका छैन।,https://os.babinrentals.com/screenshots/calendar/calendar.png,OK,,S11 approved wording
-clients.title,2,clients,clients,Clients,ग्राहक,https://os.babinrentals.com/screenshots/clients/clients.png,OK,,S11 approved wording
-clients.subtitle,2,clients,clients,"Client directory, memberships, credit policies, and records","ग्राहक निर्देशिका, सदस्यता, क्रेडिट नीति र विवरणहरू",https://os.babinrentals.com/screenshots/clients/clients.png,OK,,S11 approved wording
-clients.tabs.directory,2,clients,tabs,Directory,निर्देशिका,https://os.babinrentals.com/screenshots/clients/tabs.png,OK,,S11 approved wording
-clients.tabs.newClient,2,clients,tabs,New Client,नयाँ ग्राहक,https://os.babinrentals.com/screenshots/clients/tabs.png,OK,,S11 approved wording
-clients.tabs.membership,2,clients,tabs,Membership, सदस्यता,https://os.babinrentals.com/screenshots/clients/tabs.png,OK,,S11 approved wording
-clients.tabs.referral,2,clients,tabs,Referral,सिफारिस,https://os.babinrentals.com/screenshots/clients/tabs.png,OK,,S11 approved wording
-clients.tabs.coupons,2,clients,tabs,Coupons & Promos,कुपन र प्रोमो,https://os.babinrentals.com/screenshots/clients/tabs.png,OK,,S11 approved wording
-clients.tabs.credit,2,clients,tabs,Credit,क्रेडिट,https://os.babinrentals.com/screenshots/clients/tabs.png,OK,,S11 approved wording
-clients.tabs.import,2,clients,tabs,Import,आयात,https://os.babinrentals.com/screenshots/clients/tabs.png,OK,,S11 approved wording
-clients.tabs.duplicates,2,clients,tabs,Duplicates,दोहोरिएका,https://os.babinrentals.com/screenshots/clients/tabs.png,OK,,S11 approved wording
-clients.kpi.totalClients,2,clients,kpi,Total Clients,जम्मा ग्राहक,https://os.babinrentals.com/screenshots/clients/kpi.png,OK,,S11 approved wording
-clients.kpi.activeRentals,2,clients,kpi,Active Rentals,चालु भाडा,https://os.babinrentals.com/screenshots/clients/kpi.png,OK,,S11 approved wording
-clients.kpi.outstanding,2,clients,kpi,Outstanding,बाँकी,https://os.babinrentals.com/screenshots/clients/kpi.png,OK,,S11 approved wording
-clients.kpi.depositHeld,2,clients,kpi,Deposit Held,धरौटी रकम,https://os.babinrentals.com/screenshots/clients/kpi.png,OK,,S11 approved wording
-clients.countPill,2,clients,clients,{count} {label},{count} {label},https://os.babinrentals.com/screenshots/clients/clients.png,OK,,S11 approved wording
-clients.countSingle,2,clients,clients,client,ग्राहक,https://os.babinrentals.com/screenshots/clients/clients.png,OK,,S11 approved wording
-clients.countMulti,2,clients,clients,clients,ग्राहकहरू,https://os.babinrentals.com/screenshots/clients/clients.png,OK,,S11 approved wording
-clients.searchPlaceholder,2,clients,clients,"Search client, PAN, phone… (press /)","ग्राहक, प्यान, फोन खोज्नुहोस्… (/ थिच्नुहोस्)",https://os.babinrentals.com/screenshots/clients/clients.png,OK,,S11 approved wording
-clients.searchAria,2,clients,clients,Search clients,ग्राहक खोज्नुहोस्,https://os.babinrentals.com/screenshots/clients/clients.png,OK,,S11 approved wording
-clients.searchMembersPlaceholder,2,clients,clients,"Search members by name, plan, or type… (press /)","नाम, योजना वा प्रकारबाट सदस्य खोज्नुहोस्… (/ थिच्नुहोस्)",https://os.babinrentals.com/screenshots/clients/clients.png,OK,,S11 approved wording
-clients.searchMembersAria,2,clients,clients,Search members,सदस्य खोज्नुहोस्,https://os.babinrentals.com/screenshots/clients/clients.png,OK,,S11 approved wording
-clients.actions.exportDirectory,2,clients,actions,Export loaded directory,खुलेको निर्देशिका निर्यात गर्नुहोस्,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.actions.importClients,2,clients,actions,Import Clients,ग्राहक आयात गर्नुहोस्,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.actions.duplicateCenter,2,clients,actions,Duplicate Center,दोहोरिएका रेकर्ड केन्द्र,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.actions.clientCredit,2,clients,actions,Client Credit,ग्राहक क्रेडिट,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.actions.referralCodes,2,clients,actions,Referral Codes,सिफारिस कोडहरू,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.actions.couponsPromos,2,clients,actions,Coupons & Promos,कुपन र प्रोमोहरू,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.actions.clientSectionsAria,2,clients,actions,Client sections,ग्राहक खण्डहरू,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.subHeader.counter,2,clients,subHeader,{count} registered {label},{count} दर्ता भएका {label},https://os.babinrentals.com/screenshots/clients/subHeader.png,OK,,S11 approved wording
-clients.subHeader.newClientBtn,2,clients,subHeader,+ New Client,+ नयाँ ग्राहक,https://os.babinrentals.com/screenshots/clients/subHeader.png,OK,,S11 approved wording
-clients.actions.addClient,2,clients,actions,Add Client,नयाँ ग्राहक थप्नुहोस्,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.actions.exportCsv,2,clients,actions,Export CSV,CSV निर्यात गर्नुहोस्,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.actions.exportReady,2,clients,actions,Export ready,निर्यात तयार भयो,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.actions.exportSuccess,2,clients,actions,{count} client rows written to clients.csv,{count} ग्राहक रेकर्ड clients.csv मा सुरक्षित गरियो,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.actions.filter,2,clients,actions,Filters,फिल्टरहरू,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.actions.edit,2,clients,actions,Edit,सम्पादन गर्नुहोस्,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.actions.block,2,clients,actions,Block Client,ग्राहक रोक लगाउनुहोस्,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.actions.unblock,2,clients,actions,Unblock Client,रोक फुकुवा गर्नुहोस्,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.actions.save,2,clients,actions,Save Changes,परिवर्तन सुरक्षित गर्नुहोस्,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.actions.cancel,2,clients,actions,Cancel,रद्द गर्नुहोस्,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.table.clientId,2,clients,table,Client ID,ग्राहक ID,https://os.babinrentals.com/screenshots/clients/table.png,OK,,S11 approved wording
-clients.table.name,2,clients,table,Name,नाम,https://os.babinrentals.com/screenshots/clients/table.png,OK,,S11 approved wording
-clients.table.type,2,clients,table,Type,प्रकार,https://os.babinrentals.com/screenshots/clients/table.png,OK,,S11 approved wording
-clients.table.membership,2,clients,table,Membership,सदस्यता,https://os.babinrentals.com/screenshots/clients/table.png,OK,,S11 approved wording
-clients.table.phone,2,clients,table,Phone,फोन,https://os.babinrentals.com/screenshots/clients/table.png,OK,,S11 approved wording
-clients.table.email,2,clients,table,Email,इमेल,https://os.babinrentals.com/screenshots/clients/table.png,OK,,S11 approved wording
-clients.table.pan,2,clients,table,PAN,प्यान,https://os.babinrentals.com/screenshots/clients/table.png,OK,,S11 approved wording
-clients.table.activeRentals,2,clients,table,Active Rentals,चालु भाडा,https://os.babinrentals.com/screenshots/clients/table.png,OK,,S11 approved wording
-clients.table.outstanding,2,clients,table,Outstanding (Rs),बाँकी रकम (रु),https://os.babinrentals.com/screenshots/clients/table.png,OK,,S11 approved wording
-clients.table.depositHeld,2,clients,table,Deposit Held (Rs),धरौटी रकम (रु),https://os.babinrentals.com/screenshots/clients/table.png,OK,,S11 approved wording
-clients.table.lastRental,2,clients,table,Last Rental (BS),पछिल्लो भाडा (वि.सं.),https://os.babinrentals.com/screenshots/clients/table.png,OK,,S11 approved wording
-clients.table.status,2,clients,table,Status,अवस्था,https://os.babinrentals.com/screenshots/clients/table.png,OK,,S11 approved wording
-clients.table.action,2,clients,table,Action,कार्य,https://os.babinrentals.com/screenshots/clients/table.png,OK,,S11 approved wording
-clients.status.active,2,clients,status,Active,सक्रिय,https://os.babinrentals.com/screenshots/clients/status.png,OK,,S11 approved wording
-clients.status.blocked,2,clients,status,Blocked,रोक लगाइएको,https://os.babinrentals.com/screenshots/clients/status.png,OK,,S11 approved wording
-clients.status.notBlocked,2,clients,status,Not blocked,रोक नभएको,https://os.babinrentals.com/screenshots/clients/status.png,OK,,S11 approved wording
-clients.form.personalInfo,2,clients,form,Personal Information,व्यक्तिगत विवरण,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.fullName,2,clients,form,Full Name,पूरा नाम,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.fullNamePlaceholder,2,clients,form,e.g. Aayush Shrestha,जस्तै: आयुष श्रेष्ठ,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.clientType,2,clients,form,Client Type,ग्राहक प्रकार,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.typeIndividual,2,clients,form,Individual,व्यक्तिगत,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.typeCompany,2,clients,form,Company,कम्पनी,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.contactInfo,2,clients,form,Contact Details,सम्पर्क विवरण,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.phone,2,clients,form,Phone Number,फोन नम्बर,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.phoneHelp,2,clients,form,10-digit Nepal mobile number (98XXXXXXXX or 97XXXXXXXX),10-अङ्कको नेपाल मोबाइल नम्बर (98XXXXXXXX वा 97XXXXXXXX),https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording · R-21: Latin numbers/currency stay Latin
-clients.form.email,2,clients,form,Email Address,इमेल ठेगाना,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.emailPlaceholder,2,clients,form,client@example.com,client@example.com,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.secondaryPhone,2,clients,form,Secondary Phone,वैकल्पिक फोन,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.address,2,clients,form,Address / Location,ठेगाना / स्थान,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.addressPlaceholder,2,clients,form,"Street, Tole, City","टोल, सडक, सहर",https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.district,2,clients,form,District,जिल्ला,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.taxInfo,2,clients,form,Tax & Verification,कर तथा प्रमाणीकरण,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.pan,2,clients,form,PAN Number,प्यान नम्बर,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.panPlaceholder,2,clients,form,9-digit PAN,9-अङ्कको प्यान नम्बर,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording · R-21: Latin numbers/currency stay Latin
-clients.form.idDocument,2,clients,form,ID Document,परिचयपत्र,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.idType,2,clients,form,ID Type,परिचयपत्र प्रकार,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.idNumber,2,clients,form,ID Number,परिचयपत्र नम्बर,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.citizenship,2,clients,form,Citizenship,नागरिकता,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.drivingLicense,2,clients,form,Driving License,सवारी चालक अनुमतिपत्र,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.passport,2,clients,form,Passport,राहदानी,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.nationalId,2,clients,form,National ID,राष्ट्रिय परिचयपत्र,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.membershipSection,2,clients,form,Membership & Terms,सदस्यता र सर्तहरू,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.tier,2,clients,form,Membership Tier,सदस्यता तह,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.paymentTerms,2,clients,form,Payment Terms,भुक्तानी सर्तहरू,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.creditLimit,2,clients,form,Credit Limit (Rs),क्रेडिट सीमा (रु),https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.notes,2,clients,form,Staff Notes,कर्मचारी टिप्पणी,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.notesPlaceholder,2,clients,form,Internal notes regarding preferences or history,ग्राहक प्राथमिकता वा विगतको आन्तरिक टिप्पणी,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.form.saveButton,2,clients,form,Register Client,ग्राहक दर्ता गर्नुहोस्,https://os.babinrentals.com/screenshots/clients/form.png,OK,,S11 approved wording
-clients.detail.overview,2,clients,detail,Client Overview,ग्राहक विवरण,https://os.babinrentals.com/screenshots/clients/detail.png,OK,,S11 approved wording
-clients.detail.recentBookings,2,clients,detail,Recent Bookings,हालैका बुकिङ,https://os.babinrentals.com/screenshots/clients/detail.png,OK,,S11 approved wording
-clients.detail.invoices,2,clients,detail,Invoices,बिलहरू,https://os.babinrentals.com/screenshots/clients/detail.png,OK,,S11 approved wording
-clients.detail.documents,2,clients,detail,Documents,कागजातहरू,https://os.babinrentals.com/screenshots/clients/detail.png,OK,,S11 approved wording
-clients.detail.collectors,2,clients,detail,Authorized Receivers,आधिकारिक प्राप्तकर्ताहरू,https://os.babinrentals.com/screenshots/clients/detail.png,OK,,S11 approved wording
-clients.detail.noBookings,2,clients,detail,No bookings recorded for this client.,यस ग्राहकको कुनै बुकिङ रेकर्ड छैन।,https://os.babinrentals.com/screenshots/clients/detail.png,OK,,S11 approved wording
-clients.detail.noInvoices,2,clients,detail,No invoices on file.,कुनै बिल फेला परेन।,https://os.babinrentals.com/screenshots/clients/detail.png,OK,,S11 approved wording
-clients.detail.noDocuments,2,clients,detail,No documents uploaded.,कुनै कागजात अपलोड गरिएको छैन।,https://os.babinrentals.com/screenshots/clients/detail.png,OK,,S11 approved wording
-clients.referral.back,2,clients,referral,Back to Referrals,सिफारिस सूचीमा फर्कनुहोस्,https://os.babinrentals.com/screenshots/clients/referral.png,OK,,S11 approved wording
-clients.referral.generateBtn,2,clients,referral,Generate Referral Code,सिफारिस कोड बनाउनुहोस्,https://os.babinrentals.com/screenshots/clients/referral.png,OK,,S11 approved wording
-clients.referral.cardTitle,2,clients,referral,Referral conversions and affiliate rewards,सिफारिस रूपान्तरण र सम्बद्ध पुरस्कार,https://os.babinrentals.com/screenshots/clients/referral.png,OK,,S11 approved wording
-clients.referral.emptyTitle,2,clients,referral,No referral is recorded,कुनै सिफारिस रेकर्ड गरिएको छैन,https://os.babinrentals.com/screenshots/clients/referral.png,OK,,S11 approved wording
-clients.referral.emptyDesc,2,clients,referral,"Referrals have no home in the database yet — no table stores a referral code, the account it introduced, or the reward owed for it. Until one exists there is nothing true to list here, and the figures this panel used to show were written into the page rather than earned by anyone.","सिफारिसहरूको लागि डाटाबेसमा हाल कुनै स्थान छैन — कुनै तालिकामा सिफारिस कोड, त्यसले ल्याएको ग्राहक वा प्राप्त हुने पुरस्कार सुरक्षित गरिएको छैन।",https://os.babinrentals.com/screenshots/clients/referral.png,OK,,S11 approved wording
-clients.credit.extended,2,clients,credit,Credit Extended,प्रदान गरिएको क्रेडिट,https://os.babinrentals.com/screenshots/clients/credit.png,OK,,S11 approved wording
-clients.credit.extendedNote,2,clients,credit,Approved limits across {count} loaded {label},{count} {label} मा स्वीकृत क्रेडिट सीमा,https://os.babinrentals.com/screenshots/clients/credit.png,OK,,S11 approved wording
-clients.credit.outstanding,2,clients,credit,Outstanding,बाँकी,https://os.babinrentals.com/screenshots/clients/credit.png,OK,,S11 approved wording
-clients.credit.outstandingNote,2,clients,credit,Owed on invoices — not the same figure as credit used,बिलहरूमा बाँकी रकम — यो प्रयोग गरिएको क्रेडिट भन्दा फरक हो,https://os.babinrentals.com/screenshots/clients/credit.png,OK,,S11 approved wording
-clients.credit.blockedBalance,2,clients,credit,Blocked Balance,रोक लगाइएको बाँकी रकम,https://os.babinrentals.com/screenshots/clients/credit.png,OK,,S11 approved wording
-clients.credit.blockedNote,2,clients,credit,{count} {label} under block,{count} {label} रोक सूचीमा,https://os.babinrentals.com/screenshots/clients/credit.png,OK,,S11 approved wording
-clients.credit.accountSingle,2,clients,credit,account,खाता,https://os.babinrentals.com/screenshots/clients/credit.png,OK,,S11 approved wording
-clients.credit.accountMulti,2,clients,credit,accounts,खाताहरू,https://os.babinrentals.com/screenshots/clients/credit.png,OK,,S11 approved wording
-clients.credit.policyNote,2,clients,credit,Credit limits come from the membership tier.,क्रेडिट सीमा सदस्यता तहबाट निर्धारण हुन्छ।,https://os.babinrentals.com/screenshots/clients/credit.png,OK,,S11 approved wording
-clients.credit.policyLink,2,clients,credit,Credit policy by tier is in Settings ▸ Business,तह अनुसारको क्रेडिट नीति सेटिङ ▸ व्यवसाय मा छ,https://os.babinrentals.com/screenshots/clients/credit.png,OK,,S11 approved wording
-clients.credit.cardTitle,2,clients,credit,Accounts with an approved credit limit,स्वीकृत क्रेडिट सीमा भएका ग्राहक खाताहरू,https://os.babinrentals.com/screenshots/clients/credit.png,OK,,S11 approved wording
-clients.credit.emptyTitle,2,clients,credit,No account carries an approved credit limit,कुनै पनि खातामा स्वीकृत क्रेडिट सीमा छैन,https://os.babinrentals.com/screenshots/clients/credit.png,OK,,S11 approved wording
-clients.credit.emptyMessage,2,clients,credit,"Every loaded client has a limit of zero, so none of them can rent on credit today.","सबै लोड भएका ग्राहकको क्रेडिट सीमा शून्य छ, त्यसैले हाल कसैले पनि उधारोमा सामान भाडामा लिन सक्दैनन्।",https://os.babinrentals.com/screenshots/clients/credit.png,OK,,S11 approved wording
-clients.credit.tableAria,2,clients,credit,Approved credit limits,स्वीकृत क्रेडिट सीमाहरू,https://os.babinrentals.com/screenshots/clients/credit.png,OK,,S11 approved wording
-clients.credit.thClient,2,clients,credit,Client,ग्राहक,https://os.babinrentals.com/screenshots/clients/credit.png,OK,,S11 approved wording
-clients.credit.thTier,2,clients,credit,Tier,तह,https://os.babinrentals.com/screenshots/clients/credit.png,OK,,S11 approved wording
-clients.credit.thApprovedLimit,2,clients,credit,Approved Limit,स्वीकृत सीमा,https://os.babinrentals.com/screenshots/clients/credit.png,OK,,S11 approved wording
-clients.credit.thOutstanding,2,clients,credit,Outstanding,बाँकी,https://os.babinrentals.com/screenshots/clients/credit.png,OK,,S11 approved wording
-clients.credit.thStatus,2,clients,credit,Status,अवस्था,https://os.babinrentals.com/screenshots/clients/credit.png,OK,,S11 approved wording
-clients.filter.all,2,clients,filter,All,सबै,https://os.babinrentals.com/screenshots/clients/filter.png,OK,,S11 approved wording
-clients.filter.openRentals,2,clients,filter,Open Rentals,चालु भाडा,https://os.babinrentals.com/screenshots/clients/filter.png,OK,,S11 approved wording
-clients.filter.vipTier,2,clients,filter,VIP / Tier,VIP / तह,https://os.babinrentals.com/screenshots/clients/filter.png,OK,,S11 approved wording
-clients.filter.paymentDue,2,clients,filter,Payment Due,भुक्तानी बाँकी,https://os.babinrentals.com/screenshots/clients/filter.png,OK,,S11 approved wording
-clients.filter.blocked,2,clients,filter,Blocked,रोक लगाइएको,https://os.babinrentals.com/screenshots/clients/filter.png,OK,,S11 approved wording
-clients.filter.organisation,2,clients,filter,Organisation,संस्थागत,https://os.babinrentals.com/screenshots/clients/filter.png,OK,,S11 approved wording
-clients.filter.individual,2,clients,filter,Individual,व्यक्तिगत,https://os.babinrentals.com/screenshots/clients/filter.png,OK,,S11 approved wording
-clients.kpi.activeClients,2,clients,kpi,Active Clients,सक्रिय ग्राहक,https://os.babinrentals.com/screenshots/clients/kpi.png,OK,,S11 approved wording
-clients.kpi.activeClientsSubtitle,2,clients,kpi,{count} with open rentals,{count} चालु भाडामा,https://os.babinrentals.com/screenshots/clients/kpi.png,OK,,S11 approved wording
-clients.kpi.openRentals,2,clients,kpi,Open Rentals,चालु भाडा,https://os.babinrentals.com/screenshots/clients/kpi.png,OK,,S11 approved wording
-clients.kpi.openRentalsSubtitle,2,clients,kpi,Currently active on rental,हाल भाडामा सामान चालु रहेको,https://os.babinrentals.com/screenshots/clients/kpi.png,OK,,S11 approved wording
-clients.kpi.hold,2,clients,kpi,Credit / Payment Hold,क्रेडिट / भुक्तानी रोक,https://os.babinrentals.com/screenshots/clients/kpi.png,OK,,S11 approved wording
-clients.kpi.holdSubtitle,2,clients,kpi,{paymentDue} payment due · {blocked} blocked,{paymentDue} भुक्तानी बाँकी · {blocked} रोक लगाइएको,https://os.babinrentals.com/screenshots/clients/kpi.png,OK,,S11 approved wording
-clients.table.thClient,2,clients,table,Client,ग्राहक,https://os.babinrentals.com/screenshots/clients/table.png,OK,,S11 approved wording
-clients.table.thContact,2,clients,table,Contact,सम्पर्क,https://os.babinrentals.com/screenshots/clients/table.png,OK,,S11 approved wording
-clients.table.thType,2,clients,table,Type,प्रकार,https://os.babinrentals.com/screenshots/clients/table.png,OK,,S11 approved wording
-clients.table.thMembership,2,clients,table,Membership,सदस्यता,https://os.babinrentals.com/screenshots/clients/table.png,OK,,S11 approved wording
-clients.table.thOpenRentals,2,clients,table,Open rentals,चालु भाडा,https://os.babinrentals.com/screenshots/clients/table.png,OK,,S11 approved wording
-clients.table.thOutstanding,2,clients,table,Outstanding,बाँकी,https://os.babinrentals.com/screenshots/clients/table.png,OK,,S11 approved wording
-clients.table.thDepositHeld,2,clients,table,Deposit Held,धरौटी रकम,https://os.babinrentals.com/screenshots/clients/table.png,OK,,S11 approved wording
-clients.table.thLastRental,2,clients,table,Last Rental (BS / AD),पछिल्लो भाडा (वि.सं. / ई.सं.),https://os.babinrentals.com/screenshots/clients/table.png,OK,,S11 approved wording
-clients.table.thAction,2,clients,table,Action,कार्य,https://os.babinrentals.com/screenshots/clients/table.png,OK,,S11 approved wording
-clients.table.selectAll,2,clients,table,Select all clients on this page,यस पृष्ठका सबै ग्राहक छान्नुहोस्,https://os.babinrentals.com/screenshots/clients/table.png,OK,,S11 approved wording
-clients.table.openProfileAria,2,clients,table,Open {name}'s profile,{name} को प्रोफाइल खोल्नुहोस्,https://os.babinrentals.com/screenshots/clients/table.png,OK,,S11 approved wording
-clients.actions.clearAll,2,clients,actions,Clear all,सबै हटाउनुहोस्,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.actions.saveCurrentView,2,clients,actions,Save Current View,हालको दृश्य सुरक्षित गर्नुहोस्,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.actions.selected,2,clients,actions,selected,छानिएको,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.actions.clearSelection,2,clients,actions,Clear selection,छनोट हटाउनुहोस्,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.actions.exportSelected,2,clients,actions,Export Selected,छानिएका निर्यात गर्नुहोस्,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.actions.blockSelected,2,clients,actions,Block Selected,छानिएकालाई रोक लगाउनुहोस्,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.actions.unblockSelected,2,clients,actions,Unblock Selected,छानिएकाको रोक फुकुवा गर्नुहोस्,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.badge.open,2,clients,badge,open,चालु,https://os.babinrentals.com/screenshots/clients/badge.png,OK,,S11 approved wording
-clients.badge.due,2,clients,badge,due,बाँकी,https://os.babinrentals.com/screenshots/clients/badge.png,OK,,S11 approved wording
-clients.badge.noRentalYet,2,clients,badge,No rental yet,कुनै भाडा भएको छैन,https://os.babinrentals.com/screenshots/clients/badge.png,OK,,S11 approved wording
-clients.actions.profile,2,clients,actions,Profile,प्रोफाइल,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.actions.viewProfileArrow,2,clients,actions,View profile →,प्रोफाइल हेर्नुहोस् →,https://os.babinrentals.com/screenshots/clients/actions.png,OK,,S11 approved wording
-clients.drawer.phone,2,clients,drawer,Phone,फोन,https://os.babinrentals.com/screenshots/clients/drawer.png,OK,,S11 approved wording
-clients.drawer.email,2,clients,drawer,Email,इमेल,https://os.babinrentals.com/screenshots/clients/drawer.png,OK,,S11 approved wording
-clients.drawer.pan,2,clients,drawer,PAN,प्यान,https://os.babinrentals.com/screenshots/clients/drawer.png,OK,,S11 approved wording
-clients.drawer.kyc,2,clients,drawer,KYC,केवाईसी,https://os.babinrentals.com/screenshots/clients/drawer.png,OK,,S11 approved wording
-clients.drawer.type,2,clients,drawer,Type,प्रकार,https://os.babinrentals.com/screenshots/clients/drawer.png,OK,,S11 approved wording
-clients.drawer.address,2,clients,drawer,Address,ठेगाना,https://os.babinrentals.com/screenshots/clients/drawer.png,OK,,S11 approved wording
-clients.drawer.authorizedContact,2,clients,drawer,Authorized contact,अधिकृत सम्पर्क व्यक्ति,https://os.babinrentals.com/screenshots/clients/drawer.png,OK,,S11 approved wording
-clients.drawer.approvedCreditLimit,2,clients,drawer,Approved credit limit,स्वीकृत क्रेडिट सीमा,https://os.babinrentals.com/screenshots/clients/drawer.png,OK,,S11 approved wording
-clients.drawer.outstandingOnInvoices,2,clients,drawer,Outstanding on invoices,बिलहरूमा बाँकी रकम,https://os.babinrentals.com/screenshots/clients/drawer.png,OK,,S11 approved wording
-clients.drawer.creditHeadroomNote,2,clients,drawer,"How much of the limit is consumed is not recorded — there is no credit-used column, and outstanding invoices are a different question. Neither figure is a headroom.",क्रेडिट सीमा कति उपभोग भयो भन्ने रेकर्ड छैन — कुनै क्रेडिट प्रयोग स्तम्भ छैन र बाँकी बिल फरक विषय हो।,https://os.babinrentals.com/screenshots/clients/drawer.png,OK,,S11 approved wording
-clients.drawer.totalRentals,2,clients,drawer,Total rentals,जम्मा भाडा,https://os.babinrentals.com/screenshots/clients/drawer.png,OK,,S11 approved wording
-clients.drawer.lifetimeSpend,2,clients,drawer,Lifetime spend,कुल कारोबार,https://os.babinrentals.com/screenshots/clients/drawer.png,OK,,S11 approved wording
-clients.drawer.startRental,2,clients,drawer,Start rental,भाडा सुरु गर्नुहोस्,https://os.babinrentals.com/screenshots/clients/drawer.png,OK,,S11 approved wording
-clients.drawer.ledger,2,clients,drawer,Ledger,खातापाता,https://os.babinrentals.com/screenshots/clients/drawer.png,OK,,S11 approved wording
-clients.drawer.viewFullProfile,2,clients,drawer,View Full Profile,पूरा प्रोफाइल हेर्नुहोस्,https://os.babinrentals.com/screenshots/clients/drawer.png,OK,,S11 approved wording
-crew.title,2,crew,crew,Crew Assist,क्रु सहायता,https://os.babinrentals.com/screenshots/crew/crew.png,OK,,S11 approved wording
-crew.subtitle,2,crew,crew,"Crew assignments, technicians, and on-set talent coordination","क्रु खटनपटन, प्राविधिक तथा अन-सेट जनशक्ति व्यवस्थापन",https://os.babinrentals.com/screenshots/crew/crew.png,OK,,S11 approved wording
-crew.table.name,2,crew,table,Crew Member,क्रु सदस्य,https://os.babinrentals.com/screenshots/crew/table.png,OK,,S11 approved wording
-crew.table.role,2,crew,table,Role,भूमिका,https://os.babinrentals.com/screenshots/crew/table.png,OK,,S11 approved wording
-crew.table.phone,2,crew,table,Phone,फोन,https://os.babinrentals.com/screenshots/crew/table.png,OK,,S11 approved wording
-crew.table.rate,2,crew,table,Daily Rate (Rs),दैनिक दर (रु),https://os.babinrentals.com/screenshots/crew/table.png,OK,,S11 approved wording
-crew.table.days,2,crew,table,Days,दिन,https://os.babinrentals.com/screenshots/crew/table.png,OK,,S11 approved wording
-crew.table.total,2,crew,table,Total (Rs),जम्मा (रु),https://os.babinrentals.com/screenshots/crew/table.png,OK,,S11 approved wording
-crew.table.status,2,crew,table,Status,अवस्था,https://os.babinrentals.com/screenshots/crew/table.png,OK,,S11 approved wording
-crew.table.action,2,crew,table,Action,कार्य,https://os.babinrentals.com/screenshots/crew/table.png,OK,,S11 approved wording
-crew.actions.assign,2,crew,actions,Assign Crew,क्रु तोक्नुहोस्,https://os.babinrentals.com/screenshots/crew/actions.png,OK,,S11 approved wording
-crew.actions.addMember,2,crew,actions,Add Member,सदस्य थप्नुहोस्,https://os.babinrentals.com/screenshots/crew/actions.png,OK,,S11 approved wording
-crew.actions.remove,2,crew,actions,Remove,हटाउनुहोस्,https://os.babinrentals.com/screenshots/crew/actions.png,OK,,S11 approved wording
-crew.role.camera,2,crew,role,Camera Operator,क्यामेराम्यान,https://os.babinrentals.com/screenshots/crew/role.png,OK,,S11 approved wording
-crew.role.drone,2,crew,role,Drone Pilot,ड्रोन पाइलट,https://os.babinrentals.com/screenshots/crew/role.png,OK,,S11 approved wording
-crew.role.sound,2,crew,role,Sound Recordist,साउन्ड रेकर्डिस्ट,https://os.babinrentals.com/screenshots/crew/role.png,OK,,S11 approved wording
-crew.role.gaffer,2,crew,role,Gaffer / Lighting,लाइटिङ टेक्निसियन,https://os.babinrentals.com/screenshots/crew/role.png,OK,,S11 approved wording
-crew.role.assistant,2,crew,role,Camera Assistant,क्यामेरा सहायक,https://os.babinrentals.com/screenshots/crew/role.png,OK,,S11 approved wording
-crew.status.assigned,2,crew,status,Assigned,तोकिएको,https://os.babinrentals.com/screenshots/crew/status.png,OK,,S11 approved wording
-crew.status.confirmed,2,crew,status,Confirmed,पुष्टि भएको,https://os.babinrentals.com/screenshots/crew/status.png,OK,,S11 approved wording
-crew.status.unavailable,2,crew,status,Unavailable,अनुपलब्ध,https://os.babinrentals.com/screenshots/crew/status.png,OK,,S11 approved wording
-crew.empty,2,crew,crew,No crew members assigned to this booking.,यस बुकिङमा कुनै क्रु सदस्य तोकिएको छैन।,https://os.babinrentals.com/screenshots/crew/crew.png,OK,,S11 approved wording
-crew.list.loading,2,crew,list,Loading assigned crew…,तोकिएको क्रु लोड हुँदैछ…,https://os.babinrentals.com/screenshots/crew/list.png,OK,,S11 approved wording
-crew.list.retry,2,crew,list,Retry crew,पुनः प्रयास गर्नुहोस्,https://os.babinrentals.com/screenshots/crew/list.png,OK,,S11 approved wording
-crew.list.empty,2,crew,list,No crew assigned to this booking yet.,यस बुकिङमा कुनै क्रु तोकिएको छैन।,https://os.babinrentals.com/screenshots/crew/list.png,OK,,S11 approved wording
-crew.list.ariaLabel,2,crew,list,Assigned crew,तोकिएको क्रु,https://os.babinrentals.com/screenshots/crew/list.png,OK,,S11 approved wording
-crew.list.nameUnavailable,2,crew,list,Crew name unavailable,क्रुको नाम उपलब्ध छैन,https://os.babinrentals.com/screenshots/crew/list.png,OK,,S11 approved wording
-crew.list.call,2,crew,list,Call: {time},कल समय: {time},https://os.babinrentals.com/screenshots/crew/list.png,OK,,S11 approved wording
-crew.list.wrap,2,crew,list,Wrap: {time},र्याप समय: {time},https://os.babinrentals.com/screenshots/crew/list.png,OK,,S11 approved wording
-crew.list.notRecorded,2,crew,list,Not recorded,रेकर्ड नभएको,https://os.babinrentals.com/screenshots/crew/list.png,OK,,S11 approved wording
-crew.list.daysSingle,2,crew,list,{count} day,{count} दिन,https://os.babinrentals.com/screenshots/crew/list.png,OK,,S11 approved wording
-crew.list.daysMulti,2,crew,list,{count} days,{count} दिन,https://os.babinrentals.com/screenshots/crew/list.png,OK,,S11 approved wording
-crew.list.dailyRate,2,crew,list,Daily rate: {rate},दैनिक दर: {rate},https://os.babinrentals.com/screenshots/crew/list.png,OK,,S11 approved wording
-crew.list.totalPay,2,crew,list,Total pay: {total},जम्मा पारिश्रमिक: {total},https://os.babinrentals.com/screenshots/crew/list.png,OK,,S11 approved wording
-crew.list.notAvailable,2,crew,list,Not available,उपलब्ध छैन,https://os.babinrentals.com/screenshots/crew/list.png,OK,,S11 approved wording
-rentals.title,2,rentals,rentals,Rentals,भाडा,https://os.babinrentals.com/screenshots/rentals/rentals.png,OK,,S11 approved wording
-rentals.subtitle,2,rentals,rentals,"Booking desk, active rentals, quotes, and gear schedules","बुकिङ डेस्क, चालु भाडा, कोटेसन तथा उपकरण कार्यतालिका",https://os.babinrentals.com/screenshots/rentals/rentals.png,OK,,S11 approved wording
-rentals.views.all,2,rentals,views,All Rentals,सबै भाडा,https://os.babinrentals.com/screenshots/rentals/views.png,OK,,S11 approved wording
-rentals.views.quotes,2,rentals,views,Quotes,कोटेसन,https://os.babinrentals.com/screenshots/rentals/views.png,OK,,S11 approved wording
-rentals.views.confirmed,2,rentals,views,Confirmed,पुष्टि भएको,https://os.babinrentals.com/screenshots/rentals/views.png,OK,,S11 approved wording
-rentals.views.active,2,rentals,views,Active / On Rent,भाडामा,https://os.babinrentals.com/screenshots/rentals/views.png,OK,,S11 approved wording
-rentals.views.dueToday,2,rentals,views,Due Today,आज फिर्ता हुनुपर्ने,https://os.babinrentals.com/screenshots/rentals/views.png,OK,,S11 approved wording
-rentals.views.overdue,2,rentals,views,Overdue,म्याद नाघेको,https://os.babinrentals.com/screenshots/rentals/views.png,OK,,S11 approved wording
-rentals.views.completed,2,rentals,views,Completed,सम्पन्न,https://os.babinrentals.com/screenshots/rentals/views.png,OK,,S11 approved wording
-rentals.views.cancelled,2,rentals,views,Cancelled,रद्द भएको,https://os.babinrentals.com/screenshots/rentals/views.png,OK,,S11 approved wording
-rentals.actions.newRental,2,rentals,actions,New Rental,नयाँ भाडा,https://os.babinrentals.com/screenshots/rentals/actions.png,OK,,S11 approved wording
-rentals.actions.newShort,2,rentals,actions,New,नयाँ,https://os.babinrentals.com/screenshots/rentals/actions.png,OK,,S11 approved wording
-rentals.actions.exportCsv,2,rentals,actions,Export CSV,CSV निर्यात गर्नुहोस्,https://os.babinrentals.com/screenshots/rentals/actions.png,OK,,S11 approved wording
-rentals.searchAria,2,rentals,rentals,Search rentals,भाडा खोज्नुहोस्,https://os.babinrentals.com/screenshots/rentals/rentals.png,OK,,S11 approved wording
-rentals.searchPlaceholder,2,rentals,rentals,Search rentals…,भाडा खोज्नुहोस्…,https://os.babinrentals.com/screenshots/rentals/rentals.png,OK,,S11 approved wording
-rentals.actions.filter,2,rentals,actions,Filters,फिल्टरहरू,https://os.babinrentals.com/screenshots/rentals/actions.png,OK,,S11 approved wording
-rentals.actions.viewDetail,2,rentals,actions,View Booking,बुकिङ हेर्नुहोस्,https://os.babinrentals.com/screenshots/rentals/actions.png,OK,,S11 approved wording
-rentals.actions.duplicate,2,rentals,actions,Duplicate,प्रतिलिपि बनाउनुहोस्,https://os.babinrentals.com/screenshots/rentals/actions.png,OK,,S11 approved wording
-rentals.actions.cancelBooking,2,rentals,actions,Cancel Booking,बुकिङ रद्द गर्नुहोस्,https://os.babinrentals.com/screenshots/rentals/actions.png,OK,,S11 approved wording
-rentals.actions.confirm,2,rentals,actions,Confirm Booking,बुकिङ पुष्टि गर्नुहोस्,https://os.babinrentals.com/screenshots/rentals/actions.png,OK,,S11 approved wording
-rentals.actions.printPickList,2,rentals,actions,Print Pick List,पिक लिस्ट छाप्नुहोस्,https://os.babinrentals.com/screenshots/rentals/actions.png,OK,,S11 approved wording
-rentals.actions.createInvoice,2,rentals,actions,Create Invoice,बिल बनाउनुहोस्,https://os.babinrentals.com/screenshots/rentals/actions.png,OK,,S11 approved wording
-rentals.table.bookingNo,2,rentals,table,Booking #,बुकिङ नं,https://os.babinrentals.com/screenshots/rentals/table.png,OK,,S11 approved wording
-rentals.table.client,2,rentals,table,Client,ग्राहक,https://os.babinrentals.com/screenshots/rentals/table.png,OK,,S11 approved wording
-rentals.table.dates,2,rentals,table,Dates (BS),मिति (वि.सं.),https://os.babinrentals.com/screenshots/rentals/table.png,OK,,S11 approved wording
-rentals.table.duration,2,rentals,table,Duration,अवधि,https://os.babinrentals.com/screenshots/rentals/table.png,OK,,S11 approved wording
-rentals.table.stage,2,rentals,table,Stage,चरण,https://os.babinrentals.com/screenshots/rentals/table.png,OK,,S11 approved wording
-rentals.table.items,2,rentals,table,Items,सामग्री,https://os.babinrentals.com/screenshots/rentals/table.png,OK,,S11 approved wording
-rentals.table.total,2,rentals,table,Total (Rs),जम्मा (रु),https://os.babinrentals.com/screenshots/rentals/table.png,OK,,S11 approved wording
-rentals.table.outstanding,2,rentals,table,Outstanding (Rs),बाँकी रकम (रु),https://os.babinrentals.com/screenshots/rentals/table.png,OK,,S11 approved wording
-rentals.table.deposit,2,rentals,table,Deposit (Rs),धरौटी (रु),https://os.babinrentals.com/screenshots/rentals/table.png,OK,,S11 approved wording
-rentals.table.action,2,rentals,table,Action,कार्य,https://os.babinrentals.com/screenshots/rentals/table.png,OK,,S11 approved wording
-rentals.detail.overview,2,rentals,detail,Booking Overview,बुकिङ विवरण,https://os.babinrentals.com/screenshots/rentals/detail.png,OK,,S11 approved wording
-rentals.detail.gearList,2,rentals,detail,Equipment & Gear,उपकरण तथा सामग्री,https://os.babinrentals.com/screenshots/rentals/detail.png,OK,,S11 approved wording
-rentals.detail.crew,2,rentals,detail,Crew,क्रु,https://os.babinrentals.com/screenshots/rentals/detail.png,OK,,S11 approved wording
-rentals.detail.transport,2,rentals,detail,Delivery & Transport,डेलिभरी तथा यातायात,https://os.babinrentals.com/screenshots/rentals/detail.png,OK,,S11 approved wording
-rentals.detail.financials,2,rentals,detail,Financials & Payments,वित्त तथा भुक्तानी,https://os.babinrentals.com/screenshots/rentals/detail.png,OK,,S11 approved wording
-rentals.detail.audit,2,rentals,detail,Audit History,अडिट इतिहास,https://os.babinrentals.com/screenshots/rentals/detail.png,OK,,S11 approved wording
-rentals.detail.notes,2,rentals,detail,Notes,टिप्पणी,https://os.babinrentals.com/screenshots/rentals/detail.png,OK,,S11 approved wording
-rentals.new.header,2,rentals,new,New Rental Booking,नयाँ भाडा बुकिङ,https://os.babinrentals.com/screenshots/rentals/new.png,OK,,S11 approved wording
-rentals.new.stepClient,2,rentals,new,1. Select Client,1. ग्राहक चयन,https://os.babinrentals.com/screenshots/rentals/new.png,OK,,S11 approved wording · R-21: Latin numbers/currency stay Latin
-rentals.new.stepDates,2,rentals,new,2. Rental Schedule,2. भाडा तालिका,https://os.babinrentals.com/screenshots/rentals/new.png,OK,,S11 approved wording · R-21: Latin numbers/currency stay Latin
-rentals.new.stepGear,2,rentals,new,3. Add Equipment,3. उपकरण थप्नुहोस्,https://os.babinrentals.com/screenshots/rentals/new.png,OK,,S11 approved wording · R-21: Latin numbers/currency stay Latin
-rentals.new.stepReview,2,rentals,new,4. Review & Confirm,4. समीक्षा तथा पुष्टि,https://os.babinrentals.com/screenshots/rentals/new.png,OK,,S11 approved wording · R-21: Latin numbers/currency stay Latin
-rentals.new.startDate,2,rentals,new,Pickup Date (BS),सामान लिने मिति (वि.सं.),https://os.babinrentals.com/screenshots/rentals/new.png,OK,,S11 approved wording
-rentals.new.returnDate,2,rentals,new,Return Date (BS),सामान फिर्ता मिति (वि.सं.),https://os.babinrentals.com/screenshots/rentals/new.png,OK,,S11 approved wording
-rentals.new.durationDays,2,rentals,new,Duration: {count} days,अवधि: {count} दिन,https://os.babinrentals.com/screenshots/rentals/new.png,OK,,S11 approved wording
-rentals.new.searchGearPlaceholder,2,rentals,new,"Search equipment by name, barcode or SKU...","उपकरणको नाम, बारकोड वा SKU खोज्नुहोस्...",https://os.babinrentals.com/screenshots/rentals/new.png,OK,,S11 approved wording
-rentals.new.saveDraft,2,rentals,new,Save as Draft,मस्यौदा सुरक्षित गर्नुहोस्,https://os.babinrentals.com/screenshots/rentals/new.png,OK,,S11 approved wording
-rentals.new.createQuote,2,rentals,new,Create Quote,कोटेसन बनाउनुहोस्,https://os.babinrentals.com/screenshots/rentals/new.png,OK,,S11 approved wording
-rentals.new.confirmBook,2,rentals,new,Confirm Booking,बुकिङ पुष्टि गर्नुहोस्,https://os.babinrentals.com/screenshots/rentals/new.png,OK,,S11 approved wording
-rentals.empty,2,rentals,rentals,No bookings found matching criteria.,कुनै बुकिङ फेला परेन।,https://os.babinrentals.com/screenshots/rentals/rentals.png,OK,,S11 approved wording
+key,wave,module,screen,english,nepali_draft,screenshot_link,status,babin_fix,notes,reviewed_by,reviewed_at
+calendar.title,2,calendar,calendar,Calendar,पात्रो,,PENDING,,Awaiting Babin review,,
+calendar.subtitle,2,calendar,calendar,"Schedule, operational timelines, pickups, and equipment availability","कार्यतालिका, उपकरण उपलब्धता, बुकिङ तथा फिर्ता विवरण",,PENDING,,Awaiting Babin review,,
+calendar.views.month,2,calendar,views,Month,महिना,,PENDING,,Awaiting Babin review,,
+calendar.views.week,2,calendar,views,Week,हप्ता,,PENDING,,Awaiting Babin review,,
+calendar.views.threeDay,2,calendar,views,3-Day,3-दिन,,PENDING,,Awaiting Babin review · R-21: Latin numbers/currency stay Latin,,
+calendar.views.day,2,calendar,views,Day,दिन,,PENDING,,Awaiting Babin review,,
+calendar.views.timeline,2,calendar,views,Timeline,समयरेखा,,PENDING,,Awaiting Babin review,,
+calendar.views.resource,2,calendar,views,Resource,उपकरण,,PENDING,,Awaiting Babin review,,
+calendar.actions.today,2,calendar,actions,Today,आज,,PENDING,,Awaiting Babin review,,
+calendar.actions.checkAvailability,2,calendar,actions,Check availability,उपलब्धता जाँच्नुहोस्,,PENDING,,Awaiting Babin review,,
+calendar.actions.availabilityShort,2,calendar,actions,Availability,उपलब्धता,,PENDING,,Awaiting Babin review,,
+calendar.actions.fullView,2,calendar,actions,Full View,पूर्ण दृश्य,,PENDING,,Awaiting Babin review,,
+calendar.actions.exitFullView,2,calendar,actions,Exit Full View,पूर्ण दृश्यबाट बाहिरिनुहोस्,,PENDING,,Awaiting Babin review,,
+calendar.actions.search,2,calendar,actions,Search,खोज्नुहोस्,,PENDING,,Awaiting Babin review,,
+calendar.actions.filters,2,calendar,actions,Filters,फिल्टरहरू,,PENDING,,Awaiting Babin review,,
+calendar.actions.filtersWithCount,2,calendar,actions,Filters ({count}),फिल्टरहरू ({count}),,PENDING,,Awaiting Babin review,,
+calendar.searchPlaceholder,2,calendar,calendar,Search calendar events (press /),कार्यतालिका घटनाहरू खोज्नुहोस् (/ थिच्नुहोस्),,PENDING,,Awaiting Babin review,,
+calendar.searchAria,2,calendar,calendar,Search calendar,कार्यतालिका खोज्नुहोस्,,PENDING,,Awaiting Babin review,,
+calendar.actions.newRental,2,calendar,actions,New Rental,नयाँ भाडा,,PENDING,,Awaiting Babin review,,
+calendar.actions.prevMonth,2,calendar,actions,Previous month,अघिल्लो महिना,,PENDING,,Awaiting Babin review,,
+calendar.actions.nextMonth,2,calendar,actions,Next month,पछिल्लो महिना,,PENDING,,Awaiting Babin review,,
+calendar.actions.filter,2,calendar,actions,Filters,फिल्टरहरू,,PENDING,,Awaiting Babin review,,
+calendar.legend.confirmed,2,calendar,legend,Confirmed,पुष्टि भएको,,PENDING,,Awaiting Babin review,,
+calendar.legend.onRent,2,calendar,legend,On Rent,भाडामा,,PENDING,,Awaiting Babin review,,
+calendar.legend.ready,2,calendar,legend,Ready,तयार,,PENDING,,Awaiting Babin review,,
+calendar.legend.returnDue,2,calendar,legend,Return Due,फिर्ता हुनुपर्ने,,PENDING,,Awaiting Babin review,,
+calendar.legend.returned,2,calendar,legend,Returned,फिर्ता भयो,,PENDING,,Awaiting Babin review,,
+calendar.legend.quote,2,calendar,legend,Quote,कोटेसन,,PENDING,,Awaiting Babin review,,
+calendar.legend.draft,2,calendar,legend,Draft,मस्यौदा,,PENDING,,Awaiting Babin review,,
+calendar.summary.pickups,2,calendar,summary,Pickups Today,आज डेलिभरी,,PENDING,,Awaiting Babin review,,
+calendar.summary.returns,2,calendar,summary,Returns Today,आज फिर्ता,,PENDING,,Awaiting Babin review,,
+calendar.summary.overdue,2,calendar,summary,Overdue,म्याद नाघेको,,PENDING,,Awaiting Babin review,,
+calendar.summary.totalActive,2,calendar,summary,Active Bookings,सक्रिय बुकिङहरू,,PENDING,,Awaiting Babin review,,
+calendar.filter.allStages,2,calendar,filter,All Stages,सबै चरणहरू,,PENDING,,Awaiting Babin review,,
+calendar.filter.allCategories,2,calendar,filter,All Categories,सबै वर्गहरू,,PENDING,,Awaiting Babin review,,
+calendar.empty,2,calendar,calendar,No bookings scheduled for this date range.,यस मिति अवधिमा कुनै बुकिङ तालिका छैन।,,PENDING,,Awaiting Babin review,,
+clients.title,2,clients,clients,Clients,ग्राहक,,PENDING,,Awaiting Babin review,,
+clients.subtitle,2,clients,clients,"Client directory, memberships, credit policies, and records","ग्राहक निर्देशिका, सदस्यता, क्रेडिट नीति र विवरणहरू",,PENDING,,Awaiting Babin review,,
+clients.tabs.directory,2,clients,tabs,Directory,निर्देशिका,,PENDING,,Awaiting Babin review,,
+clients.tabs.newClient,2,clients,tabs,New Client,नयाँ ग्राहक,,PENDING,,Awaiting Babin review,,
+clients.tabs.membership,2,clients,tabs,Membership, सदस्यता,,PENDING,,Awaiting Babin review,,
+clients.tabs.referral,2,clients,tabs,Referral,सिफारिस,,PENDING,,Awaiting Babin review,,
+clients.tabs.coupons,2,clients,tabs,Coupons & Promos,कुपन र प्रोमो,,PENDING,,Awaiting Babin review,,
+clients.tabs.credit,2,clients,tabs,Credit,क्रेडिट,,PENDING,,Awaiting Babin review,,
+clients.tabs.import,2,clients,tabs,Import,आयात,,PENDING,,Awaiting Babin review,,
+clients.tabs.duplicates,2,clients,tabs,Duplicates,दोहोरिएका,,PENDING,,Awaiting Babin review,,
+clients.kpi.totalClients,2,clients,kpi,Total Clients,जम्मा ग्राहक,,PENDING,,Awaiting Babin review,,
+clients.kpi.activeRentals,2,clients,kpi,Active Rentals,चालु भाडा,,PENDING,,Awaiting Babin review,,
+clients.kpi.outstanding,2,clients,kpi,Outstanding,बाँकी,,PENDING,,Awaiting Babin review,,
+clients.kpi.depositHeld,2,clients,kpi,Deposit Held,धरौटी रकम,,PENDING,,Awaiting Babin review,,
+clients.countPill,2,clients,clients,{count} {label},{count} {label},,PENDING,,Awaiting Babin review,,
+clients.countSingle,2,clients,clients,client,ग्राहक,,PENDING,,Awaiting Babin review,,
+clients.countMulti,2,clients,clients,clients,ग्राहकहरू,,PENDING,,Awaiting Babin review,,
+clients.searchPlaceholder,2,clients,clients,"Search client, PAN, phone… (press /)","ग्राहक, प्यान, फोन खोज्नुहोस्… (/ थिच्नुहोस्)",,PENDING,,Awaiting Babin review,,
+clients.searchAria,2,clients,clients,Search clients,ग्राहक खोज्नुहोस्,,PENDING,,Awaiting Babin review,,
+clients.searchMembersPlaceholder,2,clients,clients,"Search members by name, plan, or type… (press /)","नाम, योजना वा प्रकारबाट सदस्य खोज्नुहोस्… (/ थिच्नुहोस्)",,PENDING,,Awaiting Babin review,,
+clients.searchMembersAria,2,clients,clients,Search members,सदस्य खोज्नुहोस्,,PENDING,,Awaiting Babin review,,
+clients.actions.exportDirectory,2,clients,actions,Export loaded directory,खुलेको निर्देशिका निर्यात गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+clients.actions.importClients,2,clients,actions,Import Clients,ग्राहक आयात गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+clients.actions.duplicateCenter,2,clients,actions,Duplicate Center,दोहोरिएका रेकर्ड केन्द्र,,PENDING,,Awaiting Babin review,,
+clients.actions.clientCredit,2,clients,actions,Client Credit,ग्राहक क्रेडिट,,PENDING,,Awaiting Babin review,,
+clients.actions.referralCodes,2,clients,actions,Referral Codes,सिफारिस कोडहरू,,PENDING,,Awaiting Babin review,,
+clients.actions.couponsPromos,2,clients,actions,Coupons & Promos,कुपन र प्रोमोहरू,,PENDING,,Awaiting Babin review,,
+clients.actions.clientSectionsAria,2,clients,actions,Client sections,ग्राहक खण्डहरू,,PENDING,,Awaiting Babin review,,
+clients.subHeader.counter,2,clients,subHeader,{count} registered {label},{count} दर्ता भएका {label},,PENDING,,Awaiting Babin review,,
+clients.subHeader.newClientBtn,2,clients,subHeader,+ New Client,+ नयाँ ग्राहक,,PENDING,,Awaiting Babin review,,
+clients.actions.addClient,2,clients,actions,Add Client,नयाँ ग्राहक थप्नुहोस्,,PENDING,,Awaiting Babin review,,
+clients.actions.exportCsv,2,clients,actions,Export CSV,CSV निर्यात गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+clients.actions.exportReady,2,clients,actions,Export ready,निर्यात तयार भयो,,PENDING,,Awaiting Babin review,,
+clients.actions.exportSuccess,2,clients,actions,{count} client rows written to clients.csv,{count} ग्राहक रेकर्ड clients.csv मा सुरक्षित गरियो,,PENDING,,Awaiting Babin review,,
+clients.actions.filter,2,clients,actions,Filters,फिल्टरहरू,,PENDING,,Awaiting Babin review,,
+clients.actions.edit,2,clients,actions,Edit,सम्पादन गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+clients.actions.block,2,clients,actions,Block Client,ग्राहक रोक लगाउनुहोस्,,PENDING,,Awaiting Babin review,,
+clients.actions.unblock,2,clients,actions,Unblock Client,रोक फुकुवा गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+clients.actions.save,2,clients,actions,Save Changes,परिवर्तन सुरक्षित गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+clients.actions.cancel,2,clients,actions,Cancel,रद्द गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+clients.table.clientId,2,clients,table,Client ID,ग्राहक ID,,PENDING,,Awaiting Babin review,,
+clients.table.name,2,clients,table,Name,नाम,,PENDING,,Awaiting Babin review,,
+clients.table.type,2,clients,table,Type,प्रकार,,PENDING,,Awaiting Babin review,,
+clients.table.membership,2,clients,table,Membership,सदस्यता,,PENDING,,Awaiting Babin review,,
+clients.table.phone,2,clients,table,Phone,फोन,,PENDING,,Awaiting Babin review,,
+clients.table.email,2,clients,table,Email,इमेल,,PENDING,,Awaiting Babin review,,
+clients.table.pan,2,clients,table,PAN,प्यान,,PENDING,,Awaiting Babin review,,
+clients.table.activeRentals,2,clients,table,Active Rentals,चालु भाडा,,PENDING,,Awaiting Babin review,,
+clients.table.outstanding,2,clients,table,Outstanding (Rs),बाँकी रकम (रु),,PENDING,,Awaiting Babin review,,
+clients.table.depositHeld,2,clients,table,Deposit Held (Rs),धरौटी रकम (रु),,PENDING,,Awaiting Babin review,,
+clients.table.lastRental,2,clients,table,Last Rental (BS),पछिल्लो भाडा (वि.सं.),,PENDING,,Awaiting Babin review,,
+clients.table.status,2,clients,table,Status,अवस्था,,PENDING,,Awaiting Babin review,,
+clients.table.action,2,clients,table,Action,कार्य,,PENDING,,Awaiting Babin review,,
+clients.status.active,2,clients,status,Active,सक्रिय,,PENDING,,Awaiting Babin review,,
+clients.status.blocked,2,clients,status,Blocked,रोक लगाइएको,,PENDING,,Awaiting Babin review,,
+clients.status.notBlocked,2,clients,status,Not blocked,रोक नभएको,,PENDING,,Awaiting Babin review,,
+clients.form.personalInfo,2,clients,form,Personal Information,व्यक्तिगत विवरण,,PENDING,,Awaiting Babin review,,
+clients.form.fullName,2,clients,form,Full Name,पूरा नाम,,PENDING,,Awaiting Babin review,,
+clients.form.fullNamePlaceholder,2,clients,form,e.g. Aayush Shrestha,जस्तै: आयुष श्रेष्ठ,,PENDING,,Awaiting Babin review,,
+clients.form.clientType,2,clients,form,Client Type,ग्राहक प्रकार,,PENDING,,Awaiting Babin review,,
+clients.form.typeIndividual,2,clients,form,Individual,व्यक्तिगत,,PENDING,,Awaiting Babin review,,
+clients.form.typeCompany,2,clients,form,Company,कम्पनी,,PENDING,,Awaiting Babin review,,
+clients.form.contactInfo,2,clients,form,Contact Details,सम्पर्क विवरण,,PENDING,,Awaiting Babin review,,
+clients.form.phone,2,clients,form,Phone Number,फोन नम्बर,,PENDING,,Awaiting Babin review,,
+clients.form.phoneHelp,2,clients,form,10-digit Nepal mobile number (98XXXXXXXX or 97XXXXXXXX),10-अङ्कको नेपाल मोबाइल नम्बर (98XXXXXXXX वा 97XXXXXXXX),,PENDING,,Awaiting Babin review · R-21: Latin numbers/currency stay Latin,,
+clients.form.email,2,clients,form,Email Address,इमेल ठेगाना,,PENDING,,Awaiting Babin review,,
+clients.form.emailPlaceholder,2,clients,form,client@example.com,client@example.com,,PENDING,,Awaiting Babin review,,
+clients.form.secondaryPhone,2,clients,form,Secondary Phone,वैकल्पिक फोन,,PENDING,,Awaiting Babin review,,
+clients.form.address,2,clients,form,Address / Location,ठेगाना / स्थान,,PENDING,,Awaiting Babin review,,
+clients.form.addressPlaceholder,2,clients,form,"Street, Tole, City","टोल, सडक, सहर",,PENDING,,Awaiting Babin review,,
+clients.form.district,2,clients,form,District,जिल्ला,,PENDING,,Awaiting Babin review,,
+clients.form.taxInfo,2,clients,form,Tax & Verification,कर तथा प्रमाणीकरण,,PENDING,,Awaiting Babin review,,
+clients.form.pan,2,clients,form,PAN Number,प्यान नम्बर,,PENDING,,Awaiting Babin review,,
+clients.form.panPlaceholder,2,clients,form,9-digit PAN,9-अङ्कको प्यान नम्बर,,PENDING,,Awaiting Babin review · R-21: Latin numbers/currency stay Latin,,
+clients.form.idDocument,2,clients,form,ID Document,परिचयपत्र,,PENDING,,Awaiting Babin review,,
+clients.form.idType,2,clients,form,ID Type,परिचयपत्र प्रकार,,PENDING,,Awaiting Babin review,,
+clients.form.idNumber,2,clients,form,ID Number,परिचयपत्र नम्बर,,PENDING,,Awaiting Babin review,,
+clients.form.citizenship,2,clients,form,Citizenship,नागरिकता,,PENDING,,Awaiting Babin review,,
+clients.form.drivingLicense,2,clients,form,Driving License,सवारी चालक अनुमतिपत्र,,PENDING,,Awaiting Babin review,,
+clients.form.passport,2,clients,form,Passport,राहदानी,,PENDING,,Awaiting Babin review,,
+clients.form.nationalId,2,clients,form,National ID,राष्ट्रिय परिचयपत्र,,PENDING,,Awaiting Babin review,,
+clients.form.membershipSection,2,clients,form,Membership & Terms,सदस्यता र सर्तहरू,,PENDING,,Awaiting Babin review,,
+clients.form.tier,2,clients,form,Membership Tier,सदस्यता तह,,PENDING,,Awaiting Babin review,,
+clients.form.paymentTerms,2,clients,form,Payment Terms,भुक्तानी सर्तहरू,,PENDING,,Awaiting Babin review,,
+clients.form.creditLimit,2,clients,form,Credit Limit (Rs),क्रेडिट सीमा (रु),,PENDING,,Awaiting Babin review,,
+clients.form.notes,2,clients,form,Staff Notes,कर्मचारी टिप्पणी,,PENDING,,Awaiting Babin review,,
+clients.form.notesPlaceholder,2,clients,form,Internal notes regarding preferences or history,ग्राहक प्राथमिकता वा विगतको आन्तरिक टिप्पणी,,PENDING,,Awaiting Babin review,,
+clients.form.saveButton,2,clients,form,Register Client,ग्राहक दर्ता गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+clients.detail.overview,2,clients,detail,Client Overview,ग्राहक विवरण,,PENDING,,Awaiting Babin review,,
+clients.detail.recentBookings,2,clients,detail,Recent Bookings,हालैका बुकिङ,,PENDING,,Awaiting Babin review,,
+clients.detail.invoices,2,clients,detail,Invoices,बिलहरू,,PENDING,,Awaiting Babin review,,
+clients.detail.documents,2,clients,detail,Documents,कागजातहरू,,PENDING,,Awaiting Babin review,,
+clients.detail.collectors,2,clients,detail,Authorized Receivers,आधिकारिक प्राप्तकर्ताहरू,,PENDING,,Awaiting Babin review,,
+clients.detail.noBookings,2,clients,detail,No bookings recorded for this client.,यस ग्राहकको कुनै बुकिङ रेकर्ड छैन।,,PENDING,,Awaiting Babin review,,
+clients.detail.noInvoices,2,clients,detail,No invoices on file.,कुनै बिल फेला परेन।,,PENDING,,Awaiting Babin review,,
+clients.detail.noDocuments,2,clients,detail,No documents uploaded.,कुनै कागजात अपलोड गरिएको छैन।,,PENDING,,Awaiting Babin review,,
+clients.referral.back,2,clients,referral,Back to Referrals,सिफारिस सूचीमा फर्कनुहोस्,,PENDING,,Awaiting Babin review,,
+clients.referral.generateBtn,2,clients,referral,Generate Referral Code,सिफारिस कोड बनाउनुहोस्,,PENDING,,Awaiting Babin review,,
+clients.referral.cardTitle,2,clients,referral,Referral conversions and affiliate rewards,सिफारिस रूपान्तरण र सम्बद्ध पुरस्कार,,PENDING,,Awaiting Babin review,,
+clients.referral.emptyTitle,2,clients,referral,No referral is recorded,कुनै सिफारिस रेकर्ड गरिएको छैन,,PENDING,,Awaiting Babin review,,
+clients.referral.emptyDesc,2,clients,referral,"Referrals have no home in the database yet — no table stores a referral code, the account it introduced, or the reward owed for it. Until one exists there is nothing true to list here, and the figures this panel used to show were written into the page rather than earned by anyone.","सिफारिसहरूको लागि डाटाबेसमा हाल कुनै स्थान छैन — कुनै तालिकामा सिफारिस कोड, त्यसले ल्याएको ग्राहक वा प्राप्त हुने पुरस्कार सुरक्षित गरिएको छैन।",,PENDING,,Awaiting Babin review,,
+clients.credit.extended,2,clients,credit,Credit Extended,प्रदान गरिएको क्रेडिट,,PENDING,,Awaiting Babin review,,
+clients.credit.extendedNote,2,clients,credit,Approved limits across {count} loaded {label},{count} {label} मा स्वीकृत क्रेडिट सीमा,,PENDING,,Awaiting Babin review,,
+clients.credit.outstanding,2,clients,credit,Outstanding,बाँकी,,PENDING,,Awaiting Babin review,,
+clients.credit.outstandingNote,2,clients,credit,Owed on invoices — not the same figure as credit used,बिलहरूमा बाँकी रकम — यो प्रयोग गरिएको क्रेडिट भन्दा फरक हो,,PENDING,,Awaiting Babin review,,
+clients.credit.blockedBalance,2,clients,credit,Blocked Balance,रोक लगाइएको बाँकी रकम,,PENDING,,Awaiting Babin review,,
+clients.credit.blockedNote,2,clients,credit,{count} {label} under block,{count} {label} रोक सूचीमा,,PENDING,,Awaiting Babin review,,
+clients.credit.accountSingle,2,clients,credit,account,खाता,,PENDING,,Awaiting Babin review,,
+clients.credit.accountMulti,2,clients,credit,accounts,खाताहरू,,PENDING,,Awaiting Babin review,,
+clients.credit.policyNote,2,clients,credit,Credit limits come from the membership tier.,क्रेडिट सीमा सदस्यता तहबाट निर्धारण हुन्छ।,,PENDING,,Awaiting Babin review,,
+clients.credit.policyLink,2,clients,credit,Credit policy by tier is in Settings ▸ Business,तह अनुसारको क्रेडिट नीति सेटिङ ▸ व्यवसाय मा छ,,PENDING,,Awaiting Babin review,,
+clients.credit.cardTitle,2,clients,credit,Accounts with an approved credit limit,स्वीकृत क्रेडिट सीमा भएका ग्राहक खाताहरू,,PENDING,,Awaiting Babin review,,
+clients.credit.emptyTitle,2,clients,credit,No account carries an approved credit limit,कुनै पनि खातामा स्वीकृत क्रेडिट सीमा छैन,,PENDING,,Awaiting Babin review,,
+clients.credit.emptyMessage,2,clients,credit,"Every loaded client has a limit of zero, so none of them can rent on credit today.","सबै लोड भएका ग्राहकको क्रेडिट सीमा शून्य छ, त्यसैले हाल कसैले पनि उधारोमा सामान भाडामा लिन सक्दैनन्।",,PENDING,,Awaiting Babin review,,
+clients.credit.tableAria,2,clients,credit,Approved credit limits,स्वीकृत क्रेडिट सीमाहरू,,PENDING,,Awaiting Babin review,,
+clients.credit.thClient,2,clients,credit,Client,ग्राहक,,PENDING,,Awaiting Babin review,,
+clients.credit.thTier,2,clients,credit,Tier,तह,,PENDING,,Awaiting Babin review,,
+clients.credit.thApprovedLimit,2,clients,credit,Approved Limit,स्वीकृत सीमा,,PENDING,,Awaiting Babin review,,
+clients.credit.thOutstanding,2,clients,credit,Outstanding,बाँकी,,PENDING,,Awaiting Babin review,,
+clients.credit.thStatus,2,clients,credit,Status,अवस्था,,PENDING,,Awaiting Babin review,,
+clients.filter.all,2,clients,filter,All,सबै,,PENDING,,Awaiting Babin review,,
+clients.filter.openRentals,2,clients,filter,Open Rentals,चालु भाडा,,PENDING,,Awaiting Babin review,,
+clients.filter.vipTier,2,clients,filter,VIP / Tier,VIP / तह,,PENDING,,Awaiting Babin review,,
+clients.filter.paymentDue,2,clients,filter,Payment Due,भुक्तानी बाँकी,,PENDING,,Awaiting Babin review,,
+clients.filter.blocked,2,clients,filter,Blocked,रोक लगाइएको,,PENDING,,Awaiting Babin review,,
+clients.filter.organisation,2,clients,filter,Organisation,संस्थागत,,PENDING,,Awaiting Babin review,,
+clients.filter.individual,2,clients,filter,Individual,व्यक्तिगत,,PENDING,,Awaiting Babin review,,
+clients.kpi.activeClients,2,clients,kpi,Active Clients,सक्रिय ग्राहक,,PENDING,,Awaiting Babin review,,
+clients.kpi.activeClientsSubtitle,2,clients,kpi,{count} with open rentals,{count} चालु भाडामा,,PENDING,,Awaiting Babin review,,
+clients.kpi.openRentals,2,clients,kpi,Open Rentals,चालु भाडा,,PENDING,,Awaiting Babin review,,
+clients.kpi.openRentalsSubtitle,2,clients,kpi,Currently active on rental,हाल भाडामा सामान चालु रहेको,,PENDING,,Awaiting Babin review,,
+clients.kpi.hold,2,clients,kpi,Credit / Payment Hold,क्रेडिट / भुक्तानी रोक,,PENDING,,Awaiting Babin review,,
+clients.kpi.holdSubtitle,2,clients,kpi,{paymentDue} payment due · {blocked} blocked,{paymentDue} भुक्तानी बाँकी · {blocked} रोक लगाइएको,,PENDING,,Awaiting Babin review,,
+clients.table.thClient,2,clients,table,Client,ग्राहक,,PENDING,,Awaiting Babin review,,
+clients.table.thContact,2,clients,table,Contact,सम्पर्क,,PENDING,,Awaiting Babin review,,
+clients.table.thType,2,clients,table,Type,प्रकार,,PENDING,,Awaiting Babin review,,
+clients.table.thMembership,2,clients,table,Membership,सदस्यता,,PENDING,,Awaiting Babin review,,
+clients.table.thOpenRentals,2,clients,table,Open rentals,चालु भाडा,,PENDING,,Awaiting Babin review,,
+clients.table.thOutstanding,2,clients,table,Outstanding,बाँकी,,PENDING,,Awaiting Babin review,,
+clients.table.thDepositHeld,2,clients,table,Deposit Held,धरौटी रकम,,PENDING,,Awaiting Babin review,,
+clients.table.thLastRental,2,clients,table,Last Rental (BS / AD),पछिल्लो भाडा (वि.सं. / ई.सं.),,PENDING,,Awaiting Babin review,,
+clients.table.thAction,2,clients,table,Action,कार्य,,PENDING,,Awaiting Babin review,,
+clients.table.selectAll,2,clients,table,Select all clients on this page,यस पृष्ठका सबै ग्राहक छान्नुहोस्,,PENDING,,Awaiting Babin review,,
+clients.table.openProfileAria,2,clients,table,Open {name}'s profile,{name} को प्रोफाइल खोल्नुहोस्,,PENDING,,Awaiting Babin review,,
+clients.actions.clearAll,2,clients,actions,Clear all,सबै हटाउनुहोस्,,PENDING,,Awaiting Babin review,,
+clients.actions.saveCurrentView,2,clients,actions,Save Current View,हालको दृश्य सुरक्षित गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+clients.actions.selected,2,clients,actions,selected,छानिएको,,PENDING,,Awaiting Babin review,,
+clients.actions.clearSelection,2,clients,actions,Clear selection,छनोट हटाउनुहोस्,,PENDING,,Awaiting Babin review,,
+clients.actions.exportSelected,2,clients,actions,Export Selected,छानिएका निर्यात गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+clients.actions.blockSelected,2,clients,actions,Block Selected,छानिएकालाई रोक लगाउनुहोस्,,PENDING,,Awaiting Babin review,,
+clients.actions.unblockSelected,2,clients,actions,Unblock Selected,छानिएकाको रोक फुकुवा गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+clients.badge.open,2,clients,badge,open,चालु,,PENDING,,Awaiting Babin review,,
+clients.badge.due,2,clients,badge,due,बाँकी,,PENDING,,Awaiting Babin review,,
+clients.badge.noRentalYet,2,clients,badge,No rental yet,कुनै भाडा भएको छैन,,PENDING,,Awaiting Babin review,,
+clients.actions.profile,2,clients,actions,Profile,प्रोफाइल,,PENDING,,Awaiting Babin review,,
+clients.actions.viewProfileArrow,2,clients,actions,View profile →,प्रोफाइल हेर्नुहोस् →,,PENDING,,Awaiting Babin review,,
+clients.drawer.phone,2,clients,drawer,Phone,फोन,,PENDING,,Awaiting Babin review,,
+clients.drawer.email,2,clients,drawer,Email,इमेल,,PENDING,,Awaiting Babin review,,
+clients.drawer.pan,2,clients,drawer,PAN,प्यान,,PENDING,,Awaiting Babin review,,
+clients.drawer.kyc,2,clients,drawer,KYC,केवाईसी,,PENDING,,Awaiting Babin review,,
+clients.drawer.type,2,clients,drawer,Type,प्रकार,,PENDING,,Awaiting Babin review,,
+clients.drawer.address,2,clients,drawer,Address,ठेगाना,,PENDING,,Awaiting Babin review,,
+clients.drawer.authorizedContact,2,clients,drawer,Authorized contact,अधिकृत सम्पर्क व्यक्ति,,PENDING,,Awaiting Babin review,,
+clients.drawer.approvedCreditLimit,2,clients,drawer,Approved credit limit,स्वीकृत क्रेडिट सीमा,,PENDING,,Awaiting Babin review,,
+clients.drawer.outstandingOnInvoices,2,clients,drawer,Outstanding on invoices,बिलहरूमा बाँकी रकम,,PENDING,,Awaiting Babin review,,
+clients.drawer.creditHeadroomNote,2,clients,drawer,"How much of the limit is consumed is not recorded — there is no credit-used column, and outstanding invoices are a different question. Neither figure is a headroom.",क्रेडिट सीमा कति उपभोग भयो भन्ने रेकर्ड छैन — कुनै क्रेडिट प्रयोग स्तम्भ छैन र बाँकी बिल फरक विषय हो।,,PENDING,,Awaiting Babin review,,
+clients.drawer.totalRentals,2,clients,drawer,Total rentals,जम्मा भाडा,,PENDING,,Awaiting Babin review,,
+clients.drawer.lifetimeSpend,2,clients,drawer,Lifetime spend,कुल कारोबार,,PENDING,,Awaiting Babin review,,
+clients.drawer.startRental,2,clients,drawer,Start rental,भाडा सुरु गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+clients.drawer.ledger,2,clients,drawer,Ledger,खातापाता,,PENDING,,Awaiting Babin review,,
+clients.drawer.viewFullProfile,2,clients,drawer,View Full Profile,पूरा प्रोफाइल हेर्नुहोस्,,PENDING,,Awaiting Babin review,,
+crew.title,2,crew,crew,Crew Assist,क्रु सहायता,,PENDING,,Awaiting Babin review,,
+crew.subtitle,2,crew,crew,"Crew assignments, technicians, and on-set talent coordination","क्रु खटनपटन, प्राविधिक तथा अन-सेट जनशक्ति व्यवस्थापन",,PENDING,,Awaiting Babin review,,
+crew.table.name,2,crew,table,Crew Member,क्रु सदस्य,,PENDING,,Awaiting Babin review,,
+crew.table.role,2,crew,table,Role,भूमिका,,PENDING,,Awaiting Babin review,,
+crew.table.phone,2,crew,table,Phone,फोन,,PENDING,,Awaiting Babin review,,
+crew.table.rate,2,crew,table,Daily Rate (Rs),दैनिक दर (रु),,PENDING,,Awaiting Babin review,,
+crew.table.days,2,crew,table,Days,दिन,,PENDING,,Awaiting Babin review,,
+crew.table.total,2,crew,table,Total (Rs),जम्मा (रु),,PENDING,,Awaiting Babin review,,
+crew.table.status,2,crew,table,Status,अवस्था,,PENDING,,Awaiting Babin review,,
+crew.table.action,2,crew,table,Action,कार्य,,PENDING,,Awaiting Babin review,,
+crew.actions.assign,2,crew,actions,Assign Crew,क्रु तोक्नुहोस्,,PENDING,,Awaiting Babin review,,
+crew.actions.addMember,2,crew,actions,Add Member,सदस्य थप्नुहोस्,,PENDING,,Awaiting Babin review,,
+crew.actions.remove,2,crew,actions,Remove,हटाउनुहोस्,,PENDING,,Awaiting Babin review,,
+crew.role.camera,2,crew,role,Camera Operator,क्यामेराम्यान,,PENDING,,Awaiting Babin review,,
+crew.role.drone,2,crew,role,Drone Pilot,ड्रोन पाइलट,,PENDING,,Awaiting Babin review,,
+crew.role.sound,2,crew,role,Sound Recordist,साउन्ड रेकर्डिस्ट,,PENDING,,Awaiting Babin review,,
+crew.role.gaffer,2,crew,role,Gaffer / Lighting,लाइटिङ टेक्निसियन,,PENDING,,Awaiting Babin review,,
+crew.role.assistant,2,crew,role,Camera Assistant,क्यामेरा सहायक,,PENDING,,Awaiting Babin review,,
+crew.status.assigned,2,crew,status,Assigned,तोकिएको,,PENDING,,Awaiting Babin review,,
+crew.status.confirmed,2,crew,status,Confirmed,पुष्टि भएको,,PENDING,,Awaiting Babin review,,
+crew.status.unavailable,2,crew,status,Unavailable,अनुपलब्ध,,PENDING,,Awaiting Babin review,,
+crew.empty,2,crew,crew,No crew members assigned to this booking.,यस बुकिङमा कुनै क्रु सदस्य तोकिएको छैन।,,PENDING,,Awaiting Babin review,,
+crew.list.loading,2,crew,list,Loading assigned crew…,तोकिएको क्रु लोड हुँदैछ…,,PENDING,,Awaiting Babin review,,
+crew.list.retry,2,crew,list,Retry crew,पुनः प्रयास गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+crew.list.empty,2,crew,list,No crew assigned to this booking yet.,यस बुकिङमा कुनै क्रु तोकिएको छैन।,,PENDING,,Awaiting Babin review,,
+crew.list.ariaLabel,2,crew,list,Assigned crew,तोकिएको क्रु,,PENDING,,Awaiting Babin review,,
+crew.list.nameUnavailable,2,crew,list,Crew name unavailable,क्रुको नाम उपलब्ध छैन,,PENDING,,Awaiting Babin review,,
+crew.list.call,2,crew,list,Call: {time},कल समय: {time},,PENDING,,Awaiting Babin review,,
+crew.list.wrap,2,crew,list,Wrap: {time},र्याप समय: {time},,PENDING,,Awaiting Babin review,,
+crew.list.notRecorded,2,crew,list,Not recorded,रेकर्ड नभएको,,PENDING,,Awaiting Babin review,,
+crew.list.daysSingle,2,crew,list,{count} day,{count} दिन,,PENDING,,Awaiting Babin review,,
+crew.list.daysMulti,2,crew,list,{count} days,{count} दिन,,PENDING,,Awaiting Babin review,,
+crew.list.dailyRate,2,crew,list,Daily rate: {rate},दैनिक दर: {rate},,PENDING,,Awaiting Babin review,,
+crew.list.totalPay,2,crew,list,Total pay: {total},जम्मा पारिश्रमिक: {total},,PENDING,,Awaiting Babin review,,
+crew.list.notAvailable,2,crew,list,Not available,उपलब्ध छैन,,PENDING,,Awaiting Babin review,,
+rentals.title,2,rentals,rentals,Rentals,भाडा,,PENDING,,Awaiting Babin review,,
+rentals.subtitle,2,rentals,rentals,"Booking desk, active rentals, quotes, and gear schedules","बुकिङ डेस्क, चालु भाडा, कोटेसन तथा उपकरण कार्यतालिका",,PENDING,,Awaiting Babin review,,
+rentals.views.all,2,rentals,views,All Rentals,सबै भाडा,,PENDING,,Awaiting Babin review,,
+rentals.views.quotes,2,rentals,views,Quotes,कोटेसन,,PENDING,,Awaiting Babin review,,
+rentals.views.confirmed,2,rentals,views,Confirmed,पुष्टि भएको,,PENDING,,Awaiting Babin review,,
+rentals.views.active,2,rentals,views,Active / On Rent,भाडामा,,PENDING,,Awaiting Babin review,,
+rentals.views.dueToday,2,rentals,views,Due Today,आज फिर्ता हुनुपर्ने,,PENDING,,Awaiting Babin review,,
+rentals.views.overdue,2,rentals,views,Overdue,म्याद नाघेको,,PENDING,,Awaiting Babin review,,
+rentals.views.completed,2,rentals,views,Completed,सम्पन्न,,PENDING,,Awaiting Babin review,,
+rentals.views.cancelled,2,rentals,views,Cancelled,रद्द भएको,,PENDING,,Awaiting Babin review,,
+rentals.actions.newRental,2,rentals,actions,New Rental,नयाँ भाडा,,PENDING,,Awaiting Babin review,,
+rentals.actions.newShort,2,rentals,actions,New,नयाँ,,PENDING,,Awaiting Babin review,,
+rentals.actions.exportCsv,2,rentals,actions,Export CSV,CSV निर्यात गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+rentals.searchAria,2,rentals,rentals,Search rentals,भाडा खोज्नुहोस्,,PENDING,,Awaiting Babin review,,
+rentals.searchPlaceholder,2,rentals,rentals,Search rentals…,भाडा खोज्नुहोस्…,,PENDING,,Awaiting Babin review,,
+rentals.actions.filter,2,rentals,actions,Filters,फिल्टरहरू,,PENDING,,Awaiting Babin review,,
+rentals.actions.viewDetail,2,rentals,actions,View Booking,बुकिङ हेर्नुहोस्,,PENDING,,Awaiting Babin review,,
+rentals.actions.duplicate,2,rentals,actions,Duplicate,प्रतिलिपि बनाउनुहोस्,,PENDING,,Awaiting Babin review,,
+rentals.actions.cancelBooking,2,rentals,actions,Cancel Booking,बुकिङ रद्द गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+rentals.actions.confirm,2,rentals,actions,Confirm Booking,बुकिङ पुष्टि गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+rentals.actions.printPickList,2,rentals,actions,Print Pick List,पिक लिस्ट छाप्नुहोस्,,PENDING,,Awaiting Babin review,,
+rentals.actions.createInvoice,2,rentals,actions,Create Invoice,बिल बनाउनुहोस्,,PENDING,,Awaiting Babin review,,
+rentals.table.bookingNo,2,rentals,table,Booking #,बुकिङ नं,,PENDING,,Awaiting Babin review,,
+rentals.table.client,2,rentals,table,Client,ग्राहक,,PENDING,,Awaiting Babin review,,
+rentals.table.dates,2,rentals,table,Dates (BS),मिति (वि.सं.),,PENDING,,Awaiting Babin review,,
+rentals.table.duration,2,rentals,table,Duration,अवधि,,PENDING,,Awaiting Babin review,,
+rentals.table.stage,2,rentals,table,Stage,चरण,,PENDING,,Awaiting Babin review,,
+rentals.table.items,2,rentals,table,Items,सामग्री,,PENDING,,Awaiting Babin review,,
+rentals.table.total,2,rentals,table,Total (Rs),जम्मा (रु),,PENDING,,Awaiting Babin review,,
+rentals.table.outstanding,2,rentals,table,Outstanding (Rs),बाँकी रकम (रु),,PENDING,,Awaiting Babin review,,
+rentals.table.deposit,2,rentals,table,Deposit (Rs),धरौटी (रु),,PENDING,,Awaiting Babin review,,
+rentals.table.action,2,rentals,table,Action,कार्य,,PENDING,,Awaiting Babin review,,
+rentals.detail.overview,2,rentals,detail,Booking Overview,बुकिङ विवरण,,PENDING,,Awaiting Babin review,,
+rentals.detail.gearList,2,rentals,detail,Equipment & Gear,उपकरण तथा सामग्री,,PENDING,,Awaiting Babin review,,
+rentals.detail.crew,2,rentals,detail,Crew,क्रु,,PENDING,,Awaiting Babin review,,
+rentals.detail.transport,2,rentals,detail,Delivery & Transport,डेलिभरी तथा यातायात,,PENDING,,Awaiting Babin review,,
+rentals.detail.financials,2,rentals,detail,Financials & Payments,वित्त तथा भुक्तानी,,PENDING,,Awaiting Babin review,,
+rentals.detail.audit,2,rentals,detail,Audit History,अडिट इतिहास,,PENDING,,Awaiting Babin review,,
+rentals.detail.notes,2,rentals,detail,Notes,टिप्पणी,,PENDING,,Awaiting Babin review,,
+rentals.new.header,2,rentals,new,New Rental Booking,नयाँ भाडा बुकिङ,,PENDING,,Awaiting Babin review,,
+rentals.new.stepClient,2,rentals,new,1. Select Client,1. ग्राहक चयन,,PENDING,,Awaiting Babin review · R-21: Latin numbers/currency stay Latin,,
+rentals.new.stepDates,2,rentals,new,2. Rental Schedule,2. भाडा तालिका,,PENDING,,Awaiting Babin review · R-21: Latin numbers/currency stay Latin,,
+rentals.new.stepGear,2,rentals,new,3. Add Equipment,3. उपकरण थप्नुहोस्,,PENDING,,Awaiting Babin review · R-21: Latin numbers/currency stay Latin,,
+rentals.new.stepReview,2,rentals,new,4. Review & Confirm,4. समीक्षा तथा पुष्टि,,PENDING,,Awaiting Babin review · R-21: Latin numbers/currency stay Latin,,
+rentals.new.startDate,2,rentals,new,Pickup Date (BS),सामान लिने मिति (वि.सं.),,PENDING,,Awaiting Babin review,,
+rentals.new.returnDate,2,rentals,new,Return Date (BS),सामान फिर्ता मिति (वि.सं.),,PENDING,,Awaiting Babin review,,
+rentals.new.durationDays,2,rentals,new,Duration: {count} days,अवधि: {count} दिन,,PENDING,,Awaiting Babin review,,
+rentals.new.searchGearPlaceholder,2,rentals,new,"Search equipment by name, barcode or SKU...","उपकरणको नाम, बारकोड वा SKU खोज्नुहोस्...",,PENDING,,Awaiting Babin review,,
+rentals.new.saveDraft,2,rentals,new,Save as Draft,मस्यौदा सुरक्षित गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+rentals.new.createQuote,2,rentals,new,Create Quote,कोटेसन बनाउनुहोस्,,PENDING,,Awaiting Babin review,,
+rentals.new.confirmBook,2,rentals,new,Confirm Booking,बुकिङ पुष्टि गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+rentals.empty,2,rentals,rentals,No bookings found matching criteria.,कुनै बुकिङ फेला परेन।,,PENDING,,Awaiting Babin review,,

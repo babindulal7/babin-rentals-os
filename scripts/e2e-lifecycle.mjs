@@ -6967,6 +6967,38 @@ STEPS.push({
 
 /* ΓöÇΓöÇ Run ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
+STEPS.push({
+  id: 'L63',
+  title: 'Owner glossary approval: role gate, idempotency, staff read and immutable revision history (T0-12/C-6)',
+  expect: 'green',
+  async run() {
+    await undone(async () => {
+      const key = crypto.randomUUID()
+      let revision
+      await as('Owner', async () => {
+        const row = (await q('select approve_glossary_term($1,$2,$3,$4) value', [key, 'msg.pending', 'पर्खँदै', 0])).rows[0].value
+        revision = row.revision
+        assertEq(row.created_by, U.Owner, 'database derives approval actor')
+        const retry = (await q('select approve_glossary_term($1,$2,$3,$4) value', [key, 'msg.pending', 'पर्खँदै', 0])).rows[0].value
+        assertEq(retry.id, row.id, 'retry returns the same approval')
+      })
+      for (const role of ['Admin', 'Manager', 'Coordinator', 'Accounts', 'Warehouse', 'Technician', 'Driver', 'Client']) {
+        await as(role, async () => {
+          await q('savepoint glossary_role_denial')
+          await refuses(`${role} cannot approve glossary`, 'select approve_glossary_term($1,$2,$3,$4)',
+            [crypto.randomUUID(), 'msg.pending', 'अर्को', revision], /glossary.role/)
+          await q('rollback to savepoint glossary_role_denial')
+          await q('release savepoint glossary_role_denial')
+          assertEq(Number(await one('select count(*) from glossary_term_revisions where client_uuid=$1', [key])), role === 'Client' ? 0 : 1, `${role} glossary read`)
+        })
+      }
+      await asOwnerOfTheDatabase(async () => {
+        await refuses('glossary history is immutable', 'update glossary_term_revisions set nepali=$1 where client_uuid=$2', ['अर्को', key], /Law 3/)
+      })
+    })
+  },
+})
+
 await seed()
 
 const results = []

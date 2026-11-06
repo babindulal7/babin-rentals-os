@@ -150,6 +150,8 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
       return rbac.canOverrideCreditLimit(ctx.role, online);
     case 'settings.manage':
       return rbac.canManageSettings(ctx.role);
+    case 'glossary.manage':
+      return rbac.canManageGlossary(ctx.role, online);
     case 'operations.perform':
       return rbac.canPerformOperations(ctx.role);
     case 'operations.pack':

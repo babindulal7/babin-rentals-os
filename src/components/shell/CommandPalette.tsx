@@ -9,7 +9,7 @@ import { useTheme } from '../../lib/theme'
 import { toggleScanner } from './ScannerFab'
 import { quickCreateActions } from './QuickCreateMenu'
 import type { GlobalSearchResult } from '../../lib/queries/globalSearch'
-import { useCurrentLanguage, toggleLanguage } from '../../lib/i18n'
+import { useCurrentLanguage } from '../../lib/i18n'
 import { isStaff } from '../../lib/rbac'
 
 /**
@@ -226,13 +226,13 @@ export const CommandPalette: React.FC = () => {
     },
     {
       id: 'act-toggle-lang',
-      title: currentLang === 'ne' ? 'Switch to English' : 'Switch Language to नेपाली (Nepali)',
-      subtitle: 'Toggle system & catalogue language (EN / ने)',
+      title: currentLang === 'ne' ? 'Language: नेपाली' : 'Language: English',
+      subtitle: 'Open your language preference',
       category: 'Actions',
       icon: 'flag',
       shortcut: 'lang',
       keywords: ['lang', 'language', 'ne', 'en', 'nepali', 'नेपाली'],
-      onSelect: () => { void toggleLanguage() },
+      onSelect: () => navigate('/settings?tab=system'),
     },
     {
       id: 'act-toggle-theme',

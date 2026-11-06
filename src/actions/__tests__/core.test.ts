@@ -434,6 +434,25 @@ describe('delivery_zone capabilities — T-1 matrix round-trip (T4-07)', () => {
   })
 })
 
+describe('glossary.manage — T-1 Owner-only approval contract (T0-12/C-6)', () => {
+  it('admits only Owner online and never executes another role or offline request', async () => {
+    const roles: SystemRole[] = ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts', 'Driver', 'Client']
+    for (const role of roles) {
+      const execute = vi.fn(async () => ({ result: true, events: [] }))
+      const probe = createAction({ name: 'GLOSSARY_PROBE', permissions: ['glossary.manage'], implemented: true, validate: () => {}, execute })
+      if (role === 'Owner') await expect(probe({}, { userId: 'owner', role, isOnline: true })).resolves.toBe(true)
+      else {
+        await expect(probe({}, { userId: 'staff', role, isOnline: true })).rejects.toBeInstanceOf(ActionPermissionError)
+        expect(execute).not.toHaveBeenCalled()
+      }
+    }
+    const execute = vi.fn(async () => ({ result: true, events: [] }))
+    const probe = createAction({ name: 'GLOSSARY_OFFLINE', permissions: ['glossary.manage'], implemented: true, validate: () => {}, execute })
+    await expect(probe({}, { userId: 'owner', role: 'Owner', isOnline: false })).rejects.toThrow()
+    expect(execute).not.toHaveBeenCalled()
+  })
+})
+
 describe('problem_report capabilities — T-1 matrix round-trip (T4-11)', () => {
   const probe = (capability: string, role: SystemRole) => {
     const execute = vi.fn(async () => ({ result: { ok: true }, events: [] }))

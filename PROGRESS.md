@@ -1,5 +1,81 @@
 # Progress Log
 
+## 2026-11-06 — T0-12: integrate current main and apply the Owner glossary migration
+
+**Did**
+- Integrated the conflict repair with main base 4a669104 in an isolated checkout, preserving Gemini's later translations, typography and onboarding language choice. Shared account-save control replaces duplicate device-cache writes. Main's three unrelated uncommitted tests remain outside this integration.
+- Renumbered the glossary migration from branch-local 0222 to 0223 because main already contains the inventory repair 0222. Regenerated all four review sheets from current catalogues as pending unless exact approval evidence exists. Restored the contract's exact active-status refusal assertion with a relative-date booking fixture.
+- Shared-file integration scope remains PLAN.md, PERMISSIONS.md, rbac.ts, actions/core.ts and database.ts; account/onboarding overlap is resolved under the explicit integration request.
+
+**Ruled**
+- C-7: Babin explicitly authorized local main integration and application of this glossary migration after backup and verification. No unrelated migration, deployment or remote Git push. C-3 whole-app owner/device acceptance still gates Nepali.
+
+**Verified**
+- Typecheck passed; targeted account/readiness/Auth/glossary run passed 50 tests across 6 files. Server contracts passed all 59 assertions on combined source.
+- Backup validation PASS: production_backup_2026-11-06T04-45-29-638Z.sql, 23,497,610 bytes, SHA-256 2ef64e76ef8c188a5ed906205ff0ac0f4c7bd60065e45c326f57a8d27fe33e94, ignored backups directory. Restore rehearsal NOT VERIFIED. Live glossary dependencies inspected read-only; tables absent before application.
+- Full combined-source gates and responsive browser recheck are pending. Migration 0223 WRITTEN, NOT APPLIED. Original branch gates do not certify this source.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 92 / 92 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 77 / 77 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 220 files · check:pglite not run this session (pass --migrations to run). Suite: Historical suite: 50/50 passed, 0 failed (recorded 2026-11-06T04:46:23.667Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Complete combined-source gates and browser check, merge locally without disturbing main drafts, refresh backup and apply only 0223, then verify live schema/RLS/RPC behavior.
+- Actual translation review, physical-device acceptance, hosted Auth/account preference and cross-client realtime acceptance remain separate. Production HOLD remains.
+
+## 2026-11-06 — T0-12: rules, task acceptance, language safety and Owner glossary editing
+
+**Did**
+- Repaired translation review evidence, whole-app Nepali activation, account language preferences, task statuses/prompts, layout dependencies, authority text, floor/portal permission descriptions and navigation/current-state drift.
+- Added Owner-only Settings glossary approval with immutable shared revisions, idempotent RPC, stale-edit guards and immediate reactive wording refresh. Delayed refreshes cannot undo a newer observed approval. Migration 0222 is WRITTEN + VERIFIED locally, NOT APPLIED or PRODUCTION-VERIFIED. Card ready for Babin review/merge; no live apply, push or merge.
+- Repaired the server-contract reservation fixture to remain active relative to today, preserving its strict retirement refusal assertion.
+- Shared-file scope: PLAN.md, docs/PERMISSIONS.md, src/lib/rbac.ts, src/actions/core.ts, src/types/database.ts; no money-engine changes.
+
+**Ruled**
+- Babin answered interactively: latest explicit product ruling wins over Foundation; new product decisions go to Babin; whole-app acceptance gates Nepali; glossary editing is Owner only and approved changes apply immediately. RULINGS-2026-11-05 C-2–C-6 records the answers, with comments at readiness/RBAC/SQL sites.
+
+**Verified**
+- Draft-export regression failed before repair; six review-script tests now pass.
+- Targeted account/readiness/auth/settings checks passed (77 tests); additional glossary engine, reactive rendering and UI checks passed. Refused drafts remain visible; other roles never get the editor.
+- Full `npm run gates`: 17/17 PASS in CI-reference order on unchanged source `793cb9cd83febec62351182842635b854240b90069943d3af17e6e2f345fdf52` (source commit `0a330c94`). Typecheck, zero-warning lint, local API guards, 6,718/6,718 tests in 553 files, 219/219 migration rebuilds, financial integrity, security including glossary nine-role proof, 64/64 lifecycle including L63, 58/58 server contracts, 58/58 partial-return assertions, progress/receipt/shell/UI-copy checks, 106/106 contrast pairs, build/PWA and coverage all passed. No hosted/device claim.
+- V8 coverage reran all 6,718 tests successfully: overall statements 66.3%, branches 74.63%, functions 51.51%, lines 66.24%. These are measured coverage figures, not full behavioral acceptance.
+- Shared-machine contention caused one earlier seeded-navigation timeout; both navigation tests passed in isolation, then the complete gates passed with test workers limited to two using Vitest environment settings. No timeout or assertion was changed. Full log: artifacts/conflict-resolution/full-gates.log; generated receipt matches final source.
+- Headless mock browser: nine checks passed at 375/820/1440 for Owner/Warehouse, including actual Owner glossary approvals and blocked premature Nepali activation. Screenshots in artifacts/conflict-resolution/browser/.
+- npm audit before claim and final documentation commits: exit 1, 36 existing advisories (3 low, 15 moderate, 14 high, 4 critical). Final refresh required bounded registry fetch settings. No dependency upgrades in this task.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 92 / 92 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 77 / 77 (100%) | +0 |
+| Lifecycle | steps green / total | 64 / 64 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 219 files · check:pglite 219/219 applied, 0 failed (recorded 2026-11-05T20:09:30.405Z). Suite: PASS — 6718/6718 passed, 0 failed (recorded 2026-11-05T21:32:43.526Z); source fingerprint matches.
+Coverage suite: PASS — 6718/6718 passed, 0 failed (recorded 2026-11-05T21:32:43.526Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-05T20:19:19.915Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin merges the reviewed branch and applies 0222 after backup; no agent live apply.
+- Hosted Auth metadata, PostgREST/RLS and cross-client Realtime acceptance remain unverified.
+- Actual wave approvals and physical-device Nepali layout acceptance remain pending; Nepali stays unavailable until complete. Production HOLD remains.
+- Dependency advisories are separate maintenance work.
+
+
 ## 2026-11-06 — T6-09: Switch it on — per-user language preference persistence (Lane B)
 
 **Did**

@@ -4,7 +4,7 @@ React 18 · TS 5.7 strict · Vite 5 · Tailwind v4 · Supabase Postgres + RLS ·
 
 ## Start here (authority order)
 
-`docs/00_READ_FIRST.md` → `CLAUDE.md` → `docs/PERMISSIONS.md` (§3/§4/§6 matrix) → `RULINGS-*.md` (newest first) → `docs/PRODUCT_RULES.md` → `docs/CURRENT_STATE.md` → `PROGRESS.md` → `PLAN.md` *(go-live roadmap, re-created 26 Oct 2026; task cards in `docs/plans/`)* → Foundation Spec. Where specs conflict, Foundation wins; where permissions conflict, `PERMISSIONS.md` wins and **stricter wins** (B-1). Never read `src/archive/` or dated `docs/audits/` as current truth.
+`docs/00_READ_FIRST.md` → `CLAUDE.md` → `docs/PERMISSIONS.md` (§3/§4/§6 matrix) → `RULINGS-*.md` (newest first) → `docs/PRODUCT_RULES.md` → `docs/CURRENT_STATE.md` → `PROGRESS.md` → `PLAN.md` *(task cards in `docs/plans/`)* → Foundation Spec. **RULING 2026-11-05:** Babin's latest explicit product ruling wins over an older specification; Foundation is the fallback. Permission conflicts follow `PERMISSIONS.md` and **stricter wins** (B-1). Never read `src/archive/` or dated `docs/audits/` as current truth.
 
 - Never invent a product decision. Mark `TODO(decision)`, log in `docs/OPEN_DECISIONS.md`, index it in `PLAN.md` §4.2, work on something unblocked.
 - Session end: update `PROGRESS.md` (newest first, Did / Ruled / Verified) with `## Completion` + `## Remaining` blocks. Run `npm run completion` — never hand-type a percentage. Run `npm run lint:progress` yourself — it enforces the blocks (CI is off).

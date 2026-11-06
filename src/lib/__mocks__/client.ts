@@ -29,6 +29,7 @@ import { MOCK_LOGINS } from '../devQuickLogins'
 import { parseBookingNoSearch } from '../format'
 import { calculateMembershipCredit } from '../membershipCredit'
 import { rupees } from '../money'
+import { GLOSSARY_TERMS, validateGlossaryText } from '../glossaryStore'
 
 const OVERLAY_KEY = 'babin.mock.overlay.v1'
 const SESSION_KEY = 'babin.mock.session.v1'
@@ -312,7 +313,7 @@ const hooks: EngineHooks = {
 /* ── Auth ──────────────────────────────────────────────────────────────── */
 
 interface MockSession {
-  user: { id: string; email: string }
+  user: { id: string; email: string; user_metadata?: Record<string, unknown> }
 }
 
 type AuthListener = (event: string, session: MockSession | null) => void
@@ -361,13 +362,30 @@ const auth = {
     if (!password) {
       return { data: { session: null }, error: { message: 'Enter any password — mock mode does not check it.' } }
     }
-    const session: MockSession = { user: { id: user['id'] as string, email: user['email'] as string } }
+    let metadata: Record<string, unknown> = {}
+    try {
+      metadata = JSON.parse(localStorage.getItem(`babin.mock.auth-metadata.${String(user['id'])}`) ?? '{}') as Record<string, unknown>
+    } catch { /* An unavailable mock preference defaults to English. */ }
+    const session: MockSession = { user: { id: user['id'] as string, email: user['email'] as string, user_metadata: metadata } }
     writeSession(session)
     return { data: { session }, error: null }
   },
   async signOut() {
     writeSession(null)
     return { error: null }
+  },
+  async updateUser(attributes: { data?: Record<string, unknown> }) {
+    const session = readSession()
+    if (!session) return { data: { user: null }, error: { message: 'Sign in to change your preference.' } }
+    const metadata = { ...session.user.user_metadata, ...attributes.data }
+    const updated = { user: { ...session.user, user_metadata: metadata } }
+    try {
+      localStorage.setItem(`babin.mock.auth-metadata.${session.user.id}`, JSON.stringify(metadata))
+    } catch {
+      return { data: { user: null }, error: { message: 'Could not save this mock account preference.' } }
+    }
+    writeSession(updated)
+    return { data: { user: updated.user }, error: null }
   },
 }
 
@@ -1295,9 +1313,29 @@ function changeClientMembership(payload: Record<string, unknown>): { data: Row |
 
 export const mockSupabase = {
   from(table: string) {
+    if (table === 'glossary_term_revisions') store[table] ??= []
     return createBuilder(table, hooks)
   },
   rpc(name: string, args?: Record<string, unknown>) {
+    if (name === 'approve_glossary_term') {
+      const actor = readSession()?.user.id
+      const role = store['users']?.find(user => user['id'] === actor)?.['primary_role']
+      if (role !== 'Owner') return Promise.resolve({ data: null, error: pgErr('42501', 'GATE:glossary.role|Only the Owner may approve glossary changes.') })
+      const term = GLOSSARY_TERMS.find(item => item.id === args?.['p_term_key'])
+      const text = typeof args?.['p_nepali'] === 'string' ? args['p_nepali'].trim() : ''
+      const rows = store['glossary_term_revisions'] ??= []
+      const previous = rows.find(row => row['client_uuid'] === args?.['p_client_uuid'])
+      if (previous) return Promise.resolve({ data: previous, error: previous['term_key'] === term?.id && previous['nepali'] === text ? null : pgErr('P0001', 'GATE:glossary.idempotency|Retry key belongs to another change.') })
+      if (!term || !args?.['p_client_uuid']) return Promise.resolve({ data: null, error: pgErr('P0001', 'Choose an existing glossary term.') })
+      const problem = validateGlossaryText(term, text)
+      if (problem) return Promise.resolve({ data: null, error: pgErr('P0001', problem) })
+      const current = rows.filter(row => row['original_nepali'] === term.ne).reduce((max, row) => Math.max(max, Number(row['revision'])), 0)
+      if (args?.['p_expected_revision'] !== current) return Promise.resolve({ data: null, error: pgErr('P0001', 'GATE:glossary.changed|The term changed while you were editing. Reload before approving.') })
+      const row = { id: crypto.randomUUID(), client_uuid: args['p_client_uuid'], term_key: term.id, original_nepali: term.ne, nepali: text,
+        revision: rows.reduce((max, item) => Math.max(max, Number(item['revision'])), 0) + 1, created_by: actor, created_at: new Date().toISOString() }
+      hooks.insert('glossary_term_revisions', [row])
+      return Promise.resolve({ data: row, error: null })
+    }
     if (name === 'assert_operation_branch_grant') {
       const actor = readSession()?.user.id
       const user = store['users']?.find(row => row['id'] === actor)
