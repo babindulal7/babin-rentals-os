@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { act } from 'react'
+import { act, StrictMode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { useFirstRun, useOnboarding } from '../useFirstRun'
 import { readLocal, writeLocal } from '../safeStorage'
@@ -36,7 +36,7 @@ describe('useFirstRun', () => {
     }
   })
 
-  it('reports firstRun true on initial mount and marks flag in safeStorage', async () => {
+  it('keeps firstRun visible under StrictMode and marks the next visit in safeStorage', async () => {
     let capturedFirstRun: boolean | undefined
     function TestComponent() {
       const { firstRun } = useFirstRun()
@@ -45,7 +45,7 @@ describe('useFirstRun', () => {
     }
 
     await act(async () => {
-      root?.render(<TestComponent />)
+      root?.render(<StrictMode><TestComponent /></StrictMode>)
     })
 
     expect(capturedFirstRun).toBe(true)

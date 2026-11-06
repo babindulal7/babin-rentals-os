@@ -3,8 +3,9 @@
 ## 2026-11-06 — T0-12: integrate current main and apply the Owner glossary migration
 
 **Did**
-- Integrated the conflict repair with main base 4a669104 in an isolated checkout, preserving Gemini's later translations, typography and onboarding language choice. Shared account-save control replaces duplicate device-cache writes. Main's three unrelated uncommitted tests remain outside this integration.
+- Integrated the conflict repair with main base 4a669104 in an isolated checkout, preserving Gemini's later translations, typography and onboarding language choice. Shared account-save control replaces duplicate device-cache writes. Main's three existing test edits were preserved and included through their own commit 66ec690a.
 - Renumbered the glossary migration from branch-local 0222 to 0223 because main already contains the inventory repair 0222. Regenerated all four review sheets from current catalogues as pending unless exact approval evidence exists. Restored the contract's exact active-status refusal assertion with a relative-date booking fixture.
+- Fixed first-sign-in onboarding to wait until staff leave the login route and to survive repeated StrictMode effects. The existing first-run tests retain all previous assertions; the first-visit case now runs in StrictMode.
 - Shared-file integration scope remains PLAN.md, PERMISSIONS.md, rbac.ts, actions/core.ts and database.ts; account/onboarding overlap is resolved under the explicit integration request.
 
 **Ruled**
@@ -13,7 +14,8 @@
 **Verified**
 - Typecheck passed; targeted account/readiness/Auth/glossary run passed 50 tests across 6 files. Server contracts passed all 59 assertions on combined source.
 - Backup validation PASS: production_backup_2026-11-06T04-45-29-638Z.sql, 23,497,610 bytes, SHA-256 2ef64e76ef8c188a5ed906205ff0ac0f4c7bd60065e45c326f57a8d27fe33e94, ignored backups directory. Restore rehearsal NOT VERIFIED. Live glossary dependencies inspected read-only; tables absent before application.
-- Full combined-source gates and responsive browser recheck are pending. Migration 0223 WRITTEN, NOT APPLIED. Original branch gates do not certify this source.
+- Browser checks passed all 12 cases: nine Owner/Warehouse screen/approval checks plus first-sign-in language gating at 375/820/1440. Preview was restarted to eliminate stale compiled modules; served source was verified before the passing checks. First-run/account regression rerun: 10 tests passed.
+- Full combined-source gates are pending. Migration 0223 WRITTEN, NOT APPLIED. Original branch gates do not certify this source.
 
 ### Completion
 | Dimension | Counts | Now | Δ |

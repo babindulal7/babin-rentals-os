@@ -131,7 +131,7 @@ export default function App() {
           <WorkspaceProvider>
             <CreationContextProvider>
               <CommandPalette />
-              {showOnboarding && (
+              {showOnboarding && user && user.role !== 'Client' && location.pathname !== '/login' && (
                 <Suspense fallback={null}>
                   <WelcomeOnboarding onClose={() => setShowOnboarding(false)} />
                 </Suspense>
