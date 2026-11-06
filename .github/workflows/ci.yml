@@ -12,11 +12,11 @@ on:
   # Manual "Run workflow" button / `gh workflow run ci.yml --ref <branch>`.
   workflow_dispatch:
 
-# Obsolete runs for the same pull request or branch are cancelled when a newer
-# commit arrives. Unrelated PRs and main runs use distinct concurrency groups so
-# they can run in parallel without cancelling each other.
+# Obsolete runs for the same PR and event type are cancelled when replaced.
+# Manual runs have their own group: they must not cancel required main/PR runs.
+# Independent PRs remain eligible to execute in parallel on separate runners.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
