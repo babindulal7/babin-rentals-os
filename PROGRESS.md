@@ -1,5 +1,40 @@
 # Progress Log
 
+## 2026-11-06 — Owned-work integration candidate: resolve conflicts before full verification
+
+**Did**
+- Combined T0-13 dependency/test-runner repairs, T3-03 cancellation-tier configuration, T3-07 opening-balance/refund/report corrections and T9-01 read-only cutover preparation in codex/owned-work-integration-20261106, based on committed main 66ec690a. Main and Antigravity's checkout were not modified.
+- Preserved main's three canonical-label test files, both retirement refusal contracts, cancellation-tier lifecycle checks and immutable opening-balance lifecycle checks. Kept migration 0222 and added 0223/0224 without a new number collision.
+- Shared PLAN.md changes index O-22/O-23/O-24 only; no policy or deadline was chosen.
+
+**Ruled**
+- This is a local review candidate. All four cards remain doing. No migration was applied to hosted Supabase and no main merge or push was performed.
+
+**Verified**
+- Cutover comparer: 5/5 Node tests passed. Package manifests match the audited T0-13 installation; lock SHA256 9b82d6ca5a69b481406be23a6ca650dff76961ff1b2ab0882458f3accfdb8300. The candidate uses that installed dependency tree read-only.
+- Fresh dependency audit: 12 findings (0 critical, 0 high, 10 moderate, 2 low). Combined-source full gates and coverage are pending; earlier branch receipts do not certify this candidate.
+- npm run completion generated the block below; current combined source is not yet verified.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 221 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Run all 17 CI-equivalent gates in order on the combined source, including full suite and coverage, with one worker. Record terminal results before calling this merge-ready.
+- Complete actual cancellation fee settlement after O-22 tax clarification and O-10 tier values; finish account-based daily closing after O-24 payment authority/allocation.
+- Obtain fresh complete cutover exports, real quote comparisons, staging and device acceptance, and O-23's billing date. Babin merges locally after review.
+
 ## 2026-11-06 — T9-01: Check hosted prerequisites and make comparison changes reviewable
 
 **Did**
