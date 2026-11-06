@@ -322,3 +322,23 @@ The Crew timesheet page now reads recorded call/wrap times from `crew_shoot_days
 - **Renewing a lapsed membership.** The function refuses "already on this plan", so a lapsed member cannot be renewed here. Renewal needs a ruling on the fee, the new term dates, and who approves.
 - **Plans themselves.** The mock has no plans, and there is no screen to create or retire one; `membership_plans` is data only an Owner, Admin or Manager can write. Until someone sets them up, "Activate Membership" says no plan is on file.
 - **Two write paths.** `enroll_client_membership` (0173, the Membership page's "+ Add Membership") and `change_client_membership` (0174, the client page's Activate / Change Plan) both insert a `client_memberships` row and supersede the live one. They differ: 0174 refuses a retired plan, a deactivated client and a move to the plan the client is already on, and takes no fee; 0173 refuses none of those and accepts a fee and join date. Should there be one function? Until ruled both stay, and RULINGS-2026-10-22 row 10 says which screen uses which.
+
+## 21. Payment method picker: seven labels or four buttons? (6 November 2026) — open
+
+T3-15's card says Record Payment offers "four large one-tap method buttons (Cash · Bank transfer ·
+Fonepay · eSewa/Khalti)". The picker that shipped keeps **seven** — Bank Transfer, Cash, Fonepay,
+eSewa, Khalti, Card, Cheque — because each is a distinct label `recordPayment` writes into
+`payments.notes` as `Method: <label>`:
+
+- **eSewa and Khalti are separate wallets.** One "eSewa/Khalti" button cannot record which one the
+  money arrived in, and a receipt that cannot say is the thing the label exists to prevent.
+- **Card and Cheque have no home in the four.** They are real receipts at the desk; dropping them
+  from the picker would force them to be recorded as something they are not.
+- Every method is still **one tap** and all are on screen (no dropdown, R-39). The card's
+  "tap count ≤ 4 from Booking Detail" holds either way: open, tap method, record.
+
+**TODO(decision):** keep the seven distinct labels, or cut the picker to the card's four and add a
+second step for eSewa-vs-Khalti (and somewhere for Card/Cheque)? Until Babin answers the seven stay:
+no ledger fact is lost, and narrowing the list would. Blocks nothing.
+
+

@@ -943,6 +943,118 @@ export function paymentsForClient(clientId: string): ListFilters {
   }
 }
 
+/* ── Payment method · the label vocabulary and where it lives ──────────────
+ *
+ * `payments` has NO method column (0006:176-196). The operator's word for how
+ * the money arrived is written into `payments.notes` as a first line
+ * `Method: <label>` by `composeNotes()` in `actions/finance/recordPayment.ts`,
+ * and the structured half — which account it landed in — is
+ * `payments.bank_account_id`. The two are deliberately independent: a label is
+ * the desk's word, an account is the ledger fact, and neither is inferred from
+ * the other (RULING 2026-10-08: Fonepay is a label with no account default).
+ *
+ * The list is declared HERE, not in the modal, because this file is also what
+ * reads the label back out for T3-15's default. One vocabulary for the writer
+ * and the reader; a label the picker can render is exactly a label this reader
+ * will return.
+ */
+export const PAYMENT_METHOD_LABELS = [
+  'Bank Transfer',
+  'Cash',
+  'Fonepay',
+  'eSewa',
+  'Khalti',
+  'Card',
+  'Cheque',
+] as const
+export type PaymentMethodLabel = (typeof PAYMENT_METHOD_LABELS)[number]
+
+/**
+ * How many recent receipts to walk back through when looking for a method.
+ *
+ * Bounded rather than unbounded: this is a convenience default on a form, and a
+ * client with years of history must not turn opening Record Payment into a full
+ * ledger scan. Twelve is deep enough that a desk which has only recently started
+ * labelling receipts still finds one, and shallow enough that the read stays a
+ * single indexed page (`idx_payments_client`, 0006:206).
+ */
+const LAST_METHOD_SCAN = 12
+
+/**
+ * The method label out of a `payments.notes` value, or `null`.
+ *
+ * `composeNotes()` always writes the label as the FIRST line and then the
+ * operator's own text, so only line 1 is examined. That matters: a note reading
+ * `Rang for the balance.\nMethod: cash was refused` must not be read as a Cash
+ * receipt, and a substring search would do exactly that.
+ *
+ * The label is matched against `PAYMENT_METHOD_LABELS` rather than returned as
+ * free text. `recordPayment` takes `paymentMethod?: string`, so a row written by
+ * an older build — or by anything that bypassed this picker — can carry a word
+ * the picker cannot render. Returning it would leave the form preselected on a
+ * card that does not exist; `null` leaves the operator choosing, which is the
+ * honest state.
+ */
+export function paymentMethodFromNotes(notes: string | null | undefined): PaymentMethodLabel | null {
+  if (!notes) return null
+  const firstLine = notes.split('\n', 1)[0]?.trim()
+  if (!firstLine || !firstLine.startsWith('Method:')) return null
+  const label = firstLine.slice('Method:'.length).trim()
+  if (!label) return null
+  return (PAYMENT_METHOD_LABELS as readonly string[]).includes(label)
+    ? (label as PaymentMethodLabel)
+    : null
+}
+
+/**
+ * The method this client used last — T3-15's default for Record Payment.
+ *
+ * Walks the client's most recent RECEIVED payments (newest first, at most
+ * `LAST_METHOD_SCAN`) and returns the first label it can read. Not simply "the
+ * newest row": a receipt taken before the METHOD block existed has notes with no
+ * label, and stopping there would answer "unknown" for a client whose previous
+ * receipt is right behind it. A client with no labelled receipt at all gets
+ * `null` — the form then opens with nothing selected, which is what a new client
+ * gets too. A wrong default is a ledger fact recorded wrongly; no default is
+ * merely one more tap.
+ *
+ * 'Failed' and 'Cancelled' payments are excluded. They are money that did not
+ * arrive, and `payments_status` can hold them only because they are set at INSERT
+ * time (see PAYMENT STATUS above); defaulting a fresh receipt to the method of a
+ * bounced one would be a claim about this receipt that nothing supports.
+ *
+ * Throws on a failed read. The caller decides what a missing default means —
+ * `RecordPaymentModal` states the reason inline and leaves the picker empty.
+ * A money-blind session reads zero rows through RLS and so gets `null`, never an
+ * error; that is the same outcome as "no history", which is why the form must not
+ * word the empty state as "new client" (see the hint there).
+ */
+export async function lastPaymentMethodForClient(clientId: string): Promise<PaymentMethodLabel | null> {
+  // A blank id is a caller bug, not a client with no history. Postgres would
+  // reject `client_id = ''` as an invalid uuid, so this is refused before the
+  // round trip rather than dressed up as a database error.
+  if (!clientId) return null
+
+  const { data, error } = (await supabase
+    .from('payments')
+    .select('notes')
+    .eq('client_id', clientId)
+    .eq('status', 'Received')
+    .order('payment_date', { ascending: false })
+    .limit(LAST_METHOD_SCAN)) as unknown as {
+    data: Array<{ notes: string | null }> | null
+    error: { message: string } | null
+  }
+
+  if (error) throw new Error(`lastPaymentMethodForClient failed: ${error.message}`)
+
+  for (const row of data ?? []) {
+    const method = paymentMethodFromNotes(row.notes)
+    if (method) return method
+  }
+  return null
+}
+
 /**
  * Payments taken between two Nepal calendar days, inclusive at both ends.
  *
