@@ -1,5 +1,79 @@
 # Progress Log
 
+## 2026-11-06 — T9-01: Check hosted prerequisites and make comparison changes reviewable
+
+**Did**
+- Matched the repository's configured Supabase hostname to the connected project, then inspected only schema metadata and aggregate counts. The project has 205 active products, one client, one active bundle and zero external-reference rows across all providers.
+- Verified that the four pricing relations from local migration 0160 are absent. The deployed external_refs schema also has no store-slug column. Recorded these as deployment, identity-mapping and old-link prerequisites in the card and export requirements.
+- Added docs/plans/evidence/cutover-readonly-preflight.sql: a single SELECT returning counts and metadata, with no individual client data or prices. It makes this inspection repeatable without an import or mutation.
+- Improved the local comparison report: updated rows list sorted top-level field names for changed, added or removed fields. The report still omits their values, including nested client details.
+
+**Ruled**
+- No product, tax or import decision was made. The older bridge catalogue and hosted OS counts have different freshness and potentially different scope; their difference is not a missing-product count. Zero mappings do not authorize creating every source record again.
+
+**Verified**
+- Executed the exact saved SELECT through the connected Supabase tool. Its aggregate result confirmed the counts, zero mappings, four absent pricing relations and external-reference column list. Raw observation time: 2026-11-05T19:56:17.912343Z (6 November NPT).
+- No hosted records, schema, credentials or source workbook were modified. No individual client record was fetched.
+- The comparer passed Node syntax checking and all five Node tests, including a new regression for changed/added/removed field names and exclusion of private values. Full card gates and app/device acceptance remain open.
+- npm audit reports the unchanged branch baseline of 36 affected packages (4 critical, 14 high, 15 moderate, 3 low). Dependency remediation remains isolated on T0-13; this branch has not received those changes.
+- npm run completion returned 1 with the generated block below because suite/coverage verification is absent on this branch. No full runtime or device acceptance is claimed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Obtain fresh scoped exports and reconcile existing OS identities before producing the real match report or proposing an import.
+- Meet Batch 1 and T3-09 prerequisites, verify the pricing schema on staging, and establish the supported slug-storage/old-link path with T7-17. Babin applies any approved live batch after backup; none was applied here.
+- Complete the 20-product three-day quote check and staging acceptance. O-23's actual billing date is still awaiting Babin; card status remains doing and Babin merges locally.
+
+## 2026-11-06 — T9-01: Check dataset freshness and prepare the source export request
+
+**Did**
+- Rechecked the connected Booqable bridge metadata, full catalogue header through column N, recorded sync status and field-map keys. Orders and client metrics refreshed on 6 November; catalogue, stock, rental-line and planning datasets still report 13 October.
+- Added docs/plans/evidence/cutover-export-requirements.md with the observed dataset timestamps, missing fields, complete export scope and the required 20-product three-day quote evidence. No quote comparison or import is claimed by the checklist.
+- Found conflicting renewal/cancellation dates in PLAN and S8/T9-08. Recorded O-23 in the decision register and PLAN section 4.2; asked Babin for the actual Account & Billing date. PLAN's shared-file change is the decision index only; no deadline was changed.
+
+**Ruled**
+- Followed the existing read-only-first import scope and B45's exclusion of product photos. The billing-date conflict remains unresolved.
+
+**Verified**
+- Connected metadata and bounded header/sync/field-map reads succeeded. The full-width catalogue header has no hidden extra slug or pricing columns. Recorded schema keys do not prove current source values or API response format.
+- Only metadata and aggregate counts were read for this follow-up; individual client records and source write paths were not accessed.
+- npm run completion generated the block below and returned 1 because verified suite/coverage receipts are absent. This documentation change does not establish runtime acceptance.
+- The unchanged branch dependency audit reports 36 affected packages; remediation remains on the separate T0-13 branch.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Obtain the refreshed scoped source exports and required slug, bundle, pricing and seasonal data, plus the matching OS snapshot and external references.
+- Produce the actual comparison and 20 quote checks; verify staging imports after the card prerequisites. Implement and reconcile external rental holds under T9-02.
+- Resolve O-23 using the actual billing date and align the run-off/cancellation schedule. Babin reviews and merges locally.
+
 ## 2026-11-06 — T3-07: Read complete liquidity periods and keep deposit movements in their branch
 
 **Did**
@@ -346,6 +420,74 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 ### Remaining
 - Switch it on (T6-09): User profile language preference persistence.
 - Owner physical device verification: on-device visual layout inspection on iPad / physical hardware.
+
+## 2026-11-05 — T9-01: Inspect the available Booqable source
+
+**Did**
+- Located the connected Booqable bridge workbook and read its metadata and bounded Equipment_Catalog A1:K308 range.
+- Documented 307 unique product IDs, 273 rows marked active, and the catalogue's recorded sync text of 13 October in the cutover card.
+- Identified that the catalogue tab's provisional price column does not supply the pricing structures, bundle members, seasonal end dates or store slugs required by the card.
+
+**Ruled**
+- Refresh the catalogue and obtain the missing fields before using it for cutover reconciliation.
+
+**Verified**
+- Connected Drive and Google Sheets metadata and bounded range reads succeeded.
+- This inspection establishes the source format and recorded catalogue date. OS counts and the 20 quote comparisons remain unverified.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+
+### Remaining
+- Refresh the source export and obtain bundle, pricing structure, seasonal rule and old-store slug data.
+- Read the scoped OS snapshot and external references, then generate and review the new/updated/unchanged/conflict report.
+- Verify the 20 quote samples and the staging import, then implement external availability holds.
+
+## 2026-11-05 — T9-01: Read-only catalogue comparison
+
+**Did**
+- Started T9-01 in its lane A worktree. Added a local comparison of normalized Booqable and OS snapshots for clients, products, bundles, pricing structures and seasonal rules.
+- Documented the input format and review steps in the card. The report classifies records by entity and external ID, flags duplicate IDs and omits compared field values.
+
+**Ruled**
+- Followed T9-01's dry-run-first order and B45's exclusion of product photos.
+
+**Verified**
+- `node --test scripts/compare-cutover-snapshots.test.mjs` — 4/4 passed.
+- CLI smoke with synthetic snapshots — exit 0 for a new product, exit 2 for a duplicate ID.
+- `git diff --check` passed. This increment contains a standalone Node script and documentation. The application release gates were not run.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Obtain the source export and scoped OS snapshot, normalize the fields, review unmapped OS records and reconcile the report against both exports.
+- Complete T3-09 staging quote verification and Batch 1 prerequisites. Review the match report with Babin before using the import paths. Verify the 20 sample quotes and then exercise T9-02 availability holds.
 
 ## 2026-11-05 — T3-07: Enforce append-only opening balances in Postgres
 

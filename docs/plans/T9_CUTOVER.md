@@ -22,7 +22,7 @@ archived; by 10 Mar Booqable is cancelled.
 
 ---
 
-### T9-01 · Bring the catalogue and clients across            status: todo · size: M · lane A
+### T9-01 · Bring the catalogue and clients across            status: doing (lane-a/T9-01-catalogue-reconciliation) · size: M · lane A
 **What** — From Booqable exports (CSV/API, read-only): clients created or changed since the earlier
 import, products, bundles (and the kit-style products that are bundles — 18 Aug), **pricing
 structures** ("Babin Daily", "Days wise discount", "Rental Rate Card", … — 0160) and the **four
@@ -41,6 +41,82 @@ per batch; rejected rows are listed with the reason; a failed batch leaves nothi
 **Done when** — counts reconcile with Booqable (clients, products, bundles, structures); a sample of
 20 products prices the same 3-day quote in both systems (allowing the known rounding difference).
 **Needs** — Batch 1 live; T3-09.
+
+#### Read-only comparison
+
+Prepare two local JSON snapshots with the same field names and types. One comes from the
+Booqable export and the other from the OS records in scope joined to their Booqable
+external references. Review OS rows without a mapping separately before treating a
+source row as new. Keep the input files outside Git.
+
+Each snapshot is a JSON array of records with the following shape:
+
+```json
+[
+  {
+    "entity": "product",
+    "externalId": "example-product-id",
+    "fields": { "name": "Example camera", "storeSlug": "example-camera" }
+  }
+]
+```
+
+Use entity names `client`, `product`, `bundle`, `pricing_structure`, and `seasonal_rule`.
+Include the importable fields in both snapshots, including bundle members, pricing
+rules, seasonal end dates and product store slugs. Exclude photo data and
+export-generated metadata. Keep arrays in the same order where the business order
+matters and normalize the order where it does not. Use integer paisa for normalized
+amounts. Preserve source values separately for the import and quote checks.
+
+```powershell
+node scripts/compare-cutover-snapshots.mjs "$env:TEMP/booqable.json" "$env:TEMP/os.json"
+```
+
+The report lists each external ID once with its status and totals by entity.
+Updated rows also list the sorted top-level field names that changed, were added
+or were removed. Field values stay in the private input files; a changed nested
+pricing rule or bundle membership lists its containing field for review.
+`osOnly` means the ID was present only in the OS snapshot, which is expected when the
+Booqable export covers only changes since the earlier import. Duplicate IDs within
+an entity produce conflicts and exit code 2. Invalid input exits with code 1.
+Review row counts against both exports and resolve mappings before using the report
+for import approval. Save the report separately from the source exports.
+
+
+#### Available source checked 5 November 2026
+
+The connected [Booqable bridge workbook](https://docs.google.com/spreadsheets/d/1nnD2Xw4gbMAo_mBJBaglCNfAGp_tmIp2Gjeiv899p68/edit)
+contains Equipment_Catalog, Stock_Items, Orders and Rental_Plannings tabs.
+A bounded read of Equipment_Catalog A1:K308 found 307 product rows with 307
+distinct product IDs, no blank IDs, and 273 rows marked Archived = FALSE.
+All catalogue rows carry the sync text `2026-10-13 3:00:44`.
+
+Use Product ID as the external identity when normalizing this export.
+Refresh the catalogue before the cutover match report. The catalogue tab labels
+its amount as `Base Price NPR (provisional)`. It has no store slug, bundle
+membership, pricing structure or seasonal end-date columns, so obtain those
+source fields before checking T9-01's pricing and old-link acceptance.
+
+#### Source rechecked 6 November 2026
+
+The bridge's Sync_Status records Orders refreshed on 6 November, but catalogue,
+stock, rental-line and planning datasets still record 13 October. Reading the
+full catalogue header through column N confirms that no extra slug or pricing
+columns were missed. The recorded API field map lists slug and pricing identity
+keys that are absent from this catalogue projection.
+
+Use the [export requirements and recorded dataset timestamps](evidence/cutover-export-requirements.md)
+to prepare the complete source snapshot. The conflicting renewal/cancellation
+dates in PLAN.md and S8/T9-08 are tracked as O-23; no date was changed by this review.
+The workbook's modification date alone cannot establish when the catalogue
+data was refreshed. This inspection establishes the available export format.
+Read-only inspection of the configured hosted OS found 205 active products, one
+client, one active bundle and zero external references. Its four 0160 pricing
+relations are absent, and external_refs has no store-slug column. These are
+deployment, identity-mapping and old-link prerequisites, not authority to apply
+migrations or treat every source product as new. The export requirements document
+records the evidence and a repeatable metadata-only preflight query.
+The OS match report and the 20 three-day quote comparisons remain open.
 
 ### T9-02 · Booqable rentals block the OS calendar            status: todo · size: M · lane A
 **What** — Import every **open and upcoming** Booqable booking (reserved or started) as a read-only
