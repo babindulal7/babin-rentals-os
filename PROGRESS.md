@@ -72,15 +72,19 @@
 - `npm run build` — `tsc --noEmit && vite build` clean production build with precached service worker.
 
 ### Completion
+
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 94 / 94 (100%) | +3 |
+| Backend | actions implemented / total | 94 / 94 (100%) | +0 |
 | Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
 | DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
 | Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
 | Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
 | Overall | structural mean of five | ≈ 97% | — |
-Migrations 219 files · check:pglite 219/219 applied, 0 failed (recorded 2026-11-06T16:28:14.268Z).
+
+Migrations 219 files · check:pglite 219/219 applied, 0 failed (recorded 2026-11-06T16:28:14.268Z). Suite: PASS — 6769/6769 passed, 0 failed (recorded 2026-11-06T16:50:09.848Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-06T16:28:52.003Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
