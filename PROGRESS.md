@@ -1,41 +1,93 @@
 # Progress Log
 
-## 2026-11-07 — T0-12: integrate current main and apply the Owner glossary migration
+## 2026-11-07 — T0-12: verified main integration and Owner glossary application
 
 **Did**
-- 7 Nov: all-main-writer pause confirmed; merged b2f5bb47 without dropping its 60-file change set, resolved the duplicate glossary decision ID as O-22, and reserved final glossary migration 0225. All draft preservation is read-only; root remains on Gemini’s lane-B branch.
-- Integrated the conflict repair with main base 4a669104 in an isolated checkout, preserving Gemini's later translations, typography and onboarding language choice. Shared account-save control replaces duplicate device-cache writes. Main's three existing test edits were preserved and included through their own commit 66ec690a.
-- Renumbered the glossary migration from branch-local 0222 to 0223 because main already contains the inventory repair 0222. Regenerated all four review sheets from current catalogues as pending unless exact approval evidence exists. Restored the contract's exact active-status refusal assertion with a relative-date booking fixture.
-- Fixed first-sign-in onboarding to wait until staff leave the login route and to survive repeated StrictMode effects. The existing first-run tests retain all previous assertions; the first-visit case now runs in StrictMode.
-- Shared-file integration scope remains PLAN.md, PERMISSIONS.md, rbac.ts, actions/core.ts and database.ts; account/onboarding overlap is resolved under the explicit integration request.
+- Reconciled repair work with main b2f5bb47, preserving all 60 changed files, and included d3ea9de8's documentation-only follow-up. No tested source changed after commit 2ac70843.
+- Preserved Gemini's 16 tracked/untracked draft files with SHA-256 manifest and binary patch in ignored artifacts/main-integration/gemini-draft-snapshot-2026-11-07/. Originals remain untouched on lane-b/T5-12-offer-emails-to-clients. Main's landing checkout is clean at .worktrees/t3-07-expense-payment-authority.
+- Final glossary migration is 0225; main's product-alias 0223 and Gemini's committed 0224 reservation are retained. Glossary decision index is O-22, preserving the unrelated payment-method O-21.
+- Retained Gemini's translated catalogues, typography and first-sign-in choice. Account language uses one verified Auth metadata path; Nepali stays disabled until whole-app owner/device approval. Fixed first-run StrictMode and login-route timing.
+- Shared files integrated: PLAN.md, PERMISSIONS.md, rbac.ts, actions/core.ts and database.ts. No money-engine edits by this repair.
 
 **Ruled**
-- C-7: Babin explicitly authorized local main integration and application of this glossary migration after backup and verification. No unrelated migration, deployment or remote Git push. C-3 whole-app owner/device acceptance still gates Nepali.
+- C-2–C-6: latest explicit owner product ruling wins; new product decisions are asked; whole-app acceptance gates Nepali; glossary approval is Owner only with immediate shared application.
+- C-7/C-8: Babin explicitly authorized local main integration and this glossary migration after backup/verification, and confirmed all main writers paused. No unrelated migration, deployment or remote Git push.
 
 **Verified**
-- Typecheck passed; targeted account/readiness/Auth/glossary run passed 50 tests across 6 files. Server contracts passed all 59 assertions on combined source.
-- Backup validation PASS: production_backup_2026-11-06T04-45-29-638Z.sql, 23,497,610 bytes, SHA-256 2ef64e76ef8c188a5ed906205ff0ac0f4c7bd60065e45c326f57a8d27fe33e94, ignored backups directory. Restore rehearsal NOT VERIFIED. Live glossary dependencies inspected read-only; tables absent before application.
-- Browser checks passed all 12 cases: nine Owner/Warehouse screen/approval checks plus first-sign-in language gating at 375/820/1440. Preview was restarted to eliminate stale compiled modules; served source was verified before the passing checks. First-run/account regression rerun: 10 tests passed.
-- Full candidate gates: 17/17 PASS on ca473317, fingerprint b4a9c26020640d95ef7331efeb2f5c7e715458c03b65c637b8ce32dc7c6d313a. Both normal and coverage runs passed 6,740 tests in 559 files. PGlite 220/220, lifecycle 64/64, financial/security, 59 server contracts, 58 partial-return assertions, progress/receipt/shell/UI-copy checks, 106 contrast pairs and build/PWA passed. V8 statements 66.42%, branches 74.32%, functions 51.4%, lines 66.35%. Migration remains NOT APPLIED.
+- Full 17/17 gates PASS on unchanged source 2ac70843, fingerprint b35cf9a4c4ede51249c09da7da52b7d851513d6844a12de5f46b4b491e84b3c0. Typecheck, zero-warning lint, local API guards, 6,839 tests in 573 files (normal and coverage), 221/221 PGlite rebuilds, financial integrity, security including nine-role glossary proof, 64/64 lifecycle, 59 server contracts, 58 partial-return assertions, progress/receipt/shell/UI-copy checks, 106/106 contrast pairs and build/PWA passed. Two test workers limited shared-machine contention; no assertion or timeout was weakened.
+- V8 coverage: statements 67.28%, branches 74.63%, functions 51.37%, lines 67.22%. These figures are measured coverage, not complete hosted/device acceptance.
+- Fresh browser checks: 12/12 at 375/820/1440, including actual Owner glossary approvals, Warehouse restriction and first-sign-in gating. External requests blocked. Isolated preview cache eliminated shared-worktree cache interference; served source and browser fingerprint match the final candidate.
+- Fresh production backup validation PASS: production_backup_2026-11-07T10-48-06-238Z.sql, 23,497,610 bytes, SHA-256 70d180d6dcac387bef4f7ede7276affdb806cb92d20a81bc3719f47890d276f7. Stored privately in ignored backups/. Restore rehearsal NOT VERIFIED. Live preflight confirms no glossary tables/history and the required role/audit helpers.
+- Dependency audit reports 36 existing advisories: 3 low, 15 moderate, 14 high, 4 critical. Dependency files are unchanged.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 92 / 92 (100%) | +0 |
+| Backend | actions implemented / total | 96 / 96 (100%) | +4 |
 | Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
-| Permissions | capabilities mapped / declared | 77 / 77 (100%) | +0 |
-| Lifecycle | steps green / total | 64 / 64 (100%) | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 78 / 78 (100%) | +1 |
+| Lifecycle | steps green / total | 64 / 64 (100%) | +0 |
 | Overall | structural mean of five | ≈ 97% | — |
-Migrations 220 files · check:pglite 220/220 applied, 0 failed (recorded 2026-11-06T08:46:05.904Z). Suite: PASS — 6740/6740 passed, 0 failed (recorded 2026-11-06T09:16:10.814Z); source fingerprint matches.
-Coverage suite: PASS — 6740/6740 passed, 0 failed (recorded 2026-11-06T09:16:10.814Z); source fingerprint matches.
-Gates read from .lifecycle-result.json, written 2026-11-06T08:48:43.363Z.
+Migrations 221 files · check:pglite 221/221 applied, 0 failed (recorded 2026-11-06T20:13:24.912Z). Suite: PASS — 6839/6839 passed, 0 failed (recorded 2026-11-06T21:26:40.506Z); source fingerprint matches.
+Coverage suite: PASS — 6839/6839 passed, 0 failed (recorded 2026-11-06T21:26:40.506Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-06T20:18:21.187Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Babin confirmed all main writers are paused. Latest main b2f5bb47 is integrated; its 0223 product-alias migration is retained, Gemini’s committed 0224 reservation is retained, and the glossary is renumbered to 0225. Sixteen Gemini draft files are snapshotted with hashes and left unchanged on lane-b/T5-12-offer-emails-to-clients. Reverify this final combined source, merge locally in the clean main worktree, refresh backup, apply only 0225 and run live post-checks. Earlier candidate receipts are historical for their source.
-- Actual translation review, physical-device acceptance, hosted Auth/account preference and cross-client realtime acceptance remain separate. Production HOLD remains.
+- Land the verified integration in local main and apply only 0225 under C-7/C-8, then record live schema/RLS/RPC checks. Migration is WRITTEN + VERIFIED locally, NOT APPLIED yet.
+- Actual translation review, physical-device acceptance, hosted Auth preferences and cross-client Realtime acceptance remain separate. Nepali stays disabled and production HOLD remains. No deployment or remote Git push.
+
+## 2026-11-07 — T3-15 and T3-12 merged to `main`; post-merge gates green (Lane C)
+
+**Did**
+- **Merged both lane C branches locally; nothing pushed.** `lane-c/T3-15-payment-method-default` → `21698b57` (clean). `lane-c/T3-12-paste-a-whatsapp-gear-list` → `174d2de5`, one `PROGRESS.md` conflict.
+- **Resolved the `PROGRESS.md` conflict exactly.** Both branches prepended a 2026-11-05 entry, and git matched the identical `### Completion` + table-header lines inside T3-15's and T3-12's entries as common context, splitting T3-12's entry across two hunks. Resolved by taking main's file verbatim and inserting the whole T3-12 entry after T6-05. Proof: disk minus that entry is byte-identical to main's file, and the entry is byte-identical to the branch copy.
+- **Repaired double-encoded UTF-8 on the T3-12 branch before merging.** `docs/PERMISSIONS.md`, `src/actions/core.ts`, `src/actions/__tests__/core.test.ts`, `src/actions/inventory/rememberProductAlias.ts`, `src/lib/queries/productAliases.ts` and `supabase/migrations/0223_product_aliases.sql` had been re-saved through a cp1252 pipeline, turning `—`, `·`, `’`, `“` and `§` into mojibake across 536 lines. The repair is line-scoped and accepted only on a lossless cp1252→UTF-8 round-trip, so correctly encoded lines were untouched; `PERMISSIONS.md` now differs from main by exactly the one new capability row and `core.ts` by the capability case + comment.
+- **Corrected the record:** `MIGRATION_LEDGER.md` 0223 row said `check:pglite 219/219`; the branch and the merged tree both build **220/220**. T3-12 and T3-15 cards marked `done (merged 6 Nov, <sha>)`.
+
+**Ruled**
+- No new product decisions. O-21 (seven payment-method cards vs the card's four) remains open for Babin.
+
+**Verified** — full gate list on merged `main` at `b2f5bb47` (which also carries Babin's UI/UX 11–20 merge), vitest 3.2.7:
+- `npm run typecheck` — 0 errors.
+- `npm run lint` — 0 errors, 0 warnings.
+- `npm test` (mock backend) — **568 files, 6820/6820 passed, 0 failed**.
+- `npm run check:pglite` — **220/220 applied, 0 failed**; view leaks 0 of 40 views, anon function leaks 0 of 19, definer hygiene **182/182** pinned `search_path`.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS.
+- `npm run check:security` — PASS, 14/14 Reset branch regression groups (local only).
+- `npm run check:lifecycle` — **63/63** green, 0 known-red.
+- `npm run test:server-contracts` — **59/59**.
+- `npm run test:partial-return` — **58/58**.
+- `node --test scripts/test-receipt.test.mjs` — **11/11**.
+- `npm run lint:shell` — **903 files**, 0 violations.
+- `npm run lint:ui-copy` — 0 failures.
+- `npm run check:contrast` — **106/106** pass.
+- `npm run build` — clean, 9m 28s, PWA 284 precache entries.
+- Migration 0223 `product_aliases`: **VERIFIED** locally (check:pglite 220/220 + check:lifecycle 63/63 = R-35 met). **Not applied** to live (N-5).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 95 / 95 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 77 / 77 (100%) | +1 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 220 files · check:pglite 220/220 applied, 0 failed (recorded 2026-11-06T18:29:46.078Z). Suite: PASS — 6820/6820 passed, 0 failed (recorded 2026-11-06T18:27:40.700Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-06T18:30:48.150Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **Babin:** apply 0223 (and the earlier 0215–0220 batch) to live after the backup protocol; nothing is pushed.
+- **Babin:** rule O-21.
+- **Lane C:** T3-13, T3-21, then T3-26 and T3-30 (`[go-live] · slips first`).
+- **Lane C:** T3-14c blocked on accountant decisions O-14/O-17.
+- Coverage suite not run (a live-batch gate, and the card list does not include it).
 
 ## 2026-11-06 — T0-12: rules, task acceptance, language safety and Owner glossary editing
 

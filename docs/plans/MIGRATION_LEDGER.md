@@ -20,7 +20,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
-| 0225 | T0-12 / T6 glossary | owner-approved-glossary-revisions | lane-a/T0-12-main-integration | claimed and written; final combined-source verification pending; NOT APPLIED |
+| 0225 | T0-12 / T6 glossary | owner-approved-glossary-revisions | lane-a/T0-12-main-integration | WRITTEN + VERIFIED locally: 221/221 rebuild and 64/64 lifecycle; final 17 gates passed; NOT APPLIED |
 | 0224 | T5-12 | offer-campaigns-and-recipients | lane-b/T5-12-offer-emails-to-clients | claimed |
 | 0178 | T2-reset | quantity-only-reset | lane-a/T2-quantity-reset | verified |
 | 0179 | T2-04 | gate1-override-by-handover-staff | lane-a/T2-04-gate1-override | verified |
@@ -68,7 +68,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0220 | T5-09 | push-subscriptions | lane-b/T5-09-phone-pop-ups | written |
 | 0221 | T1-17 | two-step-sign-in | lane-a/T1-17-two-step-sign-in-for-every | claimed; branch not merged |
 | 0222 | T3-smart-reservations | repair-confirm-booking-atomic-and-reservation-dedup | audit/system-design-consistency-20261105 | verified |
-| 0223 | T3-12 | product-aliases | lane-c/T3-12-paste-a-whatsapp-gear-list | verified (check:pglite 219/219 + check:lifecycle 63/63) |
+| 0223 | T3-12 | product-aliases | lane-c/T3-12-paste-a-whatsapp-gear-list | verified (check:pglite 220/220 + check:lifecycle 63/63) |
 
 ## Expected migrations (not yet claimed)
 
