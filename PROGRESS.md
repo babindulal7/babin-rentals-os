@@ -4,7 +4,7 @@
 
 **Did**
 - Reconciled repair work with main b2f5bb47, preserving all 60 changed files, and included d3ea9de8's documentation-only follow-up. No tested source changed after commit 2ac70843.
-- Preserved Gemini's 16 tracked/untracked draft files with SHA-256 manifest and binary patch in ignored artifacts/main-integration/gemini-draft-snapshot-2026-11-07/. Originals remain untouched on lane-b/T5-12-offer-emails-to-clients. Main's landing checkout is clean at .worktrees/t3-07-expense-payment-authority.
+- Preserved Gemini's 16 tracked/untracked draft files with SHA-256 manifest and binary patch in ignored artifacts/main-integration/gemini-draft-snapshot-2026-11-07/. Originals remain untouched on lane-b/T5-12-offer-emails-to-clients. Main was fast-forwarded in .worktrees/t3-07-expense-payment-authority. Gemini subsequently committed all 16 saved draft paths on lane-b/T5-12-offer-emails-to-clients at 51e615c0 (13 byte-identical to the snapshot; three later changed by that lane). Root is now on its T5-13 branch; this session never wrote to that checkout.
 - Final glossary migration is 0225; main's product-alias 0223 and Gemini's committed 0224 reservation are retained. Glossary decision index is O-22, preserving the unrelated payment-method O-21.
 - Retained Gemini's translated catalogues, typography and first-sign-in choice. Account language uses one verified Auth metadata path; Nepali stays disabled until whole-app owner/device approval. Fixed first-run StrictMode and login-route timing.
 - Shared files integrated: PLAN.md, PERMISSIONS.md, rbac.ts, actions/core.ts and database.ts. No money-engine edits by this repair.
@@ -14,6 +14,8 @@
 - C-7/C-8: Babin explicitly authorized local main integration and this glossary migration after backup/verification, and confirmed all main writers paused. No unrelated migration, deployment or remote Git push.
 
 **Verified**
+- Local main landed at d48b84d7, retaining d3ea9de8’s documentation-only update with the same verified source fingerprint. Migration 0225 APPLIED live as version 20261107105159 after the fresh validated backup. Live DB post-checks PASS: 265 baseline terms, zero persisted revisions/audit probe rows, RLS on both tables, five enabled immutability/audit triggers, two pinned definer functions, anonymous access refused and direct authenticated revision writes revoked.
+- Live rollback probe PASS: active Owner approval, same-key retry consistency and audit insert; Client and anon refused. The approval and audit row were rolled back. Realtime publication membership verified; actual cross-client delivery and hosted Auth/PostgREST acceptance remain open. This is APPLIED + live DB verification, not full end-to-end PRODUCTION-VERIFIED acceptance.
 - Full 17/17 gates PASS on unchanged source 2ac70843, fingerprint b35cf9a4c4ede51249c09da7da52b7d851513d6844a12de5f46b4b491e84b3c0. Typecheck, zero-warning lint, local API guards, 6,839 tests in 573 files (normal and coverage), 221/221 PGlite rebuilds, financial integrity, security including nine-role glossary proof, 64/64 lifecycle, 59 server contracts, 58 partial-return assertions, progress/receipt/shell/UI-copy checks, 106/106 contrast pairs and build/PWA passed. Two test workers limited shared-machine contention; no assertion or timeout was weakened.
 - V8 coverage: statements 67.28%, branches 74.63%, functions 51.37%, lines 67.22%. These figures are measured coverage, not complete hosted/device acceptance.
 - Fresh browser checks: 12/12 at 375/820/1440, including actual Owner glossary approvals, Warehouse restriction and first-sign-in gating. External requests blocked. Isolated preview cache eliminated shared-worktree cache interference; served source and browser fingerprint match the final candidate.
@@ -36,7 +38,8 @@ Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Land the verified integration in local main and apply only 0225 under C-7/C-8, then record live schema/RLS/RPC checks. Migration is WRITTEN + VERIFIED locally, NOT APPLIED yet.
+- Main integration and authorized glossary migration application are complete. Do not apply the root T5-13 draft 0225_message_templates.sql under this authorization: glossary already owns live/main 0225. Rebase that feature onto current main and renumber its later-merging migration before integration. No edits were made to that draft.
+- Security advisors retain existing live findings and flag the intentionally authenticated SECURITY DEFINER glossary RPC (Owner check verified); no new glossary-specific error. Existing dependency advisories remain separate maintenance work.
 - Actual translation review, physical-device acceptance, hosted Auth preferences and cross-client Realtime acceptance remain separate. Nepali stays disabled and production HOLD remains. No deployment or remote Git push.
 
 ## 2026-11-07 — T3-15 and T3-12 merged to `main`; post-merge gates green (Lane C)
