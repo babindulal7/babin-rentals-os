@@ -53,21 +53,21 @@
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 92 / 92 (100%) | +1 |
+| Backend | actions implemented / total | 92 / 92 (100%) | +0 |
 | Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
-| Permissions | capabilities mapped / declared | 77 / 77 (100%) | +1 |
-| Lifecycle | steps green / total | 64 / 64 (100%) | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 77 / 77 (100%) | +0 |
+| Lifecycle | steps green / total | 64 / 64 (100%) | +0 |
 | Overall | structural mean of five | ≈ 97% | — |
-Migrations 220 files · check:pglite 220/220 applied, 0 failed (recorded 2026-11-07T21:46:40.598Z). Suite: Historical suite: 6726/6734 passed, 8 failed (recorded 2026-11-06T21:21:26.360Z); current source NOT VERIFIED.
+Migrations 220 files · check:pglite 220/220 applied, 0 failed (recorded 2026-11-07T21:53:11.386Z). Suite: Historical suite: 6726/6734 passed, 8 failed (recorded 2026-11-06T21:21:26.360Z); current source NOT VERIFIED.
 Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written 2026-11-07T21:46:08.591Z.
+Gates read from .lifecycle-result.json, written 2026-11-07T21:53:28.537Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
 - T5-13 is complete on branch `lane-b/T5-13-edit-email-and-document-texts` awaiting Babin local merge.
-- Next card in Track B: T5-12 Offer emails to clients (design note first per card prompt).
+- Next in Lane B: Track T6 (Nepali localization, starting with untagged and plain go-live cards per PLAN.md §6).
 
 ## 2026-11-06 — T6-09: Switch it on — per-user language preference persistence (Lane B)
 
