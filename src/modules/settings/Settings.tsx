@@ -25,12 +25,13 @@ import { supabase } from '../../lib/supabase'
 import type { SettingKey, SettingValue, SettingsRecord } from '../../lib/settingsStore'
 import { saveSettings, resetSharedSettings } from '../../lib/settingsSync'
 import { applyLanguage } from '../../lib/i18n'
-import { canManageSettings } from '../../lib/rbac'
+import { canManageSettings, canManageMessageTemplates } from '../../lib/rbac'
 import { useAuth } from '../../lib/auth'
 import { useTheme } from '../../lib/theme'
 import { useDisplayDensity } from '../../lib/displayDensity'
 import {
   TABS,
+  TEXTS_TAB,
   LEGACY_TAB,
   DEFAULT_TAB,
   TAB_SHORT_LABEL,
@@ -41,7 +42,7 @@ import {
   SYSTEM_SUMMARY,
   SEED_ERRORS,
 } from '../../lib/queries/settings'
-import type { Branch, TabKey } from '../../lib/queries/settings'
+import type { Branch, TabKey, TabDef } from '../../lib/queries/settings'
 import { useSettingsLoad } from './useSettingsLoad'
 import {
   DestControl,
@@ -61,6 +62,7 @@ import {
   BranchesRail,
   FinancialPane,
   UsersPane,
+  TextsPane,
   branchCsvRows,
 } from './sections'
 
@@ -85,6 +87,10 @@ const TAB_CONFIG: Record<TabKey, { icon: IconName; subtitle: string }> = {
   system: {
     icon: 'settings',
     subtitle: 'Preferences, security & audit',
+  },
+  texts: {
+    icon: 'file',
+    subtitle: 'Email and document texts (B20)',
   },
 }
 
@@ -136,9 +142,13 @@ export default function Settings() {
 
   const [searchQuery, setSearchQuery] = useState('')
 
-  /* Law 6 — money-only tab is removed from the strip, not disabled. */
+  const canManageTexts = canManageMessageTemplates(user?.role ?? 'Client')
+
+  /* Law 6 — money-only tab is removed from the strip, not disabled.
+     B20 — texts tab is Owner and Admin only; Manager & floor roles denied. */
   const tabs = useMemo(() => {
-    const base = TABS.filter((t) => money || !t.money)
+    const list: TabDef[] = [...TABS, ...(canManageTexts ? [TEXTS_TAB] : [])]
+    const base = list.filter((t) => money || !t.money)
     if (!searchQuery.trim()) return base
     const q = searchQuery.toLowerCase().trim()
     return base.filter((t) => {
@@ -149,7 +159,7 @@ export default function Settings() {
         TAB_SUMMARY[t.key]?.toLowerCase().includes(q)
       )
     })
-  }, [money, searchQuery])
+  }, [money, canManageTexts, searchQuery])
 
   const raw = params.get('tab')
   const requested: TabKey = isTabKey(raw) ? raw : (raw !== null && LEGACY_TAB[raw]) || DEFAULT_TAB
@@ -308,6 +318,20 @@ export default function Settings() {
   /* ── the panel ───────────────────────────────────────────────────────── */
 
   const panel = (() => {
+    if (requested === 'texts' && !canManageTexts) {
+      return (
+        <div className="card" style={{ padding: 'var(--sp-xl)', textAlign: 'center' }}>
+          <Icon name="lock" size={36} style={{ color: 'var(--muted)', margin: '0 auto var(--sp-md)' }} />
+          <h3 style={{ fontSize: 'var(--t-title)', marginBottom: 'var(--sp-xs)' }}>Access Restricted</h3>
+          <p style={{ color: 'var(--text2)', maxWidth: 500, margin: '0 auto' }}>
+            Settings ▸ Texts is restricted to <strong>Owner</strong> and <strong>Admin</strong> (B20). Your role ({user?.role ?? 'Guest'}) does not have permission to view or edit message templates.
+          </p>
+        </div>
+      )
+    }
+    if (active === 'texts') {
+      return <TextsPane />
+    }
     if (active === 'branches') {
       return (
         <BranchesPane money={money} rows={branches} setRows={setBranches} addOpen={addOpen} setAddOpen={setAddOpen} />

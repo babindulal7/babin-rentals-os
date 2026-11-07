@@ -398,7 +398,7 @@ model**. Nothing is stored: `product_units_service_v` derives it at read time.
 | `comms.draft_lifecycle` | all staff except Driver | confirmed / ready / pickup-tomorrow / return-reminder / overdue — **never auto-sent** | ○ |
 | `comms.draft_money` (receipt, balance due, reminder) | Money · Coordinator | Law 6 — a message asserting money owed is always human-sent | ○ |
 | `comms.broadcast` (marketing) | drafts C+; **publish M+** | consent model; auto-pause thresholds | ○ |
-| `comms.templates` | Owner · Admin (edit) · Manager (view) | version-pinned; unregistered variable blocks publish | ○ |
+| `comms.templates` | Owner · Admin (edit) · Manager (view) | version-pinned; unregistered variable blocks publish | ● |
 | `comms.settings` (channels, credentials, quiet hours) | Owner · Admin | credentials write-once, masked | ○ |
 | OTP bodies | **nobody** — masked for every role incl. Owner | | ○ |
 

@@ -6964,6 +6964,106 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L64',
+  title: 'Message and document texts: Owner/Admin edit, Manager refused, unknown placeholder refused, version restore (T5-13, B20, Law 3)',
+  expect: 'green',
+  run: async () => {
+    // 1. Manager cannot change a template (B20)
+    await as('Manager', async () => {
+      await refuses(
+        'Manager cannot save message template',
+        `select public.save_message_template(
+          gen_random_uuid(),
+          'email.pickup_reminder',
+          'Subject',
+          'Hello {{client_name}}, your booking {{booking_number}} is ready'
+        )`,
+        [],
+        /Only Owner and Admin can edit message and document texts/i,
+      )
+    })
+
+    // 2. An unknown placeholder is refused on save
+    await as('Owner', async () => {
+      await refuses(
+        'unknown placeholder is refused on save',
+        `select public.save_message_template(
+          gen_random_uuid(),
+          'email.pickup_reminder',
+          'Subject',
+          'Hello {{client_name}}, your secret discount is {{secret_discount_code}}'
+        )`,
+        [],
+        /Unknown placeholder "{{secret_discount_code}}" is refused/i,
+      )
+    })
+
+    // 3. Owner saves a valid new version of pickup_reminder
+    const clientUuid1 = 'a0000001-0000-0000-0000-000000000001'
+    let v2Res
+    await as('Owner', async () => {
+      const res = await q(
+        `select public.save_message_template(
+          $1::uuid,
+          'email.pickup_reminder',
+          'Updated Reminder: {{booking_number}}',
+          'Hello {{client_name}}, your gear for booking {{booking_number}} will be ready on {{pickup_date}} at {{pickup_time}}. Please bring your valid ID.'
+        )`,
+        [clientUuid1],
+      )
+      v2Res = res.rows[0].save_message_template
+    })
+
+    assertEq(v2Res.version, 2, 'saved version is 2')
+    assertEq(v2Res.is_active, true, 'version 2 is active')
+
+    // Verify version 1 is now inactive
+    const v1Row = (await q(`select is_active, version from public.message_templates where template_key = 'email.pickup_reminder' and version = 1`)).rows[0]
+    assertEq(v1Row.is_active, false, 'version 1 is now deactivated')
+
+    // 4. Idempotency check: re-sending with same client_uuid returns existing version without incrementing
+    await as('Owner', async () => {
+      const res = await q(
+        `select public.save_message_template(
+          $1::uuid,
+          'email.pickup_reminder',
+          'Updated Reminder: {{booking_number}}',
+          'Different body that should be ignored on duplicate client_uuid'
+        )`,
+        [clientUuid1],
+      )
+      assertEq(res.rows[0].save_message_template.version, 2, 'idempotent retry returns version 2')
+    })
+
+    // 5. Restore version 1 creates version 3 as an exact copy of version 1
+    const clientUuid2 = 'a0000001-0000-0000-0000-000000000002'
+    let v3Res
+    await as('Owner', async () => {
+      const res = await q(
+        `select public.restore_message_template(
+          $1::uuid,
+          'email.pickup_reminder',
+          1
+        )`,
+        [clientUuid2],
+      )
+      v3Res = res.rows[0].restore_message_template
+    })
+
+    assertEq(v3Res.version, 3, 'restored template is minted as version 3 (Law 3 append-only)')
+    assertEq(v3Res.is_active, true, 'version 3 is active')
+    assert(v3Res.body.includes('authorized ID'), 'restored body matches version 1 text')
+
+    // Verify audit events exist
+    const auditCount = (await q(
+      `select count(*) as cnt from public.audit_events where table_name = 'message_templates' and (client_uuid = $1 or client_uuid = $2)`,
+      [clientUuid1, clientUuid2],
+    )).rows[0].cnt
+    assertEq(Number(auditCount), 2, 'exactly two audit events were recorded')
+  },
+})
+
 
 /* ΓöÇΓöÇ Run ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 

@@ -750,6 +750,16 @@ export function canManageSettings(role: SystemRole): boolean {
 }
 
 /**
+ * Check if role can manage message and document wording templates (T5-13, B20).
+ * Owner and Admin only.
+ *
+ * Mirrors `save_message_template` and `restore_message_template` RPCs (0225).
+ */
+export function canManageMessageTemplates(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin'
+}
+
+/**
  * Publish a saved view to the whole team (0159 `save_view`). Anyone on staff may keep a private one.
  * RULING 2026-10-07 (D-3 proposal, ⭐): Manager and above. The database enforces the same list.
  */

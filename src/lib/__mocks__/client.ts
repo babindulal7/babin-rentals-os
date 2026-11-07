@@ -149,6 +149,138 @@ for (const booking of store['bookings'] ?? []) {
 /** Views are computed on read so they always reflect the latest base rows. */
 function read(table: string): Row[] {
   if (table === 'client_directory_v') return clientDirectory(store)
+  if (table === 'message_templates') {
+    if (!store['message_templates'] || store['message_templates'].length === 0) {
+      store['message_templates'] = [
+        {
+          id: 'tmpl-001',
+          client_uuid: 'e0000001-0000-0000-0000-000000000001',
+          template_key: 'email.booking_confirmed',
+          category: 'email',
+          name: 'Booking Confirmation',
+          description: 'Automatic email sent to clients when their rental booking is confirmed',
+          version: 1,
+          subject: 'Your gear booking {{booking_number}} is confirmed',
+          body: 'Dear {{client_name}},\n\nYour equipment rental {{booking_number}} has been confirmed.\n\nPickup Time: {{pickup_time}}\nReturn Time: {{return_time}}\n\nYou can review your rental details online at {{action_url}}.\n\nThank you,\n{{company_name}}\n{{company_phone}}',
+          allowed_placeholders: ['client_name', 'booking_number', 'pickup_time', 'return_time', 'action_url', 'portal_url', 'company_name', 'company_phone'],
+          is_active: true,
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 'tmpl-002',
+          client_uuid: 'e0000001-0000-0000-0000-000000000002',
+          template_key: 'email.pickup_reminder',
+          category: 'email',
+          name: 'Pickup Reminder',
+          description: 'Automatic reminder sent 24 hours prior to equipment pickup',
+          version: 1,
+          subject: 'Reminder: Equipment pickup for {{booking_number}} on {{pickup_date}}',
+          body: 'Dear {{client_name}},\n\nThis is a reminder that your rental gear for booking {{booking_number}} is scheduled for pickup on {{pickup_date}} at {{pickup_time}}.\n\nPlease remember to bring your authorized ID for equipment handover.\n\nDetails: {{action_url}}\n\nWarm regards,\n{{company_name}}\n{{company_phone}}',
+          allowed_placeholders: ['client_name', 'booking_number', 'pickup_time', 'pickup_date', 'action_url', 'company_name', 'company_phone'],
+          is_active: true,
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 'tmpl-003',
+          client_uuid: 'e0000001-0000-0000-0000-000000000003',
+          template_key: 'email.return_reminder',
+          category: 'email',
+          name: 'Return Reminder',
+          description: 'Automatic reminder sent morning of return due date',
+          version: 1,
+          subject: 'Reminder: Equipment return for {{booking_number}} on {{return_date}}',
+          body: 'Dear {{client_name}},\n\nThis is a courtesy reminder that your equipment rental {{booking_number}} is due for return on {{return_date}} by {{return_time}}.\n\nRental summary: {{action_url}}\n\nThank you,\n{{company_name}}\n{{company_phone}}',
+          allowed_placeholders: ['client_name', 'booking_number', 'return_time', 'return_date', 'action_url', 'company_name', 'company_phone'],
+          is_active: true,
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 'tmpl-004',
+          client_uuid: 'e0000001-0000-0000-0000-000000000004',
+          template_key: 'email.payment_reminder',
+          category: 'email',
+          name: 'Payment Reminder',
+          description: 'Automated reminder sent for overdue or outstanding invoice balances',
+          version: 1,
+          subject: 'Payment Reminder for Invoice {{invoice_number}} (Booking {{booking_number}})',
+          body: 'Dear {{client_name}},\n\nThis is a reminder regarding outstanding invoice {{invoice_number}} associated with booking {{booking_number}}.\n\nOutstanding Balance: {{amount_due}}\nDue Date: {{due_date}}\n\nYou may settle online at {{pay_url}} or at our rental counter.\n\nRegards,\n{{company_name}}\n{{company_phone}}',
+          allowed_placeholders: ['client_name', 'invoice_number', 'booking_number', 'amount_due', 'due_date', 'pay_url', 'company_name', 'company_phone'],
+          is_active: true,
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 'tmpl-005',
+          client_uuid: 'e0000001-0000-0000-0000-000000000005',
+          template_key: 'email.offer_footer',
+          category: 'email',
+          name: 'Offer Email Footer',
+          description: 'Standard regulatory and unsubscribe footer appended to client promotional offers',
+          version: 1,
+          subject: null,
+          body: 'You are receiving this special offer as a valued client of {{company_name}}.\nTo manage your preferences or unsubscribe, please visit: {{unsubscribe_url}}\nPortal: {{portal_url}}\n{{company_address}}',
+          allowed_placeholders: ['company_name', 'unsubscribe_url', 'portal_url', 'company_address'],
+          is_active: true,
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 'tmpl-006',
+          client_uuid: 'e0000001-0000-0000-0000-000000000006',
+          template_key: 'doc.invoice_footer',
+          category: 'document',
+          name: 'Invoice Footer',
+          description: 'Notes, payment terms, and bank details rendered at the bottom of official tax invoices',
+          version: 1,
+          subject: null,
+          body: 'Thank you for choosing {{company_name}} for your cinema equipment rentals.\nPayment is due per agreed invoice terms.\nFor inquiries contact {{company_phone}} or {{company_email}}.\nBank Details: {{bank_details}}',
+          allowed_placeholders: ['company_name', 'company_phone', 'company_email', 'bank_details'],
+          is_active: true,
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 'tmpl-007',
+          client_uuid: 'e0000001-0000-0000-0000-000000000007',
+          template_key: 'doc.proforma_note',
+          category: 'document',
+          name: 'Pro Forma Note',
+          description: 'Validity disclaimer and booking confirmation note on pro forma estimate quotes',
+          version: 1,
+          subject: null,
+          body: 'This pro forma estimate is valid for {{validity_days}} days from issuance.\nEquipment availability is confirmed only upon reservation booking.\nIssued by {{company_name}} / Contact: {{contact_name}}',
+          allowed_placeholders: ['company_name', 'validity_days', 'contact_name'],
+          is_active: true,
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 'tmpl-008',
+          client_uuid: 'e0000001-0000-0000-0000-000000000008',
+          template_key: 'doc.rental_agreement_terms',
+          category: 'document',
+          name: 'Rental Agreement Terms',
+          description: 'Standard terms, custody conditions, and liabilities printed on rental handover contracts',
+          version: 1,
+          subject: null,
+          body: '1. The Client acknowledges receipt of the equipment listed above in clean, working condition.\n2. Standard custody applies until physical return and check-in inspection by {{company_name}}.\n3. In case of damage or missing items, assessment fees apply per company tariff.\n4. Governing law: Nepal. Disputes subject to Kathmandu jurisdiction.',
+          allowed_placeholders: ['company_name', 'jurisdiction'],
+          is_active: true,
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 'tmpl-009',
+          client_uuid: 'e0000001-0000-0000-0000-000000000009',
+          template_key: 'doc.packing_list_footer',
+          category: 'document',
+          name: 'Packing List Footer',
+          description: 'Warehouse dispatch checklist notes and technician inspection sign-off line',
+          version: 1,
+          subject: null,
+          body: 'Please verify all serial numbers and included accessories upon dispatch handover.\nDispatched by: {{dispatcher_name}} / Checked by: {{technician_name}}\n{{company_name}} Operations',
+          allowed_placeholders: ['dispatcher_name', 'technician_name', 'company_name'],
+          is_active: true,
+          created_at: new Date().toISOString(),
+        },
+      ]
+    }
+  }
   const base = VIEW_OF[table]
   if (base) return store[base] ?? []
   const rows = store[table]
@@ -1297,7 +1429,7 @@ export const mockSupabase = {
   from(table: string) {
     return createBuilder(table, hooks)
   },
-  rpc(name: string, args?: Record<string, unknown>) {
+  rpc(name: string, args?: Record<string, unknown>): Promise<{ data: unknown; error: PgError | null }> {
     if (name === 'assert_operation_branch_grant') {
       const actor = readSession()?.user.id
       const user = store['users']?.find(row => row['id'] === actor)
@@ -1601,6 +1733,93 @@ export const mockSupabase = {
         return Promise.resolve({
           data: { ok: true, plan_id: planId, level: plan['level'], status: plan['status'] },
           error: null,
+        })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
+    if (name === 'save_message_template') {
+      try {
+        const actor = readSession()?.user?.id ?? (store['users']?.find(u => u['primary_role'] === 'Owner')?.['id'] ?? 'user-owner')
+        const user = (store['users'] ?? []).find(u => u['id'] === actor)
+        const role = user ? (user['primary_role'] as string | undefined) : 'Owner'
+        if (role && !['Owner', 'Admin'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'Only Owner and Admin can edit message and document texts (B20)') })
+        }
+        const clientUuid = args?.['p_client_uuid'] as string
+        if (!clientUuid) {
+          return Promise.resolve({ data: null, error: pgErr('23502', 'client_uuid is required for idempotency (Law 8)') })
+        }
+        read('message_templates')
+        const templates = store['message_templates'] ?? []
+        const existing = templates.find(t => t['client_uuid'] === clientUuid)
+        if (existing) {
+          return Promise.resolve({ data: existing, error: null })
+        }
+        const templateKey = args?.['p_template_key'] as string
+        const subject = (args?.['p_subject'] as string | null) ?? null
+        const body = args?.['p_body'] as string
+        if (!body || body.trim().length < 5) {
+          return Promise.resolve({ data: null, error: pgErr('22023', 'Template body must be at least 5 characters long') })
+        }
+        const active = templates.find(t => t['template_key'] === templateKey && t['is_active'])
+        const allowedPlaceholders = (active?.['allowed_placeholders'] as string[]) ?? [
+          'client_name', 'booking_number', 'pickup_date', 'pickup_time', 'return_date', 'return_time', 'equipment_list', 'action_url', 'portal_url', 'company_name', 'company_phone', 'company_email', 'amount_due', 'due_date', 'pay_url', 'invoice_number', 'bank_details', 'validity_days', 'contact_name', 'unsubscribe_url', 'company_address', 'dispatcher_name', 'technician_name', 'jurisdiction'
+        ]
+        const matches = [...body.matchAll(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g)].map(m => m[1] ?? '').filter(Boolean)
+        for (const p of matches) {
+          if (!allowedPlaceholders.includes(p)) {
+            return Promise.resolve({ data: null, error: pgErr('22023', `Unknown placeholder "{{${p}}}" is refused. Allowed placeholders: ${allowedPlaceholders.join(', ')}`) })
+          }
+        }
+        templates.forEach(t => {
+          if (t['template_key'] === templateKey) t['is_active'] = false
+        })
+        const maxVersion = templates.filter(t => t['template_key'] === templateKey).reduce((max, t) => Math.max(max, Number(t['version'] || 1)), 0)
+        const nextVersion = maxVersion + 1
+        const newRecord = {
+          id: `tmpl-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          client_uuid: clientUuid,
+          template_key: templateKey,
+          category: active?.['category'] ?? (templateKey.startsWith('email.') ? 'email' : 'document'),
+          name: active?.['name'] ?? templateKey,
+          description: active?.['description'] ?? null,
+          version: nextVersion,
+          subject,
+          body,
+          allowed_placeholders: allowedPlaceholders,
+          is_active: true,
+          created_by: actor,
+          created_at: new Date().toISOString(),
+        }
+        templates.push(newRecord)
+        return Promise.resolve({ data: newRecord, error: null })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
+    if (name === 'restore_message_template') {
+      try {
+        const actor = readSession()?.user?.id ?? (store['users']?.find(u => u['primary_role'] === 'Owner')?.['id'] ?? 'user-owner')
+        const user = (store['users'] ?? []).find(u => u['id'] === actor)
+        const role = user ? (user['primary_role'] as string | undefined) : 'Owner'
+        if (role && !['Owner', 'Admin'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'Only Owner and Admin can restore message and document texts (B20)') })
+        }
+        const clientUuid = args?.['p_client_uuid'] as string
+        const templateKey = args?.['p_template_key'] as string
+        const targetVersion = Number(args?.['p_target_version'])
+        read('message_templates')
+        const templates = store['message_templates'] ?? []
+        const target = templates.find(t => t['template_key'] === templateKey && Number(t['version']) === targetVersion)
+        if (!target) {
+          return Promise.resolve({ data: null, error: pgErr('P0002', `Template "${templateKey}" version ${targetVersion} does not exist`) })
+        }
+        return mockSupabase.rpc('save_message_template', {
+          p_client_uuid: clientUuid,
+          p_template_key: templateKey,
+          p_subject: target['subject'],
+          p_body: target['body'],
         })
       } catch (e) {
         return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })

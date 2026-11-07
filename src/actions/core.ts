@@ -423,6 +423,11 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'problem_report.manage':
       return rbac.canManageProblemReports(ctx.role);
 
+    // Message templates (T5-13, B20, migration 0225)
+    case 'settings.manage_templates':
+    case 'comms.templates':
+      return rbac.canManageMessageTemplates(ctx.role);
+
     // ⚠ FILED, not fixed: `crew.assign` is still `isStaff()`, but PERMISSIONS.md
     // §4.7 says `C+` and the §3 grid marks Crew Assist ✕ for Warehouse,
     // Technician and Driver. Left alone deliberately — there is no C+ role set
