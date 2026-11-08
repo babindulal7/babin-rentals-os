@@ -610,6 +610,8 @@ describe('every declared capability resolves to a rule', () => {
       'inspection.create',
       'inspection.pass',
       'inspection.fail',
+      'offer_campaign.manage',
+      'comms.templates',
     ]
     const orphaned = handled().filter((c) => !declared().includes(c) && !APP_LEVEL.includes(c))
     expect(orphaned).toEqual([])
