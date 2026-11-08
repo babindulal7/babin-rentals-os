@@ -161,7 +161,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
 
     // Realtime postgres changes
     let channel: ReturnType<typeof supabase.channel> | null = null
-    if (!IS_MOCK && typeof supabase?.channel === 'function') {
+    if (!IS_MOCK && import.meta.env.MODE !== 'test' && typeof supabase?.channel === 'function') {
       channel = supabase
         .channel(`realtime:header-notifications:${user?.id ?? 'all'}`)
         .on(
@@ -1084,6 +1084,77 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                   background: 'var(--brand-mark)',
                 }}
               />
+            </button>
+          )}
+
+          {/* Mobile Outbox Sync Heartbeat Indicator (Principle 6 / Law 16) */}
+          {isPhone && isAbnormalSync && (
+            <button
+              className="header-sync-control tap header-sync-control--mobile"
+              type="button"
+              onClick={() => triggerSync()}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                height: 36,
+                minHeight: 44,
+                padding: '0 8px',
+                marginRight: 4,
+                borderRadius: 999,
+                background:
+                  syncStatus === 'syncing'
+                    ? 'var(--nav-active-bg)'
+                    : pendingCount > 0 || syncStatus === 'pending'
+                    ? 'rgba(232, 118, 45, 0.12)'
+                    : syncStatus === 'offline'
+                    ? 'var(--surface-2)'
+                    : 'var(--danger-soft)',
+                border: '1px solid var(--border)',
+                fontSize: '11px',
+                fontWeight: 600,
+                color:
+                  syncStatus === 'syncing'
+                    ? 'var(--primary-text)'
+                    : pendingCount > 0 || syncStatus === 'pending'
+                    ? 'var(--warn-text)'
+                    : syncStatus === 'offline'
+                    ? 'var(--muted)'
+                    : 'var(--danger-text)',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+              aria-label={
+                pendingCount > 0
+                  ? `${pendingCount} offline mutations queued`
+                  : `Sync status: ${syncStatus}`
+              }
+            >
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  display: 'inline-block',
+                  background:
+                    syncStatus === 'syncing'
+                      ? 'var(--primary-text)'
+                      : pendingCount > 0 || syncStatus === 'pending'
+                      ? 'var(--warn-text)'
+                      : syncStatus === 'offline'
+                      ? 'var(--muted)'
+                      : 'var(--danger-text)',
+                }}
+              />
+              <span>
+                {syncStatus === 'syncing'
+                  ? 'Syncing…'
+                  : pendingCount > 0
+                  ? `${pendingCount} Queued`
+                  : syncStatus === 'offline'
+                  ? 'Offline'
+                  : '!'}
+              </span>
             </button>
           )}
 
