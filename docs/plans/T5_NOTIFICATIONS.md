@@ -183,7 +183,7 @@ is always a draft staff send (W60).
 **Done when** — the register matches the code; the test passes.
 **Needs** — T5-07, T5-08, T7-04.
 
-### T5-12 · Offer emails to clients            status: todo · size: L · lane B · [go-live] · slips first
+### T5-12 · Offer emails to clients            status: done - awaiting merge (lane-b/T5-12-offer-emails-to-clients) · size: L · lane B · [go-live] · slips first
 **What** — Owner, Admin and Manager (B43) write and send an **offer email from the app** (B50) to
 **every client with an email who has not unsubscribed** (B34), or to a filtered group (tag, last rental,
 membership ⭐). Write (subject, text, ⭐ one image, a button to `book.babinrentals.com`) → preview →
