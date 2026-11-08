@@ -434,6 +434,12 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'problem_report.manage':
       return rbac.canManageProblemReports(ctx.role);
 
+    // Offer campaigns (T5-12, migration 0224)
+    case 'offer_campaign.create':
+    case 'offer_campaign.manage':
+    case 'offer_campaign.send':
+      return rbac.canManageOfferCampaigns(ctx.role);
+
     // ⚠ FILED, not fixed: `crew.assign` is still `isStaff()`, but PERMISSIONS.md
     // §4.7 says `C+` and the §3 grid marks Crew Assist ✕ for Warehouse,
     // Technician and Driver. Left alone deliberately — there is no C+ role set

@@ -21,7 +21,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
 | 0225 | T0-12 / T6 glossary | owner-approved-glossary-revisions | lane-a/T0-12-main-integration | APPLIED live 7 Nov 2026 as 20261107105159 after validated backup; 17 local gates and live DB/RLS/RPC post-checks PASS; hosted/device acceptance pending |
-| 0224 | T5-12 | offer-campaigns-and-recipients | lane-b/T5-12-offer-emails-to-clients | claimed |
+| 0224 | T5-12 | offer-campaigns-and-recipients | lane-b/T5-12-offer-emails-to-clients | verified |
 | 0178 | T2-reset | quantity-only-reset | lane-a/T2-quantity-reset | verified |
 | 0179 | T2-04 | gate1-override-by-handover-staff | lane-a/T2-04-gate1-override | verified |
 | 0180 | T2-05 | technician-floor-verbs | lane-a/T2-05-technician-floor | verified |

@@ -8,14 +8,14 @@ import { BarcodeBurstDetector, useBarcodeBurst } from '../barcodeBurst'
 
 describe('BarcodeBurstDetector (T2-09)', () => {
   let detector: BarcodeBurstDetector
-  let onScan: ReturnType<typeof vi.fn>
+  let onScan: (code: string) => void
   let virtualTime = 100000
   let nowSpy: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
     virtualTime = 100000
     nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => virtualTime)
-    onScan = vi.fn()
+    onScan = vi.fn((_code: string) => {})
     detector = new BarcodeBurstDetector({ onScan, minChars: 3, maxIntervalMs: 50, cooldownMs: 1000 })
   })
 
