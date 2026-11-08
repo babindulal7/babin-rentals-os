@@ -1,5 +1,11 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 9 November 2026 — owner interview answers (RULINGS-2026-11-09)
+
+Babin answered in chat; full wording and reverts in `RULINGS-2026-11-09.md`. Answered: O-10 shape (figures still open), O-11 process, O-15 structure (amounts open), O-20 Elite fee per client, F-a, F-b/F-c/F-e (Rs 25,000), F-d (Rs 50,000 Manager cap), D-a (Driver handover on assigned trips), CI as merge gate, I-a and K-a (Coordinator), the S/A/N/P defaults, the O-4/O-12/O-13/O-21 defaults, and the 13 online-booking defaults. Still open: cancellation tier figures, delivery zone amounts, and the seven accountant questions (due 30 Nov).
+
+---
+
 ## 5 November 2026 — Glossary editing in Settings (O-22)
 
 Babin requested glossary changes from Settings during the conflict repair. **Answered 5 Nov 2026:** editing is **Owner only** and **approved term changes apply throughout the app immediately**. The glossary's existing 1 Nov approval remains recorded; automatic OK statuses from the faulty wave exporter are not review evidence. T0-12 implements an explicit Owner approval action, append-only shared revisions and immediate text refresh. Whole-app Nepali activation remains gated independently. No hosted write path is enabled until Babin applies the locally verified migration (N-5).

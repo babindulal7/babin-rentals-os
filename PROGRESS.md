@@ -1,5 +1,35 @@
 # Progress Log
 
+## 2026-11-09 — Owner decision interview: rulings recorded (docs only, Lane B worktree)
+
+**Did**
+- Read `origin/main` @ `1d7ad2f3`: `OPEN_DECISIONS.md`, `PLAN.md` §4.2, `PERMISSIONS.md` §13, rulings 10-26, 10-27, 11-01, 11-05.
+- Recorded Babin's 9 Nov answers in `RULINGS-2026-11-09.md` (R-9.1 to R-9.17). Updated `docs/OPEN_DECISIONS.md` and `PLAN.md` §4.2 rows O-9, O-10, O-11, O-15, O-20.
+
+**Ruled**
+- Owner answers: Driver handover on assigned trips (D-a); Accounts payment reversals (F-a); Coordinator crew pay rates and equipment/bundle edits (I-a, K-a); purchase Manager cap Rs 50,000 (F-d); expense/maintenance/write-off Rs 25,000 (F-b, F-c, F-e); CI as merge gate; Elite fee per client (O-20); delivery fee one per zone (O-15); cancellation shape: all three selectable in Settings (O-10); online defaults 1–13 approved.
+- These change permission cells and gates. Implementation is **not** in this change (B-3).
+
+**Verified**
+- Documentation-only change. Gates **not run** in this worktree (no typecheck, tests, `check:pglite`, `check:lifecycle`, `lint:progress`). Verified only by reading the edited files.
+
+**Blocked / open**
+- O-10 cancellation figures and O-15 zone amounts: Babin types them in Settings.
+- Accountant: 7 questions, due 30 Nov (not answered).
+- `CLAUDE.md`, `AGENTS.md`, `PLAN.md` §6.4 and `docs/plans/BABIN_ACTIONS.md` still say CI is off; a follow-up correction is needed.
+- Code still hard-codes delivery fee Rs 1,500 (`createDeliveryJob.ts:57`).
+- `RULINGS-2026-11-09.md` existed only as an untracked file in the main checkout; this PR supersedes it. The untracked copy there was left untouched.
+
+## Completion
+
+not measured — documentation-only session; `npm run completion` not run.
+
+## Remaining
+
+Rulings open (2): cancellation band figures (O-10), zone delivery amounts (O-15). Next session starts with the CI-docs correction and the permission implementation plan.
+
+---
+
 ## 2026-11-08 — T5-13: Edit email and document texts (Lane B)
 
 **Did**
