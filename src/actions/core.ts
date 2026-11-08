@@ -193,6 +193,10 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     // RULING 2026-10-22: new capability, mirrors `client_memberships_all` (0037) — Owner, Admin, Manager, Coordinator.
     case 'client.change_membership':
       return rbac.canChangeMembership(ctx.role);
+    // RULING (T3-25, B16, B55): booking tags write capability — Owner, Admin, Manager, Coordinator.
+    case 'booking.tag':
+    case 'rental.tag':
+      return rbac.canSetBookingTags(ctx.role);
     case 'inventory.create':
       return rbac.canCreateBundle(ctx.role);
     /*

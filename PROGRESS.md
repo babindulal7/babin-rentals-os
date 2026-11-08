@@ -1,5 +1,85 @@
 # Progress Log
 
+## 2026-11-08 — T3-25: Tags on bookings (Lane C)
+
+**Did**
+- **T3-25: Tags on bookings (B16, B55, Law 6, Law 8):**
+  - Claimed migration `0228` in `docs/plans/MIGRATION_LEDGER.md` (Next free number: `0229`).
+  - Authored `supabase/migrations/0228_booking_tags.sql`:
+    - Added `tags text[] not null default '{}'` to `bookings` table.
+    - Added GIN index `idx_bookings_tags` for fast array searches (`tags && ARRAY['...']`).
+    - Added explicit column grant `grant select (tags) on public.bookings to authenticated` ensuring Law 6 column-level SELECT masking remains intact.
+    - Created SECURITY DEFINER function `set_booking_tags(p_client_uuid uuid, p_booking_id uuid, p_tags text[])` with `search_path = public, pg_temp`.
+    - Gated write to Owner, Admin, Manager, Coordinator; rejected Warehouse, Technician, Driver, Client with `42501`.
+    - Enforced tag constraints: trimmed whitespace, case-insensitive deduplication, maximum 30 characters per tag (rejects longer with `22023`).
+    - Appended explicit row to `audit_events` with actor role and before/after tags snapshot.
+    - Idempotent replay on `p_client_uuid` returning existing tag set.
+    - Revoked execute on `set_booking_tags` from public and anon.
+  - Added step `L68` to `scripts/e2e-lifecycle.mjs`:
+    - Verified Coordinator sets tags, Warehouse is denied (`42501`), >30 character tag is rejected (`22023`), whitespace is trimmed, case-insensitive duplicate is collapsed, **tags never change stage or money**, GIN index search succeeds, and idempotent replay preserves result.
+  - Exported `canSetBookingTags(role: SystemRole)` in `src/lib/rbac.ts` and mapped `rental.tag` / `booking.tag` in `src/actions/core.ts` and `docs/PERMISSIONS.md`.
+  - Implemented action `src/actions/rentals/setBookingTags.ts` registered in `src/actions/rentals/index.ts` with unit test suite `src/actions/rentals/__tests__/setBookingTags.test.ts` (11/11 passed).
+  - Extended mock infrastructure:
+    - Added `overlaps` filter builder and array-aware matching to `src/lib/__mocks__/engine.ts`.
+    - Added `set_booking_tags` RPC handling in `src/lib/__mocks__/client.ts`.
+  - Extended query layer:
+    - Added `tags` to `BookingListRow`, `RawBookingRow`, `BASE_COLUMNS`, and `toRow` in `src/lib/queries/bookings.ts`.
+    - Handled `tags` facet and array `overlaps` filtering in `src/lib/queries/listQuery.ts`.
+    - Added `tags` to `RentalListRow` and `toRentalListRow` in `src/data/rentals.ts`.
+  - Created UI component `src/modules/rentals/BookingTagsBar.tsx`:
+    - Quick-pick suggestions ("wedding", "repeat", "festival", "corporate", "music video", "vip").
+    - Clean tag chips with one-click remove.
+    - Add tag input with instant keyboard handling (`Enter`, `,`).
+    - Floor roles (Warehouse, Technician, Driver, Client) see tags in read-only mode without edit buttons.
+  - Mounted `<BookingTagsBar>` in `src/modules/rentals/BookingDetail.tsx`.
+  - Enhanced `src/modules/rentals/RentalsList.tsx`:
+    - Added tag chips on booking rows.
+    - Added tag filtering chips in URL schema and filter bar.
+    - Integrated `tagFilter`, `onToggleTag`, and `availableTags` with `BooqableRentalFilterDrawer.tsx`.
+    - Included `tags` in CSV export.
+  - Registered `tag: IconTag` in `src/components/ui/Icon.tsx` and `RENTAL_TAGS_UPDATED` in `src/events/eventBus.ts`.
+
+**Ruled**
+- B16, B55: Free tags on bookings; multiple per booking, case-insensitive deduplication, trimmed, <= 30 characters.
+- Law 6: Tags never carry money figures. Floor roles can view tags while remaining strictly money-blind.
+- Law 8: Mutation requires `client_uuid` for idempotent replay.
+- RBAC: Setting tags is restricted to Coordinator and above; floor roles and client are read-only.
+
+**Verified**
+- `npm run check:pglite`: 225/225 applied, 0 failed, 193 definer functions pinned, 0 unauthorized public functions.
+- `npm run check:lifecycle`: 68/68 green, 0 known-red, 0 failed (Step L68 passed).
+- `node scripts/test-booking-financial-integrity.mjs`: PASS (all financial integrity assertions green).
+- `npm run check:security`: PASS (all Phase 0 regressions + Reset branch + operations grants verified).
+- `npm run test:server-contracts`: 59/59 integration assertions PASSED (0 failures).
+- `npm run test:partial-return`: 58/58 partial return acceptance assertions PASSED (0 failures).
+- `node scripts/test-receipt.mjs`: PASSED.
+- `npm run lint:shell`: 923 files checked, 0 violations.
+- `npm run lint:ui-copy`: 0 developer-text violations (12/12 tests passed).
+- `npm run check:contrast`: 106/106 pass, 0 FAIL.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run build`: built in production mode without errors.
+- Unit & component tests: 255/255 tests passed (including `setBookingTags.test.ts`, `RentalTimeline.test.ts`, `rentalsList.test.ts`, `operationsQueues.test.ts`, `todayQuery.test.ts`, `rentalsList.render.test.tsx`).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 100 / 100 (100%) | +8 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 82 / 82 (100%) | +5 |
+| Lifecycle | steps green / total | 68 / 68 (100%) | +4 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 225 files · check:pglite 225/225 applied, 0 failed (recorded 2026-11-08T18:10:16.221Z). Suite: NOT VERIFIED — focused or unspecified run: 42/42 passed, 0 failed (recorded 2026-11-08T17:53:06.375Z).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-08T18:11:36.297Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T3-25 is complete on branch `lane-c/T3-25-tags-on-bookings` awaiting Babin local merge.
+- Next in Lane C: Card T3-26 · Project name and shoot location on every booking (`docs/plans/T3_BOOKING_MONEY.md`).
+
 ## 2026-11-08 — T5-13: Edit email and document texts (Lane B)
 
 **Did**

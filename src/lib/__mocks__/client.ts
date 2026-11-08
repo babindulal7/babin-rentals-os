@@ -1317,6 +1317,77 @@ export const mockSupabase = {
     return createBuilder(table, hooks)
   },
   rpc(name: string, args?: Record<string, unknown>): Promise<{ data: unknown; error: PgError | null }> {
+    if (name === 'set_booking_tags') {
+      const actor = readSession()?.user.id
+      const role = store['users']?.find(user => user['id'] === actor)?.['primary_role']
+      if (!['Owner', 'Admin', 'Manager', 'Coordinator'].includes(String(role))) {
+        return Promise.resolve({ data: null, error: pgErr('42501', 'GATE:tags.role|Only booking-desk roles (Owner, Admin, Manager, Coordinator) may modify booking tags') })
+      }
+      const clientUuid = args?.['p_client_uuid']
+      const bookingId = args?.['p_booking_id']
+      const rawTags = (args?.['p_tags'] as string[]) ?? []
+      if (!clientUuid) {
+        return Promise.resolve({ data: null, error: pgErr('23502', 'client_uuid is required for idempotency (Law 8)') })
+      }
+      const booking = store['bookings']?.find(b => b['id'] === bookingId)
+      if (!booking) {
+        return Promise.resolve({ data: null, error: pgErr('P0002', `Booking ${bookingId} not found`) })
+      }
+      // Idempotency check via audit_events
+      const auditRows = store['audit_events'] ??= []
+      const existingAudit = auditRows.find(a => a['client_uuid'] === clientUuid && a['record_id'] === bookingId && a['reason'] === 'Booking tags updated (T3-25)')
+      if (existingAudit) {
+        return Promise.resolve({
+          data: {
+            booking_id: bookingId,
+            tags: (booking['tags'] as string[]) ?? [],
+            idempotent: true,
+          },
+          error: null,
+        })
+      }
+      // Clean tags: trim, max 30, case-insensitive deduplication
+      const cleaned: string[] = []
+      for (const t of rawTags) {
+        if (typeof t !== 'string') continue
+        const trimmed = t.trim()
+        if (trimmed.length === 0) continue
+        if (trimmed.length > 30) {
+          return Promise.resolve({ data: null, error: pgErr('22023', `Tag "${trimmed}" exceeds 30 characters limit`) })
+        }
+        const lower = trimmed.toLowerCase()
+        if (!cleaned.some(x => x.toLowerCase() === lower)) {
+          cleaned.push(trimmed)
+        }
+      }
+      // Update booking tags
+      const oldTags = (booking['tags'] as string[]) ?? []
+      booking['tags'] = cleaned
+      // Log audit event
+      const auditEvent = {
+        id: crypto.randomUUID(),
+        client_uuid: clientUuid,
+        table_name: 'bookings',
+        record_id: bookingId,
+        actor_id: actor,
+        actor_role: role,
+        action: 'Update',
+        old_values: { tags: oldTags },
+        new_values: { tags: cleaned },
+        diff: { tags: cleaned },
+        reason: 'Booking tags updated (T3-25)',
+        created_at: new Date().toISOString(),
+      }
+      hooks.insert('audit_events', [auditEvent])
+      return Promise.resolve({
+        data: {
+          booking_id: bookingId,
+          tags: cleaned,
+          idempotent: false,
+        },
+        error: null,
+      })
+    }
     if (name === 'approve_glossary_term') {
       const actor = readSession()?.user.id
       const role = store['users']?.find(user => user['id'] === actor)?.['primary_role']

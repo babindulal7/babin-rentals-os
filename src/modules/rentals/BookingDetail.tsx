@@ -45,7 +45,9 @@ import {
   canWriteBookingDesk,
   canCloseRental,
   canManageCollateral,
+  canSetBookingTags,
 } from '../../lib/rbac'
+import { BookingTagsBar } from './BookingTagsBar'
 import { IntelCard } from '../../components/ui/IntelCard'
 import { ClientIntelFromId } from '../../components/intel/ClientIntelFromId'
 import { useToast } from '../../components/ui/Toast'
@@ -992,6 +994,7 @@ function BookingDetailView() {
    */
   const canRaiseInvoice = user ? canIssueInvoice(user.role) : false
   const canOperate = user ? canPerformOperations(user.role) : false
+  const canSetTags = user ? canSetBookingTags(user.role) : false
 
   /* ── the booking head — `listBookings`, filtered to this one number ──────
    *
@@ -2507,6 +2510,16 @@ function BookingDetailView() {
       >
         <Stepper status={stage} dots={onPhone} />
       </div>
+
+      {booking && (
+        <BookingTagsBar
+          bookingId={booking.id}
+          bookingNo={booking.bookingNo}
+          tags={booking.tags ?? []}
+          canEdit={canSetTags}
+          onTagsChanged={refreshBookingData}
+        />
+      )}
 
       {onPhone && <Segmented segments={segments} active={activeSegment} onPick={setSegment} />}
 

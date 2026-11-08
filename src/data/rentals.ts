@@ -1046,6 +1046,7 @@ export interface RentalListRow {
    * Law 11, colour never alone — and it fires on `true` only.
    */
   isExternal: boolean | null
+  tags: string[]
 }
 
 /** "31 Jul 2026" + "09:00 AM", both rendered in Kathmandu (Law 7). */
@@ -1146,6 +1147,7 @@ export function toRentalListRow(
     // unknown; deliberately NOT defaulted to `false`, which would assert "no
     // external gear" from a question nobody asked. See the field's own comment.
     isExternal: subRentalOf(subRentedBookingIds, row.id),
+    tags: row.tags ?? [],
   }
 }
 

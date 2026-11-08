@@ -122,6 +122,7 @@ export interface BookingListRow {
   totalAmount?: Paisa | null
   isCancelled: boolean
   isClosed: boolean
+  tags: string[]
 }
 
 /* ── DELIVERY · delivery_type vs delivery_method, settled ─────────────────
@@ -276,7 +277,7 @@ export interface BookingListRow {
  * the `withDeposit` treatment below.
  */
 const BASE_COLUMNS =
-  'id, booking_no, client_id, project, project_type, project_type_other, stage, pickup_at, return_at, actual_return_at, ' +
+  'id, booking_no, client_id, project, project_type, project_type_other, stage, tags, pickup_at, return_at, actual_return_at, ' +
   'delivery_type, pickup_location, return_location, quote_expires_at, ' +
   'cancelled_at, closed_at, created_at, ' +
   'clients ( name ), booking_lines ( id, qty )'
@@ -301,6 +302,7 @@ interface RawBookingRow {
   project_type?: string | null
   project_type_other?: string | null
   stage: BookingStageDb
+  tags?: string[] | null
   pickup_at: string
   return_at: string
   actual_return_at: string | null
@@ -390,6 +392,7 @@ function toRow(r: RawBookingRow): BookingListRow {
     ),
     isCancelled: r.cancelled_at !== null,
     isClosed: r.closed_at !== null,
+    tags: Array.isArray(r.tags) ? r.tags : [],
   }
 }
 

@@ -346,7 +346,7 @@ rules unchanged (`gate.expense.approve`). Replaces "Receipt upload is not built 
 **Done when** — an expense with a photo is saved from an iPhone; the photo appears in the monthly pack.
 **Needs** — T2-01.
 
-### T3-25 · Tags on bookings            status: doing (lane-c/T3-25-tags-on-bookings) · size: S · lane C · [go-live] · slips first
+### T3-25 · Tags on bookings            status: ready — awaiting merge (lane-c/T3-25-tags-on-bookings) · size: S · lane C · [go-live] · slips first
 **What** — Free tags on a booking (B16): type a new one or pick one already used ("wedding",
 "repeat", "festival"); several per booking; chips on Booking Detail and the booking list; the list and
 saved views (0159, `SavedViewsMenu`) filter by tag; search (T3-21) finds by tag. Booking-desk roles add

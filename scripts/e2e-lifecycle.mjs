@@ -7382,6 +7382,84 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L68',
+  title: 'Tags on bookings: Coordinator sets tags, Warehouse refused, case-insensitive deduplication, tags never change stage or money (T3-25, B16, B55)',
+  expect: 'green',
+  run: async () => {
+    const bookingId = bookingIds.b
+
+    // 1. Snapshot booking state before tag changes
+    const beforeBooking = (await q(`select stage, deposit_required, (select count(*) from booking_lines where booking_id = $1) as line_count from bookings where id = $1`, [bookingId])).rows[0]
+
+    // 2. Warehouse attempts to set tags: MUST BE REFUSED (42501)
+    await as('Warehouse', async () => {
+      await refuses(
+        'Warehouse role cannot set booking tags',
+        `select public.set_booking_tags($1::uuid, $2::uuid, $3::text[])`,
+        [crypto.randomUUID(), bookingId, ['floor_tag']],
+        /Only booking-desk roles.*may modify booking tags/i,
+      )
+    })
+
+    // 3. Tag longer than 30 characters: MUST BE REFUSED (22023)
+    await as('Coordinator', async () => {
+      await refuses(
+        'Tag exceeding 30 characters is refused',
+        `select public.set_booking_tags($1::uuid, $2::uuid, $3::text[])`,
+        [crypto.randomUUID(), bookingId, ['this_tag_is_way_too_long_to_be_allowed_under_the_30_character_limit']],
+        /exceeds 30 characters limit/i,
+      )
+    })
+
+    // 4. Coordinator sets valid tags with trimming and case-insensitive deduplication
+    const clientUuid1 = crypto.randomUUID()
+    let tagsRes
+    await as('Coordinator', async () => {
+      const res = await q(
+        `select public.set_booking_tags($1::uuid, $2::uuid, $3::text[])`,
+        [clientUuid1, bookingId, ['  wedding  ', 'WEDDING', 'festival', 'repeat', '   ']],
+      )
+      tagsRes = res.rows[0].set_booking_tags
+    })
+
+    assertEq(tagsRes.booking_id, bookingId, 'booking_id matches')
+    assertEq(tagsRes.tags.length, 3, 'empty tag removed and case duplicate trimmed')
+    assertEq(tagsRes.tags[0], 'wedding', 'first tag trimmed and deduplicated')
+    assertEq(tagsRes.tags[1], 'festival', 'second tag preserved')
+    assertEq(tagsRes.tags[2], 'repeat', 'third tag preserved')
+
+    // 5. CRITICAL LIFECYCLE: tags never change a booking's stage or money
+    const afterBooking = (await q(`select stage, deposit_required, (select count(*) from booking_lines where booking_id = $1) as line_count, tags from bookings where id = $1`, [bookingId])).rows[0]
+    assertEq(afterBooking.stage, beforeBooking.stage, 'booking stage is byte-identical')
+    assertEq(Number(afterBooking.deposit_required), Number(beforeBooking.deposit_required), 'deposit_required is byte-identical')
+    assertEq(Number(afterBooking.line_count), Number(beforeBooking.line_count), 'line_count is byte-identical')
+    assertEq(afterBooking.tags.length, 3, 'tags saved in database')
+
+    // 6. GIN index search: tags overlap and containment query
+    const foundByTag = (await q(`select count(*) as cnt from bookings where tags @> array['festival']::text[] and id = $1`, [bookingId])).rows[0].cnt
+    assertEq(Number(foundByTag), 1, 'GIN index query matches tag')
+
+    // 7. Idempotent replay: same client_uuid returns cached tags
+    await as('Coordinator', async () => {
+      const res = await q(
+        `select public.set_booking_tags($1::uuid, $2::uuid, $3::text[])`,
+        [clientUuid1, bookingId, ['should', 'be', 'ignored']],
+      )
+      const replayRes = res.rows[0].set_booking_tags
+      assertEq(replayRes.idempotent, true, 'replayed call is marked idempotent')
+      assertEq(replayRes.tags.length, 3, 'original tags returned on duplicate client_uuid')
+    })
+
+    // 8. Verify audit event
+    const auditCount = (await q(
+      `select count(*) as cnt from public.audit_events where table_name = 'bookings' and record_id = $1 and client_uuid = $2 and reason = 'Booking tags updated (T3-25)'`,
+      [bookingId, clientUuid1],
+    )).rows[0].cnt
+    assertEq(Number(auditCount), 1, 'exactly one explicit audit event logged for client_uuid')
+  },
+})
+
 
 /* ΓöÇΓöÇ Run ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 

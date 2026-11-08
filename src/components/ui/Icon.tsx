@@ -87,6 +87,7 @@ import {
   IconWallet,
   IconFlask,
   IconDatabase,
+  IconTag,
   type Icon as TablerIconType,
 } from '@tabler/icons-react'
 import { captureError } from '../../lib/monitoring'
@@ -217,6 +218,7 @@ const REGISTRY = {
   cash: IconCash,
   qr: IconQrcode,
   wallet: IconWallet,
+  tag: IconTag,
 } satisfies Record<string, TablerIconType>
 
 export type IconName = keyof typeof REGISTRY
