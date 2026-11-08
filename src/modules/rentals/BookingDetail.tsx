@@ -1033,11 +1033,13 @@ function BookingDetailView() {
   }
 
   const [collaterals, setCollaterals] = useState<CollateralDoc[]>([])
+  const [collateralsError, setCollateralsError] = useState<string | null>(null)
   const [returnCollateralTarget, setReturnCollateralTarget] = useState<CollateralDoc | null>(null)
 
   const fetchCollaterals = useCallback(async () => {
     if (!bookingId) {
       setCollaterals([])
+      setCollateralsError(null)
       return
     }
     try {
@@ -1046,17 +1048,47 @@ function BookingDetailView() {
         .select('id, booking_id, collateral_type, document_number, held_by, held_at, notes, returned_at, returned_by, return_notes')
         .eq('booking_id', bookingId)
         .order('held_at', { ascending: false })
-      if (!error && data) {
+      if (error) {
+        setCollateralsError(error.message)
+      } else if (data) {
         setCollaterals(data as CollateralDoc[])
+        setCollateralsError(null)
       }
-    } catch {
-      // ignore
+    } catch (err) {
+      setCollateralsError(err instanceof Error ? err.message : 'Failed to read collateral documents')
     }
   }, [bookingId])
 
   useEffect(() => {
-    void fetchCollaterals()
-  }, [fetchCollaterals])
+    let active = true
+    if (!bookingId) {
+      setCollaterals([])
+      setCollateralsError(null)
+      return
+    }
+    void (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('collateral_documents_v')
+          .select('id, booking_id, collateral_type, document_number, held_by, held_at, notes, returned_at, returned_by, return_notes')
+          .eq('booking_id', bookingId)
+          .order('held_at', { ascending: false })
+        if (!active) return
+        if (error) {
+          setCollateralsError(error.message)
+        } else if (data) {
+          setCollaterals(data as CollateralDoc[])
+          setCollateralsError(null)
+        }
+      } catch (err) {
+        if (!active) return
+        setCollateralsError(err instanceof Error ? err.message : 'Failed to read collateral documents')
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [bookingId])
 
   const activeCollateral = collaterals.find((c) => c.returned_at === null) ?? null
   const userCanManageCollateral = user ? canManageCollateral(user.role) : false
@@ -1537,6 +1569,10 @@ function BookingDetailView() {
       )
       return
     }
+    if (collateralsError) {
+      setCloseError("Could not verify client collateral documents. Please check your connection and retry.")
+      return
+    }
     if (activeCollateral) {
       setCloseError("Cannot close booking while client collateral (ID card) is still held. Return collateral first.")
       return
@@ -1556,7 +1592,7 @@ function BookingDetailView() {
         setCloseError(formatGateError(err))
       })
       .finally(() => setClosing(false))
-  }, [id, user, showSuccessToast, refetchHead, activeCollateral])
+  }, [id, user, showSuccessToast, refetchHead, activeCollateral, collateralsError])
 
   const submitCloseOverride = useCallback(() => {
     const ctx = actionCtx(user)
@@ -2047,7 +2083,9 @@ function BookingDetailView() {
   if (canBookingMoney && booking.depositRequired && booking.depositRequired > 0 && stage !== 'Closed') {
     blockers.push(`Security deposit required: ${formatMoney(booking.depositRequired)}`)
   }
-  if (activeCollateral) {
+  if (collateralsError) {
+    blockers.push('Client collateral verification failed — check connection before closing')
+  } else if (activeCollateral) {
     blockers.push("Client collateral (ID card) is still held — return the client's ID before closing")
   }
 
@@ -2919,16 +2957,32 @@ function BookingDetailView() {
                           label: 'Deposit Required',
                           value: booking.depositRequired !== null ? formatMoney(booking.depositRequired) : 'Not recorded',
                         },
-                        ...(activeCollateral
+                        ...(collateralsError
                           ? [
                               {
                                 label: 'Collateral Held',
-                                value: `${activeCollateral.collateral_type.replace(/_/g, ' ')} (${activeCollateral.document_number})`,
+                                value: 'Failed to verify collateral status',
                               },
                             ]
-                          : []),
+                          : activeCollateral
+                            ? [
+                                {
+                                  label: 'Collateral Held',
+                                  value: `${activeCollateral.collateral_type.replace(/_/g, ' ')} (${activeCollateral.document_number})`,
+                                },
+                              ]
+                            : []),
                       ]}
                     />
+                    {collateralsError && (
+                      <div role="alert" style={{ marginTop: 'var(--sp-xs)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--t-meta)', color: 'var(--danger-text)' }}>
+                        <Icon name="alert_triangle" size={13} />
+                        <span>Could not load collateral documents</span>
+                        <Button variant="tertiary" size="sm" onClick={() => void fetchCollaterals()}>
+                          Retry
+                        </Button>
+                      </div>
+                    )}
                     {activeCollateral && stage === 'Returned' && userCanManageCollateral && (
                       <div style={{ marginTop: 'var(--sp-xs)' }}>
                         <Button

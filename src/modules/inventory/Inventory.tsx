@@ -47,6 +47,7 @@ import { canImportProducts } from '../../lib/productImport'
 import { FloatingBulkActionBar } from '../../components/ui/QuickActionPanel'
 import { BarcodeLookupModal } from '../rentals/modals/BarcodeLookupModal'
 import { PrintLabelModal } from '../../components/ui/PrintLabelModal'
+import { BulkEditProductsModal } from './modals/BulkEditProductsModal'
 import type { LabelData } from '../../lib/labelPrinter'
 import './inventory.css'
 import {
@@ -1334,6 +1335,7 @@ export default function Inventory() {
   const [inspectingEquipment, setInspectingEquipment] = useState<InventoryListRow | null>(null)
   const [barcodeLookupOpen, setBarcodeLookupOpen] = useState(false)
   const [printingLabel, setPrintingLabel] = useState<LabelData | null>(null)
+  const [bulkEditOpen, setBulkEditOpen] = useState(false)
 
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -1360,6 +1362,7 @@ export default function Inventory() {
    * table showed a replacement value the card built from the same row withheld.
    */
   const money = canViewMoneyField(gctx, 'asset-finance')
+  const canBulkEdit = ['Owner', 'Admin', 'Manager'].includes(role)
 
   const activeFacetCount = useMemo(
     () => Object.values(facets).reduce((a, s) => a + (s?.size ?? 0), 0),
@@ -2136,6 +2139,17 @@ export default function Inventory() {
                     </button>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)' }}>
+                    {canBulkEdit && (
+                      <Button
+                        icon="edit"
+                        size="sm"
+                        variant="primary"
+                        onClick={() => setBulkEditOpen(true)}
+                        aria-label={`Change ${selected.size} selected items`}
+                      >
+                        Change …
+                      </Button>
+                    )}
                     <Button
                       icon="download"
                       size="sm"
@@ -2481,6 +2495,17 @@ export default function Inventory() {
         onClearSelection={() => setSelected(new Set())}
         noun="items"
         actions={[
+          ...(canBulkEdit
+            ? [
+                {
+                  id: 'bulk-change',
+                  label: 'Change …',
+                  icon: 'edit' as const,
+                  onClick: () => setBulkEditOpen(true),
+                  variant: 'primary' as const,
+                },
+              ]
+            : []),
           {
             id: 'bulk-export',
             label: 'Export Selected CSV',
@@ -2516,7 +2541,6 @@ export default function Inventory() {
               p.set('tab', 'stock-check')
               setParams(p, { replace: true })
             },
-            variant: 'primary',
           },
           {
             id: 'bulk-scan',
@@ -2537,6 +2561,19 @@ export default function Inventory() {
           isOpen={Boolean(printingLabel)}
           onClose={() => setPrintingLabel(null)}
           labelData={printingLabel}
+        />
+      )}
+
+      {bulkEditOpen && (
+        <BulkEditProductsModal
+          isOpen={bulkEditOpen}
+          onClose={() => setBulkEditOpen(false)}
+          onSuccess={() => {
+            list.refetch()
+            setSelected(new Set())
+          }}
+          selectedProducts={list.rows.filter((r) => selected.has(r.id))}
+          canViewMoney={money}
         />
       )}
 

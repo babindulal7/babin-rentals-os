@@ -1381,8 +1381,8 @@ export function AddItemPanel({
       <OverbookingOverrideModal
         isOpen={overrideUnit !== null}
         unit={overrideUnit}
-        onClose={() => setOverrideUnit(null)}
         allowOverbooking={allowOverbooking}
+        onClose={() => setOverrideUnit(null)}
         onOverbook={(unit) => addEquipment(unit)}
         onSubRent={(unit) => addSubRentEquipment(unit)}
       />

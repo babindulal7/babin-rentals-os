@@ -1012,7 +1012,7 @@ function OfflineBanner() {
       borderBottom: '1px solid var(--border)'
     }}>
       <Icon name="error" size={16} />
-      <span>You are offline. Changes will be saved locally and synced when you reconnect.</span>
+      <span>You are offline. Scans and team notes queue locally. Custodial handovers, returns, and stage transitions require an online connection.</span>
     </div>
   )
 }

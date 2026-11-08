@@ -1,9 +1,9 @@
-import { Children, useMemo, useState, useEffect } from 'react'
+import { Children, useMemo, useState, useEffect, useCallback } from 'react'
 import Icon from '../../components/ui/Icon'
 import { Card, Button, cardStyle } from '../../components/ui/Page'
 import { Badge } from '../../components/ui/Badge'
 import type { StatusKey } from '../../lib/status'
-import { EmptyState } from '../../components/ui/StateViews'
+import { EmptyState, ErrorBanner, LoadingSkeleton } from '../../components/ui/StateViews'
 import { formatMoney, rupees, toRupees } from '../../lib/money'
 import type { Paisa } from '../../lib/money'
 import { useAuth } from '../../lib/auth'
@@ -120,18 +120,27 @@ export function DamageTab() {
   const approver = user?.name.trim() ? user.name.trim() : null
 
   const [findings, setFindings] = useState<DamageFinding[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  const loadFindings = useCallback(() => {
+    setLoading(true)
+    setLoadError(null)
+    getDamageFindings()
+      .then((res) => {
+        setFindings(res)
+      })
+      .catch((err) => {
+        setLoadError(err instanceof Error ? err.message : 'Failed to load damage findings')
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [])
 
   useEffect(() => {
-    let active = true
-    getDamageFindings().then((res) => {
-      if (active) {
-        setFindings(res)
-      }
-    }).catch(() => {})
-    return () => {
-      active = false
-    }
-  }, [])
+    loadFindings()
+  }, [loadFindings])
 
   /* The approval confirmation cannot live inside the pending list: approving
      removes the row from it, so the message would render into a branch that no
@@ -146,7 +155,19 @@ export function DamageTab() {
   if (!money) {
     return (
       <Card title={`Damage findings (${findings.length})`}>
-        {findings.length === 0 ? (
+        {loadError ? (
+          <div style={{ padding: 'var(--sp-sm)' }}>
+            <ErrorBanner
+              title="Could not load damage findings"
+              message={loadError}
+              onRetry={loadFindings}
+            />
+          </div>
+        ) : loading ? (
+          <div style={{ padding: 'var(--sp-sm)' }}>
+            <LoadingSkeleton rows={3} label="Loading damage findings…" />
+          </div>
+        ) : findings.length === 0 ? (
           <EmptyState title="No damage findings" description="No active damage findings are currently recorded." />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -172,27 +193,27 @@ export function DamageTab() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
-      {/* RS-05 — this used to read "moved to Maintenance and is no longer
-          available for booking". Nothing here writes `damage_findings`, opens a
-          maintenance job or changes `product_units`: there is no damage action
-          in src/actions, so the decision lives in this screen's state only and
-          the notice says exactly that. TODO(decision): an `approveDamageFinding`
-          action (finding write + maintenance job + unit status, per
-          `approvalEffect` in lib/damage.ts) is needed before this can claim
-          the move. */}
+      {loadError && (
+        <ErrorBanner
+          title="Could not load damage findings"
+          message={loadError}
+          onRetry={loadFindings}
+        />
+      )}
+
       {justApproved && (
         <div role="status" style={{ ...cardStyle, padding: '10px 12px', display: 'flex', alignItems: 'flex-start', gap: 'var(--sp-sm)' }}>
-          <Icon name="alert_triangle" size={14} style={{ flexShrink: 0, marginTop: 2, color: 'var(--warn-text)' }} />
-          <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
-            Approval for {justApproved.unitName} is recorded on this screen only — nothing has been written. No damage
-            action exists yet, so the finding is not saved, no maintenance job was opened and the unit's availability is
-            unchanged.
+          <Icon name="check" size={14} style={{ flexShrink: 0, marginTop: 2, color: 'var(--good)' }} />
+          <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text)' }}>
+            Damage resolution for {justApproved.unitName} has been recorded on the database.
           </span>
         </div>
       )}
 
       <Card title={`Awaiting approval (${pending.length})`}>
-        {pending.length === 0 ? (
+        {loading ? (
+          <LoadingSkeleton rows={3} label="Loading pending findings…" />
+        ) : pending.length === 0 ? (
           <EmptyState title="Nothing waiting" description="Every damage finding raised at Return has been approved or rejected." />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -343,9 +364,24 @@ export function DamageTab() {
                       variant="danger"
                       icon="close"
                       disabled={!mayApprove}
-                      onClick={() => {
+                      onClick={async () => {
                         if (approver === null) return
-                        setFindings((prev) => prev.map((x) => (x.id === f.id ? { ...x, state: 'Rejected' } : x)))
+                        try {
+                          const { resolveDamageFinding } = await import('../../actions/inventory/resolveDamage')
+                          await resolveDamageFinding({
+                            findingId: f.id,
+                            disposition: 'Absorb',
+                            chargePaisa: 0 as Paisa,
+                            clientUuid: generateClientUuid(),
+                          })
+                          setFindings((prev) =>
+                            prev.map((x) => (x.id === f.id ? { ...x, state: 'Rejected', approvedBy: approver } : x)),
+                          )
+                          setJustApproved({ unitName: `${f.unitName} (charge absorbed / waived)` })
+                        } catch (err) {
+                          console.error('Failed to resolve damage rejection', err)
+                          alert('Failed to reject damage: ' + (err instanceof Error ? err.message : String(err)))
+                        }
                       }}
                     >
                       Reject
