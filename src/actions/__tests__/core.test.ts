@@ -610,6 +610,8 @@ describe('every declared capability resolves to a rule', () => {
       'inspection.create',
       'inspection.pass',
       'inspection.fail',
+      // Permission-level rule for message templates; action entry point uses settings.manage_templates.
+      'comms.templates',
     ]
     const orphaned = handled().filter((c) => !declared().includes(c) && !APP_LEVEL.includes(c))
     expect(orphaned).toEqual([])
