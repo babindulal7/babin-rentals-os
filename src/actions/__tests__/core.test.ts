@@ -612,6 +612,8 @@ describe('every declared capability resolves to a rule', () => {
       'inspection.fail',
       // Permission-level rule for message templates; action entry point uses settings.manage_templates.
       'comms.templates',
+      // Permission-level rule for marketing offer campaigns; action entry points use offer_campaign.create / send (T5-12).
+      'offer_campaign.manage',
     ]
     const orphaned = handled().filter((c) => !declared().includes(c) && !APP_LEVEL.includes(c))
     expect(orphaned).toEqual([])
