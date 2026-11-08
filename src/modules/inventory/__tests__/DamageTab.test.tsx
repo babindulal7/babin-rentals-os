@@ -130,16 +130,13 @@ describe('DamageTab — the money half', () => {
   })
 
   /* RS-05 (BUG_AUDIT_LIFECYCLE) — this test used to pin the sentence "moved to
-     Maintenance and is no longer available for booking". Nothing writes a
-     damage finding, a maintenance job or a unit status from this tab, so the
-     notice may not claim it; it now states that the approval lives on this
-     screen only. When an approveDamageFinding action exists, this assertion
-     flips back to the move. */
-  it('approving says the decision is recorded on this screen only — no write is claimed', async () => {
+     Maintenance and is no longer available for booking". With resolveDamageFinding
+     now wired (6e82b9d2), the notice states that damage resolution has been
+     recorded on the database. */
+  it('approving says the decision has been recorded on the database', async () => {
     await mount()
     await click(buttons(/Approve as/)[0])
-    expect(text()).toContain('recorded on this screen only')
-    expect(text()).toContain('nothing has been written')
+    expect(text()).toContain('recorded on the database')
     expect(text()).not.toContain('is no longer available for booking')
   })
 })

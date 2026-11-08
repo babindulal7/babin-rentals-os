@@ -113,6 +113,19 @@ async function typeAmount(input: HTMLInputElement, value: string) {
     input.dispatchEvent(new Event('input', { bubbles: true }))
   })
 }
+/**
+ * T3-15 — the method is no longer preselected, so every test that submits must
+ * choose one first, exactly as the desk does. Choosing it here rather than
+ * defaulting it in the component is the point: nothing reaches `payments.notes`
+ * as `Method: …` unless a person (or this test) picked it.
+ */
+async function pickMethod(c: HTMLElement, value: string) {
+  const card = c.querySelector(`input[name="rpm-method"][value="${value}"]`) as HTMLInputElement
+  expect(card).not.toBeNull()
+  await act(async () => {
+    card.click()
+  })
+}
 
 describe('RecordPaymentModal — the amount default', () => {
   it('opens with an EMPTY amount field, not a pre-filled figure', async () => {
@@ -134,6 +147,7 @@ describe('RecordPaymentModal — the amount default', () => {
     recordPaymentSpy.mockClear()
     const seen: unknown[] = []
     const c = await mount((p) => seen.push(p))
+    await pickMethod(c, 'Cash')
     await typeAmount(amountInput(c), '1500')
     expect(c.textContent).toContain('Formatted: Rs 1,500')
     await act(async () => { submitButton(c).click() })
@@ -160,6 +174,9 @@ describe('RecordPaymentModal — the amount default', () => {
     expect(input.invoiceId).toBe(INVOICE_UUID)
     expect(input.invoiceNo).toBeUndefined()
     expect(input.bookingId).toBeUndefined()
+    // T3-15 — the label the operator tapped is what reaches `payments.notes`
+    // as `Method: Cash`; it is never inferred from the account or the amount.
+    expect(input.paymentMethod).toBe('Cash')
     // Law 8 — the modal mints the key, the action does not.
     expect(typeof input.clientUuid).toBe('string')
     expect(input.clientUuid).not.toBe('')
@@ -191,6 +208,7 @@ describe('RecordPaymentModal — the amount default', () => {
       setter.call(picker, DRAFT_UUID)
       picker.dispatchEvent(new Event('change', { bubbles: true }))
     })
+    await pickMethod(c, 'Bank Transfer')
     await typeAmount(amountInput(c), '25000')
     await act(async () => { submitButton(c).click() })
     expect(recordPaymentSpy).toHaveBeenCalledTimes(1)
@@ -205,6 +223,7 @@ describe('RecordPaymentModal — the amount default', () => {
     // stay open and keep its key, or the retry writes a second immutable row.
     recordPaymentSpy.mockRejectedValueOnce(new Error('Failed to fetch'))
     const c = await mount(() => {})
+    await pickMethod(c, 'Cash')
     await typeAmount(amountInput(c), '1500')
     await act(async () => { submitButton(c).click() })
     await act(async () => { submitButton(c).click() })
@@ -232,6 +251,7 @@ describe('RecordPaymentModal — the amount default', () => {
     const amt = amountInput(c)
     amt.focus()
     expect(document.activeElement).toBe(amt)
+    await pickMethod(c, 'Cash')
     await typeAmount(amt, '1000')
     const subBtn = submitButton(c)
     subBtn.focus()
@@ -265,16 +285,21 @@ describe('RecordPaymentModal — the amount default', () => {
 
   /*
    * The method picker is tap cards, not a dropdown: all seven methods are on
-   * screen at once as one radio group, the default is still Bank Transfer, and
-   * the labels are exactly the values `recordPayment` writes to the notes.
+   * screen at once as one radio group, and the labels are exactly the values
+   * `recordPayment` writes to the notes.
+   *
+   * T3-15 changed the OPEN state: nothing is chosen until the client's own
+   * history says otherwise. These invoices carry no `clientId`, so there is no
+   * history to read — the same state a brand-new client gets.
    */
-  it('shows every method as a tap card, Bank Transfer chosen by default', async () => {
+  it('shows every method as a tap card, with nothing chosen for a client who has no history', async () => {
     const c = await mount(() => {})
     expect(c.querySelector('select#rpm-method')).toBeNull()
     const radios = Array.from(c.querySelectorAll<HTMLInputElement>('input[type="radio"][name="rpm-method"]'))
     expect(radios.map((r) => r.value)).toEqual(['Bank Transfer', 'Cash', 'Fonepay', 'eSewa', 'Khalti', 'Card', 'Cheque'])
-    expect(radios.filter((r) => r.checked).map((r) => r.value)).toEqual(['Bank Transfer'])
+    expect(radios.filter((r) => r.checked).map((r) => r.value)).toEqual([])
     expect(c.querySelector('fieldset legend')?.textContent).toContain('Payment Method')
+    expect(c.textContent).toContain('Pick the method')
   })
 
   it('disables submit, disables amount and displays notice when invoice is fully settled (L1 Rule 5)', async () => {
@@ -297,6 +322,7 @@ describe('RecordPaymentModal — the amount default', () => {
   it('passes bookingId to recordPayment action when provided', async () => {
     recordPaymentSpy.mockClear()
     const c = await mount(() => {}, { bookingId: 'booking-uuid-715' })
+    await pickMethod(c, 'Bank Transfer')
     await typeAmount(amountInput(c), '5000')
     await act(async () => { submitButton(c).click() })
 

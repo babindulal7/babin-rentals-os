@@ -2,10 +2,12 @@ import { useOnboarding } from './useFirstRun'
 import { useToast } from '../components/ui/Toast'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
+import { LanguagePreference } from '../modules/settings/LanguagePreference'
 
 /**
  * Welcome onboarding modal that appears for first-time users.
  * Uses localStorage to track that it has been shown.
+ * Allows staff to choose language (English / नेपाली) on first sign-in (T6-09).
  */
 function WelcomeOnboarding({ onClose }: { onClose: () => void }) {
   const { firstRun, completeOnboarding } = useOnboarding(onClose)
@@ -37,7 +39,9 @@ function WelcomeOnboarding({ onClose }: { onClose: () => void }) {
         }}>
           Manage equipment rentals, inventory tracking, deliveries, and crew workflows all in one place.
         </p>
-        
+
+        <LanguagePreference />
+
         <div style={{ 
           margin: '16px 0', 
           display: 'grid', 

@@ -33,6 +33,8 @@ export interface ServiceDueBadgeProps {
  * legible in greyscale, at a glance, and to a screen reader — CLAUDE.md's
  * "never colour alone", which is an accessibility rule first.
  *
+ * The accessible name carries the reason and counters for screen readers;
+ * the native tooltip also carries the same detail for pointer users.
  * The tooltip carries the reason and the counters (`— usage (42 of 40 rental
  * days)`), built by `lib/serviceDue.ts`; it is on `title` rather than a custom
  * popover so it survives on touch-less and on keyboard focus without this
@@ -45,7 +47,7 @@ export const ServiceDueBadge: React.FC<ServiceDueBadgeProps> = ({ row, size = 's
   if (status === null) return null
 
   return (
-    <span title={status.detail} style={{ display: 'inline-flex' }}>
+    <span title={status.detail} aria-label={`${status.label}. ${status.detail}`} style={{ display: 'inline-flex' }}>
       <Badge label={status.label} tone={status.tone} icon={<IconTool size={14} />} size={size} />
     </span>
   )

@@ -472,9 +472,9 @@ export function KeyFigures({ kpis }: { kpis: KpiSpec[] }) {
 export interface Field {
   label: string
   note: string
-  /** A value renders as a select; a boolean renders as a switch; a dest renders as a control. */
+  /** A value renders as a read-only display; a dest renders as a navigation control. */
   value?: string
-  on?: boolean
+  // Do not reintroduce `on?: boolean`: a local-only switch cannot persist a setting (T1-16).
   dest?: Dest
   /**
    * Registry key. A field with one is **genuinely editable** — its value comes
@@ -526,46 +526,6 @@ export interface Section {
  */
 export const EditCtx = createContext<UseEditModeResult | null>(null)
 
-function Switch({ on, label }: { on: boolean; label: string }) {
-  const [state, setState] = useState(on)
-  return (
-    /* A switch has a canonical shape — a 34x19 pill with a knob that slides the
-       width of it — and the shape is how it reads as a switch rather than as a
-       button. Growing the box to 44 would not make a bigger switch, it would
-       make a different, unrecognisable control, and the knob geometry inside is
-       tuned to these two numbers. So this is exactly the case §5 carves out:
-       keep the paint, extend the hit area underneath with `tap`, because the
-       law is the hit area and not the paint. Before this the target was 34x19 —
-       under half the required area, on a control whose whole job is to be
-       flipped by a thumb. */
-    <button
-      type="button"
-      className="tap"
-      role="switch"
-      aria-checked={state}
-      aria-label={label}
-      onClick={() => setState((s) => !s)}
-      style={{
-        width: 34,
-        height: 19,
-        borderRadius: 'var(--r-badge)',
-        border: 'none',
-        padding: 2,
-        background: state ? 'var(--success)' : 'var(--disabled)',
-        cursor: 'pointer',
-        flexShrink: 0,
-        display: 'flex',
-        justifyContent: state ? 'flex-end' : 'flex-start',
-      }}
-    >
-      <span
-        aria-hidden
-        style={{ width: 15, height: 15, borderRadius: 'var(--r-badge)', background: 'var(--card)', display: 'block' }}
-      />
-    </button>
-  )
-}
-
 /**
  * §11.1 — *"one card per section, **rows not a form**"*: label / value / [Edit].
  * The row is the unit; the card is a group of rows; nothing on this page is a
@@ -578,9 +538,8 @@ export function FieldRow({ f }: { f: Field }) {
   const edit = useContext(EditCtx)
   const { theme, glass, choose } = useTheme()
   const [textSize, setTextSize] = useState<TextSize>(() => readTextSize())
-  // redesign v1 §3 — the one Settings toggle that is actually wired (every
-  // other Switch on this page is local-state-only, same as Theme/Text size
-  // above are the only other two real ones), via lib/bookingRules.ts.
+  // This is the only toggle retained here: it writes to device-local storage.
+  // T1-16 removes every switch that had no persistence or real save handler.
   const [allowOverbooking, setAllowOverbookingState] = useState<boolean>(() => getAllowOverbooking())
 
   return (
@@ -720,8 +679,8 @@ export function FieldRow({ f }: { f: Field }) {
         >
           <span aria-hidden style={{ width: 15, height: 15, borderRadius: 'var(--r-badge)', background: 'var(--card)', display: 'block' }} />
         </button>
-      ) : f.on !== undefined ? (
-        <Switch on={f.on} label={f.label} />
+      ) : f.readOnlyWhy && !f.settingKey && f.value === undefined ? (
+        <NotBuilt why={f.readOnlyWhy} />
       ) : f.dest ? (
         /* The row's own control. `tap` for the `controlStyle` reason; safe on
            both axes here because the row is label-over-note plus 11px of
@@ -853,7 +812,7 @@ export function fieldValue(f: Field, settings: SettingsRecord): string {
      for a setting the operator changed. */
   if (f.settingKey) return formatSetting(f.settingKey, settings[f.settingKey])
   if (f.value !== undefined) return f.value
-  if (f.on !== undefined) return f.on ? 'On' : 'Off'
+  if (f.readOnlyWhy) return f.readOnlyWhy
   if (f.dest === undefined) return '—'
   if (f.dest.kind === 'route') return f.dest.to
   if (f.dest.kind === 'tab') return `Settings ▸ ${f.dest.tab}`

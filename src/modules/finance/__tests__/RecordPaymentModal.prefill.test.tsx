@@ -128,15 +128,21 @@ describe('RecordPaymentModal — outstanding prefill (R-39 D1)', () => {
 })
 
 describe('RecordPaymentModal — primary bank account default (R-39 D3)', () => {
-  it('defaults to the primary account while the method is Bank Transfer', async () => {
+  it('defaults to the primary account once the method is Bank Transfer', async () => {
     const c = await mount()
     await act(async () => {})
+    // T3-15: nothing is chosen on open, so the account default waits for the
+    // method that makes an account meaningful. Cash must not carry NIC Asia Main.
+    const methodCard = (v: string) => c.querySelector(`input[name="rpm-method"][value="${v}"]`) as HTMLInputElement
+    await act(async () => { methodCard('Bank Transfer').click() })
     expect(accountSelect(c).value).toBe(PRIMARY_ID)
   })
 
   it('a deliberate "No account recorded" is not overridden', async () => {
     const c = await mount()
     await act(async () => {})
+    const methodCard = (v: string) => c.querySelector(`input[name="rpm-method"][value="${v}"]`) as HTMLInputElement
+    await act(async () => { methodCard('Bank Transfer').click() })
     await changeSelect(accountSelect(c), '')
     expect(accountSelect(c).value).toBe('')
   })

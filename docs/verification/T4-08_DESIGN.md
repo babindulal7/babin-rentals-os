@@ -1,10 +1,10 @@
 # T4-08 Security Design Note: One-Time Rider Link
 
-**Date:** 2026-10-31 · Updated 2026-11-01 (Review Fixes R1–R5)  
+**Date:** 2026-10-31  
 **Author:** Gemini (Lane B)  
-**Status:** Implemented & Verified (R1–R5 complete)  
-**Card:** [`docs/plans/T4_SHARED_TOOLS.md`](../plans/T4_SHARED_TOOLS.md) · Prompts: [`docs/plans/prompts/T4-08.md`](../plans/prompts/T4-08.md) & [`docs/plans/prompts/T4-08-fixes.md`](../plans/prompts/T4-08-fixes.md)  
-**Rulings Cited:** W49, W46, Law 6, Law 3, Law 8, PERMISSIONS §3/§7.1, RULINGS-2026-11-01 (R1–R5)  
+**Status:** Awaiting Claude & Babin Review  
+**Card:** [`docs/plans/T4_SHARED_TOOLS.md`](../plans/T4_SHARED_TOOLS.md) · Prompt: [`docs/plans/prompts/T4-08.md`](../plans/prompts/T4-08.md)  
+**Rulings Cited:** W49, W46, Law 6, Law 3, Law 8, PERMISSIONS §3/§7  
 
 ---
 
@@ -13,69 +13,98 @@ Babin Rentals frequently hires external delivery riders for single drop-offs and
 
 ---
 
-## 2. Threat Model & Mitigations (Updated for R1–R5)
+## 2. Threat Model & Mitigations
 
 | Threat | Risk Level | Mitigation & Enforcement |
 |---|---|---|
-| **Token Brute-Force / Guessing** | Critical | 128-bit+ cryptographically secure random token generated on the server (`replace(gen_random_uuid()::text \|\| gen_random_uuid()::text, '-', '')`). Raw token is **never stored in the database**; only `token_hash` (`sha256(token)`) is persisted in Postgres. A guessed token cannot match. |
-| **Authenticated Session Token Probing (R1, D-10.6)** | Critical | Rider-facing RPCs (`get_rider_job_by_token`, `rider_mark_picked_up`, `rider_complete_delivery`) are granted exclusively to `service_role`. They are revoked from `authenticated`, `anon`, and `public`. Calling them as any signed-in user or stranger is refused at the grant. |
-| **Staff Credential Harvesting (R1)** | High | The `token_hash` column is explicitly excluded from the `authenticated` SELECT grant on `delivery_job_links`. Direct `SELECT token_hash` by Coordinator or Warehouse is refused by Postgres at the column level. |
-| **Mutation Replays / Law 8 Violations (R2)** | High | `delivery_job_links.client_uuid` is `NOT NULL UNIQUE`. Calling `create_rider_link` with the same `client_uuid` returns `{ link_id, already_issued: true }` without re-minting a raw token or duplicating rows. |
-| **Monetary & Pricing Leakage (Law 6)** | Critical | The rider endpoint and UI are strictly money-blind. Neither rental prices, delivery fees, deposits, invoice totals, nor client financial statuses are included in the query or returned in the JSON payload. Enforced at the Postgres view/RPC layer. |
-| **Cross-Tenant / Cross-Job Hopping** | High | The rider token is strictly scoped to a single `job_id`. The lookup query is `WHERE token_hash = $1 AND expires_at > now() AND revoked_at IS NULL AND completed_at IS NULL`. No enumerating or browsing other jobs. |
+| **Token Brute-Force / Guessing** | Critical | 128-bit cryptographically secure random token (URL-safe base64, 22+ chars). Raw token is **never stored in the database**; only `token_hash` (`sha256(token)`) is persisted in Postgres. A guessed token cannot match. |
+| **Monetary & Pricing Leakage (Law 6)** | Critical | The rider endpoint and UI are strictly money-blind. Neither rental prices, delivery fees, deposits, invoice totals, nor client credit status are included in the query or returned in the JSON payload. Enforced at the Postgres view/RPC layer. |
+| **Cross-Tenant / Cross-Job Hopping** | High | The rider token is strictly scoped to a single `job_id`. The lookup query is `WHERE token_hash = sha256($1) AND expires_at > now() AND revoked_at IS NULL`. No enumerating or browsing other jobs. |
 | **Replay / Double Delivery** | High | Atomic state transition: delivery completion sets `completed_at = now()` and transitions `delivery_jobs.status = 'Delivered'`. A completed, failed, or revoked link immediately refuses further reads and writes. |
-| **Information Leakage via Error Messages (R4)** | Medium | In `supabase/functions/rider-link`, error codes (e.g. `42501`) map to a uniform message: `"This link is no longer valid"`. Raw tokens, hashes, phone numbers, and rider names are never logged. |
+| **Tampering with Job Details** | Medium | The rider has read-only access to dispatch address, contact, and item/case count. Rider write capability is restricted to two idempotent state transitions: `mark_picked_up` and `complete_delivery(receiver_name, signature_svg, photo_url)`. |
 | **Stale / Zombie Links** | Medium | Hard 24-hour expiration ceiling (`expires_at = created_at + interval '24 hours'`). Staff can manually revoke the link at any moment via the delivery workspace. |
 
 ---
 
-## 3. Data Model & Migration Schema (0190_one_time_rider_links.sql)
+## 3. Data Model & Migration Schema
+
+### 3.1 Table: `delivery_job_links`
+Claim next free migration number in `docs/plans/MIGRATION_LEDGER.md` (e.g. `0199_one_time_rider_links.sql`).
 
 ```sql
-create table public.delivery_job_links (
-  id uuid primary key default gen_random_uuid(),
-  client_uuid uuid not null unique,
-  job_id uuid not null references public.delivery_jobs(id) on delete cascade,
-  token_hash text not null unique check (char_length(token_hash) = 64),
-  rider_name text not null check (length(btrim(rider_name)) >= 2),
-  rider_phone text not null check (length(btrim(rider_phone)) >= 7),
-  created_at timestamptz not null default now(),
-  expires_at timestamptz not null default (now() + interval '24 hours'),
-  revoked_at timestamptz,
-  revoked_by uuid references public.users(id),
-  completed_at timestamptz,
-  created_by uuid not null references public.users(id),
-  constraint delivery_job_links_expires_after_created check (expires_at > created_at)
+CREATE TABLE public.delivery_job_links (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  job_id uuid NOT NULL REFERENCES public.delivery_jobs(id) ON DELETE RESTRICT,
+  token_hash text NOT NULL UNIQUE,
+  rider_name text NOT NULL,
+  rider_phone text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  expires_at timestamptz NOT NULL DEFAULT (now() + interval '24 hours'),
+  revoked_at timestamptz NULL,
+  completed_at timestamptz NULL,
+  created_by uuid NOT NULL REFERENCES auth.users(id),
+  CONSTRAINT delivery_job_links_token_hash_len CHECK (char_length(token_hash) = 64)
 );
 
-create index delivery_job_links_token_hash_idx on public.delivery_job_links(token_hash)
-  where revoked_at is null and completed_at is null;
-create index delivery_job_links_job_id_idx on public.delivery_job_links(job_id);
-create index delivery_job_links_client_uuid_idx on public.delivery_job_links(client_uuid);
-
-alter table public.delivery_job_links enable row level security;
-
--- Column-level grant: staff can inspect metadata, but NEVER the token_hash (R1)
-revoke all on public.delivery_job_links from public, anon, authenticated;
-grant select (id, client_uuid, job_id, rider_name, rider_phone, created_at, expires_at, revoked_at, revoked_by, completed_at, created_by)
-  on public.delivery_job_links to authenticated;
-grant all on public.delivery_job_links to service_role;
+CREATE INDEX idx_delivery_job_links_lookup 
+  ON public.delivery_job_links (token_hash) 
+  WHERE revoked_at IS NULL AND completed_at IS NULL;
 ```
+
+### 3.2 RLS & Access Policies
+- `delivery_job_links` has **RLS enabled**:
+  - `anon` has **NO DIRECT TABLE ACCESS** (`SELECT`, `INSERT`, `UPDATE`, `DELETE` are denied to `anon` and `authenticated`).
+  - Access is mediated solely through SECURITY DEFINER RPCs pinned to `search_path = public` or Edge Function with service-role token.
+  - Staff (`Coordinator`, `Manager`, `Owner`, `Admin`) can view active links via an authenticated view joined to `delivery_jobs`.
 
 ---
 
-## 4. Verification & Gates (L47 in scripts/e2e-lifecycle.mjs)
-1. **R1 / D-10.6 Execution Grant Verification**:
-   - `has_function_privilege('authenticated', 'get_rider_job_by_token(text)', 'EXECUTE')` = `false`.
-   - `has_function_privilege('authenticated', 'rider_mark_picked_up(text)', 'EXECUTE')` = `false`.
-   - `has_function_privilege('authenticated', 'rider_complete_delivery(text, text, text, text)', 'EXECUTE')` = `false`.
-   - `has_column_privilege('authenticated', 'delivery_job_links', 'token_hash', 'SELECT')` = `false`.
-   - `has_function_privilege('service_role', ..., 'EXECUTE')` = `true`.
-2. **R2 Idempotency**:
-   - Calling `create_rider_link` twice with the same `client_uuid` leaves exactly one row in `delivery_job_links`.
-   - Replay returns `already_issued: true` and `raw_token: null`.
-3. **R3 Server-Minted Token**:
-   - Server mints token using core UUID entropy; raw token is returned once in JSON result.
-   - Asserted that raw token text does not appear in `delivery_job_links` or `audit_events`.
-4. **Law 6 Money Blindness**:
-   - Asserted that JSON payload from `get_rider_job_by_token` contains zero money keywords (`paisa`, `price`, `rate`, `deposit`, `total_amount`, `discount`, `invoice`, `credit`).
+## 4. Database RPCs & Edge Function Contract
+
+### 4.1 RPC: `get_rider_job_by_token(p_token_hash text)`
+- **Callable by:** `anon` (or Edge Function).
+- **Validation:**
+  - `expires_at > now()`
+  - `revoked_at IS NULL`
+  - `completed_at IS NULL`
+- **Returns JSON:**
+  ```json
+  {
+    "job_id": "...",
+    "job_number": "DEL-2026-0042",
+    "status": "Assigned",
+    "pickup_address": "Babin Rentals, Putalisadak, Kathmandu",
+    "delivery_address": "Horizon Studios, Sanepa, Lalitpur",
+    "contact_name": "Suman Gurung",
+    "contact_phone": "9801234567",
+    "case_count": 3,
+    "case_labels": ["Cam-A Case", "Prime Lens Kit", "Tripod Bag"],
+    "notes": "Gate code #4412, call upon arrival",
+    "rider_name": "Kiran Rider",
+    "expires_at": "2026-11-01T08:00:00Z"
+  }
+  ```
+  *(Notice: Absolutely zero rates, line prices, fees, or monetary figures).*
+
+### 4.2 RPC: `complete_rider_delivery(p_token_hash text, p_receiver_name text, p_signature_svg text, p_photo_url text, p_client_uuid uuid)`
+- **Validates token and atomicity**:
+  - Updates `delivery_job_links.completed_at = now()`.
+  - Updates `delivery_jobs.status = 'Delivered'`, `delivered_at = now()`, `receiver_name`, `signature_svg`, `delivery_photo_url`.
+  - Appends to `audit_events` recording rider action with link id and rider name.
+  - If token is already used or expired, throws an exception and refuses the update.
+
+---
+
+## 5. UI Architecture & Routing
+- **Public Route:** Isolated entry `src/rider.html` / route `/rider/:token` (lightweight standalone bundle, no main app shell, no navigation rail, mobile-first touch layout).
+- **Floor Verb Targets:** Big 56px action buttons ("Confirm Pickup", "Submit Signature & Complete").
+- **Offline & Connectivity:** If rider drops connection in the basement, signature is held locally in memory until connection resumes or displays a clear offline retry prompt.
+
+---
+
+## 6. Review Gate & Checklist
+- [x] Design note completed with threat model, RLS rules, and Law 6 money blindness guarantees.
+- [ ] Claude & Babin review design note at next check-in.
+- [ ] Claim migration in `docs/plans/MIGRATION_LEDGER.md`.
+- [ ] Implement migration + lifecycle steps (`check:pglite` and `check:lifecycle`).
+- [ ] Implement Edge Function / RPC and `/rider/:token` UI.

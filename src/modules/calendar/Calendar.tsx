@@ -9,6 +9,7 @@ import { Card, PageHeader, PageActions, Button, cardStyle, Rail } from '../../co
 import { openCommandPalette } from '../../components/shell/CommandPalette'
 import { FilterButton, FilterDrawer } from '../../components/ui/FilterDrawer'
 import { listInventory } from '../../lib/queries/inventory'
+import { useTranslation } from '../../lib/i18n'
 import './calendar.css'
 import { BRAND } from '../../lib/status'
 import {
@@ -2291,7 +2292,19 @@ function SelectedEventPanel({
 /* ── screen ────────────────────────────────────────────────────────────── */
 
 export default function Calendar() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
+
+  const viewLabel = (v: ViewName): string => {
+    switch (v) {
+      case 'Month': return t('calendar.views.month', 'Month')
+      case 'Week': return t('calendar.views.week', 'Week')
+      case 'Day': return t('calendar.views.day', 'Day')
+      case 'Timeline': return t('calendar.views.timeline', 'Timeline')
+      case 'Availability': return t('calendar.actions.checkAvailability', 'Availability')
+      default: return v
+    }
+  }
   /* §8.3 — the shared hook, same call site as every other screen. It omits the
      money rows below; nothing here is masked. */
   const money = useCanViewMoney()
@@ -3099,7 +3112,7 @@ export default function Calendar() {
               fontFamily: 'inherit',
             }}
           >
-            {v}
+            {viewLabel(v)}
           </button>
         )
       })}
@@ -3893,7 +3906,7 @@ export default function Calendar() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', flexWrap: 'wrap' }}>
           {/* Inside the full-view overlay, which covers the global header: stays in place. */}
           <FilterButton inHeader={false} onClick={() => setShowFilters((open) => !open)} activeCount={activeFilterCount} controls="calendar-filters" expanded={showFilters} />
-          <h1 style={{ margin: 0, fontSize: 'var(--t-h2)', fontWeight: 700 }}>Calendar</h1>
+          <h1 style={{ margin: 0, fontSize: 'var(--t-h2)', fontWeight: 700 }}>{t('calendar.title', 'Calendar')}</h1>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--sp-sm)', marginLeft: 10 }}>{navButtons}</span>
           <span style={{ marginLeft: 'auto', width: 300 }}>
             <SearchInput
@@ -3904,8 +3917,8 @@ export default function Calendar() {
               aria-label="Search bookings, equipment, client, crew"
             />
           </span>
-          <Button icon="calendar_event" onClick={() => setShowCheckAvailability(true)}>Check availability</Button>
-          <Button icon="close" onClick={() => setFullChoice(false)}>Exit Full View</Button>
+          <Button icon="calendar_event" onClick={() => setShowCheckAvailability(true)}>{t('calendar.actions.checkAvailability', 'Check availability')}</Button>
+          <Button icon="close" onClick={() => setFullChoice(false)}>{t('calendar.actions.exitFullView', 'Exit Full View')}</Button>
         </div>
 
         <FilterDrawer id="calendar-filters" open={showFilters} onClose={() => setShowFilters(false)} desktopMode="overlay" resultCount={barList.loading ? null : bars.length} noun="events" activeCount={activeFilterCount} onClearAll={clearAll} standardFooter onApply={() => setShowFilters(false)}>
@@ -4045,41 +4058,41 @@ export default function Calendar() {
         <PageHeader
           leading={!phone ? <FilterButton onClick={() => setShowFilters((open) => !open)} activeCount={activeFilterCount} controls="calendar-filters" expanded={showFilters} /> : undefined}
           icon="calendar"
-          title="Calendar"
+          title={t('calendar.title', 'Calendar')}
           // RULING 2026-10-21: retain the visible Availability verb and drawer at 375px.
           searchInMore={phone}
           module="calendar"
           search={{
             value: query,
             onChange: setQuery,
-            placeholder: 'Search calendar events (press /)',
-            ariaLabel: 'Search calendar',
+            placeholder: t('calendar.searchPlaceholder', 'Search calendar events (press /)'),
+            ariaLabel: t('calendar.searchAria', 'Search calendar'),
           }}
           actions={
             <PageActions
               extra={!phone ? navButtons : undefined}
               primary={
-                <Button icon={phone ? undefined : 'calendar_event'} variant="primary" onClick={() => setShowCheckAvailability(true)} aria-label="Check availability">
-                  {desktop ? 'Check availability' : 'Availability'}
+                <Button icon={phone ? undefined : 'calendar_event'} variant="primary" onClick={() => setShowCheckAvailability(true)} aria-label={t('calendar.actions.checkAvailability', 'Check availability')}>
+                  {desktop ? t('calendar.actions.checkAvailability', 'Check availability') : t('calendar.actions.availabilityShort', 'Availability')}
                 </Button>
               }
               secondary={[
                 ...(desktop ? [
                   <Button key="full" icon="eye" onClick={() => setFullChoice(true)}>
-                    Full View
+                    {t('calendar.actions.fullView', 'Full View')}
                   </Button>,
                 ] : []),
               ].filter(Boolean)}
               overflow={[
                 ...(phone ? [
-                  { label: 'Search', icon: 'search' as const, onClick: openCommandPalette },
+                  { label: t('calendar.actions.search', 'Search'), icon: 'search' as const, onClick: openCommandPalette },
                   {
-                    label: activeFilterCount > 0 ? `Filters (${activeFilterCount})` : 'Filters',
+                    label: activeFilterCount > 0 ? t('calendar.actions.filtersWithCount', `Filters (${activeFilterCount})`, { count: activeFilterCount }) : t('calendar.actions.filters', 'Filters'),
                     icon: 'filter' as const,
                     onClick: () => setShowFilters(true),
                   },
                   {
-                    label: 'Today',
+                    label: t('calendar.actions.today', 'Today'),
                     icon: 'calendar' as const,
                     onClick: goToday,
                   },

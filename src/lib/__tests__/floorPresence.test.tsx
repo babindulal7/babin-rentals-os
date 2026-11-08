@@ -26,8 +26,8 @@ describe('getTerminalId', () => {
 describe('useFloorPresence hook', () => {
   let container: HTMLDivElement
   let root: Root
-  let mockPostMessage: ReturnType<typeof vi.fn>
-  let mockClose: ReturnType<typeof vi.fn>
+  let mockPostMessage: (data: FloorPresenceMessage) => void
+  let mockClose: () => void
   let listeners: ((event: MessageEvent<FloorPresenceMessage>) => void)[] = []
 
   class MockBroadcastChannel {

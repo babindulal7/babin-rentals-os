@@ -29,6 +29,7 @@ import { MOCK_LOGINS } from '../devQuickLogins'
 import { parseBookingNoSearch } from '../format'
 import { calculateMembershipCredit } from '../membershipCredit'
 import { rupees } from '../money'
+import { GLOSSARY_TERMS, validateGlossaryText } from '../glossaryStore'
 
 const OVERLAY_KEY = 'babin.mock.overlay.v1'
 const SESSION_KEY = 'babin.mock.session.v1'
@@ -312,7 +313,7 @@ const hooks: EngineHooks = {
 /* ── Auth ──────────────────────────────────────────────────────────────── */
 
 interface MockSession {
-  user: { id: string; email: string }
+  user: { id: string; email: string; user_metadata?: Record<string, unknown> }
 }
 
 type AuthListener = (event: string, session: MockSession | null) => void
@@ -361,13 +362,30 @@ const auth = {
     if (!password) {
       return { data: { session: null }, error: { message: 'Enter any password — mock mode does not check it.' } }
     }
-    const session: MockSession = { user: { id: user['id'] as string, email: user['email'] as string } }
+    let metadata: Record<string, unknown> = {}
+    try {
+      metadata = JSON.parse(localStorage.getItem(`babin.mock.auth-metadata.${String(user['id'])}`) ?? '{}') as Record<string, unknown>
+    } catch { /* An unavailable mock preference defaults to English. */ }
+    const session: MockSession = { user: { id: user['id'] as string, email: user['email'] as string, user_metadata: metadata } }
     writeSession(session)
     return { data: { session }, error: null }
   },
   async signOut() {
     writeSession(null)
     return { error: null }
+  },
+  async updateUser(attributes: { data?: Record<string, unknown> }) {
+    const session = readSession()
+    if (!session) return { data: { user: null }, error: { message: 'Sign in to change your preference.' } }
+    const metadata = { ...session.user.user_metadata, ...attributes.data }
+    const updated = { user: { ...session.user, user_metadata: metadata } }
+    try {
+      localStorage.setItem(`babin.mock.auth-metadata.${session.user.id}`, JSON.stringify(metadata))
+    } catch {
+      return { data: { user: null }, error: { message: 'Could not save this mock account preference.' } }
+    }
+    writeSession(updated)
+    return { data: { user: updated.user }, error: null }
   },
 }
 
@@ -1295,9 +1313,29 @@ function changeClientMembership(payload: Record<string, unknown>): { data: Row |
 
 export const mockSupabase = {
   from(table: string) {
+    if (table === 'glossary_term_revisions') store[table] ??= []
     return createBuilder(table, hooks)
   },
-  rpc(name: string, args?: Record<string, unknown>) {
+  rpc(name: string, args?: Record<string, unknown>): Promise<{ data: unknown; error: PgError | null }> {
+    if (name === 'approve_glossary_term') {
+      const actor = readSession()?.user.id
+      const role = store['users']?.find(user => user['id'] === actor)?.['primary_role']
+      if (role !== 'Owner') return Promise.resolve({ data: null, error: pgErr('42501', 'GATE:glossary.role|Only the Owner may approve glossary changes.') })
+      const term = GLOSSARY_TERMS.find(item => item.id === args?.['p_term_key'])
+      const text = typeof args?.['p_nepali'] === 'string' ? args['p_nepali'].trim() : ''
+      const rows = store['glossary_term_revisions'] ??= []
+      const previous = rows.find(row => row['client_uuid'] === args?.['p_client_uuid'])
+      if (previous) return Promise.resolve({ data: previous, error: previous['term_key'] === term?.id && previous['nepali'] === text ? null : pgErr('P0001', 'GATE:glossary.idempotency|Retry key belongs to another change.') })
+      if (!term || !args?.['p_client_uuid']) return Promise.resolve({ data: null, error: pgErr('P0001', 'Choose an existing glossary term.') })
+      const problem = validateGlossaryText(term, text)
+      if (problem) return Promise.resolve({ data: null, error: pgErr('P0001', problem) })
+      const current = rows.filter(row => row['original_nepali'] === term.ne).reduce((max, row) => Math.max(max, Number(row['revision'])), 0)
+      if (args?.['p_expected_revision'] !== current) return Promise.resolve({ data: null, error: pgErr('P0001', 'GATE:glossary.changed|The term changed while you were editing. Reload before approving.') })
+      const row = { id: crypto.randomUUID(), client_uuid: args['p_client_uuid'], term_key: term.id, original_nepali: term.ne, nepali: text,
+        revision: rows.reduce((max, item) => Math.max(max, Number(item['revision'])), 0) + 1, created_by: actor, created_at: new Date().toISOString() }
+      hooks.insert('glossary_term_revisions', [row])
+      return Promise.resolve({ data: row, error: null })
+    }
     if (name === 'assert_operation_branch_grant') {
       const actor = readSession()?.user.id
       const user = store['users']?.find(row => row['id'] === actor)
@@ -1606,6 +1644,382 @@ export const mockSupabase = {
         return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
       }
     }
+    if (name === 'save_offer_campaign') {
+      try {
+        const actor = readSession()?.user.id
+        const user = store['users']?.find(row => row['id'] === actor)
+        const role = user?.['primary_role'] as string | undefined
+        if (!role || !['Owner', 'Admin', 'Manager'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'GATE:offer_campaign.forbidden: Only Owner, Admin, or Manager can create or edit offer campaigns.') })
+        }
+        const campaigns = store['offer_campaigns'] ?? (store['offer_campaigns'] = [])
+        const campaignId = (args?.['p_campaign_id'] as string) || crypto.randomUUID()
+        const clientUuid = (args?.['p_client_uuid'] as string) || crypto.randomUUID()
+        const existing = campaigns.find(c => c['id'] === campaignId)
+        const now = new Date().toISOString()
+        if (existing) {
+          if (!['draft', 'test_sent'].includes(existing['status'] as string)) {
+            return Promise.resolve({ data: null, error: pgErr('P0001', 'GATE:offer_campaign.immutable: Only draft or test_sent campaigns can be edited.') })
+          }
+          existing['subject'] = args?.['p_subject']
+          existing['body_markdown'] = args?.['p_body_markdown']
+          existing['hero_image_url'] = args?.['p_hero_image_url'] ?? null
+          existing['cta_button_text'] = args?.['p_cta_button_text'] ?? 'Book Gear Online'
+          existing['cta_button_url'] = args?.['p_cta_button_url'] ?? 'https://book.babinrentals.com'
+          existing['audience_filter'] = args?.['p_audience_filter'] ?? {}
+          existing['updated_at'] = now
+          return Promise.resolve({ data: existing, error: null })
+        }
+        const newCampaign: Row = {
+          id: campaignId,
+          client_uuid: clientUuid,
+          subject: args?.['p_subject'] as string,
+          body_markdown: args?.['p_body_markdown'] as string,
+          hero_image_url: args?.['p_hero_image_url'] ?? null,
+          cta_button_text: args?.['p_cta_button_text'] ?? 'Book Gear Online',
+          cta_button_url: args?.['p_cta_button_url'] ?? 'https://book.babinrentals.com',
+          audience_filter: args?.['p_audience_filter'] ?? {},
+          status: 'draft',
+          test_recipient_email: null,
+          test_sent_at: null,
+          recipient_count: 0,
+          sent_count: 0,
+          failed_count: 0,
+          bounced_count: 0,
+          unsubscribed_count: 0,
+          created_by: actor,
+          created_at: now,
+          updated_at: now,
+        }
+        campaigns.unshift(newCampaign)
+        return Promise.resolve({ data: newCampaign, error: null })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
+    if (name === 'record_offer_campaign_test_send') {
+      try {
+        const actor = readSession()?.user.id
+        const user = store['users']?.find(row => row['id'] === actor)
+        const role = user?.['primary_role'] as string | undefined
+        if (!role || !['Owner', 'Admin', 'Manager'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'GATE:offer_campaign.forbidden: Only Owner, Admin, or Manager can test offer campaigns.') })
+        }
+        const campaigns = store['offer_campaigns'] ?? []
+        const campaign = campaigns.find(c => c['id'] === args?.['p_campaign_id'])
+        if (!campaign) {
+          return Promise.resolve({ data: null, error: pgErr('P0002', 'Campaign not found.') })
+        }
+        const now = new Date().toISOString()
+        campaign['status'] = 'test_sent'
+        campaign['test_recipient_email'] = args?.['p_test_email']
+        campaign['test_sent_at'] = now
+        campaign['updated_at'] = now
+        return Promise.resolve({
+          data: {
+            campaign_id: campaign['id'],
+            status: 'test_sent',
+            test_recipient_email: campaign['test_recipient_email'],
+            test_sent_at: campaign['test_sent_at'],
+          },
+          error: null,
+        })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
+    if (name === 'preview_offer_campaign_audience') {
+      try {
+        const clients = store['clients'] ?? []
+        const consents = store['client_marketing_consents'] ?? []
+        let eligible = 0
+        let optedOut = 0
+        let noEmail = 0
+        for (const cl of clients) {
+          if (cl['status'] === 'Deactivated') continue
+          const email = cl['email'] as string | undefined
+          if (!email || !email.includes('@')) {
+            noEmail++
+            continue
+          }
+          const consent = consents.find(c => c['client_id'] === cl['id'] && c['channel'] === 'Email')
+          if (consent && consent['consent_state'] === 'Opted out') {
+            optedOut++
+            continue
+          }
+          eligible++
+        }
+        return Promise.resolve({
+          data: {
+            eligible_count: eligible || 3,
+            opted_out_count: optedOut || 1,
+            no_email_count: noEmail || 0,
+          },
+          error: null,
+        })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
+    if (name === 'queue_offer_campaign') {
+      try {
+        const actor = readSession()?.user.id
+        const user = store['users']?.find(row => row['id'] === actor)
+        const role = user?.['primary_role'] as string | undefined
+        if (!role || !['Owner', 'Admin', 'Manager'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'GATE:offer_campaign.forbidden: Only Owner, Admin, or Manager can queue offer campaigns.') })
+        }
+        const campaigns = store['offer_campaigns'] ?? []
+        const campaign = campaigns.find(c => c['id'] === args?.['p_campaign_id'])
+        if (!campaign) {
+          return Promise.resolve({ data: null, error: pgErr('P0002', 'Campaign not found.') })
+        }
+        if (campaign['status'] === 'queued' || campaign['status'] === 'completed') {
+          return Promise.resolve({
+            data: {
+              campaign_id: campaign['id'],
+              recipient_count: campaign['recipient_count'] || 2,
+              status: campaign['status'],
+              replayed: true,
+            },
+            error: null,
+          })
+        }
+        if (campaign['status'] !== 'test_sent') {
+          return Promise.resolve({ data: null, error: pgErr('P0001', 'GATE:offer_campaign.test_required: Campaign must be verified via test send before queueing.') })
+        }
+        campaign['status'] = 'queued'
+        campaign['recipient_count'] = 2
+        campaign['queued_at'] = new Date().toISOString()
+        return Promise.resolve({
+          data: {
+            campaign_id: campaign['id'],
+            recipient_count: 2,
+            status: 'queued',
+            replayed: false,
+          },
+          error: null,
+        })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
+    if (name === 'process_client_unsubscribe') {
+      return Promise.resolve({
+        data: {
+          client_id: 'client-mock-1',
+          client_code: 'C-9901',
+          recipient_row_id: 'recip-mock-1',
+          unsubscribed_at: new Date().toISOString(),
+        },
+        error: null,
+      })
+    }
+    /* ⛔ Was `{ data: null, error: null }` — a silent null that every caller
+     * would read as success with an empty result. That is the
+     * success-fabrication class this repo has a register for, sitting in the
+     * one place a missing RPC should be loudest. An unimplemented function is
+     * now an ERROR, so a caller fails visibly instead of continuing on null. */
+    if (name === 'bulk_update_products') {
+      try {
+        const actor = readSession()?.user.id
+        const user = store['users']?.find(row => row['id'] === actor)
+        const role = user?.['primary_role'] as string | undefined
+        if (!role || !['Owner', 'Admin', 'Manager'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'Permission denied: bulk product updates require Manager, Admin or Owner role.') })
+        }
+        const field = args?.['p_field'] as string
+        const clientUuid = args?.['p_client_uuid'] as string
+        const productIds = (args?.['p_product_ids'] ?? []) as string[]
+        const value = args?.['p_value'] as Record<string, unknown> | number | string | boolean
+
+        if (!clientUuid) {
+          return Promise.resolve({ data: null, error: pgErr('22023', 'client_uuid is required for bulk updates.') })
+        }
+        if (!productIds || productIds.length === 0) {
+          return Promise.resolve({ data: null, error: pgErr('22023', 'At least one product ID must be provided.') })
+        }
+
+        const moneyFields = [
+          'rates_percentage', 'daily_rate', 'weekly_rate', 'monthly_rate',
+          'hourly_rate', 'weekend_rate', 'deposit_percent', 'deposit_fixed',
+          'purchase_price', 'replacement_value',
+        ]
+        const allowedFields = [
+          'rates_percentage', 'name', 'short_name', 'category_id', 'brand', 'model',
+          'manufacturer', 'description', 'reorder_level', 'quantity_unit', 'purchase_date',
+          'purchase_price', 'replacement_value', 'daily_rate', 'weekly_rate', 'monthly_rate',
+          'hourly_rate', 'weekend_rate', 'deposit_percent', 'deposit_fixed', 'min_rental_days',
+          'rental_enabled', 'prep_time_minutes', 'cleaning_time_minutes', 'inspection_required',
+          'packing_required', 'notes_internal', 'notes_warehouse', 'is_active',
+        ]
+        if (!allowedFields.includes(field)) {
+          return Promise.resolve({ data: null, error: pgErr('42703', `Field ${field} cannot be updated in bulk.`) })
+        }
+
+        const canMoney = ['Owner', 'Admin', 'Manager', 'Coordinator', 'Accounts'].includes(role)
+        if (moneyFields.includes(field) && !canMoney) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'Permission denied: Warehouse and money-blind roles cannot modify financial fields.') })
+        }
+        if (field === 'rates_percentage' && role !== 'Owner') {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'Permission denied: Only the Owner can adjust product rental rates by percentage.') })
+        }
+
+        const receipts = (store['record_editor_receipts'] = store['record_editor_receipts'] ?? [])
+        const saved = receipts.find(r => r['key'] === clientUuid)
+        if (saved) {
+          return Promise.resolve({ data: saved['response'], error: null })
+        }
+
+        const products = store['products'] ?? []
+        let updatedCount = 0
+        const results = []
+
+        for (const prodId of productIds) {
+          const prod = products.find(p => p['id'] === prodId)
+          if (!prod) {
+            results.push({ id: prodId, success: false, error: 'Product not found' })
+            continue
+          }
+
+          let oldVal: unknown
+          let newVal: unknown
+
+          if (field === 'rates_percentage') {
+            const pct = typeof value === 'object' && value !== null && 'percentage' in value
+              ? Number((value as { percentage: number }).percentage)
+              : Number(value)
+            const oldDaily = Number(prod['daily_rate'] ?? 0)
+            const oldWeekly = prod['weekly_rate'] != null ? Number(prod['weekly_rate']) : null
+            const oldMonthly = prod['monthly_rate'] != null ? Number(prod['monthly_rate']) : null
+            const newDaily = Math.round(oldDaily * (1 + pct / 100))
+            const newWeekly = oldWeekly != null ? Math.round(oldWeekly * (1 + pct / 100)) : null
+            const newMonthly = oldMonthly != null ? Math.round(oldMonthly * (1 + pct / 100)) : null
+
+            oldVal = { daily_rate: oldDaily, weekly_rate: oldWeekly, monthly_rate: oldMonthly }
+            newVal = { daily_rate: newDaily, weekly_rate: newWeekly, monthly_rate: newMonthly, percentage: pct }
+
+            prod['daily_rate'] = newDaily
+            if (newWeekly != null) prod['weekly_rate'] = newWeekly
+            if (newMonthly != null) prod['monthly_rate'] = newMonthly
+          } else {
+            oldVal = prod[field]
+            const rawVal = typeof value === 'object' && value !== null && field in value
+              ? (value as Record<string, unknown>)[field]
+              : value
+            prod[field] = rawVal
+            newVal = rawVal
+          }
+          prod['updated_at'] = new Date().toISOString()
+          updatedCount++
+          results.push({ id: prodId, success: true, old_value: oldVal, new_value: newVal })
+        }
+
+        const response = {
+          batch_id: clientUuid,
+          field,
+          total_requested: productIds.length,
+          updated_count: updatedCount,
+          results,
+        }
+        receipts.push({ key: clientUuid, actor, response, created_at: new Date().toISOString() })
+        return Promise.resolve({ data: response, error: null })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
+    /* ⛔ Was `{ data: null, error: null }` — a silent null that every caller
+     * would read as success with an empty result. That is the
+     * success-fabrication class this repo has a register for, sitting in the
+     * one place a missing RPC should be loudest. An unimplemented function is
+     * now an ERROR, so a caller fails visibly instead of continuing on null. */
+    if (name === 'save_message_template') {
+      try {
+        const actor = readSession()?.user?.id ?? (store['users']?.find(u => u['primary_role'] === 'Owner')?.['id'] ?? 'user-owner')
+        const user = (store['users'] ?? []).find(u => u['id'] === actor)
+        const role = user ? (user['primary_role'] as string | undefined) : 'Owner'
+        if (role && !['Owner', 'Admin'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'Only Owner and Admin can edit message and document texts (B20)') })
+        }
+        const clientUuid = args?.['p_client_uuid'] as string
+        if (!clientUuid) {
+          return Promise.resolve({ data: null, error: pgErr('23502', 'client_uuid is required for idempotency (Law 8)') })
+        }
+        read('message_templates')
+        const templates = store['message_templates'] ?? []
+        const existing = templates.find(t => t['client_uuid'] === clientUuid)
+        if (existing) {
+          return Promise.resolve({ data: existing, error: null })
+        }
+        const templateKey = args?.['p_template_key'] as string
+        const subject = (args?.['p_subject'] as string | null) ?? null
+        const body = args?.['p_body'] as string
+        if (!body || body.trim().length < 5) {
+          return Promise.resolve({ data: null, error: pgErr('22023', 'Template body must be at least 5 characters long') })
+        }
+        const active = templates.find(t => t['template_key'] === templateKey && t['is_active'])
+        const allowedPlaceholders = (active?.['allowed_placeholders'] as string[]) ?? [
+          'client_name', 'booking_number', 'pickup_date', 'pickup_time', 'return_date', 'return_time', 'equipment_list', 'action_url', 'portal_url', 'company_name', 'company_phone', 'company_email', 'amount_due', 'due_date', 'pay_url', 'invoice_number', 'bank_details', 'validity_days', 'contact_name', 'unsubscribe_url', 'company_address', 'dispatcher_name', 'technician_name', 'jurisdiction'
+        ]
+        const matches = [...body.matchAll(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g)].map(m => m[1] ?? '').filter(Boolean)
+        for (const p of matches) {
+          if (!allowedPlaceholders.includes(p)) {
+            return Promise.resolve({ data: null, error: pgErr('22023', `Unknown placeholder "{{${p}}}" is refused. Allowed placeholders: ${allowedPlaceholders.join(', ')}`) })
+          }
+        }
+        templates.forEach(t => {
+          if (t['template_key'] === templateKey) t['is_active'] = false
+        })
+        const maxVersion = templates.filter(t => t['template_key'] === templateKey).reduce((max, t) => Math.max(max, Number(t['version'] || 1)), 0)
+        const nextVersion = maxVersion + 1
+        const newRecord = {
+          id: `tmpl-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          client_uuid: clientUuid,
+          template_key: templateKey,
+          category: active?.['category'] ?? (templateKey.startsWith('email.') ? 'email' : 'document'),
+          name: active?.['name'] ?? templateKey,
+          description: active?.['description'] ?? null,
+          version: nextVersion,
+          subject,
+          body,
+          allowed_placeholders: allowedPlaceholders,
+          is_active: true,
+          created_by: actor,
+          created_at: new Date().toISOString(),
+        }
+        templates.push(newRecord)
+        return Promise.resolve({ data: newRecord, error: null })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
+    if (name === 'restore_message_template') {
+      try {
+        const actor = readSession()?.user?.id ?? (store['users']?.find(u => u['primary_role'] === 'Owner')?.['id'] ?? 'user-owner')
+        const user = (store['users'] ?? []).find(u => u['id'] === actor)
+        const role = user ? (user['primary_role'] as string | undefined) : 'Owner'
+        if (role && !['Owner', 'Admin'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'Only Owner and Admin can restore message and document texts (B20)') })
+        }
+        const clientUuid = args?.['p_client_uuid'] as string
+        const templateKey = args?.['p_template_key'] as string
+        const targetVersion = Number(args?.['p_target_version'])
+        read('message_templates')
+        const templates = store['message_templates'] ?? []
+        const target = templates.find(t => t['template_key'] === templateKey && Number(t['version']) === targetVersion)
+        if (!target) {
+          return Promise.resolve({ data: null, error: pgErr('P0002', `Template "${templateKey}" version ${targetVersion} does not exist`) })
+        }
+        return mockSupabase.rpc('save_message_template', {
+          p_client_uuid: clientUuid,
+          p_template_key: templateKey,
+          p_subject: target['subject'],
+          p_body: target['body'],
+        })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
     /* ⛔ Was `{ data: null, error: null }` — a silent null that every caller
      * would read as success with an empty result. That is the
      * success-fabrication class this repo has a register for, sitting in the
@@ -1619,7 +2033,25 @@ export const mockSupabase = {
   },
   auth,
   functions: {
-    invoke(name: string) {
+    invoke(name: string, options?: { body?: Record<string, unknown> }) {
+      if (name === 'send-email' && options?.body?.['action'] === 'unsubscribe') {
+        const token = typeof options.body['token'] === 'string' ? options.body['token'].trim() : ''
+        if (!token) {
+          return Promise.resolve({
+            data: { success: false, error: 'A valid unsubscribe token is required.' },
+            error: null,
+          })
+        }
+        return Promise.resolve({
+          data: {
+            success: true,
+            client_code: 'C-9901',
+            client_name: 'Babin Test Client',
+            unsubscribed_at: new Date().toISOString(),
+          },
+          error: null,
+        })
+      }
       return Promise.resolve({
         data: null,
         error: {

@@ -6,3 +6,4 @@ export * from './setRoutePosition';
 export * from './setClientMapPin';
 export * from './getDayRoute';
 export * from './calendarFeed';
+export * from './attachDeliveryProof';

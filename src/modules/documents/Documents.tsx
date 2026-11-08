@@ -45,6 +45,7 @@ import {
   missingFor,
   type CategoryKey,
   type DocRow,
+  type ExpiringDoc,
   type RelatedKind,
   type SortKey,
 } from '../../lib/queries/documents'
@@ -270,7 +271,46 @@ export default function Documents({
   const allDocs: DocRow[] = docRows
   const categories = useMemo(() => categoriesFor(money, allDocs), [money, allDocs])
   const missing = useMemo(() => IS_MOCK ? missingFor(money) : [], [money])
-  const expiring = useMemo(() => IS_MOCK ? expiringFor(money) : [], [money])
+  const expiring = useMemo(() => {
+    if (IS_MOCK) return expiringFor(money)
+    const candidates = allDocs.filter((d) => !d.archived && (money || !d.finance))
+    const dueSoonOrPending = candidates.filter(
+      (d) =>
+        d.status === 'Expired' ||
+        d.status === 'Pending Signature' ||
+        d.status === 'Pending Approval' ||
+        d.status === 'Draft',
+    )
+    return dueSoonOrPending.slice(0, 10).map((d): ExpiringDoc => {
+      let what = 'Validity ending'
+      let when = 'Due soon'
+      let action = 'Review document'
+      if (d.status === 'Expired') {
+        what = 'Document expired'
+        when = 'Expired'
+        action = 'Renew or re-issue'
+      } else if (d.status === 'Pending Signature') {
+        what = 'Signature required'
+        when = d.ageing ? `Outstanding ${d.ageing}` : 'Pending signature'
+        action = 'Capture signature or send reminder'
+      } else if (d.status === 'Pending Approval') {
+        what = 'Approval required'
+        when = 'Pending sign-off'
+        action = 'Review and approve'
+      } else if (d.status === 'Draft') {
+        what = 'Unissued draft'
+        when = 'Draft state'
+        action = 'Finalize document'
+      }
+      return {
+        doc: d.name || d.id,
+        what,
+        when,
+        action,
+        ...(d.finance ? { finance: true } : {}),
+      }
+    })
+  }, [money, allDocs])
   const total = useMemo(() => categories.reduce((a, c) => a + c.count, 0), [categories])
 
   /*
@@ -1078,39 +1118,57 @@ export default function Documents({
 
           <Card title="Missing Documents">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-              {missing.map((m) => (
-                <div key={m.doc + m.booking} className="doc-alert-item">
-                  <Icon name="alert_triangle" size={13} style={{ color: 'var(--danger-text)', flexShrink: 0 }} />
-                  <span style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ display: 'block', fontWeight: 600, color: 'var(--text)' }}>{m.doc}</span>
-                    {/* §0 — the panel names the booking and the client. */}
-                    <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-                      <Link to={`/rentals/${m.booking}`} className="identifier doc-mono" style={{ color: 'var(--link)', textDecoration: 'none' }}>
-                        {m.booking}
-                      </Link>{' '}
-                      · {m.client}
+              {missing.length > 0 ? (
+                missing.map((m) => (
+                  <div key={m.doc + m.booking} className="doc-alert-item">
+                    <Icon name="alert_triangle" size={13} style={{ color: 'var(--danger-text)', flexShrink: 0 }} />
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ display: 'block', fontWeight: 600, color: 'var(--text)' }}>{m.doc}</span>
+                      {/* §0 — the panel names the booking and the client. */}
+                      <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
+                        <Link to={`/rentals/${m.booking}`} className="identifier doc-mono" style={{ color: 'var(--link)', textDecoration: 'none' }}>
+                          {m.booking}
+                        </Link>{' '}
+                        · {m.client}
+                      </span>
                     </span>
-                  </span>
-                  <span
-                    style={{
-                      flexShrink: 0,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      height: 19,
-                      padding: '0 7px',
-                      borderRadius: 'var(--r-badge)',
-                      background: STATUS.danger.bg,
-                      color: STATUS.danger.fg,
-                      fontSize: 'var(--t-th)',
-                      fontWeight: 700,
-                    }}
-                  >
-                    Missing
-                  </span>
+                    <span
+                      style={{
+                        flexShrink: 0,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        height: 19,
+                        padding: '0 7px',
+                        borderRadius: 'var(--r-badge)',
+                        background: STATUS.danger.bg,
+                        color: STATUS.danger.fg,
+                        fontSize: 'var(--t-th)',
+                        fontWeight: 700,
+                      }}
+                    >
+                      Missing
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div style={{ padding: '4px 0', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
+                  {IS_MOCK
+                    ? 'No missing documents detected.'
+                    : 'Automated missing-document verification requires per-rental document requirement rules (not configured for live database).'}
                 </div>
-              ))}
+              )}
               <p style={{ margin: 0, paddingTop: 2, fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-                {IS_MOCK ? <><span className="figure doc-mono">{missing.length}</span> missing in active rentals.</> : 'Missing-document checks are not tracked yet.'}
+                {IS_MOCK ? (
+                  <>
+                    <span className="figure doc-mono">{missing.length}</span> missing in active rentals.
+                  </>
+                ) : missing.length > 0 ? (
+                  <>
+                    <span className="figure doc-mono">{missing.length}</span> missing in active rentals.
+                  </>
+                ) : (
+                  'Missing-document checks are not tracked in live database.'
+                )}
               </p>
             </div>
           </Card>
@@ -1120,15 +1178,21 @@ export default function Documents({
               Warehouse session is never told a quotation exists. */}
           <Card title="Expiring / Due Soon">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-              {expiring.map((e) => (
-                <div key={e.doc} className="doc-alert-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 3 }}>
-                  <span style={{ display: 'block', color: 'var(--text)', fontWeight: 600 }}>{e.doc}</span>
-                  <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--text2)' }}>
-                    {e.what} <span className="doc-mono" style={{ color: 'var(--progress-text)', fontWeight: 700 }}>{e.when}</span>
-                  </span>
-                  <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>{e.action}</span>
+              {expiring.length > 0 ? (
+                expiring.map((e) => (
+                  <div key={e.doc} className="doc-alert-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 3 }}>
+                    <span style={{ display: 'block', color: 'var(--text)', fontWeight: 600 }}>{e.doc}</span>
+                    <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--text2)' }}>
+                      {e.what} <span className="doc-mono" style={{ color: 'var(--progress-text)', fontWeight: 700 }}>{e.when}</span>
+                    </span>
+                    <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>{e.action}</span>
+                  </div>
+                ))
+              ) : (
+                <div style={{ padding: '4px 0', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
+                  No documents expiring or requiring urgent action.
                 </div>
-              ))}
+              )}
             </div>
           </Card>
 

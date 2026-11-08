@@ -78,7 +78,7 @@ Location: `docs/PERMISSIONS.md` (beside Foundation v3.0 and UI_UX.md)
 | Scope | Every module — built, light-v1 and parked (Crew Assist full, Communication Center, Automation Center, AI Assistant, Client Portal). Parked modules inherit their cells when built; nobody re-decides them. |
 | Fixed in v1 | The matrix is **code + RLS**, not data. Settings ▸ People & Access *shows* it read-only. Changing a cell is a migration + `rbac.ts` edit + test update, exactly like a numbering format. (An editable matrix UI would be the Numbering editor again — a saved-looking screen that changes nothing or breaks a policy.) |
 | Vocabulary | "Client", never "customer". Money renders `Rs 1,23,456`. Booking numbers `#<n>`. |
-| Build-time authority | **Claude may resolve any conflict, gap or ambiguity it meets while building — in this document, a spec, code or a migration — without stopping to ask**, under the conditions in §15. Every such decision is logged as a ruling Babin can flip. |
+| Build-time authority | **Agents resolve routine engineering details independently; new or unresolved product decisions go to Babin**, under §15 and RULING 2026-11-05. |
 
 ---
 
@@ -108,7 +108,7 @@ These sit beside PLAN.md's 17. Numbered P1–P10 so they can be cited.
 | **Owner** | Babin | Everything, plus the Owner-only list (§6.2). | All |
 | **Admin** | The boss / deputy owner | Everything **Manager** can do **plus** system: users (up to Manager), Settings writes, branches, integrations, backups (run), Automation. Not the Owner-only list. | All |
 | **Manager** | Runs daily operations and reports | All floor verbs, all approvals under threshold, block/merge clients, overbooking override, payment reversals, cancel after Packed, Reports in full. **Settings view only.** No users, no integrations, no backups. | All |
-| **Coordinator** | Rental coordinator / front desk (Sales folded in) | Bookings end to end (create · confirm · edit · extend · cancel before Packed), Clients create/edit, **Payments full** (records advance and more — 22 Jul), Quotes/Invoices/Agreements generation, comms drafts, Sub-rental + Suppliers. Floor verbs allowed. | **Booking money + client balance/deposit only.** No purchase cost, ROI, utilisation %, P&L, payout rates. |
+| **Coordinator** | Rental coordinator / front desk (Sales folded in) | Bookings end to end (create · confirm · edit · extend · cancel before Packed), Clients create/edit, **Payments full** (records advance and more — 22 Jul), Quotes/Invoices/Agreements generation, comms drafts, Sub-rental + Suppliers. Pack, Handover, Return and Reset excluded (0180, `rbac.ts` floor set). | **Booking money + client balance/deposit only.** No purchase cost, ROI, utilisation %, P&L, payout rates. |
 | **Warehouse** | Floor staff, equipment caretaker | Pack · Handover · Return · Reset; scan; stock check; equipment identity/units/location/labels; raise damage/missing/maintenance; create a booking (no discount line); walk-in client (commercial section not rendered); submit own expenses. | **None.** Gate checklist reads "Payment required" with no amount. |
 | **Technician** | AC / prep technician | All four floor verbs: Pack, Handover, Return, Reset (D3, 26 Oct 2026); scan; Maintenance jobs and Cases (write), equipment condition at intake. | None |
 | **Accounts** | Accountant | Finance in full: record payments, issue/void invoices with credit note, expenses entry + approval under threshold, deposit refund confirmation, VAT/registers, all Reports. Suppliers (with Coordinator). Crew payouts + TDS. **No payment reversals** (⭐ §13). No floor verbs, no booking edits. | All |
@@ -136,10 +136,10 @@ Legend: **✅** Full · **👁** View · **◐** Limited (explained in §3.1 by 
 |---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | **Dashboard** (jobs only, no money KPIs) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 👁 | ◐ D1 | ✕ |
 | **New Rental** (full page) | ✅ | ✅ | ✅ | ✅ | ◐ W1 | ✕ | ✕ | ✕ | ✕ |
-| **Operations — Pack** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✕ | ✕ | ✕ |
-| **Operations — Handover** | ✅ | ✅ | ✅ | ✅ | ◐ W2 | ◐ W2 | ✕ | ◐ D2 | ✕ |
-| **Operations — Return & triage** | ✅ | ✅ | ✅ | ✅ | ◐ W3 | ◐ W3 | ✕ | ◐ D2 | ✕ |
-| **Operations — Reset** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✕ | ✕ | ✕ |
+| **Operations — Pack** | ✅ | ✅ | ✅ | ◐ C9 | ✅ | ✅ | ✕ | ✕ | ✕ |
+| **Operations — Handover** | ✅ | ✅ | ✅ | ◐ C9 | ◐ W2 | ◐ W2 | ✕ | ◐ D2 | ✕ |
+| **Operations — Return & triage** | ✅ | ✅ | ✅ | ◐ C9 | ◐ W3 | ◐ W3 | ✕ | ◐ D2 | ✕ |
+| **Operations — Reset** | ✅ | ✅ | ✅ | ◐ C9 | ✅ | ✅ | ✕ | ✕ | ✕ |
 | **Operations — Cases** (damage/missing) | ✅ | ✅ | ✅ | ◐ C1 | ◐ W4 | ◐ W4 | ◐ A1 | ✕ | ◐ P1 |
 | **Rentals — Bookings** | ✅ | ✅ | ✅ | ✅ | ◐ W5 | 👁 | ◐ A2 | ◐ D3 | ◐ P2 |
 | **Rentals — Productions** | ✅ | ✅ | ✅ | ✅ | 👁 | 👁 | 👁 | ✕ | ✕ |
@@ -207,6 +207,7 @@ Staff never see the Client Portal as themselves; a Coordinator opening it uses "
 | **C6** | Coordinator | Create Draft invoice from a booking, issue it, generate receipt. Cannot void (Manager+ / Accounts). |
 | **C7** | Coordinator | Rentals, Clients, Operations, Fulfillment, Discounts reports with **booking money**. No P&L, cash flow, working capital, expenses, VAT, equipment ROI/utilisation, staff reports. |
 | **C8** | Coordinator | Inbox two-way conversations; all templates incl. money ones (booking money); Broadcasts drafts only; no channel settings. |
+| **C9** | Coordinator | Staff booking/desk context only; cannot commit Pack, Handover, Return, Reset or floor inspections. The five-role floor set in 0180 and rbac remains authoritative; this limited cell never grants a floor write. Existing lifecycle L35 and role fixtures enforce the exclusion. |
 | **A1** | Accounts | View cases; record recovery/absorbed amounts once disposition is approved. No disposition. |
 | **A2** | Accounts | Booking read with full money; create/issue/void invoice; no booking edits, no floor verbs. |
 | **A3** | Accounts | Payouts, TDS, crew PAN/ID documents (with Owner). No booking of crew. |
@@ -257,12 +258,12 @@ Ladder shorthand: `M+` = Owner · Admin · Manager. `C+` = M+ · Coordinator. `F
 
 | Capability | Roles | Notes | Code |
 |---|---|---|---|
-| `rental.pack` | C+ · Warehouse · Technician | D3 (26 Oct 2026) admits Technician to pack gear | ○ (packRental) |
-| `rental.pickup` (= Handover session) | C+ · Warehouse · Technician | soft gate: any of these may release with payment outstanding **after warning, logged** (D3 admits Tech) | ✓ |
-| `rental.pickup.override_receiver` | C+ · Warehouse · Technician — any staff allowed to hand over (D2, 0179; corrected 27 Oct, K7) | receiver-verification gate, reason ≥10 | ○ |
-| `rental.return` (triage) | C+ · Floor | shared triage (21 Jul) | ✓ |
-| `rental.reset` | C+ · Floor | non-blocking stage | ○ (completeReset) |
-| `inspection.record` | C+ · Floor | condition, evidence, severity — **no cost** for Floor | ✓ (`inspection.*`) |
+| `rental.pack` | Owner · Admin · Manager · Warehouse · Technician | D3 (0180); Coordinator excluded; branch grants may narrow | ✓ (packRental) |
+| `rental.pickup` (= Handover session) | Owner · Admin · Manager · Warehouse · Technician | soft gate: these roles may release with payment outstanding **after warning, logged** (0180); Coordinator excluded | ✓ |
+| `rental.pickup.override_receiver` | Owner · Admin · Manager · Warehouse · Technician — staff allowed to hand over (0179/0180) | receiver-verification gate, reason ≥10 | ✓ |
+| `rental.return` (triage) | Owner · Admin · Manager · Warehouse · Technician | shared triage; Coordinator excluded (0180) | ✓ |
+| `rental.reset` | Owner · Admin · Manager · Warehouse · Technician | non-blocking stage; branch grants may narrow | ✓ (completeReset; 0180) |
+| `inspection.create` / `inspection.pass` / `inspection.fail` | Owner · Admin · Manager · Warehouse · Technician | condition, evidence, severity — **no cost** for Floor; Coordinator excluded | `core.ts` → `canWriteFloor`; mapping ruled 12 Sep 2026 |
 | `evidence.capture` | all staff on the job | mandatory on Damaged/Lost lines | ○ |
 | `evidence.review` (accept/reject match, archive with reason) | M+ | soft-delete only | ✓ |
 | `scan` | all staff | identity by PIN (P8) | ○ |
@@ -312,6 +313,7 @@ model**. Nothing is stored: `product_units_service_v` derives it at read time.
 |---|---|---|---|
 | `inventory.edit_service_plan` | Owner · Admin · Manager | the three intervals + grace on `products`; `products_update` policy | ○ |
 | `inventory.record_meter` | M+ · Warehouse · Technician | `product_units.meter_hours` / `meter_hours_recorded_at`, written at intake and at Return only | ○ |
+| `inventory.edit_product_aliases` | C+ · Warehouse | `product_aliases` `select`/`insert`/`update` policies (0223, T3-12) — one spelling maps to one product, `delete` revoked for every role (Law 3); the `remember_product_alias` RPC re-checks the same five and pins `search_path`. Rides `canWriteBookingDesk`: storing a spelling is narrower than the booking write these five already hold (N-3). No money column, so no Law 6 mask. | ✓ |
 | view `product_units_service_v` | all staff | carries no money column, so no Law 6 mask is needed — the view is money-free by construction | ○ |
 
 
@@ -398,7 +400,8 @@ model**. Nothing is stored: `product_units_service_v` derives it at read time.
 | `comms.draft_lifecycle` | all staff except Driver | confirmed / ready / pickup-tomorrow / return-reminder / overdue — **never auto-sent** | ○ |
 | `comms.draft_money` (receipt, balance due, reminder) | Money · Coordinator | Law 6 — a message asserting money owed is always human-sent | ○ |
 | `comms.broadcast` (marketing) | drafts C+; **publish M+** | consent model; auto-pause thresholds | ○ |
-| `comms.templates` | Owner · Admin (edit) · Manager (view) | version-pinned; unregistered variable blocks publish | ○ |
+| `offer_campaign.manage` / `offer_campaign.send` | Owner · Admin · Manager | T5-12 / B43: write, test-send, audience preview, and queue marketing offer emails; consent enforced in DB; Coordinator & floor refused | `offer_campaigns`, `offer_campaign_recipients`, `queue_offer_campaign()` — 0224 |
+| `comms.templates` | Owner · Admin (edit) · Manager (view) | version-pinned; unregistered variable blocks publish | ● |
 | `comms.settings` (channels, credentials, quiet hours) | Owner · Admin | credentials write-once, masked | ○ |
 | OTP bodies | **nobody** — masked for every role incl. Owner | | ○ |
 
@@ -413,6 +416,8 @@ model**. Nothing is stored: `product_units_service_v` derives it at read time.
 
 ### 4.10 Settings and Administration
 
+**RULING 2026-11-05 C-6 (0225):** `glossary.manage` is **Owner only, online**. `approve_glossary_term` is the only write path; canonical terms and approval revisions are immutable. Staff may read approved text; Client and anon cannot. A new approval applies immediately to matching Nepali terms and retains actor/time/history. Reversal is another approval, never an update/delete. T-1 fixture: `core.test.ts` glossary matrix; database proof: lifecycle L63 and `scripts/test-glossary-revisions.mjs`.
+
 | Capability | Roles | Notes | Code |
 |---|---|---|---|
 | `settings.view` | M+ · Coordinator · Accounts (money-gated tab follows §5) | | ○ |
@@ -420,6 +425,9 @@ model**. Nothing is stored: `product_units_service_v` derives it at read time.
 | `delivery_zone.read` | all staff (zone name, description, active flag) — `fee_paisa` only when `auth_can_view_money()` | `list_delivery_zones()` returns `fee_paisa = null` for Warehouse · Technician · Driver; `get_delivery_zone_fee()` raises `insufficient_privilege` for them (Law 6, T4-07 build note 1). Clients are denied by RLS. | `delivery_zones_read_staff`, `list_delivery_zones()`, `get_delivery_zone_fee()` — 0189 (amended 3 Nov 2026) | ✓ (T4-07) |
 | `delivery_zone.create` | M+ | INSERT only; the Settings ▸ System ▸ Delivery zones control gates on this capability, not `settings.manage` (T4-07 build note 3) | `delivery_zones_insert_manager_plus`, `create_delivery_zone()` | ✓ (T4-07) |
 | `delivery_zone.manage` | M+ | UPDATE + `deactivate_delivery_zone()`; **no DELETE policy** — deactivate is terminal (Law 3, N-4, T4-07 build note 2) | `delivery_zones_update_manager_plus`, `update_delivery_zone()`, `deactivate_delivery_zone()` | ✓ (T4-07) |
+| `problem_report.create` | all staff | INSERT only; submit problem report with auto context (B27, B48). Clients denied by RLS. | `problem_reports_insert`, `create_problem_report()` — 0210 | ✓ (T4-11) |
+| `problem_report.read` | all staff (own reports) · Owner · Admin (all reports) | SELECT only; staff see own rows, Owner/Admin see all. Clients denied by RLS. | `problem_reports_select`, `list_problem_reports()`, `problem_reports_v` — 0210 | ✓ (T4-11) |
+| `problem_report.manage` | Owner · Admin | UPDATE status (Open → Seen → Fixed → Won't fix) with reason ≥10 chars (Law 3). Staff cannot update/delete. | `update_problem_report_status()` — 0210 | ✓ (T4-11) |
 | `settings.rules` class 1–2 | Owner · Admin | BLOCK/WARN/OFF states | ○ |
 | `settings.rules` class 3 | **Owner** + PIN + typed confirmation (2FA when built) | | ○ |
 | `admin.users` (create, deactivate, assign ≤ Manager) | Owner · Admin | build gap: today only read/reset/revoke | ○ |
@@ -545,6 +553,7 @@ WARN-class rules (Rules Registry) are passed by **any staff** with the warning l
 8. Enable an integration that sends client data outside Nepal (AI providers), and set its ceiling.
 9. Live replay of an automation execution.
 10. Retire a branch.
+11. Approve and apply shared glossary wording (C-6, 5 Nov 2026; immutable revisions in 0225). This is one Owner configuration write, not a separate staff-submission approval workflow; no other self-approval gate changes.
 
 Everything else Admin can do. Admin ⊇ Manager ⊇ Coordinator for approvals (a higher rung can always act where a lower one may). The exception is the **approve-your-own-submission** rule: nobody approves what they submitted, at any rung.
 
@@ -571,7 +580,7 @@ One page, no routes, sheets only. `auth_is_staff()` = false. Every read is joine
 | Upload payment proof | Attached to invoice; **never changes invoice status** until Accounts/Coordinator records the payment |
 | Sign agreement | Signature stored with device/IP/time; agreement → Signed |
 
-`portal_users`, `portal_sessions`, `portal_auth_challenges` are **deny-all today**. They stay deny-all until the session → `client_id` binding is written and tested (§12 D-5). Guessing it wrong exposes one client's data to another.
+`portal_users` and `portal_sessions` have the self-read session/account bindings and staff write paths introduced by 0072; `portal_auth_challenges` remains deny-all (see V-12 and RULINGS-2026-11-01 X3). This binding is not permission to expose new portal writes: verify cross-client isolation with §12 D-5 before enabling them (N-7). Portal rollout remains subject to the T7 gates.
 
 ### 7.1 Hired Rider Link (non-login access path · W49 · T4-08 · R1–R5)
 
@@ -736,9 +745,9 @@ Doing this section is what makes the document "bug-free". None of it is optional
 
 ---
 
-## 15. Build-time authority — Claude resolves conflicts
+## 15. Build-time authority — engineering and product decisions
 
-**Ruled 7 Sep 2026.** While building the app, Claude (Claude Code or a chat session working on the repo) **may make any change needed to resolve a conflict, gap or ambiguity without stopping to ask** — in this document, in any spec, in code, in a migration file. The build does not wait for a ruling round. Babin reviews by flipping logged rows, not by being asked mid-task.
+**RULING 2026-11-05 (Babin), superseding the broad 7 Sep delegation:** agents may resolve routine engineering details and implement settled rulings independently. For a new or unresolved product decision, record the question in `docs/OPEN_DECISIONS.md`, index it in `PLAN.md` §4.2, and ask Babin. Continue independent work while waiting. Do not invent a product default to unblock the build. N-1–N-8 and external-action boundaries remain in force.
 
 **End every session with the R-29 blocks.** A session ends with `## Completion` and
 `## Remaining`. Run `npm run completion`; **never type a percentage by hand.** Overall is the mean
@@ -759,7 +768,7 @@ were green over a database that accepted a double booking and refused every disc
 | **B-2** | **Three-place log, same commit.** Every decision goes to (1) `RULINGS-<date>.md` in the repo, (2) PROGRESS.md under *Ruled* (house format Did / Ruled / Verified), (3) a `// RULING <date>: <one line>` comment at the code or migration site. |
 | **B-3** | **This document moves with the code.** A ruling that changes a cell, a capability or a gate edits §3/§4/§6 and the T-1 fixture in the same commit. The doc never lags. |
 | **B-4** | **Gates stay green.** tsc 0, vitest green, build exit 0 after the change — a ruling that breaks a gate is not a ruling, it is a bug. |
-| **B-5** | **Business figures are ⭐.** Thresholds, fees, percentages, retention periods: take the §13 default (or the most conservative figure in any source), mark ⭐, move on. |
+| **B-5** | **Business figures use settled defaults only.** Reuse an existing owner-approved §13 default or explicit ruling, marked ⭐ where provisional. A new fee, threshold, percentage or retention decision goes to Babin (RULING 2026-11-05); do not invent one. |
 | **B-6** | **Reversible by design.** Prefer the change that can be undone with one edit. Write the revert in the ruling ("revert = remove Warehouse from line 42"). |
 | **B-7** | **Silence is not supersession.** A newer document that does not mention a rule has not cancelled it (RULINGS-2026-09-04). |
 
@@ -776,7 +785,7 @@ were green over a database that accepted a double booking and refused every disc
 | **N-7** | Turn on any Client Portal write path before test D-5 passes. | Cross-client data exposure. |
 | **N-8** | Rotate, print, log or commit a credential or API token. | The 5 Sep audit found one in the working tree — the fix is rotate + Edge Function secret, and that is Babin's action. |
 
-Anything not in this table is Claude's to decide.
+Outside this table, agents may decide routine engineering details. New or unresolved product decisions require Babin's answer (RULING 2026-11-05).
 
 ### 15.3 Resolution order
 
@@ -785,13 +794,13 @@ When sources conflict, read in this order and stop at the first that answers:
 ```
 1  PERMISSIONS.md (this file)            — for anything about who may do what
 2  RULINGS-*.md, newest first            — dated rulings
-3  MASTER.md                             — implementation detail
-4  Foundation v3.0 · UI_UX.md            — engines, look
-5  The module spec                       — page behaviour
+3  PRODUCT_RULES.md and remaining sources — follow docs/00_READ_FIRST.md
+4  Foundation specification               — fallback domain model
+5  The module spec                       — page behaviour within the settled rules
 6  The code as found                     — what actually runs today
 ```
 
-If none answers: choose the option that is **(a)** stricter, **(b)** least code, **(c)** reversible — in that order. Record which of the six sources were consulted and why they did not settle it.
+If none answers a product question, record the sources consulted and ask Babin. For routine engineering details only, prefer **(a)** stricter, **(b)** least code, **(c)** reversible, in that order.
 
 ### 15.4 Session report
 
