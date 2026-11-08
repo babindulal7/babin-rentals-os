@@ -200,7 +200,7 @@ await expectThrows(
 // Create a booking holding unitHeldId
 const bkRes = await sql(`insert into bookings
   (client_uuid, booking_no, client_id, branch_id, stage, pickup_at, return_at, delivery_type, created_by, updated_by)
-  values (gen_random_uuid(), '9000101', $1, $2, 'Booked', '2026-11-01 10:00:00+00', '2026-11-05 10:00:00+00', 'Client Pickup', $3, $3)
+  values (gen_random_uuid(), '9000101', $1, $2, 'Booked', now() - interval '1 day', now() + interval '3 days', 'Client Pickup', $3, $3)
   returning id`, [client, branch, ownerId])
 const bookingId = bkRes.rows[0].id
 
@@ -212,12 +212,12 @@ const bookingLineId = blRes.rows[0].id
 
 await sql(`insert into inventory_reservations
   (client_uuid, booking_id, booking_line_id, asset_id, period, created_by)
-  values (gen_random_uuid(), $1, $2, $3, tstzrange('2026-11-01 10:00:00+00', '2026-11-05 10:00:00+00', '[)'), $4)`,
+  select gen_random_uuid(), $1, $2, $3, tstzrange(pickup_at, return_at, '[)'), $4 from bookings where id = $1`,
   [bookingId, bookingLineId, unitHeldId, ownerId])
 
 await expectThrows(
   () => sql(`select retire_equipment_unit($1, 'Damaged beyond repair in transit', $2)`, [unitHeldId, crypto.randomUUID()]),
-  'GATE:unit.retire.active_reservation',
+  'GATE:unit.retire.active_status',
   'Cannot retire a unit with an active booking hold'
 )
 

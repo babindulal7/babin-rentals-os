@@ -30,6 +30,8 @@ import { captureError } from './monitoring'
 import { FEE_PER_CREW_DAY_PAISA } from '../data/crew'
 
 import { readLocal, writeLocal, removeLocal } from './safeStorage'
+import { canEnable, NEPALI_UNAVAILABLE } from './languageReadiness'
+import { getLanguagePreference } from './languagePreferenceStore'
 
 export type SettingKey =
   | 'organisationName'
@@ -261,7 +263,7 @@ export const SETTING_SPECS: Record<SettingKey, SettingSpec> = {
    * looking for Nepali is looking for "नेपाली", not for the English word for it.
    * `lib/i18n.ts` owns the coverage gate; this only stores the choice.
    */
-  language: { default: 'English', kind: 'select', options: ['English', 'नेपाली'] },
+  language: { default: 'English', kind: 'select', get options() { return canEnable('ne') ? ['English', 'नेपाली'] : ['English'] } },
 
   /**
    * **D4, ruled 30 Aug 2026** (`docs/booqable/REFERENCE_SPEC_v2.5.md`
@@ -502,6 +504,7 @@ const PREFIX = 'br.settings.'
  * default rather than propagating into an invoice.
  */
 export function validateSetting(key: SettingKey, value: SettingValue): string | null {
+  if (key === 'language' && value === 'नेपाली' && !canEnable('ne')) return NEPALI_UNAVAILABLE
   const spec = SETTING_SPECS[key]
   if (spec.kind === 'select' && spec.options && !spec.options.includes(String(value))) {
     return `Must be one of: ${spec.options.join(', ')}.`
@@ -511,9 +514,12 @@ export function validateSetting(key: SettingKey, value: SettingValue): string | 
 
 /**
  * RULING 2026-10-07 (G1): settings are shared across devices through the `settings` table (0158).
- * Only these two stay per-device — they are how THIS screen looks and reads, not business rules.
+ * Density stays per-device. Language is a self-owned account preference (T0-12/T6-09).
  */
-export const DEVICE_LOCAL_KEYS: readonly SettingKey[] = ['density', 'language']
+export const DEVICE_LOCAL_KEYS: readonly SettingKey[] = ['density']
+export function isUserPreferenceKey(key: SettingKey): boolean {
+  return key === 'language'
+}
 export function isDeviceLocalKey(key: SettingKey): boolean {
   return DEVICE_LOCAL_KEYS.includes(key)
 }
@@ -544,7 +550,7 @@ export function applyRemoteSettings(rows: readonly RemoteSettingRow[]): void {
   const org: Partial<Record<SettingKey, SettingValue>> = {}
   const loc: Record<string, Partial<Record<SettingKey, SettingValue>>> = {}
   for (const r of rows) {
-    if (!(r.key in SETTING_SPECS) || isDeviceLocalKey(r.key as SettingKey)) continue
+    if (!(r.key in SETTING_SPECS) || isDeviceLocalKey(r.key as SettingKey) || isUserPreferenceKey(r.key as SettingKey)) continue
     const key = r.key as SettingKey
     const v = coerce(key, r.value)
     if (v === null) continue
@@ -583,9 +589,15 @@ export function getSettingForLocation(key: SettingKey, locationId: string | null
 }
 
 export function readSettings(): SettingsRecord {
-  if (typeof window === 'undefined') return { ...SETTINGS_DEFAULTS, ...remoteOrg }
+  const preferredLanguage = getLanguagePreference().language
+  const language = preferredLanguage === 'ne' && canEnable('ne') ? 'नेपाली' : 'English'
+  if (typeof window === 'undefined') return { ...SETTINGS_DEFAULTS, ...remoteOrg, language }
   const out = { ...SETTINGS_DEFAULTS }
   for (const key of Object.keys(SETTING_SPECS) as SettingKey[]) {
+    if (isUserPreferenceKey(key)) {
+      out[key] = language
+      continue
+    }
     /* A shared value wins over this device's old localStorage copy. A key the database has no row for
        yet falls through to the local value, so nothing reverts the day this ships. */
     const shared = isDeviceLocalKey(key) ? undefined : remoteOrg[key]
@@ -636,6 +648,7 @@ export function readSettings(): SettingsRecord {
 
 /** Writes only the keys in the patch. Refuses an invalid value rather than storing it. */
 export function writeSettings(patch: Partial<SettingsRecord>): void {
+  if ('language' in patch) throw new Error('Save language through your account preferences.')
   if (typeof window === 'undefined') return
   for (const [k, v] of Object.entries(patch) as Array<[SettingKey, SettingValue]>) {
     const problem = validateSetting(k, v)

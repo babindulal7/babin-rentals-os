@@ -427,9 +427,46 @@ export async function getPushNotificationsForEvent(
 }
 
 /**
+ * Check whether this browser device has an active push subscription.
+ * In live environments, checks navigator.serviceWorker.ready -> pushManager.getSubscription().
+ * In mock mode, checks mockSubscriptions.
+ */
+export async function getActiveDevicePushSubscription(): Promise<{ endpoint: string } | null> {
+  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock' || !supabase
+  if (isMock) {
+    const item = mockSubscriptions.find((s) => s.isActive)
+    return item ? { endpoint: item.endpoint } : null
+  }
+  if (!isPushSupported()) return null
+  try {
+    const reg = await navigator.serviceWorker?.ready
+    const sub = await reg?.pushManager?.getSubscription()
+    return sub ? { endpoint: sub.endpoint } : null
+  } catch {
+    return null
+  }
+}
+
+/**
  * Subscribe current browser session to Web Push and save to database.
  */
 export async function subscribeCurrentDevice(vapidPublicKey?: string): Promise<boolean> {
+  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock' || !supabase
+  if (isMock && (!('serviceWorker' in (typeof navigator !== 'undefined' ? navigator : {})) || !navigator.serviceWorker)) {
+    const perm = await requestNotificationPermission()
+    if (perm !== 'granted') {
+      throw new Error('Notification permission was not granted by the user.')
+    }
+    const mockEndpoint = `https://push.example.com/mock-sub-${getDeviceLabel().toLowerCase().replace(/\s+/g, '-')}`
+    await registerPushSubscription({
+      endpoint: mockEndpoint,
+      p256dh: 'mock-p256dh',
+      auth: 'mock-auth',
+      deviceLabel: getDeviceLabel(),
+    })
+    return true
+  }
+
   if (!isPushSupported()) {
     throw new Error('Push notifications are not supported on this browser or platform.')
   }
@@ -489,6 +526,15 @@ export async function subscribeCurrentDevice(vapidPublicKey?: string): Promise<b
  * Unsubscribe current browser session from Web Push and deactivate in database.
  */
 export async function unsubscribeCurrentDevice(): Promise<boolean> {
+  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock' || !supabase
+  if (isMock && (!('serviceWorker' in (typeof navigator !== 'undefined' ? navigator : {})) || !navigator.serviceWorker)) {
+    const active = mockSubscriptions.find((s) => s.isActive)
+    if (active) {
+      await unregisterPushSubscription(active.endpoint)
+    }
+    return true
+  }
+
   if (!isPushSupported()) return true
 
   const registration = await navigator.serviceWorker.ready

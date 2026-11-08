@@ -206,6 +206,9 @@ describe('createAction — fails closed', () => {
       'inventory.reserve',
       'document.create',
       'subrental.create',
+      // T3-12 / 0223: the alias write rides the same five-role set as the
+      // booking write it supports, so it is asserted with them (B-3).
+      'inventory.edit_product_aliases',
     ]
     const FLOOR = [
       'rental.pickup',
@@ -430,6 +433,25 @@ describe('delivery_zone capabilities — T-1 matrix round-trip (T4-07)', () => {
     }
     const { run, execute } = probe('delivery_zone.read', 'Client')
     await expect(run()).rejects.toBeInstanceOf(ActionPermissionError)
+    expect(execute).not.toHaveBeenCalled()
+  })
+})
+
+describe('glossary.manage — T-1 Owner-only approval contract (T0-12/C-6)', () => {
+  it('admits only Owner online and never executes another role or offline request', async () => {
+    const roles: SystemRole[] = ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts', 'Driver', 'Client']
+    for (const role of roles) {
+      const execute = vi.fn(async () => ({ result: true, events: [] }))
+      const probe = createAction({ name: 'GLOSSARY_PROBE', permissions: ['glossary.manage'], implemented: true, validate: () => {}, execute })
+      if (role === 'Owner') await expect(probe({}, { userId: 'owner', role, isOnline: true })).resolves.toBe(true)
+      else {
+        await expect(probe({}, { userId: 'staff', role, isOnline: true })).rejects.toBeInstanceOf(ActionPermissionError)
+        expect(execute).not.toHaveBeenCalled()
+      }
+    }
+    const execute = vi.fn(async () => ({ result: true, events: [] }))
+    const probe = createAction({ name: 'GLOSSARY_OFFLINE', permissions: ['glossary.manage'], implemented: true, validate: () => {}, execute })
+    await expect(probe({}, { userId: 'owner', role: 'Owner', isOnline: false })).rejects.toThrow()
     expect(execute).not.toHaveBeenCalled()
   })
 })

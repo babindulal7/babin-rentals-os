@@ -91,6 +91,8 @@ const QrLabels          = lazy(() => import('./modules/inventory/QrLabels'))
 const InternalNotesPage = lazy(() => import('./modules/notes/InternalNotesPage'))
 const RiderDeliveryPage = lazy(() => import('./modules/operations/RiderDeliveryPage'))
 const ApprovalsInbox    = lazy(() => import('./modules/approvals/ApprovalsInbox'))
+const UnsubscribePage   = lazy(() => import('./modules/communication/UnsubscribePage').then(m => ({ default: m.UnsubscribePage })))
+const OfferCampaigns   = lazy(() => import('./modules/communication/OfferCampaigns').then(m => ({ default: m.OfferCampaigns })))
 
 function FinanceTabRedirect({ tab }: { tab: FinanceTabSlug }) {
   const { search, hash } = useLocation()
@@ -131,7 +133,7 @@ export default function App() {
           <WorkspaceProvider>
             <CreationContextProvider>
               <CommandPalette />
-              {showOnboarding && (
+              {showOnboarding && user && user.role !== 'Client' && location.pathname !== '/login' && (
                 <Suspense fallback={null}>
                   <WelcomeOnboarding onClose={() => setShowOnboarding(false)} />
                 </Suspense>
@@ -154,6 +156,8 @@ export default function App() {
         {/* Public Rider Link route (T4-08, W49): unauthenticated, token-hashed job view */}
         <Route path="/rider/:token" element={<Suspense fallback={AuthFallback}><RiderDeliveryPage /></Suspense>} />
         <Route path="/rider" element={<Suspense fallback={AuthFallback}><RiderDeliveryPage /></Suspense>} />
+        {/* Public Marketing Unsubscribe route (T5-12, K6): unauthenticated, token-hashed */}
+        <Route path="/unsubscribe" element={<Suspense fallback={AuthFallback}><UnsubscribePage /></Suspense>} />
         <Route path="/" element={<Navigate to={user ? defaultNavTarget(user.role) : '/login'} replace />} />
 
         {/*
@@ -830,6 +834,18 @@ export default function App() {
         <Route path="/tools/depreciation" element={<Navigate to="/tools?tab=depreciation" replace />} />
         <Route path="/tools/pricing" element={<Navigate to="/tools?tab=pricing" replace />} />
 
+        {/* Marketing / Communication Offer Campaigns (T5-12, B43, B50) */}
+        <Route
+          path="/communication/offers"
+          element={
+            <Shell crumbs={[{ label: 'Communication' }, { label: 'Offer Emails' }]}>
+              <OfferCampaigns />
+            </Shell>
+          }
+        />
+        <Route path="/marketing/offers" element={<Navigate to="/communication/offers" replace />} />
+        <Route path="/tools/offers" element={<Navigate to="/communication/offers" replace />} />
+
         <Route
           path={AUDIT_LOG_PATH}
           element={
@@ -996,7 +1012,7 @@ function OfflineBanner() {
       borderBottom: '1px solid var(--border)'
     }}>
       <Icon name="error" size={16} />
-      <span>You are offline. Changes will be saved locally and synced when you reconnect.</span>
+      <span>You are offline. Scans and team notes queue locally. Custodial handovers, returns, and stage transitions require an online connection.</span>
     </div>
   )
 }

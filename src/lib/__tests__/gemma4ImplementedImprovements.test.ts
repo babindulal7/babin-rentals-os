@@ -60,18 +60,11 @@ describe('Gemma 4 Implemented Improvements Suite', () => {
   })
 
   describe('Improvement 3: Bilingual Bikram Sambat & Nepali Language Switching', () => {
-    it('switches language between English and Nepali seamlessly', async () => {
+    it('refuses a Nepali switch before whole-app acceptance', async () => {
       expect(getCurrentLanguage()).toBe('en')
-
-      const next = await toggleLanguage()
-      expect(next).toBe('ne')
-      expect(getCurrentLanguage()).toBe('ne')
-      expect(document.documentElement.getAttribute('lang')).toBe('ne')
-
-      const reverted = await toggleLanguage()
-      expect(reverted).toBe('en')
+      await expect(toggleLanguage()).rejects.toThrow('Nepali will be available')
       expect(getCurrentLanguage()).toBe('en')
-      expect(document.documentElement.getAttribute('lang')).toBe('en')
+      expect(localStorage.getItem('br.settings.language')).toBeNull()
     })
 
     it('dispatches languagechange event on applyLanguage', async () => {
@@ -80,7 +73,7 @@ describe('Gemma 4 Implemented Improvements Suite', () => {
 
       await applyLanguage('ne')
       expect(listener).toHaveBeenCalled()
-      expect(document.documentElement.getAttribute('lang')).toBe('ne')
+      expect(document.documentElement.getAttribute('lang')).toBe('en')
 
       window.removeEventListener('languagechange', listener)
     })

@@ -15,6 +15,7 @@
   "operations.col.items": "Items",
   "operations.col.project": "Project",
   "operations.col.status": "Stage",
+  "operations.col.time": "Time",
   "operations.driver.babinDelivery": "Babin Delivery",
   "operations.driver.clientPickup": "Client Pickup",
   "operations.driver.courier": "Courier",

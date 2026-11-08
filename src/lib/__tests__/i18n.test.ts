@@ -163,8 +163,8 @@ describe('canEnable — a half-translated toggle is worse than no toggle', () =>
     expect(canEnable('en')).toBe(true)
   })
 
-  it('now allows Nepali, because the catalogue covers every key', () => {
-    expect(canEnable('ne')).toBe(true)
+  it('refuses Nepali until whole-app review and layout acceptance are recorded', () => {
+    expect(canEnable('ne')).toBe(false)
   })
 
   it('demands full coverage, not a majority', () => {
@@ -174,7 +174,7 @@ describe('canEnable — a half-translated toggle is worse than no toggle', () =>
   })
 
   it('checks module coverage when moduleName is provided', () => {
-    expect(canEnable('ne', 'tools')).toBe(true)
+    expect(canEnable('ne', 'tools')).toBe(false)
     expect(canEnable('en', 'tools')).toBe(true)
     expect(canEnable('ne', 'nonExistentModule')).toBe(false)
   })

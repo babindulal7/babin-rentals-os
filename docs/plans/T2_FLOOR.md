@@ -201,7 +201,7 @@ handover; lifecycle step "Technician completes a handover".
 **Done when** — a Technician seat on staging completes all four verbs; sees no money.
 **Needs** — T1-05 (Technician seat).
 
-### T2-06 · Repair job closes the damage            status: done — awaiting merge (lane-a/T2-06-repair-job-closes-the-damage) · size: L · lane A
+### T2-06 · Repair job closes the damage            status: ready — awaiting merge (lane-a/T2-06-repair-job-closes-the-damage) · size: L · lane A
 **What** — Build the Maintenance job detail screen (today "not built yet", `Maintenance.tsx` ~lines
 454 and 1139): findings, actions taken, cost (money roles only), photos, and **Close job (note
 required)** for Technician or Manager+. Closing marks the linked `damage_findings` row repaired and
@@ -292,7 +292,7 @@ message + "Add ID" in place); a repeat client's collector is picked in one tap; 
 an ID number.
 **Needs** — T2-01. Also wires the collector picker into `SignOnGlassModal.tsx` as the receiver name (T2-02 left free text).
 
-### T2-13 · Self-QC when alone            status: done — awaiting merge (lane-a/T2-13-self-qc-when-alone) · size: S · lane A · [go-live]
+### T2-13 · Self-QC when alone            status: ready — awaiting merge (lane-a/T2-13-self-qc-when-alone) · size: S · lane A · [go-live]
 **What** — Allow the person who cleaned an item to pass its QC **when alone on shift** (W43, L7):
 the QC step shows "I am alone on shift" as a tick; with it ticked, `qc_by = cleaned_by` is accepted
 and recorded as self-checked (audit row says so). Without it, a second person is still asked for.
@@ -308,7 +308,7 @@ the "ruled, not yet in code" box in the same commit (B-3).
 **Done when** — both paths work in mock mode and on staging; the audit shows self-checked rows.
 **Needs** — none.
 
-### T2-14 · Scan a label → item card            status: done — awaiting merge (lane-a/T2-14-scan-a-label-to-item-card) · size: M · lane A · [go-live]
+### T2-14 · Scan a label → item card            status: ready — awaiting merge (lane-a/T2-14-scan-a-label-to-item-card) · size: M · lane A · [go-live]
 **What** — Scanning (camera or Bluetooth) or searching an item's QR/asset code **anywhere outside a
 floor workspace** opens its item card: status, **who has it now** (client, booking, due back, with a
 countdown), location if in the shop, next booking, last reset, open damage. Inside a workspace,
@@ -324,7 +324,7 @@ match case-insensitively; every code is checked by the server, and an unknown co
 time; a Warehouse seat sees no money.
 **Needs** — none.
 
-### T2-15 · Damage found during reset            status: done — awaiting merge (lane-a/T2-15-damage-found-during-reset) · size: S · lane A · [soon]
+### T2-15 · Damage found during reset            status: ready — awaiting merge (lane-a/T2-15-damage-found-during-reset) · size: S · lane A · [soon]
 **What** — When Reset marks an item Damaged after the client has left (W44), the app opens a damage
 case **linked to the booking it last came back from**, defaulting to **claim from the client**; the
 client gets the "damage found — under review" email without an amount (W23, T5-07); the amount
@@ -336,7 +336,7 @@ follows only after a Manager (< Rs 25,000) or Owner (≥ Rs 25,000) approves.
 client gets the notice, and no amount appears until approval.
 **Needs** — T2-01, T5-07 for the email.
 
-### T2-16 · Photo rules from W27: several photos, size caps, HEIC            status: done — awaiting merge (lane-a/T2-16-photo-rules-w27) · size: S · lane A · [go-live]
+### T2-16 · Photo rules from W27: several photos, size caps, HEIC            status: ready — awaiting merge (lane-a/T2-16-photo-rules-w27) · size: S · lane A · [go-live]
 **What** — T2-01 shipped one photo per step with one shrink rule. Bring it to W27: the file input gets
 `multiple`; **one or more photos per step, the gate needs at least one**; shrink on the device until
 **damage photos ≤ 10 MB and every other photo ≤ 3 MB** (lower the long edge and the JPEG quality step

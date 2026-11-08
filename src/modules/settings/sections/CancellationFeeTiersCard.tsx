@@ -5,28 +5,60 @@ import { fetchCancellationFeeTiers, type CancellationFeeTier } from '../../../li
 export function CancellationFeeTiersCard() {
   const [tiers, setTiers] = useState<CancellationFeeTier[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
+  const loadTiers = () => {
+    setLoading(true)
+    setError(null)
     void fetchCancellationFeeTiers()
       .then((data) => {
-        if (!cancelled) setTiers(data)
+        setTiers(data)
       })
-      .catch(() => {
-        if (!cancelled) setTiers([])
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : 'Failed to load cancellation fee tiers')
       })
       .finally(() => {
-        if (!cancelled) setLoading(false)
+        setLoading(false)
       })
-    return () => {
-      cancelled = true
-    }
+  }
+
+  useEffect(() => {
+    loadTiers()
   }, [])
 
   if (loading) {
     return (
       <Card title="Cancellation fee tiers">
         <p style={{ color: 'var(--muted)', fontSize: 'var(--t-meta)' }}>Loading…</p>
+      </Card>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card title="Cancellation fee tiers">
+        <div role="alert" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <p style={{ color: 'var(--danger-text)', fontSize: 'var(--t-meta)' }}>
+            {error}. Could not retrieve policy tiers from the database.
+          </p>
+          <button
+            type="button"
+            className="press"
+            onClick={loadTiers}
+            style={{
+              alignSelf: 'flex-start',
+              padding: '4px 10px',
+              fontSize: 'var(--t-meta)',
+              borderRadius: 'var(--r-btn)',
+              border: '1px solid var(--border)',
+              background: 'var(--card2)',
+              color: 'var(--text)',
+              cursor: 'pointer',
+            }}
+          >
+            Retry
+          </button>
+        </div>
       </Card>
     )
   }

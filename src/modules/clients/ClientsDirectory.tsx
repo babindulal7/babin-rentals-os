@@ -43,6 +43,7 @@ import type { ActionContext } from '../../actions/core'
 import { gateContext, canViewPII } from '../../lib/fieldGating'
 import { shouldFlipUp } from '../../lib/menuFlip'
 import { IntelCard } from '../../components/ui/IntelCard'
+import { useTranslation } from '../../lib/i18n'
 import {
   clientGlance,
   clientDetailGroups,
@@ -444,6 +445,7 @@ export function ClientsDirectory({
   filtersOpen?: boolean
   onFiltersOpenChange?: (open: boolean) => void
 }) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const money = useCanViewMoney()
   const [params, setParams] = useSearchParams()
@@ -1024,9 +1026,9 @@ export function ClientsDirectory({
   const kpiItems: ModuleKpiItem[] = [
     {
       id: 'active',
-      label: 'Active Clients',
+      label: t('clients.kpi.activeClients', 'Active Clients'),
       count: metrics.total,
-      subtitle: `${metrics.onRent} with open rentals`,
+      subtitle: t('clients.kpi.activeClientsSubtitle', '{count} with open rentals', { count: metrics.onRent }),
       icon: 'users',
       tone: 'primary',
       active: activeFilter === 'all' && !overlays.blocked && !overlays.onStop,
@@ -1037,9 +1039,9 @@ export function ClientsDirectory({
     },
     {
       id: 'onRent',
-      label: 'Open Rentals',
+      label: t('clients.kpi.openRentals', 'Open Rentals'),
       count: metrics.onRent,
-      subtitle: 'Currently active on rental',
+      subtitle: t('clients.kpi.openRentalsSubtitle', 'Currently active on rental'),
       icon: 'checklist',
       tone: 'success',
       active: activeFilter === 'active',
@@ -1047,9 +1049,12 @@ export function ClientsDirectory({
     },
     {
       id: 'hold',
-      label: 'Credit / Payment Hold',
+      label: t('clients.kpi.hold', 'Credit / Payment Hold'),
       count: money && metrics.outstandingPaisa > 0 ? formatMoney(metrics.outstandingPaisa) : String(metrics.blocked + onStopCount),
-      subtitle: `${metrics.paymentDue} payment due · ${metrics.blocked} blocked`,
+      subtitle: t('clients.kpi.holdSubtitle', '{paymentDue} payment due · {blocked} blocked', {
+        paymentDue: metrics.paymentDue,
+        blocked: metrics.blocked,
+      }),
       icon: 'alert_triangle',
       tone: metrics.paymentDue > 0 || metrics.blocked > 0 ? 'warn' : 'primary',
       active: activeFilter === 'paymentDue' || overlays.blocked || overlays.onStop,
@@ -1061,13 +1066,13 @@ export function ClientsDirectory({
   ]
 
   const filterTabs: FilterTabOption[] = [
-    { id: 'all', label: 'All', count: metrics.total },
-    { id: 'active', label: 'Open Rentals', count: metrics.onRent, icon: 'checklist' },
-    { id: 'vip', label: 'VIP / Tier', count: metrics.vip, icon: 'sparkles' },
-    ...(money ? [{ id: 'paymentDue', label: 'Payment Due', count: metrics.paymentDue, icon: 'card' as const }] : []),
-    { id: 'blocked', label: 'Blocked', count: metrics.blocked, icon: 'alert_triangle' as const },
-    { id: 'typeOrg', label: 'Organisation', count: metrics.typeOrg },
-    { id: 'typeInd', label: 'Individual', count: metrics.typeInd },
+    { id: 'all', label: t('clients.filter.all', 'All'), count: metrics.total },
+    { id: 'active', label: t('clients.filter.openRentals', 'Open Rentals'), count: metrics.onRent, icon: 'checklist' },
+    { id: 'vip', label: t('clients.filter.vipTier', 'VIP / Tier'), count: metrics.vip, icon: 'sparkles' },
+    ...(money ? [{ id: 'paymentDue', label: t('clients.filter.paymentDue', 'Payment Due'), count: metrics.paymentDue, icon: 'card' as const }] : []),
+    { id: 'blocked', label: t('clients.filter.blocked', 'Blocked'), count: metrics.blocked, icon: 'alert_triangle' as const },
+    { id: 'typeOrg', label: t('clients.filter.organisation', 'Organisation'), count: metrics.typeOrg },
+    { id: 'typeInd', label: t('clients.filter.individual', 'Individual'), count: metrics.typeInd },
   ]
 
   return (
@@ -1193,7 +1198,7 @@ export function ClientsDirectory({
                   padding: 0,
                 }}
               >
-                Clear all
+                {t('clients.actions.clearAll', 'Clear all')}
               </button>
             }
             bodyStyle={{ padding: 'var(--sp-sm)' }}
@@ -1286,7 +1291,7 @@ export function ClientsDirectory({
             <div style={{ borderTop: '1px solid var(--border)', marginTop: 8, paddingTop: 8 }}>
               <Unavailable reason="Saving a view is not built yet — views are not persisted anywhere">
                 <Button icon="plus" disabled>
-                  Save Current View
+                  {t('clients.actions.saveCurrentView', 'Save Current View')}
                 </Button>
               </Unavailable>
             </div>
@@ -1344,7 +1349,7 @@ export function ClientsDirectory({
               {selectedRowIds.size > 0 && (
                 <>
                   <span className="figure" style={{ color: 'var(--text)', fontWeight: 600 }}>
-                    {selectedRowIds.size} selected
+                    {selectedRowIds.size} {t('clients.actions.selected', 'selected')}
                   </span>
                   <button
                     type="button"
@@ -1359,10 +1364,10 @@ export function ClientsDirectory({
                       fontFamily: 'inherit',
                     }}
                   >
-                    Clear selection
+                    {t('clients.actions.clearSelection', 'Clear selection')}
                   </button>
                   <Button icon="download" onClick={exportSelected}>
-                    Export Selected
+                    {t('clients.actions.exportSelected', 'Export Selected')}
                   </Button>
                   {/* Only the un-blocked ones — asking to block a client that is
                       already blocked has no write to make, and the action says so
@@ -1381,7 +1386,7 @@ export function ClientsDirectory({
                       icon="alert_triangle"
                       onClick={() => openBlockDialog('block', selectedClients.filter((c) => !c.isBlocked))}
                     >
-                      Block Selected
+                      {t('clients.actions.blockSelected', 'Block Selected')}
                     </Button>
                   )}
                   {/* Law 3 — a block is lifted, never deleted, so the lift needs a
@@ -1391,7 +1396,7 @@ export function ClientsDirectory({
                       icon="checklist"
                       onClick={() => openBlockDialog('unblock', selectedClients.filter((c) => c.isBlocked))}
                     >
-                      Unblock Selected
+                      {t('clients.actions.unblockSelected', 'Unblock Selected')}
                     </Button>
                   )}
                 </>
@@ -1489,11 +1494,11 @@ export function ClientsDirectory({
                           <span className="figure client-outfit" style={{ color: 'var(--text)', fontWeight: 600 }}>
                             {client.currentRentalsCount}
                           </span>{' '}
-                          open
+                          {t('clients.badge.open', 'open')}
                         </span>
                         {money && client.outstandingPaisa > 0 && (
                           <span className="figure client-outfit" style={{ color: 'var(--danger-text)', fontWeight: 600 }}>
-                            {formatMoney(client.outstandingPaisa)} due
+                            {formatMoney(client.outstandingPaisa)} {t('clients.badge.due', 'due')}
                           </span>
                         )}
                       </div>
@@ -1502,7 +1507,7 @@ export function ClientsDirectory({
                         <Button variant={action.variant} onClick={action.run}>
                           {action.label}
                         </Button>
-                        <Button onClick={() => setSelectedClientId(client.id)}>Profile</Button>
+                        <Button onClick={() => setSelectedClientId(client.id)}>{t('clients.actions.profile', 'Profile')}</Button>
                       </div>
                     </article>
                   )
@@ -1517,30 +1522,27 @@ export function ClientsDirectory({
                 band; the dropped facts are all still on the row's IntelCard and
                 in the profile panel, so nothing becomes unreachable.
               */
-              <DataTableShell ariaLabel="Clients directory" data-table-scroll className="client-table-shell" style={{ overflowX: 'auto' }}>
+              <DataTableShell ariaLabel={t('clients.title', 'Clients directory')} data-table-scroll className="client-table-shell" style={{ overflowX: 'auto' }}>
                 <table className="client-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: narrow ? 620 : 0 }}>
                   <thead>
                     <tr style={{ background: 'var(--th-bg)' }}>
                       <th style={{ ...th, width: 30 }}>
                         <input
                           type="checkbox"
-                          aria-label="Select all clients on this page"
+                          aria-label={t('clients.table.selectAll', 'Select all clients on this page')}
                           checked={allOnPageSelected}
                           onChange={toggleAllOnPage}
                         />
                       </th>
-                      <SortHeader label="Client" sortKey="name" sort={sort} onSort={applySortKey} />
-                      {pii && !narrow && <SortHeader label="Contact" sort={sort} onSort={applySortKey} />}
-                      {!narrow && <SortHeader label="Type" sortKey="type" sort={sort} onSort={applySortKey} />}
-                      <SortHeader label="Membership" sortKey="membership" sort={sort} onSort={applySortKey} />
-                      {/* "Active Rentals", not "Current Rentals": the figure is
-                          `active_bookings_count` — every booking that is neither
-                          Closed nor cancelled, see the KPI note above. */}
-                      {!narrow && <SortHeader label="Open rentals" sortKey="rentals" sort={sort} onSort={applySortKey} />}
-                      {money && <SortHeader label="Outstanding" sortKey="outstanding" sort={sort} onSort={applySortKey} />}
-                      {money && !narrow && <SortHeader label="Deposit Held" sortKey="deposit" sort={sort} onSort={applySortKey} />}
-                      {!narrow && <SortHeader label="Last Rental (BS / AD)" sortKey="lastRental" sort={sort} onSort={applySortKey} />}
-                      <SortHeader label="Action" sort={sort} onSort={applySortKey} align="right" />
+                      <SortHeader label={t('clients.table.thClient', 'Client')} sortKey="name" sort={sort} onSort={applySortKey} />
+                      {pii && !narrow && <SortHeader label={t('clients.table.thContact', 'Contact')} sort={sort} onSort={applySortKey} />}
+                      {!narrow && <SortHeader label={t('clients.table.thType', 'Type')} sortKey="type" sort={sort} onSort={applySortKey} />}
+                      <SortHeader label={t('clients.table.thMembership', 'Membership')} sortKey="membership" sort={sort} onSort={applySortKey} />
+                      {!narrow && <SortHeader label={t('clients.table.thOpenRentals', 'Open rentals')} sortKey="rentals" sort={sort} onSort={applySortKey} />}
+                      {money && <SortHeader label={t('clients.table.thOutstanding', 'Outstanding')} sortKey="outstanding" sort={sort} onSort={applySortKey} />}
+                      {money && !narrow && <SortHeader label={t('clients.table.thDepositHeld', 'Deposit Held')} sortKey="deposit" sort={sort} onSort={applySortKey} />}
+                      {!narrow && <SortHeader label={t('clients.table.thLastRental', 'Last Rental (BS / AD)')} sortKey="lastRental" sort={sort} onSort={applySortKey} />}
+                      <SortHeader label={t('clients.table.thAction', 'Action')} sort={sort} onSort={applySortKey} align="right" />
                     </tr>
                   </thead>
                   <tbody>
@@ -1557,7 +1559,7 @@ export function ClientsDirectory({
                              row, so the interaction was invisible to assistive tech.
                              The accessible name says what pressing it does. */
                           role="button"
-                          aria-label={`Open ${client.name}'s profile`}
+                          aria-label={t('clients.table.openProfileAria', "Open {name}'s profile", { name: client.name })}
                           aria-pressed={isSelected}
                           tabIndex={0}
                           onClick={(e) => {
@@ -1708,7 +1710,7 @@ export function ClientsDirectory({
                           <td style={td}>
                             {client.currentRentalsCount > 0 ? (
                               <span className="figure client-outfit" style={{ color: 'var(--link)', fontWeight: 600 }}>
-                                {client.currentRentalsCount} open
+                                {client.currentRentalsCount} {t('clients.badge.open', 'open')}
                               </span>
                             ) : (
                               <span className="figure client-outfit" style={{ color: 'var(--muted)' }}>
@@ -1752,7 +1754,7 @@ export function ClientsDirectory({
                           {!narrow && (
                           <td style={td}>
                             {client.lastRentalAtAd ? <BsAdDate date={client.lastRentalAtAd} tone="booking" /> : client.lastRentalBs === '—' ? (
-                              <span style={{ color: 'var(--muted)' }}>No rental yet</span>
+                              <span style={{ color: 'var(--muted)' }}>{t('clients.badge.noRentalYet', 'No rental yet')}</span>
                             ) : (
                               <>
                                 {/* No " BS" appended here: `queries/clients.ts` already suffixes a
@@ -1929,7 +1931,7 @@ export function ClientsDirectory({
                       navigate(`/clients/${selectedClient.id}`)
                     }}
                   >
-                    View profile →
+                    {t('clients.actions.viewProfileArrow', 'View profile →')}
                   </Button>
                 </div>
               ) : undefined
@@ -2087,21 +2089,21 @@ export function ClientsDirectory({
                   {pii && (
                     <>
                       <span>
-                        <span style={{ color: 'var(--muted)', display: 'block' }}>Phone</span>
+                        <span style={{ color: 'var(--muted)', display: 'block' }}>{t('clients.drawer.phone', 'Phone')}</span>
                         <span className="figure" style={{ color: 'var(--text)', fontWeight: 600 }}>{selectedClient.phone}</span>
                       </span>
                       <span style={{ minWidth: 0 }}>
-                        <span style={{ color: 'var(--muted)', display: 'block' }}>Email</span>
+                        <span style={{ color: 'var(--muted)', display: 'block' }}>{t('clients.drawer.email', 'Email')}</span>
                         <span style={{ color: 'var(--text)', wordBreak: 'break-all' }}>{selectedClient.email}</span>
                       </span>
                       <span>
-                        <span style={{ color: 'var(--muted)', display: 'block' }}>PAN</span>
+                        <span style={{ color: 'var(--muted)', display: 'block' }}>{t('clients.drawer.pan', 'PAN')}</span>
                         <span className="figure" style={{ color: 'var(--text)' }}>{selectedClient.pan ?? 'Not on file'}</span>
                       </span>
                     </>
                   )}
                   <span>
-                    <span style={{ color: 'var(--muted)', display: 'block' }}>KYC</span>
+                    <span style={{ color: 'var(--muted)', display: 'block' }}>{t('clients.drawer.kyc', 'KYC')}</span>
                     <Tone
                       text={selectedClient.kycStatus}
                       tone={
@@ -2114,12 +2116,12 @@ export function ClientsDirectory({
                     />
                   </span>
                   <span>
-                    <span style={{ color: 'var(--muted)', display: 'block' }}>Type</span>
+                    <span style={{ color: 'var(--muted)', display: 'block' }}>{t('clients.drawer.type', 'Type')}</span>
                     <span style={{ color: 'var(--text)' }}>{selectedClient.clientType}</span>
                   </span>
                   {pii && (
                     <span style={{ minWidth: 0 }}>
-                      <span style={{ color: 'var(--muted)', display: 'block' }}>Address</span>
+                      <span style={{ color: 'var(--muted)', display: 'block' }}>{t('clients.drawer.address', 'Address')}</span>
                       <span style={{ color: 'var(--text)' }}>{selectedClient.address}</span>
                     </span>
                   )}
@@ -2127,7 +2129,7 @@ export function ClientsDirectory({
 
                 {pii && (
                   <div style={{ fontSize: 'var(--t-meta)' }}>
-                    <span style={{ color: 'var(--muted)', display: 'block', marginBottom: 3 }}>Authorized contact</span>
+                    <span style={{ color: 'var(--muted)', display: 'block', marginBottom: 3 }}>{t('clients.drawer.authorizedContact', 'Authorized contact')}</span>
                     <span style={{ display: 'block', fontWeight: 600, color: 'var(--text)' }}>
                       {selectedClient.contactPerson.name}
                     </span>
@@ -2171,20 +2173,19 @@ export function ClientsDirectory({
                     */}
                     <div style={{ padding: '11px 12px', background: 'var(--card2)', borderRadius: 'var(--r-sm)', border: '1px solid var(--border)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 'var(--sp-sm)', fontSize: 'var(--t-meta)' }}>
-                        <span style={{ color: 'var(--text2)' }}>Approved credit limit</span>
+                        <span style={{ color: 'var(--text2)' }}>{t('clients.drawer.approvedCreditLimit', 'Approved credit limit')}</span>
                         <span className="figure" style={{ fontWeight: 600, color: 'var(--text)' }}>
                           {formatMoney(selectedClient.creditLimitPaisa)}
                         </span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 'var(--sp-sm)', fontSize: 'var(--t-meta)', marginTop: 6 }}>
-                        <span style={{ color: 'var(--text2)' }}>Outstanding on invoices</span>
+                        <span style={{ color: 'var(--text2)' }}>{t('clients.drawer.outstandingOnInvoices', 'Outstanding on invoices')}</span>
                         <span className="figure" style={{ fontWeight: 600, color: 'var(--text)' }}>
                           {formatMoney(selectedClient.outstandingPaisa)}
                         </span>
                       </div>
                       <p style={{ margin: '8px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)', lineHeight: 1.5 }}>
-                        How much of the limit is consumed is not recorded — there is no credit-used column, and outstanding
-                        invoices are a different question. Neither figure is a headroom.
+                        {t('clients.drawer.creditHeadroomNote', 'How much of the limit is consumed is not recorded — there is no credit-used column, and outstanding invoices are a different question. Neither figure is a headroom.')}
                       </p>
                     </div>
 
@@ -2193,13 +2194,13 @@ export function ClientsDirectory({
                         <span className="figure" style={{ display: 'block', fontSize: 'var(--t-ui)', fontWeight: 700, color: 'var(--text)' }}>
                           {selectedClient.totalRentalsCount}
                         </span>
-                        <span style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>Total rentals</span>
+                        <span style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>{t('clients.drawer.totalRentals', 'Total rentals')}</span>
                       </span>
                       <span style={{ padding: 10, background: 'var(--card2)', borderRadius: 'var(--r-sm)', textAlign: 'center' }}>
                         <span className="figure" style={{ display: 'block', fontSize: 'var(--t-ui)', fontWeight: 700, color: 'var(--text)' }}>
                           {formatMoney(selectedClient.totalSpentPaisa)}
                         </span>
-                        <span style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>Lifetime spend</span>
+                        <span style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>{t('clients.drawer.lifetimeSpend', 'Lifetime spend')}</span>
                       </span>
                     </div>
                   </>
@@ -2211,7 +2212,7 @@ export function ClientsDirectory({
                       <span className="figure" style={{ display: 'block', fontSize: 'var(--t-ui)', fontWeight: 700, color: 'var(--text)' }}>
                         {selectedClient.totalRentalsCount}
                       </span>
-                      <span style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>Total rentals</span>
+                      <span style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>{t('clients.drawer.totalRentals', 'Total rentals')}</span>
                     </span>
                   </div>
                 )}
@@ -2230,7 +2231,7 @@ export function ClientsDirectory({
                       } — clear the block before starting a rental`}
                     >
                       <Button variant="primary" disabled>
-                        Start rental
+                        {t('clients.drawer.startRental', 'Start rental')}
                       </Button>
                     </Unavailable>
                   ) : (
@@ -2239,42 +2240,32 @@ export function ClientsDirectory({
                       icon="plus"
                       onClick={() => navigate(`/rentals/new?clientId=${encodeURIComponent(selectedClient.id)}`)}
                     >
-                      Start rental
+                      {t('clients.drawer.startRental', 'Start rental')}
                     </Button>
                   )}
                   {money ? (
                     <Button icon="card" onClick={() => navigate('/finance')}>
-                      Ledger
+                      {t('clients.drawer.ledger', 'Ledger')}
                     </Button>
                   ) : (
                     <Unavailable reason="The client ledger is a money surface — not available to this role">
                       <Button icon="card" disabled>
-                        Ledger
+                        {t('clients.drawer.ledger', 'Ledger')}
                       </Button>
                     </Unavailable>
                   )}
                   <Button icon="external_link" onClick={() => navigate(`/clients/${selectedClient.id}`)}>
-                    View Full Profile
+                    {t('clients.drawer.viewFullProfile', 'View Full Profile')}
                   </Button>
-                  {/* One client, both directions. Law 3: unblocking must be
-                      possible, and this surface has always had it. `ClientDetail`
-                      now has it too — CL-06, in this same change, replaced the
-                      `Unavailable` reason that claimed `client.block` was unruled
-                      with a real dispatch gated on `canBlockClient`. Both
-                      surfaces write through `actions/clients/blockClient`. */}
                   {!mayBlock ? (
-                    /* Greyed with the rule stated, matching the Ledger control
-                       three lines up — the rail already carries `Unavailable`
-                       refusals, so here the verb stays discoverable, exactly as
-                       `ClientDetail` now does it. */
                     <Unavailable reason="Blocking a client is an Owner, Admin or Manager action (client.block)">
                       <Button icon="alert_triangle" disabled>
-                        Block Client
+                        {t('clients.actions.block', 'Block Client')}
                       </Button>
                     </Unavailable>
                   ) : selectedClient.isBlocked ? (
                     <Button icon="checklist" onClick={() => openBlockDialog('unblock', [selectedClient])}>
-                      Unblock Client
+                      {t('clients.actions.unblock', 'Unblock Client')}
                     </Button>
                   ) : (
                     <Button
@@ -2282,7 +2273,7 @@ export function ClientsDirectory({
                       icon="alert_triangle"
                       onClick={() => openBlockDialog('block', [selectedClient])}
                     >
-                      Block Client
+                      {t('clients.actions.block', 'Block Client')}
                     </Button>
                   )}
                 </div>
@@ -2309,7 +2300,7 @@ export function ClientsDirectory({
         footer={
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, width: '100%' }}>
             <Button variant="secondary" onClick={() => setShowBulkBlock(false)} disabled={blockBusy}>
-              Cancel
+              {t('clients.actions.cancel', 'Cancel')}
             </Button>
             <Button
               variant={blockMode === 'block' ? 'danger' : 'primary'}
