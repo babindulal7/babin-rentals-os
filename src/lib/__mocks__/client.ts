@@ -1316,7 +1316,7 @@ export const mockSupabase = {
     if (table === 'glossary_term_revisions') store[table] ??= []
     return createBuilder(table, hooks)
   },
-  rpc(name: string, args?: Record<string, unknown>) {
+  rpc(name: string, args?: Record<string, unknown>): Promise<{ data: unknown; error: PgError | null }> {
     if (name === 'approve_glossary_term') {
       const actor = readSession()?.user.id
       const role = store['users']?.find(user => user['id'] === actor)?.['primary_role']
@@ -1924,6 +1924,98 @@ export const mockSupabase = {
         }
         receipts.push({ key: clientUuid, actor, response, created_at: new Date().toISOString() })
         return Promise.resolve({ data: response, error: null })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
+    /* ⛔ Was `{ data: null, error: null }` — a silent null that every caller
+     * would read as success with an empty result. That is the
+     * success-fabrication class this repo has a register for, sitting in the
+     * one place a missing RPC should be loudest. An unimplemented function is
+     * now an ERROR, so a caller fails visibly instead of continuing on null. */
+    if (name === 'save_message_template') {
+      try {
+        const actor = readSession()?.user?.id ?? (store['users']?.find(u => u['primary_role'] === 'Owner')?.['id'] ?? 'user-owner')
+        const user = (store['users'] ?? []).find(u => u['id'] === actor)
+        const role = user ? (user['primary_role'] as string | undefined) : 'Owner'
+        if (role && !['Owner', 'Admin'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'Only Owner and Admin can edit message and document texts (B20)') })
+        }
+        const clientUuid = args?.['p_client_uuid'] as string
+        if (!clientUuid) {
+          return Promise.resolve({ data: null, error: pgErr('23502', 'client_uuid is required for idempotency (Law 8)') })
+        }
+        read('message_templates')
+        const templates = store['message_templates'] ?? []
+        const existing = templates.find(t => t['client_uuid'] === clientUuid)
+        if (existing) {
+          return Promise.resolve({ data: existing, error: null })
+        }
+        const templateKey = args?.['p_template_key'] as string
+        const subject = (args?.['p_subject'] as string | null) ?? null
+        const body = args?.['p_body'] as string
+        if (!body || body.trim().length < 5) {
+          return Promise.resolve({ data: null, error: pgErr('22023', 'Template body must be at least 5 characters long') })
+        }
+        const active = templates.find(t => t['template_key'] === templateKey && t['is_active'])
+        const allowedPlaceholders = (active?.['allowed_placeholders'] as string[]) ?? [
+          'client_name', 'booking_number', 'pickup_date', 'pickup_time', 'return_date', 'return_time', 'equipment_list', 'action_url', 'portal_url', 'company_name', 'company_phone', 'company_email', 'amount_due', 'due_date', 'pay_url', 'invoice_number', 'bank_details', 'validity_days', 'contact_name', 'unsubscribe_url', 'company_address', 'dispatcher_name', 'technician_name', 'jurisdiction'
+        ]
+        const matches = [...body.matchAll(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g)].map(m => m[1] ?? '').filter(Boolean)
+        for (const p of matches) {
+          if (!allowedPlaceholders.includes(p)) {
+            return Promise.resolve({ data: null, error: pgErr('22023', `Unknown placeholder "{{${p}}}" is refused. Allowed placeholders: ${allowedPlaceholders.join(', ')}`) })
+          }
+        }
+        templates.forEach(t => {
+          if (t['template_key'] === templateKey) t['is_active'] = false
+        })
+        const maxVersion = templates.filter(t => t['template_key'] === templateKey).reduce((max, t) => Math.max(max, Number(t['version'] || 1)), 0)
+        const nextVersion = maxVersion + 1
+        const newRecord = {
+          id: `tmpl-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          client_uuid: clientUuid,
+          template_key: templateKey,
+          category: active?.['category'] ?? (templateKey.startsWith('email.') ? 'email' : 'document'),
+          name: active?.['name'] ?? templateKey,
+          description: active?.['description'] ?? null,
+          version: nextVersion,
+          subject,
+          body,
+          allowed_placeholders: allowedPlaceholders,
+          is_active: true,
+          created_by: actor,
+          created_at: new Date().toISOString(),
+        }
+        templates.push(newRecord)
+        return Promise.resolve({ data: newRecord, error: null })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
+    if (name === 'restore_message_template') {
+      try {
+        const actor = readSession()?.user?.id ?? (store['users']?.find(u => u['primary_role'] === 'Owner')?.['id'] ?? 'user-owner')
+        const user = (store['users'] ?? []).find(u => u['id'] === actor)
+        const role = user ? (user['primary_role'] as string | undefined) : 'Owner'
+        if (role && !['Owner', 'Admin'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'Only Owner and Admin can restore message and document texts (B20)') })
+        }
+        const clientUuid = args?.['p_client_uuid'] as string
+        const templateKey = args?.['p_template_key'] as string
+        const targetVersion = Number(args?.['p_target_version'])
+        read('message_templates')
+        const templates = store['message_templates'] ?? []
+        const target = templates.find(t => t['template_key'] === templateKey && Number(t['version']) === targetVersion)
+        if (!target) {
+          return Promise.resolve({ data: null, error: pgErr('P0002', `Template "${templateKey}" version ${targetVersion} does not exist`) })
+        }
+        return mockSupabase.rpc('save_message_template', {
+          p_client_uuid: clientUuid,
+          p_template_key: templateKey,
+          p_subject: target['subject'],
+          p_body: target['body'],
+        })
       } catch (e) {
         return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
       }

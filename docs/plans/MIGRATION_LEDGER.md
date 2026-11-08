@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0227**
+**Next free number: 0228**
 
 > **Legacy exception:** `0188` exists as two distinct, locally verified migration files
 > (`0188_smart_reservation_holds.sql` and `0188_staff_renting_gear.sql`). Both are preserved because
@@ -70,6 +70,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0222 | T3-smart-reservations | repair-confirm-booking-atomic-and-reservation-dedup | audit/system-design-consistency-20261105 | verified |
 | 0223 | T3-12 | product-aliases | lane-c/T3-12-paste-a-whatsapp-gear-list | verified (check:pglite 220/220 + check:lifecycle 63/63) |
 | 0226 | T4-12 | bulk-update-products | lane-b/T4-12-bulk-edit-products | verified |
+| 0227 | T5-13 | message-templates | lane-b/T5-13-edit-email-and-document-texts | verified |
 
 ## Expected migrations (not yet claimed)
 

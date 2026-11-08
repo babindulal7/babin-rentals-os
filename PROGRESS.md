@@ -1,5 +1,74 @@
 # Progress Log
 
+## 2026-11-08 — T5-13: Edit email and document texts (Lane B)
+
+**Did**
+- **T5-13: Edit email and document texts (B20, O-11, Law 3, Law 7):**
+  - Settings ▸ **Texts** section created for Owner and Admin only (B20), hidden from Manager and money-blind roles (Warehouse, Technician, Driver, Client, Coordinator).
+  - Migration `0227_message_templates.sql` created and verified:
+    - `message_templates` table with `template_key`, `version`, `subject`, `body`, `created_by`, `created_at`, `is_active`.
+    - RLS policies ensuring only Owner and Admin can insert/update templates; sender and PDF builder read active version.
+    - RPC `save_message_template(p_client_uuid, p_template_key, p_subject, p_body)`: checks role, validates allowed placeholder variables (rejects unknown placeholders with 22023), deactivates prior versions, and inserts a new incremented active version (Law 3 append-only).
+    - RPC `restore_message_template(p_client_uuid, p_template_key, p_target_version)`: restores any prior version by minting a new active version carrying the historical subject and body.
+  - Lifecycle step `L66` in `scripts/e2e-lifecycle.mjs`:
+    - Tests Manager denied (42501), unknown placeholder refused (22023), Owner save bumps version & deactivates prior, idempotent replay with same client_uuid, restore mints new active version.
+  - Action module `src/actions/settings/messageTemplates.ts`:
+    - Dispatched via `src/actions/core.ts` (`template:save`, `template:restore`).
+    - Capability gated in `src/lib/rbac.ts` (`canManageMessageTemplates`).
+    - Matrix documented in `docs/PERMISSIONS.md`.
+  - Frontend component `src/modules/settings/sections/TextsPane.tsx`:
+    - Category filtering (All, Email, Document) with template selector.
+    - Token chips highlighting allowed placeholder variables (`{{client_name}}`, `{{booking_number}}`, `{{pickup_time}}`, `{{rental_agreement_terms}}`, etc.).
+    - Strict money safety: amounts only appear as server-filled tokens (`{{total_amount}}`, `{{deposit_amount}}`, `{{outstanding_amount}}`), never free-typed.
+    - Statutory legal lock: statutory fields (invoice number, PAN, VAT lines per Law 7) are locked with an explicit notice explaining they are legally non-editable.
+    - Live real booking preview with test selector or manual input.
+    - Version history drawer/panel with diffing and one-click "Restore this version" action.
+    - Responsive layout (375px mobile, 820px tablet, 1440px desktop) with >=44px touch targets.
+  - Added unit test suites:
+    - `src/actions/settings/__tests__/messageTemplates.test.ts` (8/8 passed).
+    - `src/modules/settings/sections/__tests__/TextsPane.test.tsx` (5/5 passed).
+
+**Ruled**
+- B20: Owner and Admin only for email and document texts; Manager and floor roles denied.
+- Law 3: Append-only history; versions are preserved, restores mint new active version carrying historical content.
+- Law 7: Statutory fields (invoice number, PAN, VAT lines) are immutable and not template-editable.
+- Law 8: Every mutation carries a client_uuid idempotency key.
+
+**Verified**
+- `npm run check:pglite`: 220/220 applied, 0 failed, 183 definer functions pinned.
+- `npm run check:lifecycle`: 64/64 green, 0 known-red, 0 failed (including L66).
+- `node scripts/test-booking-financial-integrity.mjs`: PASS (all assertions green in isolated PGlite).
+- `npm run check:security`: 18 Phase 0 regressions + 14/14 Reset branch groups + operations grants all PASS.
+- `npm run test:server-contracts`: All 59 integration assertions PASSED (0 failures).
+- `npm run test:partial-return`: All 58 partial return acceptance assertions PASSED (0 failures).
+- `node --test scripts/test-receipt.test.mjs`: 11/11 passed.
+- `npm run lint:shell`: 900 files checked, 0 violations.
+- `npm run lint:ui-copy`: UI copy: 0 developer-text violations (6/6 tests pass).
+- `npm run check:contrast`: 106/106 pass, 0 FAIL.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npx vite build`: Built successfully in production mode.
+- Screen check driven across phone (375px), tablet (820px), desktop (1440px) as Owner (full access to Texts pane, live preview, version history, restore) and Warehouse (Settings ▸ Texts hidden, direct navigation restricted with banner).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 92 / 92 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 77 / 77 (100%) | +0 |
+| Lifecycle | steps green / total | 64 / 64 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 220 files · check:pglite 220/220 applied, 0 failed (recorded 2026-11-07T21:53:11.386Z). Suite: Historical suite: 6726/6734 passed, 8 failed (recorded 2026-11-06T21:21:26.360Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-07T21:53:28.537Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T5-13 is complete on branch `lane-b/T5-13-edit-email-and-document-texts` awaiting Babin local merge.
+- Next in Lane B: Track T6 (Nepali localization, starting with untagged and plain go-live cards per PLAN.md §6).
+
 ## 2026-11-07 — Card T5-12 · Offer Emails to Clients: Migration 0224, Resend Edge Function, Security Definer RPCs, RBAC & Consent Architecture (Lane B)
 
 **Did**
