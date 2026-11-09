@@ -1,17 +1,13 @@
 name: Mac PR verification
 
-# A separate, complementary fast-feedback lane for the three Apple Silicon
-# self-hosted runners. One PR = one Mac job. Three PRs can execute concurrently
-# when BABIN-MAC-01/02/03 are all online and idle. Do not add runner-name labels:
-# existing verified labels are self-hosted, macOS and ARM64.
+# A separate, complementary fast-feedback lane for the Apple Silicon
+# self-hosted runners. One PR = one Mac job. PRs execute concurrently
+# across idle Mac runners [self-hosted, macOS, ARM64].
 #
-# The Windows ci.yml is still the full mandatory merge gate (database migrations,
-# RLS/security, lifecycle, financial integrity, full coverage). Mac success on its
-# own must never be described as full CI green or release-ready.
+# Dedicated to pull requests and manual dispatch only. Full CI for main
+# pushes is handled in ci.yml across both Windows and Mac runners.
 on:
   pull_request:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
