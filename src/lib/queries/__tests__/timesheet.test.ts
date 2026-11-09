@@ -42,7 +42,6 @@ const {
   weekRange,
   addDays,
   formatHours,
-  hasOvertime,
   STANDARD_DAY_HOURS,
 } = await import('../timesheet')
 
@@ -206,15 +205,16 @@ describe('buildTimesheetRows', () => {
     expect(approval([day()])).toBe('Not submitted')
   })
 
-  it('flags overtime past the standard day', () => {
-    const [row] = buildTimesheetRows(
+  it('does not derive an overtime flag from hours (R-9.3: day rate, no overtime flag)', () => {
+    const rows = buildTimesheetRows(
       [day({ actual_end: '2026-10-19T14:30:00Z' })], // 11.5h − 0.5h break = 11h
       [booking()],
       [member()],
       '2026-10-19',
       '2026-10-25',
     )
-    expect(hasOvertime(row!)).toBe(true)
+    expect(rows[0]!.totalHrs).toBeGreaterThan(8)
+    expect(rows[0]!.overtimeDays).toBe(0)
   })
 
   it('sorts by name', () => {
@@ -235,9 +235,9 @@ describe('getTimesheetStats', () => {
     expect(getTimesheetStats(rows).totalPay).toBeNull()
   })
 
-  it('totals hours, pay, who logged, and overtime', () => {
+  it('totals hours, pay, and who logged', () => {
     const rows = buildTimesheetRows([day()], [booking()], [member()], '2026-10-19', '2026-10-25')
-    expect(getTimesheetStats(rows)).toEqual({ totalHours: 8, totalPay: 4000, staffLogged: 1, totalStaff: 1, overtimeFlags: 0 })
+    expect(getTimesheetStats(rows)).toEqual({ totalHours: 8, totalPay: 4000, staffLogged: 1, totalStaff: 1 })
   })
 })
 

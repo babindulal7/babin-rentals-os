@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { Modal } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Button'
 import { addEquipmentUnits, type UnitIntakeRow } from '../../../actions/inventory/manageStock'
+import { sanitizeBatchSerials, sanitizeSerial } from '../../../lib/formForgiveness'
 import { useAuth } from '../../../lib/auth'
 import { useToast } from '../../../components/ui/Toast'
 import { newClientUuid } from '../../../lib/supabase'
@@ -48,10 +49,7 @@ export function AddUnitsModal({
   const [error, setError] = useState<string | null>(null)
   const submissionKeyRef = useRef<{ fingerprint: string; key: string } | null>(null)
 
-  const parsedSerials = batchSerialsText
-    .split('\n')
-    .map((s) => s.trim())
-    .filter(Boolean)
+  const parsedSerials = sanitizeBatchSerials(batchSerialsText)
 
   const countToAdd = mode === 'single' ? 1 : parsedSerials.length
 
@@ -83,7 +81,7 @@ export function AddUnitsModal({
         mode === 'single'
           ? [
               {
-                serial_no: singleSerial.trim() || undefined,
+                serial_no: sanitizeSerial(singleSerial) || undefined,
                 warehouse_id: warehouseId,
                 rack: rack.trim() || undefined,
                 shelf: shelf.trim() || undefined,
@@ -330,6 +328,10 @@ export function AddUnitsModal({
               type="text"
               value={singleSerial}
               onChange={(e) => setSingleSerial(e.target.value)}
+              onBlur={() => {
+                const cleaned = sanitizeSerial(singleSerial)
+                if (cleaned !== singleSerial) setSingleSerial(cleaned)
+              }}
               placeholder="e.g. 7041289"
               style={{
                 minHeight: 44,

@@ -8,6 +8,7 @@ import { DataTableShell } from '../../components/ui/DataTable'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { OperationAside } from '../operations/FloorAside'
 import { useOperationShell } from '../operations/RentalOperationShell'
+import { StickyFloorBar } from '../operations/StickyFloorBar'
 import { EmptyState, ErrorBanner } from '../../components/ui/StateViews'
 import { PageBody } from '../../components/ui/PageBody'
 import { STATUS, jobStateChip } from '../../lib/status'
@@ -2367,6 +2368,32 @@ export default function PackingWorkspace({
               </OperationAside>
               </div>
             </div>
+
+            {phone && !embedded && (
+              <StickyFloorBar
+                progress={{
+                  current: packedRows.length,
+                  total: rows.length,
+                  label: pendingRows.length ? `${pendingRows.length} remaining` : 'All items packed',
+                  complete: canComplete,
+                }}
+                onScan={() => {
+                  unlockAudioContext()
+                  setShowScanner(true)
+                }}
+                primaryAction={{
+                  label: dispatching
+                    ? 'Recording…'
+                    : !isOnline
+                    ? 'Needs connection to complete'
+                    : 'Complete Packing',
+                  onClick: completePacking,
+                  disabled: !isOnline || !canComplete,
+                  loading: dispatching,
+                  icon: isOnline ? 'checklist' : 'alert_triangle',
+                }}
+              />
+            )}
 
             <BarcodeScannerModal
               isOpen={showScanner}
