@@ -23,6 +23,9 @@ import {
   coverage,
   canEnable,
   COVERAGE_THRESHOLD,
+  moduleCoverage,
+  screenCoverage,
+  detailedCoverage,
 } from '../i18n'
 
 describe('safeWeight — Asar has one weight, and a faked one smears conjuncts', () => {
@@ -160,14 +163,56 @@ describe('canEnable — a half-translated toggle is worse than no toggle', () =>
     expect(canEnable('en')).toBe(true)
   })
 
-  it('now allows Nepali, because the catalogue covers every key', () => {
-    expect(canEnable('ne')).toBe(true)
+  it('refuses Nepali until whole-app review and layout acceptance are recorded', () => {
+    expect(canEnable('ne')).toBe(false)
   })
 
   it('demands full coverage, not a majority', () => {
     // An operator cannot tell a missing translation from a deliberate English
     // term, so "mostly translated" is not a state worth shipping.
     expect(COVERAGE_THRESHOLD).toBe(100)
+  })
+
+  it('checks module coverage when moduleName is provided', () => {
+    expect(canEnable('ne', 'tools')).toBe(false)
+    expect(canEnable('en', 'tools')).toBe(true)
+    expect(canEnable('ne', 'nonExistentModule')).toBe(false)
+  })
+})
+
+describe('module and screen coverage reporting (T6-02)', () => {
+  it('reports coverage per module for English and Nepali', () => {
+    const reportEn = moduleCoverage('en')
+    expect(reportEn.tools).toBeDefined()
+    expect(reportEn.tools!.percent).toBe(100)
+    expect(reportEn.tools!.total).toBeGreaterThan(0)
+
+    const reportNe = moduleCoverage('ne')
+    expect(reportNe.tools).toBeDefined()
+    expect(reportNe.tools!.percent).toBe(100)
+    expect(reportNe.tools!.missing).toEqual([])
+  })
+
+  it('reports coverage per screen within a module', () => {
+    const lateFeeEn = screenCoverage('tools', 'lateFee', 'en')
+    expect(lateFeeEn.total).toBeGreaterThan(0)
+    expect(lateFeeEn.percent).toBe(100)
+
+    const lateFeeNe = screenCoverage('tools', 'lateFee', 'ne')
+    expect(lateFeeNe.translated).toBe(lateFeeNe.total)
+    expect(lateFeeNe.percent).toBe(100)
+  })
+
+  it('detailedCoverage embeds byModule breakdown', () => {
+    const detailed = detailedCoverage('ne')
+    expect(detailed.percent).toBe(100)
+    expect(detailed.byModule.tools).toBeDefined()
+    expect(detailed.byModule.tools?.screens.lateFee).toBeDefined()
+  })
+
+  it('supports variable interpolation in t()', () => {
+    expect(t('tools.landing.title', 'en')).toBe('Tools')
+    expect(t('tools.landing.title', 'ne')).toBe('औजार')
   })
 })
 

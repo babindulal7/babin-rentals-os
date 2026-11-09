@@ -1381,6 +1381,7 @@ export function AddItemPanel({
       <OverbookingOverrideModal
         isOpen={overrideUnit !== null}
         unit={overrideUnit}
+        allowOverbooking={allowOverbooking}
         onClose={() => setOverrideUnit(null)}
         onOverbook={(unit) => addEquipment(unit)}
         onSubRent={(unit) => addSubRentEquipment(unit)}
@@ -1834,8 +1835,9 @@ function EquipmentGroupRow({
    * clicking does nothing at all. When the valve is on, the click opens the
    * override dialog on the first unit not already booked instead.
    */
+  const canFallback = allowOverbooking || Boolean(onSubRent)
   const overrideCandidate =
-    !group.autoPick && (allowOverbooking || true) ? (group.units.find((u) => !existing.has(u.id)) ?? null) : null
+    !group.autoPick && canFallback ? (group.units.find((u) => !existing.has(u.id)) ?? null) : null
 
   // What the row does when chosen — one definition for the click and the keyboard.
   const activate: (() => void) | undefined = isSubRentalMode
@@ -1860,7 +1862,11 @@ function EquipmentGroupRow({
           : group.autoPick
             ? 'Press Enter to add the least-used free unit.'
             : overrideCandidate
-              ? 'Nothing free for these dates. Opens the sub-rent and overbooking options.'
+              ? allowOverbooking && onSubRent
+                ? 'Nothing free for these dates. Opens the sub-rent and overbooking options.'
+                : allowOverbooking
+                  ? 'Nothing free for these dates. Opens the overbooking options.'
+                  : 'Nothing free for these dates. Opens the sub-rent options.'
               : 'Nothing free for these dates.'
       }`}
       onMouseMove={onHover}
@@ -2027,6 +2033,7 @@ function EquipmentGroupRow({
         <div
           role="region"
           tabIndex={-1}
+          // Containment only: clicks on the unit chips must not also add the whole row.
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation() } }}
           style={{
@@ -2039,9 +2046,6 @@ function EquipmentGroupRow({
             border: '1px solid var(--border)',
             borderRadius: 'var(--r-btn)',
           }}
-          // Containment only: clicks on the unit chips must not also add the whole row.
-          role="presentation"
-          onClick={(e) => e.stopPropagation()}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text2)' }}>
@@ -2063,7 +2067,8 @@ function EquipmentGroupRow({
                 u.status !== 'Maintenance'
               const onBooking = existing.has(u.id)
               const why = `${u.status ?? u.availability.detail}${u.committedTo !== '—' ? ` · ${u.committedTo}` : ''}`
-              const opensOverride = !free && !onBooking
+              const canFallbackUnit = allowOverbooking || Boolean(onSubRent)
+              const opensOverride = !free && !onBooking && canFallbackUnit
               const tappable = (free && !onBooking) || opensOverride || isSubRentalMode
               return (
                 <button
@@ -2078,7 +2083,13 @@ function EquipmentGroupRow({
                         ? `${u.serial} — already on this booking`
                         : free
                           ? `Add unit ${u.serial} (Free)`
-                          : `${u.serial} · ${why} (Click to sub-rent or override)`
+                          : opensOverride
+                            ? allowOverbooking && onSubRent
+                              ? `${u.serial} · ${why} (Click to sub-rent or override)`
+                              : allowOverbooking
+                                ? `${u.serial} · ${why} (Click to override)`
+                                : `${u.serial} · ${why} (Click to sub-rent)`
+                            : `${u.serial} · ${why}`
                   }
                   aria-label={
                     isSubRentalMode
@@ -2088,7 +2099,11 @@ function EquipmentGroupRow({
                         : free
                           ? `Add unit with serial ${u.serial}`
                           : opensOverride
-                            ? `${u.serial} — booked. ${why}. Opens sub-rent and overbooking options.`
+                            ? allowOverbooking && onSubRent
+                              ? `${u.serial} — booked. ${why}. Opens sub-rent and overbooking options.`
+                              : allowOverbooking
+                                ? `${u.serial} — booked. ${why}. Opens overbooking options.`
+                                : `${u.serial} — booked. ${why}. Opens sub-rent options.`
                             : `${u.serial} — booked, not tappable. ${why}`
                   }
                   onClick={(e) => {

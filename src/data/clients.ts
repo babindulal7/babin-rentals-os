@@ -135,6 +135,11 @@ export interface ClientRecord {
   isVerified?: boolean
   isBlocked?: boolean
   blockReason?: string
+  /** Automatic payment reminders paused by staff (W18b). */
+  remindersPaused?: boolean
+  remindersPausedReason?: string | null
+  remindersPausedBy?: string | null
+  remindersPausedAt?: string | null
   currentRentalsCount: number
   activeBookings: string[]
   outstandingPaisa: Paisa

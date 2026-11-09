@@ -9,7 +9,7 @@ import { PageShell } from '../../components/ui/PageShell'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { Button } from '../../components/ui/Button'
 import { SearchInput } from '../../components/ui/SearchInput'
-import { EmptyState } from '../../components/ui/StateViews'
+import { EmptyState, ErrorBanner, LoadingSkeleton } from '../../components/ui/StateViews'
 import { Unavailable } from '../../components/ui/Unavailable'
 import Icon from '../../components/ui/Icon'
 import { Badge } from '../../components/ui/Badge'
@@ -396,18 +396,38 @@ export function SubRental({
   const canSeeFinance = canViewMoneyField(gctx, 'asset-finance')
 
   const [records, setRecords] = useState<SubRentalRecord[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const fetchRecords = useCallback(() => {
     let active = true
-    listSubRentals().then((res) => {
-      if (active) {
-        setRecords(res.rows)
-      }
-    }).catch(() => {})
+    setLoading(true)
+    setError(null)
+    listSubRentals()
+      .then((res) => {
+        if (active) {
+          setRecords(res.rows)
+        }
+      })
+      .catch((err: unknown) => {
+        if (active) {
+          setError(err instanceof Error ? err.message : 'Sub-rentals could not be loaded.')
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false)
+        }
+      })
     return () => {
       active = false
     }
   }, [])
+
+  useEffect(() => {
+    const cancel = fetchRecords()
+    return cancel
+  }, [fetchRecords])
 
   const supplierGroups = useMemo(() => groupByCounterparty(records), [records])
 
@@ -579,10 +599,10 @@ export function SubRental({
             Records
           </span>
           <div className="figure" style={{ fontSize: 'var(--t-h2)', fontWeight: 700, color: 'var(--text)', marginTop: 'var(--sp-xs)' }}>
-            {recordCount}
+            {loading ? '—' : recordCount}
           </div>
           <span className="figure" style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)', marginTop: 4, display: 'block' }}>
-            Borrowing ({directionCount.Borrowing}) · Lending ({directionCount.Lending}) · every record in table
+            {loading ? 'Loading records…' : `Borrowing (${directionCount.Borrowing}) · Lending (${directionCount.Lending}) · every record in table`}
           </span>
         </Card>
         {canSeeFinance && (
@@ -691,9 +711,39 @@ export function SubRental({
         </div>
       </div>
 
+      {error && (
+        <div style={{ marginBottom: 'var(--sp-md)' }}>
+          <ErrorBanner
+            title="Could not load sub-rentals"
+            message={error}
+            onRetry={fetchRecords}
+          />
+        </div>
+      )}
+
       {/* Main Table */}
       <Card padding="none" style={{ overflow: 'hidden' }}>
-        {filteredData.length === 0 ? (
+        {loading ? (
+          <div style={{ padding: 'var(--sp-lg)' }}>
+            <LoadingSkeleton rows={5} type="table" label="Loading sub-rental register…" />
+          </div>
+        ) : error ? (
+          <div style={{ padding: 'var(--sp-lg)' }}>
+            <EmptyState
+              kind="no-results"
+              title="Unable to load sub-rentals"
+              description={error}
+              actionLabel="Retry"
+              onAction={fetchRecords}
+            />
+          </div>
+        ) : records.length === 0 ? (
+          <EmptyState
+            kind="nothing-yet"
+            title="No sub-rentals recorded yet"
+            description="Cross-hire borrowings and lendings with external suppliers will appear here."
+          />
+        ) : filteredData.length === 0 ? (
           <EmptyState
             title="No records found"
             description="Adjust your filters or search query to find sub-rental records."

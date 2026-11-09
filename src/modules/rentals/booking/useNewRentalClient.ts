@@ -11,6 +11,11 @@ import {
 } from 'react'
 import type { ClientRecord } from '../../../lib/queries/clients'
 import { clientHealth, type ClientHealthVerdict } from './clientHealth'
+import {
+  fetchClientActiveMembership,
+  fetchClientMonthlyBookingsCount,
+  type ClientActiveMembership,
+} from '../../../lib/queries/membership'
 
 export interface UseNewRentalClientOptions {
   searchParams: URLSearchParams
@@ -24,6 +29,11 @@ export interface UseNewRentalClientResult {
   selectedClientId: string | null
   setSelectedClientId: Dispatch<SetStateAction<string | null>>
   client: ClientRecord | undefined
+  clientMembership: ClientActiveMembership | null
+  monthlyBookingsCount: number
+  memberDiscountRemoved: boolean
+  setMemberDiscountRemoved: Dispatch<SetStateAction<boolean>>
+  toggleMemberDiscount: () => void
   quickViewOpen: boolean
   setQuickViewOpen: Dispatch<SetStateAction<boolean>>
   historyOpen: boolean
@@ -61,6 +71,37 @@ export function useNewRentalClient({
     () => clientPool.find((c) => c.id === selectedClientId || (c.dbId && c.dbId === selectedClientId)),
     [clientPool, selectedClientId],
   )
+
+  const [clientMembership, setClientMembership] = useState<ClientActiveMembership | null>(null)
+  const [monthlyBookingsCount, setMonthlyBookingsCount] = useState<number>(0)
+  const [memberDiscountRemoved, setMemberDiscountRemoved] = useState<boolean>(false)
+
+  useEffect(() => {
+    setMemberDiscountRemoved(false)
+    let cancelled = false
+    if (!client) {
+      setClientMembership(null)
+      setMonthlyBookingsCount(0)
+      return
+    }
+    void fetchClientActiveMembership(client).then((m) => {
+      if (!cancelled) setClientMembership(m)
+    })
+    if (client.dbId) {
+      void fetchClientMonthlyBookingsCount(client.dbId).then((cnt) => {
+        if (!cancelled) setMonthlyBookingsCount(cnt)
+      })
+    } else {
+      setMonthlyBookingsCount(0)
+    }
+    return () => {
+      cancelled = true
+    }
+  }, [client])
+
+  const toggleMemberDiscount = useCallback(() => {
+    setMemberDiscountRemoved((prev) => !prev)
+  }, [])
 
   /* Connect URL client parameter to selection as soon as client pool loads */
   useEffect(() => {
@@ -127,6 +168,11 @@ export function useNewRentalClient({
     selectedClientId,
     setSelectedClientId,
     client,
+    clientMembership,
+    monthlyBookingsCount,
+    memberDiscountRemoved,
+    setMemberDiscountRemoved,
+    toggleMemberDiscount,
     quickViewOpen,
     setQuickViewOpen,
     historyOpen,

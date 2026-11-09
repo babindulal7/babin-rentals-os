@@ -206,6 +206,9 @@ describe('createAction — fails closed', () => {
       'inventory.reserve',
       'document.create',
       'subrental.create',
+      // T3-12 / 0223: the alias write rides the same five-role set as the
+      // booking write it supports, so it is asserted with them (B-3).
+      'inventory.edit_product_aliases',
     ]
     const FLOOR = [
       'rental.pickup',
@@ -384,6 +387,123 @@ describe('createAction — fails closed', () => {
   })
 })
 
+/*
+ * T4-07 · delivery zones (migration 0189, amended 3 Nov 2026).
+ *
+ * The T-1 round-trip for the three zone capabilities: the dispatcher must
+ * resolve each to the role set in PERMISSIONS.md §4.10 and its RLS policy, not
+ * to a broader default. Coordinator is the regression this pins — 0189 shipped
+ * Coordinator+, the card's role set is Owner · Admin · Manager (build note 3),
+ * and `checkCapability` had no case for these strings at all until T4-07.
+ */
+describe('delivery_zone capabilities — T-1 matrix round-trip (T4-07)', () => {
+  const probe = (capability: string, role: SystemRole) => {
+    const execute = vi.fn(async () => ({ result: { ok: true }, events: [] }))
+    const action = createAction({
+      name: `PROBE_${capability}`,
+      permissions: [capability],
+      implemented: true,
+      validate: () => {},
+      execute,
+    })
+    return { run: () => action({}, { userId: 'u-1', role }), execute }
+  }
+
+  const ZONE_WRITERS = ['Owner', 'Admin', 'Manager'] as const
+  const NOT_ZONE_WRITERS = ['Coordinator', 'Accounts', 'Warehouse', 'Technician', 'Driver', 'Client'] as const
+
+  it.each(['delivery_zone.create', 'delivery_zone.manage'] as const)(
+    '%s admits exactly Owner · Admin · Manager',
+    async (capability) => {
+      for (const role of ZONE_WRITERS) {
+        await expect(probe(capability, role).run()).resolves.toEqual({ ok: true })
+      }
+      for (const role of NOT_ZONE_WRITERS) {
+        const { run, execute } = probe(capability, role)
+        await expect(run()).rejects.toBeInstanceOf(ActionPermissionError)
+        expect(execute).not.toHaveBeenCalled()
+      }
+    },
+  )
+
+  it('delivery_zone.read admits every staff role and refuses Client', async () => {
+    const staff: SystemRole[] = ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts', 'Driver']
+    for (const role of staff) {
+      await expect(probe('delivery_zone.read', role).run()).resolves.toEqual({ ok: true })
+    }
+    const { run, execute } = probe('delivery_zone.read', 'Client')
+    await expect(run()).rejects.toBeInstanceOf(ActionPermissionError)
+    expect(execute).not.toHaveBeenCalled()
+  })
+})
+
+describe('glossary.manage — T-1 Owner-only approval contract (T0-12/C-6)', () => {
+  it('admits only Owner online and never executes another role or offline request', async () => {
+    const roles: SystemRole[] = ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts', 'Driver', 'Client']
+    for (const role of roles) {
+      const execute = vi.fn(async () => ({ result: true, events: [] }))
+      const probe = createAction({ name: 'GLOSSARY_PROBE', permissions: ['glossary.manage'], implemented: true, validate: () => {}, execute })
+      if (role === 'Owner') await expect(probe({}, { userId: 'owner', role, isOnline: true })).resolves.toBe(true)
+      else {
+        await expect(probe({}, { userId: 'staff', role, isOnline: true })).rejects.toBeInstanceOf(ActionPermissionError)
+        expect(execute).not.toHaveBeenCalled()
+      }
+    }
+    const execute = vi.fn(async () => ({ result: true, events: [] }))
+    const probe = createAction({ name: 'GLOSSARY_OFFLINE', permissions: ['glossary.manage'], implemented: true, validate: () => {}, execute })
+    await expect(probe({}, { userId: 'owner', role: 'Owner', isOnline: false })).rejects.toThrow()
+    expect(execute).not.toHaveBeenCalled()
+  })
+})
+
+describe('problem_report capabilities — T-1 matrix round-trip (T4-11)', () => {
+  const probe = (capability: string, role: SystemRole) => {
+    const execute = vi.fn(async () => ({ result: { ok: true }, events: [] }))
+    const action = createAction({
+      name: `PROBE_${capability}`,
+      permissions: [capability],
+      implemented: true,
+      validate: () => {},
+      execute,
+    })
+    return {
+      run: () => action({}, { userId: 'u-1', role, isOnline: true }),
+      execute,
+    }
+  }
+
+  it('problem_report.create admits all staff and refuses Client', async () => {
+    const staff: SystemRole[] = ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts', 'Driver']
+    for (const role of staff) {
+      await expect(probe('problem_report.create', role).run()).resolves.toEqual({ ok: true })
+    }
+    const { run, execute } = probe('problem_report.create', 'Client')
+    await expect(run()).rejects.toBeInstanceOf(ActionPermissionError)
+    expect(execute).not.toHaveBeenCalled()
+  })
+
+  it('problem_report.read admits all staff and refuses Client', async () => {
+    const staff: SystemRole[] = ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts', 'Driver']
+    for (const role of staff) {
+      await expect(probe('problem_report.read', role).run()).resolves.toEqual({ ok: true })
+    }
+    const { run, execute } = probe('problem_report.read', 'Client')
+    await expect(run()).rejects.toBeInstanceOf(ActionPermissionError)
+    expect(execute).not.toHaveBeenCalled()
+  })
+
+  it('problem_report.manage admits exactly Owner and Admin', async () => {
+    for (const role of ['Owner', 'Admin'] as const) {
+      await expect(probe('problem_report.manage', role).run()).resolves.toEqual({ ok: true })
+    }
+    for (const role of ['Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts', 'Driver', 'Client'] as const) {
+      const { run, execute } = probe('problem_report.manage', role)
+      await expect(run()).rejects.toBeInstanceOf(ActionPermissionError)
+      expect(execute).not.toHaveBeenCalled()
+    }
+  })
+})
+
 /**
  * ## The guard that should have existed first
  *
@@ -490,6 +610,11 @@ describe('every declared capability resolves to a rule', () => {
       'inspection.create',
       'inspection.pass',
       'inspection.fail',
+      // Permission-level template rule (PERMISSIONS.md §4.8); actions use settings.manage_templates.
+      // Keep the orphan guard strict for every other capability.
+      'comms.templates',
+      // Shared offer-campaign permission rule (PERMISSIONS.md §4.8); create/send are action capabilities.
+      'offer_campaign.manage',
     ]
     const orphaned = handled().filter((c) => !declared().includes(c) && !APP_LEVEL.includes(c))
     expect(orphaned).toEqual([])

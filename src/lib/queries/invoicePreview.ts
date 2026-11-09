@@ -159,8 +159,11 @@ export interface InvoicePreviewLine {
   ratePaisa: Paisa
   /** The LINE's own discount (rupees on `booking_lines`), not the booking's percentage. */
   discountPaisa: Paisa
-  /** `qty × days × rate − discount`, floored at 0 — what lands in `invoice_lines.line_total`. */
+  /** `qty × days × rate − discount`, floored at 0 — what lands in `invoice_lines.line_total`.
+   * For structure/fixed-priced lines (0168), this is the stored `line_total` from the booking line. */
   netPaisa: Paisa
+  /** The quote snapshot (structure/ruleset ids, charged days, adjustments) — present for structure/fixed lines. */
+  priceBreakdown?: Record<string, unknown> | undefined
   sortOrder: number
 }
 
@@ -245,6 +248,8 @@ interface RawLineRow {
   days: number | null
   rate: number | string | null
   discount_amount: number | string | null
+  line_total: number | string | null
+  price_breakdown: Record<string, unknown> | null
   sort_order: number | null
   voided_at: string | null
 }
@@ -418,7 +423,7 @@ export async function previewInvoiceForBooking(
   /* ── Equipment, bundles, accessories, services, sub-rentals ─────────────── */
   const { data: lineRows, error: linesError } = await supabase
     .from('booking_lines_v')
-    .select('client_uuid, line_type, description, qty, days, rate, discount_amount, sort_order, voided_at')
+    .select('client_uuid, line_type, description, qty, days, rate, discount_amount, line_total, price_breakdown, sort_order, voided_at')
     .eq('booking_id', booking.id)
     .order('sort_order', { ascending: true })
 
@@ -458,6 +463,14 @@ export async function previewInvoiceForBooking(
     const days = Math.max(1, Number(l.days))
     const rate = Number(l.rate)
     const discount = Number(l.discount_amount ?? 0)
+    // Use stored line_total when present (structure/fixed pricing, 0168),
+    // otherwise fall back to flat-rate computation for legacy lines.
+    const storedTotal = l.line_total !== null && l.line_total !== undefined
+      ? Number(l.line_total)
+      : null
+    const netPaisa = storedTotal !== null
+      ? rupees(Math.max(0, storedTotal * 100))
+      : rupees(Math.max(0, qty * days * rate - discount))
     return {
       key: l.client_uuid,
       kind: LINE_KIND_BY_TYPE[l.line_type] ?? 'Equipment Rental',
@@ -469,7 +482,8 @@ export async function previewInvoiceForBooking(
       days,
       ratePaisa: rupees(rate),
       discountPaisa: rupees(discount),
-      netPaisa: rupees(Math.max(0, qty * days * rate - discount)),
+      netPaisa,
+      priceBreakdown: l.price_breakdown ?? undefined,
       sortOrder: l.sort_order ?? i,
     }
   })

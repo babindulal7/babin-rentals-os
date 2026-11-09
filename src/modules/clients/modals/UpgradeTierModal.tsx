@@ -60,6 +60,8 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership, 
   const [feeInput, setFeeInput] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  /* R-9.2: staff choose each time. Default is restart the term from the change date. */
+  const [keepJoinDate, setKeepJoinDate] = useState(false)
   const submitting = useRef(false)
 
   const [activeMembership, setActiveMembership] = useState<{
@@ -203,7 +205,7 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership, 
       setError('Connect to update client membership.')
       return
     }
-    const signature = JSON.stringify([client.dbId, chosen.level, isRenewal, note.trim(), negotiatedFeePaisa])
+    const signature = JSON.stringify([client.dbId, chosen.level, isRenewal, note.trim(), negotiatedFeePaisa, keepJoinDate])
     if (keyRef.current?.signature !== signature) keyRef.current = { signature, key: crypto.randomUUID() }
     submitting.current = true
     setSaving(true)
@@ -239,6 +241,8 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership, 
             // payload's fee_paid, and everything else stays out of the payload.
             ...(negotiatedFeePaisa !== null ? { feePaid: negotiatedFeePaisa } : {}),
             note: note.trim() || undefined,
+            // R-9.2: only a plan change to an existing membership can keep the join date.
+            ...(keepJoinDate && hasMembership && !activating ? { keepJoinDate: true } : {}),
             clientUuid: keyRef.current.key,
           },
           { userId: user.id, role: user.role, isOnline: online },
@@ -494,9 +498,40 @@ function UpgradeTierDialog({ isOpen, onClose, onSuccess, client, hasMembership, 
                 <span style={{ fontSize: 'var(--t-caption)', color: 'var(--muted)', marginTop: 2 }}>
                   {creditWorking.accountCreditPaisa > 0
                     ? 'Credit exceeds the new fee. The excess is credited to the client’s account balance (non-cash).'
-                    : 'A new term starts from today. Unused days of the old plan are credited toward the new fee.'}
+                    : keepJoinDate
+                      ? 'The original join date is kept, so the renewal date stays on the same anniversary. Unused days of the old plan are credited toward the new fee.'
+                      : 'A new term starts from today. Unused days of the old plan are credited toward the new fee.'}
                 </span>
               </div>
+            )}
+
+            {hasMembership && chosen && !unchanged && (
+              <fieldset
+                disabled={saving}
+                style={{ border: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}
+              >
+                <legend style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>
+                  Renewal date after this change
+                </legend>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 'var(--t-meta)', color: 'var(--text)' }}>
+                  <input
+                    type="radio"
+                    name="membership-term-start"
+                    checked={!keepJoinDate}
+                    onChange={() => setKeepJoinDate(false)}
+                  />
+                  Restart the term from today (default)
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 'var(--t-meta)', color: 'var(--text)' }}>
+                  <input
+                    type="radio"
+                    name="membership-term-start"
+                    checked={keepJoinDate}
+                    onChange={() => setKeepJoinDate(true)}
+                  />
+                  Keep the original join date
+                </label>
+              </fieldset>
             )}
 
             {unchanged && (

@@ -135,10 +135,11 @@ export const InputGroupAddon = forwardRef<HTMLDivElement, InputGroupAddonProps>(
       role="presentation"
       data-slot="input-group-addon"
       data-align={align}
-      role="button"
-      tabIndex={-1}
+      /* Pointer-only affordance: clicking the padding/icon focuses the sibling
+         input. Keyboard users reach that input directly, and a nested real
+         button keeps its own semantics — so the wrapper stays presentational
+         rather than a focusable role="button" that can do nothing on Enter. */
       onMouseDown={handleMouseDown}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleMouseDown(e as unknown as React.MouseEvent<HTMLDivElement>) } }}
       className={cn(className)}
       style={{
         display: 'flex',

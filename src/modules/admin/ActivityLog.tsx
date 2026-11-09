@@ -9,6 +9,7 @@ import { PageBody } from '../../components/ui/PageBody'
 import { useLoad } from '../../lib/queries/useLoad'
 import { useViewport } from '../../lib/device'
 import { useAuth } from '../../lib/auth'
+import { useTranslation } from '../../lib/i18n'
 import {
   listActivityEvents,
   ACTIVITY_MODULES,
@@ -53,6 +54,7 @@ import {
 const ALL = 'All'
 
 export default function ActivityLog() {
+  const { t } = useTranslation()
   const viewport = useViewport()
   const { user } = useAuth()
   const showNetwork = user?.role === 'Owner' || user?.role === 'Manager' || user?.role === 'Admin'
@@ -102,10 +104,10 @@ export default function ActivityLog() {
   const dayOptions = useMemo(() => [...new Set(timeline.map((r) => r.timestamp.slice(0, 10)))].sort((a, b) => b.localeCompare(a)), [timeline])
 
   const kpis: Kpi[] = [
-    { label: 'Entries', value: String(metrics.totalActivities), icon: 'activity', accent: 'primary', note: 'In this log' },
-    { label: 'Failed', value: String(metrics.failed), icon: 'error', accent: 'danger', note: 'Errors or refusals' },
-    { label: 'People', value: String(metrics.uniqueUsers), icon: 'users', accent: 'success', note: 'Distinct actors' },
-    { label: 'Modules', value: String(metrics.modulesTouched), icon: 'queues', accent: 'progress', note: 'Touched' },
+    { label: t('admin.activity.kpi.entries'), value: String(metrics.totalActivities), icon: 'activity', accent: 'primary', note: t('admin.activity.kpi.entriesNote') },
+    { label: t('admin.activity.kpi.failed'), value: String(metrics.failed), icon: 'error', accent: 'danger', note: t('admin.activity.kpi.failedNote') },
+    { label: t('admin.activity.kpi.people'), value: String(metrics.uniqueUsers), icon: 'users', accent: 'success', note: t('admin.activity.kpi.peopleNote') },
+    { label: t('admin.activity.kpi.modules'), value: String(metrics.modulesTouched), icon: 'queues', accent: 'progress', note: t('admin.activity.kpi.modulesNote') },
   ]
 
   const filtered = who !== ALL || mod !== ALL || day !== ALL
@@ -114,8 +116,8 @@ export default function ActivityLog() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-lg)' }}>
       <PageHeader
         icon="activity"
-        title="Activity"
-        description="Who did what, where — newest first. Usage, not state changes; those live in the Audit Log."
+        title={t('admin.activity.title')}
+        description={t('admin.activity.description')}
       />
 
       <PageBody
@@ -125,23 +127,23 @@ export default function ActivityLog() {
         onRetry={load.reload}
         hasRows={timeline.length > 0}
         empty={load.data !== null && timeline.length === 0}
-        emptyTitle="No activity recorded yet"
-        emptyMessage="Sign-ins, exports and other usage appear here as they happen."
+        emptyTitle={t('admin.activity.emptyTitle')}
+        emptyMessage={t('admin.activity.emptyMessage')}
       >
       <KpiStrip items={kpis} columns={viewport === 'phone' ? 1 : viewport === 'tablet' ? 2 : 4} />
 
       <div
         role="search"
-        aria-label="Filter activity"
+        aria-label={t('admin.activity.searchAria')}
         style={{
           display: 'grid',
           gridTemplateColumns: viewport === 'phone' ? 'minmax(0,1fr)' : 'repeat(3, minmax(0,1fr))',
           gap: 'var(--sp-sm)',
         }}
       >
-        <Filter label="User" value={who} onChange={setWho} options={userOptions} />
-        <Filter label="Module" value={mod} onChange={setMod} options={moduleOptions} />
-        <Filter label="Date" value={day} onChange={setDay} options={dayOptions} />
+        <Filter label={t('admin.activity.filterUser')} allLabel={t('admin.activity.allUsers')} value={who} onChange={setWho} options={userOptions} />
+        <Filter label={t('admin.activity.filterModule')} allLabel={t('admin.activity.allModules')} value={mod} onChange={setMod} options={moduleOptions} />
+        <Filter label={t('admin.activity.filterDate')} allLabel={t('admin.activity.allDates')} value={day} onChange={setDay} options={dayOptions} />
       </div>
 
       {/* Reached only with a non-empty log, so this is always no RESULTS —
@@ -150,11 +152,11 @@ export default function ActivityLog() {
         <EmptyState
           kind="no-results"
           icon={<Icon name="search" size={22} />}
-          title="No activity matches this filter"
-          description="Try a wider date, another module, or clear the filters to see the whole timeline."
+          title={t('admin.activity.noResultsTitle')}
+          description={t('admin.activity.noResultsDesc')}
           {...(filtered
             ? {
-                actionLabel: 'Clear filters',
+                actionLabel: t('admin.activity.clearFilters'),
                 onAction: () => {
                   setWho(ALL)
                   setMod(ALL)
@@ -199,6 +201,7 @@ export default function ActivityLog() {
 /* ── one line of the timeline ──────────────────────────────────────────── */
 
 function Entry({ row, last, phone, showNetwork }: { row: ActivityRow; last: boolean; phone: boolean; showNetwork: boolean }) {
+  const { t } = useTranslation()
   const failed = row.status === 'Failed'
   const target = targetLabel(row.target, row.timestamp)
 
@@ -252,7 +255,7 @@ function Entry({ row, last, phone, showNetwork }: { row: ActivityRow; last: bool
               </span>
             </>
           )}
-          <span style={{ color: 'var(--text2)' }}> in {row.where}</span>
+          <span style={{ color: 'var(--text2)' }}> {t('admin.activity.inLocation', { where: row.where })}</span>
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 5, flexWrap: 'wrap' }}>
           <Tag icon="queues" text={row.module} />
@@ -294,11 +297,13 @@ function Tag({ icon, text, tone = 'neutral' }: { icon: 'queues' | 'error' | 'che
 
 function Filter({
   label,
+  allLabel,
   value,
   onChange,
   options,
 }: {
   label: string
+  allLabel?: string
   value: string
   onChange: (v: string) => void
   options: readonly string[]
@@ -309,7 +314,7 @@ function Filter({
         {label}
       </span>
       <select value={value} onChange={(e) => onChange(e.target.value)} style={selectStyle}>
-        <option value={ALL}>All {label.toLowerCase()}s</option>
+        <option value={ALL}>{allLabel || `All ${label.toLowerCase()}s`}</option>
         {options.map((o) => (
           <option key={o} value={o}>
             {label === 'Date' ? formatAd(new Date(o)) : o}

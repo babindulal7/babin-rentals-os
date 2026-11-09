@@ -181,18 +181,18 @@ within each priority.
 - T2-03 · ID card as the deposit — done
 - T2-04 · Gate 1 override by any handover staff — done
 - T2-05 · Technician can do every floor verb — done
-- T2-06 · Repair job closes the damage — done — awaiting merge (lane-a/T2-06-repair-job-closes-the-damage)
+- T2-06 · Repair job closes the damage — ready — awaiting merge (lane-a/T2-06-repair-job-closes-the-damage)
 - T2-07 · Reset "Needed next" — done
 - T2-08 · Floor printing — done
 - T2-10 · Offline outbox for scans and ticks — done
-- T2-12 · Client collectors and ID on file — done — awaiting merge (lane-a/T2-12-client-collectors-and-id-on-file)
-- T2-13 · Self-QC when alone — done — awaiting merge (lane-a/T2-13-self-qc-when-alone)
-- T2-14 · Scan a label → item card — done — awaiting merge (lane-a/T2-14-scan-a-label-to-item-card)
-- T2-16 · Photo rules from W27: several photos, size caps, HEIC — done — awaiting merge (lane-a/T2-16-photo-rules-w27)
+- T2-12 · Client collectors and ID on file — ready — awaiting merge (lane-a/T2-12-client-collectors-and-id-on-file)
+- T2-13 · Self-QC when alone — ready — awaiting merge (lane-a/T2-13-self-qc-when-alone)
+- T2-14 · Scan a label → item card — ready — awaiting merge (lane-a/T2-14-scan-a-label-to-item-card)
+- T2-16 · Photo rules from W27: several photos, size caps, HEIC — ready — awaiting merge (lane-a/T2-16-photo-rules-w27)
 - T3-01 · Re-book — done (merged 31 Oct, `7250c42`)
-- T4-01 · Delivery dispatch on the database — done — awaiting merge (lane-b/T4-01-delivery-dispatch-on-the-database)
+- T4-01 · Delivery dispatch on the database — ready — awaiting merge (lane-b/T4-01-delivery-dispatch-on-the-database)
 - T4-04 · Team notes on the database — done
 - T4-05 · Shift handover on the database — done
 - T4-06 · Export old browser-only entries — done
-- T8-08 · TDS on crew payouts — done — awaiting merge (lane-a/T8-08-tds-on-crew-payouts)
+- T8-08 · TDS on crew payouts — ready — awaiting merge (lane-a/T8-08-tds-on-crew-payouts)
 - T3-14a · Harden the invoice write path (audit F2/F5/F4) — done (merged, migration 0193)

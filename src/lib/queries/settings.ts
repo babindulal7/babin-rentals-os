@@ -1,6 +1,7 @@
 import { supabase } from '../supabase'
 import {
   TABS,
+  TEXTS_TAB,
   LEGACY_TAB,
   DEFAULT_TAB,
   TAB_SHORT_LABEL,
@@ -54,6 +55,7 @@ import { useEffect, useState } from 'react'
 
 export {
   TABS,
+  TEXTS_TAB,
   LEGACY_TAB,
   DEFAULT_TAB,
   TAB_SHORT_LABEL,
