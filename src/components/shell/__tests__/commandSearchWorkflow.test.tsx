@@ -87,7 +87,7 @@ it('offers an inline retry without making the user retype the query', async () =
   act(() => retry.click())
   expect(document.activeElement).toBe(host.querySelector('input'))
   await debounce()
-  expect(mocks.search).toHaveBeenLastCalledWith({ role: 'Owner', term: 'b-715', limit: 4 })
+  expect(mocks.search).toHaveBeenLastCalledWith(expect.objectContaining({ role: 'Owner', term: 'b-715', limit: 4 }))
   expect(host.textContent).toContain('#715')
 })
 

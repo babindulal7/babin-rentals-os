@@ -300,7 +300,7 @@ houses pay on credit (W14), so this is the chase screen; reminders themselves ar
 open it; a statement PDF shares to WhatsApp in two taps.
 **Needs** — T3-16.
 
-### T3-21 · Find anything in one box            status: todo · size: M · lane C · [go-live]
+### T3-21 · Find anything in one box            status: ready — awaiting merge (lane-c/T3-21-find-anything-in-one-box) · size: M · lane C · [go-live]
 **What** — The header search (⌘K / phone search) finds a booking by **number, client name, client
 phone, collector name, item name, serial or asset code**, and shows recent items first; results
 open in one tap. Today `globalSearch.ts` covers booking, client, equipment and invoice — add phone,
