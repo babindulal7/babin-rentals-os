@@ -1,0 +1,61 @@
+name: Mac 03 lightweight runner probe (temporary)
+
+# An isolated low-load probe so the two Mac PR smoke jobs keep running.
+# This branch/workflow is temporary. It must not be merged into main.
+on:
+  push:
+    branches:
+      - ci/mac03-lightweight-probe-20261109
+
+permissions:
+  contents: read
+
+jobs:
+  mac-03-probe:
+    name: Mac 03 · PR 99 lightweight Git verification
+    if: github.repository == 'babindulal7/babin-rentals-os'
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 15
+    env:
+      CI: 'true'
+    steps:
+      - name: Confirm runner is BABIN-MAC-03 before any checkout
+        shell: bash
+        run: |
+          echo "Assigned runner: ${RUNNER_NAME}"
+          if [[ "${RUNNER_NAME}" != 'BABIN-MAC-03' ]]; then
+            echo 'Runner 03 was not assigned; this probe intentionally does not execute on other Macs.'
+            exit 1
+          fi
+          echo 'Verified Mac runner 03.'
+      - name: Capture lightweight resource indicators
+        shell: bash
+        run: |
+          echo 'Apple Silicon architecture:'
+          uname -m
+          echo 'Physical RAM bytes:'
+          sysctl -n hw.memsize
+          echo 'Swap usage:'
+          sysctl vm.swapusage || true
+          echo 'VM counters:'
+          vm_stat | head -n 8 || true
+      - name: Check out pinned open PR 99 (no persisted credentials)
+        uses: actions/checkout@v4
+        with:
+          ref: 42141f32f7e227f59724d8fd3a2881f35b8f313e
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Verify PR head and Git patch whitespace
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = '42141f32f7e227f59724d8fd3a2881f35b8f313e'
+          git show --format= --check HEAD
+          test -z "$(git status --porcelain)"
+          echo 'PR #99 lightweight Git verification passed.'
+      - name: Report exact scope
+        if: always()
+        shell: bash
+        run: |
+          echo 'Runner: ${RUNNER_NAME}' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Target: PR #99, SHA 42141f32f7e227f59724d8fd3a2881f35b8f313e' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Scope: runner identity, Mac resource probe, commit pin and whitespace only. NOT full CI, no npm or database tests.' >> "$GITHUB_STEP_SUMMARY"
