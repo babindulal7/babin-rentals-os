@@ -25,10 +25,13 @@ permissions:
 jobs:
   verify:
     name: typecheck · test · build
-    # Native Windows x64 self-hosted runner on the owner's PC (default labels).
-    # GitHub-hosted minutes are exhausted; if this runner is offline the job waits
-    # in the queue — do NOT switch this back to a paid hosted runner to get green.
-    runs-on: [self-hosted, Windows, X64]
+    # Full CI runs on Apple Silicon for same-repository PRs and on Windows x64
+    # for main pushes. Preserve the required CI job/check identity and all 17 gates.
+    # Use only verified default labels; do not select GitHub-hosted runners.
+    runs-on:
+      - self-hosted
+      - ${{ github.event_name == 'pull_request' && 'macOS' || 'Windows' }}
+      - ${{ github.event_name == 'pull_request' && 'ARM64' || 'X64' }}
     # This job executes on the owner's own computer, so never run code from a
     # forked pull request here. Pushes and same-repository PRs only.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
@@ -40,6 +43,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up Node
         uses: actions/setup-node@v4
