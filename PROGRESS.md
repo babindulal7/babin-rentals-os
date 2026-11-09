@@ -1,5 +1,71 @@
 # Progress Log
 
+## 2026-11-09 — T3-21: Find anything in one box (Lane C)
+
+**Did**
+- **T3-21: Find anything in one box across seven keys (W91, Law 6, Law 8):**
+  - Enhanced `src/lib/queries/globalSearch.ts`:
+    - Searches across 7 keys:
+      1. Booking number (normalizes `#`, `BK-`, `B-` via `parseBookingNoSearch` in `src/lib/format.ts`).
+      2. Client name (case-insensitive substring match).
+      3. Client phone (matches normalized 10-digit Nepal mobile numbers via `phoneLocalDigits`).
+      4. Collector name (queries `client_collectors_v` view joined to client and active bookings).
+      5. Item / equipment name (`equipment` catalog).
+      6. Serial number (`product_units` joined to booking lines).
+      7. Asset code / barcode / unit code (`product_units.asset_code`).
+    - Sorts recent bookings first (`pickup_at` / `created_at` descending) so active and recent rentals appear at the top.
+    - Money-blind enforcement (Law 6): Invoices and money amounts are completely omitted when caller role has `canViewMoney(role) === false`.
+    - Added `AbortSignal` support to `searchRecords(query, role, signal)` to enable cancellation of in-flight queries.
+    - Exported comprehensive typing: `SearchResultGroup`, `GlobalSearchResultItem`, `GlobalSearchResultKind`.
+  - Updated `src/components/shell/CommandPalette.tsx`:
+    - 250ms debounced input search with `AbortController` cancellation for previous pending queries.
+    - Explicit state transitions: `'idle'`, `'loading'`, `'ready'`, `'error'`, and empty state with retry.
+    - Result grouping: Bookings, Clients, Equipment, Invoices with direct one-tap navigation.
+  - Added / updated test suites:
+    - `src/lib/queries/__tests__/globalSearch.test.ts`: 21 comprehensive tests covering all 7 search keys, recent sorting, money blindness, error handling, and abort signals.
+    - `src/components/shell/__tests__/commandSearchWorkflow.test.tsx`: Verified search UI interaction and keyboard navigation.
+    - `src/components/shell/MobileHeaderSearch.test.tsx`: Verified mobile search flow.
+    - `src/lib/__tests__/bookingNo.test.ts`: Verified booking number parsing.
+
+**Ruled**
+- W91: Header search (⌘K / mobile search) finds bookings across all seven required keys (number, client name, client phone, collector name, item name, serial number, asset code).
+- Law 6: Floor roles (Warehouse, Technician, Driver, Client) remain strictly money-blind in search; invoices are not returned and money values are never surfaced.
+- Law 8: All async operations observe cancelable abort signals and idempotent read patterns.
+
+**Verified**
+- `npm run check:pglite`: 227/227 applied, 0 failed.
+- `npm run check:lifecycle`: 70/70 green, 0 known-red, 0 failed.
+- `npx vitest run src/lib/queries/__tests__/globalSearch.test.ts src/components/shell/__tests__/commandSearchWorkflow.test.tsx src/lib/__tests__/bookingNo.test.ts src/components/shell/MobileHeaderSearch.test.tsx`: 31/31 passed.
+- `node scripts/test-booking-financial-integrity.mjs`: PASS.
+- `npm run check:security`: PASS.
+- `npm run test:server-contracts`: 59/59 passed.
+- `npm run test:partial-return`: 58/58 passed.
+- `node --test scripts/test-receipt.test.mjs`: 11/11 passed.
+- `npm run lint:shell`: 923 files checked, 0 violations.
+- `npm run lint:ui-copy`: 0 violations.
+- `npm run check:contrast`: 106/106 pass.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 100 / 100 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 82 / 82 (100%) | +0 |
+| Lifecycle | steps green / total | 70 / 70 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 227 files · check:pglite 227/227 applied, 0 failed (recorded 2026-11-09T18:14:54.941Z). Suite: Historical suite: 6917/6917 passed, 0 failed (recorded 2026-11-09T17:57:45.951Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-09T18:16:07.874Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T3-21 merged into `main`.
+- Next in Lane C: Card T3-27 · Pro forma invoice from the draft (`docs/plans/prompts/T3-27.md`).
+
 ## 2026-11-09 — T3-26: Project name and shoot location on every booking (Lane C)
 
 **Did**
