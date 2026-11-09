@@ -47,15 +47,23 @@ export const ModuleKpiStrip: React.FC<ModuleKpiStripProps> = ({
           }
         }
 
+        // Only a card with somewhere to go is a control; then it is a real toggle button:
+        // focusable, pressed-state aware, and operable with Enter and Space as well as a click.
+        const buttonProps = isInteractive
+          ? {
+              role: 'button' as const,
+              tabIndex: 0,
+              onClick: item.onClick,
+              onKeyDown: handleKeyDown,
+              'aria-pressed': item.active,
+            }
+          : {}
+
         return (
           <div
             key={item.id}
+            {...buttonProps}
             className={`module-kpi-card ${item.active ? 'is-active' : ''} ${isInteractive ? 'press' : ''}`.trim()}
-            role={isInteractive ? 'button' : undefined}
-            tabIndex={isInteractive ? 0 : undefined}
-            onClick={item.onClick}
-            onKeyDown={isInteractive ? handleKeyDown : undefined}
-            aria-pressed={isInteractive ? item.active : undefined}
             aria-label={`${item.label}: ${displayCount}, ${item.subtitle}`}
           >
             <div className="module-kpi-card__head">

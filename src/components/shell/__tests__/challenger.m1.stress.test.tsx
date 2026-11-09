@@ -819,19 +819,27 @@ describe('Empirical Challenger — Header Sync Badge Visibility States', () => {
     expect(container.querySelector('[role="dialog"][aria-label="User profile"]')).toBeNull()
   })
 
-  it('on phone viewport (<768px), hides center search and sync badge while preserving mobile search & profile', async () => {
+  it('on phone viewport (<768px), hides desktop sync context but preserves the actionable mobile outbox badge and search', async () => {
     viewport = 'phone'
+    const triggerSync = vi.fn()
     syncMockState = {
       status: 'offline',
       syncStatus: 'offline',
       pendingCount: 5,
       error: null,
-      triggerSync: vi.fn(),
+      triggerSync,
     }
     await mount(<Header crumbs={[{ label: 'Rentals' }, { label: 'B-715' }]} />)
-    // On phone, center search & sync badge are not rendered
-    expect(container.querySelector('.header-sync-control')).toBeNull()
-    // Mobile search button is rendered with 44px hit target
+    // The desktop center slot is absent. Never conceal queued offline writes on mobile (Law 16).
+    expect(container.querySelector('.header-sync-context')).toBeNull()
+    const mobileSync = container.querySelector<HTMLButtonElement>('.header-sync-control--mobile')
+    expect(mobileSync).not.toBeNull()
+    expect(mobileSync?.textContent).toContain('5 Queued')
+    expect(mobileSync?.getAttribute('aria-label')).toBe('5 offline mutations queued')
+    expect(mobileSync?.style.minHeight).toBe('44px')
+    await act(async () => mobileSync?.click())
+    expect(triggerSync).toHaveBeenCalledTimes(1)
+    // Mobile search button is rendered with a 44px touch target
     const mobileSearch = container.querySelector<HTMLButtonElement>('button[aria-label="Search"]')
     expect(mobileSearch).not.toBeNull()
     expect(mobileSearch?.style.minHeight).toBe('44px')

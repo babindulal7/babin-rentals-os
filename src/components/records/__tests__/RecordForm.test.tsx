@@ -126,8 +126,9 @@ describe('RecordForm - shared client form (Add)', () => {
     const summary = container.querySelector('.record-error-summary')!
     expect(summary.textContent).toContain('Name is required.')
     await click([...summary.querySelectorAll('button')].find((b) => b.textContent?.includes('PAN/VAT')))
-    await flush()
-    expect(document.activeElement?.id).toBe('record-pan_vat')
+    // Focus follows a two-frame expansion; wait for that observable outcome rather
+    // than assuming two animation frames always finish inside a 40ms sleep on CI.
+    await vi.waitFor(() => expect(document.activeElement?.id).toBe('record-pan_vat'))
   })
 
   it('submits canonical phone once, even on a double click, and lands on the new record keeping its context', async () => {

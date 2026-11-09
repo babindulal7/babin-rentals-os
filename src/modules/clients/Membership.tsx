@@ -12,6 +12,8 @@ import { formatMoney } from '../../lib/money'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { listMembers, type MemberListRow } from '../../lib/queries/membership'
 import { EnrollMembershipModal } from './modals/EnrollMembershipModal'
+import { SegmentedControl } from '../../components/ui/SegmentedControl'
+import PlansAdmin from './PlansAdmin'
 import './clients.css'
 
 const PAGE_SIZES = [10, 25, 50] as const
@@ -23,6 +25,7 @@ export default function Membership({ embedded = false, filtersOpen: externalFilt
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const money = useCanViewMoney()
+  const subTab = (params.get('msub') === 'plans' ? 'plans' : 'members') as 'members' | 'plans'
   const search = params.get('mq') ?? ''
   const selectedLevel = params.get('ml') ?? ''
   const selectedKind = params.get('mk') ?? ''
@@ -43,6 +46,7 @@ export default function Membership({ embedded = false, filtersOpen: externalFilt
   const closeFilters = onFiltersClose ?? (() => setInternalFiltersOpen(false))
 
   useEffect(() => {
+    if (subTab === 'plans') return
     let active = true
     setLoading(true)
     setError(null)
@@ -53,7 +57,7 @@ export default function Membership({ embedded = false, filtersOpen: externalFilt
       })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [retry])
+  }, [retry, subTab])
 
   function updateParam(key: string, value: string, replace = false) {
     const next = new URLSearchParams(params)
@@ -129,7 +133,23 @@ export default function Membership({ embedded = false, filtersOpen: externalFilt
         </>
       )}
 
-      <FilterDrawer id="membership-filters" open={filtersOpen} onClose={closeFilters} resultCount={loading ? null : filtered.length} noun="members" activeCount={Number(Boolean(selectedKind))} onClearAll={() => updateParam('mk', '')} standardFooter onApply={closeFilters}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+        <SegmentedControl<'members' | 'plans'>
+          ariaLabel="Membership sub-views"
+          options={[
+            { id: 'members', label: 'Members' },
+            { id: 'plans', label: 'Plans' },
+          ]}
+          value={subTab}
+          onChange={(val) => updateParam('msub', val === 'members' ? '' : 'plans')}
+        />
+      </div>
+
+      {subTab === 'plans' ? (
+        <PlansAdmin />
+      ) : (
+        <>
+          <FilterDrawer id="membership-filters" open={filtersOpen} onClose={closeFilters} resultCount={loading ? null : filtered.length} noun="members" activeCount={Number(Boolean(selectedKind))} onClearAll={() => updateParam('mk', '')} standardFooter onApply={closeFilters}>
         <label style={{ display: 'grid', gap: 8, fontWeight: 600 }}>Client type
           <Select aria-label="Filter members by client type" value={selectedKind} onChange={(event) => updateParam('mk', event.target.value)} style={{ minHeight: 44, width: '100%' }}>
             <option value="">All client types</option>
@@ -230,6 +250,8 @@ export default function Membership({ embedded = false, filtersOpen: externalFilt
           onClose={() => setEnrollOpen(false)}
           onEnrolled={() => setRetry((r) => r + 1)}
         />
+      )}
+        </>
       )}
     </div>
   )

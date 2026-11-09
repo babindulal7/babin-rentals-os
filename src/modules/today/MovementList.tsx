@@ -324,8 +324,15 @@ function RowMenu({ onClose, m, up }: { onClose: () => void; m: MovementRow; up: 
     'Packing List': () => openOperations(m.bookingNo, m.status, 'Pack'),
     Invoice: () => navigate('/documents'),
     'Copy Booking Number': () => {
-      void navigator.clipboard?.writeText(m.bookingNo)
-      showSuccessToast('Copied', `Booking number ${m.bookingNo} copied to clipboard.`)
+      if (!navigator.clipboard?.writeText) return
+      navigator.clipboard
+        .writeText(m.bookingNo)
+        .then(() => {
+          showSuccessToast('Copied', `Booking number ${m.bookingNo} copied to clipboard.`)
+        })
+        .catch(() => {
+          // Never fire false success toast if clipboard permission or write failed (UX-24)
+        })
     },
   }
   /*
@@ -786,6 +793,8 @@ export default function MovementList({
               <div
                 key={r.id}
                 {...(phone ? {} : { className: 'movement-row' })}
+                role="button"
+                tabIndex={0}
                 onClick={() => {
                   // The click a completed long-press emits must not navigate away
                   // from the card it just opened.
@@ -795,6 +804,7 @@ export default function MovementList({
                   }
                   navigate(`/rentals/${r.bookingNo}`)
                 }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/rentals/${r.bookingNo}`) } }}
                 onMouseEnter={() => scheduleHover(r.id)}
                 onMouseLeave={cancelHover}
                 onTouchStart={() => holdStart(r.id)}

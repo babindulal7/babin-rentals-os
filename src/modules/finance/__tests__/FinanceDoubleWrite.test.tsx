@@ -56,6 +56,8 @@ const db = vi.hoisted(() => {
       in: pass,
       gte: pass,
       lte: pass,
+      eq: pass,
+      limit: pass,
       is: pass,
       not: pass,
       order: pass,
@@ -155,6 +157,15 @@ describe('Finance — one click, one payment write', () => {
       setter.call(input, '1500')
       input.dispatchEvent(new Event('input', { bubbles: true }))
     })
+
+    /*
+     * T3-15 — the method is a required answer now. The stub has no payment
+     * history, so the picker opens empty and the submit would refuse; the desk's
+     * one tap on a method is part of the click this test counts.
+     */
+    const method = container.querySelector('input[name="rpm-method"][value="Bank Transfer"]') as HTMLInputElement
+    expect(method).toBeTruthy()
+    await act(async () => { method.click() })
 
     // The modal's footer submit (the last matching button in the DOM).
     const buttons = Array.from(container.querySelectorAll('button')).filter((b) => /Record Payment/.test(b.textContent ?? ''))

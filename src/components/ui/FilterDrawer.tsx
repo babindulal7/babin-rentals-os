@@ -1164,30 +1164,17 @@ export function FilterSection({
               {badge}
             </span>
           )}
+          {/* One full-width, 44px disclosure target: no duplicate chevron tab stop. */}
+          <span aria-hidden="true" style={{ marginLeft: 'auto', display: 'inline-flex', color: 'var(--muted)', flexShrink: 0 }}>
+            <Icon name={open ? 'chevron_up' : 'chevron_down'} size={16} />
+          </span>
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          {action}
-          <button
-            type="button"
-            className="tap"
-            onClick={toggle}
-            aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
-            style={{
-              display: 'grid',
-              placeItems: 'center',
-              width: 32,
-              height: 32,
-              border: 'none',
-              background: 'transparent',
-              color: 'var(--muted)',
-              cursor: 'pointer',
-              borderRadius: 'var(--r-sm)',
-            }}
-          >
-            <Icon name={open ? 'chevron_up' : 'chevron_down'} size={16} />
-          </button>
-        </div>
+        {action && (
+          <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+            {action}
+          </div>
+        )}
       </div>
 
       {open && (

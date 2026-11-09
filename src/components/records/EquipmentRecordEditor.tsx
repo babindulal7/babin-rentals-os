@@ -8,8 +8,6 @@ import {
   INTAKE_CONDITIONS,
   PasteSerials,
   equipmentSectionState,
-  EQUIPMENT_STAGES,
-  EquipmentWizardStepper,
   UnitBarcodeModal,
   EquipmentCatalogPreviewModal,
 } from './equipmentAssist'
@@ -65,35 +63,9 @@ export function EquipmentRecordEditor({
   const [defaultShelf, setDefaultShelf] = useState<string>(String(rows[0]?.shelf ?? ''))
   const [defaultBin, setDefaultBin] = useState<string>(String(rows[0]?.bin ?? ''))
 
-  /* ── 5-Stage Precision Cinema Wizard State ────────────────────────────── */
-  const [wizardMode, setWizardMode] = useState<boolean>(false)
-  const [currentStage, setCurrentStage] = useState<number>(1)
   const [barcodeModalUnit, setBarcodeModalUnit] = useState<{ unit: RecordValues; index: number } | null>(null)
   const [catalogPreviewOpen, setCatalogPreviewOpen] = useState<boolean>(false)
   const imagePreviewUrl: string | null = null
-
-  const stage = EQUIPMENT_STAGES.find((s) => s.id === currentStage) ?? EQUIPMENT_STAGES[0]!
-  const prevStage = currentStage > 1 ? (EQUIPMENT_STAGES.find((s) => s.id === currentStage - 1) ?? null) : null
-  const nextStage = currentStage < 5 ? (EQUIPMENT_STAGES.find((s) => s.id === currentStage + 1) ?? null) : null
-
-  const handleSelectStage = (stageId: number) => {
-    setCurrentStage(stageId)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  const handleNextStage = () => {
-    if (currentStage < 5) {
-      setCurrentStage((prev) => prev + 1)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
-  }
-
-  const handleBackStage = () => {
-    if (currentStage > 1) {
-      setCurrentStage((prev) => prev - 1)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
-  }
 
   const set = (key: string, value: RecordValue) => {
     setValues((v) => ({ ...v, [key]: value } as RecordValues))
@@ -1350,126 +1322,40 @@ export function EquipmentRecordEditor({
         </div>
       )}
 
-      {/* ── 5-Stage Stepper Header & Mode Toggle ── */}
-      {!editing && (
-        <EquipmentWizardStepper
-          currentStage={currentStage}
-          onSelectStage={handleSelectStage}
-          wizardMode={wizardMode}
-          onToggleWizardMode={setWizardMode}
-          values={values}
-          rows={rows}
-          canViewMoney={canViewMoney}
-          errors={errors}
-        />
+      {/* ── Section jump links ── */}
+      <EquipmentSectionLinks
+        sections={sections}
+        stateOf={(sec) => equipmentSectionState(sec, values, rows)}
+        idOf={sectionId}
+      />
+
+      {/* ── IDENTITY ─────────────────────────────────────────────────────── */}
+      {renderIdentitySection()}
+
+      {/* ── STOCK & UNITS ────────────────────────────────────────────────── */}
+      {renderStockSection()}
+
+      {/* ── RELATIONSHIPS ────────────────────────────────────────────────── */}
+      {renderRelationshipsSection()}
+
+      {/* ── LOCATION ─────────────────────────────────────────────────────── */}
+      {renderLocationSection()}
+
+      {/* ── PRICING & TERMS ──────────────────────────────────────────────── */}
+      {canViewMoney ? (
+        <>
+          {renderPurchaseSection()}
+          {renderPricingSection()}
+        </>
+      ) : (
+        renderMoneyBlindNotice()
       )}
 
-      {/* Section jump links */}
-      <div style={{ display: wizardMode ? 'none' : undefined }}>
-        <EquipmentSectionLinks
-          sections={sections}
-          stateOf={(sec) => equipmentSectionState(sec, values, rows)}
-          idOf={sectionId}
-        />
-      </div>
+      {/* ── MAINTENANCE & DOCUMENTS ─────────────────────────────────────── */}
+      {renderMaintenanceSection()}
 
-      {/* ── STAGE 1: BASIC INFORMATION (Identity & Location) ── */}
-      <div style={{ display: !wizardMode || currentStage === 1 ? undefined : 'none' }}>
-        {renderIdentitySection()}
-        {wizardMode && renderLocationSection()}
-      </div>
-
-      {/* ── STAGE 2: INVENTORY STRUCTURE (Stock & Units) ────── */}
-      <div style={{ display: !wizardMode || currentStage === 2 ? undefined : 'none' }}>
-        {renderStockSection()}
-      </div>
-
-      {/* ── STAGE 4 (or non-wizard order): RELATIONSHIPS ────── */}
-      <div style={{ display: !wizardMode || currentStage === 4 ? undefined : 'none' }}>
-        {renderRelationshipsSection()}
-      </div>
-
-      {/* Location in non-wizard mode appears after relationships */}
-      {!wizardMode && renderLocationSection()}
-
-      {/* ── STAGE 3: PRICING & TERMS ────────────────────────── */}
-      <div style={{ display: !wizardMode || currentStage === 3 ? undefined : 'none' }}>
-        {canViewMoney ? (
-          <>
-            {renderPurchaseSection()}
-            {renderPricingSection()}
-          </>
-        ) : (
-          wizardMode && renderMoneyBlindNotice()
-        )}
-      </div>
-
-      {/* ── STAGE 4: MAINTENANCE & DOCUMENTS ─────────────────── */}
-      <div style={{ display: !wizardMode || currentStage === 4 ? undefined : 'none' }}>
-        {renderMaintenanceSection()}
-      </div>
-
-      {/* ── STAGE 5: REVIEW & SAVE ──────────────────────────── */}
-      {(!wizardMode || currentStage === 5) && renderStage5Review()}
-
-      {/* ── WIZARD BOTTOM NAVIGATION BAR ────────────────────── */}
-      {!editing && wizardMode && (
-        <div className="equipment-wizard-nav">
-          <div>
-            {prevStage ? (
-              <Button
-                type="button"
-                variant="secondary"
-                icon="chevron_left"
-                onClick={handleBackStage}
-              >
-                Back: {prevStage.shortName}
-              </Button>
-            ) : (
-              <span style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
-                Step 1 of 5
-              </span>
-            )}
-          </div>
-
-          <div className="equipment-wizard-nav-status" style={{ textAlign: 'center' }}>
-            <span className="equipment-wizard-nav-step-name">
-              Stage {currentStage}: {stage.name}
-            </span>
-            <span className="equipment-wizard-nav-step-sub">
-              {stage.description}
-            </span>
-          </div>
-
-          <div className="equipment-wizard-nav-actions">
-            {nextStage ? (
-              <Button
-                type="button"
-                variant="primary"
-                icon="chevron_right"
-                onClick={handleNextStage}
-              >
-                Next: {nextStage.shortName}
-              </Button>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span className="equipment-badge-status">
-                  <Icon name="check" size={14} />
-                  Ready to Save
-                </span>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  icon="search"
-                  onClick={() => setCatalogPreviewOpen(true)}
-                >
-                  Preview in Catalog
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* ── REVIEW ───────────────────────────────────────────────────────── */}
+      {renderStage5Review()}
 
       {/* ── MODALS ─────────────────────────────────────────── */}
       <UnitBarcodeModal

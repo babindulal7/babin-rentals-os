@@ -6,6 +6,7 @@ import { AuthCard } from './AuthCard'
 import { PasswordInput } from './PasswordInput'
 import { ErrorBanner } from '../../components/ui/StateViews'
 import { useAuth } from '../../lib/auth'
+import { useTranslation } from '../../lib/i18n'
 import { IS_MOCK } from '../../lib/supabase'
 import { MOCK_LOGINS } from '../../lib/devQuickLogins'
 import './auth.css'
@@ -26,6 +27,7 @@ export default function Login() {
   const [lockoutSeconds, setLockoutSeconds] = useState(0)
   const [busy, setBusy] = useState(false)
   const { signIn } = useAuth()
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
   const lockoutTimerRef = useRef<number | null>(null)
@@ -68,7 +70,7 @@ export default function Login() {
 
     const trimmedEmail = email.trim()
     if (!trimmedEmail || !password) {
-      setError('Enter your work email and password.')
+      setError(t('auth.missingFields', 'Enter your work email and password.'))
       return
     }
 
@@ -108,14 +110,14 @@ export default function Login() {
 
   return (
     <AuthCard
-      title="Welcome to Babin Rentals"
-      subtitle="Sign in with your work email to continue."
+      title={t('auth.welcomeTitle', 'Welcome to Babin Rentals')}
+      subtitle={t('auth.welcomeSubtitle', 'Sign in with your work email to continue.')}
       footer={<LoginFooter />}
     >
       <form onSubmit={handleLogin} noValidate className="auth-form">
         <div className="auth-field">
           <label htmlFor="login-email" className="auth-label">
-            Work Email
+            {t('auth.emailLabel', 'Work Email')}
           </label>
           <Input
             id="login-email"
@@ -126,7 +128,7 @@ export default function Login() {
             inputMode="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="name@babinrentals.com"
+            placeholder={t('auth.emailPlaceholder', 'name@babinrentals.com')}
             autoFocus
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? 'login-error' : undefined}
@@ -135,21 +137,21 @@ export default function Login() {
 
         <div className="auth-field">
           <label htmlFor="login-password" className="auth-label">
-            Password
+            {t('auth.passwordLabel', 'Password')}
           </label>
           <PasswordInput
             id="login-password"
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
+            placeholder={t('auth.passwordPlaceholder', '••••••••')}
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? 'login-error' : undefined}
           />
         {/* Law 12 — inline persistent error, never a toast */}
         {error && (
           <div id="login-error">
-            <ErrorBanner title="Could not sign in" message={error} />
+            <ErrorBanner title={t('auth.signInError', 'Could not sign in')} message={error} />
           </div>
         )}
 
@@ -163,7 +165,7 @@ export default function Login() {
             onChange={(e) => setRememberEmail(e.target.checked)}
             className="auth-remember-checkbox"
           />
-          <span className="auth-remember-label">Remember work email on this device</span>
+          <span className="auth-remember-label">{t('auth.rememberEmail', 'Remember work email on this device')}</span>
         </label>
 
         {/* Live lockout countdown feedback */}
@@ -171,8 +173,7 @@ export default function Login() {
           <div className="auth-lockout-banner" role="alert" aria-live="assertive">
             <Icon name="alert_circle" size={16} />
             <span>
-              Too many sign-in attempts. Please wait{' '}
-              <span className="auth-lockout-timer">{lockoutSeconds}s</span> before retrying.
+              {t('auth.lockoutMessage', 'Too many sign-in attempts. Please wait {seconds}s before retrying.', { seconds: lockoutSeconds })}
             </span>
           </div>
         )}
@@ -180,7 +181,7 @@ export default function Login() {
         {/* Mock mode: Quick 1-click role logins (Strictly zero emojis) */}
         {IS_MOCK && (
           <div role="status" className="auth-mock-box">
-            <div className="auth-mock-title">Quick Sign-In (Demo / Offline Mode):</div>
+            <div className="auth-mock-title">{t('auth.quickSignIn', 'Quick Sign-In (Demo / Offline Mode):')}</div>
             <div className="auth-mock-buttons">
               {MOCK_LOGINS.map((l) => (
                 <button
@@ -232,7 +233,7 @@ export default function Login() {
           disabled={busy || lockoutSeconds > 0}
           style={{ minHeight: 44, fontSize: 16 }}
         >
-          {busy ? 'Signing in…' : lockoutSeconds > 0 ? `Wait (${lockoutSeconds}s)` : 'Sign In'}
+          {busy ? t('auth.submitting', 'Signing in…') : lockoutSeconds > 0 ? `Wait (${lockoutSeconds}s)` : t('auth.submit', 'Sign In')}
         </Button>
       </form>
     </AuthCard>
@@ -243,13 +244,14 @@ export default function Login() {
  * The secondary routes under the divider.
  */
 function LoginFooter() {
+  const { t } = useTranslation()
   return (
     <>
       <Link
         to="/forgot-password"
         className="auth-footer-link"
       >
-        Forgot password?
+        {t('auth.forgotPassword', 'Forgot password?')}
       </Link>
     </>
   )

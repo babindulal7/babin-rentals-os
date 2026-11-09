@@ -31,6 +31,13 @@ import { IRD_POOL_BLOCKED_REASON } from '../../../data/tools'
 
 let viewport: Viewport = 'desktop'
 
+// Local copy/layout review fixture only. Production activation remains closed;
+// languageReadiness/languagePreferences suites verify that release boundary.
+vi.mock('../../../lib/languageReadiness', async (orig) => ({
+  ...(await orig<typeof import('../../../lib/languageReadiness')>()),
+  canEnable: () => true,
+}))
+
 vi.mock('../../../lib/device', async (orig) => ({
   ...(await orig<typeof import('../../../lib/device')>()),
   useViewport: () => viewport,
@@ -41,6 +48,7 @@ vi.mock('../../../lib/device', async (orig) => ({
 
 const { default: PricingCalculator } = await import('../PricingCalculator')
 const { default: DepreciationCalculator } = await import('../DepreciationCalculator')
+const { default: LateFeeCalculator } = await import('../LateFeeCalculator')
 
 let container: HTMLDivElement
 let root: Root
@@ -235,5 +243,27 @@ describe('Depreciation — no default life, and no invented IRD rate', () => {
     /* No percentage may appear on this tab — one would be an invented tax
        position. The tab renders alone, so the assertion is safe. */
     expect(text).not.toMatch(/\d+(\.\d+)?\s*%/)
+  })
+})
+
+describe('LateFeeCalculator — i18n and Latin digits (T6-02)', () => {
+  it('renders English copy by default', async () => {
+    document.documentElement.setAttribute('lang', 'en')
+    await mount(<LateFeeCalculator />)
+    expect(container.textContent).toContain('Late fee estimate')
+    expect(container.textContent).toContain('Up to 30 minutes free')
+    expect(container.textContent).toContain('Enter a daily rate to calculate the fee.')
+  })
+
+  it('renders Nepali copy in the reviewer fixture, keeping numbers and NPR Latin', async () => {
+    document.documentElement.setAttribute('lang', 'ne')
+    await mount(<LateFeeCalculator />)
+    expect(container.textContent).toContain('ढिलाइ शुल्क अनुमान')
+    expect(container.textContent).toContain('30 मिनेटसम्म निःशुल्क')
+    expect(container.textContent).toContain('शुल्क गणना गर्न दैनिक दर प्रविष्ट गर्नुहोस्।')
+    // Asserts no Devanagari digits exist
+    expect(container.textContent).not.toMatch(/[०-९]/)
+    // Reset lang back to en
+    document.documentElement.setAttribute('lang', 'en')
   })
 })

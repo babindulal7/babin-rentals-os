@@ -282,6 +282,10 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     selectClient,
     onClientCreated,
     health,
+    clientMembership,
+    monthlyBookingsCount,
+    memberDiscountRemoved,
+    toggleMemberDiscount,
   } = useNewRentalClient({
     searchParams,
     clientPool,
@@ -474,6 +478,8 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     isStaffClient,
     staffDiscountPercent,
     staffDiscountRemoved,
+    clientMembership,
+    memberDiscountRemoved,
   })
 
   /* ── §12 alerts. Critical blocks Confirm; Warning blocks Handover. ─────── */
@@ -527,6 +533,8 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
         lines,
         equipmentLines,
         pricing,
+        clientMembership,
+        monthlyBookingsCount,
       }),
     [
       conflictLines,
@@ -545,6 +553,8 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
       lines,
       equipmentLines,
       pricing,
+      clientMembership,
+      monthlyBookingsCount,
     ],
   )
 
@@ -607,7 +617,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
         ...member,
         role: member.role as CrewRole,
         dayRatePaisa: member.dayRatePaisa as Paisa,
-        overtimePaisa: member.overtimePaisa as Paisa,
+        overtimeDays: Number(member.overtimeDays ?? 0),
         accommodationPaisa: member.accommodationPaisa as Paisa,
         mealsPaisa: member.mealsPaisa as Paisa,
       })),
@@ -724,6 +734,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     setConfirmedSuccess,
     showSuccessToast,
     client,
+    clientMembership,
     lines,
     equipmentLines,
     project,
@@ -773,7 +784,17 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
       const mapped = prefill.lines.map((l) => ({ ...l }) as Line)
       setLines((prev) => (mode === 'fresh' ? mapped : [...prev, ...mapped]))
       if (prefill.crew.length > 0) {
-        const crewMapped = prefill.crew.map((c) => ({ ...c, role: c.role as CrewRole }) as CrewLine)
+        const crewMapped: CrewLine[] = prefill.crew.map((c) => ({
+          crewId: c.crewMemberId ?? `crew-${Math.random().toString(36).slice(2, 9)}`,
+          crewMemberId: c.crewMemberId ?? undefined,
+          name: c.name,
+          role: c.role as CrewRole,
+          phone: c.phone,
+          dayRatePaisa: c.dayRatePaisa,
+          overtimeDays: c.dayRatePaisa > 0 ? c.overtimePaisa / c.dayRatePaisa : 0,
+          accommodationPaisa: c.accommodationPaisa,
+          mealsPaisa: c.mealsPaisa,
+        }))
         setCrew((prev) => (mode === 'fresh' ? crewMapped : [...prev, ...crewMapped]))
       }
       if (prefill.delivery) {
@@ -1241,6 +1262,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
               open={open[0] ?? true}
               onToggle={() => toggle(0)}
               client={client}
+              clientMembership={clientMembership}
               clientPool={clientPool}
               selectedClientId={selectedClientId}
               clientFieldTouched={clientFieldTouched}
@@ -1410,6 +1432,9 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
               setDepositOverrideReason={setDepositOverrideReason}
               depositAuthorizedBy={depositAuthorizedBy}
               setDepositAuthorizedBy={setDepositAuthorizedBy}
+              clientMembership={clientMembership}
+              memberDiscountRemoved={memberDiscountRemoved}
+              onToggleMemberDiscount={toggleMemberDiscount}
               title={SECTIONS[5]}
             />
           )}

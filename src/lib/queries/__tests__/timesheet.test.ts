@@ -42,7 +42,6 @@ const {
   weekRange,
   addDays,
   formatHours,
-  hasOvertime,
   STANDARD_DAY_HOURS,
 } = await import('../timesheet')
 
@@ -125,11 +124,42 @@ describe('buildTimesheetRows', () => {
     expect(rows[0]!.pay).toBe(4000 + 8000)
   })
 
-  it('estimates pay as hours × day rate ÷ the standard day', () => {
+  it('pays by the day (days × day rate + recorded overtime days, D24) matching Crew Assist payouts', () => {
     const [row] = buildTimesheetRows([day()], [booking({ day_rate: 4000 })], [member()], '2026-10-19', '2026-10-25')
     expect(STANDARD_DAY_HOURS).toBe(8)
     expect(row!.pay).toBe(4000)
     expect(row!.rate).toBe(4000)
+    expect(row!.daysWorked).toBe(1)
+    expect(row!.overtimeDays).toBe(0)
+  })
+
+  it('calculates 3-day line with +0.5 day overtime as 3.5 days × day rate matching Crew Assist (D24, T8-07)', () => {
+    const days = [
+      day({ work_date: '2026-10-19', overtime_fraction: 0 }),
+      day({ work_date: '2026-10-20', overtime_fraction: 0.5 }),
+      day({ work_date: '2026-10-21', overtime_fraction: 0 }),
+    ]
+    const [row] = buildTimesheetRows(days, [booking({ day_rate: 5000 })], [member()], '2026-10-19', '2026-10-25')
+    expect(row!.daysWorked).toBe(3)
+    expect(row!.overtimeDays).toBe(0.5)
+    // 3.5 days × 5000 = 17,500
+    expect(row!.pay).toBe(17500)
+    expect(row!.rate).toBe(5000)
+  })
+
+  it('pays days worked even when hours are unrecorded (operational hours distinct from day pay, D24)', () => {
+    const [row] = buildTimesheetRows(
+      [day({ actual_start: null, actual_end: null, overtime_fraction: 1.0 })],
+      [booking({ day_rate: 6000 })],
+      [member()],
+      '2026-10-19',
+      '2026-10-25',
+    )
+    expect(row!.totalHrs).toBe(0)
+    expect(row!.daysWorked).toBe(1)
+    expect(row!.overtimeDays).toBe(1)
+    // (1 + 1.0) × 6000 = 12,000
+    expect(row!.pay).toBe(12000)
   })
 
   it('withholds rate and pay (null, not 0) when the view masked the day rate', () => {
@@ -175,15 +205,16 @@ describe('buildTimesheetRows', () => {
     expect(approval([day()])).toBe('Not submitted')
   })
 
-  it('flags overtime past the standard day', () => {
-    const [row] = buildTimesheetRows(
+  it('does not derive an overtime flag from hours (R-9.3: day rate, no overtime flag)', () => {
+    const rows = buildTimesheetRows(
       [day({ actual_end: '2026-10-19T14:30:00Z' })], // 11.5h − 0.5h break = 11h
       [booking()],
       [member()],
       '2026-10-19',
       '2026-10-25',
     )
-    expect(hasOvertime(row!)).toBe(true)
+    expect(rows[0]!.totalHrs).toBeGreaterThan(8)
+    expect(rows[0]!.overtimeDays).toBe(0)
   })
 
   it('sorts by name', () => {
@@ -204,21 +235,23 @@ describe('getTimesheetStats', () => {
     expect(getTimesheetStats(rows).totalPay).toBeNull()
   })
 
-  it('totals hours, pay, who logged, and overtime', () => {
+  it('totals hours, pay, and who logged', () => {
     const rows = buildTimesheetRows([day()], [booking()], [member()], '2026-10-19', '2026-10-25')
-    expect(getTimesheetStats(rows)).toEqual({ totalHours: 8, totalPay: 4000, staffLogged: 1, totalStaff: 1, overtimeFlags: 0 })
+    expect(getTimesheetStats(rows)).toEqual({ totalHours: 8, totalPay: 4000, staffLogged: 1, totalStaff: 1 })
   })
 })
 
 describe('timesheetCsv', () => {
   const rows = buildTimesheetRows([day()], [booking()], [member({ full_name: 'Suman "Gaffer" Rai' })], '2026-10-19', '2026-10-25')
 
-  it('carries day rate and estimated pay only for a money-sighted session', () => {
+  it('carries day rate, days, and pay only for a money-sighted session (no estimated pay label, D24)', () => {
     const money = timesheetCsv(rows, true)
-    expect(money.columns).toEqual(expect.arrayContaining(['Day rate (Rs)', 'Estimated pay (Rs)']))
+    expect(money.columns).toEqual(expect.arrayContaining(['Day rate (Rs)', 'Days', 'OT days', 'Pay (Rs)']))
+    expect(money.columns).not.toContain('Estimated pay (Rs)')
     expect(money.text).toContain('4000')
     const blind = timesheetCsv(rows, false)
     expect(blind.columns).not.toContain('Day rate (Rs)')
+    expect(blind.columns).not.toContain('Pay (Rs)')
     expect(blind.columns).not.toContain('Estimated pay (Rs)')
     expect(blind.text).not.toContain('4000')
   })

@@ -1439,7 +1439,7 @@ export default function HandoverWorkspace({
       focusBlocker,
       progress: { done: outUnits, total: totalUnits },
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- focusBlocker is re-created each render; listing it would re-register the action bag on every render
   }, [onRegisterActions, isOnline, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget, outUnits, totalUnits])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */

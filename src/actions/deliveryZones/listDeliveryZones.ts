@@ -11,7 +11,11 @@ export type DeliveryZoneRow = {
   id: string;
   name: string;
   description: string | null;
-  fee_paisa: number;
+  /**
+   * Law 6: `list_delivery_zones()` returns null for money-blind roles
+   * (Warehouse · Technician · Driver) — the row exists, the figure does not.
+   */
+  fee_paisa: number | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;

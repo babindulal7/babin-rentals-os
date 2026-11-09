@@ -1155,7 +1155,9 @@ function AddBranchModal({
       role="dialog"
       aria-modal="true"
       aria-label="Add branch"
+      tabIndex={0}
       onClick={onClose}
+      onKeyDown={(e) => { if (e.key === 'Escape') onClose() }}
       style={{
         position: 'fixed',
         inset: 0,
@@ -1167,7 +1169,11 @@ function AddBranchModal({
       }}
     >
       <div
+        role="region"
+        aria-label="Add branch modal content"
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => { if (e.key === 'Escape') e.stopPropagation() }}
         style={{ ...cardStyle, width: 520, maxWidth: '100%', maxHeight: '86vh', overflowY: 'auto', boxShadow: 'var(--shadow-modal)' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>

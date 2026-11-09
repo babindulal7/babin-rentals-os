@@ -250,6 +250,7 @@ export function Modal({
   const modalNode = (
     <div
       className="app-modal"
+      role="presentation"
       onKeyDown={handleTrapKeyDown}
       style={{
         position: 'fixed',
@@ -270,7 +271,10 @@ export function Modal({
     >
       <div
         style={{ position: 'fixed', inset: 0 }}
+        role="button"
+        tabIndex={-1}
         onClick={onClose}
+        onKeyDown={(e) => { if (e.key === 'Escape') onClose() }}
         aria-hidden="true"
       />
 

@@ -175,3 +175,90 @@ export function approvalEffect(report: DamageReportInput, approvedBy: string): D
 export function submitState(validation: DamageValidation): DamageState {
   return validation.valid ? 'Awaiting Approval' : 'Draft'
 }
+
+/** Ruling W44: Damage found at cleaning/reset defaults to claiming from the client. */
+export const DEFAULT_POST_RETURN_DAMAGE_DISPOSITION = 'Charge Client'
+
+/** Ruling W23: Damage cases opened post-return start with zero assessed amount under review until approved. */
+export const POST_RETURN_DAMAGE_INITIAL_STATUS = 'Under Review'
+
+export interface ResetDamageCaseInput {
+  bookingId: string
+  unitId: string
+  damageType: string
+  description: string
+  severity?: string | undefined
+  photos: number
+}
+
+/**
+ * Validates damage reported during reset/cleaning.
+ * Ruling W27 requires >= 1 photo; description requires >= 5 characters.
+ */
+export function validateResetDamageReport(i: ResetDamageCaseInput): { valid: boolean; errors: string[] } {
+  const errors: string[] = []
+  if (i.photos < MIN_PHOTOS) {
+    errors.push(`At least ${MIN_PHOTOS} saved evidence photo is required for damage found during reset (Ruling W27).`)
+  }
+  if (!i.description || i.description.trim().length < 5) {
+    errors.push('Damage description of at least 5 characters is required.')
+  }
+  if (!i.damageType || i.damageType.trim() === '') {
+    errors.push('Damage type must be selected.')
+  }
+  return { valid: errors.length === 0, errors }
+}
+
+/**
+ * Ruling W23: Damage notice format for client notification post-return.
+ * Notice now, amount later: states the issue and photos attached, but no amount
+ * appears until approved by Manager (< Rs 25,000) or Owner (>= Rs 25,000).
+ */
+export interface ResetDamageClientNotice {
+  subject: string
+  body: string
+  bookingNo: string
+  clientName: string
+  equipmentName: string
+  description: string
+  photosCount: number
+  status: 'Under Review'
+}
+
+export function buildResetDamageClientNotice(input: {
+  bookingNo: string
+  clientName: string
+  equipmentName: string
+  description: string
+  photosCount?: number
+}): ResetDamageClientNotice {
+  const photosCount = input.photosCount ?? 0
+  const photosLine =
+    photosCount > 0
+      ? `We have recorded ${photosCount} photo${photosCount === 1 ? '' : 's'} of the condition.`
+      : 'Our inspection team has documented the condition.'
+
+  return {
+    subject: `Equipment Condition Update: ${input.equipmentName} (${input.bookingNo}) — Under Review`,
+    body: [
+      `Dear ${input.clientName},`,
+      '',
+      `During post-return inspection for rental ${input.bookingNo}, our team identified damage on ${input.equipmentName}:`,
+      `"${input.description.trim()}"`,
+      '',
+      photosLine,
+      'This matter is currently under review with our technical management team.',
+      'No charges have been assessed at this time. We will contact you once the assessment is complete.',
+      '',
+      'Dhanyabad,',
+      'Babin Rentals',
+    ].join('\n'),
+    bookingNo: input.bookingNo,
+    clientName: input.clientName,
+    equipmentName: input.equipmentName,
+    description: input.description.trim(),
+    photosCount,
+    status: 'Under Review',
+  }
+}
+

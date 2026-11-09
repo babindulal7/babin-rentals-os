@@ -7,12 +7,15 @@ import {
   applyRemoteSettings,
   getSetting,
   isDeviceLocalKey,
+  isUserPreferenceKey,
   writeSettings,
+  validateSetting,
   type RemoteSettingRow,
   type SettingKey,
   type SettingValue,
   type SettingsRecord,
 } from './settingsStore'
+import { saveUserLanguage } from './languagePreferences'
 
 /**
  * Database side of the settings store (0158, G1). Kept apart from `settingsStore.ts` so the many modules
@@ -44,9 +47,15 @@ async function setShared(key: SettingKey, value: SettingValue): Promise<void> {
 
 /** Saves a patch: shared keys go to the database, device-local keys stay on this device. */
 export async function saveSettings(patch: Partial<SettingsRecord>): Promise<void> {
+  if (patch.language !== undefined) {
+    const problem = validateSetting('language', patch.language)
+    if (problem) throw new Error(problem)
+    await saveUserLanguage(patch.language === 'नेपाली' ? 'ne' : 'en')
+  }
   const shared: Partial<SettingsRecord> = {}
   const local: Partial<SettingsRecord> = {}
   for (const [k, v] of Object.entries(patch) as Array<[SettingKey, SettingValue]>) {
+    if (isUserPreferenceKey(k)) continue
     ;(isDeviceLocalKey(k) ? local : shared)[k] = v
   }
   if (Object.keys(local).length) writeSettings(local)
@@ -60,7 +69,7 @@ export async function saveSettings(patch: Partial<SettingsRecord>): Promise<void
 export async function resetSharedSettings(): Promise<void> {
   const back: Partial<SettingsRecord> = {}
   for (const k of Object.keys(SETTING_SPECS) as SettingKey[]) {
-    if (!isDeviceLocalKey(k) && getSetting(k) !== SETTINGS_DEFAULTS[k]) back[k] = SETTINGS_DEFAULTS[k]
+    if (!isDeviceLocalKey(k) && !isUserPreferenceKey(k) && getSetting(k) !== SETTINGS_DEFAULTS[k]) back[k] = SETTINGS_DEFAULTS[k]
   }
   await saveSettings(back)
 }

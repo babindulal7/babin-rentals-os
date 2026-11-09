@@ -421,7 +421,10 @@ export function LineItemTree({
               {/* Flight Case Sturdy Header */}
               <div
                 className="flight-case-header"
+                role="button"
+                tabIndex={0}
                 onClick={() => toggleCase(parent.id)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleCase(parent.id) } }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',

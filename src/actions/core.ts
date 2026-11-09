@@ -73,6 +73,8 @@ export type ActionContext = {
   role: SystemRole;
   /** Law 6 / rbac's offline degradation: several approvals are refused offline. */
   isOnline?: boolean;
+  /** Target user ID for actions on behalf of another user (e.g., revoke another's token). */
+  targetUserId?: string;
 };
 
 export type ActionConfig<Input, Output> = {
@@ -148,6 +150,8 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
       return rbac.canOverrideCreditLimit(ctx.role, online);
     case 'settings.manage':
       return rbac.canManageSettings(ctx.role);
+    case 'glossary.manage':
+      return rbac.canManageGlossary(ctx.role, online);
     case 'operations.perform':
       return rbac.canPerformOperations(ctx.role);
     case 'operations.pack':
@@ -249,6 +253,15 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     // — the identical five-role set, confirmed against pg_policies the same
     // day. The release is an UPDATE on that table; no narrower policy exists.
     case 'unit.release':
+    // `inventory.edit_product_aliases` (T3-12, 0223) mirrors the
+    // `product_aliases_select/insert/update` policies, whose role list IS this
+    // five (Owner · Admin · Manager · Coordinator · Warehouse): the people who
+    // build bookings are the people who correct what the paste-list matcher
+    // suggested. Storing a spelling is narrower than the booking write they
+    // already hold, so this set is the ceiling and not an extension of it
+    // (N-3). The `remember_product_alias` RPC re-checks the same five in
+    // Postgres, so the rule survives a caller that skips `checkCapability`.
+    case 'inventory.edit_product_aliases':
       return rbac.canWriteBookingDesk(ctx.role);
 
     /* `closing.approve` (1 Sep, §5.4) mirrors `daily_closings_finance_insert`
@@ -347,6 +360,9 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     // either way — this can only ever be narrower than the policy, never wider.
     //
     // Revert: `return rbac.canWriteSharedTriage(ctx.role);`
+    case 'case.create':
+      return rbac.isStaff(ctx.role);
+
     case 'case.resolve':
       return rbac.canApproveDamage(ctx.role, 'Manager');
 
@@ -383,6 +399,20 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
       return rbac.canTransitionDeliveryJob(ctx.role);
     case 'delivery.reschedule':
       return rbac.canRescheduleDeliveryJob(ctx.role);
+    case 'delivery.view':
+      return rbac.canViewDayRoute(ctx.role);
+    case 'delivery.setRoutePosition':
+      return rbac.canSetDeliveryRoutePosition(ctx.role);
+    case 'delivery.setClientMapPin':
+      return rbac.canSetClientMapPin(ctx.role);
+
+    // Calendar feed tokens (T4-10, migration 0209)
+    case 'calendar_feed.create':
+      return rbac.canCreateCalendarFeedToken(ctx.role);
+    case 'calendar_feed.revoke':
+      return rbac.canRevokeCalendarFeedToken(ctx.role, ctx.targetUserId, ctx.userId);
+    case 'calendar_feed.view':
+      return rbac.canViewCalendarFeedTokenStatus(ctx.role, ctx.targetUserId, ctx.userId);
 
     // Delivery zones (T4-07, migration 0189)
     case 'delivery_zone.create':
@@ -391,6 +421,29 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
       return rbac.canReadDeliveryZones(ctx.role);
     case 'delivery_zone.manage':
       return rbac.canManageDeliveryZones(ctx.role);
+
+    // Delivery proof (T4-03, migration 0211)
+    case 'delivery.proof':
+      return rbac.canAttachDeliveryProof(ctx.role);
+
+    // Problem reports (T4-11, migration 0210)
+    case 'problem_report.create':
+      return rbac.canCreateProblemReport(ctx.role);
+    case 'problem_report.read':
+      return rbac.canReadProblemReports(ctx.role);
+    case 'problem_report.manage':
+      return rbac.canManageProblemReports(ctx.role);
+
+    // Offer campaigns (T5-12, migration 0224)
+    case 'offer_campaign.create':
+    case 'offer_campaign.manage':
+    case 'offer_campaign.send':
+      return rbac.canManageOfferCampaigns(ctx.role);
+
+    // Message templates (T5-13, B20, migration 0227)
+    case 'settings.manage_templates':
+    case 'comms.templates':
+      return rbac.canManageMessageTemplates(ctx.role);
 
     // ⚠ FILED, not fixed: `crew.assign` is still `isStaff()`, but PERMISSIONS.md
     // §4.7 says `C+` and the §3 grid marks Crew Assist ✕ for Warehouse,

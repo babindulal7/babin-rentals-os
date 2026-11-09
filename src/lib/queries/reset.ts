@@ -84,44 +84,49 @@ export async function getNextReservationsForUnits(
   currentBookingId?: string | null,
 ): Promise<Record<string, NextReservationInfo>> {
   if (assetIds.length === 0) return {}
-  try {
-    let query = supabase
-      .from('inventory_reservations')
-      .select('asset_id, period, bookings ( id, booking_no, pickup_at )')
-      .is('released_at', null)
-      .in('asset_id', assetIds)
 
-    if (currentBookingId) {
-      query = query.neq('booking_id', currentBookingId)
-    }
+  let query = supabase
+    .from('inventory_reservations')
+    .select('asset_id, period, bookings ( id, booking_no, pickup_at )', { count: 'exact' })
+    .is('released_at', null)
+    .in('asset_id', assetIds)
 
-    const { data, error } = await query
-    if (error || !data) return {}
+  if (currentBookingId) {
+    query = query.neq('booking_id', currentBookingId)
+  }
 
-    const result: Record<string, NextReservationInfo> = {}
+  // A failed or truncated read is UNKNOWN, not "there are no urgent pickups".
+  // Fail visibly so floor staff cannot treat a partial queue as an empty one.
+  const { data, error, count } = await query
+  if (error) throw new Error(`Upcoming reservation check failed: ${error.message}`)
+  if (!data) throw new Error('Upcoming reservation check returned no data.')
+  if (typeof count === 'number' && count > data.length) {
+    throw new Error(`Upcoming reservation check was incomplete (${data.length} of ${count} rows).`)
+  }
 
-    for (const row of data) {
-      if (!row.asset_id) continue
-      const bookingData = row.bookings as { id?: string; booking_no?: string; pickup_at?: string } | null
-      const parsedRange = typeof row.period === 'string' ? parseTstzRange(row.period) : null
-      const pickupAt = bookingData?.pickup_at ?? parsedRange?.fromAd
-      if (!pickupAt) continue
-      const pickupTime = Date.parse(pickupAt)
-      if (Number.isNaN(pickupTime)) continue
+  const result: Record<string, NextReservationInfo> = {}
+  const staleBefore = Date.now() - 30 * 60_000
 
-      const existing = result[row.asset_id]
-      if (!existing || pickupTime < Date.parse(existing.pickupAt)) {
-        result[row.asset_id] = {
-          pickupAt,
-          bookingNo: bookingData?.booking_no ?? '',
-        }
+  for (const row of data) {
+    if (!row.asset_id) continue
+    const bookingData = row.bookings as { id?: string; booking_no?: string; pickup_at?: string } | null
+    const parsedRange = typeof row.period === 'string' ? parseTstzRange(row.period) : null
+    const pickupAt = bookingData?.pickup_at ?? parsedRange?.fromAd
+    if (!pickupAt) continue
+    const pickupTime = Date.parse(pickupAt)
+    // A long-expired reservation should not hide a later valid pickup.
+    if (!Number.isFinite(pickupTime) || pickupTime < staleBefore) continue
+
+    const existing = result[row.asset_id]
+    if (!existing || pickupTime < Date.parse(existing.pickupAt)) {
+      result[row.asset_id] = {
+        pickupAt,
+        bookingNo: bookingData?.booking_no ?? '',
       }
     }
-
-    return result
-  } catch {
-    return {}
   }
+
+  return result
 }
 
 /**

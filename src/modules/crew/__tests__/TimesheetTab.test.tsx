@@ -54,7 +54,9 @@ const row = (over: Partial<TimesheetRow> = {}): TimesheetRow => ({
   rate: 4000,
   hrs: [8, 0, 9.5, 0, 0, 0, 0],
   totalHrs: 17.5,
-  pay: 8750,
+  daysWorked: 2,
+  overtimeDays: 0,
+  pay: 8000,
   unrecordedDays: 0,
   approval: 'Awaiting approval',
   ...over,
@@ -99,13 +101,15 @@ afterEach(async () => {
 })
 
 describe('data states', () => {
-  it('shows each person with hours, approval and overtime', async () => {
+  it('shows each person with hours and approval, with no hours-based overtime flag (R-9.3)', async () => {
     await mount()
     expect(text()).toContain('Suman Rai')
     expect(text()).toContain('Gaffer')
     expect(text()).toContain('17.5h')
     expect(text()).toContain('9.5h')
     expect(text()).toContain('Awaiting approval')
+    expect(text()).not.toContain('Overtime hours logged')
+    expect(text()).not.toContain('Overtime Flags')
   })
 
   it('shows an honest empty state, not seeded staff', async () => {
@@ -159,11 +163,12 @@ describe('data states', () => {
 })
 
 describe('Law 6 — money', () => {
-  it('shows the estimate, its basis and the export to a money role', async () => {
+  it('shows the day-based pay (D24), matching Crew Assist, and the export to a money role with no estimated pay labels', async () => {
     await mount()
-    expect(text()).toContain('Estimated Pay')
-    expect(text()).toContain('Est. pay')
-    expect(text()).toContain('hours × day rate ÷ 8')
+    expect(text()).toContain('Pay')
+    expect(text()).not.toContain('Estimated Pay')
+    expect(text()).not.toContain('Est. pay')
+    expect(text()).toContain('days worked × day rate')
     expect(button('Export CSV')).toBeDefined()
   })
 
@@ -197,6 +202,7 @@ describe('export', () => {
     expect(audit.module).toBe('Operations')
     expect(audit.rowCount).toBe(1)
     expect(audit.filter).toBe('This Week')
-    expect(audit.columns).toEqual(expect.arrayContaining(['Name', 'Estimated pay (Rs)', 'Approval']))
+    expect(audit.columns).toEqual(expect.arrayContaining(['Name', 'Days', 'OT days', 'Pay (Rs)', 'Approval']))
+    expect(audit.columns).not.toContain('Estimated pay (Rs)')
   })
 })

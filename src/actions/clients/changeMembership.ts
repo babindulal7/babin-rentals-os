@@ -2,35 +2,20 @@ import { createAction, type ActionConfig } from '../core'
 import { EVENT_TYPES } from '../../events/eventBus'
 import { supabase } from '../../lib/supabase'
 import { MEMBERSHIP_TIERS, type MembershipTier } from '../../lib/queries/clients'
+import { toRupees, type Paisa } from '../../lib/money'
 
 /**
  * # CHANGE_CLIENT_MEMBERSHIP — put a client on a plan, or move them to another
  *
- * RULING 2026-10-22 (Babin: "activate membership"). Before this, the Change
- * Tier dialog's save was deliberately blocked — "no tier-change action exists" —
- * because a tier lives in `client_memberships`, not `clients`, and nothing wrote
- * it. This is that action. It is one RPC, `change_client_membership` (0174),
- * because 0005 allows exactly one LIVE membership per client and a level change
- * must supersede the old row and add the new one atomically; three separate
- * writes from here could strand a client with none, which reads as Lapsed and
- * zeroes their credit.
+ * RULING D22 (OPEN_DECISIONS §20). Changing plan mid-term starts a new term from
+ * today and credits the unused days of the old plan toward the new fee:
+ *   credit = old fee × days left ÷ days in old term (integer paisa, half-up)
+ *   new fee due = max(0, new fee − credit)
+ * If credit > new fee (downgrade), excess becomes the client's account credit.
  *
- * There is no "None" plan. A client with no live membership is simply *activated*
- * onto the plan; a client with one is *moved*. Same write.
+ * One RPC, `change_client_membership` (0197 successor of 0174).
  *
- * What it does not do, on purpose:
- *  - it records no fee (`fee_paid` stays NULL) — payments stay on the invoice flow;
- *  - it does not renew a lapsed membership (the function refuses "already on this
- *    plan"); renewal is a different action that has not been built;
- *  - it does not decide whether a change restarts the term — the new row's join date
- *    is today's business day, and that open question is OPEN_DECISIONS §19.
- *
- * Who may: Owner, Admin, Manager, Coordinator (`client.change_membership`,
- * mirroring `client_memberships_all`). The function checks the same list itself
- * because it is SECURITY DEFINER.
- *
- * The domain event is emitted here, after the write is confirmed — never before,
- * and never by the dialog (the old dialog emitted it for a save that wrote nothing).
+ * Who may: Owner, Admin, Manager, Coordinator (`client.change_membership`).
  */
 
 export interface ChangeMembershipInput {
@@ -38,15 +23,25 @@ export interface ChangeMembershipInput {
   clientDbId: string
   /** The C-… code the screens key on. Carried for the event only. */
   clientCode: string
-  planLevel: MembershipTier
+  planLevel?: MembershipTier | undefined
+  planId?: string | undefined
+  effectiveDate?: string | undefined
+  /** Integer paisa. The RPC's rupee column is converted at this boundary. */
+  feePaid?: number | null | undefined
   /** Optional free text, kept as the audit reason. At most 500 characters. */
   note?: string | undefined
+  /**
+   * R-9.2: keep the client's original join date (the renewal anniversary stays put).
+   * Omitted or false restarts the term from the change date.
+   */
+  keepJoinDate?: boolean | undefined
   /** One per attempt (Law 8). The caller keeps it across retries of the same request. */
   clientUuid: string
 }
 
 export interface ChangeMembershipResult {
   client_id: string
+  plan_id?: string
   plan_level: MembershipTier
   /** `null` when the client had no live membership — i.e. this was an activation. */
   previous_level: MembershipTier | null
@@ -54,6 +49,15 @@ export interface ChangeMembershipResult {
   superseded_membership_id: string | null
   /** The new row's join date (Kathmandu business day). */
   joined_on: string
+  /** True when the original join date was kept (R-9.2). */
+  join_date_kept?: boolean
+  old_fee?: number
+  days_left?: number
+  total_days?: number
+  credit?: number
+  new_fee?: number
+  new_fee_due?: number
+  account_credit?: number
 }
 
 export const NOTE_MAX = 500
@@ -67,8 +71,14 @@ export const changeMembershipConfig: ActionConfig<ChangeMembershipInput, ChangeM
     if (!input.clientDbId || !input.clientCode || !input.clientUuid) {
       throw new Error('Client and request key are required.')
     }
-    if (!(MEMBERSHIP_TIERS as readonly string[]).includes(input.planLevel)) {
+    if (!input.planLevel && !input.planId) {
       throw new Error('Choose one of the membership plans.')
+    }
+    if (input.planLevel && !(MEMBERSHIP_TIERS as readonly string[]).includes(input.planLevel)) {
+      throw new Error('Choose one of the membership plans.')
+    }
+    if (input.feePaid != null && (!Number.isSafeInteger(input.feePaid) || input.feePaid < 0)) {
+      throw new Error('Membership fee must be a non-negative amount in integer paisa.')
     }
     if ((input.note ?? '').trim().length > NOTE_MAX) {
       throw new Error(`A note can be at most ${NOTE_MAX} characters.`)
@@ -84,8 +94,12 @@ export const changeMembershipConfig: ActionConfig<ChangeMembershipInput, ChangeM
       p_payload: {
         client_id: input.clientDbId,
         client_uuid: input.clientUuid,
-        plan_level: input.planLevel,
+        ...(input.planLevel ? { plan_level: input.planLevel } : {}),
+        ...(input.planId ? { plan_id: input.planId } : {}),
+        ...(input.effectiveDate ? { effective_date: input.effectiveDate } : {}),
+        ...(input.feePaid != null ? { fee_paid: toRupees(input.feePaid as Paisa) } : {}),
         ...(note ? { note } : {}),
+        ...(input.keepJoinDate ? { keep_join_date: true } : {}),
       },
     })
     if (error?.code === 'PGRST202') {
@@ -95,7 +109,7 @@ export const changeMembershipConfig: ActionConfig<ChangeMembershipInput, ChangeM
     if (error) throw new Error(error.message)
 
     const result = data as unknown as ChangeMembershipResult | null
-    if (result?.client_id !== input.clientDbId || result.plan_level !== input.planLevel) {
+    if (result?.client_id !== input.clientDbId || (input.planLevel && result.plan_level !== input.planLevel)) {
       throw new Error('The server did not confirm this membership change. Retry with the same request.')
     }
     return {

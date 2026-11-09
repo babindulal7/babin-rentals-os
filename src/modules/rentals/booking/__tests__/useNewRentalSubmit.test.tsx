@@ -601,4 +601,102 @@ describe('useNewRentalSubmit', () => {
       host.remove()
     }
   })
+
+  it('marks booking project with [Priority] when client membership has Priority Booking perk', async () => {
+    vi.mocked(createRental).mockClear()
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const root = createRoot(host)
+    let submitHook!: ReturnType<typeof useNewRentalSubmit>
+
+    const dummyClient = {
+      dbId: 'client-db-priority',
+      id: 'CL-002',
+      name: 'Priority Member Client',
+    } as unknown as ClientRecord
+
+    const dummyPricing = {
+      securityDeposit: { requiredPaisa: 0 },
+      discounts: { discountPaisa: 0, appliedPercent: 0 },
+    } as unknown as PricingPipelineResult
+
+    function TestComponent() {
+      submitHook = useNewRentalSubmit({
+        confirmBlocked: false,
+        saveState: 'saved',
+        setSaveState: vi.fn(),
+        dispatchContext: () => ({ userId: 'user-1', role: 'Coordinator' }),
+        setActionError: vi.fn(),
+        setConfirmedSuccess: vi.fn(),
+        showSuccessToast: vi.fn(),
+        client: dummyClient,
+        clientMembership: {
+          level: 'Creator',
+          label: 'Creator Pass',
+          individualDiscountPct: 15,
+          bundleDiscountPct: 7,
+          monthlyBookingLimit: 4,
+          simultaneousRentalLimit: 2,
+          perks: ['Priority Booking'],
+          status: 'Active',
+          benefitsActive: true,
+        },
+        lines: [],
+        equipmentLines: [],
+        project: 'Documentary Kathmandu',
+        pickupAt: new Date('2026-11-01T09:00:00Z'),
+        returnAt: new Date('2026-11-03T18:00:00Z'),
+        deliveryType: 'Client Pickup',
+        pricing: dummyPricing,
+        manualDiscountReason: '',
+        manualDiscountAuthorizedBy: '',
+        womenDopEligible: false,
+        crew: [],
+        clientPickup: true,
+        deliveryChargePaisa: 0 as Paisa,
+        fuelChargePaisa: 0 as Paisa,
+        returnPickupType: 'Client Return',
+        returnPickupAddress: '',
+        returnPickupTime: '18:00',
+        returnPickupChargePaisa: 0,
+        returnTransportPaisa: 0,
+        vehicle: '',
+        numberPlate: '',
+        driverContact: '',
+        pickupLocation: '',
+        returnLocation: '',
+        specialInstructions: '',
+        days: 2,
+        draftId: null,
+        draftBookingNo: null,
+        draftHasUnsavedChanges: false,
+        draftData: {} as any,
+        setSavedDraftFingerprint: vi.fn(),
+        kind: 'Commercial',
+        kindOther: '',
+        confirmKey: { current: null },
+        draftBookingKey: { current: null },
+      })
+      return null
+    }
+
+    try {
+      await act(async () => {
+        root.render(<TestComponent />)
+      })
+
+      await act(async () => {
+        submitHook.confirmBooking()
+      })
+
+      expect(createRental).toHaveBeenCalledTimes(1)
+      const payload = vi.mocked(createRental).mock.calls[0]?.[0]
+      expect(payload?.project).toBe('[Priority] Documentary Kathmandu')
+    } finally {
+      await act(async () => {
+        root.unmount()
+      })
+      host.remove()
+    }
+  })
 })

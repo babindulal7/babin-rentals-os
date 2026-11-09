@@ -15,7 +15,7 @@ const sampleCrew: CrewLine[] = [
     role: 'Director of Photography',
     phone: '9841234567',
     dayRatePaisa: rupees(12000),
-    overtimePaisa: rupees(0),
+    overtimeDays: 0,
     accommodationPaisa: rupees(0),
     mealsPaisa: rupees(0),
   },
@@ -96,21 +96,20 @@ describe('CrewSection', () => {
         expandBtn?.click()
       })
 
-      expect(host.textContent).toContain('Overtime (Rs) *')
+      expect(host.textContent).toContain('Overtime (days) *')
       expect(host.textContent).toContain('Meals (Rs) *')
       expect(host.textContent).toContain('Accommodation (Rs) *')
 
-      // Change overtime input
-      const overtimeInput = host.querySelector<HTMLInputElement>('input[placeholder="0"]')
-      expect(overtimeInput).not.toBeNull()
+      // Change overtime input (select dropdown)
+      const overtimeSelect = host.querySelector<HTMLSelectElement>('select')
+      expect(overtimeSelect).not.toBeNull()
 
-      if (overtimeInput) {
+      if (overtimeSelect) {
         await act(async () => {
-          Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(overtimeInput, '1500')
-          overtimeInput.dispatchEvent(new Event('input', { bubbles: true }))
-          overtimeInput.dispatchEvent(new Event('change', { bubbles: true }))
+          overtimeSelect.value = '0.5'
+          overtimeSelect.dispatchEvent(new Event('change', { bubbles: true }))
         })
-        expect(onUpdateCrewExtras).toHaveBeenCalledWith('crew-1', 'overtimePaisa', rupees(1500))
+        expect(onUpdateCrewExtras).toHaveBeenCalledWith('crew-1', 'overtimeDays', 0.5)
       }
     } finally {
       await act(async () => root.unmount())
@@ -195,6 +194,86 @@ describe('CrewSection', () => {
         clearBtn?.click()
       })
       expect(onClearCrew).toHaveBeenCalled()
+    } finally {
+      await act(async () => root.unmount())
+      host.remove()
+    }
+  })
+
+  it('allows adding shoot day overtime (+½ day) per shoot day and calculates 3.5 days billed (D24, T8-06)', async () => {
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const root = createRoot(host)
+    const onUpdateCrewExtras = vi.fn()
+    const onUpdateCrewLine = vi.fn()
+
+    const threeDayCrew: CrewLine[] = [
+      {
+        crewId: 'crew-1',
+        name: 'Anup Baral',
+        role: 'Director of Photography',
+        phone: '9841234567',
+        days: 3,
+        dayRatePaisa: rupees(5000),
+        overtimeDays: 0,
+        accommodationPaisa: rupees(0),
+        mealsPaisa: rupees(0),
+      },
+    ]
+
+    try {
+      await act(async () => {
+        root.render(
+          <MemoryRouter>
+            <CrewSection
+              open={true}
+              onToggle={vi.fn()}
+              crew={threeDayCrew}
+              days={3}
+              canCrewMoney={true}
+              onAddCrew={vi.fn()}
+              onRemoveCrew={vi.fn()}
+              onClearCrew={vi.fn()}
+              onUpdateCrewExtras={onUpdateCrewExtras}
+              onUpdateCrewLine={onUpdateCrewLine}
+              crewChargesPaisa={rupees(15000)}
+              isPhone={false}
+            />
+          </MemoryRouter>,
+        )
+      })
+
+      // Expand extras
+      const expandBtn = host.querySelector<HTMLButtonElement>(
+        'button[aria-label="Show overtime, meals and accommodation for Anup Baral"]',
+      )
+      expect(expandBtn).not.toBeNull()
+      await act(async () => {
+        expandBtn?.click()
+      })
+
+      expect(host.textContent).toContain('Shoot Day Overtime (D24)')
+      expect(host.textContent).toContain('Day 1:')
+      expect(host.textContent).toContain('Day 2:')
+      expect(host.textContent).toContain('Day 3:')
+
+      // Click +½ day on Day 2
+      const day2HalfBtn = host.querySelector<HTMLButtonElement>(
+        'button[aria-label="Day 2 overtime +½ day for Anup Baral"]',
+      )
+      expect(day2HalfBtn).not.toBeNull()
+
+      await act(async () => {
+        day2HalfBtn?.click()
+      })
+
+      expect(onUpdateCrewExtras).toHaveBeenCalledWith('crew-1', 'overtimeDays', 0.5)
+      expect(onUpdateCrewLine).toHaveBeenCalledWith(
+        'crew-1',
+        expect.objectContaining({
+          overtimeDays: 0.5,
+        }),
+      )
     } finally {
       await act(async () => root.unmount())
       host.remove()

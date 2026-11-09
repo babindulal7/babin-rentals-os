@@ -28,7 +28,6 @@ import {
   TIMESHEET_DAYS,
   STANDARD_DAY_HOURS,
   getTimesheetStats,
-  hasOvertime,
   formatHours,
   timesheetCsv,
   downloadTimesheetCsv,
@@ -133,7 +132,9 @@ function StaffCard({
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontWeight: 600, fontSize: 'var(--t-body)' }}>{formatHours(row.totalHrs)}h</div>
+              <div style={{ fontWeight: 600, fontSize: 'var(--t-body)' }}>
+                {row.daysWorked}d{row.overtimeDays > 0 ? ` (+${row.overtimeDays} OT)` : ''} · {formatHours(row.totalHrs)}h
+              </div>
               {canViewMoney && row.pay !== null && (
                 <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text3)' }}>
                   {formatMoney(rupees(row.pay))}
@@ -151,7 +152,7 @@ function StaffCard({
               <span style={{ color: 'var(--text3)' }}>{TIMESHEET_DAYS[i]}</span>
               <span style={{
                 fontWeight: 600,
-                color: h === 0 ? 'var(--text3)' : h > STANDARD_DAY_HOURS ? 'var(--warn-text)' : 'var(--text)',
+                color: h === 0 ? 'var(--text3)' : 'var(--text)',
               }}>
                 {formatHours(h)}h
               </span>
@@ -187,12 +188,6 @@ function StaffCard({
           </div>
         )}
 
-        {/* Overtime flag */}
-        {hasOvertime(row) && (
-          <div style={{ marginTop: '6px' }}>
-            <Badge tone="warning" label="Overtime" />
-          </div>
-        )}
       </div>
     </Card>
   )
@@ -234,16 +229,15 @@ export default function TimesheetTab() {
     ...(canViewMoney
       ? [
           {
-            label: 'Estimated Pay',
+            label: 'Pay',
             value: formatMoney(rupees(stats.totalPay ?? 0)),
             icon: 'card' as const,
             accent: 'success' as const,
-            definition: `Sum of hours × day rate ÷ ${STANDARD_DAY_HOURS} across the crew this week. An estimate: crew payouts are days booked × day rate, and the hourly basis is not ruled yet.`,
+            definition: 'Sum of (days + overtime days) × day rate across the crew this week (Ruling D24). Matches Crew Assist payouts.',
           },
         ]
       : []),
     { label: 'Staff Logged', value: `${stats.staffLogged} / ${stats.totalStaff}`, icon: 'users', accent: 'progress' },
-    { label: 'Overtime Flags', value: String(stats.overtimeFlags), icon: 'alert_triangle', accent: 'warn' },
   ], [stats, canViewMoney])
 
   return (
@@ -340,17 +334,18 @@ export default function TimesheetTab() {
                     <th key={d} style={{ padding: '10px 6px', fontWeight: 600, color: 'var(--text3)', textAlign: 'center', minWidth: 36 }}>{d}</th>
                   ))}
                   <th style={{ padding: '10px 8px', fontWeight: 600, color: 'var(--text2)', textAlign: 'right' }}>Hours</th>
+                  <th style={{ padding: '10px 8px', fontWeight: 600, color: 'var(--text2)', textAlign: 'center' }}>Days</th>
                   {canViewMoney && (
-                    <th style={{ padding: '10px 16px', fontWeight: 600, color: 'var(--text2)', textAlign: 'right' }}>Est. pay</th>
+                    <th style={{ padding: '10px 16px', fontWeight: 600, color: 'var(--text2)', textAlign: 'right' }}>Pay</th>
                   )}
                   <th style={{ padding: '10px 8px', fontWeight: 600, color: 'var(--text2)' }}>Approval</th>
-                  <th style={{ width: 32 }} />
+                  <th style={{ width: 32 }}><span className="sr-only">Timesheet details</span></th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRows.length === 0 && (
                   <tr>
-                    <td colSpan={canViewMoney ? 12 : 11} style={{ padding: '24px 16px' }}>
+                    <td colSpan={canViewMoney ? 13 : 12} style={{ padding: '24px 16px' }}>
                       <EmptyState
                         kind={search.trim() ? 'no-results' : 'nothing-yet'}
                         title={search.trim() ? `No staff matching "${search}"` : 'No timesheet entries this period'}
@@ -392,14 +387,17 @@ export default function TimesheetTab() {
                             style={{
                               padding: '10px 6px',
                               textAlign: 'center',
-                              fontWeight: h > STANDARD_DAY_HOURS ? 600 : 400,
-                              color: h === 0 ? 'var(--text3)' : h > STANDARD_DAY_HOURS ? 'var(--warn-text)' : 'var(--text)',
+                              fontWeight: 400,
+                              color: h === 0 ? 'var(--text3)' : 'var(--text)',
                             }}
                           >
                             {h > 0 ? `${formatHours(h)}h` : '—'}
                           </td>
                         ))}
                         <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 600 }}>{formatHours(row.totalHrs)}h</td>
+                        <td style={{ padding: '10px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                          {row.daysWorked}{row.overtimeDays > 0 ? ` (+${row.overtimeDays} OT)` : ''}
+                        </td>
                         {canViewMoney && (
                           <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 500 }}>
                             {row.pay === null ? '—' : formatMoney(rupees(row.pay))}
@@ -416,7 +414,7 @@ export default function TimesheetTab() {
                       {/* Expanded row: daily bar chart */}
                       {isOpen && (
                         <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                          <td colSpan={canViewMoney ? 12 : 11} style={{ padding: '0 16px 12px' }}>
+                          <td colSpan={canViewMoney ? 13 : 12} style={{ padding: '0 16px 12px' }}>
                             <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', padding: '8px 0', maxWidth: 400 }}>
                               {row.hrs.map((h, di) => (
                                 <div key={di} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', flex: 1 }}>
@@ -439,16 +437,13 @@ export default function TimesheetTab() {
                             {unrecordedNote(row.unrecordedDays) && (
                               <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text3)', marginTop: '4px' }}>{unrecordedNote(row.unrecordedDays)}</div>
                             )}
-                            {((canViewMoney && row.rate !== null) || hasOvertime(row)) && (
+                            {((canViewMoney && row.rate !== null) || row.overtimeDays > 0) && (
                               <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text3)', marginTop: '4px' }}>
                                 {canViewMoney && row.rate !== null && (
                                   <span>
-                                    Rate: {formatMoney(rupees(row.rate))}/day · {formatMoney(rupees(Math.round(row.rate / STANDARD_DAY_HOURS)))}/hr
-                                  </span>
-                                )}
-                                {hasOvertime(row) && (
-                                  <span style={{ marginLeft: canViewMoney && row.rate !== null ? '8px' : 0 }}>
-                                    <Badge tone="warning" label="Overtime flagged" />
+                                    Rate: {formatMoney(rupees(row.rate))}/day
+                                    {row.overtimeDays > 0 && ` · Overtime: +${row.overtimeDays} day${row.overtimeDays === 1 ? '' : 's'} (${formatMoney(rupees(Math.round(row.overtimeDays * row.rate)))})`}
+                                    {` · Total pay: ${formatMoney(rupees(row.pay ?? 0))}`}
                                   </span>
                                 )}
                               </div>
@@ -468,8 +463,7 @@ export default function TimesheetTab() {
 
       {canViewMoney && rows.length > 0 && (
         <p style={{ margin: 'var(--sp-md) 0 0', fontSize: 'var(--t-meta)', color: 'var(--text3)', lineHeight: 1.55 }}>
-          Pay is an estimate: hours × day rate ÷ {STANDARD_DAY_HOURS}. Crew payouts on Crew Assist are days booked × day rate,
-          and an approved timesheet is what releases a payout — so treat this column as a cross-check, not the payout.
+          Pay is days worked × day rate + recorded overtime days (Ruling D24), matching Crew Assist payouts. Hours are recorded for operational tracking.
         </p>
       )}
     </PageShell>

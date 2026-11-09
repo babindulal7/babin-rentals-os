@@ -20,6 +20,7 @@ import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext
 import type { BookingStatus } from '../../lib/workflow'
 import RawDashboardMovementPanel from './DashboardMovementPanel'
 import LegacyExportCard from './LegacyExportCard'
+import RoleTaskCockpit from './RoleTaskCockpit'
 import './dashboard.css'
 
 const DashboardMovementPanel = RawDashboardMovementPanel as React.ComponentType<
@@ -111,7 +112,7 @@ const QUICK_PERIOD_LABELS: Record<'en' | 'ne', Record<QuickPeriod, string>> = {
   ne: {
     Today: 'आज',
     Tomorrow: 'भोलि',
-    'Next 7 Days': 'यो हप्ता (७ दिन)',
+    'Next 7 Days': 'आगामी 7 दिन',
   },
 }
 
@@ -621,6 +622,7 @@ export default function Today() {
             className="dispatch-toolbar__presets"
             role="tablist"
             aria-label="Preset dispatch periods"
+            tabIndex={0}
             onKeyDown={onPresetKeyDown}
           >
             {QUICK_PERIODS.map((period) => {
@@ -637,7 +639,6 @@ export default function Today() {
                   type="button"
                   tabIndex={isActive ? 0 : -1}
                   aria-selected={isActive}
-                  aria-pressed={isActive}
                   style={{ minHeight: 'var(--tap, 44px)' }}
                   onClick={() => syncBothPanels({ kind: 'quick', period })}
                 >
@@ -767,6 +768,12 @@ export default function Today() {
           />
         )}
       </div>
+
+      {/* Preserve the approved role-specific 1-tap actions without crowding the movement board. */}
+      <details className="dashboard-other-tasks" open>
+        <summary className="dashboard-other-tasks__summary">Other tasks and shortcuts</summary>
+        <RoleTaskCockpit />
+      </details>
 
     </PageShell>
   )

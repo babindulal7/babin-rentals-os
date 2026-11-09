@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import './rentals.css'
 import Icon from '../../components/ui/Icon'
@@ -7,6 +7,7 @@ import { Badge } from '../../components/ui/Badge'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { OperationAside } from '../operations/FloorAside'
+import { StickyFloorBar } from '../operations/StickyFloorBar'
 import { EmptyState, ErrorBanner } from '../../components/ui/StateViews'
 import { PageBody } from '../../components/ui/PageBody'
 import { STATUS } from '../../lib/status'
@@ -24,6 +25,8 @@ import { captureError } from '../../lib/monitoring'
 import { formatBsOrAd, formatAd } from '../../lib/bs'
 import { newClientUuid, supabase } from '../../lib/supabase'
 import { DomainEvents, EVENT_TYPES } from '../../events/eventBus'
+import { uploadEvidencePhoto } from '../../lib/evidenceStorage'
+import { compressEvidencePhoto } from '../../lib/imageCompression'
 import { fetchFloorBooking, type FloorBooking, type FloorLine } from '../../lib/queries/bookings'
 import type { ResetEntryInput } from '../../actions/rentals/floorVerb'
 import {
@@ -41,7 +44,7 @@ import {
   formatPickupClockTime,
   type NextReservationInfo,
 } from '../../lib/queries/reset'
-import { getSetting } from '../../lib/settingsStore'
+import { getSetting, subscribeSettings } from '../../lib/settingsStore'
 import { queueTimeTone } from '../../data/reset'
 import { fetchStaffDirectory } from '../../lib/queries/staff'
 
@@ -406,6 +409,40 @@ export default function ResetWorkspace({
    */
   const [completionKey, setCompletionKey] = useState(() => newClientUuid())
   const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true)
+  const [uploadingUnitId, setUploadingUnitId] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+
+  const handleEvidencePhotoUpload = async (unitId: string, files: FileList | null) => {
+    if (!files || files.length === 0 || !user?.id || !floor?.id) return
+    setUploadingUnitId(unitId)
+    setUploadError(null)
+
+    try {
+      for (const file of Array.from(files)) {
+        const compressed = await compressEvidencePhoto(file, { isDamage: true })
+        const baseName = file.name ? file.name.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_') : 'reset_damage'
+        const cleanFileName = `${baseName}_reset_${Date.now()}.jpg`
+
+        await uploadEvidencePhoto({
+          file: compressed.blob,
+          filename: cleanFileName,
+          category: 'Damage',
+          reference: {
+            bookingId: floor.id,
+            operationStage: 'Reset',
+            itemId: unitId,
+          },
+          userId: user.id,
+        })
+      }
+      await savedEvidence.refresh()
+      showSuccessToast('Damage Photo Saved', 'Evidence photo attached to unit.')
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Photo upload failed.')
+    } finally {
+      setUploadingUnitId(null)
+    }
+  }
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true)
@@ -474,26 +511,31 @@ export default function ResetWorkspace({
   }, [rawRows])
 
   const [nextReservations, setNextReservations] = useState<Record<string, NextReservationInfo>>({})
-  const neededNextHours = useMemo(() => {
-    const val = Number(getSetting('resetNeededNextHours'))
-    return Number.isFinite(val) && val > 0 ? val : 4
-  }, [])
+  const [nextReservationsError, setNextReservationsError] = useState<string | null>(null)
+  const [reservationReload, setReservationReload] = useState(0)
+  // The settings store can update from another page or from the shared database.
+  const configuredHours = useSyncExternalStore(
+    subscribeSettings,
+    () => Number(getSetting('resetNeededNextHours')),
+    () => 4,
+  )
+  const neededNextHours = Number.isFinite(configuredHours) && configuredHours > 0 ? configuredHours : 4
 
   useEffect(() => {
-    if (assetIds.length === 0) {
-      setNextReservations({})
-      return
-    }
+    setNextReservations({})
+    setNextReservationsError(null)
+    if (assetIds.length === 0) return
     let active = true
     void getNextReservationsForUnits(assetIds, floor?.id).then((map) => {
-      if (active) {
-        setNextReservations(map)
-      }
+      if (active) setNextReservations(map)
+    }).catch((error: unknown) => {
+      if (!active) return
+      setNextReservationsError(error instanceof Error ? error.message : 'Upcoming reservations could not be checked.')
     })
     return () => {
       active = false
     }
-  }, [assetIds, floor?.id])
+  }, [assetIds, floor?.id, reservationReload])
 
   const rows = useMemo(() => {
     return [...rawRows].sort((a, b) => {
@@ -1170,7 +1212,15 @@ export default function ResetWorkspace({
       )
       .then(() => {
         void DomainEvents.emit(EVENT_TYPES.RENTAL_RESET_COMPLETED, { bookingNo: floor.bookingNo })
-        showSuccessToast('Reset Completed', `Rental ${floor.bookingNo} reset and returned to pool`)
+        const damageCount = resetEntries.filter((e) => e.problemState === 'Damaged').length
+        if (damageCount > 0) {
+          showSuccessToast(
+            'Reset & Damage Case Opened',
+            `Rental ${floor.bookingNo} reset completed. ${damageCount} damage case${damageCount > 1 ? 's' : ''} opened for Manager review (W44, W23).`,
+          )
+        } else {
+          showSuccessToast('Reset Completed', `Rental ${floor.bookingNo} reset and returned to pool`)
+        }
         setDispatching(false)
         if (onConfirmSuccess) {
           onConfirmSuccess()
@@ -1208,7 +1258,7 @@ export default function ResetWorkspace({
       discard: () => { setMarks(persistedMarks); setProblemDraft({}); setQcReason({}); setBatchQcReason(''); setSelected(new Set()) },
       progress: { done: readyUnits, total: totalUnits },
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- focusBlocker is re-created each render; listing it would re-register the action bag on every render
   }, [onRegisterActions, isOnline, canComplete, dispatching, isDirty, dispatchError, blockedReason, blockerTarget, persistedMarks, readyUnits, totalUnits])
 
   /* ── honest degradations, before any workspace chrome ──────────────────── */
@@ -1338,6 +1388,14 @@ export default function ResetWorkspace({
                 </div>
               </div>
             </div>
+            )}
+
+            {nextReservationsError !== null && (
+              <ErrorBanner
+                title="Upcoming bookings could not be checked"
+                message={`${nextReservationsError} Priority order is unknown; check Reservations before releasing equipment.`}
+                onRetry={() => setReservationReload((n) => n + 1)}
+              />
             )}
 
             {/* §4 booking summary strip — Bento 2.0 bar with AD/BS duality */}
@@ -2018,17 +2076,43 @@ export default function ResetWorkspace({
                                           <option value="">Severity…</option>
                                           {SEVERITIES.map((s) => <option key={s} value={s}>{s}</option>)}
                                         </select>
-                                        <Button icon="refresh" onClick={savedEvidence.refresh}>
-                                          Refresh saved photos ({draft.evidence})
-                                        </Button>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-xs)', flexWrap: 'wrap' }}>
+                                          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 12px', height: 38, borderRadius: 'var(--r-xs)', border: '1px solid var(--border)', background: 'var(--card2)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontWeight: 600, cursor: uploadingUnitId === r.assetId ? 'wait' : 'pointer' }}>
+                                            <Icon name="camera" size={14} />
+                                            <span>{uploadingUnitId === r.assetId ? 'Uploading…' : 'Add Damage Photo'}</span>
+                                            <input
+                                              type="file"
+                                              accept="image/*"
+                                              capture="environment"
+                                              multiple
+                                              disabled={uploadingUnitId === r.assetId}
+                                              style={{ display: 'none' }}
+                                              onChange={(e) => {
+                                                if (r.assetId) void handleEvidencePhotoUpload(r.assetId, e.target.files)
+                                                e.target.value = ''
+                                              }}
+                                            />
+                                          </label>
+                                          <Button icon="refresh" size="sm" onClick={savedEvidence.refresh}>
+                                            Refresh ({draft.evidence})
+                                          </Button>
+                                        </div>
+                                        {uploadError && (
+                                          <div style={{ fontSize: 'var(--t-meta)', color: 'var(--st-danger-fg)' }}>
+                                            {uploadError}
+                                          </div>
+                                        )}
                                         <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
-                                          {/* Required before recording — Warehouse records the finding, never a cost (§8.3). The count is
-                                          only saved photos satisfy the gate. */}A saved photo linked to this unit is required. Photo upload is unavailable here.</p>
+                                          {draft.evidence > 0
+                                            ? `${draft.evidence} evidence photo(s) saved for this unit.`
+                                            : 'At least 1 saved photo of the damage is required before recording (Ruling W27).'}
+                                        </p>
                                       </>
                                     )}
                                     <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
-                                      {PROBLEM_ROUTE[draft.type as Exclude<ProblemState, 'No Problems'>]}
-                                      {' — the routing is where this finding goes in the workflow; no repair or case record is written from this screen yet, and the item is excluded from the reset dispatch.'}
+                                      {draft.type === 'Damaged'
+                                        ? 'Raises an open damage case on this booking, defaulting to client claim under review without an amount until approved by Manager (< Rs 25,000) or Owner (≥ Rs 25,000) (Ruling W44, W23).'
+                                        : `${PROBLEM_ROUTE[draft.type as Exclude<ProblemState, 'No Problems'>]} — the item is excluded from the reset dispatch.`}
                                     </p>
                                     <div style={{ display: 'flex', gap: 6 }}>
                                       <button type="button" onClick={() => cancelProblem(r.key)} style={{ minHeight: 44, padding: '0 12px', borderRadius: 'var(--r-xs)', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text2)', fontSize: 'var(--t-meta)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -2481,6 +2565,28 @@ export default function ResetWorkspace({
                 operator sees instead of being navigated away from a reset that
                 was never recorded. */}
             {dispatchError && <ErrorBanner title="The reset was not recorded" message={dispatchError} />}
+
+            {phone && !embedded && (
+              <StickyFloorBar
+                progress={{
+                  current: readyUnits,
+                  total: totalUnits,
+                  label: totalUnits > readyUnits ? `${totalUnits - readyUnits} remaining` : 'All items ready',
+                  complete: canComplete,
+                }}
+                primaryAction={{
+                  label: dispatching
+                    ? 'Recording…'
+                    : !isOnline
+                    ? 'Needs connection to complete'
+                    : 'Complete Reset',
+                  onClick: completeResetJob,
+                  disabled: !isOnline || !canComplete,
+                  loading: dispatching,
+                  icon: isOnline ? 'checklist' : 'alert_triangle',
+                }}
+              />
+            )}
           </div>
         )}
       </PageBody>

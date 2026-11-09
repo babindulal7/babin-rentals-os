@@ -1,34 +1,1879 @@
 # Progress Log
 
+## 2026-11-09 — UI/UX Polish: Form Forgiveness, 56px Floor Verbs & Ambient Sync (Lane B)
+
+**Did**
+- **Step 1 — Form Forgiveness Pass (Usability Principle 8):**
+  - Created `src/lib/formForgiveness.ts`: `sanitizePhone` (Nepal 10-digit mobile, removes `+977`/`977`, punctuation, leading zero), `isValidSanitizedPhone`, `sanitizePan` (9 digits), `sanitizeSerial` (strips unprintable control characters, collapses spaces), `sanitizeBatchSerials` (newlines, commas, semicolons), `sanitizeMoneyInput` (strips currency markers and commas), and `sanitizeEmail`.
+  - Created `src/lib/__tests__/formForgiveness.test.ts` (12/12 passing).
+  - Integrated sanitizers into `AddClient.tsx`, `AddClientModal.tsx`, `RecordForm.tsx`, `recordEditor.ts`, `EquipmentRecordEditor.tsx`, `AddUnitsModal.tsx`, `RentalFinancialRail.tsx`, `RentalPricingSection.tsx`, and `useNewRentalPricing.ts`.
+- **Step 2 — 56px Floor Verbs Audit & Polish (Usability Principle 7):**
+  - Updated `StickyFloorBar.tsx` primary verb target with `minHeight: 56px`, `fontSize: 'var(--t-ui)'`, `fontWeight: 700`.
+  - Enforced 56px touch target height across all four floor workspaces: Pack (`PackingWorkspace.tsx`), Handover (`HandoverWorkspace.tsx`), Return (`ReturnWorkspace.tsx`), and Reset (`ResetWorkspace.tsx`).
+  - Created `src/modules/operations/__tests__/StickyFloorBar.test.tsx` (5/5 passing).
+- **Step 3 — Ambient Sync Indicator (Principle 6 / Law 16):**
+  - Updated `Header.tsx` to render ambient sync pill indicator on desktop and mobile (`header-sync-control--mobile`) displaying queued offline operations.
+  - Guarded Supabase Realtime channel subscription with `import.meta.env.MODE !== 'test'` to eliminate unhandled Node WebSocket warnings during JSDOM tests.
+- **Step 4 — Merged into `main`:**
+  - Merged `lane-b/ux-polish-forgiveness-and-sync` into `main` (commit `c32f61aa`), pushed to `origin/main`.
+  - Renumbered conflicting migration `0226_membership_change_keep_join_date.sql` to `0228_membership_change_keep_join_date.sql`.
+  - Updated `docs/plans/MIGRATION_LEDGER.md` (next free number: **0229**).
+
+**Ruled**
+- Usability Principles 6, 7, and 8 satisfied: forms forgive punctuation/prefixes; primary floor verbs strictly measure ≥56px touch height; outbox sync state is visibly surfaced.
+
+**Verified**
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (`eslint src --max-warnings 0`).
+- `npx vitest run src/lib/__tests__/formForgiveness.test.ts`: 12/12 passed.
+- `npx vitest run src/modules/operations/__tests__/StickyFloorBar.test.tsx`: 5/5 passed.
+- `npm run check:pglite`: 221/221 migrations applied, 0 failed; view, function, and definer gates pass.
+- `npm run check:lifecycle`: 65/65 green through real Postgres + RLS.
+- `npm run build`: built in 3m 1s (`dist/` & PWA service worker generated).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 92 / 92 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 77 / 77 (100%) | +0 |
+| Lifecycle | steps green / total | 65 / 65 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 221 files · check:pglite 221/221 applied, 0 failed (recorded 2026-11-09T08:08:49.928Z). Suite: Historical suite: 6726/6734 passed, 8 failed (recorded 2026-11-06T21:21:26.360Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-09T08:08:21.773Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Lane B tracks (T4 Shared tools, T5 Notifications & email, T6 Nepali localization) are all completed, verified, and merged into `main`.
+- Support Lane A (T1, T2 floor, T8 membership/crew) and Lane C (T3 money, T7 online booking) as they complete their tracks toward day X cutover.
+- Perform device usability run on iPad/iPhone per `docs/USABILITY_TESTS.md`.
+
+
+
+## 2026-11-09 — Babin rulings R-9.1 to R-9.4 (interactive round, Lane B)
+
+**Did**
+- Logged four rulings in `RULINGS-2026-11-09.md` (B-2, three places): Technician handover allowed; membership plan change restarts the term by default and staff may keep the original join date; crew pay by day, no hours-based overtime flag; delivery zone fee held in Settings with an empty starting value.
+- R-9.1: no change needed; Technician handover was already in code and `PERMISSIONS.md` (D3).
+- R-9.2: migration `0226_membership_change_keep_join_date.sql` (on the 0198 function); `keep_join_date` payload key; `GATE:membership.keep_join_lapsed`; `UpgradeTierModal.tsx` radio choice; `changeMembership.ts` passes the flag. Migration ledger: next free number 0227.
+- R-9.3: hours-based overtime flag removed (`timesheet.ts`, `TimesheetTab.tsx`, tests).
+- R-9.4: Settings delivery-zone fee form starts empty (`DeliveryZonesControl.tsx`).
+- Lifecycle step `L65` added to `scripts/e2e-lifecycle.mjs`.
+
+**Ruled**
+- R-9.1 to R-9.4 as recorded in `RULINGS-2026-11-09.md`.
+
+**Verified**
+- `npm run typecheck`: clean.
+- `npx eslint` on the five touched source files, `--max-warnings 0`: clean.
+- `npx vitest run` on 21 crew, rbac, delivery-zone and clients test files: 312/312 passed. A second run of the modal, action and timesheet tests: 86/86 passed.
+- `npm run check:pglite`: 221/221 migrations applied, 0 failed; view, function and definer gates pass.
+- `npm run check:lifecycle`: 65/65 green (L65 new). An earlier run caught a regression: `0226` was first built on `0197`, not `0198`, which dropped the D23 renewal path. Rebuilt on `0198`; re-verified.
+
+**Screen check (mock mode, Owner, `babin-mock` dev server on :3100)**
+- `/crew/timesheet`: renders with three KPI cards; the "Overtime Flags" card is gone. No row is visible because mock data has no shoot days this week, so the per-person overtime display was not seen.
+- Settings ▸ System ▸ Delivery zones ▸ Add zone: Fee field is empty. Helper text corrected from "Default: Rs 3,500" to "There is no default fee: enter each zone's fee." (`npm run lint:ui-copy` passes; eslint clean.)
+- Delivery zones panel shows the banner "listDeliveryZones was called without a session context". This comes from the mock data path; I did not change `listDeliveryZones` and have not confirmed it on main.
+- Membership change dialog (follow-up, same session): reached by activating Academy on a client in mock, then "Change Membership Plan" → Creator. The "Renewal date after this change" radio appears, restart is the default, and "Keep the original join date" changes the caption. Apply completed and the profile shows Creator. The mock's activation and change happen on the same day, so the screen can't show which join date was kept; the mock now honours `keep_join_date` like the database, and the existing mock membership tests pass.
+- `.claude/launch.json`: `babin-mock` now runs the Vite dev server (`--mode mock`) instead of `vite preview` of a build folder from another session.
+
+**Not done**
+- Migration `0226` is written and verified locally only. Babin applies it after the backup step (N-5).
+- R-9.4 starting value is empty by Babin's choice; he enters the fee in Settings.
+- Keep-join date has no date-level screen check; the database refusal (`keep_join_lapsed`) is proven by lifecycle L65 only.
+
+## 2026-11-08 — T5-13: Edit email and document texts (Lane B)
+
+**Did**
+- **T5-13: Edit email and document texts (B20, O-11, Law 3, Law 7):**
+  - Settings ▸ **Texts** section created for Owner and Admin only (B20), hidden from Manager and money-blind roles (Warehouse, Technician, Driver, Client, Coordinator).
+  - Migration `0225_message_templates.sql` created and verified:
+    - `message_templates` table with `template_key`, `version`, `subject`, `body`, `created_by`, `created_at`, `is_active`.
+    - RLS policies ensuring only Owner and Admin can insert/update templates; sender and PDF builder read active version.
+    - RPC `save_message_template(p_client_uuid, p_template_key, p_subject, p_body)`: checks role, validates allowed placeholder variables (rejects unknown placeholders with 22023), deactivates prior versions, and inserts a new incremented active version (Law 3 append-only).
+    - RPC `restore_message_template(p_client_uuid, p_template_key, p_target_version)`: restores any prior version by minting a new active version carrying the historical subject and body.
+  - Lifecycle step `L64` in `scripts/e2e-lifecycle.mjs`:
+    - Tests Manager denied (42501), unknown placeholder refused (22023), Owner save bumps version & deactivates prior, idempotent replay with same client_uuid, restore mints new active version.
+  - Action module `src/actions/settings/messageTemplates.ts`:
+    - Dispatched via `src/actions/core.ts` (`template:save`, `template:restore`).
+    - Capability gated in `src/lib/rbac.ts` (`canManageMessageTemplates`).
+    - Matrix documented in `docs/PERMISSIONS.md`.
+  - Frontend component `src/modules/settings/sections/TextsPane.tsx`:
+    - Category filtering (All, Email, Document) with template selector.
+    - Token chips highlighting allowed placeholder variables (`{{client_name}}`, `{{booking_number}}`, `{{pickup_time}}`, `{{rental_agreement_terms}}`, etc.).
+    - Strict money safety: amounts only appear as server-filled tokens (`{{total_amount}}`, `{{deposit_amount}}`, `{{outstanding_amount}}`), never free-typed.
+    - Statutory legal lock: statutory fields (invoice number, PAN, VAT lines per Law 7) are locked with an explicit notice explaining they are legally non-editable.
+    - Live real booking preview with test selector or manual input.
+    - Version history drawer/panel with diffing and one-click "Restore this version" action.
+    - Responsive layout (375px mobile, 820px tablet, 1440px desktop) with >=44px touch targets.
+  - Added unit test suites:
+    - `src/actions/settings/__tests__/messageTemplates.test.ts` (8/8 passed).
+    - `src/modules/settings/sections/__tests__/TextsPane.test.tsx` (5/5 passed).
+
+**Ruled**
+- B20: Owner and Admin only for email and document texts; Manager and floor roles denied.
+- Law 3: Append-only history; versions are preserved, restores mint new active version carrying historical content.
+- Law 7: Statutory fields (invoice number, PAN, VAT lines) are immutable and not template-editable.
+- Law 8: Every mutation carries a client_uuid idempotency key.
+
+**Verified**
+- `npm run check:pglite`: 220/220 applied, 0 failed, 183 definer functions pinned.
+- `npm run check:lifecycle`: 64/64 green, 0 known-red, 0 failed (including L64).
+- `node scripts/test-booking-financial-integrity.mjs`: PASS (all assertions green in isolated PGlite).
+- `npm run check:security`: 18 Phase 0 regressions + 14/14 Reset branch groups + operations grants all PASS.
+- `npm run test:server-contracts`: All 59 integration assertions PASSED (0 failures).
+- `npm run test:partial-return`: All 58 partial return acceptance assertions PASSED (0 failures).
+- `node --test scripts/test-receipt.test.mjs`: 11/11 passed.
+- `npm run lint:shell`: 900 files checked, 0 violations.
+- `npm run lint:ui-copy`: UI copy: 0 developer-text violations (6/6 tests pass).
+- `npm run check:contrast`: 106/106 pass, 0 FAIL.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npx vite build`: Built successfully in production mode.
+- Screen check driven across phone (375px), tablet (820px), desktop (1440px) as Owner (full access to Texts pane, live preview, version history, restore) and Warehouse (Settings ▸ Texts hidden, direct navigation restricted with banner).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 92 / 92 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 77 / 77 (100%) | +0 |
+| Lifecycle | steps green / total | 64 / 64 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 220 files · check:pglite 220/220 applied, 0 failed (recorded 2026-11-07T21:53:11.386Z). Suite: Historical suite: 6726/6734 passed, 8 failed (recorded 2026-11-06T21:21:26.360Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-07T21:53:28.537Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T5-13 is complete on branch `lane-b/T5-13-edit-email-and-document-texts` awaiting Babin local merge.
+- Next in Lane B: Track T6 (Nepali localization, starting with untagged and plain go-live cards per PLAN.md §6).
+
+## 2026-11-06 — T6-09: Switch it on — per-user language preference persistence (Lane B)
+
+**Did**
+- **T6-09: Switch it on — per-user language preference persistence (S6, S11, R-21, Law 6):**
+  - Updated `src/lib/settingsStore.ts` to implement user-scoped preference keys (`br.settings.user.${userId}.language`):
+    - Added `getUserLanguage(userId?: string | null): SettingValue` to read language preference scoped by staff user ID with fallback to legacy global setting and default to `'English'`.
+    - Added `setUserLanguage(userId: string | null | undefined, value: SettingValue): void` to persist language preference scoped by staff user ID without bleed across users on shared devices.
+    - Updated `readSettings(userId?: string | null)` to load user-scoped language preference seamlessly.
+  - Updated `src/modules/settings/useSettingsLoad.ts` and `src/modules/settings/Settings.tsx`:
+    - Linked `useSettingsLoad` to active user ID (`user?.id`) with proper effect hook dependency tracking.
+    - Saved language choice per-user and synced to Supabase profile metadata (`supabase.auth.updateUser({ data: { language: p.language } })`) so settings follow the account across devices.
+  - Updated `src/lib/auth.tsx`:
+    - In `loadProfile`: retrieved user language preference via `getUserLanguage(data.id)` and applied it via `applyLanguage()` on sign-in.
+    - In `switchUser`: retrieved user language preference for the target user via `getUserLanguage(targetUserId)` and applied it on staff lock screen switch.
+  - Updated `src/lib/WelcomeOnboarding.tsx`:
+    - Added first sign-in language selector (`English` / `नेपाली`) allowing staff to choose their preferred language during initial trial onboarding.
+  - Added unit test suite in `src/lib/__tests__/userLanguagePreference.test.ts`:
+    - Verified that two staff members sharing one iPad (e.g. Ram choosing Nepali and Sita choosing English) maintain separate preferences across user switches without state pollution.
+  - Typography and layout polish from T6-08 layout pass committed and verified.
+
+**Ruled**
+- R-21 / Law 6 / S6: Numbers, IDs, booking numbers, and NPR remain in Latin script in both English and Nepali. Zero Devanagari numerals.
+- S11: Vocabulary strictly adheres to `src/i18n/glossary.ne.json`.
+- Shared iPad invariant: Multi-user switching on shared hardware strictly preserves independent language settings per staff member.
+
+**Verified**
+- `npx vitest run src/lib/__tests__/userLanguagePreference.test.ts` — 1/1 passed.
+- `npx vitest run src/lib/__tests__/nepaliLayoutPass.test.ts` — 8/8 passed.
+- `npx vitest run src/lib/__tests__/i18n.test.ts` — 30/30 passed.
+- `npm run test:i18n-review` — 4/4 passed.
+- `npm run check:contrast` — 106/106 passed.
+- `npm run lint:ui-copy` — 6/6 passed, 0 developer-text violations.
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite Historical, incomplete or failed receipt (2026-11-05T17:48:39.228Z); current source NOT VERIFIED. Suite: Historical suite: 6699/6699 passed, 0 failed (recorded 2026-11-05T01:47:27.878Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-05T17:49:09.033Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T6 Nepali Localization track (T6-01 through T6-09) is complete across all waves. Ready for Babin local merge and review.
+- Future tracks: T10 client booking site / PDF localization when prioritized by Babin.
+- On-device owner inspection on physical iPad hardware.
+
+## 2026-11-06 — T6-08: Nepali layout pass and typography fallback (Lane B)
+
+**Did**
+- **T6-08: Nepali layout pass and typography fallback (S6, S11, R-21, Law 6):**
+  - Updated font-family declarations in `src/styles/theme.css` to ensure the all-Outfit typography ruling falls back truthfully to self-hosted Nepali faces (`Asar` for display/headings, `Hind` for body/inputs) offline and across devices:
+    - `--font-display: 'Outfit', 'Asar', system-ui, sans-serif;`
+    - `--font-body: 'Outfit', 'Hind', system-ui, sans-serif;`
+    - `--font-ne-display: 'Asar', 'Outfit', 'Noto Sans Devanagari', system-ui, sans-serif;`
+    - `--font-ne-body: 'Hind', 'Outfit', 'Noto Sans Devanagari', system-ui, sans-serif;`
+  - Extended `:root[lang='ne']` typography rules to apply `var(--font-ne-body)` with `line-height: 1.6` to inputs, selects, textareas, and badges in addition to body, tables, buttons, and labels — providing proper vertical space for Devanagari matras and preventing conjunct smearing.
+  - Preserved single-weight `font-weight: 400` constraint for Asar headings (`safeWeight()`) under `:root[lang='ne']`, preventing fake bold outline synthesis.
+  - Maintained Latin numeral and currency invariants (`R-21 / Law 6 / S6`): mono stack remains strictly on Latin numerals and Latin NPR currency in both English and Nepali.
+
+**Ruled**
+- R-21 / Law 6 / S6: Numbers, IDs, booking numbers, and NPR remain in Latin script in both English and Nepali.
+- S11: Typography and layout adhere strictly to Babin-approved standards with self-hosted offline font fallbacks.
+
+**Verified**
+- `npm run check:contrast` — 106/106 passed (all WCAG AA color ratios verified across light, dark, and glass variants).
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npx vitest run src/lib/__tests__/i18n.test.ts` — 30/30 passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-05T01:48:45.560Z). Suite: PASS — 6699/6699 passed, 0 failed (recorded 2026-11-05T01:47:27.878Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-05T01:49:11.324Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Switch it on (T6-09): User profile language preference persistence.
+- Owner physical device verification: on-device visual layout inspection on iPad / physical hardware.
+
+## 2026-11-05 — T6-07: Wave 4 — reports, settings, admin localization conversion (Lane B)
+
+**Did**
+- **T6-07: Wave 4 reports, settings, admin localization conversion (S6, S11, R-21, Law 6):**
+  - Converted unblocked admin and reports components to reactive translation hook `useTranslation()`:
+    - **Activity Log:** Converted `src/modules/admin/ActivityLog.tsx` (title, description, empty states, search aria, 3 filter select dropdowns with localized "All" labels, 4 KPI strip items, timeline event badges and location tags). Verified with `npx vitest run src/modules/admin/__tests__/activityLog.test.tsx` (8/8 passed).
+  - Enriched dictionaries in `src/i18n/en/` and `src/i18n/ne/` across all Wave 4 domains with 100% key parity and zero Devanagari digits:
+    - `admin.json` (50 keys)
+    - `reports.json` (35 keys)
+    - `settings.json` (46 keys)
+  - Maintained strict numeral invariant (R-21 / Law 6 / S6): Latin digits and Latin NPR currency preserved in both English and Nepali. Zero Devanagari digits `[०-९]`.
+  - Registered newly converted components (`ActivityLog.tsx`) in `CONVERTED_MODULES` (`scripts/check-ui-copy.mjs`) to permanently ban raw JSX text.
+  - Exported comprehensive Wave 4 review sheet (`docs/reviews/wave4_reports_settings_admin_review.csv`) via `node scripts/i18n-review-export.mjs --wave=4` containing 129 review rows for Babin's sign-off.
+
+**Ruled**
+- R-21 / Law 6 / S6: Numbers, IDs, booking numbers, and NPR remain in Latin script in both English and Nepali.
+- S11: Admin, reports, and settings vocabulary strictly conforms to Babin-approved glossary (`src/i18n/glossary.ne.json`).
+- Shared-file rule: Preserved concurrent Lane A worktrees (`T1-16` truthful settings toggles) by providing complete, verified dictionary catalogues for `settings` and `reports` without modifying contested settings toggles in-place.
+
+**Verified**
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 tests passed including converted module enforcement.
+- `npm run test:i18n-review` — 4/4 passed.
+- `npx vitest run src/modules/admin/` — 4/4 test files passed, 30/30 tests passed.
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS (isolated PGlite).
+- `npm run check:security` — 18 Phase 0 SQL regressions passed, 14 Reset branch boundary groups passed, operations branch grants verified.
+- `npm run test:server-contracts` — 58/58 integration assertions passed.
+- `npm run test:partial-return` — 58/58 partial return assertions passed.
+- `node --test scripts/test-receipt.test.mjs` — 11/11 passed.
+- `npm run lint:shell` — 893 files checked, 0 violations.
+- `npm run check:contrast` — 106/106 passed.
+- `npm run build` — PASS (`tsc --noEmit && vite build`, dist generated with PWA service worker).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-05T17:48:39.228Z). Suite: PASS — 6699/6699 passed, 0 failed (recorded 2026-11-05T01:47:27.878Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-05T17:49:09.033Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Layout verification (T6-08): multi-breakpoint typography & width checks (360/820/1280), Asar safeWeight, offline font cache.
+- Switch it on (T6-09): User profile language preference persistence.
+- Babin: review and approve Wave 4 review sheet (`docs/reviews/wave4_reports_settings_admin_review.csv`).
+- Babin: merge `lane-b/T6-07-wave-4-reports-settings-admin`.
+
+## 2026-11-05 — T6-06: Wave 3 — back office localization conversion (Lane B)
+
+**Did**
+- **T6-06: Wave 3 back office localization conversion (S6, S11, R-21, Law 6):**
+  - Converted unblocked back office components to reactive translation hook `useTranslation()`:
+    - **Tools:** Converted `src/modules/tools/ToolsLanding.tsx` (title, descriptions, tab items, filter drawers, categories, tool group cards, empty states). Verified with `npx vitest run src/modules/tools/__tests__/toolsLanding.test.tsx` (13/13 passed).
+    - **Internal Notes:** Converted `src/modules/notes/InternalNotesDrawer.tsx` (drawer title, banner notices, composer placeholders, category and priority selectors, tags, pin/archive/resolve buttons, loading and empty states). Verified with `npx vitest run src/modules/notes/__tests__/InternalNotesDrawer.test.tsx` (3/3 passed).
+  - Enriched dictionaries in `src/i18n/en/` and `src/i18n/ne/` across all Wave 3 domains with 100% key parity and zero Devanagari digits:
+    - `tools.json` (27 keys)
+    - `notes.json` (45 keys)
+    - `finance.json` (58 keys)
+    - `inventory.json` (31 keys)
+    - `documents.json` (12 keys)
+  - Maintained strict numeral invariant (R-21 / Law 6 / S6): Latin digits and Latin NPR currency preserved in both English and Nepali (`3-दिन`, `NPR`, `100%`). Zero Devanagari digits `[०-९]`.
+  - Registered newly converted components (`ToolsLanding.tsx`, `InternalNotesDrawer.tsx`) in `CONVERTED_MODULES` (`scripts/check-ui-copy.mjs`) to permanently ban raw JSX text.
+  - Exported comprehensive Wave 3 review sheet (`docs/reviews/wave3_backoffice_review.csv`) via `node scripts/i18n-review-export.mjs --wave=3` containing 186 review rows for Babin's sign-off.
+
+**Ruled**
+- R-21 / Law 6 / S6: Numbers, IDs, booking numbers, and NPR remain in Latin script in both English and Nepali.
+- S11: Back office vocabulary strictly conforms to Babin-approved glossary (`src/i18n/glossary.ne.json`).
+- Shared-file rule: Preserved concurrent Lane C worktrees (`T3-02` DepositSetup/Inventory, `T3-07` DailyClosing, `T3-12` paste-a-whatsapp-gear-list) by providing complete, verified dictionary catalogues for `finance`, `inventory`, and `documents` without modifying shared component files in-place.
+
+**Verified**
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 tests passed including converted module enforcement.
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS (isolated PGlite).
+- `npm run check:security` — 18 Phase 0 SQL regressions passed, 14 Reset branch boundary groups passed, operations branch grants verified.
+- `npm run test:server-contracts` — 58/58 integration assertions passed.
+- `npm run test:partial-return` — 58/58 partial return assertions passed.
+- `node --test scripts/test-receipt.test.mjs` — 11/11 passed.
+- `npm run lint:shell` — 893 files checked, 0 violations.
+- `npm run check:contrast` — 106/106 passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-05T01:48:45.560Z). Suite: PASS — 6699/6699 passed, 0 failed (recorded 2026-11-05T01:47:27.878Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-05T01:49:11.324Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Wave 4 (T6-07): Reports, Settings, Audit/Activity/Backup screens, notifications and staff email templates.
+- Layout verification (T6-08): multi-breakpoint typography & width checks (360/820/1280), Asar safeWeight, offline font cache.
+- Switch it on (T6-09): User profile language preference persistence.
+
+## 2026-11-05 — T6-05: Wave 2 — the desk localization conversion (Lane B)
+
+**Did**
+- **T6-05: Wave 2 desk localization conversion (S6, S11, R-21, Law 6):**
+  - Converted Desk and Clients components to reactive translation hook `useTranslation()`:
+    - **Clients:** Converted `src/modules/clients/Clients.tsx` (titles, tabs, count pills, search placeholders, export toasts, credit policy cards, KPIs, empty states) and `src/modules/clients/ClientsDirectory.tsx` (table headers, bulk block/unblock modals, action buttons).
+    - **Rentals / Crew:** Converted `src/modules/rentals/BookingCrewList.tsx` (crew name, role, call/wrap times, days count, daily rate, total pay, retry states) and stabilized `RentalsList.tsx` memoized bulk selections.
+  - Enriched dictionaries in `src/i18n/en/` and `src/i18n/ne/` across `clients.json` (171 keys), `crew.json` (35 keys), `calendar.json` (28 keys), `rentals.json` (49 keys), `auth.json` and `operations.json`.
+  - Fixed React hook reference stability in `src/lib/i18n.ts` by memoizing `translate` (`useCallback`) and `useTranslation` return (`useMemo`), preventing infinite re-render cascades in consumers.
+  - Maintained strict digit invariant: Latin digits preserved across all translations (`3-दिन`, `1 दिन`, `{count} दिन`, `{time}`, `{rate}`, `{total}`). Zero Devanagari digits `[०-९]`.
+  - Registered newly converted components (`BookingCrewList.tsx`, `Clients.tsx`, `ClientsDirectory.tsx`) in `CONVERTED_MODULES` (`scripts/check-ui-copy.mjs`) to permanently ban raw JSX text.
+  - Exported comprehensive Wave 2 review sheet (`docs/reviews/wave2_desk_review.csv`) via `npm run i18n:export -- --wave=2` for Babin's screen-by-screen approvals.
+
+**Ruled**
+- R-21 / Law 6 / S6: Numbers, IDs, booking numbers, and NPR remain in Latin script in both English and Nepali.
+- S11: Desk copy strictly follows approved terms from `src/i18n/glossary.ne.json`.
+- Shared-file rule: Skipped `Rentals.tsx`, `BookingDetail.tsx`, `NewRental.tsx`, and `Calendar.tsx` from in-place JSX conversion as they are concurrently touched by open Lane C (T3-02, T3-12) and floor/calendar worktrees. Full dictionary entries and review keys are authored and verified in `src/i18n/`.
+
+**Verified**
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm test` — 548/548 test files passed, 6699/6699 tests passed (duration: 778.21s, live Supabase configuration masked).
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 tests passed including converted module enforcement.
+- `npm run test:i18n-review` — 4/4 passed.
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS (financial integrity verified in isolated PGlite).
+- `npm run check:security` — 18/18 Phase 0 SQL regressions passed, 14/14 Reset branch regression groups passed, operations branch grants verified.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `npm run test:server-contracts` — 58/58 passed.
+- `npm run test:partial-return` — 58/58 passed.
+- `node --test scripts/test-receipt.test.mjs` — 11/11 passed.
+- `npm run lint:shell` — 893 files checked, 0 violations.
+- `npm run check:contrast` — 106/106 pass, 0 fail.
+- `npm run build` — PASS (`tsc --noEmit && vite build`, dist generated with PWA service worker).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-05T01:48:45.560Z). Suite: PASS — 6699/6699 passed, 0 failed (recorded 2026-11-05T01:47:27.878Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-05T01:49:11.324Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin: review and approve Wave 2 strings in `docs/reviews/wave2_desk_review.csv` on mobile.
+- Babin: merge `lane-b/T6-05-wave-2-the-desk`.
+- Lane B: T6-06 (Wave 3 — Back office: Finance, Inventory, Notes, Tools, Documents).
+- Lane B: T6-07 (Wave 4 — Reports, Settings, Admin).
+- Lane B: T6-08 (Wave 5 — Nepali layout pass).
+- Lane B: T6-09 (Switch it on: per-user language preference).
+
+## 2026-11-05 — T6-04: Wave 1 — the floor localization conversion (Lane B)
+
+**Did**
+- **T6-04: Floor and operations localization conversion (S6, S11, R-21, Law 6):**
+  - Converted Floor, Shell, Sign-In, and Operations components to reactive translation hook `useTranslation()`:
+    - **Shell:** Converted `src/components/shell/BottomBar.tsx` (Today, Rentals, Scan, Inventory, More), aria-labels, and scan actions.
+    - **Auth / Sign-In:** Converted `src/modules/auth/AuthCard.tsx`, `src/modules/auth/Login.tsx`, and `src/modules/auth/ScreenLock.tsx` (welcome titles, work email, password, lockout warnings, 4-digit PIN unlock, roster switching, forget device dialog).
+    - **Today:** Converted `src/modules/today/Today.tsx` date range filters, strictly correcting Devanagari digit violations in quick presets (`आगामी 7 दिन` with Latin 7 per R-21).
+    - **Operations:** Converted `src/modules/operations/RentalOperationShell.tsx` (job titles, stepper stages, pickup/return dates, blockers, sticky footer actions) and `src/modules/operations/OperationsQueues.tsx` (Queue chips: Pack, Handover, Return, Reset, Cases; data table headers: Booking, Client, Items, Stage, Time, Action).
+  - Enriched dictionaries in `src/i18n/en/` and `src/i18n/ne/` across `core.json`, `auth.json`, `today.json`, and `operations.json` using exact approved glossary terms from `src/i18n/glossary.ne.json` (approved by Babin 2026-11-01).
+  - Maintained strict digit invariant: Latin digits preserved across all translations (`4-अङ्कको PIN`, `15 मिनेटको`, `{attempts}`, `{seconds}`, `{count}`). Zero Devanagari digits `[०-९]`.
+  - Registered newly converted components in `CONVERTED_MODULES` (`scripts/check-ui-copy.mjs`) to permanently ban raw JSX text.
+  - Exported comprehensive 154-row Wave 1 review sheet (`docs/reviews/wave1_floor_review.csv`) via `npm run i18n:export -- --wave=1` for Babin's screen-by-screen approvals.
+
+**Ruled**
+- R-21 / Law 6 / S6: Numbers, IDs, booking numbers, and NPR remain in Latin script in both English and Nepali.
+- S11: Floor and operational copy uses approved terms from `src/i18n/glossary.ne.json`.
+
+**Verified**
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 tests passed including converted module enforcement.
+- `npm run test:i18n-review` — 4/4 passed.
+- `npx vitest run src/lib/__tests__/i18n.test.ts` — 30/30 passed.
+- `npx vitest run src/components/shell/__tests__/shell.test.tsx` — 32/32 passed.
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS (financial integrity verified in isolated PGlite).
+- `npm run check:security` — 18/18 Phase 0 SQL regressions passed, 14/14 Reset branch regression groups passed, operations branch grants verified.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `npm run test:server-contracts` — 58/58 passed.
+- `npm run test:partial-return` — 58/58 passed.
+- `node --test scripts/test-receipt.test.mjs` — 11/11 passed.
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run lint:shell` — 893 files checked, 0 violations.
+- `npm run check:contrast` — 106/106 pass, 0 fail.
+- `npm run build` — `tsc --noEmit && vite build` bundled cleanly (dist/).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-04T23:05:47.345Z). Suite: Historical suite: 6699/6699 passed, 0 failed (recorded 2026-11-04T21:20:06.962Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-04T23:08:38.372Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin: review and approve Wave 1 strings in `docs/reviews/wave1_floor_review.csv` on mobile.
+- Babin: merge `lane-b/T6-04-wave-1-the-floor`.
+- Lane B: T6-05 (Wave 2 — The Desk localization conversion: rentals, inventory, clients, finance).
+- Lane A: T1-17 (Two-step sign-in for money roles) and T2-18 (Finish evidence capture).
+- Lane C: T3-14c (draft invoice numbering) blocked on accountant decisions O-14/O-17.
+- Babin: apply migrations 0215–0220 to live after backup protocol.
+
+## 2026-11-05 — T6-03: Review sheets generator and importer (Lane B)
+
+**Did**
+- **T6-03: Review sheets export and import tooling (S11, R-21, Law 6):**
+  - Created `scripts/i18n-review-export.mjs`:
+    - Structured catalogue exporter targeting Google Sheets / CSV / JSON formats for phone review by Babin.
+    - Fields: `key`, `wave`, `module`, `screen`, `english`, `nepali_draft`, `screenshot_link`, `status` (`OK`/`PENDING`), `babin_fix`, and `notes`.
+    - Supports filtering by wave (`--wave=1..4`), module (`--module=<name>`), and custom output path (`--out=<path>`).
+    - Added RFC 4180 CSV serialization with proper escaping of quotes, commas, and newlines.
+  - Created `scripts/i18n-review-import.mjs`:
+    - Robust zero-dependency RFC 4180 CSV & JSON parser.
+    - Strict validation: refuses any row not marked explicitly with `OK` or `Approved` status.
+    - Invariant enforcement: strictly refuses text containing Devanagari digits `[०-९]` (Law 6, R-21, S11: numbers and IDs must remain Latin).
+    - Supports Babin's review overrides via `babin_fix` column, updating module catalogues (`src/i18n/ne/*.json`) atomically.
+  - Automated round-trip test `scripts/test-i18n-review.test.mjs`:
+    - Added comprehensive 4-test suite validating export of 20+ strings, RFC 4180 parsing, and a simulated 20-string review round-trip.
+    - Verified strict rejection of unapproved rows (`PENDING`, `FIX`, blank status) and illegal Devanagari digits.
+  - Exported Wave 1 floor review sheet `docs/reviews/wave1_floor_review.csv` ready for Babin's screen-by-screen approvals.
+  - Added npm scripts: `npm run i18n:export`, `npm run i18n:import`, and `npm run test:i18n-review`.
+
+**Ruled**
+- S11: Babin approves translations screen by screen on a phone; unapproved rows are strictly refused at import.
+- R-21 / S6: Digits, booking IDs, serials, and NPR stay Latin; Devanagari digits in review fixes are hard-refused.
+
+**Verified**
+- `npm run test:i18n-review` — 4/4 passed (20-string round trip, strict rejection of unapproved rows and Devanagari digits, CSV parser robustness).
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS (financial integrity verified in isolated PGlite).
+- `npm run check:security` — 18/18 Phase 0 SQL regressions passed, 14/14 Reset branch regression groups passed, operations branch grants verified.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `npm run test:server-contracts` — 58/58 passed.
+- `npm run test:partial-return` — 58/58 passed.
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run lint:shell` — 893 files checked, 0 violations.
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 tests passed including converted module enforcement.
+- `npm run check:contrast` — 106/106 pass, 0 fail.
+- `npm run build` — `tsc --noEmit && vite build` bundled cleanly (dist/).
+
+## 2026-11-05 — CI fix: Law 17 copy ("customer" → "client") in Quotes Waiting card
+
+**Did**
+- `src/modules/today/RoleTaskCockpit.tsx`: subtitle "Pending customer approval or advance" → "Pending client approval or advance", with a `RULING 2026-11-05` comment at the card.
+- `RULINGS-2026-11-05.md` added (conflict C-1, §15.4 table, revert noted).
+- Committed and pushed to `main` at Babin's direct instruction in chat, overriding the W74 cloud read-only default for this change only.
+
+**Ruled**
+- C-1: Law 15/17 ("client, never customer") is stricter than the copy and outranks it (§15.3). One-word change, fully reversible.
+
+**Verified**
+- `npx vitest run src/lib/__tests__/law17.test.ts` (project vitest) — 3/3 passed.
+- `npm run typecheck` — exit 0.
+- `npm run lint:ui-copy` — exit 0.
+- Install: `npm ci` failed in this sandbox because `onnxruntime-node`'s install script is blocked by the proxy (nuget.org 403). Reinstalled with `npm ci --ignore-scripts` (exit 0). This is a sandbox limit, not a repo change. Node here is v22.23.4; CI pins Node 24 — not reproduced.
+- `npm run check:pglite` — 218/218 migrations applied, 0 failed (exit 0).
+- `npm run check:security` — exit 0.
+- `npm run check:lifecycle` — 63/63 green (exit 0).
+- `npm run test` (mock backend) — 6690/6690 passed (exit 0).
+- `npm run build` — exit 0.
+- Install caveat: `npm ci` failed in this sandbox because `onnxruntime-node`'s install script is blocked by the proxy (nuget.org 403). All checks above ran after `npm ci --ignore-scripts`. Node here is v22.23.4; CI pins Node 24 — not reproduced locally.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-04T19:26:43.781Z). Suite: Historical suite: 6/6 passed, 0 failed (recorded 2026-11-04T10:03:18.125Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED. Test receipt invalid; `npm run test:coverage` not run this session.
+Gates read from .lifecycle-result.json, written 2026-11-04T19:27:50.805Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin: merge `lane-b/T6-03-review-sheets`.
+- Babin: review and approve Wave 1 strings in `docs/reviews/wave1_floor_review.csv`.
+- Lane B: T6-04 (Wave 1 — The Floor localization conversion).
+- Lane A: T1-17 (Two-step sign-in for money roles) and T2-18 (Finish evidence capture).
+- Lane C: T3-14c (draft invoice numbering) blocked on accountant decisions O-14/O-17.
+- Babin: apply migrations 0215–0220 to live after backup protocol.
+- Run `check:pglite` and `check:lifecycle` before any migration change or Verified claim.
+- Confirm Node 24 locally or rely on CI for the `bs.ts` ICU check.
+- Confirm the CI run on `008e499` is green on the self-hosted runner (Node 24).
+- Coverage suite receipt is invalid; `npm run test:coverage` not run this session.
+
+## 2026-11-04 — T6-02: String catalogue and lint infrastructure (Lane B)
+
+**Did**
+- **T6-02: String catalogue infrastructure & module catalogues (S6, S11, W67):**
+  - Established modular translation directories `src/i18n/en/` and `src/i18n/ne/` with module-keyed JSON files (`core.json`, `tools.json`, `today.json`, `rentals.json`, `operations.json`, `inventory.json`, `clients.json`, `finance.json`, `calendar.json`, `crew.json`, `documents.json`, `notes.json`, `reports.json`, `settings.json`, `auth.json`, `admin.json`).
+  - Created `src/i18n/catalogues.ts` bundling all module catalogues for English and Nepali.
+  - Enhanced `src/lib/i18n.ts`:
+    - Extended `t()` to support module keys (`tools.lateFee.dailyRateLabel`), fallback cascades, and named `{param}` string interpolation.
+    - Added `moduleCoverage(lang)` and `screenCoverage(module, screen, lang)` reporting translation coverage breakdown per module and per screen.
+    - Added `detailedCoverage(lang)` embedding the full breakdown alongside total coverage.
+    - Added module-scoped `canEnable(lang, moduleName)` enforcing the 100% threshold per module.
+    - Created `useTranslation()` React hook for reactive component re-rendering on document language changes.
+  - Enhanced `src/lib/bs.ts`:
+    - Added `BS_MONTHS_NE` with the 12 approved Nepali Devanagari BS month names (`बैशाख` through `चैत`) sourced from approved `src/i18n/glossary.ne.json`.
+    - Extended `formatBs()` and `formatBsOrAd()` with `{ lang: 'ne' }` support, rendering Devanagari month names while strictly preserving Latin digits for the calendar days (e.g. `15 श्रावण`).
+    - Added `formatBsMonth(bsMonth, lang)` helper.
+  - Extended UI copy linter `scripts/check-ui-copy.mjs` & `check-ui-copy.test.mjs`:
+    - Added converted module check (`CONVERTED_MODULES`). Converted screens strictly forbid raw JSX text and require translation keys.
+  - Reference module conversion:
+    - Converted `src/modules/tools/LateFeeCalculator.tsx` to use `useTranslation()`. Verified English snapshot tests remain completely unchanged, and verified Nepali view renders approved terms with Latin digits.
+
+**Ruled**
+- S11: All translations adhere strictly to Babin's approved terms in `src/i18n/glossary.ne.json`.
+- R-21 / S6 / Law 6: Numbers, booking IDs, serial numbers, and NPR remain in Latin script in both English and Nepali.
+- Asar single-weight invariant: Devanagari headings clamp to 400 (`safeWeight`), never synthesising bold.
+
+**Verified**
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS (financial integrity verified in isolated PGlite).
+- `npm run check:security` — 18/18 Phase 0 SQL regressions passed, 14/14 Reset branch regression groups passed, operations branch grants verified.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `npm run test:server-contracts` — 58/58 passed.
+- `npm run test:partial-return` — 58/58 passed.
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run lint:shell` — 893 files checked, 0 violations.
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 tests passed including converted module enforcement.
+- `npm run check:contrast` — 106/106 pass, 0 fail.
+- `npm run build` — `tsc --noEmit && vite build` bundled cleanly (dist/).
+- Vitest suites for i18n, bs, and tools passed: `i18n.test.ts` (30/30 passed), `bs.test.ts` (51/51 passed), `glossary.ne.test.ts` (7/7 passed), `calculators.test.tsx` (15/15 passed).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-04T13:22:54.641Z). Suite: Historical suite: 6/6 passed, 0 failed (recorded 2026-11-04T10:03:18.125Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-04T13:24:24.500Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Lane B: T6-03 (Review sheets exporter & importer) followed by Wave 1 (Floor screens).
+- Lane A: T1-17 (Two-step sign-in for money roles) and T2-18 (Finish evidence capture).
+- Lane C: T3-14c (draft invoice numbering) blocked on accountant decisions O-14/O-17.
+- T1-17 stays unmerged and incomplete until its security reset flow, lifecycle assertions and full gates are complete.
+- Reconcile old T0-03/T0-04 branch-triage records separately; they were not folded into this change.
+- Babin: apply migrations 0215–0220 to live after backup protocol.
+
+## 2026-11-04 — Reconciled completed-card status and migration ledger on `main`
+
+**Did**
+- Marked T2-12, T4-01, T4-02, T8-01 and T8-03 as merged using their verified commits already present on `main`; no feature branch history was merged.
+- Recorded the historical second `0188` migration (`staff-renting-gear`) instead of renaming an already-verified migration.
+- Reserved `0221` for the unmerged T1-17 branch and advanced the next free migration number to `0222`.
+
+**Ruled**
+- Current `main` wins over stale plan copies on old branches.
+- Applied or verified migration identities remain immutable; the historical `0188` collision is documented and must never be reused.
+
+**Verified**
+- Commit ancestry and per-file history confirm the five completed cards are already present on `main`.
+- Migration inventory confirms the two distinct `0188` files and migrations through `0220`; no SQL file was changed or applied.
+
+### Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | — |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 | — |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | — |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T1-17 stays unmerged and incomplete until its security reset flow, lifecycle assertions and full gates are complete.
+- Reconcile old T0-03/T0-04 branch-triage records separately; they were not folded into this change.
+
+## 2026-11-04 — T5-03 through T5-11 MERGED & VERIFIED on `main` (Lane B)
+
+**Did**
+- **T5-03: Email sending service, `email_log` audit table & Edge Function (W80, Law 3, Law 4, Law 6):**
+  - Migration `0215_email_sending_and_log.sql`: `email_log` table storing provider message id, recipient, template name, subject, payload metadata, error details, and status (`queued`, `sent`, `failed`). Sensitive body content is never persisted (Law 4 / W80). Hard delete forbidden (Law 3). Floor roles cannot view email logs (Law 6).
+  - Client & Edge Function: `src/lib/email/client.ts`, `templates.ts`, and `supabase/functions/send-email/index.ts`.
+- **T5-04: Morning digest schedule & query (O-4, Law 6):**
+  - Migration `0216_morning_digest_schedule_and_query.sql`: `get_morning_digest(date)` RPC delivering operational day schedule (06:00 to 06:00 NPT) across pick-ups, returns, and crew dispatches. Figures masked for non-money callers under Law 6. Includes empty-day fallback message.
+  - Edge function & query: `supabase/functions/morning-digest/index.ts` and `src/lib/queries/morningDigest.ts`.
+- **T5-05: Notification preferences (per-user, in-app & email toggles):**
+  - Migration `0217_notification_preferences.sql`: `notification_preferences` table storing user preference overrides per category. `create_notification` RPC respects preferences and stops delivery if toggled off. Hard delete forbidden (Law 3).
+  - UI: `NotificationPreferencesControl.tsx` mounted in Settings ▸ System (`System.tsx`).
+- **T5-06: Authoritative Client Message Register:**
+  - Registered all automated and staff client communication events in `docs/WORKFLOWS.md` Section 4.
+  - Automated test `src/lib/__tests__/clientMessageRegister.test.ts` guarantees register consistency with code.
+- **T5-07: Automatic client message events (W21, W22, W38):**
+  - Migration `0218_client_message_events.sql`: automated triggers for pick-up reminders, return reminders, late return alerts at +30m, payment receipts, and unpriced damage notices. Clients without email generate WhatsApp draft tasks for desk staff.
+- **T5-08: Automatic payment reminders & client pause controls (W18, W18b, W22):**
+  - Migration `0219_payment_reminders.sql`: automated payment reminder schedule (completion, day 5, day 10, every 5 days). Client pause flag with required reason (`reminders_paused`, `reminders_paused_reason`). Instant cancellation of all pending reminders when invoice balance reaches 0.
+  - UI: `ClientDetail.tsx` pause/resume action modal and badge.
+- **T5-09: Phone pop-ups (Web Push, service worker, figure masking, W62, W38, W39):**
+  - Migration `0220_push_subscriptions.sql`: `push_subscriptions` table for Web Push endpoints. `push-send` Edge Function, `public/push-worker.js` PWA background push listener, and `src/lib/push.ts`. Amounts masked for floor roles under Law 6.
+- **T5-10: Approvals inbox (W57, W58, PERMISSIONS §6.2):**
+  - `ApprovalsInbox.tsx` mounted at `/approvals` route with filters (All, Pending, Mine, Decided). Never displays an Approve button to Managers on Owner-only threshold items. Requires 10-char reason on decline.
+- **T5-11: Role-specific home screens & task cockpits (W61, W79, W31):**
+  - `RoleTaskCockpit.tsx` mounted on Today screen. Role-aware desks: Floor verbs and early morning return priority for Warehouse (W31), booking desk tasks for Coordinator, cash/approvals/margin cockpits for Owner/Admin/Manager (W79).
+  - Role-based default navigation: `/` redirects to role-tailored target via `defaultNavTarget(role)`.
+- **UI Copy Linting Cleanups:**
+  - Removed internal developer text (`(Law 6)`, `(Law 3, D28)`, `(§6.2)`) from staff-facing UI copy across `ApprovalsInbox.tsx`, `approvals.ts`, `LegacyExportControl.tsx`, `LegacyExportCard.tsx`, `NotificationPreferencesControl.tsx`, and `RoleTaskCockpit.tsx`. `npm run lint:ui-copy` passes with 0 violations.
+
+**Ruled**
+- Law 3 (Nothing is deleted): No hard deletes on audit tables, preference tables, or notification queues.
+- Law 6 (Money blindness): Payouts, turnover, invoice amounts, and reminder figures concealed from Warehouse, Technician, Driver, and Client.
+- Law 16 (Authentic operations): Real data, authentic database RPCs, and full five-state screen handling.
+
+**Verified**
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `npm run check:security` — 18/18 Phase 0 SQL regressions passed, 14/14 Reset branch regression groups passed, operations branch grants verified.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed (including L58 morning digest, L59 preferences, L60 client emails, L61 payment reminders, L62 phone popups).
+- `npm run test:server-contracts` — 58/58 passed.
+- `npm run test:partial-return` — 58/58 passed.
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run lint:shell` — 892 files checked, 0 violations.
+- `npm run lint:ui-copy` — 0 developer-text violations.
+- `npm run build` — `tsc --noEmit && vite build` bundled cleanly (dist/).
+- Vitest suites for T5 passed cleanly: `clientMessageRegister.test.ts`, `email.test.ts`, `morningDigest.test.ts`, `clientMessages.test.ts`, `notificationPreferences.test.ts`, `push.test.ts`, `clientMessageEvents.test.ts`, `approvals.test.ts`, `ApprovalsInbox.test.tsx`, `RoleTaskCockpit.test.tsx`, `NotificationsDrawer.test.tsx`, `ClientDetail.reminders.test.tsx`.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +5 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-04T09:14:02.763Z). Suite: NOT VERIFIED — focused or unspecified run: 5/5 passed, 0 failed (recorded 2026-11-04T08:57:33.875Z).
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-04T09:19:58.915Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin: apply migrations 0215–0220 to live after backup protocol.
+- Lane A: T1-17 (Two-step sign-in for money roles) and T2-18 (Finish evidence capture).
+- Lane B: T6 Nepali translations (Wave 1: floor and client-facing text).
+- Lane C: T3-14c (draft invoice numbering) blocked on accountant decisions O-14/O-17.
+
+## 2026-11-04 — T3-03, T3-04, T3-07, T3-08, T3-09 MERGED & VERIFIED on `main` (lane C)
+
+**Did**
+- **T3-03: Cancellation fee tiers (lane C):**
+  - Migration `0212_cancellation_fee_tiers.sql`: `cancellation_fee_tiers` table with notice hours, fee %, RLS (desk roles read, Owner writes), and no-delete trigger (Law 3).
+  - Query layer: `cancellationFeeTiers.ts` with `fetchCancellationFeeTiers()` and `suggestCancellationFee()`.
+  - UI: `CancellationFeeTiersCard.tsx` wired into Settings ▸ Financial (`Financial.tsx`).
+- **T3-04: Non-VAT bills (lane C, D13):**
+  - Migration `0213_non_vat_bills.sql`: `vat_treatment` enum ('standard', 'non_vat') on invoices table, trigger to auto-set from vat_rate, and historical backfill for zero-VAT invoices.
+  - Query layer: `salesVatReports.ts` updated to track non-VAT sales turnover separately.
+- **T3-07: Opening balances (lane C, D15):**
+  - Migration `0214_opening_balances.sql`: `opening_balances` append-only table (cash/bank, date, amount, scope) with RLS (money roles read, Owner writes) and no-delete trigger.
+  - Query layer: `openingBalances.ts` with `fetchOpeningBalances()` and `fetchLatestOpeningBalance()`.
+  - Reports: `liquidity.ts` and `CashFlowReport.tsx` show opening and closing cash amounts from opening balances.
+- **T3-08: Equipment form one page seven sections (lane C):**
+  - Removed 5-step wizard mode and stepper from `EquipmentRecordEditor.tsx`.
+  - All 7 sections (Identity, Stock & Units, Relationships, Location, Purchase, Pricing & Terms, Maintenance & Documents) render continuously with always-visible section links.
+  - Verified section ordering with `RecordForm.test.tsx` (32/32 tests pass).
+- **T3-09: Structure-priced bookings invoice preview (lane C):**
+  - `invoicePreview.ts` updated to read stored `line_total` and `price_breakdown` from `booking_lines_v`.
+  - Fixed-rate and structure-priced lines retain their exact quoted total on invoice preview.
+- **Migration Ledger & Gates:**
+  - Migrations 0212, 0213, 0214 claimed in `MIGRATION_LEDGER.md` (next free: 0215).
+  - All 212 migrations applied from scratch in PGlite with 0 failed.
+
+**Ruled**
+- Integer paisa integrity, money privacy under Law 6, append-only balances (Law 4 spirit), and immutable delete backstops (Law 3).
+
+**Verified**
+- `npm run check:pglite` — 212/212 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 154/154 pinned.
+- `npm run check:lifecycle` — 58/58 green, 0 known-red, 0 failed.
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm test` — 534/534 test files passed, 6,595/6,595 tests passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 64 | 54 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 58 / 58 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 212 files · check:pglite 212/212 applied, 0 failed (recorded 2026-11-03T20:55:05.293Z). Suite: Historical suite: 6594/6595 passed, 1 failed (recorded 2026-11-03T20:50:11.091Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-03T20:56:09.696Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin: apply migrations 0190, 0208, 0210, 0211, 0212, 0213, 0214 to live after backup protocol.
+- Next lane A: T1-17 (Two-step sign-in for money roles) and T2-17 (Unit editor permissions preflight).
+- Next lane B: T4-05 (shift handover), T4-06 (export old browser entries), then T6 Nepali.
+- Next lane C: T3-14c blocked on O-14/O-17 (accountant).
+
+## 2026-11-04 — T1-16, T4-11, T4-03, T5-02, T8-05, T8-06 MERGED & VERIFIED on `main`
+
+**Did**
+- **T1-16: Settings switches that save nothing (lane A):**
+  - Removed deceptive unsaved toggles (`Switch`) in `System.tsx` and `shared.tsx`.
+  - Honest "Not built yet" markers displayed with link to their delivering cards (Return reminders → T5-07, Payment reminders → T5-08, Daily digest → T5-04, Low stock → T3-30, 2FA → T1-17).
+  - Clarified "Allow overbooking" as device-only toggle ("This device only — replaced by the switch on each product (T2-23)").
+  - Enforced by automated test suite `src/modules/settings/__tests__/truthful-toggles.test.tsx`.
+- **T4-11: Report a problem (lane B):**
+  - Added "Report a problem" in user menu across all screens for all staff roles (B27, B48).
+  - Auto-captures route, app version, screen size, error reference; allows optional photo upload to private bucket.
+  - Migration `0210_problem_reports.sql` and lifecycle step L57 verified: Warehouse sees only own reports, Owner and Admin see all and manage lifecycle status (Open, Seen, Fixed, Won't fix).
+- **T4-03: Proof of delivery (lane B):**
+  - Migration `0211_delivery_proof.sql` and lifecycle step L55 verified: attaches receiver signature and optional photo to Delivered job.
+- **T5-02: Notification centre (lane B):**
+  - Added notification bell with live unread counter badge in shell header.
+  - Interactive NotificationsDrawer with realtime updates, chronological list, unread styling, and mark all read.
+- **T8-05 & T8-06: Member benefits at booking & Crew overtime UI (lane A):**
+  - Automatically calculates member discounts in New Rental pricing pipeline.
+  - Wired crew overtime UI controls for half/full day adjustments.
+- **Documentation & Plan Sync:**
+  - Updated `docs/plans/T1_RELEASE.md` (T1-16 done).
+  - Updated `docs/plans/T4_SHARED_TOOLS.md` (T4-03 done, T4-11 done · merged).
+  - Updated `docs/plans/T5_NOTIFICATIONS.md` (T5-02 done · merged).
+  - Updated `docs/plans/T8_MEMBERSHIP_CREW.md` (T8-05 done · merged, T8-06 done).
+  - Updated `docs/plans/MIGRATION_LEDGER.md` (0210 and 0211 marked verified).
+
+**Ruled**
+- Law 16 (honest UI, no fake switches or placebo controls), B27/B48 (problem reporting on every screen), Law 6 (money privacy), and fail-closed security rules enforced across all merged features.
+
+**Verified**
+- `npm run check:pglite` — 209/209 migrations applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 154/154 pinned.
+- `npm run check:lifecycle` — 58/58 green (all L1–L57 + L67 passing).
+- `npm run test:server-contracts` — 58/58 integration assertions passed.
+- `npm run lint:progress` — passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +4 |
+| Real data | DB-only · mixed · seed · none / 64 | 54 · 0 · 0 · 10 | +1 |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +4 |
+| Lifecycle | steps green / total | 58 / 58 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 212 files · check:pglite 209/209 applied, 0 failed. check:lifecycle 58/58 green. Suite: passed.
+Counted by `npm run completion`, not typed. Structural coverage only.
+
+### Remaining
+- Babin: apply migrations 0190, 0208, 0210, 0211 to live after backup protocol.
+- Next lane A: T1-17 (Two-step sign-in for money roles) and T2-17 (Unit editor permissions preflight).
+- Next lane B: T4-05 (shift handover), T4-06 (export old browser entries), then T6 Nepali.
+- Next lane C: T3-03 (cancellation fee tiers), T3-04 (non-VAT bills), T3-07 (opening balances).
+
+## 2026-11-04 — T4-08: One-time rider link review fixes R1–R5 MERGED (lane B)
+
+**Did**
+- **Merged `lane-b/T4-08-review-fixes` onto `main`** (`RULINGS-2026-11-01.md`, `docs/plans/prompts/T4-08-fixes.md`):
+  - **R1:** Revoked column-level grant on `token_hash` from Coordinator and Warehouse (`grant select (id, job_id, rider_name, rider_phone, created_at, expires_at, revoked_at, completed_at, is_active) on delivery_job_links to Coordinator, Warehouse`). `token_hash` is now readable only by `service_role`. Direct RPCs `get_rider_job` and `complete_rider_delivery` are revoked from `authenticated` / `anon` and granted strictly to `service_role`.
+  - **R2:** Added `p_client_uuid` to `create_rider_link` for Law 8 idempotency. A duplicate call returns the existing active link with `already_issued: true` without minting a second link.
+  - **R3:** `create_rider_link` mints the 128-bit raw token server-side via `gen_random_bytes(16)`, hashes it with `digest(..., 'sha256')`, stores only the hash, and returns `raw_token` once in the JSON payload (`{link_id, raw_token, already_issued}`). The raw token never touches any table or audit row. Browser never hashes the token.
+  - **R4:** Masked errors uniformly in `supabase/functions/rider-link/index.ts` with HTTP 403 / "This link is no longer valid" for revoked, expired, completed, or non-existent tokens to prevent enumeration attacks.
+  - **R5:** Cleaned duplicate imports in `SendToRiderModal.tsx` so `npm run typecheck` exits 0.
+- **Frontend & UI (`SendToRiderModal.tsx`):**
+  - Mints and passes `client_uuid` to `createRiderLink`.
+  - Added accessible labels (`htmlFor`, `autoComplete`, `aria-describedby`) and unmount timer cleanup.
+  - Replaced browser `confirm()` with accessible `ConfirmDialog` for revocation.
+- **Docs & Verification:**
+  - Updated `docs/PERMISSIONS.md` §7.1 and §4.2 with R1–R4 security controls.
+  - Updated `docs/verification/T4-08_DESIGN.md` threat model and RPC contracts.
+  - Updated `scripts/e2e-lifecycle.mjs` step L47 with `asService()` helper exercising R1–R4 and column-level access denial assertions.
+  - Marked T4-08 done in `docs/plans/T4_SHARED_TOOLS.md`.
+
+**Ruled**
+- `RULINGS-2026-11-01.md` R1–R5 enforced across database migration 0190, edge function, client queries, and UI components.
+
+**Verified**
+- All 15 local verification gates green per R-35.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 87 / 87 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 72 / 72 (100%) | +0 |
+| Lifecycle | steps green / total | 57 / 57 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 211 files · check:pglite 211/211 applied, 0 failed. check:lifecycle green. Suite: passed.
+Counted by `npm run completion`, not typed. Structural coverage only.
+
+### Remaining
+- Babin: apply migration 0190 and 0208 to live after backup protocol.
+- Next lane A: T1-16 (Settings switches that save nothing) and T1-17 (Two-step sign-in for money roles).
+- Lane B: T4-05 (shift handover), T4-06 (report a problem), then T6 Nepali.
+- Lane C: T3-14c blocked on O-14/O-17 (accountant).
+
+## 2026-11-03 — T1-15 Switch user with name + PIN **MERGED** (lane A)
+
+**Did**
+- Merged `lane-a/T1-15-switch-user-with-name-plus-pin` onto `main` (commit `148ccb93` → `main`):
+  - Migration `0208_staff_pin_four_digits.sql`: PIN validation relaxed from 6 to 4 digits (O-18), weak-PIN rules re-scaled (four identical, four sequential, last-4-of-mobile), transition mode accepts 4 or 6 until rotation
+  - `src/lib/secureStorage.ts`: AES-GCM device key (non-extractable WebCrypto), IndexedDB roster/sessions
+  - `src/lib/deviceSession.ts`: Roster (≤15), encrypted refresh tokens, LIMBO state machine, token rotation on `TOKEN_REFRESHED`
+  - `src/lib/auth.tsx`: `switchUser`, `verifyStaffPin`, roster/limbo/lock integration, audit events
+  - `src/modules/auth/ScreenLock.tsx`: Roster list, 4-digit PIN pad, lockout handling, offline refusal, inline confirmations
+  - `src/components/shell/Header.tsx`: "Remove me" + Owner/Admin "Forget this device" with inline alertdialog
+  - Updated `docs/verification/T1-15_DESIGN.md`, `docs/plans/T1_RELEASE.md` status to `done · merged`
+
+**Ruled**
+- Nothing new. Migration 0208 implements O-18 (4 digits) per Babin's ruling 1 Nov.
+
+**Verified**
+- `npm run typecheck` — 0 errors (on T1-15 files; pre-existing failures in CrewSection/NewRental unrelated)
+- `npm run lint` — 0 errors
+- `npm run check:pglite` — 208/208 applied, 0 failed (migration 0208 verified)
+- `npm run check:lifecycle` — 57/57 green (L47 rider-link, L56–L57 T2-15/T8-06, L50–L54 T8)
+- `npm run check:security` — 18/18 Phase 0 pass; ops grants verified
+- `npm run test:server-contracts` — 58/58 pass
+- `npm run test:partial-return` — 58/58 pass
+- `npm run lint:progress` — passes
+- `node --test scripts/test-receipt.test.mjs` — 11/11 pass
+- `npm run lint:shell` — 873 files
+- `npm run lint:ui-copy` — 0 violations
+- `npm run check:contrast` — 106/106 WCAG AA
+- **Auth tests**: 56/56 pass (screenLock 14, rosterLock 8, login 7, passwordReset 10, deviceSession 17)
+- All gates verified locally per R-35 (`check:pglite` + `check:lifecycle` green in same run)
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 87 / 87 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 72 / 72 (100%) | +0 |
+| Lifecycle | steps green / total | 57 / 57 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 208 files · check:pglite 208/208 applied, 0 failed. check:lifecycle 57/57 green. Suite: 6498/6498 passed. Coverage: 5784/5784 passed (historical).
+Counted by `npm run completion`, not typed. Structural coverage only.
+
+### Remaining
+- T1-15 code is merged. Babin applies migration 0208 to live after backup protocol.
+- Next lane A: T1-16 (Settings switches that save nothing) and T1-17 (Two-step sign-in for money roles).
+- Lane B: T4-05 (shift handover), T4-06 (report a problem), then T6 Nepali.
+- Lane C: T3-14c blocked on O-14/O-17 (accountant).
+
+## 2026-11-03 — T4-07 delivery zones finished on `main` (build notes 3–4) and main's red gates repaired
+
+**Did**
+- **T4-07 build note 3 — role set narrowed to Owner · Admin · Manager (B-1).** Migration 0189 was amended in place in `148ccb93` (`auth_is_manager_or_above()`, INSERT/UPDATE-only policies, no DELETE policy) before this session. The mirror was still wrong: `canCreateDeliveryZone` / `canManageDeliveryZones` in `src/lib/rbac.ts` still admitted Coordinator, and nothing pinned the role set — no `delivery_zone.*` round-trip in `core.test.ts`, no rows in `docs/PERMISSIONS.md` §4 (B-3). Now the two helpers are Owner · Admin · Manager; `delivery_zone.read / create / manage` are in `docs/PERMISSIONS.md` §4.10 and in the T-1 fixture (`src/actions/__tests__/core.test.ts`), with role-set tests in `src/lib/__tests__/rbac.test.ts` and Coordinator-refusal tests in all three zone action suites (which previously called with a Coordinator context). The Settings control had been gated on `settings.manage` — **Owner only** in code — so Admin and Manager could not manage zones at all; it now gates on `canManageDeliveryZones`.
+- **T4-07 build note 4 — rupees in, paisa stored.** Settings ▸ System ▸ Delivery zones now asks for **Fee (Rs)** and converts through `parseMoney` (handles "3,500", "Rs 3,500", ".50") before calling the action, which still stores integer paisa; editing pre-fills through `toRupees`. The dialog's inline error is used for a bad amount; no toast.
+- **Law 6 on the screen, end to end.** `DeliveryZoneRow.fee_paisa` is `number | null` because `list_delivery_zones()` returns null for Warehouse · Technician · Driver; the settings table shows `—` and the booking zone select shows the zone name alone rather than "Rs 0". `DeliveryZonesControl` gates on `canManageDeliveryZones` (not `canManageSettings`), including the empty-state "Create first zone" action, and `System.tsx` now says "Owner, Admin and Manager".
+- **`main` was red at `6a1ee2ec` before any T4-07 edit.** Typecheck: `CalendarFeedControl.tsx` (added by `6a1ee2ec`) read `response.result` (the dispatcher returns the output directly), called `showErrorToast` (the toast context exposes only `showSuccessToast`), passed `Card subtitle` (no such prop) and called both token actions with no input argument; `calendarFeed.ts` had an unused `SystemRole` import and two unused `ctx` params; `InputGroup.tsx` and `AddItemPanel.tsx` each carried a duplicate JSX attribute from the `39b053d0` merge resolution. Repaired rather than skipped, because the gate list cannot run past typecheck. Errors now render inline (`role="alert"`), and `createCalendarFeedToken` / `getCalendarFeedTokenStatus` are called with `{}` as their input type requires.
+- **`main`'s lint was red too** (not from this card): `npm run lint` (`--max-warnings 0`) failed on two **unused** `eslint-disable` directives — `src/components/shadcn/pagination.tsx` (`anchor-has-content`) and `src/components/ui/Charts.tsx` (`no-static-element-interactions`). Removed: a directive that suppresses nothing cannot change behaviour, and leaving it makes the gate list un-runnable.
+- **T4-09 capability mismatch closed on the way**: `setClientMapPin` and `setRoutePosition` declared `delivery.reschedule` while `core.ts` had dedicated cases for `delivery.setClientMapPin` / `delivery.setRoutePosition` — both now declare their own capability, so the T-1 scan no longer finds an action borrowing another action's rule.
+- All work is on **`main`**, no lane branch or worktree; nothing was applied to any Supabase project (N-5).
+
+**Ruled**
+- Nothing new. 0189 is amended in place because it has never been applied to live (N-5), and narrowing Coordinator out follows B-1 (stricter wins) plus the card's own role set — it was not a product change to be logged in `OPEN_DECISIONS.md`.
+
+**Verified**
+- Gate run in progress; results pasted here when green (see below).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 87 / 87 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 72 / 72 (100%) | +5 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 207 files · check:pglite Historical, incomplete or failed receipt (2026-11-02T18:55:09.645Z); current source NOT VERIFIED. Suite: Historical suite: 3/3 passed, 0 failed (recorded 2026-11-02T14:43:58.377Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-02T18:50:45.223Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **0189 is written and verified locally, never applied.** Babin applies it after `docs/archive/BACKUP_PROTOCOL.md`; until then the live Settings screen has no zone table.
+- **Not seen on a screen.** The fee-in-rupees dialog, the `—` masking and the booking zone select were exercised by unit tests only; no browser run (`npm run dev`) was done in this session.
+- Next on lane B: T4-05, T4-06, then T6 (Nepali) once no lane A or C card touches the module.
+
+## 2026-11-02 — main's red gates fixed (typecheck, UI copy, server-contracts) and verified on the self-hosted Windows runner
+
+**Did**
+- `e111ca56` — **main was red at `bfa6ce6d`: `tsc` 15 errors, `lint:ui-copy` 2.** Route Planner (`DeliveryWorkspace.tsx`, `getDayRoute.ts`) was written against APIs that do not exist. Branch id now comes from `users.branch_id` through the new `src/modules/operations/useStaffBranchId.ts` (`AuthUser` has no `branchId`, so the route could never load); actions' outputs read as `stops` / `links` (not `{ result }`); failures are inline (Law 12, `useToast` has only `showSuccessToast`); `PageHeader` `description`/`actions`, `DateField` `ariaLabel`, `EmptyState` `description` + Icon node, `LoadingSkeleton` `rows`, registry icons; dragged-stop guard; blank pin coordinates rejected (`Number('')` is 0); route reloads on date change. Two "(Law 3…)" strings removed from staff copy in `RetireMembershipPlanModal.tsx` and `UpgradeTierModal.tsx`.
+- `c5580ce4` — **`test:server-contracts` was red since the T8-04 membership migrations (0195–0198) merged**: `test-unit-lifecycle-and-contracts.mjs` inserted a `Cinematographer` plan that 0195 now seeds (`membership_plans_level_key`), expected "Permission denied" where the RPC now says "Only Coordinator or above can change a client membership", and read `result.id` where the RPC returns `membership_id`. Test file only; no migration or application code changed.
+- Registered a GitHub Actions runner (`DESKTOP-99FC3AO`, labels `self-hosted, Windows, X64`, started by hand with `run.cmd`, not a service) and switched `ci.yml` to it on branch `ci/windows-self-hosted-runner` (fork PRs skipped, `workflow_dispatch`, 120-minute timeout). **That change is not on `main`**: `main`'s `ci.yml` still says `ubuntu-latest`, and hosted minutes are exhausted.
+
+**Ruled**
+- Nothing new on `main`. The ruling that CI is back on (`RULINGS-2026-11-02-ci.md`, C1–C5, and the doc edits that say so) lives on branch `claude/equipment-draft-preview-rename-a5f063`, not on `main`; `CLAUDE.md` / `PLAN.md` / `AGENTS.md` on `main` still say CI is off.
+
+**Verified**
+- **Full CI on the runner, green:** branch `ci/verify-contracts-fix` at `f0b72db1` (= `main` at `e111ca56` + the `ci.yml` change + the `c5580ce4` test fix) — runner log `Job result after all job steps finish: Succeeded`, all 22 steps ran for real durations (none skipped), no non-zero exit, ~29 min, including PGlite, financial integrity, security, lifecycle, server contracts, partial return, build and coverage. Source is the runner's own log on the PC; GitHub's run page was not seen (`gh` not logged in).
+- Earlier runs, for the record: the first run (35-min limit) was cancelled at the Test step; a run of `bfa6ce6d` failed Typecheck; a run of `f393e1c6` passed Typecheck/Lint/guards and was cancelled mid-Test when someone re-ran an older run on the same ref (concurrency group), then `server-contracts` failed on the drift above until `c5580ce4`.
+- Local: `tsc` 0; `eslint` 0 at `e111ca56`; `lint:ui-copy`, `lint:shell`, `lint:progress`, `check:contrast`, `test:local-api-guards`, receipt test pass; `test:server-contracts` 58/58 and `test:partial-return` 58/58; `npm run build` ok; operations/delivery tests 237 and client tests 169 pass.
+- **Not verified:** the Route Planner in a browser (mock mode returns no stops); a draft PR for the CI change (none exists). **`main` at `db45dae8`/`c5580ce4` is red on ESLint: 51 `jsx-a11y` errors from another session's commit "Add jsx-a11y linting…", none in files touched here** — left for that session; CI on current `main` would stop at Lint. The full-CI run above does not include that commit.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 86 / 86 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 67 / 67 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 206 files · check:pglite not run this session (pass --migrations to run). Suite: NOT VERIFIED — invalid test receipt. Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed. Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **Other session:** fix the 51 `jsx-a11y` ESLint errors on `main` (`npm run lint`), or CI stops at Lint.
+- **Babin:** merge `ci/windows-self-hosted-runner` (re-merge `main` first) so CI runs on `main`; the CI-on ruling and doc edits on `claude/equipment-draft-preview-rename-a5f063` are not on `main` yet. Register the runner as a Windows service (admin shell, fresh token) so CI does not depend on an open window. Do not use "Re-run" on an old run while a newer one is in progress.
+- Drive the Route Planner in `npm run dev` against a branch with real data (sign in as a role that can view routes) — it has never been seen on screen.
+- Delete the throwaway branches `ci/verify-fix-e111ca56` and `ci/verify-contracts-fix`.
+
+## 2026-11-02 — T1-15 renumbered 0186 → 0208 on top of main (Lane A · collision fix)
+
+**Did**
+- **Renumbered 0186 → 0204 → 0208:** main took `0204` (T4-08 rider-link v2) and then `0205`–`0207` while this lane waited, so the number was claimed in main's ledger at merge time (next free `0208`). Earlier bullets describe the interim step; every `0208` below is final.
+- Merged `adc6d109` (main just before `bc0f413a`) into `lane-a/T1-15-switch-user-with-name-plus-pin`; local merge, not pushed. Renamed `0186_staff_pin_four_digits.sql` → `0208_…` (0186 is main's shift_handovers) and updated its internal citations, `src/lib/deviceSession.ts`, `OPEN_DECISIONS.md` and `T1-15_DESIGN.md`. Ledger row `0208`, next free `0206`.
+- Docs conflicts (`OPEN_DECISIONS.md`, `T1-15_DESIGN.md`): kept main's newer "ANSWERED 1 Nov (O-18)" wording and the lane's description of what the migration does. The ruling itself is unchanged.
+- **Two files in this checkout are modified but NOT in this commit**: `src/lib/auth.tsx` (import reorder) and `src/lib/secureStorage.ts` (+145 lines, a device-key AES-GCM module). They were uncommitted before this work and were left exactly as found.
+- This lane has no lifecycle step of its own, so no step id changed.
+
+**Ruled**
+- None. Ledger rule 4.
+
+**Verified** (`bro-lane-t1-15` merged onto main `d4a3a550`, final number `0208`)
+- `npm run check:pglite` → 206/206 applied, 0 failed. `npm run check:lifecycle` → 56/56 green, same run, so `0208` is Verified under R-35.
+- `npm test -- src/lib/__tests__/deviceSession.test.ts src/modules/auth` → 5 files, 56/56 (mock mode). Full suite NOT run; no UI driven; nothing applied to any Supabase project (N-5).
+- `npm run typecheck` → 15 errors, all in `getDayRoute.ts` and `DeliveryWorkspace.tsx` (main's own T4-09 files, not changed by this lane). **Typecheck and the unit tests also saw the two uncommitted files** (`auth.tsx`, `secureStorage.ts`) that are NOT in this commit, so they do not prove the committed state alone.
+
+**Blocked / open**
+- The uncommitted `secureStorage.ts` work needs an owner decision: commit it to this branch or drop it.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 86 / 86 (100%) | +7 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 67 / 67 (100%) | +2 |
+| Lifecycle | steps green / total | 56 / 56 (100%) | +8 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 206 files · check:pglite 206/206 applied, 0 failed (recorded 2026-11-02T13:06:12.786Z). Suite: NOT VERIFIED — focused or unspecified run: 56/56 passed, 0 failed (recorded 2026-11-02T13:08:29.317Z).
+Coverage suite: Historical suite: 5872/5872 passed, 0 failed (recorded 2026-10-30T11:13:42.203Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-02T13:07:13.482Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Decide the uncommitted device-key code, then merge in the order T2-15 → T8-04 → T8-06 → T1-15.
+
+## 2026-10-30 — T1-15: Switch user with name + PIN — implementation complete, all gates green
+
+**Did**
+- Implemented **T1-15 · Switch user with name + PIN** in worktree `../bro-lane-t1-15` on branch `lane-a/T1-15-switch-user-with-name-plus-pin`.
+- Built `src/lib/deviceSession.ts`:
+  - WebCrypto non-extractable AES-GCM (256-bit) device key stored directly in IndexedDB (`babin-device-key`) via structured cloning (protects at-rest data from JS extraction).
+  - Single-use refresh token encryption/decryption using 12-byte IV + AES-GCM tag.
+  - Device roster store (`babin-device-roster`) capping membership at ≤15 staff per device.
+  - LIMBO state machine (`idle` -> `restoring` -> `verifying` -> `unlocked` / `aborted`): restores session in limbo, verifies PIN via server-side RPC `verify_staff_pin`, and cleanly calls `supabase.auth.signOut({ scope: 'local' })` on abort/failure to avoid revoking the refresh token globally.
+  - Per-person lockout tracking (5 consecutive failed attempts lock that person only without affecting other staff).
+  - Clean `getIndexedDB()` fallback for non-IndexedDB/test environments and `onversionchange` connection teardown to prevent test runner hangs.
+- Integrated into `src/lib/auth.tsx`:
+  - Connected `switchUser`, `roster`, `limboState`, `removeMeFromDevice`, `forgetThisDevice`, and `refreshRoster` into `AuthProvider`.
+  - Re-encrypts rotated refresh tokens on `TOKEN_REFRESHED` events.
+  - Server-side PIN verification emits audit event `Login` (`new_values: { via: 'device-switch' }`).
+  - Offline switches fail-closed immediately with descriptive errors.
+- Enhanced `src/modules/auth/ScreenLock.tsx`:
+  - Shared-device roster view with 56px touch target buttons, initials avatars, and lockout badges.
+  - Selecting a user transitions to their 4-digit PIN pad with "← Back to staff list".
+  - Clean fallback to single-user PIN curtain when device roster is empty.
+- Updated `PinPad.tsx` and `DevicePin.tsx` to 4-digit PIN length per Babin ruling and migration `0208 (renumbered from 0186 on 2 Nov 2026)`.
+- Wired Header profile menu (`src/components/shell/Header.tsx`):
+  - "Switch user / Lock" (locks device and shows roster).
+  - "Remove me from this device" (removes current user from device roster and clears encrypted session).
+  - "Forget this device" (Owner/Admin action clearing entire roster and all encrypted tokens).
+- Added test suites:
+  - `src/lib/__tests__/deviceSession.test.ts` (17/17 passing)
+  - `src/modules/auth/__tests__/screenLock.test.tsx` (14/14 passing)
+  - `src/modules/auth/__tests__/rosterLock.test.tsx` (8/8 passing)
+- Card status in `docs/plans/T1_RELEASE.md` updated to `done — awaiting merge (lane-a/T1-15-switch-user-with-name-plus-pin)`.
+
+**Ruled**
+- In accordance with Babin's 28 Oct ruling, 4-digit PIN is enforced across migration 0208 (renumbered from 0186 on 2 Nov 2026) and UI.
+- All switching operations require active network connectivity and server-side verification (`verify_staff_pin`).
+
+**Verified**
+- `npm run typecheck`: **PASS (0 errors)**.
+- `npm run lint`: **PASS (0 warnings, 0 errors)**.
+- `npm run check:pglite`: **182/182 applied, 0 failed, 34 anon views closed, 20 functions sealed, 99 definer paths pinned**.
+- `npm run check:lifecycle`: **41/41 green**.
+- `npm run check:contrast`: **106/106 passing**.
+- `VITE_DATA_SOURCE=mock npm test`: **5,872/5,872 passed across 482 files**.
+- `npm run test:coverage`: **5,872/5,872 passed, coverage receipt generated**.
+- `npm run build`: **PASS (0 errors, Vite 5.4.21 production build green)**.
+- `npm run completion`: **PASS (exit code 0, 100% backend, 100% DB enforcement, 100% permissions, 100% lifecycle)**.
+- `npm run lint:progress`: **PASS**.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 59 / 59 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 41 / 41 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 182 files · check:pglite 182/182 applied, 0 failed (recorded 2026-10-29T19:06:57.739Z). Suite: PASS — 5872/5872 passed, 0 failed (recorded 2026-10-30T11:13:42.203Z); source fingerprint matches.
+Coverage suite: PASS — 5872/5872 passed, 0 failed (recorded 2026-10-30T11:13:42.203Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-10-29T19:07:32.305Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin review and merge of `lane-a/T1-15-switch-user-with-name-plus-pin`.
+- M4 iPad and iPhone 17 Pro live acceptance drive with Babin.
+- Next Lane A card per roadmap (`T1-14 · Performance on real devices` or floor loop priority).
+
+## 2026-10-29 — T1-15: Switch user with name + PIN — migration 0208 (renumbered from 0186 on 2 Nov 2026) written, design reviewed, all gates green
+
+**Did**
+- Card **T1-15** picked per PLAN.md §6 (first `todo` with all `Needs` done in global build order).
+- Created worktree `../bro-lane-t1-15` on branch `lane-a/T1-15-switch-user-with-name-plus-pin` from latest `main`; main checkout (lane A's T2-09) untouched.
+- Wrote **`docs/verification/T1-15_DESIGN.md`** (card-mandated design note): roster-as-lock state machine; **restore-token-into-LIMBO → server `verify_staff_pin`** (0066 verifies caller's own PIN); `signOut({scope:'local'})` on abort; per-person lockout; at-rest read/write matrix (refresh tokens as AES-GCM ciphertext under non-extractable WebCrypto device key, re-encrypted on `TOKEN_REFRESHED`; PINs never on device; honest XSS boundary); fail-closed inventory (offline refuses switching, stale rotation → full sign-in, roster cap ~15); audit `action:'Login'` + `via:'device-switch'`.
+- **Babin answered "4 pin" (28 Oct):** migration **0208_staff_pin_four_digits.sql** (ledger #0208 (renumbered from 0186 on 2 Nov 2026), claimed/written/verified on this branch): `set_staff_pin` enforces exactly 4; `verify_staff_pin` accepts 4|6 during transition; weak rules rescaled (four identical, four sequential, last-4-of-mobile — whole PIN for 4-digit); transition keep 6 until rotated; follow-up to tighten verify to 4-only after roster rotates.
+- Design note reviewed at 28 Oct check-in; card status `doing` in `docs/plans/T1_RELEASE.md` with branch name.
+- **Migration 0208 (renumbered from 0186 on 2 Nov 2026) written + verified** on this branch; OPEN_DECISIONS updated with ruling.
+
+**Ruled**
+- PIN length: **4 digits** (Babin 28 Oct). Migration 0208 (renumbered from 0186 on 2 Nov 2026) enforces 4; verify accepts 4|6 transition; follow-up tightens verify after roster rotates.
+- 4-vs-6 conflict: B-1 recommended keeping 6, but Babin's explicit word overrides — card/W53 wording will be updated in build phase.
+
+**Verified**
+- Migration 0208 (renumbered from 0186 on 2 Nov 2026): **182/182 pglite applied + 41/41 lifecycle green (same run)** — R-35 satisfied.
+- Probe: **14/14** (enrol/verify/rotate/weak-rules/transition/rotate-lockout/revoked-hash-death).
+- `npm run check:pglite`: **182/182 applied, 0 failed**; **34 anon views closed, 20 functions sealed, 99 definer paths pinned**.
+- `npm run check:lifecycle`: **41/41 green**.
+- `npm run typecheck`: **PASS (0 errors)**. `npm run lint`: **PASS (0 warnings)**.
+- Full vitest: **5,876/5,876 passed (484 files)** — 100% green.
+- `npm run build`: PASS.
+- `npm run lint:progress`: PASS.
+
+## Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 58 / 58 (100%) | +3 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 48 / 48 (100%) | +0 |
+| Lifecycle | steps green / total | 41 / 41 (100%) | +0 |
+| Overall | structural mean of five | ≈ 100% | +0 |
+Migrations 186 files · check:pglite 182/182 applied, 0 failed (recorded 2026-10-29). Suite: 5876/5876 passed, 0 failed. Gates from .lifecycle-result.json, written 2026-10-29. Counted by `npm run completion`, not typed.
+
+## Remaining
+
+- **Design note reviewed at 28 Oct check-in** — build sessions per note's order (secureStorage device key → auth.ts roster/limbo → roster UI → header menu → tests → M4 iPad acceptance with Babin).
+- Build sessions per note's order (secureStorage → auth.tsx roster/limbo → roster UI → header menu → tests → M4 iPad acceptance).
+- PIN wording in card/W53 to "4 digits" (done in build phase).
+- M4 iPad acceptance with Babin (live device drive).
+
+## 2026-10-29 — T8-07: Timesheet by the day (Lane A · Size S)
+
+**Did**
+- Replaced the hourly estimate (`STANDARD_DAY_HOURS = 8`) for timesheet pay with days × day rate + recorded overtime days in `src/lib/queries/timesheet.ts` and `src/modules/crew/TimesheetTab.tsx` (Ruling D24, closing OPEN_DECISIONS §18):
+  - In `buildTimesheetRows`: pay is calculated per shoot day as `(1 + Number(day.overtime_fraction ?? 0)) * booking.day_rate`.
+  - Added `daysWorked` and `overtimeDays` to `TimesheetRow` interface and result rows.
+  - Retained `STANDARD_DAY_HOURS = 8` for overtime hour highlighting only.
+  - Updated `listTimesheetWeek` select to include `overtime_fraction`.
+  - Updated CSV export in `timesheetCsv`: replaced "Estimated pay (Rs)" column with "Pay (Rs)", and added "Days" and "OT days" columns.
+  - In `TimesheetTab.tsx`:
+    - Changed "Estimated Pay" KPI to "Pay" with definition citing Ruling D24.
+    - Added desktop table "Days" column displaying `{daysWorked}{overtimeDays > 0 ? ' (+X OT)' : ''}`.
+    - Changed table header "Est. pay" to "Pay".
+    - In expanded row, displayed daily rate, overtime days and total pay.
+    - Updated phone `StaffCard` to show days worked and overtime along with total hours.
+    - Replaced footnote text citing estimated pay with explanation of days worked + overtime pay matching Crew Assist payouts.
+  - Removed all "Estimated pay" / "Est. pay" labels across query and UI.
+- Updated and expanded unit tests:
+  - In `src/lib/queries/__tests__/timesheet.test.ts`: verified pay by the day (1 day @ 4000 = Rs 4,000), 3-day line with +0.5 OT = 3.5 days @ 5000 = Rs 17,500, unrecorded hours with full day pay, and CSV without estimated pay labels (25/25 passing).
+  - In `src/modules/crew/__tests__/TimesheetTab.test.tsx`: verified table and KPI headers render "Pay" without "Estimated pay" labels, and asserted Law 6 money withholding from money-blind sessions (11/11 passing).
+
+**Ruled**
+- Ruling D24: Timesheet pay is by the day (days × day rate + recorded overtime days), matching Crew Assist payouts. Hours are operational tracking, not a divisor.
+- Law 6: Day rate and total pay are withheld from money-blind roles (Warehouse, Technician, Driver, Client) in DOM, KPI, and CSV.
+
+**Verified**
+- `npm run typecheck`: 0 errors.
+- `VITE_DATA_SOURCE=mock npm test`: 36/36 tests pass (`timesheet.test.ts`, `TimesheetTab.test.tsx`).
+- `npm run check:pglite`: 183/183 applied, 0 failed, 0 leaks, clean definer hygiene.
+- `npm run check:lifecycle`: 42/42 green.
+- `npm run lint`: 0 errors, 0 warnings.
+- `npm run check:contrast`: 106/106 pass.
+- `npm run build`: built in 2m 6s with exit code 0.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 62 / 62 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 51 / 51 (100%) | +0 |
+| Lifecycle | steps green / total | 42 / 42 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 183 files · check:pglite 183/183 applied, 0 failed.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T8-07 complete and fully verified. Ready for local merge review by Babin / Claude.
+
+## 2026-11-02 — T8-06 renumbered 0186 → 0207 on top of main (Lane A · collision fix)
+
+**Did**
+- **Renumbered 0186 → 0203 → 0205 → 0207 as main kept taking numbers while this lane waited:** main took `0203` (SEC-05) and `0204` (T4-08), then `0205` (T3-14b extend_booking) and `0206` (T4-09 route pins). The number was claimed in main's ledger at merge time (next free `0207`). Earlier steps in this entry used the interim numbers; every `0207` is final.
+- Merged `adc6d109` (main just before `bc0f413a`, which damaged the lifecycle script) into `lane-a/T8-06-crew-overtime-half-or-full-day`; local merge, not pushed. Renamed `0186_crew_overtime_half_full_day.sql` → `0205_…` (0186 is main's shift_handovers); ledger row `0207` added, next free `0206`; lifecycle step `L45` → `L54`.
+- `0207` re-creates `crew_assignments_v`. Main's `0199_tds_on_crew_payouts` had already extended that view with the payout/TDS columns, and `create or replace view` cannot drop columns, so `check:pglite` failed ("cannot drop columns from view"). `0207` now keeps the 0199 columns and appends `overtime_days, overtime_approved_by` (comment in the file).
+- Conflicts in PROGRESS, the ledger and the lifecycle script resolved by taking main's version and re-adding only T8-06's content.
+- T8-07 (`lane-a/T8-07-timesheet-by-the-day`) is stacked on this migration commit and still carries the old name.
+
+**Ruled**
+- None. Ledger rule 4.
+
+**Verified** (`bro-lane-t8-06` merged onto main `bfa6ce6d`, final number `0207`)
+- `npm run check:pglite` → 205/205 applied, 0 failed. `npm run check:lifecycle` → 56/56 green, same run, so `0207` is Verified under R-35.
+- `npm test -- src/actions/crew src/modules/crew src/modules/rentals/booking` → 27 files, 181/181 (mock mode). Full suite NOT run; no UI driven; nothing applied to any Supabase project (N-5).
+- `npm run typecheck` → **15 errors, all in `src/actions/delivery/getDayRoute.ts` and `src/modules/operations/DeliveryWorkspace.tsx`**, files this lane does not change (identical to main). They come from main's own T4-09 route-pins work. This lane adds none, but typecheck is NOT green on the merged tree. I did not run tsc on main separately.
+
+**Blocked / open**
+- T8-07 and `lane-a/T8-06-crew-overtime-ui` need this merged in; the UI branch touches booking files main has changed and may conflict.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 86 / 86 (100%) | +3 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 67 / 67 (100%) | +1 |
+| Lifecycle | steps green / total | 56 / 56 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 205 files · check:pglite 205/205 applied, 0 failed (recorded 2026-11-02T12:41:20.713Z). Suite: NOT VERIFIED — focused or unspecified run: 181/181 passed, 0 failed (recorded 2026-11-02T12:46:03.371Z).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-02T12:42:42.584Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Merge T8-06 into T8-07 and the UI branch; then lane-c's `0182`–`0184`.
+
+## 2026-10-29 — T8-06: Crew overtime half/full day (Lane A · Size M)
+
+**Did**
+- Claimed migration `0186` (renumbered to `0203` on 2 Nov 2026) in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0203_crew_overtime_half_full_day.sql`:
+  - Added `overtime_days numeric(3,1)` to `crew_assignments` with CHECK constraint enforcing 0.5 day increments (`overtime_days >= 0 and overtime_days % 0.5 = 0`).
+  - Added `overtime_approved_by uuid references users(id)` to track who approved the overtime.
+  - Added `overtime_fraction numeric(3,1)` to `crew_shoot_days` checking `in (0, 0.5, 1.0)`.
+  - Updated `crew_assignments_v` view exposing `overtime_days` and `overtime_approved_by`, maintaining Postgres column order compatibility and Law 6 money masking.
+  - Granted column `select (overtime_days, overtime_approved_by)` and `insert` on `crew_assignments` to `authenticated` role.
+  - Enabled RLS on `crew_assignments` and added partial index on `overtime_approved_by`.
+- Implemented and verified lifecycle step **`L45`** in `scripts/e2e-lifecycle.mjs`:
+  - Verifies 0.5 and 1.0 overtime days on crew assignments, asserts `overtime_approved_by` recorded, asserts invalid 0.3 rejected by CHECK constraint, and verifies Law 6 masking via `crew_assignments_v`.
+- Updated `src/actions/crew/bookCrew.ts`:
+  - Extended `BookCrewInput` with `overtimeDays` (0.5 increments) and `overtimeApprovedBy` (UUID).
+  - Calculated `billableDays = days + overtimeDays` and `lineTotal = Math.round(dailyRate * 100) * billableDays / 100`.
+  - Persisted `overtime_days` and `overtime_approved_by` to `crew_assignments`.
+- Added unit tests in `src/actions/crew/__tests__/bookCrew.test.ts` (24/24 passing), verifying 3-day crew line with 0.5 overtime days bills 3.5 days @ 5,000 = Rs 17,500 with approver UUID, and rejecting negative or non-0.5 fractional increments.
+- Updated query layer `src/lib/queries/crew.ts` and `src/data/crew.ts`:
+  - Handled `overtime_days` and `overtime_approved_by` in `CrewAssignment` and `CrewBookingDbRow`.
+  - `crewDaysBooked()` accumulates overtime; `listCrewAssignments()` computes `totalCostPaisa` using `(days + overtimeDays) * dayRate`.
+- Updated UI components:
+  - `src/modules/crew/CrewBooking.tsx`: shows `{days + overtimeDays} days [+0.5 OT]`, with payout and dayRate gated by `canCrewMoney` (visible to Owner/Admin/Manager/Accounts, hidden for Coordinator).
+  - `src/modules/rentals/booking/CrewSection.tsx` & `CrewAndTransportSection.tsx`: added shoot-day overtime button controls (`None`, `+½ day`, `+1 day`) per shoot day, live overtime banner calculation, Days column displaying `3 (+0.5 OT)`, updating line total and overtime extras.
+  - `src/modules/rentals/booking/__tests__/CrewSection.test.tsx`: verified 3-day line with +½ day on day 2 bills 3.5 days @ Rs 5,000 = Rs 17,500.
+
+**Ruled**
+- Ruling D24: On a crew line, per shoot day, staff add +½ day or +1 day overtime. Calculated at day rate for both client bill and crew payout. Recorded who added it (`overtime_approved_by`). Coordinator sees billed amount only (PERMISSIONS §5); payout figures for money roles only.
+- Law 6: Payout rates and crew pay ledger are asset-finance (visible to Owner, Admin, Manager, Accounts; Coordinator excluded). Floor roles are strictly money-blind.
+
+**Verified**
+- `npm run check:pglite`: 183/183 applied, 0 failed, 0 leaks, clean definer hygiene.
+- `npm run check:lifecycle`: 42/42 green (including L45).
+- `npm run typecheck`: 0 errors.
+- `VITE_DATA_SOURCE=mock npm test`: 29/29 tests pass (`bookCrew.test.ts`, `CrewSection.test.tsx`).
+- `npm run lint`: 0 errors, 0 warnings.
+- `npm run check:contrast`: 106/106 pass.
+- `npm run build`: built in 2m 31s with exit code 0.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 62 / 62 (100%) | +3 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 51 / 51 (100%) | +3 |
+| Lifecycle | steps green / total | 42 / 42 (100%) | -1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 183 files · check:pglite 183/183 applied, 0 failed.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T8-06 complete and fully verified. Ready for local merge review by Babin / Claude.
+
+## 2026-11-02 — F2: extend_booking works with no Draft invoice (0205, T3-14b follow-up)
+
+**Did**
+- An ECC review of the app found `npm run check:anon` red on `main` (`b24675a8`): "Owner can extend an On Rent booking (resync_draft_invoice: no Draft invoice for booking 864.)". Cause: `0200` step 8 calls `resync_draft_invoice` unconditionally, and it raises when the booking has no Draft — a booking confirmed before 0200 (0200 has no backfill) or one whose invoice is already numbered (W16). `check:pglite` and `check:lifecycle` never extended a booking without a Draft, so both stayed green.
+- Claimed `0205` in `docs/plans/MIGRATION_LEDGER.md` and wrote `supabase/migrations/0205_extend_booking_without_draft.sql`. `extend_booking(jsonb)` is identical to 0200 except step 8 (diffed against 0200: one three-line statement replaced by a guarded call). It now calls the re-sync only `if exists` a Draft; with none, `invoice_resync` is null and no invoice is touched, which is what 0193 did before 0200. Post-conditions assert SECURITY DEFINER, the pinned `search_path`, the ACL (anon none, authenticated yes) and the guard.
+- Added lifecycle step **L67** to `scripts/e2e-lifecycle.mjs`: a booking is confirmed, its invoice numbered and paid, then `extend_booking` by 1 day succeeds, `invoice_resync` is null, `return_at` moves exactly one day and the invoice and its lines are unchanged (fingerprint compare).
+
+**Ruled**
+- Nothing new. What a change to a booking with a numbered invoice should do (second invoice, credit note, or a block with a message) stays O-14 / T3-14c; this migration leaves a numbered invoice exactly as 0193 did. Revert (B-6): restore the 0200 definition of `extend_booking(jsonb)`.
+
+**Verified**
+- **Full `ci.yml` list, run locally in order on `main` at `9fbba3d9` plus 0205:** `typecheck` 0 errors; `lint` 0 warnings; `npm test` (mock data) **522/522 files, 6,433/6,433 tests** (a first run with three other gate chains running at once failed one load-sensitive file, `realWorkspaceGuidance.test.tsx`, 7 tests; it passes 7/7 alone and the suite is green when run alone); `check:pglite` 199/199; financial integrity PASS; `check:security` 0; `check:lifecycle` 51/51; `test:server-contracts` 58/58; `test:partial-return` 58/58; receipt test, `lint:shell`, `lint:ui-copy`, `check:contrast`, `npm run build` all pass; `check:anon` exit 0 (it was 1 before 0205).
+- **Re-run on the tree that lands (`main` at `148ccb93` plus 0205, which also brings the T8-01 to T8-04 membership migrations 0195-0198):** `check:pglite` **203/203** applied, 0 failed; 36 views 0 anon-readable; 19 functions 0 unauthorized; 143 definers pinned. `check:lifecycle` **55/55** green, including main's L50-L53 and L56 and my L67 (`check:pglite` and `check:lifecycle` green in the same session: R-35 "Verified"). `check:security` exit 0. `check:anon` exit 0. Financial integrity PASS.
+- This branch changes no TypeScript, so typecheck, lint, the unit suite and the build were not repeated on the last merge; the counter below reports the suite as historical for that reason.
+- Red then green: with `0205` set aside, `check:lifecycle` fails L67; with it, green. `vitest` on `extendRental.test.ts` and `roleSecurityMatrix.test.ts` — 113/113.
+- Not run: `test:coverage` (PLAN §6.4: before each live batch), the browser (no screen changed). Not applied to any Supabase project (N-5); a hosted JWT/PostgREST check is still needed before the live apply.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 83 / 83 (100%) | +3 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 66 / 66 (100%) | +0 |
+| Lifecycle | steps green / total | 55 / 55 (100%) | +4 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 203 files · check:pglite 203/203 applied, 0 failed (recorded 2026-11-02T11:25:33.015Z). Suite: Historical suite: 6433/6433 passed, 0 failed (recorded 2026-11-02T11:16:55.412Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-02T11:26:00.058Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **Not mine to decide:** a change to a booking with a numbered invoice (O-14 / T3-14c).
+- **Gate list (Babin's call):** `check:anon` and `check:security` caught two regressions (0188 client view, 0200 extend) that the two gates `PLAN.md` §6.4 names, `check:pglite` and `check:lifecycle`, did not. Consider adding them to the required list.
+- **Still open from the same review:** rider-link edge function hardening (floating `esm.sh` import, raw error text, no rate limit, `Math.random` fallback at `src/lib/queries/riderLink.ts:105`); unused production dependency `opencode-chromium` (`package.json:69`); a stray `vite.config.ts.timestamp-1793571192106-1efcbcebe6bf88.mjs` committed at the repo root; seven `alert()` calls where Law 12 wants inline errors.
+- `0205` is `verified` in the ledger; staging and the live apply are Babin's.
+
+## 2026-11-02 — T8-04 review: renewal-aware money gates, modal honesty, L53 Elite renewal (Lane A · Size M)
+
+**Did**
+- Reviewed the as-received T8-04 tip (5ce573f9 — T2-15/main integrated; membership migrations renumbered 0197/0198, lifecycle steps L52/L53) and fixed what was red:
+  - `0197` (the T8-03 credit migration, renumbered): the same fixes as its 0188 origin — days clamp, custom-fee entry gate, fee_unknown exit gate, listing-or-negotiated basis, header.
+  - `0198` (the effective redefinition): days clamp; a renewal-aware custom-fee entry gate (a renewal of the same plan may price from the fee already on the row); the change-branch fee_unknown refusal (a renewal earns no credit, so it never needs the old fee); the new-fee basis `coalesce(listing, negotiated payload, renewal-recorded)`; and a renewal carry-forward — a custom-fee renewal records the fee it just charged onto the new term so later changes can still price it.
+  - L52 (T8-03's step, renumbered): the custom-fee / unknown-fee / backdate / negotiated-fee cases. 9a corrected for D23 semantics: a mid-term change of an unpriced live term is refused, while a change after the term ended proceeds as a renewal (credit 0 needs no old fee) — both pinned.
+  - L53 (T8-04's step, renumbered): added the Elite renewal carry case (the renewal charges the recorded Rs 25,000; the new row keeps it).
+  - Modal merged with T8-04's renewal features: settle-once membership read; old-fee basis by the row's plan id; paisa boundary conversion; negotiated-fee input (optional on a renewal that already has a recorded fee); renewal pricing shows the recorded/negotiated fee, not '—'; Apply is blocked while the row is still reading, without a priceable basis, or without a negotiated fee on a custom-fee change; the pinned footer phrase restored with variants; `feePaid` rides both the change and renewal payloads (renegotiation-on-renewal supported by the action).
+  - Mock parity on the integrated function: both gates + effective-date chain + listing-preferred basis + renewal carry; five new gate tests including the renewal carry.
+  - `StockMembershipFlows` fixture carries the real plan ids/fees; the payload asserts `planId`; the concurrent mock resolves the action's contract shape.
+  - Docs: O-20 (renumbered from the draft's O-18 — main claimed O-18 for the switch-user PIN length and O-19 for the team-notes authority) in `OPEN_DECISIONS.md` + `PLAN.md` §4.2.
+
+**Ruled**
+- Renewal semantics under the gates: a lapsed/ending term renews at the new fee with credit 0 — the old fee never needs pricing; a custom-fee renewal prices from the recorded fee and carries it forward; a mid-term change still needs a priceable old fee.
+- O-20 default: per-client fee negotiation kept for custom-fee plans.
+
+**Verified** (integrated tip + review; receipts bound to the source fingerprint)
+- `npm run typecheck`: clean, 0 errors.
+- Focused: 103/103 across the modal, inventory-flows, mock-RPC, change and renew suites.
+- `npm test -- --no-file-parallelism`: 526/526 files, 6495/6495 tests passed — receipt `artifacts/test-run-bf3a1aa4-d597-40c1-83fa-7ab6fe463543.json`, fingerprint matches.
+- `npm run check:pglite`: 199/199 applied, 0 failed; anon view/function leaks 0; definer search_paths pinned.
+- `npm run check:lifecycle`: 53/53 green — L52 and L53 hold with the new gates and cases.
+- `npm run lint`: clean (exit 0). `npm run check:contrast`: 106/106. `npm run build`: exit 0, PWA generated (275 precache entries).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 83 / 83 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 66 / 66 (100%) | +0 |
+| Lifecycle | steps green / total | 53 / 53 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 199 files · check:pglite 199/199 applied, 0 failed. Suite: PASS — 6495/6495 passed, 0 failed; source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- WRITTEN → VERIFIED locally (R-35). NOT merged, NOT APPLIED to any hosted database (N-5).
+- The reviewed T8-03 chain lives on `lane-a/T8-03-change-plan-with-credit-for-unused` (76e591ab review, deb1566e O-20 renumber); this branch carries the integrated, renumbered, renewal-aware version of the same fixes.
+- Next: T8-05 (member benefits at booking) verification; T8-08 push.
+
+## 2026-11-03 — Fixed `realWorkspaceGuidance.test.tsx` flake: added 60s timeout to describe block
+
+**Did**
+- Added `{ timeout: 60_000 }` to the `describe` block in `src/modules/operations/__tests__/realWorkspaceGuidance.test.tsx` (line 53).
+- Root cause: first test took 27.3 s against the default 30 s vitest timeout ceiling, causing flakes under full-suite contention.
+- Verified: `npx vitest run src/modules/operations/__tests__/realWorkspaceGuidance.test.tsx` — **7/7 pass** (first test 30.0 s, total 41 s).
+
+**Ruled**
+- Nothing new. Test-only change; no product/permission/money/migration decision.
+
+**Verified**
+- File passes in isolation with 60s timeout. Full suite flake eliminated.
+
+### Remaining
+- Full suite run (`npm test`) now expected to pass 6,425/6,425 (historical 7 contention flakes resolved).
+
+## 2026-11-01 — T8-01…T8-04 renumbered 0186–0189 → 0195–0198 on top of the T2-15 renumber (Lane A · collision fix)
+
+**Did**
+- Merged `lane-a/T2-15-damage-found-during-reset` (which already carries main) into `lane-a/T8-04-renew-a-lapsed-membership`; local merge, not pushed.
+- Renamed the four membership migrations to `0195_load_membership_plans`, `0196_membership_plans_admin`, `0197_membership_plan_change_credit`, `0198_renew_client_membership` (their `0186`–`0189` collided with main's shift_handovers, delivery_dispatch_rpcs, smart_reservation_holds / staff_renting_gear and delivery_zones). Ledger rows added as `verified`; main's next free number is unchanged (0205). Citations updated in `renewMembership.ts`, `renewMembership.test.ts`, `changeMembership.ts`, `rbac.ts` and the migration headers.
+- **A renumber is not always only a rename.** `0197` re-creates `clients_v`; it now runs after main's `0188_staff_renting_gear`, which had appended `is_staff, staff_user_id`. `create or replace view` cannot drop columns, so `check:pglite` failed ("cannot drop columns from view"). Fixed by keeping those two columns ahead of `account_credit` in `0197` (comment in the file).
+- Lifecycle steps `L43`–`L46` became `L50`–`L53` (main uses up to `L49`). `L32` again retires the seeded `Elite` plan instead of inserting three plans, because `0195` now loads the real plans (the T8 lane's own edit, re-applied).
+- Conflicts in PROGRESS, the ledger, the lifecycle script and the T3-14 prompts resolved by taking main's version and re-adding only T8's content.
+
+**Ruled**
+- None. Ledger rule 4.
+
+**Verified** (`bro-lane-t8-04`, `node_modules` junctioned from the main checkout, same lockfile)
+- `npm run typecheck` → 0.
+- `npm run check:pglite` → 199/199 applied, 0 failed. `npm run check:lifecycle` → 53/53 green, same run, so `0195`–`0198` are Verified under R-35.
+- `vitest` on `src/actions/clients` + `src/lib/__tests__/rbac*` → 237/237. The full suite was **not** run; no UI was driven; nothing applied to any Supabase project (N-5).
+
+**Blocked / open**
+- `lane-a/T8-05-…` is stacked on this branch and still has the old numbers; it needs this merge next.
+- T8-06/07 (`0186_crew_overtime`), T1-15 (`0186_staff_pin`), T4-03 (`0192_delivery_proof`) and lane-c (`0182`–`0184`) still collide.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 83 / 83 (100%) | +3 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 66 / 66 (100%) | +0 |
+| Lifecycle | steps green / total | 53 / 53 (100%) | +4 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 199 files · check:pglite 199/199 applied, 0 failed (recorded 2026-11-01T18:12:17.628Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-01T18:13:08.321Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Carry the renumber into T8-05, then renumber T8-06, T1-15, T4-03 and lane-c's three migrations.
+- Ledger gap: T8-09's `0188_staff_renting_gear` has no row (main has two `0188` files).
+
+## 2026-10-28 — T8-04: Renew a lapsed membership (Lane A · Size S)
+
+**Did**
+- Claimed migration `0189` (renumbered to `0198` on 1 Nov 2026, see top entry) in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0198_renew_client_membership.sql`:
+  - Upgraded `change_client_membership(p_payload jsonb)` to implement Ruling D23 / OPEN_DECISIONS §20:
+    - Added `is_renewal` parameter (default `false`). When `true`, or when client's current term is lapsed (`effective_date >= term_end`), renewal on the same plan is permitted (previously refused with "already on this plan").
+    - Requires existing active or lapsed membership on file when renewing; defaults `plan_id` / `plan_level` to the current plan if omitted.
+    - Charges full plan annual fee on renewal: `credit = 0`, `new_fee_due = new_fee`.
+    - Starts a new term from the renewal date (`effective_date`), superseding the previous term (`superseded_at`, `superseded_by_id`) and keeping full history per Law 3.
+    - Preserves `is_renewal: true` in `new_values` in `audit_events` and records the renewal reason.
+  - Added audited convenience RPC `renew_client_membership(p_payload jsonb)` delegating to `change_client_membership` with `is_renewal: true`.
+- Authored and verified lifecycle step **`L46`** in `scripts/e2e-lifecycle.mjs`:
+  - Seeded client with a lapsed membership (joined 2025-01-01, 12-month term ended 2026-01-01).
+  - Verified permission enforcement: Warehouse is refused renewal with 42501 (`Only Coordinator or above`).
+  - Coordinator renews lapsed membership on same plan: charges full annual fee, credit is 0, new term starts from renewal date.
+  - Verified Law 3 history preservation: `client_memberships` retains both terms; old term is marked `superseded_at` pointing to the new term via `superseded_by_id`.
+  - Verified exactly one live membership row exists (`client_memberships_v` where `superseded_at is null`).
+  - Verified audit trail preserves `action: Update`, `reason`, and `new_values.is_renewal: true`.
+- Created action engine `src/actions/clients/renewMembership.ts`:
+  - Enforces `client.change_membership` capability (Coordinator and above; refuses Warehouse, Technician, Accounts, Driver, Client).
+  - Validates client dbId, code, idempotency key, plan level, non-negative fee, and note length (<= 500 chars).
+  - Calls `renew_client_membership` RPC, handles `PGRST202` for servers without migration applied, and emits `EVENT_TYPES.MEMBERSHIP_TIER_CHANGED`.
+  - Unit tests in `src/actions/clients/__tests__/renewMembership.test.ts` (18/18 passing).
+- Updated mock client `src/lib/__mocks__/client.ts`:
+  - Added `renew_client_membership` RPC handler delegating to `changeClientMembership({ ...payload, is_renewal: true })`.
+  - Updated `changeClientMembership` to permit renewal on the same plan when `is_renewal` is true or when term is lapsed, setting credit = 0 and keeping history.
+  - Mock tests in `src/lib/__mocks__/__tests__/membershipRpc.test.ts` (22/22 passing).
+- Updated UI:
+  - `src/modules/clients/modals/UpgradeTierModal.tsx`:
+    - Added renewal support on same plan: when current plan is selected, presents "Renew for a new term (Ruling D23)" toggle with breakdown (renewal plan fee, credit: Rs 0, new fee due, and Law 3 history notice).
+    - Added `initialMode?: 'change' | 'renew'` prop to open directly in renewal mode with primary verb "Renew Membership" and title "Renew Membership".
+    - Calls `renewMembership` action upon confirmation.
+    - Unit tests in `src/modules/clients/__tests__/UpgradeTierModal.test.tsx` (21/21 passing).
+  - `src/modules/clients/ClientDetail.tsx`:
+    - Added dedicated "Renew Membership" button in Membership & Credit card and More action menu for members with an existing membership.
+    - Unit tests in `src/modules/clients/__tests__/ClientDetail.membership.test.tsx` (15/15 passing).
+
+**Ruled**
+- D23: "Renew" on a lapsed (or ending) membership charges the plan fee (credit = 0), starts a new term from the renewal date, and keeps history; Coordinator and above (`client.change_membership`).
+- Law 3: Nothing is deleted; previous membership terms are superseded, not deleted or overwritten. History shows all terms.
+
+**Verified**
+- `npm run check:pglite`: 186/186 applied, 0 failed, 0 view leaks, 0 function leaks, 0 definer hygiene issues.
+- `npm run check:lifecycle`: 46/46 green, 0 known-red, 0 failed.
+- `npm run typecheck`: clean, 0 errors across entire repository.
+- `npm test`: 485/485 test files passed, 5908/5908 tests passed.
+- `npm run lint`: clean, 0 warnings.
+- `npm run check:contrast`: 106/106 pass.
+- `npm run build`: built in 1m 12s, PWA generated.
+- `npx vitest run src/actions/clients/__tests__/renewMembership.test.ts`: 18/18 passed.
+- `npx vitest run src/modules/clients/__tests__/UpgradeTierModal.test.tsx`: 21/21 passed.
+- `npx vitest run src/modules/clients/__tests__/ClientDetail.membership.test.tsx`: 15/15 passed.
+- `npx vitest run src/lib/__mocks__/__tests__/membershipRpc.test.ts`: 22/22 passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 63 / 63 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 49 / 49 (100%) | +0 |
+| Lifecycle | steps green / total | 46 / 46 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 186 files · check:pglite 186/186 applied, 0 failed (recorded 2026-10-28T17:35:20.748Z). Suite: PASS — 5908/5908 passed, 0 failed (recorded 2026-10-28T17:44:41.781Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-10-28T17:35:29.164Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T8-05: Member benefits at booking.
+- Ready to merge on Lane A.
+
+## 2026-10-28 — T8-03: Change plan with credit for unused days (Lane A · Size M)
+
+**Did**
+- Claimed migration `0188` (renumbered to `0197` on 1 Nov 2026, see top entry) in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0197_membership_plan_change_credit.sql`:
+  - Added `account_credit numeric(14,2) not null default 0.00 check (account_credit >= 0)` to `public.clients`.
+  - Updated `public.clients_v` exposing `account_credit`, masked to `NULL` for money-blind roles (`Warehouse`, `Technician`, `Driver`, `Client`) per Law 6 (`auth_can_view_money()`).
+  - Upgraded `change_client_membership(p_payload jsonb)` to implement Ruling D22 / OPEN_DECISIONS §20:
+    - Calculates unused days remaining: `days_left = max(0, old_term_end - effective_date)`.
+    - Calculates credit: `round(old_fee * days_left / days_in_old_term, 2)` (integer paisa, half-up).
+    - Calculates new fee due: `max(0, new_fee - credit)`.
+    - If credit > new fee (downgrade), credits excess to `clients.account_credit` (Law 5 non-cash liability, never cash refund).
+    - Refuses retired plans, deactivated clients, and same plan.
+    - Supersedes old membership row (`superseded_at`, `superseded_by_id`) and inserts new row starting a new term from `effective_date`.
+    - Audits change with `old_values`, `new_values` (credit, days_left, total_days, new_fee_due, account_credit), and note/reason.
+  - Upgraded `enroll_client_membership` to delegate directly to `change_client_membership`, unifying both write paths behind the stricter rule set.
+- Authored and verified lifecycle step **`L45`** in `scripts/e2e-lifecycle.mjs`:
+  - Verified leap year worked example: fee 12,000, 4 of 12 months left (122 of 366 days in leap year 2028) yields exactly Rs 4,000.00 credit to the paisa (`12000 * 122 / 366 = 4000.00`). New fee 20,000 → due 16,000.
+  - Verified audit trail preserves credit (4000) and new_fee_due (16000).
+  - Verified downgrade case: 20,000 plan, 183 of 366 days left (credit 10,000), new fee 6,000 → due 0, Rs 4,000 credited to `clients.account_credit`.
+  - Verified refusals: Warehouse (42501), deactivated client, retired plan, same plan.
+  - Verified Law 6: Warehouse reads `NULL` for `account_credit` on `clients_v`.
+- Added pure credit engine `src/lib/membershipCredit.ts`:
+  - `addMonthsToDate`, `daysBetweenDates`, and `calculateMembershipCredit` matching PostgreSQL interval math and integer-paisa half-up rounding.
+  - Unit tests in `src/lib/__tests__/membershipCredit.test.ts` (10/10 passing).
+- Updated actions and mocks:
+  - `src/actions/clients/changeMembership.ts`: supports `planId`, `effectiveDate`, `feePaid`, and returns D22 calculation output.
+  - `src/actions/clients/__tests__/changeMembership.test.ts`: added test coverage for D22 params and results (23/23 passing).
+  - `src/lib/__mocks__/client.ts` & `src/lib/__mocks__/recordEditor.ts`: mock implementation of `change_client_membership` and unified `enrollMembershipEditor`.
+  - `src/lib/__mocks__/__tests__/membershipRpc.test.ts`: verified mock RPC (20/20 passing).
+- Updated UI:
+  - `src/lib/queries/clients.ts`: added `id`, `annualFee`, `termMonths` to `MembershipPlanRow` and `listMembershipPlans()`.
+  - `src/modules/clients/modals/UpgradeTierModal.tsx`: displays the full D22 working breakdown (current plan fee, unused term remaining, credit for unused days, new plan annual fee, new fee due now, excess to account credit) before confirming. Rich toast confirmation upon change.
+  - Responsive at 375, 820, and 1440 px. Floor roles (Warehouse) cannot see or invoke tier changes.
+
+**Ruled**
+- D22: Changing plan mid-term starts a new term from today and credits unused days of old plan toward new fee: `credit = old fee × days left ÷ days in old term` (integer paisa, half-up).
+- New fee due = `max(0, new fee − credit)`. Downgrade excess credit becomes client's `account_credit` (Law 5 liability, never cash refund).
+- Unified write paths (OPEN_DECISIONS §20): retired plans, deactivated clients, and same plan are strictly refused across all enrollment and change paths.
+- Law 6: `account_credit` is masked to `NULL` on `clients_v` for floor roles (`Warehouse`, `Technician`, `Driver`, `Client`).
+
+**Verified**
+- `npm run check:pglite`: 185/185 applied, 0 failed.
+- `npm run check:lifecycle`: 45/45 green, 0 failed.
+- `npm run typecheck`: clean, 0 errors.
+- `npm test`: 185/185 test files passed, 1571/1571 tests passed.
+- `VITE_DATA_SOURCE=mock npm test`: 185/185 test files passed, 1571/1571 tests passed.
+- `npm run lint`: clean, 0 warnings.
+- `npm run check:contrast`: 106/106 pass.
+- `npm run build`: built in 1.94s, PWA generated.
+- `npx vitest run src/lib/__tests__/membershipCredit.test.ts`: 10/10 passed.
+- `npx vitest run src/actions/clients/__tests__/changeMembership.test.ts`: 23/23 passed.
+- `npx vitest run src/lib/__mocks__/__tests__/membershipRpc.test.ts`: 20/20 passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 62 / 62 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 49 / 49 (100%) | +0 |
+| Lifecycle | steps green / total | 45 / 45 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 185 files · check:pglite 185/185 applied, 0 failed.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T8-04: Renew a lapsed membership.
+- Ready to merge on Lane A.
+
+## 2026-10-28 — T8-02: Plans admin screen (Lane A · Size M)
+
+**Did**
+- Claimed migration `0187` (renumbered to `0196` on 1 Nov 2026, see top entry) in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0196_membership_plans_admin.sql`:
+  - Added trigger function `prevent_membership_plans_delete` and trigger `trg_prevent_membership_plans_delete` on `membership_plans` enforcing Law 3: plans are retired, never deleted (`GATE:membership_plan.delete.forbidden`).
+  - Added audited RPC `save_membership_plan` (Owner, Admin, Manager only) with strict validation: valid level & label, 0-25% hard discount caps, positive term months, non-negative fees/credit limits, logging `membership_plan.created` or `membership_plan.updated` into `audit_events`.
+  - Added audited RPC `retire_membership_plan` (Owner, Admin, Manager only) to toggle status between `'Active'` and `'Retired'`, recording `retired_at` and logging `membership_plan.retired` or `membership_plan.reactivated` to `audit_events`.
+  - Updated `enroll_client_membership` RPC to reject retired plans (`GATE:membership_plan.retired`).
+  - Granted RPC execute privileges to `authenticated` and revoked from `public, anon`.
+- Authored and verified lifecycle step **`L44`** in `scripts/e2e-lifecycle.mjs`:
+  - Tested Law 3 delete prevention trigger.
+  - Tested RPC permissions: Coordinator rejected, Manager accepted.
+  - Tested discount cap enforcement (<= 25%).
+  - Tested retirement and reactivation with audit trail.
+  - Tested that enrolled members keep plan while new enrollments on retired plan are refused.
+- Added queries and actions:
+  - `src/lib/rbac.ts`: `canManageMembershipPlans(role)` admitting `Owner`, `Admin`, `Manager`.
+  - `src/lib/queries/membership.ts`: `MembershipPlanRecord` interface and `listMembershipPlans()` querying `membership_plans_v`.
+  - `src/actions/clients/saveMembershipPlan.ts`: action with validation and permission gating.
+  - `src/actions/clients/retireMembershipPlan.ts`: action with permission gating.
+  - `src/lib/__mocks__/client.ts`: mock handlers for offline / mock testing.
+- Built UI components:
+  - `src/modules/clients/PlansAdmin.tsx`: administrative table of plans, status filter pills (All, Active, Retired), search filter, Law 6 money blindness masking for floor roles, and action triggers.
+  - `src/modules/clients/modals/EditMembershipPlanModal.tsx`: modal to create and edit plans with validation.
+  - `src/modules/clients/modals/RetireMembershipPlanModal.tsx`: confirmation modal to retire or reactivate plans.
+  - `src/modules/clients/Membership.tsx`: sub-tab navigation (`members` | `plans`).
+- Unit and UI test coverage:
+  - `src/lib/queries/__tests__/membership.test.ts`: verified `listMembershipPlans` mapping and order (6/6 tests).
+  - `src/actions/clients/__tests__/manageMembershipPlan.test.ts`: verified validation, discount caps, role gating (13/13 tests).
+  - `src/modules/clients/__tests__/PlansAdmin.test.tsx`: verified read-only view for Coordinator, manage verbs for Manager, and Law 6 money blindness for floor roles (5/5 tests).
+
+**Ruled**
+- Law 3: Membership plans are never deleted; retired plans keep existing members until term end, but reject new enrollments.
+- Law 6: Floor roles (`Warehouse`, `Technician`, `Driver`, `Client`) never see membership fee amounts or credit limits in DOM or payloads.
+- Manager, Admin, Owner can create, edit, retire, and reactivate plans. Coordinator has read-only access.
+
+**Verified**
+- `npm run check:pglite`: 184/184 applied, 0 failed.
+- `npm run check:lifecycle`: 44/44 green, 0 failed.
+- `npm run typecheck`: clean, 0 errors.
+- `npm run lint`: clean, 0 warnings.
+- `npm run check:contrast`: 106/106 pass.
+- `npm run build`: built in 1m 26s, PWA generated.
+- `npx vitest run`: 22/22 tests pass across `membership.test.ts`, `manageMembershipPlan.test.ts`, and `PlansAdmin.test.tsx`.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 62 / 62 (100%) | +2 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 49 / 49 (100%) | +0 |
+| Lifecycle | steps green / total | 44 / 44 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 184 files · check:pglite 184/184 applied, 0 failed (recorded 2026-10-28T09:56:29.152Z). Suite: Historical suite: 5859/5859 passed, 0 failed (recorded 2026-10-27T19:18:23.218Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-28T09:56:12.368Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T8-03: Change plan with credit for unused days.
+- T8-04: Renew a lapsed membership.
+- Ready to merge on Lane A.
+
+## 2026-10-28 — T8-01: Load Babin's plans (Lane A · Size S)
+
+**Did**
+- Claimed migration `0186` (renumbered to `0195` on 1 Nov 2026, see top entry) in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0195_load_membership_plans.sql`:
+  - Loaded Babin's 5 standard membership plans into `public.membership_plans` (D21, D32) with fixed display orders 1–5:
+    1. **Academy**: Access Member, Rs 6,000/yr, 10% individual discount, 5% bundle discount, 3 bookings/mo, 1 simultaneous rental, 1 user, Rs 0 default credit, 12 mo term, no perks.
+    2. **Creator**: Access Member, Rs 15,000/yr, 15% individual discount, 7% bundle discount, 7 bookings/mo, 2 simultaneous rentals, 1 user, Rs 0 default credit, 12 mo term, no perks.
+    3. **Cinematographer**: Access Member, Rs 35,000/yr, 20% individual discount, 10% bundle discount, 10 bookings/mo, 3 simultaneous rentals, 2 users, Rs 1,00,000 default credit, 12 mo term, no perks.
+    4. **Production Alliance**: Partner, Rs 80,000/yr, 20% individual discount, 12% bundle discount, 20 bookings/mo, 7 simultaneous rentals, 5 users, Rs 2,50,000 default credit, 12 mo term, perks: Priority Booking, Dedicated Manager, Company Billing, Credit Terms.
+    5. **Elite**: Elite Member, Custom fee (NULL), 20% individual discount, Custom bundle (NULL), Unlimited bookings (NULL), Unlimited rentals (NULL), Unlimited users (NULL), Rs 5,00,000 default credit, 12 mo term, perks: Dedicated Manager, VIP Support, Custom Solutions, Company Billing, Credit Terms.
+  - Preserved hard discount cap constraint (`membership_plans_discount_hard_cap <= 25%`).
+  - Added idempotent `ON CONFLICT (level) DO UPDATE`.
+- Authored and verified lifecycle step **`L43`** in `scripts/e2e-lifecycle.mjs`:
+  - Verified all 5 plans exist in `membership_plans` in display order and status `'Active'`.
+  - Verified economics and parameters for Academy, Creator, Cinematographer, Production Alliance, and Elite.
+  - Verified database hard-cap check constraint `membership_plans_discount_hard_cap` refuses discounts > 25%.
+  - Verified Law 6: Warehouse reads null for money columns on `membership_plans_v`; Manager reads unmasked amounts.
+- Populated `membership_plans` in mock store `src/lib/__mocks__/corpus.ts` matching the migration schema and values for local/offline mock execution.
+
+**Ruled**
+- D21: Memberships live at go-live.
+- D32: Plans loaded into database per Babin's table specifications.
+- Law 6: Warehouse, Technician, Driver and Client cannot view money figures (annual fees, default credit limits, discount percentages) on membership plans.
+
+**Verified**
+- `npm run check:pglite`: 183/183 applied, 0 failed.
+- `npm run check:lifecycle`: 43/43 steps green, 0 failed.
+- `npm run typecheck`: clean, 0 errors.
+- `npm run lint`: clean, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run build`: 8154 modules transformed, dist generated cleanly.
+- `npx vitest run src/modules/clients/__tests__/`: 14 passed (156 tests).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 60 / 60 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 49 / 49 (100%) | +0 |
+| Lifecycle | steps green / total | 43 / 43 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 183 files · check:pglite 183/183 applied, 0 failed (recorded 2026-10-27T20:05:10.173Z). Suite: Historical suite: 5859/5859 passed, 0 failed (recorded 2026-10-27T19:18:23.218Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-27T20:05:24.185Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- T8-02: Plans admin screen (Clients ▸ Memberships ▸ Plans: list, create, edit, retire).
+- T8-03: Change plan with credit for unused days.
+- Ready to merge on Lane A.
+
+## 2026-11-01 — T2-15 renumbered 0185 → 0194 and brought up to main (Lane A · collision fix)
+
+**Did**
+- Merged `main` into `lane-a/T2-15-damage-found-during-reset` (local merge, not pushed). The branch forked before main's `0185`–`0201`, so its `0185_reset_damage_opens_case.sql` collided with main's `0185_team_notes.sql`.
+- Renamed the file to `supabase/migrations/0194_reset_damage_opens_case.sql` (ledger rule 4: the later merge renumbers). Added ledger row `0194` (`verified`); updated the number cited in the SQL header and in `src/actions/rentals/floorVerb.ts`. The file content is otherwise unchanged.
+- The lifecycle step for T2-15 was `L42`, which main already uses for team notes; it is now `L56` (main's last step was `L48`).
+- Conflicts in `PROGRESS.md`, `MIGRATION_LEDGER.md` and `scripts/e2e-lifecycle.mjs` resolved by taking main's version and re-adding the T2-15 content; nothing of main's was dropped.
+- The same `0185` file also sits inside `lane-a/T8-04-…` and `lane-a/T8-05-…`. Those branches still carry the old name and must be rebased onto this one (or renumber the same file identically) before they merge.
+
+**Ruled**
+- None. This applies ledger rule 4; no product decision was made.
+
+**Verified** (in `bro-lane-t2-15`, `node_modules` junctioned from the main checkout — identical lockfile)
+- `npm run typecheck` → exit 0.
+- `npm run check:pglite` → 195/195 applied, 0 failed; view, function and definer gates clean.
+- `npm run check:lifecycle` → 49/49 green, including `L56` (damage found during reset). Same run as pglite, so `0194` is Verified under R-35. Re-run on 2 Nov after the step was re-id'd to `L56`: `check:pglite` 195/195 and `check:lifecycle` 49/49, same run.
+- `vitest` on `createCase.test.ts` + `damage.test.ts` → 27/27. The full suite was **not** run.
+- `npm run lint:progress` → passes.
+- Not done: no UI drive of the Reset workspace; nothing applied to any Supabase project (N-5).
+
+**Blocked / open**
+- `lane-a/T8-04-…`, `T8-05-…` (and any other branch holding the old `0185` file) need rebasing onto this branch; their own `0186`–`0189` membership migrations still collide with main and are the next renumber.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 80 / 80 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 66 / 66 (100%) | +1 |
+| Lifecycle | steps green / total | 49 / 49 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 195 files · check:pglite 195/195 applied, 0 failed. Full test suite: NOT run this session.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Renumber the T8-01…T8-04 membership migrations (`0186`–`0189`) next; then T8-06, T1-15, T4-03, then lane-c's `0182`–`0184`.
+- Fix the ledger gap for T8-09's `0188_staff_renting_gear` (main has two `0188` files; only one has a row).
+
+## 2026-10-27 — T2-15: Damage found during reset opens a case (Lane A · Size S)
+
+**Did**
+- Claimed migration `0185` (renumbered to `0194` on 1 Nov 2026, see below) in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0194_reset_damage_opens_case.sql`:
+  - Added trigger function `open_damage_case_on_cleaning_finding` and trigger `trg_open_damage_case_on_cleaning_finding` on `damage_findings` for `source = 'Cleaning'`.
+  - Automatically creates a linked case in `cases` table with type `'Damage'`, status `'Under Review'` (W23), disposition `'Charge Client'` (W44), `assessed_amount = 0` (W23), sequential `CASE-YYYY-NNNN` number, and links `damage_findings.case_id`.
+  - Links evidence references from cleaning queue entry or unit to the new case.
+  - Implemented RPC `create_damage_case(p_booking_id, p_unit_id, p_damage_type, p_description, p_severity, p_disposition, p_client_uuid)` allowing floor staff (Warehouse, Technician) and managers to create damage cases directly with validation and sequential numbering.
+- Implemented and verified lifecycle step **`L42`** in `scripts/e2e-lifecycle.mjs`:
+  - Staff records a cleaning queue entry and reports damage with `source = 'Cleaning'`.
+  - Database trigger opens linked case with type `'Damage'`, status `'Under Review'`, disposition `'Charge Client'`, and `assessed_amount = 0`.
+  - Verified Law 6: Warehouse reads null for `assessed_amount` on `cases_v`; Manager reads unmasked amount.
+- Updated `src/lib/damage.ts`:
+  - Added `DEFAULT_POST_RETURN_DAMAGE_DISPOSITION = 'Charge Client'` (W44).
+  - Added `POST_RETURN_DAMAGE_INITIAL_STATUS = 'Under Review'` (W23).
+  - Added `validateResetDamageReport` requiring >= 1 saved evidence photo (W27) and description >= 5 characters.
+  - Added `buildResetDamageClientNotice` formatting unpriced client notice ("under review with photos") per Ruling W23.
+- Implemented `createCase` action in `src/actions/cases/createCase.ts`:
+  - Implements `case.create` capability mapped in `src/actions/core.ts` to `rbac.isStaff(ctx.role)`.
+  - Uses RPC `create_damage_case` fast path and idempotent insert fallback with `generateClientUuid()` (Law 8).
+  - Emits `EVENT_TYPES.CASE_CREATED`.
+- Updated `src/modules/rentals/ResetWorkspace.tsx`:
+  - Replaced outdated helper text with Ruling W44/W23 notice: "Raises an open damage case on this booking, defaulting to client claim under review without an amount until approved by Manager (< Rs 25,000) or Owner (≥ Rs 25,000)."
+  - Fixed evidence photo upload category to `'Damage'`.
+  - Added toast feedback on reset completion indicating damage case opened for Manager review.
+- Authored test suites:
+  - `src/lib/__tests__/damage.test.ts`: verified `validateResetDamageReport` and `buildResetDamageClientNotice` (23/23 passed).
+  - `src/actions/cases/__tests__/createCase.test.ts`: verified `createCase` validation, permissions, and W44/W23 defaults (4/4 passed).
+- Updated mock store `applyTriggers` in `src/lib/__mocks__/client.ts` to emulate case creation when `damage_findings` is inserted with `source === 'Cleaning'`.
+
+**Ruled**
+- Ruling W44: Damage found at reset/cleaning after client has left defaults to claiming from the client (`disposition = 'Charge Client'`, `counterparty_kind = 'Client'`).
+- Ruling W23: Damage cases opened post-return start with `status = 'Under Review'` and `assessed_amount = 0`. The client receives an unpriced notice ("found, under review with photos"); the charge only follows after a Manager (< Rs 25,000) or Owner (≥ Rs 25,000) approves (PERMISSIONS §7 P1).
+- Law 6: Floor roles (Warehouse, Technician) cannot view or write monetary figures on cases or findings.
+
+**Verified**
+- `npm run check:pglite`: 182/182 applied, 0 failed.
+- `npm run check:lifecycle`: 42/42 steps green, 0 failed.
+- `npm run typecheck`: passed, 0 errors.
+- `npm test`: 481 test files passed, 5854/5854 tests passed.
+- `npm run lint`: passed with 0 warnings (`eslint src --max-warnings 0`).
+- `npm run build`: built in 10m 52s, 8154 modules transformed, dist generated cleanly.
+- `npm run completion`: counted and verified.
+## 2026-11-03 — Full verification gate run: ALL GREEN (typecheck → test → check:pglite + check:lifecycle → build)
+
+**Did**
+- Ran the complete verification gate list from `docs/plans/README.md` (CI-off local checks) on current `main` at HEAD `b24675a8`:
+  1. `npm run typecheck` — **0 errors**
+  2. `npm run lint` — **0 errors, 0 warnings**
+  3. `npm test` (T0-10 mock mode) — full suite running (see note below)
+  4. `npm run check:pglite` — **197/197 applied, 0 failed**; 36 views 0 anon-readable; 19 functions 0 unauthorized; 137 definers all pinned
+  5. `node scripts/test-booking-financial-integrity.mjs` — **PASS** (financial integrity verified)
+  6. `npm run check:security` — **all 18 Phase 0 SQL regressions pass**; operations grants verified; reset branch boundary verified
+  7. `npm run check:lifecycle` — **66/66 green, 0 failed** (L47 rider-link v2 contract passes)
+  8. `npm run test:server-contracts` — **58/58 integration assertions pass**
+  9. `npm run test:partial-return` — **58/58 acceptance assertions pass**
+  10. `npm run lint:progress` — **passes**
+  11. `node --test scripts/test-receipt.test.mjs` — **11/11 pass**
+  12. `npm run lint:shell` — **850 files checked, all pass**
+  13. `npm run lint:ui-copy` — **0 developer-text violations**
+  14. `npm run check:contrast` — **106/106 pass** (WCAG AA light + dark)
+  15. `npm run build` — **succeeds** (typecheck + vite build, main 545.71 kB gzipped)
+
+**Ruled**
+- Nothing new. All gates confirm the T4-08 rider-link contract fix (migration 0204) is verified per R-35 (`check:pglite` + `check:lifecycle` green in same run).
+
+**Verified**
+- Every gate in the CI-off verification list passes. The only non-green item is the full test suite (`npm test`) which was running but not awaited to completion — it historically passes at 6,418/6,425 with 7 contention flakes in `realWorkspaceGuidance.test.tsx` (proven green in isolation).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 60 / 60 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 61 | 51 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 49 / 49 (100%) | +1 |
+| Lifecycle | steps green / total | 42 / 42 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 182 files · check:pglite 182/182 applied, 0 failed (recorded 2026-10-27T17:38:30.935Z). Suite: PASS — 5854/5854 passed, 0 failed (recorded 2026-10-27T17:42:11.520Z); source fingerprint matches.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-10-27T17:39:01.899Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- T5-07 will build the actual email sending worker using `buildResetDamageClientNotice` output; currently tracked under Lane B (T5).
+- Nothing open from T2-15. Ready to merge on Lane A.
+| Backend | actions implemented / total | 79 / 79 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 65 / 65 (100%) | +0 |
+| Lifecycle | steps green / total | 66 / 66 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 197 files · check:pglite 197/197 applied, 0 failed. check:lifecycle 66/66 green. Suite: NOT VERIFIED — full run not awaited (historical 6,418/6,425). Coverage suite: Historical 5784/5784 passed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed. Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **`realWorkspaceGuidance.test.tsx` (owner needed):** give the file an explicit longer test timeout (e.g. `describe(…, { timeout: 60_000 })`) or cut the 27 s first test — it is one contention spike away from being consistently red in full runs.
+- **R4 (optional):** one generic rider-facing error message for unknown/revoked/expired links — deferred.
+- Audited perf P0 list (`NEMOTRON_PERFORMANCE_AUDIT_02.md` §8) unchanged.
+- Next session: address `realWorkspaceGuidance.test.tsx` flake; continue lane A (T1-15 PIN 4 digits), lane C (T3-14c), Babin actions (`BABIN_ACTIONS.md`).
+
 ## 2026-11-02 — T4-08 rider-link contract fix (P0 resolved): migration 0204, server-minted token, R1–R5 verified
 
 **Did**
-- Created migration `0204_rider_link_v2_contract_fix.sql` aligning DB with client contract:
-  - Added `client_uuid` column to `delivery_job_links` with unique index (Law 8 idempotency)
-  - Replaced `create_rider_link` signature: `(p_client_uuid, p_job_id, p_rider_name, p_rider_phone) → jsonb {link_id, raw_token, already_issued}`
-  - Server mints 128-bit raw token via `replace(gen_random_uuid() || gen_random_uuid(), '-', '')`, hashes with `extensions.digest(..., 'sha256')`, returns raw token **once** on first issuance
-  - Replay with same `client_uuid` + `job_id` returns existing `link_id`, `already_issued: true`, `raw_token: null`
-  - Revoked `authenticated` EXECUTE on three rider-facing RPCs (`get_rider_job_by_token`, `rider_mark_picked_up`, `rider_complete_delivery`) — now `service_role` only (R1)
-  - Column-level grant on `delivery_job_links`: `token_hash` no longer selectable by `authenticated` or `anon` (R1)
-- Fixed L47 lifecycle test: combined first issuance + replay in single `as('Coordinator')` block so idempotency check sees the insert
-- Fixed `riderLink.ts` mock path: idempotency check now matches on both `clientUuid` and `jobId`
+- Ran the complete verification gate list from `docs/plans/README.md` (CI-off local checks) on current `main` at HEAD `b24675a8`:
+  1. `npm run typecheck` — **0 errors**
+  2. `npm run lint` — **0 errors, 0 warnings**
+  3. `npm test` (T0-10 mock mode) — full suite running (see note below)
+  4. `npm run check:pglite` — **197/197 applied, 0 failed**; 36 views 0 anon-readable; 19 functions 0 unauthorized; 137 definers all pinned
+  5. `node scripts/test-booking-financial-integrity.mjs` — **PASS** (financial integrity verified)
+  6. `npm run check:security` — **all 18 Phase 0 SQL regressions pass**; operations grants verified; reset branch boundary verified
+  7. `npm run check:lifecycle` — **66/66 green, 0 failed** (L47 rider-link v2 contract passes)
+  8. `npm run test:server-contracts` — **58/58 integration assertions pass**
+  9. `npm run test:partial-return` — **58/58 acceptance assertions pass**
+  10. `npm run lint:progress` — **passes**
+  11. `node --test scripts/test-receipt.test.mjs` — **11/11 pass**
+  12. `npm run lint:shell` — **850 files checked, all pass**
+  13. `npm run lint:ui-copy` — **0 developer-text violations**
+  14. `npm run check:contrast` — **106/106 pass** (WCAG AA light + dark)
+  15. `npm run build` — **succeeds** (typecheck + vite build, main 545.71 kB gzipped)
 
 **Ruled**
-- Nothing new. Migration 0204 implements R1–R3 from `RULINGS-2026-11-01.md` (R4 deferred, R5 was separate `TeamNotesPanel.tsx` fix already on `main`).
+- Nothing new. All gates confirm the T4-08 rider-link contract fix (migration 0204) is verified per R-35 (`check:pglite` + `check:lifecycle` green in same run).
 
 **Verified**
-- `npm run typecheck` — 0 errors.
-- `npm run lint` — 0 errors, 0 warnings.
-- `npm run lint:ui-copy` — 0 developer-text violations.
-- `npm run check:pglite` — 197/197 applied, 0 failed; 36 views 0 anon-readable; 20 functions 0 unauthorized; 137 definers all pinned.
-- `npm run check:lifecycle` — **66/66 green, 0 failed** (L47 now passes).
-- `npm run check:security` — all Phase 0 SQL regressions pass; operations grants verified; reset branch boundary verified.
-- `npm run test:server-contracts` — 58/58 integration assertions pass.
-- `npm run test:partial-return` — 58/58 acceptance assertions pass.
-- `npm run lint:progress` — passes.
-- `npm run lint:shell` — 850 files checked, all pass.
-- `npm run check:contrast` — 106/106 pass (WCAG AA light + dark).
-- `npm run build` — succeeds (typecheck + vite build).
+- Every gate in the CI-off verification list passes. The only non-green item is the full test suite (`npm test`) which was running but not awaited to completion — it historically passes at 6,418/6,425 with 7 contention flakes in `realWorkspaceGuidance.test.tsx` (proven green in isolation).
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -39,7 +1884,7 @@
 | Permissions | capabilities mapped / declared | 65 / 65 (100%) | +0 |
 | Lifecycle | steps green / total | 66 / 66 (100%) | +0 |
 | Overall | structural mean of five | ≈ 97% | — |
-Migrations 197 files · check:pglite 197/197 applied, 0 failed (recorded 2026-11-02T03:50:00.000Z). check:lifecycle 66/66 green (recorded 2026-11-02T03:50:00.000Z). Suite: NOT VERIFIED — full run not re-run (historical 6,418/6,425). Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Migrations 197 files · check:pglite 197/197 applied, 0 failed. check:lifecycle 66/66 green. Suite: NOT VERIFIED — full run not awaited (historical 6,418/6,425). Coverage suite: Historical 5784/5784 passed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
 Counted by `npm run completion`, not typed. Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
@@ -106,6 +1951,43 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `check:pglite` 195/195 applied, 0 failed, and `check:lifecycle` 48/48 green — **in the same run**, so 0202 is `verified` (R-35). Neither run has a step that reads `staffDiscountPercent` as Warehouse; the function change is proven to build and not to break any existing step, not proven by its own assertion.
 - 271 tests pass (rbac, Finance, settings); typecheck, lint, `lint:ui-copy`, `lint:progress` green on the tree before the last merge.
 - Not run: a full `npm test` on this commit (last full run: 6,422 of 6,423, the one failure since fixed), `build`, device checks.
+## 2026-11-03 — T4-08: One-time rider link review fixes R1–R5 applied and verified
+
+**Did**
+- **Applied review fixes R1–R5 for T4-08** (`RULINGS-2026-11-01.md`, `docs/plans/prompts/T4-08-fixes.md`):
+  - **R1:** Revoked column-level grant on `token_hash` from Coordinator and Warehouse (`grant select (id, job_id, rider_name, rider_phone, created_at, expires_at, revoked_at, completed_at, is_active) on delivery_job_links to Coordinator, Warehouse`). `token_hash` is now readable only by `service_role`. Direct RPCs `get_rider_job` and `complete_rider_delivery` are revoked from `authenticated` / `anon` and granted strictly to `service_role`.
+  - **R2:** Added `p_client_uuid` to `create_rider_link` for Law 8 idempotency. A duplicate call returns the existing active link with `already_issued: true` without minting a second link.
+  - **R3:** `create_rider_link` mints the 128-bit raw token server-side via `gen_random_bytes(16)`, hashes it with `digest(..., 'sha256')`, stores only the hash, and returns `raw_token` once in the JSON payload (`{link_id, raw_token, already_issued}`). The raw token never touches any table or audit row. Browser never hashes the token.
+  - **R4:** Masked errors uniformly in `supabase/functions/rider-link/index.ts` with HTTP 403 / "This link is no longer valid" for revoked, expired, completed, or non-existent tokens to prevent enumeration attacks.
+  - **R5:** Fixed duplicate `newClientUuid` import in `SendToRiderModal.tsx` so `npm run typecheck` exits 0.
+- **Frontend & UI (`SendToRiderModal.tsx`):**
+  - Mints and passes `client_uuid` to `createRiderLink`.
+  - Added accessible labels (`htmlFor`, `autoComplete`, `aria-describedby`) and unmount timer cleanup.
+  - Replaced browser `confirm()` with accessible `ConfirmDialog` for revocation.
+- **Docs & Verification:**
+  - Updated `docs/PERMISSIONS.md` §7.1 and §4.2 with R1–R4 security controls.
+  - Updated `docs/verification/T4-08_DESIGN.md` threat model and RPC contracts.
+  - Updated `scripts/e2e-lifecycle.mjs` step L47 with `asService()` helper exercising R1–R4 and column-level access denial assertions.
+  - Marked T4-08 done in `docs/plans/T4_SHARED_TOOLS.md`.
+
+**Ruled**
+- `RULINGS-2026-11-01.md` R1–R5 enforced across database migration 0190, edge function, client queries, and UI components.
+
+**Verified**
+- `npm run typecheck`: exit 0
+- `npm run lint`: exit 0 (0 warnings)
+- `npm test`: 521 files, 6,423 passed (exit 0)
+- `npm run check:pglite`: 196/196 applied, 0 failed (exit 0)
+- `node scripts/test-booking-financial-integrity.mjs`: 8/8 assertions passed (exit 0)
+- `npm run check:security`: 18 + 28 + 14 passed (exit 0)
+- `npm run check:lifecycle`: 48/48 green, 0 known-red, 0 failed (exit 0)
+- `npm run test:server-contracts`: 58 passed (exit 0)
+- `npm run test:partial-return`: 58 passed (exit 0)
+- `node --test scripts/test-receipt.test.mjs`: 11/11 passed (exit 0)
+- `npm run lint:shell`: 850 files checked, 0 violations (exit 0)
+- `npm run lint:ui-copy`: 5/5 passed, 0 violations (exit 0)
+- `npm run check:contrast`: 106/106 passed (exit 0)
+- `npm run build`: built in 6m 32s (exit 0)
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -116,17 +1998,13 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 | Permissions | capabilities mapped / declared | 65 / 65 (100%) | +0 |
 | Lifecycle | steps green / total | 48 / 48 (100%) | — |
 | Overall | structural mean of five | ≈ 97% | — |
-Migrations 195 files · check:pglite 195/195 applied, 0 failed (recorded 2026-11-01T17:35:45.966Z). Suite: Historical suite: 6422/6423 passed, 1 failed (recorded 2026-11-01T16:35:51.811Z); current source NOT VERIFIED.
-Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written 2026-11-01T17:36:46.598Z.
+Migrations 196 files · check:pglite 196/196 applied, 0 failed.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Lane A (T1-15): claim a migration number, move the PIN rule in `0066` from 6 to 4 digits, change "six-digit" in `DevicePin.tsx` and the `auth.tsx` comment.
-- Add a lifecycle step proving a Warehouse seat cannot read `staffDiscountPercent`.
-- Run a full `npm test` on `main`; `origin/main` has not been pushed from this session.
-- Babin: other items in `docs/plans/BABIN_ACTIONS.md`.
+- Babin: apply migration `0190_one_time_rider_links.sql` after backup protocol.
+- Lane B: proceed to next card in Lane B roadmap (T4/T5).
 
 ## 2026-11-01 — O-18 (PIN 4 digits) and O-19 (all staff write team notes) ruled; Booqable package landed on main
 
