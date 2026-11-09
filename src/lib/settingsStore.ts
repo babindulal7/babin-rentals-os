@@ -30,6 +30,8 @@ import { captureError } from './monitoring'
 import { FEE_PER_CREW_DAY_PAISA } from '../data/crew'
 
 import { readLocal, writeLocal, removeLocal } from './safeStorage'
+import { canEnable, NEPALI_UNAVAILABLE } from './languageReadiness'
+import { getLanguagePreference } from './languagePreferenceStore'
 
 export type SettingKey =
   | 'organisationName'
@@ -261,7 +263,7 @@ export const SETTING_SPECS: Record<SettingKey, SettingSpec> = {
    * looking for Nepali is looking for "नेपाली", not for the English word for it.
    * `lib/i18n.ts` owns the coverage gate; this only stores the choice.
    */
-  language: { default: 'English', kind: 'select', options: ['English', 'नेपाली'] },
+  language: { default: 'English', kind: 'select', get options() { return canEnable('ne') ? ['English', 'नेपाली'] : ['English'] } },
 
   /**
    * **D4, ruled 30 Aug 2026** (`docs/booqable/REFERENCE_SPEC_v2.5.md`
@@ -496,36 +498,13 @@ export const SETTINGS_DEFAULTS: SettingsRecord = Object.fromEntries(
 const PREFIX = 'br.settings.'
 
 /**
- * Reads user-scoped language preference, falling back to device setting.
- * Allows multiple staff sharing a single device (e.g. iPad) to keep their own language (T6-09).
- */
-export function getUserLanguage(userId?: string | null): SettingValue {
-  if (userId) {
-    const userSpecific = readLocal(`${PREFIX}user.${userId}.language`)
-    if (userSpecific && (userSpecific === 'English' || userSpecific === 'नेपाली')) {
-      return userSpecific
-    }
-  }
-  return getSetting('language')
-}
-
-/**
- * Saves user-scoped language preference and updates active local setting.
- */
-export function setUserLanguage(userId: string | null | undefined, value: SettingValue): void {
-  if (userId) {
-    writeLocal(`${PREFIX}user.${userId}.language`, String(value))
-  }
-  writeLocal(`${PREFIX}language`, String(value))
-}
-
-/**
  * Validates a value against its own spec. Exported because the screen runs it
  * before writing and the store runs it again on read — a value that stopped
  * being valid (a spec tightened, a hand-edited localStorage) falls back to the
  * default rather than propagating into an invoice.
  */
 export function validateSetting(key: SettingKey, value: SettingValue): string | null {
+  if (key === 'language' && value === 'नेपाली' && !canEnable('ne')) return NEPALI_UNAVAILABLE
   const spec = SETTING_SPECS[key]
   if (spec.kind === 'select' && spec.options && !spec.options.includes(String(value))) {
     return `Must be one of: ${spec.options.join(', ')}.`
@@ -535,9 +514,12 @@ export function validateSetting(key: SettingKey, value: SettingValue): string | 
 
 /**
  * RULING 2026-10-07 (G1): settings are shared across devices through the `settings` table (0158).
- * Only these two stay per-device — they are how THIS screen looks and reads, not business rules.
+ * Density stays per-device. Language is a self-owned account preference (T0-12/T6-09).
  */
-export const DEVICE_LOCAL_KEYS: readonly SettingKey[] = ['density', 'language']
+export const DEVICE_LOCAL_KEYS: readonly SettingKey[] = ['density']
+export function isUserPreferenceKey(key: SettingKey): boolean {
+  return key === 'language'
+}
 export function isDeviceLocalKey(key: SettingKey): boolean {
   return DEVICE_LOCAL_KEYS.includes(key)
 }
@@ -568,7 +550,7 @@ export function applyRemoteSettings(rows: readonly RemoteSettingRow[]): void {
   const org: Partial<Record<SettingKey, SettingValue>> = {}
   const loc: Record<string, Partial<Record<SettingKey, SettingValue>>> = {}
   for (const r of rows) {
-    if (!(r.key in SETTING_SPECS) || isDeviceLocalKey(r.key as SettingKey)) continue
+    if (!(r.key in SETTING_SPECS) || isDeviceLocalKey(r.key as SettingKey) || isUserPreferenceKey(r.key as SettingKey)) continue
     const key = r.key as SettingKey
     const v = coerce(key, r.value)
     if (v === null) continue
@@ -606,12 +588,14 @@ export function getSettingForLocation(key: SettingKey, locationId: string | null
   return override ?? getSetting(key)
 }
 
-export function readSettings(userId?: string | null): SettingsRecord {
-  if (typeof window === 'undefined') return { ...SETTINGS_DEFAULTS, ...remoteOrg }
+export function readSettings(): SettingsRecord {
+  const preferredLanguage = getLanguagePreference().language
+  const language = preferredLanguage === 'ne' && canEnable('ne') ? 'नेपाली' : 'English'
+  if (typeof window === 'undefined') return { ...SETTINGS_DEFAULTS, ...remoteOrg, language }
   const out = { ...SETTINGS_DEFAULTS }
   for (const key of Object.keys(SETTING_SPECS) as SettingKey[]) {
-    if (key === 'language' && userId) {
-      out.language = getUserLanguage(userId)
+    if (isUserPreferenceKey(key)) {
+      out[key] = language
       continue
     }
     /* A shared value wins over this device's old localStorage copy. A key the database has no row for
@@ -664,6 +648,7 @@ export function readSettings(userId?: string | null): SettingsRecord {
 
 /** Writes only the keys in the patch. Refuses an invalid value rather than storing it. */
 export function writeSettings(patch: Partial<SettingsRecord>): void {
+  if ('language' in patch) throw new Error('Save language through your account preferences.')
   if (typeof window === 'undefined') return
   for (const [k, v] of Object.entries(patch) as Array<[SettingKey, SettingValue]>) {
     const problem = validateSetting(k, v)

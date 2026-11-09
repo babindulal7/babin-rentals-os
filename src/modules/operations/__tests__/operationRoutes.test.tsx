@@ -251,7 +251,7 @@ describe('Spec 03 §3.1 — queue chips filter ONE time-ordered list', () => {
     }
     // §3.1's row: time │ BR# │ client │ items │ stage badge │ [verb] ⋮
     const headers = [...container.querySelectorAll('th')].map((h) => h.textContent)
-    expect(headers).toContain('Due Time')
+    expect(headers).toContain('Time')
     expect(headers).toContain('Booking')
     expect(headers).toContain('Client')
     expect(headers).toContain('Items')

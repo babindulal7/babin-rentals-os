@@ -105,12 +105,16 @@ export function importReviewRows(input, options = {}) {
 
   const rows = normalizeReviewRows(input)
   const neDir = path.join(i18nDir, 'ne')
+  const enDir = path.join(i18nDir, 'en')
+  const approvalPath = path.join(i18nDir, 'review-approvals.json')
+  const ledger = fs.existsSync(approvalPath)
+    ? JSON.parse(fs.readFileSync(approvalPath, 'utf8')) : { schemaVersion: 1, entries: {} }
 
   const rejections = []
   const approvedByModule = {}
 
   for (const row of rows) {
-    const key = row.key
+    const key = typeof row.key === 'string' ? row.key : ''
     const moduleName = row.module || key.split('.')[0]
     const status = (row.status || '').trim().toUpperCase()
 
@@ -121,6 +125,22 @@ export function importReviewRows(input, options = {}) {
         status: row.status,
         reason: `Row is not approved (status: "${row.status || 'empty'}"). Only "OK" rows are imported.`,
       })
+      continue
+    }
+
+    const reviewedBy = row.reviewed_by?.trim()
+    const reviewedAt = row.reviewed_at?.trim()
+    if (!reviewedBy || !/^\d{4}-\d{2}-\d{2}$/.test(reviewedAt ?? '')
+      || !Number.isFinite(Date.parse(reviewedAt)) || new Date(reviewedAt).toISOString().slice(0, 10) !== reviewedAt) {
+      rejections.push({ key, status: row.status, reason: 'Approval requires reviewed_by and a valid reviewed_at date (YYYY-MM-DD).' })
+      continue
+    }
+
+    // Restrict writes to known module catalogues and unchanged English source.
+    const enPath = /^[a-z]+$/.test(moduleName) ? path.join(enDir, `${moduleName}.json`) : null
+    const source = enPath && fs.existsSync(enPath) ? JSON.parse(fs.readFileSync(enPath, 'utf8')) : {}
+    if (!Object.hasOwn(source, key) || source[key] !== row.english) {
+      rejections.push({ key, status: row.status, reason: 'Unknown key/module or English source changed. Export a fresh review sheet.' })
       continue
     }
 
@@ -155,6 +175,7 @@ export function importReviewRows(input, options = {}) {
     approvedByModule[moduleName].push({
       key,
       text: candidateText,
+      approval: { english: source[key], nepali: candidateText, reviewedBy, reviewedAt },
     })
   }
 
@@ -175,12 +196,14 @@ export function importReviewRows(input, options = {}) {
 
       for (const item of items) {
         currentData[item.key] = item.text
+        ledger.entries[item.key] = item.approval
       }
 
       fs.mkdirSync(path.dirname(filePath), { recursive: true })
       fs.writeFileSync(filePath, JSON.stringify(currentData, null, 2) + '\n', 'utf8')
       updatedModules.push(moduleName)
     }
+    if (updatedModules.length) fs.writeFileSync(approvalPath, JSON.stringify(ledger, null, 2) + '\n', 'utf8')
   }
 
   const importedCount = Object.values(approvedByModule).reduce((sum, list) => sum + list.length, 0)

@@ -12,6 +12,7 @@ import { Unavailable } from '../../components/ui/Unavailable'
 import { BarcodeScannerModal } from '../../components/ui/BarcodeScannerModal'
 import { useViewport } from '../../lib/device'
 import { useAuth } from '../../lib/auth'
+import { canWriteFloor } from '../../lib/rbac'
 import { formatAd, formatAdDateTime, formatBs, toBs } from '../../lib/bs'
 import { captureError } from '../../lib/monitoring'
 import { useList } from '../../lib/queries/useList'
@@ -84,15 +85,6 @@ import './inventory.css'
  * list** below 1280 (`WIREFRAME_RULINGS_2026-08-12.md` §7: collapse means
  * reflow, not hide).
  */
-
-/**
- * Named reason, per the Unavailable rule: no `src/actions/` file exists for
- * confirming a unit missing, and no capability string is declared for it —
- * so the assertion cannot land anywhere. The old build set a local flag and
- * showed the badge, which is a fabricated write on what is now a real record.
- */
-const CONFIRM_MISSING_UNAVAILABLE =
-  'Confirming a unit missing is not wired yet — no confirm-missing action exists, so the assertion would not be recorded. Phase 2 adds the write; until then the unit stays Unverified, which is the truthful state.'
 
 type FilterMode = 'all' | 'verified' | 'unverified' | 'missing' | 'unexpected'
 
@@ -255,15 +247,15 @@ export default function StockCheck({ embedded = false }: { embedded?: boolean } 
       ? Math.round((foundKpi.total / expectedKpi.total) * 100)
       : null
 
+  const [actionBusyItemId, setActionBusyItemId] = useState<string | null>(null)
+
   /**
    * The scan box, answered by the SERVER against the whole manifest — the list
    * in hand may be chip-narrowed to one outcome, so matching against it would
    * call an unverified serial "not on this manifest".
    *
-   * A match does NOT flip anything: the rows are the database's, and there is
-   * no scan-write action yet. The feedback says what is true — on the manifest,
-   * current outcome, nothing saved. Fabricating a local "Verified" over a real
-   * record is the exact failure "never fabricate success" names.
+   * A match records the scan verification directly in Postgres via `recordStockCheckScan`.
+   * Unmatched codes are logged as Unexpected scratch lines without mutating any expected unit.
    */
   const handleScanSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault()
@@ -274,17 +266,34 @@ export default function StockCheck({ embedded = false }: { embedded?: boolean } 
     setScanError(null)
 
     findStockAuditItemByCode(selected.id, query)
-      .then((hit) => {
+      .then(async (hit) => {
         if (hit) {
           const code = hit.serialNo ?? hit.assetTag ?? hit.productUnitId
-          setLastScannedFeedback({
-            serial: code,
-            name: hit.productName ?? 'Manifest unit',
-            match: true,
-            message: `${hit.productName ?? 'Unit'} (${code}) is on this manifest — currently ${unitStateOfOutcome(
-              hit.outcome,
-            )}. Recording a scan is not wired yet (Phase 2), so nothing was saved.`,
-          })
+          try {
+            const { recordStockCheckScan } = await import('../../actions/inventory/recordStockCheckScan')
+            const res = await recordStockCheckScan(
+              { auditId: selected.id, code: query, productUnitId: hit.productUnitId },
+              { userId: user ? user.id : 'usr-anonymous', role: user ? user.role : 'Warehouse' },
+            )
+            if (res.success) {
+              setLastScannedFeedback({
+                serial: code,
+                name: hit.productName ?? 'Manifest unit',
+                match: true,
+                message: `${hit.productName ?? 'Unit'} (${code}) verified and recorded.`,
+              })
+              refetchAll()
+            } else {
+              setLastScannedFeedback({
+                serial: code,
+                name: hit.productName ?? 'Manifest unit',
+                match: false,
+                message: res.message || `${code} could not be verified on this manifest.`,
+              })
+            }
+          } catch (err: unknown) {
+            setScanError(err instanceof Error ? err.message : String(err))
+          }
         } else {
           const serial = query.toUpperCase()
           // Not on this manifest — a MISPLACED statement about where a unit is,
@@ -315,6 +324,29 @@ export default function StockCheck({ embedded = false }: { embedded?: boolean } 
         setScanError(err instanceof Error ? err.message : String(err))
       })
       .finally(() => setScanBusy(false))
+  }
+
+  const handleToggleMissing = async (it: StockAuditItemRow) => {
+    if (!selected || actionBusyItemId) return
+    const isCurrentlyMissing = it.outcome === 'Confirmed missing'
+    setActionBusyItemId(it.id)
+    try {
+      const { confirmStockCheckMissing } = await import('../../actions/inventory/confirmStockCheckMissing')
+      await confirmStockCheckMissing(
+        {
+          auditId: selected.id,
+          itemId: it.id,
+          reversal: isCurrentlyMissing,
+          notes: isCurrentlyMissing ? 'Reversed missing status by staff' : 'Confirmed missing by staff during audit',
+        },
+        { userId: user ? user.id : 'usr-anonymous', role: user ? user.role : 'Warehouse' },
+      )
+      refetchAll()
+    } catch (err: unknown) {
+      setScanError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setActionBusyItemId(null)
+    }
   }
 
   /**
@@ -414,21 +446,37 @@ export default function StockCheck({ embedded = false }: { embedded?: boolean } 
     )
   }
 
-  /** The two row buttons. Confirm-missing is Unavailable, not fake — see the constant. */
+  /** The two row buttons: Manual verify fills scan box, and Confirm/Revert missing writes through confirmStockCheckMissing. */
   const rowActions = (it: StockAuditItemRow) => {
     const seed = verifySeedOf(it)
+    const canConfirm = user ? canWriteFloor(user.role) : false
     return (
-      <span style={{ display: 'inline-flex', gap: 'var(--sp-xs)', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-        {seed && (
+      <span style={{ display: 'inline-flex', gap: 'var(--sp-xs)', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+        {seed && it.outcome !== 'Found' && (
           <Button variant="ghost" size="sm" onClick={() => setScanInput(seed)}>
             Manual verify
           </Button>
         )}
-        <Unavailable reason={CONFIRM_MISSING_UNAVAILABLE}>
-          <Button variant="outline" size="sm" disabled>
-            Confirm missing
+        {it.outcome === 'Found' ? (
+          <span style={{ fontSize: 'var(--t-meta)', color: 'var(--good)', fontWeight: 600, padding: '2px 8px' }}>
+            Verified
+          </span>
+        ) : canConfirm ? (
+          <Button
+            variant={it.outcome === 'Confirmed missing' ? 'secondary' : 'outline'}
+            size="sm"
+            disabled={actionBusyItemId === it.id}
+            onClick={() => handleToggleMissing(it)}
+          >
+            {it.outcome === 'Confirmed missing' ? 'Revert missing' : 'Confirm missing'}
           </Button>
-        </Unavailable>
+        ) : (
+          <Unavailable reason="Your role cannot record audit discrepancies or verify inventory.">
+            <Button variant="outline" size="sm" disabled>
+              Confirm missing
+            </Button>
+          </Unavailable>
+        )}
       </span>
     )
   }
@@ -619,9 +667,9 @@ export default function StockCheck({ embedded = false }: { embedded?: boolean } 
         missing
       </span>
       <span style={{ marginLeft: 'auto', display: 'flex', gap: 'var(--sp-sm)', flexWrap: 'wrap' }}>
-        <Unavailable reason={CONFIRM_MISSING_UNAVAILABLE}>
+        <Unavailable reason="Confirm or revert missing assertions per unit in the manifest table below.">
           <Button variant="outline" size="sm" disabled>
-            Confirm missing
+            Batch missing
           </Button>
         </Unavailable>
       </span>
@@ -797,7 +845,7 @@ export default function StockCheck({ embedded = false }: { embedded?: boolean } 
                     {itemMeta(it)}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', flexWrap: 'wrap' }}>
                       {stateBadge(state)}
-                      {state === 'Unverified' && rowActions(it)}
+                      {rowActions(it)}
                     </div>
                   </div>
                 )
@@ -835,7 +883,7 @@ export default function StockCheck({ embedded = false }: { embedded?: boolean } 
                         </td>
                         <td style={{ padding: '12px' }}>{stateBadge(state)}</td>
                         <td style={{ padding: '12px', textAlign: 'right' }}>
-                          {state === 'Unverified' && rowActions(it)}
+                          {rowActions(it)}
                         </td>
                       </tr>
                     )
@@ -1046,3 +1094,5 @@ export default function StockCheck({ embedded = false }: { embedded?: boolean } 
     </PageShell>
   )
 }
+
+export { StockCheck }

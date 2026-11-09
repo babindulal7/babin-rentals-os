@@ -749,6 +749,11 @@ export function canManageSettings(role: SystemRole): boolean {
   return role === 'Owner'
 }
 
+/** RULING 2026-11-05 C-6: only Owner approves glossary wording; DB 0225 enforces it. */
+export function canManageGlossary(role: SystemRole, online = true): boolean {
+  return role === 'Owner' && online
+}
+
 /**
  * Check if role can manage message and document wording templates (T5-13, B20).
  * Owner and Admin only.
@@ -1032,6 +1037,15 @@ export function canReadProblemReports(role: SystemRole | null | undefined): bool
 export function canManageProblemReports(role: SystemRole | null | undefined): boolean {
   if (!role) return false
   return role === 'Owner' || role === 'Admin'
+}
+
+/**
+ * Offer campaigns to clients (T5-12, B43, B50, migration 0224).
+ * Owner · Admin · Manager only. Floor roles, Coordinator, and Client are denied.
+ */
+export function canManageOfferCampaigns(role: SystemRole | null | undefined): boolean {
+  if (!role) return false
+  return role === 'Owner' || role === 'Admin' || role === 'Manager'
 }
 
 /**

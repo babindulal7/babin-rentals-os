@@ -51,7 +51,7 @@ export function useSettingsLoad(userId?: string | null): SettingsLoadResult {
 
     void (async () => {
       try {
-        const settings = readSettings(userId)
+        const settings = readSettings()
         /* The stored language is applied before the page is declared ready, so
            a Nepali session never paints an English first frame. */
         await applyLanguage(languageCodeOf(settings.language))
@@ -60,7 +60,7 @@ export function useSettingsLoad(userId?: string | null): SettingsLoadResult {
            shared values arrive they replace it. Never blocks the page on the network. */
         void hydrateSharedSettings()
           .then(() => {
-            if (live) setLoad({ status: 'ready', settings: readSettings(userId) })
+            if (live) setLoad({ status: 'ready', settings: readSettings() })
           })
           .catch(() => undefined)
       } catch (e) {

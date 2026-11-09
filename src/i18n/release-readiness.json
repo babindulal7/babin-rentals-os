@@ -1,0 +1,22 @@
+{
+  "approvedBy": null,
+  "approvedAt": null,
+  "modules": {
+    "admin": { "conversionComplete": false, "layoutCheckedBy": null, "layoutCheckedAt": null },
+    "auth": { "conversionComplete": false, "layoutCheckedBy": null, "layoutCheckedAt": null },
+    "calendar": { "conversionComplete": false, "layoutCheckedBy": null, "layoutCheckedAt": null },
+    "clients": { "conversionComplete": false, "layoutCheckedBy": null, "layoutCheckedAt": null },
+    "core": { "conversionComplete": false, "layoutCheckedBy": null, "layoutCheckedAt": null },
+    "crew": { "conversionComplete": false, "layoutCheckedBy": null, "layoutCheckedAt": null },
+    "documents": { "conversionComplete": false, "layoutCheckedBy": null, "layoutCheckedAt": null },
+    "finance": { "conversionComplete": false, "layoutCheckedBy": null, "layoutCheckedAt": null },
+    "inventory": { "conversionComplete": false, "layoutCheckedBy": null, "layoutCheckedAt": null },
+    "notes": { "conversionComplete": false, "layoutCheckedBy": null, "layoutCheckedAt": null },
+    "operations": { "conversionComplete": false, "layoutCheckedBy": null, "layoutCheckedAt": null },
+    "rentals": { "conversionComplete": false, "layoutCheckedBy": null, "layoutCheckedAt": null },
+    "reports": { "conversionComplete": false, "layoutCheckedBy": null, "layoutCheckedAt": null },
+    "settings": { "conversionComplete": false, "layoutCheckedBy": null, "layoutCheckedAt": null },
+    "today": { "conversionComplete": false, "layoutCheckedBy": null, "layoutCheckedAt": null },
+    "tools": { "conversionComplete": false, "layoutCheckedBy": null, "layoutCheckedAt": null }
+  }
+}

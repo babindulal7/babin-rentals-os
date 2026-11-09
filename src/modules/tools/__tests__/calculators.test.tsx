@@ -31,6 +31,13 @@ import { IRD_POOL_BLOCKED_REASON } from '../../../data/tools'
 
 let viewport: Viewport = 'desktop'
 
+// Local copy/layout review fixture only. Production activation remains closed;
+// languageReadiness/languagePreferences suites verify that release boundary.
+vi.mock('../../../lib/languageReadiness', async (orig) => ({
+  ...(await orig<typeof import('../../../lib/languageReadiness')>()),
+  canEnable: () => true,
+}))
+
 vi.mock('../../../lib/device', async (orig) => ({
   ...(await orig<typeof import('../../../lib/device')>()),
   useViewport: () => viewport,
@@ -248,7 +255,7 @@ describe('LateFeeCalculator — i18n and Latin digits (T6-02)', () => {
     expect(container.textContent).toContain('Enter a daily rate to calculate the fee.')
   })
 
-  it('renders Nepali copy when language is set to ne, keeping numbers and NPR Latin', async () => {
+  it('renders Nepali copy in the reviewer fixture, keeping numbers and NPR Latin', async () => {
     document.documentElement.setAttribute('lang', 'ne')
     await mount(<LateFeeCalculator />)
     expect(container.textContent).toContain('ढिलाइ शुल्क अनुमान')

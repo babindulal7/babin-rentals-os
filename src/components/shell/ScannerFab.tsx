@@ -388,14 +388,14 @@ export default function ScannerFab() {
       // Outside a floor workspace: scanning opens item card! (T2-14, W91)
       await openCardForCode(c)
     } else {
-      // Real database / unit lookup via canonical resolveScannedCode (AUD-002)
+      // Real database / unit lookup via canonical resolveScannedCode (AUD-002, UX-06)
       const res = await resolveScannedCode(c)
       if (res.status === 'unit_matched') {
-        fire('ok', `${res.label} (${res.serialNo || res.assetTag || c}) — ${context}`)
+        fire('ok', `Recognized: ${res.label} (${res.serialNo || res.assetTag || c}) — open workspace to pack/return`)
       } else if (res.status === 'product_matched') {
-        fire('ok', `${res.label} (${res.assetCode}) — ${context}`)
+        fire('ok', `Recognized: ${res.label} (${res.assetCode}) — open workspace to pack/return`)
       } else if (res.status === 'booking_matched') {
-        fire('ok', `${res.label}`)
+        fire('ok', `Recognized: ${res.label}`)
       } else if (res.status === 'query_failed') {
         fire('unknown', `Query error: ${res.error}`)
       } else {

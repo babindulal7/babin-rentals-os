@@ -39,6 +39,8 @@ export const CSV_HEADERS = [
   'status',
   'babin_fix',
   'notes',
+  'reviewed_by',
+  'reviewed_at',
 ]
 
 /**
@@ -53,6 +55,8 @@ export function exportReviewRows(options = {}) {
 
   const enDir = path.join(i18nDir, 'en')
   const neDir = path.join(i18nDir, 'ne')
+  const approvalPath = path.join(i18nDir, 'review-approvals.json')
+  const approvals = fs.existsSync(approvalPath) ? JSON.parse(fs.readFileSync(approvalPath, 'utf8')).entries : {}
 
   if (!fs.existsSync(enDir)) {
     throw new Error(`English catalogue directory not found: ${enDir}`)
@@ -79,10 +83,12 @@ export function exportReviewRows(options = {}) {
       const screenName = parts.length > 2 ? parts[1] : (parts.length === 2 ? parts[0] : 'general')
       const neText = neData[key] || ''
 
-      const isVerified = Boolean(neText && neText.trim().length > 0)
-      const screenshotLink = `https://os.babinrentals.com/screenshots/${modName}/${screenName}.png`
+      const approval = approvals[key]
+      const isVerified = Boolean(neText.trim() && approval?.english === enText && approval?.nepali === neText
+        && approval?.reviewedBy?.trim() && /^\d{4}-\d{2}-\d{2}$/.test(approval?.reviewedAt ?? ''))
+      const screenshotLink = '' // Add actual captured evidence during review; never manufacture screenshot URLs.
 
-      let notes = 'S11 approved wording'
+      let notes = isVerified ? 'Reviewed wording' : 'Awaiting Babin review'
       if (/NPR|\$|%|\d/.test(enText)) {
         notes += ' · R-21: Latin numbers/currency stay Latin'
       }
@@ -98,6 +104,8 @@ export function exportReviewRows(options = {}) {
         status: isVerified ? 'OK' : 'PENDING',
         babin_fix: '',
         notes,
+        reviewed_by: isVerified ? approval.reviewedBy : '',
+        reviewed_at: isVerified ? approval.reviewedAt : '',
       })
     }
   }
@@ -124,6 +132,8 @@ export function exportReviewCsv(options = {}) {
       row.status,
       row.babin_fix,
       row.notes,
+      row.reviewed_by,
+      row.reviewed_at,
     ]))
   }
 

@@ -185,6 +185,7 @@ export function saveCoupons(coupons: Coupon[]): void {
     }
   } catch (err) {
     console.error('Failed to save coupons', err)
+    throw new Error('Failed to save coupon to local storage: storage quota exceeded or disabled.')
   }
 }
 

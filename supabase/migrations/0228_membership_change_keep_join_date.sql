@@ -1,4 +1,4 @@
--- 0226_membership_change_keep_join_date.sql
+-- 0228_membership_change_keep_join_date.sql
 --
 -- R-9.2 (RULINGS-2026-11-09): on a membership plan change, staff choose each time whether the
 -- new row keeps the client's original join date (the renewal anniversary stays put) or restarts

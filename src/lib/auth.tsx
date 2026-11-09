@@ -1,8 +1,9 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback, ReactNode } from 'react'
 import { supabase, IS_MOCK, newClientUuid } from './supabase'
-import { getSetting, getUserLanguage, languageCodeOf } from './settingsStore'
-import { applyLanguage } from './i18n'
+import { getSetting } from './settingsStore'
 import { hydrateSharedSettings } from './settingsSync'
+import { hydrateUserLanguage } from './languagePreferences'
+import { useSharedGlossary } from './useSharedGlossary'
 import { recordLogin, recordLogout } from './authAudit'
 import { captureError } from './monitoring'
 import { purgeDeviceReadCaches } from './devicePurge'
@@ -186,6 +187,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
+  useSharedGlossary(user?.id ?? null, user?.role ?? 'Client')
   /* Latest signed-in id for `logout`, which has no dependency on render state (G6 Logout audit row). */
   const userIdRef = useRef<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -302,8 +304,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role: data.primary_role as Role,
       isSharedDevice: false,
     })
-    const userLang = getUserLanguage(data.id)
-    void applyLanguage(languageCodeOf(userLang))
     void createRosterEntryFromUser({
       id: data.id,
       name: data.full_name,
@@ -319,6 +319,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data }) => {
       if (cancelled) return
       const session = data.session
+      hydrateUserLanguage(session?.user.id ?? null, session?.user.user_metadata)
       if (!session) {
         setUser(null)
         setLoading(false)
@@ -331,6 +332,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return
+      hydrateUserLanguage(session?.user.id ?? null, session?.user.user_metadata)
 
       /*
        * A recovery link is the ONLY way `PASSWORD_RECOVERY` fires. Supabase
@@ -635,6 +637,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const logout = useCallback(() => {
     const leavingId = userIdRef.current
+    hydrateUserLanguage(null)
     setUser(null)
     setLocked(false)
     setPasswordRecovery(false)
@@ -733,8 +736,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setTimeout(() => setLimboState('idle'), 100)
 
       await loadProfile(sessionData.session.user.id, sessionData.session.user.email)
-      const targetUserLang = getUserLanguage(targetUserId)
-      await applyLanguage(languageCodeOf(targetUserLang))
       await refreshRoster()
       setLocked(false)
 

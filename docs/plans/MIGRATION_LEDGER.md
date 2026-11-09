@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0227**
+**Next free number: 0229**
 
 > **Legacy exception:** `0188` exists as two distinct, locally verified migration files
 > (`0188_smart_reservation_holds.sql` and `0188_staff_renting_gear.sql`). Both are preserved because
@@ -20,6 +20,8 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
+| 0225 | T0-12 / T6 glossary | owner-approved-glossary-revisions | lane-a/T0-12-main-integration | APPLIED live 7 Nov 2026 as 20261107105159 after validated backup; 17 local gates and live DB/RLS/RPC post-checks PASS; hosted/device acceptance pending |
+| 0224 | T5-12 | offer-campaigns-and-recipients | lane-b/T5-12-offer-emails-to-clients | verified |
 | 0178 | T2-reset | quantity-only-reset | lane-a/T2-quantity-reset | verified |
 | 0179 | T2-04 | gate1-override-by-handover-staff | lane-a/T2-04-gate1-override | verified |
 | 0180 | T2-05 | technician-floor-verbs | lane-a/T2-05-technician-floor | verified |
@@ -66,10 +68,11 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0220 | T5-09 | push-subscriptions | lane-b/T5-09-phone-pop-ups | written |
 | 0221 | T1-17 | two-step-sign-in | lane-a/T1-17-two-step-sign-in-for-every | claimed; branch not merged |
 | 0222 | T3-smart-reservations | repair-confirm-booking-atomic-and-reservation-dedup | audit/system-design-consistency-20261105 | verified |
-| 0223 | T4-12 | bulk-update-products | lane-b/T4-12-bulk-edit-products | verified |
+| 0223 | T3-12 | product-aliases | lane-c/T3-12-paste-a-whatsapp-gear-list | verified (check:pglite 220/220 + check:lifecycle 63/63) |
 | 0224 | T5-12 | offer-campaigns-and-recipients | lane-b/T5-12-offer-emails-to-clients | verified |
-| 0225 | T5-13 | message-templates | lane-b/T5-13-edit-email-and-document-texts | verified |
-| 0226 | R-9.2 | membership change keeps join date (`keep_join_date`) | main (RULINGS-2026-11-09) | written, not applied (N-5) |
+| 0226 | T4-12 | bulk-update-products | lane-b/T4-12-bulk-edit-products | verified |
+| 0227 | T5-13 | message-templates | lane-b/T5-13-edit-email-and-document-texts | verified |
+| 0228 | R-9.2 | membership change keeps join date (`keep_join_date`) | lane-b/ux-polish-forgiveness-and-sync | written, not applied (N-5) |
 
 ## Expected migrations (not yet claimed)
 
