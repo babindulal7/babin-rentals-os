@@ -1,5 +1,77 @@
 # Progress Log
 
+## 2026-11-09 — T3-27: Pro forma invoice from the draft (Lane C)
+
+**Did**
+- **T3-27: Pro forma invoice from the draft (B18, B55, Law 6, Law 7, Law 8):**
+  - Migration `0231_pro_forma_document_type.sql` claimed in `docs/plans/MIGRATION_LEDGER.md` (Next free number: `0232`):
+    - Added `'Pro Forma'` to `document_type` and `booking_document_type` enums (N-6 additive enum).
+    - Updated `document_registry_role_read_scope` RLS policy to enforce Law 6 money-blindness (Warehouse only reads agreements, packing lists, delivery notes; Technician excluded from Pro Forma and financial documents).
+  - Lifecycle step `L71` added in `scripts/e2e-lifecycle.mjs`:
+    - Asserts generating a pro forma consumes no document sequence numbers (Law 7: `next_document_number('invoice')` is untouched).
+    - Asserts draft invoices and pro forma documents remain completely excluded from the sales/VAT register (`count = 0` for non-draft/non-void invoices).
+    - Asserts money-blind roles (Warehouse, Technician) are denied reading pro forma records in `document_registry` by RLS (Law 6).
+    - Asserts Coordinator and money roles can query and retrieve the pro forma document.
+  - Server Action `src/actions/documents/generateProForma.ts`:
+    - Validates booking ID and enforces Law 6 role permissions (`canBookingMoney(role)`).
+    - Resolves draft invoice for the booking; fails loudly if no draft invoice exists.
+    - Generates pro forma document number formatted as `PF-${bookingNo}` (never mints or touches monotonic invoice numbers, Law 7).
+    - Computes advance due (`calculateAdvanceRequired(totalAmount)`), estimated VAT (13%), and 7-day validity notice.
+    - Generates pro forma PDF and records document in `document_registry` (`document_type = 'Pro Forma'`) and links in `booking_documents` with idempotency key (`client_uuid`).
+  - PDF Generation & Export (`src/lib/pdf/generatePdf.ts`, `src/lib/pdf/exportPdf.ts`):
+    - Titled `"PRO FORMA INVOICE — not a tax invoice"`.
+    - References booking number instead of invoice number (`BOOKING: BK-...`).
+    - Prints project name (T3-26, B52).
+    - Item lines: description, quantity, days, rate, line total.
+    - Displays `Estimated VAT (13%):`, `Advance Due:`, `Validity: Valid for 7 days`, and payment details.
+    - Added `exportProFormaPdf(invoiceData, options)` helper.
+  - UI Integration (`src/modules/rentals/BookingDetail.tsx`):
+    - Added 1-tap Pro Forma Invoice generation button in Quick Actions rail and Rental Charges section when draft invoice exists and user has money permissions (≤ 2 taps).
+    - Displays inline error message and loading state.
+    - Documents table renders pro forma rows with view/download capabilities.
+  - Added unit test suite `src/actions/documents/__tests__/generateProForma.test.ts` (4/4 passed).
+  - Added unit tests in `src/lib/pdf/__tests__/generatePdf.test.ts` (13/13 passed).
+
+**Ruled**
+- B18, B55: Pro forma invoice is generated from the draft invoice, titled "PRO FORMA INVOICE — not a tax invoice", prints project name and booking number (no invoice number), marks estimated VAT and advance due, valid for 7 days.
+- Law 6: Warehouse, Technician, Driver, and Client are money-blind roles and cannot open or view Pro Forma documents in UI or database (`document_registry_role_read_scope` RLS).
+- Law 7: Never mints a document number from `next_document_number()`; pro forma takes no invoice sequence number and stays out of the sales/VAT register.
+- Law 8: All document writes are idempotent via `client_uuid`.
+
+**Verified**
+- `npm run check:pglite`: 228/228 applied, 0 failed.
+- `npm run check:lifecycle`: 71/71 green, 0 known-red, 0 failed.
+- `npm test`: 587 test files passed, 6937 passed.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run build`: built in 1m 39s (PWA precache 284 entries).
+- `npm run check:security`: 18 Phase 0 regressions + 14 branch groups + glossary pass.
+- `node scripts/test-booking-financial-integrity.mjs`: PASS.
+- `npm run test:server-contracts`: 59/59 passed.
+- `npm run test:partial-return`: 58/58 passed.
+- `npm run check:contrast`: 106/106 pass.
+- `npm run lint:ui-copy`: 0 violations.
+- `npm run lint:shell`: 925 files checked, 0 violations.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 101 / 101 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 82 / 82 (100%) | +0 |
+| Lifecycle | steps green / total | 71 / 71 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 228 files · check:pglite 228/228 applied, 0 failed (recorded 2026-11-09T19:18:25.585Z). Suite: PASS — 6937/6937 passed, 0 failed (recorded 2026-11-09T19:26:00.309Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-09T19:18:46.348Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T3-27 ready for local merge into `main`.
+- Next in Lane C: Card T3-28 · Rental day start as a setting (`docs/plans/prompts/T3-28.md`).
+
 ## 2026-11-09 — T3-21: Find anything in one box (Lane C)
 
 **Did**

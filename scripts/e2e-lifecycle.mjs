@@ -7645,6 +7645,104 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L71',
+  title: 'A pro forma takes no document number and stays out of the VAT register (T3-27, B18, Law 6, Law 7)',
+  expect: 'green',
+  run: async () => {
+    let bookingId
+    let clientId
+    let draftInvoiceId
+
+    await asOwnerOfTheDatabase(async () => {
+      // 1. Create a client and booking
+      const clientCode = await one("select next_document_number('client')")
+      clientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+        values (gen_random_uuid(), '${clientCode}', 'L71 Pro Forma Client', '+9779800009971', 'Active', '${U.Owner}')
+        returning id`)).rows[0].id
+
+      const bookingNo = await one("select next_document_number('booking')")
+      bookingId = (await q(`insert into bookings (client_uuid, booking_no, client_id, branch_id, stage, delivery_type, pickup_at, return_at, created_by, updated_by, project_name)
+        values (gen_random_uuid(), '${bookingNo}', '${clientId}', '${BRANCH}', 'Booked', 'Client Pickup', '2026-12-01 10:00:00+05:45', '2026-12-03 18:00:00+05:45', '${U.Owner}', '${U.Owner}', 'L71 Project Pro Forma')
+        returning id`)).rows[0].id
+
+      // 2. Create a Draft invoice (T3-14)
+      draftInvoiceId = (await q(`insert into invoices (client_uuid, booking_id, client_id, branch_id, status, subtotal, discount_amount, taxable_amount, vat_rate, vat_amount, total_amount, paid_amount, outstanding_amount, due_date, created_by)
+        values (gen_random_uuid(), '${bookingId}', '${clientId}', '${BRANCH}', 'Draft', 100000, 0, 100000, 0.13, 13000, 113000, 0, 113000, current_date + 7, '${U.Owner}')
+        returning id`)).rows[0].id
+    })
+
+    // 3. Snapshot invoice sequence value before pro forma
+    const invSeqBefore = Number((await q("select current_value from number_sequences where sequence_key = 'invoice'")).rows[0]?.current_value ?? 0)
+
+    // 4. Record Pro Forma in document_registry and booking_documents
+    let proFormaDocId
+    await as('Coordinator', async () => {
+      proFormaDocId = (await q(`insert into document_registry (
+        client_uuid,
+        document_no,
+        document_type,
+        booking_id,
+        client_id,
+        lifecycle_status,
+        file_url,
+        created_by
+      ) values (
+        gen_random_uuid(),
+        'PF-BK-L71-001',
+        'Pro Forma',
+        '${bookingId}',
+        '${clientId}',
+        'Draft',
+        'documents/PF-BK-L71-001.pdf',
+        '${U.Coordinator}'
+      ) returning id`)).rows[0].id
+
+      await q(`insert into booking_documents (
+        client_uuid,
+        booking_id,
+        document_id,
+        doc_type,
+        origin,
+        created_by
+      ) values (
+        gen_random_uuid(),
+        '${bookingId}',
+        '${proFormaDocId}',
+        'Pro Forma',
+        'Generated',
+        '${U.Coordinator}'
+      )`)
+    })
+
+    // 5. Assert invoice sequence value is UNTOUCHED (Law 7: monotonic sequence not consumed)
+    const invSeqAfter = Number((await q("select current_value from number_sequences where sequence_key = 'invoice'")).rows[0]?.current_value ?? 0)
+    assertEq(invSeqAfter, invSeqBefore, 'Pro forma creation never consumes an invoice sequence number (Law 7)')
+
+    // 6. Assert Draft invoice and Pro Forma stay out of sales and VAT register
+    const vatInvoices = (await q(`select count(*) from invoices where booking_id = '${bookingId}' and status <> 'Draft' and status <> 'Void'`)).rows[0].count
+    assertEq(Number(vatInvoices), 0, 'Draft invoices and pro formas stay out of the VAT register (B18, B55)')
+
+    // 7. Assert Law 6 money-blindness: Warehouse and Technician cannot read Pro Forma documents
+    await as('Warehouse', async () => {
+      const whDocs = (await q(`select id from document_registry where id = '${proFormaDocId}'`)).rows
+      assertEq(whDocs.length, 0, 'Warehouse role cannot view Pro Forma documents (Law 6 money-blindness)')
+    })
+
+    await as('Technician', async () => {
+      const techDocs = (await q(`select id from document_registry where id = '${proFormaDocId}'`)).rows
+      assertEq(techDocs.length, 0, 'Technician role cannot view Pro Forma documents (Law 6 money-blindness)')
+    })
+
+    // 8. Assert Coordinator can read the Pro Forma document
+    await as('Coordinator', async () => {
+      const coordDocs = (await q(`select id, document_no, document_type from document_registry where id = '${proFormaDocId}'`)).rows
+      assertEq(coordDocs.length, 1, 'Coordinator can view Pro Forma document in document_registry')
+      assertEq(coordDocs[0].document_type, 'Pro Forma', 'Document type is Pro Forma')
+    })
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break

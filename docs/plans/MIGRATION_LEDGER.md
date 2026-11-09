@@ -75,7 +75,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0228 | R-9.2 | membership change keeps join date (`keep_join_date`) | lane-b/ux-polish-forgiveness-and-sync | written, not applied (N-5) |
 | 0229 | T3-25 | booking-tags | lane-c/T3-25-tags-on-bookings | verified (check:pglite 226/226 + check:lifecycle 68/68 Step L68) |
 | 0230 | T3-26 | project-name-and-shoot-location | lane-c/T3-26-project-name-and-shoot-location-on | verified |
-| 0231 | T3-27 | pro-forma-document-type | lane-c/T3-27-pro-forma-invoice-from-the-draft | claimed |
+| 0231 | T3-27 | pro-forma-document-type | lane-c/T3-27-pro-forma-invoice-from-the-draft | verified (check:pglite 228/228 + check:lifecycle 71/71 Step L71) |
 
 ## Expected migrations (not yet claimed)
 

@@ -68,6 +68,7 @@ import { RecordPaymentModal } from '../finance/modals/RecordPaymentModal'
 import { CreateInvoiceModal } from '../finance/modals/CreateInvoiceModal'
 import { CreateDocumentModal } from '../documents/CreateDocumentModal'
 import { LineItemTree } from './LineItemTree'
+import { generateProForma } from '../../actions/documents/generateProForma'
 import { listDocuments, documentsForBooking, type DocRow } from '../../lib/queries/documents'
 import { formatGateError } from '../../lib/gates'
 import type { ActionContext } from '../../actions/core'
@@ -1308,6 +1309,31 @@ function BookingDetailView() {
   /* Law 3 — a voided invoice still exists, but its money is settled by its
      credit note, so the totals this page states are over the live ones. */
   const liveInvoices = useMemo(() => invoicesList.rows.filter((r) => !r.isVoid), [invoicesList.rows])
+  const draftInvoice = useMemo(() => liveInvoices.find((r) => r.status === 'Draft'), [liveInvoices])
+
+  const [generatingProForma, setGeneratingProForma] = useState(false)
+  const [proFormaError, setProFormaError] = useState<string | null>(null)
+
+  const handleGenerateProForma = useCallback(
+    async (invoiceId?: string) => {
+      if (!bookingId || !user) return
+      setGeneratingProForma(true)
+      setProFormaError(null)
+      try {
+        await generateProForma(
+          { bookingId, invoiceId, download: true },
+          { userId: user.id, role: user.role },
+        )
+        showSuccessToast('Pro Forma Ready', `Generated pro forma for ${booking?.bookingNo ?? id}`)
+        void documentsList.refetch()
+      } catch (err: unknown) {
+        setProFormaError(err instanceof Error ? err.message : 'Failed to generate pro forma')
+      } finally {
+        setGeneratingProForma(false)
+      }
+    },
+    [bookingId, user, booking?.bookingNo, id, showSuccessToast, documentsList],
+  )
 
   /**
    * ## "No invoice" is a THIRD state, not the absence of a first (Law 12)
@@ -2238,6 +2264,16 @@ function BookingDetailView() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
             {canTakePayment && recordPaymentButton('Record Payment')}
             {canRaiseInvoice && createInvoiceButton(hasInvoice ? 'View Invoice' : 'Create Invoice')}
+            {draftInvoice && (
+              <Button
+                variant="secondary"
+                icon="file"
+                loading={generatingProForma}
+                onClick={() => void handleGenerateProForma(draftInvoice.id)}
+              >
+                Pro Forma Invoice
+              </Button>
+            )}
           </div>
         </Card>
       )}
@@ -2985,8 +3021,41 @@ function BookingDetailView() {
                           <span className="figure" style={{ fontFamily: 'var(--font-id, sans-serif)', fontSize: '15px' }}>{money(totals.total)}</span>
                         </div>
                         <p style={{ margin: '8px 0 0', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-                          From {liveInvoices.length === 1 ? `invoice ${liveInvoices[0]?.invoiceNo}` : `${liveInvoices.length} live invoices`}.
+                          From {liveInvoices.length === 1 ? `invoice ${liveInvoices[0]?.invoiceNo ?? 'Draft'}` : `${liveInvoices.length} live invoices`}.
                         </p>
+                        {draftInvoice && (
+                          <div style={{ marginTop: 10 }}>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              icon="file"
+                              loading={generatingProForma}
+                              onClick={() => void handleGenerateProForma(draftInvoice.id)}
+                            >
+                              Pro Forma Invoice
+                            </Button>
+                          </div>
+                        )}
+                        {proFormaError && (
+                          <div
+                            role="alert"
+                            style={{
+                              marginTop: 10,
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              gap: 8,
+                              padding: '8px 12px',
+                              borderRadius: 'var(--r-sm)',
+                              border: '1px solid var(--danger)',
+                              background: 'var(--st-danger-bg)',
+                              fontSize: 'var(--t-meta)',
+                              color: 'var(--danger-text)',
+                            }}
+                          >
+                            <Icon name="alert_triangle" size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+                            <span>{proFormaError}</span>
+                          </div>
+                        )}
                       </>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
@@ -3226,14 +3295,28 @@ function BookingDetailView() {
                           <tr key={doc.id} style={{ borderBottom: '1px solid var(--border)' }}>
                             <td className="figure" style={{ ...td, fontSize: 'var(--t-meta)', fontWeight: 600 }}>
                               {doc.fileUrl ? (
-                                <Link
-                                  to={`/rentals/${booking.id}/evidence`}
-                                  style={{ color: 'var(--primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                                  title="View signed document"
-                                >
-                                  <Icon name="file" size={13} />
-                                  <span>{doc.id}</span>
-                                </Link>
+                                doc.fileUrl.startsWith('data:') || doc.fileUrl.startsWith('http') || doc.fileUrl.startsWith('blob:') ? (
+                                  <a
+                                    href={doc.fileUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    download={doc.fileUrl.startsWith('data:') ? `${doc.id}.pdf` : undefined}
+                                    style={{ color: 'var(--primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                    title={`Download / view ${doc.name}`}
+                                  >
+                                    <Icon name="file" size={13} />
+                                    <span>{doc.id}</span>
+                                  </a>
+                                ) : (
+                                  <Link
+                                    to={`/rentals/${booking.id}/evidence`}
+                                    style={{ color: 'var(--primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                    title="View signed document"
+                                  >
+                                    <Icon name="file" size={13} />
+                                    <span>{doc.id}</span>
+                                  </Link>
+                                )
                               ) : (
                                 doc.id
                               )}

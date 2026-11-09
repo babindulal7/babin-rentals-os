@@ -60,6 +60,9 @@ export interface InvoicePdfData {
   paidPaisa?: Paisa | number | null
   outstandingPaisa?: Paisa | number | null
   notes?: string | null
+  isProForma?: boolean
+  advanceDuePaisa?: Paisa | number | null
+  validityDays?: number
 }
 
 export interface DocumentPdfData {
@@ -169,11 +172,23 @@ export function generateInvoicePdf(data: InvoicePdfData): Uint8Array {
   const borderGray = '0.80 0.84 0.88' // #ccd6e0
   const bgLight = '0.96 0.97 0.98' // #f5f7fa
 
-  const docTitle = data.documentTitle || (data.status === 'Draft' ? 'DRAFT INVOICE' : 'TAX INVOICE')
-  const invNo = data.invoiceNo || 'DRAFT (NO NUMBER)'
+  const isProForma = Boolean(
+    data.isProForma ||
+    (data.documentTitle && data.documentTitle.toLowerCase().includes('pro forma')) ||
+    (data.status && data.status.toLowerCase().includes('pro forma'))
+  )
+
+  const docTitle = isProForma
+    ? (data.documentTitle || 'PRO FORMA INVOICE — not a tax invoice')
+    : (data.documentTitle || (data.status === 'Draft' ? 'DRAFT INVOICE' : 'TAX INVOICE'))
+  const invNo = isProForma
+    ? (data.bookingNo && data.bookingNo !== '—' ? `BOOKING: ${data.bookingNo}` : 'PRO FORMA')
+    : (data.invoiceNo || 'DRAFT (NO NUMBER)')
   const bookingNo = data.bookingNo || '—'
   const issueDate = formatAd(data.issueDateAd ? new Date(data.issueDateAd) : new Date())
-  const dueDate = data.dueDateAd ? formatAd(new Date(data.dueDateAd)) : 'Due on Receipt'
+  const dueDate = isProForma
+    ? 'Valid for 7 days'
+    : (data.dueDateAd ? formatAd(new Date(data.dueDateAd)) : 'Due on Receipt')
 
   const companyName = data.company?.name.trim()
   if (!companyName) throw new Error('Save the organisation name in Settings before exporting an invoice.')
@@ -202,12 +217,19 @@ export function generateInvoicePdf(data: InvoicePdfData): Uint8Array {
 
   // Document Title (Top Right)
   streamOps.push(`${darkSlate} rg`)
-  streamOps.push(`BT /F2 18 Tf 380 776 Td (${escapePdfText(docTitle)}) Tj ET`)
-  streamOps.push(`${mutedText} rg`)
-  streamOps.push(`BT /F3 11 Tf 380 760 Td (${escapePdfText(invNo)}) Tj ET`)
-  if (data.status) {
-    const statusText = `STATUS: ${data.status.toUpperCase()}`
-    streamOps.push(`BT /F2 9 Tf 380 746 Td (${escapePdfText(statusText)}) Tj ET`)
+  if (isProForma) {
+    streamOps.push(`BT /F2 12.5 Tf 270 776 Td (${escapePdfText(docTitle)}) Tj ET`)
+    streamOps.push(`${mutedText} rg`)
+    streamOps.push(`BT /F3 10 Tf 270 760 Td (${escapePdfText(invNo)}) Tj ET`)
+    streamOps.push(`BT /F2 8.5 Tf 270 746 Td (STATUS: PRO FORMA) Tj ET`)
+  } else {
+    streamOps.push(`BT /F2 18 Tf 380 776 Td (${escapePdfText(docTitle)}) Tj ET`)
+    streamOps.push(`${mutedText} rg`)
+    streamOps.push(`BT /F3 11 Tf 380 760 Td (${escapePdfText(invNo)}) Tj ET`)
+    if (data.status) {
+      const statusText = `STATUS: ${data.status.toUpperCase()}`
+      streamOps.push(`BT /F2 9 Tf 380 746 Td (${escapePdfText(statusText)}) Tj ET`)
+    }
   }
 
   // Header Divider
@@ -242,7 +264,16 @@ export function generateInvoicePdf(data: InvoicePdfData): Uint8Array {
   streamOps.push(`BT /F2 9 Tf 320 710 Td (RENTAL REFERENCE:) Tj ET`)
   streamOps.push(`${mutedText} rg`)
   streamOps.push(`BT /F1 9 Tf 320 696 Td (Booking Reference: ) Tj /F3 9 Tf (${escapePdfText(bookingNo)}) Tj ET`)
-  if (data.project) {
+  if (isProForma) {
+    if (data.project) {
+      streamOps.push(`BT /F1 9 Tf 320 682 Td (Project: ) Tj /F2 9 Tf (${escapePdfText(data.project)}) Tj ET`)
+      streamOps.push(`BT /F1 9 Tf 320 668 Td (Issue Date: ${escapePdfText(issueDate)}) Tj ET`)
+      streamOps.push(`BT /F2 9 Tf 320 654 Td (Validity: Valid for 7 days) Tj ET`)
+    } else {
+      streamOps.push(`BT /F1 9 Tf 320 682 Td (Issue Date: ${escapePdfText(issueDate)}) Tj ET`)
+      streamOps.push(`BT /F2 9 Tf 320 668 Td (Validity: Valid for 7 days) Tj ET`)
+    }
+  } else if (data.project) {
     streamOps.push(`BT /F1 9 Tf 320 682 Td (Project: ) Tj /F2 9 Tf (${escapePdfText(data.project)}) Tj ET`)
     streamOps.push(`BT /F1 9 Tf 320 668 Td (Issue Date: ${escapePdfText(issueDate)}) Tj ET`)
     streamOps.push(`BT /F1 9 Tf 320 654 Td (Due Date: ${escapePdfText(dueDate)}) Tj ET`)
@@ -306,14 +337,16 @@ export function generateInvoicePdf(data: InvoicePdfData): Uint8Array {
   }
 
   // Financial summary block
+  const hasAdvance = isProForma && data.advanceDuePaisa !== undefined && data.advanceDuePaisa !== null
+  const summaryBoxHeight = hasAdvance ? 122 : 110
   const summaryBoxY = curY - 10
   const sumLeft = 320
   const sumWidth = 235
 
   streamOps.push(`${bgLight} rg`)
-  streamOps.push(`${sumLeft} ${summaryBoxY - 110} ${sumWidth} 110 re f`)
+  streamOps.push(`${sumLeft} ${summaryBoxY - summaryBoxHeight} ${sumWidth} ${summaryBoxHeight} re f`)
   streamOps.push(`${borderGray} RG 0.5 w`)
-  streamOps.push(`${sumLeft} ${summaryBoxY - 110} ${sumWidth} 110 re S`)
+  streamOps.push(`${sumLeft} ${summaryBoxY - summaryBoxHeight} ${sumWidth} ${summaryBoxHeight} re S`)
 
   const addSummaryRow = (label: string, value: string, yOffset: number, bold = false) => {
     streamOps.push(bold ? `${darkSlate} rg` : `${mutedText} rg`)
@@ -322,28 +355,46 @@ export function generateInvoicePdf(data: InvoicePdfData): Uint8Array {
     streamOps.push(`BT /${bold ? 'F2' : 'F1'} 8.5 Tf ${sumLeft + 140} ${summaryBoxY - yOffset} Td (${escapePdfText(value)}) Tj ET`)
   }
 
-  addSummaryRow('Subtotal:', formatPaisaOrZero(data.subtotalPaisa), 18)
+  addSummaryRow('Subtotal:', formatPaisaOrZero(data.subtotalPaisa), 16)
   if (data.discountPaisa && Number(data.discountPaisa) > 0) {
     const discLabel = data.discountPercent ? `Discount (${data.discountPercent}%):` : 'Discount:'
-    addSummaryRow(discLabel, `-${formatPaisaOrZero(data.discountPaisa)}`, 32)
+    addSummaryRow(discLabel, `-${formatPaisaOrZero(data.discountPaisa)}`, 28)
   }
-  addSummaryRow('Taxable Amount:', formatPaisaOrZero(data.taxablePaisa), 46)
-  const vatLabel = data.vatPercent !== undefined && data.vatPercent !== null ? `VAT (${data.vatPercent}%):` : 'VAT (13%):'
-  addSummaryRow(vatLabel, formatPaisaOrZero(data.vatPaisa), 60)
+  addSummaryRow('Taxable Amount:', formatPaisaOrZero(data.taxablePaisa), 40)
+  const vatLabel = isProForma
+    ? (data.vatPercent !== undefined && data.vatPercent !== null ? `Estimated VAT (${data.vatPercent}%):` : 'Estimated VAT (13%):')
+    : (data.vatPercent !== undefined && data.vatPercent !== null ? `VAT (${data.vatPercent}%):` : 'VAT (13%):')
+  addSummaryRow(vatLabel, formatPaisaOrZero(data.vatPaisa), 52)
 
   // Grand Total highlight bar
+  const totalBarY = hasAdvance ? 76 : 88
   streamOps.push(`${darkSlate} rg`)
-  streamOps.push(`${sumLeft} ${summaryBoxY - 88} ${sumWidth} 24 re f`)
+  streamOps.push(`${sumLeft} ${summaryBoxY - totalBarY} ${sumWidth} 22 re f`)
   streamOps.push(`1 1 1 rg`)
-  streamOps.push(`BT /F2 10 Tf ${sumLeft + 12} ${summaryBoxY - 76} Td (TOTAL AMOUNT:) Tj ET`)
-  streamOps.push(`BT /F2 10 Tf ${sumLeft + 135} ${summaryBoxY - 76} Td (${escapePdfText(formatPaisaOrZero(data.totalPaisa))}) Tj ET`)
+  streamOps.push(`BT /F2 9.5 Tf ${sumLeft + 12} ${summaryBoxY - totalBarY + 6} Td (TOTAL AMOUNT:) Tj ET`)
+  streamOps.push(`BT /F2 9.5 Tf ${sumLeft + 135} ${summaryBoxY - totalBarY + 6} Td (${escapePdfText(formatPaisaOrZero(data.totalPaisa))}) Tj ET`)
 
-  // Outstanding / Paid balance
-  addSummaryRow('Paid Amount:', formatPaisaOrZero(data.paidPaisa || 0), 98)
-  addSummaryRow('Outstanding Balance:', formatPaisaOrZero(data.outstandingPaisa ?? data.totalPaisa), 108, true)
+  if (hasAdvance) {
+    addSummaryRow('Advance Due:', formatPaisaOrZero(data.advanceDuePaisa), 90, true)
+    addSummaryRow('Paid Amount:', formatPaisaOrZero(data.paidPaisa || 0), 102)
+    addSummaryRow('Estimated Balance:', formatPaisaOrZero(data.outstandingPaisa ?? data.totalPaisa), 114, true)
+  } else {
+    addSummaryRow('Paid Amount:', formatPaisaOrZero(data.paidPaisa || 0), 98)
+    addSummaryRow('Outstanding Balance:', formatPaisaOrZero(data.outstandingPaisa ?? data.totalPaisa), 108, true)
+  }
 
   // Notes and payment details (left of summary box)
-  if (data.notes) {
+  if (isProForma) {
+    streamOps.push(`${darkSlate} rg`)
+    streamOps.push(`BT /F2 8.5 Tf 40 ${summaryBoxY - 16} Td (PRO FORMA ESTIMATE & PAYMENT:) Tj ET`)
+    streamOps.push(`${mutedText} rg`)
+    streamOps.push(`BT /F1 8 Tf 40 ${summaryBoxY - 28} Td (This pro forma is not a tax invoice. Valid for 7 days.) Tj ET`)
+    streamOps.push(`BT /F1 8 Tf 40 ${summaryBoxY - 40} Td (Payment details: Bank transfer, Fonepay, eSewa or Cash at desk.) Tj ET`)
+    if (data.notes) {
+      const cleanNotes = escapePdfText(data.notes).slice(0, 100)
+      streamOps.push(`BT /F1 8 Tf 40 ${summaryBoxY - 54} Td (Notes: ${cleanNotes}) Tj ET`)
+    }
+  } else if (data.notes) {
     streamOps.push(`${darkSlate} rg`)
     streamOps.push(`BT /F2 8.5 Tf 40 ${summaryBoxY - 18} Td (NOTES & REMARKS:) Tj ET`)
     streamOps.push(`${mutedText} rg`)
@@ -364,7 +415,11 @@ export function generateInvoicePdf(data: InvoicePdfData): Uint8Array {
   streamOps.push(`405 ${footerY - 35} 150 0.5 re S`)
   streamOps.push(`BT /F1 8 Tf 405 ${footerY - 45} Td (Client / Authorized Signatory) Tj ET`)
 
-  streamOps.push(`BT /F1 7.5 Tf 40 25 Td (${escapePdfText(`Thank you for choosing ${companyName}. Generated by Babin Rentals OS.`)}) Tj ET`)
+  streamOps.push(`BT /F1 7.5 Tf 40 25 Td (${escapePdfText(
+    isProForma
+      ? `PRO FORMA INVOICE · NOT A TAX INVOICE · VALID FOR 7 DAYS · ${companyName}`
+      : `Thank you for choosing ${companyName}. Generated by Babin Rentals OS.`
+  )}) Tj ET`)
 
   const contentStream = streamOps.join('\n')
 
