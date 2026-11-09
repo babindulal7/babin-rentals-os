@@ -1,0 +1,63 @@
+name: Mac PR smoke (temporary)
+
+# Temporary pilot: test two specific, same-repository PR heads on the owner's
+# macOS ARM64 self-hosted runners. Do not merge this workflow into main.
+on:
+  push:
+    branches:
+      - ci/mac-pr-smoke-20261109
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mac-pr-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-pr-heads:
+    name: PR #${{ matrix.pr }} · typecheck + lint
+    if: github.repository == 'babindulal7/babin-rentals-os'
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - pr: 103
+            head_sha: 9e4d4601a5e5a6ccdd6cadd20ec91b1f94c082e2
+          - pr: 104
+            head_sha: 3b35ccfc9233036a99dbf7b68f589d94072fede2
+    env:
+      CI: 'true'
+      VITE_DATA_SOURCE: mock
+      NODE_OPTIONS: '--max-old-space-size=2048'
+    steps:
+      - name: Check out exact PR head, without persistent credentials
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.head_sha }}
+          persist-credentials: false
+      - name: Set up Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Verify pinned SHA
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = '${{ matrix.head_sha }}'
+          test -z "$(git status --porcelain)"
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Explain limited scope
+        if: always()
+        shell: bash
+        run: |
+          echo "PR #${{ matrix.pr }} at ${{ matrix.head_sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo 'Mac smoke checks only; not the full Windows CI / database gates / release approval.' >> "$GITHUB_STEP_SUMMARY"
