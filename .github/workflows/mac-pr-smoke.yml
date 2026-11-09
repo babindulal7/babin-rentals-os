@@ -1,6 +1,6 @@
 name: Mac PR smoke (temporary)
 
-# Temporary pilot: test two specific, same-repository PR heads on the owner's
+# Temporary pilot: test five specific, same-repository PR heads on the owner's
 # macOS ARM64 self-hosted runners. Do not merge this workflow into main.
 on:
   push:
@@ -25,10 +25,16 @@ jobs:
       max-parallel: 2
       matrix:
         include:
-          - pr: 103
-            head_sha: 9e4d4601a5e5a6ccdd6cadd20ec91b1f94c082e2
-          - pr: 104
-            head_sha: 3b35ccfc9233036a99dbf7b68f589d94072fede2
+          - pr: 114
+            head_sha: 493471940bf9026ac1bfc711c2e13849055d351a
+          - pr: 105
+            head_sha: 74ab019ffae074b21299a259db52205b8ab3fbb3
+          - pr: 96
+            head_sha: 63daaa912346ea1186c5b49d970a8f8aa7e3b505
+          - pr: 95
+            head_sha: efdc1eb2d5131d08bc76efce61921b0e400c4866
+          - pr: 94
+            head_sha: 0c45bfaeab904dcb7a89aa9b3bdb376ad55f05c2
     env:
       CI: 'true'
       VITE_DATA_SOURCE: mock
