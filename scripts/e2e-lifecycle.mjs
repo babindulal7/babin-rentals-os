@@ -6964,6 +6964,424 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L64',
+  title: 'Offer emails to clients: RBAC gating, pre-flight test send, server-side consent filtering, and cryptographic unsubscribe (T5-12, B31, B34, B43, B50, K6, W80)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      const client1Id = '11111111-0005-4000-8000-000000000001'
+      const client2Id = '11111111-0005-4000-8000-000000000002'
+      const client3Id = '11111111-0005-4000-8000-000000000003'
+
+      // Seed 3 test clients
+      // Client 1: Active, email, consent 'Not asked' (eligible)
+      // Client 2: Active, email, consent 'Opted in' (eligible)
+      // Client 3: Active, email, consent 'Opted out' on 'Email' (ineligible)
+      await q(`
+        insert into clients (id, client_uuid, client_code, name, email, phone, status, created_by)
+        values ($1, gen_random_uuid(), 'C-9901', 'Eligible Client Alpha', 'alpha@client.test', '+9779811111101', 'Active', $2)
+        on conflict (id) do update set email = excluded.email, status = 'Active'
+      `, [client1Id, U.Owner])
+      await q(`
+        insert into clients (id, client_uuid, client_code, name, email, phone, status, created_by)
+        values ($1, gen_random_uuid(), 'C-9902', 'Eligible Client Beta', 'beta@client.test', '+9779811111102', 'Active', $2)
+        on conflict (id) do update set email = excluded.email, status = 'Active'
+      `, [client2Id, U.Owner])
+      await q(`
+        insert into clients (id, client_uuid, client_code, name, email, phone, status, created_by)
+        values ($1, gen_random_uuid(), 'C-9903', 'Opted Out Client Gamma', 'gamma@client.test', '+9779811111103', 'Active', $2)
+        on conflict (id) do update set email = excluded.email, status = 'Active'
+      `, [client3Id, U.Owner])
+
+      // Explicitly set Client 2 to 'Opted in' with provenance
+      await q(`
+        insert into client_marketing_consents (id, client_uuid, client_id, channel, state, opted_in_at, opt_in_source, opt_in_actor_id)
+        values (gen_random_uuid(), gen_random_uuid(), $1, 'Email', 'Opted in', now(), 'booking_contract', $2)
+        on conflict (client_id, channel) do update set state = 'Opted in', opted_in_at = now()
+      `, [client2Id, U.Owner])
+
+      // Explicitly set Client 3 to 'Opted out'
+      await q(`
+        insert into client_marketing_consents (id, client_uuid, client_id, channel, state, opted_out_at, opt_out_origin_channel)
+        values (gen_random_uuid(), gen_random_uuid(), $1, 'Email', 'Opted out', now(), 'Email')
+        on conflict (client_id, channel) do update set state = 'Opted out', opted_out_at = now()
+      `, [client3Id])
+
+      // 1. RBAC: Coordinator cannot create or queue offer campaigns (42501)
+      await as('Coordinator', async () => {
+        await q('savepoint coord_probe')
+        try {
+          await refuses(
+            'Coordinator cannot create an offer campaign',
+            `select save_offer_campaign(gen_random_uuid(), 'Special Promo', 'Body markdown content here...', null, 'Book', 'https://book.babinrentals.com', '{}'::jsonb)`,
+            [],
+            /42501|Permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint coord_probe')
+        }
+      })
+
+      // 2. RBAC: Warehouse cannot view campaigns or preview audiences (42501)
+      await as('Warehouse', async () => {
+        await q('savepoint wh_probe')
+        try {
+          await refuses(
+            'Warehouse cannot preview offer campaign audience',
+            `select * from preview_offer_campaign_audience('{}'::jsonb)`,
+            [],
+            /42501|Permission denied/i,
+          )
+        } finally {
+          await q('rollback to savepoint wh_probe')
+        }
+      })
+
+      // 3. Manager creates a draft campaign
+      let campaignId = null
+      const campaignUuid = '99999999-0005-4000-8000-000000000088'
+      await as('Manager', async () => {
+        const rows = (await q(`
+          select save_offer_campaign(
+            $1::uuid,
+            'Monsoon Lighting Sale — 25% Off ARRI SkyPanels',
+            'Upgrade your production with our soft daylight fixtures this week only.',
+            'https://babinrentals.com/assets/promo-skypanel.jpg',
+            'Reserve Now',
+            'https://book.babinrentals.com',
+            '{}'::jsonb
+          ) as id
+        `, [campaignUuid])).rows
+        campaignId = rows[0].id
+        assert(campaignId, 'Manager successfully created draft offer campaign')
+
+        // Preview audience: Client 1 and Client 2 eligible, Client 3 opted out
+        const preview = (await q(`select * from preview_offer_campaign_audience('{}'::jsonb)`)).rows[0]
+        assertEq(preview.opted_out_count, 1, 'Audience preview accurately counted 1 opted-out client')
+        assert(preview.eligible_count >= 2, 'Audience preview found at least 2 eligible clients')
+
+        // 4. Pre-flight gate: queueing without a test send is refused
+        await q('savepoint preflight_probe')
+        try {
+          await refuses(
+            'Queueing an offer campaign without a test send is refused by database gate (P0001)',
+            `select queue_offer_campaign($1::uuid, gen_random_uuid())`,
+            [campaignId],
+            /P0001|A test email must be sent/i,
+          )
+        } finally {
+          await q('rollback to savepoint preflight_probe')
+        }
+
+        // 5. Manager records a test send to self
+        const testSent = (await q(`
+          select record_offer_campaign_test_send($1::uuid, 'manager@babinrentals.test')
+        `, [campaignId])).rows[0].record_offer_campaign_test_send
+        assertEq(testSent, true, 'Manager recorded pre-flight test send')
+
+        // 6. Manager queues the campaign
+        const queueUuid = '99999999-0005-4000-8000-000000000089'
+        const queueResult = (await q(`
+          select queue_offer_campaign($1::uuid, $2::uuid) as res
+        `, [campaignId, queueUuid])).rows[0].res
+        assertEq(queueResult.status, 'queued', 'Campaign status is now queued')
+        assert(queueResult.recipient_count >= 2, 'Campaign queued at least 2 recipients')
+
+        // Verify opted-out Client 3 was NEVER queued
+        const c3Rows = (await q(`
+          select * from offer_campaign_recipients where campaign_id = $1 and client_id = $2
+        `, [campaignId, client3Id])).rows
+        assertEq(c3Rows.length, 0, 'Opted-out Client Gamma was strictly excluded from recipient roster (B34)')
+
+        // 7. Idempotency: double tap on Send returns cached receipt without duplicating recipients
+        const replayResult = (await q(`
+          select queue_offer_campaign($1::uuid, $2::uuid) as res
+        `, [campaignId, queueUuid])).rows[0].res
+        assertEq(replayResult.idempotent_replay, true, 'Replaying queue returns idempotent replay')
+
+        // 8. One-click cryptographic unsubscribe: Client 1 clicks unsubscribe link
+        // Manager cannot directly update recipient rows (proving RLS denies direct writes).
+        // For test setup of known raw token, reset role to postgres, update token hash, then call process_client_unsubscribe.
+        const testRawToken = 'unsub-test-token-client-1-secret'
+        const testTokenHash = (await q(`select encode(sha256(convert_to($1, 'UTF8')), 'hex') as h`, [testRawToken])).rows[0].h
+        await db.exec('reset role;')
+        await q(`
+          update offer_campaign_recipients
+          set unsubscribe_token_hash = $1
+          where campaign_id = $2 and client_id = $3
+        `, [testTokenHash, campaignId, client1Id])
+
+        // Call unauthenticated unsubscribe (service_role / anon via edge function)
+        const unsubResult = (await q(`
+          select process_client_unsubscribe($1) as res
+        `, [testRawToken])).rows[0].res
+        assertEq(unsubResult.ok, true, 'Unsubscribe call returned ok')
+
+        // Switch back to Manager session to verify view reads
+        await db.exec(`set role authenticated; select set_config('app.current_user_id', '${U.Manager}', false);`)
+
+        // Verify recipient status updated to unsubscribed
+        const c1Recipient = (await q(`
+          select status from offer_campaign_recipients where campaign_id = $1 and client_id = $2
+        `, [campaignId, client1Id])).rows[0]
+        assertEq(c1Recipient.status, 'unsubscribed', 'Client 1 recipient row marked unsubscribed')
+
+        // Verify Client 1 marketing consent transitioned to Opted out
+        const c1Consent = (await q(`
+          select state from client_marketing_consents where client_id = $1 and channel = 'Email'
+        `, [client1Id])).rows[0]
+        assertEq(c1Consent.state, 'Opted out', 'Client 1 email marketing consent is now Opted out')
+
+        // 9. Subsequent campaign audience automatically skips Client 1
+        const preview2 = (await q(`select * from preview_offer_campaign_audience('{}'::jsonb)`)).rows[0]
+        assertEq(preview2.opted_out_count, 2, 'Subsequent campaign accurately counts both Client 1 and Client 3 as opted out')
+      })
+    })
+  },
+})
+
+
+/* ΓöÇΓöÇ Run ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
+
+STEPS.push({
+  id: 'L63',
+  title: 'Owner glossary approval: role gate, idempotency, staff read and immutable revision history (T0-12/C-6)',
+  expect: 'green',
+  async run() {
+    await undone(async () => {
+      const key = crypto.randomUUID()
+      let revision
+      await as('Owner', async () => {
+        const row = (await q('select approve_glossary_term($1,$2,$3,$4) value', [key, 'msg.pending', 'पर्खँदै', 0])).rows[0].value
+        revision = row.revision
+        assertEq(row.created_by, U.Owner, 'database derives approval actor')
+        const retry = (await q('select approve_glossary_term($1,$2,$3,$4) value', [key, 'msg.pending', 'पर्खँदै', 0])).rows[0].value
+        assertEq(retry.id, row.id, 'retry returns the same approval')
+      })
+      for (const role of ['Admin', 'Manager', 'Coordinator', 'Accounts', 'Warehouse', 'Technician', 'Driver', 'Client']) {
+        await as(role, async () => {
+          await q('savepoint glossary_role_denial')
+          await refuses(`${role} cannot approve glossary`, 'select approve_glossary_term($1,$2,$3,$4)',
+            [crypto.randomUUID(), 'msg.pending', 'अर्को', revision], /glossary.role/)
+          await q('rollback to savepoint glossary_role_denial')
+          await q('release savepoint glossary_role_denial')
+          assertEq(Number(await one('select count(*) from glossary_term_revisions where client_uuid=$1', [key])), role === 'Client' ? 0 : 1, `${role} glossary read`)
+        })
+      }
+      await asOwnerOfTheDatabase(async () => {
+        await refuses('glossary history is immutable', 'update glossary_term_revisions set nepali=$1 where client_uuid=$2', ['अर्को', key], /Law 3/)
+      })
+    })
+  },
+})
+
+
+STEPS.push({
+  id: 'L65',
+  title: 'Bulk edit products: rates by % is Owner-only, rounded to whole rupees, Manager refused, Warehouse money column refused, re-sent batch idempotent (T4-12, B32, B33, 0226)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      // Pick two products from seeded products
+      const prods = (await q(`select id, name, daily_rate, weekly_rate, monthly_rate from products where daily_rate is not null and daily_rate > 0 order by name limit 2`)).rows
+      assert(prods.length >= 2, 'Found at least 2 products for bulk edit')
+      const p1 = prods[0]
+      const p2 = prods[1]
+      const batchKey1 = '88888888-0001-4000-8000-000000000063'
+      const batchKey2 = '88888888-0002-4000-8000-000000000063'
+      const batchKey3 = '88888888-0003-4000-8000-000000000063'
+
+      // 1. Manager attempts rate adjustment by percentage -> REFUSED (B32: Owner-only)
+      await as('Manager', async () => {
+        let denied = false
+        try {
+          await q(
+            `select bulk_update_products($1::uuid[], 'rates_percentage', $2::jsonb, $3::uuid)`,
+            [[p1.id, p2.id], JSON.stringify({ percentage: 5 }), batchKey1]
+          )
+        } catch (e) {
+          denied = true
+          assert(
+            String(e.message).includes('Only the Owner can adjust product rental rates by percentage') ||
+            String(e.message).includes('Permission denied'),
+            `Manager rate percentage change refused with permission error: ${e.message}`
+          )
+        }
+        assert(denied, 'Manager rate change by percentage was refused by database')
+      })
+
+      // 2. Warehouse attempts to touch a money column (daily_rate) -> REFUSED (Law 6)
+      await as('Warehouse', async () => {
+        let denied = false
+        try {
+          await q(
+            `select bulk_update_products($1::uuid[], 'daily_rate', $2::jsonb, $3::uuid)`,
+            [[p1.id], JSON.stringify({ daily_rate: 9999 }), batchKey1]
+          )
+        } catch (e) {
+          denied = true
+          assert(
+            String(e.message).includes('Permission denied'),
+            `Warehouse money update refused with permission error: ${e.message}`
+          )
+        }
+        assert(denied, 'Warehouse touching a money column was refused by database')
+      })
+
+      // 3. Owner applies rate increase (+5%) -> SUCCEEDS, rates rounded to whole rupees (B32)
+      let ownerResult
+      await as('Owner', async () => {
+        const res = await q(
+          `select bulk_update_products($1::uuid[], 'rates_percentage', $2::jsonb, $3::uuid)`,
+          [[p1.id, p2.id], JSON.stringify({ percentage: 5 }), batchKey2]
+        )
+        ownerResult = res.rows[0].bulk_update_products
+        assertEq(ownerResult.updated_count, 2, 'Owner updated 2 products')
+
+        // Verify rounding to whole rupees via products_v
+        const updated1 = (await q(`select daily_rate from products_v where id = $1`, [p1.id])).rows[0]
+        const expected1 = Math.round(Number(p1.daily_rate) * 1.05)
+        assertEq(Number(updated1.daily_rate), expected1, 'daily_rate is rounded to whole rupees')
+      })
+
+      // Verify audit rows created with batch_id (checked with system connection)
+      const auditRows = (await q(`select * from audit_events where record_id in ($1, $2) and (new_values->>'batch_id') = $3`, [p1.id, p2.id, batchKey2])).rows
+      assertEq(auditRows.length, 2, 'One audit row per product created with batch_id')
+
+      // 4. Idempotency: Re-sending the same batch changes nothing and returns the cached receipt
+      const auditCountBefore = (await q(`select count(*) as c from audit_events where (new_values->>'batch_id') = $1`, [batchKey2])).rows[0].c
+      await as('Owner', async () => {
+        const resReplay = await q(
+          `select bulk_update_products($1::uuid[], 'rates_percentage', $2::jsonb, $3::uuid)`,
+          [[p1.id, p2.id], JSON.stringify({ percentage: 5 }), batchKey2]
+        )
+        const replayResult = resReplay.rows[0].bulk_update_products
+        assertEq(replayResult.batch_id, ownerResult.batch_id, 'Replay returned identical cached batch_id')
+        assertEq(replayResult.updated_count, ownerResult.updated_count, 'Replay returned identical updated_count')
+      })
+      const auditCountAfter = (await q(`select count(*) as c from audit_events where (new_values->>'batch_id') = $1`, [batchKey2])).rows[0].c
+      assertEq(auditCountBefore, auditCountAfter, 'Re-sent batch created no additional audit rows')
+
+      // 5. Manager updates a non-financial allowed field (prep_time_minutes) -> SUCCEEDS
+      await as('Manager', async () => {
+        const res = await q(
+          `select bulk_update_products($1::uuid[], 'prep_time_minutes', $2::jsonb, $3::uuid)`,
+          [[p1.id], JSON.stringify({ prep_time_minutes: 25 }), batchKey3]
+        )
+        const managerResult = res.rows[0].bulk_update_products
+        assertEq(managerResult.updated_count, 1, 'Manager successfully updated non-financial field in bulk')
+        const updated = (await q(`select prep_time_minutes from products_v where id = $1`, [p1.id])).rows[0]
+        assertEq(Number(updated.prep_time_minutes), 25, 'prep_time_minutes updated to 25')
+      })
+    })
+  },
+})
+
+
+/* ΓöÇΓöÇ Run ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
+
+
+STEPS.push({
+  id: 'L66',
+  title: 'Message and document texts: Owner/Admin edit, Manager refused, unknown placeholder refused, version restore (T5-13, B20, Law 3)',
+  expect: 'green',
+  run: async () => {
+    // 1. Manager cannot change a template (B20)
+    await as('Manager', async () => {
+      await refuses(
+        'Manager cannot save message template',
+        `select public.save_message_template(
+          gen_random_uuid(),
+          'email.pickup_reminder',
+          'Subject',
+          'Hello {{client_name}}, your booking {{booking_number}} is ready'
+        )`,
+        [],
+        /Only Owner and Admin can edit message and document texts/i,
+      )
+    })
+
+    // 2. An unknown placeholder is refused on save
+    await as('Owner', async () => {
+      await refuses(
+        'unknown placeholder is refused on save',
+        `select public.save_message_template(
+          gen_random_uuid(),
+          'email.pickup_reminder',
+          'Subject',
+          'Hello {{client_name}}, your secret discount is {{secret_discount_code}}'
+        )`,
+        [],
+        /Unknown placeholder "{{secret_discount_code}}" is refused/i,
+      )
+    })
+
+    // 3. Owner saves a valid new version of pickup_reminder
+    const clientUuid1 = 'a0000001-0000-0000-0000-000000000001'
+    let v2Res
+    await as('Owner', async () => {
+      const res = await q(
+        `select public.save_message_template(
+          $1::uuid,
+          'email.pickup_reminder',
+          'Updated Reminder: {{booking_number}}',
+          'Hello {{client_name}}, your gear for booking {{booking_number}} will be ready on {{pickup_date}} at {{pickup_time}}. Please bring your valid ID.'
+        )`,
+        [clientUuid1],
+      )
+      v2Res = res.rows[0].save_message_template
+    })
+
+    assertEq(v2Res.version, 2, 'saved version is 2')
+    assertEq(v2Res.is_active, true, 'version 2 is active')
+
+    // Verify version 1 is now inactive
+    const v1Row = (await q(`select is_active, version from public.message_templates where template_key = 'email.pickup_reminder' and version = 1`)).rows[0]
+    assertEq(v1Row.is_active, false, 'version 1 is now deactivated')
+
+    // 4. Idempotency check: re-sending with same client_uuid returns existing version without incrementing
+    await as('Owner', async () => {
+      const res = await q(
+        `select public.save_message_template(
+          $1::uuid,
+          'email.pickup_reminder',
+          'Updated Reminder: {{booking_number}}',
+          'Different body that should be ignored on duplicate client_uuid'
+        )`,
+        [clientUuid1],
+      )
+      assertEq(res.rows[0].save_message_template.version, 2, 'idempotent retry returns version 2')
+    })
+
+    // 5. Restore version 1 creates version 3 as an exact copy of version 1
+    const clientUuid2 = 'a0000001-0000-0000-0000-000000000002'
+    let v3Res
+    await as('Owner', async () => {
+      const res = await q(
+        `select public.restore_message_template(
+          $1::uuid,
+          'email.pickup_reminder',
+          1
+        )`,
+        [clientUuid2],
+      )
+      v3Res = res.rows[0].restore_message_template
+    })
+
+    assertEq(v3Res.version, 3, 'restored template is minted as version 3 (Law 3 append-only)')
+    assertEq(v3Res.is_active, true, 'version 3 is active')
+    assert(v3Res.body.includes('authorized ID'), 'restored body matches version 1 text')
+
+    // Verify audit events exist
+    const auditCount = (await q(
+      `select count(*) as cnt from public.audit_events where table_name = 'message_templates' and (client_uuid = $1 or client_uuid = $2)`,
+      [clientUuid1, clientUuid2],
+    )).rows[0].cnt
+    assertEq(Number(auditCount), 2, 'exactly two audit events were recorded')
+  },
+})
+
 
 /* ΓöÇΓöÇ Run ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
@@ -6971,6 +7389,87 @@ await seed()
 
 const results = []
 let hardFailure = null
+
+STEPS.push({
+  id: 'L65',
+  title: 'Membership plan change: restart the term by default, keep the original join date when chosen, refuse keeping it after the term ended (R-9.2, migration 0226)',
+  expect: 'green',
+  run: async () => {
+    let keepClientId
+    let academyPlanId
+    let creatorPlanId
+
+    await asOwnerOfTheDatabase(async () => {
+      const clientCode = await one("select next_document_number('client')")
+      keepClientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+        values (gen_random_uuid(), '${clientCode}', 'L65 Keep Join Client', '+9779800009965', 'Active', '${U.Owner}')
+        returning id`)).rows[0].id
+
+      academyPlanId = (await q(`insert into membership_plans (client_uuid, level, label, annual_fee, term_months, display_order, status)
+        values (gen_random_uuid(), 'Academy', 'Access Member', 12000.00, 12, 91, 'Active')
+        on conflict (level) do update set annual_fee = 12000.00, term_months = 12, status = 'Active'
+        returning id`)).rows[0].id
+
+      creatorPlanId = (await q(`insert into membership_plans (client_uuid, level, label, annual_fee, term_months, display_order, status)
+        values (gen_random_uuid(), 'Creator', 'Partner', 20000.00, 12, 92, 'Active')
+        on conflict (level) do update set annual_fee = 20000.00, term_months = 12, status = 'Active'
+        returning id`)).rows[0].id
+
+      // A live Creator membership that started 1 Jan 2027 (term runs to 1 Jan 2028).
+      await q(`insert into client_memberships (client_uuid, client_id, plan_id, join_date, fee_paid, created_by)
+        values (gen_random_uuid(), '${keepClientId}', '${creatorPlanId}', '2027-01-01', 20000, '${U.Owner}')`)
+    })
+
+    const dateOnly = (value) => String(value).slice(0, 10)
+
+    await as('Coordinator', async () => {
+      // 1. Default: restart the term from the change date (no keep flag sent)
+      const restartRes = (await q(`select change_client_membership(jsonb_build_object(
+        'client_id', '${keepClientId}',
+        'client_uuid', gen_random_uuid(),
+        'plan_id', '${academyPlanId}',
+        'effective_date', '2027-06-01'
+      ))`)).rows[0]
+      const restartOut = typeof restartRes.change_client_membership === 'string'
+        ? JSON.parse(restartRes.change_client_membership)
+        : restartRes.change_client_membership
+      assertEq(dateOnly(restartOut.joined_on), '2027-06-01', 'Default change restarts the term from the change date')
+      assertEq(restartOut.join_date_kept, false, 'Default change does not keep the join date')
+    })
+
+    // The term that restarted on 1 Jun 2027 is the live row now; move it back to Creator keeping its join date.
+    await as('Coordinator', async () => {
+      const keepRes = (await q(`select change_client_membership(jsonb_build_object(
+        'client_id', '${keepClientId}',
+        'client_uuid', gen_random_uuid(),
+        'plan_id', '${creatorPlanId}',
+        'effective_date', '2027-07-01',
+        'keep_join_date', true
+      ))`)).rows[0]
+      const keepOut = typeof keepRes.change_client_membership === 'string'
+        ? JSON.parse(keepRes.change_client_membership)
+        : keepRes.change_client_membership
+      assertEq(dateOnly(keepOut.joined_on), '2027-06-01', 'Keeping the join date keeps the live row\'s original join date')
+      assertEq(keepOut.join_date_kept, true, 'The result says the join date was kept')
+    })
+
+    // 2. Keeping the join date after the term has ended is refused: it is a renewal.
+    await as('Coordinator', async () => {
+      await refuses(
+        'Keeping the join date after the term has ended is refused',
+        `select change_client_membership(jsonb_build_object(
+          'client_id', '${keepClientId}',
+          'client_uuid', gen_random_uuid(),
+          'plan_id', '${academyPlanId}',
+          'effective_date', '2028-08-01',
+          'keep_join_date', true
+        ))`,
+        [],
+        /GATE:membership\.keep_join_lapsed/i,
+      )
+    })
+  },
+})
 
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {

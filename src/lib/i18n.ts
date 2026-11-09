@@ -43,6 +43,10 @@ import {
   FULL_CATALOGUE_EN,
   FULL_CATALOGUE_NE,
 } from '../i18n/catalogues'
+import { canEnable, NEPALI_UNAVAILABLE } from './languageReadiness'
+import { getLanguagePreference } from './languagePreferenceStore'
+import { applyGlossaryText, glossaryVersion, subscribeGlossary } from './glossaryStore'
+export { canEnable } from './languageReadiness'
 
 export type Language = 'en' | 'ne'
 
@@ -231,6 +235,7 @@ export function t(
     template = FULL_CATALOGUE_EN[key] ?? EN[key as StringKey] ?? key
   }
 
+  template = applyGlossaryText(template, lang)
   if (params && typeof template === 'string') {
     return template.replace(/\{(\w+)\}/g, (_, k: string) => {
       const val = params[k]
@@ -370,14 +375,6 @@ export function detailedCoverage(lang: Language): DetailedCoverage {
  */
 export const COVERAGE_THRESHOLD = 100
 
-export function canEnable(lang: Language, moduleName?: string): boolean {
-  if (lang === 'en') return true
-  if (moduleName) {
-    const mod = moduleCoverage(lang)[moduleName]
-    return mod ? mod.percent >= COVERAGE_THRESHOLD : false
-  }
-  return coverage(lang).percent >= COVERAGE_THRESHOLD
-}
 
 /**
  * The Devanagari faces the NE toggle needs, and which of them exist.
@@ -454,8 +451,12 @@ export function resetFontLoadingForTest(): void {
  * switches voice on, and what the browser uses to pick a fallback face when
  * Hind has not arrived yet.
  */
+let languageApplication = 0
 export async function applyLanguage(lang: Language): Promise<void> {
   if (typeof document === 'undefined') return
+  const application = ++languageApplication
+  // Persisted preferences cannot bypass release acceptance; English is always safe.
+  if (!canEnable(lang)) lang = 'en'
   const root = document.documentElement
   root.setAttribute('lang', lang === 'ne' ? 'ne' : 'en')
 
@@ -463,6 +464,7 @@ export async function applyLanguage(lang: Language): Promise<void> {
     /* Fonts first, then the swap — setting the family before the face has
        arrived flashes a fallback that is usually the wrong script entirely. */
     await loadNepaliFonts()
+    if (application !== languageApplication) return
     root.style.setProperty('--font-display', 'var(--font-ne-display)')
     root.style.setProperty('--font-body', 'var(--font-ne-body)')
   } else {
@@ -476,23 +478,21 @@ export async function applyLanguage(lang: Language): Promise<void> {
   }
 }
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useMemo, useSyncExternalStore } from 'react'
 
 /** Synchronously checks active document language. */
 export function getCurrentLanguage(): Language {
   if (typeof document !== 'undefined') {
     const docLang = document.documentElement.getAttribute('lang')
-    if (docLang === 'ne') return 'ne'
+    if (docLang === 'ne' && canEnable('ne')) return 'ne'
   }
-  if (typeof window !== 'undefined') {
-    const stored = window.localStorage.getItem('br.settings.language')
-    if (stored === 'नेपाली') return 'ne'
-  }
-  return 'en'
+  const preferred = getLanguagePreference().language
+  return canEnable(preferred) ? preferred : 'en'
 }
 
 /** Reactive hook for components that adapt their typography or preset labels to the active language. */
 export function useCurrentLanguage(): Language {
+  useSyncExternalStore(subscribeGlossary, glossaryVersion, glossaryVersion)
   const [lang, setLang] = useState<Language>(() => getCurrentLanguage())
 
   useEffect(() => {
@@ -515,8 +515,9 @@ export function useCurrentLanguage(): Language {
  */
 export function useTranslation() {
   const lang = useCurrentLanguage()
-  const translate = useCallback(
-    (
+  const glossaryRevision = useSyncExternalStore(subscribeGlossary, glossaryVersion, glossaryVersion)
+  const translation = useMemo(
+    () => ({ revision: glossaryRevision, translate: (
       key: StringKey | string,
       fallbackOrParams?: string | Record<string, string | number>,
       params?: Record<string, string | number>
@@ -526,25 +527,19 @@ export function useTranslation() {
         return translated === key ? fallbackOrParams : translated
       }
       return t(key, lang, fallbackOrParams)
-    },
-    [lang]
+    } }),
+    [lang, glossaryRevision]
   )
-  return useMemo(() => ({ t: translate, lang }), [translate, lang])
+  return useMemo(() => ({ t: translation.translate, lang }), [translation, lang])
 }
 
 /** Toggles between English and Nepali, persisting to settings and applying fonts immediately. */
 export async function toggleLanguage(): Promise<Language> {
   const current = getCurrentLanguage()
   const next: Language = current === 'en' ? 'ne' : 'en'
-  const nextLabel = next === 'ne' ? 'नेपाली' : 'English'
-  if (typeof window !== 'undefined') {
-    try {
-      window.localStorage.setItem('br.settings.language', nextLabel)
-    } catch {
-      /* ignore */
-    }
-  }
-  await applyLanguage(next)
+  if (!canEnable(next)) throw new Error(NEPALI_UNAVAILABLE)
+  const { saveUserLanguage } = await import('./languagePreferences')
+  await saveUserLanguage(next)
   return next
 }
 

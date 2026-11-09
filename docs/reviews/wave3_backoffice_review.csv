@@ -1,187 +1,187 @@
-key,wave,module,screen,english,nepali_draft,screenshot_link,status,babin_fix,notes
-documents.title,3,documents,documents,Documents,कागजातहरू,https://os.babinrentals.com/screenshots/documents/documents.png,OK,,S11 approved wording
-documents.subtitle,3,documents,documents,Agreements & Paperwork,सम्झौता तथा कागजात,https://os.babinrentals.com/screenshots/documents/documents.png,OK,,S11 approved wording
-documents.tabs.agreements,3,documents,tabs,Rental Agreements,भाडा सम्झौताहरू,https://os.babinrentals.com/screenshots/documents/tabs.png,OK,,S11 approved wording
-documents.tabs.idCards,3,documents,tabs,ID Proofs,परिचयपत्रहरू,https://os.babinrentals.com/screenshots/documents/tabs.png,OK,,S11 approved wording
-documents.tabs.invoices,3,documents,tabs,Invoices,बिलहरू,https://os.babinrentals.com/screenshots/documents/tabs.png,OK,,S11 approved wording
-documents.tabs.receipts,3,documents,tabs,Receipts,रसिदहरू,https://os.babinrentals.com/screenshots/documents/tabs.png,OK,,S11 approved wording
-documents.actions.upload,3,documents,actions,Upload Document,कागजात अपलोड गर्नुहोस्,https://os.babinrentals.com/screenshots/documents/actions.png,OK,,S11 approved wording
-documents.actions.preview,3,documents,actions,Preview,पूर्वावलोकन गर्नुहोस्,https://os.babinrentals.com/screenshots/documents/actions.png,OK,,S11 approved wording
-documents.actions.download,3,documents,actions,Download,डाउनलोड गर्नुहोस्,https://os.babinrentals.com/screenshots/documents/actions.png,OK,,S11 approved wording
-documents.status.verified,3,documents,status,Verified,प्रमाणित,https://os.babinrentals.com/screenshots/documents/status.png,OK,,S11 approved wording
-documents.status.pending,3,documents,status,Pending,प्रमाणीकरण बाँकी,https://os.babinrentals.com/screenshots/documents/status.png,OK,,S11 approved wording
-documents.status.rejected,3,documents,status,Rejected,अस्वीकृत,https://os.babinrentals.com/screenshots/documents/status.png,OK,,S11 approved wording
-finance.title,3,finance,finance,Finance,वित्त,https://os.babinrentals.com/screenshots/finance/finance.png,OK,,S11 approved wording
-finance.subtitle,3,finance,finance,Accounts & Invoicing,लेखा र बिलिङ,https://os.babinrentals.com/screenshots/finance/finance.png,OK,,S11 approved wording
-finance.tabs.dashboard,3,finance,tabs,Dashboard,ड्यासबोर्ड,https://os.babinrentals.com/screenshots/finance/tabs.png,OK,,S11 approved wording
-finance.tabs.invoices,3,finance,tabs,Invoices,बिलहरू,https://os.babinrentals.com/screenshots/finance/tabs.png,OK,,S11 approved wording
-finance.tabs.payments,3,finance,tabs,Payments,भुक्तानीहरू,https://os.babinrentals.com/screenshots/finance/tabs.png,OK,,S11 approved wording
-finance.tabs.expenses,3,finance,tabs,Expenses,खर्चहरू,https://os.babinrentals.com/screenshots/finance/tabs.png,OK,,S11 approved wording
-finance.tabs.closing,3,finance,tabs,Closing,दैनिक हिसाब,https://os.babinrentals.com/screenshots/finance/tabs.png,OK,,S11 approved wording
-finance.tabs.documents,3,finance,tabs,Documents,कागजातहरू,https://os.babinrentals.com/screenshots/finance/tabs.png,OK,,S11 approved wording
-finance.tabs.reports,3,finance,tabs,Reports,प्रतिवेदनहरू,https://os.babinrentals.com/screenshots/finance/tabs.png,OK,,S11 approved wording
-finance.actions.recordPayment,3,finance,actions,Record payment,भुक्तानी दर्ता गर्नुहोस्,https://os.babinrentals.com/screenshots/finance/actions.png,OK,,S11 approved wording
-finance.actions.createInvoice,3,finance,actions,Create invoice,बिल सिर्जना गर्नुहोस्,https://os.babinrentals.com/screenshots/finance/actions.png,OK,,S11 approved wording
-finance.actions.voidInvoice,3,finance,actions,Void invoice,बिल खारेज गर्नुहोस्,https://os.babinrentals.com/screenshots/finance/actions.png,OK,,S11 approved wording
-finance.actions.viewInvoice,3,finance,actions,View invoice,बिल हेर्नुहोस्,https://os.babinrentals.com/screenshots/finance/actions.png,OK,,S11 approved wording
-finance.actions.printInvoice,3,finance,actions,Print invoice,बिल छाप्नुहोस्,https://os.babinrentals.com/screenshots/finance/actions.png,OK,,S11 approved wording
-finance.actions.downloadPdf,3,finance,actions,Download PDF,PDF डाउनलोड गर्नुहोस्,https://os.babinrentals.com/screenshots/finance/actions.png,OK,,S11 approved wording
-finance.actions.exportCsv,3,finance,actions,Export CSV,CSV निर्यात गर्नुहोस्,https://os.babinrentals.com/screenshots/finance/actions.png,OK,,S11 approved wording
-finance.actions.filter,3,finance,actions,Filter,फिल्टर,https://os.babinrentals.com/screenshots/finance/actions.png,OK,,S11 approved wording
-finance.actions.clearAll,3,finance,actions,Clear all,सबै खाली गर्नुहोस्,https://os.babinrentals.com/screenshots/finance/actions.png,OK,,S11 approved wording
-finance.actions.apply,3,finance,actions,Apply,लागू गर्नुहोस्,https://os.babinrentals.com/screenshots/finance/actions.png,OK,,S11 approved wording
-finance.status.paid,3,finance,status,Paid,चुक्ता,https://os.babinrentals.com/screenshots/finance/status.png,OK,,S11 approved wording
-finance.status.unpaid,3,finance,status,Unpaid,भुक्तानी बाँकी,https://os.babinrentals.com/screenshots/finance/status.png,OK,,S11 approved wording
-finance.status.partiallyPaid,3,finance,status,Partially Paid,आंशिक भुक्तानी,https://os.babinrentals.com/screenshots/finance/status.png,OK,,S11 approved wording
-finance.status.void,3,finance,status,Void,खारेज,https://os.babinrentals.com/screenshots/finance/status.png,OK,,S11 approved wording
-finance.status.overdue,3,finance,status,Overdue,म्याद नाघेको,https://os.babinrentals.com/screenshots/finance/status.png,OK,,S11 approved wording
-finance.kpi.rentalTotal,3,finance,kpi,Rental Total,भाडा जम्मा,https://os.babinrentals.com/screenshots/finance/kpi.png,OK,,S11 approved wording
-finance.kpi.advance,3,finance,kpi,Advance,पेशकी,https://os.babinrentals.com/screenshots/finance/kpi.png,OK,,S11 approved wording
-finance.kpi.deposit,3,finance,kpi,Deposit,धरौटी,https://os.babinrentals.com/screenshots/finance/kpi.png,OK,,S11 approved wording
-finance.kpi.outstanding,3,finance,kpi,Outstanding,बाँकी,https://os.babinrentals.com/screenshots/finance/kpi.png,OK,,S11 approved wording
-finance.kpi.balance,3,finance,kpi,Balance,बाँकी रकम,https://os.babinrentals.com/screenshots/finance/kpi.png,OK,,S11 approved wording
-finance.kpi.receivedThisMonth,3,finance,kpi,Received This Month,यस महिना प्राप्त,https://os.babinrentals.com/screenshots/finance/kpi.png,OK,,S11 approved wording
-finance.kpi.outstandingInvoices,3,finance,kpi,Outstanding Invoices,बाँकी बिलहरू,https://os.babinrentals.com/screenshots/finance/kpi.png,OK,,S11 approved wording
-finance.kpi.activeDeposits,3,finance,kpi,Active Deposits,सक्रिय धरौटी,https://os.babinrentals.com/screenshots/finance/kpi.png,OK,,S11 approved wording
-finance.table.invoiceNumber,3,finance,table,Invoice #,बिल #,https://os.babinrentals.com/screenshots/finance/table.png,OK,,S11 approved wording
-finance.table.client,3,finance,table,Client,ग्राहक,https://os.babinrentals.com/screenshots/finance/table.png,OK,,S11 approved wording
-finance.table.issueDate,3,finance,table,Issue Date,जारी मिति,https://os.babinrentals.com/screenshots/finance/table.png,OK,,S11 approved wording
-finance.table.dueDate,3,finance,table,Due Date,भुक्तानी मिति,https://os.babinrentals.com/screenshots/finance/table.png,OK,,S11 approved wording
-finance.table.amount,3,finance,table,Amount,रकम,https://os.babinrentals.com/screenshots/finance/table.png,OK,,S11 approved wording
-finance.table.subtotal,3,finance,table,Subtotal,उप-जम्मा,https://os.babinrentals.com/screenshots/finance/table.png,OK,,S11 approved wording
-finance.table.vat,3,finance,table,VAT,भ्याट,https://os.babinrentals.com/screenshots/finance/table.png,OK,,S11 approved wording
-finance.table.discount,3,finance,table,Discount,छुट,https://os.babinrentals.com/screenshots/finance/table.png,OK,,S11 approved wording
-finance.table.status,3,finance,table,Status,अवस्था,https://os.babinrentals.com/screenshots/finance/table.png,OK,,S11 approved wording
-finance.table.actions,3,finance,table,Actions,कार्यहरू,https://os.babinrentals.com/screenshots/finance/table.png,OK,,S11 approved wording
-finance.methods.cash,3,finance,methods,Cash,नगद,https://os.babinrentals.com/screenshots/finance/methods.png,OK,,S11 approved wording
-finance.methods.bank,3,finance,methods,Bank,बैंक,https://os.babinrentals.com/screenshots/finance/methods.png,OK,,S11 approved wording
-finance.methods.fonepay,3,finance,methods,Fonepay,Fonepay,https://os.babinrentals.com/screenshots/finance/methods.png,OK,,S11 approved wording
-finance.methods.esewa,3,finance,methods,eSewa,eSewa,https://os.babinrentals.com/screenshots/finance/methods.png,OK,,S11 approved wording
-finance.methods.khalti,3,finance,methods,Khalti,Khalti,https://os.babinrentals.com/screenshots/finance/methods.png,OK,,S11 approved wording
-finance.methods.cheque,3,finance,methods,Cheque,चेक,https://os.babinrentals.com/screenshots/finance/methods.png,OK,,S11 approved wording
-finance.methods.cards,3,finance,methods,Cards,कार्ड,https://os.babinrentals.com/screenshots/finance/methods.png,OK,,S11 approved wording
-finance.methods.other,3,finance,methods,Other,अन्य,https://os.babinrentals.com/screenshots/finance/methods.png,OK,,S11 approved wording
-finance.expenses.title,3,finance,expenses,Expenses,खर्चहरू,https://os.babinrentals.com/screenshots/finance/expenses.png,OK,,S11 approved wording
-finance.expenses.category,3,finance,expenses,Expense Category,खर्च वर्ग,https://os.babinrentals.com/screenshots/finance/expenses.png,OK,,S11 approved wording
-finance.expenses.vendor,3,finance,expenses,Vendor,विक्रेता,https://os.babinrentals.com/screenshots/finance/expenses.png,OK,,S11 approved wording
-finance.expenses.receipt,3,finance,expenses,Receipt,रसिद,https://os.babinrentals.com/screenshots/finance/expenses.png,OK,,S11 approved wording
-finance.closing.title,3,finance,closing,Daily Closing,दैनिक हिसाब,https://os.babinrentals.com/screenshots/finance/closing.png,OK,,S11 approved wording
-finance.closing.expectedCash,3,finance,closing,Expected Cash,अपेक्षित नगद,https://os.babinrentals.com/screenshots/finance/closing.png,OK,,S11 approved wording
-finance.closing.actualCash,3,finance,closing,Actual Cash,वास्तविक नगद,https://os.babinrentals.com/screenshots/finance/closing.png,OK,,S11 approved wording
-finance.closing.discrepancy,3,finance,closing,Discrepancy,फरक रकम,https://os.babinrentals.com/screenshots/finance/closing.png,OK,,S11 approved wording
-finance.restricted.title,3,finance,restricted,Access restricted,पहुँच प्रतिबन्धित,https://os.babinrentals.com/screenshots/finance/restricted.png,OK,,S11 approved wording
-finance.restricted.desc,3,finance,restricted,Financial records require Accounts or Owner permissions.,वित्तीय विवरणहरूको लागि लेखा वा मालिक अनुमति आवश्यक पर्दछ।,https://os.babinrentals.com/screenshots/finance/restricted.png,OK,,S11 approved wording
-inventory.title,3,inventory,inventory,Inventory,मौज्दात,https://os.babinrentals.com/screenshots/inventory/inventory.png,OK,,S11 approved wording
-inventory.subtitle,3,inventory,inventory,Stock & Fleet Management,मौज्दात तथा सामग्री व्यवस्थापन,https://os.babinrentals.com/screenshots/inventory/inventory.png,OK,,S11 approved wording
-inventory.tabs.equipment,3,inventory,tabs,Equipment,उपकरण,https://os.babinrentals.com/screenshots/inventory/tabs.png,OK,,S11 approved wording
-inventory.tabs.bundles,3,inventory,tabs,Bundles,बन्डलहरू,https://os.babinrentals.com/screenshots/inventory/tabs.png,OK,,S11 approved wording
-inventory.tabs.stockCheck,3,inventory,tabs,Stock Check,मौज्दात जाँच,https://os.babinrentals.com/screenshots/inventory/tabs.png,OK,,S11 approved wording
-inventory.tabs.maintenance,3,inventory,tabs,Maintenance,मर्मत सम्भार,https://os.babinrentals.com/screenshots/inventory/tabs.png,OK,,S11 approved wording
-inventory.actions.addEquipment,3,inventory,actions,Add Equipment,उपकरण थप्नुहोस्,https://os.babinrentals.com/screenshots/inventory/actions.png,OK,,S11 approved wording
-inventory.actions.addBundle,3,inventory,actions,Add Bundle,बन्डल थप्नुहोस्,https://os.babinrentals.com/screenshots/inventory/actions.png,OK,,S11 approved wording
-inventory.actions.stockAudit,3,inventory,actions,Start Stock Check,मौज्दात जाँच सुरु गर्नुहोस्,https://os.babinrentals.com/screenshots/inventory/actions.png,OK,,S11 approved wording
-inventory.actions.adjustStock,3,inventory,actions,Adjust Stock,मौज्दात समायोजन गर्नुहोस्,https://os.babinrentals.com/screenshots/inventory/actions.png,OK,,S11 approved wording
-inventory.actions.printLabels,3,inventory,actions,Print QR Labels,QR लेबलहरू छाप्नुहोस्,https://os.babinrentals.com/screenshots/inventory/actions.png,OK,,S11 approved wording
-inventory.status.available,3,inventory,status,Available,उपलब्ध,https://os.babinrentals.com/screenshots/inventory/status.png,OK,,S11 approved wording
-inventory.status.rented,3,inventory,status,Rented,भाडामा गएको,https://os.babinrentals.com/screenshots/inventory/status.png,OK,,S11 approved wording
-inventory.status.maintenance,3,inventory,status,Maintenance,मर्मतमा रहेको,https://os.babinrentals.com/screenshots/inventory/status.png,OK,,S11 approved wording
-inventory.status.damaged,3,inventory,status,Damaged,क्षतिग्रस्त,https://os.babinrentals.com/screenshots/inventory/status.png,OK,,S11 approved wording
-inventory.status.decommissioned,3,inventory,status,Decommissioned,हटाउन सिफारिस,https://os.babinrentals.com/screenshots/inventory/status.png,OK,,S11 approved wording
-inventory.table.sku,3,inventory,table,SKU,SKU,https://os.babinrentals.com/screenshots/inventory/table.png,OK,,S11 approved wording
-inventory.table.name,3,inventory,table,Item Name,सामग्री नाम,https://os.babinrentals.com/screenshots/inventory/table.png,OK,,S11 approved wording
-inventory.table.category,3,inventory,table,Category,वर्ग,https://os.babinrentals.com/screenshots/inventory/table.png,OK,,S11 approved wording
-inventory.table.serial,3,inventory,table,Serial Number,सिरियल नम्बर,https://os.babinrentals.com/screenshots/inventory/table.png,OK,,S11 approved wording
-inventory.table.totalQuantity,3,inventory,table,Total,जम्मा,https://os.babinrentals.com/screenshots/inventory/table.png,OK,,S11 approved wording
-inventory.table.availableQuantity,3,inventory,table,Available,उपलब्ध,https://os.babinrentals.com/screenshots/inventory/table.png,OK,,S11 approved wording
-inventory.table.dailyRate,3,inventory,table,Daily Rate,दैनिक दर,https://os.babinrentals.com/screenshots/inventory/table.png,OK,,S11 approved wording
-inventory.table.replacementValue,3,inventory,table,Replacement Value,प्रतिस्थापन मूल्य,https://os.babinrentals.com/screenshots/inventory/table.png,OK,,S11 approved wording
-inventory.maintenance.jobId,3,inventory,maintenance,Job ID,कार्य ID,https://os.babinrentals.com/screenshots/inventory/maintenance.png,OK,,S11 approved wording
-inventory.maintenance.reportedIssue,3,inventory,maintenance,Reported Issue,देखिएको समस्या,https://os.babinrentals.com/screenshots/inventory/maintenance.png,OK,,S11 approved wording
-inventory.maintenance.repairCost,3,inventory,maintenance,Repair Cost,मर्मत खर्च,https://os.babinrentals.com/screenshots/inventory/maintenance.png,OK,,S11 approved wording
-inventory.maintenance.scheduledReturn,3,inventory,maintenance,Scheduled Return,फिर्ता हुने मिति,https://os.babinrentals.com/screenshots/inventory/maintenance.png,OK,,S11 approved wording
-inventory.stockCheck.counted,3,inventory,stockCheck,Counted,गणना गरिएको,https://os.babinrentals.com/screenshots/inventory/stockCheck.png,OK,,S11 approved wording
-inventory.stockCheck.expected,3,inventory,stockCheck,Expected,अपेक्षित,https://os.babinrentals.com/screenshots/inventory/stockCheck.png,OK,,S11 approved wording
-inventory.stockCheck.difference,3,inventory,stockCheck,Difference,फरक,https://os.babinrentals.com/screenshots/inventory/stockCheck.png,OK,,S11 approved wording
-inventory.stockCheck.reconcile,3,inventory,stockCheck,Reconcile,समायोजन गर्नुहोस्,https://os.babinrentals.com/screenshots/inventory/stockCheck.png,OK,,S11 approved wording
-notes.title,3,notes,notes,Internal Notes,आन्तरिक टिप्पणी,https://os.babinrentals.com/screenshots/notes/notes.png,OK,,S11 approved wording
-notes.drawer.title,3,notes,drawer,Team Internal Notes,टोली आन्तरिक टिप्पणी,https://os.babinrentals.com/screenshots/notes/drawer.png,OK,,S11 approved wording
-notes.drawer.description,3,notes,drawer,Shift handover scratchpad & equipment advisories,सिफ्ट हस्तान्तरण टिपोट र उपकरण सल्लाह,https://os.babinrentals.com/screenshots/notes/drawer.png,OK,,S11 approved wording
-notes.drawer.allStaffNotice,3,notes,drawer,Notes are seen by all staff.,टिप्पणीहरू सबै कर्मचारीहरूले देख्न सक्छन्।,https://os.babinrentals.com/screenshots/notes/drawer.png,OK,,S11 approved wording
-notes.drawer.openPage,3,notes,drawer,Open Team Notes page,टोली टिप्पणी पृष्ठ खोल्नुहोस्,https://os.babinrentals.com/screenshots/notes/drawer.png,OK,,S11 approved wording
-notes.drawer.placeholder,3,notes,drawer,"Post a shift note, equipment alert, client remark... (Ctrl+Enter to post)","सिफ्ट टिप्पणी, उपकरण चेतावनी, ग्राहक टिपोट पोस्ट गर्नुहोस्... (पोस्ट गर्न Ctrl+Enter)",https://os.babinrentals.com/screenshots/notes/drawer.png,OK,,S11 approved wording
-notes.drawer.draftAria,3,notes,drawer,Internal note draft,आन्तरिक टिप्पणी मस्यौदा,https://os.babinrentals.com/screenshots/notes/drawer.png,OK,,S11 approved wording
-notes.drawer.categoryAria,3,notes,drawer,Note category,टिप्पणी वर्ग,https://os.babinrentals.com/screenshots/notes/drawer.png,OK,,S11 approved wording
-notes.drawer.priorityAria,3,notes,drawer,Note priority,टिप्पणी प्राथमिकता,https://os.babinrentals.com/screenshots/notes/drawer.png,OK,,S11 approved wording
-notes.category.all,3,notes,category,All,सबै,https://os.babinrentals.com/screenshots/notes/category.png,OK,,S11 approved wording
-notes.category.general,3,notes,category,General,साधारण,https://os.babinrentals.com/screenshots/notes/category.png,OK,,S11 approved wording
-notes.category.equipmentAlert,3,notes,category,Equipment Alert,उपकरण चेतावनी,https://os.babinrentals.com/screenshots/notes/category.png,OK,,S11 approved wording
-notes.category.shiftHandover,3,notes,category,Shift Handover,सिफ्ट हस्तान्तरण,https://os.babinrentals.com/screenshots/notes/category.png,OK,,S11 approved wording
-notes.category.logistics,3,notes,category,Logistics,यातायात,https://os.babinrentals.com/screenshots/notes/category.png,OK,,S11 approved wording
-notes.category.clientRemark,3,notes,category,Client Remark,ग्राहक टिपोट,https://os.babinrentals.com/screenshots/notes/category.png,OK,,S11 approved wording
-notes.priority.normal,3,notes,priority,Normal,सामान्य,https://os.babinrentals.com/screenshots/notes/priority.png,OK,,S11 approved wording
-notes.priority.high,3,notes,priority,High,उच्च,https://os.babinrentals.com/screenshots/notes/priority.png,OK,,S11 approved wording
-notes.priority.urgent,3,notes,priority,🚨 Urgent,🚨 जरुरी,https://os.babinrentals.com/screenshots/notes/priority.png,OK,,S11 approved wording
-notes.actions.post,3,notes,actions,Post,पोस्ट गर्नुहोस्,https://os.babinrentals.com/screenshots/notes/actions.png,OK,,S11 approved wording
-notes.actions.posting,3,notes,actions,Posting…,पोस्ट गरिँदैछ…,https://os.babinrentals.com/screenshots/notes/actions.png,OK,,S11 approved wording
-notes.actions.pin,3,notes,actions,Pin note to top,माथि पिन गर्नुहोस्,https://os.babinrentals.com/screenshots/notes/actions.png,OK,,S11 approved wording
-notes.actions.unpin,3,notes,actions,Unpin note,पिन हटाउनुहोस्,https://os.babinrentals.com/screenshots/notes/actions.png,OK,,S11 approved wording
-notes.actions.archive,3,notes,actions,Archive note,अभिलेख गर्नुहोस्,https://os.babinrentals.com/screenshots/notes/actions.png,OK,,S11 approved wording
-notes.actions.done,3,notes,actions,Done,भयो,https://os.babinrentals.com/screenshots/notes/actions.png,OK,,S11 approved wording
-notes.actions.reopen,3,notes,actions,Reopen,पुनः खोल्नुहोस्,https://os.babinrentals.com/screenshots/notes/actions.png,OK,,S11 approved wording
-notes.drawer.loading,3,notes,drawer,Loading team notes…,टोली टिप्पणी लोड हुँदैछ…,https://os.babinrentals.com/screenshots/notes/drawer.png,OK,,S11 approved wording
-notes.drawer.empty,3,notes,drawer,No notes in this category yet.,यो वर्गमा अहिलेसम्म कुनै टिप्पणी छैन।,https://os.babinrentals.com/screenshots/notes/drawer.png,OK,,S11 approved wording
-notes.badge.urgent,3,notes,badge,URGENT,जरुरी,https://os.babinrentals.com/screenshots/notes/badge.png,OK,,S11 approved wording
-notes.badge.done,3,notes,badge,DONE,सम्पन्न,https://os.babinrentals.com/screenshots/notes/badge.png,OK,,S11 approved wording
-notes.restricted.title,3,notes,restricted,Restricted Access,पहुँच प्रतिबन्धित,https://os.babinrentals.com/screenshots/notes/restricted.png,OK,,S11 approved wording
-notes.restricted.body,3,notes,restricted,Team notes are available to staff members only.,टोली टिप्पणी केवल कर्मचारीहरूको लागि मात्र उपलब्ध छ।,https://os.babinrentals.com/screenshots/notes/restricted.png,OK,,S11 approved wording
-notes.unavailable.title,3,notes,unavailable,Shared team notes unavailable,साझा टोली टिप्पणी उपलब्ध छैन,https://os.babinrentals.com/screenshots/notes/unavailable.png,OK,,S11 approved wording
-notes.unavailable.body,3,notes,unavailable,Team notes cannot be shared between staff yet. Existing entries on this device have been kept.,कर्मचारीहरू बीच अहिले टोली टिप्पणी साझा गर्न सकिँदैन। यस उपकरणमा रहेका प्रविष्टिहरू राखिएका छन्।,https://os.babinrentals.com/screenshots/notes/unavailable.png,OK,,S11 approved wording
-notes.closeAria,3,notes,notes,Close team internal notes,टोली आन्तरिक टिप्पणी बन्द गर्नुहोस्,https://os.babinrentals.com/screenshots/notes/notes.png,OK,,S11 approved wording
-notes.toasts.postedTitle,3,notes,toasts,Note Posted,टिप्पणी पोस्ट गरियो,https://os.babinrentals.com/screenshots/notes/toasts.png,OK,,S11 approved wording
-notes.toasts.postedDesc,3,notes,toasts,Internal log updated successfully.,आन्तरिक लग सफलतापूर्वक अद्यावधिक भयो।,https://os.babinrentals.com/screenshots/notes/toasts.png,OK,,S11 approved wording
-notes.toasts.archivedTitle,3,notes,toasts,Note Archived,टिप्पणी अभिलेख गरियो,https://os.babinrentals.com/screenshots/notes/toasts.png,OK,,S11 approved wording
-notes.toasts.archivedDesc,3,notes,toasts,Archived and removed from active log.,अभिलेख गरियो र सक्रिय लगबाट हटाइयो।,https://os.babinrentals.com/screenshots/notes/toasts.png,OK,,S11 approved wording
-notes.page.title,3,notes,page,Team Dispatch & Shift Notes,टोली प्रेषण र सिफ्ट टिप्पणी,https://os.babinrentals.com/screenshots/notes/page.png,OK,,S11 approved wording
-notes.page.equipmentAlerts,3,notes,page,Equipment Alerts,उपकरण चेतावनीहरू,https://os.babinrentals.com/screenshots/notes/page.png,OK,,S11 approved wording
-notes.page.shiftHandovers,3,notes,page,Shift Handovers,सिफ्ट हस्तान्तरणहरू,https://os.babinrentals.com/screenshots/notes/page.png,OK,,S11 approved wording
-notes.page.resolvedToday,3,notes,page,Resolved Today,आज समाधान गरिएका,https://os.babinrentals.com/screenshots/notes/page.png,OK,,S11 approved wording
-notes.page.postInternalNote,3,notes,page,Post Internal Dispatch Note,आन्तरिक प्रेषण टिप्पणी पोस्ट गर्नुहोस्,https://os.babinrentals.com/screenshots/notes/page.png,OK,,S11 approved wording
-notes.templates.equipmentDefect,3,notes,templates,🚨 Equipment Defect,🚨 उपकरण त्रुटि,https://os.babinrentals.com/screenshots/notes/templates.png,OK,,S11 approved wording
-notes.templates.shiftHandover,3,notes,templates,🔄 Shift Handover,🔄 सिफ्ट हस्तान्तरण,https://os.babinrentals.com/screenshots/notes/templates.png,OK,,S11 approved wording
-notes.templates.dispatchRoute,3,notes,templates,🚚 Dispatch Route,🚚 प्रेषण मार्ग,https://os.babinrentals.com/screenshots/notes/templates.png,OK,,S11 approved wording
-notes.templates.clientRemark,3,notes,templates,👤 Client Remark,👤 ग्राहक टिपोट,https://os.babinrentals.com/screenshots/notes/templates.png,OK,,S11 approved wording
-notes.actions.postToDispatch,3,notes,actions,Post to Dispatch Log,प्रेषण लगमा पोस्ट गर्नुहोस्,https://os.babinrentals.com/screenshots/notes/actions.png,OK,,S11 approved wording
-notes.actions.markAsDone,3,notes,actions,Mark as Done,सम्पन्न जनाउनुहोस्,https://os.babinrentals.com/screenshots/notes/actions.png,OK,,S11 approved wording
-notes.views.compact,3,notes,views,Compact,संक्षिप्त,https://os.babinrentals.com/screenshots/notes/views.png,OK,,S11 approved wording
-notes.views.cards,3,notes,views,Cards,कार्डहरू,https://os.babinrentals.com/screenshots/notes/views.png,OK,,S11 approved wording
-notes.actions.shiftBrief,3,notes,actions,Shift Brief,सिफ्ट विवरण,https://os.babinrentals.com/screenshots/notes/actions.png,OK,,S11 approved wording
-tools.landing.title,3,tools,landing,Tools,औजार,https://os.babinrentals.com/screenshots/tools/landing.png,OK,,S11 approved wording
-tools.landing.subtitle,3,tools,landing,Integrated Workbench,एकीकृत कार्यशाला,https://os.babinrentals.com/screenshots/tools/landing.png,OK,,S11 approved wording
-tools.landing.description,3,tools,landing,Integrated calculators and technical utilities — work within the workbench without external shortcuts.,एकीकृत क्यालकुलेटर र प्राविधिक उपयोगिताहरू — बाह्य सर्टकट बिना कार्यशाला भित्र काम गर्नुहोस्।,https://os.babinrentals.com/screenshots/tools/landing.png,OK,,S11 approved wording
-tools.landing.navAria,3,tools,landing,Tools navigation,औजार नेभिगेसन,https://os.babinrentals.com/screenshots/tools/landing.png,OK,,S11 approved wording
-tools.landing.categoryLabel,3,tools,landing,Category,वर्ग,https://os.babinrentals.com/screenshots/tools/landing.png,OK,,S11 approved wording
-tools.landing.allCategories,3,tools,landing,All categories,सबै वर्गहरू,https://os.babinrentals.com/screenshots/tools/landing.png,OK,,S11 approved wording
-tools.landing.filterAria,3,tools,landing,Filter tools by category,वर्ग अनुसार औजार फिल्टर गर्नुहोस्,https://os.babinrentals.com/screenshots/tools/landing.png,OK,,S11 approved wording
-tools.landing.calculatorsGroup,3,tools,landing,Calculators,क्यालकुलेटरहरू,https://os.babinrentals.com/screenshots/tools/landing.png,OK,,S11 approved wording
-tools.landing.commercialGroup,3,tools,landing,Commercial Utilities,व्यापारिक उपयोगिताहरू,https://os.babinrentals.com/screenshots/tools/landing.png,OK,,S11 approved wording
-tools.landing.cinematographyGroup,3,tools,landing,Cinematography suite,सिनेमाटोग्राफी सुइट,https://os.babinrentals.com/screenshots/tools/landing.png,OK,,S11 approved wording
-tools.landing.cinematographyNote,3,tools,landing,"15 categories of camera, lens, exposure, timecode and power calculators.","क्यामेरा, लेन्स, एक्सपोजर, टाइमकोड र पावर क्यालकुलेटरका 15 वर्गहरू।",https://os.babinrentals.com/screenshots/tools/landing.png,OK,,S11 approved wording · R-21: Latin numbers/currency stay Latin
-tools.landing.depreciationLabel,3,tools,landing,Depreciation,ह्रासकट्टी,https://os.babinrentals.com/screenshots/tools/landing.png,OK,,S11 approved wording
-tools.landing.depreciationHint,3,tools,landing,Book view · IRD pool view (schedule & book value curve),किताबी दृश्य · IRD समूह दृश्य (तालिका र किताबी मूल्य वक्र),https://os.babinrentals.com/screenshots/tools/landing.png,OK,,S11 approved wording
-tools.landing.pricingLabel,3,tools,landing,Pricing,मूल्य निर्धारण,https://os.babinrentals.com/screenshots/tools/landing.png,OK,,S11 approved wording
-tools.landing.pricingHint,3,tools,landing,"Rate, days, discount — quote sandbox engine","दर, दिन, छुट — कोटेसन परीक्षण इन्जिन",https://os.babinrentals.com/screenshots/tools/landing.png,OK,,S11 approved wording
-tools.landing.lateFeeLabel,3,tools,landing,Late Fee,ढिलाइ शुल्क,https://os.babinrentals.com/screenshots/tools/landing.png,OK,,S11 approved wording
-tools.landing.lateFeeHint,3,tools,landing,Standard policy calculator,मानक नीति क्यालकुलेटर,https://os.babinrentals.com/screenshots/tools/landing.png,OK,,S11 approved wording
-tools.cards.lateFeeHint,3,tools,cards,30 minutes free · under 2 hours: half day · 2 hours or more: full day,30 मिनेटसम्म निःशुल्क · 2 घण्टाभन्दा कम: आधा दिन · 2 घण्टा वा सोभन्दा बढी: पूरै दिन,https://os.babinrentals.com/screenshots/tools/cards.png,OK,,S11 approved wording · R-21: Latin numbers/currency stay Latin
-tools.landing.cameraLensToolsLabel,3,tools,landing,Camera & lens tools,क्यामेरा र लेन्स औजार,https://os.babinrentals.com/screenshots/tools/landing.png,OK,,S11 approved wording
-tools.landing.cameraLensToolsHint,3,tools,landing,Crop factor · field of view · depth of field · ND · timecode · storage · battery,क्रप फ्याक्टर · फिल्ड अफ भ्यु · डेप्थ अफ फिल्ड · ND · टाइमकोड · भण्डारण · ब्याट्री,https://os.babinrentals.com/screenshots/tools/landing.png,OK,,S11 approved wording
-tools.tabs.overview,3,tools,tabs,Overview,अवलोकन,https://os.babinrentals.com/screenshots/tools/tabs.png,OK,,S11 approved wording
-tools.tabs.depreciation,3,tools,tabs,Depreciation,ह्रासकट्टी,https://os.babinrentals.com/screenshots/tools/tabs.png,OK,,S11 approved wording
-tools.tabs.pricing,3,tools,tabs,Pricing,मूल्य निर्धारण,https://os.babinrentals.com/screenshots/tools/tabs.png,OK,,S11 approved wording
-tools.tabs.latefee,3,tools,tabs,Late Fee,ढिलाइ शुल्क,https://os.babinrentals.com/screenshots/tools/tabs.png,OK,,S11 approved wording
-tools.tabs.cinematography,3,tools,tabs,Cinematography Suite,सिनेमाटोग्राफी सुइट,https://os.babinrentals.com/screenshots/tools/tabs.png,OK,,S11 approved wording
-tools.lateFee.ruleDescription,3,tools,lateFee,"Up to 30 minutes free. Under 2 hours: half a day. From 2 hours: a full day, with another day charged for each additional 24 hours.","30 मिनेटसम्म निःशुल्क। 2 घण्टाभन्दा कम: आधा दिन। 2 घण्टादेखि: पूरै दिन, र थप प्रत्येक 24 घण्टाको लागि अर्को दिन शुल्क लाग्नेछ।",https://os.babinrentals.com/screenshots/tools/lateFee.png,OK,,S11 approved wording · R-21: Latin numbers/currency stay Latin
-tools.lateFee.estimateTitle,3,tools,lateFee,Late fee estimate,ढिलाइ शुल्क अनुमान,https://os.babinrentals.com/screenshots/tools/lateFee.png,OK,,S11 approved wording
-tools.lateFee.dailyRateLabel,3,tools,lateFee,Daily rental rate (NPR),दैनिक भाडा दर (NPR),https://os.babinrentals.com/screenshots/tools/lateFee.png,OK,,S11 approved wording · R-21: Latin numbers/currency stay Latin
-tools.lateFee.minutesLabel,3,tools,lateFee,Minutes after scheduled return,निर्धारित फिर्ता पछिको मिनेट,https://os.babinrentals.com/screenshots/tools/lateFee.png,OK,,S11 approved wording
-tools.lateFee.enterDailyRatePrompt,3,tools,lateFee,Enter a daily rate to calculate the fee.,शुल्क गणना गर्न दैनिक दर प्रविष्ट गर्नुहोस्।,https://os.babinrentals.com/screenshots/tools/lateFee.png,OK,,S11 approved wording
+key,wave,module,screen,english,nepali_draft,screenshot_link,status,babin_fix,notes,reviewed_by,reviewed_at
+documents.title,3,documents,documents,Documents,कागजातहरू,,PENDING,,Awaiting Babin review,,
+documents.subtitle,3,documents,documents,Agreements & Paperwork,सम्झौता तथा कागजात,,PENDING,,Awaiting Babin review,,
+documents.tabs.agreements,3,documents,tabs,Rental Agreements,भाडा सम्झौताहरू,,PENDING,,Awaiting Babin review,,
+documents.tabs.idCards,3,documents,tabs,ID Proofs,परिचयपत्रहरू,,PENDING,,Awaiting Babin review,,
+documents.tabs.invoices,3,documents,tabs,Invoices,बिलहरू,,PENDING,,Awaiting Babin review,,
+documents.tabs.receipts,3,documents,tabs,Receipts,रसिदहरू,,PENDING,,Awaiting Babin review,,
+documents.actions.upload,3,documents,actions,Upload Document,कागजात अपलोड गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+documents.actions.preview,3,documents,actions,Preview,पूर्वावलोकन गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+documents.actions.download,3,documents,actions,Download,डाउनलोड गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+documents.status.verified,3,documents,status,Verified,प्रमाणित,,PENDING,,Awaiting Babin review,,
+documents.status.pending,3,documents,status,Pending,प्रमाणीकरण बाँकी,,PENDING,,Awaiting Babin review,,
+documents.status.rejected,3,documents,status,Rejected,अस्वीकृत,,PENDING,,Awaiting Babin review,,
+finance.title,3,finance,finance,Finance,वित्त,,PENDING,,Awaiting Babin review,,
+finance.subtitle,3,finance,finance,Accounts & Invoicing,लेखा र बिलिङ,,PENDING,,Awaiting Babin review,,
+finance.tabs.dashboard,3,finance,tabs,Dashboard,ड्यासबोर्ड,,PENDING,,Awaiting Babin review,,
+finance.tabs.invoices,3,finance,tabs,Invoices,बिलहरू,,PENDING,,Awaiting Babin review,,
+finance.tabs.payments,3,finance,tabs,Payments,भुक्तानीहरू,,PENDING,,Awaiting Babin review,,
+finance.tabs.expenses,3,finance,tabs,Expenses,खर्चहरू,,PENDING,,Awaiting Babin review,,
+finance.tabs.closing,3,finance,tabs,Closing,दैनिक हिसाब,,PENDING,,Awaiting Babin review,,
+finance.tabs.documents,3,finance,tabs,Documents,कागजातहरू,,PENDING,,Awaiting Babin review,,
+finance.tabs.reports,3,finance,tabs,Reports,प्रतिवेदनहरू,,PENDING,,Awaiting Babin review,,
+finance.actions.recordPayment,3,finance,actions,Record payment,भुक्तानी दर्ता गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+finance.actions.createInvoice,3,finance,actions,Create invoice,बिल सिर्जना गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+finance.actions.voidInvoice,3,finance,actions,Void invoice,बिल खारेज गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+finance.actions.viewInvoice,3,finance,actions,View invoice,बिल हेर्नुहोस्,,PENDING,,Awaiting Babin review,,
+finance.actions.printInvoice,3,finance,actions,Print invoice,बिल छाप्नुहोस्,,PENDING,,Awaiting Babin review,,
+finance.actions.downloadPdf,3,finance,actions,Download PDF,PDF डाउनलोड गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+finance.actions.exportCsv,3,finance,actions,Export CSV,CSV निर्यात गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+finance.actions.filter,3,finance,actions,Filter,फिल्टर,,PENDING,,Awaiting Babin review,,
+finance.actions.clearAll,3,finance,actions,Clear all,सबै खाली गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+finance.actions.apply,3,finance,actions,Apply,लागू गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+finance.status.paid,3,finance,status,Paid,चुक्ता,,PENDING,,Awaiting Babin review,,
+finance.status.unpaid,3,finance,status,Unpaid,भुक्तानी बाँकी,,PENDING,,Awaiting Babin review,,
+finance.status.partiallyPaid,3,finance,status,Partially Paid,आंशिक भुक्तानी,,PENDING,,Awaiting Babin review,,
+finance.status.void,3,finance,status,Void,खारेज,,PENDING,,Awaiting Babin review,,
+finance.status.overdue,3,finance,status,Overdue,म्याद नाघेको,,PENDING,,Awaiting Babin review,,
+finance.kpi.rentalTotal,3,finance,kpi,Rental Total,भाडा जम्मा,,PENDING,,Awaiting Babin review,,
+finance.kpi.advance,3,finance,kpi,Advance,पेशकी,,PENDING,,Awaiting Babin review,,
+finance.kpi.deposit,3,finance,kpi,Deposit,धरौटी,,PENDING,,Awaiting Babin review,,
+finance.kpi.outstanding,3,finance,kpi,Outstanding,बाँकी,,PENDING,,Awaiting Babin review,,
+finance.kpi.balance,3,finance,kpi,Balance,बाँकी रकम,,PENDING,,Awaiting Babin review,,
+finance.kpi.receivedThisMonth,3,finance,kpi,Received This Month,यस महिना प्राप्त,,PENDING,,Awaiting Babin review,,
+finance.kpi.outstandingInvoices,3,finance,kpi,Outstanding Invoices,बाँकी बिलहरू,,PENDING,,Awaiting Babin review,,
+finance.kpi.activeDeposits,3,finance,kpi,Active Deposits,सक्रिय धरौटी,,PENDING,,Awaiting Babin review,,
+finance.table.invoiceNumber,3,finance,table,Invoice #,बिल #,,PENDING,,Awaiting Babin review,,
+finance.table.client,3,finance,table,Client,ग्राहक,,PENDING,,Awaiting Babin review,,
+finance.table.issueDate,3,finance,table,Issue Date,जारी मिति,,PENDING,,Awaiting Babin review,,
+finance.table.dueDate,3,finance,table,Due Date,भुक्तानी मिति,,PENDING,,Awaiting Babin review,,
+finance.table.amount,3,finance,table,Amount,रकम,,PENDING,,Awaiting Babin review,,
+finance.table.subtotal,3,finance,table,Subtotal,उप-जम्मा,,PENDING,,Awaiting Babin review,,
+finance.table.vat,3,finance,table,VAT,भ्याट,,PENDING,,Awaiting Babin review,,
+finance.table.discount,3,finance,table,Discount,छुट,,PENDING,,Awaiting Babin review,,
+finance.table.status,3,finance,table,Status,अवस्था,,PENDING,,Awaiting Babin review,,
+finance.table.actions,3,finance,table,Actions,कार्यहरू,,PENDING,,Awaiting Babin review,,
+finance.methods.cash,3,finance,methods,Cash,नगद,,PENDING,,Awaiting Babin review,,
+finance.methods.bank,3,finance,methods,Bank,बैंक,,PENDING,,Awaiting Babin review,,
+finance.methods.fonepay,3,finance,methods,Fonepay,Fonepay,,PENDING,,Awaiting Babin review,,
+finance.methods.esewa,3,finance,methods,eSewa,eSewa,,PENDING,,Awaiting Babin review,,
+finance.methods.khalti,3,finance,methods,Khalti,Khalti,,PENDING,,Awaiting Babin review,,
+finance.methods.cheque,3,finance,methods,Cheque,चेक,,PENDING,,Awaiting Babin review,,
+finance.methods.cards,3,finance,methods,Cards,कार्ड,,PENDING,,Awaiting Babin review,,
+finance.methods.other,3,finance,methods,Other,अन्य,,PENDING,,Awaiting Babin review,,
+finance.expenses.title,3,finance,expenses,Expenses,खर्चहरू,,PENDING,,Awaiting Babin review,,
+finance.expenses.category,3,finance,expenses,Expense Category,खर्च वर्ग,,PENDING,,Awaiting Babin review,,
+finance.expenses.vendor,3,finance,expenses,Vendor,विक्रेता,,PENDING,,Awaiting Babin review,,
+finance.expenses.receipt,3,finance,expenses,Receipt,रसिद,,PENDING,,Awaiting Babin review,,
+finance.closing.title,3,finance,closing,Daily Closing,दैनिक हिसाब,,PENDING,,Awaiting Babin review,,
+finance.closing.expectedCash,3,finance,closing,Expected Cash,अपेक्षित नगद,,PENDING,,Awaiting Babin review,,
+finance.closing.actualCash,3,finance,closing,Actual Cash,वास्तविक नगद,,PENDING,,Awaiting Babin review,,
+finance.closing.discrepancy,3,finance,closing,Discrepancy,फरक रकम,,PENDING,,Awaiting Babin review,,
+finance.restricted.title,3,finance,restricted,Access restricted,पहुँच प्रतिबन्धित,,PENDING,,Awaiting Babin review,,
+finance.restricted.desc,3,finance,restricted,Financial records require Accounts or Owner permissions.,वित्तीय विवरणहरूको लागि लेखा वा मालिक अनुमति आवश्यक पर्दछ।,,PENDING,,Awaiting Babin review,,
+inventory.title,3,inventory,inventory,Inventory,मौज्दात,,PENDING,,Awaiting Babin review,,
+inventory.subtitle,3,inventory,inventory,Stock & Fleet Management,मौज्दात तथा सामग्री व्यवस्थापन,,PENDING,,Awaiting Babin review,,
+inventory.tabs.equipment,3,inventory,tabs,Equipment,उपकरण,,PENDING,,Awaiting Babin review,,
+inventory.tabs.bundles,3,inventory,tabs,Bundles,बन्डलहरू,,PENDING,,Awaiting Babin review,,
+inventory.tabs.stockCheck,3,inventory,tabs,Stock Check,मौज्दात जाँच,,PENDING,,Awaiting Babin review,,
+inventory.tabs.maintenance,3,inventory,tabs,Maintenance,मर्मत सम्भार,,PENDING,,Awaiting Babin review,,
+inventory.actions.addEquipment,3,inventory,actions,Add Equipment,उपकरण थप्नुहोस्,,PENDING,,Awaiting Babin review,,
+inventory.actions.addBundle,3,inventory,actions,Add Bundle,बन्डल थप्नुहोस्,,PENDING,,Awaiting Babin review,,
+inventory.actions.stockAudit,3,inventory,actions,Start Stock Check,मौज्दात जाँच सुरु गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+inventory.actions.adjustStock,3,inventory,actions,Adjust Stock,मौज्दात समायोजन गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+inventory.actions.printLabels,3,inventory,actions,Print QR Labels,QR लेबलहरू छाप्नुहोस्,,PENDING,,Awaiting Babin review,,
+inventory.status.available,3,inventory,status,Available,उपलब्ध,,PENDING,,Awaiting Babin review,,
+inventory.status.rented,3,inventory,status,Rented,भाडामा गएको,,PENDING,,Awaiting Babin review,,
+inventory.status.maintenance,3,inventory,status,Maintenance,मर्मतमा रहेको,,PENDING,,Awaiting Babin review,,
+inventory.status.damaged,3,inventory,status,Damaged,क्षतिग्रस्त,,PENDING,,Awaiting Babin review,,
+inventory.status.decommissioned,3,inventory,status,Decommissioned,हटाउन सिफारिस,,PENDING,,Awaiting Babin review,,
+inventory.table.sku,3,inventory,table,SKU,SKU,,PENDING,,Awaiting Babin review,,
+inventory.table.name,3,inventory,table,Item Name,सामग्री नाम,,PENDING,,Awaiting Babin review,,
+inventory.table.category,3,inventory,table,Category,वर्ग,,PENDING,,Awaiting Babin review,,
+inventory.table.serial,3,inventory,table,Serial Number,सिरियल नम्बर,,PENDING,,Awaiting Babin review,,
+inventory.table.totalQuantity,3,inventory,table,Total,जम्मा,,PENDING,,Awaiting Babin review,,
+inventory.table.availableQuantity,3,inventory,table,Available,उपलब्ध,,PENDING,,Awaiting Babin review,,
+inventory.table.dailyRate,3,inventory,table,Daily Rate,दैनिक दर,,PENDING,,Awaiting Babin review,,
+inventory.table.replacementValue,3,inventory,table,Replacement Value,प्रतिस्थापन मूल्य,,PENDING,,Awaiting Babin review,,
+inventory.maintenance.jobId,3,inventory,maintenance,Job ID,कार्य ID,,PENDING,,Awaiting Babin review,,
+inventory.maintenance.reportedIssue,3,inventory,maintenance,Reported Issue,देखिएको समस्या,,PENDING,,Awaiting Babin review,,
+inventory.maintenance.repairCost,3,inventory,maintenance,Repair Cost,मर्मत खर्च,,PENDING,,Awaiting Babin review,,
+inventory.maintenance.scheduledReturn,3,inventory,maintenance,Scheduled Return,फिर्ता हुने मिति,,PENDING,,Awaiting Babin review,,
+inventory.stockCheck.counted,3,inventory,stockCheck,Counted,गणना गरिएको,,PENDING,,Awaiting Babin review,,
+inventory.stockCheck.expected,3,inventory,stockCheck,Expected,अपेक्षित,,PENDING,,Awaiting Babin review,,
+inventory.stockCheck.difference,3,inventory,stockCheck,Difference,फरक,,PENDING,,Awaiting Babin review,,
+inventory.stockCheck.reconcile,3,inventory,stockCheck,Reconcile,समायोजन गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+notes.title,3,notes,notes,Internal Notes,आन्तरिक टिप्पणी,,PENDING,,Awaiting Babin review,,
+notes.drawer.title,3,notes,drawer,Team Internal Notes,टोली आन्तरिक टिप्पणी,,PENDING,,Awaiting Babin review,,
+notes.drawer.description,3,notes,drawer,Shift handover scratchpad & equipment advisories,सिफ्ट हस्तान्तरण टिपोट र उपकरण सल्लाह,,PENDING,,Awaiting Babin review,,
+notes.drawer.allStaffNotice,3,notes,drawer,Notes are seen by all staff.,टिप्पणीहरू सबै कर्मचारीहरूले देख्न सक्छन्।,,PENDING,,Awaiting Babin review,,
+notes.drawer.openPage,3,notes,drawer,Open Team Notes page,टोली टिप्पणी पृष्ठ खोल्नुहोस्,,PENDING,,Awaiting Babin review,,
+notes.drawer.placeholder,3,notes,drawer,"Post a shift note, equipment alert, client remark... (Ctrl+Enter to post)","सिफ्ट टिप्पणी, उपकरण चेतावनी, ग्राहक टिपोट पोस्ट गर्नुहोस्... (पोस्ट गर्न Ctrl+Enter)",,PENDING,,Awaiting Babin review,,
+notes.drawer.draftAria,3,notes,drawer,Internal note draft,आन्तरिक टिप्पणी मस्यौदा,,PENDING,,Awaiting Babin review,,
+notes.drawer.categoryAria,3,notes,drawer,Note category,टिप्पणी वर्ग,,PENDING,,Awaiting Babin review,,
+notes.drawer.priorityAria,3,notes,drawer,Note priority,टिप्पणी प्राथमिकता,,PENDING,,Awaiting Babin review,,
+notes.category.all,3,notes,category,All,सबै,,PENDING,,Awaiting Babin review,,
+notes.category.general,3,notes,category,General,साधारण,,PENDING,,Awaiting Babin review,,
+notes.category.equipmentAlert,3,notes,category,Equipment Alert,उपकरण चेतावनी,,PENDING,,Awaiting Babin review,,
+notes.category.shiftHandover,3,notes,category,Shift Handover,सिफ्ट हस्तान्तरण,,PENDING,,Awaiting Babin review,,
+notes.category.logistics,3,notes,category,Logistics,यातायात,,PENDING,,Awaiting Babin review,,
+notes.category.clientRemark,3,notes,category,Client Remark,ग्राहक टिपोट,,PENDING,,Awaiting Babin review,,
+notes.priority.normal,3,notes,priority,Normal,सामान्य,,PENDING,,Awaiting Babin review,,
+notes.priority.high,3,notes,priority,High,उच्च,,PENDING,,Awaiting Babin review,,
+notes.priority.urgent,3,notes,priority,🚨 Urgent,🚨 जरुरी,,PENDING,,Awaiting Babin review,,
+notes.actions.post,3,notes,actions,Post,पोस्ट गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+notes.actions.posting,3,notes,actions,Posting…,पोस्ट गरिँदैछ…,,PENDING,,Awaiting Babin review,,
+notes.actions.pin,3,notes,actions,Pin note to top,माथि पिन गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+notes.actions.unpin,3,notes,actions,Unpin note,पिन हटाउनुहोस्,,PENDING,,Awaiting Babin review,,
+notes.actions.archive,3,notes,actions,Archive note,अभिलेख गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+notes.actions.done,3,notes,actions,Done,भयो,,PENDING,,Awaiting Babin review,,
+notes.actions.reopen,3,notes,actions,Reopen,पुनः खोल्नुहोस्,,PENDING,,Awaiting Babin review,,
+notes.drawer.loading,3,notes,drawer,Loading team notes…,टोली टिप्पणी लोड हुँदैछ…,,PENDING,,Awaiting Babin review,,
+notes.drawer.empty,3,notes,drawer,No notes in this category yet.,यो वर्गमा अहिलेसम्म कुनै टिप्पणी छैन।,,PENDING,,Awaiting Babin review,,
+notes.badge.urgent,3,notes,badge,URGENT,जरुरी,,PENDING,,Awaiting Babin review,,
+notes.badge.done,3,notes,badge,DONE,सम्पन्न,,PENDING,,Awaiting Babin review,,
+notes.restricted.title,3,notes,restricted,Restricted Access,पहुँच प्रतिबन्धित,,PENDING,,Awaiting Babin review,,
+notes.restricted.body,3,notes,restricted,Team notes are available to staff members only.,टोली टिप्पणी केवल कर्मचारीहरूको लागि मात्र उपलब्ध छ।,,PENDING,,Awaiting Babin review,,
+notes.unavailable.title,3,notes,unavailable,Shared team notes unavailable,साझा टोली टिप्पणी उपलब्ध छैन,,PENDING,,Awaiting Babin review,,
+notes.unavailable.body,3,notes,unavailable,Team notes cannot be shared between staff yet. Existing entries on this device have been kept.,कर्मचारीहरू बीच अहिले टोली टिप्पणी साझा गर्न सकिँदैन। यस उपकरणमा रहेका प्रविष्टिहरू राखिएका छन्।,,PENDING,,Awaiting Babin review,,
+notes.closeAria,3,notes,notes,Close team internal notes,टोली आन्तरिक टिप्पणी बन्द गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+notes.toasts.postedTitle,3,notes,toasts,Note Posted,टिप्पणी पोस्ट गरियो,,PENDING,,Awaiting Babin review,,
+notes.toasts.postedDesc,3,notes,toasts,Internal log updated successfully.,आन्तरिक लग सफलतापूर्वक अद्यावधिक भयो।,,PENDING,,Awaiting Babin review,,
+notes.toasts.archivedTitle,3,notes,toasts,Note Archived,टिप्पणी अभिलेख गरियो,,PENDING,,Awaiting Babin review,,
+notes.toasts.archivedDesc,3,notes,toasts,Archived and removed from active log.,अभिलेख गरियो र सक्रिय लगबाट हटाइयो।,,PENDING,,Awaiting Babin review,,
+notes.page.title,3,notes,page,Team Dispatch & Shift Notes,टोली प्रेषण र सिफ्ट टिप्पणी,,PENDING,,Awaiting Babin review,,
+notes.page.equipmentAlerts,3,notes,page,Equipment Alerts,उपकरण चेतावनीहरू,,PENDING,,Awaiting Babin review,,
+notes.page.shiftHandovers,3,notes,page,Shift Handovers,सिफ्ट हस्तान्तरणहरू,,PENDING,,Awaiting Babin review,,
+notes.page.resolvedToday,3,notes,page,Resolved Today,आज समाधान गरिएका,,PENDING,,Awaiting Babin review,,
+notes.page.postInternalNote,3,notes,page,Post Internal Dispatch Note,आन्तरिक प्रेषण टिप्पणी पोस्ट गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+notes.templates.equipmentDefect,3,notes,templates,🚨 Equipment Defect,🚨 उपकरण त्रुटि,,PENDING,,Awaiting Babin review,,
+notes.templates.shiftHandover,3,notes,templates,🔄 Shift Handover,🔄 सिफ्ट हस्तान्तरण,,PENDING,,Awaiting Babin review,,
+notes.templates.dispatchRoute,3,notes,templates,🚚 Dispatch Route,🚚 प्रेषण मार्ग,,PENDING,,Awaiting Babin review,,
+notes.templates.clientRemark,3,notes,templates,👤 Client Remark,👤 ग्राहक टिपोट,,PENDING,,Awaiting Babin review,,
+notes.actions.postToDispatch,3,notes,actions,Post to Dispatch Log,प्रेषण लगमा पोस्ट गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+notes.actions.markAsDone,3,notes,actions,Mark as Done,सम्पन्न जनाउनुहोस्,,PENDING,,Awaiting Babin review,,
+notes.views.compact,3,notes,views,Compact,संक्षिप्त,,PENDING,,Awaiting Babin review,,
+notes.views.cards,3,notes,views,Cards,कार्डहरू,,PENDING,,Awaiting Babin review,,
+notes.actions.shiftBrief,3,notes,actions,Shift Brief,सिफ्ट विवरण,,PENDING,,Awaiting Babin review,,
+tools.landing.title,3,tools,landing,Tools,औजार,,PENDING,,Awaiting Babin review,,
+tools.landing.subtitle,3,tools,landing,Integrated Workbench,एकीकृत कार्यशाला,,PENDING,,Awaiting Babin review,,
+tools.landing.description,3,tools,landing,Integrated calculators and technical utilities — work within the workbench without external shortcuts.,एकीकृत क्यालकुलेटर र प्राविधिक उपयोगिताहरू — बाह्य सर्टकट बिना कार्यशाला भित्र काम गर्नुहोस्।,,PENDING,,Awaiting Babin review,,
+tools.landing.navAria,3,tools,landing,Tools navigation,औजार नेभिगेसन,,PENDING,,Awaiting Babin review,,
+tools.landing.categoryLabel,3,tools,landing,Category,वर्ग,,PENDING,,Awaiting Babin review,,
+tools.landing.allCategories,3,tools,landing,All categories,सबै वर्गहरू,,PENDING,,Awaiting Babin review,,
+tools.landing.filterAria,3,tools,landing,Filter tools by category,वर्ग अनुसार औजार फिल्टर गर्नुहोस्,,PENDING,,Awaiting Babin review,,
+tools.landing.calculatorsGroup,3,tools,landing,Calculators,क्यालकुलेटरहरू,,PENDING,,Awaiting Babin review,,
+tools.landing.commercialGroup,3,tools,landing,Commercial Utilities,व्यापारिक उपयोगिताहरू,,PENDING,,Awaiting Babin review,,
+tools.landing.cinematographyGroup,3,tools,landing,Cinematography suite,सिनेमाटोग्राफी सुइट,,PENDING,,Awaiting Babin review,,
+tools.landing.cinematographyNote,3,tools,landing,"15 categories of camera, lens, exposure, timecode and power calculators.","क्यामेरा, लेन्स, एक्सपोजर, टाइमकोड र पावर क्यालकुलेटरका 15 वर्गहरू।",,PENDING,,Awaiting Babin review · R-21: Latin numbers/currency stay Latin,,
+tools.landing.depreciationLabel,3,tools,landing,Depreciation,ह्रासकट्टी,,PENDING,,Awaiting Babin review,,
+tools.landing.depreciationHint,3,tools,landing,Book view · IRD pool view (schedule & book value curve),किताबी दृश्य · IRD समूह दृश्य (तालिका र किताबी मूल्य वक्र),,PENDING,,Awaiting Babin review,,
+tools.landing.pricingLabel,3,tools,landing,Pricing,मूल्य निर्धारण,,PENDING,,Awaiting Babin review,,
+tools.landing.pricingHint,3,tools,landing,"Rate, days, discount — quote sandbox engine","दर, दिन, छुट — कोटेसन परीक्षण इन्जिन",,PENDING,,Awaiting Babin review,,
+tools.landing.lateFeeLabel,3,tools,landing,Late Fee,ढिलाइ शुल्क,,PENDING,,Awaiting Babin review,,
+tools.landing.lateFeeHint,3,tools,landing,Standard policy calculator,मानक नीति क्यालकुलेटर,,PENDING,,Awaiting Babin review,,
+tools.cards.lateFeeHint,3,tools,cards,30 minutes free · under 2 hours: half day · 2 hours or more: full day,30 मिनेटसम्म निःशुल्क · 2 घण्टाभन्दा कम: आधा दिन · 2 घण्टा वा सोभन्दा बढी: पूरै दिन,,PENDING,,Awaiting Babin review · R-21: Latin numbers/currency stay Latin,,
+tools.landing.cameraLensToolsLabel,3,tools,landing,Camera & lens tools,क्यामेरा र लेन्स औजार,,PENDING,,Awaiting Babin review,,
+tools.landing.cameraLensToolsHint,3,tools,landing,Crop factor · field of view · depth of field · ND · timecode · storage · battery,क्रप फ्याक्टर · फिल्ड अफ भ्यु · डेप्थ अफ फिल्ड · ND · टाइमकोड · भण्डारण · ब्याट्री,,PENDING,,Awaiting Babin review,,
+tools.tabs.overview,3,tools,tabs,Overview,अवलोकन,,PENDING,,Awaiting Babin review,,
+tools.tabs.depreciation,3,tools,tabs,Depreciation,ह्रासकट्टी,,PENDING,,Awaiting Babin review,,
+tools.tabs.pricing,3,tools,tabs,Pricing,मूल्य निर्धारण,,PENDING,,Awaiting Babin review,,
+tools.tabs.latefee,3,tools,tabs,Late Fee,ढिलाइ शुल्क,,PENDING,,Awaiting Babin review,,
+tools.tabs.cinematography,3,tools,tabs,Cinematography Suite,सिनेमाटोग्राफी सुइट,,PENDING,,Awaiting Babin review,,
+tools.lateFee.ruleDescription,3,tools,lateFee,"Up to 30 minutes free. Under 2 hours: half a day. From 2 hours: a full day, with another day charged for each additional 24 hours.","30 मिनेटसम्म निःशुल्क। 2 घण्टाभन्दा कम: आधा दिन। 2 घण्टादेखि: पूरै दिन, र थप प्रत्येक 24 घण्टाको लागि अर्को दिन शुल्क लाग्नेछ।",,PENDING,,Awaiting Babin review · R-21: Latin numbers/currency stay Latin,,
+tools.lateFee.estimateTitle,3,tools,lateFee,Late fee estimate,ढिलाइ शुल्क अनुमान,,PENDING,,Awaiting Babin review,,
+tools.lateFee.dailyRateLabel,3,tools,lateFee,Daily rental rate (NPR),दैनिक भाडा दर (NPR),,PENDING,,Awaiting Babin review · R-21: Latin numbers/currency stay Latin,,
+tools.lateFee.minutesLabel,3,tools,lateFee,Minutes after scheduled return,निर्धारित फिर्ता पछिको मिनेट,,PENDING,,Awaiting Babin review,,
+tools.lateFee.enterDailyRatePrompt,3,tools,lateFee,Enter a daily rate to calculate the fee.,शुल्क गणना गर्न दैनिक दर प्रविष्ट गर्नुहोस्।,,PENDING,,Awaiting Babin review,,

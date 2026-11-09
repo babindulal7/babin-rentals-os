@@ -183,7 +183,7 @@ is always a draft staff send (W60).
 **Done when** — the register matches the code; the test passes.
 **Needs** — T5-07, T5-08, T7-04.
 
-### T5-12 · Offer emails to clients            status: todo · size: L · lane B · [go-live] · slips first
+### T5-12 · Offer emails to clients            status: done · size: L · lane B · [go-live] · slips first
 **What** — Owner, Admin and Manager (B43) write and send an **offer email from the app** (B50) to
 **every client with an email who has not unsubscribed** (B34), or to a filtered group (tag, last rental,
 membership ⭐). Write (subject, text, ⭐ one image, a button to `book.babinrentals.com`) → preview →
@@ -205,7 +205,7 @@ next offer skips them; 3) Coordinator and Warehouse cannot send (the database re
 shows the link and has the header; 5) a double tap on Send sends once.
 **Needs** — T5-03, T1-09.
 
-### T5-13 · Edit email and document texts            status: todo · size: M · lane B · [go-live] · slips first
+### T5-13 · Edit email and document texts            status: done · size: M · lane B · [go-live] · slips first
 **What** — Settings ▸ **Texts**, Owner and Admin only (B20): edit the wording of the automatic client
 emails (T5-07), payment reminders (T5-08), the offer email footer (T5-12) and the fixed texts on
 documents (invoice footer, the pro forma note, the rental agreement terms — O-11 — and the packing list

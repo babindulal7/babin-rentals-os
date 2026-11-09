@@ -7,6 +7,7 @@ import { Badge } from '../../components/ui/Badge'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { OperationAside } from '../operations/FloorAside'
+import { StickyFloorBar } from '../operations/StickyFloorBar'
 import { EmptyState, ErrorBanner } from '../../components/ui/StateViews'
 import { PageBody } from '../../components/ui/PageBody'
 import { STATUS } from '../../lib/status'
@@ -2551,6 +2552,28 @@ export default function ResetWorkspace({
                 operator sees instead of being navigated away from a reset that
                 was never recorded. */}
             {dispatchError && <ErrorBanner title="The reset was not recorded" message={dispatchError} />}
+
+            {phone && !embedded && (
+              <StickyFloorBar
+                progress={{
+                  current: readyUnits,
+                  total: totalUnits,
+                  label: totalUnits > readyUnits ? `${totalUnits - readyUnits} remaining` : 'All items ready',
+                  complete: canComplete,
+                }}
+                primaryAction={{
+                  label: dispatching
+                    ? 'Recording…'
+                    : !isOnline
+                    ? 'Needs connection to complete'
+                    : 'Complete Reset',
+                  onClick: completeResetJob,
+                  disabled: !isOnline || !canComplete,
+                  loading: dispatching,
+                  icon: isOnline ? 'checklist' : 'alert_triangle',
+                }}
+              />
+            )}
           </div>
         )}
       </PageBody>

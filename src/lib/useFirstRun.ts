@@ -3,18 +3,13 @@ import { readLocal, writeLocal } from './safeStorage'
 
 // Helper to detect first run and set a flag
 export function useFirstRun(): { firstRun: boolean; setFirstRun: (value: boolean) => void } {
-  const [firstRun, setFirstRun] = useState(true)
+  const [firstRun, setFirstRun] = useState(() => readLocal('babin-first-run') !== 'true')
 
   useEffect(() => {
-    const stored = readLocal('babin-first-run')
-    if (stored === 'true') {
-      setFirstRun(false)
-    } else {
-      // Mark as not first run after this effect
-      writeLocal('babin-first-run', 'true')
-      setFirstRun(true) // Will be false on next mount
-    }
-  }, [])
+    // StrictMode repeats mount effects. Mark the next mount without consuming
+    // the current first-run screen when the same effect runs a second time.
+    if (firstRun) writeLocal('babin-first-run', 'true')
+  }, [firstRun])
 
   return { firstRun, setFirstRun }
 }

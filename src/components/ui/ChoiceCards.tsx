@@ -17,7 +17,17 @@ export interface ChoiceCardsProps<T extends string = string> {
   /** Shared `name` for the radio inputs — one per group on the page. */
   name: string
   options: readonly ChoiceCardOption<T>[]
-  value: T
+  /**
+   * The chosen value, or `null` for "nothing chosen yet".
+   *
+   * `null` is a real state, not an empty string standing in for one: a radio
+   * group with no `checked` member is exactly how the browser and every screen
+   * reader spell "no answer", and it is what a form that deliberately opens
+   * unselected (Record Payment for a client with no history, T3-15) must show.
+   * Callers that always hold a value are unaffected — `T` is assignable to
+   * `T | null`.
+   */
+  value: T | null
   onChange: (value: T) => void
   required?: boolean
   /** Narrowest a card may get before the grid drops a column. */
