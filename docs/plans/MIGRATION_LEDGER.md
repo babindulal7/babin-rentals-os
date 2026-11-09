@@ -69,9 +69,11 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0221 | T1-17 | two-step-sign-in | lane-a/T1-17-two-step-sign-in-for-every | claimed; branch not merged |
 | 0222 | T3-smart-reservations | repair-confirm-booking-atomic-and-reservation-dedup | audit/system-design-consistency-20261105 | verified |
 | 0223 | T3-12 | product-aliases | lane-c/T3-12-paste-a-whatsapp-gear-list | verified (check:pglite 220/220 + check:lifecycle 63/63) |
+| 0224 | T5-12 | offer-campaigns-and-recipients | lane-b/T5-12-offer-emails-to-clients | verified |
 | 0226 | T4-12 | bulk-update-products | lane-b/T4-12-bulk-edit-products | verified |
 | 0227 | T5-13 | message-templates | lane-b/T5-13-edit-email-and-document-texts | verified |
-| 0228 | T2-18 | return-damage-photo-per-unit | lane-a/T2-18-finish-evidence-capture-what-t2-16 | written locally |
+| 0228 | R-9.2 | membership change keeps join date (`keep_join_date`) | lane-b/ux-polish-forgiveness-and-sync | written, not applied (N-5) |
+| 0229 | T2-18 | return-damage-photo-per-unit | lane-a/T2-18-finish-evidence-capture-what-t2-16 | written locally |
 
 ## Expected migrations (not yet claimed)
 

@@ -101,13 +101,15 @@ afterEach(async () => {
 })
 
 describe('data states', () => {
-  it('shows each person with hours, approval and overtime', async () => {
+  it('shows each person with hours and approval, with no hours-based overtime flag (R-9.3)', async () => {
     await mount()
     expect(text()).toContain('Suman Rai')
     expect(text()).toContain('Gaffer')
     expect(text()).toContain('17.5h')
     expect(text()).toContain('9.5h')
     expect(text()).toContain('Awaiting approval')
+    expect(text()).not.toContain('Overtime hours logged')
+    expect(text()).not.toContain('Overtime Flags')
   })
 
   it('shows an honest empty state, not seeded staff', async () => {
