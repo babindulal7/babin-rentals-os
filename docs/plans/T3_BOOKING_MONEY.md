@@ -242,7 +242,7 @@ phone's share sheet, or wa.me with a text summary when sharing a file is not pos
 PC in ≤ 2 taps; Warehouse cannot share a priced document.
 **Needs** — T5-03 for email; T3-06 for the document contents.
 
-### T3-17 · Extend in two taps            status: todo · size: S · lane C · [go-live]
+### T3-17 · Extend in two taps            status: ready — awaiting merge (lane-c/T3-17-extend-in-two-taps) · size: S · lane C · [go-live]
 **What** — "Extend" on Booking Detail and on a late return: pick the new return (chips +1 day,
 +2 days, custom); availability is checked; a clash offers similar/sub-rent (T3-13). Price of the
 extra days: **two one-tap choices every time** — "Same rate and discount as the booking" or

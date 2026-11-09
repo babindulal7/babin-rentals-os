@@ -26,6 +26,8 @@ import { RentalIntelFromFloor } from '../../components/intel/RentalIntelFromFloo
 import { EquipmentIntelFromFloor } from '../../components/intel/EquipmentIntelFromFloor'
 import { captureError } from '../../lib/monitoring'
 import { formatBsOrAd, formatAd, formatAdDateTime } from '../../lib/bs'
+import { canWriteBookingDesk } from '../../lib/rbac'
+import { ExtendRentalModal } from './modals/ExtendRentalModal'
 /* `lateBand` and its two formatters return no monetary value — that is the
    whole reason they exist. `lib/money.ts` stays unimported here (§8.3). */
 import { lateBand, formatOverage, bandConsequence } from '../../lib/lateFee'
@@ -597,6 +599,8 @@ export default function ReturnWorkspace({
   const savedEvidence = useOperationEvidence(floor?.id ?? null)
   const [restoredFromStorage, setRestoredFromStorage] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
+  const [showExtendModal, setShowExtendModal] = useState(false)
+  const canExtend = user ? canWriteBookingDesk(user.role) : false
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('Outstanding')
   const [query, setQuery] = useState('')
   const [scanLog, setScanLog] = useState<string[]>([])
@@ -1729,11 +1733,19 @@ export default function ReturnWorkspace({
                 Finance can never disagree about how late a return is running.
                 No monetary value comes back — that is why `lateBand` exists. */}
             {overrun !== null && overrun.band !== 'None' && (
-              <p style={{ margin: '-6px 2px 0', fontSize: 'var(--t-meta)', color: 'var(--danger-text)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-                <Icon name="timer" size={12} />
-                {formatOverage(overrun.overageMinutes)} past expected return
-                <span style={{ fontWeight: 500, color: 'var(--text2)' }}>· {bandConsequence(overrun)}</span>
-              </p>
+              <div style={{ margin: '-6px 2px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--danger-text)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                  <Icon name="timer" size={12} />
+                  {formatOverage(overrun.overageMinutes)} past expected return
+                  <span style={{ fontWeight: 500, color: 'var(--text2)' }}>· {bandConsequence(overrun)}</span>
+                </p>
+                {canExtend && (
+                  <CompactButton
+                    label="Extend rental"
+                    onClick={() => setShowExtendModal(true)}
+                  />
+                )}
+              </div>
             )}
 
             {/* ── §5 scan bar ──────────────────────────────────────────────── */}
@@ -2483,6 +2495,23 @@ export default function ReturnWorkspace({
                 clientName={floor?.clientName}
                 deliveryType={floor?.deliveryType}
                 onSignComplete={handleSignComplete}
+              />
+            )}
+
+            {showExtendModal && floor && (
+              <ExtendRentalModal
+                isOpen={showExtendModal}
+                onClose={() => setShowExtendModal(false)}
+                bookingId={floor.id}
+                bookingNo={floor.bookingNo}
+                client={floor.clientName}
+                currentReturnDate={floor.returnAtAd}
+                lines={floor.lines}
+                onSuccess={(ext) => {
+                  showSuccessToast('Rental Extended', `${ext.days} day${ext.days === 1 ? '' : 's'} added — new return ${ext.newReturnDate}`)
+                  setShowExtendModal(false)
+                  setReload((r) => r + 1)
+                }}
               />
             )}
 

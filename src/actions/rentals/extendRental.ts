@@ -34,6 +34,12 @@ export type ExtendRentalInput = {
    * Stated extension reason (minimum 10 characters).
    */
   reason?: string | null | undefined
+  /**
+   * W41 pricing option for the extra days:
+   * - 'same_rate': same rate & discount as original booking (default)
+   * - 'standard_rate': full catalog standard rate without extra discount
+   */
+  pricingOption?: 'same_rate' | 'standard_rate' | undefined
   /** Law 8 idempotency key. */
   clientUuid?: string | undefined
 }
@@ -45,6 +51,7 @@ export type ExtendRentalResult = {
   oldReturnAt: string
   newReturnAt: string
   daysAdded: number
+  pricingOption: 'same_rate' | 'standard_rate'
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -89,11 +96,14 @@ export const extendRentalConfig: ActionConfig<ExtendRentalInput, ExtendRentalRes
       bookingId = data.id
     }
 
+    const pricingOption = input.pricingOption ?? 'same_rate'
+
     const { data: rpcResult, error: rpcError } = await supabase.rpc('extend_booking', {
       p_payload: {
         booking_id: bookingId,
         days,
         reason,
+        pricing_option: pricingOption,
         actor_id: ctx.userId ?? null,
         client_uuid: input.clientUuid ?? null,
       },
@@ -110,6 +120,7 @@ export const extendRentalConfig: ActionConfig<ExtendRentalInput, ExtendRentalRes
       old_return_at: string
       new_return_at: string
       days_added: number
+      pricing_option?: 'same_rate' | 'standard_rate'
     }
 
     const events = [
@@ -121,6 +132,7 @@ export const extendRentalConfig: ActionConfig<ExtendRentalInput, ExtendRentalRes
           daysAdded: res.days_added,
           oldReturnAt: res.old_return_at,
           newReturnAt: res.new_return_at,
+          pricingOption,
           reason,
           timestamp: new Date().toISOString(),
           userId: ctx.userId,
@@ -136,6 +148,7 @@ export const extendRentalConfig: ActionConfig<ExtendRentalInput, ExtendRentalRes
         oldReturnAt: res.old_return_at,
         newReturnAt: res.new_return_at,
         daysAdded: res.days_added,
+        pricingOption,
       },
       events,
     }

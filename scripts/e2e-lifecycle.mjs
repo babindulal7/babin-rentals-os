@@ -1959,6 +1959,30 @@ const STEPS = [
         ),
       )
       assert(auditCount >= 1, 'extend_booking emitted audit event attributed to Coordinator')
+
+      // 8. T3-17 / W41: Extend again by 1 day with standard_rate pricing option
+      await as('Coordinator', async () => {
+        const res = await q(
+          `select extend_booking(jsonb_build_object(
+            'booking_id', $1::uuid,
+            'days', 1,
+            'pricing_option', 'standard_rate',
+            'reason', 'Additional day needed at catalog standard rate without extra discount'
+          )) as data`,
+          [bookingIds['ext_test']],
+        )
+        const ext2 = res.rows[0].data
+        assertEq(ext2.success, true, 'standard_rate extension succeeded')
+        assertEq(ext2.pricing_option, 'standard_rate', 'pricing_option returned as standard_rate')
+        assertEq(ext2.days_added, 1, '1 day added')
+      })
+      const finalDays = Number(
+        await one(
+          'select days from booking_lines where booking_id = $1 and voided_at is null limit 1',
+          [bookingIds['ext_test']],
+        ),
+      )
+      assertEq(finalDays, 5, 'line days incremented to 5')
     },
   },
   {

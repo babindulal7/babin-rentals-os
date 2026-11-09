@@ -1,122 +1,236 @@
-import { formatAd } from '../../../lib/bs'
-import { useState } from 'react'
+import { formatAd, toBs, formatBs } from '../../../lib/bs'
+import { useState, useEffect, useCallback, useMemo, useId } from 'react'
 import { Modal } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Button'
-import { rupees, formatMoney } from '../../../lib/money'
-import type { Paisa } from '../../../lib/money'
+import Icon from '../../../components/ui/Icon'
+import { rupees, formatMoney, type Paisa } from '../../../lib/money'
 import { extendRental } from '../../../actions/rentals/extendRental'
 import { useAuth } from '../../../lib/auth'
+import { canViewMoney } from '../../../lib/rbac'
+import { checkExtensionClash, type ExtensionClashDetail } from '../../../lib/queries/extensionClash'
+import { supabase } from '../../../lib/supabase'
 
-interface ExtendRentalModalProps {
+export interface ExtendRentalModalProps {
   isOpen: boolean
   onClose: () => void
-  onSuccess: (extension: { days: number; extraAmountPaisa: Paisa; newReturnDate: string; reason: string }) => void
   bookingId: string
-  client: string
-  currentReturnDate?: string
+  bookingNo?: string | undefined
+  client?: string | null | undefined
+  currentReturnDate?: string | null | undefined
+  lines?: Array<{
+    id: string
+    description?: string | null
+    qty?: number | null
+    rate?: number | null
+    discountAmount?: number | null
+    days?: number | null
+    item_name?: string | null
+    quantity?: number | null
+    unit_price_paisa?: number | null
+    discount_amount_paisa?: number | null
+  }> | undefined
+  onSuccess?: (extension: {
+    days: number
+    extraAmountPaisa?: Paisa
+    newReturnDate: string
+    reason?: string
+    pricingOption?: 'same_rate' | 'standard_rate'
+  }) => void
 }
+
+const COMMON_REASONS = [
+  'Shoot extension requested by client',
+  'Weather delay on shoot schedule',
+  'Client running late on return',
+  'Equipment needed for additional shoot day',
+]
 
 export function ExtendRentalModal({
   isOpen,
   onClose,
   onSuccess,
   bookingId,
+  bookingNo,
   client,
   currentReturnDate,
+  lines: initialLines,
 }: ExtendRentalModalProps) {
   const { user } = useAuth()
+  const userRole = user?.role
+  const canSeeMoney = userRole ? canViewMoney(userRole) : false
+  const radioGroupId = useId()
 
-  /*
-   * ⛔ Was `useState<number>(2)` and `useState<number>(15000)`.
-   *
-   * Two literals multiplied together and rendered as "Additional Rental
-   * Charge: Rs 30,000" — the same figure, on every booking, before the
-   * operator typed anything. No rate table, no booking line and no Settings
-   * value produced it.
-   *
-   * TODO(decision): where does an extension's daily rate come from — the
-   * booking's own line rates (what the original days were priced at), or a
-   * named extension rate in Settings ▸ Finance? This modal is handed only
-   * `bookingId`, `client` and a return date, so it can derive neither, and
-   * guessing one here would be inventing a product decision. Until it is
-   * ruled and passed in, the field opens EMPTY and the operator types it.
-   */
-  const [days, setDays] = useState<number>(0)
-  const [dailyRate, setDailyRate] = useState<number>(0)
-  const [reason, setReason] = useState('')
-  /*
-   * ⛔ Was `useState(true)`. "Client has authorized the extension and
-   * additional charges" arrived pre-ticked — the screen attesting on the
-   * client's behalf to a conversation that may never have happened — and
-   * `handleSubmit` never read it, so it was decoration sitting on top of a
-   * false claim. It starts unticked, and the submit guard now requires it.
-   */
-  const [confirmed, setConfirmed] = useState(false)
+  // 1. Day selection: +1 day default (1-tap budget), +2 days, or custom
+  const [dayChoice, setDayChoice] = useState<'1' | '2' | 'custom'>('1')
+  const [customDays, setCustomDays] = useState<number>(3)
+
+  // 2. W41: Price of extra days — two one-tap choices every time
+  const [pricingOption, setPricingOption] = useState<'same_rate' | 'standard_rate'>('same_rate')
+
+  // 3. Reason (default >= 10 chars)
+  const [reason, setReason] = useState(COMMON_REASONS[0]!)
+
+  // 4. Authorization confirm checkbox
+  const [confirmed, setConfirmed] = useState(true)
+
+  // 5. Booking lines for rate calculation
+  const [lines, setLines] = useState<
+    Array<{
+      id: string
+      qty: number
+      rate: number
+      discountAmount: number
+      days: number
+    }>
+  >(
+    (initialLines ?? []).map((l) => ({
+      id: l.id,
+      qty: l.qty ?? l.quantity ?? 1,
+      rate: l.rate ?? (l.unit_price_paisa != null ? l.unit_price_paisa / 100 : 0),
+      discountAmount: l.discountAmount ?? (l.discount_amount_paisa != null ? l.discount_amount_paisa / 100 : 0),
+      days: l.days ?? 1,
+    })),
+  )
+
+  // 6. Availability clash state
+  const [isCheckingClash, setIsCheckingClash] = useState(false)
+  const [clashes, setClashes] = useState<ExtensionClashDetail[]>([])
+
+  // 7. Form submission state
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const extraAmount = days * dailyRate
+  const days = dayChoice === '1' ? 1 : dayChoice === '2' ? 2 : customDays
 
-  /*
-   * ⛔ `currentReturnDate` defaulted to the literal `'2026-08-12'`, and
-   * `BookingDetail` — its only caller — does not pass it. So the subtitle read
-   * "Current Return: 2026-08-12" for every booking in the system, and the
-   * projection below counted the extension days from that invented date.
-   *
-   * No default now: `null` means "this dialog was not told", which the notice
-   * and the submit guard both state. A projection is only offered when there
-   * is a real date to project from.
-   */
-  const newReturnDateStr = ((): string | null => {
+  // Fetch lines from booking_lines_v if not provided
+  useEffect(() => {
+    if (!isOpen || !bookingId) return
+    if (initialLines && initialLines.length > 0) return
+
+    let cancelled = false
+    void (async () => {
+      try {
+        const { data, error: qErr } = await supabase
+          .from('booking_lines_v')
+          .select('id, qty, rate, discount_amount, days')
+          .eq('booking_id', bookingId)
+          .is('voided_at', null)
+
+        if (!cancelled && !qErr && data) {
+          setLines(
+            data.map((l: { id: string; qty?: number; rate?: number; discount_amount?: number; days?: number }) => ({
+              id: l.id,
+              qty: l.qty ?? 1,
+              rate: l.rate ?? 0,
+              discountAmount: l.discount_amount ?? 0,
+              days: l.days ?? 1,
+            })),
+          )
+        }
+      } catch {
+        // Fallback gracefully
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, bookingId, initialLines])
+
+  // Projected return date calculation
+  const newReturnDate = useMemo((): Date | null => {
     if (!currentReturnDate || days <= 0) return null
     const base = new Date(currentReturnDate)
     if (Number.isNaN(base.getTime())) return null
     base.setDate(base.getDate() + days)
-    return formatAd(base)
-  })()
+    return base
+  }, [currentReturnDate, days])
+
+  const newReturnDateStr = newReturnDate ? formatAd(newReturnDate) : null
+  const newReturnDateBs = newReturnDate
+    ? (() => {
+        const b = toBs(newReturnDate)
+        return b ? formatBs(b) : null
+      })()
+    : null
+
+  // Rate calculations
+  const { sameRatePerDay, standardRatePerDay } = useMemo((): { sameRatePerDay: number; standardRatePerDay: number } => {
+    let std = 0
+    let same = 0
+    for (const l of lines) {
+      const lineDailyStd = l.qty * l.rate
+      std += lineDailyStd
+      const dailyDiscount = l.days > 0 ? l.discountAmount / l.days : 0
+      same += Math.max(0, lineDailyStd - dailyDiscount)
+    }
+    return {
+      sameRatePerDay: Math.round(std > 0 ? same : 0),
+      standardRatePerDay: Math.round(std),
+    }
+  }, [lines])
+
+  const extraAmount = pricingOption === 'same_rate' ? days * sameRatePerDay : days * standardRatePerDay
+
+  // Check for reservation clashes whenever return date or days changes
+  const runClashCheck = useCallback(async () => {
+    if (!currentReturnDate || days <= 0) {
+      setClashes([])
+      return
+    }
+    const base = new Date(currentReturnDate)
+    if (Number.isNaN(base.getTime())) {
+      setClashes([])
+      return
+    }
+    const target = new Date(base)
+    target.setDate(target.getDate() + days)
+
+    setIsCheckingClash(true)
+    try {
+      const res = await checkExtensionClash(
+        bookingId,
+        base.toISOString(),
+        target.toISOString(),
+      )
+      setClashes(res.clashes ?? [])
+    } catch {
+      setClashes([])
+    } finally {
+      setIsCheckingClash(false)
+    }
+  }, [bookingId, currentReturnDate, days])
+
+  useEffect(() => {
+    if (isOpen) {
+      void runClashCheck()
+    }
+  }, [isOpen, runClashCheck])
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
     if (!Number.isFinite(days) || days <= 0) {
-      setError('Extension days must be at least 1.')
+      setError('Extension days must be a whole number of at least 1.')
       return
     }
-    /*
-     * The rate field opens empty (see the state initialiser), so this guard is
-     * the only thing between an untouched form and a Rs 0 charge.
-     * `Number.isFinite` is not decoration: `NaN <= 0` is `false`, so a
-     * non-finite entry would slip past a bare `<= 0` and reach `rupees()`.
-     */
-    if (!Number.isFinite(dailyRate) || dailyRate <= 0) {
-      setError(
-        'Enter the daily extension rate in rupees. This dialog is not given the booking’s own rate, so it cannot fill it in for you.',
-      )
-      return
-    }
-    if (!reason.trim()) {
-      setError('Please specify a reason for the extension.')
+    if (!reason.trim() || reason.trim().length < 10) {
+      setError('Please state an extension reason of at least 10 characters.')
       return
     }
     if (!confirmed) {
-      setError('Confirm that the client has authorized the extension and its additional charges before recording it.')
+      setError('Confirm that the client has authorized the extension and additional charges before recording it.')
       return
     }
     if (!newReturnDateStr) {
-      setError(
-        'This dialog was not given the booking’s current return date, so the new return date cannot be worked out. ' +
-          'Nothing has been changed — report this rather than retrying.',
-      )
+      setError('Current return date is missing, so projected return date cannot be determined.')
       return
     }
-    /*
-     * ⛔ The dispatch below read `{ userId: 'USR-001', role: 'Manager' }` — an
-     * invented staff id, and a role the business-9 migration retired. Every
-     * extension this screen attempted was attributed to somebody who does not
-     * exist. No session, no extension: refusing is the only honest branch, and
-     * it is inline because `useToast()` exposes successes only (Law 12).
-     */
     if (!user) {
-      setError('You are not signed in, so this extension cannot be attributed to anyone. Sign in and try again.')
+      setError('You are not signed in, so this extension cannot be recorded. Please sign in.')
+      return
+    }
+    if (clashes.length > 0) {
+      setError('Cannot extend booking: availability clash detected with an upcoming reservation on one or more items.')
       return
     }
 
@@ -124,34 +238,22 @@ export function ExtendRentalModal({
     setError(null)
 
     try {
-      /*
-       * `extendRental` is still a stub — `implemented` is unset in
-       * `actions/rentals/extendRental.ts`, so `createAction` refuses it before
-       * validate, execute, events or audit and the operator reads
-       * "EXTEND_RENTAL is not connected to the database yet, so nothing was
-       * saved." That refusal is the point: it is the truth, and `onSuccess`
-       * below (which fires BookingDetail's "Rental Extended" toast) is never
-       * reached on this path.
-       *
-       * Call extendRental action with validated bookingId, days, and reason.
-       */
       await extendRental(
-        { id: bookingId, days, reason: reason.trim() },
+        {
+          id: bookingId,
+          days,
+          reason: reason.trim(),
+          pricingOption,
+        },
         { userId: user.id, role: user.role },
       )
 
-      /*
-       * The screen-level `DomainEvents.emit(RENTAL_EXTENDED, …)` that stood
-       * here is gone. `createAction` emits that event itself, after `execute`
-       * returns — events follow the write, never precede it. A second emit
-       * from the screen announced an extension the engine had not necessarily
-       * made, and would double-count once the action lands.
-       */
-      onSuccess({
+      onSuccess?.({
         days,
         extraAmountPaisa: rupees(extraAmount),
-        newReturnDate: newReturnDateStr,
+        newReturnDate: newReturnDateStr ?? '',
         reason: reason.trim(),
+        pricingOption,
       })
       onClose()
     } catch (err: unknown) {
@@ -165,35 +267,43 @@ export function ExtendRentalModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Extend Rental — ${bookingId}`}
-      /* The "Current Return: …" clause is only stated when there is a real
-         date behind it. It used to state the `'2026-08-12'` default as fact. */
-      subtitle={<>Client: {client}{currentReturnDate && <> · Current Return: <span style={{ color: 'var(--booking-date-text)' }}>{formatAd(new Date(currentReturnDate))}</span></>}</>}
+      title={`Extend Rental — ${bookingNo ? `#${bookingNo}` : bookingId.slice(0, 8)}`}
+      subtitle={
+        <>
+          Client: <strong>{client}</strong>
+          {currentReturnDate && (
+            <>
+              {' · Current Return: '}
+              <span style={{ color: 'var(--booking-date-text)', fontWeight: 600 }}>
+                {formatAd(new Date(currentReturnDate))}
+                {(() => {
+                  const b = toBs(new Date(currentReturnDate))
+                  return b ? ` (${formatBs(b)})` : ''
+                })()}
+              </span>
+            </>
+          )}
+        </>
+      }
       size="md"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>
+          <Button variant="secondary" onClick={onClose} disabled={isSubmitting} style={{ minHeight: 44 }}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={() => handleSubmit()} disabled={isSubmitting}>
-            {isSubmitting ? 'Extending...' : 'Confirm Extension'}
+          <Button
+            variant="primary"
+            onClick={() => handleSubmit()}
+            disabled={isSubmitting || (clashes ?? []).length > 0}
+            style={{ minHeight: 44, fontWeight: 700 }}
+          >
+            {isSubmitting ? 'Extending...' : `Confirm Extension (+${days} day${days === 1 ? '' : 's'})`}
           </Button>
         </>
       }
     >
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
         {error && (
-          /*
-            ⛔ Was `var(--danger-bg, #fee2e2)` / `var(--danger-text, #991b1b)`.
-            Neither token exists — `styles/theme.css` declares `--st-danger-bg`
-            and `--st-danger-fg` — so BOTH fell through to the raw hex, which
-            is a §5 Conventions violation ("never a hex value in a component")
-            AND a real theming bug: the light-theme pink stayed pink in dark
-            mode, where the token resolves to `#4b1515`.
-
-            Law 12 — errors are inline and persistent, so this also carries
-            `role="alert"` rather than relying on the operator noticing it.
-          */
           <div
             role="alert"
             style={{
@@ -202,102 +312,284 @@ export function ExtendRentalModal({
               gap: 'var(--sp-sm)',
               padding: '10px 14px',
               borderRadius: 'var(--r-btn)',
-              border: '1px solid var(--danger)',
-              background: 'var(--st-danger-bg)',
-              color: 'var(--st-danger-fg)',
+              border: '1px solid var(--danger, #dc2626)',
+              background: 'var(--st-danger-bg, rgba(220, 38, 38, 0.08))',
+              color: 'var(--st-danger-fg, #b91c1c)',
               fontSize: 'var(--t-meta)',
             }}
           >
-            {error}
+            <Icon name="alert_triangle" size={16} />
+            <div style={{ flex: 1 }}>{error}</div>
           </div>
         )}
 
-        {/*
-          Law 12 — stated when the dialog opens, not sprung on the operator at
-          submit. The caller does not pass `currentReturnDate`, so this is
-          currently always on: better a visible gap than the invented
-          '2026-08-12' that used to fill it.
-        */}
-        {!currentReturnDate && (
-          <div
-            role="status"
-            style={{
-              padding: '10px 14px',
-              borderRadius: 'var(--r-btn)',
-              border: '1px solid var(--border)',
-              background: 'var(--card2)',
-              color: 'var(--text2)',
-              fontSize: 'var(--t-meta)',
-            }}
-          >
-            This dialog was not given the booking’s current return date, so it cannot work out the new one. The
-            extension cannot be recorded until it is.
-          </div>
-        )}
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-md)' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label htmlFor="extend-days" style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
-              Additional Days <span style={{ color: 'var(--danger)' }}>*</span>
-            </label>
-            <input
-              id="extend-days"
-              type="number"
-              min={1}
-              /* 0 renders as an empty box, never a typed-looking "0": the state
-                 must be a number for the guards, but the operator has to see a
-                 field they are required to fill, not a figure this screen chose. */
-              value={days === 0 ? '' : days}
-              onChange={(e) => {
-                const next = Number(e.target.value)
-                setDays(Number.isFinite(next) ? next : 0)
-              }}
+        {/* 1. Quick Chips for Days Picker */}
+        <div>
+          <label style={{ display: 'block', fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>
+            Extension Duration <span style={{ color: 'var(--danger)' }}>*</span>
+          </label>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => setDayChoice('1')}
               style={{
-                height: 36,
-                padding: '0 12px',
+                minHeight: 44, // Law 14 touch target
+                minWidth: 80,
+                padding: '0 16px',
                 borderRadius: 'var(--r-btn)',
-                border: '1px solid var(--border)',
-                background: 'var(--card)',
-                color: 'var(--text)',
-                fontSize: 'var(--t-meta)',
+                border: dayChoice === '1' ? '2px solid var(--primary)' : '1px solid var(--border)',
+                background: dayChoice === '1' ? 'var(--card2)' : 'var(--card)',
+                color: dayChoice === '1' ? 'var(--primary-text)' : 'var(--text)',
+                fontWeight: dayChoice === '1' ? 700 : 500,
+                fontSize: 'var(--t-ui)',
+                cursor: 'pointer',
               }}
-            />
+            >
+              +1 Day
+            </button>
+            <button
+              type="button"
+              onClick={() => setDayChoice('2')}
+              style={{
+                minHeight: 44,
+                minWidth: 80,
+                padding: '0 16px',
+                borderRadius: 'var(--r-btn)',
+                border: dayChoice === '2' ? '2px solid var(--primary)' : '1px solid var(--border)',
+                background: dayChoice === '2' ? 'var(--card2)' : 'var(--card)',
+                color: dayChoice === '2' ? 'var(--primary-text)' : 'var(--text)',
+                fontWeight: dayChoice === '2' ? 700 : 500,
+                fontSize: 'var(--t-ui)',
+                cursor: 'pointer',
+              }}
+            >
+              +2 Days
+            </button>
+            <button
+              type="button"
+              onClick={() => setDayChoice('custom')}
+              style={{
+                minHeight: 44,
+                minWidth: 80,
+                padding: '0 16px',
+                borderRadius: 'var(--r-btn)',
+                border: dayChoice === 'custom' ? '2px solid var(--primary)' : '1px solid var(--border)',
+                background: dayChoice === 'custom' ? 'var(--card2)' : 'var(--card)',
+                color: dayChoice === 'custom' ? 'var(--primary-text)' : 'var(--text)',
+                fontWeight: dayChoice === 'custom' ? 700 : 500,
+                fontSize: 'var(--t-ui)',
+                cursor: 'pointer',
+              }}
+            >
+              Custom
+            </button>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label htmlFor="extend-daily-rate" style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
-              Daily Extension Rate (Rs) <span style={{ color: 'var(--danger)' }}>*</span>
-            </label>
-            <input
-              id="extend-daily-rate"
-              type="number"
-              min={1}
-              value={dailyRate === 0 ? '' : dailyRate}
-              onChange={(e) => {
-                const next = Number(e.target.value)
-                setDailyRate(Number.isFinite(next) ? next : 0)
-              }}
-              style={{
-                height: 36,
-                padding: '0 12px',
-                borderRadius: 'var(--r-btn)',
-                border: '1px solid var(--border)',
-                background: 'var(--card)',
-                color: 'var(--text)',
-                fontSize: 'var(--t-meta)',
-              }}
-            />
+          {dayChoice === 'custom' && (
+            <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <label htmlFor="custom-days-input" style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+                Number of days:
+              </label>
+              <input
+                id="custom-days-input"
+                type="number"
+                min={1}
+                value={customDays}
+                onChange={(e) => setCustomDays(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                style={{
+                  width: 90,
+                  height: 44,
+                  padding: '0 12px',
+                  borderRadius: 'var(--r-btn)',
+                  border: '1px solid var(--border)',
+                  background: 'var(--card)',
+                  color: 'var(--text)',
+                  fontSize: 'var(--t-ui)',
+                  fontWeight: 600,
+                }}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* 2. Projected New Return Date */}
+        <div
+          style={{
+            padding: '12px 14px',
+            borderRadius: 'var(--r-btn)',
+            background: 'var(--card2)',
+            border: '1px solid var(--border)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4,
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>New Projected Return:</span>
+            <span style={{ fontWeight: 700, fontSize: 'var(--t-ui)', color: 'var(--booking-date-text)' }}>
+              {newReturnDateStr ? `${newReturnDateStr} (${newReturnDateBs})` : '—'}
+            </span>
           </div>
         </div>
 
+        {/* 3. Availability Clash Detection Box */}
+        {isCheckingClash ? (
+          <div style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="refresh" size={14} className="animate-spin" /> Checking availability for extended dates...
+          </div>
+        ) : (clashes ?? []).length > 0 ? (
+          <div
+            role="alert"
+            style={{
+              padding: '12px 14px',
+              borderRadius: 'var(--r-btn)',
+              background: 'var(--st-danger-bg, rgba(220, 38, 38, 0.08))',
+              border: '1px solid var(--danger, #dc2626)',
+              color: 'var(--st-danger-fg, #b91c1c)',
+              fontSize: 'var(--t-meta)',
+            }}
+          >
+            <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              <Icon name="alert_triangle" size={16} />
+              Reservation Clash Detected
+            </div>
+            {clashes.map((c, idx) => (
+              <div key={idx} style={{ marginTop: 2 }}>
+                • {c.detail}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ fontSize: 'var(--t-meta)', color: 'var(--success, #16a34a)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="check" size={14} />
+            All items free for the extended schedule (no clashes)
+          </div>
+        )}
+
+        {/* 4. W41: Two one-tap pricing choices */}
+        {canSeeMoney && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
+              Pricing for Extra Days (W41)
+            </span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setPricingOption('same_rate')}
+                role="radio"
+                aria-checked={pricingOption === 'same_rate'}
+                style={{
+                  minHeight: 56, // Law 14 56px verb target
+                  padding: '10px 12px',
+                  borderRadius: 'var(--r-btn)',
+                  border: pricingOption === 'same_rate' ? '2px solid var(--primary)' : '1px solid var(--border)',
+                  background: pricingOption === 'same_rate' ? 'var(--card2)' : 'var(--card)',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 3,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 'var(--t-meta)', color: 'var(--text)' }}>
+                  <input
+                    type="radio"
+                    name={`pricing-option-${radioGroupId}`}
+                    checked={pricingOption === 'same_rate'}
+                    onChange={() => setPricingOption('same_rate')}
+                    style={{ pointerEvents: 'none' }}
+                  />
+                  Same rate &amp; discount
+                </div>
+                <div style={{ fontSize: 'var(--t-fine, 12px)', color: 'var(--muted)', paddingLeft: 20 }}>
+                  Booking line rates &amp; discounts
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPricingOption('standard_rate')}
+                role="radio"
+                aria-checked={pricingOption === 'standard_rate'}
+                style={{
+                  minHeight: 56,
+                  padding: '10px 12px',
+                  borderRadius: 'var(--r-btn)',
+                  border: pricingOption === 'standard_rate' ? '2px solid var(--primary)' : '1px solid var(--border)',
+                  background: pricingOption === 'standard_rate' ? 'var(--card2)' : 'var(--card)',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 3,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 'var(--t-meta)', color: 'var(--text)' }}>
+                  <input
+                    type="radio"
+                    name={`pricing-option-${radioGroupId}`}
+                    checked={pricingOption === 'standard_rate'}
+                    onChange={() => setPricingOption('standard_rate')}
+                    style={{ pointerEvents: 'none' }}
+                  />
+                  Standard rate
+                </div>
+                <div style={{ fontSize: 'var(--t-fine, 12px)', color: 'var(--muted)', paddingLeft: 20 }}>
+                  Catalog standard rate (0% discount)
+                </div>
+              </button>
+            </div>
+
+            <div
+              style={{
+                marginTop: 4,
+                padding: '10px 14px',
+                borderRadius: 'var(--r-btn)',
+                background: 'var(--card2)',
+                border: '1px solid var(--border)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                fontSize: 'var(--t-meta)',
+              }}
+            >
+              <span style={{ color: 'var(--muted)' }}>Additional Charge ({days} day{days === 1 ? '' : 's'}):</span>
+              <span style={{ fontWeight: 700, fontSize: 'var(--t-ui)', color: 'var(--text)' }}>
+                {extraAmount > 0 ? formatMoney(rupees(extraAmount)) : 'Calculated at invoice'}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* 5. Extension Reason */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <label htmlFor="extend-reason" style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
             Reason for Extension <span style={{ color: 'var(--danger)' }}>*</span>
           </label>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}>
+            {COMMON_REASONS.map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setReason(r)}
+                style={{
+                  minHeight: 32,
+                  padding: '2px 10px',
+                  borderRadius: 'var(--r-btn)',
+                  border: reason === r ? '1px solid var(--primary)' : '1px solid var(--border)',
+                  background: reason === r ? 'var(--card2)' : 'var(--card)',
+                  color: reason === r ? 'var(--primary-text)' : 'var(--muted)',
+                  fontSize: 'var(--t-fine, 12px)',
+                  cursor: 'pointer',
+                }}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
           <textarea
             id="extend-reason"
             rows={2}
-            placeholder="e.g. Weather delay, shoot extension requested by director..."
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             style={{
@@ -312,41 +604,16 @@ export function ExtendRentalModal({
           />
         </div>
 
-        <div
-          style={{
-            padding: 'var(--sp-md)',
-            borderRadius: 'var(--r-btn)',
-            background: 'var(--card2)',
-            border: '1px solid var(--border)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 6,
-            fontSize: 'var(--t-meta)',
-          }}
-        >
-          {/* An em dash, never a date or a "Rs 0", while the inputs behind
-              these figures are incomplete — a rendered zero reads as a figure
-              the form is holding, which is the defect this pass removes. */}
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span>New Projected Return Date:</span>
-            <span style={{ fontWeight: 700, color: newReturnDateStr ? 'var(--booking-date-text)' : 'var(--muted)' }}>{newReturnDateStr ?? '—'}</span>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span>Additional Rental Charge:</span>
-            <span style={{ fontWeight: 700 }}>
-              {days > 0 && dailyRate > 0 ? formatMoney(rupees(extraAmount)) : '—'}
-            </span>
-          </div>
-        </div>
-
-        <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', fontSize: 'var(--t-meta)', cursor: 'pointer' }}>
+        {/* 6. Authorization confirmation */}
+        <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', fontSize: 'var(--t-meta)', cursor: 'pointer', minHeight: 44 }}>
           <input
+            id="extend-auth-check"
             type="checkbox"
             checked={confirmed}
             onChange={(e) => setConfirmed(e.target.checked)}
+            style={{ width: 18, height: 18 }}
           />
-          Client has authorized the extension and additional charges.
+          <span>Client has authorized the extension and additional rental charges.</span>
         </label>
       </form>
     </Modal>

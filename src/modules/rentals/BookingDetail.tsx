@@ -3584,14 +3584,14 @@ function BookingDetailView() {
         isOpen={showExtendModal}
         onClose={() => setShowExtendModal(false)}
         bookingId={id}
+        bookingNo={booking.bookingNo}
         client={booking.clientName}
-        /* The queried return instant — the prop whose absence made this modal
-           structurally un-submittable from this page (page doc §7.6). The
-           action behind it is still a stub that fails closed; the modal now at
-           least states THAT reason instead of a missing-prop one. */
         currentReturnDate={booking.returnAtAd}
+        lines={floor?.lines}
         onSuccess={(ext) => {
           showSuccessToast('Rental Extended', `${ext.days} day${ext.days === 1 ? '' : 's'} added — new return ${ext.newReturnDate}`)
+          refetchHead()
+          setFloorVersion((v) => v + 1)
         }}
       />
 

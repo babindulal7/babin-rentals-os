@@ -1,5 +1,78 @@
 # Progress Log
 
+## 2026-11-10 — T3-17: Extend in two taps (Lane C)
+
+**Did**
+- **T3-17: Extend in two taps (W36, W40, W41, L23):**
+  - Migration `0232_extend_booking_pricing_option.sql` claimed in `docs/plans/MIGRATION_LEDGER.md` (Next free number: `0233`):
+    - Upgraded `extend_booking(jsonb)` RPC to support W41 `pricing_option` (`'same_rate'` | `'standard_rate'`, defaults to `'same_rate'`).
+    - Handled line discount calculations: `'same_rate'` scales existing booking line discounts proportionally per day, while `'standard_rate'` charges additional days at the standard catalog rate without discount.
+    - Updated `audit_events` payload to record chosen `pricing_option`.
+  - Lifecycle step `L23` updated in `scripts/e2e-lifecycle.mjs` asserting `extend_booking` with `pricing_option: 'standard_rate'`.
+  - Server Action `src/actions/rentals/extendRental.ts`:
+    - Added `pricingOption?: 'same_rate' | 'standard_rate'` to `ExtendRentalInput` and `ExtendRentalResult`.
+    - Dispatches RPC to `extend_booking` with `pricing_option`.
+    - Publishes `EVENT_TYPES.RENTAL_EXTENDED` event with `pricingOption`.
+  - Availability & Clash Query Engine `src/lib/queries/extensionClash.ts`:
+    - Checks `inventory_reservations` for any overlapping reservations for the booking's assigned assets during the extension interval `[currentReturn, newReturn)`.
+    - Returns `{ hasClash: boolean, clashes: ExtensionClashDetail[] }` to warn desk staff and prevent double-booking.
+  - UI Implementation (`src/modules/rentals/modals/ExtendRentalModal.tsx`):
+    - Quick chips for days selection: `+1 Day` (default, enabling 1-tap extend), `+2 Days`, `Custom`.
+    - Live availability clash check box; displays conflicting bookings and disables submission if conflicts exist.
+    - W41 segmented choices: **"Same rate & discount"** vs **"Standard rate"** with 56px verb touch targets.
+    - Reason chips for one-tap selection (`Shoot extension requested by client`, `Weather delay`, etc.) with client authorization check.
+    - Law 6 money blindness enforced: zero rates/charges rendered for floor roles (`Warehouse`, `Technician`, `Driver`).
+    - ≥44px touch targets throughout.
+  - Integration in `src/modules/rentals/BookingDetail.tsx` and `src/modules/rentals/ReturnWorkspace.tsx`:
+    - Connected `ExtendRentalModal` to BookingDetail with lines from `floor.lines` and auto-refetch on success.
+    - Connected `ExtendRentalModal` to ReturnWorkspace in the late return overrun banner (W36) when `canWriteBookingDesk(userRole)` is true.
+  - Unit tests added:
+    - `src/modules/rentals/modals/__tests__/ExtendRentalModal.test.tsx` (5/5 passed).
+    - `src/lib/queries/__tests__/extensionClash.test.ts` (3/3 passed).
+    - `src/actions/rentals/__tests__/extendRental.test.ts` (9/9 passed).
+
+**Ruled**
+- W36, W40, W41: Booking extensions provide two one-tap pricing choices ("Same rate & discount" or "Standard rate"). Desk staff (`canWriteBookingDesk`: Coordinator, Manager, Admin, Owner) can extend from Booking Detail or directly from the Return Workspace when a return is late.
+- Double-booking prevention: Active overlapping reservations on held assets are detected and prevent submission.
+- Law 6: Floor roles never receive monetary calculations in the DOM or API payloads.
+- Law 8: Idempotent writes via `client_uuid`.
+
+**Verified**
+- `npm run check:pglite`: 229/229 applied, 0 failed (R-35 Verified).
+- `npm run check:lifecycle`: 71/71 green, 0 failed.
+- `npm test`: 589 test files passed, 6946 passed.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run build`: built in 1m 57s (PWA precache 292 entries).
+- `npm run check:security`: 18 Phase 0 regressions + 14 branch groups + glossary pass.
+- `node scripts/test-booking-financial-integrity.mjs`: PASS.
+- `npm run test:server-contracts`: 59/59 passed.
+- `npm run test:partial-return`: 58/58 passed.
+- `npm run check:contrast`: 106/106 pass.
+- `npm run lint:ui-copy`: 0 violations.
+- `npm run lint:shell`: 926 files checked, 0 violations.
+- `node --test scripts/test-receipt.test.mjs`: 11/11 passed.
+- Driven screens at 375px, 820px, 1440px as money role (`Coordinator`) and money-blind role (`Warehouse`). Screen checks pass: which screen (Extend Rental modal), which booking (#BK-1001), where am I (Booking Detail / Return Workspace), next action (Confirm Extension), search and exit (Esc / Cancel / backdrop dismiss), touch targets ≥44px (56px for W41 pricing chips).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 101 / 101 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 82 / 82 (100%) | +0 |
+| Lifecycle | steps green / total | 71 / 71 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 229 files · check:pglite 229/229 applied, 0 failed (recorded 2026-11-09T21:26:52.789Z). Suite: PASS — 6946/6946 passed, 0 failed (recorded 2026-11-09T21:25:25.844Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-09T21:29:46.877Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T3-17 ready for local merge into `main`.
+- Next in Lane C: Card T3-28 · Rental day start as a setting (`docs/plans/prompts/T3-28.md`).
+
 ## 2026-11-09 — T3-27: Pro forma invoice from the draft (Lane C)
 
 **Did**

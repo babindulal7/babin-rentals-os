@@ -112,6 +112,7 @@ describe('EXTEND_RENTAL action', () => {
         booking_id: '11111111-1111-4111-8111-111111111111',
         days: 2,
         reason: 'Director requested additional shooting schedule',
+        pricing_option: 'same_rate',
         actor_id: 'user-actor-coord',
         client_uuid: 'action-uuid-extend-1',
       },
@@ -167,6 +168,33 @@ describe('EXTEND_RENTAL action', () => {
         role: 'Coordinator',
       })
     ).rejects.toThrow(/Could not resolve booking number NONEXISTENT/)
+  })
+
+  it('supports W41 pricingOption standard_rate', async () => {
+    const input: ExtendRentalInput = {
+      id: '11111111-1111-4111-8111-111111111111',
+      days: 1,
+      pricingOption: 'standard_rate',
+      reason: 'Extra day at catalog standard rate',
+      clientUuid: 'action-uuid-extend-std',
+    }
+
+    const res = await extendRentalConfig.execute(input, {
+      userId: 'user-actor-coord',
+      role: 'Coordinator',
+    })
+
+    expect(res.result.pricingOption).toBe('standard_rate')
+    expect(db.state.rpcCalls[0]!.args).toEqual({
+      p_payload: {
+        booking_id: '11111111-1111-4111-8111-111111111111',
+        days: 1,
+        reason: 'Extra day at catalog standard rate',
+        pricing_option: 'standard_rate',
+        actor_id: 'user-actor-coord',
+        client_uuid: 'action-uuid-extend-std',
+      },
+    })
   })
 
   it('propagates RPC errors directly from Postgres', async () => {
