@@ -4,6 +4,7 @@ import { Button } from '../../../components/ui/Button'
 import { Input } from '../../../components/ui'
 import type { PricingPipelineResult } from '../../../lib/pricingPipeline'
 import { formatMoney } from '../../../lib/money'
+import { sanitizeMoneyInput } from '../../../lib/formForgiveness'
 import { DiscountChips } from './DiscountChips'
 import { Field, MoneyRow } from './BookingFormWidgets'
 import { VatToggle } from './VatToggle'
@@ -447,10 +448,14 @@ export function RentalFinancialRail({
             <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
               <Field label="Override Amount (Rs) *">
                 <Input
-                  type="number"
-                  min={0}
+                  type="text"
+                  inputMode="numeric"
                   value={manualDepositAmount}
                   onChange={(e) => onManualDepositAmount(e.target.value)}
+                  onBlur={() => {
+                    const cleaned = sanitizeMoneyInput(manualDepositAmount)
+                    if (cleaned !== manualDepositAmount) onManualDepositAmount(cleaned)
+                  }}
                   placeholder="0"
                   style={inputStyle}
                 />

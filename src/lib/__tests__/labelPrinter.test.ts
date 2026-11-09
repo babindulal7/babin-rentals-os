@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
+import { BinaryBitmap, HybridBinarizer, QRCodeReader, RGBLuminanceSource } from '@zxing/library'
 import {
   generateCode128Svg,
+  generateQrSvg,
   generateLabelHtml,
   LABEL_PRESETS,
   type LabelData,
@@ -22,6 +24,32 @@ describe('Asset Tag & Thermal Label Printer', () => {
     expect(svg).toContain('viewBox="0 0')
     expect(svg).toContain('<rect')
     expect(svg).toContain('</svg>')
+  })
+
+  it('generates a genuine QR that ZXing decodes back to the same asset number', () => {
+    const original = 'FX3-9941-SN'
+    const svg = generateQrSvg(original)
+    expect(svg).toContain('data-symbology="qr"')
+    const dims = svg.match(/viewBox="0 0 (\d+) (\d+)"/)
+    expect(dims).not.toBeNull()
+    const width = Number(dims![1])
+    const height = Number(dims![2])
+    const pixels = new Uint8ClampedArray(width * height).fill(255)
+    const rectangles = svg.matchAll(/<rect x="(\d+)" y="(\d+)" width="1" height="1"\/>/g)
+    for (const match of rectangles) {
+      pixels[Number(match[2]) * width + Number(match[1])] = 0
+    }
+    const bitmap = new BinaryBitmap(new HybridBinarizer(new RGBLuminanceSource(pixels, width, height)))
+    expect(new QRCodeReader().decode(bitmap).getText()).toBe(original)
+    expect(generateQrSvg('RS4-7712')).not.toBe(svg)
+  })
+
+  it('prints the requested real QR instead of always printing Code128', () => {
+    const html = generateLabelHtml({
+      assetCode: 'FX3-9941', title: 'Sony FX3', barcodeValue: 'FX3-9941', symbology: 'qr',
+    }, 'case')
+    expect(html).toContain('data-symbology="qr"')
+    expect(html).toContain('70mm 35mm')
   })
 
   it('handles empty input gracefully', () => {

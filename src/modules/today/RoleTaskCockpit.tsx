@@ -21,6 +21,7 @@ import Icon, { type IconName } from '../../components/ui/Icon'
 import { useAuth } from '../../lib/auth'
 import { canViewMoney } from '../../lib/rbac'
 import { formatMoney } from '../../lib/money'
+import { URL_KEY } from '../../data/operations'
 import {
   fetchRoleTaskMetrics,
   type RoleTaskMetrics,
@@ -319,7 +320,7 @@ export function RoleTaskCockpit() {
               count={metrics.warehouse.packCount}
               subtitle="Bookings staged for preparation today"
               actionLabel="Pack Gear"
-              actionPath="/operations?tab=pack"
+              actionPath={`/operations?queue=${URL_KEY.Pack}`}
               icon="box"
               isFloorVerb
             />
@@ -328,7 +329,7 @@ export function RoleTaskCockpit() {
               count={metrics.warehouse.handoverCount}
               subtitle="Packed orders waiting for client pickup"
               actionLabel="Start Handover"
-              actionPath="/operations?tab=handover"
+              actionPath={`/operations?queue=${URL_KEY.Handover}`}
               icon="checklist"
               isFloorVerb
             />
@@ -341,7 +342,7 @@ export function RoleTaskCockpit() {
                   : 'Scheduled returns for intake & check'
               }
               actionLabel="Intake Return"
-              actionPath="/operations?tab=return"
+              actionPath={`/operations?queue=${URL_KEY.Return}`}
               icon="return_arrow"
               badge={metrics.warehouse.earlyMorningReturnCount > 0 ? `${metrics.warehouse.earlyMorningReturnCount} Early (<6 AM)` : undefined}
               badgeTone={metrics.warehouse.earlyMorningReturnCount > 0 ? 'warning' : undefined}
@@ -352,7 +353,7 @@ export function RoleTaskCockpit() {
               count={metrics.warehouse.resetCount}
               subtitle="Returned gear undergoing cleaning & QC check"
               actionLabel="Reset Gear"
-              actionPath="/operations?tab=reset"
+              actionPath={`/operations?queue=${URL_KEY.Reset}`}
               icon="tool"
               isFloorVerb
             />
@@ -411,7 +412,7 @@ export function RoleTaskCockpit() {
               count={metrics.coordinator.lateReturnsCount}
               subtitle="Rentals past scheduled return time"
               actionLabel="Manage Overdue"
-              actionPath="/operations?tab=return"
+              actionPath={`/operations?queue=${URL_KEY.Return}`}
               icon="alert_triangle"
               badge={metrics.coordinator.lateReturnsCount > 0 ? 'Overdue' : undefined}
               badgeTone="danger"
