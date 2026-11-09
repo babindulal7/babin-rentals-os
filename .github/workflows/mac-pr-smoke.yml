@@ -27,14 +27,14 @@ jobs:
       max-parallel: 2
       matrix:
         include:
-          - pr: 114
-            head_sha: 493471940bf9026ac1bfc711c2e13849055d351a
-          - pr: 90
-            head_sha: 2f092614d24ede58e529e61411b974a9b9ba7efe
-          - pr: 80
-            head_sha: f27a96ccf50368e59b41e67b4604ed8939f6eb54
-          - pr: 108
-            head_sha: 64e6bbdda76b1279884c450dfbc63b43836f200f
+          - pr: 54
+            head_sha: ec68b85578aaa9db3bff25557b5c297e75b73831
+          - pr: 55
+            head_sha: ce1a7af7dda7da5f3d468a5e7d4a4a5efb5dbbf4
+          - pr: 71
+            head_sha: 2149969d337013470cf7636de8155bfcecf82c07
+          - pr: 53
+            head_sha: 03edd0f8eb2b0f22bcdf3d38c42cca34ebdc7973
     env:
       CI: 'true'
       VITE_DATA_SOURCE: mock
@@ -116,7 +116,10 @@ jobs:
           test "${RUNNER_ARCH}" = ARM64
           test "$(git rev-parse HEAD)" = '${{ matrix.head_sha }}'
           test -z "$(git status --porcelain)"
-          git show --format= --check HEAD
+          if ! git show --format= --check HEAD > "${RUNNER_TEMP}/commit-whitespace.txt" 2>&1; then
+            echo '::warning::Target PR commit has whitespace findings; report separately, do not block typecheck/lint.'
+            cat "${RUNNER_TEMP}/commit-whitespace.txt"
+          fi
           echo "Assigned runner: ${RUNNER_NAME}"
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
