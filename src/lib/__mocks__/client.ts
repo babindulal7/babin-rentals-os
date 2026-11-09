@@ -471,6 +471,31 @@ function createBooking(payload: Record<string, unknown>): { data: Row | null; er
     return { data: null, error: { code: '23502', message: 'create_booking: created_by is required; there is no system actor', details: '', hint: '' } }
   }
 
+  /* 0229 — project name and shoot location, checked <= 120 chars */
+  const projectName =
+    typeof payload['project_name'] === 'string' && payload['project_name'].trim() !== ''
+      ? payload['project_name'].trim()
+      : typeof payload['project'] === 'string' && payload['project'].trim() !== ''
+        ? payload['project'].trim()
+        : null
+  const shootLocation =
+    typeof payload['shoot_location'] === 'string' && payload['shoot_location'].trim() !== ''
+      ? payload['shoot_location'].trim()
+      : null
+
+  if (projectName && projectName.length > 120) {
+    return {
+      data: null,
+      error: { code: '22026', message: 'create_booking: project_name must be 120 characters or fewer. Nothing was created.', details: '', hint: '' },
+    }
+  }
+  if (shootLocation && shootLocation.length > 120) {
+    return {
+      data: null,
+      error: { code: '22026', message: 'create_booking: shoot_location must be 120 characters or fewer. Nothing was created.', details: '', hint: '' },
+    }
+  }
+
   /* 0144 — project-type validation, mirroring the RPC allow-list so mock and
      Postgres refuse the same payloads. NULL is accepted (Drafts). */
   const projectType =
@@ -509,6 +534,8 @@ function createBooking(payload: Record<string, unknown>): { data: Row | null; er
         booking_id: existing['id'],
         booking_no: existing['booking_no'],
         stage: existing['stage'],
+        project_name: existing['project_name'] ?? existing['project'] ?? null,
+        shoot_location: existing['shoot_location'] ?? null,
         replayed: true,
       } as Row,
       error: null,
@@ -528,7 +555,9 @@ function createBooking(payload: Record<string, unknown>): { data: Row | null; er
     branch_id: payload['branch_id'] ?? null,
     client_id: payload['client_id'] ?? null,
     contact_id: payload['contact_id'] ?? null,
-    project: payload['project'] ?? null,
+    project: projectName ?? payload['project'] ?? null,
+    project_name: projectName,
+    shoot_location: shootLocation,
     project_type: projectType,
     project_type_other: projectTypeOther,
     stage: 'Quote',
@@ -832,6 +861,8 @@ function createBooking(payload: Record<string, unknown>): { data: Row | null; er
       unit_count: builtUnits.length,
       crew_lines: builtCrew.length,
       transport_written: builtTransport !== null,
+      project_name: projectName,
+      shoot_location: shootLocation,
       replayed: false,
     } as Row,
     error: null,
@@ -955,6 +986,7 @@ function createInvoiceRpc(payload: Record<string, unknown>): { data: Row | null;
       taxable_amount: invoice['taxable_amount'],
       vat_amount: invoice['vat_amount'],
       total: invoice['total_amount'],
+      project_name: invoice['project_name'] ?? null,
       replayed,
     }) as Row
 
@@ -1050,6 +1082,7 @@ function createInvoiceRpc(payload: Record<string, unknown>): { data: Row | null;
     booking_id: bookingId,
     client_id: booking['client_id'] ?? null,
     branch_id: booking['branch_id'] ?? null,
+    project_name: (booking['project_name'] as string | null) ?? (booking['project'] as string | null) ?? null,
     status: 'Draft',
     due_date: dueDate,
     currency: 'NPR',

@@ -3046,6 +3046,7 @@ export default function RentalsList() {
 
             <InspectorFacts title="Client" facts={[
               { key: 'client', label: 'Client', value: activeRental.client, strong: true },
+              ...(activeRental.shootLocation ? [{ key: 'shoot-location', label: 'Shoot location', value: activeRental.shootLocation }] : []),
               { key: 'pickup-location', label: 'Pickup location', value: activeRental.pickupLocation ?? 'Lalitpur Warehouse' },
             ]} />
 

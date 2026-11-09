@@ -971,6 +971,10 @@ export interface RentalListRow {
   avatarTone: StatusKey
   /** `bookings.project`, nullable (0002:28). Renders as an explicit non-value. */
   project: string | null
+  /** Project / production name (T3-26, B8, B52). */
+  projectName?: string | null
+  /** Shoot location (T3-26, B8). */
+  shootLocation?: string | null
   /**
    * `bookings.project_type` + `project_type_other` (0144) — the ALREADY-DISPLAYED
    * answer, resolved once here so no screen re-derives it. `Other` renders its
@@ -1106,6 +1110,8 @@ export function toRentalListRow(
     monogram: monogramOf(row.clientName),
     avatarTone: avatarToneFor(row.clientId),
     project: row.project,
+    projectName: row.projectName ?? row.project ?? null,
+    shootLocation: row.shootLocation ?? null,
     projectTypeDisplay: displayProjectType(row.projectType, row.projectTypeOther),
     projectTypeValue: row.projectType,
     pickupLocation: row.pickupLocation,

@@ -1,5 +1,91 @@
 # Progress Log
 
+## 2026-11-09 — T3-26: Project name and shoot location on every booking (Lane C)
+
+**Did**
+- **T3-26: Project name and shoot location on every booking (B8, B52, Law 4, Law 6, Law 8):**
+  - Claimed migration `0229` in `docs/plans/MIGRATION_LEDGER.md` (Next free number: `0230`).
+  - Authored `supabase/migrations/0229_project_name_and_shoot_location.sql`:
+    - Added `project_name text check (length(project_name) <= 120)` to `bookings`.
+    - Added `shoot_location text check (length(shoot_location) <= 120)` to `bookings`.
+    - Added `project_name text check (length(project_name) <= 120)` to `invoices`.
+    - Added trigger `trg_bookings_sync_project_name` to synchronize legacy `project` and `project_name` on bookings.
+    - Added trigger `trg_invoices_snapshot_project_name` to automatically snapshot `bookings.project_name` on invoice creation.
+    - Added trigger `trg_guard_invoice_project_name_immutable` to guard invoice project name immutability once `status <> 'Draft'` (B52, Law 4).
+    - Added explicit column grants on `project_name` and `shoot_location` to authenticated.
+    - Updated `create_booking(p_payload jsonb)` to accept and store `project_name` and `shoot_location`.
+    - Updated `create_invoice(p_payload jsonb)` to snapshot `project_name` from booking and accept manual override during creation.
+  - Added step `L69` to `scripts/e2e-lifecycle.mjs`:
+    - Verified `create_booking` stores both `project_name` and `shoot_location`.
+    - Verified length checks `<= 120` enforced in Postgres.
+    - Verified invoice creation snapshots `project_name`.
+    - Verified issued invoice project name is immutable (B52, Law 4).
+  - Extended query & mock layer:
+    - Added `projectName` and `shootLocation` to `BookingListRow`, `RawBookingRow`, `BASE_COLUMNS`, and `toRow` in `src/lib/queries/bookings.ts`.
+    - Added `projectName` and `shootLocation` to `FloorBooking`, `RawFloorBooking`, and `FLOOR_COLUMNS` in `src/lib/queries/bookings.ts` (enabling floor packing list and return report to render project details).
+    - Added `fetchRecentClientProjects(clientDbId)` in `src/lib/queries/bookings.ts` fetching up to 5 distinct recent project names and shoot locations for quick one-tap reuse.
+    - Added `projectName` to `InvoiceListRow`, `RawInvoiceRow`, and `INVOICE_COLUMNS` in `src/lib/queries/finance.ts`.
+    - Added `projectName` and `shootLocation` to `RentalListRow` and `toRentalListRow` in `src/data/rentals.ts`.
+    - Updated mock client `createBookingRpc` and `createInvoiceRpc` in `src/lib/__mocks__/client.ts`.
+  - Extended actions:
+    - Updated `createRental` in `src/actions/rentals/createRental.ts` with length validation `<= 120` and passing `project_name` & `shoot_location` to `create_booking`.
+    - Updated `updateBookingProject` in `src/actions/rentals/updateBookingProject.ts` with validation and audit logging for `projectName` and `shootLocation`.
+    - Updated `saveDraft` in `src/actions/rentals/saveDraft.ts` to include `projectName` and `shootLocation` in `RentalDraftData`.
+  - Extended PDF generation:
+    - Added `project?: string | null` to `InvoicePdfData` in `src/lib/pdf/generatePdf.ts` and `src/lib/pdf/invoicePdfData.ts`.
+    - Printed `Project: <project>` in the RENTAL REFERENCE block of invoice PDF (B52).
+    - Preserved project display in `DocumentPdfData` and `PackingListPdfData`.
+  - Extended UI components:
+    - `src/modules/rentals/booking/BookingClientSection.tsx`: Added Project / Production Name and Shoot Location fields with max 120 char counters and one-tap chips from recent client bookings.
+    - `src/modules/rentals/NewRental.tsx`: Wired `shootLocation` and `recentProjects` fetched via `fetchRecentClientProjects(clientDbId)`, wired into draft and submit hooks.
+    - `src/modules/rentals/BookingDetail.tsx`: Displayed Project and Shoot Location in SummaryRows and header description. Updated `ProjectTypeEditor` into an inline editor allowing editing Project Name, Shoot Location, and Project Type with validation and rollback.
+    - `src/modules/rentals/RentalsList.tsx`: Displayed `shootLocation` in the rental inspector drawer alongside client facts.
+  - Added / updated unit test suites:
+    - `src/actions/rentals/__tests__/updateBookingProject.test.ts`: Added validation tests (<= 120 chars) and update write tests for `projectName` and `shootLocation`.
+    - `src/lib/pdf/__tests__/generatePdf.test.ts`: Added test asserting invoice PDF prints project name (B52, T3-26).
+    - `src/modules/rentals/__tests__/newRentalDraftPersistence.test.tsx` and `src/modules/rentals/booking/__tests__/useNewRentalSubmit.test.tsx`: Verified all passed.
+
+**Ruled**
+- B8, B52: Project / production name and shoot location on every booking, up to 120 chars each.
+- B52, Law 4: Project name printed on every invoice; an issued invoice preserves the name it was issued with immutably.
+- Law 6: Floor roles see project name and shoot location on packing lists and booking details while remaining strictly money-blind.
+- Law 8: All updates and writes carry idempotency keys.
+
+**Verified**
+- `npm run check:pglite`: 226/226 applied, 0 failed, 195 definer functions pinned, 0 unauthorized public functions.
+- `npm run check:lifecycle`: 69/69 green, 0 known-red, 0 failed (Step L69 passed).
+- `node scripts/test-booking-financial-integrity.mjs`: PASS (all financial integrity assertions green).
+- `npm run check:security`: PASS (all Phase 0 regressions + Reset branch + operations grants verified).
+- `npm run test:server-contracts`: 59/59 integration assertions PASSED (0 failures).
+- `npm run test:partial-return`: 58/58 partial return acceptance assertions PASSED (0 failures).
+- `node --test scripts/test-receipt.test.mjs`: 11/11 passed.
+- `npm run lint:shell`: 923 files checked, 0 violations.
+- `npm run lint:ui-copy`: 0 developer-text violations (12/12 tests passed).
+- `npm run check:contrast`: 106/106 pass, 0 FAIL.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run build`: built in production mode without errors (`tsc --noEmit && vite build`).
+- `npm test`: 584 test files passed (6906/6906 tests passed, 0 failed).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 100 / 100 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 82 / 82 (100%) | +0 |
+| Lifecycle | steps green / total | 69 / 69 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 226 files · check:pglite 226/226 applied, 0 failed (recorded 2026-11-09T09:55:46.192Z). Suite: PASS — 6906/6906 passed, 0 failed (recorded 2026-11-09T10:57:50.081Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-09T09:56:40.086Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T3-26 is complete on branch `lane-c/T3-26-project-name-and-shoot-location-on` awaiting Babin local merge.
+- Next in Lane C: Card T3-27 · Pro forma invoice from the draft (`docs/plans/T3_BOOKING_MONEY.md`).
+
 ## 2026-11-08 — T3-25: Tags on bookings (Lane C)
 
 **Did**

@@ -17,7 +17,7 @@ import { useViewport } from '../../lib/device'
 import { useNetwork } from '../../lib/network'
 import { formatAd } from '../../lib/bs'
 import { isProjectType } from '../../lib/projectTypes'
-import { fetchLastProjectType } from '../../lib/queries/bookings'
+import { fetchLastProjectType, fetchRecentClientProjects } from '../../lib/queries/bookings'
 import { formatMoney, rupees } from '../../lib/money'
 import type { Paisa } from '../../lib/money'
 import type { RentalDraftData } from '../../actions/rentals/saveDraft'
@@ -312,6 +312,11 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
      demo literals — a named project, a kind, and a July 2026 window — which
      made every fresh draft look priced and dated before anyone touched it. */
   const [project, setProject] = useState('')
+  const [shootLocation, setShootLocation] = useState('')
+  const [recentProjects, setRecentProjects] = useState<{ projectNames: string[]; shootLocations: string[] }>({
+    projectNames: [],
+    shootLocations: [],
+  })
   const [kind, setKind] = useState('')
   /** Custom description, only meaningful while `kind` is 'Other' (spec §7). */
   const [kindOther, setKindOther] = useState('')
@@ -332,9 +337,13 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     if (!clientDbId) {
       if (prefilledKind.current !== null && kindNow.current === prefilledKind.current) setKind('')
       prefilledKind.current = null
+      setRecentProjects({ projectNames: [], shootLocations: [] })
       return
     }
     let cancelled = false
+    void fetchRecentClientProjects(clientDbId).then((rec) => {
+      if (!cancelled) setRecentProjects(rec)
+    })
     void fetchLastProjectType(clientDbId).then((last) => {
       if (cancelled || !replaceable()) return
       const next = last && isProjectType(last.projectType) ? last.projectType : ''
@@ -591,7 +600,8 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
      loader and the local restore both call it, so they cannot drift apart. */
   const applyDraftFields = useCallback((data: RentalDraftData) => {
     setSelectedClientId(data.selectedClientId)
-    setProject(data.project)
+    setProject(data.projectName ?? data.project)
+    if (data.shootLocation) setShootLocation(data.shootLocation)
     /* Legacy drafts stored free-text `kind`; only allow-listed values
        survive the restore — anything else would fail validation on save. */
     setKind(isProjectType(data.kind) ? data.kind : '')
@@ -690,6 +700,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     setQuoteSnapshot,
     selectedClientId,
     project,
+    shootLocation,
     kind,
     kindOther,
     govId,
@@ -738,6 +749,8 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     lines,
     equipmentLines,
     project,
+    projectName: project,
+    shootLocation,
     pickupAt,
     returnAt,
     deliveryType,
@@ -1286,6 +1299,10 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
               isPhone={isPhone}
               project={project}
               setProject={setProject}
+              shootLocation={shootLocation}
+              setShootLocation={setShootLocation}
+              recentProjectNames={recentProjects.projectNames}
+              recentShootLocations={recentProjects.shootLocations}
               kind={kind}
               setKind={setKind}
               kindOther={kindOther}

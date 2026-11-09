@@ -34,6 +34,8 @@ export interface UseNewRentalSubmitOptions {
   lines: Line[]
   equipmentLines: Line[]
   project: string
+  projectName?: string
+  shootLocation?: string
   pickupAt: Date | null
   returnAt: Date | null
   deliveryType: 'Client Pickup' | 'Babin Delivery'
@@ -128,6 +130,8 @@ export function useNewRentalSubmit({
   lines,
   equipmentLines,
   project,
+  projectName,
+  shootLocation,
   pickupAt,
   returnAt,
   deliveryType,
@@ -255,6 +259,8 @@ export function useNewRentalSubmit({
           clientId: clientDbId,
           branchId,
           project: finalProject,
+          projectName: (projectName?.trim() || finalProject) ?? null,
+          shootLocation: shootLocation?.trim() || null,
           projectType: kind.trim() !== '' ? kind : null,
           projectTypeOther: kind === 'Other' && kindOther.trim() !== '' ? kindOther.trim() : null,
           ...(draftBookingNo ? { bookingNo: draftBookingNo } : {}),
@@ -357,6 +363,8 @@ export function useNewRentalSubmit({
       lines,
       equipmentLines,
       project,
+      projectName,
+      shootLocation,
       kind,
       kindOther,
       draftBookingNo,

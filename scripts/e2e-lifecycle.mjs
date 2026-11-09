@@ -7460,6 +7460,102 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L69',
+  title: 'Project name and shoot location on every booking: create_booking stores both, length checks enforced, invoice snapshot preserves project name (T3-26, B8, B52)',
+  expect: 'green',
+  run: async () => {
+    const clientUuid = '00000000-0000-4000-8000-000000000069'
+    const projName = 'Kathmandu Diaries — music video'
+    const shootLoc = 'Pokhara, Phewa lake'
+
+    // 1. Create booking with project_name and shoot_location
+    let bId
+    await as('Coordinator', async () => {
+      const payload = {
+        client_uuid: clientUuid,
+        created_by: U.Coordinator,
+        branch_id: BRANCH,
+        client_id: CLIENT,
+        project_name: projName,
+        shoot_location: shootLoc,
+        project_type: 'Music Video',
+        pickup_at: '2099-12-01T04:00:00Z',
+        return_at: '2099-12-03T04:00:00Z',
+        delivery_type: 'Client Pickup',
+        deposit_required: 0,
+        lines: [
+          {
+            client_uuid: '00000000-0000-4000-8000-000000006901',
+            line_type: 'Equipment',
+            product_id: SERIAL_PRODUCT,
+            item_name: 'Lifecycle FX3 Camera',
+            qty: 1,
+            days: 2,
+            rate: 5000,
+          },
+        ],
+      }
+      const res = await q('select public.create_booking($1::jsonb) as res', [JSON.stringify(payload)])
+      bId = res.rows[0].res.booking_id
+    })
+
+    // 2. Query bookings table directly to assert both columns persisted
+    const bRow = (await q('select project, project_name, shoot_location from bookings where id = $1', [bId])).rows[0]
+    assertEq(bRow.project_name, projName, 'project_name persisted in bookings')
+    assertEq(bRow.shoot_location, shootLoc, 'shoot_location persisted in bookings')
+    assertEq(bRow.project, projName, 'legacy project column synced with project_name')
+
+    // 3. Length check > 120 chars must fail
+    await as('Coordinator', async () => {
+      const longName = 'A'.repeat(121)
+      const badPayload = {
+        client_uuid: '00000000-0000-4000-8000-000000006902',
+        created_by: U.Coordinator,
+        branch_id: BRANCH,
+        client_id: CLIENT,
+        project_name: longName,
+        pickup_at: '2099-12-01T04:00:00Z',
+        return_at: '2099-12-03T04:00:00Z',
+        delivery_type: 'Client Pickup',
+        lines: [],
+      }
+      let threw = false
+      try {
+        await q('select public.create_booking($1::jsonb)', [JSON.stringify(badPayload)])
+      } catch (err) {
+        threw = true
+        assert(err.message.includes('120') || err.code === '22023', 'error explains 120 char limit')
+      }
+      assert(threw, 'create_booking refused project_name > 120 chars')
+    })
+
+    // 4. Create an invoice for this booking — must carry the project_name snapshot
+    let invId
+    await as('Accounts', async () => {
+      const invPayload = {
+        client_uuid: '00000000-0000-4000-8000-000000006903',
+        created_by: U.Accounts,
+        booking_id: bId,
+      }
+      const res = await q('select public.create_invoice($1::jsonb) as res', [JSON.stringify(invPayload)])
+      invId = res.rows[0].res.invoice_id
+      assertEq(res.rows[0].res.project_name, projName, 'create_invoice returned project_name snapshot')
+    })
+
+    const invRow = (await q('select project_name from invoices where id = $1', [invId])).rows[0]
+    assertEq(invRow.project_name, projName, 'invoices table stores project_name snapshot')
+
+    // 5. Mutating booking project_name later leaves invoice project_name unchanged (B52)
+    await as('Coordinator', async () => {
+      await q('update bookings set project_name = $1 where id = $2', ['Revised Title Subsequent To Invoice', bId])
+    })
+
+    const invRowAfter = (await q('select project_name from invoices where id = $1', [invId])).rows[0]
+    assertEq(invRowAfter.project_name, projName, 'invoice keeps original project_name even after booking is edited')
+  },
+})
+
 
 /* ΓöÇΓöÇ Run ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 

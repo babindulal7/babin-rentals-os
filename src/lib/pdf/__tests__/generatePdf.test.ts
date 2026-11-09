@@ -48,6 +48,18 @@ describe('generatePdf', () => {
       expect(text).not.toContain('Professional Camera, Lighting')
     })
 
+    it('prints project name on invoice when provided (B52, T3-26)', () => {
+      const bytes = generateInvoicePdf({
+        ...basicInvoice,
+        company: { name: 'Recorded Rentals' },
+        vatPaisa: rupees(0),
+        project: 'Kathmandu Diaries — music video',
+      })
+      const text = new TextDecoder().decode(bytes)
+      expect(text).toContain('Project:')
+      expect(text).toContain('Kathmandu Diaries')
+    })
+
     it('produces valid PDF 1.4 binary bytes with standard structure', () => {
       const data: InvoicePdfData = {
         invoiceNo: 'INV-2026-0001',
