@@ -1,7 +1,9 @@
 name: Mac PR smoke (temporary)
 
-# Temporary pilot: test five specific, same-repository PR heads on the owner's
-# macOS ARM64 self-hosted runners. Do not merge this workflow into main.
+# Temporary verification harness on the owner's three M4 self-hosted runners.
+# Two deeper mock suites plus one lightweight lint/typecheck lane can run
+# concurrently. This is NOT the required Windows full CI or merge approval.
+# Do not merge this temporary workflow into main.
 on:
   push:
     branches:
@@ -15,11 +17,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate-pr-heads:
-    name: PR #${{ matrix.pr }} · typecheck + lint
+  deep-pr-heads:
+    name: PR #${{ matrix.pr }} · mock tests + build
     if: github.repository == 'babindulal7/babin-rentals-os'
     runs-on: [self-hosted, macOS, ARM64]
-    timeout-minutes: 60
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -27,20 +29,18 @@ jobs:
         include:
           - pr: 114
             head_sha: 493471940bf9026ac1bfc711c2e13849055d351a
-          - pr: 105
-            head_sha: 74ab019ffae074b21299a259db52205b8ab3fbb3
-          - pr: 96
-            head_sha: 63daaa912346ea1186c5b49d970a8f8aa7e3b505
-          - pr: 95
-            head_sha: efdc1eb2d5131d08bc76efce61921b0e400c4866
-          - pr: 94
-            head_sha: 0c45bfaeab904dcb7a89aa9b3bdb376ad55f05c2
+          - pr: 90
+            head_sha: 2f092614d24ede58e529e61411b974a9b9ba7efe
+          - pr: 80
+            head_sha: f27a96ccf50368e59b41e67b4604ed8939f6eb54
+          - pr: 108
+            head_sha: 64e6bbdda76b1279884c450dfbc63b43836f200f
     env:
       CI: 'true'
       VITE_DATA_SOURCE: mock
       NODE_OPTIONS: '--max-old-space-size=2048'
     steps:
-      - name: Check out exact PR head, without persistent credentials
+      - name: Check out exact same-repository PR head
         uses: actions/checkout@v4
         with:
           ref: ${{ matrix.head_sha }}
@@ -50,20 +50,86 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-      - name: Verify pinned SHA
+      - name: Verify exact head and runner
         shell: bash
         run: |
+          test "${RUNNER_OS}" = macOS
+          test "${RUNNER_ARCH}" = ARM64
           test "$(git rev-parse HEAD)" = '${{ matrix.head_sha }}'
           test -z "$(git status --porcelain)"
-      - name: Install locked dependencies
+          echo "Assigned runner: ${RUNNER_NAME}"
+      - name: Install dependencies
         run: npm ci --no-audit --no-fund
       - name: Typecheck
         run: npm run typecheck
       - name: Lint
         run: npm run lint
-      - name: Explain limited scope
+      - name: Local API safety guards
+        run: npm run test:local-api-guards
+      - name: Mock test suite (one worker per job)
+        run: npm test -- --maxWorkers=1
+      - name: Production build
+        run: npm run build
+      - name: Evidence and scope
         if: always()
         shell: bash
         run: |
-          echo "PR #${{ matrix.pr }} at ${{ matrix.head_sha }}" >> "$GITHUB_STEP_SUMMARY"
-          echo 'Mac smoke checks only; not the full Windows CI / database gates / release approval.' >> "$GITHUB_STEP_SUMMARY"
+          echo "Runner: ${RUNNER_NAME}" >> "$GITHUB_STEP_SUMMARY"
+          echo "PR #${{ matrix.pr }} pinned head ${{ matrix.head_sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo 'Mac offline mock verification only. Full Windows CI, database/RLS/financial gates and coverage remain required.' >> "$GITHUB_STEP_SUMMARY"
+
+  quick-pr-heads:
+    name: PR #${{ matrix.pr }} · typecheck + lint
+    if: github.repository == 'babindulal7/babin-rentals-os'
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          - pr: 109
+            head_sha: 738e964d4360666a9f0247dc826e735f6e6741fd
+          - pr: 116
+            head_sha: d741b627373a2daba8d9763048f80465832707ee
+          - pr: 110
+            head_sha: e14baec6992327c42bb1881ce73be2073224cf36
+    env:
+      CI: 'true'
+      VITE_DATA_SOURCE: mock
+      NODE_OPTIONS: '--max-old-space-size=1536'
+    steps:
+      - name: Check out exact same-repository PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.head_sha }}
+          persist-credentials: false
+      - name: Set up Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Verify exact head and runner
+        shell: bash
+        run: |
+          test "${RUNNER_OS}" = macOS
+          test "${RUNNER_ARCH}" = ARM64
+          test "$(git rev-parse HEAD)" = '${{ matrix.head_sha }}'
+          test -z "$(git status --porcelain)"
+          git show --format= --check HEAD
+          echo "Assigned runner: ${RUNNER_NAME}"
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Local API safety guards
+        run: npm run test:local-api-guards
+      - name: Evidence and scope
+        if: always()
+        shell: bash
+        run: |
+          echo "Runner: ${RUNNER_NAME}" >> "$GITHUB_STEP_SUMMARY"
+          echo "PR #${{ matrix.pr }} pinned head ${{ matrix.head_sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo 'Quick Mac preflight only, not full tests/build/Windows CI or release approval.' >> "$GITHUB_STEP_SUMMARY"
