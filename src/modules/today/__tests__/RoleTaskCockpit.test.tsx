@@ -96,7 +96,7 @@ describe('RoleTaskCockpit Component (T5-11, W61, W79, W31)', () => {
       ['Start Handover', '/operations?queue=handover'],
       ['Intake Return', '/operations?queue=return'],
       ['Reset Gear', '/operations?queue=reset'],
-    ]) {
+    ] as const) {
       const button = Array.from(buttons).find((b) => b.textContent?.includes(label))
       expect(button, `Missing ${label} shortcut`).toBeDefined()
       await act(async () => {
