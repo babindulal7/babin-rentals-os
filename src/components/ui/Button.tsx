@@ -92,6 +92,14 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   disabled,
   icon,
   iconRight,
+  /*
+   * HTML's default for `<button>` is `type="submit"`. Every button in this app
+   * lives inside some form or another, so a `Button` used purely for a
+   * non-submitting action (a row action, a "cancel", a tab) silently submitted
+   * the enclosing form and reloaded the page. `type="button"` is the safe
+   * default; a real submit button still opts in explicitly.
+   */
+  type = 'button',
   style,
   className,
   ...props
@@ -105,6 +113,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   return (
     <button
       ref={ref}
+      type={type}
       disabled={isDisabled}
       aria-busy={loading || undefined}
       className={['ui-button', `ui-button--${variant}`, `ui-button--${size}`, 'press', className].filter(Boolean).join(' ')}

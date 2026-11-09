@@ -149,6 +149,8 @@ export const EVENT_TYPES = {
      Carries no unit — due-ness is derived per unit at read time and there is
      no is_due column to invalidate, so a listener re-reads the view. */
   PRODUCT_SERVICE_PLAN_UPDATED: 'inventory.product_service_plan_updated',
+  /** T3-12: a paste-list correction was saved as an alias against a product. */
+  PRODUCT_ALIAS_REMEMBERED: 'inventory.product_alias_remembered',
   CLIENT_CREATED: 'client.created',
   CLIENT_UPDATED: 'client.updated',
   CLIENT_STATUS_UPDATED: 'client.status_updated',

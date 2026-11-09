@@ -234,12 +234,17 @@ export function enrollMembershipEditor(store: Store, args: Record<string, unknow
 
   const client = store.clients?.find(c => c.id === clientId)
   if (!client) throw new Error('Client not found.')
+  if (String(client.status) === 'Deactivated') throw new Error('A deactivated client cannot take a membership.')
   const plan = store.membership_plans?.find(p => p.id === planId)
   if (!plan) throw new Error('Membership plan not found.')
+  if (String(plan.status ?? 'Active') !== 'Active') throw new Error('That membership plan is retired and cannot be assigned.')
 
   const now = new Date().toISOString()
   const newId = crypto.randomUUID()
   const existing = (store.client_memberships ?? []).find(m => m.client_id === clientId && !m.superseded_at)
+  if (existing && existing.plan_id === planId) {
+    throw new Error('This client is already on this membership plan.')
+  }
   if (existing) {
     existing.superseded_at = now
     existing.superseded_by_id = newId

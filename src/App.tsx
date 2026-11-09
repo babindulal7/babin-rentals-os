@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { AUDIT_LOG_PATH, PRODUCTIONS_HUB_PATH, financeTabPath, type FinanceTabSlug } from './lib/routeTargets'
+import { AUDIT_LOG_PATH, PROBLEM_REPORTS_PATH, PRODUCTIONS_HUB_PATH, financeTabPath, type FinanceTabSlug } from './lib/routeTargets'
 import Sidebar from './components/shell/Sidebar'
 import BottomBar, { BAR_BOX } from './components/shell/BottomBar'
 import HeaderBar from './components/shell/Header'
@@ -9,7 +9,8 @@ import type { Crumb } from './components/shell/Header'
 import ScannerFab from './components/shell/ScannerFab'
 import { ErrorBoundary } from './components/shell/ErrorBoundary'
 import { LoadingSkeleton, RestrictedState } from './components/ui/StateViews'
-import { NAV, isMoneySurface, isStaffSurface, FLOOR_ROUTE_SUFFIXES } from './data/nav'
+import { Button } from './components/ui/Page'
+import { NAV, isMoneySurface, isStaffSurface, FLOOR_ROUTE_SUFFIXES, defaultNavTarget } from './data/nav'
 import { ToastProvider } from './components/ui/Toast'
 import { SyncProvider } from './lib/syncContext'
 import { CommandPalette } from './components/shell/CommandPalette'
@@ -63,6 +64,7 @@ const BackupRestore     = lazy(() => import('./modules/admin/BackupRestore'))
 const AuditSettings     = lazy(() => import('./modules/admin/AuditSettings'))
 const ActivityLog       = lazy(() => import('./modules/admin/ActivityLog'))
 const AuditLog          = lazy(() => import('./modules/admin/AuditLog'))
+const ProblemReports    = lazy(() => import('./modules/admin/ProblemReports'))
 const NumberingSequences = lazy(() => import('./modules/admin/NumberingSequences'))
 const CashFlowReport    = lazy(() => import('./modules/reports/CashFlowReport'))
 const WorkingCapital    = lazy(() => import('./modules/reports/WorkingCapitalReport'))
@@ -88,6 +90,9 @@ const WarrantyTracker   = lazy(() => import('./modules/inventory/WarrantyTracker
 const QrLabels          = lazy(() => import('./modules/inventory/QrLabels'))
 const InternalNotesPage = lazy(() => import('./modules/notes/InternalNotesPage'))
 const RiderDeliveryPage = lazy(() => import('./modules/operations/RiderDeliveryPage'))
+const ApprovalsInbox    = lazy(() => import('./modules/approvals/ApprovalsInbox'))
+const UnsubscribePage   = lazy(() => import('./modules/communication/UnsubscribePage').then(m => ({ default: m.UnsubscribePage })))
+const OfferCampaigns   = lazy(() => import('./modules/communication/OfferCampaigns').then(m => ({ default: m.OfferCampaigns })))
 
 function FinanceTabRedirect({ tab }: { tab: FinanceTabSlug }) {
   const { search, hash } = useLocation()
@@ -128,7 +133,7 @@ export default function App() {
           <WorkspaceProvider>
             <CreationContextProvider>
               <CommandPalette />
-              {showOnboarding && (
+              {showOnboarding && user && user.role !== 'Client' && location.pathname !== '/login' && (
                 <Suspense fallback={null}>
                   <WelcomeOnboarding onClose={() => setShowOnboarding(false)} />
                 </Suspense>
@@ -151,7 +156,9 @@ export default function App() {
         {/* Public Rider Link route (T4-08, W49): unauthenticated, token-hashed job view */}
         <Route path="/rider/:token" element={<Suspense fallback={AuthFallback}><RiderDeliveryPage /></Suspense>} />
         <Route path="/rider" element={<Suspense fallback={AuthFallback}><RiderDeliveryPage /></Suspense>} />
-        <Route path="/" element={<Navigate to={user ? "/today" : "/login"} replace />} />
+        {/* Public Marketing Unsubscribe route (T5-12, K6): unauthenticated, token-hashed */}
+        <Route path="/unsubscribe" element={<Suspense fallback={AuthFallback}><UnsubscribePage /></Suspense>} />
+        <Route path="/" element={<Navigate to={user ? defaultNavTarget(user.role) : '/login'} replace />} />
 
         {/*
           v2.0 §5.1 removed Reports from the sidebar — it is a Finance tab
@@ -200,6 +207,17 @@ export default function App() {
           element={
             <Shell crumbs={[{ label: 'Today' }]} search="Search booking no, client, equipment…">
               <Today />
+            </Shell>
+          }
+        />
+
+        <Route
+          path="/approvals"
+          element={
+            <Shell crumbs={[{ label: 'Approvals' }]}>
+              <Suspense fallback={AuthFallback}>
+                <ApprovalsInbox />
+              </Suspense>
             </Shell>
           }
         />
@@ -816,6 +834,18 @@ export default function App() {
         <Route path="/tools/depreciation" element={<Navigate to="/tools?tab=depreciation" replace />} />
         <Route path="/tools/pricing" element={<Navigate to="/tools?tab=pricing" replace />} />
 
+        {/* Marketing / Communication Offer Campaigns (T5-12, B43, B50) */}
+        <Route
+          path="/communication/offers"
+          element={
+            <Shell crumbs={[{ label: 'Communication' }, { label: 'Offer Emails' }]}>
+              <OfferCampaigns />
+            </Shell>
+          }
+        />
+        <Route path="/marketing/offers" element={<Navigate to="/communication/offers" replace />} />
+        <Route path="/tools/offers" element={<Navigate to="/communication/offers" replace />} />
+
         <Route
           path={AUDIT_LOG_PATH}
           element={
@@ -848,6 +878,15 @@ export default function App() {
           element={
             <Shell crumbs={[{ label: 'Settings', to: '/settings' }, { label: 'Backup & Restore' }]}>
               <BackupRestore />
+            </Shell>
+          }
+        />
+
+        <Route
+          path={PROBLEM_REPORTS_PATH}
+          element={
+            <Shell crumbs={[{ label: 'Settings', to: '/settings' }, { label: 'Problem Reports' }]}>
+              <ProblemReports />
             </Shell>
           }
         />
@@ -973,7 +1012,58 @@ function OfflineBanner() {
       borderBottom: '1px solid var(--border)'
     }}>
       <Icon name="error" size={16} />
-      <span>You are offline. Changes will be saved locally and synced when you reconnect.</span>
+      <span>You are offline. Scans and team notes queue locally. Custodial handovers, returns, and stage transitions require an online connection.</span>
+    </div>
+  )
+}
+
+/**
+ * **Fail-closed curtain for the screen lock.**
+ *
+ * The lock is a lazily-loaded chunk rendered behind `<Suspense fallback={null}>`
+ * (a null fallback means: nothing is painted while the chunk downloads). That
+ * is safe only if the chunk always arrives. When it does not — cold offline
+ * load, a stale service-worker cache, a chunk 404 after a deploy — the session
+ * stays fully visible and interactive behind an invisible "lock".
+ *
+ * This curtain paints *over* everything at `--z-system` until the real PIN
+ * prompt mounts, so a slow or failed chunk can never expose the app. `failed`
+ * is the error-boundary case: the chunk rejected, so there is no prompt to
+ * mount and the honest action is a reload, with the app still hidden.
+ */
+function LockCurtain({ failed = false }: { failed?: boolean }) {
+  return (
+    <div
+      role={failed ? 'alert' : 'status'}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 'var(--z-system)' as unknown as number,
+        background: 'var(--bg)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+        padding: 24,
+        textAlign: 'center',
+      }}
+    >
+      <Icon name="lock" size={28} />
+      <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>
+        {failed ? 'This session is locked.' : 'Locking this session…'}
+      </p>
+      {failed && (
+        <>
+          <p style={{ margin: 0, maxWidth: 360, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+            The unlock screen could not load. Reload to sign in again — the app behind this
+            screen stays hidden until you do.
+          </p>
+          <Button variant="primary" onClick={() => window.location.reload()}>
+            Reload
+          </Button>
+        </>
+      )}
     </div>
   )
 }
@@ -1165,11 +1255,14 @@ function Shell({
       {phone && <BottomBar active={pathname + query} />}
       <ScannerFab />
 
-      {/* Screen Lock Overlay */}
+      {/* Screen Lock Overlay — fail closed: the curtain covers the session while
+          the chunk loads, and stays up if the chunk never arrives. */}
       {isLocked && (
-        <Suspense fallback={null}>
-          <ScreenLock onUnlock={() => setLocked(false)} />
-        </Suspense>
+        <ErrorBoundary fallback={<LockCurtain failed />}>
+          <Suspense fallback={<LockCurtain />}>
+            <ScreenLock onUnlock={() => setLocked(false)} />
+          </Suspense>
+        </ErrorBoundary>
       )}
     </div>
   )

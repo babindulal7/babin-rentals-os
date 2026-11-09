@@ -163,10 +163,11 @@ export function CreateSubRentalModal({
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-md)' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
+            <label htmlFor="subrental-vendor" style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
               External Vendor <span style={{ color: 'var(--danger)' }}>*</span>
             </label>
             <input
+              id="subrental-vendor"
               type="text"
               placeholder="e.g. Cine Gear Nepal"
               value={vendor}
@@ -184,10 +185,11 @@ export function CreateSubRentalModal({
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
+            <label htmlFor="subrental-equipment" style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
               Equipment Name <span style={{ color: 'var(--danger)' }}>*</span>
             </label>
             <input
+              id="subrental-equipment"
               type="text"
               placeholder="e.g. ARRI Alexa Mini"
               value={itemName}
@@ -243,10 +245,11 @@ export function CreateSubRentalModal({
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
+            <label htmlFor="subrental-client-charge" style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
               Client Charge Price (Rs) <span style={{ color: 'var(--danger)' }}>*</span>
             </label>
             <input
+              id="subrental-client-charge"
               type="number"
               min={1}
               value={clientCharge === 0 ? '' : clientCharge}

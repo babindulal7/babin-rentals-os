@@ -9,6 +9,7 @@ import { PageShell } from '../../components/ui/PageShell'
 import { useViewport } from '../../lib/device'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { isMoneySurface, getToolsStatus } from '../../lib/queries/tools'
+import { useTranslation } from '../../lib/i18n'
 import DepreciationCalculator from './DepreciationCalculator'
 import PricingCalculator from './PricingCalculator'
 import CineTools from '../settings/Tools'
@@ -41,68 +42,69 @@ interface ToolGroup {
   cards: ToolCard[]
 }
 
-const GROUPS: ToolGroup[] = [
-  {
-    heading: 'Calculators',
-    desktopColumns: 2,
-    cards: [
-      {
-        label: 'Depreciation',
-        hint: 'Book view · IRD pool view (schedule & book value curve)',
-        icon: 'chart',
-        tab: 'depreciation',
-        to: '/tools/depreciation',
-      },
-      {
-        label: 'Pricing',
-        hint: 'Rate, days, discount — quote sandbox engine',
-        icon: 'dollar',
-        tab: 'pricing',
-        to: '/tools/pricing',
-      },
-    ],
-  },
-  {
-    heading: 'Commercial Utilities',
-    desktopColumns: 2,
-    cards: [
-      {
-        label: 'Late Fee',
-        hint: '30 minutes free · under 2 hours: half day · 2 hours or more: full day',
-        icon: 'timer',
-        tab: 'latefee',
-        to: '/tools/latefee',
-      },
-    ],
-  },
-  {
-    heading: 'Cinematography suite',
-    desktopColumns: 2,
-    note: '15 categories of camera, lens, exposure, timecode and power calculators.',
-    cards: [
-      {
-        label: 'Camera & lens tools',
-        hint: 'Crop factor · field of view · depth of field · ND · timecode · storage · battery',
-        icon: 'camera',
-        tab: 'cinematography',
-        to: '/tools/cinematography',
-      },
-    ],
-  },
-]
-
-function visibleGroups(money: boolean): ToolGroup[] {
-  if (money) return GROUPS
-  return GROUPS.map((g) => ({
-    ...g,
-    cards: g.cards.filter((c) => !isMoneySurface(c.to)),
-  })).filter((g) => g.cards.length > 0)
-}
-
 export default function ToolsLanding() {
+  const { t } = useTranslation()
   const viewport = useViewport()
   const money = useCanViewMoney()
-  const groups = useMemo(() => visibleGroups(money), [money])
+
+  const groups = useMemo<ToolGroup[]>(() => {
+    const raw: ToolGroup[] = [
+      {
+        heading: t('tools.landing.calculatorsGroup'),
+        desktopColumns: 2,
+        cards: [
+          {
+            label: t('tools.landing.depreciationLabel'),
+            hint: t('tools.landing.depreciationHint'),
+            icon: 'chart',
+            tab: 'depreciation',
+            to: '/tools/depreciation',
+          },
+          {
+            label: t('tools.landing.pricingLabel'),
+            hint: t('tools.landing.pricingHint'),
+            icon: 'dollar',
+            tab: 'pricing',
+            to: '/tools/pricing',
+          },
+        ],
+      },
+      {
+        heading: t('tools.landing.commercialGroup'),
+        desktopColumns: 2,
+        cards: [
+          {
+            label: t('tools.landing.lateFeeLabel'),
+            hint: t('tools.cards.lateFeeHint'),
+            icon: 'timer',
+            tab: 'latefee',
+            to: '/tools/latefee',
+          },
+        ],
+      },
+      {
+        heading: t('tools.landing.cinematographyGroup'),
+        desktopColumns: 2,
+        note: t('tools.landing.cinematographyNote'),
+        cards: [
+          {
+            label: t('tools.landing.cameraLensToolsLabel'),
+            hint: t('tools.landing.cameraLensToolsHint'),
+            icon: 'camera',
+            tab: 'cinematography',
+            to: '/tools/cinematography',
+          },
+        ],
+      },
+    ]
+
+    if (money) return raw
+    return raw.map((g) => ({
+      ...g,
+      cards: g.cards.filter((c) => !isMoneySurface(c.to)),
+    })).filter((g) => g.cards.length > 0)
+  }, [money, t])
+
   const [params, setParams] = useSearchParams()
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [selectedGroup, setSelectedGroup] = useState('')
@@ -118,24 +120,24 @@ export default function ToolsLanding() {
     ? currentTab
     : 'overview'
 
-  const setTab = (t: ToolsTab) => {
+  const setTab = (tTab: ToolsTab) => {
     setFiltersOpen(false)
     const next = new URLSearchParams(params)
-    if (t === 'overview') next.delete('tab')
-    else next.set('tab', t)
+    if (tTab === 'overview') next.delete('tab')
+    else next.set('tab', tTab)
     setParams(next)
   }
 
   const tabs: Array<{ key: ToolsTab; label: string; icon: IconName; money?: boolean }> = [
-    { key: 'overview', label: 'Overview', icon: 'tool' },
+    { key: 'overview', label: t('tools.tabs.overview'), icon: 'tool' },
     ...(money
       ? [
-          { key: 'depreciation' as const, label: 'Depreciation', icon: 'chart' as const, money: true },
-          { key: 'pricing' as const, label: 'Pricing', icon: 'dollar' as const, money: true },
-          { key: 'latefee' as const, label: 'Late Fee', icon: 'timer' as const, money: true },
+          { key: 'depreciation' as const, label: t('tools.tabs.depreciation'), icon: 'chart' as const, money: true },
+          { key: 'pricing' as const, label: t('tools.tabs.pricing'), icon: 'dollar' as const, money: true },
+          { key: 'latefee' as const, label: t('tools.tabs.latefee'), icon: 'timer' as const, money: true },
         ]
       : []),
-    { key: 'cinematography', label: 'Cinematography Suite', icon: 'camera' },
+    { key: 'cinematography', label: t('tools.tabs.cinematography'), icon: 'camera' },
   ]
 
   // 7 Oct audit: the legacy sandbox contains invented gear/rates and does not save.
@@ -152,14 +154,14 @@ export default function ToolsLanding() {
     <PageShell width="full">
       <PageHeader
         icon="tool"
-        title="Tools"
+        title={t('tools.landing.title')}
         {...(activeTab === 'overview' ? { leading: <FilterButton onClick={() => setFiltersOpen((open) => !open)} controls="tools-filters" expanded={filtersOpen} activeCount={Number(Boolean(selectedGroup))} /> } : {})}
-        description="Integrated calculators and technical utilities — work within the workbench without external shortcuts."
+        description={t('tools.landing.description')}
       />
       <FilterDrawer id="tools-filters" open={filtersOpen && activeTab === 'overview'} onClose={() => setFiltersOpen(false)} resultCount={visibleToolCount} noun="tools" activeCount={Number(Boolean(selectedGroup))} onClearAll={() => setSelectedGroup('')} standardFooter onApply={() => setFiltersOpen(false)}>
-        <label style={{ display: 'grid', gap: 8, fontWeight: 600 }}>Category
-          <Select aria-label="Filter tools by category" value={selectedGroup} onChange={(event) => setSelectedGroup(event.target.value)} style={{ minHeight: 44, width: '100%' }}>
-            <option value="">All categories</option>
+        <label style={{ display: 'grid', gap: 8, fontWeight: 600 }}>{t('tools.landing.categoryLabel')}
+          <Select aria-label={t('tools.landing.filterAria')} value={selectedGroup} onChange={(event) => setSelectedGroup(event.target.value)} style={{ minHeight: 44, width: '100%' }}>
+            <option value="">{t('tools.landing.allCategories')}</option>
             {groups.map((group) => <option key={group.heading} value={group.heading}>{group.heading}</option>)}
           </Select>
         </label>
@@ -168,7 +170,7 @@ export default function ToolsLanding() {
       {/* Tabs strip */}
       <div
         role="tablist"
-        aria-label="Tools navigation"
+        aria-label={t('tools.landing.navAria')}
         style={{
           display: 'flex',
           gap: 'var(--sp-xs)',
@@ -176,15 +178,15 @@ export default function ToolsLanding() {
           overflowX: 'auto',
         }}
       >
-        {tabs.map((t) => {
-          const on = activeTab === t.key
+        {tabs.map((tabItem) => {
+          const on = activeTab === tabItem.key
           return (
             <button
-              key={t.key}
+              key={tabItem.key}
               type="button"
               role="tab"
               aria-selected={on}
-              onClick={() => setTab(t.key)}
+              onClick={() => setTab(tabItem.key)}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -204,8 +206,8 @@ export default function ToolsLanding() {
                 marginBottom: -1,
               }}
             >
-              <Icon name={t.icon} size={14} />
-              {t.label}
+              <Icon name={tabItem.icon} size={14} />
+              {tabItem.label}
             </button>
           )
         })}

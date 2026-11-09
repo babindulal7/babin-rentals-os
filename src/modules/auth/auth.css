@@ -333,3 +333,95 @@
   margin: 0 auto 18px;
   box-shadow: 0 0 20px rgba(99, 102, 241, 0.15);
 }
+
+/* ─── Roster Lock Screen (T1-15) ─── */
+.roster-card {
+  max-width: 440px;
+}
+
+.roster-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 18px 0 24px;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.roster-item-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 56px;
+  padding: 10px 14px;
+  border-radius: var(--r-md, 12px);
+  border: 1px solid var(--border);
+  background: var(--card2, rgba(255, 255, 255, 0.04));
+  color: var(--text);
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  transition: background var(--dur-fast, 150ms) ease, border-color var(--dur-fast, 150ms) ease;
+}
+
+.roster-item-btn:hover:not(:disabled) {
+  background: var(--card, #1e293b);
+  border-color: var(--primary);
+}
+
+.roster-item-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.roster-item-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.roster-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  color: #ffffff;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.roster-name-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.roster-name-text {
+  font-size: var(--t-ui, 0.9375rem);
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.roster-status-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.roster-status-badge.active {
+  color: var(--primary, #6366f1);
+}
+
+.roster-status-badge.locked {
+  color: var(--danger-text, #ef4444);
+}

@@ -12,14 +12,11 @@
  * `null` for a money-blind role. So `rate` and `pay` arrive `null` for them —
  * withheld, never zero — and the page and the CSV omit those columns.
  *
- * ⭐ TODO(decision) — two figures here are the old standalone's defaults, not
- * rulings, and are kept only so the page keeps its existing meaning:
- *   · `STANDARD_DAY_HOURS = 8` is both the overtime threshold and the divisor
- *     that turns a day rate into an hourly equivalent (`pay = hours × rate ÷ 8`).
- *   · Crew payouts elsewhere (Crew Assist's payout ledger) are days × day rate,
- *     so `pay` here is an hours-based ESTIMATE and is labelled as one.
- * `overtime_approved_by` exists on the table, so overtime is a real concept; its
- * threshold has never been ruled. Added to PLAN.md §4.
+ * D24 (Ruling 2026-10-26): Pay is by the day (days × day rate + recorded
+ * overtime days) matching Crew Assist payouts (closes OPEN_DECISIONS §18).
+ * Hours worked remain tracked for operational presence and visibility.
+ * R-9.3 (RULINGS-2026-11-09): no hours-based overtime flag. Overtime is only
+ * the recorded overtime days, never derived from hours.
  */
 import { supabase } from '../supabase'
 import { businessDayAd } from '../bs'
@@ -33,7 +30,7 @@ export type TimesheetWeek = 'This Week' | 'Last Week'
 /** The week's seven columns, Monday first (Nepal's weekend is Saturday, but the grid is Monday-based). */
 export const TIMESHEET_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
 
-/** ⭐ unruled — see the header. Overtime threshold AND hourly-equivalent divisor. */
+/** Display only: an 8-hour day is shaded as a full day. NOT an overtime threshold (R-9.3). */
 export const STANDARD_DAY_HOURS = 8
 
 /**
@@ -52,7 +49,11 @@ export interface TimesheetRow {
   /** Hours worked per day, Monday first, from recorded start/end minus break. */
   hrs: number[]
   totalHrs: number
-  /** Estimated pay in NPR (hours × day rate ÷ 8); `null` when the rate is withheld. */
+  /** Shoot days worked in this week (count of shoot days). */
+  daysWorked: number
+  /** Overtime days recorded in this week (sum of overtime fractions, D24). */
+  overtimeDays: number
+  /** Pay in NPR ((daysWorked + overtimeDays) × day rate, D24); `null` when the rate is withheld. */
   pay: number | null
   /** Shoot days up to today with no recorded start/end — hours the grid cannot show. */
   unrecordedDays: number
@@ -65,7 +66,6 @@ export interface TimesheetStats {
   totalPay: number | null
   staffLogged: number
   totalStaff: number
-  overtimeFlags: number
 }
 
 /** The columns read from `crew_shoot_days`, as the database returns them. */
@@ -77,6 +77,7 @@ export interface ShootDayDbRow {
   break_minutes: number | null
   submission_state: string
   approval_state: string
+  overtime_fraction?: number | null | undefined
 }
 
 export interface CrewBookingDbRow {
@@ -159,7 +160,20 @@ export function buildTimesheetRows(
   const bookingById = new Map(bookings.map((b) => [b.id, b]))
   const memberById = new Map(members.map((m) => [m.id, m]))
 
-  const byMember = new Map<string, { days: ShootDayDbRow[]; hrs: number[]; pay: number; anyRate: boolean; rate: number | null; rateHrs: number; unrecorded: number }>()
+  const byMember = new Map<
+    string,
+    {
+      days: ShootDayDbRow[]
+      hrs: number[]
+      pay: number
+      anyRate: boolean
+      rate: number | null
+      rateHrs: number
+      daysWorked: number
+      overtimeDays: number
+      unrecorded: number
+    }
+  >()
 
   for (const day of days) {
     const booking = bookingById.get(day.crew_booking_id)
@@ -169,7 +183,17 @@ export function buildTimesheetRows(
 
     let acc = byMember.get(booking.crew_member_id)
     if (!acc) {
-      acc = { days: [], hrs: [0, 0, 0, 0, 0, 0, 0], pay: 0, anyRate: false, rate: null, rateHrs: -1, unrecorded: 0 }
+      acc = {
+        days: [],
+        hrs: [0, 0, 0, 0, 0, 0, 0],
+        pay: 0,
+        anyRate: false,
+        rate: null,
+        rateHrs: -1,
+        daysWorked: 0,
+        overtimeDays: 0,
+        unrecorded: 0,
+      }
       byMember.set(booking.crew_member_id, acc)
     }
     acc.days.push(day)
@@ -178,11 +202,18 @@ export function buildTimesheetRows(
     acc.hrs[idx] = Math.round(((acc.hrs[idx] ?? 0) + hours) * 100) / 100
     if (hours === 0 && day.work_date <= today) acc.unrecorded += 1
 
+    const otFraction = Number(day.overtime_fraction ?? 0)
+    acc.daysWorked += 1
+    acc.overtimeDays = Math.round((acc.overtimeDays + otFraction) * 10) / 10
+
     if (booking.day_rate !== null) {
       acc.anyRate = true
-      acc.pay += hours * (booking.day_rate / STANDARD_DAY_HOURS)
+      // D24: Day rate + overtime days (not hourly estimate)
+      // Each shoot day is 1 day + overtime fraction at day rate
+      const billableFraction = 1 + otFraction
+      acc.pay += billableFraction * booking.day_rate
       // The rate shown is the one that carried the most hours this week.
-      if (hours > acc.rateHrs) {
+      if (acc.rate === null || hours > acc.rateHrs) {
         acc.rateHrs = hours
         acc.rate = booking.day_rate
       }
@@ -201,6 +232,8 @@ export function buildTimesheetRows(
       rate: acc.rate,
       hrs: acc.hrs,
       totalHrs,
+      daysWorked: acc.daysWorked,
+      overtimeDays: acc.overtimeDays,
       pay: acc.anyRate ? Math.round(acc.pay) : null,
       unrecordedDays: acc.unrecorded,
       approval: summariseApproval(acc.days),
@@ -221,7 +254,7 @@ export async function listTimesheetWeek(week: TimesheetWeek, now: Date = new Dat
 
   const { data: dayData, error: dayError } = await supabase
     .from('crew_shoot_days')
-    .select('crew_booking_id, work_date, actual_start, actual_end, break_minutes, submission_state, approval_state')
+    .select('crew_booking_id, work_date, actual_start, actual_end, break_minutes, submission_state, approval_state, overtime_fraction')
     .gte('work_date', start)
     .lte('work_date', end)
   if (dayError) throw new Error(`listTimesheetWeek failed: ${dayError.message}`)
@@ -259,7 +292,6 @@ export function getTimesheetStats(rows: readonly TimesheetRow[]): TimesheetStats
   let totalPay = 0
   let anyPay = false
   let staffLogged = 0
-  let overtimeFlags = 0
 
   for (const row of rows) {
     totalHours += row.totalHrs
@@ -268,7 +300,6 @@ export function getTimesheetStats(rows: readonly TimesheetRow[]): TimesheetStats
       anyPay = true
     }
     if (row.totalHrs > 0) staffLogged++
-    if (hasOvertime(row)) overtimeFlags++
   }
 
   return {
@@ -276,12 +307,7 @@ export function getTimesheetStats(rows: readonly TimesheetRow[]): TimesheetStats
     totalPay: anyPay ? totalPay : null,
     staffLogged,
     totalStaff: rows.length,
-    overtimeFlags,
   }
-}
-
-export function hasOvertime(row: Pick<TimesheetRow, 'hrs'>): boolean {
-  return row.hrs.some((h) => h > STANDARD_DAY_HOURS)
 }
 
 /** `8` → "8", `8.5` → "8.5", `7.333` → "7.3". */
@@ -304,7 +330,9 @@ export function timesheetCsv(rows: readonly TimesheetRow[], canViewMoney: boolea
     ...(canViewMoney ? ['Day rate (Rs)'] : []),
     ...TIMESHEET_DAYS,
     'Total hours',
-    ...(canViewMoney ? ['Estimated pay (Rs)'] : []),
+    'Days',
+    'OT days',
+    ...(canViewMoney ? ['Pay (Rs)'] : []),
     'Approval',
   ]
   const lines = rows.map((r) => [
@@ -313,6 +341,8 @@ export function timesheetCsv(rows: readonly TimesheetRow[], canViewMoney: boolea
     ...(canViewMoney ? [r.rate === null ? '' : String(r.rate)] : []),
     ...r.hrs.map((h) => String(h)),
     String(r.totalHrs),
+    String(r.daysWorked),
+    String(r.overtimeDays),
     ...(canViewMoney ? [r.pay === null ? '' : String(r.pay)] : []),
     r.approval,
   ])

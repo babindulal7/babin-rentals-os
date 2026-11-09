@@ -132,8 +132,13 @@ export const InputGroupAddon = forwardRef<HTMLDivElement, InputGroupAddonProps>(
   return (
     <div
       ref={ref}
+      role="presentation"
       data-slot="input-group-addon"
       data-align={align}
+      /* Pointer-only affordance: clicking the padding/icon focuses the sibling
+         input. Keyboard users reach that input directly, and a nested real
+         button keeps its own semantics — so the wrapper stays presentational
+         rather than a focusable role="button" that can do nothing on Enter. */
       onMouseDown={handleMouseDown}
       className={cn(className)}
       style={{

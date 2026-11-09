@@ -174,6 +174,8 @@ starts it, the desk takes payment, T3-31).
 
 ### §4.2 Still open
 
+**Answered 5 Nov 2026 — conflict repair:** Babin's latest explicit product ruling wins over older specifications (Foundation is the fallback); Nepali activates only after the whole staff app is approved; agents ask Babin about new product decisions while resolving routine engineering independently. Recorded in `RULINGS-2026-11-05.md` C-2–C-4; implementation tracked by T0-12. These are answered rules, not new open decisions.
+
 Each has a ⭐ default the build may use until Babin answers (CLAUDE.md B-5). Full text and history
 stay in [`docs/OPEN_DECISIONS.md`](docs/OPEN_DECISIONS.md).
 
@@ -198,6 +200,9 @@ stay in [`docs/OPEN_DECISIONS.md`](docs/OPEN_DECISIONS.md).
 | O-17 | VAT timing: may the tax invoice wait until the client pays in full (W16), even for credit clients who pay weeks later? [VAT Act 2052 §6](https://nepallaws.com/Laws/value-added-tax-act-2052/section-6-place-and-time-of-supply/) puts the time of a supply at the earliest of invoice, service or payment, with its own rule for part payments | As ruled (number on full payment) until the accountant answers; if the invoice must come earlier, the numbering moment becomes one setting. The numbering step ships only after the answer | T3-14 |
 | O-18 | **Answered 1 Nov (Babin: "4 pin"):** the switch-user PIN is **4 digits**. The shipped `0066` still enforces 6, so T1-15 includes the migration that moves it to 4 (stricter rules kept: weak-PIN list, lockout) | 4 digits | T1-15 code |
 | O-19 | **Answered 1 Nov (Babin: "all staff yes"):** every staff member may write team notes. `rbac.canCreateTeamNote` now matches `0185` | Every staff role (not Client) | T4-04 — done |
+| O-20 | What fee sits on a custom-fee plan (Elite's annual fee is blank in the plans Babin sent) — a listed fee, or per-client negotiation? (D22 implementation, T8-03 review) | ⭐ Per-client negotiation kept: the change into the plan is refused without a negotiated fee (`GATE:membership.custom_fee`), the negotiated fee is recorded on the membership row and prices later changes out of it (a renewal carries it onto the new term), and a membership with no fee on record anywhere is refused (`GATE:membership.fee_unknown`). Babin answers to unblock | T8-03 |
+| O-21 | Payment method picker: keep the seven distinct labels (Bank Transfer · Cash · Fonepay · eSewa · Khalti · Card · Cheque) or cut to T3-15's four buttons (Cash · Bank transfer · Fonepay · eSewa/Khalti)? | ⭐ Seven kept: eSewa and Khalti are different wallets and Card/Cheque are real receipts; every method stays one tap, so the card's ≤4-tap condition holds | — |
+| O-22 — answered 5 Nov | Glossary editing in Settings: who may edit, and draft approval versus immediate application? | Babin: Owner only; approved term changes apply throughout the app immediately. Whole-app activation remains separately gated. | T0-12 / T6 glossary; `RULINGS-2026-11-05.md` C-6 |
 
 ### §4.3 How a new decision gets in
 

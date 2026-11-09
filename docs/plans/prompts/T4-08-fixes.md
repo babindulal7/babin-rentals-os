@@ -111,7 +111,7 @@ role-dependent. On each changed screen, run the **screen check** in `docs/USABIL
 did not happen, touch, forgiving forms) and write the result in your PROGRESS entry.
 
 ## Finish
-1. In `docs/plans/T4_SHARED_TOOLS.md`, add one line under T4-08: `review fixes R1–R5 — done, awaiting merge (lane-b/T4-08-review-fixes)`.
+1. In `docs/plans/T4_SHARED_TOOLS.md`, add one line under T4-08: `review fixes R1–R5 — ready, awaiting merge (lane-b/T4-08-review-fixes)`.
 2. Add a `PROGRESS.md` entry at the top: **Did / Ruled / Verified**, the Completion block printed by
    `npm run completion`, and a Remaining block. Run `npm run lint:progress`.
 3. Commit on your branch — R5 as its **own commit**. Do not merge — Babin merges locally.

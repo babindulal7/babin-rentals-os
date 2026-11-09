@@ -1,10 +1,26 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 5 November 2026 — Glossary editing in Settings (O-22)
+
+Babin requested glossary changes from Settings during the conflict repair. **Answered 5 Nov 2026:** editing is **Owner only** and **approved term changes apply throughout the app immediately**. The glossary's existing 1 Nov approval remains recorded; automatic OK statuses from the faulty wave exporter are not review evidence. T0-12 implements an explicit Owner approval action, append-only shared revisions and immediate text refresh. Whole-app Nepali activation remains gated independently. No hosted write path is enabled until Babin applies the locally verified migration (N-5).
+
 ## 28 October 2026: switch-user PIN length (T1-15) — ANSWERED 1 Nov: 4 digits (O-18)
 
 **Answered 1 Nov 2026 by Babin ("4 pin"): the switch-user PIN is 4 digits.** T1-15 carries the migration
-that moves `0066` from 6 to 4; see `RULINGS-2026-11-01.md` (R-1). The text below is the original
+that moves `0066` from 6 to 4; see `RULINGS-2026-11-01.md` (R-1). Below: what the migration does, then the original
 question, kept for the record.
+
+**What the migration does:**
+- Babin answered **"4 pin"** on 28 Oct 2026. The shipped 6-digit parameter in migration `0066` is
+  relaxed by his explicit instruction — migration **`0208_staff_pin_four_digits.sql`** (claimed in
+  the MIGRATION_LEDGER, written on `lane-a/T1-15-switch-user-with-name-plus-pin`): `set_staff_pin`
+  enforces exactly 4 from now on; `verify_staff_pin` accepts 4 **or** 6 during the transition so
+  hashes enrolled before the ruling keep verifying until their owners rotate them.
+- Follow-up (not a decision, a scheduled tightening): once the live roster has rotated, a later
+  migration narrows verify to 4-only.
+- The honest cost is stated in the migration header: the space drops to 10^4; the 5-try/15-minute
+  lockout makes an even-odds continuous attack take ~10.4 days of uninterrupted tries.
+
 
 - The T1-15 card and ruling W53 say "tap name + **4-digit** PIN"; the shipped security
   parameter in migration `0066` enforces `^[0-9]{6}$` (6 digits, 5-try lockout).
@@ -62,6 +78,16 @@ New open items, each with a ⭐ default in [`PLAN.md` §4.2](../PLAN.md):
   time of a supply at the earliest of the invoice, the service or the payment, and has its own rule for
   part payments — so an advance or the handover may already require the invoice. The accountant decides;
   if needed the numbering moment becomes one setting, and T3-14's numbering step ships only after the answer.
+- **O-20** — what fee is on a custom-fee plan such as Elite (D22 implementation, T8-03 review). The
+  plans Babin sent leave Elite's annual fee blank: the price is negotiated per client. Until the plan
+  table answers it, the app refuses the change (`GATE:membership.custom_fee`) so an unpriced term can
+  never silently cost Rs 0 or credit the whole old fee; a negotiated fee typed into the dialog is
+  recorded on the membership row and prices any later change out of it (a renewal carries the recorded
+  fee onto the new term). A membership whose fee was never recorded and whose plan lists none is
+  likewise refused (`GATE:membership.fee_unknown`) — the unused days cannot be priced and Babin
+  decides the fee before the change can be sent. `TODO(decision)`: Babin sets Elite's pricing basis
+  (a listed fee, or per-client negotiation kept as is). *(Numbered O-20: main's O-18 is the
+  switch-user PIN length, O-19 the team-notes authority.)*
 
 ## 26 October 2026: Babin's ruling round — what it closed, what is still open
 
@@ -300,3 +326,23 @@ The Crew timesheet page now reads recorded call/wrap times from `crew_shoot_days
 - **Renewing a lapsed membership.** The function refuses "already on this plan", so a lapsed member cannot be renewed here. Renewal needs a ruling on the fee, the new term dates, and who approves.
 - **Plans themselves.** The mock has no plans, and there is no screen to create or retire one; `membership_plans` is data only an Owner, Admin or Manager can write. Until someone sets them up, "Activate Membership" says no plan is on file.
 - **Two write paths.** `enroll_client_membership` (0173, the Membership page's "+ Add Membership") and `change_client_membership` (0174, the client page's Activate / Change Plan) both insert a `client_memberships` row and supersede the live one. They differ: 0174 refuses a retired plan, a deactivated client and a move to the plan the client is already on, and takes no fee; 0173 refuses none of those and accepts a fee and join date. Should there be one function? Until ruled both stay, and RULINGS-2026-10-22 row 10 says which screen uses which.
+
+## 21. Payment method picker: seven labels or four buttons? (6 November 2026) — open
+
+T3-15's card says Record Payment offers "four large one-tap method buttons (Cash · Bank transfer ·
+Fonepay · eSewa/Khalti)". The picker that shipped keeps **seven** — Bank Transfer, Cash, Fonepay,
+eSewa, Khalti, Card, Cheque — because each is a distinct label `recordPayment` writes into
+`payments.notes` as `Method: <label>`:
+
+- **eSewa and Khalti are separate wallets.** One "eSewa/Khalti" button cannot record which one the
+  money arrived in, and a receipt that cannot say is the thing the label exists to prevent.
+- **Card and Cheque have no home in the four.** They are real receipts at the desk; dropping them
+  from the picker would force them to be recorded as something they are not.
+- Every method is still **one tap** and all are on screen (no dropdown, R-39). The card's
+  "tap count ≤ 4 from Booking Detail" holds either way: open, tap method, record.
+
+**TODO(decision):** keep the seven distinct labels, or cut the picker to the card's four and add a
+second step for eSewa-vs-Khalti (and somewhere for Card/Cheque)? Until Babin answers the seven stay:
+no ledger fact is lost, and narrowing the list would. Blocks nothing.
+
+

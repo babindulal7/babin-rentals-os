@@ -98,7 +98,7 @@ export function DueForService({ onCreateJob }: DueForServiceProps = {}) {
                 <th style={th}>Unit</th>
                 <th style={th}>State</th>
                 <th style={th}>Why</th>
-                <th style={th} />
+                <th style={th}><span className="sr-only">Action</span></th>
               </tr>
             </thead>
             <tbody>

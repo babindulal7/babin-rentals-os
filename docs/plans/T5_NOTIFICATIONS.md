@@ -20,7 +20,7 @@ receive an amount in any notification or email.
 
 ---
 
-### T5-01 · Notification records            status: done — awaiting merge (lane-b/T5-01-notification-records) · size: M · lane B
+### T5-01 · Notification records            status: done · merged · size: M · lane B
 **What** — A `notifications` table: recipient user, type, title, body (no money for money-blind
 recipients — the row is written per recipient, so the text is built for that role), link to the
 entity, created at, read at. Rows are written **by the database** when the event happens (trigger
@@ -36,7 +36,7 @@ Warehouse → queues, Accounts → payments).
 seat reads none.
 **Needs** — none.
 
-### T5-02 · Notification centre            status: todo · size: M · lane B
+### T5-02 · Notification centre            status: done · merged · size: M · lane B
 **What** — A bell in the 64 px header (count badge, never colour alone) opening a drawer: newest
 first, unread bold, tap opens the entity, "Mark all read". Realtime via Supabase subscription;
 falls back to refresh on focus. Same drawer on phone as a bottom sheet.
@@ -47,7 +47,7 @@ falls back to refresh on focus. Same drawer on phone as a bottom sheet.
 targets; keyboard reachable.
 **Needs** — T5-01.
 
-### T5-03 · Email sending service            status: todo · size: M · lane B
+### T5-03 · Email sending service            status: done · merged · size: M · lane B
 **What** — The first Supabase **Edge Function**, `send-email`: takes a template id + recipient user
 id + entity id, builds the message server-side from the database (never from browser-supplied
 text), sends through the T1-09 provider from `no-reply@babinrentals.com`, logs the send (id, type,
@@ -62,7 +62,7 @@ and reminders ≈ 3,000–4,000 emails a month — pick the provider tier for th
 id is refused; logs hold no email body.
 **Needs** — T1-09.
 
-### T5-04 · Morning digest            status: todo · size: M · lane B
+### T5-04 · Morning digest            status: done · merged · size: M · lane B
 **What** — A scheduled job at **⭐ 05:30 NPT** (O-4) — before the 06:00 rental day — that emails each
 active staff member their digest: today's pickups and returns, overdue returns, open damage cases,
 unacknowledged shift handovers, and (for money roles only) payments due today. Uses the
@@ -78,7 +78,7 @@ subject.
 a day with nothing sends "Nothing scheduled today" (not silence).
 **Needs** — T5-03.
 
-### T5-05 · Notification preferences            status: todo · size: S · lane B
+### T5-05 · Notification preferences            status: done · merged · size: S · lane B
 **What** — Settings ▸ My preferences: per type, in-app on/off and email on/off; the digest on by
 default. Role defaults from the 21 Jul lock apply to new users.
 **Why** — Staff can mute noise without missing the digest.
@@ -87,7 +87,7 @@ default. Role defaults from the 21 Jul lock apply to new users.
 **Done when** — turning a type off stops new rows of that type for that user only.
 **Needs** — T5-01.
 
-### T5-07 · Automatic client emails            status: todo · size: L · lane B · [go-live]
+### T5-07 · Automatic client emails            status: done · merged · size: L · lane B · [go-live]
 **What** — Emails sent automatically by the server (pg_cron + `send-email`, T5-03), **in English**
 (W80), from `no-reply@babinrentals.com`, each logged in `email_log`:
 1. **Pickup reminder** — 2 hours before pickup (W37; a 06:00 pickup → 04:00).
@@ -114,7 +114,7 @@ content; a no-email client produces WhatsApp draft tasks instead; no amount ever
 approval.
 **Needs** — T5-03, T1-09.
 
-### T5-08 · Payment reminders            status: todo · size: M · lane B · [go-live]
+### T5-08 · Payment reminders            status: done · merged · size: M · lane B · [go-live]
 **What** — When a booking is **completed** (returned) with money still owed, automatic reminder
 emails go out at **completion, day 5, day 10, then every 5 days** (W18) until paid. Staff can
 **pause a client** (W18b) from the client page or the Who owes list (T3-20), with a reason;
@@ -128,7 +128,7 @@ email → WhatsApp draft task for staff (W22).
 pausing stops them.
 **Needs** — T5-07, T3-20.
 
-### T5-09 · Phone pop-ups            status: todo · size: M · lane B · [go-live]
+### T5-09 · Phone pop-ups            status: done · merged · size: M · lane B · [go-live]
 **What** — Push notifications to staff phones and the iPad (Web Push for the installed app; iOS needs
 the app added to the Home Screen) for four events (W62): **late return** (at 30 min, to **all staff
 on shift at once** — W38, W39), **new online booking request**, **online payment received**, **damage
@@ -142,7 +142,7 @@ push subscriptions table.
 minute; a Warehouse phone never shows an amount.
 **Needs** — T5-01.
 
-### T5-10 · Approvals inbox            status: todo · size: M · lane B · [go-live]
+### T5-10 · Approvals inbox            status: done · merged · size: M · lane B · [go-live]
 **What** — One "Approvals" list for everything that waits on a person: late-fee waivers, overrides,
 refunds, damage charges, expense approvals, write-offs. When Babin is away **a Manager approves**
 (W57) wherever PERMISSIONS already allows a Manager; Owner-only items (§6.2) still wait for Babin.
@@ -155,7 +155,7 @@ opens it; approve/decline with the reason rules that already exist.
 Owner-only item never shows an approve button to a Manager.
 **Needs** — T5-01, T5-03.
 
-### T5-11 · Each role opens on its own tasks            status: todo · size: M · lane B · [go-live]
+### T5-11 · Each role opens on its own tasks            status: done · merged · size: M · lane B · [go-live]
 **What** — The first screen depends on the role (W61): **Warehouse/Technician** — today's pack,
 handover, return and reset queue (returns before 06:00 first, W31); **Coordinator** — online
 requests, quotes waiting, today's pickups/returns, late; **Accounts** — payments due, who owes,
@@ -170,7 +170,7 @@ block (Law 6).
 ≤ 1.
 **Needs** — T5-10 for the approvals block.
 
-### T5-06 · Client message register            status: todo · size: S · lane B
+### T5-06 · Client message register            status: done · merged · size: S · lane B
 **What** — One table in `docs/WORKFLOWS.md` listing **every message the app sends a client**, how
 (automatic email · staff-sent email · WhatsApp draft), when, and to whom — and a test that fails if
 code sends a client message not in the table. Automatic: the T5-07 events, the T5-08 reminders and
@@ -183,7 +183,7 @@ is always a draft staff send (W60).
 **Done when** — the register matches the code; the test passes.
 **Needs** — T5-07, T5-08, T7-04.
 
-### T5-12 · Offer emails to clients            status: todo · size: L · lane B · [go-live] · slips first
+### T5-12 · Offer emails to clients            status: done · size: L · lane B · [go-live] · slips first
 **What** — Owner, Admin and Manager (B43) write and send an **offer email from the app** (B50) to
 **every client with an email who has not unsubscribed** (B34), or to a filtered group (tag, last rental,
 membership ⭐). Write (subject, text, ⭐ one image, a button to `book.babinrentals.com`) → preview →
@@ -205,7 +205,7 @@ next offer skips them; 3) Coordinator and Warehouse cannot send (the database re
 shows the link and has the header; 5) a double tap on Send sends once.
 **Needs** — T5-03, T1-09.
 
-### T5-13 · Edit email and document texts            status: todo · size: M · lane B · [go-live] · slips first
+### T5-13 · Edit email and document texts            status: done · size: M · lane B · [go-live] · slips first
 **What** — Settings ▸ **Texts**, Owner and Admin only (B20): edit the wording of the automatic client
 emails (T5-07), payment reminders (T5-08), the offer email footer (T5-12) and the fixed texts on
 documents (invoice footer, the pro forma note, the rental agreement terms — O-11 — and the packing list

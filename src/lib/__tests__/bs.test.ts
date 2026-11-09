@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   BS_MONTHS,
+  BS_MONTHS_NE,
   BS_MAX_YEAR,
   BS_MIN_YEAR,
   BS_SUPPORTED_RANGE,
@@ -10,6 +11,7 @@ import {
   toAd,
   fiscalYear,
   formatBs,
+  formatBsMonth,
   formatBsOrAd,
   formatAd,
   formatAdDateTime,
@@ -291,6 +293,24 @@ describe('BS month names and formatting', () => {
 
   it('never renders Devanagari digits', () => {
     expect(formatBs({ year: 2083, month: 4, day: 15 })).toMatch(/^[\x20-\x7E]+$/)
+  })
+
+  it('renders Nepali BS month names in Devanagari while keeping digits Latin', () => {
+    expect(formatBs({ year: 2083, month: 4, day: 15 }, { lang: 'ne' })).toBe('15 श्रावण')
+    expect(formatBs({ year: 2083, month: 1, day: 1 }, { lang: 'ne' })).toBe('1 बैशाख')
+    // Digits are Latin: 0-9 only, never ०-९
+    const result = formatBs({ year: 2083, month: 4, day: 15 }, { lang: 'ne' })
+    expect(result).not.toMatch(/[०-९]/)
+    expect(result).toMatch(/^15 /)
+  })
+
+  it('covers all 12 BS months in Nepali Devanagari without Devanagari digits', () => {
+    expect(BS_MONTHS_NE).toHaveLength(12)
+    for (let m = 1; m <= 12; m++) {
+      const monthName = formatBsMonth(m, 'ne')
+      expect(monthName.trim()).not.toBe('')
+      expect(monthName).not.toMatch(/[०-९]/)
+    }
   })
 })
 

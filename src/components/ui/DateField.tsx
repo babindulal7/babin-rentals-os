@@ -606,6 +606,7 @@ export function CalendarPopover({
       <div
         ref={gridRef}
         role="grid"
+        tabIndex={-1}
         onKeyDown={onGridKeyDown}
         style={{
           display: 'grid',
@@ -1047,7 +1048,7 @@ export function DateField({
       window.removeEventListener('scroll', measurePanel, true)
       window.removeEventListener('resize', measurePanel)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- measurePanel is re-created each render; listing it would re-attach the scroll and resize listeners every render
   }, [open])
 
   /* After the panel lands, pull it up if it runs past the viewport bottom —

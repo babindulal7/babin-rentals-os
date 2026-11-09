@@ -256,6 +256,16 @@ export type WarehouseStatus = 'Active' | 'Inactive' | 'Under Maintenance' | 'Clo
 export interface Database {
   public: {
     Tables: {
+      glossary_terms: {
+        Row: { id: string; term_key: string; english: string; original_nepali: string; approved_at: string }
+        Insert: never
+        Update: never
+      }
+      glossary_term_revisions: {
+        Row: { id: string; client_uuid: string; revision: number; term_key: string; original_nepali: string; nepali: string; created_by: string; created_at: string }
+        Insert: never
+        Update: never
+      }
       branches: {
         Row: {
           id: string

@@ -805,6 +805,13 @@ describe('Law 4 — payments are immutable, and this module offers no way in', (
       'FINANCE_RESTRICTED_REASON',
       'INVOICE_STATUSES',
       'INVOICE_TOKEN',
+      /*
+       * T3-15: the method vocabulary plus the two reads behind Record Payment's
+       * default. All three are read-only — a frozen list of labels, a pure
+       * parser, and one `select('notes')` on `payments` narrowed to the client's
+       * Received rows. No name here can write a payment.
+       */
+      'PAYMENT_METHOD_LABELS',
       'SPEC_TABS',
       'STORED_INVOICE_STATUSES',
       'businessDayAd',
@@ -832,6 +839,7 @@ describe('Law 4 — payments are immutable, and this module offers no way in', (
       'invoicesDueInPeriod',
       'invoicesForBooking',
       'invoicesForClient',
+      'lastPaymentMethodForClient',
       'listExpenseBranches',
       'listExpenseCategories',
       'listExpenses',
@@ -840,17 +848,22 @@ describe('Law 4 — payments are immutable, and this module offers no way in', (
       'liveInvoices',
       'outstandingInvoices',
       'overdueInvoices',
+      // W18b: Staff can pause/resume client payment reminders (T5-08)
+      'pauseClientReminders',
       // MONEY-05 — the set a PAYMENT may be recorded against, which is
       // `outstandingInvoices` plus 'Draft'. R-02 keeps an invoice in Draft for
       // the whole rental and R-14 leaves it there when a payment lands, so a
       // Draft is payable by ruling; it is still not a receivable, which is why
       // the two sets stayed separate rather than one being widened.
       'payableInvoices',
+      'paymentMethodFromNotes',
       'paymentsForBooking',
       'paymentsForClient',
       'paymentsForInvoice',
       'paymentsInPeriod',
       'receivedPayments',
+      // W18b: Staff can pause/resume client payment reminders (T5-08)
+      'resumeClientReminders',
       'setExpenseStatus',
       'todayDate',
       'voidedInvoices',

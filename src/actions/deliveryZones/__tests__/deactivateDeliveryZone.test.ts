@@ -20,7 +20,9 @@ vi.mock('../../../events/eventBus', () => ({
 describe('deactivateDeliveryZone', () => {
   // Plain { data, error } replies, typed loosely as in the other action tests.
   const mockRpc = vi.mocked(supabase.rpc) as unknown as ReturnType<typeof vi.fn>;
-  const coordinatorContext = { userId: 'user-123', role: 'Coordinator' as const };
+  // T4-07: zone writes are Owner/Admin/Manager only. Coordinator used to pass.
+  const managerContext = { userId: 'user-123', role: 'Manager' as const };
+  const coordinatorContext = { userId: 'coordinator-123', role: 'Coordinator' as const };
   const ownerContext = { userId: 'owner-123', role: 'Owner' as const };
   const warehouseContext = { userId: 'warehouse-123', role: 'Warehouse' as const };
   const clientContext = { userId: 'client-123', role: 'Client' as const };
@@ -33,6 +35,12 @@ describe('deactivateDeliveryZone', () => {
     await expect(deactivateDeliveryZone({ zoneId: 'zone-uuid' })).rejects.toThrow(
       'was called without a session context'
     );
+  });
+
+  it('throws ActionPermissionError for Coordinator role', async () => {
+    await expect(
+      deactivateDeliveryZone({ zoneId: 'zone-uuid' }, coordinatorContext)
+    ).rejects.toThrow(ActionPermissionError);
   });
 
   it('throws ActionPermissionError for Warehouse role', async () => {
@@ -49,22 +57,22 @@ describe('deactivateDeliveryZone', () => {
 
   it('throws validation error for missing zoneId', async () => {
     await expect(
-      deactivateDeliveryZone({ zoneId: '' }, coordinatorContext)
+      deactivateDeliveryZone({ zoneId: '' }, managerContext)
     ).rejects.toThrow('Zone ID is required');
   });
 
   it('throws validation error for invalid UUID format', async () => {
     await expect(
-      deactivateDeliveryZone({ zoneId: 'not-a-uuid' }, coordinatorContext)
+      deactivateDeliveryZone({ zoneId: 'not-a-uuid' }, managerContext)
     ).rejects.toThrow('Invalid zone ID format');
   });
 
-  it('deactivates zone successfully for Coordinator', async () => {
+  it('deactivates zone successfully for Manager', async () => {
     mockRpc.mockResolvedValue({ data: true, error: null } as any);
 
     const result = await deactivateDeliveryZone(
       { zoneId: '123e4567-e89b-12d3-a456-426614174000' },
-      coordinatorContext
+      managerContext
     );
 
     expect(result).toEqual({ deactivated: true });
@@ -89,7 +97,7 @@ describe('deactivateDeliveryZone', () => {
 
     const result = await deactivateDeliveryZone(
       { zoneId: '123e4567-e89b-12d3-a456-426614174000' },
-      coordinatorContext
+      managerContext
     );
 
     expect(result).toEqual({ deactivated: false });
@@ -99,7 +107,7 @@ describe('deactivateDeliveryZone', () => {
     mockRpc.mockResolvedValue({ data: null, error: { message: 'Zone not found' } } as any);
 
     await expect(
-      deactivateDeliveryZone({ zoneId: '123e4567-e89b-12d3-a456-426614174000' }, coordinatorContext)
+      deactivateDeliveryZone({ zoneId: '123e4567-e89b-12d3-a456-426614174000' }, managerContext)
     ).rejects.toThrow('Failed to deactivate delivery zone: Zone not found');
   });
 });

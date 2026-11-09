@@ -79,6 +79,9 @@ export interface ClientListItem {
   membershipLevel: MembershipTier | null
   /** AD, ISO. Law 7 — BS is rendered from this, never stored. */
   lastPickupAtAd: string | null
+  /** Automatic payment reminders paused (W18b). */
+  remindersPaused?: boolean
+  remindersPausedReason?: string | null
 }
 
 /**
@@ -136,6 +139,10 @@ interface DirectoryRow {
   is_blocked: boolean | null
   is_staff?: boolean | null
   staff_user_id?: string | null
+  reminders_paused: boolean | null
+  reminders_paused_reason: string | null
+  reminders_paused_by: string | null
+  reminders_paused_at: string | null
 }
 
 /** numeric (rupees) -> Paisa, preserving null rather than collapsing it to 0. */
@@ -162,6 +169,7 @@ function toListItem(row: DirectoryRow): ClientListItem {
     // a client who has never joined a tier.
     membershipLevel: row.membership_level,
     lastPickupAtAd: row.last_pickup_at,
+    ...(row.reminders_paused ? { remindersPaused: true, remindersPausedReason: row.reminders_paused_reason } : {}),
   }
 }
 
@@ -172,7 +180,7 @@ const DIRECTORY_COLUMNS =
   'active_bookings_count, total_bookings_count, last_pickup_at, ' +
   'contact_name, contact_designation, contact_phone, membership_level, ' +
   'kyc_docs_count, kyc_verified_count, is_blocked, deactivated_at, created_at, ' +
-  'is_staff, staff_user_id'
+  'is_staff, staff_user_id, reminders_paused, reminders_paused_reason, reminders_paused_by, reminders_paused_at'
 
 /**
  * Directory row -> the `ClientRecord` every clients surface already consumes.
@@ -289,6 +297,14 @@ export function toClientRecord(row: DirectoryRow): ClientRecord {
     // client has the key ABSENT, not present-and-false, which is the same
     // shape the seed records use.
     ...(row.is_blocked ? { isBlocked: true } : {}),
+    ...(row.reminders_paused
+      ? {
+          remindersPaused: true,
+          remindersPausedReason: row.reminders_paused_reason,
+          remindersPausedBy: row.reminders_paused_by,
+          remindersPausedAt: row.reminders_paused_at,
+        }
+      : {}),
     // `blockReason` is deliberately still absent. `client_flags.reason` exists
     // (0005:236) but the view publishes only the boolean, and 0005's own
     // comment records that a mandatory reason is unruled. Inventing a sentence
@@ -810,6 +826,7 @@ export async function listReferrerOptions(): Promise<ReferrerOption[]> {
  * auth_is_staff()`, so a Client session gets no rows at all.
  */
 export interface MembershipPlanRow {
+  id?: string | undefined
   level: MembershipTier
   /** `membership_label` — the plan's own words. Levels are distinguished by label, never hue (0005). */
   label: string
@@ -817,12 +834,17 @@ export interface MembershipPlanRow {
   defaultCreditLimit: Paisa | null
   /** A PERCENTAGE, not an amount — stays numeric (lib/money §2.3). `null` for Elite ("Negotiated") AND for a money-blind session; the two are indistinguishable here by design. */
   individualDiscountPct: number | null
+  annualFee?: Paisa | null | undefined
+  termMonths?: number | undefined
   displayOrder: number
 }
 
 interface MembershipPlanViewRow {
+  id: string | null
   level: MembershipTier | null
   label: string | null
+  annual_fee: number | null
+  term_months: number | null
   default_credit_limit: number | null
   individual_discount_pct: number | null
   display_order: number | null
@@ -832,7 +854,7 @@ interface MembershipPlanViewRow {
 export async function listMembershipPlans(): Promise<MembershipPlanRow[]> {
   const { data, error } = await supabase
     .from('membership_plans_v')
-    .select('level, label, default_credit_limit, individual_discount_pct, display_order, status')
+    .select('id, level, label, annual_fee, term_months, default_credit_limit, individual_discount_pct, display_order, status')
     // Retire is terminal and a plan with historic members can never be deleted
     // (0005), so retired plans must be excluded here rather than shown as live
     // policy.
@@ -849,10 +871,13 @@ export async function listMembershipPlans(): Promise<MembershipPlanRow[]> {
     // unnamed tier.
     .filter((r): r is MembershipPlanViewRow & { level: MembershipTier } => r.level !== null)
     .map((r) => ({
+      id: r.id ?? undefined,
       level: r.level,
       label: r.label ?? r.level,
       defaultCreditLimit: toPaisa(r.default_credit_limit),
       individualDiscountPct: r.individual_discount_pct,
+      annualFee: toPaisa(r.annual_fee),
+      termMonths: r.term_months ?? 12,
       displayOrder: r.display_order ?? 0,
     }))
 }
@@ -977,6 +1002,44 @@ export async function fetchClientCollectors(clientId: string): Promise<ClientCol
     isActive: r.is_active,
     createdAt: r.created_at,
   }))
+}
+
+/**
+ * Pause automatic payment reminders for a client (W18b).
+ * Requires staff role and a non-empty reason.
+ */
+export async function pauseClientPaymentReminders(
+  clientId: string,
+  reason: string,
+): Promise<boolean> {
+  if (!reason.trim()) {
+    throw new Error('A reason is required to pause payment reminders')
+  }
+
+  const { data, error } = await supabase.rpc('pause_client_payment_reminders', {
+    p_client_uuid: crypto.randomUUID(),
+    p_client_id: clientId,
+    p_reason: reason.trim(),
+  })
+
+  if (error) throw new Error(`pauseClientPaymentReminders failed: ${error.message}`)
+  return Boolean(data)
+}
+
+/**
+ * Resume automatic payment reminders for a client (W18b).
+ * Re-schedules reminder for any completed booking with positive balance.
+ */
+export async function resumeClientPaymentReminders(
+  clientId: string,
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc('resume_client_payment_reminders', {
+    p_client_uuid: crypto.randomUUID(),
+    p_client_id: clientId,
+  })
+
+  if (error) throw new Error(`resumeClientPaymentReminders failed: ${error.message}`)
+  return Boolean(data)
 }
 
 export {

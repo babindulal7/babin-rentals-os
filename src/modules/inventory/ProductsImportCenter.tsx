@@ -354,6 +354,8 @@ function ProductImportForm({ embedded = false, onDone }: ProductsImportCenterPro
         }
       >
         <div
+          role="group"
+          aria-label="CSV upload — drop a file here or use Choose file"
           onDragOver={(e) => {
             e.preventDefault()
             setDragOver(true)
@@ -365,6 +367,7 @@ function ProductImportForm({ embedded = false, onDone }: ProductsImportCenterPro
             const file = e.dataTransfer.files[0]
             if (file) handleFile(file)
           }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.getElementById('csv-file-input')?.click() } }}
           style={{
             border: `2px dashed ${dragOver ? 'var(--nav-active-accent)' : 'var(--border)'}`,
             borderRadius: 'var(--r-card)',
@@ -427,6 +430,12 @@ function ProductImportForm({ embedded = false, onDone }: ProductsImportCenterPro
               </thead>
               <tbody>
                 {headers.map((header, index) => (
+                  /*
+                   * Index key, deliberately: a column's identity in this screen
+                   * IS its position. `mapping` is keyed by the same index, so
+                   * two columns both called "Name" must stay distinct rows —
+                   * a header-string key would collide and drop one.
+                   */
                   <tr key={index}>
                     <td style={{ padding: 8, maxWidth: 280, overflowWrap: 'anywhere' }}>{header}</td>
                     <td style={{ padding: 8 }}>

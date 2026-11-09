@@ -1,5 +1,6 @@
 # T0 — Repo & process hygiene
 
+
 **Goal:** before feature work fans out into three lanes, make the repository safe for parallel
 agents and make its documents tell the truth. **Lane A · Codex-1 + Babin · week 1 (by 1 Nov 2026 · 16 Kartik 2083).**
 
@@ -119,7 +120,7 @@ each check-in (7:38 AM / 7:38 PM) and reports anything red.
 **Done when** — no new red X appears on pushes; the first check-in report shows the gates on `main`.
 **Needs** — none.
 
-### T0-10 · Tests never run with live settings            status: todo · size: S · lane A · [go-live]
+### T0-10 · Tests never run with live settings            status: doing — fresh current-main safety fix on fix/T0-10-mock-safe-tests-current-main; CI and owner verification pending · size: S · lane A · [go-live]
 **What** — Since T0-02 (`3fca220`), `scripts/run-tests.mjs` picks mock data only when no
 `VITE_SUPABASE_URL` is found — and it reads `.env.local`. On a computer that runs the app against
 live (a `.env.local` with the live URL), `npm test` therefore runs with **live** settings, and Vitest
@@ -136,7 +137,7 @@ without signing in until batch 0); B-1 (the safer default wins).
 passes; 2) `npm test -- --live` prints "data source=live"; 3) the docs show plain `npm test`.
 **Needs** — none.
 
-### T0-11 · One command for the local gate            status: todo · size: S · lane A · [go-live]
+### T0-11 · One command for the local gate            status: doing — stacked on T0-10, new current-main local gate script and tests; CI and cross-platform validation pending · size: S · lane A · [go-live]
 **What** — Add `npm run gates`: runs every step of `.github/workflows/ci.yml` in its order (the list
 in `docs/plans/README.md`), with mock data for the tests, stops at the first red step, and ends with
 a one-screen summary (step · pass/fail · time). `npm run gates -- --quick` skips coverage. Then the
@@ -150,3 +151,11 @@ reached `main` with `lint:ui-copy` red because that step was not in the short li
 pass; 2) a seeded UI-copy violation makes it stop at that step with the file and line; 3) works in Git
 Bash and PowerShell.
 **Needs** — T0-10.
+
+### T0-12 · Resolve the 5 November rules and application conflicts            status: acceptance_pending — merged on main; 0225 applied and live DB checks passed; hosted/device acceptance pending (lane-a/T0-12-main-integration) · size: L · lane A · [go-live]
+**What** — Repair translation approval, whole-app activation and account language preferences; reconcile conflicting authority text, floor permission descriptions, task statuses/dependencies and current-state navigation.
+**Why** — Babin requested every finding in the 5 Nov conflict audit fixed; his interactive answers establish ruling precedence, whole-app Nepali acceptance and owner decisions.
+**Where** — `src/lib/i18n.ts`, language readiness/preference/glossary modules, auth/settings integration, first-run scheduling in App.tsx/useFirstRun.ts, Owner glossary Settings control and action, review scripts/tests, `src/i18n/`, `AGENTS.md`, `CLAUDE.md`, `docs/00_READ_FIRST.md`, `docs/PERMISSIONS.md`, `PLAN.md`, affected task cards, current-state/navigation docs and verification report. Shared files authorized here: `PLAN.md`, `docs/PERMISSIONS.md`, `src/lib/rbac.ts`, `src/actions/core.ts`, `src/types/database.ts` for the Owner-only glossary capability/contract. No money-engine changes.
+**Database** — account language uses self-owned Auth metadata. Owner-approved shared glossary revisions require migration 0225, claimed in the ledger before SQL. Append-only revisions, idempotent Owner-only RPC, staff-only text reads and local lifecycle/permission proof. C-7 authorizes only this migration after backup and combined-source verification.
+**Done when** — draft exports remain pending, import records explicit reviewer/date and exact text; language activation requires all module conversions/reviews/layout checks and owner approval; user choices follow their own account; docs use one authority/status contract; regression tests and local gates pass; screen checks recorded; Babin merges. Unperformed owner/device acceptance remains pending.
+**Needs** — the three original owner answers, plus Owner-only immediate approved glossary editing, all received 5 Nov 2026.

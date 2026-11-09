@@ -45,6 +45,10 @@ copy-paste prompt in [`prompts/`](prompts/README.md).
    Never share a checkout with another agent.
 5. When Babin merges it, set the card to `done` with the date.
 
+**Status vocabulary (5 Nov conflict repair):** `todo` = not started; `doing` = implementation in progress; `ready` = implementation prepared, merge/review pending; `acceptance_pending` = implementation merged or prepared but required owner/device acceptance is still missing; `done` = merged by Babin and every acceptance condition is evidenced. An awaiting-merge card is never `done`. A card may explicitly permit dependent implementation after its predecessor is `ready` or merged; that permits engineering work only, never release or acceptance sign-off.
+
+For independent translation drafting, a card may instead name the already merged scaffolding it actually needs and explicitly allow drafting while an earlier wave is still incomplete. This never waives module ownership, ordered wave acceptance or the whole-app activation gate. A partial conversion remains `doing`.
+
 ## Card format
 
 ```
@@ -62,6 +66,9 @@ run that ends in a branch ready to merge and a PROGRESS.md entry.
 
 ## Gates every card must pass (CI is off — these are the gate, W75)
 
+**After T0-10 and T0-11 are merged:** run `npm run gates` for all checks in the exact CI order. `npm run gates -- --quick` skips only coverage and **does not** certify a release. Both force mock mode for tests even when `.env.local` contains live credentials. The script refuses to run if the workflow order changes; the list below remains the audit reference.
+
+
 The same steps `.github/workflows/ci.yml` ran, in its order (T0-11 turns this into one command).
 A gate that is skipped is how a red check reaches `main` — on 26 Oct the UI-copy check went red
 that way.
@@ -69,7 +76,7 @@ that way.
 ```bash
 npm run typecheck
 npm run lint
-VITE_DATA_SOURCE=mock npm test        # keep the variable until T0-10: with a live URL in .env.local the runner would use live settings
+npm test                             # T0-10 branch: mock is forced by runner even if .env.local points at live
 npm run check:pglite                  # with check:lifecycle, both green in one run = migration Verified (R-35)
 node scripts/test-booking-financial-integrity.mjs
 npm run check:security
@@ -82,11 +89,10 @@ npm run lint:shell
 npm run lint:ui-copy
 npm run check:contrast
 npm run build
-VITE_DATA_SOURCE=mock npm run test:coverage   # before each live batch (long)
+npm run test:coverage                # T0-10 branch: mock is forced (long)
 ```
 
-PowerShell: set the variable first — `$env:VITE_DATA_SOURCE='mock'` — then run the same lines without
-the `VITE_DATA_SOURCE=mock` prefix.
+PowerShell and Git Bash use the same commands; the test runner forces mock mode. `npm test -- --live` is an explicit dangerous opt-in, reserved for a separately isolated test project — never production.
 
 Then drive the changed screen in `npm run dev:mock` at **375, 820 and 1440 px**, as each role the
 card names, and run the **screen check** in [`docs/USABILITY_TESTS.md`](../USABILITY_TESTS.md) §1 —

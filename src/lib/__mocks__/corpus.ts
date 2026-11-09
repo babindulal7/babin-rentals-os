@@ -34,7 +34,6 @@ import { DOCUMENTS } from '../../data/documents'
 /** Tables the app queries that the corpus cannot fill. Shown in the banner. */
 export const UNSERVED = [
   'expenses',
-  'membership_plans',
   'operation_sessions',
   'cleaning_queue_entries',
   'client_flags',
@@ -457,7 +456,14 @@ export function buildStore(options?: BuildStoreOptions): Store {
         // Finance's collected filter use 'Advance Payment', so every report that
         // filters the enum read Rs 0 collected in the mock build.
         payment_type: 'Advance Payment',
-        method: 'Bank Transfer',
+        /*
+         * `payments` has no `method` column (0006:176-190); the operator's word
+         * lives in `notes` as a first line `Method: <label>` written by
+         * `composeNotes()` in `actions/finance/recordPayment.ts`. The corpus used
+         * to carry a `method` field that no table has, so the mock build could
+         * never show T3-15's default on a seeded client. Same fact, real shape.
+         */
+        notes: 'Method: Bank Transfer',
         status: 'Received',
         payment_date: day(b.spec.pickupAt),
         reference: b.bookingNo,
@@ -747,6 +753,93 @@ export function buildStore(options?: BuildStoreOptions): Store {
     stock_transfers: stockTransfers,
     stock_transfer_lines: stockTransferLines,
     document_registry: documentRegistry,
+    membership_plans: [
+      {
+        id: '11111111-0000-0000-0000-000000000001',
+        client_uuid: '11111111-0000-0000-0000-000000000001',
+        level: 'Academy',
+        label: 'Access Member',
+        annual_fee: 6000,
+        individual_discount_pct: 10,
+        bundle_discount_pct: 5,
+        monthly_booking_limit: 3,
+        simultaneous_rental_limit: 1,
+        authorized_users: 1,
+        default_credit_limit: 0,
+        term_months: 12,
+        perks: [],
+        display_order: 1,
+        status: 'Active',
+      },
+      {
+        id: '11111111-0000-0000-0000-000000000002',
+        client_uuid: '11111111-0000-0000-0000-000000000002',
+        level: 'Creator',
+        label: 'Access Member',
+        annual_fee: 15000,
+        individual_discount_pct: 15,
+        bundle_discount_pct: 7,
+        monthly_booking_limit: 7,
+        simultaneous_rental_limit: 2,
+        authorized_users: 1,
+        default_credit_limit: 0,
+        term_months: 12,
+        perks: [],
+        display_order: 2,
+        status: 'Active',
+      },
+      {
+        id: '11111111-0000-0000-0000-000000000003',
+        client_uuid: '11111111-0000-0000-0000-000000000003',
+        level: 'Cinematographer',
+        label: 'Access Member',
+        annual_fee: 35000,
+        individual_discount_pct: 20,
+        bundle_discount_pct: 10,
+        monthly_booking_limit: 10,
+        simultaneous_rental_limit: 3,
+        authorized_users: 2,
+        default_credit_limit: 100000,
+        term_months: 12,
+        perks: [],
+        display_order: 3,
+        status: 'Active',
+      },
+      {
+        id: '11111111-0000-0000-0000-000000000004',
+        client_uuid: '11111111-0000-0000-0000-000000000004',
+        level: 'Production Alliance',
+        label: 'Partner',
+        annual_fee: 80000,
+        individual_discount_pct: 20,
+        bundle_discount_pct: 12,
+        monthly_booking_limit: 20,
+        simultaneous_rental_limit: 7,
+        authorized_users: 5,
+        default_credit_limit: 250000,
+        term_months: 12,
+        perks: ['Priority Booking', 'Dedicated Manager', 'Company Billing', 'Credit Terms'],
+        display_order: 4,
+        status: 'Active',
+      },
+      {
+        id: '11111111-0000-0000-0000-000000000005',
+        client_uuid: '11111111-0000-0000-0000-000000000005',
+        level: 'Elite',
+        label: 'Elite Member',
+        annual_fee: null,
+        individual_discount_pct: 20,
+        bundle_discount_pct: null,
+        monthly_booking_limit: null,
+        simultaneous_rental_limit: null,
+        authorized_users: null,
+        default_credit_limit: 500000,
+        term_months: 12,
+        perks: ['Dedicated Manager', 'VIP Support', 'Custom Solutions', 'Company Billing', 'Credit Terms'],
+        display_order: 5,
+        status: 'Active',
+      },
+    ],
   }
   for (const t of UNSERVED) store[t] = []
   store['probe'] = []

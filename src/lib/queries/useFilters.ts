@@ -251,7 +251,7 @@ export function useFilters({
     if (mode !== 'apply') return
     setDraft(applied)
     // `appliedKey` rather than `applied`: the object is rebuilt every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- applied is rebuilt every render; appliedKey is its value identity
   }, [appliedKey, mode])
 
   /**
@@ -479,12 +479,12 @@ export function useFilters({
 
     return out
     // `extrasKey` rather than `extras`: the object is rebuilt every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- extras is rebuilt every render; extrasKey is its value identity
   }, [applied, labels, extrasKey, setSearch, toggleChip, setDateRange, setPresence, setExtra])
 
   const activeCount = useMemo(
     () => countGroups(applied) + Object.keys(extras).length,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- extras is rebuilt every render; extrasKey is its value identity
     [applied, extrasKey],
   )
 

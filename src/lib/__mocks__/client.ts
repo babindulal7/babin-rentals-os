@@ -27,6 +27,9 @@ import { TIME_DEFAULTS } from './columnDefaults'
 import { PROJECT_TYPES } from '../projectTypes'
 import { MOCK_LOGINS } from '../devQuickLogins'
 import { parseBookingNoSearch } from '../format'
+import { calculateMembershipCredit } from '../membershipCredit'
+import { rupees } from '../money'
+import { GLOSSARY_TERMS, validateGlossaryText } from '../glossaryStore'
 
 const OVERLAY_KEY = 'babin.mock.overlay.v1'
 const SESSION_KEY = 'babin.mock.session.v1'
@@ -206,16 +209,51 @@ function commitInsert(table: string, row: Row, at: string): void {
  * — an exclusion over a range type is not something this store can express.
  */
 function applyTriggers(table: string, row: Row): void {
-  if (table !== 'booking_stage_transitions') return
-  const bookingId = row['booking_id']
-  const to = row['to_stage']
-  if (typeof bookingId !== 'string' || typeof to !== 'string') return
-  const bookings = store['bookings'] ?? []
-  for (const b of bookings) {
-    if (b['id'] !== bookingId) continue
-    const patch: Row = { stage: to, updated_at: row['occurred_at'] ?? row['created_at'] ?? new Date().toISOString() }
-    Object.assign(b, patch)
-    overlay.updates.push({ table: 'bookings', id: b['id'], patch })
+  if (table === 'booking_stage_transitions') {
+    const bookingId = row['booking_id']
+    const to = row['to_stage']
+    if (typeof bookingId !== 'string' || typeof to !== 'string') return
+    const bookings = store['bookings'] ?? []
+    for (const b of bookings) {
+      if (b['id'] !== bookingId) continue
+      const patch: Row = { stage: to, updated_at: row['occurred_at'] ?? row['created_at'] ?? new Date().toISOString() }
+      Object.assign(b, patch)
+      overlay.updates.push({ table: 'bookings', id: b['id'], patch })
+    }
+    return
+  }
+
+  if (table === 'damage_findings' && row['source'] === 'Cleaning' && !row['case_id']) {
+    const caseId = crypto.randomUUID()
+    const cases = (store['cases'] ??= [])
+    const nextNum = cases.length + 1
+    const year = new Date().getFullYear()
+    const caseNo = `CASE-${year}-${String(nextNum).padStart(4, '0')}`
+    const newCase: Row = {
+      id: caseId,
+      client_uuid: crypto.randomUUID(),
+      case_no: caseNo,
+      type: 'Damage',
+      title: `Damage found during reset — ${row['damage_type'] ?? 'Equipment'}`,
+      counterparty_kind: 'Client',
+      counterparty_name: 'Client',
+      priority: row['severity'] === 'Critical' || row['severity'] === 'High' ? row['severity'] : 'Medium',
+      status: 'Under Review',
+      disposition: 'Charge Client',
+      linked_booking_id: row['booking_id'] ?? null,
+      assessed_amount: 0,
+      deposit_held_amount: 0,
+      charged_to_client_amount: 0,
+      owner_id: row['created_by'] ?? '00000000-0000-0000-0000-000000000001',
+      created_by: row['created_by'] ?? '00000000-0000-0000-0000-000000000001',
+      opened_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    cases.push(newCase)
+    overlay.inserts.push({ table: 'cases', row: newCase })
+    row['case_id'] = caseId
+    return
   }
 }
 
@@ -275,7 +313,7 @@ const hooks: EngineHooks = {
 /* ── Auth ──────────────────────────────────────────────────────────────── */
 
 interface MockSession {
-  user: { id: string; email: string }
+  user: { id: string; email: string; user_metadata?: Record<string, unknown> }
 }
 
 type AuthListener = (event: string, session: MockSession | null) => void
@@ -324,13 +362,30 @@ const auth = {
     if (!password) {
       return { data: { session: null }, error: { message: 'Enter any password — mock mode does not check it.' } }
     }
-    const session: MockSession = { user: { id: user['id'] as string, email: user['email'] as string } }
+    let metadata: Record<string, unknown> = {}
+    try {
+      metadata = JSON.parse(localStorage.getItem(`babin.mock.auth-metadata.${String(user['id'])}`) ?? '{}') as Record<string, unknown>
+    } catch { /* An unavailable mock preference defaults to English. */ }
+    const session: MockSession = { user: { id: user['id'] as string, email: user['email'] as string, user_metadata: metadata } }
     writeSession(session)
     return { data: { session }, error: null }
   },
   async signOut() {
     writeSession(null)
     return { error: null }
+  },
+  async updateUser(attributes: { data?: Record<string, unknown> }) {
+    const session = readSession()
+    if (!session) return { data: { user: null }, error: { message: 'Sign in to change your preference.' } }
+    const metadata = { ...session.user.user_metadata, ...attributes.data }
+    const updated = { user: { ...session.user, user_metadata: metadata } }
+    try {
+      localStorage.setItem(`babin.mock.auth-metadata.${session.user.id}`, JSON.stringify(metadata))
+    } catch {
+      return { data: { user: null }, error: { message: 'Could not save this mock account preference.' } }
+    }
+    writeSession(updated)
+    return { data: { user: updated.user }, error: null }
   },
 }
 
@@ -1128,11 +1183,17 @@ function changeClientMembership(payload: Record<string, unknown>): { data: Row |
   const role = (store['users'] ?? []).find((u) => u['id'] === actor)?.['primary_role']
   if (!actor || !MEMBERSHIP_WRITERS.has(String(role))) return fail('42501', 'Only Coordinator or above can change a client membership.')
 
+  const isRenewal = Boolean(payload['is_renewal'])
   const clientId = String(payload['client_id'] ?? '')
   const key = String(payload['client_uuid'] ?? '')
-  const level = String(payload['plan_level'] ?? '').trim()
+  const level = payload['plan_level'] ? String(payload['plan_level']).trim() : null
+  const planId = payload['plan_id'] ? String(payload['plan_id']).trim() : null
   const note = String(payload['note'] ?? '').trim() || null
-  if (!clientId || !key || !level) return fail('P0001', 'Client, request key and membership plan are required.')
+  // Matches the SQL's effective-date chain (0197/0198): effective_date, then
+  // join_date, then today's Kathmandu business day.
+  const effectiveDate = String(payload['effective_date'] ?? payload['join_date'] ?? new Date(Date.now() + (5 * 60 + 45) * 60_000).toISOString().slice(0, 10))
+  const feePaid = payload['fee_paid'] != null ? Number(payload['fee_paid']) : null
+  if (!clientId || !key || (!level && !planId && !isRenewal)) return fail('P0001', 'Client, request key and membership plan are required.')
   if (note !== null && note.length > 500) return fail('P0001', 'A note can be at most 500 characters.')
 
   const client = (store['clients'] ?? []).find((c) => c['id'] === clientId)
@@ -1141,7 +1202,7 @@ function changeClientMembership(payload: Record<string, unknown>): { data: Row |
   const receipt = (store['audit_events'] ?? []).find((a) => a['client_uuid'] === key)
   if (receipt) {
     const kept = receipt['new_values'] as Row | undefined
-    if (receipt['actor_id'] === actor && kept?.['client_id'] === clientId && kept['plan_level'] === level && (receipt['reason'] ?? null) === note) {
+    if (receipt['actor_id'] === actor && kept?.['client_id'] === clientId && (!level || kept['plan_level'] === level) && (receipt['reason'] ?? null) === note) {
       return { data: kept, error: null }
     }
     return fail('P0001', 'Request key already belongs to another action.')
@@ -1149,29 +1210,101 @@ function changeClientMembership(payload: Record<string, unknown>): { data: Row |
 
   if (String(client['status']) === 'Deactivated') return fail('P0001', 'A deactivated client cannot take a membership.')
   const plans = store['membership_plans'] ?? []
-  const plan = plans.find((p) => String(p['level']) === level)
-  if (!plan) return fail('P0001', 'That membership plan does not exist.')
-  if (String(plan['status'] ?? 'Active') !== 'Active') return fail('P0001', 'That membership plan is retired and cannot be assigned.')
 
   const old = (store['client_memberships'] ?? []).find((m) => m['client_id'] === clientId && m['superseded_at'] == null)
-  let previous: string | null = null
-  if (old) {
-    previous = String(plans.find((p) => p['id'] === old['plan_id'])?.['level'] ?? '') || null
-    if (old['plan_id'] === plan['id']) return fail('P0001', `This client is already on the ${level} plan.`)
+  if (isRenewal && !old) return fail('P0001', 'Cannot renew: client does not have an active or lapsed membership.')
+
+  let plan = plans.find((p) => (planId && p['id'] === planId) || (level && String(p['level']) === level))
+  if (!plan && isRenewal && old) {
+    plan = plans.find((p) => p['id'] === old['plan_id'])
+  }
+  if (!plan) return fail('P0001', 'That membership plan does not exist.')
+  if (String(plan['status'] ?? 'Active') !== 'Active') return fail('P0001', 'That membership plan is retired and cannot be assigned.')
+  // A custom-fee plan (Elite: listed fee NULL) is priced per client — without a
+  // price there is none, and zero would sell the term free (T8-03 review). A
+  // renewal of the same plan may instead rely on the fee recorded on the live row.
+  if (plan['annual_fee'] == null && feePaid == null
+      && !(old && old['plan_id'] === plan['id'] && old['fee_paid'] != null)) {
+    return fail('P0001', `GATE:membership.custom_fee: The ${String(plan['level'])} plan has a custom fee. Record the negotiated fee to put this client on it.`)
   }
 
+  let previous: string | null = null
+  let credit = 0
+  let daysInOldTerm = 0
+  let daysLeft = 0
+  let oldFee = 0
+  let isRenewEffective = isRenewal
+  if (old) {
+    const oldPlan = plans.find((p) => p['id'] === old['plan_id'])
+    previous = String(oldPlan?.['level'] ?? '') || null
+
+    oldFee = Number(old['fee_paid'] ?? oldPlan?.['annual_fee'] ?? 0)
+    const oldTermMonths = Number(oldPlan?.['term_months'] ?? 12)
+    const oldJoinDate = String(old['join_date'] ?? effectiveDate)
+    const newFee = Number(plan['annual_fee'] ?? feePaid ?? 0)
+
+    const calc = calculateMembershipCredit({
+      oldFeePaisa: rupees(oldFee),
+      oldJoinDate,
+      oldTermMonths,
+      effectiveDate,
+      newFeePaisa: rupees(newFee),
+    })
+    daysInOldTerm = calc.daysInOldTerm
+
+    if (calc.daysLeft <= 0) {
+      isRenewEffective = true
+    }
+
+    if (isRenewEffective) {
+      credit = 0
+      daysLeft = 0
+    } else {
+      // The credit is priced from the fee the old term carried (recorded, else
+      // the plan's listing). With BOTH unknown there is no honest arithmetic — refuse.
+      if (old['fee_paid'] == null && oldPlan?.['annual_fee'] == null) {
+        return fail('P0001', "GATE:membership.fee_unknown: The fee on the client's current membership was never recorded, so the unused days cannot be priced. Record the fee, then change the plan.")
+      }
+      if (old['plan_id'] === plan['id']) return fail('P0001', `This client is already on the ${plan['level']} plan.`)
+      credit = calc.creditPaisa / 100
+      daysLeft = calc.daysLeft
+    }
+  }
+
+  // The new-fee basis prefers the plan's listing; a renewal of a custom-fee
+  // plan falls back to the fee recorded on the live row (T8-03 review).
+  const newFee = Number(plan['annual_fee'] ?? feePaid ?? (isRenewEffective && old && old['plan_id'] === plan['id'] ? old['fee_paid'] : null) ?? 0)
+  const newFeeDue = Math.max(0, newFee - credit)
+  const excessCredit = Math.max(0, credit - newFee)
+
+  if (excessCredit > 0) {
+    client['account_credit'] = Number(client['account_credit'] ?? 0) + excessCredit
+  }
+
+  // R-9.2 (migration 0226): keep the original join date on a plan change to a live
+  // membership. Refused when the change is a renewal, as the database does.
+  const keepJoin = Boolean(payload['keep_join_date']) && Boolean(old)
+  if (keepJoin && isRenewEffective) {
+    return fail('P0001', 'GATE:membership.keep_join_lapsed: The current term has already ended, so the original join date cannot be kept. Restart the term instead.')
+  }
+  const joinDateKept = keepJoin && !isRenewEffective
   const now = new Date().toISOString()
   const newId = crypto.randomUUID()
-  // The business day is Nepal's (UTC+5:45), not the browser's — the same day the SQL function uses.
-  const joinedOn = new Date(Date.now() + (5 * 60 + 45) * 60_000).toISOString().slice(0, 10)
+  const joinedOn = joinDateKept && old ? String(old['join_date']) : effectiveDate
   if (old) hooks.update('client_memberships', { superseded_at: now, superseded_by_id: newId }, (r) => r['id'] === old['id'])
   commitInsert('client_memberships', {
     id: newId, client_uuid: key, client_id: clientId, plan_id: plan['id'], join_date: joinedOn,
-    fee_paid: null, superseded_by_id: null, superseded_at: null, created_at: now, created_by: actor,
+    // A renewal of a custom-fee plan keeps the price it just charged (T8-03 review).
+    fee_paid: feePaid ?? (isRenewEffective && old && old['plan_id'] === plan['id'] && plan['annual_fee'] == null ? old['fee_paid'] : null),
+    superseded_by_id: null, superseded_at: null, created_at: now, created_by: actor,
   }, now)
   const result: Row = {
-    client_id: clientId, plan_level: level, previous_level: previous,
+    client_id: clientId, plan_id: plan['id'], plan_level: plan['level'], previous_level: previous,
     membership_id: newId, superseded_membership_id: old ? old['id'] : null, joined_on: joinedOn,
+    join_date_kept: joinDateKept,
+    is_renewal: isRenewEffective,
+    old_fee: oldFee, days_left: daysLeft, total_days: daysInOldTerm,
+    credit: credit, new_fee: newFee, new_fee_due: newFeeDue, account_credit: excessCredit,
   }
   commitInsert('audit_events', {
     id: crypto.randomUUID(), client_uuid: key, event_class: 'status change', category: 'Administration', module: 'Clients',
@@ -1188,9 +1321,29 @@ function changeClientMembership(payload: Record<string, unknown>): { data: Row |
 
 export const mockSupabase = {
   from(table: string) {
+    if (table === 'glossary_term_revisions') store[table] ??= []
     return createBuilder(table, hooks)
   },
-  rpc(name: string, args?: Record<string, unknown>) {
+  rpc(name: string, args?: Record<string, unknown>): Promise<{ data: unknown; error: PgError | null }> {
+    if (name === 'approve_glossary_term') {
+      const actor = readSession()?.user.id
+      const role = store['users']?.find(user => user['id'] === actor)?.['primary_role']
+      if (role !== 'Owner') return Promise.resolve({ data: null, error: pgErr('42501', 'GATE:glossary.role|Only the Owner may approve glossary changes.') })
+      const term = GLOSSARY_TERMS.find(item => item.id === args?.['p_term_key'])
+      const text = typeof args?.['p_nepali'] === 'string' ? args['p_nepali'].trim() : ''
+      const rows = store['glossary_term_revisions'] ??= []
+      const previous = rows.find(row => row['client_uuid'] === args?.['p_client_uuid'])
+      if (previous) return Promise.resolve({ data: previous, error: previous['term_key'] === term?.id && previous['nepali'] === text ? null : pgErr('P0001', 'GATE:glossary.idempotency|Retry key belongs to another change.') })
+      if (!term || !args?.['p_client_uuid']) return Promise.resolve({ data: null, error: pgErr('P0001', 'Choose an existing glossary term.') })
+      const problem = validateGlossaryText(term, text)
+      if (problem) return Promise.resolve({ data: null, error: pgErr('P0001', problem) })
+      const current = rows.filter(row => row['original_nepali'] === term.ne).reduce((max, row) => Math.max(max, Number(row['revision'])), 0)
+      if (args?.['p_expected_revision'] !== current) return Promise.resolve({ data: null, error: pgErr('P0001', 'GATE:glossary.changed|The term changed while you were editing. Reload before approving.') })
+      const row = { id: crypto.randomUUID(), client_uuid: args['p_client_uuid'], term_key: term.id, original_nepali: term.ne, nepali: text,
+        revision: rows.reduce((max, item) => Math.max(max, Number(item['revision'])), 0) + 1, created_by: actor, created_at: new Date().toISOString() }
+      hooks.insert('glossary_term_revisions', [row])
+      return Promise.resolve({ data: row, error: null })
+    }
     if (name === 'assert_operation_branch_grant') {
       const actor = readSession()?.user.id
       const user = store['users']?.find(row => row['id'] === actor)
@@ -1353,6 +1506,10 @@ export const mockSupabase = {
       const payload = (args?.['p_payload'] ?? {}) as Record<string, unknown>
       return Promise.resolve(changeClientMembership(payload))
     }
+    if (name === 'renew_client_membership') {
+      const payload = (args?.['p_payload'] ?? {}) as Record<string, unknown>
+      return Promise.resolve(changeClientMembership({ ...payload, is_renewal: true }))
+    }
     if (name === 'create_invoice') {
       const payload = (args?.['p_payload'] ?? {}) as Record<string, unknown>
       return Promise.resolve(createInvoiceRpc(payload))
@@ -1407,6 +1564,470 @@ export const mockSupabase = {
         return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
       }
     }
+    if (name === 'save_membership_plan') {
+      try {
+        const actor = readSession()?.user.id
+        const user = store['users']?.find(row => row['id'] === actor)
+        const role = user?.['primary_role'] as string | undefined
+        if (!role || !['Owner', 'Admin', 'Manager'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'GATE:membership_plan.manage.forbidden: Only Manager, Admin or Owner can create or edit membership plans.') })
+        }
+        const level = String(args?.['p_level'])
+        const label = String(args?.['p_label'])
+        const planId = args?.['p_plan_id'] as string | undefined
+        const plans = store['membership_plans'] ?? []
+        const plan = planId ? plans.find(p => p['id'] === planId) : plans.find(p => p['level'] === level)
+        if (plan) {
+          plan['level'] = level
+          plan['label'] = label
+          plan['annual_fee'] = args?.['p_annual_fee'] != null ? Number(args['p_annual_fee']) : null
+          plan['individual_discount_pct'] = args?.['p_individual_discount_pct'] != null ? Number(args['p_individual_discount_pct']) : null
+          plan['bundle_discount_pct'] = args?.['p_bundle_discount_pct'] != null ? Number(args['p_bundle_discount_pct']) : null
+          plan['monthly_booking_limit'] = args?.['p_monthly_booking_limit'] != null ? Number(args['p_monthly_booking_limit']) : null
+          plan['simultaneous_rental_limit'] = args?.['p_simultaneous_rental_limit'] != null ? Number(args['p_simultaneous_rental_limit']) : null
+          plan['authorized_users'] = args?.['p_authorized_users'] != null ? Number(args['p_authorized_users']) : null
+          plan['default_credit_limit'] = args?.['p_default_credit_limit'] != null ? Number(args['p_default_credit_limit']) : 0
+          plan['term_months'] = args?.['p_term_months'] != null ? Number(args['p_term_months']) : 12
+          plan['perks'] = Array.isArray(args?.['p_perks']) ? args['p_perks'] : []
+          plan['updated_at'] = new Date().toISOString()
+          return Promise.resolve({
+            data: { ok: true, plan_id: plan['id'], level, status: plan['status'] },
+            error: null,
+          })
+        } else {
+          const newId = crypto.randomUUID()
+          const newPlan = {
+            id: newId,
+            client_uuid: (args?.['p_client_uuid'] as string) || crypto.randomUUID(),
+            level,
+            label,
+            annual_fee: args?.['p_annual_fee'] != null ? Number(args['p_annual_fee']) : null,
+            individual_discount_pct: args?.['p_individual_discount_pct'] != null ? Number(args['p_individual_discount_pct']) : null,
+            bundle_discount_pct: args?.['p_bundle_discount_pct'] != null ? Number(args['p_bundle_discount_pct']) : null,
+            monthly_booking_limit: args?.['p_monthly_booking_limit'] != null ? Number(args['p_monthly_booking_limit']) : null,
+            simultaneous_rental_limit: args?.['p_simultaneous_rental_limit'] != null ? Number(args['p_simultaneous_rental_limit']) : null,
+            authorized_users: args?.['p_authorized_users'] != null ? Number(args['p_authorized_users']) : null,
+            default_credit_limit: args?.['p_default_credit_limit'] != null ? Number(args['p_default_credit_limit']) : 0,
+            term_months: args?.['p_term_months'] != null ? Number(args['p_term_months']) : 12,
+            perks: Array.isArray(args?.['p_perks']) ? args['p_perks'] : [],
+            display_order: Number(args?.['p_display_order'] ?? plans.length + 1),
+            status: 'Active',
+            retired_at: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }
+          plans.push(newPlan)
+          return Promise.resolve({
+            data: { ok: true, plan_id: newId, level, status: 'Active' },
+            error: null,
+          })
+        }
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
+    if (name === 'retire_membership_plan') {
+      try {
+        const actor = readSession()?.user.id
+        const user = store['users']?.find(row => row['id'] === actor)
+        const role = user?.['primary_role'] as string | undefined
+        if (!role || !['Owner', 'Admin', 'Manager'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'GATE:membership_plan.manage.forbidden: Only Manager, Admin or Owner can retire or reactivate membership plans.') })
+        }
+        const planId = String(args?.['p_plan_id'])
+        const retire = args?.['p_retire'] ?? true
+        const plans = store['membership_plans'] ?? []
+        const plan = plans.find(p => p['id'] === planId)
+        if (!plan) {
+          return Promise.resolve({ data: null, error: pgErr('P0002', `GATE:membership_plan.not_found: Membership plan with id ${planId} not found.`) })
+        }
+        plan['status'] = retire ? 'Retired' : 'Active'
+        plan['retired_at'] = retire ? new Date().toISOString() : null
+        plan['updated_at'] = new Date().toISOString()
+        return Promise.resolve({
+          data: { ok: true, plan_id: planId, level: plan['level'], status: plan['status'] },
+          error: null,
+        })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
+    if (name === 'save_offer_campaign') {
+      try {
+        const actor = readSession()?.user.id
+        const user = store['users']?.find(row => row['id'] === actor)
+        const role = user?.['primary_role'] as string | undefined
+        if (!role || !['Owner', 'Admin', 'Manager'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'GATE:offer_campaign.forbidden: Only Owner, Admin, or Manager can create or edit offer campaigns.') })
+        }
+        const campaigns = store['offer_campaigns'] ?? (store['offer_campaigns'] = [])
+        const campaignId = (args?.['p_campaign_id'] as string) || crypto.randomUUID()
+        const clientUuid = (args?.['p_client_uuid'] as string) || crypto.randomUUID()
+        const existing = campaigns.find(c => c['id'] === campaignId)
+        const now = new Date().toISOString()
+        if (existing) {
+          if (!['draft', 'test_sent'].includes(existing['status'] as string)) {
+            return Promise.resolve({ data: null, error: pgErr('P0001', 'GATE:offer_campaign.immutable: Only draft or test_sent campaigns can be edited.') })
+          }
+          existing['subject'] = args?.['p_subject']
+          existing['body_markdown'] = args?.['p_body_markdown']
+          existing['hero_image_url'] = args?.['p_hero_image_url'] ?? null
+          existing['cta_button_text'] = args?.['p_cta_button_text'] ?? 'Book Gear Online'
+          existing['cta_button_url'] = args?.['p_cta_button_url'] ?? 'https://book.babinrentals.com'
+          existing['audience_filter'] = args?.['p_audience_filter'] ?? {}
+          existing['updated_at'] = now
+          return Promise.resolve({ data: existing, error: null })
+        }
+        const newCampaign: Row = {
+          id: campaignId,
+          client_uuid: clientUuid,
+          subject: args?.['p_subject'] as string,
+          body_markdown: args?.['p_body_markdown'] as string,
+          hero_image_url: args?.['p_hero_image_url'] ?? null,
+          cta_button_text: args?.['p_cta_button_text'] ?? 'Book Gear Online',
+          cta_button_url: args?.['p_cta_button_url'] ?? 'https://book.babinrentals.com',
+          audience_filter: args?.['p_audience_filter'] ?? {},
+          status: 'draft',
+          test_recipient_email: null,
+          test_sent_at: null,
+          recipient_count: 0,
+          sent_count: 0,
+          failed_count: 0,
+          bounced_count: 0,
+          unsubscribed_count: 0,
+          created_by: actor,
+          created_at: now,
+          updated_at: now,
+        }
+        campaigns.unshift(newCampaign)
+        return Promise.resolve({ data: newCampaign, error: null })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
+    if (name === 'record_offer_campaign_test_send') {
+      try {
+        const actor = readSession()?.user.id
+        const user = store['users']?.find(row => row['id'] === actor)
+        const role = user?.['primary_role'] as string | undefined
+        if (!role || !['Owner', 'Admin', 'Manager'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'GATE:offer_campaign.forbidden: Only Owner, Admin, or Manager can test offer campaigns.') })
+        }
+        const campaigns = store['offer_campaigns'] ?? []
+        const campaign = campaigns.find(c => c['id'] === args?.['p_campaign_id'])
+        if (!campaign) {
+          return Promise.resolve({ data: null, error: pgErr('P0002', 'Campaign not found.') })
+        }
+        const now = new Date().toISOString()
+        campaign['status'] = 'test_sent'
+        campaign['test_recipient_email'] = args?.['p_test_email']
+        campaign['test_sent_at'] = now
+        campaign['updated_at'] = now
+        return Promise.resolve({
+          data: {
+            campaign_id: campaign['id'],
+            status: 'test_sent',
+            test_recipient_email: campaign['test_recipient_email'],
+            test_sent_at: campaign['test_sent_at'],
+          },
+          error: null,
+        })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
+    if (name === 'preview_offer_campaign_audience') {
+      try {
+        const clients = store['clients'] ?? []
+        const consents = store['client_marketing_consents'] ?? []
+        let eligible = 0
+        let optedOut = 0
+        let noEmail = 0
+        for (const cl of clients) {
+          if (cl['status'] === 'Deactivated') continue
+          const email = cl['email'] as string | undefined
+          if (!email || !email.includes('@')) {
+            noEmail++
+            continue
+          }
+          const consent = consents.find(c => c['client_id'] === cl['id'] && c['channel'] === 'Email')
+          if (consent && consent['consent_state'] === 'Opted out') {
+            optedOut++
+            continue
+          }
+          eligible++
+        }
+        return Promise.resolve({
+          data: {
+            eligible_count: eligible || 3,
+            opted_out_count: optedOut || 1,
+            no_email_count: noEmail || 0,
+          },
+          error: null,
+        })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
+    if (name === 'queue_offer_campaign') {
+      try {
+        const actor = readSession()?.user.id
+        const user = store['users']?.find(row => row['id'] === actor)
+        const role = user?.['primary_role'] as string | undefined
+        if (!role || !['Owner', 'Admin', 'Manager'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'GATE:offer_campaign.forbidden: Only Owner, Admin, or Manager can queue offer campaigns.') })
+        }
+        const campaigns = store['offer_campaigns'] ?? []
+        const campaign = campaigns.find(c => c['id'] === args?.['p_campaign_id'])
+        if (!campaign) {
+          return Promise.resolve({ data: null, error: pgErr('P0002', 'Campaign not found.') })
+        }
+        if (campaign['status'] === 'queued' || campaign['status'] === 'completed') {
+          return Promise.resolve({
+            data: {
+              campaign_id: campaign['id'],
+              recipient_count: campaign['recipient_count'] || 2,
+              status: campaign['status'],
+              replayed: true,
+            },
+            error: null,
+          })
+        }
+        if (campaign['status'] !== 'test_sent') {
+          return Promise.resolve({ data: null, error: pgErr('P0001', 'GATE:offer_campaign.test_required: Campaign must be verified via test send before queueing.') })
+        }
+        campaign['status'] = 'queued'
+        campaign['recipient_count'] = 2
+        campaign['queued_at'] = new Date().toISOString()
+        return Promise.resolve({
+          data: {
+            campaign_id: campaign['id'],
+            recipient_count: 2,
+            status: 'queued',
+            replayed: false,
+          },
+          error: null,
+        })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
+    if (name === 'process_client_unsubscribe') {
+      return Promise.resolve({
+        data: {
+          client_id: 'client-mock-1',
+          client_code: 'C-9901',
+          recipient_row_id: 'recip-mock-1',
+          unsubscribed_at: new Date().toISOString(),
+        },
+        error: null,
+      })
+    }
+    /* ⛔ Was `{ data: null, error: null }` — a silent null that every caller
+     * would read as success with an empty result. That is the
+     * success-fabrication class this repo has a register for, sitting in the
+     * one place a missing RPC should be loudest. An unimplemented function is
+     * now an ERROR, so a caller fails visibly instead of continuing on null. */
+    if (name === 'bulk_update_products') {
+      try {
+        const actor = readSession()?.user.id
+        const user = store['users']?.find(row => row['id'] === actor)
+        const role = user?.['primary_role'] as string | undefined
+        if (!role || !['Owner', 'Admin', 'Manager'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'Permission denied: bulk product updates require Manager, Admin or Owner role.') })
+        }
+        const field = args?.['p_field'] as string
+        const clientUuid = args?.['p_client_uuid'] as string
+        const productIds = (args?.['p_product_ids'] ?? []) as string[]
+        const value = args?.['p_value'] as Record<string, unknown> | number | string | boolean
+
+        if (!clientUuid) {
+          return Promise.resolve({ data: null, error: pgErr('22023', 'client_uuid is required for bulk updates.') })
+        }
+        if (!productIds || productIds.length === 0) {
+          return Promise.resolve({ data: null, error: pgErr('22023', 'At least one product ID must be provided.') })
+        }
+
+        const moneyFields = [
+          'rates_percentage', 'daily_rate', 'weekly_rate', 'monthly_rate',
+          'hourly_rate', 'weekend_rate', 'deposit_percent', 'deposit_fixed',
+          'purchase_price', 'replacement_value',
+        ]
+        const allowedFields = [
+          'rates_percentage', 'name', 'short_name', 'category_id', 'brand', 'model',
+          'manufacturer', 'description', 'reorder_level', 'quantity_unit', 'purchase_date',
+          'purchase_price', 'replacement_value', 'daily_rate', 'weekly_rate', 'monthly_rate',
+          'hourly_rate', 'weekend_rate', 'deposit_percent', 'deposit_fixed', 'min_rental_days',
+          'rental_enabled', 'prep_time_minutes', 'cleaning_time_minutes', 'inspection_required',
+          'packing_required', 'notes_internal', 'notes_warehouse', 'is_active',
+        ]
+        if (!allowedFields.includes(field)) {
+          return Promise.resolve({ data: null, error: pgErr('42703', `Field ${field} cannot be updated in bulk.`) })
+        }
+
+        const canMoney = ['Owner', 'Admin', 'Manager', 'Coordinator', 'Accounts'].includes(role)
+        if (moneyFields.includes(field) && !canMoney) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'Permission denied: Warehouse and money-blind roles cannot modify financial fields.') })
+        }
+        if (field === 'rates_percentage' && role !== 'Owner') {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'Permission denied: Only the Owner can adjust product rental rates by percentage.') })
+        }
+
+        const receipts = (store['record_editor_receipts'] = store['record_editor_receipts'] ?? [])
+        const saved = receipts.find(r => r['key'] === clientUuid)
+        if (saved) {
+          return Promise.resolve({ data: saved['response'], error: null })
+        }
+
+        const products = store['products'] ?? []
+        let updatedCount = 0
+        const results = []
+
+        for (const prodId of productIds) {
+          const prod = products.find(p => p['id'] === prodId)
+          if (!prod) {
+            results.push({ id: prodId, success: false, error: 'Product not found' })
+            continue
+          }
+
+          let oldVal: unknown
+          let newVal: unknown
+
+          if (field === 'rates_percentage') {
+            const pct = typeof value === 'object' && value !== null && 'percentage' in value
+              ? Number((value as { percentage: number }).percentage)
+              : Number(value)
+            const oldDaily = Number(prod['daily_rate'] ?? 0)
+            const oldWeekly = prod['weekly_rate'] != null ? Number(prod['weekly_rate']) : null
+            const oldMonthly = prod['monthly_rate'] != null ? Number(prod['monthly_rate']) : null
+            const newDaily = Math.round(oldDaily * (1 + pct / 100))
+            const newWeekly = oldWeekly != null ? Math.round(oldWeekly * (1 + pct / 100)) : null
+            const newMonthly = oldMonthly != null ? Math.round(oldMonthly * (1 + pct / 100)) : null
+
+            oldVal = { daily_rate: oldDaily, weekly_rate: oldWeekly, monthly_rate: oldMonthly }
+            newVal = { daily_rate: newDaily, weekly_rate: newWeekly, monthly_rate: newMonthly, percentage: pct }
+
+            prod['daily_rate'] = newDaily
+            if (newWeekly != null) prod['weekly_rate'] = newWeekly
+            if (newMonthly != null) prod['monthly_rate'] = newMonthly
+          } else {
+            oldVal = prod[field]
+            const rawVal = typeof value === 'object' && value !== null && field in value
+              ? (value as Record<string, unknown>)[field]
+              : value
+            prod[field] = rawVal
+            newVal = rawVal
+          }
+          prod['updated_at'] = new Date().toISOString()
+          updatedCount++
+          results.push({ id: prodId, success: true, old_value: oldVal, new_value: newVal })
+        }
+
+        const response = {
+          batch_id: clientUuid,
+          field,
+          total_requested: productIds.length,
+          updated_count: updatedCount,
+          results,
+        }
+        receipts.push({ key: clientUuid, actor, response, created_at: new Date().toISOString() })
+        return Promise.resolve({ data: response, error: null })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
+    /* ⛔ Was `{ data: null, error: null }` — a silent null that every caller
+     * would read as success with an empty result. That is the
+     * success-fabrication class this repo has a register for, sitting in the
+     * one place a missing RPC should be loudest. An unimplemented function is
+     * now an ERROR, so a caller fails visibly instead of continuing on null. */
+    if (name === 'save_message_template') {
+      try {
+        const actor = readSession()?.user?.id ?? (store['users']?.find(u => u['primary_role'] === 'Owner')?.['id'] ?? 'user-owner')
+        const user = (store['users'] ?? []).find(u => u['id'] === actor)
+        const role = user ? (user['primary_role'] as string | undefined) : 'Owner'
+        if (role && !['Owner', 'Admin'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'Only Owner and Admin can edit message and document texts (B20)') })
+        }
+        const clientUuid = args?.['p_client_uuid'] as string
+        if (!clientUuid) {
+          return Promise.resolve({ data: null, error: pgErr('23502', 'client_uuid is required for idempotency (Law 8)') })
+        }
+        read('message_templates')
+        const templates = store['message_templates'] ?? []
+        const existing = templates.find(t => t['client_uuid'] === clientUuid)
+        if (existing) {
+          return Promise.resolve({ data: existing, error: null })
+        }
+        const templateKey = args?.['p_template_key'] as string
+        const subject = (args?.['p_subject'] as string | null) ?? null
+        const body = args?.['p_body'] as string
+        if (!body || body.trim().length < 5) {
+          return Promise.resolve({ data: null, error: pgErr('22023', 'Template body must be at least 5 characters long') })
+        }
+        const active = templates.find(t => t['template_key'] === templateKey && t['is_active'])
+        const allowedPlaceholders = (active?.['allowed_placeholders'] as string[]) ?? [
+          'client_name', 'booking_number', 'pickup_date', 'pickup_time', 'return_date', 'return_time', 'equipment_list', 'action_url', 'portal_url', 'company_name', 'company_phone', 'company_email', 'amount_due', 'due_date', 'pay_url', 'invoice_number', 'bank_details', 'validity_days', 'contact_name', 'unsubscribe_url', 'company_address', 'dispatcher_name', 'technician_name', 'jurisdiction'
+        ]
+        const matches = [...body.matchAll(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g)].map(m => m[1] ?? '').filter(Boolean)
+        for (const p of matches) {
+          if (!allowedPlaceholders.includes(p)) {
+            return Promise.resolve({ data: null, error: pgErr('22023', `Unknown placeholder "{{${p}}}" is refused. Allowed placeholders: ${allowedPlaceholders.join(', ')}`) })
+          }
+        }
+        templates.forEach(t => {
+          if (t['template_key'] === templateKey) t['is_active'] = false
+        })
+        const maxVersion = templates.filter(t => t['template_key'] === templateKey).reduce((max, t) => Math.max(max, Number(t['version'] || 1)), 0)
+        const nextVersion = maxVersion + 1
+        const newRecord = {
+          id: `tmpl-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+          client_uuid: clientUuid,
+          template_key: templateKey,
+          category: active?.['category'] ?? (templateKey.startsWith('email.') ? 'email' : 'document'),
+          name: active?.['name'] ?? templateKey,
+          description: active?.['description'] ?? null,
+          version: nextVersion,
+          subject,
+          body,
+          allowed_placeholders: allowedPlaceholders,
+          is_active: true,
+          created_by: actor,
+          created_at: new Date().toISOString(),
+        }
+        templates.push(newRecord)
+        return Promise.resolve({ data: newRecord, error: null })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
+    if (name === 'restore_message_template') {
+      try {
+        const actor = readSession()?.user?.id ?? (store['users']?.find(u => u['primary_role'] === 'Owner')?.['id'] ?? 'user-owner')
+        const user = (store['users'] ?? []).find(u => u['id'] === actor)
+        const role = user ? (user['primary_role'] as string | undefined) : 'Owner'
+        if (role && !['Owner', 'Admin'].includes(role)) {
+          return Promise.resolve({ data: null, error: pgErr('42501', 'Only Owner and Admin can restore message and document texts (B20)') })
+        }
+        const clientUuid = args?.['p_client_uuid'] as string
+        const templateKey = args?.['p_template_key'] as string
+        const targetVersion = Number(args?.['p_target_version'])
+        read('message_templates')
+        const templates = store['message_templates'] ?? []
+        const target = templates.find(t => t['template_key'] === templateKey && Number(t['version']) === targetVersion)
+        if (!target) {
+          return Promise.resolve({ data: null, error: pgErr('P0002', `Template "${templateKey}" version ${targetVersion} does not exist`) })
+        }
+        return mockSupabase.rpc('save_message_template', {
+          p_client_uuid: clientUuid,
+          p_template_key: templateKey,
+          p_subject: target['subject'],
+          p_body: target['body'],
+        })
+      } catch (e) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', (e as Error).message) })
+      }
+    }
     /* ⛔ Was `{ data: null, error: null }` — a silent null that every caller
      * would read as success with an empty result. That is the
      * success-fabrication class this repo has a register for, sitting in the
@@ -1420,7 +2041,25 @@ export const mockSupabase = {
   },
   auth,
   functions: {
-    invoke(name: string) {
+    invoke(name: string, options?: { body?: Record<string, unknown> }) {
+      if (name === 'send-email' && options?.body?.['action'] === 'unsubscribe') {
+        const token = typeof options.body['token'] === 'string' ? options.body['token'].trim() : ''
+        if (!token) {
+          return Promise.resolve({
+            data: { success: false, error: 'A valid unsubscribe token is required.' },
+            error: null,
+          })
+        }
+        return Promise.resolve({
+          data: {
+            success: true,
+            client_code: 'C-9901',
+            client_name: 'Babin Test Client',
+            unsubscribed_at: new Date().toISOString(),
+          },
+          error: null,
+        })
+      }
       return Promise.resolve({
         data: null,
         error: {

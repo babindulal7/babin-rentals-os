@@ -20,7 +20,9 @@ vi.mock('../../../events/eventBus', () => ({
 describe('createDeliveryZone', () => {
   // Plain { data, error } replies, typed loosely as in the other action tests.
   const mockRpc = vi.mocked(supabase.rpc) as unknown as ReturnType<typeof vi.fn>;
-  const coordinatorContext = { userId: 'user-123', role: 'Coordinator' as const };
+  // T4-07: zone writes are Owner/Admin/Manager only. Coordinator used to pass.
+  const managerContext = { userId: 'user-123', role: 'Manager' as const };
+  const coordinatorContext = { userId: 'coordinator-123', role: 'Coordinator' as const };
   const ownerContext = { userId: 'owner-123', role: 'Owner' as const };
   const warehouseContext = { userId: 'warehouse-123', role: 'Warehouse' as const };
   const clientContext = { userId: 'client-123', role: 'Client' as const };
@@ -33,6 +35,12 @@ describe('createDeliveryZone', () => {
     await expect(createDeliveryZone({ name: 'Test Zone', description: 'Test', feePaisa: 350000 })).rejects.toThrow(
       'was called without a session context'
     );
+  });
+
+  it('throws ActionPermissionError for Coordinator role', async () => {
+    await expect(
+      createDeliveryZone({ name: 'Test Zone', description: 'Test', feePaisa: 350000 }, coordinatorContext)
+    ).rejects.toThrow(ActionPermissionError);
   });
 
   it('throws ActionPermissionError for Warehouse role', async () => {
@@ -49,28 +57,28 @@ describe('createDeliveryZone', () => {
 
   it('throws validation error for empty name', async () => {
     await expect(
-      createDeliveryZone({ name: '', description: 'Test', feePaisa: 350000 }, coordinatorContext)
+      createDeliveryZone({ name: '', description: 'Test', feePaisa: 350000 }, managerContext)
     ).rejects.toThrow('Zone name cannot be empty');
   });
 
   it('throws validation error for negative fee', async () => {
     await expect(
-      createDeliveryZone({ name: 'Test Zone', description: 'Test', feePaisa: -100 }, coordinatorContext)
+      createDeliveryZone({ name: 'Test Zone', description: 'Test', feePaisa: -100 }, managerContext)
     ).rejects.toThrow('Zone fee cannot be negative');
   });
 
   it('throws validation error for non-integer fee', async () => {
     await expect(
-      createDeliveryZone({ name: 'Test Zone', description: 'Test', feePaisa: 350000.5 }, coordinatorContext)
+      createDeliveryZone({ name: 'Test Zone', description: 'Test', feePaisa: 350000.5 }, managerContext)
     ).rejects.toThrow('Zone fee must be an integer');
   });
 
-  it('creates zone successfully for Coordinator', async () => {
+  it('creates zone successfully for Manager', async () => {
     mockRpc.mockResolvedValue({ data: 'zone-uuid-123', error: null } as any);
 
     const result = await createDeliveryZone(
       { name: 'Test Zone', description: 'Test description', feePaisa: 350000 },
-      coordinatorContext
+      managerContext
     );
 
     expect(result).toEqual({ zoneId: 'zone-uuid-123' });
@@ -97,7 +105,7 @@ describe('createDeliveryZone', () => {
 
     await createDeliveryZone(
       { name: '  Trimmed Zone  ', description: '  Desc  ', feePaisa: 400000 },
-      coordinatorContext
+      managerContext
     );
 
     expect(mockRpc).toHaveBeenCalledWith('create_delivery_zone', {
@@ -111,7 +119,7 @@ describe('createDeliveryZone', () => {
     mockRpc.mockResolvedValue({ data: null, error: { message: 'DB error' } } as any);
 
     await expect(
-      createDeliveryZone({ name: 'Test Zone', description: 'Test', feePaisa: 350000 }, coordinatorContext)
+      createDeliveryZone({ name: 'Test Zone', description: 'Test', feePaisa: 350000 }, managerContext)
     ).rejects.toThrow('Failed to create delivery zone: DB error');
   });
 });

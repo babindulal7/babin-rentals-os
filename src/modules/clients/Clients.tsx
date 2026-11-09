@@ -30,6 +30,7 @@ import { FilterButton } from '../../components/ui/FilterDrawer'
 import './clients.css'
 import { canImportClients } from '../../lib/clientImport'
 import { csvCell } from '../../lib/csv'
+import { useTranslation } from '../../lib/i18n'
 
 /**
  * Clients — directory, memberships, referrals, credit, imports, and duplicates.
@@ -60,12 +61,26 @@ const TAB_DEFS: TabDef[] = [
 ]
 
 export default function Clients() {
+  const { t } = useTranslation()
   const money = useCanViewMoney()
   const { user } = useAuth()
   const { showSuccessToast } = useToast()
   const [params, setParams] = useSearchParams()
   const [directoryFiltersOpen, setDirectoryFiltersOpen] = useState(false)
   const [membershipFiltersOpen, setMembershipFiltersOpen] = useState(false)
+
+  const tabLabel = (key: TabKey): string => {
+    switch (key) {
+      case 'clients': return t('clients.tabs.directory', 'Directory')
+      case 'new': return t('clients.tabs.newClient', 'New Client')
+      case 'membership': return t('clients.tabs.membership', 'Membership')
+      case 'referral': return t('clients.tabs.referral', 'Referral')
+      case 'coupons': return t('clients.tabs.coupons', 'Coupons & Promos')
+      case 'credit': return t('clients.tabs.credit', 'Credit')
+      case 'import': return t('clients.tabs.import', 'Import')
+      case 'duplicates': return t('clients.tabs.duplicates', 'Duplicates')
+    }
+  }
 
   /**
    * Every panel on this screen now reads the database. The directory comes from
@@ -134,7 +149,7 @@ export default function Clients() {
     a.download = 'clients.csv'
     a.click()
     URL.revokeObjectURL(url)
-    showSuccessToast('Export ready', `${clients.length} client rows written to clients.csv`)
+    showSuccessToast(t('clients.actions.exportReady', 'Export ready'), t('clients.actions.exportSuccess', '{count} client rows written to clients.csv', { count: clients.length }))
   }
 
   return (
@@ -152,7 +167,7 @@ export default function Clients() {
                 />
               ),
             }
-          : activeTab === 'membership' ? {
+          : activeTab === 'membership' && params.get('msub') !== 'plans' ? {
               leading: (
                 <FilterButton
                   onClick={() => setMembershipFiltersOpen((open) => !open)}
@@ -162,7 +177,7 @@ export default function Clients() {
                 />
               ),
             } : {})}
-        title="Clients"
+        title={t('clients.title', 'Clients')}
         status={
           activeTab === 'clients' && clients.length > 0 ? (
             <span
@@ -174,7 +189,7 @@ export default function Clients() {
                 letterSpacing: 'normal',
               }}
             >
-              {clients.length} {clients.length === 1 ? 'client' : 'clients'}
+              {t('clients.countPill', '{count} {label}', { count: clients.length, label: clients.length === 1 ? t('clients.countSingle', 'client') : t('clients.countMulti', 'clients') })}
             </span>
           ) : null
         }
@@ -188,15 +203,15 @@ export default function Clients() {
                   else next.delete('q')
                   setParams(next, { replace: true })
                 },
-                placeholder: 'Search client, PAN, phone… (press /)',
+                placeholder: t('clients.searchPlaceholder', 'Search client, PAN, phone… (press /)'),
                 onClear: () => {
                   const next = new URLSearchParams(params)
                   next.delete('q')
                   setParams(next, { replace: true })
                 },
-                ariaLabel: 'Search clients',
+                ariaLabel: t('clients.searchAria', 'Search clients'),
               }
-            : activeTab === 'membership'
+            : activeTab === 'membership' && params.get('msub') !== 'plans'
               ? {
                   value: params.get('mq') ?? '',
                   onChange: (val: string) => {
@@ -206,14 +221,14 @@ export default function Clients() {
                     next.delete('mp')
                     setParams(next, { replace: true })
                   },
-                  placeholder: 'Search members by name, plan, or type… (press /)',
+                  placeholder: t('clients.searchMembersPlaceholder', 'Search members by name, plan, or type… (press /)'),
                   onClear: () => {
                     const next = new URLSearchParams(params)
                     next.delete('mq')
                     next.delete('mp')
                     setParams(next, { replace: true })
                   },
-                  ariaLabel: 'Search members',
+                  ariaLabel: t('clients.searchMembersAria', 'Search members'),
                 }
               : undefined
         }
@@ -224,13 +239,13 @@ export default function Clients() {
             // RULING 2026-10-15: at every width (title read "Cli…" at 1280px). Revert = restore
             // the `phone ?` branches on secondary/overflow.
             overflow={[
-              ...(!clientsLoading && !clientsError ? [{ label: 'Export loaded directory', icon: 'download' as const, onClick: exportCsv }] : []),
-              ...(user && canImportClients(user.role) ? [{ label: 'Import Clients', icon: 'upload' as const, onClick: () => setTab('import') }] : []),
-              { label: 'Duplicate Center', icon: 'users', onClick: () => setTab('duplicates') },
+              ...(!clientsLoading && !clientsError ? [{ label: t('clients.actions.exportDirectory', 'Export loaded directory'), icon: 'download' as const, onClick: exportCsv }] : []),
+              ...(user && canImportClients(user.role) ? [{ label: t('clients.actions.importClients', 'Import Clients'), icon: 'upload' as const, onClick: () => setTab('import') }] : []),
+              { label: t('clients.actions.duplicateCenter', 'Duplicate Center'), icon: 'users', onClick: () => setTab('duplicates') },
               // RULING 2026-10-18: the tier policy moved to Settings ▸ Business; this opens the client-level credit view.
-              ...(money ? [{ label: 'Client Credit', icon: 'card' as const, onClick: () => setTab('credit') }] : []),
-              { label: 'Referral Codes', icon: 'sparkles', onClick: () => setTab('referral') },
-              ...(money ? [{ label: 'Coupons & Promos', icon: 'receipt' as const, onClick: () => setTab('coupons') }] : []),
+              ...(money ? [{ label: t('clients.actions.clientCredit', 'Client Credit'), icon: 'card' as const, onClick: () => setTab('credit') }] : []),
+              { label: t('clients.actions.referralCodes', 'Referral Codes'), icon: 'sparkles', onClick: () => setTab('referral') },
+              ...(money ? [{ label: t('clients.actions.couponsPromos', 'Coupons & Promos'), icon: 'receipt' as const, onClick: () => setTab('coupons') }] : []),
             ]}
           />
         }
@@ -240,8 +255,8 @@ export default function Clients() {
 
       <div style={{ overflowX: 'auto', paddingBottom: 2, maxWidth: '100%' }}>
         <SegmentedControl<TabKey>
-          ariaLabel="Client sections"
-          options={visibleTabs.map((t) => ({ id: t.key, label: t.label }))}
+          ariaLabel={t('clients.actions.clientSectionsAria', 'Client sections')}
+          options={visibleTabs.map((t) => ({ id: t.key, label: tabLabel(t.key) }))}
           value={activeTab}
           onChange={setTab}
         />
@@ -250,7 +265,7 @@ export default function Clients() {
       {activeTab === 'clients' && (
         <>
           <ModuleSubHeader
-            counter={`${clients.length} registered ${clients.length === 1 ? 'client' : 'clients'}`}
+            counter={t('clients.subHeader.counter', '{count} registered {label}', { count: clients.length, label: clients.length === 1 ? t('clients.countSingle', 'client') : t('clients.countMulti', 'clients') })}
             loadedAt={clients.length > 0 ? new Date() : null}
             loading={clientsLoading}
             onRefresh={refresh}
@@ -260,15 +275,15 @@ export default function Clients() {
                   type="button"
                   className="module-sub-header__secondary-btn press"
                   onClick={exportCsv}
-                  aria-label="Export loaded directory"
+                  aria-label={t('clients.actions.exportDirectory', 'Export loaded directory')}
                 >
                   <Icon name="download" size={14} />
-                  <span>Export CSV</span>
+                  <span>{t('clients.actions.exportCsv', 'Export CSV')}</span>
                 </button>
               ) : null
             }
             primaryAction={{
-              label: '+ New Client',
+              label: t('clients.subHeader.newClientBtn', '+ New Client'),
               onClick: () => setTab('new'),
             }}
           />
@@ -400,6 +415,7 @@ const td = { height: 'var(--row-min-h)', padding: '11px 12px', fontSize: 'var(--
  * not a source for this one.
  */
 function ReferralView() {
+  const { t } = useTranslation()
   const [composing, setComposing] = useState(false)
 
   if (composing) {
@@ -407,7 +423,7 @@ function ReferralView() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
         <div>
           <Button icon="chevron_left" onClick={() => setComposing(false)}>
-            Back to Referrals
+            {t('clients.referral.back', 'Back to Referrals')}
           </Button>
         </div>
         <GenerateReferralCode embedded onDone={() => setComposing(false)} />
@@ -417,16 +433,16 @@ function ReferralView() {
 
   return (
     <Card
-      title="Referral conversions and affiliate rewards"
+      title={t('clients.referral.cardTitle', 'Referral conversions and affiliate rewards')}
       action={
         <Button icon="plus" onClick={() => setComposing(true)}>
-          Generate Referral Code
+          {t('clients.referral.generateBtn', 'Generate Referral Code')}
         </Button>
       }
     >
       <EmptyState
-        title="No referral is recorded"
-        description="Referrals have no home in the database yet — no table stores a referral code, the account it introduced, or the reward owed for it. Until one exists there is nothing true to list here, and the figures this panel used to show were written into the page rather than earned by anyone."
+        title={t('clients.referral.emptyTitle', 'No referral is recorded')}
+        description={t('clients.referral.emptyDesc', 'Referrals have no home in the database yet — no table stores a referral code, the account it introduced, or the reward owed for it. Until one exists there is nothing true to list here, and the figures this panel used to show were written into the page rather than earned by anyone.')}
       />
     </Card>
   )
@@ -471,6 +487,7 @@ function CreditView({
   error: string | null
   onRetry: () => void
 }) {
+  const { t } = useTranslation()
   const extended = clients.reduce((sum, c) => (sum + c.creditLimitPaisa) as Paisa, rupees(0))
   const owed = clients.reduce((sum, c) => (sum + c.outstandingPaisa) as Paisa, rupees(0))
   // `isBlocked` is a database fact now (0054's `client_directory_v.is_blocked`,
@@ -486,25 +503,31 @@ function CreditView({
 
   const kpis: Kpi[] = [
     {
-      label: 'Credit Extended',
+      label: t('clients.credit.extended', 'Credit Extended'),
       value: formatMoney(extended),
       icon: 'card',
       accent: 'primary',
-      note: `Approved limits across ${clients.length} loaded account${clients.length === 1 ? '' : 's'}`,
+      note: t('clients.credit.extendedNote', 'Approved limits across {count} loaded {label}', {
+        count: clients.length,
+        label: clients.length === 1 ? t('clients.credit.accountSingle', 'account') : t('clients.credit.accountMulti', 'accounts'),
+      }),
     },
     {
-      label: 'Outstanding',
+      label: t('clients.credit.outstanding', 'Outstanding'),
       value: formatMoney(owed),
       icon: 'activity',
       accent: 'progress',
-      note: 'Owed on invoices — not the same figure as credit used',
+      note: t('clients.credit.outstandingNote', 'Owed on invoices — not the same figure as credit used'),
     },
     {
-      label: 'Blocked Balance',
+      label: t('clients.credit.blockedBalance', 'Blocked Balance'),
       value: formatMoney(blockedBalance),
       icon: 'alert_triangle',
       accent: 'danger',
-      note: `${blocked.length} account${blocked.length === 1 ? '' : 's'} under block`,
+      note: t('clients.credit.blockedNote', '{count} {label} under block', {
+        count: blocked.length,
+        label: blocked.length === 1 ? t('clients.credit.accountSingle', 'account') : t('clients.credit.accountMulti', 'accounts'),
+      }),
     },
   ]
 
@@ -517,13 +540,13 @@ function CreditView({
           client-level figures. Revert = render <CreditPolicyCard /> here again. */}
       <p style={{ margin: 0, display: 'flex', gap: 6, alignItems: 'center', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
         <Icon name="info" size={13} style={{ color: 'var(--muted)', flexShrink: 0 }} />
-        Credit limits come from the membership tier.{' '}
+        {t('clients.credit.policyNote', 'Credit limits come from the membership tier.')}{' '}
         <Link to="/settings?tab=business" style={{ color: 'var(--primary-text)', fontWeight: 600 }}>
-          Credit policy by tier is in Settings ▸ Business
+          {t('clients.credit.policyLink', 'Credit policy by tier is in Settings ▸ Business')}
         </Link>
       </p>
 
-      <Card title="Accounts with an approved credit limit" bodyStyle={{ padding: withLimit.length ? 0 : undefined }}>
+      <Card title={t('clients.credit.cardTitle', 'Accounts with an approved credit limit')} bodyStyle={{ padding: withLimit.length ? 0 : undefined }}>
         <PageBody
           loading={loading}
           error={error}
@@ -531,18 +554,18 @@ function CreditView({
           hasRows={withLimit.length > 0}
           empty={!loading && !error && withLimit.length === 0}
           noun="accounts"
-          emptyTitle="No account carries an approved credit limit"
-          emptyMessage="Every loaded client has a limit of zero, so none of them can rent on credit today."
+          emptyTitle={t('clients.credit.emptyTitle', 'No account carries an approved credit limit')}
+          emptyMessage={t('clients.credit.emptyMessage', 'Every loaded client has a limit of zero, so none of them can rent on credit today.')}
         >
-          <DataTableShell ariaLabel="Approved credit limits">
+          <DataTableShell ariaLabel={t('clients.credit.tableAria', 'Approved credit limits')}>
             <table className="client-table" style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
               <thead>
                 <tr style={{ background: 'var(--th-bg)' }}>
-                  <th style={th}>Client</th>
-                  <th style={th}>Tier</th>
-                  <th style={th}>Approved Limit</th>
-                  <th style={th}>Outstanding</th>
-                  <th style={th}>Status</th>
+                  <th style={th}>{t('clients.credit.thClient', 'Client')}</th>
+                  <th style={th}>{t('clients.credit.thTier', 'Tier')}</th>
+                  <th style={th}>{t('clients.credit.thApprovedLimit', 'Approved Limit')}</th>
+                  <th style={th}>{t('clients.credit.thOutstanding', 'Outstanding')}</th>
+                  <th style={th}>{t('clients.credit.thStatus', 'Status')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -595,7 +618,7 @@ function CreditView({
                         }}
                       >
                         <Icon name={c.isBlocked ? 'alert_triangle' : 'checklist'} size={11} />
-                        {c.isBlocked ? 'Blocked' : 'Active'}
+                        {c.isBlocked ? t('clients.status.blocked', 'Blocked') : t('clients.status.active', 'Active')}
                       </span>
                     </td>
                   </tr>

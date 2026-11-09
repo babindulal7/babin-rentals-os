@@ -80,6 +80,7 @@ export type TabKey =
   | 'people'
   | 'branches'
   | 'system'
+  | 'texts'
 
 export interface TabDef {
   key: TabKey
@@ -134,6 +135,8 @@ export const TABS: TabDef[] = [
   { key: 'system', label: 'System', money: false },
 ]
 
+export const TEXTS_TAB: TabDef = { key: 'texts', label: 'Texts', money: false }
+
 /**
  * Retired tab keys, and where each now lands.
  *
@@ -149,6 +152,8 @@ export const LEGACY_TAB: Record<string, TabKey> = {
   users: 'people',
   security: 'system',
   integrations: 'system',
+  messages: 'texts',
+  templates: 'texts',
   /* Parked well before this cut — kept here so their links resolve too. */
   communication: 'system',
   automation: 'system',
@@ -164,6 +169,7 @@ export const TAB_SHORT_LABEL: Record<TabKey, string> = {
   people: 'People',
   branches: 'Branches',
   system: 'System',
+  texts: 'Texts',
 }
 
 export const TAB_ICON: Record<TabKey, IconName> = {
@@ -171,6 +177,7 @@ export const TAB_ICON: Record<TabKey, IconName> = {
   people: 'users',
   branches: 'box',
   system: 'settings',
+  texts: 'file',
 }
 
 /** One line under each row of the phone section list, so a tap is not a guess. */
@@ -179,11 +186,12 @@ export const TAB_SUMMARY: Record<TabKey, string> = {
   people: 'User list, role assignment, and the nine-role permissions matrix.',
   branches: 'Branch list, and the warehouses, racks and zones under each one.',
   system: 'Appearance, notifications, preferences, security and the admin tools.',
+  texts: 'Automatic client emails, reminder wording, and document texts (B20).',
 }
 
 
 export function isTabKey(v: string | null): v is TabKey {
-  return TABS.some((t) => t.key === v)
+  return TABS.some((t) => t.key === v) || v === 'texts'
 }
 
 /**
@@ -728,6 +736,7 @@ export const SYSTEM_QUICK_ACTIONS: QuickAction[] = [
     dest: NO('The search index is server side; nothing is connected to rebuild.'),
   },
   { label: 'View audit logs', icon: 'file', dest: TO('/admin/audit') },
+  { label: 'View problem reports', icon: 'alert_triangle', dest: TO('/admin/problem-reports') },
   { label: 'System health check', icon: 'activity', dest: TO('/system') },
   { label: 'Update system', icon: 'download', dest: NO('Releases are deployed from the build pipeline, not from this page.') },
 ]

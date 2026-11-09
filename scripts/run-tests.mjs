@@ -1,49 +1,30 @@
 /** A new full-suite attempt invalidates old green evidence before Vitest starts. */
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { beginVerification, coverageRunDirectory, finishVerification, testReceipt, writeTestReceipt } from './test-receipt.mjs'
+import { configureTestDataSource } from './test-data-source.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
-function findConfiguredSupabaseUrl(rootDir) {
-  if (process.env.VITE_SUPABASE_URL) return process.env.VITE_SUPABASE_URL
-  for (const file of ['.env.local', '.env']) {
-    const fullPath = join(rootDir, file)
-    if (!existsSync(fullPath)) continue
-    try {
-      const content = readFileSync(fullPath, 'utf8')
-      for (const line of content.split('\n')) {
-        const m = line.match(/^\s*VITE_SUPABASE_URL\s*=\s*(.*)\s*$/)
-        if (m) {
-          const val = m[1].replace(/^["']|["']$/g, '').trim()
-          if (val) return val
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }
-  return null
-}
-
-const configuredUrl = findConfiguredSupabaseUrl(root)
-if (!process.env.VITE_DATA_SOURCE && !configuredUrl) {
-  process.env.VITE_DATA_SOURCE = 'mock'
-  console.log('[test runner] VITE_DATA_SOURCE=mock (auto-detected: no VITE_SUPABASE_URL or VITE_DATA_SOURCE configured)')
+// Force mock transport before Vitest/Vite can read .env.local. This boundary
+// makes "npm test" safe on machines whose app configuration points at live.
+const rawArgs = process.argv.slice(2)
+const { args, source } = configureTestDataSource(rawArgs, process.env)
+if (source === 'live') {
+  console.warn('[test runner] data source=live — explicit --live opt-in. Run this ONLY against an isolated test environment, never production.')
 } else {
-  console.log(`[test runner] data source=${process.env.VITE_DATA_SOURCE ?? 'live'}`)
+  console.log('[test runner] data source=mock — live Supabase configuration masked')
 }
 
-const args = process.argv.slice(2)
 const coverage = args.includes('--coverage')
 const outputArgument = args.find(arg => arg.startsWith('--outputFile='))
 const output = outputArgument?.slice('--outputFile='.length) ?? join(root, 'artifacts', `test-run-${randomUUID()}.json`)
 mkdirSync(dirname(output), { recursive: true })
 writeFileSync(output, '{}')
-const command = `npm run ${coverage ? 'test:coverage' : 'test'}${args.length ? ` -- ${args.join(' ')}` : ''}`
+const command = `npm run ${coverage ? 'test:coverage' : 'test'}${rawArgs.length ? ` -- ${rawArgs.join(' ')}` : ''}`
 const start = beginVerification(root, command, `local Vitest; data source=${process.env.VITE_DATA_SOURCE ?? 'default'}`)
 start.kind = coverage ? 'coverage' : 'test'
 const coverageDirectory = coverage ? coverageRunDirectory(root, start.runId) : null
