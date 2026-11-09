@@ -241,6 +241,7 @@ Ladder shorthand: `M+` = Owner · Admin · Manager. `C+` = M+ · Coordinator. `F
 | `rental.discount` | C+ (Coordinator included) | `booking_discounts_money_blind` refuses Floor. **Ungated in amount** (31 Aug): no cap, no reason, no approver. | ○ split from `rental.create` |
 | `rental.extend` | C+ | invoice update in place; blocked on collision with next booking (system, not role) | ✓ |
 | `rental.update_project` | C+ · Warehouse (UI offers edit to C+; floor views) | narrow `project_type`/`project_type_other` text edit via `updateBookingProject`; audited old→new; 0102 money trigger untouched | ○ |
+| `rental.tag` | C+ | `set_booking_tags` RPC (0228, T3-25, B16, B55); adds and removes tags; floor roles read-only | ✓ |
 | `rental.cancel` (before Packed) | C+ | stage-transition policy; cancellation fee tiers from Settings | ✓ |
 | `rental.cancel` (Packed or later) | M+ | reason ≥10 chars, audited | ✓ (same string; stage checked in engine) |
 | `rental.override_overbooking` | M+ | releases the **losing** reservation (`released_at` + `override_records` row + reason ≥10 chars) and re-runs the transition; the GiST constraint is never disabled and never `deferrable` (R-26, 8 Sep) | ○ |

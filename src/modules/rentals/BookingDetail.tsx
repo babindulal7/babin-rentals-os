@@ -45,7 +45,9 @@ import {
   canWriteBookingDesk,
   canCloseRental,
   canManageCollateral,
+  canSetBookingTags,
 } from '../../lib/rbac'
+import { BookingTagsBar } from './BookingTagsBar'
 import { IntelCard } from '../../components/ui/IntelCard'
 import { ClientIntelFromId } from '../../components/intel/ClientIntelFromId'
 import { useToast } from '../../components/ui/Toast'
@@ -211,6 +213,8 @@ function ProjectTypeEditor({
   bookingId,
   currentType,
   currentOther,
+  currentProjectName,
+  currentShootLocation,
   userId,
   role,
   onSaved,
@@ -218,25 +222,42 @@ function ProjectTypeEditor({
   bookingId: string
   currentType: string | null
   currentOther: string | null
+  currentProjectName?: string | null | undefined
+  currentShootLocation?: string | null | undefined
   userId: string
   role: ActionContext['role']
-  onSaved: (projectType: string | null, projectTypeOther: string | null) => void
+  onSaved: (projectType?: string | null, projectTypeOther?: string | null) => void
 }) {
   const { showSuccessToast } = useToast()
   const [draft, setDraft] = useState(currentType ?? '')
   const [draftOther, setDraftOther] = useState(currentOther ?? '')
+  const [draftProjectName, setDraftProjectName] = useState(currentProjectName ?? '')
+  const [draftShootLocation, setDraftShootLocation] = useState(currentShootLocation ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const dirty =
     (draft.trim() !== '' ? draft : null) !== currentType ||
-    (draft === 'Other' && draftOther.trim() !== '' ? draftOther.trim() : null) !== (currentOther ?? null)
+    (draft === 'Other' && draftOther.trim() !== '' ? draftOther.trim() : null) !== (currentOther ?? null) ||
+    (draftProjectName.trim() || null) !== (currentProjectName ?? null) ||
+    (draftShootLocation.trim() || null) !== (currentShootLocation ?? null)
+
   const validation = validateProjectType(draft.trim() !== '' ? draft : null, draftOther)
+  const projectNameValid = draftProjectName.trim().length <= 120
+  const shootLocationValid = draftShootLocation.trim().length <= 120
 
   async function save() {
     if (saving) return
     if (!validation.valid) {
       setError(validation.message ?? 'Select a project type from the list.')
+      return
+    }
+    if (!projectNameValid) {
+      setError('Project name must be 120 characters or fewer.')
+      return
+    }
+    if (!shootLocationValid) {
+      setError('Shoot location must be 120 characters or fewer.')
       return
     }
     setSaving(true)
@@ -247,13 +268,15 @@ function ProjectTypeEditor({
           id: bookingId,
           projectType: draft.trim() !== '' ? draft : null,
           projectTypeOther: draft === 'Other' && draftOther.trim() !== '' ? draftOther.trim() : null,
+          projectName: draftProjectName.trim() || null,
+          shootLocation: draftShootLocation.trim() || null,
         },
         { userId, role },
       )
       onSaved(out.projectType, out.projectTypeOther)
-      showSuccessToast('Project Type Updated', `Updated to ${out.projectType ?? 'None / Unset'}`)
+      showSuccessToast('Project Details Updated', `Saved project details for this booking.`)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not update project type. Your previous value has been restored.')
+      setError(e instanceof Error ? e.message : 'Could not update project details. Your previous values have been restored.')
     } finally {
       setSaving(false)
     }
@@ -262,6 +285,26 @@ function ProjectTypeEditor({
   return (
     <div style={{ marginTop: 'var(--sp-sm)', display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
+        <Input
+          aria-label="Project / production name"
+          value={draftProjectName}
+          maxLength={120}
+          onChange={(e) => {
+            setDraftProjectName(e.target.value)
+            setError(null)
+          }}
+          placeholder="Project / production name (max 120 chars)"
+        />
+        <Input
+          aria-label="Shoot location"
+          value={draftShootLocation}
+          maxLength={120}
+          onChange={(e) => {
+            setDraftShootLocation(e.target.value)
+            setError(null)
+          }}
+          placeholder="Shoot location (max 120 chars)"
+        />
         <Select
           aria-label="Project type"
           value={isProjectType(draft) ? draft : ''}
@@ -292,8 +335,12 @@ function ProjectTypeEditor({
         </div>
       )}
       <div>
-        <Button type="button" disabled={!dirty || saving || !validation.valid} onClick={() => void save()}>
-          {saving ? 'Saving…' : 'Save project type'}
+        <Button
+          type="button"
+          disabled={!dirty || saving || !validation.valid || !projectNameValid || !shootLocationValid}
+          onClick={() => void save()}
+        >
+          {saving ? 'Saving…' : 'Save project details'}
         </Button>
       </div>
     </div>
@@ -992,6 +1039,7 @@ function BookingDetailView() {
    */
   const canRaiseInvoice = user ? canIssueInvoice(user.role) : false
   const canOperate = user ? canPerformOperations(user.role) : false
+  const canSetTags = user ? canSetBookingTags(user.role) : false
 
   /* ── the booking head — `listBookings`, filtered to this one number ──────
    *
@@ -2344,8 +2392,14 @@ function BookingDetailView() {
           title={booking.clientName ? `${booking.bookingNo} · ${booking.clientName}` : booking.bookingNo}
           searchInMore={onPhone}
           description={
-            booking.project || booking.projectType
-              ? `${booking.project ?? 'Untitled project'} · ${displayProjectType(booking.projectType, booking.projectTypeOther)}`
+            booking.project || booking.projectType || booking.shootLocation
+              ? [
+                  booking.project ?? 'Untitled project',
+                  displayProjectType(booking.projectType, booking.projectTypeOther),
+                  booking.shootLocation ? `Location: ${booking.shootLocation}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
               : undefined
           }
           status={
@@ -2508,6 +2562,16 @@ function BookingDetailView() {
         <Stepper status={stage} dots={onPhone} />
       </div>
 
+      {booking && (
+        <BookingTagsBar
+          bookingId={booking.id}
+          bookingNo={booking.bookingNo}
+          tags={booking.tags ?? []}
+          canEdit={canSetTags}
+          onTagsChanged={refreshBookingData}
+        />
+      )}
+
       {onPhone && <Segmented segments={segments} active={activeSegment} onPick={setSegment} />}
 
       {/* Facts strip — schedule on the left, money on the right. */}
@@ -2658,7 +2722,8 @@ function BookingDetailView() {
                           ? 'Loading…'
                           : 'Not recorded',
                   },
-                  { label: 'Project', value: booking.project ?? 'Not recorded' },
+                  { label: 'Project', value: (booking.projectName ?? booking.project) ?? 'Not recorded' },
+                  { label: 'Shoot Location', value: booking.shootLocation ?? 'Not recorded' },
                   { label: 'Project Type', value: displayProjectType(booking.projectType, booking.projectTypeOther) },
                   { label: 'Pickup Location', value: booking.pickupLocation ?? 'Not recorded' },
                   { label: 'Return Location', value: booking.returnLocation ?? 'Not recorded' },
@@ -2670,9 +2735,9 @@ function BookingDetailView() {
               <div style={{ marginTop: 'var(--sp-sm)' }}>
                 {booking.stage === 'Quote' && !booking.isCancelled && Boolean(user?.role && ['Owner','Admin','Manager','Coordinator'].includes(user.role)) ? <Link to="?action=edit"><Button>Edit booking</Button></Link> : <Unavailable reason="General editing is available before confirmation. Use this booking's operational actions."><Button disabled>Edit</Button></Unavailable>}
               </div>
-              {/* Focused project-type edit (0144) — the one header field with a
-                  real write path (`updateBookingProject`). Coordinator+ only;
-                  floor roles keep the read-only line above (spec §24). */}
+              {/* Focused project edit — header fields with a real write path
+                  (`updateBookingProject`). Coordinator+ only; floor roles keep
+                  the read-only lines above (spec §24). */}
               {(() => {
                 const editorUser =
                   user && (user.role === 'Owner' || user.role === 'Admin' || user.role === 'Manager' || user.role === 'Coordinator')
@@ -2681,14 +2746,16 @@ function BookingDetailView() {
                 return editorUser ? (
                   <details style={{ marginTop: 'var(--sp-xs)' }}>
                     <summary style={{ cursor: 'pointer', minHeight: 44, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--t-meta, 13px)', color: 'var(--text2)', fontWeight: 600 }}>
-                      Edit project type
+                      Edit project details
                     </summary>
                     <div style={{ marginTop: 8 }}>
                       <ProjectTypeEditor
-                        key={`${booking.id}·${booking.projectType ?? ''}·${booking.projectTypeOther ?? ''}`}
+                        key={`${booking.id}·${booking.projectType ?? ''}·${booking.projectTypeOther ?? ''}·${booking.projectName ?? ''}·${booking.shootLocation ?? ''}`}
                         bookingId={booking.id}
                         currentType={booking.projectType}
                         currentOther={booking.projectTypeOther}
+                        currentProjectName={booking.projectName ?? booking.project}
+                        currentShootLocation={booking.shootLocation}
                         userId={editorUser.id}
                         role={editorUser.role}
                         onSaved={() => refreshBookingData()}

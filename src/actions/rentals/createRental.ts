@@ -239,6 +239,10 @@ export type CreateRentalInput = {
   branchId: string
   contactId?: string | null
   project?: string | null
+  /** Project / production name (up to 120 characters, B8, B52, T3-26). */
+  projectName?: string | null
+  /** Shoot location (up to 120 characters, B8, T3-26). */
+  shootLocation?: string | null
   /**
    * Structured project type (`src/lib/projectTypes.ts`). NULL while a Draft —
    * Confirm refuses it instead. `projectTypeOther` only with 'Other'.
@@ -364,6 +368,12 @@ export const createRentalConfig: ActionConfig<CreateRentalInput, CreateRentalRes
 
     /* Project Type rides the same allow-list the database enforces (0144).
        NULL passes here — Drafts may omit it; Confirm refuses it instead. */
+    if (input.projectName && input.projectName.trim().length > 120) {
+      throw new Error('Project name must be 120 characters or fewer. Nothing was sent.')
+    }
+    if (input.shootLocation && input.shootLocation.trim().length > 120) {
+      throw new Error('Shoot location must be 120 characters or fewer. Nothing was sent.')
+    }
     const projectTypeCheck = validateProjectType(input.projectType, input.projectTypeOther)
     if (!projectTypeCheck.valid) {
       throw new Error(`${projectTypeCheck.message ?? 'Select a project type from the list.'} Nothing was sent.`)
@@ -510,7 +520,9 @@ export const createRentalConfig: ActionConfig<CreateRentalInput, CreateRentalRes
       branch_id: input.branchId,
       client_id: input.clientId,
       contact_id: input.contactId ?? null,
-      project: input.project ?? null,
+      project: input.projectName ?? input.project ?? null,
+      project_name: input.projectName ?? input.project ?? null,
+      shoot_location: input.shootLocation ?? null,
       project_type: input.projectType ?? null,
       project_type_other: input.projectTypeOther ?? null,
       pickup_at: input.pickupAt,

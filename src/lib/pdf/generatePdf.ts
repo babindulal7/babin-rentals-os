@@ -40,6 +40,7 @@ export interface InvoicePdfData {
   issueDateAd?: string | null
   dueDateAd?: string | null
   bookingNo?: string | null
+  project?: string | null
   client: {
     name: string
     phone?: string | null
@@ -67,6 +68,7 @@ export interface DocumentPdfData {
   docType: string
   clientName?: string | null
   bookingNo?: string | null
+  project?: string | null
   dateAd?: string | null
   contentParagraphs?: string[]
   notes?: string | null
@@ -240,8 +242,14 @@ export function generateInvoicePdf(data: InvoicePdfData): Uint8Array {
   streamOps.push(`BT /F2 9 Tf 320 710 Td (RENTAL REFERENCE:) Tj ET`)
   streamOps.push(`${mutedText} rg`)
   streamOps.push(`BT /F1 9 Tf 320 696 Td (Booking Reference: ) Tj /F3 9 Tf (${escapePdfText(bookingNo)}) Tj ET`)
-  streamOps.push(`BT /F1 9 Tf 320 682 Td (Issue Date: ${escapePdfText(issueDate)}) Tj ET`)
-  streamOps.push(`BT /F1 9 Tf 320 668 Td (Due Date: ${escapePdfText(dueDate)}) Tj ET`)
+  if (data.project) {
+    streamOps.push(`BT /F1 9 Tf 320 682 Td (Project: ) Tj /F2 9 Tf (${escapePdfText(data.project)}) Tj ET`)
+    streamOps.push(`BT /F1 9 Tf 320 668 Td (Issue Date: ${escapePdfText(issueDate)}) Tj ET`)
+    streamOps.push(`BT /F1 9 Tf 320 654 Td (Due Date: ${escapePdfText(dueDate)}) Tj ET`)
+  } else {
+    streamOps.push(`BT /F1 9 Tf 320 682 Td (Issue Date: ${escapePdfText(issueDate)}) Tj ET`)
+    streamOps.push(`BT /F1 9 Tf 320 668 Td (Due Date: ${escapePdfText(dueDate)}) Tj ET`)
+  }
 
   // Items Table Header
   const tableTopY = 635
@@ -428,7 +436,7 @@ export function generateDocumentPdf(data: DocumentPdfData): Uint8Array {
 
   // Metadata line
   streamOps.push(`${mutedText} rg`)
-  const metaLine = `Client: ${data.clientName || 'General'} | Booking: ${data.bookingNo || '—'} | Date: ${formatAd(data.dateAd ? new Date(data.dateAd) : new Date())}`
+  const metaLine = `Client: ${data.clientName || 'General'} | Booking: ${data.bookingNo || '—'}${data.project ? ` | Project: ${data.project}` : ''} | Date: ${formatAd(data.dateAd ? new Date(data.dateAd) : new Date())}`
   streamOps.push(`BT /F1 9 Tf 40 690 Td (${escapePdfText(metaLine)}) Tj ET`)
 
   // Content Paragraphs

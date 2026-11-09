@@ -7382,6 +7382,180 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L68',
+  title: 'Tags on bookings: Coordinator sets tags, Warehouse refused, case-insensitive deduplication, tags never change stage or money (T3-25, B16, B55)',
+  expect: 'green',
+  run: async () => {
+    const bookingId = bookingIds.b
+
+    // 1. Snapshot booking state before tag changes
+    const beforeBooking = (await q(`select stage, deposit_required, (select count(*) from booking_lines where booking_id = $1) as line_count from bookings where id = $1`, [bookingId])).rows[0]
+
+    // 2. Warehouse attempts to set tags: MUST BE REFUSED (42501)
+    await as('Warehouse', async () => {
+      await refuses(
+        'Warehouse role cannot set booking tags',
+        `select public.set_booking_tags($1::uuid, $2::uuid, $3::text[])`,
+        [crypto.randomUUID(), bookingId, ['floor_tag']],
+        /Only booking-desk roles.*may modify booking tags/i,
+      )
+    })
+
+    // 3. Tag longer than 30 characters: MUST BE REFUSED (22023)
+    await as('Coordinator', async () => {
+      await refuses(
+        'Tag exceeding 30 characters is refused',
+        `select public.set_booking_tags($1::uuid, $2::uuid, $3::text[])`,
+        [crypto.randomUUID(), bookingId, ['this_tag_is_way_too_long_to_be_allowed_under_the_30_character_limit']],
+        /exceeds 30 characters limit/i,
+      )
+    })
+
+    // 4. Coordinator sets valid tags with trimming and case-insensitive deduplication
+    const clientUuid1 = crypto.randomUUID()
+    let tagsRes
+    await as('Coordinator', async () => {
+      const res = await q(
+        `select public.set_booking_tags($1::uuid, $2::uuid, $3::text[])`,
+        [clientUuid1, bookingId, ['  wedding  ', 'WEDDING', 'festival', 'repeat', '   ']],
+      )
+      tagsRes = res.rows[0].set_booking_tags
+    })
+
+    assertEq(tagsRes.booking_id, bookingId, 'booking_id matches')
+    assertEq(tagsRes.tags.length, 3, 'empty tag removed and case duplicate trimmed')
+    assertEq(tagsRes.tags[0], 'wedding', 'first tag trimmed and deduplicated')
+    assertEq(tagsRes.tags[1], 'festival', 'second tag preserved')
+    assertEq(tagsRes.tags[2], 'repeat', 'third tag preserved')
+
+    // 5. CRITICAL LIFECYCLE: tags never change a booking's stage or money
+    const afterBooking = (await q(`select stage, deposit_required, (select count(*) from booking_lines where booking_id = $1) as line_count, tags from bookings where id = $1`, [bookingId])).rows[0]
+    assertEq(afterBooking.stage, beforeBooking.stage, 'booking stage is byte-identical')
+    assertEq(Number(afterBooking.deposit_required), Number(beforeBooking.deposit_required), 'deposit_required is byte-identical')
+    assertEq(Number(afterBooking.line_count), Number(beforeBooking.line_count), 'line_count is byte-identical')
+    assertEq(afterBooking.tags.length, 3, 'tags saved in database')
+
+    // 6. GIN index search: tags overlap and containment query
+    const foundByTag = (await q(`select count(*) as cnt from bookings where tags @> array['festival']::text[] and id = $1`, [bookingId])).rows[0].cnt
+    assertEq(Number(foundByTag), 1, 'GIN index query matches tag')
+
+    // 7. Idempotent replay: same client_uuid returns cached tags
+    await as('Coordinator', async () => {
+      const res = await q(
+        `select public.set_booking_tags($1::uuid, $2::uuid, $3::text[])`,
+        [clientUuid1, bookingId, ['should', 'be', 'ignored']],
+      )
+      const replayRes = res.rows[0].set_booking_tags
+      assertEq(replayRes.idempotent, true, 'replayed call is marked idempotent')
+      assertEq(replayRes.tags.length, 3, 'original tags returned on duplicate client_uuid')
+    })
+
+    // 8. Verify audit event
+    const auditCount = (await q(
+      `select count(*) as cnt from public.audit_events where table_name = 'bookings' and record_id = $1 and client_uuid = $2 and reason = 'Booking tags updated (T3-25)'`,
+      [bookingId, clientUuid1],
+    )).rows[0].cnt
+    assertEq(Number(auditCount), 1, 'exactly one explicit audit event logged for client_uuid')
+  },
+})
+
+STEPS.push({
+  id: 'L69',
+  title: 'Project name and shoot location on every booking: create_booking stores both, length checks enforced, invoice snapshot preserves project name (T3-26, B8, B52)',
+  expect: 'green',
+  run: async () => {
+    const clientUuid = '00000000-0000-4000-8000-000000000069'
+    const projName = 'Kathmandu Diaries — music video'
+    const shootLoc = 'Pokhara, Phewa lake'
+
+    // 1. Create booking with project_name and shoot_location
+    let bId
+    await as('Coordinator', async () => {
+      const payload = {
+        client_uuid: clientUuid,
+        created_by: U.Coordinator,
+        branch_id: BRANCH,
+        client_id: CLIENT,
+        project_name: projName,
+        shoot_location: shootLoc,
+        project_type: 'Music Video',
+        pickup_at: '2099-12-01T04:00:00Z',
+        return_at: '2099-12-03T04:00:00Z',
+        delivery_type: 'Client Pickup',
+        deposit_required: 0,
+        lines: [
+          {
+            client_uuid: '00000000-0000-4000-8000-000000006901',
+            line_type: 'Equipment',
+            product_id: SERIAL_PRODUCT,
+            item_name: 'Lifecycle FX3 Camera',
+            qty: 1,
+            days: 2,
+            rate: 5000,
+          },
+        ],
+      }
+      const res = await q('select public.create_booking($1::jsonb) as res', [JSON.stringify(payload)])
+      bId = res.rows[0].res.booking_id
+    })
+
+    // 2. Query bookings table directly to assert both columns persisted
+    const bRow = (await q('select project, project_name, shoot_location from bookings where id = $1', [bId])).rows[0]
+    assertEq(bRow.project_name, projName, 'project_name persisted in bookings')
+    assertEq(bRow.shoot_location, shootLoc, 'shoot_location persisted in bookings')
+    assertEq(bRow.project, projName, 'legacy project column synced with project_name')
+
+    // 3. Length check > 120 chars must fail
+    await as('Coordinator', async () => {
+      const longName = 'A'.repeat(121)
+      const badPayload = {
+        client_uuid: '00000000-0000-4000-8000-000000006902',
+        created_by: U.Coordinator,
+        branch_id: BRANCH,
+        client_id: CLIENT,
+        project_name: longName,
+        pickup_at: '2099-12-01T04:00:00Z',
+        return_at: '2099-12-03T04:00:00Z',
+        delivery_type: 'Client Pickup',
+        lines: [],
+      }
+      let threw = false
+      try {
+        await q('select public.create_booking($1::jsonb)', [JSON.stringify(badPayload)])
+      } catch (err) {
+        threw = true
+        assert(err.message.includes('120') || err.code === '22023', 'error explains 120 char limit')
+      }
+      assert(threw, 'create_booking refused project_name > 120 chars')
+    })
+
+    // 4. Create an invoice for this booking — must carry the project_name snapshot
+    let invId
+    await as('Accounts', async () => {
+      const invPayload = {
+        client_uuid: '00000000-0000-4000-8000-000000006903',
+        created_by: U.Accounts,
+        booking_id: bId,
+      }
+      const res = await q('select public.create_invoice($1::jsonb) as res', [JSON.stringify(invPayload)])
+      invId = res.rows[0].res.invoice_id
+      assertEq(res.rows[0].res.project_name, projName, 'create_invoice returned project_name snapshot')
+    })
+
+    const invRow = (await q('select project_name from invoices where id = $1', [invId])).rows[0]
+    assertEq(invRow.project_name, projName, 'invoices table stores project_name snapshot')
+
+    // 5. Mutating booking project_name later leaves invoice project_name unchanged (B52)
+    await as('Coordinator', async () => {
+      await q('update bookings set project_name = $1 where id = $2', ['Revised Title Subsequent To Invoice', bId])
+    })
+
+    const invRowAfter = (await q('select project_name from invoices where id = $1', [invId])).rows[0]
+    assertEq(invRowAfter.project_name, projName, 'invoice keeps original project_name even after booking is edited')
+  },
+})
+
 
 /* ΓöÇΓöÇ Run ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
@@ -7391,8 +7565,8 @@ const results = []
 let hardFailure = null
 
 STEPS.push({
-  id: 'L65',
-  title: 'Membership plan change: restart the term by default, keep the original join date when chosen, refuse keeping it after the term ended (R-9.2, migration 0226)',
+  id: 'L70',
+  title: 'Membership plan change: restart the term by default, keep the original join date when chosen, refuse keeping it after the term ended (R-9.2, migration 0228)',
   expect: 'green',
   run: async () => {
     let keepClientId

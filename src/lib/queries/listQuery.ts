@@ -24,6 +24,7 @@
 export interface FilterBuilder<T> {
   or(filters: string, opts?: { referencedTable?: string }): T
   in(column: string, values: readonly unknown[]): T
+  overlaps?(column: string, values: readonly unknown[]): T
   gte(column: string, value: unknown): T
   lte(column: string, value: unknown): T
   is(column: string, value: null | boolean): T
@@ -152,7 +153,13 @@ export function applyListFilters<T extends FilterBuilder<T>>(query: T, filters: 
 
   // 2. Chip groups. An empty group is no constraint at all.
   for (const [column, values] of Object.entries(filters.chips ?? {})) {
-    if (values && values.length > 0) q = q.in(column, values)
+    if (values && values.length > 0) {
+      if (column === 'tags' && typeof q.overlaps === 'function') {
+        q = q.overlaps('tags', values)
+      } else {
+        q = q.in(column, values)
+      }
+    }
   }
 
   // 3. Date range, half-open at neither end — a user picking 1–7 means both.

@@ -218,6 +218,16 @@ export function canChangeMembership(role: SystemRole): boolean {
 }
 
 /**
+ * Check if role can add, edit, or remove tags on bookings.
+ * Owner, Admin, Manager, Coordinator (Booking desk roles). Floor roles and Client are read-only.
+ *
+ * Mirrors `set_booking_tags` RPC (0228, T3-25, B16, B55).
+ */
+export function canSetBookingTags(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+}
+
+/**
  * Check if role can manage membership plans (create, edit, retire, reactivate).
  * Owner, Admin, Manager only. Coordinator is read-only (T8-02, Law 3).
  *

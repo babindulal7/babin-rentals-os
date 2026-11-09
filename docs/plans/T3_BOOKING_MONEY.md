@@ -346,7 +346,7 @@ rules unchanged (`gate.expense.approve`). Replaces "Receipt upload is not built 
 **Done when** — an expense with a photo is saved from an iPhone; the photo appears in the monthly pack.
 **Needs** — T2-01.
 
-### T3-25 · Tags on bookings            status: todo · size: S · lane C · [go-live] · slips first
+### T3-25 · Tags on bookings            status: done (merged 9 Nov, `6c1d62a8`) · size: S · lane C · [go-live] · slips first
 **What** — Free tags on a booking (B16): type a new one or pick one already used ("wedding",
 "repeat", "festival"); several per booking; chips on Booking Detail and the booking list; the list and
 saved views (0159, `SavedViewsMenu`) filter by tag; search (T3-21) finds by tag. Booking-desk roles add
@@ -362,7 +362,7 @@ row; lifecycle "tags never change a booking's stage or money".
 and no money; screen check.
 **Needs** — none (if T7-04 is open, coordinate on `RentalsList.tsx`).
 
-### T3-26 · Project name and shoot location on every booking            status: todo · size: S · lane C · [go-live] · slips first
+### T3-26 · Project name and shoot location on every booking            status: done (merged 9 Nov, `6c1d62a8`) · size: S · lane C · [go-live] · slips first
 **What** — Two fields on every booking (B8, B52): **Project / production name** (e.g. "Kathmandu
 Diaries — music video") and **Shoot location** (e.g. "Pokhara, Phewa lake"), ⭐ up to 120 characters
 each. They sit beside the existing **project type** (0144 — Feature Film, Commercial / Advertisement,

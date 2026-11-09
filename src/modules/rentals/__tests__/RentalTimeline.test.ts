@@ -31,6 +31,7 @@ function row(pickup: string, ret: string): RentalListRow {
     quoteExpires: null,
     deposit: null,
     isExternal: false,
+    tags: [],
   }
 }
 
