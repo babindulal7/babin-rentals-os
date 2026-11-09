@@ -38,5 +38,5 @@ $taskCommand = 'cmd.exe /d /c ""' + $launcher + '""'
 if ($LASTEXITCODE -ne 0) { throw 'Task Scheduler rejected installation; use the manual README setup.' }
 Write-Host "Installed: $TaskName"
 Write-Host "Log: $log"
-Write-Host "Inspect: schtasks /Query /TN \`"$TaskName\`" /V /FO LIST"
-Write-Host "Remove:  schtasks /Delete /TN \`"$TaskName\`" /F"
+Write-Host ('Inspect: schtasks /Query /TN "' + $TaskName + '" /V /FO LIST')
+Write-Host ('Remove:  schtasks /Delete /TN "' + $TaskName + '" /F')
