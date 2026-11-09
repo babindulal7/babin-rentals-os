@@ -1113,4 +1113,132 @@ export function findSimilarFreeEquipment<
   return matches.slice(0, limit).map((m) => m.item)
 }
 
+/* ── DAILY AVAILABILITY & NEXT FREE DATE (T3-22, W91) ──────────────────────────
+ *
+ * Evaluates per-calendar-day availability and finds the next free date for
+ * a product, matching New Rental's windowed engine exactly.
+ * Pure — Law 1.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+export interface DailyAvailabilityInput {
+  readonly mode: 'unit' | 'quantity'
+  readonly candidates?: readonly UnitCandidate[]
+  readonly unitHolds?: readonly UnitHold[]
+  readonly quantityHolds?: readonly QuantityHold[]
+  readonly totalQuantity?: number
+  readonly disqualifyingStates?: ReadonlySet<string>
+  readonly bounds?: BoundConvention
+  readonly startDateIso: string // 'YYYY-MM-DD'
+  readonly daysCount?: number // default 60
+}
+
+/**
+ * Computes a map of date string ('YYYY-MM-DD') -> free units count,
+ * evaluated for each operational day (06:00 to 06:00 NPT).
+ */
+export function computeDailyAvailability(input: DailyAvailabilityInput): Record<string, number> {
+  const {
+    mode,
+    candidates = [],
+    unitHolds = [],
+    quantityHolds = [],
+    totalQuantity = 0,
+    disqualifyingStates = DISQUALIFYING_UNIT_STATES,
+    bounds = RENTAL_WINDOW_BOUNDS,
+    startDateIso,
+    daysCount = 60,
+  } = input
+
+  const result: Record<string, number> = {}
+  const parts = startDateIso.split('-').map(Number)
+  const startYear = parts[0]
+  const startMonth = parts[1]
+  const startDay = parts[2]
+  if (!startYear || !startMonth || !startDay) return result
+
+  const owned = candidates.filter((c) => !isRetired(c))
+  const totalQty = mode === 'unit' ? owned.length : totalQuantity
+
+  for (let i = 0; i < daysCount; i++) {
+    const d = new Date(Date.UTC(startYear, startMonth - 1, startDay + i))
+    const nextD = new Date(Date.UTC(startYear, startMonth - 1, startDay + i + 1))
+    const dateStr = d.toISOString().slice(0, 10)
+    const nextDateStr = nextD.toISOString().slice(0, 10)
+
+    // Nepal operational day 06:00 to 06:00 NPT (+05:45) is 00:15 UTC
+    const fromAd = `${dateStr}T00:15:00Z`
+    const toAd = `${nextDateStr}T00:15:00Z`
+    const window: RentalWindow = { fromAd, toAd }
+
+    if (mode === 'unit') {
+      if (owned.length === 0) {
+        result[dateStr] = 0
+      } else {
+        const outcome = selectUnitsForLine({
+          needed: owned.length,
+          window,
+          candidates: owned,
+          holds: unitHolds,
+          disqualifyingStates,
+          bounds,
+        })
+        result[dateStr] = outcome.assigned.length
+      }
+    } else {
+      if (totalQty === 0) {
+        result[dateStr] = 0
+      } else {
+        const outcome = capacityFor({
+          window,
+          holds: quantityHolds,
+          totalQuantity: totalQty,
+          qtyRequested: 1,
+          bounds,
+        })
+        result[dateStr] = outcome.free
+      }
+    }
+  }
+
+  return result
+}
+
+export interface NextFreeDateResult {
+  readonly date: string | null // 'YYYY-MM-DD'
+  readonly isAvailableNow: boolean
+  readonly relativeDays: number | null
+}
+
+/**
+ * Finds the earliest date in the availability map (starting from startDateIso)
+ * where available units >= requestedQty (default 1).
+ */
+export function findNextFreeDate(
+  availabilityMap: Record<string, number>,
+  startDateIso: string,
+  requestedQty: number = 1,
+): NextFreeDateResult {
+  const dates = Object.keys(availabilityMap).sort()
+  const startIndex = dates.indexOf(startDateIso)
+  const candidateDates = startIndex >= 0 ? dates.slice(startIndex) : dates.filter((d) => d >= startDateIso)
+
+  if (candidateDates.length === 0) {
+    return { date: null, isAvailableNow: false, relativeDays: null }
+  }
+
+  const firstDate = candidateDates[0]
+  if (firstDate && (availabilityMap[firstDate] ?? 0) >= requestedQty) {
+    return { date: firstDate, isAvailableNow: true, relativeDays: 0 }
+  }
+
+  for (let idx = 0; idx < candidateDates.length; idx++) {
+    const d = candidateDates[idx]!
+    if ((availabilityMap[d] ?? 0) >= requestedQty) {
+      return { date: d, isAvailableNow: idx === 0, relativeDays: idx }
+    }
+  }
+
+  return { date: null, isAvailableNow: false, relativeDays: null }
+}
+
 

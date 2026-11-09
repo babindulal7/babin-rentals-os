@@ -221,6 +221,18 @@ export const CommandPalette: React.FC = () => {
       onSelect: toggleScanner,
     },
     {
+      id: 'act-availability',
+      title: 'Check Availability',
+      subtitle: 'See free units for any dates, next free date, and who has it now',
+      category: 'Actions',
+      icon: 'calendar',
+      shortcut: 'avail',
+      keywords: ['avail', 'availability', 'free', 'stock', 'check', 'dates'],
+      onSelect: () => {
+        window.dispatchEvent(new CustomEvent('babin:open-availability'))
+      },
+    },
+    {
       id: 'act-team-notes',
       title: 'Team Internal Notes',
       subtitle: 'Open shift handovers, gear defect alerts & dispatch log',

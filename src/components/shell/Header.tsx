@@ -32,6 +32,11 @@ const HandoverSheet = lazy(() => import('../../modules/auth/HandoverSheet'))
 const InternalNotesDrawer = lazy(() => import('../../modules/notes/InternalNotesDrawer'))
 const ProblemReportModal = lazy(() => import('./ProblemReportModal'))
 const NotificationsDrawer = lazy(() => import('./NotificationsDrawer'))
+const CheckAvailabilityModal = lazy(() => import('../ui/CheckAvailabilityModal').then((m) => ({ default: m.CheckAvailabilityModal })))
+
+export function openAvailabilityModal() {
+  window.dispatchEvent(new CustomEvent('babin:open-availability'))
+}
 
 export interface Crumb {
   label: string
@@ -112,6 +117,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
   const [profileOpen, setProfileOpen] = useState(false)
   const [showHandover, setShowHandover] = useState(false)
   const [notesOpen, setNotesOpen] = useState(false)
+  const [availabilityOpen, setAvailabilityOpen] = useState(false)
   const [problemReportOpen, setProblemReportOpen] = useState(false)
   const [notesVisited, setNotesVisited] = useState(false)
   useEffect(() => { if (notesOpen) setNotesVisited(true) }, [notesOpen])
@@ -133,16 +139,23 @@ export default function Header({ crumbs, actions }: HeaderProps) {
         e.preventDefault()
         setNotesOpen((v) => !v)
       }
+      if (e.altKey && (e.key === 'a' || e.key === 'A')) {
+        e.preventDefault()
+        setAvailabilityOpen((v) => !v)
+      }
     }
     const handleOpenNotes = () => setNotesOpen(true)
     const handleOpenNotifications = () => setNotificationsOpen(true)
+    const handleOpenAvailability = () => setAvailabilityOpen(true)
     window.addEventListener('keydown', handleKeyDown)
     window.addEventListener('babin:open-notes', handleOpenNotes)
     window.addEventListener('babin:open-notifications', handleOpenNotifications)
+    window.addEventListener('babin:open-availability', handleOpenAvailability)
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('babin:open-notes', handleOpenNotes)
       window.removeEventListener('babin:open-notifications', handleOpenNotifications)
+      window.removeEventListener('babin:open-availability', handleOpenAvailability)
     }
   }, [])
 
@@ -984,6 +997,30 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                 )}
               </span>
 
+          {/* Availability Button (Alt+A, T3-22) */}
+          {!isPhone && (
+            <button
+              type="button"
+              onClick={() => setAvailabilityOpen(true)}
+              aria-label="Check Availability"
+              title="Check Availability (Alt+A)"
+              style={{
+                ...iconBtn,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                width: 'auto',
+                minWidth: 44,
+                padding: isTablet ? '0 8px' : '0 10px',
+                fontSize: 'var(--t-meta, 12px)',
+                fontWeight: 600,
+              }}
+            >
+              <Icon name="calendar" size={17} />
+              {!isTablet && <span>Availability</span>}
+            </button>
+          )}
+
           {/* 7. Team Internal Notes Button (Alt+N) */}
           {!isPhone && <button
             type="button"
@@ -1237,12 +1274,20 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                     </div>
                   </div>
                   {isPhone && (
-                    <Button variant="secondary" icon="message" onClick={() => {
-                      setProfileOpen(false)
-                      setNotesOpen(true)
-                    }}>
-                      Team internal notes
-                    </Button>
+                    <>
+                      <Button variant="secondary" icon="calendar" onClick={() => {
+                        setProfileOpen(false)
+                        setAvailabilityOpen(true)
+                      }}>
+                        Check Availability
+                      </Button>
+                      <Button variant="secondary" icon="message" onClick={() => {
+                        setProfileOpen(false)
+                        setNotesOpen(true)
+                      }}>
+                        Team internal notes
+                      </Button>
+                    </>
                   )}
                   {/* Report a Problem — available to all staff on every screen (T4-11) */}
                   <button
@@ -1497,6 +1542,16 @@ export default function Header({ crumbs, actions }: HeaderProps) {
         )}
 
         {(notesOpen || notesVisited) && <InternalNotesDrawer isOpen={notesOpen} onClose={() => setNotesOpen(false)} />}
+
+        {availabilityOpen && (
+          <CheckAvailabilityModal
+            open={availabilityOpen}
+            onClose={() => setAvailabilityOpen(false)}
+            onApplyRange={(rng, qty) => {
+              navigate(`/rentals/new?from=${rng.from}&to=${rng.to}&qty=${qty}`)
+            }}
+          />
+        )}
 
         {problemReportOpen && <ProblemReportModal isOpen={problemReportOpen} onClose={() => setProblemReportOpen(false)} />}
 
