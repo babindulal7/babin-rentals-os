@@ -1,5 +1,37 @@
 # Progress Log
 
+## 2026-11-09 — Babin rulings R-9.1 to R-9.4 (interactive round, Lane B)
+
+**Did**
+- Logged four rulings in `RULINGS-2026-11-09.md` (B-2, three places): Technician handover allowed; membership plan change restarts the term by default and staff may keep the original join date; crew pay by day, no hours-based overtime flag; delivery zone fee held in Settings with an empty starting value.
+- R-9.1: no change needed; Technician handover was already in code and `PERMISSIONS.md` (D3).
+- R-9.2: migration `0226_membership_change_keep_join_date.sql` (on the 0198 function); `keep_join_date` payload key; `GATE:membership.keep_join_lapsed`; `UpgradeTierModal.tsx` radio choice; `changeMembership.ts` passes the flag. Migration ledger: next free number 0227.
+- R-9.3: hours-based overtime flag removed (`timesheet.ts`, `TimesheetTab.tsx`, tests).
+- R-9.4: Settings delivery-zone fee form starts empty (`DeliveryZonesControl.tsx`).
+- Lifecycle step `L65` added to `scripts/e2e-lifecycle.mjs`.
+
+**Ruled**
+- R-9.1 to R-9.4 as recorded in `RULINGS-2026-11-09.md`.
+
+**Verified**
+- `npm run typecheck`: clean.
+- `npx eslint` on the five touched source files, `--max-warnings 0`: clean.
+- `npx vitest run` on 21 crew, rbac, delivery-zone and clients test files: 312/312 passed. A second run of the modal, action and timesheet tests: 86/86 passed.
+- `npm run check:pglite`: 221/221 migrations applied, 0 failed; view, function and definer gates pass.
+- `npm run check:lifecycle`: 65/65 green (L65 new). An earlier run caught a regression: `0226` was first built on `0197`, not `0198`, which dropped the D23 renewal path. Rebuilt on `0198`; re-verified.
+
+**Screen check (mock mode, Owner, `babin-mock` dev server on :3100)**
+- `/crew/timesheet`: renders with three KPI cards; the "Overtime Flags" card is gone. No row is visible because mock data has no shoot days this week, so the per-person overtime display was not seen.
+- Settings ▸ System ▸ Delivery zones ▸ Add zone: Fee field is empty. Helper text corrected from "Default: Rs 3,500" to "There is no default fee: enter each zone's fee." (`npm run lint:ui-copy` passes; eslint clean.)
+- Delivery zones panel shows the banner "listDeliveryZones was called without a session context". This comes from the mock data path; I did not change `listDeliveryZones` and have not confirmed it on main.
+- Membership change dialog: not reached. Mock has no `client_memberships` rows, so clients show "Activate Membership" and the plan-change radio cannot appear in mock.
+- `.claude/launch.json`: `babin-mock` now runs the Vite dev server (`--mode mock`) instead of `vite preview` of a build folder from another session.
+
+**Not done**
+- Migration `0226` is written and verified locally only. Babin applies it after the backup step (N-5).
+- R-9.4 starting value is empty by Babin's choice; he enters the fee in Settings.
+- The membership radio has no screen check (see above); it needs a client with a live membership on a real or seeded database.
+
 ## 2026-11-08 — T5-13: Edit email and document texts (Lane B)
 
 **Did**

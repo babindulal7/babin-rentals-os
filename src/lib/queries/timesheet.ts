@@ -15,7 +15,8 @@
  * D24 (Ruling 2026-10-26): Pay is by the day (days × day rate + recorded
  * overtime days) matching Crew Assist payouts (closes OPEN_DECISIONS §18).
  * Hours worked remain tracked for operational presence and visibility.
- * `STANDARD_DAY_HOURS = 8` is retained for overtime hour highlighting only.
+ * R-9.3 (RULINGS-2026-11-09): no hours-based overtime flag. Overtime is only
+ * the recorded overtime days, never derived from hours.
  */
 import { supabase } from '../supabase'
 import { businessDayAd } from '../bs'
@@ -29,7 +30,7 @@ export type TimesheetWeek = 'This Week' | 'Last Week'
 /** The week's seven columns, Monday first (Nepal's weekend is Saturday, but the grid is Monday-based). */
 export const TIMESHEET_DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
 
-/** ⭐ unruled — see the header. Overtime threshold AND hourly-equivalent divisor. */
+/** Display only: an 8-hour day is shaded as a full day. NOT an overtime threshold (R-9.3). */
 export const STANDARD_DAY_HOURS = 8
 
 /**
@@ -65,7 +66,6 @@ export interface TimesheetStats {
   totalPay: number | null
   staffLogged: number
   totalStaff: number
-  overtimeFlags: number
 }
 
 /** The columns read from `crew_shoot_days`, as the database returns them. */
@@ -292,7 +292,6 @@ export function getTimesheetStats(rows: readonly TimesheetRow[]): TimesheetStats
   let totalPay = 0
   let anyPay = false
   let staffLogged = 0
-  let overtimeFlags = 0
 
   for (const row of rows) {
     totalHours += row.totalHrs
@@ -301,7 +300,6 @@ export function getTimesheetStats(rows: readonly TimesheetRow[]): TimesheetStats
       anyPay = true
     }
     if (row.totalHrs > 0) staffLogged++
-    if (hasOvertime(row)) overtimeFlags++
   }
 
   return {
@@ -309,12 +307,7 @@ export function getTimesheetStats(rows: readonly TimesheetRow[]): TimesheetStats
     totalPay: anyPay ? totalPay : null,
     staffLogged,
     totalStaff: rows.length,
-    overtimeFlags,
   }
-}
-
-export function hasOvertime(row: Pick<TimesheetRow, 'hrs'>): boolean {
-  return row.hrs.some((h) => h > STANDARD_DAY_HOURS)
 }
 
 /** `8` → "8", `8.5` → "8.5", `7.333` → "7.3". */
