@@ -7072,6 +7072,87 @@ await seed()
 const results = []
 let hardFailure = null
 
+STEPS.push({
+  id: 'L65',
+  title: 'Membership plan change: restart the term by default, keep the original join date when chosen, refuse keeping it after the term ended (R-9.2, migration 0226)',
+  expect: 'green',
+  run: async () => {
+    let keepClientId
+    let academyPlanId
+    let creatorPlanId
+
+    await asOwnerOfTheDatabase(async () => {
+      const clientCode = await one("select next_document_number('client')")
+      keepClientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+        values (gen_random_uuid(), '${clientCode}', 'L65 Keep Join Client', '+9779800009965', 'Active', '${U.Owner}')
+        returning id`)).rows[0].id
+
+      academyPlanId = (await q(`insert into membership_plans (client_uuid, level, label, annual_fee, term_months, display_order, status)
+        values (gen_random_uuid(), 'Academy', 'Access Member', 12000.00, 12, 91, 'Active')
+        on conflict (level) do update set annual_fee = 12000.00, term_months = 12, status = 'Active'
+        returning id`)).rows[0].id
+
+      creatorPlanId = (await q(`insert into membership_plans (client_uuid, level, label, annual_fee, term_months, display_order, status)
+        values (gen_random_uuid(), 'Creator', 'Partner', 20000.00, 12, 92, 'Active')
+        on conflict (level) do update set annual_fee = 20000.00, term_months = 12, status = 'Active'
+        returning id`)).rows[0].id
+
+      // A live Creator membership that started 1 Jan 2027 (term runs to 1 Jan 2028).
+      await q(`insert into client_memberships (client_uuid, client_id, plan_id, join_date, fee_paid, created_by)
+        values (gen_random_uuid(), '${keepClientId}', '${creatorPlanId}', '2027-01-01', 20000, '${U.Owner}')`)
+    })
+
+    const dateOnly = (value) => String(value).slice(0, 10)
+
+    await as('Coordinator', async () => {
+      // 1. Default: restart the term from the change date (no keep flag sent)
+      const restartRes = (await q(`select change_client_membership(jsonb_build_object(
+        'client_id', '${keepClientId}',
+        'client_uuid', gen_random_uuid(),
+        'plan_id', '${academyPlanId}',
+        'effective_date', '2027-06-01'
+      ))`)).rows[0]
+      const restartOut = typeof restartRes.change_client_membership === 'string'
+        ? JSON.parse(restartRes.change_client_membership)
+        : restartRes.change_client_membership
+      assertEq(dateOnly(restartOut.joined_on), '2027-06-01', 'Default change restarts the term from the change date')
+      assertEq(restartOut.join_date_kept, false, 'Default change does not keep the join date')
+    })
+
+    // The term that restarted on 1 Jun 2027 is the live row now; move it back to Creator keeping its join date.
+    await as('Coordinator', async () => {
+      const keepRes = (await q(`select change_client_membership(jsonb_build_object(
+        'client_id', '${keepClientId}',
+        'client_uuid', gen_random_uuid(),
+        'plan_id', '${creatorPlanId}',
+        'effective_date', '2027-07-01',
+        'keep_join_date', true
+      ))`)).rows[0]
+      const keepOut = typeof keepRes.change_client_membership === 'string'
+        ? JSON.parse(keepRes.change_client_membership)
+        : keepRes.change_client_membership
+      assertEq(dateOnly(keepOut.joined_on), '2027-06-01', 'Keeping the join date keeps the live row\'s original join date')
+      assertEq(keepOut.join_date_kept, true, 'The result says the join date was kept')
+    })
+
+    // 2. Keeping the join date after the term has ended is refused: it is a renewal.
+    await as('Coordinator', async () => {
+      await refuses(
+        'Keeping the join date after the term has ended is refused',
+        `select change_client_membership(jsonb_build_object(
+          'client_id', '${keepClientId}',
+          'client_uuid', gen_random_uuid(),
+          'plan_id', '${academyPlanId}',
+          'effective_date', '2028-08-01',
+          'keep_join_date', true
+        ))`,
+        [],
+        /GATE:membership\.keep_join_lapsed/i,
+      )
+    })
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break
