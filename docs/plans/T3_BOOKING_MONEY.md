@@ -362,7 +362,7 @@ row; lifecycle "tags never change a booking's stage or money".
 and no money; screen check.
 **Needs** — none (if T7-04 is open, coordinate on `RentalsList.tsx`).
 
-### T3-26 · Project name and shoot location on every booking            status: todo · size: S · lane C · [go-live] · slips first
+### T3-26 · Project name and shoot location on every booking            status: doing (lane-c/T3-26-project-name-and-shoot-location-on) · size: S · lane C · [go-live] · slips first
 **What** — Two fields on every booking (B8, B52): **Project / production name** (e.g. "Kathmandu
 Diaries — music video") and **Shoot location** (e.g. "Pokhara, Phewa lake"), ⭐ up to 120 characters
 each. They sit beside the existing **project type** (0144 — Feature Film, Commercial / Advertisement,
