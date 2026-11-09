@@ -781,6 +781,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     setSavedDraftFingerprint,
     kind,
     kindOther,
+    parentBookingId: searchParams.get('linkedParent'),
     confirmKey,
     draftBookingKey,
   })
@@ -1160,6 +1161,21 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
           </div>
         )
       })()}
+      {searchParams.get('linkedParent') && !editBookingId && (
+        <div
+          role="region"
+          aria-label="Linked booking notice"
+          className="new-rental-draft-notice"
+          style={{ background: 'var(--brand-muted, rgba(37, 99, 235, 0.08))', border: '1px solid var(--brand, #2563eb)' }}
+        >
+          <div className="new-rental-draft-notice__content">
+            <Icon name="external_link" size={16} style={{ flexShrink: 0 }} />
+            <span>
+              <strong>Linked booking:</strong> This rental is being created as an add-gear booking linked to parent booking #{searchParams.get('linkedParent')}.
+            </span>
+          </div>
+        </div>
+      )}
       {productDepositError && canBookingMoney && (
         <p role="status" style={inlineErrorStyle}>
           <Icon name="error" size={14} style={{ flexShrink: 0, marginTop: 1 }} />

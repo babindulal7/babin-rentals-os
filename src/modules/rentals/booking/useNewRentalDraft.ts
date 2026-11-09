@@ -16,6 +16,16 @@ import { useUnsavedRecord } from '../../../components/ui/RecordWorkspace'
 import { rupees, type Paisa } from '../../../lib/money'
 import type { ClientRecord } from '../../../lib/queries/clients'
 import { quoteToDraft, readQuoteEditor, type QuoteSnapshot } from '../../../lib/queries/quoteEditor'
+import {
+  readBookingForChange,
+  bookingChangeToDraft,
+  type BookingChangeSnapshot,
+} from '../../../lib/queries/changeBooking'
+import {
+  changeBooking,
+  prepareBookingChangeSave,
+  type BookingChangeSaveAttempt,
+} from '../../../actions/rentals/changeBooking'
 import { newClientUuid } from '../../../lib/supabase'
 import type { CrewLine } from './CrewSection'
 import { clearLocalDraft, readLocalDraft, writeLocalDraft, type LocalDraft } from './localDraft'
@@ -147,10 +157,12 @@ export function useNewRentalDraft({
 
   const [quoteLoading, setQuoteLoading] = useState(Boolean(editBookingId))
   const [quoteReload, setQuoteReload] = useState(0)
+  const [changeSnapshot, setChangeSnapshot] = useState<BookingChangeSnapshot | null>(null)
 
   const quoteInitial = useRef<string | null>(null)
   const quoteSaving = useRef(false)
   const quoteAttempt = useRef<QuoteSaveAttempt | null>(null)
+  const changeAttempt = useRef<BookingChangeSaveAttempt | null>(null)
 
   const confirmKey = useRef<string | null>(null)
   const draftCreateKey = useRef<string | null>(null)
@@ -367,17 +379,18 @@ export function useNewRentalDraft({
       })
   }, [searchParams, applyDraftFields, setActionError])
 
-  // Load quote when in edit mode
+  // Load booking / quote when in edit mode
   useEffect(() => {
     if (!editBookingId) return
     let active = true
     setQuoteLoading(true)
     setActionError(null)
-    void readQuoteEditor(editBookingId)
+    void readBookingForChange(editBookingId)
       .then((snapshot) => {
         if (!active) return
-        const data = quoteToDraft(snapshot)
-        setQuoteSnapshot(snapshot)
+        const data = bookingChangeToDraft(snapshot)
+        setChangeSnapshot(snapshot)
+        setQuoteSnapshot(snapshot as unknown as QuoteSnapshot)
         setDraftBookingNo(snapshot.code)
         quoteInitial.current = null
         setSavedDepositPaisa(rupees(Number(snapshot.values.deposit_required)))
@@ -389,11 +402,36 @@ export function useNewRentalDraft({
         applyDraftFields(data)
         setQuoteLoading(false)
       })
-      .catch((error: unknown) => {
-        if (active) {
-          setQuoteLoading(false)
-          setActionError(error instanceof Error ? error.message : String(error))
-        }
+      .catch((changeErr: unknown) => {
+        return readQuoteEditor(editBookingId)
+          .then((snapshot) => {
+            if (!active) return
+            const data = quoteToDraft(snapshot)
+            setChangeSnapshot(null)
+            setQuoteSnapshot(snapshot)
+            setDraftBookingNo(snapshot.code)
+            quoteInitial.current = null
+            setSavedDepositPaisa(rupees(Number(snapshot.values.deposit_required)))
+            setManualDepositOverride(false)
+            setManualDepositAmount('')
+            setDepositOverrideReason('')
+            setDepositAuthorizedBy('')
+            quoteAttempt.current = null
+            applyDraftFields(data)
+            setQuoteLoading(false)
+          })
+          .catch((error: unknown) => {
+            if (active) {
+              setQuoteLoading(false)
+              setActionError(
+                error instanceof Error
+                  ? error.message
+                  : changeErr instanceof Error
+                    ? changeErr.message
+                    : String(error),
+              )
+            }
+          })
       })
     return () => {
       active = false
@@ -419,9 +457,40 @@ export function useNewRentalDraft({
   useUnsavedRecord(editBookingId ? quoteDirty : draftHasUnsavedChanges)
 
   const saveQuote = useCallback(async () => {
-    if (!quoteSnapshot || quoteSaving.current) return
+    if (quoteSaving.current) return
     const ctx = dispatchContext()
     if (!ctx) return
+
+    // If changing a confirmed booking (Booked, Packed, On Rent)
+    if (changeSnapshot && changeSnapshot.stage !== 'Quote') {
+      quoteSaving.current = true
+      setSaveState('saving')
+      setActionError(null)
+      try {
+        changeAttempt.current = prepareBookingChangeSave(
+          {
+            bookingId: changeSnapshot.id,
+            expectedRevision: changeSnapshot.revision,
+            draft: draftData,
+            snapshot: changeSnapshot,
+            depositPaisa: requiredDepositPaisa,
+          },
+          changeAttempt.current,
+        )
+        await changeBooking(changeAttempt.current.input, ctx)
+        quoteInitial.current = quoteFingerprint
+        showSuccessToast('Booking updated', changeSnapshot.code)
+        doExit()
+      } catch (error) {
+        setActionError(error instanceof Error ? error.message : String(error))
+        setSaveState('error')
+      } finally {
+        quoteSaving.current = false
+      }
+      return
+    }
+
+    if (!quoteSnapshot) return
     quoteSaving.current = true
     setSaveState('saving')
     setActionError(null)
@@ -447,6 +516,7 @@ export function useNewRentalDraft({
       quoteSaving.current = false
     }
   }, [
+    changeSnapshot,
     quoteSnapshot,
     dispatchContext,
     quoteFingerprint,

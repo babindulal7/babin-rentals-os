@@ -52,6 +52,7 @@ export interface RentalDraftData {
     lineNote?: string | undefined
     serviceBasis?: 'Flat' | 'Per day' | undefined
     supplierCost?: number | undefined
+    isPacked?: boolean | undefined
   }>
   crew: Array<{
     crewId: string

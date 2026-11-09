@@ -18,7 +18,6 @@ Location: `docs/PERMISSIONS.md` (beside Foundation v3.0 and UI_UX.md)
 > | D30 | §7 client writes: add "pay online" (advance or invoice balance) | T7-05 |
 > | W49 | §3/§7 new access path: a one-time, job-scoped delivery link for a hired rider — no login, no money, expires | T4-08 |
 > | W53 | Sign-in: switch user on a shared device by name + PIN (4 or 6 digits — O-18), restoring that person's own session (not the screen-lock curtain) | T1-15 |
-> | W88 | §4 new capability `rental.change`: booking-desk roles change items and dates after Confirm (today quote-only edits + extend) | T3-18 |
 > | W68 | §6.1 note: a Staff client's 20% discount is an ordinary discount line (Law 10, ungated) | T8-09 |
 > | B19 | §6.1 new row `gate.return.damage_unsigned`: a Return with a flagged unit needs a signature or a recorded refusal (reason ≥ 10 chars), by any staff allowed to do Return | T2-19 |
 > | B21, B40 | §5 mechanics: once Owner arms it, money rows and money writes need the second sign-in step (`aal2`) for Owner · Admin · Manager · Coordinator · Accounts; asked again every 30 days per device; Warehouse · Technician · Driver unchanged | T1-17 |
@@ -37,7 +36,7 @@ Location: `docs/PERMISSIONS.md` (beside Foundation v3.0 and UI_UX.md)
 > | B27 | Report a problem — any staff writes; each sees their own; Owner · Admin read all | T4-11 |
 >
 > *Landed and removed from this box (K7): D1 (0181, §6.1), D2 (0179, §6.1, §3.1 W2, §4.2),
-> D3 (0180, §2, §3, §4.2), W43 (0183, §6.1 `gate.reset.qc_self_check`).*
+> D3 (0180, §2, §3, §4.2), W43 (0183, §6.1 `gate.reset.qc_self_check`), W88 (0232, §4.1 `rental.change`).*
 
 > ## ⛔ VERIFIED 7 Sep 2026 — read §16 before building from §4, §5, §9 or §12
 >
@@ -240,6 +239,7 @@ Ladder shorthand: `M+` = Owner · Admin · Manager. `C+` = M+ · Coordinator. `F
 | `rental.confirm` | C+ · Warehouse | `booking_stage_transitions_insert` — and, since R-26, that same INSERT writes the booking's `inventory_reservations` rows (`0100`, trigger, SECURITY INVOKER). The five roles this policy admits are exactly the five `inventory_reservations_all` admits, so confirming and holding are one permission and one transaction. | ✓ |
 | `rental.discount` | C+ (Coordinator included) | `booking_discounts_money_blind` refuses Floor. **Ungated in amount** (31 Aug): no cap, no reason, no approver. | ○ split from `rental.create` |
 | `rental.extend` | C+ | invoice update in place; blocked on collision with next booking (system, not role) | ✓ |
+| `rental.change` | C+ · Warehouse | `change_booking` RPC (0232, T3-18, W88); booking-desk roles change items and dates after Confirm | ✓ |
 | `rental.update_project` | C+ · Warehouse (UI offers edit to C+; floor views) | narrow `project_type`/`project_type_other` text edit via `updateBookingProject`; audited old→new; 0102 money trigger untouched | ○ |
 | `rental.tag` | C+ | `set_booking_tags` RPC (0228, T3-25, B16, B55); adds and removes tags; floor roles read-only | ✓ |
 | `rental.cancel` (before Packed) | C+ | stage-transition policy; cancellation fee tiers from Settings | ✓ |

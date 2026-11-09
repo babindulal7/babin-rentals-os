@@ -7743,6 +7743,219 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L72',
+  title: 'A change can never double-book (T3-18, W88)',
+  expect: 'green',
+  run: async () => {
+    let b1Id
+    let b2Id
+    const clientCode = await one("select next_document_number('client')")
+    const clientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+      values (gen_random_uuid(), '${clientCode}', 'L72 Client', '+9779800009972', 'Active', '${U.Owner}')
+      returning id`)).rows[0].id
+
+    // Booking 1: Holds unit UNITS[0] for 10-12 Dec 2099
+    await as('Coordinator', async () => {
+      const b1Res = await createBooking({
+        key: 'l72_b1',
+        window: ['2099-12-10T04:00:00Z', '2099-12-12T04:00:00Z'],
+        actor: 'Coordinator',
+        clientId,
+        lines: [{
+          productId: SERIAL_PRODUCT,
+          description: 'L72 Primary Camera',
+          qty: 1,
+          days: 2,
+          rate: 500000,
+          units: [UNITS[0]],
+        }],
+      })
+      b1Id = b1Res.booking_id
+      await transition('l72_b1', 'Quote', 'Booked', 'Coordinator')
+
+      // Booking 2: Also holds unit UNITS[0] but later: 15-17 Dec 2099
+      const b2Res = await createBooking({
+        key: 'l72_b2',
+        window: ['2099-12-15T04:00:00Z', '2099-12-17T04:00:00Z'],
+        actor: 'Coordinator',
+        clientId,
+        lines: [{
+          productId: SERIAL_PRODUCT,
+          description: 'L72 Secondary Camera',
+          qty: 1,
+          days: 2,
+          rate: 500000,
+          units: [UNITS[0]],
+        }],
+      })
+      b2Id = b2Res.booking_id
+      await transition('l72_b2', 'Quote', 'Booked', 'Coordinator')
+    })
+
+    // Now read booking 2 for change
+    let b2Snapshot
+    await as('Coordinator', async () => {
+      b2Snapshot = await one('select read_booking_for_change($1)', [b2Id])
+    })
+
+    // Attempt to change Booking 2's dates to overlap Booking 1 (11-13 Dec 2099).
+    // Because both hold UNITS[0], the GiST exclusion constraint MUST refuse.
+    await as('Coordinator', async () => {
+      const linesPayload = [
+        {
+          id: b2Snapshot.lines[0].id,
+          client_uuid: b2Snapshot.lines[0].client_uuid,
+          line_type: 'Equipment',
+          product_id: SERIAL_PRODUCT,
+          description: 'L72 Conflicting Move',
+          qty: 1,
+          days: 2,
+          rate: 5000,
+          sort_order: 0,
+        }
+      ]
+
+      const changePayload = {
+        booking_id: b2Id,
+        client_uuid: crypto.randomUUID(),
+        revision: b2Snapshot.revision,
+        values: {
+          pickup_at: '2099-12-11T04:00:00Z',
+          return_at: '2099-12-13T04:00:00Z',
+        },
+        lines: linesPayload,
+      }
+
+      await refuses(
+        'a change can never double-book',
+        'select change_booking($1::jsonb)',
+        [JSON.stringify(changePayload)],
+        /exclusion|double[- ]book|conflicting/i,
+      )
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L73',
+  title: 'A packed unit cannot be silently removed (T3-18, W88)',
+  expect: 'green',
+  run: async () => {
+    let bId
+    const clientCode = await one("select next_document_number('client')")
+    const clientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+      values (gen_random_uuid(), '${clientCode}', 'L73 Packed Client', '+9779800009973', 'Active', '${U.Owner}')
+      returning id`)).rows[0].id
+
+    await as('Coordinator', async () => {
+      const bRes = await createBooking({
+        key: 'l73_pack',
+        window: ['2099-12-20T04:00:00Z', '2099-12-22T04:00:00Z'],
+        actor: 'Coordinator',
+        clientId,
+        lines: [{
+          productId: SERIAL_PRODUCT,
+          description: 'L73 Packed Camera',
+          qty: 1,
+          days: 2,
+          rate: 500000,
+          units: [UNITS[2]],
+        }],
+      })
+      bId = bRes.booking_id
+      await transition('l73_pack', 'Quote', 'Booked', 'Coordinator')
+    })
+
+    // Warehouse packs it cleanly
+    await as('Warehouse', async () => {
+      await actionPackRental({ key: 'l73_pack', actor: 'Warehouse', units: [UNITS[2]] })
+    })
+
+    // Now attempt to remove the packed line via change_booking without unpacking
+    await as('Coordinator', async () => {
+      const packSnapshot = await one('select read_booking_for_change($1)', [bId])
+      assert(packSnapshot.lines[0].is_packed === true, 'Line is marked is_packed in read_booking_for_change')
+
+      const removeLinePayload = {
+        booking_id: bId,
+        client_uuid: crypto.randomUUID(),
+        revision: packSnapshot.revision,
+        lines: [], // removing the packed line!
+      }
+
+      await refuses(
+        'a packed unit cannot be silently removed',
+        'select change_booking($1::jsonb)',
+        [JSON.stringify(removeLinePayload)],
+        /A packed unit cannot be silently removed/i,
+      )
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L74',
+  title: 'Linked booking carries the parent id (T3-18, W87)',
+  expect: 'green',
+  run: async () => {
+    let parentId
+    let linkedId
+    const clientCode = await one("select next_document_number('client')")
+    const clientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+      values (gen_random_uuid(), '${clientCode}', 'L74 Linked Client', '+9779800009974', 'Active', '${U.Owner}')
+      returning id`)).rows[0].id
+
+    await as('Coordinator', async () => {
+      const parentRes = await createBooking({
+        key: 'l74_parent',
+        window: ['2099-12-25T04:00:00Z', '2099-12-27T04:00:00Z'],
+        actor: 'Coordinator',
+        clientId,
+        lines: [{
+          productId: QTY_PRODUCT,
+          description: 'L74 Original Gear',
+          qty: 1,
+          days: 2,
+          rate: 200000,
+        }],
+      })
+      parentId = parentRes.booking_id
+      await transition('l74_parent', 'Quote', 'Booked', 'Coordinator')
+
+      // Create linked booking carrying parent_booking_id
+      const { payload } = createPayload({
+        key: 'l74_linked',
+        window: ['2099-12-26T04:00:00Z', '2099-12-27T04:00:00Z'],
+        actor: 'Coordinator',
+        clientId,
+        lines: [{
+          productId: QTY_PRODUCT,
+          description: 'L74 Add Gear Linked',
+          qty: 1,
+          days: 1,
+          rate: 200000,
+        }],
+      })
+      payload.parent_booking_id = parentId
+
+      const linkedRes = await one('select create_booking($1::jsonb)', [JSON.stringify(payload)])
+      linkedId = linkedRes.booking_id
+      assertEq(linkedRes.parent_booking_id, parentId, 'create_booking response carries parent_booking_id')
+    })
+
+    // Query database directly to assert bookings.parent_booking_id
+    const row = (await q(`select id, parent_booking_id from bookings where id = '${linkedId}'`)).rows[0]
+    assertEq(row.parent_booking_id, parentId, 'linked booking carries the parent id in bookings table (W87)')
+
+    // Verify read_booking_for_change also reports parent_booking_id
+    await as('Coordinator', async () => {
+      const snapshot = await one('select read_booking_for_change($1)', [linkedId])
+      assertEq(snapshot.parent_booking_id, parentId, 'read_booking_for_change reports parent_booking_id')
+    })
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break

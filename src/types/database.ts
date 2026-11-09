@@ -685,6 +685,8 @@ export interface Database {
           /** 0144 — custom description, only when project_type is 'Other'. */
           project_type_other: string | null
           location: string | null
+          /** 0232 — parent booking when created as linked booking (W87). */
+          parent_booking_id: string | null
           notes: string | null
           created_at: string
           created_by: string | null
@@ -713,6 +715,8 @@ export interface Database {
           /** 0144 — custom description, only when project_type is 'Other'. */
           project_type_other?: string | null
           location?: string | null
+          /** 0232 — parent booking when created as linked booking (W87). */
+          parent_booking_id?: string | null
           notes?: string | null
           created_at?: string
           created_by?: string | null

@@ -558,6 +558,7 @@ function createBooking(payload: Record<string, unknown>): { data: Row | null; er
     project: projectName ?? payload['project'] ?? null,
     project_name: projectName,
     shoot_location: shootLocation,
+    parent_booking_id: payload['parent_booking_id'] ?? null,
     project_type: projectType,
     project_type_other: projectTypeOther,
     stage: 'Quote',
@@ -863,6 +864,7 @@ function createBooking(payload: Record<string, unknown>): { data: Row | null; er
       transport_written: builtTransport !== null,
       project_name: projectName,
       shoot_location: shootLocation,
+    parent_booking_id: payload['parent_booking_id'] ?? null,
       replayed: false,
     } as Row,
     error: null,
@@ -1605,6 +1607,46 @@ export const mockSupabase = {
     if (name === 'create_booking') {
       const payload = (args?.['p_payload'] ?? {}) as Record<string, unknown>
       return Promise.resolve(createBooking(payload))
+    }
+    if (name === 'read_booking_for_change') {
+      const id = String(args?.['p_id'] ?? '')
+      const b = (store['bookings'] ?? []).find(r => r['id'] === id || r['booking_no'] === id)
+      if (!b) return Promise.resolve({ data: null, error: pgErr('P0002', 'Booking not found.') })
+      const lines = (store['booking_lines'] ?? []).filter(l => l['booking_id'] === b['id'] && !l['voided_at'])
+      const crew = (store['booking_crew_lines'] ?? []).filter(c => c['booking_id'] === b['id'])
+      const transport = (store['booking_transport'] ?? []).find(t => t['booking_id'] === b['id']) ?? null
+      const discounts = (store['booking_discounts'] ?? []).filter(d => d['record_id'] === b['id'])
+      return Promise.resolve({
+        data: {
+          id: b['id'],
+          code: b['booking_no'],
+          stage: b['stage'],
+          parent_booking_id: b['parent_booking_id'] ?? null,
+          revision: 'mock-rev-1',
+          values: b,
+          lines: lines.map(l => ({ ...l, is_packed: false })),
+          crew,
+          transport,
+          discounts,
+        },
+        error: null,
+      })
+    }
+    if (name === 'change_booking') {
+      const payload = (args?.['p_payload'] ?? {}) as Record<string, unknown>
+      const bId = String(payload['booking_id'] ?? '')
+      const b = (store['bookings'] ?? []).find(r => r['id'] === bId)
+      if (!b) return Promise.resolve({ data: null, error: pgErr('P0002', 'Booking not found.') })
+      return Promise.resolve({
+        data: {
+          booking_id: b['id'],
+          booking_no: b['booking_no'],
+          stage: b['stage'],
+          parent_booking_id: b['parent_booking_id'] ?? null,
+          replayed: false,
+        },
+        error: null,
+      })
     }
     if (name === 'change_client_membership') {
       const payload = (args?.['p_payload'] ?? {}) as Record<string, unknown>

@@ -1,5 +1,83 @@
 # Progress Log
 
+## 2026-11-10 — T3-18: Change a confirmed booking & link add-gear bookings (Lane C)
+
+**Did**
+- **T3-18: Change a confirmed booking & link add-gear bookings (W87, W88, B-1, B-3, Law 1, Law 6, Law 8):**
+  - Claimed migration `0232` in `docs/plans/MIGRATION_LEDGER.md` (`0232_change_confirmed_booking_rpc.sql`):
+    - Added `parent_booking_id uuid references bookings(id)` to `bookings` table with btree index and grant.
+    - Updated `create_booking(jsonb)` atomic RPC to accept and return `parent_booking_id` for linked bookings (W87).
+    - Created `read_booking_for_change(text)` RPC: returns complete lines with `is_packed` flag, crew, transport, discounts, parent booking id, and md5 revision lock for all editable stages (`Quote`, `Booked`, `Packed`, `On Rent`).
+    - Created `change_booking(jsonb)` atomic RPC:
+      - Validates role (`Owner`, `Admin`, `Manager`, `Coordinator`, `Warehouse`).
+      - Revision lock validation (`40001` serialization failure on concurrent modification).
+      - Stage lock validation (only `Quote`, `Booked`, `Packed`, `On Rent` allowed; `Closed`, `Returned`, `Cancelled` rejected).
+      - Packed unit protection: lines with packed units cannot be silently removed without unpacking in Warehouse first.
+      - Date change: updates `pickup_at` / `return_at`, checks range validity.
+      - Line synchronization: upserts active lines, voids removed lines (Law 3).
+      - Reservation synchronization: GiST exclusion constraint check against `inventory_reservations` — double-booking raises exclusion violation and aborts transaction.
+      - Draft invoice resync: recalculates lines and updates draft invoice if present.
+      - Audit trail: records detailed before/after audit event in `audit_events`.
+  - Added capability `rental.change` in `docs/PERMISSIONS.md` §4.1 (`C+ · Warehouse`).
+  - Added `canChangeBooking(role)` in `src/lib/rbac.ts` and wired capability `rental.change` in `src/actions/core.ts`.
+  - Added Server Action `changeBooking` in `src/actions/rentals/changeBooking.ts` and query helpers in `src/lib/queries/changeBooking.ts` (`readBookingForChange`, `bookingChangeToDraft`, `bookingChangePayload`, `prepareBookingChangeSave`).
+  - Added e2e lifecycle steps in `scripts/e2e-lifecycle.mjs`:
+    - `L72`: "A change can never double-book (T3-18, W88)" — confirms GiST exclusion refusal on conflicting dates.
+    - `L73`: "A packed unit cannot be silently removed (T3-18, W88)" — confirms packed lines require floor unpacking first.
+    - `L74`: "Linked booking carries the parent id (T3-18, W87)" — confirms linked booking creation with parent reference.
+  - UI Integration in `src/modules/rentals/BookingDetail.tsx`:
+    - Displays "Linked booking" badge linking to `/rentals/${booking.parentBookingId}` when present.
+    - Stage-aware desk actions: "Edit quote" (`Quote`), "Change booking" (`Booked`, `Packed`), and "Add gear" (`On Rent`).
+    - "Add gear" modal on `On Rent` bookings gives desk staff two choices:
+      1. "Add to this booking" -> opens editor for current booking.
+      2. "Start a new booking linked to it" -> prefills new rental with `linkedParent` and client reference.
+  - UI Integration in `src/modules/rentals/booking/useNewRentalDraft.ts`, `NewRental.tsx`, and `RentalLineItemsTree.tsx`:
+    - In edit mode, loads via `readBookingForChange` and saves via `changeBooking` for confirmed stages, with `updateRentalQuote` fallback for quotes.
+    - Supports `?linkedParent=` search param to prefill linked parent booking and client, displaying informational linked booking banner.
+    - Protects packed units in UI (`RentalLineItemsTree`) by marking packed units and preventing silent deletion without unpacking.
+  - Added unit test suite `src/actions/rentals/__tests__/changeBooking.test.ts` (9/9 passed).
+  - Updated `BookingDetail.edit.test.tsx` to verify `Change booking` affordance for confirmed bookings.
+
+**Ruled**
+- W88: Any desk staff (Owner, Admin, Manager, Coordinator, Warehouse) may change items and dates after Confirm.
+- W87: On Rent bookings offer "Add gear" with choices to add directly to current booking or start a new linked booking carrying parent ID.
+- Packed units cannot be removed without unpacking first in Warehouse.
+- GiST exclusion prevents double-booking across booking changes.
+
+**Verified**
+- `npm run check:pglite`: 229/229 applied, 0 failed.
+- `npm run check:lifecycle`: 74/74 green, 0 known-red, 0 failed.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run build`: built in 7m 21s (PWA precache 284 entries).
+- `npm run check:security`: 18 Phase 0 regressions + 14 branch groups + glossary pass.
+- `node scripts/test-booking-financial-integrity.mjs`: PASS.
+- `npm run test:server-contracts`: 59/59 passed.
+- `npm run test:partial-return`: 58/58 passed.
+- `node --test scripts/test-receipt.test.mjs`: 11/11 passed.
+- `npm run lint:shell`: 925 files checked, 0 violations.
+- `npm run lint:ui-copy`: 0 violations.
+- `npm run check:contrast`: 106/106 pass.
+- `npx vitest run src/actions/rentals/__tests__/changeBooking.test.ts`: 9/9 passed.
+- `npx vitest run src/modules/rentals/__tests__/BookingDetail.edit.test.tsx`: 11/11 passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +1 |
+| Lifecycle | steps green / total | 74 / 74 (100%) | +3 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 229 files · check:pglite 229/229 applied, 0 failed.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- T3-18 ready for local merge into `main`.
+- Next in Lane C: Card T3-28 · Rental day start as a setting (`docs/plans/prompts/T3-28.md`).
+
 ## 2026-11-09 — T3-27: Pro forma invoice from the draft (Lane C)
 
 **Did**

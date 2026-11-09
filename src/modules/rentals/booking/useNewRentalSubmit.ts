@@ -66,6 +66,7 @@ export interface UseNewRentalSubmitOptions {
   setSavedDraftFingerprint: (fp: string | null) => void
   kind: string
   kindOther: string
+  parentBookingId?: string | null
 
   confirmKey: React.MutableRefObject<string | null>
   draftBookingKey: React.MutableRefObject<string | null>
@@ -161,6 +162,7 @@ export function useNewRentalSubmit({
   setSavedDraftFingerprint,
   kind,
   kindOther,
+  parentBookingId,
   confirmKey,
   draftBookingKey,
 }: UseNewRentalSubmitOptions) {
@@ -263,6 +265,7 @@ export function useNewRentalSubmit({
           shootLocation: shootLocation?.trim() || null,
           projectType: kind.trim() !== '' ? kind : null,
           projectTypeOther: kind === 'Other' && kindOther.trim() !== '' ? kindOther.trim() : null,
+          ...(parentBookingId ? { parentBookingId } : {}),
           ...(draftBookingNo ? { bookingNo: draftBookingNo } : {}),
           pickupAt: pickupAt.toISOString(),
           returnAt: returnAt.toISOString(),
@@ -367,6 +370,7 @@ export function useNewRentalSubmit({
       shootLocation,
       kind,
       kindOther,
+      parentBookingId,
       draftBookingNo,
       deliveryType,
       pricing,

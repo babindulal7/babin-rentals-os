@@ -1,6 +1,5 @@
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useParams, Link, useNavigate } from 'react-router-dom'
 import { useCallback, useEffect, useMemo, useState, useRef, Suspense, lazy } from 'react'
-import { useParams, Link } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
 import { Card, PageHeader, Button, Rail, SummaryRows, cardStyle } from '../../components/ui/Page'
@@ -46,6 +45,7 @@ import {
   canCloseRental,
   canManageCollateral,
   canSetBookingTags,
+  canChangeBooking,
 } from '../../lib/rbac'
 import { BookingTagsBar } from './BookingTagsBar'
 import { IntelCard } from '../../components/ui/IntelCard'
@@ -1000,6 +1000,7 @@ function bsOrDash(iso: string): string {
  */
 
 function BookingDetailView() {
+  const navigate = useNavigate()
   const { bookingNo } = useParams()
   const id = bookingNo ?? ''
   const [showExtendModal, setShowExtendModal] = useState(false)
@@ -1009,6 +1010,7 @@ function BookingDetailView() {
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [showCreateInvoice, setShowCreateInvoice] = useState(false)
   const [showCreateDocument, setShowCreateDocument] = useState(false)
+  const [addGearModalOpen, setAddGearModalOpen] = useState(false)
   const { showSuccessToast } = useToast()
   const { openOperations } = useOperationsWorkspace()
   const viewport = useViewport()
@@ -2442,6 +2444,11 @@ function BookingDetailView() {
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--sp-xs)' }}>
               {/* The stage is named by the stepper below ("Closed — current stage"), so no badge here. */}
               {booking.isCancelled && <Badge flag="Cancelled" />}
+              {booking.parentBookingId && (
+                <Link to={`/rentals/${booking.parentBookingId}`} style={{ textDecoration: 'none' }} title="View parent booking">
+                  <Badge tone="progress" label="Linked booking" />
+                </Link>
+              )}
               {subRental && <SubRentedMark label="Sub-rental" />}
               {stage === 'Quote' && availabilityEvaluation && !availabilityEvaluation.isAllAvailable && (
                 <Badge tone="danger" label="Needs attention / Availability changed" />
@@ -2765,11 +2772,31 @@ function BookingDetailView() {
                   { label: 'Return Location', value: booking.returnLocation ?? 'Not recorded' },
                 ]}
               />
-              {/* Law 16 — Edit exists but is Unavailable-with-reason. A missing
-                  button reads as "read-only by design"; a disabled one with a
-                  reason states the truth: the write path is not yet wired. */}
-              <div style={{ marginTop: 'var(--sp-sm)' }}>
-                {booking.stage === 'Quote' && !booking.isCancelled && Boolean(user?.role && ['Owner','Admin','Manager','Coordinator'].includes(user.role)) ? <Link to="?action=edit"><Button>Edit booking</Button></Link> : <Unavailable reason="General editing is available before confirmation. Use this booking's operational actions."><Button disabled>Edit</Button></Unavailable>}
+              {/* Desk staff can edit Quote, change confirmed booking (Booked/Packed), or Add gear (On Rent) */}
+              <div style={{ marginTop: 'var(--sp-sm)', display: 'flex', gap: 8, alignItems: 'center' }}>
+                {booking.isCancelled ? (
+                  <Unavailable reason="This booking is cancelled. No changes can be made.">
+                    <Button disabled>Edit</Button>
+                  </Unavailable>
+                ) : booking.stage === 'Closed' || booking.stage === 'Returned' ? (
+                  <Unavailable reason="This booking is closed. Use operational corrections.">
+                    <Button disabled>Edit</Button>
+                  </Unavailable>
+                ) : !user?.role || !canChangeBooking(user.role) ? (
+                  <Unavailable reason="Changing a confirmed booking requires booking desk permission.">
+                    <Button disabled>Edit</Button>
+                  </Unavailable>
+                ) : booking.stage === 'Quote' ? (
+                  <Link to="?action=edit"><Button>Edit quote</Button></Link>
+                ) : booking.stage === 'Booked' || booking.stage === 'Packed' ? (
+                  <Link to="?action=edit"><Button>Change booking</Button></Link>
+                ) : booking.stage === 'On Rent' ? (
+                  <Button onClick={() => setAddGearModalOpen(true)}>Add gear</Button>
+                ) : (
+                  <Unavailable reason="General editing is not available at this stage.">
+                    <Button disabled>Edit</Button>
+                  </Unavailable>
+                )}
               </div>
               {/* Focused project edit — header fields with a real write path
                   (`updateBookingProject`). Coordinator+ only; floor roles keep
@@ -3802,6 +3829,85 @@ function BookingDetailView() {
         conflicts={conflictsList}
         onKeepDraft={() => setConflictModalOpen(false)}
       />
+
+      {addGearModalOpen && (
+        <Modal
+          isOpen={addGearModalOpen}
+          onClose={() => setAddGearModalOpen(false)}
+          title="Add gear to rental"
+          subtitle={`Booking ${booking.bookingNo}`}
+          footer={
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--sp-sm)' }}>
+              <Button variant="secondary" onClick={() => setAddGearModalOpen(false)}>
+                Cancel
+              </Button>
+            </div>
+          }
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+            <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--text)' }}>
+              This rental is currently <strong>On Rent</strong>. Choose how you want to add gear:
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div
+                style={{
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--r-md)',
+                  padding: 'var(--sp-md)',
+                  background: 'var(--card)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontWeight: 600, fontSize: 'var(--t-body)', color: 'var(--text)' }}>
+                    Add to this booking
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setAddGearModalOpen(false)
+                      navigate('?action=edit')
+                    }}
+                  >
+                    Edit booking
+                  </Button>
+                </div>
+                <p style={{ margin: 0, fontSize: 'var(--t-caption)', color: 'var(--text2)' }}>
+                  Modifies {booking.bookingNo} directly by adding lines. Existing packed units remain assigned.
+                </p>
+              </div>
+
+              <div
+                style={{
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--r-md)',
+                  padding: 'var(--sp-md)',
+                  background: 'var(--card)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontWeight: 600, fontSize: 'var(--t-body)', color: 'var(--text)' }}>
+                    Start a new booking linked to it
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    onClick={() => {
+                      setAddGearModalOpen(false)
+                      navigate(`/rentals/new?linkedParent=${booking.id}${booking.clientId ? `&client=${booking.clientId}` : ''}`)
+                    }}
+                  >
+                    New linked rental
+                  </Button>
+                </div>
+                <p style={{ margin: 0, fontSize: 'var(--t-caption)', color: 'var(--text2)' }}>
+                  Creates a separate rental for {booking.clientName} linked to parent {booking.bookingNo} with separate logistics and invoice.
+                </p>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
     </PageShell>
   )
 }

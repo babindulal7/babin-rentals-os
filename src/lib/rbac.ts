@@ -170,6 +170,17 @@ export function canConfirmRental(role: SystemRole): boolean {
 }
 
 /**
+ * Check if role can change a confirmed booking (items and dates after Confirm).
+ *
+ * RULING W88 / T3-18 (26 Oct 2026): booking-desk roles change items and dates
+ * after Confirm. Owner · Admin · Manager · Coordinator · Warehouse.
+ * Mirrors `change_booking` RPC (0232).
+ */
+export function canChangeBooking(role: SystemRole): boolean {
+  return BOOKING_DESK.has(role)
+}
+
+/**
  * Check if role can create a client.
  *
  * **Ruled 15 Aug 2026 by mirroring the database**, closing PLAN.md §4.20.

@@ -238,6 +238,7 @@ export type CreateRentalInput = {
   clientId: string
   branchId: string
   contactId?: string | null
+  parentBookingId?: string | null
   project?: string | null
   /** Project / production name (up to 120 characters, B8, B52, T3-26). */
   projectName?: string | null
@@ -345,6 +346,9 @@ export const createRentalConfig: ActionConfig<CreateRentalInput, CreateRentalRes
     }
     if (!UUID_RE.test(input.branchId)) {
       throw new Error(`branchId must be a uuid. Received ${JSON.stringify(input.branchId)}. Nothing was sent.`)
+    }
+    if (input.parentBookingId != null && !UUID_RE.test(input.parentBookingId)) {
+      throw new Error(`parentBookingId must be a uuid. Received ${JSON.stringify(input.parentBookingId)}. Nothing was sent.`)
     }
 
     assertInstant(input.pickupAt, 'pickupAt')
@@ -525,6 +529,7 @@ export const createRentalConfig: ActionConfig<CreateRentalInput, CreateRentalRes
       shoot_location: input.shootLocation ?? null,
       project_type: input.projectType ?? null,
       project_type_other: input.projectTypeOther ?? null,
+      parent_booking_id: input.parentBookingId ?? null,
       pickup_at: input.pickupAt,
       return_at: input.returnAt,
       delivery_type: input.deliveryType,

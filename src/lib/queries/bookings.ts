@@ -124,6 +124,7 @@ export interface BookingListRow {
    */
   depositRequired: Paisa | null
   totalAmount?: Paisa | null
+  parentBookingId?: string | null
   isCancelled: boolean
   isClosed: boolean
   tags: string[]
@@ -281,7 +282,7 @@ export interface BookingListRow {
  * the `withDeposit` treatment below.
  */
 const BASE_COLUMNS =
-  'id, booking_no, client_id, project, project_name, shoot_location, project_type, project_type_other, stage, tags, pickup_at, return_at, actual_return_at, ' +
+  'id, booking_no, client_id, parent_booking_id, project, project_name, shoot_location, project_type, project_type_other, stage, tags, pickup_at, return_at, actual_return_at, ' +
   'delivery_type, pickup_location, return_location, quote_expires_at, ' +
   'cancelled_at, closed_at, created_at, ' +
   'clients ( name ), booking_lines ( id, qty )'
@@ -302,6 +303,7 @@ interface RawBookingRow {
   id: string
   booking_no: string
   client_id: string
+  parent_booking_id?: string | null
   project: string | null
   project_name?: string | null
   shoot_location?: string | null
@@ -363,6 +365,7 @@ function toRow(r: RawBookingRow): BookingListRow {
     id: r.id,
     bookingNo: r.booking_no,
     clientId: r.client_id,
+    parentBookingId: r.parent_booking_id ?? null,
     // A booking always has a client (NOT NULL + FK), so a missing join is a
     // query bug, not a data state. Say so rather than printing a friendly dash
     // that hides it.
@@ -423,6 +426,12 @@ const PRE_0144_SEARCH_COLUMNS = ['booking_no', 'project'] as const
 interface BookingQueryError {
   message: string
   code?: string
+}
+
+function missingParentBookingColumn(error: BookingQueryError | null): boolean {
+  if (!error) return false
+  const msg = (error.message || '').toLowerCase()
+  return msg.includes('parent_booking_id')
 }
 
 function missingProjectTypeColumn(error: BookingQueryError | null): boolean {
@@ -599,14 +608,16 @@ export async function listBookings(opts: BookingListOptions = {}): Promise<ListQ
    * future postgrest-js renames an argument shape, `tsc` says so HERE, once,
    * instead of on the floor.
    */
-  const fetchBookings = async (legacy: boolean): Promise<{
+  const fetchBookings = async (legacy: boolean, omitParentBooking = false): Promise<{
     data: RawBookingRow[] | null
     error: BookingQueryError | null
     count: number | null
   }> => {
+    let cols = legacy ? PRE_0144_COLUMNS : BASE_COLUMNS
+    if (omitParentBooking) cols = cols.replace('parent_booking_id, ', '')
     const base = supabase
       .from('bookings')
-      .select(legacy ? PRE_0144_COLUMNS : BASE_COLUMNS, withCount ? { count: 'exact' } : undefined)
+      .select(cols, withCount ? { count: 'exact' } : undefined)
       // Law 3: a removed line is voided, never deleted, so it must not be counted.
       .is('booking_lines.voided_at', null)
     if (useArchiveFilter) base.is('archived_at', null)
@@ -640,11 +651,13 @@ export async function listBookings(opts: BookingListOptions = {}): Promise<ListQ
 
   let { data, error, count } = await fetchBookings(false)
   let legacy = false
-  for (let retry = 0; error && retry < 2; retry++) {
+  let omitParentBooking = false
+  for (let retry = 0; error && retry < 3; retry++) {
     if (useArchiveFilter && missingArchiveColumn(error)) useArchiveFilter = false
     else if (!legacy && missingProjectTypeColumn(error) && canUsePre0144Columns(filters)) legacy = true
+    else if (!omitParentBooking && missingParentBookingColumn(error)) omitParentBooking = true
     else break
-    ;({ data, error, count } = await fetchBookings(legacy))
+    ;({ data, error, count } = await fetchBookings(legacy, omitParentBooking))
   }
   if (error) throw new Error(`listBookings failed: ${error.message}`)
 

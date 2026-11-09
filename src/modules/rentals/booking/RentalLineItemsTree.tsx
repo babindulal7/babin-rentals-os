@@ -40,6 +40,7 @@ export interface Line {
   location: string
   status?: InvStatus | undefined
   committedTo: string
+  isPacked?: boolean | undefined
 }
 
 export function lineAmountPaisa(l: Line): Paisa {
@@ -404,6 +405,21 @@ export function RentalLineItemsTree({
           {!readOnly && (
             menuItems ? (
               <RowMenu label={`Actions for ${l.name}`} items={menuItems} />
+            ) : l.isPacked ? (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  fontSize: 'var(--t-caption)',
+                  color: 'var(--text-muted)',
+                  padding: '2px 6px',
+                  borderRadius: 'var(--r-xs)',
+                  background: 'var(--card2)',
+                }}
+                title="Packed unit cannot be removed — unpack in Warehouse first"
+              >
+                Packed
+              </span>
             ) : (
               <button
                 type="button"
@@ -469,12 +485,17 @@ export function RentalLineItemsTree({
               const parentPill = g.lines
                 .map(linePill)
                 .reduce((worst, x) => (x.rank > worst.rank ? x : worst))
+              const hasPackedLines = g.lines.some((x) => x.isPacked)
               const menuItems = [
-                {
-                  label: nested ? `Remove all ${g.lines.length} lines` : 'Remove from this booking',
-                  icon: 'close' as IconName,
-                  onClick: () => setLines((p) => p.filter((x) => !g.lines.some((y) => y.id === x.id))),
-                },
+                ...(hasPackedLines
+                  ? []
+                  : [
+                      {
+                        label: nested ? `Remove all ${g.lines.length} lines` : 'Remove from this booking',
+                        icon: 'close' as IconName,
+                        onClick: () => setLines((p) => p.filter((x) => !g.lines.some((y) => y.id === x.id))),
+                      },
+                    ]),
                 ...(!nested && g.lines[0] && g.lines[0].serial !== '—'
                   ? [
                       {
