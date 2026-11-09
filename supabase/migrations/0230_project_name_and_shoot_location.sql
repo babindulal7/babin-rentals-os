@@ -1,5 +1,5 @@
 -- =============================================================================
--- 0229_project_name_and_shoot_location.sql
+-- 0230_project_name_and_shoot_location.sql
 --
 -- T3-26 · Project name and shoot location on every booking (B8, B52)
 -- Two fields on every booking:

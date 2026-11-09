@@ -41,7 +41,8 @@ export function DeliveryZonesControl() {
   // Form state — the fee is typed in rupees and stored as integer paisa (T4-07 build note 4).
   const [formName, setFormName] = useState('')
   const [formDescription, setFormDescription] = useState('')
-  const [formFeeRupees, setFormFeeRupees] = useState('3500')
+  // R-9.4 (RULINGS-2026-11-09): the fee is a Settings value with no starting figure.
+  const [formFeeRupees, setFormFeeRupees] = useState('')
   const [formIsActive, setFormIsActive] = useState(true)
   const [formSubmitting, setFormSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -66,7 +67,7 @@ export function DeliveryZonesControl() {
   const openCreateModal = () => {
     setFormName('')
     setFormDescription('')
-    setFormFeeRupees('3500')
+    setFormFeeRupees('')
     setFormIsActive(true)
     setEditingZone(null)
     setFormError(null)
@@ -169,7 +170,7 @@ export function DeliveryZonesControl() {
   const resetForm = () => {
     setFormName('')
     setFormDescription('')
-    setFormFeeRupees('3500')
+    setFormFeeRupees('')
     setFormIsActive(true)
     setEditingZone(null)
     setFormError(null)
@@ -372,7 +373,7 @@ export function DeliveryZonesControl() {
                   }}
                 />
                 <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-                  Typed in rupees, stored in paisa. Default: Rs 3,500 for valley zones. "Outside the valley" = 0 (quoted per job).
+                  Typed in rupees, stored in paisa. There is no default fee: enter each zone's fee. "Outside the valley" = 0 (quoted per job).
                 </span>
               </label>
               {editingZone && (

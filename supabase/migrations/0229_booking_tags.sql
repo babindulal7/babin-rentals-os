@@ -1,5 +1,5 @@
 -- =============================================================================
--- 0228_booking_tags.sql
+-- 0229_booking_tags.sql
 --
 -- T3-25 · Tags on bookings (B16, B55)
 -- Free tags on a booking: type a new one or pick one already used ("wedding",

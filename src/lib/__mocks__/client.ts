@@ -1314,9 +1314,16 @@ function changeClientMembership(payload: Record<string, unknown>): { data: Row |
     client['account_credit'] = Number(client['account_credit'] ?? 0) + excessCredit
   }
 
+  // R-9.2 (migration 0226): keep the original join date on a plan change to a live
+  // membership. Refused when the change is a renewal, as the database does.
+  const keepJoin = Boolean(payload['keep_join_date']) && Boolean(old)
+  if (keepJoin && isRenewEffective) {
+    return fail('P0001', 'GATE:membership.keep_join_lapsed: The current term has already ended, so the original join date cannot be kept. Restart the term instead.')
+  }
+  const joinDateKept = keepJoin && !isRenewEffective
   const now = new Date().toISOString()
   const newId = crypto.randomUUID()
-  const joinedOn = effectiveDate
+  const joinedOn = joinDateKept && old ? String(old['join_date']) : effectiveDate
   if (old) hooks.update('client_memberships', { superseded_at: now, superseded_by_id: newId }, (r) => r['id'] === old['id'])
   commitInsert('client_memberships', {
     id: newId, client_uuid: key, client_id: clientId, plan_id: plan['id'], join_date: joinedOn,
@@ -1327,6 +1334,7 @@ function changeClientMembership(payload: Record<string, unknown>): { data: Row |
   const result: Row = {
     client_id: clientId, plan_id: plan['id'], plan_level: plan['level'], previous_level: previous,
     membership_id: newId, superseded_membership_id: old ? old['id'] : null, joined_on: joinedOn,
+    join_date_kept: joinDateKept,
     is_renewal: isRenewEffective,
     old_fee: oldFee, days_left: daysLeft, total_days: daysInOldTerm,
     credit: credit, new_fee: newFee, new_fee_due: newFeeDue, account_credit: excessCredit,

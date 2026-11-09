@@ -28,7 +28,6 @@ import {
   TIMESHEET_DAYS,
   STANDARD_DAY_HOURS,
   getTimesheetStats,
-  hasOvertime,
   formatHours,
   timesheetCsv,
   downloadTimesheetCsv,
@@ -153,7 +152,7 @@ function StaffCard({
               <span style={{ color: 'var(--text3)' }}>{TIMESHEET_DAYS[i]}</span>
               <span style={{
                 fontWeight: 600,
-                color: h === 0 ? 'var(--text3)' : h > STANDARD_DAY_HOURS ? 'var(--warn-text)' : 'var(--text)',
+                color: h === 0 ? 'var(--text3)' : 'var(--text)',
               }}>
                 {formatHours(h)}h
               </span>
@@ -189,12 +188,6 @@ function StaffCard({
           </div>
         )}
 
-        {/* Overtime flag */}
-        {hasOvertime(row) && (
-          <div style={{ marginTop: '6px' }}>
-            <Badge tone="warning" label="Overtime" />
-          </div>
-        )}
       </div>
     </Card>
   )
@@ -245,7 +238,6 @@ export default function TimesheetTab() {
         ]
       : []),
     { label: 'Staff Logged', value: `${stats.staffLogged} / ${stats.totalStaff}`, icon: 'users', accent: 'progress' },
-    { label: 'Overtime Flags', value: String(stats.overtimeFlags), icon: 'alert_triangle', accent: 'warn' },
   ], [stats, canViewMoney])
 
   return (
@@ -395,8 +387,8 @@ export default function TimesheetTab() {
                             style={{
                               padding: '10px 6px',
                               textAlign: 'center',
-                              fontWeight: h > STANDARD_DAY_HOURS ? 600 : 400,
-                              color: h === 0 ? 'var(--text3)' : h > STANDARD_DAY_HOURS ? 'var(--warn-text)' : 'var(--text)',
+                              fontWeight: 400,
+                              color: h === 0 ? 'var(--text3)' : 'var(--text)',
                             }}
                           >
                             {h > 0 ? `${formatHours(h)}h` : '—'}
@@ -445,18 +437,13 @@ export default function TimesheetTab() {
                             {unrecordedNote(row.unrecordedDays) && (
                               <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text3)', marginTop: '4px' }}>{unrecordedNote(row.unrecordedDays)}</div>
                             )}
-                            {((canViewMoney && row.rate !== null) || hasOvertime(row) || row.overtimeDays > 0) && (
+                            {((canViewMoney && row.rate !== null) || row.overtimeDays > 0) && (
                               <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text3)', marginTop: '4px' }}>
                                 {canViewMoney && row.rate !== null && (
                                   <span>
                                     Rate: {formatMoney(rupees(row.rate))}/day
                                     {row.overtimeDays > 0 && ` · Overtime: +${row.overtimeDays} day${row.overtimeDays === 1 ? '' : 's'} (${formatMoney(rupees(Math.round(row.overtimeDays * row.rate)))})`}
                                     {` · Total pay: ${formatMoney(rupees(row.pay ?? 0))}`}
-                                  </span>
-                                )}
-                                {hasOvertime(row) && (
-                                  <span style={{ marginLeft: canViewMoney && row.rate !== null ? '8px' : 0 }}>
-                                    <Badge tone="warning" label="Overtime hours logged (>8h)" />
                                   </span>
                                 )}
                               </div>

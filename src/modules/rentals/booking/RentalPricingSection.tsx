@@ -5,6 +5,7 @@ import { Field, Section, inputStyle } from './BookingFormWidgets'
 import { DiscountChips } from './DiscountChips'
 import { VatToggle } from './VatToggle'
 import { formatMoney, toRupees } from '../../../lib/money'
+import { sanitizeMoneyInput } from '../../../lib/formForgiveness'
 import { lookupCouponByCode } from '../../../lib/queries/couponLookup'
 import {
   type PricingPipelineResult,
@@ -491,10 +492,14 @@ export function RentalPricingSection({
             <div id="new-rental-deposit-fields" className="new-rental-pricing-deposit-fields">
               <Field label="Override Amount (Rs) *">
                 <Input
-                  type="number"
-                  min={0}
+                  type="text"
+                  inputMode="numeric"
                   value={manualDepositAmount}
                   onChange={(e) => setManualDepositAmount(e.target.value)}
+                  onBlur={() => {
+                    const cleaned = sanitizeMoneyInput(manualDepositAmount)
+                    if (cleaned !== manualDepositAmount) setManualDepositAmount(cleaned)
+                  }}
                   placeholder="0"
                   style={inputStyle}
                 />

@@ -4,7 +4,7 @@ import {
   type PricingPipelineResult,
   type PromoCodeDefinition,
 } from '../../../lib/pricingPipeline'
-import { rupees, type Paisa } from '../../../lib/money'
+import { parseMoney, rupees, type Paisa } from '../../../lib/money'
 import { rentalDaysBetween } from '../../../lib/rentalDays'
 import {
   productDepositPaisa,
@@ -184,6 +184,8 @@ export function useNewRentalPricing({
 
   const manualDepositPaisa = useMemo<Paisa | null>(() => {
     if (!manualDepositOverride) return null
+    const parsed = parseMoney(manualDepositAmount)
+    if (parsed !== null && parsed >= 0) return parsed
     const num = Number(manualDepositAmount)
     return Number.isFinite(num) && num >= 0 ? (rupees(num) as Paisa) : null
   }, [manualDepositOverride, manualDepositAmount])
