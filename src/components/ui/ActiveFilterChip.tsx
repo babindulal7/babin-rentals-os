@@ -31,7 +31,7 @@ export function ActiveFilterChip({
         display: 'inline-flex',
         alignItems: 'center',
         gap: '6px',
-        height: '32px',
+        minHeight: '44px',
         padding: '0 8px 0 10px',
         borderRadius: '16px',
         background: 'var(--bg-subtle, #F1F5F9)',
@@ -85,8 +85,9 @@ export function ActiveFilterChip({
         style={{
           display: 'grid',
           placeItems: 'center',
-          width: '20px',
-          height: '20px',
+          width: '44px',
+          height: '44px',
+          flexShrink: 0,
           borderRadius: '50%',
           border: 'none',
           background: 'transparent',
@@ -110,8 +111,8 @@ export function ActiveFilterChip({
         }}
       >
         <svg
-          width="12"
-          height="12"
+          width="16"
+          height="16"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"

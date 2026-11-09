@@ -1381,6 +1381,7 @@ export function AddItemPanel({
       <OverbookingOverrideModal
         isOpen={overrideUnit !== null}
         unit={overrideUnit}
+        allowOverbooking={allowOverbooking}
         onClose={() => setOverrideUnit(null)}
         onOverbook={(unit) => addEquipment(unit)}
         onSubRent={(unit) => addSubRentEquipment(unit)}
@@ -1653,11 +1654,13 @@ function BundleRow({
       id={id}
       role="option"
       aria-selected={active}
+      tabIndex={-1}
       aria-label={`${result.name}. Bundle, ${result.category}, ${facts.totalItems} items. ${availability.label} — ${availability.detail}. ${
         showPrices ? `${formatMoney(result.ratePaisa)} per day. ` : ''
       }Press Enter to add its components, or press Right Arrow to preview them.`}
       onMouseMove={onHover}
       onClick={onAdd}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAdd() } }}
       style={{
         display: 'grid',
         gap: 'var(--sp-xs)',
@@ -1832,8 +1835,21 @@ function EquipmentGroupRow({
    * clicking does nothing at all. When the valve is on, the click opens the
    * override dialog on the first unit not already booked instead.
    */
+  const canFallback = allowOverbooking || Boolean(onSubRent)
   const overrideCandidate =
-    !group.autoPick && (allowOverbooking || true) ? (group.units.find((u) => !existing.has(u.id)) ?? null) : null
+    !group.autoPick && canFallback ? (group.units.find((u) => !existing.has(u.id)) ?? null) : null
+
+  // What the row does when chosen — one definition for the click and the keyboard.
+  const activate: (() => void) | undefined = isSubRentalMode
+    ? () => {
+        const target = group.autoPick || group.units[0]
+        if (target && onSubRent) onSubRent(target)
+      }
+    : group.autoPick
+      ? onAutoPick
+      : overrideCandidate
+        ? () => onRequestOverride(overrideCandidate)
+        : undefined
 
   return (
     <li
@@ -1846,7 +1862,11 @@ function EquipmentGroupRow({
           : group.autoPick
             ? 'Press Enter to add the least-used free unit.'
             : overrideCandidate
-              ? 'Nothing free for these dates. Opens the sub-rent and overbooking options.'
+              ? allowOverbooking && onSubRent
+                ? 'Nothing free for these dates. Opens the sub-rent and overbooking options.'
+                : allowOverbooking
+                  ? 'Nothing free for these dates. Opens the overbooking options.'
+                  : 'Nothing free for these dates. Opens the sub-rent options.'
               : 'Nothing free for these dates.'
       }`}
       onMouseMove={onHover}
@@ -1862,18 +1882,15 @@ function EquipmentGroupRow({
          chips below and the bundle row's [View] — already calls
          `e.stopPropagation()`, so picking a specific unit still picks that
          unit and never also auto-picks another. */
-      onClick={
-        isSubRentalMode
-          ? () => {
-              const target = group.autoPick || group.units[0]
-              if (target && onSubRent) onSubRent(target)
-            }
-          : group.autoPick
-            ? onAutoPick
-            : overrideCandidate
-              ? () => onRequestOverride(overrideCandidate)
-              : undefined
-      }
+      onClick={activate}
+      onKeyDown={(e) => {
+        // Enter/Space on the row itself chooses it; keys from the unit chips inside are theirs.
+        if (e.target !== e.currentTarget || !activate) return
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          activate()
+        }
+      }}
       style={{
         display: 'grid',
         gap: 6,
@@ -2014,6 +2031,11 @@ function EquipmentGroupRow({
 
       {!bulk && (
         <div
+          role="region"
+          tabIndex={-1}
+          // Containment only: clicks on the unit chips must not also add the whole row.
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation() } }}
           style={{
             display: 'flex',
             flexDirection: 'column',
@@ -2024,7 +2046,6 @@ function EquipmentGroupRow({
             border: '1px solid var(--border)',
             borderRadius: 'var(--r-btn)',
           }}
-          onClick={(e) => e.stopPropagation()}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text2)' }}>
@@ -2046,7 +2067,8 @@ function EquipmentGroupRow({
                 u.status !== 'Maintenance'
               const onBooking = existing.has(u.id)
               const why = `${u.status ?? u.availability.detail}${u.committedTo !== '—' ? ` · ${u.committedTo}` : ''}`
-              const opensOverride = !free && !onBooking
+              const canFallbackUnit = allowOverbooking || Boolean(onSubRent)
+              const opensOverride = !free && !onBooking && canFallbackUnit
               const tappable = (free && !onBooking) || opensOverride || isSubRentalMode
               return (
                 <button
@@ -2061,7 +2083,13 @@ function EquipmentGroupRow({
                         ? `${u.serial} — already on this booking`
                         : free
                           ? `Add unit ${u.serial} (Free)`
-                          : `${u.serial} · ${why} (Click to sub-rent or override)`
+                          : opensOverride
+                            ? allowOverbooking && onSubRent
+                              ? `${u.serial} · ${why} (Click to sub-rent or override)`
+                              : allowOverbooking
+                                ? `${u.serial} · ${why} (Click to override)`
+                                : `${u.serial} · ${why} (Click to sub-rent)`
+                            : `${u.serial} · ${why}`
                   }
                   aria-label={
                     isSubRentalMode
@@ -2071,7 +2099,11 @@ function EquipmentGroupRow({
                         : free
                           ? `Add unit with serial ${u.serial}`
                           : opensOverride
-                            ? `${u.serial} — booked. ${why}. Opens sub-rent and overbooking options.`
+                            ? allowOverbooking && onSubRent
+                              ? `${u.serial} — booked. ${why}. Opens sub-rent and overbooking options.`
+                              : allowOverbooking
+                                ? `${u.serial} — booked. ${why}. Opens overbooking options.`
+                                : `${u.serial} — booked. ${why}. Opens sub-rent options.`
                             : `${u.serial} — booked, not tappable. ${why}`
                   }
                   onClick={(e) => {
@@ -2152,11 +2184,19 @@ function CrewRow({
       id={id}
       role="option"
       aria-selected={active}
+      tabIndex={-1}
       aria-label={`${result.name}. Crew member, ${result.role}. ${result.phone}. ${availability.label} — ${availability.detail}. ${
         showPrices ? `${formatMoney(result.dayRatePaisa)} per day. ` : ''
       }${assigned ? 'Already on booking.' : 'Press Enter to assign to booking.'}`}
       onMouseMove={onHover}
       onClick={assigned ? undefined : onAdd}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget || assigned) return
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onAdd()
+        }
+      }}
       style={{
         display: 'grid',
         gap: 'var(--sp-xs)',
@@ -2276,6 +2316,7 @@ function TransportRow({
       id={id}
       role="option"
       aria-selected={active}
+      tabIndex={-1}
       aria-label={`${result.name}. Transport mode: ${result.type}. ${
         showPrices
           ? result.ratePaisa === null
@@ -2285,6 +2326,13 @@ function TransportRow({
       }${selected ? 'Currently selected.' : 'Press Enter to select transport mode.'}`}
       onMouseMove={onHover}
       onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onSelect()
+        }
+      }}
       style={{
         display: 'grid',
         gap: 'var(--sp-xs)',

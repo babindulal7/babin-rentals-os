@@ -174,6 +174,17 @@ describe('focused pickup and return dashboard', () => {
     expect(panels.map((panel) => panel.className)).toEqual(initialPanelStyles)
   })
 
+  it('puts pickup and return work ahead of secondary role shortcuts without hiding their one-tap actions', async () => {
+    await mount()
+    const panels = container.querySelector('.rental-dashboard__panels')
+    const tasks = container.querySelector<HTMLDetailsElement>('details.dashboard-other-tasks')
+    expect(panels).not.toBeNull()
+    expect(tasks).not.toBeNull()
+    expect(Boolean(panels!.compareDocumentPosition(tasks!) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true)
+    expect(tasks?.open).toBe(true)
+    expect(tasks?.querySelector('summary')?.textContent).toContain('Other tasks and shortcuts')
+  })
+
   it('renders only the two operational panels', async () => {
     await mount()
     expect(container.textContent).toContain('Pickups')

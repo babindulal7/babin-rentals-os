@@ -1,11 +1,32 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback, ReactNode } from 'react'
-import { supabase, IS_MOCK } from './supabase'
+import { supabase, IS_MOCK, newClientUuid } from './supabase'
 import { getSetting } from './settingsStore'
 import { hydrateSharedSettings } from './settingsSync'
+import { hydrateUserLanguage } from './languagePreferences'
+import { useSharedGlossary } from './useSharedGlossary'
 import { recordLogin, recordLogout } from './authAudit'
 import { captureError } from './monitoring'
 import { purgeDeviceReadCaches } from './devicePurge'
 import { loadFailureReason } from './queries/useLoad'
+import {
+  type RosterEntry,
+  type LimboState,
+  getRoster,
+  storeSession,
+  getAndDecryptSession,
+  removeSession,
+  removeRosterEntry,
+  clearAllSessions,
+  clearRoster,
+  touchRosterEntry,
+  updateRosterLockout,
+  updateRosterPinStatus,
+  createRosterEntryFromUser,
+  onTokenRefreshed,
+  abortLimbo,
+} from './deviceSession'
+
+export type { RosterEntry, LimboState }
 
 /**
  * The session role IS the system role. They were separate unions until 8 Aug 2026,
@@ -70,6 +91,13 @@ export interface PinStatus {
   unavailable?: string | undefined
 }
 
+/** Result of a user-switch attempt (T1-15). */
+export interface SwitchOutcome {
+  success: boolean
+  error?: string
+  userId?: string
+}
+
 interface AuthContextType {
   user: AuthUser | null
   /**
@@ -129,6 +157,18 @@ interface AuthContextType {
   staffPinStatus: () => Promise<PinStatus>
   /** Remove the current session's own PIN. */
   revokeOwnStaffPin: () => Promise<{ error: string | null }>
+  /** Switch to another user on a shared device (T1-15). */
+  switchUser: (targetUserId: string, pin: string) => Promise<SwitchOutcome>
+  /** Current roster of users who have signed in on this device (T1-15). */
+  roster: RosterEntry[]
+  /** Current LIMBO state during a user switch (T1-15). */
+  limboState: LimboState
+  /** Remove current user (or specified user) from this device's roster and session store. */
+  removeMeFromDevice: (targetUserId?: string) => Promise<void>
+  /** Clear all roster entries and encrypted sessions from this device (Owner/Admin). */
+  forgetThisDevice: () => Promise<void>
+  /** Refresh the roster list from IndexedDB. */
+  refreshRoster: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -147,12 +187,27 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
+  useSharedGlossary(user?.id ?? null, user?.role ?? 'Client')
   /* Latest signed-in id for `logout`, which has no dependency on render state (G6 Logout audit row). */
   const userIdRef = useRef<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [isLocked, setLocked] = useState(false)
   const [isPasswordRecovery, setPasswordRecovery] = useState(false)
   const [hasPin, setHasPin] = useState(false)
+
+  /* ── T1-15: Roster & LIMBO (device-session switching) ─────────────────────── */
+  const [roster, setRoster] = useState<RosterEntry[]>([])
+  const [limboState, setLimboState] = useState<LimboState>('idle')
+  const limboUserIdRef = useRef<string | null>(null)
+
+  const refreshRoster = useCallback(async () => {
+    try {
+      const list = await getRoster()
+      setRoster(list)
+    } catch {
+      // IndexedDB failure / fallback
+    }
+  }, [])
 
   /**
    * Resolve the staff row for a signed-in identity. The role must come from
@@ -249,14 +304,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role: data.primary_role as Role,
       isSharedDevice: false,
     })
-  }, [])
+    void createRosterEntryFromUser({
+      id: data.id,
+      name: data.full_name,
+      email: fallbackEmail,
+    }).then(() => void refreshRoster())
+  }, [refreshRoster])
 
   useEffect(() => {
     let cancelled = false
 
+    void refreshRoster()
+
     supabase.auth.getSession().then(({ data }) => {
       if (cancelled) return
       const session = data.session
+      hydrateUserLanguage(session?.user.id ?? null, session?.user.user_metadata)
       if (!session) {
         setUser(null)
         setLoading(false)
@@ -269,6 +332,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled) return
+      hydrateUserLanguage(session?.user.id ?? null, session?.user.user_metadata)
 
       /*
        * A recovery link is the ONLY way `PASSWORD_RECOVERY` fires. Supabase
@@ -282,7 +346,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
        * someone from the screen they are legitimately using.
        */
       if (event === 'PASSWORD_RECOVERY') setPasswordRecovery(true)
-      if (event === 'SIGNED_IN' && session) recordLogin(session.user.id, session.user.last_sign_in_at)
+      if (event === 'SIGNED_IN' && session) {
+        recordLogin(session.user.id, session.user.last_sign_in_at)
+        // T1-15: Store session (encrypted refresh token) and create roster entry
+        if (session.refresh_token) {
+          void storeSession(session.user.id, session.refresh_token)
+          void createRosterEntryFromUser(session.user).then(() => {
+            void refreshRoster()
+          })
+        }
+      }
+
+      if (event === 'TOKEN_REFRESHED' && session?.refresh_token) {
+        // T1-15: Re-encrypt and store the new refresh token on rotation
+        void onTokenRefreshed(session.user.id, session.refresh_token)
+      }
 
       if (!session) {
         setUser(null)
@@ -298,7 +376,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       cancelled = true
       sub.subscription.unsubscribe()
     }
-  }, [loadProfile])
+  }, [loadProfile, refreshRoster])
 
   /**
    * Supabase Auth, and nothing else.
@@ -439,12 +517,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // The database raises with the operator-facing sentence already written
       // ("That PIN is six identical digits. Choose another."), so it is passed
       // through rather than restated — one wording, one place to change it.
-      if (!error) setHasPin(true)
+      if (!error) {
+        setHasPin(true)
+        if (userIdRef.current) void updateRosterPinStatus(userIdRef.current, true).then(() => void refreshRoster())
+      }
       return { error: error ? error.message : null }
     } catch (cause) {
       return { error: cause instanceof Error ? cause.message : 'The PIN could not be set.' }
     }
-  }, [])
+  }, [refreshRoster])
 
   const verifyStaffPin = useCallback(async (pin: string): Promise<PinVerdict> => {
     if (IS_MOCK) {
@@ -538,12 +619,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.rpc('revoke_own_staff_pin')
       // Keeps `hasPin` — and therefore the idle branch between lock and
       // sign-out — correct without waiting for the next status read.
-      if (!error) setHasPin(false)
+      if (!error) {
+        setHasPin(false)
+        if (userIdRef.current) void updateRosterPinStatus(userIdRef.current, false).then(() => void refreshRoster())
+      }
       return { error: error ? error.message : null }
     } catch (cause) {
       return { error: cause instanceof Error ? cause.message : 'The PIN could not be removed.' }
     }
-  }, [])
+  }, [refreshRoster])
 
   /**
    * Kept synchronous-looking because existing call sites (`Header`,
@@ -553,6 +637,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const logout = useCallback(() => {
     const leavingId = userIdRef.current
+    hydrateUserLanguage(null)
     setUser(null)
     setLocked(false)
     setPasswordRecovery(false)
@@ -573,6 +658,108 @@ export function AuthProvider({ children }: { children: ReactNode }) {
      */
     void purgeDeviceReadCaches()
   }, [])
+
+  /**
+   * Switch to another user on a shared device.
+   * Restores their encrypted refresh token, verifies their PIN via verify_staff_pin,
+   * and swaps the active session. Fails closed on any error.
+   */
+  const switchUser = useCallback(
+    async (targetUserId: string, pin: string): Promise<SwitchOutcome> => {
+      if (limboState !== 'idle') return { success: false, error: 'Switch already in progress' }
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        return { success: false, error: 'Offline. User switching requires an active server connection to verify PIN.' }
+      }
+
+      setLimboState('restoring')
+      limboUserIdRef.current = targetUserId
+
+      // 1. Restore target user's encrypted refresh token
+      let refreshToken: string | null = null
+      try {
+        refreshToken = await getAndDecryptSession(targetUserId)
+        if (!refreshToken) throw new Error('No stored session for this user')
+      } catch {
+        await abortLimbo(supabase)
+        setLimboState('aborted')
+        setTimeout(() => setLimboState('idle'), 100)
+        return { success: false, error: 'Session expired or not found. Please sign in with email and password.' }
+      }
+
+      // 2. Restore session in limbo (curtain stays up, no business reads)
+      setLimboState('verifying')
+      const { data: sessionData, error: authError } = await supabase.auth.setSession({
+        access_token: '',
+        refresh_token: refreshToken,
+      })
+      if (authError || !sessionData?.session) {
+        await abortLimbo(supabase)
+        setLimboState('aborted')
+        setTimeout(() => setLimboState('idle'), 100)
+        return { success: false, error: authError?.message ?? 'Failed to restore session' }
+      }
+
+      // 3. Verify PIN via server RPC (0066 verify_staff_pin against target user's identity)
+      const verdict = await verifyStaffPin(pin)
+      if (!verdict.ok) {
+        if (verdict.reason === 'locked' && verdict.lockedUntil) {
+          await updateRosterLockout(targetUserId, verdict.lockedUntil)
+        }
+        await abortLimbo(supabase)
+        await refreshRoster()
+        const errMsg =
+          verdict.message ||
+          (verdict.reason === 'locked'
+            ? 'Account locked due to too many incorrect attempts'
+            : 'Incorrect PIN')
+        return { success: false, error: errMsg }
+      }
+
+      // 4. Success: target user is verified. Clear any lockout, touch roster, audit
+      await updateRosterLockout(targetUserId, null)
+      await touchRosterEntry(targetUserId)
+
+      try {
+        await supabase.from('audit_events').insert({
+          action: 'Login',
+          entity_type: 'auth',
+          entity_id: targetUserId,
+          new_values: { via: 'device-switch' },
+          client_uuid: newClientUuid(),
+        })
+      } catch {
+        // audit best effort
+      }
+
+      limboUserIdRef.current = null
+      setLimboState('unlocked')
+      setTimeout(() => setLimboState('idle'), 100)
+
+      await loadProfile(sessionData.session.user.id, sessionData.session.user.email)
+      await refreshRoster()
+      setLocked(false)
+
+      return { success: true, userId: targetUserId }
+    },
+    [limboState, verifyStaffPin, loadProfile, refreshRoster],
+  )
+
+  const removeMeFromDevice = useCallback(
+    async (targetUserId?: string) => {
+      const idToRemove = targetUserId ?? user?.id
+      if (!idToRemove) return
+      await removeSession(idToRemove)
+      await removeRosterEntry(idToRemove)
+      await refreshRoster()
+    },
+    [user?.id, refreshRoster],
+  )
+
+  const forgetThisDevice = useCallback(async () => {
+    await clearAllSessions()
+    await clearRoster()
+    await refreshRoster()
+  }, [refreshRoster])
 
   /*
    * ── the lock trigger ──────────────────────────────────────────────────────
@@ -713,6 +900,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         verifyStaffPin,
         staffPinStatus,
         revokeOwnStaffPin,
+        switchUser,
+        roster,
+        limboState,
+        removeMeFromDevice,
+        forgetThisDevice,
+        refreshRoster,
       }}
     >
       {children}
@@ -736,6 +929,12 @@ const FALLBACK_AUTH_CONTEXT: AuthContextType = {
   verifyStaffPin: async () => ({ ok: false, reason: 'unavailable', message: 'Auth not initialized' }),
   staffPinStatus: async () => ({ hasPin: false }),
   revokeOwnStaffPin: async () => ({ error: 'Auth not initialized' }),
+  switchUser: async () => ({ success: false, error: 'Auth not initialized' }),
+  roster: [],
+  limboState: 'idle',
+  removeMeFromDevice: async () => {},
+  forgetThisDevice: async () => {},
+  refreshRoster: async () => {},
 }
 
 export function useAuth() {

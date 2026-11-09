@@ -47,6 +47,8 @@ export interface CrewAssignment {
   startDateAd: string
   endDateAd: string
   days: number
+  overtimeDays?: number | undefined
+  overtimeApprovedBy?: string | null | undefined
   dayRatePaisa: Paisa
   totalCostPaisa: Paisa
   status: AssignmentStatus
@@ -142,6 +144,7 @@ export const CREW_DATA: CrewAssignment[] = [
     startDateAd: '25 Jul 2026',
     endDateAd: '29 Jul 2026',
     days: 5,
+    overtimeDays: 0,
     dayRatePaisa: rupees(25000),
     totalCostPaisa: rupees(125000),
     status: 'Confirmed',
@@ -164,6 +167,7 @@ export const CREW_DATA: CrewAssignment[] = [
     startDateAd: '25 Jul 2026',
     endDateAd: '29 Jul 2026',
     days: 5,
+    overtimeDays: 0,
     dayRatePaisa: rupees(15000),
     totalCostPaisa: rupees(75000),
     status: 'Confirmed',
@@ -185,6 +189,7 @@ export const CREW_DATA: CrewAssignment[] = [
     startDateAd: '27 Jul 2026',
     endDateAd: '30 Jul 2026',
     days: 4,
+    overtimeDays: 0,
     dayRatePaisa: rupees(12000),
     totalCostPaisa: rupees(48000),
     status: 'Tentative',
@@ -206,6 +211,7 @@ export const CREW_DATA: CrewAssignment[] = [
     startDateAd: '09 Jul 2026',
     endDateAd: '10 Jul 2026',
     days: 2,
+    overtimeDays: 0,
     dayRatePaisa: rupees(18000),
     totalCostPaisa: rupees(36000),
     status: 'Completed',
@@ -228,6 +234,7 @@ export const CREW_DATA: CrewAssignment[] = [
     startDateAd: '23 Jul 2026',
     endDateAd: '24 Jul 2026',
     days: 2,
+    overtimeDays: 0,
     dayRatePaisa: rupees(13000),
     totalCostPaisa: rupees(26000),
     status: 'Completed',
@@ -249,6 +256,7 @@ export const CREW_DATA: CrewAssignment[] = [
     startDateAd: '16 Jul 2026',
     endDateAd: '17 Jul 2026',
     days: 2,
+    overtimeDays: 0,
     dayRatePaisa: rupees(14000),
     totalCostPaisa: rupees(28000),
     status: 'Confirmed',
@@ -270,6 +278,7 @@ export const CREW_DATA: CrewAssignment[] = [
     startDateAd: '31 Jul 2026',
     endDateAd: '31 Jul 2026',
     days: 1,
+    overtimeDays: 0,
     dayRatePaisa: rupees(18000),
     totalCostPaisa: rupees(18000),
     status: 'Draft',
@@ -291,6 +300,7 @@ export const CREW_DATA: CrewAssignment[] = [
     startDateAd: '27 Jul 2026',
     endDateAd: '30 Jul 2026',
     days: 4,
+    overtimeDays: 0,
     dayRatePaisa: rupees(12000),
     totalCostPaisa: rupees(48000),
     status: 'Tentative',
@@ -313,6 +323,7 @@ export const CREW_DATA: CrewAssignment[] = [
     startDateAd: '26 Jul 2026',
     endDateAd: '28 Jul 2026',
     days: 3,
+    overtimeDays: 0,
     dayRatePaisa: rupees(25000),
     totalCostPaisa: rupees(75000),
     status: 'Confirmed',
@@ -335,6 +346,7 @@ export const CREW_DATA: CrewAssignment[] = [
     startDateAd: '28 Jul 2026',
     endDateAd: '29 Jul 2026',
     days: 2,
+    overtimeDays: 0,
     dayRatePaisa: rupees(13000),
     totalCostPaisa: rupees(26000),
     status: 'Confirmed',
@@ -356,6 +368,7 @@ export const CREW_DATA: CrewAssignment[] = [
     startDateAd: '30 Jul 2026',
     endDateAd: '30 Jul 2026',
     days: 1,
+    overtimeDays: 0,
     dayRatePaisa: rupees(13000),
     totalCostPaisa: rupees(13000),
     status: 'Confirmed',
@@ -628,7 +641,7 @@ export function prospectiveConflicts(
 /* ── §5.4 · crew-days and fill rate — replaces utilization entirely ─────── */
 
 export function crewDaysBooked(assignments: CrewAssignment[] = CREW_DATA): number {
-  return assignments.filter((a) => !a.cancelled && (a.status === 'Confirmed' || a.status === 'Completed')).reduce((sum, a) => sum + a.days, 0)
+  return assignments.filter((a) => !a.cancelled && (a.status === 'Confirmed' || a.status === 'Completed')).reduce((sum, a) => sum + a.days + (a.overtimeDays ?? 0), 0)
 }
 
 /** "Filled" = assignments actually staffed (Confirmed/Completed, not cancelled) — counted, never guessed. */

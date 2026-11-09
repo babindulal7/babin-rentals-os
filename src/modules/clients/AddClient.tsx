@@ -20,6 +20,7 @@ import { useViewport } from '../../lib/device'
    unconditional, this field is fixed at +977, and gating it meant an address
    outside Nepal reopened the identical hole. */
 import { PHONE_LOCAL_RE, PHONE_REJECTION, canonicalPhone, phoneLocalDigits } from '../../lib/phone'
+import { sanitizeEmail, sanitizePan, sanitizePhone } from '../../lib/formForgiveness'
 import { useAuth } from '../../lib/auth'
 import { useNetwork } from '../../lib/network'
 import { newClientUuid } from '../../lib/supabase'
@@ -342,7 +343,7 @@ export default function AddClient({ embedded = false, onDone }: AddClientProps =
 
   const clearError = (key: string) => setErrors((prev) => (prev[key] ? { ...prev, [key]: null } : prev))
 
-  const phoneLocal = phoneLocalDigits(phone)
+  const phoneLocal = sanitizePhone(phone)
   const phoneIsValid = PHONE_LOCAL_RE.test(phoneLocal)
   /** The exact string that will be saved — echoed under the field, never guessed at. */
   const phoneWillSave = phoneIsValid ? canonicalPhone(phone) : ''
@@ -458,12 +459,14 @@ export default function AddClient({ embedded = false, onDone }: AddClientProps =
   function validate(): boolean {
     const e: Record<string, string | null> = {}
     if (!name.trim()) e.name = clientType === 'Organisation' ? 'Organisation Name is required.' : 'Full Name is required.'
-    if (!phone.trim()) {
+    const cleanedPhone = sanitizePhone(phone)
+    if (!cleanedPhone.trim()) {
       e.phone = 'Phone Number is required — duplicate detection and the merge tool match on it.'
-    } else if (!PHONE_LOCAL_RE.test(phoneLocal)) {
+    } else if (!PHONE_LOCAL_RE.test(cleanedPhone)) {
       e.phone = PHONE_REJECTION
     }
-    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    const cleanedEmail = sanitizeEmail(email)
+    if (cleanedEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanedEmail)) {
       e.email = 'Enter a valid email address.'
     }
     /*
@@ -485,7 +488,8 @@ export default function AddClient({ embedded = false, onDone }: AddClientProps =
      * an Organisation, and `clients_org_subtype_pairing` has nothing to
      * catch. A branch for it would be a validation that can never fire.
      */
-    if (pan.trim() && !PAN_RE.test(pan.trim())) {
+    const cleanedPan = sanitizePan(pan)
+    if (cleanedPan && !PAN_RE.test(cleanedPan)) {
       e.pan = PAN_REJECTION
     }
     setErrors(e)
@@ -545,8 +549,8 @@ export default function AddClient({ embedded = false, onDone }: AddClientProps =
           name: name.trim(),
           // Saved with the country code the CHECK requires, and only ever the
           // digits the operator actually typed — `validate()` has already run.
-          phone: canonicalPhone(phone),
-          email: email.trim(),
+          phone: canonicalPhone(sanitizePhone(phone)),
+          email: sanitizeEmail(email),
           /* `ClientType` carries a third member, 'Unassigned', which the two
              cards on this screen cannot produce and which `clients.type_parent`
              has no enum member for. Sent only when it is one of the two real
@@ -559,7 +563,7 @@ export default function AddClient({ embedded = false, onDone }: AddClientProps =
           district: district.trim(),
           postalCode: postalCode.trim(),
           country: country.trim(),
-          panVat: pan.trim(),
+          panVat: sanitizePan(pan),
           notes: notes.trim(),
           clientUuid: saveKey.current.key,
         },
@@ -916,6 +920,10 @@ export default function AddClient({ embedded = false, onDone }: AddClientProps =
                       setPhone(e.target.value)
                       clearError('phone')
                     }}
+                    onBlur={() => {
+                      const cleaned = sanitizePhone(phone)
+                      if (cleaned && cleaned !== phone) setPhone(cleaned)
+                    }}
                     placeholder="9801234567"
                     className="figure"
                     style={{ ...inputStyle(!!errors.phone), flex: 1 }}
@@ -929,6 +937,10 @@ export default function AddClient({ embedded = false, onDone }: AddClientProps =
                   onChange={(e) => {
                     setEmail(e.target.value)
                     clearError('email')
+                  }}
+                  onBlur={() => {
+                    const cleaned = sanitizeEmail(email)
+                    if (cleaned && cleaned !== email) setEmail(cleaned)
                   }}
                   placeholder="e.g. info@company.com"
                   style={inputStyle(!!errors.email)}
@@ -1027,6 +1039,10 @@ export default function AddClient({ embedded = false, onDone }: AddClientProps =
                   onChange={(e) => {
                     setPan(e.target.value)
                     clearError('pan')
+                  }}
+                  onBlur={() => {
+                    const cleaned = sanitizePan(pan)
+                    if (cleaned && cleaned !== pan) setPan(cleaned)
                   }}
                   placeholder="e.g. 600123456"
                   className="figure"
@@ -1240,6 +1256,12 @@ export default function AddClient({ embedded = false, onDone }: AddClientProps =
                 addFiles(e.dataTransfer.files)
               }}
               onClick={() => fileInputRef.current?.click()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  fileInputRef.current?.click()
+                }
+              }}
               role="button"
               tabIndex={0}
               style={{

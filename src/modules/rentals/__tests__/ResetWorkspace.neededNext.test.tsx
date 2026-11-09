@@ -19,6 +19,8 @@ import { loadMockClient } from '../../../lib/supabase'
 import { fetchStaffDirectory } from '../../../lib/queries/staff'
 import { writeSettings, resetSettings } from '../../../lib/settingsStore'
 
+const upcomingState = vi.hoisted(() => ({ fail: false }))
+
 vi.mock('../../../lib/queries/staff', () => ({ fetchStaffDirectory: vi.fn() }))
 beforeEach(() => {
   vi.mocked(fetchStaffDirectory).mockResolvedValue({ kind: 'ok', rows: [] })
@@ -109,10 +111,13 @@ vi.mock('../../../lib/queries/reset', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../lib/queries/reset')>()
   return {
     ...actual,
-    getNextReservationsForUnits: async () => ({
+    getNextReservationsForUnits: async () => {
+      if (upcomingState.fail) throw new Error('Network connection lost')
+      return {
       'asset-alpha': { pickupAt: PICKUP_5H, bookingNo: 'BK-5H' },
       'asset-beta': { pickupAt: PICKUP_3H, bookingNo: 'BK-3H' },
-    }),
+      }
+    },
     // Anchor Date.now() in isNeededNext default parameter to BASE_TIME
     isNeededNext: (pickupAtIso: string, thresholdHours: number = 4, nowMs: number = BASE_TIME) =>
       actual.isNeededNext(pickupAtIso, thresholdHours, nowMs),
@@ -138,6 +143,7 @@ let container: HTMLDivElement
 let root: Root
 
 beforeEach(() => {
+  upcomingState.fail = false
   resetSettings()
   container = document.createElement('div')
   document.body.appendChild(container)
@@ -213,6 +219,32 @@ describe('Reset Workspace — Ruling D5 "Needed next"', () => {
 
     expect(secondRowText).toContain('Alpha Camera')
     expect(secondRowText).toContain('Needed next · pickup 16:45')
+  })
+
+  it('updates urgency badges when the setting changes while Reset stays open', async () => {
+    await mount()
+    let rows = container.querySelectorAll('.floor-table-row')
+    expect(rows[1]?.textContent).not.toContain('Needed next')
+
+    await act(async () => { writeSettings({ resetNeededNextHours: 6 }) })
+    await flush(6)
+    rows = container.querySelectorAll('.floor-table-row')
+    expect(rows[1]?.textContent).toContain('Needed next · pickup 16:45')
+
+    await act(async () => { writeSettings({ resetNeededNextHours: 2 }) })
+    await flush(6)
+    rows = container.querySelectorAll('.floor-table-row')
+    expect(rows[0]?.textContent).not.toContain('Needed next')
+    expect(rows[1]?.textContent).not.toContain('Needed next')
+  })
+
+  it('shows persistent unknown-priority warning rather than false emptiness on lookup failure', async () => {
+    upcomingState.fail = true
+    await mount()
+    expect(container.textContent).toContain('Upcoming bookings could not be checked')
+    expect(container.textContent).toContain('Network connection lost')
+    expect(container.textContent).toContain('Priority order is unknown')
+    upcomingState.fail = false
   })
 
   it('demotes the 3h unit when settings threshold is lowered to 2h', async () => {

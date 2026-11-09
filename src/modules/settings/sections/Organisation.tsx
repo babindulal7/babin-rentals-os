@@ -1,4 +1,3 @@
-import { LANGUAGE_LABEL, coverage } from '../../../lib/i18n'
 import { BRANCH } from '../../../lib/queries/settings'
 import type { Section } from './shared'
 
@@ -19,9 +18,6 @@ import type { Section } from './shared'
  * sit on them opened nothing. They keep their value and gain the reason; they
  * never gain an input.
  */
-
-/** Computed once — the Language row reports the real gap rather than a claim. */
-const NE_COVERAGE = coverage('ne')
 
 export const ORGANISATION_SECTIONS: Section[] = [
   {
@@ -82,16 +78,6 @@ export const ORGANISATION_SECTIONS: Section[] = [
         note: 'BS leads AD everywhere. Latin digits always.',
         value: 'BS + AD (Default)',
         readOnlyWhy: 'Foundation §4.2 — every date shows both calendars. There is no single-calendar mode to switch to.',
-      },
-      {
-        label: 'Language',
-        /* Ruled 12 Aug 2026 (PLAN.md §4.26). The catalogue reached 100%, Asar
-           and Hind are installed, and `canEnable('ne')` now returns true — so
-           this stopped being a read-only row with an excuse and became a real
-           setting. `lib/i18n.ts` still owns the gate; if coverage ever
-           regresses below 100% the option disappears again on its own. */
-        note: `English and ${LANGUAGE_LABEL.ne}. ${NE_COVERAGE.translated} shared labels have Nepali translations; numbers, IDs and NPR stay Latin in both.`,
-        settingKey: 'language',
       },
       {
         label: 'Timezone',

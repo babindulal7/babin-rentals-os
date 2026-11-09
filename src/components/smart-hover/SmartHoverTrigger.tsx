@@ -132,6 +132,7 @@ export function SmartHoverTrigger({
     ) : (
       <div
         ref={cardWrapRef}
+        role="presentation"
         onMouseEnter={handleCardEnter}
         onMouseLeave={handleCardLeave}
         style={{

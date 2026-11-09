@@ -53,7 +53,8 @@ export default function CouponsManager() {
   const [newStackable, setNewStackable] = useState(true)
   const [createError, setCreateError] = useState('')
 
-  const todayIso = useMemo(() => getBusinessToday().toISOString().slice(0, 10), [])
+  // Dynamically evaluate business today across Kathmandu midnight (UX-22)
+  const todayIso = getBusinessToday().toISOString().slice(0, 10)
 
   const refreshedCoupons = () => {
     setCoupons(listCoupons())
@@ -65,9 +66,15 @@ export default function CouponsManager() {
     showSuccessToast('Coupon Updated', `Status changed for voucher ${code}`)
   }
 
-  const handleCopy = (code: string) => {
-    navigator.clipboard.writeText(code)
-    showSuccessToast('Copied to Clipboard', `Voucher code ${code} is ready to paste`)
+  const handleCopy = async (code: string) => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(code)
+        showSuccessToast('Copied to Clipboard', `Voucher code ${code} is ready to paste`)
+      }
+    } catch {
+      // Do not fire false success toast on clipboard write failure (UX-23)
+    }
   }
 
   const handleTestValidate = () => {
@@ -107,7 +114,7 @@ export default function CouponsManager() {
       })
       refreshedCoupons()
       setIsModalOpen(false)
-      showSuccessToast('Coupon Created', `Promo voucher ${newCode.toUpperCase()} is now live.`)
+      showSuccessToast('Coupon Created (Simulator)', `Promo voucher ${newCode.toUpperCase()} saved to local simulator.`)
       // reset form
       setNewCode('')
       setNewValue('10')
@@ -190,6 +197,25 @@ export default function CouponsManager() {
           </Button>
         }
       />
+
+      {/* Truth-of-state disclosure (UX-03 / Owner Ruling 6 Nov 2026) */}
+      <div
+        role="status"
+        style={{
+          padding: '10px 14px',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 'var(--sp-sm)',
+          background: 'var(--surface2)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--r-card)',
+        }}
+      >
+        <Icon name="info" size={16} style={{ flexShrink: 0, marginTop: 2, color: 'var(--muted)' }} />
+        <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.45 }}>
+          <strong>Local Pricing Simulator:</strong> Codes created and tested here are stored in local browser storage for modeling checkout discounts. They are not yet synced to a server-side promotion registry across other staff devices.
+        </span>
+      </div>
 
       <KpiStrip items={kpiItems} />
 
@@ -504,10 +530,11 @@ export default function CouponsManager() {
             )}
 
             <div>
-              <label style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
+              <label htmlFor="coupon-code" style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
                 Voucher Code *
               </label>
               <input
+                id="coupon-code"
                 type="text"
                 required
                 value={newCode}
@@ -529,10 +556,11 @@ export default function CouponsManager() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-md)' }}>
               <div>
-                <label style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
+                <label htmlFor="coupon-discount-type" style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
                   Discount Type
                 </label>
                 <select
+                  id="coupon-discount-type"
                   value={newType}
                   onChange={e => setNewType(e.target.value as 'pct' | 'flat')}
                   style={{
@@ -550,10 +578,11 @@ export default function CouponsManager() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
+                <label htmlFor="coupon-value" style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
                   {newType === 'pct' ? 'Percentage (%)' : 'Amount (NPR)'} *
                 </label>
                 <input
+                  id="coupon-value"
                   type="number"
                   required
                   value={newValue}
@@ -573,10 +602,11 @@ export default function CouponsManager() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-md)' }}>
               <div>
-                <label style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
+                <label htmlFor="coupon-min-spend" style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
                   Min Booking Spend (NPR)
                 </label>
                 <input
+                  id="coupon-min-spend"
                   type="number"
                   value={newMinSpend}
                   onChange={e => setNewMinSpend(e.target.value)}
@@ -593,10 +623,11 @@ export default function CouponsManager() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
+                <label htmlFor="coupon-cap" style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
                   Maximum Discount Cap (NPR)
                 </label>
                 <input
+                  id="coupon-cap"
                   type="number"
                   value={newCapNpr}
                   onChange={e => setNewCapNpr(e.target.value)}
@@ -615,26 +646,27 @@ export default function CouponsManager() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-md)' }}>
               <div>
-                <label style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
+                <label htmlFor="coupon-valid-from" style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
                   Valid From
                 </label>
-                <DateField ariaLabel="Valid From" value={newFrom} onChange={setNewFrom} style={{ minHeight: 44 }} />
+                <DateField id="coupon-valid-from" ariaLabel="Valid From" value={newFrom} onChange={setNewFrom} style={{ minHeight: 44 }} />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
+                <label htmlFor="coupon-valid-until" style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
                   Valid Until
                 </label>
-                <DateField ariaLabel="Valid Until" value={newTo} onChange={setNewTo} style={{ minHeight: 44 }} />
+                <DateField id="coupon-valid-until" ariaLabel="Valid Until" value={newTo} onChange={setNewTo} style={{ minHeight: 44 }} />
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-md)' }}>
               <div>
-                <label style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
+                <label htmlFor="coupon-limit" style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
                   Total Redemption Quota
                 </label>
                 <input
+                  id="coupon-limit"
                   type="number"
                   value={newLimit}
                   onChange={e => setNewLimit(e.target.value)}
@@ -651,10 +683,11 @@ export default function CouponsManager() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
+                <label htmlFor="coupon-client-type" style={{ display: 'block', fontSize: 'var(--t-caption)', fontWeight: 600, marginBottom: 4 }}>
                   Target Client Group
                 </label>
                 <select
+                  id="coupon-client-type"
                   value={newClientType}
                   onChange={e => setNewClientType(e.target.value)}
                   style={{

@@ -270,6 +270,7 @@ export function CrewSearch({
                   id={`${listboxId}-opt-${i}`}
                   role="option"
                   aria-selected={active}
+                  tabIndex={-1}
                   aria-label={`${m.name}, ${m.role}.${
                     showRates ? ` ${formatMoney(m.dayRatePaisa)} per day.` : ''
                   }${note ? ` ${note}` : ''} Press Enter to add to this booking.`}
@@ -278,6 +279,7 @@ export function CrewSearch({
                     setActiveIndex(i)
                   }}
                   onClick={() => commit(m)}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); commit(m) } }}
                   style={{
                     display: 'grid',
                     gap: 2,

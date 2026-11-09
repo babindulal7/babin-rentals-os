@@ -54,10 +54,13 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
            the trigger's open-value comparison read undefined. A bare option's
            value is its text content (that's how a native select answers it),
            so the parse does exactly that. */
+        const label = Array.isArray(child.props.children)
+          ? child.props.children.map((c: unknown) => (typeof c === 'string' || typeof c === 'number' ? String(c) : '')).join('')
+          : child.props.children
         return {
-          value: child.props.value ?? String(child.props.children),
-          label: child.props.children,
-          disabled: child.props.disabled
+          value: child.props.value ?? (typeof label === 'string' ? label : String(label)),
+          label,
+          disabled: child.props.disabled,
         }
       }
       return null
@@ -418,10 +421,20 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
                     key={opt.value}
                     id={optionId(i)}
                     role="option"
+                    tabIndex={-1}
                     aria-selected={isSelected}
                     aria-disabled={opt.disabled || undefined}
+                    // Keep focus on the trigger when an option is pressed (select-only combobox).
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => {
                       if (!opt.disabled) handleSelect(opt.value)
+                    }}
+                    onKeyDown={(e) => {
+                      // Keys normally arrive on the trigger; this covers an option that holds focus.
+                      if ((e.key === 'Enter' || e.key === ' ') && !opt.disabled) {
+                        e.preventDefault()
+                        handleSelect(opt.value)
+                      }
                     }}
                     onMouseEnter={() => {
                       if (!opt.disabled) setHighlight(i)

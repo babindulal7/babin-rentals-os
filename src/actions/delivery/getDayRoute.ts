@@ -1,6 +1,5 @@
 import { createAction } from '../core';
 import { IS_MOCK, supabase } from '../../lib/supabase';
-import { EVENT_TYPES } from '../../events/eventBus';
 
 export interface DayRouteStop {
   id: string;

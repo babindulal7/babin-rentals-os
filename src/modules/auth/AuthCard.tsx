@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Card } from '../../components/ui'
 import Icon from '../../components/ui/Icon'
+import { useTranslation } from '../../lib/i18n'
 import './auth.css'
 
 /**
@@ -20,13 +21,15 @@ export function AuthCard({
   /** Optional block below a divider — secondary routes, unavailable flows. */
   footer?: ReactNode
 }) {
+  const { t } = useTranslation()
+
   return (
     <div className="auth-wrapper">
       <Card className="auth-card">
         <div className="auth-header">
           {/* Gold BR monogram tile matching the app identity */}
           <span aria-hidden className="auth-brand-mark title">
-            BR
+            {t('auth.brandMonogram', 'BR')}
           </span>
           <h1 className="auth-title">{title}</h1>
           <p className="auth-subtitle">{subtitle}</p>
@@ -40,7 +43,7 @@ export function AuthCard({
             {footer}
             <div className="auth-security-badge">
               <Icon name="lock" size={12} />
-              <span>Encrypted Session · Babin Rentals OS</span>
+              <span>{t('auth.encryptedBadge', 'Encrypted Session · Babin Rentals OS')}</span>
             </div>
           </div>
         )}

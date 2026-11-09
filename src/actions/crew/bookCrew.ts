@@ -12,8 +12,10 @@ export type BookCrewInput = {
   wrapTime?: string
   dailyRate?: number
   days?: number
+  overtimeDays?: number
   notes?: string
   clientUuid?: string
+  overtimeApprovedBy?: string
 }
 export type BookCrewResult = { success: boolean; count: number; assignmentIds: string[] }
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -21,10 +23,19 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 function validate(input: BookCrewInput) {
   if (!Array.isArray(input.crewIds) || !input.crewIds.length || input.crewIds.some((id) => typeof id !== 'string' || !id.trim())) throw new Error('At least one crew ID must be selected.')
   if (input.days !== undefined && (!Number.isInteger(input.days) || input.days < 1)) throw new Error('Days must be a positive integer greater than or equal to 1.')
+  if (input.overtimeDays !== undefined && (!Number.isFinite(input.overtimeDays) || input.overtimeDays < 0 || input.overtimeDays % 0.5 !== 0)) throw new Error('Overtime days must be a non-negative multiple of 0.5.')
   if (input.dailyRate !== undefined && (!Number.isFinite(input.dailyRate) || input.dailyRate < 0)) throw new Error('Daily rate must be a non-negative number.')
   if (!input.bookingId?.trim()) throw new Error('A target booking is required to assign crew.')
   if (new Set(input.crewIds.map((id) => id.trim())).size !== input.crewIds.length) throw new Error('Choose each crew member only once.')
   if (input.clientUuid !== undefined && !UUID.test(input.clientUuid)) throw new Error('A valid assignment request UUID is required.')
+  if (input.overtimeDays !== undefined) {
+    if (!Number.isFinite(input.overtimeDays) || input.overtimeDays < 0 || input.overtimeDays % 0.5 !== 0) {
+      throw new Error('Overtime days must be a non-negative number in half-day (0.5) increments.')
+    }
+  }
+  if (input.overtimeApprovedBy !== undefined && !UUID.test(input.overtimeApprovedBy)) {
+    throw new Error('A valid user UUID is required for overtime approval.')
+  }
 }
 
 async function assignmentKey(root: string, crewId: string, single: boolean) {
@@ -90,6 +101,19 @@ export const bookCrewConfig: ActionConfig<BookCrewInput, BookCrewResult> = {
       if (m?.crew_code) memberMap.set(m.crew_code, m)
     }
 
+    const overtimeDays = input.overtimeDays ?? 0
+    // Approval/entry provenance must never come from a caller-supplied UUID.
+    // This is an application-side guard only; authenticated DB write policies
+    // must independently enforce actor identity before this is release-ready.
+    if (overtimeDays > 0 && !UUID.test(ctx.userId)) {
+      throw new Error('An authenticated user UUID is required to record crew overtime.')
+    }
+    if (input.overtimeApprovedBy !== undefined && input.overtimeApprovedBy !== ctx.userId) {
+      throw new Error('Crew overtime approval must match the signed-in operator.')
+    }
+    const overtimeApprovedBy = overtimeDays > 0 ? ctx.userId : null
+    const billableDays = days + overtimeDays
+
     const prepared = []
     for (const raw of input.crewIds) {
       const crewId = raw.trim()
@@ -97,7 +121,7 @@ export const bookCrewConfig: ActionConfig<BookCrewInput, BookCrewResult> = {
       if (!member?.id || !member.is_active) throw new Error(`Crew member "${crewId}" is unavailable or inactive.`)
       const dailyRate = input.dailyRate ?? member.daily_rate
       if (dailyRate == null || !Number.isFinite(Number(dailyRate)) || Number(dailyRate) < 0) throw new Error('An available crew rate is required.')
-      const lineTotal = Math.round(Number(dailyRate) * 100) * days / 100
+      const lineTotal = Math.round(Number(dailyRate) * 100) * billableDays / 100
       if (!Number.isFinite(lineTotal)) throw new Error('Crew total is outside the supported range.')
       const clientUuid = await assignmentKey(rootKey, member.id, input.crewIds.length === 1)
       prepared.push({
@@ -109,6 +133,8 @@ export const bookCrewConfig: ActionConfig<BookCrewInput, BookCrewResult> = {
         wrap_time: wrapTime,
         daily_rate: Math.round(Number(dailyRate) * 100) / 100,
         days,
+        overtime_days: overtimeDays,
+        overtime_approved_by: overtimeApprovedBy,
         line_total: lineTotal,
         notes: input.notes?.trim() || null,
         created_by: ctx.userId,
@@ -129,14 +155,14 @@ export const bookCrewConfig: ActionConfig<BookCrewInput, BookCrewResult> = {
       const clientUuids = prepared.map((r) => r.client_uuid)
       const { data: existingRows, error: readError } = await supabase
         .from('crew_assignments_v')
-        .select('id, client_uuid, booking_id, crew_id, role_on_shoot, call_time, wrap_time, daily_rate, days, notes')
+        .select('id, client_uuid, booking_id, crew_id, role_on_shoot, call_time, wrap_time, daily_rate, days, overtime_days, overtime_approved_by, notes')
         .in('client_uuid', clientUuids)
 
       if (readError || !existingRows || existingRows.length !== prepared.length) {
         throw new Error('Could not confirm the saved assignment. Retry with the same details.')
       }
 
-      const existingMap = new Map((existingRows as Array<{ client_uuid: string; id: string; booking_id: string; crew_id: string; role_on_shoot: string; call_time: string | null; wrap_time: string | null; daily_rate: number | string | null; days: number; notes: string | null }>).map((e) => [e.client_uuid, e]))
+      const existingMap = new Map((existingRows as Array<{ client_uuid: string; id: string; booking_id: string; crew_id: string; role_on_shoot: string; call_time: string | null; wrap_time: string | null; daily_rate: number | string | null; days: number; overtime_days?: number | null; overtime_approved_by?: string | null; notes: string | null }>).map((e) => [e.client_uuid, e]))
       for (const row of prepared) {
         const existing = existingMap.get(row.client_uuid)
         if (!existing?.id || existing.booking_id !== row.booking_id || existing.crew_id !== row.crew_id) {
@@ -148,6 +174,8 @@ export const bookCrewConfig: ActionConfig<BookCrewInput, BookCrewResult> = {
           Date.parse(existing.wrap_time ?? '') !== Date.parse(row.wrap_time) ||
           Number(existing.daily_rate) !== row.daily_rate ||
           existing.days !== row.days ||
+          Number(existing.overtime_days ?? 0) !== row.overtime_days ||
+          (existing.overtime_approved_by ?? null) !== row.overtime_approved_by ||
           existing.notes !== row.notes
         ) {
           throw new Error('This request already saved different assignment details. Reload the booking before adding another assignment.')
@@ -162,7 +190,7 @@ export const bookCrewConfig: ActionConfig<BookCrewInput, BookCrewResult> = {
     }
     return { result: { success: true, count: assignmentIds.length, assignmentIds }, events: [{
       type: EVENT_TYPES.CREW_ASSIGNED,
-      payload: { bookingId: booking.id, bookingNo: booking.booking_no, crewIds: prepared.map((r) => r.crew_id), crewCount: prepared.length, role: input.role, days, timestamp: new Date().toISOString(), userId: ctx.userId },
+      payload: { bookingId: booking.id, bookingNo: booking.booking_no, crewIds: prepared.map((r) => r.crew_id), crewCount: prepared.length, role: input.role, days, overtimeDays, billableDays, timestamp: new Date().toISOString(), userId: ctx.userId },
     }] }
   },
 }

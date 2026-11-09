@@ -41,7 +41,7 @@ export interface SettingsLoadResult {
   patch: (p: Partial<SettingsRecord>) => void
 }
 
-export function useSettingsLoad(): SettingsLoadResult {
+export function useSettingsLoad(userId?: string | null): SettingsLoadResult {
   const [load, setLoad] = useState<SettingsLoad>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
 
@@ -78,7 +78,7 @@ export function useSettingsLoad(): SettingsLoadResult {
     return () => {
       live = false
     }
-  }, [attempt])
+  }, [attempt, userId])
 
   const reload = useCallback(() => setAttempt((a) => a + 1), [])
 
