@@ -24,13 +24,13 @@
 - `/crew/timesheet`: renders with three KPI cards; the "Overtime Flags" card is gone. No row is visible because mock data has no shoot days this week, so the per-person overtime display was not seen.
 - Settings ▸ System ▸ Delivery zones ▸ Add zone: Fee field is empty. Helper text corrected from "Default: Rs 3,500" to "There is no default fee: enter each zone's fee." (`npm run lint:ui-copy` passes; eslint clean.)
 - Delivery zones panel shows the banner "listDeliveryZones was called without a session context". This comes from the mock data path; I did not change `listDeliveryZones` and have not confirmed it on main.
-- Membership change dialog: not reached. Mock has no `client_memberships` rows, so clients show "Activate Membership" and the plan-change radio cannot appear in mock.
+- Membership change dialog (follow-up, same session): reached by activating Academy on a client in mock, then "Change Membership Plan" → Creator. The "Renewal date after this change" radio appears, restart is the default, and "Keep the original join date" changes the caption. Apply completed and the profile shows Creator. The mock's activation and change happen on the same day, so the screen can't show which join date was kept; the mock now honours `keep_join_date` like the database, and the existing mock membership tests pass.
 - `.claude/launch.json`: `babin-mock` now runs the Vite dev server (`--mode mock`) instead of `vite preview` of a build folder from another session.
 
 **Not done**
 - Migration `0226` is written and verified locally only. Babin applies it after the backup step (N-5).
 - R-9.4 starting value is empty by Babin's choice; he enters the fee in Settings.
-- The membership radio has no screen check (see above); it needs a client with a live membership on a real or seeded database.
+- Keep-join date has no date-level screen check; the database refusal (`keep_join_lapsed`) is proven by lifecycle L65 only.
 
 ## 2026-11-08 — T5-13: Edit email and document texts (Lane B)
 
