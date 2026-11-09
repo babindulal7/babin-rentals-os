@@ -382,7 +382,7 @@ name; lifecycle "create_booking stores both".
 prints the project name; screen check.
 **Needs** — none.
 
-### T3-27 · Pro forma invoice from the draft            status: todo · size: S · lane C · [go-live] · slips first
+### T3-27 · Pro forma invoice from the draft            status: doing · size: S · lane C · [go-live] · slips first
 **What** — On a booking with a draft invoice (T3-14), "**Pro forma**" makes a PDF from the draft
 (B18): titled **"PRO FORMA INVOICE — not a tax invoice"**, **no invoice number** (it names the booking
 number), the project name (T3-26), lines, VAT shown as an estimate, the advance due, payment details,
