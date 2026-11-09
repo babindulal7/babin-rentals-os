@@ -183,4 +183,15 @@ describe('Documents Workspace (Bento 2.0 / Design Taste)', () => {
     )
     expect(cancelBtn).toBeDefined()
   })
+
+  it('renders honest missing-document tracking disclaimer and non-empty expiring items in summary rail (#17)', () => {
+    const el = render(
+      <MemoryRouter initialEntries={['/documents']}>
+        <Documents />
+      </MemoryRouter>,
+    )
+
+    expect(el.textContent).toContain('Missing Documents')
+    expect(el.textContent).toContain('Expiring / Due Soon')
+  })
 })

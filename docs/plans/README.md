@@ -46,6 +46,10 @@ copy-paste prompt in [`prompts/`](prompts/README.md).
    Never share a checkout with another agent.
 5. When Babin merges it, set the card to `done` with the date.
 
+**Status vocabulary (5 Nov conflict repair):** `todo` = not started; `doing` = implementation in progress; `ready` = implementation prepared, merge/review pending; `acceptance_pending` = implementation merged or prepared but required owner/device acceptance is still missing; `done` = merged by Babin and every acceptance condition is evidenced. An awaiting-merge card is never `done`. A card may explicitly permit dependent implementation after its predecessor is `ready` or merged; that permits engineering work only, never release or acceptance sign-off.
+
+For independent translation drafting, a card may instead name the already merged scaffolding it actually needs and explicitly allow drafting while an earlier wave is still incomplete. This never waives module ownership, ordered wave acceptance or the whole-app activation gate. A partial conversion remains `doing`.
+
 ## Card format
 
 ```

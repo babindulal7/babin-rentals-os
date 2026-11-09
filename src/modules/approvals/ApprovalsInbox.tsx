@@ -159,7 +159,7 @@ export function ApprovalsInbox() {
     return (
       <main style={{ padding: '24px 16px', maxWidth: 1000, margin: '0 auto' }}>
         <RestrictedState
-          reason="Floor roles (Warehouse, Technician, Driver, Client) cannot view or decide management authorizations (Law 6)."
+          reason="Floor roles (Warehouse, Technician, Driver, Client) cannot view or decide management authorizations."
           requiredRole="Manager or Owner"
         />
       </main>
@@ -376,7 +376,7 @@ export function ApprovalsInbox() {
                           color: 'var(--warn)',
                         }}
                       >
-                        Owner only (Babin) §6.2
+                        Owner only (Babin)
                       </span>
                     ) : (
                       <span
@@ -541,7 +541,7 @@ export function ApprovalsInbox() {
                             }}
                           >
                             {isManagerViewingOwnerOnly
-                              ? 'Awaiting Owner (Babin) — Owner-only item §6.2'
+                              ? 'Awaiting Owner (Babin) — Owner-only authorization'
                               : check.reason || 'Not authorized to decide'}
                           </div>
                         )}

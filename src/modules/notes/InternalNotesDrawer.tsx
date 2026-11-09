@@ -15,6 +15,7 @@ import { useAuth } from '../../lib/auth'
 import { IS_MOCK, supabase } from '../../lib/supabase'
 import { useOptionalToast } from '../../components/ui/Toast'
 import { canReadTeamNotes } from '../../lib/rbac'
+import { useTranslation } from '../../lib/i18n'
 import {
   listTeamNotes,
   createTeamNote,
@@ -44,6 +45,7 @@ interface InternalNotesDrawerProps {
 
 export default function InternalNotesDrawer(props: InternalNotesDrawerProps) {
   const { user } = useAuth()
+  const { t } = useTranslation()
   const role = user?.role
 
   if (IS_MOCK) return <InternalNotesPreview {...props} />
@@ -52,10 +54,10 @@ export default function InternalNotesDrawer(props: InternalNotesDrawerProps) {
   if (!role || !canReadTeamNotes(role)) {
     return (
       <FilterDrawer id="team-internal-notes" open={props.isOpen} onClose={props.onClose} side="right" width={360}
-        title="Team Internal Notes" keepMounted>
+        title={t('notes.drawer.title')} keepMounted>
         <div role="status" style={{ padding: 'var(--sp-md)' }}>
-          <h2>Restricted Access</h2>
-          <p>Team notes are available to staff members only.</p>
+          <h2>{t('notes.restricted.title')}</h2>
+          <p>{t('notes.restricted.body')}</p>
         </div>
       </FilterDrawer>
     )
@@ -65,10 +67,10 @@ export default function InternalNotesDrawer(props: InternalNotesDrawerProps) {
   if (typeof (supabase as unknown as { rpc?: unknown })?.rpc !== 'function') {
     return (
       <FilterDrawer id="team-internal-notes" open={props.isOpen} onClose={props.onClose} side="right" width={360}
-        title="Team Internal Notes" keepMounted>
+        title={t('notes.drawer.title')} keepMounted>
         <div role="status" style={{ padding: 'var(--sp-md)' }}>
-          <h2>Shared team notes unavailable</h2>
-          <p>Team notes cannot be shared between staff yet. Existing entries on this device have been kept.</p>
+          <h2>{t('notes.unavailable.title')}</h2>
+          <p>{t('notes.unavailable.body')}</p>
         </div>
       </FilterDrawer>
     )
@@ -79,6 +81,7 @@ export default function InternalNotesDrawer(props: InternalNotesDrawerProps) {
 
 function InternalNotesLiveDrawer({ isOpen, onClose, initialReference }: InternalNotesDrawerProps) {
   const { user } = useAuth()
+  const { t } = useTranslation()
   const toast = useOptionalToast()
   const navigate = useNavigate()
   const ctx = useMemo(
@@ -139,7 +142,7 @@ function InternalNotesLiveDrawer({ isOpen, onClose, initialReference }: Internal
       )
       setDraft('')
       await reloadNotes()
-      toast?.showSuccessToast('Note Posted', 'Internal log updated successfully.')
+      toast?.showSuccessToast(t('notes.toasts.postedTitle'), t('notes.toasts.postedDesc'))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to post note')
     } finally {
@@ -167,7 +170,7 @@ function InternalNotesLiveDrawer({ isOpen, onClose, initialReference }: Internal
   const handleDelete = async (id: string) => {
     if (!ctx) return
     await archiveTeamNote({ noteId: id, archived: true }, ctx)
-    toast?.showSuccessToast('Note Archived', 'Archived and removed from active log.')
+    toast?.showSuccessToast(t('notes.toasts.archivedTitle'), t('notes.toasts.archivedDesc'))
     await reloadNotes()
   }
 
@@ -185,13 +188,13 @@ function InternalNotesLiveDrawer({ isOpen, onClose, initialReference }: Internal
 
   return (
     <FilterDrawer id="team-internal-notes" open={isOpen} onClose={onClose} side="right" width={360}
-      title="Team Internal Notes" description="Shift handover scratchpad & equipment advisories" keepMounted>
+      title={t('notes.drawer.title')} description={t('notes.drawer.description')} keepMounted>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface-2)' }}>
         <div style={{ fontSize: '11px', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
           <Icon name="info" size={13} />
-          <span style={{ fontWeight: 600 }}>Notes are seen by all staff.</span>
+          <span style={{ fontWeight: 600 }}>{t('notes.drawer.allStaffNotice')}</span>
         </div>
-        <Button onClick={() => { onClose(); navigate('/notes') }}>Open Team Notes page</Button>
+        <Button onClick={() => { onClose(); navigate('/notes') }}>{t('notes.drawer.openPage')}</Button>
       </div>
 
       {/* Note Composer */}
@@ -200,7 +203,7 @@ function InternalNotesLiveDrawer({ isOpen, onClose, initialReference }: Internal
           <textarea
             ref={textareaRef}
             rows={3}
-            aria-label="Internal note draft"
+            aria-label={t('notes.drawer.draftAria')}
             value={draft}
             disabled={submitting}
             onChange={e => setDraft(e.target.value)}
@@ -210,7 +213,7 @@ function InternalNotesLiveDrawer({ isOpen, onClose, initialReference }: Internal
                 handlePost()
               }
             }}
-            placeholder="Post a shift note, equipment alert, client remark... (Ctrl+Enter to post)"
+            placeholder={t('notes.drawer.placeholder')}
             style={{
               width: '100%',
               padding: '10px 12px',
@@ -228,7 +231,7 @@ function InternalNotesLiveDrawer({ isOpen, onClose, initialReference }: Internal
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               <select
                 value={category}
-                aria-label="Note category"
+                aria-label={t('notes.drawer.categoryAria')}
                 disabled={submitting}
                 onChange={e => setCategory(e.target.value as NoteCategory)}
                 style={{
@@ -241,16 +244,16 @@ function InternalNotesLiveDrawer({ isOpen, onClose, initialReference }: Internal
                   fontWeight: 600,
                 }}
               >
-                <option value="General">General</option>
-                <option value="Equipment Alert">Equipment Alert</option>
-                <option value="Shift Handover">Shift Handover</option>
-                <option value="Logistics & Transport">Logistics</option>
-                <option value="Client Remark">Client Remark</option>
+                <option value="General">{t('notes.category.general')}</option>
+                <option value="Equipment Alert">{t('notes.category.equipmentAlert')}</option>
+                <option value="Shift Handover">{t('notes.category.shiftHandover')}</option>
+                <option value="Logistics & Transport">{t('notes.category.logistics')}</option>
+                <option value="Client Remark">{t('notes.category.clientRemark')}</option>
               </select>
 
               <select
                 value={priority}
-                aria-label="Note priority"
+                aria-label={t('notes.drawer.priorityAria')}
                 disabled={submitting}
                 onChange={e => setPriority(e.target.value as NotePriority)}
                 style={{
@@ -263,9 +266,9 @@ function InternalNotesLiveDrawer({ isOpen, onClose, initialReference }: Internal
                   fontWeight: 600,
                 }}
               >
-                <option value="normal">Normal</option>
-                <option value="high">High</option>
-                <option value="urgent">🚨 Urgent</option>
+                <option value="normal">{t('notes.priority.normal')}</option>
+                <option value="high">{t('notes.priority.high')}</option>
+                <option value="urgent">{t('notes.priority.urgent')}</option>
               </select>
 
               {detectedRef && (
@@ -289,7 +292,7 @@ function InternalNotesLiveDrawer({ isOpen, onClose, initialReference }: Internal
 
             <Button variant="primary" type="submit" disabled={!draft.trim() || submitting} style={{ minHeight: 44, padding: '0 14px' }}>
               <Icon name="plus" size={14} />
-              {submitting ? 'Posting…' : 'Post'}
+              {submitting ? t('notes.actions.posting') : t('notes.actions.post')}
             </Button>
           </div>
         </form>
@@ -322,7 +325,7 @@ function InternalNotesLiveDrawer({ isOpen, onClose, initialReference }: Internal
               whiteSpace: 'nowrap',
             }}
           >
-            {cat === 'Logistics & Transport' ? 'Logistics' : cat}
+            {cat === 'All' ? t('notes.category.all') : cat === 'Shift Handover' ? t('notes.category.shiftHandover') : cat === 'Equipment Alert' ? t('notes.category.equipmentAlert') : cat === 'Logistics & Transport' ? t('notes.category.logistics') : cat === 'Client Remark' ? t('notes.category.clientRemark') : t('notes.category.general')}
           </button>
         ))}
       </div>
@@ -336,11 +339,11 @@ function InternalNotesLiveDrawer({ isOpen, onClose, initialReference }: Internal
         )}
         {loading && notes.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--muted)', fontSize: 'var(--t-caption)' }}>
-            Loading team notes…
+            {t('notes.drawer.loading')}
           </div>
         ) : filteredNotes.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--muted)', fontSize: 'var(--t-caption)' }}>
-            No notes in this category yet.
+            {t('notes.drawer.empty')}
           </div>
         ) : (
           filteredNotes.map(n => {
@@ -407,13 +410,13 @@ function InternalNotesLiveDrawer({ isOpen, onClose, initialReference }: Internal
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    {isUrgent && !isResolved && <Badge label="URGENT" tone="danger" />}
+                    {isUrgent && !isResolved && <Badge label={t('notes.badge.urgent')} tone="danger" />}
                     <Badge label={n.category} tone={tone} />
-                    {isResolved && <Badge label="DONE" tone="in" />}
+                    {isResolved && <Badge label={t('notes.badge.done')} tone="in" />}
                     <button
                       type="button"
                       onClick={() => handleTogglePin(n.id)}
-                      title={n.pinned ? 'Unpin note' : 'Pin note to top'}
+                      title={n.pinned ? t('notes.actions.unpin') : t('notes.actions.pin')}
                       style={{
                         border: 'none',
                         background: 'transparent',
@@ -429,7 +432,7 @@ function InternalNotesLiveDrawer({ isOpen, onClose, initialReference }: Internal
                     <button
                       type="button"
                       onClick={() => handleDelete(n.id)}
-                      title="Archive note"
+                      title={t('notes.actions.archive')}
                       style={{
                         border: 'none',
                         background: 'transparent',
@@ -502,7 +505,7 @@ function InternalNotesLiveDrawer({ isOpen, onClose, initialReference }: Internal
                     }}
                   >
                     <Icon name="check" size={12} />
-                    {isResolved ? 'Reopen' : 'Done'}
+                    {isResolved ? t('notes.actions.reopen') : t('notes.actions.done')}
                   </button>
                 </div>
               </div>
@@ -516,6 +519,7 @@ function InternalNotesLiveDrawer({ isOpen, onClose, initialReference }: Internal
 
 function InternalNotesPreview({ isOpen, onClose, initialReference }: InternalNotesDrawerProps) {
   const { user } = useAuth()
+  const { t } = useTranslation()
   const toast = useOptionalToast()
   const navigate = useNavigate()
   const [notes, setNotes] = useState<InternalNote[]>(() => listInternalNotes())
@@ -565,7 +569,7 @@ function InternalNotesPreview({ isOpen, onClose, initialReference }: InternalNot
 
     setDraft('')
     reloadNotes()
-    toast?.showSuccessToast('Note Posted', 'Internal log updated successfully.')
+    toast?.showSuccessToast(t('notes.toasts.postedTitle'), t('notes.toasts.postedDesc'))
   }
 
   const handleTogglePin = (id: string) => {
@@ -598,15 +602,22 @@ function InternalNotesPreview({ isOpen, onClose, initialReference }: InternalNot
 
   return (
     <FilterDrawer id="team-internal-notes" open={isOpen} onClose={onClose} side="right" width={360}
-      title="Team Internal Notes" description="Shift handover scratchpad & equipment advisories" keepMounted>
-      <Button onClick={() => { onClose(); navigate('/notes') }}>Open Team Notes page</Button>
+      title={t('notes.drawer.title')} description={t('notes.drawer.description')} keepMounted>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '12px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface-2)' }}>
+        <div style={{ fontSize: '11px', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Icon name="info" size={13} />
+          <span style={{ fontWeight: 600 }}>{t('notes.drawer.allStaffNotice')}</span>
+        </div>
+        <Button onClick={() => { onClose(); navigate('/notes') }}>{t('notes.drawer.openPage')}</Button>
+      </div>
+
         {/* Note Composer */}
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'var(--card)' }}>
           <form onSubmit={handlePost} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <textarea
               ref={textareaRef}
               rows={3}
-              aria-label="Internal note draft"
+              aria-label={t('notes.drawer.draftAria')}
               value={draft}
               onChange={e => setDraft(e.target.value)}
               onKeyDown={e => {
@@ -615,7 +626,7 @@ function InternalNotesPreview({ isOpen, onClose, initialReference }: InternalNot
                   handlePost()
                 }
               }}
-              placeholder="Post a shift note, equipment alert, client remark... (Ctrl+Enter to post)"
+              placeholder={t('notes.drawer.placeholder')}
               style={{
                 width: '100%',
                 padding: '10px 12px',
@@ -633,7 +644,7 @@ function InternalNotesPreview({ isOpen, onClose, initialReference }: InternalNot
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <select
                   value={category}
-                  aria-label="Note category"
+                  aria-label={t('notes.drawer.categoryAria')}
                   onChange={e => setCategory(e.target.value as NoteCategory)}
                   style={{
                     padding: '6px 8px',
@@ -645,16 +656,16 @@ function InternalNotesPreview({ isOpen, onClose, initialReference }: InternalNot
                     fontWeight: 600,
                   }}
                 >
-                  <option value="General">General</option>
-                  <option value="Equipment Alert">Equipment Alert</option>
-                  <option value="Shift Handover">Shift Handover</option>
-                  <option value="Logistics & Transport">Logistics</option>
-                  <option value="Client Remark">Client Remark</option>
+                  <option value="General">{t('notes.category.general')}</option>
+                  <option value="Equipment Alert">{t('notes.category.equipmentAlert')}</option>
+                  <option value="Shift Handover">{t('notes.category.shiftHandover')}</option>
+                  <option value="Logistics & Transport">{t('notes.category.logistics')}</option>
+                  <option value="Client Remark">{t('notes.category.clientRemark')}</option>
                 </select>
 
                 <select
                   value={priority}
-                  aria-label="Note priority"
+                  aria-label={t('notes.drawer.priorityAria')}
                   onChange={e => setPriority(e.target.value as NotePriority)}
                   style={{
                     padding: '6px 8px',
@@ -666,9 +677,9 @@ function InternalNotesPreview({ isOpen, onClose, initialReference }: InternalNot
                     fontWeight: 600,
                   }}
                 >
-                  <option value="normal">Normal</option>
-                  <option value="high">High</option>
-                  <option value="urgent">🚨 Urgent</option>
+                  <option value="normal">{t('notes.priority.normal')}</option>
+                  <option value="high">{t('notes.priority.high')}</option>
+                  <option value="urgent">{t('notes.priority.urgent')}</option>
                 </select>
 
                 {detectedRef && (
@@ -692,7 +703,7 @@ function InternalNotesPreview({ isOpen, onClose, initialReference }: InternalNot
 
               <Button variant="primary" type="submit" disabled={!draft.trim()} style={{ minHeight: 44, padding: '0 14px' }}>
                 <Icon name="plus" size={14} />
-                Post
+                {t('notes.actions.post')}
               </Button>
             </div>
           </form>
@@ -725,7 +736,7 @@ function InternalNotesPreview({ isOpen, onClose, initialReference }: InternalNot
                 whiteSpace: 'nowrap',
               }}
             >
-              {cat === 'Logistics & Transport' ? 'Logistics' : cat}
+              {cat === 'All' ? t('notes.category.all') : cat === 'Shift Handover' ? t('notes.category.shiftHandover') : cat === 'Equipment Alert' ? t('notes.category.equipmentAlert') : cat === 'Logistics & Transport' ? t('notes.category.logistics') : cat === 'Client Remark' ? t('notes.category.clientRemark') : t('notes.category.general')}
             </button>
           ))}
         </div>
@@ -734,7 +745,7 @@ function InternalNotesPreview({ isOpen, onClose, initialReference }: InternalNot
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {filteredNotes.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--muted)', fontSize: 'var(--t-caption)' }}>
-              No notes in this category yet.
+              {t('notes.drawer.empty')}
             </div>
           ) : (
             filteredNotes.map(n => {
@@ -801,13 +812,13 @@ function InternalNotesPreview({ isOpen, onClose, initialReference }: InternalNot
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      {isUrgent && !isResolved && <Badge label="URGENT" tone="danger" />}
+                      {isUrgent && !isResolved && <Badge label={t('notes.badge.urgent')} tone="danger" />}
                       <Badge label={n.category} tone={tone} />
-                      {isResolved && <Badge label="DONE" tone="in" />}
+                      {isResolved && <Badge label={t('notes.badge.done')} tone="in" />}
                       <button
                         type="button"
                         onClick={() => handleTogglePin(n.id)}
-                        title={n.pinned ? 'Unpin note' : 'Pin note to top'}
+                        title={n.pinned ? t('notes.actions.unpin') : t('notes.actions.pin')}
                         style={{
                           border: 'none',
                           background: 'transparent',
@@ -823,7 +834,7 @@ function InternalNotesPreview({ isOpen, onClose, initialReference }: InternalNot
                       <button
                         type="button"
                         onClick={() => handleDelete(n.id)}
-                        title="Delete note"
+                        title={t('notes.actions.archive')}
                         style={{
                           border: 'none',
                           background: 'transparent',
@@ -896,7 +907,7 @@ function InternalNotesPreview({ isOpen, onClose, initialReference }: InternalNot
                       }}
                     >
                       <Icon name="check" size={12} />
-                      {isResolved ? 'Reopen' : 'Done'}
+                      {isResolved ? t('notes.actions.reopen') : t('notes.actions.done')}
                     </button>
                   </div>
                 </div>

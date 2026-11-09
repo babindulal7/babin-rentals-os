@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import './rentals.css'
 import Icon from '../../components/ui/Icon'
@@ -7,6 +7,7 @@ import { Badge } from '../../components/ui/Badge'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { OperationAside } from '../operations/FloorAside'
+import { StickyFloorBar } from '../operations/StickyFloorBar'
 import { EmptyState, ErrorBanner } from '../../components/ui/StateViews'
 import { PageBody } from '../../components/ui/PageBody'
 import { STATUS } from '../../lib/status'
@@ -43,7 +44,7 @@ import {
   formatPickupClockTime,
   type NextReservationInfo,
 } from '../../lib/queries/reset'
-import { getSetting } from '../../lib/settingsStore'
+import { getSetting, subscribeSettings } from '../../lib/settingsStore'
 import { queueTimeTone } from '../../data/reset'
 import { fetchStaffDirectory } from '../../lib/queries/staff'
 
@@ -510,26 +511,31 @@ export default function ResetWorkspace({
   }, [rawRows])
 
   const [nextReservations, setNextReservations] = useState<Record<string, NextReservationInfo>>({})
-  const neededNextHours = useMemo(() => {
-    const val = Number(getSetting('resetNeededNextHours'))
-    return Number.isFinite(val) && val > 0 ? val : 4
-  }, [])
+  const [nextReservationsError, setNextReservationsError] = useState<string | null>(null)
+  const [reservationReload, setReservationReload] = useState(0)
+  // The settings store can update from another page or from the shared database.
+  const configuredHours = useSyncExternalStore(
+    subscribeSettings,
+    () => Number(getSetting('resetNeededNextHours')),
+    () => 4,
+  )
+  const neededNextHours = Number.isFinite(configuredHours) && configuredHours > 0 ? configuredHours : 4
 
   useEffect(() => {
-    if (assetIds.length === 0) {
-      setNextReservations({})
-      return
-    }
+    setNextReservations({})
+    setNextReservationsError(null)
+    if (assetIds.length === 0) return
     let active = true
     void getNextReservationsForUnits(assetIds, floor?.id).then((map) => {
-      if (active) {
-        setNextReservations(map)
-      }
+      if (active) setNextReservations(map)
+    }).catch((error: unknown) => {
+      if (!active) return
+      setNextReservationsError(error instanceof Error ? error.message : 'Upcoming reservations could not be checked.')
     })
     return () => {
       active = false
     }
-  }, [assetIds, floor?.id])
+  }, [assetIds, floor?.id, reservationReload])
 
   const rows = useMemo(() => {
     return [...rawRows].sort((a, b) => {
@@ -1382,6 +1388,14 @@ export default function ResetWorkspace({
                 </div>
               </div>
             </div>
+            )}
+
+            {nextReservationsError !== null && (
+              <ErrorBanner
+                title="Upcoming bookings could not be checked"
+                message={`${nextReservationsError} Priority order is unknown; check Reservations before releasing equipment.`}
+                onRetry={() => setReservationReload((n) => n + 1)}
+              />
             )}
 
             {/* §4 booking summary strip — Bento 2.0 bar with AD/BS duality */}
@@ -2551,6 +2565,28 @@ export default function ResetWorkspace({
                 operator sees instead of being navigated away from a reset that
                 was never recorded. */}
             {dispatchError && <ErrorBanner title="The reset was not recorded" message={dispatchError} />}
+
+            {phone && !embedded && (
+              <StickyFloorBar
+                progress={{
+                  current: readyUnits,
+                  total: totalUnits,
+                  label: totalUnits > readyUnits ? `${totalUnits - readyUnits} remaining` : 'All items ready',
+                  complete: canComplete,
+                }}
+                primaryAction={{
+                  label: dispatching
+                    ? 'Recording…'
+                    : !isOnline
+                    ? 'Needs connection to complete'
+                    : 'Complete Reset',
+                  onClick: completeResetJob,
+                  disabled: !isOnline || !canComplete,
+                  loading: dispatching,
+                  icon: isOnline ? 'checklist' : 'alert_triangle',
+                }}
+              />
+            )}
           </div>
         )}
       </PageBody>

@@ -22,7 +22,7 @@ estimates pay hourly with a hard-coded 8 hours (`src/lib/queries/timesheet.ts`, 
 
 ---
 
-### T8-01 · Load Babin's plans            status: done — merged on `main` 1 Nov 2026 (migration `0195` arrived with `0370cb23`; the lane branch is superseded); status corrected 4 Nov after the rule audit · size: S · lane A + Babin
+### T8-01 · Load Babin's plans            status: done · merged (`0370cb23`) · size: S · lane A + Babin
 **What** — Babin sends one row per plan with exactly these columns: level (one of the five), label,
 annual fee (NPR), individual discount %, bundle discount %, monthly booking limit, simultaneous
 rental limit, authorised users, default credit limit (NPR), term (months), perks (from the six).
@@ -34,7 +34,7 @@ renames). Load through the T8-02 screen, or a reviewed one-off script on staging
 **Done when** — plans visible on staging and live; Babin confirms the screen matches his table.
 **Needs** — Babin's table (O-9).
 
-### T8-02 · Plans admin screen            status: done — awaiting merge (lane-a/T8-02-plans-admin-screen) · size: M · lane A
+### T8-02 · Plans admin screen            status: ready — awaiting merge (lane-a/T8-02-plans-admin-screen) · size: M · lane A
 **What** — Clients ▸ Memberships ▸ Plans: list, create, edit, **retire** (never delete — Law 3) for
 Owner, Admin, Manager. A retired plan keeps its members until their term ends; it cannot take new
 members.
@@ -45,7 +45,7 @@ are not already covered by RLS + audit trigger.
 **Done when** — Coordinator sees plans read-only; Manager can retire; audit rows exist.
 **Needs** — none.
 
-### T8-03 · Change plan with credit for unused days            status: done — awaiting merge (lane-a/T8-03-change-plan-with-credit-for-unused) · size: M · lane A
+### T8-03 · Change plan with credit for unused days            status: done · merged and reviewed (`01386427`) · size: M · lane A
 **What** — Changing plan mid-term starts a **new term from today** and credits the **unused days of
 the old plan** toward the new fee (D22): credit = old fee × days left ÷ days in old term (integer
 paisa, half-up). The new fee due = new fee − credit, never below zero; ⭐ if the credit is larger
@@ -61,7 +61,7 @@ calculation; lifecycle step with a worked example (fee 12,000, 4 of 12 months le
 **Done when** — the worked example matches to the paisa; audit holds old plan, new plan, credit.
 **Needs** — T8-01.
 
-### T8-04 · Renew a lapsed membership            status: done — awaiting merge (lane-a/T8-04-renew-a-lapsed-membership) · size: S · lane A
+### T8-04 · Renew a lapsed membership            status: ready — awaiting merge (lane-a/T8-04-renew-a-lapsed-membership) · size: S · lane A
 **What** — "Renew" on a lapsed (or ending) membership: charges the plan fee, starts a new term from
 the renewal date, keeps history; Coordinator and above (D23).
 **Why** — D23 (OPEN_DECISIONS §20 — today the function refuses "already on this plan").
@@ -96,7 +96,7 @@ Recorded who added it (`overtime_approved_by`). Coordinator sees the billed amou
 payout agree.
 **Needs** — none.
 
-### T8-07 · Timesheet by the day            status: done — awaiting merge (lane-a/T8-07-timesheet-by-the-day) · size: S · lane A
+### T8-07 · Timesheet by the day            status: ready — awaiting merge (lane-a/T8-07-timesheet-by-the-day) · size: S · lane A
 **What** — Replace the hourly estimate (`STANDARD_DAY_HOURS = 8`) with days × day rate + recorded
 overtime days. Hours stay visible as information only.
 **Why** — D24 closes OPEN_DECISIONS §18.
@@ -105,7 +105,7 @@ overtime days. Hours stay visible as information only.
 **Done when** — no "Estimated pay" label remains; totals match Crew Assist payouts.
 **Needs** — T8-06.
 
-### T8-08 · TDS on crew payouts            status: done — awaiting merge (lane-a/T8-08-tds-on-crew-payouts) · size: M · lane A + accountant
+### T8-08 · TDS on crew payouts            status: ready — awaiting merge (lane-a/T8-08-tds-on-crew-payouts) · size: M · lane A + accountant
 **What** — Settings ▸ Financial ▸ "TDS on crew payouts" (rate set by the accountant — O-5). Crew
 payouts show **gross, TDS, net**; a TDS report per month for the accountant. Until a rate is set,
 payouts show "TDS: rate not set". Money roles only (PERMISSIONS §5).
@@ -117,7 +117,7 @@ rate change must not rewrite past payouts).
 does not alter it.
 **Needs** — accountant's rate (O-5).
 
-### T8-09 · Staff renting gear            status: done — awaiting merge (lane-a/T8-09-staff-renting-gear-finish) · size: S · lane A · [go-live]
+### T8-09 · Staff renting gear            status: ready — awaiting merge (lane-a/T8-09-staff-renting-gear-finish) · size: S · lane A · [go-live]
 **What** — A client can be marked **Staff** (linked to the staff member's user). A Staff client's
 bookings get a **20% staff discount** line automatically (W68), shown and removable like any other
 discount (Law 10 — no approval gate). Everything else is a normal client booking: deposit, ID on

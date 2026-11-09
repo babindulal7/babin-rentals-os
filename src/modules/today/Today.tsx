@@ -112,7 +112,7 @@ const QUICK_PERIOD_LABELS: Record<'en' | 'ne', Record<QuickPeriod, string>> = {
   ne: {
     Today: 'आज',
     Tomorrow: 'भोलि',
-    'Next 7 Days': 'यो हप्ता (७ दिन)',
+    'Next 7 Days': 'आगामी 7 दिन',
   },
 }
 
@@ -657,8 +657,6 @@ export default function Today() {
         </div>
       </div>
 
-      <RoleTaskCockpit />
-
       <LegacyExportCard />
 
       {/* RULING 2026-10-23: Today contains movement queues only; totals come from the same queries. */}
@@ -770,6 +768,12 @@ export default function Today() {
           />
         )}
       </div>
+
+      {/* Preserve the approved role-specific 1-tap actions without crowding the movement board. */}
+      <details className="dashboard-other-tasks" open>
+        <summary className="dashboard-other-tasks__summary">Other tasks and shortcuts</summary>
+        <RoleTaskCockpit />
+      </details>
 
     </PageShell>
   )

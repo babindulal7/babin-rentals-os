@@ -15,7 +15,8 @@ import {
   type ClientType,
   type OrganisationType,
 } from '../../../lib/queries/clients'
-import { PHONE_LOCAL_RE, PHONE_REJECTION, canonicalPhone, phoneLocalDigits } from '../../../lib/phone'
+import { PHONE_LOCAL_RE, PHONE_REJECTION, canonicalPhone } from '../../../lib/phone'
+import { sanitizeEmail, sanitizeMoneyInput, sanitizePan, sanitizePhone } from '../../../lib/formForgiveness'
 import {
   DEFAULT_CLIENT_TYPE,
   DEFAULT_ORGANISATION_TYPE,
@@ -449,7 +450,7 @@ export function AddClientModal({
    */
   const saveKey = useRef<string | null>(null)
 
-  const localDigits = phoneLocalDigits(phone)
+  const localDigits = sanitizePhone(phone)
 
   /* The name the field was seeded with from the search box. Dirtiness is
      measured against it, not against empty, so Esc immediately after opening
@@ -612,13 +613,15 @@ export function AddClientModal({
       next.name = clientType === 'Organisation' ? 'Company / client name is required.' : 'Client name is required.'
     }
 
-    if (!phone.trim()) {
+    const cleanedPhone = sanitizePhone(phone)
+    if (!cleanedPhone.trim()) {
       next.phone = 'Phone number is required.'
-    } else if (!PHONE_LOCAL_RE.test(localDigits)) {
+    } else if (!PHONE_LOCAL_RE.test(cleanedPhone)) {
       next.phone = PHONE_REJECTION
     }
 
-    if (email.trim() && !EMAIL_RE.test(email.trim())) {
+    const cleanedEmail = sanitizeEmail(email)
+    if (cleanedEmail && !EMAIL_RE.test(cleanedEmail)) {
       next.email = 'Enter a valid email address, or leave it blank.'
     }
 
@@ -690,11 +693,11 @@ export function AddClientModal({
       const draft: NewClientDraft = {
         clientType,
         organisationType: orgType,
-        name,
-        phone: canonicalPhone(phone),
-        email,
-        pan,
-        notes,
+        name: name.trim(),
+        phone: canonicalPhone(sanitizePhone(phone)),
+        email: sanitizeEmail(email),
+        pan: sanitizePan(pan),
+        notes: notes.trim(),
       }
       const res = await createClient(createClientInputFrom(draft, saveKey.current), ctx)
 
@@ -1140,6 +1143,10 @@ export function AddClientModal({
                         setDismissedDuplicate(false)
                         clearError('phone')
                       }}
+                      onBlur={() => {
+                        const cleaned = sanitizePhone(phone)
+                        if (cleaned && cleaned !== phone) setPhone(cleaned)
+                      }}
                       placeholder="9801234567"
                       aria-required="true"
                       aria-invalid={errors.phone ? true : undefined}
@@ -1158,6 +1165,10 @@ export function AddClientModal({
                     onChange={(e) => {
                       setEmail(e.target.value)
                       clearError('email')
+                    }}
+                    onBlur={() => {
+                      const cleaned = sanitizeEmail(email)
+                      if (cleaned && cleaned !== email) setEmail(cleaned)
                     }}
                     placeholder="e.g. bookings@company.com"
                     aria-invalid={errors.email ? true : undefined}
@@ -1186,6 +1197,10 @@ export function AddClientModal({
                     id={`${uid}-pan`}
                     value={pan}
                     onChange={(e) => setPan(e.target.value)}
+                    onBlur={() => {
+                      const cleaned = sanitizePan(pan)
+                      if (cleaned && cleaned !== pan) setPan(cleaned)
+                    }}
                     placeholder="e.g. 600123456"
                     inputMode="numeric"
                     aria-describedby={`${uid}-pan-help`}
@@ -1204,6 +1219,10 @@ export function AddClientModal({
                       value={creditLimit}
                       inputMode="numeric"
                       onChange={(e) => setCreditLimit(e.target.value)}
+                      onBlur={() => {
+                        const cleaned = sanitizeMoneyInput(creditLimit)
+                        if (cleaned !== creditLimit) setCreditLimit(cleaned)
+                      }}
                       placeholder="e.g. 1,00,000"
                       aria-describedby={`${uid}-credit-help`}
                       className="figure"

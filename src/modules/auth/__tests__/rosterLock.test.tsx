@@ -148,7 +148,7 @@ describe('RosterLock — shared device lock and user switching', () => {
 
     expect(text()).toContain('Signed in as Sita Sharma')
     expect(text()).toContain('Enter your PIN to resume this session')
-    expect(text()).toContain('Back to staff list')
+    expect(Array.from(container.querySelectorAll('button')).some((b) => b.textContent?.includes('Back to staff list'))).toBe(true)
     // 4 dots for 4-digit PIN pad
     const digit1 = container.querySelector('button[aria-label="Digit 1"]')
     expect(digit1).toBeTruthy()

@@ -7,6 +7,7 @@ import type { Paisa } from '../../../lib/money'
 import { recordPayment } from '../../../actions/finance/recordPayment'
 import { listBankAccounts } from '../../../lib/queries/bankAccounts'
 import type { BankAccountRow } from '../../../lib/queries/bankAccounts'
+import { lastPaymentMethodForClient, type PaymentMethodLabel } from '../../../lib/queries/finance'
 import { useAuth } from '../../../lib/auth'
 import { useNetwork } from '../../../lib/network'
 import { newClientUuid } from '../../../lib/supabase'
@@ -71,6 +72,17 @@ interface RecordPaymentModalProps {
     status: string
     booking?: string
     /**
+     * **T3-15:** `invoices.client_id` — the UUID of the client the invoice
+     * belongs to. The modal needs it to ask "how did this client pay last?";
+     * `client` is a display NAME and cannot answer that.
+     *
+     * Optional so a caller reading a narrower source still compiles, and when it
+     * is absent the form simply opens with no method selected — the same state a
+     * client with no payment history gets. Never derived from `client`: names
+     * repeat, and a wrong client's last method is a wrong ledger fact.
+     */
+    clientId?: string
+    /**
      * **R-39 fix (defaults are doctrine):** the invoice's outstanding balance
      * in RUPEES (the unit the operator types), used as the Amount field's
      * prefill while that field is untouched. Optional so a caller reading a
@@ -110,7 +122,13 @@ export const DRAFT_NO_NUMBER = 'Draft (no number)'
  */
 const SUBTITLE = 'Register an incoming payment against an invoice — a Draft included.'
 
-type PaymentMethod = 'Bank Transfer' | 'Cash' | 'Fonepay' | 'eSewa' | 'Khalti' | 'Card' | 'Cheque'
+/**
+ * The method vocabulary lives in `queries/finance.ts` (`PAYMENT_METHOD_LABELS`)
+ * because that file also reads the label back out of `payments.notes` for
+ * T3-15's default. One list, so the picker can never offer a word the reader
+ * cannot recognise.
+ */
+type PaymentMethod = PaymentMethodLabel
 
 /*
  * The method picker, as tap cards rather than a `<select>`: every method is on
@@ -118,6 +136,12 @@ type PaymentMethod = 'Bank Transfer' | 'Cash' | 'Fonepay' | 'eSewa' | 'Khalti' |
  * writes to the notes (its METHOD block), so it must not change. A hint says
  * what the method is, never which account it lands in; that is the account
  * picker's job below.
+ *
+ * TODO(decision) O-21: the T3-15 card words this as four buttons
+ * (Cash · Bank transfer · Fonepay · eSewa/Khalti). Seven labels ship instead,
+ * because eSewa and Khalti are different wallets and Card/Cheque are real
+ * receipts — see `docs/OPEN_DECISIONS.md` §21. Until Babin rules, every label
+ * here is one tap and no ledger fact is lost.
  */
 const PAYMENT_METHODS: readonly ChoiceCardOption<PaymentMethod>[] = [
   { value: 'Bank Transfer', label: 'Bank Transfer', hint: 'To an account', icon: 'bank' },
@@ -205,7 +229,40 @@ export function RecordPaymentModal({
   useEffect(() => {
     if (isOpen) setAmountTouched(initialAmount !== undefined)
   }, [isOpen, initialAmount])
-  const [method, setMethod] = useState<PaymentMethod>('Bank Transfer')
+  /*
+   * ── T3-15 · the method default ──────────────────────────────────────────
+   *
+   * `null` means NOTHING IS CHOSEN, and it is where the form opens. The previous
+   * default was `'Bank Transfer'` — a guess. Most Kathmandu receipts are not bank
+   * transfers, so every Cash, Fonepay and wallet receipt started life recording a
+   * method the desk had to remember to correct, and `recordPayment` writes
+   * whatever this holds into `payments.notes` as `Method: …`.
+   *
+   * The one default that IS evidence is the method this client paid by last
+   * (L2, W13 "mix"). It is read from `payments.notes` — `payments` has no method
+   * column — by `lastPaymentMethodForClient`, and applied only while the operator
+   * has not chosen for themselves. A client with no labelled receipt gets `null`
+   * and the picker opens empty: one more tap, never a wrong ledger fact.
+   */
+  const [method, setMethod] = useState<PaymentMethod | null>(null)
+  /**
+   * WHICH CLIENT the operator's own choice belongs to.
+   *
+   * A ref rather than a boolean: the default is a fact about a client, so a
+   * choice made for client A must not suppress client B's default when the
+   * operator switches the invoice picker to another client's bill. Holding the
+   * id makes that comparison explicit instead of implicit in effect ordering.
+   */
+  const methodTouchedFor = useRef<string | null>(null)
+  /**
+   * True while the current selection came from the read rather than the operator.
+   * State, not a read of the ref, because the hint below is rendered text: a ref
+   * would change without a re-render and the sentence would lag the picker.
+   */
+  const [methodIsDefault, setMethodIsDefault] = useState(false)
+  /** The last-method read, drawn as its own state so the form can say why it is empty. */
+  const [lastMethodLoading, setLastMethodLoading] = useState(false)
+  const [lastMethodError, setLastMethodError] = useState<string | null>(null)
   /*
    * The ACCOUNT the money landed in — `bank_accounts.id`, the structured half
    * of "how was this paid" (`recordPayment.ts`'s METHOD block). '' means "no
@@ -251,8 +308,61 @@ export function RecordPaymentModal({
       // an account is per-receipt, and a stale one silently credits it again.
       setBankAccountId('')
       accountTouched.current = false
+      // Same rule for the method: a reopened form starts from this client's
+      // history, not from whatever the last receipt used.
+      setMethod(null)
+      setMethodIsDefault(false)
+      methodTouchedFor.current = null
+      setLastMethodError(null)
     }
   }, [isOpen])
+
+  /*
+   * T3-15 — ask for this client's last method, once per client per open.
+   *
+   * The invoice is the only thing this form knows about the client, and it can
+   * change while the modal is open (the picker offers several). So the read is
+   * keyed on the SELECTED invoice's `clientId`, not on mount: switching to
+   * another client's bill asks about that client, and the answer replaces the
+   * previous default unless the operator has already chosen for this one.
+   *
+   * A failure is stated and leaves the picker EMPTY. A convenience default is
+   * not worth guessing at: `null` costs one tap, a wrong label is a receipt that
+   * says Cash for a bank transfer.
+   */
+  const selectedClientId = selectedInvoice?.clientId || ''
+  useEffect(() => {
+    if (!isOpen) return
+    if (!selectedClientId) {
+      setLastMethodError(null)
+      setLastMethodLoading(false)
+      setMethodIsDefault(false)
+      return
+    }
+    let cancelled = false
+    setLastMethodLoading(true)
+    setLastMethodError(null)
+    lastPaymentMethodForClient(selectedClientId)
+      .then((last) => {
+        if (cancelled || typeof window === 'undefined') return
+        // `null` is an ANSWER here — "no labelled receipt" — and it clears the
+        // picker rather than leaving a previous client's method behind.
+        if (methodTouchedFor.current === selectedClientId) return
+        setMethod(last)
+        setMethodIsDefault(last !== null)
+      })
+      .catch((err: unknown) => {
+        if (cancelled || typeof window === 'undefined') return
+        setLastMethodError(err instanceof Error ? err.message : String(err))
+        setMethodIsDefault(false)
+      })
+      .finally(() => {
+        if (!cancelled) setLastMethodLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, selectedClientId])
 
   /*
    * R-39 D3 — the bank-account default that was missing. When the method is a
@@ -348,6 +458,21 @@ export function RecordPaymentModal({
           MAX_PAYMENT_PAISA as Paisa,
         )}. Check the figure; nothing was recorded.`,
       )
+      return
+    }
+    /*
+     * T3-15 — the method is now a real required answer.
+     *
+     * While `'Bank Transfer'` was the initial state this could not be blank; with
+     * the default coming from the client's history it can be, and `null` must not
+     * reach `recordPayment` — the label is what lands in `payments.notes` as
+     * `Method: …`, and a receipt with no method is a fact the desk will be asked
+     * about later. The picker's radios are `required`, but the submit button sits
+     * in the modal footer OUTSIDE the `<form>`, so native validation never runs
+     * for a click — this guard is the one that holds.
+     */
+    if (!method) {
+      setError('Choose how the payment was made — the method is written on the receipt.')
       return
     }
     /*
@@ -703,14 +828,38 @@ export function RecordPaymentModal({
           </span>
         </div>
 
-        <ChoiceCards<PaymentMethod>
-          legend="Payment Method"
-          name="rpm-method"
-          options={PAYMENT_METHODS}
-          value={method}
-          onChange={setMethod}
-          required
-        />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <ChoiceCards<PaymentMethod>
+            legend="Payment Method"
+            name="rpm-method"
+            options={PAYMENT_METHODS}
+            value={method}
+            onChange={(next) => {
+              // The operator's word, not the screen's. Recorded against THIS
+              // client so a switch to another client's invoice still gets that
+              // client's default (see `methodTouchedFor` above).
+              methodTouchedFor.current = selectedClientId || null
+              setMethodIsDefault(false)
+              setMethod(next)
+            }}
+            required
+          />
+          {/*
+            T3-15: say where the selection came from. "Preselected" is a claim
+            about the read, so it is only made when the read supplied the value —
+            a default the operator cannot tell apart from their own choice is the
+            thing that makes a wrong method survive review.
+          */}
+          <span role="status" style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
+            {lastMethodLoading
+              ? 'Looking up how this client paid last…'
+              : lastMethodError
+                ? `This client's last method could not be read (${lastMethodError}) — pick the method for this receipt.`
+                : methodIsDefault
+                  ? 'Preselected: how this client paid last. Change it if this receipt is different.'
+                  : 'Pick the method — it is written on the receipt.'}
+          </span>
+        </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <label htmlFor="rpm-account" style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>

@@ -5,7 +5,6 @@
 1. Read [`docs/00_READ_FIRST.md`](docs/00_READ_FIRST.md) — documentation governance and rules of truth.
 2. Read [`PLAN.md`](PLAN.md) — the go-live roadmap: finish line, tracks, calendar, decisions index and how agents work in parallel. Build-ready task cards are in [`docs/plans/`](docs/plans/README.md). *(Re-created 26 Oct 2026 by Babin's ruling — `RULINGS-2026-10-26.md` S4. It is a new plan, not a reconstruction of the pre-October file: laws live in [`docs/PRODUCT_RULES.md`](docs/PRODUCT_RULES.md); open decisions are indexed in `PLAN.md` §4.2 with full text in [`docs/OPEN_DECISIONS.md`](docs/OPEN_DECISIONS.md).)*
 3. Read [`PROGRESS.md`](PROGRESS.md) — what state the build is actually in.
-4. Read [`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md) — one shared policy: which source wins, who may push, the one gate, what "done" means.
 
 **Before ending a session:** update [`PROGRESS.md`](PROGRESS.md) with what changed, **how it
 was verified**, and what is now blocked. Log verification, not intention — "typechecks" and
@@ -32,12 +31,8 @@ permission or named-action gate — it removes *avoidable* steps only. Budgets:
 - **Verify by driving the app**, not by reading the code you just wrote.
 - **Claude in a cloud chat session is read-only on GitHub** (ruled 26 Oct 2026, W74): read,
   review and suggest; never push, open or close PRs, or comment. Deliver plans, prompts and
-  patches as files for Babin. Codex and Gemini build locally; Babin merges. A local Claude Code session
-  in an authorized worktree may push a **new branch** and open a **draft PR**, never `main`, never merge
-  (`docs/AGENT_WORKFLOW.md` §3).
-- **CI:** W75 (26 Oct 2026, historical) turned it off because GitHub-hosted minutes were billing-blocked; it now
-  runs on the owner's self-hosted runner. Run the local gates (`npm run gates`, `PLAN.md` §6.4) before you push;
-  a complete CI run on the same head is supporting evidence (`docs/AGENT_WORKFLOW.md` §5–6).
+  patches as files for Babin. Codex and Gemini build locally; Babin merges.
+- **CI is off** (W75): the local gates in `PLAN.md` §6.4 are the merge gate.
 
 ## The ones most easily broken
 
@@ -57,22 +52,19 @@ Full list in `PLAN.md §0`.
 ## Specs
 
 [`../mds and photos/Babin Rentals OS/`](../mds%20and%20photos/Babin%20Rentals%20OS/) —
-canonical is `00 Getting Started/Foundation Specification.md`. For domain concepts Foundation is the
-reference; it never overrides `docs/PERMISSIONS.md`, a newer owner ruling or a Law
-(`docs/AGENT_WORKFLOW.md` §2). Never build from `_Archive/`.
+canonical is `00 Getting Started/Foundation Specification.md`. Follow the authority order in
+`docs/00_READ_FIRST.md`: Babin's latest explicit product ruling wins; Foundation is the fallback.
+Permission conflicts follow `PERMISSIONS.md` and B-1. See [`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md) §2 for the topic-specific authority matrix. Never build from `_Archive/`.
 
 ---
 
 ## Authority to resolve conflicts
 
-Copied verbatim from [`docs/PERMISSIONS.md`](docs/PERMISSIONS.md) §15, which that section
-requires (§15.5). **The full permission matrix lives there — §3 (module × role), §4 (capability
-catalogue), §5 (money visibility) and §6 (approval gates). This file does not restate them.**
-Where any spec disagrees with `PERMISSIONS.md` about who may do what, that file wins.
+The following section is copied verbatim from PERMISSIONS.md §15; the full role matrix remains there.
 
-### Build-time authority — Claude resolves conflicts
+## 15. Build-time authority — engineering and product decisions
 
-**Ruled 7 Sep 2026.** While building the app, Claude (Claude Code or a chat session working on the repo) **may make any change needed to resolve a conflict, gap or ambiguity without stopping to ask** — in this document, in any spec, in code, in a migration file. The build does not wait for a ruling round. Babin reviews by flipping logged rows, not by being asked mid-task.
+**RULING 2026-11-05 (Babin), superseding the broad 7 Sep delegation:** agents may resolve routine engineering details and implement settled rulings independently. For a new or unresolved product decision, record the question in `docs/OPEN_DECISIONS.md`, index it in `PLAN.md` §4.2, and ask Babin. Continue independent work while waiting. Do not invent a product default to unblock the build. N-1–N-8 and external-action boundaries remain in force.
 
 **End every session with the R-29 blocks.** A session ends with `## Completion` and
 `## Remaining`. Run `npm run completion`; **never type a percentage by hand.** Overall is the mean
@@ -85,7 +77,7 @@ heading.
 same run** (R-35, issued as R-27). Unit tests cannot see across the RPC boundary: 2,834 of them
 were green over a database that accepted a double booking and refused every discounted booking.
 
-#### 15.1 Always
+### 15.1 Always
 
 | # | Rule |
 |---|---|
@@ -93,11 +85,11 @@ were green over a database that accepted a double booking and refused every disc
 | **B-2** | **Three-place log, same commit.** Every decision goes to (1) `RULINGS-<date>.md` in the repo, (2) PROGRESS.md under *Ruled* (house format Did / Ruled / Verified), (3) a `// RULING <date>: <one line>` comment at the code or migration site. |
 | **B-3** | **This document moves with the code.** A ruling that changes a cell, a capability or a gate edits §3/§4/§6 and the T-1 fixture in the same commit. The doc never lags. |
 | **B-4** | **Gates stay green.** tsc 0, vitest green, build exit 0 after the change — a ruling that breaks a gate is not a ruling, it is a bug. |
-| **B-5** | **Business figures are ⭐.** Thresholds, fees, percentages, retention periods: take the §13 default (or the most conservative figure in any source), mark ⭐, move on. |
+| **B-5** | **Business figures use settled defaults only.** Reuse an existing owner-approved §13 default or explicit ruling, marked ⭐ where provisional. A new fee, threshold, percentage or retention decision goes to Babin (RULING 2026-11-05); do not invent one. |
 | **B-6** | **Reversible by design.** Prefer the change that can be undone with one edit. Write the revert in the ruling ("revert = remove Warehouse from line 42"). |
 | **B-7** | **Silence is not supersession.** A newer document that does not mention a rule has not cancelled it (RULINGS-2026-09-04). |
 
-#### 15.2 Never — even to resolve a conflict (Babin's explicit word required)
+### 15.2 Never — even to resolve a conflict (Babin's explicit word required)
 
 | # | Boundary | Why it is fixed |
 |---|---|---|
@@ -110,24 +102,24 @@ were green over a database that accepted a double booking and refused every disc
 | **N-7** | Turn on any Client Portal write path before test D-5 passes. | Cross-client data exposure. |
 | **N-8** | Rotate, print, log or commit a credential or API token. | The 5 Sep audit found one in the working tree — the fix is rotate + Edge Function secret, and that is Babin's action. |
 
-Anything not in this table is Claude's to decide.
+Outside this table, agents may decide routine engineering details. New or unresolved product decisions require Babin's answer (RULING 2026-11-05).
 
-#### 15.3 Resolution order
+### 15.3 Resolution order
 
 When sources conflict, read in this order and stop at the first that answers:
 
 ```
 1  PERMISSIONS.md (this file)            — for anything about who may do what
 2  RULINGS-*.md, newest first            — dated rulings
-3  MASTER.md                             — implementation detail
-4  Foundation v3.0 · UI_UX.md            — engines, look
-5  The module spec                       — page behaviour
+3  PRODUCT_RULES.md and remaining sources — follow docs/00_READ_FIRST.md
+4  Foundation specification               — fallback domain model
+5  The module spec                       — page behaviour within the settled rules
 6  The code as found                     — what actually runs today
 ```
 
-If none answers: choose the option that is **(a)** stricter, **(b)** least code, **(c)** reversible — in that order. Record which of the six sources were consulted and why they did not settle it.
+If none answers a product question, record the sources consulted and ask Babin. For routine engineering details only, prefer **(a)** stricter, **(b)** least code, **(c)** reversible, in that order.
 
-#### 15.4 Session report
+### 15.4 Session report
 
 Each build session ends with one table Babin can scan on a phone:
 
@@ -137,6 +129,13 @@ Each build session ends with one table Babin can scan on a phone:
 
 A row Babin disagrees with is flipped by replying with the row number. That reply becomes the next `RULINGS-<date>.md` entry.
 
-#### 15.5 Where this clause lives
+**The table is followed by the two R-29 blocks** — `## Completion` (five counted dimensions, the
+mean of them the Overall) and `## Remaining` (features to build · bugs to fix · rulings open, each
+with a count in its heading, plus one line naming what the next session starts with). A session
+that logs Did / Ruled / Verified and no Completion / Remaining is logged as unfinished.
+
+### 15.5 Where this clause lives
 
 Copy §15 verbatim into `CLAUDE.md` under a heading **"Authority to resolve conflicts"**, so every Claude Code session reads it at start. `CLAUDE.md` points back here for the full matrix; it does not restate §3–§6.
+
+---

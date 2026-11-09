@@ -8,6 +8,8 @@
 
 When any two documents in this repository conflict or disagree, read in this exact order and stop at the first document that answers:
 
+**RULING 2026-11-05 (Babin):** the latest explicit owner ruling supersedes an older product specification, including Foundation. Foundation supplies the fallback when no higher source answers. Permission conflicts remain governed by `PERMISSIONS.md` and B-1 (stricter wins); an agent must not widen a permission to resolve a conflict. The order below is the shared authority order for all contributor documents.
+
 ```text
 1. docs/00_READ_FIRST.md          — Universal documentation entry point & rules of engagement
 2. CLAUDE.md                       — Repository contributor laws & operational constraints

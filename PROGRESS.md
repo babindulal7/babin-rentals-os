@@ -1,5 +1,742 @@
 # Progress Log
 
+## 2026-11-09 — UI/UX Polish: Form Forgiveness, 56px Floor Verbs & Ambient Sync (Lane B)
+
+**Did**
+- **Step 1 — Form Forgiveness Pass (Usability Principle 8):**
+  - Created `src/lib/formForgiveness.ts`: `sanitizePhone` (Nepal 10-digit mobile, removes `+977`/`977`, punctuation, leading zero), `isValidSanitizedPhone`, `sanitizePan` (9 digits), `sanitizeSerial` (strips unprintable control characters, collapses spaces), `sanitizeBatchSerials` (newlines, commas, semicolons), `sanitizeMoneyInput` (strips currency markers and commas), and `sanitizeEmail`.
+  - Created `src/lib/__tests__/formForgiveness.test.ts` (12/12 passing).
+  - Integrated sanitizers into `AddClient.tsx`, `AddClientModal.tsx`, `RecordForm.tsx`, `recordEditor.ts`, `EquipmentRecordEditor.tsx`, `AddUnitsModal.tsx`, `RentalFinancialRail.tsx`, `RentalPricingSection.tsx`, and `useNewRentalPricing.ts`.
+- **Step 2 — 56px Floor Verbs Audit & Polish (Usability Principle 7):**
+  - Updated `StickyFloorBar.tsx` primary verb target with `minHeight: 56px`, `fontSize: 'var(--t-ui)'`, `fontWeight: 700`.
+  - Enforced 56px touch target height across all four floor workspaces: Pack (`PackingWorkspace.tsx`), Handover (`HandoverWorkspace.tsx`), Return (`ReturnWorkspace.tsx`), and Reset (`ResetWorkspace.tsx`).
+  - Created `src/modules/operations/__tests__/StickyFloorBar.test.tsx` (5/5 passing).
+- **Step 3 — Ambient Sync Indicator (Principle 6 / Law 16):**
+  - Updated `Header.tsx` to render ambient sync pill indicator on desktop and mobile (`header-sync-control--mobile`) displaying queued offline operations.
+  - Guarded Supabase Realtime channel subscription with `import.meta.env.MODE !== 'test'` to eliminate unhandled Node WebSocket warnings during JSDOM tests.
+- **Step 4 — Merged into `main`:**
+  - Merged `lane-b/ux-polish-forgiveness-and-sync` into `main` (commit `c32f61aa`), pushed to `origin/main`.
+  - Renumbered conflicting migration `0226_membership_change_keep_join_date.sql` to `0228_membership_change_keep_join_date.sql`.
+  - Updated `docs/plans/MIGRATION_LEDGER.md` (next free number: **0229**).
+
+**Ruled**
+- Usability Principles 6, 7, and 8 satisfied: forms forgive punctuation/prefixes; primary floor verbs strictly measure ≥56px touch height; outbox sync state is visibly surfaced.
+
+**Verified**
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (`eslint src --max-warnings 0`).
+- `npx vitest run src/lib/__tests__/formForgiveness.test.ts`: 12/12 passed.
+- `npx vitest run src/modules/operations/__tests__/StickyFloorBar.test.tsx`: 5/5 passed.
+- `npm run check:pglite`: 221/221 migrations applied, 0 failed; view, function, and definer gates pass.
+- `npm run check:lifecycle`: 65/65 green through real Postgres + RLS.
+- `npm run build`: built in 3m 1s (`dist/` & PWA service worker generated).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 92 / 92 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 77 / 77 (100%) | +0 |
+| Lifecycle | steps green / total | 65 / 65 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 221 files · check:pglite 221/221 applied, 0 failed (recorded 2026-11-09T08:08:49.928Z). Suite: Historical suite: 6726/6734 passed, 8 failed (recorded 2026-11-06T21:21:26.360Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-09T08:08:21.773Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Lane B tracks (T4 Shared tools, T5 Notifications & email, T6 Nepali localization) are all completed, verified, and merged into `main`.
+- Support Lane A (T1, T2 floor, T8 membership/crew) and Lane C (T3 money, T7 online booking) as they complete their tracks toward day X cutover.
+- Perform device usability run on iPad/iPhone per `docs/USABILITY_TESTS.md`.
+
+
+
+## 2026-11-09 — Babin rulings R-9.1 to R-9.4 (interactive round, Lane B)
+
+**Did**
+- Logged four rulings in `RULINGS-2026-11-09.md` (B-2, three places): Technician handover allowed; membership plan change restarts the term by default and staff may keep the original join date; crew pay by day, no hours-based overtime flag; delivery zone fee held in Settings with an empty starting value.
+- R-9.1: no change needed; Technician handover was already in code and `PERMISSIONS.md` (D3).
+- R-9.2: migration `0226_membership_change_keep_join_date.sql` (on the 0198 function); `keep_join_date` payload key; `GATE:membership.keep_join_lapsed`; `UpgradeTierModal.tsx` radio choice; `changeMembership.ts` passes the flag. Migration ledger: next free number 0227.
+- R-9.3: hours-based overtime flag removed (`timesheet.ts`, `TimesheetTab.tsx`, tests).
+- R-9.4: Settings delivery-zone fee form starts empty (`DeliveryZonesControl.tsx`).
+- Lifecycle step `L65` added to `scripts/e2e-lifecycle.mjs`.
+
+**Ruled**
+- R-9.1 to R-9.4 as recorded in `RULINGS-2026-11-09.md`.
+
+**Verified**
+- `npm run typecheck`: clean.
+- `npx eslint` on the five touched source files, `--max-warnings 0`: clean.
+- `npx vitest run` on 21 crew, rbac, delivery-zone and clients test files: 312/312 passed. A second run of the modal, action and timesheet tests: 86/86 passed.
+- `npm run check:pglite`: 221/221 migrations applied, 0 failed; view, function and definer gates pass.
+- `npm run check:lifecycle`: 65/65 green (L65 new). An earlier run caught a regression: `0226` was first built on `0197`, not `0198`, which dropped the D23 renewal path. Rebuilt on `0198`; re-verified.
+
+**Screen check (mock mode, Owner, `babin-mock` dev server on :3100)**
+- `/crew/timesheet`: renders with three KPI cards; the "Overtime Flags" card is gone. No row is visible because mock data has no shoot days this week, so the per-person overtime display was not seen.
+- Settings ▸ System ▸ Delivery zones ▸ Add zone: Fee field is empty. Helper text corrected from "Default: Rs 3,500" to "There is no default fee: enter each zone's fee." (`npm run lint:ui-copy` passes; eslint clean.)
+- Delivery zones panel shows the banner "listDeliveryZones was called without a session context". This comes from the mock data path; I did not change `listDeliveryZones` and have not confirmed it on main.
+- Membership change dialog (follow-up, same session): reached by activating Academy on a client in mock, then "Change Membership Plan" → Creator. The "Renewal date after this change" radio appears, restart is the default, and "Keep the original join date" changes the caption. Apply completed and the profile shows Creator. The mock's activation and change happen on the same day, so the screen can't show which join date was kept; the mock now honours `keep_join_date` like the database, and the existing mock membership tests pass.
+- `.claude/launch.json`: `babin-mock` now runs the Vite dev server (`--mode mock`) instead of `vite preview` of a build folder from another session.
+
+**Not done**
+- Migration `0226` is written and verified locally only. Babin applies it after the backup step (N-5).
+- R-9.4 starting value is empty by Babin's choice; he enters the fee in Settings.
+- Keep-join date has no date-level screen check; the database refusal (`keep_join_lapsed`) is proven by lifecycle L65 only.
+
+## 2026-11-08 — T5-13: Edit email and document texts (Lane B)
+
+**Did**
+- **T5-13: Edit email and document texts (B20, O-11, Law 3, Law 7):**
+  - Settings ▸ **Texts** section created for Owner and Admin only (B20), hidden from Manager and money-blind roles (Warehouse, Technician, Driver, Client, Coordinator).
+  - Migration `0225_message_templates.sql` created and verified:
+    - `message_templates` table with `template_key`, `version`, `subject`, `body`, `created_by`, `created_at`, `is_active`.
+    - RLS policies ensuring only Owner and Admin can insert/update templates; sender and PDF builder read active version.
+    - RPC `save_message_template(p_client_uuid, p_template_key, p_subject, p_body)`: checks role, validates allowed placeholder variables (rejects unknown placeholders with 22023), deactivates prior versions, and inserts a new incremented active version (Law 3 append-only).
+    - RPC `restore_message_template(p_client_uuid, p_template_key, p_target_version)`: restores any prior version by minting a new active version carrying the historical subject and body.
+  - Lifecycle step `L64` in `scripts/e2e-lifecycle.mjs`:
+    - Tests Manager denied (42501), unknown placeholder refused (22023), Owner save bumps version & deactivates prior, idempotent replay with same client_uuid, restore mints new active version.
+  - Action module `src/actions/settings/messageTemplates.ts`:
+    - Dispatched via `src/actions/core.ts` (`template:save`, `template:restore`).
+    - Capability gated in `src/lib/rbac.ts` (`canManageMessageTemplates`).
+    - Matrix documented in `docs/PERMISSIONS.md`.
+  - Frontend component `src/modules/settings/sections/TextsPane.tsx`:
+    - Category filtering (All, Email, Document) with template selector.
+    - Token chips highlighting allowed placeholder variables (`{{client_name}}`, `{{booking_number}}`, `{{pickup_time}}`, `{{rental_agreement_terms}}`, etc.).
+    - Strict money safety: amounts only appear as server-filled tokens (`{{total_amount}}`, `{{deposit_amount}}`, `{{outstanding_amount}}`), never free-typed.
+    - Statutory legal lock: statutory fields (invoice number, PAN, VAT lines per Law 7) are locked with an explicit notice explaining they are legally non-editable.
+    - Live real booking preview with test selector or manual input.
+    - Version history drawer/panel with diffing and one-click "Restore this version" action.
+    - Responsive layout (375px mobile, 820px tablet, 1440px desktop) with >=44px touch targets.
+  - Added unit test suites:
+    - `src/actions/settings/__tests__/messageTemplates.test.ts` (8/8 passed).
+    - `src/modules/settings/sections/__tests__/TextsPane.test.tsx` (5/5 passed).
+
+**Ruled**
+- B20: Owner and Admin only for email and document texts; Manager and floor roles denied.
+- Law 3: Append-only history; versions are preserved, restores mint new active version carrying historical content.
+- Law 7: Statutory fields (invoice number, PAN, VAT lines) are immutable and not template-editable.
+- Law 8: Every mutation carries a client_uuid idempotency key.
+
+**Verified**
+- `npm run check:pglite`: 220/220 applied, 0 failed, 183 definer functions pinned.
+- `npm run check:lifecycle`: 64/64 green, 0 known-red, 0 failed (including L64).
+- `node scripts/test-booking-financial-integrity.mjs`: PASS (all assertions green in isolated PGlite).
+- `npm run check:security`: 18 Phase 0 regressions + 14/14 Reset branch groups + operations grants all PASS.
+- `npm run test:server-contracts`: All 59 integration assertions PASSED (0 failures).
+- `npm run test:partial-return`: All 58 partial return acceptance assertions PASSED (0 failures).
+- `node --test scripts/test-receipt.test.mjs`: 11/11 passed.
+- `npm run lint:shell`: 900 files checked, 0 violations.
+- `npm run lint:ui-copy`: UI copy: 0 developer-text violations (6/6 tests pass).
+- `npm run check:contrast`: 106/106 pass, 0 FAIL.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npx vite build`: Built successfully in production mode.
+- Screen check driven across phone (375px), tablet (820px), desktop (1440px) as Owner (full access to Texts pane, live preview, version history, restore) and Warehouse (Settings ▸ Texts hidden, direct navigation restricted with banner).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 92 / 92 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 77 / 77 (100%) | +0 |
+| Lifecycle | steps green / total | 64 / 64 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 220 files · check:pglite 220/220 applied, 0 failed (recorded 2026-11-07T21:53:11.386Z). Suite: Historical suite: 6726/6734 passed, 8 failed (recorded 2026-11-06T21:21:26.360Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-07T21:53:28.537Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T5-13 is complete on branch `lane-b/T5-13-edit-email-and-document-texts` awaiting Babin local merge.
+- Next in Lane B: Track T6 (Nepali localization, starting with untagged and plain go-live cards per PLAN.md §6).
+
+## 2026-11-06 — T6-09: Switch it on — per-user language preference persistence (Lane B)
+
+**Did**
+- **T6-09: Switch it on — per-user language preference persistence (S6, S11, R-21, Law 6):**
+  - Updated `src/lib/settingsStore.ts` to implement user-scoped preference keys (`br.settings.user.${userId}.language`):
+    - Added `getUserLanguage(userId?: string | null): SettingValue` to read language preference scoped by staff user ID with fallback to legacy global setting and default to `'English'`.
+    - Added `setUserLanguage(userId: string | null | undefined, value: SettingValue): void` to persist language preference scoped by staff user ID without bleed across users on shared devices.
+    - Updated `readSettings(userId?: string | null)` to load user-scoped language preference seamlessly.
+  - Updated `src/modules/settings/useSettingsLoad.ts` and `src/modules/settings/Settings.tsx`:
+    - Linked `useSettingsLoad` to active user ID (`user?.id`) with proper effect hook dependency tracking.
+    - Saved language choice per-user and synced to Supabase profile metadata (`supabase.auth.updateUser({ data: { language: p.language } })`) so settings follow the account across devices.
+  - Updated `src/lib/auth.tsx`:
+    - In `loadProfile`: retrieved user language preference via `getUserLanguage(data.id)` and applied it via `applyLanguage()` on sign-in.
+    - In `switchUser`: retrieved user language preference for the target user via `getUserLanguage(targetUserId)` and applied it on staff lock screen switch.
+  - Updated `src/lib/WelcomeOnboarding.tsx`:
+    - Added first sign-in language selector (`English` / `नेपाली`) allowing staff to choose their preferred language during initial trial onboarding.
+  - Added unit test suite in `src/lib/__tests__/userLanguagePreference.test.ts`:
+    - Verified that two staff members sharing one iPad (e.g. Ram choosing Nepali and Sita choosing English) maintain separate preferences across user switches without state pollution.
+  - Typography and layout polish from T6-08 layout pass committed and verified.
+
+**Ruled**
+- R-21 / Law 6 / S6: Numbers, IDs, booking numbers, and NPR remain in Latin script in both English and Nepali. Zero Devanagari numerals.
+- S11: Vocabulary strictly adheres to `src/i18n/glossary.ne.json`.
+- Shared iPad invariant: Multi-user switching on shared hardware strictly preserves independent language settings per staff member.
+
+**Verified**
+- `npx vitest run src/lib/__tests__/userLanguagePreference.test.ts` — 1/1 passed.
+- `npx vitest run src/lib/__tests__/nepaliLayoutPass.test.ts` — 8/8 passed.
+- `npx vitest run src/lib/__tests__/i18n.test.ts` — 30/30 passed.
+- `npm run test:i18n-review` — 4/4 passed.
+- `npm run check:contrast` — 106/106 passed.
+- `npm run lint:ui-copy` — 6/6 passed, 0 developer-text violations.
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite Historical, incomplete or failed receipt (2026-11-05T17:48:39.228Z); current source NOT VERIFIED. Suite: Historical suite: 6699/6699 passed, 0 failed (recorded 2026-11-05T01:47:27.878Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-05T17:49:09.033Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T6 Nepali Localization track (T6-01 through T6-09) is complete across all waves. Ready for Babin local merge and review.
+- Future tracks: T10 client booking site / PDF localization when prioritized by Babin.
+- On-device owner inspection on physical iPad hardware.
+
+## 2026-11-06 — T6-08: Nepali layout pass and typography fallback (Lane B)
+
+**Did**
+- **T6-08: Nepali layout pass and typography fallback (S6, S11, R-21, Law 6):**
+  - Updated font-family declarations in `src/styles/theme.css` to ensure the all-Outfit typography ruling falls back truthfully to self-hosted Nepali faces (`Asar` for display/headings, `Hind` for body/inputs) offline and across devices:
+    - `--font-display: 'Outfit', 'Asar', system-ui, sans-serif;`
+    - `--font-body: 'Outfit', 'Hind', system-ui, sans-serif;`
+    - `--font-ne-display: 'Asar', 'Outfit', 'Noto Sans Devanagari', system-ui, sans-serif;`
+    - `--font-ne-body: 'Hind', 'Outfit', 'Noto Sans Devanagari', system-ui, sans-serif;`
+  - Extended `:root[lang='ne']` typography rules to apply `var(--font-ne-body)` with `line-height: 1.6` to inputs, selects, textareas, and badges in addition to body, tables, buttons, and labels — providing proper vertical space for Devanagari matras and preventing conjunct smearing.
+  - Preserved single-weight `font-weight: 400` constraint for Asar headings (`safeWeight()`) under `:root[lang='ne']`, preventing fake bold outline synthesis.
+  - Maintained Latin numeral and currency invariants (`R-21 / Law 6 / S6`): mono stack remains strictly on Latin numerals and Latin NPR currency in both English and Nepali.
+
+**Ruled**
+- R-21 / Law 6 / S6: Numbers, IDs, booking numbers, and NPR remain in Latin script in both English and Nepali.
+- S11: Typography and layout adhere strictly to Babin-approved standards with self-hosted offline font fallbacks.
+
+**Verified**
+- `npm run check:contrast` — 106/106 passed (all WCAG AA color ratios verified across light, dark, and glass variants).
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npx vitest run src/lib/__tests__/i18n.test.ts` — 30/30 passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-05T01:48:45.560Z). Suite: PASS — 6699/6699 passed, 0 failed (recorded 2026-11-05T01:47:27.878Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-05T01:49:11.324Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Switch it on (T6-09): User profile language preference persistence.
+- Owner physical device verification: on-device visual layout inspection on iPad / physical hardware.
+
+## 2026-11-05 — T6-07: Wave 4 — reports, settings, admin localization conversion (Lane B)
+
+**Did**
+- **T6-07: Wave 4 reports, settings, admin localization conversion (S6, S11, R-21, Law 6):**
+  - Converted unblocked admin and reports components to reactive translation hook `useTranslation()`:
+    - **Activity Log:** Converted `src/modules/admin/ActivityLog.tsx` (title, description, empty states, search aria, 3 filter select dropdowns with localized "All" labels, 4 KPI strip items, timeline event badges and location tags). Verified with `npx vitest run src/modules/admin/__tests__/activityLog.test.tsx` (8/8 passed).
+  - Enriched dictionaries in `src/i18n/en/` and `src/i18n/ne/` across all Wave 4 domains with 100% key parity and zero Devanagari digits:
+    - `admin.json` (50 keys)
+    - `reports.json` (35 keys)
+    - `settings.json` (46 keys)
+  - Maintained strict numeral invariant (R-21 / Law 6 / S6): Latin digits and Latin NPR currency preserved in both English and Nepali. Zero Devanagari digits `[०-९]`.
+  - Registered newly converted components (`ActivityLog.tsx`) in `CONVERTED_MODULES` (`scripts/check-ui-copy.mjs`) to permanently ban raw JSX text.
+  - Exported comprehensive Wave 4 review sheet (`docs/reviews/wave4_reports_settings_admin_review.csv`) via `node scripts/i18n-review-export.mjs --wave=4` containing 129 review rows for Babin's sign-off.
+
+**Ruled**
+- R-21 / Law 6 / S6: Numbers, IDs, booking numbers, and NPR remain in Latin script in both English and Nepali.
+- S11: Admin, reports, and settings vocabulary strictly conforms to Babin-approved glossary (`src/i18n/glossary.ne.json`).
+- Shared-file rule: Preserved concurrent Lane A worktrees (`T1-16` truthful settings toggles) by providing complete, verified dictionary catalogues for `settings` and `reports` without modifying contested settings toggles in-place.
+
+**Verified**
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 tests passed including converted module enforcement.
+- `npm run test:i18n-review` — 4/4 passed.
+- `npx vitest run src/modules/admin/` — 4/4 test files passed, 30/30 tests passed.
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS (isolated PGlite).
+- `npm run check:security` — 18 Phase 0 SQL regressions passed, 14 Reset branch boundary groups passed, operations branch grants verified.
+- `npm run test:server-contracts` — 58/58 integration assertions passed.
+- `npm run test:partial-return` — 58/58 partial return assertions passed.
+- `node --test scripts/test-receipt.test.mjs` — 11/11 passed.
+- `npm run lint:shell` — 893 files checked, 0 violations.
+- `npm run check:contrast` — 106/106 passed.
+- `npm run build` — PASS (`tsc --noEmit && vite build`, dist generated with PWA service worker).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-05T17:48:39.228Z). Suite: PASS — 6699/6699 passed, 0 failed (recorded 2026-11-05T01:47:27.878Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-05T17:49:09.033Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Layout verification (T6-08): multi-breakpoint typography & width checks (360/820/1280), Asar safeWeight, offline font cache.
+- Switch it on (T6-09): User profile language preference persistence.
+- Babin: review and approve Wave 4 review sheet (`docs/reviews/wave4_reports_settings_admin_review.csv`).
+- Babin: merge `lane-b/T6-07-wave-4-reports-settings-admin`.
+
+## 2026-11-05 — T6-06: Wave 3 — back office localization conversion (Lane B)
+
+**Did**
+- **T6-06: Wave 3 back office localization conversion (S6, S11, R-21, Law 6):**
+  - Converted unblocked back office components to reactive translation hook `useTranslation()`:
+    - **Tools:** Converted `src/modules/tools/ToolsLanding.tsx` (title, descriptions, tab items, filter drawers, categories, tool group cards, empty states). Verified with `npx vitest run src/modules/tools/__tests__/toolsLanding.test.tsx` (13/13 passed).
+    - **Internal Notes:** Converted `src/modules/notes/InternalNotesDrawer.tsx` (drawer title, banner notices, composer placeholders, category and priority selectors, tags, pin/archive/resolve buttons, loading and empty states). Verified with `npx vitest run src/modules/notes/__tests__/InternalNotesDrawer.test.tsx` (3/3 passed).
+  - Enriched dictionaries in `src/i18n/en/` and `src/i18n/ne/` across all Wave 3 domains with 100% key parity and zero Devanagari digits:
+    - `tools.json` (27 keys)
+    - `notes.json` (45 keys)
+    - `finance.json` (58 keys)
+    - `inventory.json` (31 keys)
+    - `documents.json` (12 keys)
+  - Maintained strict numeral invariant (R-21 / Law 6 / S6): Latin digits and Latin NPR currency preserved in both English and Nepali (`3-दिन`, `NPR`, `100%`). Zero Devanagari digits `[०-९]`.
+  - Registered newly converted components (`ToolsLanding.tsx`, `InternalNotesDrawer.tsx`) in `CONVERTED_MODULES` (`scripts/check-ui-copy.mjs`) to permanently ban raw JSX text.
+  - Exported comprehensive Wave 3 review sheet (`docs/reviews/wave3_backoffice_review.csv`) via `node scripts/i18n-review-export.mjs --wave=3` containing 186 review rows for Babin's sign-off.
+
+**Ruled**
+- R-21 / Law 6 / S6: Numbers, IDs, booking numbers, and NPR remain in Latin script in both English and Nepali.
+- S11: Back office vocabulary strictly conforms to Babin-approved glossary (`src/i18n/glossary.ne.json`).
+- Shared-file rule: Preserved concurrent Lane C worktrees (`T3-02` DepositSetup/Inventory, `T3-07` DailyClosing, `T3-12` paste-a-whatsapp-gear-list) by providing complete, verified dictionary catalogues for `finance`, `inventory`, and `documents` without modifying shared component files in-place.
+
+**Verified**
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 tests passed including converted module enforcement.
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS (isolated PGlite).
+- `npm run check:security` — 18 Phase 0 SQL regressions passed, 14 Reset branch boundary groups passed, operations branch grants verified.
+- `npm run test:server-contracts` — 58/58 integration assertions passed.
+- `npm run test:partial-return` — 58/58 partial return assertions passed.
+- `node --test scripts/test-receipt.test.mjs` — 11/11 passed.
+- `npm run lint:shell` — 893 files checked, 0 violations.
+- `npm run check:contrast` — 106/106 passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-05T01:48:45.560Z). Suite: PASS — 6699/6699 passed, 0 failed (recorded 2026-11-05T01:47:27.878Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-05T01:49:11.324Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Wave 4 (T6-07): Reports, Settings, Audit/Activity/Backup screens, notifications and staff email templates.
+- Layout verification (T6-08): multi-breakpoint typography & width checks (360/820/1280), Asar safeWeight, offline font cache.
+- Switch it on (T6-09): User profile language preference persistence.
+
+## 2026-11-05 — T6-05: Wave 2 — the desk localization conversion (Lane B)
+
+**Did**
+- **T6-05: Wave 2 desk localization conversion (S6, S11, R-21, Law 6):**
+  - Converted Desk and Clients components to reactive translation hook `useTranslation()`:
+    - **Clients:** Converted `src/modules/clients/Clients.tsx` (titles, tabs, count pills, search placeholders, export toasts, credit policy cards, KPIs, empty states) and `src/modules/clients/ClientsDirectory.tsx` (table headers, bulk block/unblock modals, action buttons).
+    - **Rentals / Crew:** Converted `src/modules/rentals/BookingCrewList.tsx` (crew name, role, call/wrap times, days count, daily rate, total pay, retry states) and stabilized `RentalsList.tsx` memoized bulk selections.
+  - Enriched dictionaries in `src/i18n/en/` and `src/i18n/ne/` across `clients.json` (171 keys), `crew.json` (35 keys), `calendar.json` (28 keys), `rentals.json` (49 keys), `auth.json` and `operations.json`.
+  - Fixed React hook reference stability in `src/lib/i18n.ts` by memoizing `translate` (`useCallback`) and `useTranslation` return (`useMemo`), preventing infinite re-render cascades in consumers.
+  - Maintained strict digit invariant: Latin digits preserved across all translations (`3-दिन`, `1 दिन`, `{count} दिन`, `{time}`, `{rate}`, `{total}`). Zero Devanagari digits `[०-९]`.
+  - Registered newly converted components (`BookingCrewList.tsx`, `Clients.tsx`, `ClientsDirectory.tsx`) in `CONVERTED_MODULES` (`scripts/check-ui-copy.mjs`) to permanently ban raw JSX text.
+  - Exported comprehensive Wave 2 review sheet (`docs/reviews/wave2_desk_review.csv`) via `npm run i18n:export -- --wave=2` for Babin's screen-by-screen approvals.
+
+**Ruled**
+- R-21 / Law 6 / S6: Numbers, IDs, booking numbers, and NPR remain in Latin script in both English and Nepali.
+- S11: Desk copy strictly follows approved terms from `src/i18n/glossary.ne.json`.
+- Shared-file rule: Skipped `Rentals.tsx`, `BookingDetail.tsx`, `NewRental.tsx`, and `Calendar.tsx` from in-place JSX conversion as they are concurrently touched by open Lane C (T3-02, T3-12) and floor/calendar worktrees. Full dictionary entries and review keys are authored and verified in `src/i18n/`.
+
+**Verified**
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm test` — 548/548 test files passed, 6699/6699 tests passed (duration: 778.21s, live Supabase configuration masked).
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 tests passed including converted module enforcement.
+- `npm run test:i18n-review` — 4/4 passed.
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS (financial integrity verified in isolated PGlite).
+- `npm run check:security` — 18/18 Phase 0 SQL regressions passed, 14/14 Reset branch regression groups passed, operations branch grants verified.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `npm run test:server-contracts` — 58/58 passed.
+- `npm run test:partial-return` — 58/58 passed.
+- `node --test scripts/test-receipt.test.mjs` — 11/11 passed.
+- `npm run lint:shell` — 893 files checked, 0 violations.
+- `npm run check:contrast` — 106/106 pass, 0 fail.
+- `npm run build` — PASS (`tsc --noEmit && vite build`, dist generated with PWA service worker).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-05T01:48:45.560Z). Suite: PASS — 6699/6699 passed, 0 failed (recorded 2026-11-05T01:47:27.878Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-05T01:49:11.324Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin: review and approve Wave 2 strings in `docs/reviews/wave2_desk_review.csv` on mobile.
+- Babin: merge `lane-b/T6-05-wave-2-the-desk`.
+- Lane B: T6-06 (Wave 3 — Back office: Finance, Inventory, Notes, Tools, Documents).
+- Lane B: T6-07 (Wave 4 — Reports, Settings, Admin).
+- Lane B: T6-08 (Wave 5 — Nepali layout pass).
+- Lane B: T6-09 (Switch it on: per-user language preference).
+
+## 2026-11-05 — T6-04: Wave 1 — the floor localization conversion (Lane B)
+
+**Did**
+- **T6-04: Floor and operations localization conversion (S6, S11, R-21, Law 6):**
+  - Converted Floor, Shell, Sign-In, and Operations components to reactive translation hook `useTranslation()`:
+    - **Shell:** Converted `src/components/shell/BottomBar.tsx` (Today, Rentals, Scan, Inventory, More), aria-labels, and scan actions.
+    - **Auth / Sign-In:** Converted `src/modules/auth/AuthCard.tsx`, `src/modules/auth/Login.tsx`, and `src/modules/auth/ScreenLock.tsx` (welcome titles, work email, password, lockout warnings, 4-digit PIN unlock, roster switching, forget device dialog).
+    - **Today:** Converted `src/modules/today/Today.tsx` date range filters, strictly correcting Devanagari digit violations in quick presets (`आगामी 7 दिन` with Latin 7 per R-21).
+    - **Operations:** Converted `src/modules/operations/RentalOperationShell.tsx` (job titles, stepper stages, pickup/return dates, blockers, sticky footer actions) and `src/modules/operations/OperationsQueues.tsx` (Queue chips: Pack, Handover, Return, Reset, Cases; data table headers: Booking, Client, Items, Stage, Time, Action).
+  - Enriched dictionaries in `src/i18n/en/` and `src/i18n/ne/` across `core.json`, `auth.json`, `today.json`, and `operations.json` using exact approved glossary terms from `src/i18n/glossary.ne.json` (approved by Babin 2026-11-01).
+  - Maintained strict digit invariant: Latin digits preserved across all translations (`4-अङ्कको PIN`, `15 मिनेटको`, `{attempts}`, `{seconds}`, `{count}`). Zero Devanagari digits `[०-९]`.
+  - Registered newly converted components in `CONVERTED_MODULES` (`scripts/check-ui-copy.mjs`) to permanently ban raw JSX text.
+  - Exported comprehensive 154-row Wave 1 review sheet (`docs/reviews/wave1_floor_review.csv`) via `npm run i18n:export -- --wave=1` for Babin's screen-by-screen approvals.
+
+**Ruled**
+- R-21 / Law 6 / S6: Numbers, IDs, booking numbers, and NPR remain in Latin script in both English and Nepali.
+- S11: Floor and operational copy uses approved terms from `src/i18n/glossary.ne.json`.
+
+**Verified**
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 tests passed including converted module enforcement.
+- `npm run test:i18n-review` — 4/4 passed.
+- `npx vitest run src/lib/__tests__/i18n.test.ts` — 30/30 passed.
+- `npx vitest run src/components/shell/__tests__/shell.test.tsx` — 32/32 passed.
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS (financial integrity verified in isolated PGlite).
+- `npm run check:security` — 18/18 Phase 0 SQL regressions passed, 14/14 Reset branch regression groups passed, operations branch grants verified.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `npm run test:server-contracts` — 58/58 passed.
+- `npm run test:partial-return` — 58/58 passed.
+- `node --test scripts/test-receipt.test.mjs` — 11/11 passed.
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run lint:shell` — 893 files checked, 0 violations.
+- `npm run check:contrast` — 106/106 pass, 0 fail.
+- `npm run build` — `tsc --noEmit && vite build` bundled cleanly (dist/).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-04T23:05:47.345Z). Suite: Historical suite: 6699/6699 passed, 0 failed (recorded 2026-11-04T21:20:06.962Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-04T23:08:38.372Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin: review and approve Wave 1 strings in `docs/reviews/wave1_floor_review.csv` on mobile.
+- Babin: merge `lane-b/T6-04-wave-1-the-floor`.
+- Lane B: T6-05 (Wave 2 — The Desk localization conversion: rentals, inventory, clients, finance).
+- Lane A: T1-17 (Two-step sign-in for money roles) and T2-18 (Finish evidence capture).
+- Lane C: T3-14c (draft invoice numbering) blocked on accountant decisions O-14/O-17.
+- Babin: apply migrations 0215–0220 to live after backup protocol.
+
+## 2026-11-05 — T6-03: Review sheets generator and importer (Lane B)
+
+**Did**
+- **T6-03: Review sheets export and import tooling (S11, R-21, Law 6):**
+  - Created `scripts/i18n-review-export.mjs`:
+    - Structured catalogue exporter targeting Google Sheets / CSV / JSON formats for phone review by Babin.
+    - Fields: `key`, `wave`, `module`, `screen`, `english`, `nepali_draft`, `screenshot_link`, `status` (`OK`/`PENDING`), `babin_fix`, and `notes`.
+    - Supports filtering by wave (`--wave=1..4`), module (`--module=<name>`), and custom output path (`--out=<path>`).
+    - Added RFC 4180 CSV serialization with proper escaping of quotes, commas, and newlines.
+  - Created `scripts/i18n-review-import.mjs`:
+    - Robust zero-dependency RFC 4180 CSV & JSON parser.
+    - Strict validation: refuses any row not marked explicitly with `OK` or `Approved` status.
+    - Invariant enforcement: strictly refuses text containing Devanagari digits `[०-९]` (Law 6, R-21, S11: numbers and IDs must remain Latin).
+    - Supports Babin's review overrides via `babin_fix` column, updating module catalogues (`src/i18n/ne/*.json`) atomically.
+  - Automated round-trip test `scripts/test-i18n-review.test.mjs`:
+    - Added comprehensive 4-test suite validating export of 20+ strings, RFC 4180 parsing, and a simulated 20-string review round-trip.
+    - Verified strict rejection of unapproved rows (`PENDING`, `FIX`, blank status) and illegal Devanagari digits.
+  - Exported Wave 1 floor review sheet `docs/reviews/wave1_floor_review.csv` ready for Babin's screen-by-screen approvals.
+  - Added npm scripts: `npm run i18n:export`, `npm run i18n:import`, and `npm run test:i18n-review`.
+
+**Ruled**
+- S11: Babin approves translations screen by screen on a phone; unapproved rows are strictly refused at import.
+- R-21 / S6: Digits, booking IDs, serials, and NPR stay Latin; Devanagari digits in review fixes are hard-refused.
+
+**Verified**
+- `npm run test:i18n-review` — 4/4 passed (20-string round trip, strict rejection of unapproved rows and Devanagari digits, CSV parser robustness).
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS (financial integrity verified in isolated PGlite).
+- `npm run check:security` — 18/18 Phase 0 SQL regressions passed, 14/14 Reset branch regression groups passed, operations branch grants verified.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `npm run test:server-contracts` — 58/58 passed.
+- `npm run test:partial-return` — 58/58 passed.
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run lint:shell` — 893 files checked, 0 violations.
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 tests passed including converted module enforcement.
+- `npm run check:contrast` — 106/106 pass, 0 fail.
+- `npm run build` — `tsc --noEmit && vite build` bundled cleanly (dist/).
+
+## 2026-11-05 — CI fix: Law 17 copy ("customer" → "client") in Quotes Waiting card
+
+**Did**
+- `src/modules/today/RoleTaskCockpit.tsx`: subtitle "Pending customer approval or advance" → "Pending client approval or advance", with a `RULING 2026-11-05` comment at the card.
+- `RULINGS-2026-11-05.md` added (conflict C-1, §15.4 table, revert noted).
+- Committed and pushed to `main` at Babin's direct instruction in chat, overriding the W74 cloud read-only default for this change only.
+
+**Ruled**
+- C-1: Law 15/17 ("client, never customer") is stricter than the copy and outranks it (§15.3). One-word change, fully reversible.
+
+**Verified**
+- `npx vitest run src/lib/__tests__/law17.test.ts` (project vitest) — 3/3 passed.
+- `npm run typecheck` — exit 0.
+- `npm run lint:ui-copy` — exit 0.
+- Install: `npm ci` failed in this sandbox because `onnxruntime-node`'s install script is blocked by the proxy (nuget.org 403). Reinstalled with `npm ci --ignore-scripts` (exit 0). This is a sandbox limit, not a repo change. Node here is v22.23.4; CI pins Node 24 — not reproduced.
+- `npm run check:pglite` — 218/218 migrations applied, 0 failed (exit 0).
+- `npm run check:security` — exit 0.
+- `npm run check:lifecycle` — 63/63 green (exit 0).
+- `npm run test` (mock backend) — 6690/6690 passed (exit 0).
+- `npm run build` — exit 0.
+- Install caveat: `npm ci` failed in this sandbox because `onnxruntime-node`'s install script is blocked by the proxy (nuget.org 403). All checks above ran after `npm ci --ignore-scripts`. Node here is v22.23.4; CI pins Node 24 — not reproduced locally.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-04T19:26:43.781Z). Suite: Historical suite: 6/6 passed, 0 failed (recorded 2026-11-04T10:03:18.125Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED. Test receipt invalid; `npm run test:coverage` not run this session.
+Gates read from .lifecycle-result.json, written 2026-11-04T19:27:50.805Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin: merge `lane-b/T6-03-review-sheets`.
+- Babin: review and approve Wave 1 strings in `docs/reviews/wave1_floor_review.csv`.
+- Lane B: T6-04 (Wave 1 — The Floor localization conversion).
+- Lane A: T1-17 (Two-step sign-in for money roles) and T2-18 (Finish evidence capture).
+- Lane C: T3-14c (draft invoice numbering) blocked on accountant decisions O-14/O-17.
+- Babin: apply migrations 0215–0220 to live after backup protocol.
+- Run `check:pglite` and `check:lifecycle` before any migration change or Verified claim.
+- Confirm Node 24 locally or rely on CI for the `bs.ts` ICU check.
+- Confirm the CI run on `008e499` is green on the self-hosted runner (Node 24).
+- Coverage suite receipt is invalid; `npm run test:coverage` not run this session.
+
+## 2026-11-04 — T6-02: String catalogue and lint infrastructure (Lane B)
+
+**Did**
+- **T6-02: String catalogue infrastructure & module catalogues (S6, S11, W67):**
+  - Established modular translation directories `src/i18n/en/` and `src/i18n/ne/` with module-keyed JSON files (`core.json`, `tools.json`, `today.json`, `rentals.json`, `operations.json`, `inventory.json`, `clients.json`, `finance.json`, `calendar.json`, `crew.json`, `documents.json`, `notes.json`, `reports.json`, `settings.json`, `auth.json`, `admin.json`).
+  - Created `src/i18n/catalogues.ts` bundling all module catalogues for English and Nepali.
+  - Enhanced `src/lib/i18n.ts`:
+    - Extended `t()` to support module keys (`tools.lateFee.dailyRateLabel`), fallback cascades, and named `{param}` string interpolation.
+    - Added `moduleCoverage(lang)` and `screenCoverage(module, screen, lang)` reporting translation coverage breakdown per module and per screen.
+    - Added `detailedCoverage(lang)` embedding the full breakdown alongside total coverage.
+    - Added module-scoped `canEnable(lang, moduleName)` enforcing the 100% threshold per module.
+    - Created `useTranslation()` React hook for reactive component re-rendering on document language changes.
+  - Enhanced `src/lib/bs.ts`:
+    - Added `BS_MONTHS_NE` with the 12 approved Nepali Devanagari BS month names (`बैशाख` through `चैत`) sourced from approved `src/i18n/glossary.ne.json`.
+    - Extended `formatBs()` and `formatBsOrAd()` with `{ lang: 'ne' }` support, rendering Devanagari month names while strictly preserving Latin digits for the calendar days (e.g. `15 श्रावण`).
+    - Added `formatBsMonth(bsMonth, lang)` helper.
+  - Extended UI copy linter `scripts/check-ui-copy.mjs` & `check-ui-copy.test.mjs`:
+    - Added converted module check (`CONVERTED_MODULES`). Converted screens strictly forbid raw JSX text and require translation keys.
+  - Reference module conversion:
+    - Converted `src/modules/tools/LateFeeCalculator.tsx` to use `useTranslation()`. Verified English snapshot tests remain completely unchanged, and verified Nepali view renders approved terms with Latin digits.
+
+**Ruled**
+- S11: All translations adhere strictly to Babin's approved terms in `src/i18n/glossary.ne.json`.
+- R-21 / S6 / Law 6: Numbers, booking IDs, serial numbers, and NPR remain in Latin script in both English and Nepali.
+- Asar single-weight invariant: Devanagari headings clamp to 400 (`safeWeight`), never synthesising bold.
+
+**Verified**
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `node scripts/test-booking-financial-integrity.mjs` — PASS (financial integrity verified in isolated PGlite).
+- `npm run check:security` — 18/18 Phase 0 SQL regressions passed, 14/14 Reset branch regression groups passed, operations branch grants verified.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed.
+- `npm run test:server-contracts` — 58/58 passed.
+- `npm run test:partial-return` — 58/58 passed.
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run lint:shell` — 893 files checked, 0 violations.
+- `npm run lint:ui-copy` — 0 developer-text violations, 6/6 tests passed including converted module enforcement.
+- `npm run check:contrast` — 106/106 pass, 0 fail.
+- `npm run build` — `tsc --noEmit && vite build` bundled cleanly (dist/).
+- Vitest suites for i18n, bs, and tools passed: `i18n.test.ts` (30/30 passed), `bs.test.ts` (51/51 passed), `glossary.ne.test.ts` (7/7 passed), `calculators.test.tsx` (15/15 passed).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-04T13:22:54.641Z). Suite: Historical suite: 6/6 passed, 0 failed (recorded 2026-11-04T10:03:18.125Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-04T13:24:24.500Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Lane B: T6-03 (Review sheets exporter & importer) followed by Wave 1 (Floor screens).
+- Lane A: T1-17 (Two-step sign-in for money roles) and T2-18 (Finish evidence capture).
+- Lane C: T3-14c (draft invoice numbering) blocked on accountant decisions O-14/O-17.
+- T1-17 stays unmerged and incomplete until its security reset flow, lifecycle assertions and full gates are complete.
+- Reconcile old T0-03/T0-04 branch-triage records separately; they were not folded into this change.
+- Babin: apply migrations 0215–0220 to live after backup protocol.
+
+## 2026-11-04 — Reconciled completed-card status and migration ledger on `main`
+
+**Did**
+- Marked T2-12, T4-01, T4-02, T8-01 and T8-03 as merged using their verified commits already present on `main`; no feature branch history was merged.
+- Recorded the historical second `0188` migration (`staff-renting-gear`) instead of renaming an already-verified migration.
+- Reserved `0221` for the unmerged T1-17 branch and advanced the next free migration number to `0222`.
+
+**Ruled**
+- Current `main` wins over stale plan copies on old branches.
+- Applied or verified migration identities remain immutable; the historical `0188` collision is documented and must never be reused.
+
+**Verified**
+- Commit ancestry and per-file history confirm the five completed cards are already present on `main`.
+- Migration inventory confirms the two distinct `0188` files and migrations through `0220`; no SQL file was changed or applied.
+
+### Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | — |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 | — |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | — |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 218 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T1-17 stays unmerged and incomplete until its security reset flow, lifecycle assertions and full gates are complete.
+- Reconcile old T0-03/T0-04 branch-triage records separately; they were not folded into this change.
+
+## 2026-11-04 — T5-03 through T5-11 MERGED & VERIFIED on `main` (Lane B)
+
+**Did**
+- **T5-03: Email sending service, `email_log` audit table & Edge Function (W80, Law 3, Law 4, Law 6):**
+  - Migration `0215_email_sending_and_log.sql`: `email_log` table storing provider message id, recipient, template name, subject, payload metadata, error details, and status (`queued`, `sent`, `failed`). Sensitive body content is never persisted (Law 4 / W80). Hard delete forbidden (Law 3). Floor roles cannot view email logs (Law 6).
+  - Client & Edge Function: `src/lib/email/client.ts`, `templates.ts`, and `supabase/functions/send-email/index.ts`.
+- **T5-04: Morning digest schedule & query (O-4, Law 6):**
+  - Migration `0216_morning_digest_schedule_and_query.sql`: `get_morning_digest(date)` RPC delivering operational day schedule (06:00 to 06:00 NPT) across pick-ups, returns, and crew dispatches. Figures masked for non-money callers under Law 6. Includes empty-day fallback message.
+  - Edge function & query: `supabase/functions/morning-digest/index.ts` and `src/lib/queries/morningDigest.ts`.
+- **T5-05: Notification preferences (per-user, in-app & email toggles):**
+  - Migration `0217_notification_preferences.sql`: `notification_preferences` table storing user preference overrides per category. `create_notification` RPC respects preferences and stops delivery if toggled off. Hard delete forbidden (Law 3).
+  - UI: `NotificationPreferencesControl.tsx` mounted in Settings ▸ System (`System.tsx`).
+- **T5-06: Authoritative Client Message Register:**
+  - Registered all automated and staff client communication events in `docs/WORKFLOWS.md` Section 4.
+  - Automated test `src/lib/__tests__/clientMessageRegister.test.ts` guarantees register consistency with code.
+- **T5-07: Automatic client message events (W21, W22, W38):**
+  - Migration `0218_client_message_events.sql`: automated triggers for pick-up reminders, return reminders, late return alerts at +30m, payment receipts, and unpriced damage notices. Clients without email generate WhatsApp draft tasks for desk staff.
+- **T5-08: Automatic payment reminders & client pause controls (W18, W18b, W22):**
+  - Migration `0219_payment_reminders.sql`: automated payment reminder schedule (completion, day 5, day 10, every 5 days). Client pause flag with required reason (`reminders_paused`, `reminders_paused_reason`). Instant cancellation of all pending reminders when invoice balance reaches 0.
+  - UI: `ClientDetail.tsx` pause/resume action modal and badge.
+- **T5-09: Phone pop-ups (Web Push, service worker, figure masking, W62, W38, W39):**
+  - Migration `0220_push_subscriptions.sql`: `push_subscriptions` table for Web Push endpoints. `push-send` Edge Function, `public/push-worker.js` PWA background push listener, and `src/lib/push.ts`. Amounts masked for floor roles under Law 6.
+- **T5-10: Approvals inbox (W57, W58, PERMISSIONS §6.2):**
+  - `ApprovalsInbox.tsx` mounted at `/approvals` route with filters (All, Pending, Mine, Decided). Never displays an Approve button to Managers on Owner-only threshold items. Requires 10-char reason on decline.
+- **T5-11: Role-specific home screens & task cockpits (W61, W79, W31):**
+  - `RoleTaskCockpit.tsx` mounted on Today screen. Role-aware desks: Floor verbs and early morning return priority for Warehouse (W31), booking desk tasks for Coordinator, cash/approvals/margin cockpits for Owner/Admin/Manager (W79).
+  - Role-based default navigation: `/` redirects to role-tailored target via `defaultNavTarget(role)`.
+- **UI Copy Linting Cleanups:**
+  - Removed internal developer text (`(Law 6)`, `(Law 3, D28)`, `(§6.2)`) from staff-facing UI copy across `ApprovalsInbox.tsx`, `approvals.ts`, `LegacyExportControl.tsx`, `LegacyExportCard.tsx`, `NotificationPreferencesControl.tsx`, and `RoleTaskCockpit.tsx`. `npm run lint:ui-copy` passes with 0 violations.
+
+**Ruled**
+- Law 3 (Nothing is deleted): No hard deletes on audit tables, preference tables, or notification queues.
+- Law 6 (Money blindness): Payouts, turnover, invoice amounts, and reminder figures concealed from Warehouse, Technician, Driver, and Client.
+- Law 16 (Authentic operations): Real data, authentic database RPCs, and full five-state screen handling.
+
+**Verified**
+- `npm run check:pglite` — 218/218 applied, 0 failed. View leaks: 0; function leaks: 0; definer hygiene: 181/181 pinned search_path.
+- `npm run check:security` — 18/18 Phase 0 SQL regressions passed, 14/14 Reset branch regression groups passed, operations branch grants verified.
+- `npm run check:lifecycle` — 63/63 green, 0 known-red, 0 failed (including L58 morning digest, L59 preferences, L60 client emails, L61 payment reminders, L62 phone popups).
+- `npm run test:server-contracts` — 58/58 passed.
+- `npm run test:partial-return` — 58/58 passed.
+- `npm run typecheck` — 0 errors (`tsc --noEmit`).
+- `npm run lint` — 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run lint:shell` — 892 files checked, 0 violations.
+- `npm run lint:ui-copy` — 0 developer-text violations.
+- `npm run build` — `tsc --noEmit && vite build` bundled cleanly (dist/).
+- Vitest suites for T5 passed cleanly: `clientMessageRegister.test.ts`, `email.test.ts`, `morningDigest.test.ts`, `clientMessages.test.ts`, `notificationPreferences.test.ts`, `push.test.ts`, `clientMessageEvents.test.ts`, `approvals.test.ts`, `ApprovalsInbox.test.tsx`, `RoleTaskCockpit.test.tsx`, `NotificationsDrawer.test.tsx`, `ClientDetail.reminders.test.tsx`.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 91 / 91 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 55 · 0 · 0 · 10 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 76 / 76 (100%) | +0 |
+| Lifecycle | steps green / total | 63 / 63 (100%) | +5 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 218 files · check:pglite 218/218 applied, 0 failed (recorded 2026-11-04T09:14:02.763Z). Suite: NOT VERIFIED — focused or unspecified run: 5/5 passed, 0 failed (recorded 2026-11-04T08:57:33.875Z).
+Coverage suite: Historical suite: 5784/5784 passed, 0 failed (recorded 2026-10-26T14:33:28.059Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-04T09:19:58.915Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin: apply migrations 0215–0220 to live after backup protocol.
+- Lane A: T1-17 (Two-step sign-in for money roles) and T2-18 (Finish evidence capture).
+- Lane B: T6 Nepali translations (Wave 1: floor and client-facing text).
+- Lane C: T3-14c (draft invoice numbering) blocked on accountant decisions O-14/O-17.
+
 ## 2026-11-04 — Rule collision audit and one shared agent workflow (docs only after the 4 Nov reconcile with `main` `98c011d1`; draft PR #91, nothing merged)
 
 **Did**

@@ -89,13 +89,21 @@ describe('RoleTaskCockpit Component (T5-11, W61, W79, W31)', () => {
       expect(btn.style.minHeight).toBe('56px')
     })
 
-    // Verify 1-tap navigation works
-    const packBtn = Array.from(buttons).find((b) => b.textContent?.includes('Pack Gear'))
-    expect(packBtn).toBeDefined()
-    await act(async () => {
-      packBtn?.click()
-    })
-    expect(mockNavigate).toHaveBeenCalledWith('/operations?tab=pack')
+    // All four floor verbs must land on the actual Operations queue selector.
+    // The Operations screen reads ?queue=, not the legacy ?tab= parameter.
+    for (const [label, expectedPath] of [
+      ['Pack Gear', '/operations?queue=packing'],
+      ['Start Handover', '/operations?queue=handover'],
+      ['Intake Return', '/operations?queue=return'],
+      ['Reset Gear', '/operations?queue=reset'],
+    ] as const) {
+      const button = Array.from(buttons).find((b) => b.textContent?.includes(label))
+      expect(button, `Missing ${label} shortcut`).toBeDefined()
+      await act(async () => {
+        button?.click()
+      })
+      expect(mockNavigate).toHaveBeenLastCalledWith(expectedPath)
+    }
   })
 
   it('renders Coordinator booking desk tasks (online requests, quotes waiting, movements)', async () => {
@@ -126,6 +134,15 @@ describe('RoleTaskCockpit Component (T5-11, W61, W79, W31)', () => {
       reviewBtn?.click()
     })
     expect(mockNavigate).toHaveBeenCalledWith('/rentals')
+
+    const overdueBtn = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Manage Overdue')
+    )
+    expect(overdueBtn).toBeDefined()
+    await act(async () => {
+      overdueBtn?.click()
+    })
+    expect(mockNavigate).toHaveBeenLastCalledWith('/operations?queue=return')
   })
 
   it('renders Accounts cockpit with financial cards and closing status', async () => {
