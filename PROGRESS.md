@@ -1,5 +1,58 @@
 # Progress Log
 
+## 2026-11-09 — UI/UX Polish: Form Forgiveness, 56px Floor Verbs & Ambient Sync (Lane B)
+
+**Did**
+- **Step 1 — Form Forgiveness Pass (Usability Principle 8):**
+  - Created `src/lib/formForgiveness.ts`: `sanitizePhone` (Nepal 10-digit mobile, removes `+977`/`977`, punctuation, leading zero), `isValidSanitizedPhone`, `sanitizePan` (9 digits), `sanitizeSerial` (strips unprintable control characters, collapses spaces), `sanitizeBatchSerials` (newlines, commas, semicolons), `sanitizeMoneyInput` (strips currency markers and commas), and `sanitizeEmail`.
+  - Created `src/lib/__tests__/formForgiveness.test.ts` (12/12 passing).
+  - Integrated sanitizers into `AddClient.tsx`, `AddClientModal.tsx`, `RecordForm.tsx`, `recordEditor.ts`, `EquipmentRecordEditor.tsx`, `AddUnitsModal.tsx`, `RentalFinancialRail.tsx`, `RentalPricingSection.tsx`, and `useNewRentalPricing.ts`.
+- **Step 2 — 56px Floor Verbs Audit & Polish (Usability Principle 7):**
+  - Updated `StickyFloorBar.tsx` primary verb target with `minHeight: 56px`, `fontSize: 'var(--t-ui)'`, `fontWeight: 700`.
+  - Enforced 56px touch target height across all four floor workspaces: Pack (`PackingWorkspace.tsx`), Handover (`HandoverWorkspace.tsx`), Return (`ReturnWorkspace.tsx`), and Reset (`ResetWorkspace.tsx`).
+  - Created `src/modules/operations/__tests__/StickyFloorBar.test.tsx` (5/5 passing).
+- **Step 3 — Ambient Sync Indicator (Principle 6 / Law 16):**
+  - Updated `Header.tsx` to render ambient sync pill indicator on desktop and mobile (`header-sync-control--mobile`) displaying queued offline operations.
+  - Guarded Supabase Realtime channel subscription with `import.meta.env.MODE !== 'test'` to eliminate unhandled Node WebSocket warnings during JSDOM tests.
+- **Step 4 — Merged into `main`:**
+  - Merged `lane-b/ux-polish-forgiveness-and-sync` into `main` (commit `c32f61aa`), pushed to `origin/main`.
+  - Renumbered conflicting migration `0226_membership_change_keep_join_date.sql` to `0228_membership_change_keep_join_date.sql`.
+  - Updated `docs/plans/MIGRATION_LEDGER.md` (next free number: **0229**).
+
+**Ruled**
+- Usability Principles 6, 7, and 8 satisfied: forms forgive punctuation/prefixes; primary floor verbs strictly measure ≥56px touch height; outbox sync state is visibly surfaced.
+
+**Verified**
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (`eslint src --max-warnings 0`).
+- `npx vitest run src/lib/__tests__/formForgiveness.test.ts`: 12/12 passed.
+- `npx vitest run src/modules/operations/__tests__/StickyFloorBar.test.tsx`: 5/5 passed.
+- `npm run check:pglite`: 221/221 migrations applied, 0 failed; view, function, and definer gates pass.
+- `npm run check:lifecycle`: 65/65 green through real Postgres + RLS.
+- `npm run build`: built in 3m 1s (`dist/` & PWA service worker generated).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 92 / 92 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 77 / 77 (100%) | +0 |
+| Lifecycle | steps green / total | 65 / 65 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 221 files · check:pglite 221/221 applied, 0 failed (recorded 2026-11-09T08:08:49.928Z). Suite: Historical suite: 6726/6734 passed, 8 failed (recorded 2026-11-06T21:21:26.360Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-09T08:08:21.773Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Lane B tracks (T4 Shared tools, T5 Notifications & email, T6 Nepali localization) are all completed, verified, and merged into `main`.
+- Support Lane A (T1, T2 floor, T8 membership/crew) and Lane C (T3 money, T7 online booking) as they complete their tracks toward day X cutover.
+- Perform device usability run on iPad/iPhone per `docs/USABILITY_TESTS.md`.
+
+
+
 ## 2026-11-09 — Babin rulings R-9.1 to R-9.4 (interactive round, Lane B)
 
 **Did**
