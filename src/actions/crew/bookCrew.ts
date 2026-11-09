@@ -102,7 +102,16 @@ export const bookCrewConfig: ActionConfig<BookCrewInput, BookCrewResult> = {
     }
 
     const overtimeDays = input.overtimeDays ?? 0
-    const overtimeApprovedBy = overtimeDays > 0 ? (input.overtimeApprovedBy ?? ctx.userId) : null
+    // Approval/entry provenance must never come from a caller-supplied UUID.
+    // This is an application-side guard only; authenticated DB write policies
+    // must independently enforce actor identity before this is release-ready.
+    if (overtimeDays > 0 && !UUID.test(ctx.userId)) {
+      throw new Error('An authenticated user UUID is required to record crew overtime.')
+    }
+    if (input.overtimeApprovedBy !== undefined && input.overtimeApprovedBy !== ctx.userId) {
+      throw new Error('Crew overtime approval must match the signed-in operator.')
+    }
+    const overtimeApprovedBy = overtimeDays > 0 ? ctx.userId : null
     const billableDays = days + overtimeDays
 
     const prepared = []
@@ -146,14 +155,14 @@ export const bookCrewConfig: ActionConfig<BookCrewInput, BookCrewResult> = {
       const clientUuids = prepared.map((r) => r.client_uuid)
       const { data: existingRows, error: readError } = await supabase
         .from('crew_assignments_v')
-        .select('id, client_uuid, booking_id, crew_id, role_on_shoot, call_time, wrap_time, daily_rate, days, overtime_days, notes')
+        .select('id, client_uuid, booking_id, crew_id, role_on_shoot, call_time, wrap_time, daily_rate, days, overtime_days, overtime_approved_by, notes')
         .in('client_uuid', clientUuids)
 
       if (readError || !existingRows || existingRows.length !== prepared.length) {
         throw new Error('Could not confirm the saved assignment. Retry with the same details.')
       }
 
-      const existingMap = new Map((existingRows as Array<{ client_uuid: string; id: string; booking_id: string; crew_id: string; role_on_shoot: string; call_time: string | null; wrap_time: string | null; daily_rate: number | string | null; days: number; overtime_days?: number | null; notes: string | null }>).map((e) => [e.client_uuid, e]))
+      const existingMap = new Map((existingRows as Array<{ client_uuid: string; id: string; booking_id: string; crew_id: string; role_on_shoot: string; call_time: string | null; wrap_time: string | null; daily_rate: number | string | null; days: number; overtime_days?: number | null; overtime_approved_by?: string | null; notes: string | null }>).map((e) => [e.client_uuid, e]))
       for (const row of prepared) {
         const existing = existingMap.get(row.client_uuid)
         if (!existing?.id || existing.booking_id !== row.booking_id || existing.crew_id !== row.crew_id) {
@@ -166,6 +175,7 @@ export const bookCrewConfig: ActionConfig<BookCrewInput, BookCrewResult> = {
           Number(existing.daily_rate) !== row.daily_rate ||
           existing.days !== row.days ||
           Number(existing.overtime_days ?? 0) !== row.overtime_days ||
+          (existing.overtime_approved_by ?? null) !== row.overtime_approved_by ||
           existing.notes !== row.notes
         ) {
           throw new Error('This request already saved different assignment details. Reload the booking before adding another assignment.')

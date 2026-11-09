@@ -358,7 +358,8 @@ describe('Spec 03 §3.1 — queue chips filter ONE time-ordered list', () => {
     })
     expect(filters?.getAttribute('aria-expanded')).toBe('true')
     expect(document.querySelector('#operations-filters')).not.toBeNull()
-    const expandAlerts = buttons().find((b) => b.getAttribute('aria-label') === 'Expand Alerts')
+    // RULING 2026-11-08: the separate "Expand Alerts" button was removed (single disclosure target); expand via the section header.
+    const expandAlerts = buttons().find((b) => b.getAttribute('aria-expanded') === 'false' && b.textContent?.includes('Alerts'))
     await act(async () => {
       expandAlerts?.click()
     })
