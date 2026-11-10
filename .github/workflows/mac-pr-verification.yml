@@ -20,10 +20,10 @@ concurrency:
 
 jobs:
   windows-smoke:
-    name: Windows · lint, safety guards, build
+    name: Windows · dependency-free smoke
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 90
+    timeout-minutes: 15
     env:
       CI: 'true'
       VITE_DATA_SOURCE: mock
@@ -49,18 +49,41 @@ jobs:
           }
           Write-Output "Runner: $env:RUNNER_NAME ($env:RUNNER_OS/$env:RUNNER_ARCH)"
 
-      - name: Install locked dependencies
-        run: npm ci --no-audit --no-fund
+      # macOS does the complete mandatory 17-gate suite. Keep the Windows
+      # lane genuinely light: no npm ci, no Vite build, no migrations, no secrets.
+      # The previous 10-minute failures produced no GitHub step details, so
+      # the small, dependency-free test also probes runner stability.
+      - name: Validate Windows runtime
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Write-Output "Node: $(node --version)"
+          Write-Output "npm: $(npm --version)"
+          Write-Output "Head: $(git rev-parse HEAD)"
+          if ($LASTEXITCODE -ne 0) { throw 'Git checkout HEAD could not be read' }
+          Write-Output "Runner: $env:RUNNER_NAME ($env:RUNNER_OS/$env:RUNNER_ARCH)"
+          node --check scripts/run-gates.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Node syntax check failed' }
 
-      - name: Lint source
-        run: npm run lint
+      - name: Node-only workflow and workstation tests
+        shell: pwsh
+        run: |
+          node --test scripts/run-gates.test.mjs tools/workstation-sync/sync.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Dependency-free smoke tests failed' }
 
-      - name: Local API verification safety guards
-        run: npm run test:local-api-guards
-
-      # Build includes `tsc --noEmit`; do not re-run a separate typecheck.
-      - name: Typecheck and build
-        run: npm run build
+      - name: Validate Windows task installer PowerShell syntax
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Join-Path $PWD 'tools/workstation-sync/install-windows.ps1'),
+            [ref]$tokens, [ref]$parseErrors
+          ) | Out-Null
+          if ($parseErrors.Count -gt 0) {
+            $parseErrors | ForEach-Object { Write-Error $_.Message }
+            throw 'Windows installer PowerShell parse failed'
+          }
 
       - name: Scope and runner evidence
         if: always()
@@ -70,6 +93,6 @@ jobs:
             '### Windows PR smoke (lightweight)'
             "Runner: $env:RUNNER_NAME ($env:RUNNER_OS/$env:RUNNER_ARCH)"
             "Commit: $env:GITHUB_SHA"
-            'Scope: locked install, lint, local API guards, TypeScript and Vite build.'
-            'NOT full CI. Require the 17-gate Mac CI check on this exact PR head.'
+            'Scope: Windows x64 runtime, Node 24 syntax, dependency-free CI contract/workstation tests, PowerShell installer syntax.'
+            'NOT a Windows app build or full CI. Require the 17-gate Mac CI check on this exact PR head.'
           ) | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
