@@ -203,6 +203,11 @@ stay in [`docs/OPEN_DECISIONS.md`](docs/OPEN_DECISIONS.md).
 | O-20 | What fee sits on a custom-fee plan (Elite's annual fee is blank in the plans Babin sent) — a listed fee, or per-client negotiation? (D22 implementation, T8-03 review) | ⭐ Per-client negotiation kept: the change into the plan is refused without a negotiated fee (`GATE:membership.custom_fee`), the negotiated fee is recorded on the membership row and prices later changes out of it (a renewal carries it onto the new term), and a membership with no fee on record anywhere is refused (`GATE:membership.fee_unknown`). Babin answers to unblock | T8-03 |
 | O-21 | Payment method picker: keep the seven distinct labels (Bank Transfer · Cash · Fonepay · eSewa · Khalti · Card · Cheque) or cut to T3-15's four buttons (Cash · Bank transfer · Fonepay · eSewa/Khalti)? | ⭐ Seven kept: eSewa and Khalti are different wallets and Card/Cheque are real receipts; every method stays one tap, so the card's ≤4-tap condition holds | — |
 | O-22 — answered 5 Nov | Glossary editing in Settings: who may edit, and draft approval versus immediate application? | Babin: Owner only; approved term changes apply throughout the app immediately. Whole-app activation remains separately gated. | T0-12 / T6 glossary; `RULINGS-2026-11-05.md` C-6 |
+| O-23 (D-UX-01) | Reusable cases and containers: what is a case ID, who labels it, who is responsible after return? | No persistent case manifest; no case count shown | UX-P22 |
+| O-24 (D-UX-02) | Which sub-items are stock-tracked and which are checklist-only? Which version applies to old rentals? | Keep today's behaviour | UX-P21, UX-P22 |
+| O-25 (D-UX-03) | Testing bay: saved in the database or a local note? How is custody shown? | Local note only; no custody change | UX-P23 |
+| O-26 (D-UX-04) | QC templates per category, handling of client media and settings resets, quick-shelve eligibility. | No templates; current Reset checklist | UX-P26 |
+| O-27 (D-UX-05) | Should the future-availability rule of 24 Oct change? | **Do not change** | UX-P26 |
 
 ### §4.3 How a new decision gets in
 
