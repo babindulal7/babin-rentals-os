@@ -1,36 +1,66 @@
 # Progress Log
 
-## 2026-11-10 — Card 2: Booking conflict help in New Rental (Lane C)
+## 2026-11-10 — Card 4: register D-UX-01 to D-UX-05 as O-23 to O-27 (docs only)
 
 **Did**
-- **Card 2: Booking conflict modal in New Rental (Card 2 prompt, G-1, G-2, Law 10):**
-  - **Step 0 Confirmation:** Confirmed that New Rental previously only offered a "Review" button scrolling to the equipment section, requiring 4+ unstructured manual taps to identify and resolve shortages. No guided resolution existed.
-  - **Guided Conflict Resolution:** Mounted `BookingConflictModal` in `src/modules/rentals/NewRental.tsx`, fed by the existing `availabilitySource` from `useNewRentalCatalogue` without adding duplicate availability reads.
-  - **Banner Integration:** Enhanced stock contention banner to provide direct "Resolve Conflicts" CTA alongside "Review", opening the guided conflict dialog in 1 tap (2 taps total to resolve vs 4+ before).
-  - **Confirm Guard Wiring:** When an operator attempts to confirm an order with unhandled equipment shortages, `handlePrimaryAction` triggers the guided conflict modal instead of merely shaking the section.
-  - **Wired 6 Concrete Resolution Callbacks:**
-    - `onReassignUnit`: Reassigns specific unit/serial in draft without leaving the page.
-    - `onSelectSubstitute`: 1-click replacement with an in-stock, compatible owned substitute in the same category (reading `unitsFree > 0` from `availabilitySource`).
-    - `onAdjustDates`: Shifts pickup/return dates to open availability windows (`setPickup` and `setRet`).
-    - `onRemoveItem`: Removes conflicting line item directly from draft lines (`setLines`).
-    - `onSubRent`: Marks line for external sub-rental (`lineType = 'Sub-rental'`), preserving draft state without prematurely clearing the physical shortage until received (Rule 4).
-    - `onKeepDraft`: Closes modal and safely preserves draft in IndexedDB/state without data loss (Rule 5).
-  - **Unit Testing:** Created `src/modules/rentals/__tests__/newRentalConflictModal.test.tsx` (7/7 passed) covering all 6 callbacks, date shifts, substitute selections, and draft preservation under refusal.
+- `PLAN.md` §4.2: added rows O-23 to O-27, one per D-UX decision, each with its ⭐ default and the UX-P item it blocks.
+- `docs/OPEN_DECISIONS.md`: added section 22 with the full question text for O-23 to O-27, all open.
+- `docs/ui-ux/06_SIX_STAGE_OPERATIONS.md`: put the O-number beside each D-UX id; replaced "to be registered" with the registration.
+- `docs/ui-ux/10_ROADMAP_AND_BACKLOG.md`: added the O-number beside D-UX-01 to D-UX-05 on UX-P22, UX-P23 and UX-P26.
+- `docs/ui-ux/09_USABILITY_AND_ACCEPTANCE.md`: removed the sentence that let a docs-only PR use link and file audits instead of the local checks; kept the point that docs do not prove runtime behaviour.
+- Rebased `docs/ux-card4-register-dux` on `origin/main` `52410e5a`; verified commit `f855ab98` in a separate clean checkout. Draft PR #127 awaits Babin’s review and merge.
 
 **Ruled**
-- Card 2 / Design 2026-11-10: Connect `BookingConflictModal` in New Rental fed by the existing `availabilitySource`. Shortages must be resolvable without leaving the page in 2 taps. Every resolution changes the draft only; confirm remains gated by server checks; sent sub-rent requests never clear shortages until stock is received; typed data is preserved on refusal.
-- Law 16: Contrast, accessibility, and five screen states verified.
+- Registration only. No D-UX question is answered; the ⭐ defaults are the ones written in `AGENT_PROMPTS-2026-11-10-design.md` card 4.
 
 **Verified**
-- `npm run typecheck`: 0 errors (`tsc --noEmit`).
-- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
-- `npm run lint:shell`: 927 files checked, 0 violations.
-- `npm run lint:ui-copy`: 0 violations.
-- `npm run check:contrast`: 106/106 pass.
-- `vitest run src/modules/rentals/__tests__/newRentalConflictModal.test.tsx`: 7/7 passed.
-- `vitest run src/modules/rentals/__tests__/newRentalSimplification.test.tsx src/modules/rentals/__tests__/newRentalDraftPersistence.test.tsx`: 11/11 passed.
-- `vitest run src/modules/rentals/booking/__tests__/BookingConflictModal.test.tsx`: 2/2 passed.
-- `npm run build`: built in 57.11s (PWA precache 291 entries).
+- Clean `npm ci`: exit 0. Audit reported 36 vulnerabilities (3 low, 15 moderate, 14 high, 4 critical); no dependencies changed.
+- `npm run typecheck`, `npm run lint`, `npm test`: exit 0; mock suite 591 files, 6,978 tests passed.
+- `npm run check:pglite`: exit 0 (228/228); financial integrity: exit 0; `npm run check:security`: exit 0.
+- `npm run check:lifecycle`: exit 0 (71/71); `npm run test:server-contracts`: exit 0 (59/59); `npm run test:partial-return`: exit 0 (58/58).
+- `npm run lint:progress`, receipt tests (11/11), `npm run lint:shell`, `npm run lint:ui-copy`, `npm run check:contrast` (106/106), `npm run build`: exit 0.
+- `npm run test:coverage`: exit 0, 591 files and 6,978 tests passed. `npm run completion`: exit 0.
+- Cross-file links: not checked. The new text uses plain paths only.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 101 / 101 (100%) | +2 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 82 / 82 (100%) | +1 |
+| Lifecycle | steps green / total | 71 / 71 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 228 files · check:pglite 228/228 applied, 0 failed (recorded 2026-11-10T11:54:57.095Z). Suite: PASS — 6978/6978 passed, 0 failed (recorded 2026-11-10T12:06:25.770Z); source fingerprint matches.
+Coverage suite: PASS — 6978/6978 passed, 0 failed (recorded 2026-11-10T12:06:25.770Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-10T11:56:01.988Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Draft PR #127 awaits Babin’s review and local merge; no decisions have been answered.
+- `RULINGS-2026-11-10.md` (ease of use) is still not in the repo; the design file says it belongs in the root.
+- `RULINGS-2026-11-10-design.md` and `AGENT_PROMPTS-2026-11-10-design.md` are untracked in the lane-c checkout root, not on this branch.
+- D-UX-01 to D-UX-05 (O-23 to O-27) await Babin's answers.
+
+
+
+## 2026-11-10 — T2-25 complete printing refreshed on current main
+
+**Did**
+- Ported the existing T2-25 printing implementation (`3f5b7114`) onto base `024f817a` in `lane-a/T2-25-current-main-printing`, retaining current invoice/project behavior and preserving the existing worktree.
+- Packing lists, return reports and invoices continue across numbered A4 pages; Booking Detail and Pack share the money-free item builder and booking QR route. Forty packing rows occupy two pages.
+- Fixed the pick-list header so its title does not overlap the QR. Fixed hierarchy ordering to retain grandchildren and preserve every item once even with cyclic parent links.
+
+**Ruled**
+- No new product or permission decision; no database migration or shared engine file changed. Physical acceptance remains required before the card is done.
+
+**Verified**
+- Final `npm run gates`: all 17 steps PASS, in order: typecheck; lint; local API guards; mock suite 6,978/6,978 in 591 files; PGlite 228/228; financial integrity; security; lifecycle 71/71; server contracts; partial returns; progress lint; receipt integrity; shell lint; UI-copy lint; contrast 106/106; build; coverage 6,978/6,978. All database checks local only.
+- Initial full run failed one existing assertion because loose items gained `isChild: false`; corrected to preserve absent flags. Focused PDF suite then passed 17/17, followed by the complete green gate above.
+- Earlier focused mounted screen/PDF suites: 53/53 across three files. Actual browser attempt: mock server started, but browser tool timed out before opening the page; no browser screen check claimed. Server stopped.
+- Synthetic 40-line PDF rendered and visually inspected on both pages. All 40 asset codes extracted; both rendered QR codes decoded with ZXing at print resolution to the exact booking route. The low-resolution full-page raster did not decode; physical camera acceptance remains open.
+- `npm audit` reported 36 findings: 3 low, 15 moderate, 14 high, 4 critical. Dependency files were unchanged; findings require separate dependency review.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -41,12 +71,16 @@
 | Permissions | capabilities mapped / declared | 82 / 82 (100%) | +0 |
 | Lifecycle | steps green / total | 71 / 71 (100%) | +0 |
 | Overall | structural mean of five | ≈ 97% | — |
+Migrations 228 files · check:pglite 228/228 applied, 0 failed (recorded 2026-11-10T03:54:18.558Z). Suite: PASS — 6978/6978 passed, 0 failed (recorded 2026-11-10T04:09:42.326Z); source fingerprint matches.
+Coverage suite: PASS — 6978/6978 passed, 0 failed (recorded 2026-11-10T04:09:42.326Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-10T03:55:37.737Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Card 2 ready for draft PR and CI review.
-- Card 3 (`#128`), Card 4 (`#127`), Card 1 (`#126`), CI routing (`#124`) verified green.
+- Card remains doing: browser screen check at 375/820/1440 as Warehouse and a money role, physical iPad print and camera scan, then Babin review/merge. No push or merge performed.
+- Review artifacts (synthetic data, git-ignored): `artifacts/pdf-review/pick-list-40.pdf`, `page-1.png`, `page-2.png`.
+
 
 ## 2026-11-09 — T3-27: Pro forma invoice from the draft (Lane C)
 

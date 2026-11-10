@@ -48,7 +48,7 @@ import {
 } from '../../lib/acousticFeedback'
 import { getCinemaKitDependencies, evaluateKitCompleteness } from '../../lib/kitBuildVerification'
 import { exportPackingListPdf, openPdfForPrint } from '../../lib/pdf/exportPdf'
-import type { PackingListPdfItem } from '../../lib/pdf/generatePdf'
+import { buildPackingListPdfItems } from '../../lib/pdf/generatePdf'
 import { FloorOfflineStatus } from '../../components/ui/FloorOfflineStatus'
 import './rentals.css'
 
@@ -292,52 +292,6 @@ export function buildRows(floor: FloorBooking): PackRow[] {
     }
   }
   return rows
-}
-
-export function buildPackingPdfItems(lines: readonly FloorLine[]): PackingListPdfItem[] {
-  const parentIds = new Set(lines.map((l) => l.parentLineId).filter((p): p is string => p !== null))
-  const items: PackingListPdfItem[] = []
-
-  for (const line of lines) {
-    if (parentIds.has(line.id) || line.lineType === 'Bundle') {
-      items.push({
-        id: line.id,
-        name: line.productName ?? line.description ?? 'Equipment Package',
-        quantity: line.qty,
-        isParent: true,
-        parentLineId: line.parentLineId,
-      })
-    }
-  }
-
-  for (const line of lines) {
-    if (parentIds.has(line.id)) continue
-    if (NON_PACKABLE_LINE_TYPES.has(line.lineType)) continue
-
-    const baseName = line.productName ?? line.description ?? 'Equipment'
-    if (line.unitsPresence === 'present' && line.units.length > 0) {
-      line.units.forEach((u, i) => {
-        items.push({
-          id: u.id,
-          name: line.units.length > 1 ? `${baseName} (Unit ${i + 1})` : baseName,
-          serialNo: u.serial ?? u.assetTag ?? null,
-          quantity: 1,
-          location: u.location,
-          parentLineId: line.parentLineId,
-        })
-      })
-    } else {
-      items.push({
-        id: line.id,
-        name: baseName,
-        quantity: line.qty,
-        location: null,
-        parentLineId: line.parentLineId,
-      })
-    }
-  }
-
-  return items
 }
 
 /**
@@ -649,9 +603,10 @@ export default function PackingWorkspace({
     if (!floor) return
     setPrinting(true)
     try {
-      const items = buildPackingPdfItems(floor.lines)
+      const items = buildPackingListPdfItems(floor.lines)
       const result = await exportPackingListPdf({
         bookingNo: floor.bookingNo,
+        bookingUrl: new URL(`/rentals/${encodeURIComponent(floor.bookingNo)}`, window.location.origin).href,
         clientName: floor.clientName ?? 'Client',
         pickupAtAd: floor.pickupAtAd,
         returnAtAd: floor.returnAtAd,
@@ -1490,7 +1445,7 @@ export default function PackingWorkspace({
                     loading={printing}
                     disabled={printing}
                   >
-                    Print Packing List
+                    Print pick list
                   </Button>
                 )}
                 {/* RULING 2026-10-14: Save Draft removed. It called `saveDraft({ id })`, which with no draft
