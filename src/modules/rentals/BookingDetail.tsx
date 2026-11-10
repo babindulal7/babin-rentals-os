@@ -2258,34 +2258,26 @@ function BookingDetailView() {
       {/* Payment is a quick action on the existing booking. Reuse the invoice-
           linked modal and its payment.create RBAC gate; never post money from
           a row button or route the operator away to the Finance ledger.
-          On phones this rail belongs to the Money segment. */}
-      {canBookingMoney && showSegment('Money') && (
-        <Card title="Quick Actions">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
-            {canTakePayment && recordPaymentButton('Record Payment')}
-            {canRaiseInvoice && createInvoiceButton(hasInvoice ? 'View Invoice' : 'Create Invoice')}
-            {draftInvoice && (
-              <Button
-                variant="secondary"
-                icon="file"
-                loading={generatingProForma}
-                onClick={() => void handleGenerateProForma(draftInvoice.id)}
-              >
-                Pro Forma Invoice
-              </Button>
-            )}
-          </div>
-        </Card>
-      )}
-
-      {/* Live invoice values; never combine the refundable deposit with rental
-          payments or display balances to money-blind warehouse roles. */}
+          On phones this rail belongs to the Money segment.
+          RULING 2026-11-10: G-1 / Card 1 — Single Quick Actions card (deduplicated).
+          Contains Record Payment, Create/View Invoice, Pro Forma (if draft),
+          and invoice read-error line with Retry. */}
       {canBookingMoney && showSegment('Money') && (
         <>
           <Card title="Quick Actions">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
               {canTakePayment && recordPaymentButton('Record Payment')}
-              {canRaiseInvoice && !hasInvoice && createInvoiceButton('Create Invoice')}
+              {canRaiseInvoice && createInvoiceButton(hasInvoice ? 'View Invoice' : 'Create Invoice')}
+              {draftInvoice && (
+                <Button
+                  variant="secondary"
+                  icon="file"
+                  loading={generatingProForma}
+                  onClick={() => void handleGenerateProForma(draftInvoice.id)}
+                >
+                  Pro Forma Invoice
+                </Button>
+              )}
               {invoicesList.error && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4 }}>
                   <span style={{ fontSize: 'var(--t-meta)', color: 'var(--danger-text)' }}>Could not read invoices</span>
@@ -3252,7 +3244,6 @@ function BookingDetailView() {
                         </DataTableShell>
                       </div>
                     )}
-                    {onPhone && canTakePayment && <div style={{ marginTop: 10 }}>{recordPaymentButton('Record Payment')}</div>}
                   </div>
                 </div>
               )}

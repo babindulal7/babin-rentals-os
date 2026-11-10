@@ -1,5 +1,58 @@
 # Progress Log
 
+## 2026-11-10 — Card 1: Remove duplicate Quick Actions card in Booking Detail (Lane B)
+
+**Did**
+- **Card 1: Deduplicate Quick Actions card in Booking Detail (G-1, G-2, Law 6):**
+  - Deduplicated the adjacent `<Card title="Quick Actions">` in `src/modules/rentals/BookingDetail.tsx` into a single card containing:
+    - `canTakePayment && recordPaymentButton('Record Payment')`
+    - `canRaiseInvoice && createInvoiceButton(hasInvoice ? 'View Invoice' : 'Create Invoice')`
+    - `draftInvoice && Pro Forma Invoice button` (T3-27)
+    - `invoicesList.error && Retry button`
+  - Removed duplicate inline `onPhone && canTakePayment && recordPaymentButton('Record Payment')` from the Payments table block so phone Money segment has exactly one Record Payment button.
+  - Added unit test suite `src/modules/rentals/__tests__/BookingDetail.quickActionsPayment.test.tsx` verifying:
+    - Money roles (`Owner`, `Admin`, `Manager`, `Coordinator`, `Accounts`) render exactly 1 Quick Actions card and exactly 1 Record Payment button on desktop and phone Money segment.
+    - Money-blind roles (`Warehouse`, `Technician`, `Driver`) render 0 Quick Actions cards and 0 Record Payment buttons in the DOM (Law 6).
+    - View Invoice opens invoice and Retry button triggers re-fetch on invoice load failure.
+  - Updated `src/modules/rentals/__tests__/BookingDetail.layout.test.tsx` line 375 assertion from 2 to 1 for tablet Quick Actions payment button.
+
+**Ruled**
+- RULING 2026-11-10: G-1 / Card 1 — Exactly one Quick Actions card in Booking Detail with Record Payment, View/Create Invoice, Pro Forma (when draft exists), and error retry line. Exactly one Record Payment button across the Money segment on phone.
+- Law 6: Money-blind roles see zero Quick Actions cards and zero payment buttons.
+
+**Verified**
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run lint:shell`: 927 files checked, 0 violations.
+- `npm run lint:ui-copy`: 0 violations.
+- `npm run check:contrast`: 106/106 pass.
+- `npm run build`: built in 6m 2s (PWA precache 284 entries).
+- `npm run check:pglite`: 228/228 applied, 0 failed.
+- `npm run check:lifecycle`: 71/71 green, 0 known-red, 0 failed.
+- `vitest` unit tests:
+  - `src/modules/rentals/__tests__/BookingDetail.quickActionsPayment.test.tsx`: 9/9 passed.
+  - `src/modules/rentals/__tests__/BookingDetail.layout.test.tsx`: 35/35 passed.
+  - `src/modules/rentals/__tests__/BookingDetail.edit.test.tsx`, `BookingDetail.honesty.test.tsx`, `bookingDetailSimplification.test.tsx`: 38/38 passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 101 / 101 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 82 / 82 (100%) | +0 |
+| Lifecycle | steps green / total | 71 / 71 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 228 files · check:pglite 228/228 applied, 0 failed (recorded 2026-11-10T01:54:36.794Z). Suite: Historical suite: 6946/6946 passed, 0 failed (recorded 2026-11-10T00:14:16.416Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-10T01:55:47.514Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Card 1 ready for local merge into `main`.
+- Next in Lane B: Card 3 · UI clean-up (`src/components/shadcn/` removal, CSS import cleanup, unused deps `shiki` and `opencode-chromium`, tokenizing transition durations).
+
 ## 2026-11-09 — T3-27: Pro forma invoice from the draft (Lane C)
 
 **Did**
