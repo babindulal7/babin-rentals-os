@@ -25,13 +25,14 @@ permissions:
 jobs:
   verify:
     name: typecheck · test · build
-    # Full CI runs on Apple Silicon for same-repository PRs and on Windows x64
-    # for main pushes. Preserve the required CI job/check identity and all 17 gates.
+    # Full CI runs on Apple Silicon for same-repository PRs and non-main manual
+    # dispatches, and on Windows x64 for main pushes and main manual dispatches.
+    # Preserve the required CI job/check identity and all 17 gates.
     # Use only verified default labels; do not select GitHub-hosted runners.
     runs-on:
       - self-hosted
-      - ${{ github.event_name == 'pull_request' && 'macOS' || 'Windows' }}
-      - ${{ github.event_name == 'pull_request' && 'ARM64' || 'X64' }}
+      - ${{ (github.ref == 'refs/heads/main' && github.event_name != 'pull_request') && 'Windows' || 'macOS' }}
+      - ${{ (github.ref == 'refs/heads/main' && github.event_name != 'pull_request') && 'X64' || 'ARM64' }}
     # This job executes on the owner's own computer, so never run code from a
     # forked pull request here. Pushes and same-repository PRs only.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
@@ -39,6 +40,10 @@ jobs:
     # Measured on this runner (2 Nov): `npm ci` ~10-22m, typecheck ~3-9m, whole job ~48m.
     # Do not weaken or skip any security, lifecycle, build, or coverage gates.
     timeout-minutes: 120
+    env:
+      CI: 'true'
+      # Cap Node heap to preserve headroom on the 16 GB Apple Silicon host.
+      NODE_OPTIONS: '--max-old-space-size=2048'
 
     steps:
       - name: Checkout
