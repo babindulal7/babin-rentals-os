@@ -16,7 +16,7 @@ describe('readCompleteAvailability (server-authoritative availability)', () => {
   })
 
   it('does not equate a failed second page with available stock', async () => {
-    await expect(readCompleteAvailability<RecordRow>(async (from, to) =>
+    await expect(readCompleteAvailability<RecordRow>(async (from) =>
       from === 0
         ? { data: [{ id: 'row-1', qty: 1 }], error: null }
         : { data: null, error: { message: 'permission denied' } },
