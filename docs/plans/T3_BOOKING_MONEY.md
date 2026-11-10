@@ -300,7 +300,7 @@ houses pay on credit (W14), so this is the chase screen; reminders themselves ar
 open it; a statement PDF shares to WhatsApp in two taps.
 **Needs** — T3-16.
 
-### T3-21 · Find anything in one box            status: todo · size: M · lane C · [go-live]
+### T3-21 · Find anything in one box            status: done (merged 9 Nov) · size: M · lane C · [go-live]
 **What** — The header search (⌘K / phone search) finds a booking by **number, client name, client
 phone, collector name, item name, serial or asset code**, and shows recent items first; results
 open in one tap. Today `globalSearch.ts` covers booking, client, equipment and invoice — add phone,
@@ -346,7 +346,7 @@ rules unchanged (`gate.expense.approve`). Replaces "Receipt upload is not built 
 **Done when** — an expense with a photo is saved from an iPhone; the photo appears in the monthly pack.
 **Needs** — T2-01.
 
-### T3-25 · Tags on bookings            status: todo · size: S · lane C · [go-live] · slips first
+### T3-25 · Tags on bookings            status: done (merged 9 Nov, `6c1d62a8`) · size: S · lane C · [go-live] · slips first
 **What** — Free tags on a booking (B16): type a new one or pick one already used ("wedding",
 "repeat", "festival"); several per booking; chips on Booking Detail and the booking list; the list and
 saved views (0159, `SavedViewsMenu`) filter by tag; search (T3-21) finds by tag. Booking-desk roles add
@@ -362,7 +362,7 @@ row; lifecycle "tags never change a booking's stage or money".
 and no money; screen check.
 **Needs** — none (if T7-04 is open, coordinate on `RentalsList.tsx`).
 
-### T3-26 · Project name and shoot location on every booking            status: todo · size: S · lane C · [go-live] · slips first
+### T3-26 · Project name and shoot location on every booking            status: done (merged 9 Nov, `6c1d62a8`) · size: S · lane C · [go-live] · slips first
 **What** — Two fields on every booking (B8, B52): **Project / production name** (e.g. "Kathmandu
 Diaries — music video") and **Shoot location** (e.g. "Pokhara, Phewa lake"), ⭐ up to 120 characters
 each. They sit beside the existing **project type** (0144 — Feature Film, Commercial / Advertisement,
@@ -382,7 +382,7 @@ name; lifecycle "create_booking stores both".
 prints the project name; screen check.
 **Needs** — none.
 
-### T3-27 · Pro forma invoice from the draft            status: todo · size: S · lane C · [go-live] · slips first
+### T3-27 · Pro forma invoice from the draft            status: done · size: S · lane C · [go-live] · slips first
 **What** — On a booking with a draft invoice (T3-14), "**Pro forma**" makes a PDF from the draft
 (B18): titled **"PRO FORMA INVOICE — not a tax invoice"**, **no invoice number** (it names the booking
 number), the project name (T3-26), lines, VAT shown as an estimate, the advance due, payment details,

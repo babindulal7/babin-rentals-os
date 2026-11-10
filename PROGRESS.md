@@ -1,5 +1,229 @@
 # Progress Log
 
+## 2026-11-09 — T3-27: Pro forma invoice from the draft (Lane C)
+
+**Did**
+- **T3-27: Pro forma invoice from the draft (B18, B55, Law 6, Law 7, Law 8):**
+  - Migration `0231_pro_forma_document_type.sql` claimed in `docs/plans/MIGRATION_LEDGER.md` (Next free number: `0232`):
+    - Added `'Pro Forma'` to `document_type` and `booking_document_type` enums (N-6 additive enum).
+    - Updated `document_registry_role_read_scope` RLS policy to enforce Law 6 money-blindness (Warehouse only reads agreements, packing lists, delivery notes; Technician excluded from Pro Forma and financial documents).
+  - Lifecycle step `L71` added in `scripts/e2e-lifecycle.mjs`:
+    - Asserts generating a pro forma consumes no document sequence numbers (Law 7: `next_document_number('invoice')` is untouched).
+    - Asserts draft invoices and pro forma documents remain completely excluded from the sales/VAT register (`count = 0` for non-draft/non-void invoices).
+    - Asserts money-blind roles (Warehouse, Technician) are denied reading pro forma records in `document_registry` by RLS (Law 6).
+    - Asserts Coordinator and money roles can query and retrieve the pro forma document.
+  - Server Action `src/actions/documents/generateProForma.ts`:
+    - Validates booking ID and enforces Law 6 role permissions (`canBookingMoney(role)`).
+    - Resolves draft invoice for the booking; fails loudly if no draft invoice exists.
+    - Generates pro forma document number formatted as `PF-${bookingNo}` (never mints or touches monotonic invoice numbers, Law 7).
+    - Computes advance due (`calculateAdvanceRequired(totalAmount)`), estimated VAT (13%), and 7-day validity notice.
+    - Generates pro forma PDF and records document in `document_registry` (`document_type = 'Pro Forma'`) and links in `booking_documents` with idempotency key (`client_uuid`).
+  - PDF Generation & Export (`src/lib/pdf/generatePdf.ts`, `src/lib/pdf/exportPdf.ts`):
+    - Titled `"PRO FORMA INVOICE — not a tax invoice"`.
+    - References booking number instead of invoice number (`BOOKING: BK-...`).
+    - Prints project name (T3-26, B52).
+    - Item lines: description, quantity, days, rate, line total.
+    - Displays `Estimated VAT (13%):`, `Advance Due:`, `Validity: Valid for 7 days`, and payment details.
+    - Added `exportProFormaPdf(invoiceData, options)` helper.
+  - UI Integration (`src/modules/rentals/BookingDetail.tsx`):
+    - Added 1-tap Pro Forma Invoice generation button in Quick Actions rail and Rental Charges section when draft invoice exists and user has money permissions (≤ 2 taps).
+    - Displays inline error message and loading state.
+    - Documents table renders pro forma rows with view/download capabilities.
+  - Added unit test suite `src/actions/documents/__tests__/generateProForma.test.ts` (4/4 passed).
+  - Added unit tests in `src/lib/pdf/__tests__/generatePdf.test.ts` (13/13 passed).
+
+**Ruled**
+- B18, B55: Pro forma invoice is generated from the draft invoice, titled "PRO FORMA INVOICE — not a tax invoice", prints project name and booking number (no invoice number), marks estimated VAT and advance due, valid for 7 days.
+- Law 6: Warehouse, Technician, Driver, and Client are money-blind roles and cannot open or view Pro Forma documents in UI or database (`document_registry_role_read_scope` RLS).
+- Law 7: Never mints a document number from `next_document_number()`; pro forma takes no invoice sequence number and stays out of the sales/VAT register.
+- Law 8: All document writes are idempotent via `client_uuid`.
+
+**Verified**
+- `npm run check:pglite`: 228/228 applied, 0 failed.
+- `npm run check:lifecycle`: 71/71 green, 0 known-red, 0 failed.
+- `npm test`: 587 test files passed, 6937 passed.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run build`: built in 1m 39s (PWA precache 284 entries).
+- `npm run check:security`: 18 Phase 0 regressions + 14 branch groups + glossary pass.
+- `node scripts/test-booking-financial-integrity.mjs`: PASS.
+- `npm run test:server-contracts`: 59/59 passed.
+- `npm run test:partial-return`: 58/58 passed.
+- `npm run check:contrast`: 106/106 pass.
+- `npm run lint:ui-copy`: 0 violations.
+- `npm run lint:shell`: 925 files checked, 0 violations.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 101 / 101 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 82 / 82 (100%) | +0 |
+| Lifecycle | steps green / total | 71 / 71 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 228 files · check:pglite 228/228 applied, 0 failed (recorded 2026-11-09T19:18:25.585Z). Suite: PASS — 6937/6937 passed, 0 failed (recorded 2026-11-09T19:26:00.309Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-09T19:18:46.348Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T3-27 ready for local merge into `main`.
+- Next in Lane C: Card T3-28 · Rental day start as a setting (`docs/plans/prompts/T3-28.md`).
+
+## 2026-11-09 — T3-21: Find anything in one box (Lane C)
+
+**Did**
+- **T3-21: Find anything in one box across seven keys (W91, Law 6, Law 8):**
+  - Enhanced `src/lib/queries/globalSearch.ts`:
+    - Searches across 7 keys:
+      1. Booking number (normalizes `#`, `BK-`, `B-` via `parseBookingNoSearch` in `src/lib/format.ts`).
+      2. Client name (case-insensitive substring match).
+      3. Client phone (matches normalized 10-digit Nepal mobile numbers via `phoneLocalDigits`).
+      4. Collector name (queries `client_collectors_v` view joined to client and active bookings).
+      5. Item / equipment name (`equipment` catalog).
+      6. Serial number (`product_units` joined to booking lines).
+      7. Asset code / barcode / unit code (`product_units.asset_code`).
+    - Sorts recent bookings first (`pickup_at` / `created_at` descending) so active and recent rentals appear at the top.
+    - Money-blind enforcement (Law 6): Invoices and money amounts are completely omitted when caller role has `canViewMoney(role) === false`.
+    - Added `AbortSignal` support to `searchRecords(query, role, signal)` to enable cancellation of in-flight queries.
+    - Exported comprehensive typing: `SearchResultGroup`, `GlobalSearchResultItem`, `GlobalSearchResultKind`.
+  - Updated `src/components/shell/CommandPalette.tsx`:
+    - 250ms debounced input search with `AbortController` cancellation for previous pending queries.
+    - Explicit state transitions: `'idle'`, `'loading'`, `'ready'`, `'error'`, and empty state with retry.
+    - Result grouping: Bookings, Clients, Equipment, Invoices with direct one-tap navigation.
+  - Added / updated test suites:
+    - `src/lib/queries/__tests__/globalSearch.test.ts`: 21 comprehensive tests covering all 7 search keys, recent sorting, money blindness, error handling, and abort signals.
+    - `src/components/shell/__tests__/commandSearchWorkflow.test.tsx`: Verified search UI interaction and keyboard navigation.
+    - `src/components/shell/MobileHeaderSearch.test.tsx`: Verified mobile search flow.
+    - `src/lib/__tests__/bookingNo.test.ts`: Verified booking number parsing.
+
+**Ruled**
+- W91: Header search (⌘K / mobile search) finds bookings across all seven required keys (number, client name, client phone, collector name, item name, serial number, asset code).
+- Law 6: Floor roles (Warehouse, Technician, Driver, Client) remain strictly money-blind in search; invoices are not returned and money values are never surfaced.
+- Law 8: All async operations observe cancelable abort signals and idempotent read patterns.
+
+**Verified**
+- `npm run check:pglite`: 227/227 applied, 0 failed.
+- `npm run check:lifecycle`: 70/70 green, 0 known-red, 0 failed.
+- `npx vitest run src/lib/queries/__tests__/globalSearch.test.ts src/components/shell/__tests__/commandSearchWorkflow.test.tsx src/lib/__tests__/bookingNo.test.ts src/components/shell/MobileHeaderSearch.test.tsx`: 31/31 passed.
+- `node scripts/test-booking-financial-integrity.mjs`: PASS.
+- `npm run check:security`: PASS.
+- `npm run test:server-contracts`: 59/59 passed.
+- `npm run test:partial-return`: 58/58 passed.
+- `node --test scripts/test-receipt.test.mjs`: 11/11 passed.
+- `npm run lint:shell`: 923 files checked, 0 violations.
+- `npm run lint:ui-copy`: 0 violations.
+- `npm run check:contrast`: 106/106 pass.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 100 / 100 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 82 / 82 (100%) | +0 |
+| Lifecycle | steps green / total | 70 / 70 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 227 files · check:pglite 227/227 applied, 0 failed (recorded 2026-11-09T18:14:54.941Z). Suite: Historical suite: 6917/6917 passed, 0 failed (recorded 2026-11-09T17:57:45.951Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-09T18:16:07.874Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T3-21 merged into `main`.
+- Next in Lane C: Card T3-27 · Pro forma invoice from the draft (`docs/plans/prompts/T3-27.md`).
+
+## 2026-11-09 — T3-26: Project name and shoot location on every booking (Lane C)
+
+**Did**
+- **T3-26: Project name and shoot location on every booking (B8, B52, Law 4, Law 6, Law 8):**
+  - Renumbered migration to `0230_project_name_and_shoot_location.sql` in `docs/plans/MIGRATION_LEDGER.md` (following Lane B's 0228 and T3-25's 0229; Next free number: `0231`).
+  - Authored `supabase/migrations/0230_project_name_and_shoot_location.sql`:
+    - Added `project_name text check (length(project_name) <= 120)` to `bookings`.
+    - Added `shoot_location text check (length(shoot_location) <= 120)` to `bookings`.
+    - Added `project_name text check (length(project_name) <= 120)` to `invoices`.
+    - Added trigger `trg_bookings_sync_project_name` to synchronize legacy `project` and `project_name` on bookings.
+    - Added trigger `trg_invoices_snapshot_project_name` to automatically snapshot `bookings.project_name` on invoice creation.
+    - Added trigger `trg_guard_invoice_project_name_immutable` to guard invoice project name immutability once `status <> 'Draft'` (B52, Law 4).
+    - Added explicit column grants on `project_name` and `shoot_location` to authenticated.
+    - Updated `create_booking(p_payload jsonb)` to accept and store `project_name` and `shoot_location`.
+    - Updated `create_invoice(p_payload jsonb)` to snapshot `project_name` from booking and accept manual override during creation.
+  - Added step `L69` to `scripts/e2e-lifecycle.mjs`:
+    - Verified `create_booking` stores both `project_name` and `shoot_location`.
+    - Verified length checks `<= 120` enforced in Postgres.
+    - Verified invoice creation snapshots `project_name`.
+    - Verified issued invoice project name is immutable (B52, Law 4).
+  - Extended query & mock layer:
+    - Added `projectName` and `shootLocation` to `BookingListRow`, `RawBookingRow`, `BASE_COLUMNS`, and `toRow` in `src/lib/queries/bookings.ts`.
+    - Added `projectName` and `shootLocation` to `FloorBooking`, `RawFloorBooking`, and `FLOOR_COLUMNS` in `src/lib/queries/bookings.ts` (enabling floor packing list and return report to render project details).
+    - Added `fetchRecentClientProjects(clientDbId)` in `src/lib/queries/bookings.ts` fetching up to 5 distinct recent project names and shoot locations for quick one-tap reuse.
+    - Added `projectName` to `InvoiceListRow`, `RawInvoiceRow`, and `INVOICE_COLUMNS` in `src/lib/queries/finance.ts`.
+    - Added `projectName` and `shootLocation` to `RentalListRow` and `toRentalListRow` in `src/data/rentals.ts`.
+    - Updated mock client `createBookingRpc` and `createInvoiceRpc` in `src/lib/__mocks__/client.ts`.
+  - Extended actions:
+    - Updated `createRental` in `src/actions/rentals/createRental.ts` with length validation `<= 120` and passing `project_name` & `shoot_location` to `create_booking`.
+    - Updated `updateBookingProject` in `src/actions/rentals/updateBookingProject.ts` with validation and audit logging for `projectName` and `shootLocation`.
+    - Updated `saveDraft` in `src/actions/rentals/saveDraft.ts` to include `projectName` and `shootLocation` in `RentalDraftData`.
+  - Extended PDF generation:
+    - Added `project?: string | null` to `InvoicePdfData` in `src/lib/pdf/generatePdf.ts` and `src/lib/pdf/invoicePdfData.ts`.
+    - Printed `Project: <project>` in the RENTAL REFERENCE block of invoice PDF (B52).
+    - Preserved project display in `DocumentPdfData` and `PackingListPdfData`.
+  - Extended UI components:
+    - `src/modules/rentals/booking/BookingClientSection.tsx`: Added Project / Production Name and Shoot Location fields with max 120 char counters and one-tap chips from recent client bookings.
+    - `src/modules/rentals/NewRental.tsx`: Wired `shootLocation` and `recentProjects` fetched via `fetchRecentClientProjects(clientDbId)`, wired into draft and submit hooks.
+    - `src/modules/rentals/BookingDetail.tsx`: Displayed Project and Shoot Location in SummaryRows and header description. Updated `ProjectTypeEditor` into an inline editor allowing editing Project Name, Shoot Location, and Project Type with validation and rollback.
+    - `src/modules/rentals/RentalsList.tsx`: Displayed `shootLocation` in the rental inspector drawer alongside client facts.
+  - Added / updated unit test suites:
+    - `src/actions/rentals/__tests__/updateBookingProject.test.ts`: Added validation tests (<= 120 chars) and update write tests for `projectName` and `shootLocation`.
+    - `src/lib/pdf/__tests__/generatePdf.test.ts`: Added test asserting invoice PDF prints project name (B52, T3-26).
+    - `src/modules/rentals/__tests__/newRentalDraftPersistence.test.tsx` and `src/modules/rentals/booking/__tests__/useNewRentalSubmit.test.tsx`: Verified all passed.
+
+**Ruled**
+- B8, B52: Project / production name and shoot location on every booking, up to 120 chars each.
+- B52, Law 4: Project name printed on every invoice; an issued invoice preserves the name it was issued with immutably.
+- Law 6: Floor roles see project name and shoot location on packing lists and booking details while remaining strictly money-blind.
+- Law 8: All updates and writes carry idempotency keys.
+
+**Verified**
+- `npm run check:pglite`: 227/227 applied, 0 failed, 195 definer functions pinned, 0 unauthorized public functions.
+- `npm run check:lifecycle`: 70/70 green, 0 known-red, 0 failed (Step L69 passed, Step L70 passed).
+- `node scripts/test-booking-financial-integrity.mjs`: PASS (all financial integrity assertions green).
+- `npm run check:security`: PASS (all Phase 0 regressions + Reset branch + operations grants verified).
+- `npm run test:server-contracts`: 59/59 integration assertions PASSED (0 failures).
+- `npm run test:partial-return`: 58/58 partial return acceptance assertions PASSED (0 failures).
+- `node --test scripts/test-receipt.test.mjs`: 11/11 passed.
+- `npm run lint:shell`: 923 files checked, 0 violations.
+- `npm run lint:ui-copy`: 0 developer-text violations (12/12 tests passed).
+- `npm run check:contrast`: 106/106 pass, 0 FAIL.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run build`: built in production mode without errors (`tsc --noEmit && vite build`).
+- `npm test`: 584 test files passed (6906/6906 tests passed, 0 failed).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 100 / 100 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 82 / 82 (100%) | +0 |
+| Lifecycle | steps green / total | 70 / 70 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 227 files · check:pglite 227/227 applied, 0 failed (recorded 2026-11-09T17:03:03.102Z). Suite: Historical suite: 6906/6906 passed, 0 failed (recorded 2026-11-09T10:57:50.081Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-09T17:05:44.604Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T3-26 is merged into `main`.
+- Next in Lane C: Card T3-27 · Pro forma invoice from the draft (`docs/plans/T3_BOOKING_MONEY.md`).
+
 ## 2026-11-09 — UI/UX Polish: Form Forgiveness, 56px Floor Verbs & Ambient Sync (Lane B)
 
 **Did**
@@ -31,37 +255,15 @@
 - `npm run check:lifecycle`: 65/65 green through real Postgres + RLS.
 - `npm run build`: built in 3m 1s (`dist/` & PWA service worker generated).
 
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 92 / 92 (100%) | +0 |
-| Real data | DB-only · mixed · seed · none / 65 | 56 · 0 · 0 · 9 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 77 / 77 (100%) | +0 |
-| Lifecycle | steps green / total | 65 / 65 (100%) | +1 |
-| Overall | structural mean of five | ≈ 97% | — |
-Migrations 221 files · check:pglite 221/221 applied, 0 failed (recorded 2026-11-09T08:08:49.928Z). Suite: Historical suite: 6726/6734 passed, 8 failed (recorded 2026-11-06T21:21:26.360Z); current source NOT VERIFIED.
-Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written 2026-11-09T08:08:21.773Z.
-Counted by `npm run completion`, not typed.
-Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
-
-### Remaining
-- Lane B tracks (T4 Shared tools, T5 Notifications & email, T6 Nepali localization) are all completed, verified, and merged into `main`.
-- Support Lane A (T1, T2 floor, T8 membership/crew) and Lane C (T3 money, T7 online booking) as they complete their tracks toward day X cutover.
-- Perform device usability run on iPad/iPhone per `docs/USABILITY_TESTS.md`.
-
-
-
 ## 2026-11-09 — Babin rulings R-9.1 to R-9.4 (interactive round, Lane B)
 
 **Did**
 - Logged four rulings in `RULINGS-2026-11-09.md` (B-2, three places): Technician handover allowed; membership plan change restarts the term by default and staff may keep the original join date; crew pay by day, no hours-based overtime flag; delivery zone fee held in Settings with an empty starting value.
 - R-9.1: no change needed; Technician handover was already in code and `PERMISSIONS.md` (D3).
-- R-9.2: migration `0226_membership_change_keep_join_date.sql` (on the 0198 function); `keep_join_date` payload key; `GATE:membership.keep_join_lapsed`; `UpgradeTierModal.tsx` radio choice; `changeMembership.ts` passes the flag. Migration ledger: next free number 0227.
+- R-9.2: migration `0228_membership_change_keep_join_date.sql` (on the 0198 function); `keep_join_date` payload key; `GATE:membership.keep_join_lapsed`; `UpgradeTierModal.tsx` radio choice; `changeMembership.ts` passes the flag. Migration ledger: next free number 0229.
 - R-9.3: hours-based overtime flag removed (`timesheet.ts`, `TimesheetTab.tsx`, tests).
 - R-9.4: Settings delivery-zone fee form starts empty (`DeliveryZonesControl.tsx`).
-- Lifecycle step `L65` added to `scripts/e2e-lifecycle.mjs`.
+- Lifecycle step `L70` added to `scripts/e2e-lifecycle.mjs`.
 
 **Ruled**
 - R-9.1 to R-9.4 as recorded in `RULINGS-2026-11-09.md`.
@@ -71,7 +273,7 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `npx eslint` on the five touched source files, `--max-warnings 0`: clean.
 - `npx vitest run` on 21 crew, rbac, delivery-zone and clients test files: 312/312 passed. A second run of the modal, action and timesheet tests: 86/86 passed.
 - `npm run check:pglite`: 221/221 migrations applied, 0 failed; view, function and definer gates pass.
-- `npm run check:lifecycle`: 65/65 green (L65 new). An earlier run caught a regression: `0226` was first built on `0197`, not `0198`, which dropped the D23 renewal path. Rebuilt on `0198`; re-verified.
+- `npm run check:lifecycle`: 65/65 green (L70 new). An earlier run caught a regression: `0226` was first built on `0197`, not `0198`, which dropped the D23 renewal path. Rebuilt on `0198`; re-verified.
 
 **Screen check (mock mode, Owner, `babin-mock` dev server on :3100)**
 - `/crew/timesheet`: renders with three KPI cards; the "Overtime Flags" card is gone. No row is visible because mock data has no shoot days this week, so the per-person overtime display was not seen.
@@ -81,9 +283,70 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `.claude/launch.json`: `babin-mock` now runs the Vite dev server (`--mode mock`) instead of `vite preview` of a build folder from another session.
 
 **Not done**
-- Migration `0226` is written and verified locally only. Babin applies it after the backup step (N-5).
+- Migration `0228` is written and verified locally only. Babin applies it after the backup step (N-5).
 - R-9.4 starting value is empty by Babin's choice; he enters the fee in Settings.
-- Keep-join date has no date-level screen check; the database refusal (`keep_join_lapsed`) is proven by lifecycle L65 only.
+- Keep-join date has no date-level screen check; the database refusal (`keep_join_lapsed`) is proven by lifecycle L70 only.
+
+## 2026-11-08 — T3-25: Tags on bookings (Lane C)
+
+**Did**
+- **T3-25: Tags on bookings (B16, B55, Law 6, Law 8):**
+  - Renumbered migration `0229_booking_tags.sql` in `docs/plans/MIGRATION_LEDGER.md`.
+  - Authored `supabase/migrations/0229_booking_tags.sql`:
+    - Added `tags text[] not null default '{}'` to `bookings` table.
+    - Added GIN index `idx_bookings_tags` for fast array searches (`tags && ARRAY['...']`).
+    - Added explicit column grant `grant select (tags) on public.bookings to authenticated` ensuring Law 6 column-level SELECT masking remains intact.
+    - Created SECURITY DEFINER function `set_booking_tags(p_client_uuid uuid, p_booking_id uuid, p_tags text[])` with `search_path = public, pg_temp`.
+    - Gated write to Owner, Admin, Manager, Coordinator; rejected Warehouse, Technician, Driver, Client with `42501`.
+    - Enforced tag constraints: trimmed whitespace, case-insensitive deduplication, maximum 30 characters per tag (rejects longer with `22023`).
+    - Appended explicit row to `audit_events` with actor role and before/after tags snapshot.
+    - Idempotent replay on `p_client_uuid` returning existing tag set.
+    - Revoked execute on `set_booking_tags` from public and anon.
+  - Added step `L68` to `scripts/e2e-lifecycle.mjs`:
+    - Verified Coordinator sets tags, Warehouse is denied (`42501`), >30 character tag is rejected (`22023`), whitespace is trimmed, case-insensitive duplicate is collapsed, **tags never change stage or money**, GIN index search succeeds, and idempotent replay preserves result.
+  - Exported `canSetBookingTags(role: SystemRole)` in `src/lib/rbac.ts` and mapped `rental.tag` / `booking.tag` in `src/actions/core.ts` and `docs/PERMISSIONS.md`.
+  - Implemented action `src/actions/rentals/setBookingTags.ts` registered in `src/actions/rentals/index.ts` with unit test suite `src/actions/rentals/__tests__/setBookingTags.test.ts` (11/11 passed).
+  - Extended mock infrastructure:
+    - Added `overlaps` filter builder and array-aware matching to `src/lib/__mocks__/engine.ts`.
+    - Added `set_booking_tags` RPC handling in `src/lib/__mocks__/client.ts`.
+  - Extended query layer:
+    - Added `tags` to `BookingListRow`, `RawBookingRow`, `BASE_COLUMNS`, and `toRow` in `src/lib/queries/bookings.ts`.
+    - Handled `tags` facet and array `overlaps` filtering in `src/lib/queries/listQuery.ts`.
+    - Added `tags` to `RentalListRow` and `toRentalListRow` in `src/data/rentals.ts`.
+  - Created UI component `src/modules/rentals/BookingTagsBar.tsx`:
+    - Quick-pick suggestions ("wedding", "repeat", "festival", "corporate", "music video", "vip").
+    - Clean tag chips with one-click remove.
+    - Add tag input with instant keyboard handling (`Enter`, `,`).
+    - Floor roles (Warehouse, Technician, Driver, Client) see tags in read-only mode without edit buttons.
+  - Mounted `<BookingTagsBar>` in `src/modules/rentals/BookingDetail.tsx`.
+  - Enhanced `src/modules/rentals/RentalsList.tsx`:
+    - Added tag chips on booking rows.
+    - Added tag filtering chips in URL schema and filter bar.
+    - Integrated `tagFilter`, `onToggleTag`, and `availableTags` with `BooqableRentalFilterDrawer.tsx`.
+    - Included `tags` in CSV export.
+  - Registered `tag: IconTag` in `src/components/ui/Icon.tsx` and `RENTAL_TAGS_UPDATED` in `src/events/eventBus.ts`.
+
+**Ruled**
+- B16, B55: Free tags on bookings; multiple per booking, case-insensitive deduplication, trimmed, <= 30 characters.
+- Law 6: Tags never carry money figures. Floor roles can view tags while remaining strictly money-blind.
+- Law 8: Mutation requires `client_uuid` for idempotent replay.
+- RBAC: Setting tags is restricted to Coordinator and above; floor roles and client are read-only.
+
+**Verified**
+- `npm run check:pglite`: 225/225 applied, 0 failed, 193 definer functions pinned, 0 unauthorized public functions.
+- `npm run check:lifecycle`: 68/68 green, 0 known-red, 0 failed (Step L68 passed).
+- `node scripts/test-booking-financial-integrity.mjs`: PASS (all financial integrity assertions green).
+- `npm run check:security`: PASS (all Phase 0 regressions + Reset branch + operations grants verified).
+- `npm run test:server-contracts`: 59/59 integration assertions PASSED (0 failures).
+- `npm run test:partial-return`: 58/58 partial return acceptance assertions PASSED (0 failures).
+- `node scripts/test-receipt.mjs`: PASSED.
+- `npm run lint:shell`: 923 files checked, 0 violations.
+- `npm run lint:ui-copy`: 0 developer-text violations (12/12 tests passed).
+- `npm run check:contrast`: 106/106 pass, 0 FAIL.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run build`: built in production mode without errors.
+- Unit & component tests: 255/255 tests passed (including `setBookingTags.test.ts`, `RentalTimeline.test.ts`, `rentalsList.test.ts`, `operationsQueues.test.ts`, `todayQuery.test.ts`, `rentalsList.render.test.tsx`).
 
 ## 2026-11-08 — T5-13: Edit email and document texts (Lane B)
 

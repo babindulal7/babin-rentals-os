@@ -34,6 +34,10 @@ export interface BooqableRentalFilterDrawerProps {
   /** Sub-rental toggle */
   subOn: boolean
   onToggleSub: () => void
+  /** Tags facet (T3-25, B16, B55) */
+  tagFilter?: Set<string>
+  onToggleTag?: (tag: string) => void
+  availableTags?: string[]
   /** Money visibility (Law 6) */
   money?: boolean
   /** Live stage counts */
@@ -85,6 +89,9 @@ export function BooqableRentalFilterDrawer({
   onChangeDateRange,
   subOn,
   onToggleSub,
+  tagFilter,
+  onToggleTag,
+  availableTags = [],
   money = false,
   stageCounts = {},
   onExport,
@@ -302,6 +309,52 @@ export function BooqableRentalFilterDrawer({
             })}
           </div>
         </div>
+
+        {/* Section 2c: Tags facet (T3-25, B16, B55) */}
+        {onToggleTag && (
+          <div style={{ marginBottom: 'var(--sp-lg)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--sp-sm)' }}>
+              <h3 style={{ fontSize: 'var(--t-ui)', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.01em' }}>
+                Tags
+              </h3>
+              {tagFilter && tagFilter.size > 0 && (
+                <Badge tone="primary" label={`${tagFilter.size} active`} size="sm" variant="square" />
+              )}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {Array.from(new Set(['wedding', 'repeat', 'festival', ...availableTags])).map((tag) => {
+                const isChecked = tagFilter?.has(tag) ?? false
+                return (
+                  <label
+                    key={tag}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '4px 10px',
+                      borderRadius: 'var(--r-full)',
+                      border: `1.5px solid ${isChecked ? 'var(--primary)' : 'var(--border)'}`,
+                      background: isChecked ? 'var(--active-row)' : 'var(--card)',
+                      cursor: 'pointer',
+                      fontSize: 'var(--t-meta)',
+                      fontWeight: isChecked ? 600 : 500,
+                      color: isChecked ? 'var(--text)' : 'var(--text2)',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      aria-label={`Filter by tag: ${tag}`}
+                      style={{ display: 'none' }}
+                      onChange={() => onToggleTag(tag)}
+                    />
+                    <span>#{tag}</span>
+                  </label>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Section 3: Booqable Date Range Presets */}
         {onChangeDateRange && (

@@ -203,6 +203,7 @@ export type DocumentType =
   | 'Incident Report'
   | 'Insurance Claim'
   | 'Call Sheet'
+  | 'Pro Forma'
 
 export type AuditEventClass = 'status change' | 'money movement' | 'discount' | 'override' | 'session' | 'cancellation'
 export type AuditCategory = 'Authentication' | 'Users' | 'Rentals' | 'Inventory' | 'Finance' | 'Administration' | 'Uncategorised'

@@ -134,6 +134,75 @@ export async function exportInvoicePdf(
 }
 
 /**
+ * Exports a Pro Forma invoice as a PDF, uploads it to Supabase Storage bucket 'documents',
+ * retrieves a signed URL, and persists `document_registry.file_url`.
+ * A pro forma is not a tax invoice, takes no invoice number, and is valid for 7 days (B18, Law 7).
+ */
+export async function exportProFormaPdf(
+  invoiceData: InvoicePdfData,
+  options: ExportPdfOptions = {},
+): Promise<ExportPdfResult> {
+  const {
+    uploadToStorage = true,
+    expiresInSeconds = 86400,
+    download = false,
+    documentId,
+  } = options
+
+  const proFormData: InvoicePdfData = {
+    ...invoiceData,
+    isProForma: true,
+    documentTitle: invoiceData.documentTitle || 'PRO FORMA INVOICE — not a tax invoice',
+    status: 'Pro Forma',
+  }
+
+  const safeBookingNo = sanitizePathSegment(invoiceData.bookingNo || 'BOOKING')
+  const safeName = sanitizePathSegment(options.filename?.replace(/\.pdf$/i, '') || `PRO_FORMA_${safeBookingNo}`)
+  const filename = options.filename || `${safeName}.pdf`
+
+  const bytes = generateInvoicePdf(proFormData)
+  const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
+
+  let storagePath: string | undefined
+  let signedUrl: string | undefined
+
+  if (uploadToStorage) {
+    const stored = await uploadPrivatePdf(blob, safeName, expiresInSeconds)
+    storagePath = stored.storagePath
+    signedUrl = stored.signedUrl
+    const reference = documentId || safeName
+    if (reference) {
+      await supabase
+        .from('document_registry')
+        .update({ file_url: storagePath, file_size_bytes: bytes.byteLength })
+        .eq(documentId ? 'id' : 'document_no', reference)
+    }
+  }
+
+  if (download && typeof window !== 'undefined' && typeof document !== 'undefined') {
+    const downloadUrl = signedUrl || URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = downloadUrl
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    if (!signedUrl) {
+      setTimeout(() => URL.revokeObjectURL(downloadUrl), 5000)
+    }
+  }
+
+  return {
+    blob,
+    bytes,
+    storagePath,
+    signedUrl,
+    filename,
+    fileSizeBytes: bytes.byteLength,
+  }
+}
+
+/**
  * Exports a registered document as a PDF, uploads to Supabase Storage bucket 'documents',
  * retrieves a signed URL, and persists `document_registry.file_url`.
  */

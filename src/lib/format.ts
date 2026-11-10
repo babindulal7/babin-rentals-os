@@ -113,6 +113,6 @@ export function formatBookingNo(bookingNo: string | null | undefined, fallback =
  */
 export function parseBookingNoSearch(term: string): string {
   const t = term.trim()
-  const m = /^(?:#|[Bb]-)(\d+)$/.exec(t)
+  const m = /^(?:#|(?:[Bb][Kk]?)-?)(\d+)$/.exec(t)
   return m ? m[1]! : t
 }

@@ -125,6 +125,8 @@ export const EVENT_TYPES = {
   RENTAL_EXTENDED: 'rental.extended',
   /** Project Type edit (0144) — emitted by UPDATE_BOOKING_PROJECT. */
   RENTAL_PROJECT_UPDATED: 'rental.project_updated',
+  /** T3-25: Tags update (0228) — emitted by SET_BOOKING_TAGS. */
+  RENTAL_TAGS_UPDATED: 'rental.tags_updated',
   NOTE_ADDED: 'booking.note_added',
   UNIT_RELEASED: 'booking.unit_released',
   /** WHATSAPP_LINKS_SPEC v1.0 §5.4 — one branch-day signed off (0078). */

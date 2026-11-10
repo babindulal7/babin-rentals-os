@@ -48,6 +48,18 @@ describe('generatePdf', () => {
       expect(text).not.toContain('Professional Camera, Lighting')
     })
 
+    it('prints project name on invoice when provided (B52, T3-26)', () => {
+      const bytes = generateInvoicePdf({
+        ...basicInvoice,
+        company: { name: 'Recorded Rentals' },
+        vatPaisa: rupees(0),
+        project: 'Kathmandu Diaries — music video',
+      })
+      const text = new TextDecoder().decode(bytes)
+      expect(text).toContain('Project:')
+      expect(text).toContain('Kathmandu Diaries')
+    })
+
     it('produces valid PDF 1.4 binary bytes with standard structure', () => {
       const data: InvoicePdfData = {
         invoiceNo: 'INV-2026-0001',
@@ -351,6 +363,90 @@ describe('generatePdf', () => {
       expect(text).not.toContain('Deposit')
       expect(text).not.toContain('Subtotal')
       expect(text).not.toContain('Total Amount')
+    })
+  })
+
+  describe('generateInvoicePdf (Pro Forma - T3-27, B18, B55, Law 7)', () => {
+    it('generates a pro forma invoice PDF with all required fields and no invoice number', () => {
+      const proFormData: InvoicePdfData = {
+        invoiceNo: null,
+        documentTitle: 'PRO FORMA INVOICE — not a tax invoice',
+        status: 'Pro Forma',
+        isProForma: true,
+        issueDateAd: '2026-11-10',
+        dueDateAd: '2026-11-17',
+        bookingNo: 'BK-2026-0777',
+        project: 'Everest Commercial Shoot',
+        client: {
+          name: 'Himalayan Pictures Pvt Ltd',
+          phone: '+977-9801234567',
+          email: 'accounts@himalayan.com',
+          panVat: '601234567',
+        },
+        company: {
+          name: 'Babin Rentals Kathmandu',
+          panVat: '109876543',
+        },
+        lines: [
+          {
+            description: 'ARRI Alexa Mini LF Package',
+            quantity: 1,
+            rentalDays: 3,
+            ratePaisa: 5000000, // Rs 50,000
+            totalPaisa: 15000000, // Rs 150,000
+          },
+          {
+            description: 'Cooke S4/i Prime Set (5 lenses)',
+            quantity: 1,
+            rentalDays: 3,
+            ratePaisa: 3000000, // Rs 30,000
+            totalPaisa: 9000000, // Rs 90,000
+          },
+        ],
+        subtotalPaisa: 24000000,
+        discountPaisa: 0,
+        taxablePaisa: 24000000,
+        vatPercent: 13,
+        vatPaisa: 3120000,
+        totalPaisa: 27120000,
+        paidPaisa: 0,
+        outstandingPaisa: 27120000,
+        advanceDuePaisa: 8136000, // ~30% advance
+        validityDays: 7,
+      }
+
+      const bytes = generateInvoicePdf(proFormData)
+      expect(bytes).toBeInstanceOf(Uint8Array)
+
+      const text = new TextDecoder().decode(bytes)
+
+      // 1. PDF structure
+      expect(text.startsWith('%PDF-1.4\n')).toBe(true)
+      expect(text.trimEnd().endsWith('%%EOF')).toBe(true)
+
+      // 2. Pro Forma title (not a tax invoice)
+      expect(text).toContain('PRO FORMA INVOICE')
+
+      // 3. Names booking number instead of invoice number (Law 7)
+      expect(text).toContain('BK-2026-0777')
+      expect(text).not.toContain('INV-2026-')
+
+      // 4. Project name printed (T3-26, B52)
+      expect(text).toContain('Everest Commercial Shoot')
+
+      // 5. Line items
+      expect(text).toContain('ARRI Alexa Mini LF Package')
+      expect(text).toContain('Cooke S4/i Prime Set')
+
+      // 6. Estimated VAT
+      expect(text).toContain('Estimated VAT \\(13%\\):')
+
+      // 7. Advance Due
+      expect(text).toContain('Advance Due:')
+
+      // 8. Valid for 7 days
+      expect(text).toContain('Valid for 7 days')
+      expect(text).toContain('PRO FORMA ESTIMATE')
     })
   })
 })
