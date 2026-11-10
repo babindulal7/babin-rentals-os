@@ -1,5 +1,42 @@
 # Progress Log
 
+## 2026-11-10 — T2-25 complete printing refreshed on current main
+
+**Did**
+- Ported the existing T2-25 printing implementation (`3f5b7114`) onto base `024f817a` in `lane-a/T2-25-current-main-printing`, retaining current invoice/project behavior and preserving the existing worktree.
+- Packing lists, return reports and invoices continue across numbered A4 pages; Booking Detail and Pack share the money-free item builder and booking QR route. Forty packing rows occupy two pages.
+- Fixed the pick-list header so its title does not overlap the QR. Fixed hierarchy ordering to retain grandchildren and preserve every item once even with cyclic parent links.
+
+**Ruled**
+- No new product or permission decision; no database migration or shared engine file changed. Physical acceptance remains required before the card is done.
+
+**Verified**
+- Final `npm run gates`: all 17 steps PASS, in order: typecheck; lint; local API guards; mock suite 6,978/6,978 in 591 files; PGlite 228/228; financial integrity; security; lifecycle 71/71; server contracts; partial returns; progress lint; receipt integrity; shell lint; UI-copy lint; contrast 106/106; build; coverage 6,978/6,978. All database checks local only.
+- Initial full run failed one existing assertion because loose items gained `isChild: false`; corrected to preserve absent flags. Focused PDF suite then passed 17/17, followed by the complete green gate above.
+- Earlier focused mounted screen/PDF suites: 53/53 across three files. Actual browser attempt: mock server started, but browser tool timed out before opening the page; no browser screen check claimed. Server stopped.
+- Synthetic 40-line PDF rendered and visually inspected on both pages. All 40 asset codes extracted; both rendered QR codes decoded with ZXing at print resolution to the exact booking route. The low-resolution full-page raster did not decode; physical camera acceptance remains open.
+- `npm audit` reported 36 findings: 3 low, 15 moderate, 14 high, 4 critical. Dependency files were unchanged; findings require separate dependency review.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 101 / 101 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 82 / 82 (100%) | +0 |
+| Lifecycle | steps green / total | 71 / 71 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 228 files · check:pglite 228/228 applied, 0 failed (recorded 2026-11-10T03:54:18.558Z). Suite: PASS — 6978/6978 passed, 0 failed (recorded 2026-11-10T04:09:42.326Z); source fingerprint matches.
+Coverage suite: PASS — 6978/6978 passed, 0 failed (recorded 2026-11-10T04:09:42.326Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-10T03:55:37.737Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Card remains doing: browser screen check at 375/820/1440 as Warehouse and a money role, physical iPad print and camera scan, then Babin review/merge. No push or merge performed.
+- Review artifacts (synthetic data, git-ignored): `artifacts/pdf-review/pick-list-40.pdf`, `page-1.png`, `page-2.png`.
+
+
 ## 2026-11-09 — T3-27: Pro forma invoice from the draft (Lane C)
 
 **Did**
