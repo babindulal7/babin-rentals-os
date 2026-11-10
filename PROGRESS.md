@@ -1,5 +1,53 @@
 # Progress Log
 
+## 2026-11-10 — Card 2: Booking conflict help in New Rental (Lane C)
+
+**Did**
+- **Card 2: Booking conflict modal in New Rental (Card 2 prompt, G-1, G-2, Law 10):**
+  - **Step 0 Confirmation:** Confirmed that New Rental previously only offered a "Review" button scrolling to the equipment section, requiring 4+ unstructured manual taps to identify and resolve shortages. No guided resolution existed.
+  - **Guided Conflict Resolution:** Mounted `BookingConflictModal` in `src/modules/rentals/NewRental.tsx`, fed by the existing `availabilitySource` from `useNewRentalCatalogue` without adding duplicate availability reads.
+  - **Banner Integration:** Enhanced stock contention banner to provide direct "Resolve Conflicts" CTA alongside "Review", opening the guided conflict dialog in 1 tap (2 taps total to resolve vs 4+ before).
+  - **Confirm Guard Wiring:** When an operator attempts to confirm an order with unhandled equipment shortages, `handlePrimaryAction` triggers the guided conflict modal instead of merely shaking the section.
+  - **Wired 6 Concrete Resolution Callbacks:**
+    - `onReassignUnit`: Reassigns specific unit/serial in draft without leaving the page.
+    - `onSelectSubstitute`: 1-click replacement with an in-stock, compatible owned substitute in the same category (reading `unitsFree > 0` from `availabilitySource`).
+    - `onAdjustDates`: Shifts pickup/return dates to open availability windows (`setPickup` and `setRet`).
+    - `onRemoveItem`: Removes conflicting line item directly from draft lines (`setLines`).
+    - `onSubRent`: Marks line for external sub-rental (`lineType = 'Sub-rental'`), preserving draft state without prematurely clearing the physical shortage until received (Rule 4).
+    - `onKeepDraft`: Closes modal and safely preserves draft in IndexedDB/state without data loss (Rule 5).
+  - **Unit Testing:** Created `src/modules/rentals/__tests__/newRentalConflictModal.test.tsx` (7/7 passed) covering all 6 callbacks, date shifts, substitute selections, and draft preservation under refusal.
+
+**Ruled**
+- Card 2 / Design 2026-11-10: Connect `BookingConflictModal` in New Rental fed by the existing `availabilitySource`. Shortages must be resolvable without leaving the page in 2 taps. Every resolution changes the draft only; confirm remains gated by server checks; sent sub-rent requests never clear shortages until stock is received; typed data is preserved on refusal.
+- Law 16: Contrast, accessibility, and five screen states verified.
+
+**Verified**
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run lint:shell`: 927 files checked, 0 violations.
+- `npm run lint:ui-copy`: 0 violations.
+- `npm run check:contrast`: 106/106 pass.
+- `vitest run src/modules/rentals/__tests__/newRentalConflictModal.test.tsx`: 7/7 passed.
+- `vitest run src/modules/rentals/__tests__/newRentalSimplification.test.tsx src/modules/rentals/__tests__/newRentalDraftPersistence.test.tsx`: 11/11 passed.
+- `vitest run src/modules/rentals/booking/__tests__/BookingConflictModal.test.tsx`: 2/2 passed.
+- `npm run build`: built in 57.11s (PWA precache 291 entries).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 101 / 101 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 82 / 82 (100%) | +0 |
+| Lifecycle | steps green / total | 71 / 71 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Card 2 ready for draft PR and CI review.
+- Card 3 (`#128`), Card 4 (`#127`), Card 1 (`#126`), CI routing (`#124`) verified green.
+
 ## 2026-11-09 — T3-27: Pro forma invoice from the draft (Lane C)
 
 **Did**
