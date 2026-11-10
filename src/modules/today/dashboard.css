@@ -3650,3 +3650,28 @@
     min-width: 100px;
   }
 }
+
+
+/* The movement queues remain the first work area; role shortcuts follow them.
+   Open by default to preserve W61/W79 one-tap action access, collapsible on demand. */
+.rental-dashboard .dashboard-other-tasks {
+  margin-top: var(--sp-lg, 24px);
+  border-top: 1px solid var(--border);
+}
+
+.rental-dashboard .dashboard-other-tasks__summary {
+  display: list-item;
+  box-sizing: border-box;
+  min-height: var(--tap, 44px);
+  padding: 12px 0;
+  color: var(--text);
+  font-size: var(--t-body, 14px);
+  font-weight: 600;
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.rental-dashboard .dashboard-other-tasks__summary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}

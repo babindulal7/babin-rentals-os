@@ -1,0 +1,83 @@
+name: Mac PR verification
+
+# A separate, complementary fast-feedback lane for the Apple Silicon
+# self-hosted runners. One PR = one Mac job. PRs execute concurrently
+# across idle Mac runners [self-hosted, macOS, ARM64].
+#
+# Dedicated to pull requests and manual dispatch only. Full CI for main
+# pushes is handled in ci.yml across both Windows and Mac runners.
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Replaces stale checks only for the SAME PR; different PRs stay parallel.
+# Distinguish push/PR/dispatch so one event cannot cancel another type.
+concurrency:
+  group: mac-pr-verification-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mac-verify:
+    name: Mac · typecheck, lint, mock tests, build
+    # Run untrusted code on an owner's machine ONLY for same-repository PRs.
+    # No secrets and no persisted checkout credentials are exposed to the job.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 120
+    env:
+      CI: 'true'
+      VITE_DATA_SOURCE: mock
+      # Three jobs may share one 16 GB M4 Mac mini. Cap each Node heap; Vitest
+      # uses at most two workers per job, while three independent PRs can run.
+      NODE_OPTIONS: '--max-old-space-size=2048'
+
+    steps:
+      - name: Check out commit without persistent credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node 24 and npm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Confirm macOS ARM64 runner
+        shell: bash
+        run: |
+          test "${RUNNER_OS}" = macOS
+          test "${RUNNER_ARCH}" = ARM64
+          echo "Runner: ${RUNNER_NAME}"
+          echo "CPU: $(sysctl -n hw.ncpu)"
+          echo "RAM (bytes): $(sysctl -n hw.memsize)"
+
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Local API verification safety guards
+        run: npm run test:local-api-guards
+
+      - name: Test (offline mock, two workers)
+        run: npm test -- --maxWorkers=2
+
+      - name: Build
+        run: npm run build
+
+      - name: Scope and runner evidence
+        if: always()
+        shell: bash
+        run: |
+          echo "Runner: ${RUNNER_NAME} (${RUNNER_OS}/${RUNNER_ARCH})" >> "${GITHUB_STEP_SUMMARY}"
+          echo "Commit: ${GITHUB_SHA}" >> "${GITHUB_STEP_SUMMARY}"
+          echo 'Scope: typecheck, lint, local API guards, offline mock unit tests and build.' >> "${GITHUB_STEP_SUMMARY}"
+          echo 'Not a substitute for the Windows CI database, authenticated RLS, lifecycle, financial-integrity or coverage gates.' >> "${GITHUB_STEP_SUMMARY}"
