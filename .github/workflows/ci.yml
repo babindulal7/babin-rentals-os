@@ -64,19 +64,45 @@ jobs:
       # `ci`, not `install`: the lockfile is the contract, and a CI run that
       # silently resolves a newer transitive dependency is not reproducing what
       # the author tested.
+      # Windows main is a quick runtime validation only. The independent Mac
+      # full CI job executes every database/security/financial/lifecycle gate.
+      # Never install npm dependencies here: Windows npm ci previously consumed
+      # 10 minutes then the runner job ended without any step logs.
+      - name: Windows dependency-free runner smoke (main)
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_OS -ne 'Windows' -or $env:RUNNER_ARCH -ne 'X64') {
+            throw "Expected Windows X64 runner, got $env:RUNNER_OS/$env:RUNNER_ARCH"
+          }
+          Write-Output "Runner: $env:RUNNER_NAME ($env:RUNNER_OS/$env:RUNNER_ARCH)"
+          Write-Output "Node: $(node --version)"
+          Write-Output "npm: $(npm --version)"
+          Write-Output "Head: $(git rev-parse HEAD)"
+          node --check scripts/run-gates.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Node syntax check failed' }
+          node --test scripts/run-gates.test.mjs tools/workstation-sync/sync.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Node-only smoke tests failed' }
+          "Windows main smoke PASS: zero dependency install, no DB or network; Mac full CI is mandatory." | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
       - name: Install dependencies
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
         run: npm ci
 
       - name: Typecheck
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
         run: npm run typecheck
 
       # Enforce ESLint on every branch, rather than only in manual release checks.
       - name: Lint source
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
         run: npm run lint
 
       # Pure, no-network check: local API verification must reject hosted URLs,
       # privileged keys, and inconclusive/failed RLS reads.
       - name: Local API verification safety guards
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
         run: npm run test:local-api-guards
 
       - name: Test (offline mock backend)
@@ -165,6 +191,7 @@ jobs:
       # deployable and is not. This job proves the tree compiles and bundles; a
       # deploy job is where real values belong.
       - name: Build
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
         run: npm run build
 
       - name: Coverage (offline mock backend)
