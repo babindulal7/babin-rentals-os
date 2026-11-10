@@ -280,7 +280,7 @@ export function QuickCreateDialog({
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: 6,
-                      transition: 'all var(--dur-fast, 120ms) ease',
+                      transition: 'all var(--dur-fast) var(--ease)',
                     }}
                   >
                     <Icon name={t === 'Individual' ? 'user' : 'company'} size={16} />

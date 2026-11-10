@@ -152,7 +152,7 @@ export function BooqableRentalFilterDrawer({
                     cursor: 'pointer',
                     textAlign: 'left',
                     fontFamily: 'inherit',
-                    transition: 'all 120ms ease',
+                    transition: 'all var(--dur-fast) var(--ease)',
                     outline: 'none',
                   }}
                   onFocus={(e) => { e.currentTarget.style.outline = '2px solid var(--input-focus)'; e.currentTarget.style.outlineOffset = '2px'; }}

@@ -1,5 +1,53 @@
 # Progress Log
 
+## 2026-11-10 — Card 3: UI clean-up — remove dead shadcn, unused deps, and tokenize motion (Lane B)
+
+**Did**
+- **Card 3: UI clean-up, layer simplification, and motion tokenization (Card 3 prompt, G-1, G-2):**
+  - **Step 1 (Baseline audit):**
+    - Captured 54 before/after screenshot baselines across all major app views in `docs/audits/card3-cleanup/baseline/` and `after-css/`.
+  - **Step 2 (Unused dependencies removal & icon migration):**
+    - Removed `shiki` and `opencode-chromium` from `package.json`.
+    - Migrated residual Lucide icons in `OfferCampaigns.tsx` and `UnsubscribePage.tsx` to standard Tabler SVG icons in `src/components/ui/Icon.tsx`.
+    - Removed `"lucide-react"` and unused `"cn"` packages.
+  - **Step 3 (Delete 58 unused shadcn components & duplicate CSS):**
+    - Removed `import './styles/shadcn-*.css'` from `src/main.tsx` and `RevenueReport.tsx`.
+    - Integrated essential `.rhea-*` report styles into `src/styles/ui-v2.css`.
+    - Safely deleted 58 unused shadcn components in `src/components/shadcn/` and obsolete `components.json`.
+    - Deleted `src/lib/__tests__/shadcn-luma-ui.test.ts`.
+    - Transformed Vite module count dropped from 10,205 to 8,285 (~1,920 modules removed), precache assets reduced by >320 KiB.
+  - **Step 4 (Tokenize transition durations & add transition linter):**
+    - Replaced 69 literal transition timings (e.g. `150ms`, `200ms`, `0.2s`, `0.15s`) across 35 `.tsx` and `.css` files with tokenized variables: `var(--dur-fast)`, `var(--dur)`, `var(--dur-theme)`, `var(--dur-drawer)`, and `var(--ease)`.
+    - Created CI enforcement script `scripts/check-transition-durations.mjs` and added `"lint:transitions"` script to `package.json`.
+    - Verified with `npm run lint:transitions`: 1,482 files checked, 0 violations.
+
+**Ruled**
+- Card 3 / Design 2026-11-10: Remove the dead shadcn component abstraction layer, remove unused runtime packages, eliminate duplicated CSS declarations, and ensure 100% of motion transitions reference semantic design tokens (`--dur`, `--dur-fast`, etc.).
+- Law 16: All affected views maintain contrast and usability standards without visual regression.
+
+**Verified**
+- `npm run lint:transitions`: 1482 files checked, 0 violations. All transitions properly tokenized.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run check:contrast`: 97/97 pass, 0 FAIL.
+- `vitest run src/modules/reports/__tests__/RevenueReport.rhea.test.tsx`: 4/4 passed.
+- `npm run build`: built in 44.21s (PWA precache 284 entries, 8,285 transformed modules).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 101 / 101 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 82 / 82 (100%) | +0 |
+| Lifecycle | steps green / total | 71 / 71 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Card 3 ready for draft PR and CI review.
+- Next in Lane C: Card 2 · Booking conflict modal in New Rental (`docs/plans/prompts/card-2.md`).
+
 ## 2026-11-09 — T3-27: Pro forma invoice from the draft (Lane C)
 
 **Did**
