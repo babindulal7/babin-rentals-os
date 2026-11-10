@@ -1,5 +1,46 @@
 # Progress Log
 
+## 2026-11-10 — Unit suites run on mock data; 39 baseline failures triaged (Lane B)
+
+**Did**
+- Triaged the 39 failing unit tests from a full `npx vitest run` (14 files). Re-ran the nine main failing files on `main`, a clean worktree: the same 34 failures in those nine files, so they predate the lane's branch.
+- Root cause: `.env.local` points at the live Supabase project, which is deliberately behind the migration ledger (N-5). Suites that reach RPCs and views not applied there fail with "not found in the schema cache". The same suites pass with mock data.
+- Fix: `env: { VITE_DATA_SOURCE: 'mock' }` in `vitest.config.ts` (commit `473682cb`, branch `fix/unit-tests-mock-env`, from `main`).
+
+**Ruled**
+- None. Engineering fix only; no product decision.
+
+**Verified**
+- `main` with the developer `.env.local`: the nine files gave 34 failed / 41 passed.
+- The same nine files with `VITE_DATA_SOURCE=mock` on `main`: 75/75.
+- The same nine files on the fix branch with the default environment: 75/75.
+- Full `npx vitest run` on the fix branch: 587 files, 6937 tests, all passed, exit 0.
+- `npm run check:pglite`: 228/228 applied, 0 failed. `npm run check:lifecycle`: 71/71 green.
+- Not verified: the full suite was run once. The earlier 6946-test count came from the lane checkout, which had other lanes' uncommitted tests, so the two counts are not comparable.
+
+### Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 101 / 101 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 | |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 82 / 82 (100%) | +0 |
+| Lifecycle | steps green / total | 71 / 71 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 228 files · check:pglite 228/228 applied, 0 failed (recorded 2026-11-10T00:39:42Z). Suite: full run above (6937 passed), recorded by hand, not by the counter. Coverage NOT VERIFIED. Structural coverage only.
+
+### Remaining
+
+*Features to build — not measured this session.*
+
+*Bugs to fix — 1.* The Delivery zones panel shows the banner "listDeliveryZones was called without a session context" in mock mode. Not confirmed on `main`.
+
+*Rulings open — 14.* O-4, O-5, O-6, O-7, O-9 to O-14, O-16, O-17, O-20, O-21 (`PLAN.md` §4.2).
+
+*Next session starts with:* deciding how to merge `docs/rulings-2026-11-09` (`3cf59d70`, rulings docs) and `fix/unit-tests-mock-env` (`473682cb`, test config). Both are local and unpushed.
+
 ## 2026-11-09 — T3-27: Pro forma invoice from the draft (Lane C)
 
 **Did**
