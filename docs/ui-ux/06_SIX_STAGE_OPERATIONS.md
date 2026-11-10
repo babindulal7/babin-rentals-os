@@ -58,13 +58,13 @@ Closing is separate from routine cleaning. The existing close gate and roles (Ow
 
 ## Explicit decisions before engineering expansion
 
-D-UX-01: Definition and ownership of reusable container IDs/cases, labels and responsibility after return.  
-D-UX-02: Which sub-items are separately stock-tracked vs checklist-only, and which versions govern legacy rentals.  
-D-UX-03: Whether Testing Bay occupancy needs persistence or is merely a local operator note; how custody is represented.  
-D-UX-04: Category QC templates, approved handling of client media and configuration resets; quick-shelve eligibility.  
-D-UX-05: Whether future availability policy should remain as currently ruled (default: **do not change**).
+D-UX-01 (O-23): Definition and ownership of reusable container IDs/cases, labels and responsibility after return.  
+D-UX-02 (O-24): Which sub-items are separately stock-tracked vs checklist-only, and which versions govern legacy rentals.  
+D-UX-03 (O-25): Whether Testing Bay occupancy needs persistence or is merely a local operator note; how custody is represented.  
+D-UX-04 (O-26): Category QC templates, approved handling of client media and configuration resets; quick-shelve eligibility.  
+D-UX-05 (O-27): Whether future availability policy should remain as currently ruled (default: **do not change**).
 
-These are **proposed decision questions** to be registered in the authoritative OPEN_DECISIONS/PLAN files through the coordinated process, not owner-approved policy in this branch.
+These are registered as O-23 to O-27 in `PLAN.md` §4.2 and `docs/OPEN_DECISIONS.md` section 22. They are open and unanswered. This document does not answer them and is not owner-approved policy.
 
 ## Safety acceptance examples
 

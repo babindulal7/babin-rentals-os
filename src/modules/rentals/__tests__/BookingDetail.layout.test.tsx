@@ -26,6 +26,15 @@ import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { ToastProvider } from '../../../components/ui/Toast'
 
+const pdfCalls = vi.hoisted(() => ({ packing: [] as Record<string, unknown>[] }))
+vi.mock('../../../lib/pdf/exportPdf', () => ({
+  exportPackingListPdf: async (data: Record<string, unknown>) => {
+    pdfCalls.packing.push(data)
+    return { blob: new Blob(['pick-list']), bytes: new Uint8Array([1]) }
+  },
+  openPdfForPrint: vi.fn(),
+}))
+
 let role = 'Owner'
 vi.mock('../../../lib/moneyVisibility', () => ({ useCanViewMoney: () => role !== 'Warehouse' }))
 vi.mock('../../../lib/auth', () => ({
@@ -265,6 +274,7 @@ afterEach(async () => {
   if (root) await act(async () => root.unmount())
   container?.remove()
   role = 'Owner'
+  pdfCalls.packing.length = 0
 })
 
 const text = () => container.textContent ?? ''
@@ -458,7 +468,8 @@ describe('§4.2 header — [Operations ▾] and [⋮], with dead controls remove
        had no persistence path and was removed rather than masquerading as a
        disabled action. RULING 2026-10-15: the booking's own rows lead the one
        More, ahead of the rental groups; its Cancel is the rental group's. */
-    expect(items.slice(0, 5)).toEqual([
+    expect(items.slice(0, 6)).toEqual([
+      'Print pick list',
       'Print booking',
       'Message client',
       'Extend rental',
@@ -468,6 +479,33 @@ describe('§4.2 header — [Operations ▾] and [⋮], with dead controls remove
     expect(items).toContain('Cancel Rental')
     expect(items).not.toContain('Cancel booking')
     expect(items).not.toContain('Save draft')
+  })
+
+  it('prints the money-blind pick list from Booking Detail with its booking route and asset code', async () => {
+    await mount(1280, 'Warehouse')
+    const more = allButtons().find((b) => b.getAttribute('aria-label') === 'More booking actions')
+    await act(async () => {
+      more?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    const printPickList = [...document.querySelectorAll('[role="menuitem"]')].find(
+      (item) => item.textContent?.trim() === 'Print pick list',
+    )
+    expect(printPickList).toBeDefined()
+    await act(async () => {
+      printPickList?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      await Promise.resolve()
+    })
+
+    expect(pdfCalls.packing).toHaveLength(1)
+    expect(pdfCalls.packing[0]).toMatchObject({
+      bookingNo: 'B-715',
+      clientName: 'Himalayan Films Pvt. Ltd.',
+    })
+    expect(pdfCalls.packing[0]?.bookingUrl).toContain('/rentals/B-715')
+    expect(pdfCalls.packing[0]?.items).toEqual(
+      expect.arrayContaining([expect.objectContaining({ assetCode: 'EQ000001-U01', serialNo: 'SN102' })]),
+    )
+    expect(JSON.stringify(pdfCalls.packing[0])).not.toMatch(/price|rate|total|deposit|paisa/i)
   })
 })
 
@@ -506,7 +544,7 @@ describe('15 Oct header rule — the stage action, Operations and ONE More, at e
       more?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     })
     const items = [...document.querySelectorAll('[role="menuitem"]')].map((i) => i.textContent?.trim() ?? '')
-    for (const label of ['Print booking', 'Message client', 'Extend rental', 'Assign crew', 'Create sub-rental']) {
+    for (const label of ['Print pick list', 'Print booking', 'Message client', 'Extend rental', 'Assign crew', 'Create sub-rental']) {
       expect(items, `${label} should be in More`).toContain(label)
     }
     expect(items.filter((i) => i.startsWith('Cancel'))).toEqual(['Cancel Rental'])
