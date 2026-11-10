@@ -51,7 +51,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Node
+      - name: Set up Node (Mac full CI)
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
         uses: actions/setup-node@v4
         with:
           # Pinned to the version the project is developed against. A skew here
@@ -68,6 +69,12 @@ jobs:
       # full CI job executes every database/security/financial/lifecycle gate.
       # Never install npm dependencies here: Windows npm ci previously consumed
       # 10 minutes then the runner job ended without any step logs.
+      - name: Set up Node (Windows smoke; no dependency cache)
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
       - name: Windows dependency-free runner smoke (main)
         if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
         shell: pwsh
@@ -82,7 +89,7 @@ jobs:
           Write-Output "Head: $(git rev-parse HEAD)"
           node --check scripts/run-gates.mjs
           if ($LASTEXITCODE -ne 0) { throw 'Node syntax check failed' }
-          node --test scripts/run-gates.test.mjs tools/workstation-sync/sync.test.mjs
+          node --test scripts/run-gates.test.mjs scripts/local-api-guard.test.mjs scripts/test-receipt.test.mjs
           if ($LASTEXITCODE -ne 0) { throw 'Node-only smoke tests failed' }
           "Windows main smoke PASS: zero dependency install, no DB or network; Mac full CI is mandatory." | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
 
