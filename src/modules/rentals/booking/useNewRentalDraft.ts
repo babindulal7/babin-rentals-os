@@ -45,6 +45,7 @@ export interface UseNewRentalDraftOptions {
   // Form state needed to build durable and local draft data
   selectedClientId: string | null
   project: string
+  shootLocation?: string
   kind: string
   kindOther: string
   govId: string
@@ -100,6 +101,7 @@ export function useNewRentalDraft({
   setQuoteSnapshot,
   selectedClientId,
   project,
+  shootLocation,
   kind,
   kindOther,
   govId,
@@ -162,6 +164,8 @@ export function useNewRentalDraft({
       clientDbId: selectedClientId ? client?.dbId ?? draftClientDbId : null,
       clientName: client?.name,
       project,
+      projectName: project,
+      shootLocation: shootLocation || undefined,
       kind,
       kindOther,
       govId,
@@ -226,6 +230,7 @@ export function useNewRentalDraft({
       client,
       draftClientDbId,
       project,
+      shootLocation,
       kind,
       kindOther,
       govId,

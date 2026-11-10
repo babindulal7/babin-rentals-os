@@ -11,6 +11,7 @@ export function invoicePdfData(invoice: InvoiceListRow, lines: readonly InvoiceL
     issueDateAd: invoice.issueDateAd,
     dueDateAd: invoice.dueDateAd,
     bookingNo: invoice.bookingNo,
+    project: invoice.projectName ?? null,
     client: { name: invoice.clientName },
     company,
     lines: lines.map((line) => ({

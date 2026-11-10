@@ -25,10 +25,13 @@ permissions:
 jobs:
   verify:
     name: typecheck · test · build
-    # Native Windows x64 self-hosted runner on the owner's PC (default labels).
-    # GitHub-hosted minutes are exhausted; if this runner is offline the job waits
-    # in the queue — do NOT switch this back to a paid hosted runner to get green.
-    runs-on: [self-hosted, Windows, X64]
+    # Full CI runs on Apple Silicon for same-repository PRs and on Windows x64
+    # for main pushes. Preserve the required CI job/check identity and all 17 gates.
+    # Use only verified default labels; do not select GitHub-hosted runners.
+    runs-on:
+      - self-hosted
+      - ${{ github.event_name == 'pull_request' && 'macOS' || 'Windows' }}
+      - ${{ github.event_name == 'pull_request' && 'ARM64' || 'X64' }}
     # This job executes on the owner's own computer, so never run code from a
     # forked pull request here. Pushes and same-repository PRs only.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
@@ -40,6 +43,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -172,3 +177,127 @@ jobs:
             artifacts/coverage-runs/
           retention-days: 7
           if-no-files-found: ignore
+
+  verify-mac:
+    name: Mac · full CI (main)
+    # Native macOS ARM64 self-hosted runner on the owner's M4 Mac mini.
+    # Executes the full mandatory verification suite on pushes to main.
+    runs-on: [self-hosted, macOS, ARM64]
+    # Runs exclusively on main pushes (and explicit manual workflow_dispatch on main).
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    timeout-minutes: 120
+    env:
+      CI: 'true'
+      VITE_DATA_SOURCE: mock
+      # Cap Node heap to preserve headroom on the 16 GB Apple Silicon host.
+      NODE_OPTIONS: '--max-old-space-size=2048'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Confirm runner identity and Apple Silicon specs
+        shell: bash
+        run: |
+          test "${RUNNER_OS}" = macOS
+          test "${RUNNER_ARCH}" = ARM64
+          echo "Runner Name: ${RUNNER_NAME}"
+          echo "CPU Cores: $(sysctl -n hw.ncpu)"
+          echo "RAM: $(($(sysctl -n hw.memsize) / 1024 / 1024 / 1024)) GB"
+          echo "Free Disk: $(df -h . | awk 'NR==2 {print $4}')"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint source
+        run: npm run lint
+
+      - name: Local API verification safety guards
+        run: npm run test:local-api-guards
+
+      - name: Test (offline mock backend)
+        env:
+          VITE_DATA_SOURCE: mock
+        run: npm run test
+
+      - name: Migrations build from scratch
+        run: npm run check:pglite
+
+      - name: Booking and invoice financial integrity (isolated PGlite)
+        run: node scripts/test-booking-financial-integrity.mjs
+
+      - name: Authenticated security and branch-Reset regressions (isolated PGlite)
+        run: npm run check:security
+
+      - name: Lifecycle
+        run: npm run check:lifecycle
+
+      - name: Record sections, equipment lifecycle and membership RPC contracts
+        run: npm run test:server-contracts
+
+      - name: Verified partial serial and quantity Return reservations
+        run: npm run test:partial-return
+
+      - name: PROGRESS.md carries its Completion and Remaining blocks
+        run: npm run lint:progress
+
+      - name: Completion receipts cannot certify stale or failed runs
+        run: node --test scripts/test-receipt.test.mjs
+
+      - name: Page shell design invariants
+        run: npm run lint:shell
+
+      - name: Staff UI contains no developer notes
+        run: npm run lint:ui-copy
+
+      - name: Contrast (WCAG AA, light + dark)
+        run: npm run check:contrast
+
+      - name: Build
+        run: npm run build
+
+      - name: Coverage (offline mock backend)
+        env:
+          VITE_DATA_SOURCE: mock
+        run: npm run test:coverage
+
+      - name: Upload lifecycle result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lifecycle-mac
+          path: .lifecycle-result.json
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-mac
+          path: |
+            coverage/
+            artifacts/coverage-runs/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Runner summary and verification evidence
+        if: always()
+        shell: bash
+        run: |
+          echo "### Mac Full CI Verification (main)" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- **Runner:** ${RUNNER_NAME} (${RUNNER_OS}/${RUNNER_ARCH})" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- **Ref:** ${GITHUB_REF}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- **Commit:** ${GITHUB_SHA}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- **Scope:** All 17 mandatory verification gates executed natively on Apple Silicon." >> "${GITHUB_STEP_SUMMARY}"

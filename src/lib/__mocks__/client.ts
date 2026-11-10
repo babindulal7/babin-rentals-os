@@ -471,6 +471,31 @@ function createBooking(payload: Record<string, unknown>): { data: Row | null; er
     return { data: null, error: { code: '23502', message: 'create_booking: created_by is required; there is no system actor', details: '', hint: '' } }
   }
 
+  /* 0229 — project name and shoot location, checked <= 120 chars */
+  const projectName =
+    typeof payload['project_name'] === 'string' && payload['project_name'].trim() !== ''
+      ? payload['project_name'].trim()
+      : typeof payload['project'] === 'string' && payload['project'].trim() !== ''
+        ? payload['project'].trim()
+        : null
+  const shootLocation =
+    typeof payload['shoot_location'] === 'string' && payload['shoot_location'].trim() !== ''
+      ? payload['shoot_location'].trim()
+      : null
+
+  if (projectName && projectName.length > 120) {
+    return {
+      data: null,
+      error: { code: '22026', message: 'create_booking: project_name must be 120 characters or fewer. Nothing was created.', details: '', hint: '' },
+    }
+  }
+  if (shootLocation && shootLocation.length > 120) {
+    return {
+      data: null,
+      error: { code: '22026', message: 'create_booking: shoot_location must be 120 characters or fewer. Nothing was created.', details: '', hint: '' },
+    }
+  }
+
   /* 0144 — project-type validation, mirroring the RPC allow-list so mock and
      Postgres refuse the same payloads. NULL is accepted (Drafts). */
   const projectType =
@@ -509,6 +534,8 @@ function createBooking(payload: Record<string, unknown>): { data: Row | null; er
         booking_id: existing['id'],
         booking_no: existing['booking_no'],
         stage: existing['stage'],
+        project_name: existing['project_name'] ?? existing['project'] ?? null,
+        shoot_location: existing['shoot_location'] ?? null,
         replayed: true,
       } as Row,
       error: null,
@@ -528,7 +555,9 @@ function createBooking(payload: Record<string, unknown>): { data: Row | null; er
     branch_id: payload['branch_id'] ?? null,
     client_id: payload['client_id'] ?? null,
     contact_id: payload['contact_id'] ?? null,
-    project: payload['project'] ?? null,
+    project: projectName ?? payload['project'] ?? null,
+    project_name: projectName,
+    shoot_location: shootLocation,
     project_type: projectType,
     project_type_other: projectTypeOther,
     stage: 'Quote',
@@ -832,6 +861,8 @@ function createBooking(payload: Record<string, unknown>): { data: Row | null; er
       unit_count: builtUnits.length,
       crew_lines: builtCrew.length,
       transport_written: builtTransport !== null,
+      project_name: projectName,
+      shoot_location: shootLocation,
       replayed: false,
     } as Row,
     error: null,
@@ -955,6 +986,7 @@ function createInvoiceRpc(payload: Record<string, unknown>): { data: Row | null;
       taxable_amount: invoice['taxable_amount'],
       vat_amount: invoice['vat_amount'],
       total: invoice['total_amount'],
+      project_name: invoice['project_name'] ?? null,
       replayed,
     }) as Row
 
@@ -1050,6 +1082,7 @@ function createInvoiceRpc(payload: Record<string, unknown>): { data: Row | null;
     booking_id: bookingId,
     client_id: booking['client_id'] ?? null,
     branch_id: booking['branch_id'] ?? null,
+    project_name: (booking['project_name'] as string | null) ?? (booking['project'] as string | null) ?? null,
     status: 'Draft',
     due_date: dueDate,
     currency: 'NPR',
@@ -1325,6 +1358,77 @@ export const mockSupabase = {
     return createBuilder(table, hooks)
   },
   rpc(name: string, args?: Record<string, unknown>): Promise<{ data: unknown; error: PgError | null }> {
+    if (name === 'set_booking_tags') {
+      const actor = readSession()?.user.id
+      const role = store['users']?.find(user => user['id'] === actor)?.['primary_role']
+      if (!['Owner', 'Admin', 'Manager', 'Coordinator'].includes(String(role))) {
+        return Promise.resolve({ data: null, error: pgErr('42501', 'GATE:tags.role|Only booking-desk roles (Owner, Admin, Manager, Coordinator) may modify booking tags') })
+      }
+      const clientUuid = args?.['p_client_uuid']
+      const bookingId = args?.['p_booking_id']
+      const rawTags = (args?.['p_tags'] as string[]) ?? []
+      if (!clientUuid) {
+        return Promise.resolve({ data: null, error: pgErr('23502', 'client_uuid is required for idempotency (Law 8)') })
+      }
+      const booking = store['bookings']?.find(b => b['id'] === bookingId)
+      if (!booking) {
+        return Promise.resolve({ data: null, error: pgErr('P0002', `Booking ${bookingId} not found`) })
+      }
+      // Idempotency check via audit_events
+      const auditRows = store['audit_events'] ??= []
+      const existingAudit = auditRows.find(a => a['client_uuid'] === clientUuid && a['record_id'] === bookingId && a['reason'] === 'Booking tags updated (T3-25)')
+      if (existingAudit) {
+        return Promise.resolve({
+          data: {
+            booking_id: bookingId,
+            tags: (booking['tags'] as string[]) ?? [],
+            idempotent: true,
+          },
+          error: null,
+        })
+      }
+      // Clean tags: trim, max 30, case-insensitive deduplication
+      const cleaned: string[] = []
+      for (const t of rawTags) {
+        if (typeof t !== 'string') continue
+        const trimmed = t.trim()
+        if (trimmed.length === 0) continue
+        if (trimmed.length > 30) {
+          return Promise.resolve({ data: null, error: pgErr('22023', `Tag "${trimmed}" exceeds 30 characters limit`) })
+        }
+        const lower = trimmed.toLowerCase()
+        if (!cleaned.some(x => x.toLowerCase() === lower)) {
+          cleaned.push(trimmed)
+        }
+      }
+      // Update booking tags
+      const oldTags = (booking['tags'] as string[]) ?? []
+      booking['tags'] = cleaned
+      // Log audit event
+      const auditEvent = {
+        id: crypto.randomUUID(),
+        client_uuid: clientUuid,
+        table_name: 'bookings',
+        record_id: bookingId,
+        actor_id: actor,
+        actor_role: role,
+        action: 'Update',
+        old_values: { tags: oldTags },
+        new_values: { tags: cleaned },
+        diff: { tags: cleaned },
+        reason: 'Booking tags updated (T3-25)',
+        created_at: new Date().toISOString(),
+      }
+      hooks.insert('audit_events', [auditEvent])
+      return Promise.resolve({
+        data: {
+          booking_id: bookingId,
+          tags: cleaned,
+          idempotent: false,
+        },
+        error: null,
+      })
+    }
     if (name === 'approve_glossary_term') {
       const actor = readSession()?.user.id
       const role = store['users']?.find(user => user['id'] === actor)?.['primary_role']

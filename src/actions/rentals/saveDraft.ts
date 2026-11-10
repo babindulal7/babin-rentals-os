@@ -11,6 +11,10 @@ export interface RentalDraftData {
   clientDbId: string | null
   clientName?: string | undefined
   project: string
+  /** Project / production name (up to 120 chars, B8, B52, T3-26). */
+  projectName?: string | undefined
+  /** Shoot location (up to 120 chars, B8, T3-26). */
+  shootLocation?: string | undefined
   kind: string
   /** Custom project-type description; only meaningful when kind is 'Other'. */
   kindOther: string

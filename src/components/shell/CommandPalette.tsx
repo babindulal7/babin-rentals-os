@@ -144,18 +144,24 @@ export const CommandPalette: React.FC = () => {
       return
     }
     let cancelled = false
+    const controller = new AbortController()
     setRecordSearch({ term, role: userRole, status: 'loading', rows: [] })
     const timer = window.setTimeout(() => {
       import('../../lib/queries/globalSearch')
-        .then(({ searchRecords }) => searchRecords({ role: userRole, term, limit: 4 }))
+        .then(({ searchRecords }) => searchRecords({ role: userRole, term, limit: 4, signal: controller.signal }))
         .then((rows) => {
-          if (!cancelled) setRecordSearch({ term, role: userRole, status: 'ready', rows })
+          if (!cancelled && !controller.signal.aborted) setRecordSearch({ term, role: userRole, status: 'ready', rows })
         })
-        .catch(() => {
-          if (!cancelled) setRecordSearch({ term, role: userRole, status: 'error', rows: [] })
+        .catch((err) => {
+          if (cancelled || controller.signal.aborted || (err instanceof Error && err.name === 'AbortError')) return
+          setRecordSearch({ term, role: userRole, status: 'error', rows: [] })
         })
     }, 180)
-    return () => { cancelled = true; window.clearTimeout(timer) }
+    return () => {
+      cancelled = true
+      controller.abort()
+      window.clearTimeout(timer)
+    }
   }, [isOpen, term, user?.role, retry])
 
   useEffect(() => {

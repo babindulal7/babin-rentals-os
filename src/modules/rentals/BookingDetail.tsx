@@ -45,7 +45,9 @@ import {
   canWriteBookingDesk,
   canCloseRental,
   canManageCollateral,
+  canSetBookingTags,
 } from '../../lib/rbac'
+import { BookingTagsBar } from './BookingTagsBar'
 import { IntelCard } from '../../components/ui/IntelCard'
 import { ClientIntelFromId } from '../../components/intel/ClientIntelFromId'
 import { useToast } from '../../components/ui/Toast'
@@ -66,6 +68,7 @@ import { RecordPaymentModal } from '../finance/modals/RecordPaymentModal'
 import { CreateInvoiceModal } from '../finance/modals/CreateInvoiceModal'
 import { CreateDocumentModal } from '../documents/CreateDocumentModal'
 import { LineItemTree } from './LineItemTree'
+import { generateProForma } from '../../actions/documents/generateProForma'
 import { listDocuments, documentsForBooking, type DocRow } from '../../lib/queries/documents'
 import { formatGateError } from '../../lib/gates'
 import type { ActionContext } from '../../actions/core'
@@ -211,6 +214,8 @@ function ProjectTypeEditor({
   bookingId,
   currentType,
   currentOther,
+  currentProjectName,
+  currentShootLocation,
   userId,
   role,
   onSaved,
@@ -218,25 +223,42 @@ function ProjectTypeEditor({
   bookingId: string
   currentType: string | null
   currentOther: string | null
+  currentProjectName?: string | null | undefined
+  currentShootLocation?: string | null | undefined
   userId: string
   role: ActionContext['role']
-  onSaved: (projectType: string | null, projectTypeOther: string | null) => void
+  onSaved: (projectType?: string | null, projectTypeOther?: string | null) => void
 }) {
   const { showSuccessToast } = useToast()
   const [draft, setDraft] = useState(currentType ?? '')
   const [draftOther, setDraftOther] = useState(currentOther ?? '')
+  const [draftProjectName, setDraftProjectName] = useState(currentProjectName ?? '')
+  const [draftShootLocation, setDraftShootLocation] = useState(currentShootLocation ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const dirty =
     (draft.trim() !== '' ? draft : null) !== currentType ||
-    (draft === 'Other' && draftOther.trim() !== '' ? draftOther.trim() : null) !== (currentOther ?? null)
+    (draft === 'Other' && draftOther.trim() !== '' ? draftOther.trim() : null) !== (currentOther ?? null) ||
+    (draftProjectName.trim() || null) !== (currentProjectName ?? null) ||
+    (draftShootLocation.trim() || null) !== (currentShootLocation ?? null)
+
   const validation = validateProjectType(draft.trim() !== '' ? draft : null, draftOther)
+  const projectNameValid = draftProjectName.trim().length <= 120
+  const shootLocationValid = draftShootLocation.trim().length <= 120
 
   async function save() {
     if (saving) return
     if (!validation.valid) {
       setError(validation.message ?? 'Select a project type from the list.')
+      return
+    }
+    if (!projectNameValid) {
+      setError('Project name must be 120 characters or fewer.')
+      return
+    }
+    if (!shootLocationValid) {
+      setError('Shoot location must be 120 characters or fewer.')
       return
     }
     setSaving(true)
@@ -247,13 +269,15 @@ function ProjectTypeEditor({
           id: bookingId,
           projectType: draft.trim() !== '' ? draft : null,
           projectTypeOther: draft === 'Other' && draftOther.trim() !== '' ? draftOther.trim() : null,
+          projectName: draftProjectName.trim() || null,
+          shootLocation: draftShootLocation.trim() || null,
         },
         { userId, role },
       )
       onSaved(out.projectType, out.projectTypeOther)
-      showSuccessToast('Project Type Updated', `Updated to ${out.projectType ?? 'None / Unset'}`)
+      showSuccessToast('Project Details Updated', `Saved project details for this booking.`)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not update project type. Your previous value has been restored.')
+      setError(e instanceof Error ? e.message : 'Could not update project details. Your previous values have been restored.')
     } finally {
       setSaving(false)
     }
@@ -262,6 +286,26 @@ function ProjectTypeEditor({
   return (
     <div style={{ marginTop: 'var(--sp-sm)', display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
+        <Input
+          aria-label="Project / production name"
+          value={draftProjectName}
+          maxLength={120}
+          onChange={(e) => {
+            setDraftProjectName(e.target.value)
+            setError(null)
+          }}
+          placeholder="Project / production name (max 120 chars)"
+        />
+        <Input
+          aria-label="Shoot location"
+          value={draftShootLocation}
+          maxLength={120}
+          onChange={(e) => {
+            setDraftShootLocation(e.target.value)
+            setError(null)
+          }}
+          placeholder="Shoot location (max 120 chars)"
+        />
         <Select
           aria-label="Project type"
           value={isProjectType(draft) ? draft : ''}
@@ -292,8 +336,12 @@ function ProjectTypeEditor({
         </div>
       )}
       <div>
-        <Button type="button" disabled={!dirty || saving || !validation.valid} onClick={() => void save()}>
-          {saving ? 'Saving…' : 'Save project type'}
+        <Button
+          type="button"
+          disabled={!dirty || saving || !validation.valid || !projectNameValid || !shootLocationValid}
+          onClick={() => void save()}
+        >
+          {saving ? 'Saving…' : 'Save project details'}
         </Button>
       </div>
     </div>
@@ -992,6 +1040,7 @@ function BookingDetailView() {
    */
   const canRaiseInvoice = user ? canIssueInvoice(user.role) : false
   const canOperate = user ? canPerformOperations(user.role) : false
+  const canSetTags = user ? canSetBookingTags(user.role) : false
 
   /* ── the booking head — `listBookings`, filtered to this one number ──────
    *
@@ -1260,6 +1309,31 @@ function BookingDetailView() {
   /* Law 3 — a voided invoice still exists, but its money is settled by its
      credit note, so the totals this page states are over the live ones. */
   const liveInvoices = useMemo(() => invoicesList.rows.filter((r) => !r.isVoid), [invoicesList.rows])
+  const draftInvoice = useMemo(() => liveInvoices.find((r) => r.status === 'Draft'), [liveInvoices])
+
+  const [generatingProForma, setGeneratingProForma] = useState(false)
+  const [proFormaError, setProFormaError] = useState<string | null>(null)
+
+  const handleGenerateProForma = useCallback(
+    async (invoiceId?: string) => {
+      if (!bookingId || !user) return
+      setGeneratingProForma(true)
+      setProFormaError(null)
+      try {
+        await generateProForma(
+          { bookingId, invoiceId, download: true },
+          { userId: user.id, role: user.role },
+        )
+        showSuccessToast('Pro Forma Ready', `Generated pro forma for ${booking?.bookingNo ?? id}`)
+        void documentsList.refetch()
+      } catch (err: unknown) {
+        setProFormaError(err instanceof Error ? err.message : 'Failed to generate pro forma')
+      } finally {
+        setGeneratingProForma(false)
+      }
+    },
+    [bookingId, user, booking?.bookingNo, id, showSuccessToast, documentsList],
+  )
 
   /**
    * ## "No invoice" is a THIRD state, not the absence of a first (Law 12)
@@ -2190,6 +2264,16 @@ function BookingDetailView() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
             {canTakePayment && recordPaymentButton('Record Payment')}
             {canRaiseInvoice && createInvoiceButton(hasInvoice ? 'View Invoice' : 'Create Invoice')}
+            {draftInvoice && (
+              <Button
+                variant="secondary"
+                icon="file"
+                loading={generatingProForma}
+                onClick={() => void handleGenerateProForma(draftInvoice.id)}
+              >
+                Pro Forma Invoice
+              </Button>
+            )}
           </div>
         </Card>
       )}
@@ -2344,8 +2428,14 @@ function BookingDetailView() {
           title={booking.clientName ? `${booking.bookingNo} · ${booking.clientName}` : booking.bookingNo}
           searchInMore={onPhone}
           description={
-            booking.project || booking.projectType
-              ? `${booking.project ?? 'Untitled project'} · ${displayProjectType(booking.projectType, booking.projectTypeOther)}`
+            booking.project || booking.projectType || booking.shootLocation
+              ? [
+                  booking.project ?? 'Untitled project',
+                  displayProjectType(booking.projectType, booking.projectTypeOther),
+                  booking.shootLocation ? `Location: ${booking.shootLocation}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
               : undefined
           }
           status={
@@ -2508,6 +2598,16 @@ function BookingDetailView() {
         <Stepper status={stage} dots={onPhone} />
       </div>
 
+      {booking && (
+        <BookingTagsBar
+          bookingId={booking.id}
+          bookingNo={booking.bookingNo}
+          tags={booking.tags ?? []}
+          canEdit={canSetTags}
+          onTagsChanged={refreshBookingData}
+        />
+      )}
+
       {onPhone && <Segmented segments={segments} active={activeSegment} onPick={setSegment} />}
 
       {/* Facts strip — schedule on the left, money on the right. */}
@@ -2658,7 +2758,8 @@ function BookingDetailView() {
                           ? 'Loading…'
                           : 'Not recorded',
                   },
-                  { label: 'Project', value: booking.project ?? 'Not recorded' },
+                  { label: 'Project', value: (booking.projectName ?? booking.project) ?? 'Not recorded' },
+                  { label: 'Shoot Location', value: booking.shootLocation ?? 'Not recorded' },
                   { label: 'Project Type', value: displayProjectType(booking.projectType, booking.projectTypeOther) },
                   { label: 'Pickup Location', value: booking.pickupLocation ?? 'Not recorded' },
                   { label: 'Return Location', value: booking.returnLocation ?? 'Not recorded' },
@@ -2670,9 +2771,9 @@ function BookingDetailView() {
               <div style={{ marginTop: 'var(--sp-sm)' }}>
                 {booking.stage === 'Quote' && !booking.isCancelled && Boolean(user?.role && ['Owner','Admin','Manager','Coordinator'].includes(user.role)) ? <Link to="?action=edit"><Button>Edit booking</Button></Link> : <Unavailable reason="General editing is available before confirmation. Use this booking's operational actions."><Button disabled>Edit</Button></Unavailable>}
               </div>
-              {/* Focused project-type edit (0144) — the one header field with a
-                  real write path (`updateBookingProject`). Coordinator+ only;
-                  floor roles keep the read-only line above (spec §24). */}
+              {/* Focused project edit — header fields with a real write path
+                  (`updateBookingProject`). Coordinator+ only; floor roles keep
+                  the read-only lines above (spec §24). */}
               {(() => {
                 const editorUser =
                   user && (user.role === 'Owner' || user.role === 'Admin' || user.role === 'Manager' || user.role === 'Coordinator')
@@ -2681,14 +2782,16 @@ function BookingDetailView() {
                 return editorUser ? (
                   <details style={{ marginTop: 'var(--sp-xs)' }}>
                     <summary style={{ cursor: 'pointer', minHeight: 44, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--t-meta, 13px)', color: 'var(--text2)', fontWeight: 600 }}>
-                      Edit project type
+                      Edit project details
                     </summary>
                     <div style={{ marginTop: 8 }}>
                       <ProjectTypeEditor
-                        key={`${booking.id}·${booking.projectType ?? ''}·${booking.projectTypeOther ?? ''}`}
+                        key={`${booking.id}·${booking.projectType ?? ''}·${booking.projectTypeOther ?? ''}·${booking.projectName ?? ''}·${booking.shootLocation ?? ''}`}
                         bookingId={booking.id}
                         currentType={booking.projectType}
                         currentOther={booking.projectTypeOther}
+                        currentProjectName={booking.projectName ?? booking.project}
+                        currentShootLocation={booking.shootLocation}
                         userId={editorUser.id}
                         role={editorUser.role}
                         onSaved={() => refreshBookingData()}
@@ -2918,8 +3021,41 @@ function BookingDetailView() {
                           <span className="figure" style={{ fontFamily: 'var(--font-id, sans-serif)', fontSize: '15px' }}>{money(totals.total)}</span>
                         </div>
                         <p style={{ margin: '8px 0 0', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-                          From {liveInvoices.length === 1 ? `invoice ${liveInvoices[0]?.invoiceNo}` : `${liveInvoices.length} live invoices`}.
+                          From {liveInvoices.length === 1 ? `invoice ${liveInvoices[0]?.invoiceNo ?? 'Draft'}` : `${liveInvoices.length} live invoices`}.
                         </p>
+                        {draftInvoice && (
+                          <div style={{ marginTop: 10 }}>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              icon="file"
+                              loading={generatingProForma}
+                              onClick={() => void handleGenerateProForma(draftInvoice.id)}
+                            >
+                              Pro Forma Invoice
+                            </Button>
+                          </div>
+                        )}
+                        {proFormaError && (
+                          <div
+                            role="alert"
+                            style={{
+                              marginTop: 10,
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              gap: 8,
+                              padding: '8px 12px',
+                              borderRadius: 'var(--r-sm)',
+                              border: '1px solid var(--danger)',
+                              background: 'var(--st-danger-bg)',
+                              fontSize: 'var(--t-meta)',
+                              color: 'var(--danger-text)',
+                            }}
+                          >
+                            <Icon name="alert_triangle" size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+                            <span>{proFormaError}</span>
+                          </div>
+                        )}
                       </>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
@@ -3159,14 +3295,28 @@ function BookingDetailView() {
                           <tr key={doc.id} style={{ borderBottom: '1px solid var(--border)' }}>
                             <td className="figure" style={{ ...td, fontSize: 'var(--t-meta)', fontWeight: 600 }}>
                               {doc.fileUrl ? (
-                                <Link
-                                  to={`/rentals/${booking.id}/evidence`}
-                                  style={{ color: 'var(--primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                                  title="View signed document"
-                                >
-                                  <Icon name="file" size={13} />
-                                  <span>{doc.id}</span>
-                                </Link>
+                                doc.fileUrl.startsWith('data:') || doc.fileUrl.startsWith('http') || doc.fileUrl.startsWith('blob:') ? (
+                                  <a
+                                    href={doc.fileUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    download={doc.fileUrl.startsWith('data:') ? `${doc.id}.pdf` : undefined}
+                                    style={{ color: 'var(--primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                    title={`Download / view ${doc.name}`}
+                                  >
+                                    <Icon name="file" size={13} />
+                                    <span>{doc.id}</span>
+                                  </a>
+                                ) : (
+                                  <Link
+                                    to={`/rentals/${booking.id}/evidence`}
+                                    style={{ color: 'var(--primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                    title="View signed document"
+                                  >
+                                    <Icon name="file" size={13} />
+                                    <span>{doc.id}</span>
+                                  </Link>
+                                )
                               ) : (
                                 doc.id
                               )}

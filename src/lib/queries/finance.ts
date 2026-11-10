@@ -238,6 +238,8 @@ export interface InvoiceListRow {
   bookingId: string
   /** `bookings.booking_no` via the embed. `'(booking not joined)'` if the join is missing — see `toInvoiceRow`. */
   bookingNo: string
+  /** Snapshot of booking project name on invoice (B52, T3-26). */
+  projectName?: string | null
   clientId: string
   /** `clients.name` via the embed. Never a placeholder that could pass for a real client. */
   clientName: string
@@ -344,7 +346,7 @@ const UNSETTLED_INVOICE_STATUSES = ['Sent', 'Partially Paid'] as const satisfies
  * and this embed names `booking_no` only.
  */
 const INVOICE_COLUMNS =
-  'id, invoice_no, booking_id, client_id, status, issue_date, due_date, currency, ' +
+  'id, invoice_no, booking_id, client_id, project_name, status, issue_date, due_date, currency, ' +
   'subtotal, discount_amount, discount_percent, taxable_amount, vat_rate, vat_amount, ' +
   'total_amount, paid_amount, outstanding_amount, ' +
   'voided_at, void_reason, credit_note_no, notes, created_at, ' +
@@ -355,6 +357,7 @@ interface RawInvoiceRow {
   invoice_no: string
   booking_id: string
   client_id: string
+  project_name?: string | null
   status: InvoiceStatusDb
   /** `date` — 'YYYY-MM-DD'. */
   issue_date: string
@@ -404,6 +407,7 @@ function toInvoiceRow(r: RawInvoiceRow): InvoiceListRow {
     // than a data state. Say so, the way `queries/bookings.ts:303` does, instead
     // of printing a dash that hides it.
     bookingNo: r.bookings?.booking_no ?? '(booking not joined)',
+    projectName: r.project_name ?? null,
     clientId: r.client_id,
     clientName: r.clients?.name ?? '(client not joined)',
     status: r.status,
