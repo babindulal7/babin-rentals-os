@@ -22,6 +22,15 @@ export default defineConfig({
   test: {
     environment: 'node',
     /*
+     * Unit suites run against the local mock corpus, whatever `.env.local` says.
+     * A developer's `.env.local` points at the live Supabase project, which is
+     * deliberately behind the migration ledger (N-5): any suite that reaches an
+     * RPC or view not yet applied there fails with "not found in the schema
+     * cache", and the run reports a defect that is really a database-state gap.
+     * The live database is covered by `check:pglite` and `check:lifecycle`.
+     */
+    env: { VITE_DATA_SOURCE: 'mock' },
+    /*
      * Vitest stubs CSS imports to an empty string by default, which is right
      * for component suites — they should not pay to parse a stylesheet.
      * `lib/__tests__/breakpoints.test.ts` is the exception: it READS
