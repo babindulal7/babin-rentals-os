@@ -8,40 +8,37 @@
 - `docs/ui-ux/06_SIX_STAGE_OPERATIONS.md`: put the O-number beside each D-UX id; replaced "to be registered" with the registration.
 - `docs/ui-ux/10_ROADMAP_AND_BACKLOG.md`: added the O-number beside D-UX-01 to D-UX-05 on UX-P22, UX-P23 and UX-P26.
 - `docs/ui-ux/09_USABILITY_AND_ACCEPTANCE.md`: removed the sentence that let a docs-only PR use link and file audits instead of the local checks; kept the point that docs do not prove runtime behaviour.
-- Branch `docs/ux-card4-register-dux` in worktree `babin-rentals-os-card4`, from `origin/main` `942a7ca4`. Not committed or pushed.
+- Rebased `docs/ux-card4-register-dux` on `origin/main` `52410e5a`; verified commit `f855ab98` in a separate clean checkout. Draft PR #127 awaits Babin’s review and merge.
 
 **Ruled**
 - Registration only. No D-UX question is answered; the ⭐ defaults are the ones written in `AGENT_PROMPTS-2026-11-10-design.md` card 4.
 
 **Verified**
-- `node scripts/lint-progress.mjs`: exit 0.
-- `grep` count of `D-UX` in `PLAN.md` (5) and `docs/OPEN_DECISIONS.md` (6): both above zero.
-- `npm run typecheck`: exit 0 (tsc --noEmit clean).
-- `npm run lint`: exit 0 (eslint src --max-warnings 0 clean).
-- `npm run lint:shell`: exit 0 (927 files checked).
-- `npm run lint:ui-copy`: exit 0 (0 developer text violations, all 12 copy/i18n tests pass).
-- `npm run check:contrast`: exit 0 (106/106 WCAG AA pass).
-- `npm run build`: exit 0 (10205 modules transformed, PWA precache 290 entries).
+- Clean `npm ci`: exit 0. Audit reported 36 vulnerabilities (3 low, 15 moderate, 14 high, 4 critical); no dependencies changed.
+- `npm run typecheck`, `npm run lint`, `npm test`: exit 0; mock suite 591 files, 6,978 tests passed.
+- `npm run check:pglite`: exit 0 (228/228); financial integrity: exit 0; `npm run check:security`: exit 0.
+- `npm run check:lifecycle`: exit 0 (71/71); `npm run test:server-contracts`: exit 0 (59/59); `npm run test:partial-return`: exit 0 (58/58).
+- `npm run lint:progress`, receipt tests (11/11), `npm run lint:shell`, `npm run lint:ui-copy`, `npm run check:contrast` (106/106), `npm run build`: exit 0.
+- `npm run test:coverage`: exit 0, 591 files and 6,978 tests passed. `npm run completion`: exit 0.
 - Cross-file links: not checked. The new text uses plain paths only.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 99 / 99 (100%) | +7 |
+| Backend | actions implemented / total | 101 / 101 (100%) | +2 |
 | Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
-| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
-| Permissions | capabilities mapped / declared | 81 / 81 (100%) | +4 |
-| Lifecycle | steps green / total | not measured — current receipt required | — |
-| Overall | structural mean of five | not measured | — |
-Migrations 225 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
-Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 82 / 82 (100%) | +1 |
+| Lifecycle | steps green / total | 71 / 71 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 228 files · check:pglite 228/228 applied, 0 failed (recorded 2026-11-10T11:54:57.095Z). Suite: PASS — 6978/6978 passed, 0 failed (recorded 2026-11-10T12:06:25.770Z); source fingerprint matches.
+Coverage suite: PASS — 6978/6978 passed, 0 failed (recorded 2026-11-10T12:06:25.770Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-10T11:56:01.988Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Card 4 is not yet committed, pushed or opened as a PR. Babin merges.
-- Run the card's full check list in a worktree with `node_modules` installed.
+- Draft PR #127 awaits Babin’s review and local merge; no decisions have been answered.
 - `RULINGS-2026-11-10.md` (ease of use) is still not in the repo; the design file says it belongs in the root.
 - `RULINGS-2026-11-10-design.md` and `AGENT_PROMPTS-2026-11-10-design.md` are untracked in the lane-c checkout root, not on this branch.
 - D-UX-01 to D-UX-05 (O-23 to O-27) await Babin's answers.
