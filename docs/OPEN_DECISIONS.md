@@ -346,3 +346,20 @@ second step for eSewa-vs-Khalti (and somewhere for Card/Cheque)? Until Babin ans
 no ledger fact is lost, and narrowing the list would. Blocks nothing.
 
 
+
+## 22. Operations UX decisions D-UX-01 to D-UX-05 (registered 10 November 2026) — open
+
+Source: `docs/ui-ux/06_SIX_STAGE_OPERATIONS.md`, "Explicit decisions before engineering expansion".
+Registered as O-23 to O-27 in `PLAN.md` §4.2. Babin has not answered any of them, and nothing in this
+section is an approved product policy. Each is `TODO(decision)` until he does.
+
+- **O-23 (D-UX-01)** — Definition and ownership of reusable container IDs/cases, labels and
+  responsibility after return. Blocks UX-P22. ⭐ No persistent case manifest; no case count shown.
+- **O-24 (D-UX-02)** — Which sub-items are separately stock-tracked versus checklist-only, and which
+  versions govern legacy rentals. Blocks UX-P21 and UX-P22. ⭐ Keep today's behaviour.
+- **O-25 (D-UX-03)** — Whether Testing Bay occupancy needs persistence or is merely a local operator
+  note, and how custody is represented. Blocks UX-P23. ⭐ Local note only; no custody change.
+- **O-26 (D-UX-04)** — Category QC templates, approved handling of client media and configuration
+  resets, and quick-shelve eligibility. Blocks UX-P26. ⭐ No templates; current Reset checklist.
+- **O-27 (D-UX-05)** — Whether the future-availability policy should remain as ruled (24 October).
+  Blocks UX-P26. ⭐ **Do not change.**

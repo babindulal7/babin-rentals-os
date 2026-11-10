@@ -106,6 +106,8 @@ import { RentalSummaryModal } from './modals/RentalSummaryModal'
 import { RentalMoreActions } from './actions/RentalMoreActions'
 import { BookingConflictModal } from './booking/BookingConflictModal'
 import type { LineEvaluationResult, BookingAvailabilityEvaluation } from '../../lib/availabilityEvaluation'
+import { exportPackingListPdf, openPdfForPrint } from '../../lib/pdf/exportPdf'
+import { buildPackingListPdfItems } from '../../lib/pdf/generatePdf'
 
 /**
  * # Booking Detail — live, for ANY `:bookingNo`
@@ -1009,6 +1011,8 @@ function BookingDetailView() {
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [showCreateInvoice, setShowCreateInvoice] = useState(false)
   const [showCreateDocument, setShowCreateDocument] = useState(false)
+  const [pickListPrinting, setPickListPrinting] = useState(false)
+  const [pickListError, setPickListError] = useState<string | null>(null)
   const { showSuccessToast } = useToast()
   const { openOperations } = useOperationsWorkspace()
   const viewport = useViewport()
@@ -1931,6 +1935,30 @@ function BookingDetailView() {
 
   const stage = (booking?.stage ?? 'Draft') as BookingStatus
   const lines: FloorLine[] = floor?.lines ?? []
+  const printPickList = async () => {
+    if (!floor || floor.linesPresence !== 'present' || floor.lines.length === 0) return
+    setPickListPrinting(true)
+    setPickListError(null)
+    try {
+      const result = await exportPackingListPdf({
+        bookingNo: floor.bookingNo,
+        bookingUrl: new URL(`/rentals/${encodeURIComponent(floor.bookingNo)}`, window.location.origin).href,
+        clientName: floor.clientName ?? 'Client',
+        project: floor.project,
+        pickupAtAd: floor.pickupAtAd,
+        returnAtAd: floor.returnAtAd,
+        deliveryType: floor.deliveryType ? deliveryTypeLabel(floor.deliveryType) : 'Client Pickup',
+        packedBy: user?.name ?? null,
+        items: buildPackingListPdfItems(floor.lines),
+      })
+      openPdfForPrint(result.blob, `Pick_List_${floor.bookingNo}`)
+      showSuccessToast('Pick List Ready', `Opened printable pick list for ${floor.bookingNo}.`)
+    } catch (error) {
+      setPickListError(error instanceof Error ? error.message : 'The pick list could not be generated.')
+    } finally {
+      setPickListPrinting(false)
+    }
+  }
   const missingSerialsCount = lines
     .filter((l) => l.lineType === 'Equipment' && l.trackingMode === 'Serialised')
     .reduce((sum, l) => sum + Math.max(0, l.qty - l.units.length), 0)
@@ -2385,6 +2413,22 @@ function BookingDetailView() {
   const moreItems: OverflowMenuItem[] = [
     /* RULING 2026-10-16: on a phone the shell's Search button lives here (`searchInMore`). */
     ...(onPhone ? [{ label: 'Search', icon: 'search' as const, onClick: openCommandPalette }] : []),
+    {
+      label: pickListPrinting ? 'Preparing pick list…' : 'Print pick list',
+      icon: 'file' as const,
+      onClick: () => void printPickList(),
+      ...(floorLoading
+        ? { unavailable: 'The booking items are still loading.' }
+        : floorError
+          ? { unavailable: 'The booking items could not be read. Retry the item read first.' }
+          : !floor || floor.linesPresence !== 'present'
+            ? { unavailable: 'The booking item list is unavailable.' }
+            : floor.lines.length === 0
+              ? { unavailable: 'This booking has no equipment lines to print.' }
+              : pickListPrinting
+                ? { unavailable: 'The pick list is already being prepared.' }
+                : {}),
+    },
     { label: 'Print booking', icon: 'file' as const, onClick: () => window.print() },
     ...bookingMoreItems,
   ]
@@ -2828,6 +2872,11 @@ function BookingDetailView() {
               {releaseError && (
                 <div style={{ marginBottom: 'var(--sp-sm)' }}>
                   <ErrorBanner title="Could not release the unit" message={releaseError} />
+                </div>
+              )}
+              {pickListError && (
+                <div style={{ marginBottom: 'var(--sp-sm)' }}>
+                  <ErrorBanner title="Could not print the pick list" message={pickListError} />
                 </div>
               )}
               {floorError ? (

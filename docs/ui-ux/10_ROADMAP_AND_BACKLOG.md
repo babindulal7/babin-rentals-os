@@ -25,11 +25,11 @@
 | --- | --- | --- | --- |
 | UX-P20 | Contextual Next Action explanation only | UX-P11, rentalActions | no second CTA, no new resolver, all stages + roles |
 | UX-P21 | Scanner-first Packing and truthful sub-item dependencies | T2 evidence / current floor rules | counted unit checks, live persistence, 56px targets |
-| UX-P22 | Kit/case persistent manifest — design/decision first | UX-P21, decisions D-UX-01/02 | approved schema/custody design, no fake case count |
-| UX-P23 | Testing-bay/receiver UI improvement | T2 Handover, decision D-UX-03 | ID/signatures/branch proof and safe new additions |
+| UX-P22 | Kit/case persistent manifest — design/decision first | UX-P21, decisions D-UX-01/02 (O-23, O-24) | approved schema/custody design, no fake case count |
+| UX-P23 | Testing-bay/receiver UI improvement | T2 Handover, decision D-UX-03 (O-25) | ID/signatures/branch proof and safe new additions |
 | UX-P24 | Active rental actions and extension collision feedback | T3 booking changes | real conflict, race and role-proof tests |
 | UX-P25 | Return and damage triage + partial cases | T2-18, active return gates | photos, correct condition, no premature release |
-| UX-P26 | Reset category templates, urgent turnaround and readiness distinction | T2-07, decisions D-UX-04/05 | correct stock-vs-ready labels; QC defect hold remains |
+| UX-P26 | Reset category templates, urgent turnaround and readiness distinction | T2-07, decisions D-UX-04/05 (O-26, O-27) | correct stock-vs-ready labels; QC defect hold remains |
 
 ## Phase 3 — adjacent modules
 
