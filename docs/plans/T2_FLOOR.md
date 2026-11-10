@@ -350,7 +350,7 @@ on retry; offline still refuses inline.
 step and the gate passes on the first, a HEIC file uploads as JPEG, retry reuses the uuid.
 **Needs** — T2-01 (done).
 
-### T2-25 · Print every line; the pick list from the booking            status: todo · size: S · lane A · [go-live]
+### T2-25 · Print every line; the pick list from the booking            status: done · size: S · lane A · [go-live]
 **What** — T2-08 (done) prints the packing list from Pack and the return report from Return. Two gaps:
 1) **Long bookings are cut short on paper.** The packing list stops after 16 lines ("…and N more
    equipment lines listed on digital manifest"), the return report after 14 and the document PDF after
