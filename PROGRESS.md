@@ -1,5 +1,53 @@
 # Progress Log
 
+## 2026-11-10 — Card 4: register D-UX-01 to D-UX-05 as O-23 to O-27 (docs only)
+
+**Did**
+- `PLAN.md` §4.2: added rows O-23 to O-27, one per D-UX decision, each with its ⭐ default and the UX-P item it blocks.
+- `docs/OPEN_DECISIONS.md`: added section 22 with the full question text for O-23 to O-27, all open.
+- `docs/ui-ux/06_SIX_STAGE_OPERATIONS.md`: put the O-number beside each D-UX id; replaced "to be registered" with the registration.
+- `docs/ui-ux/10_ROADMAP_AND_BACKLOG.md`: added the O-number beside D-UX-01 to D-UX-05 on UX-P22, UX-P23 and UX-P26.
+- `docs/ui-ux/09_USABILITY_AND_ACCEPTANCE.md`: removed the sentence that let a docs-only PR use link and file audits instead of the local checks; kept the point that docs do not prove runtime behaviour.
+- Branch `docs/ux-card4-register-dux` in worktree `babin-rentals-os-card4`, from `origin/main` `942a7ca4`. Not committed or pushed.
+
+**Ruled**
+- Registration only. No D-UX question is answered; the ⭐ defaults are the ones written in `AGENT_PROMPTS-2026-11-10-design.md` card 4.
+
+**Verified**
+- `node scripts/lint-progress.mjs`: exit 0.
+- `grep` count of `D-UX` in `PLAN.md` (5) and `docs/OPEN_DECISIONS.md` (6): both above zero.
+- `npm run typecheck`: exit 0 (tsc --noEmit clean).
+- `npm run lint`: exit 0 (eslint src --max-warnings 0 clean).
+- `npm run lint:shell`: exit 0 (927 files checked).
+- `npm run lint:ui-copy`: exit 0 (0 developer text violations, all 12 copy/i18n tests pass).
+- `npm run check:contrast`: exit 0 (106/106 WCAG AA pass).
+- `npm run build`: exit 0 (10205 modules transformed, PWA precache 290 entries).
+- Cross-file links: not checked. The new text uses plain paths only.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 99 / 99 (100%) | +7 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 81 / 81 (100%) | +4 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 225 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Card 4 is not yet committed, pushed or opened as a PR. Babin merges.
+- Run the card's full check list in a worktree with `node_modules` installed.
+- `RULINGS-2026-11-10.md` (ease of use) is still not in the repo; the design file says it belongs in the root.
+- `RULINGS-2026-11-10-design.md` and `AGENT_PROMPTS-2026-11-10-design.md` are untracked in the lane-c checkout root, not on this branch.
+- D-UX-01 to D-UX-05 (O-23 to O-27) await Babin's answers.
+
+
+
 ## 2026-11-10 — T2-25 complete printing refreshed on current main
 
 **Did**
