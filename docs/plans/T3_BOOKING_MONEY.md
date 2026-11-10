@@ -178,7 +178,7 @@ Nepali digits, emoji bullets); 80%+ of lines in the samples auto-match; nothing 
 confirm tap; Warehouse sees no prices in the preview.
 **Needs** — none.
 
-### T3-13 · Fully booked → similar item or sub-rent            status: todo · size: M · lane C · [go-live]
+### T3-13 · Fully booked → similar item or sub-rent            status: ready — awaiting merge (lane-c/T3-13-fully-booked-to-similar-item-or) · size: M · lane C · [go-live]
 **What** — When a product has no free unit for the dates, New Rental shows **both** (W10): "Similar
 we own — free" (same category and type, e.g. another 24-70 lens) and "Sub-rent from a partner"
 (opens the sub-rental line flow with the partner list). Staff choose. The booked item itself stays

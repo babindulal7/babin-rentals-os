@@ -1,5 +1,71 @@
 # Progress Log
 
+## 2026-11-10 — T3-13: Fully booked → similar item or sub-rent (Lane C)
+
+**Did**
+- **T3-13: Fully booked → similar item or sub-rent (W10, W69, 27 Jul ruling):**
+  - Pure similarity algorithm implemented in `src/lib/availability.ts`:
+    - `findSimilarFreeEquipment<T>(target, candidates, options)`: ranks items by category/kind match, brand bonus, kind bonus, token overlap, and free count tie-breaker.
+    - Exported partner constants `SUBRENTAL_PARTNERS = ['GearHouse KTM', 'Kathmandu Cinema Works', 'Everest Cine Rentals', 'Pokhara Film Gear', 'Shine Pictures'] as const` and `SubrentalPartner` type.
+    - 5 pure unit tests added to `src/lib/__tests__/availability.test.ts`.
+  - Type definitions & line drafts in `src/modules/rentals/booking/itemCatalogue.ts`:
+    - Added `supplierCost?: number | undefined`, `supplierName?: string | undefined`, `supplierId?: string | undefined`, and `lineNote?: string | undefined` to `BookingLineDraft` with `exactOptionalPropertyTypes: true` compliance.
+  - Line items rendering & money blindness in `src/modules/rentals/booking/RentalLineItemsTree.tsx`:
+    - Added `supplierCost`, `supplierName`, `supplierId` to `Line` model.
+    - Rendered supplier cost on Sub-rental lines strictly when `canBookingMoney` is true (`Supplier cost: {formatMoney(rupees(l.supplierCost))}`). Money-blind roles (`Warehouse`, `Technician`, `Driver`, `Client`) never see supplier costs in DOM or payloads (Law 6).
+  - Draft submission integration in `src/modules/rentals/booking/useNewRentalSubmit.ts`:
+    - Passed through `supplierCost`, `supplierId`, and `lineNote` on sub-rental lines to `createRental`.
+  - AddItemPanel & equipment alternatives UI in `src/modules/rentals/booking/AddItemPanel.tsx`:
+    - Detected fully booked status (`!bulk && freeCount === 0`) on equipment groups.
+    - Hard-blocked booked serial unit chips (`disabled={true}`) under the 27 Jul hard block ruling.
+    - Rendered alternatives box offering **both** W10 paths:
+      1. **"Similar we own — free"**: 1-tap chip for each similar free equipment item (`+ [Name] ([N] free)`) that immediately adds the item to the rental draft.
+      2. **"Sub-rent from a partner"**: 1-tap quick button (`+ Sub-rent: GearHouse KTM` with client rate & supplier cost preview for money roles), and a **"Choose partner…"** button opening `SubRentalPartnerModal`.
+    - Implemented `SubRentalPartnerModal` allowing selection of Kathmandu cinema rental partners (`GearHouse KTM`, `Kathmandu Cinema Works`, `Everest Cine Rentals`, `Pokhara Film Gear`, `Shine Pictures`, `Custom`), quantity, client rate, and supplier cost (with profit margin display for money roles).
+    - Touch targets ≥44px for floor accessibility.
+  - Comprehensive unit & component tests in `src/modules/rentals/booking/__tests__/AddItemPanel.similar-subrent.test.tsx` (5/5 passing).
+
+**Ruled**
+- W10, W69: Fully booked equipment must display alternatives for both "Similar we own — free" and "Sub-rent from a partner" in one tap each. Staff choose.
+- 27 Jul hard block: The booked item itself stays blocked and cannot be selected.
+- Law 6: Floor roles (`Warehouse`, `Technician`, `Driver`, `Client`) never see supplier cost or client rates anywhere in the sub-rent modal, quick button, or line items tree.
+
+**Verified**
+- `npm run check:pglite`: 229/229 applied, 0 failed (R-35 Verified).
+- `npm run check:lifecycle`: 71/71 green, 0 failed.
+- `npm test`: 590 test files passed, 6956 passed.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run build`: built in 2m 10s (PWA precache 292 entries).
+- `npm run check:security`: 18 Phase 0 regressions + 14 branch groups + glossary pass.
+- `node scripts/test-booking-financial-integrity.mjs`: PASS.
+- `npm run test:server-contracts`: 59/59 passed.
+- `npm run test:partial-return`: 58/58 passed.
+- `npm run check:contrast`: 106/106 pass.
+- `npm run lint:ui-copy`: 0 violations.
+- `npm run lint:shell`: 926 files checked, 0 violations.
+- `node --test scripts/test-receipt.test.mjs`: 11/11 passed.
+- Driven screens at 375px, 820px, 1440px as money role (`Coordinator`) and money-blind role (`Warehouse`). Screen checks pass: which screen (New Rental / Add Equipment), which item (Sony FX3 Cinema Camera), where am I (AddItemPanel), next action (1-tap add similar free item or 1-tap sub-rent), search and exit (Esc / Cancel / backdrop dismiss), touch targets ≥44px.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 101 / 101 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 82 / 82 (100%) | +0 |
+| Lifecycle | steps green / total | 71 / 71 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 229 files · check:pglite 229/229 applied, 0 failed (recorded 2026-11-10T02:16:11.530Z). Suite: PASS — 6956/6956 passed, 0 failed (recorded 2026-11-10T02:14:29.200Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-10T02:17:48.595Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T3-13 ready for local merge into `main`.
+- Next in Lane C: Card T3-28 · Rental day start as a setting (`docs/plans/prompts/T3-28.md`).
+
 ## 2026-11-10 — T3-17: Extend in two taps (Lane C)
 
 **Did**

@@ -341,7 +341,16 @@ export function useNewRentalSubmit({
                             : null,
                       description: l.name,
                     }
-                  : { description: l.name }),
+                  : {
+                      description: l.name,
+                      ...(l.lineType === 'Sub-rental'
+                        ? {
+                            supplierCost: l.supplierCost != null ? l.supplierCost : null,
+                            supplierId: l.supplierId ?? null,
+                            lineNote: l.lineNote ?? null,
+                          }
+                        : {}),
+                    }),
               qty: l.qty,
               days: l.days,
               rate: toRupees(l.ratePaisa),

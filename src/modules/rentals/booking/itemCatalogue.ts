@@ -63,6 +63,7 @@ import type { StatusKey } from '../../../lib/status'
 import type { IconName } from '../../../components/ui/Icon'
 
 export { CREW_ROSTER, type CrewMember } from '../../../lib/queries/crew'
+export { findSimilarFreeEquipment, SUBRENTAL_PARTNERS, type SubrentalPartner } from '../../../lib/availability'
 
 /* ── The draft a result hands back to the page ─────────────────────────── */
 
@@ -91,11 +92,16 @@ export interface BookingLineDraft {
   ratePaisa: Paisa
   /** §8.3 — Days is mandatory and explicit on every line. */
   days: number
+  daysOverridden?: boolean
   qty: number
   discountPct: number
   location: string
   status?: InvStatus
   committedTo: string
+  supplierCost?: number | undefined
+  supplierName?: string | undefined
+  supplierId?: string | undefined
+  lineNote?: string | undefined
 }
 
 /** Read by nothing at runtime; here so the coupling above is greppable. */

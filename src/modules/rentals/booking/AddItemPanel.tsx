@@ -54,7 +54,8 @@ import { useCallback, useEffect, useLayoutEffect, useId, useMemo, useRef, useSta
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useViewport } from '../../../lib/device'
 import Icon from '../../../components/ui/Icon'
-import { formatMoney, rupees, type Paisa } from '../../../lib/money'
+import { Modal } from '../../../components/ui/Modal'
+import { formatMoney, rupees, toRupees, type Paisa } from '../../../lib/money'
 import { generateClientUuid } from '../../../lib/dataAccess'
 import type { BundleRecord } from '../../../lib/queries/bundles'
 import { AvailabilityChip, BundlePreview, KitCapacityLine } from './BundlePreview'
@@ -64,11 +65,14 @@ import { getAllowOverbooking } from '../../../lib/bookingRules'
 import './add-item-panel.css'
 import {
   DERIVED_CATEGORIES,
+  EQUIPMENT_RESULTS,
   OMITTED_SORTS,
   SERVICES_UNAVAILABLE_REASON,
   SORT_OPTIONS,
+  SUBRENTAL_PARTNERS,
   addBundleToBooking,
   equipmentLineDraft,
+  findSimilarFreeEquipment,
   groupEquipmentResults,
   runQuery,
 } from './itemCatalogue'
@@ -341,6 +345,7 @@ export function AddItemPanel({
   // header comment: Settings and this panel are never mounted together.
   const [allowOverbooking] = useState<boolean>(() => getAllowOverbooking())
   const [overrideUnit, setOverrideUnit] = useState<EquipmentResult | null>(null)
+  const [partnerModalGroup, setPartnerModalGroup] = useState<EquipmentModelGroup | null>(null)
   const [availability, setAvailability] = useState<AvailabilityLevel | 'any'>('any')
   const [sort, setSort] = useState<SortKey>('recommended')
   const [filtersExpanded, setFiltersExpanded] = useState(false)
@@ -537,6 +542,11 @@ export function AddItemPanel({
     }
   }, [inline])
 
+  const allEquipmentGroups = useMemo(() => {
+    const raw = equipment ?? EQUIPMENT_RESULTS
+    return groupEquipmentResults(raw)
+  }, [equipment])
+
   /* ── Committing ─────────────────────────────────────────────────────── */
 
   const addEquipment = useCallback(
@@ -548,8 +558,18 @@ export function AddItemPanel({
   )
 
   const addSubRentEquipment = useCallback(
-    (e: EquipmentResult, partner = 'GearHouse KTM', customRate?: Paisa) => {
+    (
+      e: EquipmentResult,
+      partner = 'GearHouse KTM',
+      customRate?: Paisa,
+      customCostRupees?: number,
+      customQty = 1,
+    ) => {
       const draft = equipmentLineDraft(e, days)
+      const costRupees =
+        customCostRupees !== undefined
+          ? customCostRupees
+          : Math.round(toRupees(customRate ?? draft.ratePaisa) * 0.8)
       const subDraft: BookingLineDraft = {
         ...draft,
         id: `sub-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -559,9 +579,12 @@ export function AddItemPanel({
         name: partner ? `${e.name} (${partner})` : `${e.name} (Sub-rental)`,
         serial: '-',
         location: partner ? `Vendor: ${partner}` : 'Sub-rented',
+        supplierName: partner,
+        supplierCost: costRupees,
+        ...(partner ? { lineNote: `Vendor: ${partner}` } : {}),
         ratePaisa: customRate ?? draft.ratePaisa,
         days: Math.max(1, days || 1),
-        qty: 1,
+        qty: Math.max(1, customQty),
         committedTo: '—',
       }
       onAdd([subDraft], { kind: e.kind, id: subDraft.id, name: subDraft.name })
@@ -570,7 +593,8 @@ export function AddItemPanel({
   )
 
   const handleAddCustomSubRental = useCallback(
-    (name: string, partner: string, rateRupees: number, qty: number) => {
+    (name: string, partner: string, rateRupees: number, qty: number, costRupees?: number) => {
+      const supplierCost = costRupees !== undefined ? costRupees : Math.round(rateRupees * 0.8)
       const draft: BookingLineDraft = {
         id: `sub-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         clientUuid: generateClientUuid(),
@@ -579,6 +603,9 @@ export function AddItemPanel({
         name: partner ? `${name} (${partner})` : `${name} (Sub-rental)`,
         serial: '-',
         location: partner ? `Vendor: ${partner}` : 'Sub-rented',
+        supplierName: partner,
+        supplierCost,
+        ...(partner ? { lineNote: `Vendor: ${partner}` } : {}),
         ratePaisa: rupees(rateRupees) as Paisa,
         days: Math.max(1, days || 1),
         qty: Math.max(1, qty),
@@ -1235,6 +1262,7 @@ export function AddItemPanel({
                                 showPrices={showPrices}
                                 allowOverbooking={allowOverbooking}
                                 isSubRentalMode={tab === 'sub-rentals'}
+                                allGroups={allEquipmentGroups}
                                 onHover={() => setActiveIndex(o.index)}
                                 onAutoPick={() => {
                                   if (tab === 'sub-rentals') {
@@ -1251,6 +1279,17 @@ export function AddItemPanel({
                                     addEquipment(unit)
                                   }
                                 }}
+                                onPickSimilar={(sim) => {
+                                  if (sim.autoPick) addEquipment(sim.autoPick)
+                                }}
+                                onQuickSubRent={(grp, partner) => {
+                                  const target = grp.units[0]
+                                  if (target) {
+                                    const costRupees = Math.round(toRupees(grp.ratePaisa) * 0.8)
+                                    addSubRentEquipment(target, partner, grp.ratePaisa, costRupees, 1)
+                                  }
+                                }}
+                                onOpenPartnerModal={(grp) => setPartnerModalGroup(grp)}
                                 onSubRent={(unit) => addSubRentEquipment(unit)}
                                 onRequestOverride={(unit) => setOverrideUnit(unit)}
                               />
@@ -1386,7 +1425,239 @@ export function AddItemPanel({
         onOverbook={(unit) => addEquipment(unit)}
         onSubRent={(unit) => addSubRentEquipment(unit)}
       />
+
+      {/* W10 / T3-13 — Partner modal for choosing external supplier, rate and cost */}
+      <SubRentalPartnerModal
+        key={partnerModalGroup?.key ?? 'none'}
+        isOpen={partnerModalGroup !== null}
+        onClose={() => setPartnerModalGroup(null)}
+        group={partnerModalGroup}
+        days={days}
+        showPrices={showPrices}
+        inputStyle={inputStyle}
+        onConfirm={(partner, clientRateRupees, supplierCostRupees, qty) => {
+          if (!partnerModalGroup) return
+          const target = partnerModalGroup.units[0]
+          if (target) {
+            addSubRentEquipment(
+              target,
+              partner,
+              rupees(clientRateRupees) as Paisa,
+              supplierCostRupees,
+              qty,
+            )
+          }
+        }}
+      />
     </div>
+  )
+}
+
+/* ── Sub-Rental Partner Modal (W10, T3-13) ────────────────────────────────── */
+
+interface SubRentalPartnerModalProps {
+  isOpen: boolean
+  onClose: () => void
+  group: EquipmentModelGroup | null
+  days: number
+  showPrices?: boolean | undefined
+  inputStyle?: CSSProperties | undefined
+  onConfirm: (partner: string, clientRateRupees: number, supplierCostRupees: number, qty: number) => void
+}
+
+function SubRentalPartnerModal({
+  isOpen,
+  onClose,
+  group,
+  days,
+  showPrices = true,
+  inputStyle,
+  onConfirm,
+}: SubRentalPartnerModalProps) {
+  const defaultRate = group ? Math.round(toRupees(group.ratePaisa)) : 0
+  const defaultCost = Math.round(defaultRate * 0.8)
+
+  const [partner, setPartner] = useState<string>('GearHouse KTM')
+  const [customPartner, setCustomPartner] = useState('')
+  const [rateRupees, setRateRupees] = useState(defaultRate)
+  const [costRupees, setCostRupees] = useState(defaultCost)
+  const [qty, setQty] = useState(1)
+
+  if (!group || !isOpen) return null
+
+  const effectivePartner = partner === 'Custom' ? customPartner : partner
+  const margin = rateRupees - costRupees
+
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!effectivePartner.trim()) return
+    onConfirm(
+      effectivePartner.trim(),
+      Math.max(0, rateRupees),
+      Math.max(0, costRupees),
+      Math.max(1, qty),
+    )
+    onClose()
+  }
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="sm"
+      title={`Sub-rent ${group.name}`}
+      subtitle={`Cross-hire from external partner · ${days} day${days === 1 ? '' : 's'}`}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => handleSubmit()}
+            disabled={!effectivePartner.trim()}
+          >
+            + Add Sub-Rental Line
+          </Button>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <label style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
+            Partner / Supplier
+          </label>
+          <select
+            id="subrental-partner-select"
+            aria-label="Partner / Supplier"
+            value={partner}
+            onChange={(e) => setPartner(e.target.value)}
+            style={{
+              ...inputStyle,
+              width: '100%',
+              minHeight: 38,
+              padding: '0 8px',
+              borderRadius: 'var(--r-input)',
+              border: '1px solid var(--border)',
+              background: 'var(--card)',
+              color: 'var(--text)',
+              fontSize: 'var(--t-ui)',
+            }}
+          >
+            {SUBRENTAL_PARTNERS.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+            <option value="Custom">Custom / Other Partner…</option>
+          </select>
+        </div>
+
+        {partner === 'Custom' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
+              Partner Name
+            </label>
+            <input
+              type="text"
+              required
+              value={customPartner}
+              onChange={(e) => setCustomPartner(e.target.value)}
+              placeholder="e.g. CineLab Nepal"
+              style={{
+                ...inputStyle,
+                width: '100%',
+                minHeight: 38,
+                padding: '0 10px',
+                borderRadius: 'var(--r-input)',
+                border: '1px solid var(--border)',
+                background: 'var(--card)',
+                color: 'var(--text)',
+                fontSize: 'var(--t-ui)',
+              }}
+            />
+          </div>
+        )}
+
+        <div style={{ display: 'grid', gridTemplateColumns: showPrices ? '1fr 1fr' : '1fr', gap: 10 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
+              Quantity
+            </label>
+            <input
+              type="number"
+              min={1}
+              value={qty}
+              onChange={(e) => setQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
+              style={{
+                ...inputStyle,
+                width: '100%',
+                minHeight: 38,
+                padding: '0 10px',
+                borderRadius: 'var(--r-input)',
+                border: '1px solid var(--border)',
+                background: 'var(--card)',
+                color: 'var(--text)',
+                fontSize: 'var(--t-ui)',
+              }}
+            />
+          </div>
+
+          {showPrices && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
+                Client Rate / Day (Rs.)
+              </label>
+              <input
+                type="number"
+                min={0}
+                value={rateRupees}
+                onChange={(e) => setRateRupees(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                style={{
+                  ...inputStyle,
+                  width: '100%',
+                  minHeight: 38,
+                  padding: '0 10px',
+                  borderRadius: 'var(--r-input)',
+                  border: '1px solid var(--border)',
+                  background: 'var(--card)',
+                  color: 'var(--text)',
+                  fontSize: 'var(--t-ui)',
+                }}
+              />
+            </div>
+          )}
+        </div>
+
+        {showPrices && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
+              Supplier Cost / Day (Rs.) — Money roles only
+            </label>
+            <input
+              type="number"
+              min={0}
+              value={costRupees}
+              onChange={(e) => setCostRupees(Math.max(0, parseInt(e.target.value, 10) || 0))}
+              style={{
+                ...inputStyle,
+                width: '100%',
+                minHeight: 38,
+                padding: '0 10px',
+                borderRadius: 'var(--r-input)',
+                border: '1px solid var(--border)',
+                background: 'var(--card)',
+                color: 'var(--text)',
+                fontSize: 'var(--t-ui)',
+              }}
+            />
+            <span style={{ fontSize: '11px', color: margin >= 0 ? 'var(--st-primary-fg)' : 'var(--st-danger-fg)' }}>
+              Expected Margin: Rs {margin.toLocaleString('en-IN')} / day
+            </span>
+          </div>
+        )}
+      </form>
+    </Modal>
   )
 }
 
@@ -1494,6 +1765,8 @@ function SubRentalQuickAdd({
             Partner / Supplier
           </label>
           <select
+            id="subrental-partner-select"
+            aria-label="Partner / Supplier"
             value={partner}
             onChange={(e) => setPartner(e.target.value)}
             style={{
@@ -1789,9 +2062,13 @@ function EquipmentGroupRow({
   showPrices,
   allowOverbooking,
   isSubRentalMode,
+  allGroups,
   onHover,
   onAutoPick,
   onPickUnit,
+  onPickSimilar,
+  onQuickSubRent,
+  onOpenPartnerModal,
   onSubRent,
   onRequestOverride,
 }: {
@@ -1803,9 +2080,13 @@ function EquipmentGroupRow({
   /** §3 — Settings ▸ Financial ▸ Booking rules ▸ Allow overbooking. Off by default. */
   allowOverbooking: boolean
   isSubRentalMode?: boolean
+  allGroups?: readonly EquipmentModelGroup[] | undefined
   onHover: () => void
   onAutoPick: () => void
   onPickUnit: (unit: EquipmentResult) => void
+  onPickSimilar?: ((similar: EquipmentModelGroup) => void) | undefined
+  onQuickSubRent?: ((group: EquipmentModelGroup, partner: string) => void) | undefined
+  onOpenPartnerModal?: ((group: EquipmentModelGroup) => void) | undefined
   onSubRent?: (unit: EquipmentResult) => void
   /** A booked/maintenance chip while the valve is on opens the override dialog instead of adding directly. */
   onRequestOverride: (unit: EquipmentResult) => void
@@ -1820,6 +2101,11 @@ function EquipmentGroupRow({
       u.status !== 'Maintenance',
   ).length
   const allOnBooking = group.units.every((u) => existing.has(u.id))
+  const isFullyBooked = !bulk && freeCount === 0
+  const similarFreeItems = useMemo(() => {
+    if (!isFullyBooked || !allGroups) return []
+    return findSimilarFreeEquipment(group, allGroups, { excludeKeys: existing, limit: 3 })
+  }, [isFullyBooked, group, allGroups, existing])
   const meta = [group.kind === 'accessory' ? 'Accessory' : 'Equipment', group.category, group.sku ?? null, group.brand ?? null].filter(
     (x): x is string => Boolean(x),
   )
@@ -2067,7 +2353,7 @@ function EquipmentGroupRow({
                 u.status !== 'Maintenance'
               const onBooking = existing.has(u.id)
               const why = `${u.status ?? u.availability.detail}${u.committedTo !== '—' ? ` · ${u.committedTo}` : ''}`
-              const canFallbackUnit = allowOverbooking || Boolean(onSubRent)
+              const canFallbackUnit = allowOverbooking
               const opensOverride = !free && !onBooking && canFallbackUnit
               const tappable = (free && !onBooking) || opensOverride || isSubRentalMode
               return (
@@ -2152,6 +2438,173 @@ function EquipmentGroupRow({
               )
             })}
           </div>
+
+          {isFullyBooked && !isSubRentalMode && (
+            <div
+              role="region"
+              aria-label={`Alternatives for fully booked ${group.name}`}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+                marginTop: 8,
+                padding: '10px 12px',
+                borderRadius: 'var(--r-btn)',
+                background: 'var(--card2)',
+                border: '1px solid var(--border)',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  fontSize: 'var(--t-meta)',
+                  fontWeight: 600,
+                  color: 'var(--st-danger-fg)',
+                }}
+              >
+                <Icon name="error" size={14} />
+                <span>Fully booked for these dates — hard blocked (27 Jul ruling)</span>
+              </div>
+
+              {/* 1. Similar we own — free */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
+                  Similar we own — free:
+                </span>
+                {similarFreeItems.length > 0 ? (
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {similarFreeItems.map((sim) => {
+                      const simFreeCount = sim.units.filter(
+                        (u) =>
+                          u.availability.level !== 'unavailable' &&
+                          u.status !== 'On Rent' &&
+                          u.status !== 'Reserved' &&
+                          u.status !== 'Maintenance',
+                      ).length
+                      return (
+                        <button
+                          key={sim.key}
+                          type="button"
+                          className="press"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onPickSimilar?.(sim)
+                          }}
+                          title={`Add similar free item ${sim.name} in one tap`}
+                          aria-label={`Add similar free item ${sim.name}`}
+                          style={{
+                            minHeight: 44,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '0 12px',
+                            borderRadius: 'var(--r-btn)',
+                            border: '1px solid var(--primary)',
+                            background: 'var(--st-primary-bg)',
+                            color: 'var(--st-primary-fg)',
+                            fontWeight: 600,
+                            fontSize: 'var(--t-meta)',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <TouchInset />
+                          <Icon name="plus" size={13} />
+                          <span>{sim.name}</span>
+                          <span style={{ fontSize: '11px', opacity: 0.85, fontWeight: 700 }}>
+                            ({simFreeCount} free)
+                          </span>
+                          {showPrices && (
+                            <span style={{ fontSize: '11px', opacity: 0.85, marginLeft: 2 }}>
+                              · {formatMoney(sim.ratePaisa)}/d
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', fontStyle: 'italic' }}>
+                    No similar free {group.category.toLowerCase()} available for these dates
+                  </span>
+                )}
+              </div>
+
+              {/* 2. Sub-rent from a partner */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 2 }}>
+                <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
+                  Sub-rent from a partner:
+                </span>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    className="press"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onQuickSubRent?.(group, 'GearHouse KTM')
+                    }}
+                    title={`Sub-rent ${group.name} from GearHouse KTM in one tap`}
+                    aria-label={`Sub-rent ${group.name} from partner in one tap`}
+                    style={{
+                      minHeight: 44,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '0 12px',
+                      borderRadius: 'var(--r-btn)',
+                      border: '1px solid var(--border)',
+                      background: 'var(--btn-secondary-bg, var(--card))',
+                      color: 'var(--text)',
+                      fontWeight: 600,
+                      fontSize: 'var(--t-meta)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <TouchInset />
+                    <Icon name="box" size={13} />
+                    <span>+ Sub-rent: GearHouse KTM</span>
+                    {showPrices && (
+                      <span style={{ fontSize: '11px', color: 'var(--text2)' }}>
+                        (Cost: {formatMoney(rupees(Math.round(toRupees(group.ratePaisa) * 0.8)))})
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="press"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onOpenPartnerModal?.(group)
+                    }}
+                    title={`Choose partner to sub-rent ${group.name}`}
+                    aria-label="Choose partner to sub-rent from"
+                    style={{
+                      minHeight: 44,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '0 12px',
+                      borderRadius: 'var(--r-btn)',
+                      border: '1px solid var(--border)',
+                      background: 'transparent',
+                      color: 'var(--link)',
+                      fontWeight: 600,
+                      fontSize: 'var(--t-meta)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <TouchInset />
+                    <Icon name="users" size={13} />
+                    <span>Choose partner…</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </li>

@@ -5,7 +5,7 @@ import Icon from '../../../components/ui/Icon'
 import type { IconName } from '../../../components/ui/Icon'
 import { DataTableShell } from '../../../components/ui/DataTable'
 import { NumberStepper, RowMenu, TouchInset, srOnly } from './BookingFormWidgets'
-import { formatMoney, roundHalfUp, type Paisa } from '../../../lib/money'
+import { formatMoney, roundHalfUp, rupees, type Paisa } from '../../../lib/money'
 import { INV_STYLE, type InvStatus } from '../../../lib/queries/inventory'
 import { STATUS } from '../../../lib/status'
 import { IntelCard } from '../../../components/ui/IntelCard'
@@ -19,6 +19,8 @@ export interface Line {
   lineNote?: string | undefined
   serviceBasis?: 'Flat' | 'Per day' | undefined
   supplierCost?: number | undefined
+  supplierName?: string | undefined
+  supplierId?: string | undefined
   bookingLineId?: string | undefined
   id: string
   clientUuid?: string | undefined
@@ -308,6 +310,16 @@ export function RentalLineItemsTree({
               ·
             </span>
             <span>{l.location}</span>
+            {l.lineType === 'Sub-rental' && canBookingMoney && l.supplierCost != null && (
+              <>
+                <span aria-hidden style={{ opacity: 0.5 }}>
+                  ·
+                </span>
+                <span style={{ color: 'var(--text2)', fontWeight: 600 }}>
+                  Supplier cost: {formatMoney(rupees(l.supplierCost))}
+                </span>
+              </>
+            )}
             {l.bundleName && !child && (
               <span
                 title={`Added as part of the ${l.bundleName} bundle`}

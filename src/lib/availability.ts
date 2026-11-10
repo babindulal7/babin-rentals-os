@@ -973,3 +973,144 @@ export function explainTurnaroundViolation(violation: TurnaroundBufferViolation,
   return `${assetTag} has only ${gapHours}h turnaround gap with booking ${violation.bookingNo} (minimum recommended: ${reqHours}h).`
 }
 
+/* ── SIMILAR EQUIPMENT & SUB-RENT SUGGESTIONS (W10, W69, T3-13) ──────────────
+ *
+ * When an item has no free units for the requested window, New Rental shows
+ * both (W10):
+ *  1. "Similar we own — free" (same category and type, e.g. another camera or 24-70 lens)
+ *  2. "Sub-rent from a partner" (cross-hire from external partner)
+ *
+ * The booked item itself stays blocked (27 Jul hard block).
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+export const SUBRENTAL_PARTNERS = [
+  'GearHouse KTM',
+  'Kathmandu Cinema Works',
+  'Everest Cine Rentals',
+  'Pokhara Film Gear',
+  'Shine Pictures',
+] as const
+
+export type SubrentalPartner = (typeof SUBRENTAL_PARTNERS)[number]
+
+const NOISE_TOKENS = new Set([
+  'a',
+  'an',
+  'and',
+  'the',
+  'with',
+  'for',
+  'in',
+  'on',
+  'body',
+  'kit',
+  'set',
+  'unit',
+  'mk',
+  'mark',
+  'gen',
+  'v1',
+  'v2',
+  'v3',
+  'ii',
+  'iii',
+  'iv',
+])
+
+function extractTokens(str: string): string[] {
+  return str
+    .toLowerCase()
+    .replace(/[^a-z0-9\-+]/g, ' ')
+    .split(/\s+/)
+    .filter((t) => t.length > 1 && !NOISE_TOKENS.has(t))
+}
+
+export function findSimilarFreeEquipment<
+  T extends {
+    readonly name: string
+    readonly category: string
+    readonly productKey?: string
+    readonly id?: string
+    readonly brand?: string
+    readonly kind?: 'equipment' | 'accessory'
+    readonly freeCount?: number
+    readonly autoPick?: unknown
+  },
+>(
+  target: {
+    readonly name: string
+    readonly category: string
+    readonly productKey?: string
+    readonly id?: string
+    readonly brand?: string
+    readonly kind?: 'equipment' | 'accessory'
+  },
+  candidates: readonly T[],
+  options?: {
+    readonly limit?: number
+    readonly excludeKeys?: ReadonlySet<string>
+  },
+): readonly T[] {
+  const limit = options?.limit ?? 3
+  const excludeKeys = options?.excludeKeys
+  const targetKey = target.productKey ?? target.id ?? ''
+  const targetName = target.name.trim().toLowerCase()
+  const targetCat = target.category.trim().toLowerCase()
+  const targetBrand = (target.brand ?? '').trim().toLowerCase()
+  const targetTokens = new Set(extractTokens(target.name))
+
+  const matches: Array<{ item: T; score: number }> = []
+
+  for (const candidate of candidates) {
+    const cKey = candidate.productKey ?? candidate.id ?? ''
+    // Exclude the target item itself
+    if (cKey && targetKey && cKey === targetKey) continue
+    if (candidate.name.trim().toLowerCase() === targetName) continue
+
+    // Exclude if specified in excludeKeys
+    if (excludeKeys && ((cKey && excludeKeys.has(cKey)) || (candidate.id && excludeKeys.has(candidate.id)))) {
+      continue
+    }
+
+    // Must have free units
+    const free = candidate.freeCount !== undefined ? candidate.freeCount : candidate.autoPick ? 1 : 0
+    if (free <= 0) continue
+
+    const cCat = candidate.category.trim().toLowerCase()
+    // Must match category
+    if (cCat !== targetCat) continue
+
+    let score = 100 // Base score for same category
+
+    // Brand match bonus
+    const cBrand = (candidate.brand ?? '').trim().toLowerCase()
+    if (targetBrand && cBrand && targetBrand === cBrand) {
+      score += 25
+    }
+
+    // Kind match bonus (equipment vs accessory)
+    if (target.kind && candidate.kind && target.kind === candidate.kind) {
+      score += 10
+    }
+
+    // Token match in name
+    const cTokens = extractTokens(candidate.name)
+    for (const token of cTokens) {
+      if (targetTokens.has(token)) {
+        score += 20
+      }
+    }
+
+    // Minor tie-breaker for higher free count
+    score += Math.min(10, free * 0.5)
+
+    matches.push({ item: candidate, score })
+  }
+
+  // Sort descending by score, then alphabetically by name
+  matches.sort((a, b) => b.score - a.score || a.item.name.localeCompare(b.item.name))
+
+  return matches.slice(0, limit).map((m) => m.item)
+}
+
+

@@ -18,6 +18,8 @@ import {
   findTurnaroundBufferViolations,
   explainTurnaroundViolation,
   turnaroundBufferMsForCategory,
+  findSimilarFreeEquipment,
+  SUBRENTAL_PARTNERS,
   type RentalWindow,
   type QuantityHold,
   type UnitCandidate,
@@ -911,4 +913,99 @@ describe('Turnaround buffers — Pillar 1', () => {
     expect(explanation).toContain('CAM-01 has only 3h turnaround gap with booking B-100 (minimum recommended: 6h).')
   })
 })
+
+describe('findSimilarFreeEquipment — W10 (settles 27 Jul lock for fully booked gear)', () => {
+  const fx3 = {
+    id: 'prod-fx3',
+    productKey: 'prod-fx3',
+    name: 'Sony FX3 Cinema Camera',
+    category: 'Camera',
+    brand: 'Sony',
+    kind: 'equipment' as const,
+    freeCount: 0,
+  }
+
+  const fx6 = {
+    id: 'prod-fx6',
+    productKey: 'prod-fx6',
+    name: 'Sony FX6 Cinema Camera',
+    category: 'Camera',
+    brand: 'Sony',
+    kind: 'equipment' as const,
+    freeCount: 2,
+  }
+
+  const a7s3 = {
+    id: 'prod-a7s3',
+    productKey: 'prod-a7s3',
+    name: 'Sony A7S III',
+    category: 'Camera',
+    brand: 'Sony',
+    kind: 'equipment' as const,
+    freeCount: 1,
+  }
+
+  const bmpcc = {
+    id: 'prod-bmpcc',
+    productKey: 'prod-bmpcc',
+    name: 'Blackmagic Pocket 6K Pro',
+    category: 'Camera',
+    brand: 'Blackmagic',
+    kind: 'equipment' as const,
+    freeCount: 3,
+  }
+
+  const lens2470 = {
+    id: 'prod-lens-2470',
+    productKey: 'prod-lens-2470',
+    name: 'Sony FE 24-70mm f/2.8 GM',
+    category: 'Lens',
+    brand: 'Sony',
+    kind: 'equipment' as const,
+    freeCount: 4,
+  }
+
+  const allCandidates = [fx3, fx6, a7s3, bmpcc, lens2470]
+
+  it('finds free similar equipment in same category and ranks by similarity', () => {
+    const similar = findSimilarFreeEquipment(fx3, allCandidates)
+    expect(similar.length).toBe(3)
+    // Both Sony FX6 and Sony A7S III should rank above Blackmagic (due to brand and FX token)
+    expect(similar[0]?.name).toBe('Sony FX6 Cinema Camera')
+    expect(similar[1]?.name).toBe('Sony A7S III')
+    expect(similar[2]?.name).toBe('Blackmagic Pocket 6K Pro')
+  })
+
+  it('excludes target item and items from different categories', () => {
+    const similar = findSimilarFreeEquipment(fx3, allCandidates)
+    expect(similar.some((item) => item.productKey === fx3.productKey)).toBe(false)
+    expect(similar.some((item) => item.category === 'Lens')).toBe(false)
+  })
+
+  it('excludes candidate if freeCount is 0', () => {
+    const candidatesWithFx6Booked = [
+      fx3,
+      { ...fx6, freeCount: 0 },
+      a7s3,
+      bmpcc,
+    ]
+    const similar = findSimilarFreeEquipment(fx3, candidatesWithFx6Booked)
+    expect(similar.map((item) => item.name)).toEqual(['Sony A7S III', 'Blackmagic Pocket 6K Pro'])
+  })
+
+  it('respects limit and excludeKeys', () => {
+    const similar = findSimilarFreeEquipment(fx3, allCandidates, {
+      limit: 1,
+      excludeKeys: new Set(['prod-fx6']),
+    })
+    expect(similar.length).toBe(1)
+    expect(similar[0]?.name).toBe('Sony A7S III')
+  })
+
+  it('exports known sub-rental partners', () => {
+    expect(SUBRENTAL_PARTNERS).toContain('GearHouse KTM')
+    expect(SUBRENTAL_PARTNERS).toContain('Kathmandu Cinema Works')
+  })
+})
+
 
