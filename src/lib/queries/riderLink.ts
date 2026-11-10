@@ -94,15 +94,16 @@ function saveMockLinks(links: MockLinkEntry[]) {
  * Generate a 128-bit cryptographically secure raw token (mock fallback only).
  */
 export function generateRiderRawToken(): string {
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-    const bytes = new Uint8Array(16)
-    crypto.getRandomValues(bytes)
-    return Array.from(bytes)
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('')
+  // A rider URL is a bearer credential: NEVER downgrade to a clock or
+  // Math.random() token. Refuse rather than issue a guessable link.
+  if (typeof crypto === 'undefined' || typeof crypto.getRandomValues !== 'function') {
+    throw new Error('Secure random generation is unavailable; rider links require a secure browser context.')
   }
-  // Fallback for non-crypto environments
-  return `${Date.now().toString(16)}${Math.random().toString(16).slice(2)}`.padEnd(32, '0').slice(0, 32)
+  const bytes = new Uint8Array(16)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
 }
 
 /**
@@ -119,13 +120,17 @@ export async function hashRiderToken(rawToken: string): Promise<string> {
     return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
   }
 
-  // Fallback for non-crypto mock environments
-  let hash = 0
-  for (let i = 0; i < trimmed.length; i++) {
-    hash = (hash << 5) - hash + trimmed.charCodeAt(i)
-    hash |= 0
+  // Node is permitted only for mock/test runs; production never substitutes
+  // a weak, non-cryptographic hash for SHA-256.
+  if (IS_MOCK) {
+    try {
+      const nodeCrypto = await import('node:crypto')
+      return nodeCrypto.createHash('sha256').update(trimmed).digest('hex')
+    } catch {
+      throw new Error('Secure SHA-256 hashing is unavailable; rider link actions are blocked.')
+    }
   }
-  return Math.abs(hash).toString(16).padStart(64, '0').slice(0, 64)
+  throw new Error('Secure SHA-256 hashing is unavailable; rider links require a secure browser context.')
 }
 
 /**
