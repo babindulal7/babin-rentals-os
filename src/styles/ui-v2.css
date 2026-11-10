@@ -782,3 +782,202 @@ input[type='search']::-webkit-search-results-decoration {
 [data-slot='input-group']:focus-within { outline: 2px solid var(--input-focus); outline-offset: -2px; }
 [data-slot='input-group'][data-invalid]:focus-within { outline-color: var(--danger); }
 
+/* ── Rhea Preset & Reports Token-Based Layer (G-7, Card 3) ────────────────── */
+.br-preset-pilot,
+[data-ui-preset="rhea"] {
+  --rhea-radius: var(--radius-md, 0.625rem);
+  --rhea-radius-sm: calc(var(--rhea-radius) * 0.6);
+  --rhea-radius-md: calc(var(--rhea-radius) * 0.8);
+  --rhea-radius-lg: var(--rhea-radius);
+  --rhea-radius-xl: calc(var(--rhea-radius) * 1.4);
+  --rhea-radius-2xl: calc(var(--rhea-radius) * 1.8);
+  --rhea-radius-3xl: calc(var(--rhea-radius) * 2.2);
+  --rhea-radius-4xl: calc(var(--rhea-radius) * 2.6);
+  --rhea-radius-card: min(var(--rhea-radius-4xl), 24px);
+  --rhea-card-spacing: var(--sp-lg, 20px);
+  --rhea-card-spacing-sm: var(--sp-md, 16px);
+  --rhea-font-heading: 'Outfit', sans-serif;
+  --rhea-font-sans: 'Source Sans 3', sans-serif;
+  --rhea-font-mono: 'JetBrains Mono', monospace;
+  --rhea-chart-1: var(--cat-1);
+  --rhea-chart-2: var(--cat-2);
+  --rhea-chart-3: var(--cat-3);
+  --rhea-chart-4: var(--cat-4);
+  --rhea-chart-5: var(--cat-5);
+  --rhea-bg: var(--bg);
+  --rhea-fg: var(--text);
+  --rhea-card: var(--card);
+  --rhea-card-fg: var(--text);
+  --rhea-primary: var(--btn-primary-bg);
+  --rhea-primary-fg: var(--btn-primary-fg);
+  --rhea-secondary: var(--card2);
+  --rhea-secondary-fg: var(--text2);
+  --rhea-muted: var(--card2);
+  --rhea-muted-fg: var(--muted);
+  --rhea-accent: var(--hover-card);
+  --rhea-accent-fg: var(--text);
+  --rhea-border: var(--border);
+  --rhea-ring: var(--input-focus);
+  --rhea-ring-hairline: var(--divider);
+  --shadow-rhea-card: var(--shadow-card);
+}
+
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rhea-card-spacing);
+  overflow: hidden;
+  border-radius: var(--rhea-radius-card);
+  background-color: var(--rhea-card);
+  color: var(--rhea-card-fg);
+  padding: var(--rhea-card-spacing);
+  border: 1px solid var(--rhea-border);
+  box-shadow: var(--shadow-rhea-card);
+  outline: 1px solid var(--rhea-ring-hairline);
+  outline-offset: -1px;
+  transition: box-shadow var(--dur-fast, 150ms) var(--ease, ease), border-color var(--dur-fast, 150ms) var(--ease, ease);
+}
+
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-card[data-size="sm"] {
+  --rhea-card-spacing: var(--rhea-card-spacing-sm);
+  padding: var(--rhea-card-spacing-sm);
+  gap: var(--rhea-card-spacing-sm);
+}
+
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-card-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: 6px;
+}
+
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-card-title {
+  font-family: var(--rhea-font-heading);
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--rhea-card-fg);
+  margin: 0;
+}
+
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-card-description {
+  font-family: var(--rhea-font-sans);
+  font-size: 0.875rem;
+  color: var(--rhea-muted-fg);
+  line-height: 1.45;
+  margin: 0;
+  grid-column: 1 / -1;
+}
+
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rhea-border);
+  font-size: 0.875rem;
+  color: var(--rhea-muted-fg);
+}
+
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border-radius: var(--rhea-radius-card);
+  background-color: var(--rhea-card);
+  border: 1px solid var(--rhea-border);
+  outline: 1px solid var(--rhea-ring-hairline);
+  outline-offset: -1px;
+  box-shadow: var(--shadow-rhea-card);
+}
+
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-kpi-label {
+  font-family: var(--rhea-font-sans);
+  font-size: 0.8125rem;
+  color: var(--rhea-muted-fg);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-kpi-value {
+  font-family: var(--rhea-font-mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--rhea-card-fg);
+}
+
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-kpi-meta {
+  font-family: var(--rhea-font-sans);
+  font-size: 0.75rem;
+  color: var(--rhea-muted-fg);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-kpi-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: var(--rhea-radius-sm);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  background-color: var(--rhea-muted);
+  color: var(--rhea-fg);
+}
+
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-kpi-badge--primary {
+  background-color: var(--rhea-primary);
+  color: var(--rhea-primary-fg);
+}
+
+:where(.br-preset-pilot, [data-ui-preset="rhea"]) .rhea-chart-container {
+  padding: 16px;
+  border-radius: var(--rhea-radius-card);
+  background-color: var(--rhea-card);
+  border: 1px solid var(--rhea-border);
+  outline: 1px solid var(--rhea-ring-hairline);
+  outline-offset: -1px;
+  box-shadow: var(--shadow-rhea-card);
+}
+
+/* Reports KPI Cards & Metrics */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.report-kpi-card {
+  padding: 17px;
+  background: var(--surface);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.metric {
+  font-weight: 720;
+  font-size: 26px;
+  letter-spacing: -0.03em;
+  margin-top: 6px;
+  font-family: var(--font-heading, 'Outfit', sans-serif);
+}
+
+
