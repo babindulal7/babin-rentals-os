@@ -6,6 +6,7 @@ import {
   WebLocalStorageAdapter,
   CapacitorKeystoreAdapter,
   TauriStrongholdAdapter,
+  ElectronSafeStorageAdapter,
 } from '../secureStorage';
 
 describe('secureStorage', () => {
@@ -15,6 +16,7 @@ describe('secureStorage', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    delete (window as any).electronAPI;
   });
 
   describe('detectPlatform', () => {
@@ -306,6 +308,49 @@ describe('secureStorage', () => {
       expect(await adapter.getItem('session')).toBeNull();
 
       delete (window as any).__TAURI__;
+    });
+  });
+
+  describe('ElectronSafeStorageAdapter', () => {
+    it('uses encrypted native IPC, not web localStorage', async () => {
+      const bridge = {
+        getItem: vi.fn().mockResolvedValue('os-encrypted-token'),
+        setItem: vi.fn().mockResolvedValue(true),
+        removeItem: vi.fn().mockResolvedValue(true),
+      };
+      (window as any).electronAPI = { isElectron: true, secureStorage: bridge };
+      expect(detectPlatform()).toBe('electron');
+      const storage = getSecureAuthStorage();
+      expect(storage).toBeInstanceOf(ElectronSafeStorageAdapter);
+      await storage.setItem('sb-test-auth-token', 'new-token');
+      expect(bridge.setItem).toHaveBeenCalledWith('sb-test-auth-token', 'new-token');
+      expect(localStorage.getItem('sb-test-auth-token')).toBeNull();
+      expect(await storage.getItem('sb-test-auth-token')).toBe('os-encrypted-token');
+      await storage.removeItem('sb-test-auth-token');
+      expect(bridge.removeItem).toHaveBeenCalledWith('sb-test-auth-token');
+    });
+
+    it('refuses to resurrect a signed-out token if native deletion returns false', async () => {
+      const bridge = {
+        getItem: vi.fn().mockResolvedValue('stale-token'),
+        setItem: vi.fn().mockResolvedValue(true),
+        removeItem: vi.fn().mockResolvedValue(false),
+      };
+      (window as any).electronAPI = { isElectron: true, secureStorage: bridge };
+      const storage = new ElectronSafeStorageAdapter();
+      await storage.removeItem('sb-test-auth-token');
+      expect(await storage.getItem('sb-test-auth-token')).toBeNull();
+      expect(bridge.getItem).not.toHaveBeenCalled();
+    });
+
+    it('uses volatile memory when the native secure bridge is absent', async () => {
+      (window as any).electronAPI = { isElectron: true };
+      const storage = new ElectronSafeStorageAdapter();
+      await storage.setItem('sb-test-auth-token', 'memory-only');
+      expect(await storage.getItem('sb-test-auth-token')).toBe('memory-only');
+      expect(localStorage.getItem('sb-test-auth-token')).toBeNull();
+      await storage.removeItem('sb-test-auth-token');
+      expect(await storage.getItem('sb-test-auth-token')).toBeNull();
     });
   });
 
