@@ -10,7 +10,7 @@ function resolveSecureStoragePath(userDataPath, key) {
   if (typeof userDataPath !== 'string' || !userDataPath.trim()) {
     throw new TypeError('Invalid Electron user data directory');
   }
-  if (typeof key !== 'string' || !KEY_PATTERN.test(key) || WINDOWS_DEVICE.test(key)) {
+  if (typeof key !== 'string' || !KEY_PATTERN.test(key) || key.endsWith('.') || WINDOWS_DEVICE.test(key)) {
     throw new TypeError('Invalid secure-storage key');
   }
   const directory = path.resolve(userDataPath, 'secure-storage');
