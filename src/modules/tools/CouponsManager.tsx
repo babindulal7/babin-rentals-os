@@ -404,7 +404,7 @@ export default function CouponsManager() {
                 const pctUsed = Math.min(100, Math.round(((c.used || 0) / (c.limit || 1)) * 100))
 
                 return (
-                  <tr key={c.code} style={{ borderBottom: '1px solid var(--border)', transition: 'background 0.15s' }}>
+                  <tr key={c.code} style={{ borderBottom: '1px solid var(--border)', transition: 'background var(--dur)' }}>
                     <td style={{ padding: '14px 16px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span style={{ fontFamily: 'var(--font-id, sans-serif)', fontVariantNumeric: 'tabular-nums', fontWeight: 700, fontSize: 'var(--t-body)', color: 'var(--accent)' }}>

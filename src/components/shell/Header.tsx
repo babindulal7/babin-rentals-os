@@ -431,7 +431,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
           background: 'var(--sidebar)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
-          transition: 'background-color var(--dur-theme) ease',
+          transition: 'background-color var(--dur-theme) var(--ease)',
           position: 'sticky',
           top: 0,
           zIndex: 20,

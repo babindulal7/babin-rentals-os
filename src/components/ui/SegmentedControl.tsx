@@ -117,7 +117,7 @@ export function SegmentedControl<T extends string = string>({
               opacity: opt.disabled ? 0.45 : 1,
               whiteSpace: 'nowrap',
               boxShadow: isSelected ? 'var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.08)), var(--specular-rim)' : 'none',
-              transition: 'background var(--dur-fast, 120ms) var(--ease), color var(--dur-fast, 120ms) var(--ease), box-shadow var(--dur-fast, 120ms) var(--ease)',
+              transition: 'background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease)',
               fontFamily: 'inherit',
             }}
           >

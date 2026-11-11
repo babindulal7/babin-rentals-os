@@ -227,7 +227,7 @@ export function FilterBar({
                   cursor: canSelect ? 'pointer' : 'default',
                   fontFamily: 'inherit',
                   whiteSpace: 'nowrap',
-                  transition: 'background-color 120ms ease, border-color 120ms ease, color 120ms ease',
+                  transition: 'background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease)',
                   flexShrink: 0,
                 }}
               >

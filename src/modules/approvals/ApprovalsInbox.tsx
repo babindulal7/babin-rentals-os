@@ -251,7 +251,7 @@ export function ApprovalsInbox() {
                   fontSize: 'var(--t-meta)',
                   fontWeight: 600,
                   cursor: 'pointer',
-                  transition: 'background 0.15s ease',
+                  transition: 'background var(--dur) var(--ease)',
                 }}
               >
                 {pill.label}

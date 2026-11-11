@@ -319,7 +319,7 @@ export function BookingTagsBar({
                           fontSize: '11px',
                           color: 'var(--text)',
                           cursor: 'pointer',
-                          transition: 'border-color 0.15s',
+                          transition: 'border-color var(--dur)',
                         }}
                         onMouseEnter={(e) => {
                           e.currentTarget.style.borderColor = 'var(--primary)'
