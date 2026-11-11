@@ -22,7 +22,7 @@ test('reject traversal, invalid strings and Windows special device filenames', (
   for (const bad of [
     '', '.', '..', '../outside', 'dir/child', 'dir\\child', '/tmp/out',
     'C:\\Windows\\Temp\\out', 'auth\0token', ' auth ', 'äuth', 'a'.repeat(129),
-    'CON', 'NUL.txt', 'COM1', 'LPT9.log', null, 5, {}, [],
+    'CON', 'NUL.txt', 'COM1', 'LPT9.log', 'session.', null, 5, {}, [],
   ]) {
     assert.throws(() => resolveSecureStoragePath(userData, bad), { name: 'TypeError' });
   }
@@ -34,4 +34,6 @@ test('Electron main wires a validated key and has no phantom electron-store depe
   assert.doesNotMatch(source, /require\(['"]electron-store['"]\)/);
   assert.match(source, /resolveSecureStoragePath\(app\.getPath\('userData'\), key\)/);
   assert.match(source, /isTrustedStorageSender\(event\)/);
+  assert.match(source, /trustedRendererOrigin/);
+  assert.match(source, /new URL\(event\.senderFrame\.url\)\.origin === trustedRendererOrigin/);
 });
