@@ -94,9 +94,9 @@ try {
   })
   await test('SEC-05: unassigned Driver gets no client/bookings/lines',async()=>{
     await db.exec("reset role; select set_config('app.current_user_id','',false),set_config('request.jwt.claim.sub','',false)"); await db.query("update users set primary_role='Driver' where id=$1",[operator]); await actor(operator)
-    for(const table of ['clients','bookings','booking_lines']) assert.equal((await rows(`select count(*)::int n from ${table}`))[0].n,0,table)
+    for(const table of ['clients','bookings','booking_lines','clients_v','client_directory_v','booking_lines_v']) assert.equal((await rows(`select count(*)::int n from ${table}`))[0].n,0,table)
   })
-  await test('SEC-05: assigned open trip grants only that booking and client; completion revokes',async()=>{
+  await test('SEC-05: assigned open trip grants only that booking and client; terminal statuses revoke',async()=>{
     await db.exec("reset role; select set_config('app.current_user_id','',false),set_config('request.jwt.claim.sub','',false)")
     await db.query(`insert into delivery_jobs(client_uuid,booking_id,branch_id,leg,scheduled_at,status,assigned_driver_id,created_by,updated_by)
       values(gen_random_uuid(),$1,$2,'Outbound',now(),'Scheduled',$3,$4,$4)`,[booking.id,booking.branch_id,operator,owner])
@@ -118,6 +118,14 @@ try {
     assert.equal((await rows('select count(*)::int n from clients_v'))[0].n,0)
     assert.equal((await rows('select count(*)::int n from client_directory_v'))[0].n,0)
     assert.equal((await rows('select count(*)::int n from booking_lines_v'))[0].n,0)
+    await db.exec("reset role; select set_config('app.current_user_id','',false),set_config('request.jwt.claim.sub','',false)")
+    await db.query("update delivery_jobs set status='Delivered',delivered_at=now(),received_by='Test Receiver' where assigned_driver_id=$1",[operator])
+    await actor(operator)
+    assert.equal((await rows('select count(*)::int n from bookings'))[0].n,0)
+    assert.equal((await rows('select count(*)::int n from clients_v'))[0].n,0)
+    assert.equal((await rows('select count(*)::int n from client_directory_v'))[0].n,0)
+    assert.equal((await rows('select count(*)::int n from booking_lines_v'))[0].n,0)
+    await denied('select driver_trip_context($1)',[booking.id])
     // 0202 must not break authorized users or remove W68's Staff client fields.
     await actor(owner)
     assert.ok((await rows('select count(*)::int n from clients_v'))[0].n>0,'Owner can read client directory')

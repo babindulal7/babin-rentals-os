@@ -103,7 +103,7 @@ after Pack is complete saves; gates green; driven in `dev:mock` at 375, 820 and
 1440 px as Warehouse and Technician.
 **Needs** — T2-01 (done in part). Staging checks of T2-01 (Done when 1–3) still wait for T1-06.
 
-### T2-17 · Save a unit's details            status: todo · size: M · lane A · [go-live]
+### T2-17 · Save a unit's details            status: doing · size: M · lane A · [go-live]
 **What** — On the equipment page, the unit editor (`AssetDetail.tsx`, `UnitEditor`) lets staff change
 a unit's asset tag, serial, status, rack, shelf, bin and condition, then says "Editing this session
 only — there is no unit-update action yet, so nothing is persisted" (line 223). Staff label and
