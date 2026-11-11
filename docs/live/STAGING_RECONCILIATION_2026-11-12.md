@@ -163,3 +163,7 @@ Preserve nonproject schemas and all production data. These rows cannot be automa
 - No deployment, Booqable cancellation, or release decision was made.
 
 **Tracking:** [Release-HOLD issue #56](https://github.com/babindulal7/babin-rentals-os/issues/56); [T1 release cards](https://github.com/babindulal7/babin-rentals-os/blob/main/docs/plans/T1_RELEASE.md). This dated snapshot must be refreshed before any write as source and hosted state can change.
+
+## Later hosted validation on 12 November 2026
+
+The first three source migrations were tested against the existing staging PostgreSQL inside rollback-only transactions; every app object was absent afterwards. A read-only production grant check also confirmed six `SECURITY DEFINER` RPCs grant `EXECUTE` to `anon`, with internal authentication checks requiring hosted test seats before any security claim. See [the detailed hosted rehearsal and release gates](STAGING_HOSTED_REHEARSAL_2026-11-12.md). This does **not** authorize any permanent schema install or production migration.
