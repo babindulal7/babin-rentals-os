@@ -19,6 +19,7 @@ if (process.env.ELECTRON_DISABLE_GPU === 'true') {
 
 let mainWindow = null;
 let staticServer = null;
+let trustedRendererOrigin = null;
 
 function createStaticDistServer(callback) {
   const distDir = path.join(__dirname, '../dist');
@@ -118,6 +119,12 @@ function createWindow() {
     },
   });
 
+  // The token IPC bridge may only be used by the origin loaded by this app.
+  const loadTrustedAppUrl = (url) => {
+    trustedRendererOrigin = new URL(url).origin;
+    return mainWindow.loadURL(url);
+  };
+
   let isShown = false;
   const showWindow = () => {
     if (!isShown && mainWindow && !mainWindow.isDestroyed()) {
@@ -151,7 +158,7 @@ function createWindow() {
 
   if (isDev) {
     const tryLoadDev = (retries = 2) => {
-      mainWindow.loadURL(devUrl).catch((err) => {
+      loadTrustedAppUrl(devUrl).catch((err) => {
         console.warn(`[Electron] Could not reach ${devUrl}: ${err.message}`);
         if (retries > 0) {
           setTimeout(() => tryLoadDev(retries - 1), 1000);
@@ -160,7 +167,7 @@ function createWindow() {
           createStaticDistServer((serverUrl, server) => {
             staticServer = server;
             if (mainWindow && !mainWindow.isDestroyed()) {
-              mainWindow.loadURL(serverUrl);
+              loadTrustedAppUrl(serverUrl);
               showWindow();
             }
           });
@@ -173,7 +180,7 @@ function createWindow() {
     createStaticDistServer((serverUrl, server) => {
       staticServer = server;
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.loadURL(serverUrl);
+        loadTrustedAppUrl(serverUrl);
         showWindow();
       }
     });
@@ -182,6 +189,7 @@ function createWindow() {
   mainWindow.on('closed', () => {
     clearTimeout(safetyTimer);
     mainWindow = null;
+    trustedRendererOrigin = null;
   });
 }
 
@@ -207,8 +215,13 @@ if (!gotTheLock) {
   // Protect the token store from untrusted subframes or foreign WebContents.
 function isTrustedStorageSender(event) {
   const contents = mainWindow?.webContents;
-  return Boolean(contents && !contents.isDestroyed()
-    && event.sender === contents && event.senderFrame === contents.mainFrame);
+  if (!contents || contents.isDestroyed() || event.sender !== contents
+    || event.senderFrame !== contents.mainFrame || !trustedRendererOrigin) return false;
+  try {
+    return new URL(event.senderFrame.url).origin === trustedRendererOrigin;
+  } catch {
+    return false;
+  }
 }
 
 // The renderer supplies a key, never a filesystem path.
