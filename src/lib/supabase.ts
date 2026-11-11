@@ -81,6 +81,10 @@ export function createStaffSwitchClient(): ReturnType<typeof createLiveClient> {
   if (!url || !anonKey) throw new Error('Supabase connection is unavailable.')
   return createClient(url, anonKey, {
     auth: {
+      // Supabase Auth uses storageKey to name its cross-tab BroadcastChannel.
+      // An isolated target refresh must NEVER broadcast B's SIGNED_IN to the
+      // shared application's regular auth channel before PIN verification.
+      storageKey: `babin-staff-switch-isolated-${crypto.randomUUID()}`,
       persistSession: false,
       autoRefreshToken: false,
       detectSessionInUrl: false,
