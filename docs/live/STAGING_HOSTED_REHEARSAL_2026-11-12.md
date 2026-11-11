@@ -76,3 +76,7 @@ Supabase reference: [Database security advisor](https://supabase.com/docs/guides
 **Hard stop:** The currently empty staging schema cannot legitimately yield passing real-JWT application-RLS results. Do not report T1-05/T1-06 complete until the approved staging schema and test identities exist.
 
 **Trackers:** [#56 release HOLD](https://github.com/babindulal7/babin-rentals-os/issues/56), [#66 security review](https://github.com/babindulal7/babin-rentals-os/issues/66), [T1 release plan](../plans/T1_RELEASE.md).
+
+## Deeper migration ledger content audit (12 November 2026)
+
+A follow-up read-only comparison generated Git-compatible blob hashes of SQL text retained in the production migration history and compared them with the current GitHub source. Of 148 same-named migrations, **40 are byte-identical, 76 differ in bytes and 32 have no retained SQL text to verify**. There are also 85 source-only names and 9 ledger-only names. Not all byte differences are semantic: `0002_bookings.sql` differs only by a trailing newline, while `0062` and `0099` need genuine code-effect review. See the [full content-hash analysis](MIGRATION_CONTENT_HASH_AUDIT_2026-11-12.md) and [242-row CSV evidence](MIGRATION_CONTENT_HASH_LEDGER_2026-11-12.csv). **No new apply authorization is implied.**
