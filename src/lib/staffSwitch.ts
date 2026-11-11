@@ -45,7 +45,7 @@ export async function verifyStaffSwitchCandidate(
   deps: StaffSwitchDependencies,
 ): Promise<StaffSwitchDecision> {
   if (!targetUserId || !refreshToken) throw new Error('Stored staff session is unavailable. Sign in with your password.')
-  if (!/^\\d{4}$/.test(pin)) {
+  if (!/^\d{4}$/.test(pin)) {
     return { status: 'denied', reason: 'malformed', message: 'Enter your four-digit PIN.', lockedUntil: null }
   }
 
