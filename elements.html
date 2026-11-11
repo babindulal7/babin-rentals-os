@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Babin Rentals OS — shadcn Preset b2Dd1dt6u All Elements Showcase</title>
+  <link rel="stylesheet" href="src/styles/preset-black-light.css">
+  <link rel="stylesheet" href="src/styles/shadcn-rhea-ui.css">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      background: var(--app);
+      color: var(--text);
+      font: 14px/1.5 system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 32px 24px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+    .header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .title h1 {
+      margin: 0 0 4px;
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .title p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .theme-toggle-btn {
+      appearance: none;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md, 8px);
+      padding: 10px 18px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.15s ease;
+      min-height: 44px;
+    }
+    .theme-toggle-btn:hover {
+      background: var(--surface-2);
+    }
+    .section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: 650;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .elements-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+    .element-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl, 14px);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .element-card h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text2);
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 0 16px;
+      border-radius: var(--radius-md, 8px);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.12s ease;
+    }
+    .btn-default { background: var(--text); color: var(--bg); }
+    .btn-default:hover { opacity: 0.9; }
+    .btn-primary { background: var(--primary, #2456d6); color: #fff; }
+    .btn-primary:hover { filter: brightness(1.08); }
+    .btn-secondary { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+    .btn-secondary:hover { filter: brightness(0.96); }
+    .btn-outline { background: transparent; border-color: var(--border); color: var(--text); }
+    .btn-outline:hover { background: var(--surface-2); }
+    .btn-ghost { background: transparent; color: var(--text); }
+    .btn-ghost:hover { background: var(--surface-2); }
+    .btn-destructive { background: #ef4444; color: #fff; }
+    .btn-destructive:hover { background: #dc2626; }
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 9999px;
+      padding: 3px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1;
+    }
+    .badge-default { background: var(--text); color: var(--bg); }
+    .badge-secondary { background: var(--surface-2); color: var(--text2); border: 1px solid var(--border); }
+    .badge-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .badge-emerald { background: var(--preset-emerald-soft); color: var(--preset-emerald); }
+    .badge-danger { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+    /* Form inputs */
+    .input-field {
+      width: 100%;
+      min-height: 44px;
+      padding: 8px 12px;
+      border-radius: var(--radius-md, 8px);
+      border: 1px solid var(--input-border);
+      background: var(--input-bg);
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.12s ease, box-shadow 0.12s ease;
+    }
+    .input-field:focus {
+      border-color: var(--input-focus);
+      box-shadow: 0 0 0 3px var(--preset-emerald-soft);
+    }
+    /* Switch */
+    .switch-wrapper {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--border);
+      transition: .2s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px; width: 18px;
+      left: 3px; bottom: 3px;
+      background-color: white;
+      transition: .2s;
+      border-radius: 50%;
+    }
+    input:checked + .slider { background-color: var(--preset-emerald, #10b981); }
+    input:checked + .slider:before { transform: translateX(20px); }
+    /* Tabs */
+    .tabs-bar {
+      display: inline-flex;
+      background: var(--surface-2);
+      padding: 3px;
+      border-radius: var(--radius-md, 8px);
+      border: 1px solid var(--border);
+    }
+    .tab-item {
+      padding: 8px 14px;
+      border-radius: calc(var(--radius-md, 8px) - 2px);
+      font-size: 13px;
+      font-weight: 550;
+      cursor: pointer;
+      color: var(--text2);
+      border: none;
+      background: transparent;
+    }
+    .tab-item.active {
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    }
+    /* Breadcrumb */
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .breadcrumb a { color: var(--text2); text-decoration: none; }
+    .breadcrumb span { color: var(--text); font-weight: 600; }
+    /* Progress */
+    .progress-bar-bg {
+      width: 100%;
+      height: 8px;
+      background: var(--surface-2);
+      border-radius: 9999px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--preset-emerald, #10b981);
+      border-radius: 9999px;
+      transition: width 0.3s ease;
+    }
+    /* Charts */
+    .chart-container {
+      height: 140px;
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      padding: 16px;
+      background: var(--surface-2);
+      border-radius: var(--radius-md, 8px);
+      border: 1px solid var(--border);
+    }
+    .chart-bar {
+      flex: 1;
+      border-radius: 4px 4px 0 0;
+      transition: height 0.3s ease;
+    }
+    .c1 { background: var(--chart-1, #4ade80); }
+    .c2 { background: var(--chart-2, #22c55e); }
+    .c3 { background: var(--chart-3, #16a34a); }
+    .c4 { background: var(--chart-4, #15803d); }
+    .c5 { background: var(--chart-5, #166534); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="title">
+        <h1>shadcn Preset b2Dd1dt6u — All Elements</h1>
+        <p>Style: base-rhea · Base: Zinc · Theme: Zinc · Charts: Emerald · Radius: Medium (0.625rem / 10px)</p>
+      </div>
+      <button class="theme-toggle-btn" onclick="document.documentElement.dataset.theme = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'">
+        Toggle Light / Black Mode
+      </button>
+    </header>
+
+    <!-- SECTION 1: BUTTONS & INTERACTIVE -->
+    <div class="section">
+      <h2 class="section-title">1. Buttons & Touch Targets (&ge;44px)</h2>
+      <div class="elements-grid">
+        <div class="element-card">
+          <h3>Button Variants</h3>
+          <div class="row">
+            <button class="btn btn-default">Default</button>
+            <button class="btn btn-primary">Primary</button>
+            <button class="btn btn-secondary">Secondary</button>
+            <button class="btn btn-outline">Outline</button>
+            <button class="btn btn-ghost">Ghost</button>
+            <button class="btn btn-destructive">Destructive</button>
+          </div>
+        </div>
+        <div class="element-card">
+          <h3>Badges & Pill Tags</h3>
+          <div class="row">
+            <span class="badge badge-default">Default</span>
+            <span class="badge badge-secondary">Secondary</span>
+            <span class="badge badge-outline">Outline</span>
+            <span class="badge badge-emerald">Emerald Active</span>
+            <span class="badge badge-danger">Attention</span>
+            <span class="tag">Rhea Pill Tag</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2: FORMS & INPUTS -->
+    <div class="section">
+      <h2 class="section-title">2. Form Controls & Inputs (Medium Radius)</h2>
+      <div class="elements-grid">
+        <div class="element-card">
+          <h3>Text Input & Textarea</h3>
+          <input class="input-field" placeholder="Enter equipment name or serial..." />
+          <textarea class="input-field" rows="2" placeholder="Inspection or handover notes..."></textarea>
+        </div>
+        <div class="element-card">
+          <h3>Toggles, Switches & Progress</h3>
+          <div class="row" style="justify-content: space-between;">
+            <label class="switch-wrapper">
+              <span class="switch">
+                <input type="checkbox" checked />
+                <span class="slider"></span>
+              </span>
+              <span>Available for Rent</span>
+            </label>
+            <label class="switch-wrapper">
+              <span class="switch">
+                <input type="checkbox" />
+                <span class="slider"></span>
+              </span>
+              <span>QC Checked</span>
+            </label>
+          </div>
+          <div>
+            <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px; color:var(--muted);">
+              <span>Return Inspection Progress</span>
+              <span>75%</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" style="width: 75%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 3: NAVIGATION & DATA DISPLAY -->
+    <div class="section">
+      <h2 class="section-title">3. Navigation, Breadcrumb & Tabs</h2>
+      <div class="elements-grid">
+        <div class="element-card">
+          <h3>Segmented Tabs & Breadcrumb</h3>
+          <nav class="breadcrumb" aria-label="Breadcrumb">
+            <a href="#">Rentals</a>
+            <span>/</span>
+            <a href="#">BK-2026-042</a>
+            <span>/</span>
+            <span>Handover</span>
+          </nav>
+          <div class="tabs-bar">
+            <button class="tab-item active">Overview</button>
+            <button class="tab-item">Equipment</button>
+            <button class="tab-item">Crew & Transport</button>
+            <button class="tab-item">Documents</button>
+          </div>
+        </div>
+        <div class="element-card">
+          <h3>Emerald Chart Ladder (Preset b2Dd1dt6u)</h3>
+          <div class="chart-container">
+            <div class="chart-bar c1" style="height: 55%;" title="Category 1"></div>
+            <div class="chart-bar c2" style="height: 80%;" title="Category 2"></div>
+            <div class="chart-bar c3" style="height: 65%;" title="Category 3"></div>
+            <div class="chart-bar c4" style="height: 90%;" title="Category 4"></div>
+            <div class="chart-bar c5" style="height: 40%;" title="Category 5"></div>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--muted);">
+            <span>Cameras</span>
+            <span>Lenses</span>
+            <span>Lighting</span>
+            <span>Audio</span>
+            <span>Grip</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 4: DATA TABLE -->
+    <div class="section">
+      <h2 class="section-title">4. Data Table (Rhea Rounded Shell)</h2>
+      <div class="tableCard card">
+        <div class="tableHead">
+          <div>
+            <h3 style="margin:0; font-size:14px; font-weight:600;">Active Equipment Roster</h3>
+            <p style="margin:2px 0 0; font-size:12px; color:var(--muted);">Sample live representation with Rhea Zinc table shell</p>
+          </div>
+          <button class="btn btn-secondary" style="min-height:36px; padding:0 12px; font-size:12px;">Export CSV</button>
+        </div>
+        <div class="data-table-shell" style="border:none; border-radius:0;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Asset / Equipment</th>
+                <th>Category</th>
+                <th>Condition</th>
+                <th>Daily Rate</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Sony FX6 Cinema Camera</td>
+                <td>Cameras</td>
+                <td><span class="badge badge-emerald">Ready</span></td>
+                <td>Rs. 4,500</td>
+                <td><span class="badge badge-secondary">In Stock</span></td>
+              </tr>
+              <tr>
+                <td>ARRI Ultra Prime 50mm T1.9</td>
+                <td>Lenses</td>
+                <td><span class="badge badge-emerald">Ready</span></td>
+                <td>Rs. 3,200</td>
+                <td><span class="badge badge-secondary">In Stock</span></td>
+              </tr>
+              <tr>
+                <td>Aputure 600d Pro LED</td>
+                <td>Lighting</td>
+                <td><span class="badge badge-emerald">Ready</span></td>
+                <td>Rs. 2,800</td>
+                <td><span class="badge badge-secondary">On Rent</span></td>
+              </tr>
+              <tr>
+                <td>Sennheiser MKH 416 Boom Mic</td>
+                <td>Audio</td>
+                <td><span class="badge badge-emerald">Ready</span></td>
+                <td>Rs. 1,500</td>
+                <td><span class="badge badge-secondary">In Stock</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

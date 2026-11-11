@@ -1,0 +1,1 @@
+const e=/^(97|98)\d{8}$/,t=/^\+977(97|98)[0-9]{8}$/,o="Must be a 10-digit Nepali mobile starting 97 or 98 — for example 9801234567.";function n(a){return a.replace(/[\s\-().]/g,"").replace(/^(?:\+977|977)/,"")}function s(a){return e.test(n(a))}function i(a){return`+977${n(a)}`}export{o as P,t as a,e as b,i as c,s as i,n as p};

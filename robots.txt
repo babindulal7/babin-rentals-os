@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /marketing.html
+Allow: /assets/
+Allow: /icons/
+Allow: /favicon.ico
+Disallow: /

@@ -1,0 +1,115 @@
+name: Windows PR smoke
+
+# Legacy workflow filename retained to preserve the existing workflow history.
+# Full PR CI is mandatory on Mac ARM64 in ci.yml; this complementary Windows
+# job is intentionally light and is NOT a substitute for database/security,
+# migration, lifecycle, financial-integrity, or coverage gates.
+# One same-repository PR = one Windows smoke, without GitHub-hosted minutes.
+on:
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A new head SHA replaces older checks for the same PR only.
+# Do not cancel unrelated PRs or required automatic main CI.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-smoke:
+    name: Windows · dependency-free smoke
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 15
+    env:
+      CI: 'true'
+      VITE_DATA_SOURCE: mock
+      NODE_OPTIONS: '--max-old-space-size=2048'
+
+    steps:
+      # Diagnostic: identify whether the job can execute a PowerShell step
+      # before checkout/setup-node; no credentials or repository files accessed.
+      - name: Runner startup preflight (before checkout)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Write-Output "Runner startup UTC: $([datetime]::UtcNow.ToString('o'))"
+          Write-Output "Runner: $env:RUNNER_NAME / $env:RUNNER_OS / $env:RUNNER_ARCH"
+          Write-Output "PowerShell: $($PSVersionTable.PSVersion)"
+          if ($env:RUNNER_OS -ne 'Windows' -or $env:RUNNER_ARCH -ne 'X64') {
+            throw 'Unexpected runner platform'
+          }
+
+      - name: Check out commit without persistent credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node 24 without npm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Confirm Windows x64 runner
+        shell: pwsh
+        run: |
+          if ($env:RUNNER_OS -ne 'Windows' -or $env:RUNNER_ARCH -ne 'X64') {
+            throw "Expected Windows/X64 self-hosted runner, got $env:RUNNER_OS/$env:RUNNER_ARCH"
+          }
+          Write-Output "Runner: $env:RUNNER_NAME ($env:RUNNER_OS/$env:RUNNER_ARCH)"
+
+      # macOS does the complete mandatory 17-gate suite. Keep the Windows
+      # lane genuinely light: no npm ci, no Vite build, no migrations, no secrets.
+      # The previous 10-minute failures produced no GitHub step details, so
+      # the small, dependency-free test also probes runner stability.
+      - name: Validate Windows runtime
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Write-Output "Node: $(node --version)"
+          Write-Output "npm: $(npm --version)"
+          Write-Output "Head: $(git rev-parse HEAD)"
+          if ($LASTEXITCODE -ne 0) { throw 'Git checkout HEAD could not be read' }
+          Write-Output "Runner: $env:RUNNER_NAME ($env:RUNNER_OS/$env:RUNNER_ARCH)"
+          node --check scripts/run-gates.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Node syntax check failed' }
+
+      - name: Node-only workflow and workstation tests
+        shell: pwsh
+        run: |
+          node --test scripts/run-gates.test.mjs scripts/local-api-guard.test.mjs scripts/test-receipt.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Dependency-free smoke tests failed' }
+
+      - name: Validate checked-in Windows PowerShell script syntax
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Join-Path $PWD 'scripts/generate-pwa-icons.ps1'),
+            [ref]$tokens, [ref]$parseErrors
+          ) | Out-Null
+          if ($parseErrors.Count -gt 0) {
+            $parseErrors | ForEach-Object { Write-Error $_.Message }
+            throw 'Windows installer PowerShell parse failed'
+          }
+
+      - name: Scope and runner evidence
+        if: always()
+        shell: pwsh
+        run: |
+          @(
+            '### Windows PR smoke (lightweight)'
+            "Runner: $env:RUNNER_NAME ($env:RUNNER_OS/$env:RUNNER_ARCH)"
+            "Commit: $env:GITHUB_SHA"
+            'Scope: Windows x64 runtime, Node 24 syntax, dependency-free CI contract/workstation tests, PowerShell syntax.'
+            'NOT a Windows app build or full CI. Require the 17-gate Mac CI check on this exact PR head.'
+          ) | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8

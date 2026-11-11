@@ -1,0 +1,364 @@
+name: CI
+
+# Run once for each PR update, then once again after merge to main.
+# Previously push('**') AND pull_request each scheduled the same full suite
+# for the same branch, doubling the queue on a single self-hosted Windows runner.
+# For a branch without an open PR, use workflow_dispatch to verify manually.
+# Required full verification stays on Mac (PR heads and main). Windows runs a
+# short cross-platform smoke check on main; it never replaces Mac's 17 gates.
+# Manual dispatch on a feature branch uses the complete Mac lane.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+  # Manual "Run workflow" button / `gh workflow run ci.yml --ref <branch>`.
+  workflow_dispatch:
+
+# Obsolete runs for the same PR and event type are cancelled when replaced.
+# Manual runs have their own group: they must not cancel required main/PR runs.
+# Independent PRs remain eligible to execute in parallel on separate runners.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: typecheck · test · build
+    # Mac runs every one of the 17 mandatory gates for PRs (and manual non-main).
+    # On main, this same required job context is a Windows X64 smoke check;
+    # the independent "Mac · full CI (main)" job retains all full gates.
+    # Preserve the existing check name and default self-hosted runner labels.
+    runs-on:
+      - self-hosted
+      - ${{ (github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')) && 'macOS' || 'Windows' }}
+      - ${{ (github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')) && 'ARM64' || 'X64' }}
+    # This job executes on the owner's own computer, so never run code from a
+    # forked pull request here. Pushes and same-repository PRs only.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # Mac full mode: 17 ordered gates, including isolated PGlite, security,
+    # lifecycle and coverage. Windows main smoke: typecheck, lint, local API
+    # guards and build only; never use a Windows smoke PASS as a full release gate.
+    # Windows npm ci and build may still be slow; measure rather than claiming speed.
+    # The separate verify-mac job below is mandatory for main release confidence.
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node (Mac full CI)
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
+        uses: actions/setup-node@v4
+        with:
+          # Pinned to the version the project is developed against. A skew here
+          # would show up first in src/lib/bs.ts, which formats dates through
+          # Intl in the Asia/Kathmandu zone and so depends on the runtime's ICU
+          # data being complete.
+          node-version: '24'
+          cache: npm
+
+      # `ci`, not `install`: the lockfile is the contract, and a CI run that
+      # silently resolves a newer transitive dependency is not reproducing what
+      # the author tested.
+      # Windows main is a quick runtime validation only. The independent Mac
+      # full CI job executes every database/security/financial/lifecycle gate.
+      # Never install npm dependencies here: Windows npm ci previously consumed
+      # 10 minutes then the runner job ended without any step logs.
+      - name: Set up Node (Windows smoke; no dependency cache)
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Windows dependency-free runner smoke (main)
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_OS -ne 'Windows' -or $env:RUNNER_ARCH -ne 'X64') {
+            throw "Expected Windows X64 runner, got $env:RUNNER_OS/$env:RUNNER_ARCH"
+          }
+          Write-Output "Runner: $env:RUNNER_NAME ($env:RUNNER_OS/$env:RUNNER_ARCH)"
+          Write-Output "Node: $(node --version)"
+          Write-Output "npm: $(npm --version)"
+          Write-Output "Head: $(git rev-parse HEAD)"
+          node --check scripts/run-gates.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Node syntax check failed' }
+          node --test scripts/run-gates.test.mjs scripts/local-api-guard.test.mjs scripts/test-receipt.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Node-only smoke tests failed' }
+          "Windows main smoke PASS: zero dependency install, no DB or network; Mac full CI is mandatory." | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+      - name: Install dependencies
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
+        run: npm ci
+
+      - name: Typecheck
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
+        run: npm run typecheck
+
+      # Enforce ESLint on every branch, rather than only in manual release checks.
+      - name: Lint source
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
+        run: npm run lint
+
+      # Pure, no-network check: local API verification must reject hosted URLs,
+      # privileged keys, and inconclusive/failed RLS reads.
+      - name: Local API verification safety guards
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
+        run: npm run test:local-api-guards
+
+      - name: Test (offline mock backend)
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
+        env:
+          VITE_DATA_SOURCE: mock
+        run: npm run test
+
+      # The migration chain, applied from scratch into an in-process Postgres 18
+      # (PGlite). No Docker, no Supabase stack, no network. It proves every
+      # CREATE, ALTER, trigger body and post-condition block in
+      # `supabase/migrations` still applies in filename order.
+      - name: Migrations build from scratch
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
+        run: npm run check:pglite
+
+      - name: Booking and invoice financial integrity (isolated PGlite)
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
+        run: node scripts/test-booking-financial-integrity.mjs
+
+      # R-27 (RULINGS-2026-09-08): one booking's whole life — create, confirm,
+      # the floor, invoice, payment, close — driven through that same Postgres
+      # with an assertion at every step, as a real role under real RLS.
+      #
+      # This is the gate the unit suite cannot be: 2,834 green tests sat over a
+      # database that accepted a double booking and refused every discounted
+      # booking, because both failures live on the far side of the mock seam.
+      # A red step blocks merge.
+      # Includes Admin superior/self-target guards, operations grant history,
+      # and direct Reset queue/task writes/reparenting (0171 + 0172).
+      - name: Authenticated security and branch-Reset regressions (isolated PGlite)
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
+        run: npm run check:security
+
+      - name: Lifecycle
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
+        run: npm run check:lifecycle
+
+      - name: Record sections, equipment lifecycle and membership RPC contracts
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
+        run: npm run test:server-contracts
+
+      - name: Verified partial serial and quantity Return reservations
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
+        run: npm run test:partial-return
+
+      # R-29: an entry that logs Did / Ruled / Verified and no Completion /
+      # Remaining is logged as unfinished, and this is what says so. One grep.
+      - name: PROGRESS.md carries its Completion and Remaining blocks
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
+        run: npm run lint:progress
+
+      - name: Completion receipts cannot certify stale or failed runs
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
+        run: node --test scripts/test-receipt.test.mjs
+
+      # Item 5: Page shell design invariants (PageHeader, single primary CTA, 44px floor, no dev notes)
+      - name: Page shell design invariants
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
+        run: npm run lint:shell
+
+      - name: Staff UI contains no developer notes
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
+        run: npm run lint:ui-copy
+
+      # WCAG AA on the SHIPPED theme.css, both themes.
+      #
+      # This gate existed and was never in this file, which is how three real
+      # contrast bugs reached the dashboard: `--muted` was measured only against
+      # `--surface` (white) while being painted on the app's tinted surfaces,
+      # where it fell to 4.45:1; `--warn`'s desaturation took its dark ink to
+      # 4.03:1; and the dark sidebar's `--nav-active-accent` sat at 4.30:1. A
+      # gate nobody runs is not a gate. The tinted-surface and nav-accent pairs
+      # are now asserted too, so a token cannot pass by being checked against
+      # the one background it was never painted on.
+      - name: Contrast (WCAG AA, light + dark)
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
+        run: npm run check:contrast
+
+      # `npm run build` is `tsc --noEmit && vite build`, so this re-runs the
+      # typecheck. Kept separate anyway: a type error should fail in seconds
+      # under its own name rather than inside a two-minute bundle step.
+      #
+      # No VITE_SUPABASE_* values are injected. Vite inlines them at build time,
+      # so a placeholder would bake a dead URL into a bundle that looks
+      # deployable and is not. This job proves the tree compiles and bundles; a
+      # deploy job is where real values belong.
+      - name: Build
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
+        run: npm run build
+
+      - name: Coverage (offline mock backend)
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
+        env:
+          VITE_DATA_SOURCE: mock
+        run: npm run test:coverage
+
+      # `npm run completion` (R-29) reads this to fill the Lifecycle row of the
+      # Completion block, so a session that cannot run PGlite locally can still
+      # cite a counted figure rather than typing one.
+      - name: Upload lifecycle result
+        if: always() && (github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'))
+        uses: actions/upload-artifact@v4
+        with:
+          name: lifecycle
+          path: .lifecycle-result.json
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload coverage
+        if: always() && (github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'))
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: |
+            coverage/
+            artifacts/coverage-runs/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  verify-mac:
+    name: Mac · full CI (main)
+    # Native macOS ARM64 self-hosted runner on the owner's M4 Mac mini.
+    # Executes the full mandatory verification suite on pushes to main.
+    runs-on: [self-hosted, macOS, ARM64]
+    # Runs exclusively on main pushes (and explicit manual workflow_dispatch on main).
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    timeout-minutes: 120
+    env:
+      CI: 'true'
+      VITE_DATA_SOURCE: mock
+      # Cap Node heap to preserve headroom on the 16 GB Apple Silicon host.
+      NODE_OPTIONS: '--max-old-space-size=2048'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Confirm runner identity and Apple Silicon specs
+        shell: bash
+        run: |
+          test "${RUNNER_OS}" = macOS
+          test "${RUNNER_ARCH}" = ARM64
+          echo "Runner Name: ${RUNNER_NAME}"
+          echo "CPU Cores: $(sysctl -n hw.ncpu)"
+          echo "RAM: $(($(sysctl -n hw.memsize) / 1024 / 1024 / 1024)) GB"
+          echo "Free Disk: $(df -h . | awk 'NR==2 {print $4}')"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint source
+        run: npm run lint
+
+      - name: Local API verification safety guards
+        run: npm run test:local-api-guards
+
+      - name: Test (offline mock backend)
+        env:
+          VITE_DATA_SOURCE: mock
+        run: npm run test
+
+      - name: Migrations build from scratch
+        run: npm run check:pglite
+
+      - name: Booking and invoice financial integrity (isolated PGlite)
+        run: node scripts/test-booking-financial-integrity.mjs
+
+      - name: Authenticated security and branch-Reset regressions (isolated PGlite)
+        run: npm run check:security
+
+      - name: Lifecycle
+        run: npm run check:lifecycle
+
+      - name: Record sections, equipment lifecycle and membership RPC contracts
+        run: npm run test:server-contracts
+
+      - name: Verified partial serial and quantity Return reservations
+        run: npm run test:partial-return
+
+      - name: PROGRESS.md carries its Completion and Remaining blocks
+        run: npm run lint:progress
+
+      - name: Completion receipts cannot certify stale or failed runs
+        run: node --test scripts/test-receipt.test.mjs
+
+      - name: Page shell design invariants
+        run: npm run lint:shell
+
+      - name: Staff UI contains no developer notes
+        run: npm run lint:ui-copy
+
+      - name: Contrast (WCAG AA, light + dark)
+        run: npm run check:contrast
+
+      - name: Build
+        run: npm run build
+
+      - name: Coverage (offline mock backend)
+        env:
+          VITE_DATA_SOURCE: mock
+        run: npm run test:coverage
+
+      - name: Upload lifecycle result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lifecycle-mac
+          path: .lifecycle-result.json
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-mac
+          path: |
+            coverage/
+            artifacts/coverage-runs/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Runner summary and verification evidence
+        if: always()
+        shell: bash
+        run: |
+          echo "### Mac Full CI Verification (main)" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- **Runner:** ${RUNNER_NAME} (${RUNNER_OS}/${RUNNER_ARCH})" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- **Ref:** ${GITHUB_REF}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- **Commit:** ${GITHUB_SHA}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- **Scope:** All 17 mandatory verification gates executed natively on Apple Silicon." >> "${GITHUB_STEP_SUMMARY}"
