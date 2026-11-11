@@ -40,7 +40,7 @@ const chipStyle = (active: boolean): React.CSSProperties => ({
   border: active ? '1px solid rgba(47, 125, 255, 0.4)' : '1px solid var(--border)',
   background: active ? 'rgba(47, 125, 255, 0.14)' : 'transparent',
   color: active ? 'var(--info)' : 'var(--text3)',
-  transition: 'all 0.15s',
+  transition: 'all var(--dur)',
 })
 
 export default function WarrantyTracker() {

@@ -106,6 +106,8 @@ import { RentalSummaryModal } from './modals/RentalSummaryModal'
 import { RentalMoreActions } from './actions/RentalMoreActions'
 import { BookingConflictModal } from './booking/BookingConflictModal'
 import type { LineEvaluationResult, BookingAvailabilityEvaluation } from '../../lib/availabilityEvaluation'
+import { exportPackingListPdf, openPdfForPrint } from '../../lib/pdf/exportPdf'
+import { buildPackingListPdfItems } from '../../lib/pdf/generatePdf'
 
 /**
  * # Booking Detail — live, for ANY `:bookingNo`
@@ -1009,6 +1011,8 @@ function BookingDetailView() {
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [showCreateInvoice, setShowCreateInvoice] = useState(false)
   const [showCreateDocument, setShowCreateDocument] = useState(false)
+  const [pickListPrinting, setPickListPrinting] = useState(false)
+  const [pickListError, setPickListError] = useState<string | null>(null)
   const { showSuccessToast } = useToast()
   const { openOperations } = useOperationsWorkspace()
   const viewport = useViewport()
@@ -1931,6 +1935,30 @@ function BookingDetailView() {
 
   const stage = (booking?.stage ?? 'Draft') as BookingStatus
   const lines: FloorLine[] = floor?.lines ?? []
+  const printPickList = async () => {
+    if (!floor || floor.linesPresence !== 'present' || floor.lines.length === 0) return
+    setPickListPrinting(true)
+    setPickListError(null)
+    try {
+      const result = await exportPackingListPdf({
+        bookingNo: floor.bookingNo,
+        bookingUrl: new URL(`/rentals/${encodeURIComponent(floor.bookingNo)}`, window.location.origin).href,
+        clientName: floor.clientName ?? 'Client',
+        project: floor.project,
+        pickupAtAd: floor.pickupAtAd,
+        returnAtAd: floor.returnAtAd,
+        deliveryType: floor.deliveryType ? deliveryTypeLabel(floor.deliveryType) : 'Client Pickup',
+        packedBy: user?.name ?? null,
+        items: buildPackingListPdfItems(floor.lines),
+      })
+      openPdfForPrint(result.blob, `Pick_List_${floor.bookingNo}`)
+      showSuccessToast('Pick List Ready', `Opened printable pick list for ${floor.bookingNo}.`)
+    } catch (error) {
+      setPickListError(error instanceof Error ? error.message : 'The pick list could not be generated.')
+    } finally {
+      setPickListPrinting(false)
+    }
+  }
   const missingSerialsCount = lines
     .filter((l) => l.lineType === 'Equipment' && l.trackingMode === 'Serialised')
     .reduce((sum, l) => sum + Math.max(0, l.qty - l.units.length), 0)
@@ -2258,34 +2286,26 @@ function BookingDetailView() {
       {/* Payment is a quick action on the existing booking. Reuse the invoice-
           linked modal and its payment.create RBAC gate; never post money from
           a row button or route the operator away to the Finance ledger.
-          On phones this rail belongs to the Money segment. */}
-      {canBookingMoney && showSegment('Money') && (
-        <Card title="Quick Actions">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
-            {canTakePayment && recordPaymentButton('Record Payment')}
-            {canRaiseInvoice && createInvoiceButton(hasInvoice ? 'View Invoice' : 'Create Invoice')}
-            {draftInvoice && (
-              <Button
-                variant="secondary"
-                icon="file"
-                loading={generatingProForma}
-                onClick={() => void handleGenerateProForma(draftInvoice.id)}
-              >
-                Pro Forma Invoice
-              </Button>
-            )}
-          </div>
-        </Card>
-      )}
-
-      {/* Live invoice values; never combine the refundable deposit with rental
-          payments or display balances to money-blind warehouse roles. */}
+          On phones this rail belongs to the Money segment.
+          RULING 2026-11-10: G-1 / Card 1 — Single Quick Actions card (deduplicated).
+          Contains Record Payment, Create/View Invoice, Pro Forma (if draft),
+          and invoice read-error line with Retry. */}
       {canBookingMoney && showSegment('Money') && (
         <>
           <Card title="Quick Actions">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
               {canTakePayment && recordPaymentButton('Record Payment')}
-              {canRaiseInvoice && !hasInvoice && createInvoiceButton('Create Invoice')}
+              {canRaiseInvoice && createInvoiceButton(hasInvoice ? 'View Invoice' : 'Create Invoice')}
+              {draftInvoice && (
+                <Button
+                  variant="secondary"
+                  icon="file"
+                  loading={generatingProForma}
+                  onClick={() => void handleGenerateProForma(draftInvoice.id)}
+                >
+                  Pro Forma Invoice
+                </Button>
+              )}
               {invoicesList.error && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4 }}>
                   <span style={{ fontSize: 'var(--t-meta)', color: 'var(--danger-text)' }}>Could not read invoices</span>
@@ -2393,6 +2413,22 @@ function BookingDetailView() {
   const moreItems: OverflowMenuItem[] = [
     /* RULING 2026-10-16: on a phone the shell's Search button lives here (`searchInMore`). */
     ...(onPhone ? [{ label: 'Search', icon: 'search' as const, onClick: openCommandPalette }] : []),
+    {
+      label: pickListPrinting ? 'Preparing pick list…' : 'Print pick list',
+      icon: 'file' as const,
+      onClick: () => void printPickList(),
+      ...(floorLoading
+        ? { unavailable: 'The booking items are still loading.' }
+        : floorError
+          ? { unavailable: 'The booking items could not be read. Retry the item read first.' }
+          : !floor || floor.linesPresence !== 'present'
+            ? { unavailable: 'The booking item list is unavailable.' }
+            : floor.lines.length === 0
+              ? { unavailable: 'This booking has no equipment lines to print.' }
+              : pickListPrinting
+                ? { unavailable: 'The pick list is already being prepared.' }
+                : {}),
+    },
     { label: 'Print booking', icon: 'file' as const, onClick: () => window.print() },
     ...bookingMoreItems,
   ]
@@ -2838,6 +2874,11 @@ function BookingDetailView() {
                   <ErrorBanner title="Could not release the unit" message={releaseError} />
                 </div>
               )}
+              {pickListError && (
+                <div style={{ marginBottom: 'var(--sp-sm)' }}>
+                  <ErrorBanner title="Could not print the pick list" message={pickListError} />
+                </div>
+              )}
               {floorError ? (
                 <ErrorBanner title="Could not load this booking's items" message={floorError} />
               ) : floorLoading ? (
@@ -3252,7 +3293,6 @@ function BookingDetailView() {
                         </DataTableShell>
                       </div>
                     )}
-                    {onPhone && canTakePayment && <div style={{ marginTop: 10 }}>{recordPaymentButton('Record Payment')}</div>}
                   </div>
                 </div>
               )}

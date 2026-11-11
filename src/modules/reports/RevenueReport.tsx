@@ -20,7 +20,6 @@ import {
   type ReportChartPoint,
 } from '../../components/ui/reports'
 import '../../styles/reportChartTokens.css'
-import '../../styles/shadcn-preset-pilot.css'
 
 /**
  * This report displays ONLY successfully fetched taxable issued-invoice values.

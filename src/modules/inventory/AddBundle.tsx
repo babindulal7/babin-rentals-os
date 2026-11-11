@@ -1481,7 +1481,7 @@ export function AddBundle(props: AddBundleProps = {}) {
                       borderRadius: 'var(--r-badge)',
                       background: active ? 'var(--success)' : 'var(--st-neutral-bg)',
                       position: 'relative',
-                      transition: 'background-color var(--dur) ease',
+                      transition: 'background-color var(--dur) var(--ease)',
                     }}
                   >
                     <span
@@ -1494,7 +1494,7 @@ export function AddBundle(props: AddBundleProps = {}) {
                         borderRadius: 'var(--r-badge)',
                         background: 'var(--card)',
                         transform: active ? 'translateX(13px)' : 'translateX(0)',
-                        transition: 'transform var(--dur) ease',
+                        transition: 'transform var(--dur) var(--ease)',
                       }}
                     />
                   </span>

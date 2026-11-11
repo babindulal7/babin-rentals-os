@@ -124,7 +124,7 @@ export function Donut({
               opacity={hover === null || hover === i ? 1 : 0.42}
               onMouseEnter={() => setHover(i)}
               onMouseLeave={() => setHover(null)}
-              style={{ transition: 'opacity var(--dur) ease' }}
+              style={{ transition: 'opacity var(--dur) var(--ease)' }}
             />
           )
         })}
@@ -420,7 +420,7 @@ export function GroupedBars({
                     // 4px rounded data-end, square at the baseline
                     borderRadius: '4px 4px 0 0',
                     opacity: !hover || (hover[0] === gi && hover[1] === si) ? 1 : 0.42,
-                    transition: 'opacity var(--dur) ease',
+                    transition: 'opacity var(--dur) var(--ease)',
                     minHeight: 2,
                   }}
                 />

@@ -76,7 +76,7 @@ const weekChipBase: React.CSSProperties = {
   border: '1px solid var(--border)',
   background: 'transparent',
   color: 'var(--text3)',
-  transition: 'all 0.15s',
+  transition: 'all var(--dur)',
 }
 
 const weekChipActive: React.CSSProperties = {
@@ -179,7 +179,7 @@ function StaffCard({
                     borderRadius: '3px 3px 0 0',
                     background: h === 0 ? 'var(--border)' : h >= STANDARD_DAY_HOURS ? 'var(--success)' : 'var(--ready)',
                     minHeight: h > 0 ? 4 : 2,
-                    transition: 'height 0.2s',
+                    transition: 'height var(--dur-theme)',
                   }}
                 />
                 <span style={{ fontSize: '10px', color: 'var(--text3)' }}>{TIMESHEET_DAYS[i]}</span>
@@ -369,7 +369,7 @@ export default function TimesheetTab() {
                         style={{
                           borderBottom: isOpen ? 'none' : '1px solid var(--border)',
                           cursor: 'pointer',
-                          transition: 'background 0.1s',
+                          transition: 'background var(--dur-fast)',
                         }}
                         onClick={() => setOpenIdx(isOpen ? null : i)}
                         onKeyDown={(e) => {
@@ -425,7 +425,7 @@ export default function TimesheetTab() {
                                       height: Math.max(Math.round((h / 9) * 40), h > 0 ? 4 : 2),
                                       borderRadius: '3px 3px 0 0',
                                       background: h === 0 ? 'var(--border)' : h >= STANDARD_DAY_HOURS ? 'var(--success)' : 'var(--ready)',
-                                      transition: 'height 0.2s',
+                                      transition: 'height var(--dur-theme)',
                                     }}
                                   />
                                   <span style={{ fontSize: '10px', color: 'var(--text3)' }}>{TIMESHEET_DAYS[di]}</span>
