@@ -67,6 +67,31 @@ function createLiveClient() {
 }
 
 /**
+ * T1-15 staff-switch verification is deliberately isolated from the app's
+ * persistent Supabase client. It must not write target credentials into the
+ * active session before the target's server-side PIN has been verified.
+ *
+ * Refreshing a stored single-use target token rotates it; the caller persists
+ * the replacement in the encrypted per-device roster, never localStorage.
+ */
+export function createStaffSwitchClient(): ReturnType<typeof createLiveClient> {
+  if (IS_MOCK) throw new Error('Staff PIN switching is unavailable in mock mode.')
+  const url = import.meta.env['VITE_SUPABASE_URL']
+  const anonKey = import.meta.env['VITE_SUPABASE_ANON_KEY']
+  if (!url || !anonKey) throw new Error('Supabase connection is unavailable.')
+  return createClient(url, anonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+    global: {
+      headers: { 'x-application-name': 'babin-rentals-os-staff-switch' },
+    },
+  })
+}
+
+/**
  * In production builds, `VITE_DATA_SOURCE` is inlined as `'live'` (the default),
  * so `IS_MOCK` becomes `false` and the mock branch is dead-code eliminated.
  * In `dev:mock`, it is inlined as `'mock'` and the mock client is used.
