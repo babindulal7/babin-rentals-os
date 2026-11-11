@@ -1909,6 +1909,74 @@ const STEPS = [
         )
       })
 
+      // 2b. A supplied actor ID is never an authorization credential or
+      // audit identity, even for a Coordinator who may otherwise extend.
+      await as('Coordinator', async () => {
+        await refuses(
+          'Coordinator impersonating Owner while extending',
+          `select extend_booking(jsonb_build_object(
+            'booking_id', $1::uuid,
+            'days', 2,
+            'reason', 'Attempt with forged audit actor identity',
+            'actor_id', $2::uuid
+          ))`,
+          [bookingIds['ext_test'], U.Owner],
+          /supplied actor does not match/i,
+        )
+        await refuses(
+          'Coordinator impersonating Owner through extended_by',
+          `select extend_booking(jsonb_build_object(
+            'booking_id', $1::uuid,
+            'days', 2,
+            'reason', 'Attempt with forged secondary audit actor',
+            'extended_by', $2::uuid
+          ))`,
+          [bookingIds['ext_test'], U.Owner],
+          /supplied actor does not match/i,
+        )
+        await refuses(
+          'Coordinator directly rewriting a Draft invoice',
+          'select resync_draft_invoice($1::uuid)',
+          [bookingIds['ext_test']],
+          /permission denied for function resync_draft_invoice/i,
+        )
+      })
+      assertEq(
+        new Date(await one('select return_at from bookings where id = $1', [bookingIds['ext_test']])).toISOString(),
+        '2105-06-03T04:00:00.000Z',
+        'forged actor tests leave the booking date unchanged',
+      )
+
+      // 2c. The security-definer RPC must not let a Coordinator change a
+      // booking belonging to another branch. All setup is rolled back.
+      await undone(async () => {
+        const foreignBranch = '00000000-0000-4000-8000-00000000f9ab'
+        await q(
+          `insert into branches (id, client_uuid, branch_code, name, address, phone, created_by)
+           values ($1, gen_random_uuid(), 'BR-TEST-EXT', 'Lifecycle Other Branch',
+                   'Separate test site', '9800009999', $2)`,
+          [foreignBranch, U.Owner],
+        )
+        await q('update users set branch_id = $1 where id = $2', [foreignBranch, U.Coordinator])
+        await as('Coordinator', async () => {
+          await db.exec('savepoint extension_branch_probe;')
+          try {
+            await refuses(
+              'Coordinator extending another branch booking',
+              `select extend_booking(jsonb_build_object(
+                'booking_id', $1::uuid,
+                'days', 2,
+                'reason', 'Cross branch request must be refused'
+              ))`,
+              [bookingIds['ext_test']],
+              /booking belongs to another branch/i,
+            )
+          } finally {
+            await db.exec('rollback to savepoint extension_branch_probe; release savepoint extension_branch_probe;')
+          }
+        })
+      })
+
       // 3. Coordinator extends booking by 2 days via extend_booking RPC
       let rpcResult
       await as('Coordinator', async () => {
