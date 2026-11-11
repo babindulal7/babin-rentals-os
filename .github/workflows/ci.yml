@@ -111,7 +111,10 @@ jobs:
       # privileged keys, and inconclusive/failed RLS reads.
       - name: Local API verification safety guards
         if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
-        run: npm run test:local-api-guards
+        run: |
+          npm run test:local-api-guards
+          node --check electron/main.cjs
+          node --test scripts/test-electron-storage-path.test.mjs
 
       - name: Test (offline mock backend)
         if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
@@ -277,7 +280,10 @@ jobs:
         run: npm run lint
 
       - name: Local API verification safety guards
-        run: npm run test:local-api-guards
+        run: |
+          npm run test:local-api-guards
+          node --check electron/main.cjs
+          node --test scripts/test-electron-storage-path.test.mjs
 
       - name: Test (offline mock backend)
         env:
