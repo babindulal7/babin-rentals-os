@@ -201,6 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const limboUserIdRef = useRef<string | null>(null)
   const switchInProgressRef = useRef(false)
   const authGenerationRef = useRef(0)
+  const passwordSignInInProgressRef = useRef(false)
 
   const refreshRoster = useCallback(async () => {
     try {
@@ -339,6 +340,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled || limboUserIdRef.current !== null) return
+
+      // Supabase broadcasts auth changes across tabs. A verified B session in
+      // one tab must NOT silently promote another tab that is still Owner A.
+      // Only an explicit password sign-in or this tab's verified PIN path may
+      // authorize an identity change here. The other tab fails closed.
+      if (session && userIdRef.current && session.user.id !== userIdRef.current &&
+          !passwordSignInInProgressRef.current) {
+        authGenerationRef.current += 1
+        setUser(null)
+        setLocked(true)
+        void supabase.auth.signOut({ scope: 'local' })
+        return
+      }
       hydrateUserLanguage(session?.user.id ?? null, session?.user.user_metadata)
 
       /*
@@ -409,9 +423,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * and only this call produces one.
    */
   const signIn = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    // onAuthStateChange populates `user`; only the failure path is reported here.
-    return { error: error ? error.message : null }
+    passwordSignInInProgressRef.current = true
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      // onAuthStateChange populates `user`; only the failure path is reported here.
+      return { error: error ? error.message : null }
+    } finally {
+      passwordSignInInProgressRef.current = false
+    }
   }, [])
 
   /**
