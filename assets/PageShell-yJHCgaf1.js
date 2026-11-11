@@ -1,0 +1,1 @@
+import{j as o}from"./vendor-base-ui-EYEaoMzE.js";import"./vendor-react-HjyheGJw.js";import"./main-Ucmo4mSs.js";function c({width:e="full",header:l,toolbar:a,summary:r,children:t,className:i,...n}){return o.jsxs("div",{className:["page-shell",`page-shell--${e}`,"animate-entrance",i].filter(Boolean).join(" "),...n,children:[l,a,r,t]})}export{c as P};
