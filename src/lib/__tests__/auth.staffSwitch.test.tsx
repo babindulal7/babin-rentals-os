@@ -160,7 +160,8 @@ describe('AuthProvider staff switch — global activation is last', () => {
     expect(latest?.user).toBeNull()
     expect(latest?.limboState).not.toBe('idle')
     await act(async () => { resolvePin(); await pending })
-    expect(fake.setSession).toHaveBeenCalledExactlyOnceWith({
+    expect(fake.setSession).toHaveBeenCalledTimes(1)
+    expect(fake.setSession).toHaveBeenCalledWith({
       access_token: 'B-verified-access', refresh_token: 'B-rotated-refresh',
     })
     expect(latest?.user?.role).toBe('Warehouse')
