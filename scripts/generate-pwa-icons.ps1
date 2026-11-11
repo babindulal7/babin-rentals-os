@@ -1,6 +1,6 @@
 Add-Type -AssemblyName System.Drawing
 
-$sourcePath = Join-Path $PSScriptRoot "..\public\icons\512.png"
+$sourcePath = Join-Path (Join-Path $PSScriptRoot "..") "public/icons/512.png"
 if (-not (Test-Path $sourcePath)) {
     Write-Error "Source icon not found at $sourcePath"
     exit 1
@@ -50,7 +50,7 @@ function Generate-Maskable-Icon([int]$size, [string]$destPath, [string]$bgColorH
     Write-Host "Generated maskable icon $destPath with safe zone ($size x $size, color $bgColorHex)"
 }
 
-$iconsDir = Join-Path $PSScriptRoot "..\public\icons"
+$iconsDir = Join-Path (Join-Path $PSScriptRoot "..") "public/icons"
 
 Resize-Icon 192 192 (Join-Path $iconsDir "192.png")
 Resize-Icon 512 512 (Join-Path $iconsDir "512.png")

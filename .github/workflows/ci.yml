@@ -10,7 +10,16 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
   pull_request:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
   # Manual "Run workflow" button / `gh workflow run ci.yml --ref <branch>`.
   workflow_dispatch:
 
@@ -18,7 +27,7 @@ on:
 # Manual runs have their own group: they must not cancel required main/PR runs.
 # Independent PRs remain eligible to execute in parallel on separate runners.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
