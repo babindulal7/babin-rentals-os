@@ -1637,7 +1637,7 @@ export default function ReturnWorkspace({
                   </span>
                 </div>
                 <div aria-hidden style={{ height: 8, borderRadius: 'var(--r-badge)', background: 'var(--card2)', marginTop: 6, overflow: 'hidden' }}>
-                  <div style={{ width: '100%', height: '100%', background: 'var(--success)', borderRadius: 'var(--r-badge)', transform: `scaleX(${pct / 100})`, transformOrigin: 'left', transition: 'transform var(--dur) ease' }} />
+                  <div style={{ width: '100%', height: '100%', background: 'var(--success)', borderRadius: 'var(--r-badge)', transform: `scaleX(${pct / 100})`, transformOrigin: 'left', transition: 'transform var(--dur) var(--ease)' }} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5, fontSize: 'var(--t-meta)', color: outstandingUnits ? 'var(--progress-text)' : 'var(--success-text)', fontWeight: 600 }}>
                   <Icon name={outstandingUnits ? 'alert_triangle' : 'checklist'} size={12} />
@@ -1834,7 +1834,7 @@ export default function ReturnWorkspace({
                               : scanPulse === 'error'
                               ? '0 0 12px color-mix(in srgb, var(--danger, #ef4444) 40%, transparent)'
                               : 'none',
-                          transition: 'outline 0.15s ease-in-out, box-shadow 0.15s ease-in-out',
+                          transition: 'outline var(--dur) var(--ease), box-shadow var(--dur) var(--ease)',
                         }}
                       >
 

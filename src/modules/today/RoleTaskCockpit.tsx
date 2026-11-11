@@ -164,7 +164,7 @@ function TaskCard({
           alignItems: 'center',
           justifyContent: 'center',
           gap: '8px',
-          transition: 'all 0.15s ease',
+          transition: 'all var(--dur) var(--ease)',
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.background = 'var(--primary)'

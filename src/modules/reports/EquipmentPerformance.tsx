@@ -101,7 +101,7 @@ function PerformerRankingBars({ rows }: { rows: EquipmentPerformanceRow[] }) {
                   height: '100%',
                   background: 'var(--chart-1, #0284c7)',
                   borderRadius: 4,
-                  transition: 'width 0.3s ease',
+                  transition: 'width var(--dur-drawer) var(--ease)',
                 }}
               />
             </div>

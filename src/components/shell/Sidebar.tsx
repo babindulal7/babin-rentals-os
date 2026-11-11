@@ -147,7 +147,7 @@ export default function Sidebar({ active }: SidebarProps) {
            as a one-off on collapse. theme.css's prefers-reduced-motion block
            (`* { transition: none !important }`) beats this inline value, so the
            opt-out is already honoured. */
-        transition: 'width 240ms var(--ease), background-color var(--dur-theme) ease',
+        transition: 'width var(--dur-drawer) var(--ease), background-color var(--dur-theme) var(--ease)',
       }}
     >
       <div
@@ -281,7 +281,7 @@ export default function Sidebar({ active }: SidebarProps) {
                 fontWeight: glass ? 600 : 500,
                 cursor: 'pointer',
                 fontFamily: 'inherit',
-                transition: 'all var(--dur-fast, 120ms) ease',
+                transition: 'all var(--dur-fast) var(--ease)',
               }}
             >
               <Icon name="sparkles" size={14} style={{ color: glass ? 'var(--primary-text, #2456d6)' : undefined }} />
@@ -743,7 +743,7 @@ function NavList({
                   width: '100%',
                   textAlign: 'left',
                   fontFamily: 'inherit',
-                  transition: 'background-color var(--dur) ease, color var(--dur) ease',
+                  transition: 'background-color var(--dur) var(--ease), color var(--dur) var(--ease)',
                 }}
               >
                 {isMoreActive && (
@@ -814,7 +814,7 @@ function NavList({
                           background: on ? 'var(--select-bg)' : 'transparent',
                           position: 'relative',
                           cursor: 'pointer',
-                          transition: 'background-color var(--dur) ease, color var(--dur) ease',
+                          transition: 'background-color var(--dur) var(--ease), color var(--dur) var(--ease)',
                         }}
                       >
                         {on && (

@@ -3,7 +3,13 @@
 const fs=require('fs')
 const css=fs.readFileSync(require('path').join(__dirname,'..','src','styles','theme.css'),'utf8').replace(/\r\n/g,'\n')
 const palette=fs.readFileSync(require('path').join(__dirname,'..','src','styles','preset-black-light.css'),'utf8').replace(/\r\n/g,'\n')
-const pilot=fs.readFileSync(require('path').join(__dirname,'..','src','styles','shadcn-preset-pilot.css'),'utf8').replace(/\r\n/g,'\n')
+const pilotPath=fs.existsSync(require('path').join(__dirname,'..','src','styles','shadcn-preset-pilot.css'))
+  ? require('path').join(__dirname,'..','src','styles','shadcn-preset-pilot.css')
+  : require('path').join(__dirname,'..','src','styles','ui-v2.css')
+const pilotRaw=fs.readFileSync(pilotPath,'utf8').replace(/\r\n/g,'\n')
+const pilot=pilotPath.endsWith('ui-v2.css')
+  ? (pilotRaw.slice(pilotRaw.indexOf('[data-ui-preset="rhea"]')).match(/\{([\s\S]*?)\}/)?.[1] ?? '')
+  : pilotRaw
 const entry=fs.readFileSync(require('path').join(__dirname,'..','src','main.tsx'),'utf8')
 const lumaPath=require('path').join(__dirname,'..','src','styles','shadcn-luma-ui.css')
 const luma=entry.includes("import './styles/shadcn-luma-ui.css'")&&fs.existsSync(lumaPath)?fs.readFileSync(lumaPath,'utf8'):null

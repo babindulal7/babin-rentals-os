@@ -401,7 +401,7 @@ export const SignaturePad = forwardRef<SignaturePadRef, SignaturePadProps>(funct
             fontWeight: 600,
             cursor: disabled || !hasDrawnState ? 'not-allowed' : 'pointer',
             opacity: hasDrawnState ? 1 : 0.6,
-            transition: 'opacity 0.15s ease',
+            transition: 'opacity var(--dur) var(--ease)',
           }}
         >
           <Icon name="x" size={14} />

@@ -149,14 +149,14 @@ describe('generatePdf', () => {
       expect(xrefSlice).toBe('xref')
     })
 
-    it('handles zero VAT percent dynamically and displays overflow indicator for >12 lines', () => {
+    it('handles zero VAT percent dynamically and prints every invoice line over multiple pages', () => {
       const overflowData: InvoicePdfData = {
         invoiceNo: 'INV-2026-0099',
         status: 'Sent',
         bookingNo: 'BK-999',
         client: { name: 'Large Project Crew' },
         company: { name: 'Recorded Rentals', panVat: '123456789' },
-        lines: Array.from({ length: 15 }, (_, i) => ({
+        lines: Array.from({ length: 40 }, (_, i) => ({
           description: `Gear Item #${i + 1}`,
           quantity: 1,
           rentalDays: 1,
@@ -174,7 +174,10 @@ describe('generatePdf', () => {
       const text = new TextDecoder().decode(bytes)
 
       expect(text).toContain('VAT \\(0%\\):')
-      expect(text).toContain('...and 4 more items included in totals')
+      expect(text).toContain('Gear Item #1')
+      expect(text).toContain('Gear Item #40')
+      expect(text).toContain('Page 1 of')
+      expect(text).not.toContain('more items included in totals')
     })
 
     it('handles Draft invoices with no invoice_no cleanly', () => {
@@ -305,6 +308,38 @@ describe('generatePdf', () => {
       expect(text).not.toContain('Subtotal')
       expect(text).not.toContain('Total:')
     })
+
+    it('prints every line across A4 pages with booking identity, page numbers, and a scannable booking route', () => {
+      const items = Array.from({ length: 40 }, (_, index) => ({
+        id: `line-${index + 1}`,
+        name: `Equipment line ${String(index + 1).padStart(2, '0')}`,
+        assetCode: `ASSET-${String(index + 1).padStart(2, '0')}`,
+        quantity: 1,
+        location: `Shelf ${index + 1}`,
+      }))
+
+      const text = new TextDecoder().decode(generatePackingListPdf({
+        bookingNo: 'BK-2026-0040',
+        bookingUrl: 'https://rentals.example.test/rentals/BK-2026-0040',
+        clientName: 'Forty Line Films',
+        project: 'Full Manifest Test',
+        pickupAtAd: '2026-11-04T04:15:00.000Z',
+        items,
+      }))
+
+      expect(text).toContain('/Count 2')
+      expect(text).toContain('Equipment line 01')
+      expect(text).toContain('Equipment line 40')
+      expect(text).toContain('ASSET-01')
+      expect(text).toContain('ASSET-40')
+      expect(text).toContain('Page 1 of 2')
+      expect(text).toContain('Page 2 of 2')
+      expect(text.match(/BK-2026-0040/g)?.length).toBeGreaterThanOrEqual(2)
+      expect(text).toContain('QR booking route: https://rentals.example.test/rentals/BK-2026-0040')
+      expect(text).not.toContain('more equipment lines')
+      expect(text).not.toContain('NPR')
+      expect(text).not.toContain('Subtotal')
+    })
   })
 
   describe('generateReturnReportPdf (T2-08, Return report)', () => {
@@ -363,6 +398,32 @@ describe('generatePdf', () => {
       expect(text).not.toContain('Deposit')
       expect(text).not.toContain('Subtotal')
       expect(text).not.toContain('Total Amount')
+    })
+
+    it('prints all 40 return lines across numbered pages', () => {
+      const lines = Array.from({ length: 40 }, (_, index) => ({
+        id: `return-${index + 1}`,
+        name: `Returned equipment ${String(index + 1).padStart(2, '0')}`,
+        serialNo: `RET-${String(index + 1).padStart(2, '0')}`,
+        quantity: 1,
+        outcome: 'Received',
+      }))
+      const text = new TextDecoder().decode(generateReturnReportPdf({
+        bookingNo: 'BK-RETURN-40',
+        clientName: 'Return Test Films',
+        totalUnits: 40,
+        returnedUnits: 40,
+        missingUnits: 0,
+        damagedUnits: 0,
+        photosCount: 0,
+        lines,
+      }))
+
+      expect(text).toContain('Returned equipment 01')
+      expect(text).toContain('Returned equipment 40')
+      expect(text).toContain('Page 1 of 2')
+      expect(text).toContain('Page 2 of 2')
+      expect(text).not.toContain('more items verified')
     })
   })
 
@@ -448,5 +509,27 @@ describe('generatePdf', () => {
       expect(text).toContain('Valid for 7 days')
       expect(text).toContain('PRO FORMA ESTIMATE')
     })
+  })
+})
+
+
+describe('complete packing hierarchy', () => {
+  it('prints every level of nested packages before loose equipment', () => {
+    const result = organizePackingListItems([
+      { id: 'leaf', name: 'Lens', quantity: 1, parentLineId: 'inner' },
+      { id: 'loose', name: 'Tripod', quantity: 1 },
+      { id: 'outer', name: 'Camera package', quantity: 1, isParent: true },
+      { id: 'inner', name: 'Lens case', quantity: 1, parentLineId: 'outer', isParent: true },
+    ])
+    expect(result.map(item => item.id)).toEqual(['outer', 'inner', 'leaf', 'loose'])
+    expect(result.find(item => item.id === 'leaf')?.isChild).toBe(true)
+  })
+
+  it('preserves every line once when parent relationships contain a cycle', () => {
+    const result = organizePackingListItems([
+      { id: 'a', name: 'Case A', quantity: 1, parentLineId: 'b' },
+      { id: 'b', name: 'Case B', quantity: 1, parentLineId: 'a' },
+    ])
+    expect(result.map(item => item.id)).toEqual(['a', 'b'])
   })
 })

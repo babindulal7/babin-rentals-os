@@ -920,7 +920,7 @@ export default function EvidenceWorkspace() {
                           borderRadius: 'var(--r-sm)',
                           border: '1px solid var(--border)',
                           background: k.bg,
-                          transition: 'border-color var(--dur) ease',
+                          transition: 'border-color var(--dur) var(--ease)',
                         }}
                       >
                         <div style={{ fontSize: 'var(--t-meta)', fontWeight: 500, color: 'var(--text2)' }}>{k.l}</div>

@@ -11,7 +11,7 @@
 .operations-shell__stage-name { font-size:var(--t-meta); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .operations-shell__stage-count { margin-left:auto; padding-left:4px; font-size:var(--t-meta); font-weight:700; font-variant-numeric:tabular-nums; color:var(--text); }
 .operations-shell__stage-track { display:block; height:6px; border-radius:var(--r-badge,999px); background:var(--card2); overflow:hidden; }
-.operations-shell__stage-fill { display:block; width:100%; height:100%; border-radius:inherit; background:var(--success); transform-origin:left; transition:transform var(--dur,200ms) ease; }
+.operations-shell__stage-fill { display:block; width:100%; height:100%; border-radius:inherit; background:var(--success); transform-origin:left; transition:transform var(--dur,var(--dur-theme)) var(--ease); }
 .operations-shell__stage[data-state="open"] .operations-shell__stage-fill { background:var(--primary); }
 .operations-shell__stage[data-state="open"] .operations-shell__stage-track { box-shadow:0 0 0 1px var(--primary); }
 .operations-shell__stage[data-state="locked"] .operations-shell__stage-track { opacity:.5; }

@@ -81,7 +81,7 @@ Controls ≥44px, primary floor confirmation ≥56px. Keyboard Tab/Shift+Tab, En
 - npm run build
 - npm run gates (comprehensive wrapper where appropriate)
 
-Run exactly the required, current sequence from docs/plans/README.md after actual source edits. A docs-only PR may use link/file audits and does **not** imply these gates ran. GitHub CI availability is not assumed; repo governance currently requires local checks.
+Run exactly the required, current sequence from docs/plans/README.md after actual source edits. Documentation changes do not prove runtime behaviour, and a docs-only change is not exempt from the local checks; link and file audits are not a substitute. GitHub CI availability is not assumed; repo governance currently requires local checks.
 
 ## Handoff record
 

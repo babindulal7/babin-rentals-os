@@ -88,6 +88,12 @@ import {
   IconFlask,
   IconDatabase,
   IconTag,
+  IconSend,
+  IconCircleCheck,
+  IconShieldExclamation,
+  IconLoader2,
+  IconWifiOff,
+  IconMailX,
   type Icon as TablerIconType,
 } from '@tabler/icons-react'
 import { captureError } from '../../lib/monitoring'
@@ -219,6 +225,15 @@ const REGISTRY = {
   qr: IconQrcode,
   wallet: IconWallet,
   tag: IconTag,
+
+  // Communication & Marketing
+  send: IconSend,
+  check_circle: IconCircleCheck,
+  shield_alert: IconShieldExclamation,
+  loader: IconLoader2,
+  wifi_off: IconWifiOff,
+  mail_x: IconMailX,
+  image: IconPhoto,
 } satisfies Record<string, TablerIconType>
 
 export type IconName = keyof typeof REGISTRY
