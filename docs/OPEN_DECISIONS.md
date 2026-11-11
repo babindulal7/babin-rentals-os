@@ -4,6 +4,22 @@
 
 Babin requested glossary changes from Settings during the conflict repair. **Answered 5 Nov 2026:** editing is **Owner only** and **approved term changes apply throughout the app immediately**. The glossary's existing 1 Nov approval remains recorded; automatic OK statuses from the faulty wave exporter are not review evidence. T0-12 implements an explicit Owner approval action, append-only shared revisions and immediate text refresh. Whole-app Nepali activation remains gated independently. No hosted write path is enabled until Babin applies the locally verified migration (N-5).
 
+## 2 November 2026 — Owner replies, implementation and tax checks still pending
+
+The latest owner decisions are recorded in [RULINGS-2026-11-02-OWNER.md](../RULINGS-2026-11-02-OWNER.md). This is a **docs-only record**; no financial rule has been shipped or verified in the app.
+
+**Answered in business terms:** O-4 digest 05:30 NPT; O-12 excess membership credit remains account credit; O-14 new separate invoice for additional charges once the original is issued, while unissued drafts are updated in place; O-20 Elite has a **fixed** (amount not yet supplied) annual fee; O-15 scooter inside/outside fees NPR 150/250 and vehicle-zone prices configurable in Settings; Booqable renewal **18 February 2027**; staged launch and A/B/C development lanes approved in principle.
+
+**Owner answers requiring compliance checks:** O-5 owner specified 1.5% withholding on services (accountant to verify); O-6 owner believes IRD-certified e-billing is not needed (requires statutory verification); O-7 expressly non-VAT bills do not charge VAT (classification and returns need accountant check); O-11 agreement approach approved but final terms text missing; O-16 printer/scanner purchase approved in principle, models not chosen; O-20 Elite fixed fee, amount missing.
+
+**O-10 cancellation policy — ANSWERED via approved Option A:** A confirmed, not-yet-started booking cancelled **more than 48 hours** before scheduled start is free. Cancellation **more than 24 and up to 48 hours** before start is **50% of pre-VAT rental subtotal for bookings longer than 2 rental days**, else free. Cancellation **within the final 24 hours** costs **one rental day's charge for a 1–2-day booking**, or **the higher of one rental day's charge and 50% of pre-VAT rental subtotal** for a booking longer than 2 days. Drafts/unconfirmed free. Staff override requires authorized role, reason and audit. This supersedes historical incomplete O-10 entries below. Full test cases in [RULINGS-2026-11-02-OWNER.md](../RULINGS-2026-11-02-OWNER.md). **Not implemented**; tax treatment is a compliance check, not a pending cancellation-rate decision.
+
+**Still unanswered:** O-17 VAT invoice issuance timing; VAT classification/treatment for cancellation fees and non-VAT bills; van zone rates and inside/outside boundaries; Elite fixed fee amount; final agreement text, scanner/printer models and legal/tax confirmation. The user did **not** authorize paid staging by approving development lanes A/B/C.
+
+**Safety:** Retain the P0 release HOLD. Do not alter issued invoices in place, assume tax compliance, deploy, or create paid staging without explicit approvals. Treat the above dated ruling as newer than the historic entries below.
+
+---
+
 ## 28 October 2026: switch-user PIN length (T1-15) — ANSWERED 1 Nov: 4 digits (O-18)
 
 **Answered 1 Nov 2026 by Babin ("4 pin"): the switch-user PIN is 4 digits.** T1-15 carries the migration
