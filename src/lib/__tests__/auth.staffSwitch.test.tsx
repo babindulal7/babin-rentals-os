@@ -200,4 +200,16 @@ describe('AuthProvider staff switch — global activation is last', () => {
     expect(fake.setSession).not.toHaveBeenCalled()
     expect(fake.signOut).toHaveBeenCalledWith({ scope: 'local' })
   })
+
+  it('refuses an unverified B login broadcast from another tab', async () => {
+    await mount()
+    await act(async () => {
+      fake.state.listener?.('SIGNED_IN', fake.b)
+      await Promise.resolve()
+    })
+    expect(fake.setSession).not.toHaveBeenCalled()
+    expect(fake.signOut).toHaveBeenCalledWith({ scope: 'local' })
+    expect(latest?.user).toBeNull()
+  })
 })
+
