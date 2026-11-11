@@ -133,6 +133,7 @@ async function mount() {
 }
 
 beforeEach(() => {
+  sessionStorage.removeItem('babin.staff-switch.incomplete')
   fake.state.listener = null
   fake.state.session = fake.a
   fake.state.pinResult = { ok: true }
@@ -147,6 +148,7 @@ beforeEach(() => {
 afterEach(async () => {
   if (root) await act(async () => { root.unmount() })
   container?.remove()
+  sessionStorage.removeItem('babin.staff-switch.incomplete')
 })
 
 describe('AuthProvider staff switch — global activation is last', () => {
