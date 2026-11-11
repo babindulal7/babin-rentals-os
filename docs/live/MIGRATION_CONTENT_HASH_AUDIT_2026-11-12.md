@@ -59,3 +59,7 @@ The computed hash was confirmed to match GitHub for `0001` and `0003`. Only migr
 5. Complete hosted JWT/PostgREST nine-role permissions, Client A/B isolation, Storage and real device validation. Require a green exact-main-head CI and owner-approved backup/restore evidence before any production migration.
 
 Do not use `supabase migration repair`, `supabase db push`, or remote reset on production from this CSV. See [hosted staging rehearsal](STAGING_HOSTED_REHEARSAL_2026-11-12.md), [filename reconciliation](STAGING_RECONCILIATION_2026-11-12.md), and [release HOLD #56](https://github.com/babindulal7/babin-rentals-os/issues/56).
+
+## Follow-up lexical triage (12 November 2026)
+
+All **76 same-name byte-mismatched migrations** were compared using SQL-aware lexical normalization of source and retained ledger SQL. **6** differ only in trailing whitespace; **25** have equal SQL token sequences after whitespace/comments are stripped; **23** also differ by an outer transaction wrapper; **22** remain for manual review. **This is a triage heuristic, not semantically-verified applied SQL**. See [the 76-row classification and 22-case review queue](MIGRATION_LEXICAL_TRIAGE_2026-11-12.md) and [CSV](MIGRATION_LEXICAL_TRIAGE_2026-11-12.csv).
