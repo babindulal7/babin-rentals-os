@@ -28,6 +28,31 @@ import {
 
 export type { RosterEntry, LimboState }
 
+// A tab interrupted after target refresh may still have A's persistent global
+// session. Never rehydrate that session on reload without a fresh sign-in.
+const STAFF_SWITCH_FENCE = 'babin.staff-switch.incomplete'
+function hasUnfinishedStaffSwitch(): boolean {
+  try {
+    return typeof sessionStorage !== 'undefined' &&
+      sessionStorage.getItem(STAFF_SWITCH_FENCE) === '1'
+  } catch {
+    return true // unreadable device state: refuse a privileged auto-restore
+  }
+}
+function beginStaffSwitchFence(): boolean {
+  try {
+    if (typeof sessionStorage === 'undefined') return false
+    sessionStorage.setItem(STAFF_SWITCH_FENCE, '1')
+    return true
+  } catch {
+    return false
+  }
+}
+function clearStaffSwitchFence(): void {
+  try { sessionStorage.removeItem(STAFF_SWITCH_FENCE) } catch { /* remains fail-closed on reload */ }
+}
+
+
 /**
  * The session role IS the system role. They were separate unions until 8 Aug 2026,
  * which forced a lossy shim on every screen that needed a capability check.
@@ -324,8 +349,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     void refreshRoster()
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (cancelled) return
+    if (hasUnfinishedStaffSwitch()) {
+      // Recovering from a crashed/closed tab during an unfinished switch:
+      // a prior Owner token is not authority to reopen the business app.
+      authGenerationRef.current += 1
+      setUser(null)
+      setLoading(false)
+      void supabase.auth.signOut({ scope: 'local' }).then(({ error }) => {
+        if (!error) clearStaffSwitchFence()
+      }).catch(() => { /* keep fence on refusal */ })
+    } else supabase.auth.getSession().then(({ data }) => {
+      if (cancelled || hasUnfinishedStaffSwitch()) return
       const session = data.session
       hydrateUserLanguage(session?.user.id ?? null, session?.user.user_metadata)
       if (!session) {
@@ -340,6 +374,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (cancelled || limboUserIdRef.current !== null) return
+      if (hasUnfinishedStaffSwitch() && !passwordSignInInProgressRef.current) {
+        // Crashed switch is not a signed-in actor, regardless of broadcast.
+        setUser(null)
+        setLoading(false)
+        return
+      }
 
       // Supabase broadcasts auth changes across tabs. A verified B session in
       // one tab must NOT silently promote another tab that is still Owner A.
@@ -426,6 +466,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     passwordSignInInProgressRef.current = true
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (!error) clearStaffSwitchFence() // explicit password replaces an interrupted switch
       // onAuthStateChange populates `user`; only the failure path is reported here.
       return { error: error ? error.message : null }
     } finally {
@@ -708,6 +749,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: 'Select another staff member to switch.' }
       }
 
+      if (!beginStaffSwitchFence()) {
+        return { success: false, error: 'This browser cannot securely remember a pending switch. Sign in with your password.' }
+      }
       switchInProgressRef.current = true
       const previousUserId = userIdRef.current
       authGenerationRef.current += 1
@@ -806,6 +850,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
         setLocked(false)
         safeToExitLimbo = true
+        clearStaffSwitchFence()
         return { success: true, userId: targetUserId }
       } catch (cause) {
         // Failed PIN, stale token, audit failure, cache failure or network loss:
@@ -823,6 +868,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setHasPin(false)
         setLocked(false)
         safeToExitLimbo = signedOut
+        if (signedOut) clearStaffSwitchFence()
         return {
           success: false,
           error: signedOut ? message : 'Local sign-out failed. Close the app and sign in again on a trusted device.',
