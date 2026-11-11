@@ -54,7 +54,7 @@ Full list in `PLAN.md §0`.
 [`../mds and photos/Babin Rentals OS/`](../mds%20and%20photos/Babin%20Rentals%20OS/) —
 canonical is `00 Getting Started/Foundation Specification.md`. Follow the authority order in
 `docs/00_READ_FIRST.md`: Babin's latest explicit product ruling wins; Foundation is the fallback.
-Permission conflicts follow `PERMISSIONS.md` and B-1. Never build from `_Archive/`.
+Permission conflicts follow `PERMISSIONS.md` and B-1. See [`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md) §2 for the topic-specific authority matrix. Never build from `_Archive/`.
 
 ---
 

@@ -307,6 +307,16 @@ export function canEditServicePlan(role: SystemRole): boolean {
   return role === 'Owner' || role === 'Admin' || role === 'Manager'
 }
 
+/**
+ * T2-17 — editable per-unit identity and shelf coordinates.
+ * Mirrors product_units_update (0018): Owner, Admin, Manager, Warehouse.
+ * Technician may inspect condition at intake, but may not edit identity/location.
+ * This predicate gates the UI only; database RLS remains authoritative.
+ */
+export function canEditUnitIdentity(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Warehouse'
+}
+
 /** RULING 2026-09-29: product-wide bulk stock corrections require Manager+. */
 export function canAdjustStock(role: SystemRole): boolean {
   return role === 'Owner' || role === 'Admin' || role === 'Manager'

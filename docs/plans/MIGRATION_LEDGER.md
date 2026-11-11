@@ -66,7 +66,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0218 | T5-07 | client-message-events | lane-b/T5-07-automatic-client-emails | written |
 | 0219 | T5-08 | payment-reminders | lane-b/T5-08-payment-reminders | written |
 | 0220 | T5-09 | push-subscriptions | lane-b/T5-09-phone-pop-ups | written |
-| 0221 | T1-17 | two-step-sign-in | lane-a/T1-17-two-step-sign-in-for-every | claimed; branch not merged |
+| 0221 | T2-17 | guard-unit-identity-edits | lane-a/T2-17-unit-editor-permissions-preflight | verified (check:pglite 221/221) |
 | 0222 | T3-smart-reservations | repair-confirm-booking-atomic-and-reservation-dedup | audit/system-design-consistency-20261105 | verified |
 | 0223 | T3-12 | product-aliases | lane-c/T3-12-paste-a-whatsapp-gear-list | verified (check:pglite 220/220 + check:lifecycle 63/63) |
 | 0224 | T5-12 | offer-campaigns-and-recipients | lane-b/T5-12-offer-emails-to-clients | verified |

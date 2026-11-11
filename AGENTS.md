@@ -4,7 +4,7 @@ React 18 · TS 5.7 strict · Vite 5 · Tailwind v4 · Supabase Postgres + RLS ·
 
 ## Start here (authority order)
 
-`docs/00_READ_FIRST.md` → `CLAUDE.md` → `docs/PERMISSIONS.md` (§3/§4/§6 matrix) → `RULINGS-*.md` (newest first) → `docs/PRODUCT_RULES.md` → `docs/CURRENT_STATE.md` → `PROGRESS.md` → `PLAN.md` *(task cards in `docs/plans/`)* → Foundation Spec. **RULING 2026-11-05:** Babin's latest explicit product ruling wins over an older specification; Foundation is the fallback. Permission conflicts follow `PERMISSIONS.md` and **stricter wins** (B-1). Never read `src/archive/` or dated `docs/audits/` as current truth.
+`docs/00_READ_FIRST.md` → `CLAUDE.md` → `docs/PERMISSIONS.md` (§3/§4/§6 matrix) → `RULINGS-*.md` (newest first) → `docs/PRODUCT_RULES.md` → `docs/CURRENT_STATE.md` → `PROGRESS.md` → `PLAN.md` *(task cards in `docs/plans/`)* → Foundation Spec. **RULING 2026-11-05:** Babin's latest explicit product ruling wins over an older specification; Foundation is the fallback. Permission conflicts follow `PERMISSIONS.md` and **stricter wins** (B-1) — see [`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md) §2. Never read `src/archive/` or dated `docs/audits/` as current truth.
 
 - Never invent a product decision. Mark `TODO(decision)`, log in `docs/OPEN_DECISIONS.md`, index it in `PLAN.md` §4.2, work on something unblocked.
 - Session end: update `PROGRESS.md` (newest first, Did / Ruled / Verified) with `## Completion` + `## Remaining` blocks. Run `npm run completion` — never hand-type a percentage. Run `npm run lint:progress` yourself — it enforces the blocks (CI is off).
@@ -36,7 +36,7 @@ npx vitest run <path>        # single file, e.g. npx vitest run src/__tests__/e2
 npm run build                # tsc --noEmit && vite build → dist/
 ```
 
-Verification order for any change: `typecheck → test → check:pglite + check:lifecycle → build`. **GitHub CI is off since 26 Oct 2026** (billing; Babin ruled W75 — `RULINGS-2026-10-26-workflow.md`): run **every step it ran, in its order**, yourself before you report a card done, and paste the results into PROGRESS.md — the list is in `docs/plans/README.md` ("Gates every card must pass"): typecheck, lint, `npm test` (T0-10 forces mock settings, even if `.env.local` contains a live URL), `check:pglite`, financial integrity, `check:security`, `check:lifecycle`, `test:server-contracts`, `test:partial-return`, `lint:progress`, the receipt test, `lint:shell`, `lint:ui-copy`, `check:contrast`, build (coverage before each live batch). The workflow file `.github/workflows/ci.yml` stays as the reference list.
+Verification order for any change: `typecheck → test → check:pglite + check:lifecycle → build`. **GitHub CI is off since 26 Oct 2026** (billing; Babin ruled W75 — `RULINGS-2026-10-26-workflow.md`): run **every step it ran, in its order**, yourself before you report a card done, and paste the results into PROGRESS.md — the list is in `docs/plans/README.md` ("Gates every card must pass"): typecheck, lint, `test:local-api-guards`, `npm test` (T0-10 forces mock settings, even if `.env.local` contains a live URL), `check:pglite`, financial integrity, `check:security`, `check:lifecycle`, `test:server-contracts`, `test:partial-return`, `lint:progress`, the receipt test, `lint:shell`, `lint:ui-copy`, `check:contrast`, build (coverage before each live batch). The workflow file `.github/workflows/ci.yml` stays as the reference list.
 
 DB / lifecycle gates (allowed in `opencode.jsonc`, never prompt-blocked):
 ```bash

@@ -1518,22 +1518,31 @@ function BookingDetailView() {
   const [conflictsList, setConflictsList] = useState<readonly LineEvaluationResult[]>([])
   const [draftOverlapNotice, setDraftOverlapNotice] = useState<string | null>(null)
   const [availabilityEvaluation, setAvailabilityEvaluation] = useState<BookingAvailabilityEvaluation | null>(null)
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
+    setAvailabilityEvaluation(null)
+    setAvailabilityError(null)
     if (booking?.stage === 'Quote' && id) {
       void import('../../lib/queries/smartReservationQueries')
         .then((m) => m.queryBookingAvailability(id))
         .then((res) => {
           if (active && res.evaluation) {
             setAvailabilityEvaluation(res.evaluation)
+            setAvailabilityError(null)
             const conflicts = res.evaluation.lineResults.filter((r) => r.status !== 'available')
             if (conflicts.length > 0) {
               setConflictsList(conflicts)
             }
           }
         })
-        .catch(() => {})
+        .catch(() => {
+          if (!active) return
+          setAvailabilityEvaluation(null)
+          setConflictsList([])
+          setAvailabilityError('Availability cannot be verified right now. Retry before confirming this rental.')
+        })
     }
     return () => {
       active = false
@@ -2710,6 +2719,26 @@ function BookingDetailView() {
         >
           <Icon name="info" size={14} style={{ flexShrink: 0, marginTop: 2, color: 'var(--st-progress-fg, #a16207)' }} />
           <span>{draftOverlapNotice}</span>
+        </div>
+      )}
+
+      {availabilityError && (
+        <div
+          role="alert"
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 'var(--sp-sm)',
+            padding: '10px 12px',
+            borderRadius: 'var(--r-sm)',
+            border: '1px solid var(--danger)',
+            background: 'var(--st-danger-bg)',
+            fontSize: 'var(--t-meta)',
+            color: 'var(--danger-text)',
+          }}
+        >
+          <Icon name="alert_triangle" size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+          <span>{availabilityError}</span>
         </div>
       )}
 
