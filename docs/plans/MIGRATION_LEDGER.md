@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0232**
+**Next free number: 0236**
 
 > **Legacy exception:** `0188` exists as two distinct, locally verified migration files
 > (`0188_smart_reservation_holds.sql` and `0188_staff_renting_gear.sql`). Both are preserved because
@@ -76,8 +76,10 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0229 | T3-25 | booking-tags | lane-c/T3-25-tags-on-bookings | verified (check:pglite 226/226 + check:lifecycle 68/68 Step L68) |
 | 0230 | T3-26 | project-name-and-shoot-location | lane-c/T3-26-project-name-and-shoot-location-on | verified |
 | 0231 | T3-27 | pro-forma-document-type | lane-c/T3-27-pro-forma-invoice-from-the-draft | verified (check:pglite 228/228 + check:lifecycle 71/71 Step L71) |
-| 0232 | T2-18 | return-damage-photo-per-unit | lane-a/T2-18-finish-evidence-capture-what-t2-16 | written locally |
-| 0233 | T4-09-security | delivery-route-branch-hardening | fix/t4-09-route-branch-hardening-0209 | claimed; staging required |
+| 0232 | T4-security | secure-temporary-hold-rpcs | repair/pr-55-hold-auth | verified (PR #133 merged) |
+| 0233 | T3-security | extend-booking-and-resync-auth | repair/pr-53-invoice-extension-auth | verified (PR #135 merged) |
+| 0234 | T2-18 | return-damage-photo-per-unit | lane-a/T2-18-finish-evidence-capture-what-t2-16 | verified (PR #80 merged) |
+| 0235 | T4-09-security | delivery-route-branch-hardening | fix/t4-09-route-branch-hardening-0209 | verified |
 
 ## Expected migrations (not yet claimed)
 

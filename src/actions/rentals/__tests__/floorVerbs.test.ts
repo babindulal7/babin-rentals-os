@@ -1064,6 +1064,56 @@ describe('Return', () => {
       .toEqual([['eq', 'client_uuid', 'original-completion-key']])
   })
 
+  it('does not duplicate a damage Return receipt or release on same-key replay', async () => {
+    // Paired with evidenceStorage.test.ts: a unit Damage photo is persisted
+    // without opening a Return session. Completing that photo-gated Return
+    // must then own the receipt key; retrying the SAME key writes nothing.
+    db.state.responses['return_lines'] = [
+      [],
+      [{ id: 'rl-1', booking_line_id: LINE_A, state: 'Returned' }],
+    ]
+    const input = {
+      rentalId: 'B-715',
+      clientUuid: 'photo-first-return-key',
+      lines: [{
+        bookingLineId: LINE_A,
+        unitIds: ['u1'],
+        condition: 'Damaged' as const,
+        damage: [{
+          unitId: 'u1',
+          condition: 'Damaged' as const,
+          description: 'Focus ring dented; inspect before the next booking.',
+        }],
+      }],
+    }
+
+    const first = await completeReturn(input, OWNER)
+    expect(first.stage).toEqual({ from: 'On Rent', to: 'Returned' })
+    expect(insertsOn('operation_sessions')).toHaveLength(1)
+    expect(insertsOn('session_line_movements')).toHaveLength(1)
+    expect(insertsOn('booking_stage_transitions')).toHaveLength(1)
+    expect(insertsOn('damage_findings')).toHaveLength(1)
+    const recorded = insertsOn('operation_sessions')[0]?.payload
+    expect(recorded?.['client_uuid']).toBe(input.clientUuid)
+
+    // Simulate the committed session read by its original action key after
+    // the first response was lost. The booking has already reached Returned.
+    db.state.returnKeyRows = [{ ...recorded, state: 'Completed', notes: null }]
+    db.state.responses['bookings'] = [[bookingAt('Returned')]]
+    writes.reset()
+    const retry = await completeReturn(input, OWNER)
+
+    expect(retry).toMatchObject({
+      sessionId: first.sessionId,
+      sessionClosed: true,
+      lines: 0,
+      movements: 0,
+      damageFindings: 0,
+      stage: null,
+    })
+    expect(writes.state.ops).toEqual([])
+  })
+
   it('reuses an original open Return session found by its completion key', async () => {
     db.state.returnKeyRows = [{ id: 'original-open', booking_id: BOOKING_ID, operation: 'Return', client_uuid: 'open-key', session_no: 1, state: 'In Progress', notes: null }]
     db.state.responses['booking_lines'] = [[{ id: LINE_A, qty: 5 }]]

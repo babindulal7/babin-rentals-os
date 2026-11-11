@@ -67,6 +67,25 @@ const FLOOR: FloorBooking = {
 
 let answer: FloorBooking | null = FLOOR
 
+const { evidenceRead, photoUpload, photoCompress } = vi.hoisted(() => ({
+  evidenceRead: vi.fn(),
+  photoUpload: vi.fn(),
+  photoCompress: vi.fn(),
+}))
+vi.mock('../../../lib/queries/evidence', async (orig) => ({
+  ...(await orig<typeof import('../../../lib/queries/evidence')>()),
+  fetchBookingEvidenceFiles: evidenceRead,
+}))
+
+vi.mock('../../../lib/evidenceStorage', async (orig) => ({
+  ...(await orig<typeof import('../../../lib/evidenceStorage')>()),
+  uploadEvidencePhoto: photoUpload,
+}))
+vi.mock('../../../lib/imageCompression', async (orig) => ({
+  ...(await orig<typeof import('../../../lib/imageCompression')>()),
+  compressEvidencePhoto: photoCompress,
+}))
+
 vi.mock('../../../lib/queries/bookings', async (orig) => ({
   ...(await orig<typeof import('../../../lib/queries/bookings')>()),
   fetchFloorBooking: async () => answer,
@@ -142,11 +161,56 @@ const click = async (el: HTMLElement) => {
 
 beforeEach(() => {
   answer = FLOOR
+  evidenceRead.mockReset().mockResolvedValue([])
+  photoUpload.mockReset().mockResolvedValue({ id: 'saved-evidence' })
+  photoCompress.mockReset().mockImplementation(async (file: File) => ({ blob: file }))
 })
 
 afterEach(async () => {
   await act(async () => root.unmount())
   container.remove()
+})
+
+describe('T2-18 — saved evidence read failures are visible and retryable', () => {
+  it('does not claim an empty saved gallery after a failed read and retries successfully', async () => {
+    evidenceRead.mockReset()
+      .mockRejectedValueOnce(new Error('RLS denied'))
+      .mockResolvedValueOnce([])
+
+    await mountAt('B-812')
+    expect(text()).toContain('Could not load photos')
+    expect(text()).toContain('photo count could not be verified')
+    expect(byText('Retry loading photos')).toHaveLength(1)
+
+    await click(byText('Retry loading photos')[0] as HTMLButtonElement)
+    expect(evidenceRead).toHaveBeenCalledTimes(2)
+    expect(text()).not.toContain('Could not load photos')
+    expect(byText('Retry loading photos')).toHaveLength(0)
+  })
+})
+
+describe('T2-18 — stage mapping in the rendered upload path', () => {
+  it('uses Pickup, not Packing, for a photo on a Packed booking', async () => {
+    answer = { ...FLOOR, deliveryType: 'Client Pickup' }
+    await mountAt('B-812')
+    const categoryButton = buttons().find((b) => (b.textContent ?? '').includes('Pickup / Delivery'))
+    expect(categoryButton).toBeDefined()
+    await click(categoryButton as HTMLButtonElement)
+    const picker = container.querySelector('input[aria-label="Upload evidence files"]') as HTMLInputElement
+    expect(picker).not.toBeNull()
+    await act(async () => {
+      Object.defineProperty(picker, 'files', {
+        configurable: true,
+        value: [new File(['image bytes'], 'handover.jpg', { type: 'image/jpeg' })],
+      })
+      picker.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    expect(photoUpload).toHaveBeenCalledTimes(1)
+    expect(photoUpload.mock.calls[0]?.[0]?.reference).toEqual({
+      bookingId: FLOOR.id,
+      operationStage: 'Pickup',
+    })
+  })
 })
 
 describe('HO-09 — the booking head is read, never printed', () => {

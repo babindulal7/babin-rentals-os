@@ -22,6 +22,7 @@ import { deliveryTypeLabel } from '../../lib/format'
 import { fetchFloorBooking, type FloorBooking } from '../../lib/queries/bookings'
 import { compressEvidencePhoto, DAMAGE_PHOTO_MAX_BYTES, STANDARD_PHOTO_MAX_BYTES } from '../../lib/imageCompression'
 import { uploadEvidencePhoto } from '../../lib/evidenceStorage'
+import { evidenceStageForCategory } from '../../lib/evidenceStage'
 import {
   PHOTOS,
   matchState,
@@ -366,21 +367,38 @@ export default function EvidenceWorkspace() {
   const [uploadProgressText, setUploadProgressText] = useState<string | null>(null)
   const [uploadErrorText, setUploadErrorText] = useState<string | null>(null)
   const [savedFiles, setSavedFiles] = useState<SavedEvidenceFile[]>([])
+  const [evidenceLoading, setEvidenceLoading] = useState(false)
+  const [evidenceLoadError, setEvidenceLoadError] = useState<string | null>(null)
+  const [evidenceReload, setEvidenceReload] = useState(0)
 
   useEffect(() => {
-    if (!floorId) return
+    if (!floorId) {
+      setSavedFiles([])
+      setEvidenceLoadError(null)
+      setEvidenceLoading(false)
+      return
+    }
     let active = true
+    // Never show stale photos as a verified count while this booking is being read.
+    setSavedFiles([])
+    setEvidenceLoadError(null)
+    setEvidenceLoading(true)
     fetchBookingEvidenceFiles(floorId)
       .then((files) => {
-        if (active) setSavedFiles(files)
+        if (!active) return
+        setSavedFiles(files)
+        setEvidenceLoading(false)
       })
       .catch(() => {
-        if (active) setSavedFiles([])
+        if (!active) return
+        setSavedFiles([])
+        setEvidenceLoadError('The saved photo count could not be verified. Nothing has been removed.')
+        setEvidenceLoading(false)
       })
     return () => {
       active = false
     }
-  }, [floorId])
+  }, [floorId, evidenceReload])
 
   const handleUploadFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? [])
@@ -392,11 +410,11 @@ export default function EvidenceWorkspace() {
     setUploading(true)
     setUploadErrorText(null)
 
-    const targetStage = category === 'Return' ? 'Return' : category === 'Damage' ? 'Damage' : 'Packing'
-    const isDamage = category === 'Damage' || targetStage === 'Damage'
-    const maxBytes = isDamage ? DAMAGE_PHOTO_MAX_BYTES : STANDARD_PHOTO_MAX_BYTES
-
     try {
+      // Never re-label another category as Packing after Pack is sealed.
+      const targetStage = evidenceStageForCategory(toEvidenceCategory(category), floor.deliveryType)
+      const isDamage = category === 'Damage' || targetStage === 'Damage'
+      const maxBytes = isDamage ? DAMAGE_PHOTO_MAX_BYTES : STANDARD_PHOTO_MAX_BYTES
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
         throw new Error('You are offline. This photo was not saved — take it again when you are back online.')
       }
@@ -438,8 +456,9 @@ export default function EvidenceWorkspace() {
           : 'Evidence photo saved successfully',
       )
       setUploadProgressText(null)
-      const fresh = await fetchBookingEvidenceFiles(floor.id)
-      setSavedFiles(fresh)
+      // The upload is confirmed independently of the gallery refresh.
+      // A read failure must not be reported as an upload failure.
+      setEvidenceReload((n) => n + 1)
     } catch (err) {
       setUploadErrorText(err instanceof Error ? err.message : String(err))
       setUploadProgressText(null)
@@ -832,7 +851,26 @@ export default function EvidenceWorkspace() {
 
               {/* ── §6 / §8 centre ──────────────────────────────────────────── */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0, ...place.list }}>
-                {savedFiles.length > 0 && (
+                {evidenceLoading && (
+                  <div role="status" style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
+                    Loading saved photos…
+                  </div>
+                )}
+                {evidenceLoadError && (
+                  <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: 180 }}>
+                      <ErrorBanner title="Could not load photos" message={evidenceLoadError} />
+                    </div>
+                    <Button
+                      variant="secondary"
+                      onClick={() => setEvidenceReload((n) => n + 1)}
+                      style={{ minHeight: 'var(--tap, 44px)' }}
+                    >
+                      Retry loading photos
+                    </Button>
+                  </div>
+                )}
+                {!evidenceLoading && !evidenceLoadError && savedFiles.length > 0 && (
                   <Card title={`Saved Booking Evidence (${savedFiles.length})`}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {savedFiles.map((sf) => (
