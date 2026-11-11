@@ -13,11 +13,11 @@ vi.mock('../../supabase', () => ({
     return query
   } },
 }))
-const file = (id: string, media_type: Database['public']['Enums']['evidence_media_type'] = 'Image', removed_at: string | null = null) => ({ id, media_type, removed_at })
+const file = (id: string, media_type: Database['public']['Enums']['evidence_media_type'] = 'Image', removed_at: string | null = null, category: Database['public']['Enums']['evidence_category'] = 'Damage') => ({ id, media_type, removed_at, category })
 beforeEach(() => { pages.length = 0; vi.clearAllMocks() })
 
 describe('saved operation evidence', () => {
-  it('counts unique live photos linked to the booking and each real unit across pages', async () => {
+  it('counts all booking images but only Damage-category images per unit across pages', async () => {
     pages.push({ data: [
       { id: 'r1', item_id: 'a1', file: file('p1') },
       { id: 'r2', item_id: 'a1', file: file('p1') },
@@ -25,10 +25,11 @@ describe('saved operation evidence', () => {
       { id: 'r4', item_id: 'a1', file: file('video', 'Video') },
       { id: 'r5', item_id: 'a2', file: file('removed', 'Image', '2026-10-24T00:00:00Z') },
       { id: 'r7', item_id: 'a2', file: file('document', 'Document') },
+      { id: 'r8', item_id: 'a1', file: file('packing-image', 'Image', null, 'Packing') },
     ], error: null }, { data: [{ id: 'r6', item_id: 'a2', file: [file('p3')] }], error: null })
-    expect(await fetchOperationEvidence('booking')).toEqual({ files: 3, filesByUnit: { a1: 1, a2: 1 } })
+    expect(await fetchOperationEvidence('booking')).toEqual({ files: 4, filesByUnit: { a1: 1, a2: 1 } })
     expect(from).toHaveBeenCalledWith('evidence_references')
-    expect(range).toHaveBeenNthCalledWith(2, 6, 505)
+    expect(range).toHaveBeenNthCalledWith(2, 7, 506)
   })
   it('refuses a later-page failure rather than claiming partial evidence is complete', async () => {
     pages.push({ data: [{ id: 'r1', item_id: 'a1', file: file('p1') }], error: null }, { data: null, error: { message: 'read refused' } })

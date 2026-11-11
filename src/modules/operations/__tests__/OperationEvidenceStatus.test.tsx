@@ -246,6 +246,56 @@ describe('OperationEvidenceStatus (T2-16, W27 Photo Rules)', () => {
     expect(secondCallArgs.clientUuid).toBe(firstClientUuid) // Must reuse exact same UUID!
   })
 
+  it('uploads a damaged Return unit using its own item ID without opening a Return session', async () => {
+    const status = createMockStatus(2)
+    const itemId = '00000000-0000-0000-0000-000000000099'
+    const bookingId = '00000000-0000-0000-0000-000000000002'
+    mockCompressEvidencePhoto.mockImplementation(async (file: File) => ({
+      blob: new Blob(['compressed'], { type: 'image/jpeg' }),
+      originalBytes: file.size,
+      compressedBytes: 100_000,
+      width: 2560,
+      height: 1700,
+      format: 'image/jpeg',
+    }))
+    mockUploadEvidencePhoto.mockResolvedValue({ id: 'photo-unit-99' })
+
+    await act(async () => {
+      root.render(
+        <OperationEvidenceStatus
+          bookingId={bookingId}
+          itemId={itemId}
+          itemLabel="FX3 · unit 2"
+          stage="Damage"
+          category="Damage"
+          status={status}
+        />,
+      )
+    })
+
+    expect(host.textContent).toContain('0 saved photo(s) linked to FX3 · unit 2')
+    expect(host.querySelector('button[aria-label="Take / Upload Damage Photo for FX3 · unit 2"]')).not.toBeNull()
+    const input = host.querySelector<HTMLInputElement>('input[type="file"]')!
+    await act(async () => {
+      Object.defineProperty(input, 'files', {
+        value: [new File(['damage'], 'scratch.jpg', { type: 'image/jpeg' })],
+        configurable: true,
+      })
+      input.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+
+    expect(mockUploadEvidencePhoto).toHaveBeenCalledTimes(1)
+    expect(mockUploadEvidencePhoto).toHaveBeenCalledWith(expect.objectContaining({
+      category: 'Damage',
+      reference: expect.objectContaining({
+        bookingId,
+        itemId,
+        operationStage: 'Damage',
+      }),
+    }))
+    expect(status.refresh).toHaveBeenCalledTimes(1)
+  })
+
   it('refuses upload inline when device is offline without creating queues', async () => {
     const status = createMockStatus(0)
 

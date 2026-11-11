@@ -7,6 +7,11 @@ name: Windows PR smoke
 # One same-repository PR = one Windows smoke, without GitHub-hosted minutes.
 on:
   pull_request:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
   workflow_dispatch:
 
 permissions:
@@ -15,7 +20,7 @@ permissions:
 # A new head SHA replaces older checks for the same PR only.
 # Do not cancel unrelated PRs or required automatic main CI.
 concurrency:
-  group: windows-pr-smoke-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
