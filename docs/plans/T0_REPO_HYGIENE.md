@@ -120,7 +120,7 @@ each check-in (7:38 AM / 7:38 PM) and reports anything red.
 **Done when** — no new red X appears on pushes; the first check-in report shows the gates on `main`.
 **Needs** — none.
 
-### T0-10 · Tests never run with live settings            status: doing — fresh current-main safety fix on fix/T0-10-mock-safe-tests-current-main; CI and owner verification pending · size: S · lane A · [go-live]
+### T0-10 · Tests never run with live settings            status: done — merged on `main` 2 Nov 2026 (#64, `673ef99a`); status corrected 4 Nov after the rule audit · size: S · lane A · [go-live]
 **What** — Since T0-02 (`3fca220`), `scripts/run-tests.mjs` picks mock data only when no
 `VITE_SUPABASE_URL` is found — and it reads `.env.local`. On a computer that runs the app against
 live (a `.env.local` with the live URL), `npm test` therefore runs with **live** settings, and Vitest
@@ -137,7 +137,7 @@ without signing in until batch 0); B-1 (the safer default wins).
 passes; 2) `npm test -- --live` prints "data source=live"; 3) the docs show plain `npm test`.
 **Needs** — none.
 
-### T0-11 · One command for the local gate            status: doing — stacked on T0-10, new current-main local gate script and tests; CI and cross-platform validation pending · size: S · lane A · [go-live]
+### T0-11 · One command for the local gate            status: done — merged on `main` 2 Nov 2026 (#65, `144e8d0f`); `npm run gates` and its CI drift guard are on `main`; status corrected 4 Nov after the rule audit · size: S · lane A · [go-live]
 **What** — Add `npm run gates`: runs every step of `.github/workflows/ci.yml` in its order (the list
 in `docs/plans/README.md`), with mock data for the tests, stops at the first red step, and ends with
 a one-screen summary (step · pass/fail · time). `npm run gates -- --quick` skips coverage. Then the
