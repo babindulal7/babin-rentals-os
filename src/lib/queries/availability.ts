@@ -385,7 +385,7 @@ async function readLines(bookingId: string): Promise<{
  */
 /** Never certify availability from a truncated PostgREST result. A short page
  * can be a server-side cap, so continue until an explicitly empty page. */
-async function readCompleteAvailability<Row extends { id: string }>(
+export async function readCompleteAvailability<Row extends { id: string }>(
   page: (from: number, to: number) => PromiseLike<{ data: unknown; error: { message: string } | null }>,
   label: string,
 ): Promise<Row[]> {
