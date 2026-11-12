@@ -42,6 +42,10 @@ Additional online-show product switches and the existing Away switch must remain
 
 ## 4. Three independent workstreams — first sprint
 
+**Tracking tickets:** [Mac mini / OS release #152](https://github.com/babindulal7/babin-rentals-os/issues/152) · [Windows PC 1 / Website #153](https://github.com/babindulal7/babin-rentals-os/issues/153) · [Windows PC 2 / Portal #154](https://github.com/babindulal7/babin-rentals-os/issues/154). GitHub assignee supervises; machines do not start work automatically from ticket creation.
+
+
+
 **Branch/worktree rule:** create a fresh worktree for *each* lane from current `origin/main`. Do not edit shared paths without a claim. One agent owns one checkout; no direct main pushes. The documentation draft PR containing this plan remains separate from all implementation PRs.
 
 ### A. Mac mini / Antigravity — OS release foundation (critical path)
