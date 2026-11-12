@@ -29,6 +29,7 @@ The working model: **2 disciplines (UX / UI), 5 UX layers, 4 UI element groups, 
 | [12_STANDALONE_REFERENCE_CROSSWALK.md](12_STANDALONE_REFERENCE_CROSSWALK.md) | Standalone bundle S/T/B/DE/IN design IDs mapped to actual React modules and current rulings |
 | [13_RESPONSIVE_IMPLEMENTATION_MATRIX.md](13_RESPONSIVE_IMPLEMENTATION_MATRIX.md) | Desktop, two iPad orientations, two phone orientations; Today independent dates outside lists |
 | [14_GOVERNANCE_CHECK_AND_HANDOFF.md](14_GOVERNANCE_CHECK_AND_HANDOFF.md) | PR #127 decision registration, full local gates and PR-head evidence |
+| [15_APPROVED_DUAL_METHOD_FLOOR_DESIGN.md](15_APPROVED_DUAL_METHOD_FLOOR_DESIGN.md) | **Owner-approved** Scan/Manual parity, safety corrections, role access and UI/UX implementation HOLD |
 
 ## Authoritative sources, in order
 
