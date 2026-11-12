@@ -65,7 +65,7 @@ describe('§11.3 — the branch ▸ warehouse join', () => {
 
 describe('the four tabs — ruled 15 Aug 2026, down from eight', () => {
   it('is exactly the four, in order', () => {
-    expect(TABS.map((t) => t.label)).toEqual(['Business', 'People', 'Branches', 'System'])
+    expect(TABS.map((t) => t.label)).toEqual(['Business & Tax', 'Staff', 'Branches', 'Preferences'])
   })
 
   it('translates every retired key instead of dropping it on the default', () => {
@@ -79,6 +79,8 @@ describe('the four tabs — ruled 15 Aug 2026, down from eight', () => {
     expect(LEGACY_TAB.organization).toBe('business')
     expect(LEGACY_TAB.overview).toBe('business')
     expect(LEGACY_TAB.users).toBe('people')
+    expect(LEGACY_TAB.staff).toBe('people')
+    expect(LEGACY_TAB.preferences).toBe('system')
     expect(LEGACY_TAB.security).toBe('system')
     expect(LEGACY_TAB.integrations).toBe('system')
     /* Parked long before this cut, and still resolvable. */

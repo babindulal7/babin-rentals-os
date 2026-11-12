@@ -127,7 +127,7 @@ describe('Settings header — phone', () => {
   it('a section uses one title and one back action to return to the section list', async () => {
     await mount('?tab=business')
     expect(container.querySelectorAll('h1')).toHaveLength(1)
-    expect(container.querySelector('h1')?.textContent).toBe('Business')
+    expect(container.querySelector('h1')?.textContent).toBe('Business & Tax')
     const back = container.querySelectorAll('button[aria-label="Back to settings"]')
     expect(back).toHaveLength(1)
     await click(back[0])

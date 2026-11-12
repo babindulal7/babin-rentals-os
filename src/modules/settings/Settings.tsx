@@ -37,6 +37,8 @@ import {
   BRANCH,
   SYSTEM_SUMMARY,
   SEED_ERRORS,
+  ADMIN_GROUP_ITEMS,
+  canAccessAdminGroup,
 } from '../../lib/queries/settings'
 import type { Branch, TabKey, TabDef } from '../../lib/queries/settings'
 import { useSettingsLoad } from './useSettingsLoad'
@@ -84,7 +86,7 @@ const TAB_CONFIG: Record<TabKey, { icon: IconName; subtitle: string }> = {
   },
   system: {
     icon: 'settings',
-    subtitle: 'Preferences, security & audit',
+    subtitle: 'Preferences, display & operations',
   },
   texts: {
     icon: 'file',
@@ -156,6 +158,19 @@ export default function Settings() {
   const requested: TabKey = isTabKey(raw) ? raw : (raw !== null && LEGACY_TAB[raw]) || DEFAULT_TAB
   const active: TabKey = tabs.some((t) => t.key === requested) ? requested : DEFAULT_TAB
   const onPhoneList = phone && (raw === null || !tabs.some((t) => t.key === raw))
+
+  const canAccessAdmin = canAccessAdminGroup(user?.role)
+
+  const filteredAdminItems = useMemo(() => {
+    if (!canAccessAdmin) return []
+    if (!searchQuery.trim()) return ADMIN_GROUP_ITEMS
+    const q = searchQuery.toLowerCase().trim()
+    return ADMIN_GROUP_ITEMS.filter(
+      (item) =>
+        item.label.toLowerCase().includes(q) ||
+        item.subtitle.toLowerCase().includes(q),
+    )
+  }, [canAccessAdmin, searchQuery])
 
   const go = (tab: TabKey) => {
     const next = new URLSearchParams(params)
@@ -258,7 +273,9 @@ export default function Settings() {
             { label: 'Reset to defaults', icon: 'refresh' as const, onClick: resetToDefaults },
           ] : []),
           { label: 'Export config', icon: 'download', onClick: exportConfig },
-          { label: 'View audit log', icon: 'checklist', onClick: () => navigate('/admin/audit') },
+          ...(canAccessAdmin
+            ? [{ label: 'View audit log', icon: 'checklist' as const, onClick: () => navigate('/admin/audit') }]
+            : []),
         ]}
       />
     )
@@ -297,10 +314,12 @@ export default function Settings() {
         <Button icon="download" onClick={exportConfig}>
           Export config
         </Button>
-        <Link to="/admin/audit" className="tap" style={{ ...controlStyle, minHeight: 44 }}>
-          <Icon name="checklist" size={14} />
-          View audit log
-        </Link>
+        {canAccessAdmin && (
+          <Link to="/admin/audit" className="tap" style={{ ...controlStyle, minHeight: 44 }}>
+            <Icon name="checklist" size={14} />
+            View audit log
+          </Link>
+        )}
       </>
     )
 
@@ -344,7 +363,19 @@ export default function Settings() {
         </>
       )
     }
-    const sections = FIELD_SECTIONS[active]
+    const rawSections = FIELD_SECTIONS[active]
+    const sections = rawSections
+      ? (active === 'system' && !canAccessAdmin
+          ? rawSections
+              .filter((s) => s.key !== 'admin')
+              .map((s) => ({
+                ...s,
+                fields: s.fields.filter(
+                  (f) => !('dest' in f && f.dest && 'to' in f.dest && f.dest.to?.startsWith('/admin')),
+                ),
+              }))
+          : rawSections)
+      : null
     return sections ? <SectionCards sections={sections} /> : null
   })()
 
@@ -384,7 +415,7 @@ export default function Settings() {
        matched none of them. Before this the section list emptied while the
        pane went on showing the default section's fields, which read as if
        those fields were the match. */
-    if (tabs.length === 0) {
+    if (tabs.length === 0 && filteredAdminItems.length === 0) {
       return (
         <EmptyState
           kind="no-results"
@@ -426,6 +457,36 @@ export default function Settings() {
               )
             })}
           </div>
+
+          {filteredAdminItems.length > 0 && (
+            <>
+              <div className="app-settings-mobile-section-header" style={{ marginTop: 'var(--sp-md)' }}>
+                ADMIN
+              </div>
+              <div className="app-settings-mobile-group">
+                {filteredAdminItems.map((item) => (
+                  <button
+                    key={item.to}
+                    type="button"
+                    onClick={() => navigate(item.to)}
+                    className="app-settings-mobile-row"
+                  >
+                    <div
+                      className="app-settings-mobile-icon"
+                      style={{ backgroundColor: 'var(--surface-2)', color: 'var(--primary)' }}
+                    >
+                      <Icon name={item.icon} size={20} />
+                    </div>
+                    <div className="app-settings-mobile-text">
+                      <span className="app-settings-mobile-title">{item.label}</span>
+                      <span className="app-settings-mobile-desc">{item.subtitle}</span>
+                    </div>
+                    <Icon name="chevron_right" size={16} className="app-settings-chevron-muted" />
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )
     }
@@ -483,6 +544,43 @@ export default function Settings() {
                 </button>
               )
             })}
+
+            {filteredAdminItems.length > 0 && (
+              <>
+                <hr
+                  className="app-settings-divider"
+                  style={{
+                    margin: 'var(--sp-md) 0 var(--sp-xs)',
+                    border: 'none',
+                    borderTop: '1px solid var(--border)',
+                  }}
+                />
+                <div className="app-settings-sidebar-header">ADMIN</div>
+                {filteredAdminItems.map((item) => (
+                  <button
+                    key={item.to}
+                    type="button"
+                    onClick={() => navigate(item.to)}
+                    className="app-settings-nav-item settings-tab-btn"
+                  >
+                    <div
+                      className="app-settings-nav-icon-box"
+                      style={{
+                        backgroundColor: 'var(--surface-2)',
+                        color: 'var(--text2)',
+                      }}
+                    >
+                      <Icon name={item.icon} size={16} />
+                    </div>
+                    <div className="app-settings-nav-text">
+                      <div className="app-settings-nav-label">{item.label}</div>
+                      <div className="app-settings-nav-subtitle">{item.subtitle}</div>
+                    </div>
+                    <Icon name="chevron_right" size={14} className="app-settings-nav-chevron" />
+                  </button>
+                ))}
+              </>
+            )}
           </nav>
         ) : (
           <div
@@ -515,6 +613,44 @@ export default function Settings() {
                 </button>
               )
             })}
+
+            {filteredAdminItems.length > 0 && (
+              <>
+                <span
+                  className="app-settings-tablet-divider"
+                  style={{
+                    width: 1,
+                    height: 24,
+                    background: 'var(--border)',
+                    margin: '0 4px',
+                    alignSelf: 'center',
+                    flexShrink: 0,
+                  }}
+                  aria-hidden="true"
+                />
+                {filteredAdminItems.map((item) => (
+                  <button
+                    key={item.to}
+                    role="tab"
+                    type="button"
+                    onClick={() => navigate(item.to)}
+                    className="app-settings-tablet-tab settings-tab-pill"
+                    title={item.label}
+                  >
+                    <div
+                      className="app-settings-tablet-icon"
+                      style={{
+                        backgroundColor: 'var(--surface-2)',
+                        color: 'var(--text2)',
+                      }}
+                    >
+                      <Icon name={item.icon} size={14} />
+                    </div>
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </>
+            )}
           </div>
         )}
 

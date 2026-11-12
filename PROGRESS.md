@@ -1,5 +1,54 @@
 # Progress Log
 
+## 2026-11-13 — Card 10: Settings 4 sections + Admin group (G-17)
+
+**Did**
+- `src/data/settings.ts`: updated the 4 primary tabs to "Business & Tax", "Staff", "Branches", "Preferences" per G-17; defined and exported `ADMIN_GROUP_ITEMS` (Audit Trail `/admin/audit-log`, Activity Log `/admin/activity-log`, Numbering `/admin/numbering`, Backup & Restore `/admin/backup`) and `canAccessAdminGroup` helper (strictly Owner and Admin); added `preferences`, `staff`, and `business-tax` aliases to `LEGACY_TAB` so legacy and new URLs all resolve cleanly.
+- `src/lib/queries/settings.ts`: re-exported `ADMIN_GROUP_ITEMS`, `canAccessAdminGroup`, and `AdminGroupItem`.
+- `src/modules/settings/Settings.tsx`:
+  - Updated desktop sidebar navigation to render the 4 sections, followed by a divider and the "ADMIN" group with icons and descriptions, rendered exclusively when `canAccessAdminGroup(user?.role)` is true.
+  - Updated phone navigation list (`onPhoneList`) to render the 4 sections under "APP SETTINGS", followed by the "ADMIN" group exclusively for Owner and Admin.
+  - Updated tablet horizontal tab list to render the 4 sections, followed by an inline divider and the Admin group pills exclusively for Owner and Admin.
+  - Concluded header action and overflow action gating: "View audit log" link and overflow action are strictly hidden for non-admin roles.
+  - Filtered `admin` section from `FIELD_SECTIONS.system` when viewing the Preferences pane so non-admin roles never see unaccessible administrative items.
+  - Kept personal settings (theme mode, display density, personal PIN, language preference) accessible to all roles per Q5.
+- `src/modules/settings/settings.css`: added `.app-settings-nav-divider` and `.app-settings-tablet-divider` styling.
+- `src/modules/settings/__tests__/settingsSections.test.ts` & `Settings.header.test.tsx`: updated tests for new tab labels and aliases.
+- `src/modules/settings/__tests__/settingsAdminGroup.test.tsx`: added dedicated test suite covering all 9 roles, navigation rendering, deep link resolution, click handling, and personal settings persistence.
+
+**Ruled**
+- G-17: Settings navigation displays 4 sections (Business & Tax · Staff · Branches · Preferences) plus an Admin group (Audit Trail · Activity Log · Numbering · Backup & Restore) rendered exclusively for Owner and Admin. Permission cells do not change.
+- Q5: Personal settings (theme, density, language, PIN) remain accessible to every role.
+- All `/settings?tab=` and `/admin/...` deep links remain functional.
+
+**Verified**
+- `npx vitest run src/modules/settings/`: 17 test files, 131 tests passed.
+- `npm run typecheck`: clean (tsc --noEmit exit code 0).
+- `npm run lint`: clean (eslint src --max-warnings 0 exit code 0).
+- `npm run lint:shell`: clean (875 files checked).
+- `npm run lint:ui-copy`: clean (0 developer-text violations, all tests passed).
+- `npm run check:contrast`: clean (97/97 passed, 0 failed).
+- `npm run build`: clean (built in 1m 49s, PWA sw.js and bundles generated).
+- `npm run lint:progress`: clean.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +1 |
+| Lifecycle | steps green / total | 72 / 72 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 233 files · check:pglite 233/233 applied, 0 failed.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Awaits Babin's review and local merge of branch `lane-b/card-10-settings-admin-group`.
+- Next card in track: Card 7 or Card 2 / 6 as prioritized.
+
 ## 2026-11-10 — Card 4: register D-UX-01 to D-UX-05 as O-23 to O-27 (docs only)
 
 **Did**

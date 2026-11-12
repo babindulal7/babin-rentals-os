@@ -129,10 +129,10 @@ export interface TabDef {
  * new home rather than dropping the user on a fallback.
  */
 export const TABS: TabDef[] = [
-  { key: 'business', label: 'Business', money: false },
-  { key: 'people', label: 'People', money: false },
+  { key: 'business', label: 'Business & Tax', money: false },
+  { key: 'people', label: 'Staff', money: false },
   { key: 'branches', label: 'Branches', money: false },
-  { key: 'system', label: 'System', money: false },
+  { key: 'system', label: 'Preferences', money: false },
 ]
 
 export const TEXTS_TAB: TabDef = { key: 'texts', label: 'Texts', money: false }
@@ -158,6 +158,10 @@ export const LEGACY_TAB: Record<string, TabKey> = {
   communication: 'system',
   automation: 'system',
   ai: 'system',
+  /* Card 10 (G-17) aliases */
+  preferences: 'system',
+  staff: 'people',
+  'business-tax': 'business',
 }
 
 /** The default when no `?tab=` is present, and the fallback for an unknown one. */
@@ -165,10 +169,10 @@ export const DEFAULT_TAB: TabKey = 'business'
 
 /** Short label for the phone list and the tablet strip, where width is scarce. */
 export const TAB_SHORT_LABEL: Record<TabKey, string> = {
-  business: 'Business',
-  people: 'People',
+  business: 'Business & Tax',
+  people: 'Staff',
   branches: 'Branches',
-  system: 'System',
+  system: 'Preferences',
   texts: 'Texts',
 }
 
@@ -182,10 +186,10 @@ export const TAB_ICON: Record<TabKey, IconName> = {
 
 /** One line under each row of the phone section list, so a tap is not a guess. */
 export const TAB_SUMMARY: Record<TabKey, string> = {
-  business: 'Name, VAT and language \u00b7 tax, terms, deposits and memberships.',
+  business: 'Name, VAT and language · tax, terms, deposits and memberships.',
   people: 'User list, role assignment, and the nine-role permissions matrix.',
   branches: 'Branch list, and the warehouses, racks and zones under each one.',
-  system: 'Appearance, notifications, preferences, security and the admin tools.',
+  system: 'Appearance, notifications, preferences, security and system controls.',
   texts: 'Automatic client emails, reminder wording, and document texts (B20).',
 }
 
@@ -204,6 +208,54 @@ export function isTabKey(v: string | null): v is TabKey {
  */
 export function isDestVisible(dest: Dest, visible: readonly TabDef[]): boolean {
   return dest.kind !== 'tab' || visible.some((t) => t.key === dest.tab)
+}
+
+/* ── Card 10 (G-17) Admin Group ────────────────────────────────────────── */
+
+export interface AdminGroupItem {
+  label: string
+  subtitle: string
+  to: string
+  icon: IconName
+}
+
+/**
+ * Admin tools group shown in Settings navigation exclusively to Owner and Admin
+ * (Ruling 2026-11-10 G-17, PERMISSIONS.md §2.1, §3).
+ */
+export const ADMIN_GROUP_ITEMS: readonly AdminGroupItem[] = [
+  {
+    label: 'Audit Trail',
+    subtitle: 'Immutable record of changes & gates',
+    to: '/admin/audit',
+    icon: 'checklist',
+  },
+  {
+    label: 'Activity Log',
+    subtitle: 'Staff actions, newest first',
+    to: '/admin/activity-log',
+    icon: 'activity',
+  },
+  {
+    label: 'Numbering',
+    subtitle: 'Booking, invoice & asset ID formats',
+    to: '/admin/numbering',
+    icon: 'receipt',
+  },
+  {
+    label: 'Backup & Restore',
+    subtitle: 'Database snapshots & restore points',
+    to: '/admin/backup',
+    icon: 'database',
+  },
+]
+
+/**
+ * Check if the active role is permitted to see and open the Admin group
+ * (Ruling 2026-11-10 G-17: shown to Owner and Admin only).
+ */
+export function canAccessAdminGroup(role?: string | null): boolean {
+  return role === 'Owner' || role === 'Admin'
 }
 
 /* ── organization profile ──────────────────────────────────────────────── */

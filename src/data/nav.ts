@@ -424,7 +424,7 @@ export function moreNav(role: SystemRole | undefined): NavSection[] {
  * | `/inventory` | Equipment · Bundles · Stock Check · Maintenance | **yes** — Sub-Rental and Cases left the strip |
  * | `/clients` | Directory · Membership | **yes in shape** — two tabs as ruled; the first is labelled "Directory" on screen |
  * | `/rentals` | no tabs (Table · Cards · Timeline is a view switch) | **yes** |
- * | `/settings` | Business · People · Branches · System | not ruled on here |
+ * | `/settings` | Business & Tax · Staff · Branches · Preferences (+ Admin group) | **yes** — ruled G-17 |
  *
  * So the name is still `SPEC_TABS`, not `TABS`: for every page but Finance it is
  * the record, not the source. Sub-Rental and Cases kept their screens
@@ -466,6 +466,7 @@ export const SPEC_TABS: Record<string, string[]> = {
      destination reachable two ways is the duplication the nav rules exist to
      prevent. See `WIREFRAME_RULINGS_2026-08-12.md` §5. */
   '/clients': ['Clients', 'Memberships'],
+  '/settings': ['Business & Tax', 'Staff', 'Branches', 'Preferences'],
 }
 
 /**

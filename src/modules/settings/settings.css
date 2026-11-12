@@ -218,6 +218,12 @@
   padding: 4px 8px;
 }
 
+.app-settings-nav-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 4px;
+}
+
 .app-settings-nav-item,
 .settings-tab-btn {
   display: flex;
@@ -318,6 +324,14 @@
   padding-bottom: 4px;
   margin-bottom: var(--sp-md, 16px);
   border-bottom: 1px solid var(--border);
+}
+
+.app-settings-tablet-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border);
+  margin: auto 4px;
+  flex-shrink: 0;
 }
 
 .app-settings-tablet-tab,
