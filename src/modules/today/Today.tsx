@@ -575,6 +575,80 @@ export default function Today() {
 
   const navigate = useNavigate()
 
+  // Reference "one obvious action" panel derives exclusively from the same
+  // RLS-filtered movement rows already used by the Pickup/Return queues.
+  // It never fabricates a client, conflict, amount, scan or inspection result.
+  const nextPickup = pickups.rows.find((row) => row.flags.includes('Overdue')) ?? pickups.rows[0]
+  const nextReturn = returns.rows[0]
+  const loadedToPack = pickups.rows.filter((row) => row.status !== 'Packed').length
+
+  const renderReferenceInspector = () => (
+    <div className="br-reference-inspector">
+      <section className="br-reference-inspector__card" aria-label="Next pickup action">
+        <span className="br-reference-inspector__eyebrow">One obvious action · Pickup</span>
+        {pickups.loading ? (
+          <p className="br-reference-inspector__detail">Loading the next operational task…</p>
+        ) : pickups.error ? (
+          <p className="br-reference-inspector__detail" role="alert">Pickup queue unavailable. Retry using Refresh movements.</p>
+        ) : nextPickup ? (
+          <>
+            <h2 className="br-reference-inspector__title">{nextPickup.bookingNo} · {nextPickup.client}</h2>
+            <p className="br-reference-inspector__detail">Current stage: {nextPickup.status || 'Booked'}</p>
+            <div className="br-reference-inspector__gate">
+              <strong>{nextPickup.status === 'Packed' ? 'Next: Complete client handover' : 'Next: Prepare and scan equipment'}</strong>
+              <small>Unit-level testing, cleaning, packing and photo-evidence gates are checked inside the actual booking operations workspace.</small>
+              <button
+                type="button"
+                className="br-reference-inspector__cta"
+                onClick={() => openOperations(
+                  nextPickup.bookingNo,
+                  (nextPickup.status as BookingStatus) || 'Booked',
+                  nextPickup.status === 'Packed' ? 'Handover' : 'Pack',
+                )}
+              >
+                {nextPickup.status === 'Packed' ? 'Open Handover' : 'Open Packing & Scan'}
+              </button>
+            </div>
+          </>
+        ) : (
+          <p className="br-reference-inspector__detail">No pickups in the selected period.</p>
+        )}
+      </section>
+      <section className="br-reference-inspector__card" aria-label="Return and queue status">
+        <span className="br-reference-inspector__eyebrow">Warehouse workbench</span>
+        <div className="br-reference-inspector__row">
+          <span>Pickups in selected period</span>
+          <strong>{pickups.loading || pickups.error ? '—' : pickups.total ?? '—'}</strong>
+        </div>
+        <div className="br-reference-inspector__row">
+          <span>Returns in selected period</span>
+          <strong>{returns.loading || returns.error ? '—' : returns.total ?? '—'}</strong>
+        </div>
+        <div className="br-reference-inspector__row">
+          <span>Loaded units to pack</span>
+          <strong>{pickups.loading || pickups.error ? '—' : loadedToPack}</strong>
+        </div>
+        {nextReturn && !returns.error && (
+          <div className="br-reference-inspector__gate">
+            <strong>Next return: {nextReturn.bookingNo}</strong>
+            <small>{nextReturn.client} · Inspect returned serialized equipment before reset.</small>
+            <button
+              type="button"
+              className="br-reference-inspector__cta"
+              onClick={() => openOperations(
+                nextReturn.bookingNo,
+                (nextReturn.status as BookingStatus) || 'On Rent',
+                'Return',
+              )}
+            >
+              Open Return & Inspection
+            </button>
+          </div>
+        )}
+      </section>
+    </div>
+  )
+
   return (
     <PageShell
       className="rental-dashboard"
@@ -684,88 +758,127 @@ export default function Today() {
             </div>
           </div>
         ))}
+        <div className="dispatch-summary dispatch-summary--packing" aria-label="Loaded packing queue">
+          <span className="dispatch-summary__icon" aria-hidden="true"><Icon name="package" size={22} /></span>
+          <div className="dispatch-summary__body">
+            <div className="dispatch-summary__heading">
+              <strong className="dispatch-summary__count font-mono tabular-nums">
+                {pickups.loading || pickups.error ? '—' : loadedToPack}
+              </strong>
+              <h2>To pack</h2>
+            </div>
+            <p>Among {pickups.loading || pickups.error ? '—' : pickups.rows.length} loaded pickup bookings</p>
+          </div>
+        </div>
+        <div className="dispatch-summary dispatch-summary--overdue" aria-label="Overdue pickups in loaded queue">
+          <span className="dispatch-summary__icon" aria-hidden="true"><Icon name="alert_triangle" size={22} /></span>
+          <div className="dispatch-summary__body">
+            <div className="dispatch-summary__heading">
+              <strong className="dispatch-summary__count font-mono tabular-nums">
+                {pickups.loading || pickups.error ? '—' : overduePickups.length}
+              </strong>
+              <h2>Overdue</h2>
+            </div>
+            <p>Among loaded pickups · not an all-bookings total</p>
+          </div>
+        </div>
       </section>
 
-      {/* Spec §31: Mobile Segmented Control */}
-      {isPhone && (
-        <div className="dashboard-mobile-nav">
-          <SegmentedControl
-            fullWidth
-            idPrefix={queueTabsId}
-            ariaLabel="Dashboard Movements"
-            options={[
-              { id: 'pickups', label: 'Pickups', badge: pickupCount },
-              { id: 'returns', label: 'Returns', badge: returnCount },
-            ]}
-            value={mobileTab}
-            onChange={(nextTab) => {
-              mobileTabChosenRef.current = true
-              setMobileTab(nextTab)
-            }}
-          />
+      <div className="br-reference-workbench" aria-label="Dispatch queues and next action">
+        <div className="br-reference-workbench__queues">
+          {/* Spec §31: Mobile Segmented Control */}
+          {isPhone && (
+            <div className="dashboard-mobile-nav">
+              <SegmentedControl
+                fullWidth
+                idPrefix={queueTabsId}
+                ariaLabel="Dashboard Movements"
+                options={[
+                  { id: 'pickups', label: 'Pickups', badge: pickupCount },
+                  { id: 'returns', label: 'Returns', badge: returnCount },
+                ]}
+                value={mobileTab}
+                onChange={(nextTab) => {
+                  mobileTabChosenRef.current = true
+                  setMobileTab(nextTab)
+                }}
+              />
+            </div>
+          )}
+    
+          {/* RULING 2026-10-09: date filtering changes records, not queue width or order. */}
+          <div className="rental-dashboard__panels">
+            {(!isPhone || mobileTab === 'pickups') && (
+              <DashboardMovementPanel
+                side="outgoing"
+                panelId={isPhone ? `${queueTabsId}-panel-pickups` : undefined}
+                tabId={isPhone ? `${queueTabsId}-tab-pickups` : undefined}
+                noun="pickup"
+                date={dispatchDate}
+                title="Pickups"
+                subtitle="Scheduled departures"
+                icon="truck"
+                list={pickups}
+                filterControl={
+                  <MasterDispatchDateControl
+                    filter={pickupDateFilter}
+                    onChange={setPickupFilter}
+                    today={dayAd}
+                    groupLabel="Date filter for pickups"
+                    dialogLabel="Pickups date filter"
+                  />
+                }
+                periodLabel={filterLabel(pickupDateFilter).toLowerCase()}
+                globalQuery={globalSearch}
+                onSelectPeriod={(p) => syncBothPanels({ kind: 'quick', period: p })}
+                onClearFilters={() => setPickupFilter({ kind: 'quick', period: 'Today' })}
+                onLoadMore={() => setPickupPage((page) => page + 1)}
+                hasMore={pickups.total !== null && pickups.rows.length < pickups.total}
+                isToday={isDispatchToday}
+              />
+            )}
+    
+            {(!isPhone || mobileTab === 'returns') && (
+              <DashboardMovementPanel
+                side="incoming"
+                panelId={isPhone ? `${queueTabsId}-panel-returns` : undefined}
+                tabId={isPhone ? `${queueTabsId}-tab-returns` : undefined}
+                noun="return"
+                date={dispatchDate}
+                title="Returns"
+                subtitle={isReturnToday ? 'Today · Overdue included' : undefined}
+                icon="return_arrow"
+                list={returns}
+                filterControl={
+                  <MasterDispatchDateControl
+                    filter={returnDateFilter}
+                    onChange={setReturnFilter}
+                    today={dayAd}
+                    groupLabel="Date filter for returns"
+                    dialogLabel="Returns date filter"
+                  />
+                }
+                periodLabel={filterLabel(returnDateFilter).toLowerCase()}
+                isToday={isReturnToday}
+                globalQuery={globalSearch}
+                onSelectPeriod={(p) => syncBothPanels({ kind: 'quick', period: p })}
+                onClearFilters={() => setReturnFilter({ kind: 'quick', period: 'Today' })}
+                onLoadMore={() => setReturnPage((page) => page + 1)}
+                hasMore={returns.total !== null && returns.rows.length < returns.total}
+              />
+            )}
+          </div>
+    
         </div>
-      )}
-
-      {/* RULING 2026-10-09: date filtering changes records, not queue width or order. */}
-      <div className="rental-dashboard__panels">
-        {(!isPhone || mobileTab === 'pickups') && (
-          <DashboardMovementPanel
-            side="outgoing"
-            panelId={isPhone ? `${queueTabsId}-panel-pickups` : undefined}
-            tabId={isPhone ? `${queueTabsId}-tab-pickups` : undefined}
-            noun="pickup"
-            date={dispatchDate}
-            title="Pickups"
-            subtitle="Scheduled departures"
-            icon="truck"
-            list={pickups}
-            filterControl={
-              <MasterDispatchDateControl
-                filter={pickupDateFilter}
-                onChange={setPickupFilter}
-                today={dayAd}
-                groupLabel="Date filter for pickups"
-                dialogLabel="Pickups date filter"
-              />
-            }
-            periodLabel={filterLabel(pickupDateFilter).toLowerCase()}
-            globalQuery={globalSearch}
-            onSelectPeriod={(p) => syncBothPanels({ kind: 'quick', period: p })}
-            onClearFilters={() => setPickupFilter({ kind: 'quick', period: 'Today' })}
-            onLoadMore={() => setPickupPage((page) => page + 1)}
-            hasMore={pickups.total !== null && pickups.rows.length < pickups.total}
-            isToday={isDispatchToday}
-          />
-        )}
-
-        {(!isPhone || mobileTab === 'returns') && (
-          <DashboardMovementPanel
-            side="incoming"
-            panelId={isPhone ? `${queueTabsId}-panel-returns` : undefined}
-            tabId={isPhone ? `${queueTabsId}-tab-returns` : undefined}
-            noun="return"
-            date={dispatchDate}
-            title="Returns"
-            subtitle={isReturnToday ? 'Today · Overdue included' : undefined}
-            icon="return_arrow"
-            list={returns}
-            filterControl={
-              <MasterDispatchDateControl
-                filter={returnDateFilter}
-                onChange={setReturnFilter}
-                today={dayAd}
-                groupLabel="Date filter for returns"
-                dialogLabel="Returns date filter"
-              />
-            }
-            periodLabel={filterLabel(returnDateFilter).toLowerCase()}
-            isToday={isReturnToday}
-            globalQuery={globalSearch}
-            onSelectPeriod={(p) => syncBothPanels({ kind: 'quick', period: p })}
-            onClearFilters={() => setReturnFilter({ kind: 'quick', period: 'Today' })}
-            onLoadMore={() => setReturnPage((page) => page + 1)}
-            hasMore={returns.total !== null && returns.rows.length < returns.total}
-          />
+        {isPhone ? (
+          <details className="br-reference-inspector--phone">
+            <summary>Next task &amp; scan workbench</summary>
+            {renderReferenceInspector()}
+          </details>
+        ) : (
+          <aside className="br-reference-inspector--desktop" aria-label="Contextual rental inspector">
+            {renderReferenceInspector()}
+          </aside>
         )}
       </div>
 
