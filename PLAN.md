@@ -1,5 +1,8 @@
 # PLAN.md — Babin Rentals OS: the road to go-live
 
+> **Owner scope update — 12 Nov 2026 (design/plan, NOT shipped):** Coordinated launch target by **18 February 2027** now includes the **full company website at babinrentals.com**, **client portal and booking at book.babinrentals.com**, and staff **Babin Rentals OS**. This supersedes the older interpreted B5/T10 choice to build the full marketing website after launch. Public booking starts with **pickup AND return date/time**; launch defaults are manual staff approval, guest requests on, public base prices on, eligible signed-in client discounts on and new-request staff notifications on, all Owner/Admin-configurable in OS Settings with backend audit. See [owner rulings](RULINGS-2026-11-12-unified-launch.md) and the [unified workstream/release plan](docs/plans/UNIFIED_LAUNCH_2027-02-18.md). Existing G1–G10 release safety gates remain mandatory; this update does **not** approve a merge, hosted staging charge, live settings/schema mutation, domain change, payment activation, deployment or Booqable cancellation.
+
+
 **Version 1.4 · 31 Oct 2026 (14 Kartik 2083) · Owner: Babin Dulal · Status: ACTIVE**
 
 *v1.4 (31 Oct, on `main` `9e219db`): the Booqable round of 27 Oct — [`RULINGS-2026-10-27-booqable.md`](RULINGS-2026-10-27-booqable.md) B1–B56 and Claude's K1–K7 — adds 29 cards across T1–T7 (store parity, stock tools, sign-in security, team tools), all tagged **[go-live] · slips first** except T1-16 and T2-25; closes O-1, O-2 and O-3; indexes O-18 (PIN length) and O-19 (who writes team notes); sizes recounted by script (§3).*
