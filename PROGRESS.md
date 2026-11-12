@@ -1,5 +1,61 @@
 # Progress Log
 
+## 2026-11-12 — T3-08, T3-22 & T3-10: Equipment one-page editor, Availability in two taps, After-hours service line (Lane C)
+
+**Did**
+- **T3-08: Equipment form: one page, seven sections (D19, closes OPEN_DECISIONS §19):**
+  - Removed remaining 5-stage wizard artifacts (`EquipmentStage`, `EQUIPMENT_STAGES`, `getEquipmentStageState`, `EquipmentWizardStepper`, and `.equipment-mode-toggle`) from `src/components/records/equipmentAssist.tsx`.
+  - Updated `src/components/records/__tests__/equipmentAssist.test.tsx` to verify section states and `EquipmentSectionLinks` for all 7 section anchors (`Identity`, `Stock & Units`, `Relationships`, `Location`, `Purchase`, `Pricing & Rental`, `Maintenance & Documents`).
+  - Added `src/components/records/__tests__/EquipmentRecordEditor.test.tsx` verifying all 7 sections render on one page with matching anchor jump links, no wizard toggle, and Law 6 hiding of `Purchase` & `Pricing & Rental` for money-blind roles.
+  - Marked `docs/OPEN_DECISIONS.md` §19 as RESOLVED (D19 / T3-08).
+- **T3-22: Availability in two taps (W91, Law 1, Law 6):**
+  - Integrated and verified `lane-c/T3-22-availability-in-two-taps` (`4cf1b23c`) cleanly with T3-13 in `src/lib/availability.ts` (`computeDailyAvailability`, `findNextFreeDate`), `src/lib/queries/productAvailability.ts`, `src/components/ui/CheckAvailabilityModal.tsx`, `src/components/shell/Header.tsx` (`Alt+A`), and `CommandPalette.tsx`.
+- **T3-10: After-hours line (D7, §4.64d, Law 6):**
+  - Added `ServiceResult`, `SERVICE_PRODUCTS` (containing **After-hours handover** with `ratePaisa: null` — no fixed price, no automatic surcharge), and `serviceLineDraft()` in `src/modules/rentals/booking/itemCatalogue.ts`, wired into `runQuery()`.
+  - Added `ServiceRow` in `src/modules/rentals/booking/AddItemPanel.tsx` so staff can open the `Services` tab (or search `"after-hours"`), type any Rs amount (≥ 0), and add the `'Service'` line (`days: 1`). Enforced Law 6: money-blind roles see no price/amount input or Rs figures.
+  - Added 1-tap **"After-hours handover"** button under `Services & other charges` in `src/modules/rentals/booking/BookingEquipmentSection.tsx` (gated by `canBookingMoney`) that pre-fills the Service line form with `After-hours handover` and `days: 1`.
+  - Added `src/modules/rentals/booking/__tests__/AfterHoursService.test.tsx` (4/4 passing).
+
+**Ruled**
+- D19 (T3-08): Equipment editor is strictly one page with seven section anchors and jump links — no five-step wizard.
+- W91 (T3-22): Checking availability from the shell header (`Alt+A` / Availability button) takes ≤ 2 taps and matches New Rental's windowed availability engine.
+- D7 (T3-10): "After-hours handover" has no fixed price and never applies an automatic surcharge; staff type the amount when deciding to charge it. Warehouse cannot see its price (Law 6).
+
+**Verified**
+- `npm run check:pglite`: 229/229 applied, 0 failed (R-35 Verified).
+- `npm run check:lifecycle`: 71/71 green, 0 failed.
+- `npm test`: 595 test files passed, 6,970 tests passed, 0 failed.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run build`: built in 1m 21s (PWA precache 294 entries).
+- `npm run check:security`: 18 Phase 0 regressions + 28 operations grants + 14 reset branch groups + glossary pass.
+- `node scripts/test-booking-financial-integrity.mjs`: PASS.
+- `npm run test:server-contracts`: 59/59 assertions passed.
+- `npm run test:partial-return`: 58/58 assertions passed.
+- `npm run check:contrast`: 106/106 pass.
+- `npm run lint:ui-copy`: 0 violations.
+- `npm run lint:shell`: 926 files checked, 0 violations.
+- `node --test scripts/test-receipt.test.mjs`: 11/11 passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 101 / 101 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 82 / 82 (100%) | +0 |
+| Lifecycle | steps green / total | 71 / 71 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 229 files · check:pglite 229/229 applied, 0 failed (recorded 2026-11-12T12:18:52.953Z). Suite: PASS — 6970/6970 passed, 0 failed (recorded 2026-11-12T12:16:52.578Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-12T12:19:51.637Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T3-08 (`lane-c/T3-08-equipment-form-one-page-seven-sections`), T3-22 (`lane-c/T3-22-availability-in-two-taps`), and T3-10 (`lane-c/T3-10-after-hours`) ready for local merge into `main`.
+- Next in Lane C: Card T3-16 · Share documents in one tap (`docs/plans/prompts/T3-16.md`) or T3-20 · Who owes (`docs/plans/prompts/T3-20.md`).
+
 ## 2026-11-10 — T3-13: Fully booked → similar item or sub-rent (Lane C)
 
 **Did**

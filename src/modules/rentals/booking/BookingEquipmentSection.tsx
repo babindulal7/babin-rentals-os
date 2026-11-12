@@ -161,7 +161,10 @@ export function BookingEquipmentSection({
         serial: '—',
         category: isSub ? 'Sub-rental' : customLineType === 'Service' ? 'Service' : 'Manual charge',
         ratePaisa: rupees(rate) as Paisa,
-        days: Math.max(1, days || 1),
+        days:
+          customLineType === 'Service' && name.toLowerCase().includes('after-hours')
+            ? 1
+            : Math.max(1, days || 1),
         qty: Math.max(1, Math.round(customLineQty) || 1),
         discountPct: 0,
         location: isSub ? (vendor ? `Vendor: ${vendor}` : 'Sub-rented') : 'Not inventory-tracked',
@@ -385,6 +388,23 @@ export function BookingEquipmentSection({
           <div className="new-rental-equipment-extras-bar">
             <h3 className="new-rental-equipment-label">Services &amp; other charges</h3>
             <div className="new-rental-equipment-extras-actions">
+              <Button
+                icon="clock"
+                variant="outline"
+                size="sm"
+                aria-controls="new-rental-custom-line"
+                aria-expanded={customLineOpen && customLineType === 'Service' && customLineName === 'After-hours handover'}
+                onClick={() => {
+                  setCustomLineType('Service')
+                  setCustomLineName('After-hours handover')
+                  setCustomLineRate('')
+                  setCustomLineQty(1)
+                  setCustomLineError(null)
+                  setCustomLineOpen(true)
+                }}
+              >
+                After-hours handover
+              </Button>
               <Button
                 icon="box"
                 variant="outline"

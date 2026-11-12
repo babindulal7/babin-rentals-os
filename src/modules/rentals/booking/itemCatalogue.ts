@@ -56,7 +56,7 @@ import { ACTIVE_BUNDLES, ALL_CATEGORIES, factsOf, isPriced, type BundleFacts, ty
 import { bundlesUsing } from '../../../lib/queries/addEquipment'
 import { CATEGORY_OPTIONS, PARENTS, type InvStatus, type ParentRow } from '../../../lib/queries/inventory'
 import { crewPool, type CrewMember } from '../../../lib/queries/crew'
-import type { Paisa } from '../../../lib/money'
+import { rupees, type Paisa } from '../../../lib/money'
 /* Type-only, so this module keeps importing nothing that touches IO. */
 import type { ProductWindowAvailability } from '../../../lib/queries/productAvailability'
 import type { StatusKey } from '../../../lib/status'
@@ -905,6 +905,74 @@ export function inCategory(r: CatalogueResult, category: string): boolean {
 export const SERVICES_UNAVAILABLE_REASON =
   'No service catalogue exists yet. Crew is added in Section 3 (Crew & Transport) and delivery and fuel are charged there too — nothing is lost, but a searchable service list needs a catalogue this build does not have.'
 
+/* ── Service products (D7 — After-hours handover, T3-10) ───────────────── */
+
+export interface ServiceResult {
+  kind: 'service'
+  id: string
+  name: string
+  category: 'Service'
+  description: string
+  /** No fixed price — staff type the amount when adding (D7). */
+  ratePaisa: null
+  availability: AvailabilityVerdict
+  haystack: readonly string[]
+}
+
+/**
+ * Service products available in New Rental (D7, §4.64d).
+ * "After-hours handover" has no fixed price; staff enter the amount when adding.
+ * No automatic surcharge is ever applied.
+ */
+export const SERVICE_PRODUCTS: readonly ServiceResult[] = [
+  {
+    kind: 'service',
+    id: 'svc-after-hours-handover',
+    name: 'After-hours handover',
+    category: 'Service',
+    description: 'Manual after-hours handover or return charge — staff enter amount (D7)',
+    ratePaisa: null,
+    availability: verdict('available', 'No fixed price · staff enter amount'),
+    haystack: [
+      'After-hours handover',
+      'After hours',
+      'handover',
+      'service',
+      'late',
+      'early',
+      'd7',
+    ].map(normalise),
+  },
+]
+
+export function serviceLineDraft(input: {
+  id?: string
+  name: string
+  rateRupees: number
+  qty?: number
+  days?: number
+}): BookingLineDraft {
+  const rate = Number.isFinite(input.rateRupees) ? Math.max(0, input.rateRupees) : 0
+  const lineId =
+    input.id ??
+    (typeof globalThis.crypto?.randomUUID === 'function'
+      ? globalThis.crypto.randomUUID()
+      : `svc-${Date.now()}-${Math.random().toString(36).slice(2)}`)
+  return {
+    id: lineId,
+    lineType: 'Service',
+    name: input.name.trim() || 'After-hours handover',
+    serial: '—',
+    category: 'Service',
+    ratePaisa: rupees(rate) as Paisa,
+    days: Math.max(1, Math.round(input.days ?? 1)),
+    qty: Math.max(1, Math.round(input.qty ?? 1)),
+    discountPct: 0,
+    location: 'Not inventory-tracked',
+    committedTo: '—',
+  }
+}
+
 /* ── Sort (§35) ────────────────────────────────────────────────────────── */
 
 export type SortKey = 'recommended' | 'name' | 'price-asc' | 'price-desc'
@@ -1144,7 +1212,7 @@ function transportToResult(t: TransportOption): TransportResult {
   } as TransportResult
 }
 
-export type CatalogueResult = EquipmentResult | BundleResult | CrewResult | TransportResult
+export type CatalogueResult = EquipmentResult | BundleResult | CrewResult | TransportResult | ServiceResult
 
 /**
  * One query over the whole catalogue (§25). The operator never picks a type
@@ -1158,6 +1226,7 @@ export function runQuery(w: BookingWindow, o: QueryOptions): QueryOutcome {
   const pool: CatalogueResult[] = [
     ...(o.kinds.has('bundle') ? (o.bundles ?? bundleResults(w)) : []),
     ...(o.equipment ?? EQUIPMENT_RESULTS).filter((e) => o.kinds.has(e.kind)),
+    ...(o.kinds.has('service') ? SERVICE_PRODUCTS : []),
     ...(o.kinds.has('crew') ? crewPool(o.crew).map(crewToResult) : []),
     ...(o.kinds.has('transport') ? (o.transport ?? defaultTransportOptions(w)).map(transportToResult) : []),
   ]
@@ -1203,7 +1272,7 @@ export function runQuery(w: BookingWindow, o: QueryOptions): QueryOutcome {
     .map((g) => ({
       kind: g.kind,
       heading: g.heading,
-      results: g.kind === 'service' ? [] : sorted.filter((r) => r.kind === g.kind),
+      results: sorted.filter((r) => r.kind === g.kind),
     }))
     .filter((g) => g.kind === 'service' || g.results.length > 0)
 

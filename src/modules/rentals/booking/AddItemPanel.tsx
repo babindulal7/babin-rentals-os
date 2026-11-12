@@ -75,6 +75,7 @@ import {
   findSimilarFreeEquipment,
   groupEquipmentResults,
   runQuery,
+  serviceLineDraft,
 } from './itemCatalogue'
 import type {
   AddBundleResult,
@@ -89,6 +90,7 @@ import type {
   EquipmentResult,
   QueryGroup,
   ResultKind,
+  ServiceResult,
   SortKey,
   TransportOption,
   TransportResult,
@@ -149,6 +151,7 @@ const AVAILABILITY_FILTERS: ReadonlyArray<{ value: AvailabilityLevel | 'any'; la
 type FlatOption =
   | { type: 'bundle'; groupKind: ResultKind; result: BundleResult; index: number }
   | { type: 'equipmentGroup'; groupKind: ResultKind; group: EquipmentModelGroup; index: number }
+  | { type: 'service'; groupKind: ResultKind; result: ServiceResult; index: number }
   | { type: 'crew'; groupKind: ResultKind; result: CrewResult; index: number }
   | { type: 'transport'; groupKind: ResultKind; result: TransportResult; index: number }
 
@@ -177,6 +180,10 @@ function flatten(groups: readonly QueryGroup[]): FlatOption[] {
     } else if (g.kind === 'equipment' || g.kind === 'accessory') {
       for (const group of groupEquipmentResults(g.results as EquipmentResult[])) {
         out.push({ type: 'equipmentGroup', groupKind: g.kind, group, index: out.length })
+      }
+    } else if (g.kind === 'service') {
+      for (const r of g.results) {
+        out.push({ type: 'service', groupKind: g.kind, result: r as ServiceResult, index: out.length })
       }
     } else if (g.kind === 'crew') {
       for (const r of g.results) {
@@ -555,6 +562,17 @@ export function AddItemPanel({
       onAdd([equipmentLineDraft(e, days)], { kind: e.kind, id: e.id, name: e.name })
     },
     [existing, onAdd, days],
+  )
+
+  const addService = useCallback(
+    (s: ServiceResult, rateRupees: number) => {
+      onAdd([serviceLineDraft({ name: s.name, rateRupees })], {
+        kind: 'service',
+        id: s.id,
+        name: s.name,
+      })
+    },
+    [onAdd],
   )
 
   const addSubRentEquipment = useCallback(
@@ -1212,7 +1230,7 @@ export function AddItemPanel({
                     </span>
                   </div>
 
-                  {g.kind === 'service' ? (
+                  {g.kind === 'service' && g.results.length === 0 ? (
                     <p
                       style={{
                         margin: 0,
@@ -1292,6 +1310,19 @@ export function AddItemPanel({
                                 onOpenPartnerModal={(grp) => setPartnerModalGroup(grp)}
                                 onSubRent={(unit) => addSubRentEquipment(unit)}
                                 onRequestOverride={(unit) => setOverrideUnit(unit)}
+                              />
+                            )
+                          }
+                          if (o.type === 'service') {
+                            return (
+                              <ServiceRow
+                                key={o.result.id}
+                                id={`${listboxId}-opt-${o.index}`}
+                                result={o.result}
+                                active={o.index === activeIndex}
+                                showPrices={showPrices}
+                                onHover={() => setActiveIndex(o.index)}
+                                onAdd={(amountRupees) => addService(o.result, amountRupees)}
                               />
                             )
                           }
@@ -2881,6 +2912,156 @@ function TransportRow({
           }}
         />
       </div>
+    </li>
+  )
+}
+
+function ServiceRow({
+  id,
+  result,
+  active,
+  showPrices,
+  onHover,
+  onAdd,
+}: {
+  id: string
+  result: ServiceResult
+  active: boolean
+  showPrices: boolean
+  onHover: () => void
+  onAdd: (amountRupees: number) => void
+}) {
+  const [amountInput, setAmountInput] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  const handleCommit = () => {
+    if (!showPrices) {
+      onAdd(0)
+      return
+    }
+    const trimmed = amountInput.trim()
+    if (trimmed === '') {
+      setError('Enter an amount (Rs 0 or more).')
+      return
+    }
+    const parsed = Number(trimmed)
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      setError('Enter a valid amount of Rs 0 or more.')
+      return
+    }
+    setError(null)
+    onAdd(parsed)
+    setAmountInput('')
+  }
+
+  return (
+    <li
+      id={id}
+      role="option"
+      aria-selected={active}
+      tabIndex={-1}
+      onMouseMove={onHover}
+      style={{
+        display: 'grid',
+        gap: 'var(--sp-xs)',
+        minHeight: TOUCH,
+        padding: '9px 10px',
+        borderRadius: 'var(--r-btn)',
+        background: active ? 'var(--hover-row)' : 'transparent',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', minWidth: 0, flexWrap: 'wrap' }}>
+        <span style={{ display: 'inline-flex', flexShrink: 0, color: 'var(--text2)' }}>
+          <Icon name="clock" size={15} />
+        </span>
+        <span
+          style={{
+            fontSize: 'var(--t-ui)',
+            fontWeight: 600,
+            color: 'var(--text)',
+          }}
+        >
+          {result.name}
+        </span>
+        <span
+          style={{
+            flexShrink: 0,
+            fontSize: 'var(--t-meta)',
+            color: 'var(--text2)',
+            fontWeight: 500,
+            background: 'var(--hover-row)',
+            padding: '1px 6px',
+            borderRadius: 'var(--r-badge)',
+          }}
+        >
+          Service
+        </span>
+        <span style={{ flexShrink: 0 }}>
+          <AvailabilityChip verdict={result.availability} />
+        </span>
+      </div>
+
+      <div style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+        {result.description}
+      </div>
+
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          gap: 8,
+          marginTop: 4,
+        }}
+      >
+        {showPrices && (
+          <input
+            type="number"
+            min={0}
+            step="1"
+            inputMode="numeric"
+            value={amountInput}
+            onChange={(e) => {
+              setAmountInput(e.target.value)
+              if (error) setError(null)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                handleCommit()
+              }
+            }}
+            placeholder="Amount (Rs)"
+            aria-label={`${result.name} amount (Rs)`}
+            style={{
+              width: 140,
+              minHeight: TOUCH,
+              padding: '0 10px',
+              borderRadius: 'var(--r-btn)',
+              border: '1px solid var(--border)',
+              background: 'var(--surface)',
+              color: 'var(--text)',
+              fontSize: 'var(--t-ui)',
+              fontFamily: 'var(--font-mono)',
+            }}
+          />
+        )}
+        <RowButton
+          label={`Add ${result.name}`}
+          icon="plus"
+          primary
+          onClick={(e) => {
+            e.stopPropagation()
+            handleCommit()
+          }}
+        />
+      </div>
+
+      {error && (
+        <p role="alert" style={{ margin: '2px 0 0', fontSize: 'var(--t-meta)', color: 'var(--st-danger-fg)' }}>
+          {error}
+        </p>
+      )}
     </li>
   )
 }

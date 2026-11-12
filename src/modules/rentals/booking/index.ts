@@ -77,6 +77,7 @@ export {
   NO_WINDOW,
   OMITTED_SORTS,
   SERVICES_UNAVAILABLE_REASON,
+  SERVICE_PRODUCTS,
   SORT_OPTIONS,
   addBundleToBooking,
   bundleAvailability,
@@ -89,6 +90,7 @@ export {
   inCategory,
   normalise,
   runQuery,
+  serviceLineDraft,
 } from './itemCatalogue'
 export type {
   AddBundleOptions,
@@ -98,6 +100,7 @@ export type {
   BookingLineDraft,
   BookingWindow,
   BundleResult,
+  ServiceResult,
   CatalogueResult,
   ConflictCheckLine,
   EquipmentAvailabilitySource,
