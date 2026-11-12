@@ -1,16 +1,24 @@
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import Icon from '../../../components/ui/Icon'
 import { Card } from '../../../components/ui/Page'
 import { DataTableShell } from '../../../components/ui/DataTable'
+import { ErrorBanner } from '../../../components/ui/StateViews'
+import { useToast } from '../../../components/ui/Toast'
 import { thStyle as th } from '../../../components/ui/TableHeaderCell'
+import { useAuth } from '../../../lib/auth'
 import {
   canViewMoney,
-  canRecordPayment,
-  canVoidInvoice,
-  canOverrideCreditLimit,
-  canPerformOperations,
   canManageSettings,
   isStaff,
 } from '../../../lib/rbac'
+import { PERMISSION_CATALOG } from '../../../lib/permissionCatalog'
+import {
+  getPermissionsVersion,
+  isCapabilityLockedForRole,
+  loadPermissionsFromDb,
+  subscribePermissions,
+} from '../../../lib/permissionsStore'
+import { saveRolePermission } from '../../../actions/settings/permissions'
 import type { SystemRole } from '../../../types/database'
 import { BRANCHES } from '../../../lib/queries/settings'
 import { ToneChip, td } from './shared'
@@ -20,41 +28,63 @@ import { StaffDirectoryCard } from './StaffDirectory'
  * **Settings ▸ Users & Roles** — §11.2: *"user list, role assignment, the
  * 9-role matrix"*.
  *
- * The matrix is **computed by `lib/rbac`**, never transcribed. Every cell calls
- * the same function the screens call, which mirrors migration 0014 — so this
- * table cannot claim a capability that RLS denies, or the reverse.
+ * Per Babin's 2026-11-12 ruling, Owner can edit role capabilities directly in
+ * this matrix (and per-staff overrides in Staff Directory), backed by Postgres
+ * (`0233_editable_staff_permissions.sql`). Owner full-access and Law 6
+ * money-blindness remain protected.
  */
 
 const ROLES: SystemRole[] = ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts', 'Driver', 'Client']
 
-const CAPABILITIES: Array<{ label: string; note: string; test: (r: SystemRole) => boolean }> = [
-  { label: 'Staff surface', note: 'Client is external — portal only.', test: isStaff },
-  { label: 'See money', note: 'Warehouse, Technician, Driver and Client see none, anywhere.', test: canViewMoney },
-  { label: 'Record payment', note: 'Advances and security deposits.', test: (r) => canRecordPayment(r) },
-  { label: 'Void invoice', note: 'Corrections are reversal rows, never edits.', test: (r) => canVoidInvoice(r) },
-  /* The 'Approve 15% discount' row left this matrix on 31 Aug 2026 — the
-     discount gate is gone (D3, Babin: "don't put any gate on discount"), so
-     there is no approval capability to compare roles by. A row every role
-     passes is a row that says nothing. */
-  { label: 'Override credit limit', note: 'Book past a client’s ceiling.', test: (r) => canOverrideCreditLimit(r) },
-  { label: 'Run operations', note: 'Pack, handover, return, reset.', test: canPerformOperations },
-  { label: 'Manage settings', note: 'This screen, and everything under it.', test: canManageSettings },
-]
-
 export function UsersPane() {
+  const { user } = useAuth()
+  const { showSuccessToast } = useToast()
+  useSyncExternalStore(subscribePermissions, getPermissionsVersion)
+
+  const [matrixError, setMatrixError] = useState<string | null>(null)
+  const [savingCell, setSavingCell] = useState<string | null>(null)
+  const canEdit = Boolean(user && canManageSettings(user.role))
+
+  useEffect(() => {
+    void loadPermissionsFromDb()
+  }, [])
+
+  const handleToggle = async (role: SystemRole, capabilityKey: string, nextAllowed: boolean, label: string) => {
+    const cellId = `${role}:${capabilityKey}`
+    setSavingCell(cellId)
+    setMatrixError(null)
+    try {
+      await saveRolePermission({ role, capability: capabilityKey, allowed: nextAllowed })
+      showSuccessToast(`${role} · ${label}: ${nextAllowed ? 'Enabled' : 'Disabled'}`)
+    } catch (e) {
+      setMatrixError(e instanceof Error ? e.message : 'Could not update role permission.')
+    } finally {
+      setSavingCell(null)
+    }
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0 }}>
       {/*
-        First, because it is the task. The matrix below it is reference material
-        — an operator arrives on this tab to act on a person, not to read the
-        9-role grid, and the grid was the only thing here until 24 Aug 2026.
+        First, because it is the task. The matrix below it is reference &
+        configuration — an operator arrives on this tab to act on a person or
+        tune role permissions.
       */}
       <StaffDirectoryCard />
 
       <Card
         title="Permissions Matrix"
-        action={<span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)' }}>{/* Computed live from lib/rbac — not a copy of it */}Permissions for each role </span>}
+        action={
+          <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
+            {canEdit ? 'Tap any unlocked cell to toggle · Owner & money-blindness locked' : 'Permissions for each role'}
+          </span>
+        }
       >
+        {matrixError && (
+          <div style={{ marginBottom: 'var(--sp-sm)' }}>
+            <ErrorBanner message={matrixError} />
+          </div>
+        )}
         <DataTableShell ariaLabel="Permissions matrix" data-table-scroll style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
             <thead>
@@ -68,16 +98,54 @@ export function UsersPane() {
               </tr>
             </thead>
             <tbody>
-              {CAPABILITIES.map((c) => (
-                <tr key={c.label}>
+              {PERMISSION_CATALOG.map((c) => (
+                <tr key={c.key}>
                   <td style={{ ...td, position: 'sticky', left: 0, background: 'var(--card)' }}>
                     <span style={{ display: 'block', fontWeight: 600 }}>{c.label}</span>
                     <span style={{ display: 'block', fontSize: 'var(--t-th)', color: 'var(--text2)', marginTop: 1 }}>{c.note}</span>
                   </td>
                   {ROLES.map((r) => {
                     const ok = c.test(r)
+                    const lock = isCapabilityLockedForRole(r, c.key)
+                    const cellId = `${r}:${c.key}`
+                    const busy = savingCell === cellId
+
+                    if (canEdit && !lock.locked) {
+                      return (
+                        <td key={r} style={{ ...td, textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            aria-label={`Toggle ${c.label} for ${r}`}
+                            aria-pressed={ok}
+                            onClick={() => void handleToggle(r, c.key, !ok, c.label)}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: 'var(--sp-xs)',
+                              minHeight: 44,
+                              minWidth: 68,
+                              padding: '0 10px',
+                              borderRadius: 'var(--r-sm)',
+                              border: '1px solid var(--border)',
+                              background: ok ? 'var(--success-bg, var(--bg))' : 'var(--bg)',
+                              fontSize: 'var(--t-th)',
+                              fontWeight: 700,
+                              color: ok ? 'var(--success-text)' : 'var(--muted)',
+                              cursor: busy ? 'wait' : 'pointer',
+                              opacity: busy ? 0.6 : 1,
+                            }}
+                          >
+                            <Icon name={ok ? 'check' : 'close'} size={13} fill />
+                            {ok ? 'Yes' : 'No'}
+                          </button>
+                        </td>
+                      )
+                    }
+
                     return (
-                      <td key={r} style={{ ...td, textAlign: 'center' }}>
+                      <td key={r} style={{ ...td, textAlign: 'center' }} title={lock.reason}>
                         {/* Law 11 — never colour alone; glyph and word together. */}
                         <span
                           style={{
@@ -89,6 +157,7 @@ export function UsersPane() {
                             color: ok ? 'var(--success-text)' : 'var(--muted)',
                           }}
                         >
+                          {lock.locked && canEdit && <Icon name="lock" size={11} />}
                           <Icon name={ok ? 'check' : 'close'} size={13} fill />
                           {ok ? 'Yes' : 'No'}
                         </span>

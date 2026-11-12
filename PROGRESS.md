@@ -1,5 +1,60 @@
 # Progress Log
 
+## 2026-11-12 — T3-20 Who owes & Editable Staff Permissions in Settings (Lane C)
+
+**Did**
+- **T3-20 · Who owes (`lane-c/T3-20-who-owes`, `b6db2991`):**
+  - Added `src/lib/queries/whoOwes.ts` (`fetchWhoOwes`, `buildWhoOwesRows`, `fetchClientStatementData`) aggregating the exact `outstandingInvoices()` set by client, sorted oldest-first, matching Finance Dashboard receivables to the paisa, and short-circuiting for money-blind roles (Law 6).
+  - Added `generateClientStatementPdf` in `src/lib/pdf/generatePdf.ts` and `exportClientStatementPdf` in `src/lib/pdf/exportPdf.ts` (open invoices + payments so far).
+  - Added `src/actions/clients/reminders.ts` (`pauseClientReminders`, `resumeClientReminders`) wired to `0219_payment_reminders.sql` RPCs with `client_uuid` idempotency (Law 8).
+  - Built `src/modules/finance/WhoOwes.tsx` and wired the `Who owes` tab into `src/data/nav.ts` and `src/modules/finance/Finance.tsx` (2-tap Statement → Share to WhatsApp / Download PDF, Pause/Resume reminders, `RestrictedState` for Warehouse/money-blind roles).
+  - Added `src/modules/finance/__tests__/WhoOwes.test.tsx` (4/4 passing) and updated `src/data/nav.test.ts` (37/37 passing).
+- **Editable Staff Permissions in Settings (`lane-c/settings-editable-permissions`):**
+  - Added `supabase/migrations/0233_editable_staff_permissions.sql` (VERIFIED locally via `check:pglite` 230/230; NOT applied to live Supabase per N-5): `role_permissions`, `user_permission_overrides`, `permission_audit_log`, `auth_has_capability()`, and Owner-only idempotent RPCs (`set_role_permission`, `set_user_permission_override`, `clear_user_permission_override`) with Owner full-access, Client external, and Law 6 money-blindness locks enforced in Postgres.
+  - Added `src/lib/permissionsStore.ts`, `src/lib/permissionCatalog.ts`, and `src/actions/settings/permissions.ts`; wired `rbac.ts` and `auth.tsx` to resolve role & per-staff overrides live while preserving default RBAC behavior.
+  - Made the Permissions Matrix in `src/modules/settings/sections/UsersRoles.tsx` interactive for Owner and added a per-staff **Permissions** modal in `src/modules/settings/sections/StaffDirectory.tsx`.
+  - Updated `docs/PERMISSIONS.md` §0 and `docs/plans/MIGRATION_LEDGER.md` (`0233` verified); added `src/modules/settings/__tests__/editablePermissions.test.tsx` (3/3 passing).
+
+**Ruled**
+- **RULING 2026-11-12 (Babin):** Staff permissions are editable in Settings (both role-level Permissions Matrix and per-staff overrides in Staff Directory), backed by Postgres (`0233`), while keeping Owner full-access and Law 6 money-blindness locked.
+- **T3-20:** `Who owes` aggregates `outstandingInvoices()` by client so totals match Finance receivables to the paisa; statement PDF shares via Web Share / WhatsApp link without waiting on T3-16's unified share sheet.
+
+**Verified**
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npx vitest run src/modules/settings/__tests__/editablePermissions.test.tsx src/modules/finance/__tests__/WhoOwes.test.tsx src/lib/__tests__/rbac.test.ts`: 3 files, 80 tests passed, 0 failed.
+- `npm run check:pglite`: 230/230 applied, 0 failed (41 views, 19 anon functions, 200 definer functions clean).
+- `npm run check:lifecycle`: 71/71 green, 0 failed.
+- `npm run check:security`: 18 Phase 0 regressions + 28 operations grants + 14 reset branch groups + glossary pass.
+- `node scripts/test-booking-financial-integrity.mjs`: PASS.
+- `npm run test:server-contracts`: passed.
+- `npm run test:partial-return`: 58/58 passed.
+- `node --test scripts/test-receipt.test.mjs`: 11/11 passed.
+- `npm run lint:shell`: 932 files checked, 0 violations.
+- `npm run lint:ui-copy`: 0 developer-text violations, 6+6 node tests passed.
+- `npm run check:contrast`: PASS (dark & light WCAG AA).
+- `npm run build`: succeeded.
+- Note: Full `npm test` ran 596/597 files (6,976/6,977 tests) passing; `RecordForm.test.tsx:130` had a transient jsdom focus assertion flake in parallel run (passes standalone).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 101 / 103 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 82 / 82 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 230 files · check:pglite Historical, incomplete or failed receipt (2026-11-12T15:07:27.498Z); current source NOT VERIFIED. Suite: Historical suite: 6976/6977 passed, 1 failed (recorded 2026-11-12T15:05:18.893Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-12T15:08:14.642Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- `T3-16` unified share sheet (when built, wire `WhoOwes` statement share to it).
+- Apply `0233_editable_staff_permissions.sql` to live Supabase after backup protocol (N-5).
+
 ## 2026-11-12 — T3-08, T3-22 & T3-10: Equipment one-page editor, Availability in two taps, After-hours service line (Lane C)
 
 **Did**

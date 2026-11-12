@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, useCallback, Re
 import { supabase, IS_MOCK, newClientUuid } from './supabase'
 import { getSetting } from './settingsStore'
 import { hydrateSharedSettings } from './settingsSync'
+import { loadPermissionsFromDb, setActivePermissionSession } from './permissionsStore'
 import { hydrateUserLanguage } from './languagePreferences'
 import { useSharedGlossary } from './useSharedGlossary'
 import { recordLogin, recordLogout } from './authAudit'
@@ -658,6 +659,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
      */
     void purgeDeviceReadCaches()
   }, [])
+
+  useEffect(() => {
+    setActivePermissionSession(user?.id ?? null, user?.role ?? null)
+    if (user?.id) {
+      void loadPermissionsFromDb([user.id])
+    }
+  }, [user?.id, user?.role])
 
   /**
    * Switch to another user on a shared device.

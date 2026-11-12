@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import Icon from '../../../components/ui/Icon'
 import { Card } from '../../../components/ui/Page'
 import { Button } from '../../../components/ui/Page'
 import { SearchInput } from '../../../components/ui/SearchInput'
 import { DataTableShell } from '../../../components/ui/DataTable'
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog'
+import { Modal } from '../../../components/ui/Modal'
 import { ErrorBanner, EmptyState, LoadingSkeleton, RestrictedState } from '../../../components/ui/StateViews'
 import { loadFailureReason } from '../../../lib/queries/useLoad'
 import { Unavailable } from '../../../components/ui/Unavailable'
@@ -12,6 +13,17 @@ import { useToast } from '../../../components/ui/Toast'
 import { thStyle as th } from '../../../components/ui/TableHeaderCell'
 import { useAuth } from '../../../lib/auth'
 import { canManageSettings } from '../../../lib/rbac'
+import { PERMISSION_CATALOG } from '../../../lib/permissionCatalog'
+import {
+  getPermissionsVersion,
+  getUserPermissionOverride,
+  isCapabilityLockedForRole,
+  subscribePermissions,
+} from '../../../lib/permissionsStore'
+import {
+  saveUserPermissionOverride,
+  resetUserPermissionOverride,
+} from '../../../actions/settings/permissions'
 import { useTabularLayout } from '../../../lib/device'
 import {
   fetchStaffDirectory,
@@ -210,6 +222,10 @@ export function StaffDirectoryCard() {
   const [confirming, setConfirming] = useState<StaffDirectoryRow | null>(null)
   const [pending, setPending] = useState<PendingChange | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [permStaff, setPermStaff] = useState<StaffDirectoryRow | null>(null)
+  const [permBusyKey, setPermBusyKey] = useState<string | null>(null)
+  const [permError, setPermError] = useState<string | null>(null)
+  useSyncExternalStore(subscribePermissions, getPermissionsVersion)
   /**
    * Per-row throttle. Keyed by id, holding the epoch ms of the last request.
    *
@@ -502,6 +518,16 @@ export function StaffDirectoryCard() {
           </Button>
         )}
 
+        <Button
+          variant="ghost"
+          onClick={() => {
+            setPermError(null)
+            setPermStaff(row)
+          }}
+        >
+          Permissions
+        </Button>
+
         {/* Deactivate is the terminal action for a staff row — Law 3, nothing is
             deleted. It is last in the group and `ghost`, so it does not read as
             the primary move on a directory whose everyday job is a reset. */}
@@ -787,6 +813,124 @@ export function StaffDirectoryCard() {
           )
         }
       />
+
+      <Modal
+        isOpen={permStaff !== null}
+        onClose={() => setPermStaff(null)}
+        title={permStaff ? `Permissions — ${permStaff.fullName || permStaff.email}` : 'Staff Permissions'}
+        subtitle={
+          permStaff
+            ? `Role: ${permStaff.primaryRole} · Custom overrides apply on top of the role matrix`
+            : undefined
+        }
+        size="lg"
+      >
+        {permStaff && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
+            {permError && <ErrorBanner message={permError} />}
+            {PERMISSION_CATALOG.map((cap) => {
+              const roleDefault = cap.test(permStaff.primaryRole, null)
+              const override = getUserPermissionOverride(permStaff.id, cap.key)
+              const effective = cap.test(permStaff.primaryRole, permStaff.id)
+              const lock = isCapabilityLockedForRole(permStaff.primaryRole, cap.key)
+              const busy = permBusyKey === cap.key
+
+              return (
+                <div
+                  key={cap.key}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 'var(--sp-sm)',
+                    padding: '10px 12px',
+                    borderRadius: 'var(--r-md)',
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg)',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <div style={{ minWidth: 200, flex: 1 }}>
+                    <div style={{ fontWeight: 600, color: 'var(--text)' }}>{cap.label}</div>
+                    <div style={{ fontSize: 'var(--t-th)', color: 'var(--text2)' }}>
+                      {cap.note} · Role default: <strong>{roleDefault ? 'Yes' : 'No'}</strong>
+                      {override !== undefined && (
+                        <>
+                          {' '}
+                          · <strong>Custom override</strong>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-xs)' }}>
+                    {override !== undefined && !lock.locked && (
+                      <Button
+                        variant="ghost"
+                        disabled={busy}
+                        onClick={() => {
+                          setPermBusyKey(cap.key)
+                          setPermError(null)
+                          void resetUserPermissionOverride({ userId: permStaff.id, capability: cap.key })
+                            .then(() => showSuccessToast(`${permStaff.fullName || permStaff.email} · ${cap.label} reset to role default`))
+                            .catch((e) => setPermError(e instanceof Error ? e.message : 'Could not reset override.'))
+                            .finally(() => setPermBusyKey(null))
+                        }}
+                      >
+                        Reset
+                      </Button>
+                    )}
+                    {lock.locked ? (
+                      <span
+                        title={lock.reason}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          minHeight: 44,
+                          padding: '0 12px',
+                          fontSize: 'var(--t-th)',
+                          fontWeight: 700,
+                          color: effective ? 'var(--success-text)' : 'var(--muted)',
+                        }}
+                      >
+                        <Icon name="lock" size={13} />
+                        {effective ? 'Yes (Locked)' : 'No (Locked)'}
+                      </span>
+                    ) : (
+                      <Button
+                        variant={effective ? 'secondary' : 'ghost'}
+                        icon={effective ? 'check' : 'close'}
+                        disabled={busy}
+                        aria-label={`Toggle ${cap.label} for ${permStaff.fullName || permStaff.email}`}
+                        onClick={() => {
+                          const next = !effective
+                          setPermBusyKey(cap.key)
+                          setPermError(null)
+                          void saveUserPermissionOverride({
+                            userId: permStaff.id,
+                            targetRole: permStaff.primaryRole,
+                            capability: cap.key,
+                            allowed: next,
+                          })
+                            .then(() =>
+                              showSuccessToast(
+                                `${permStaff.fullName || permStaff.email} · ${cap.label}: ${next ? 'Granted' : 'Revoked'}`,
+                              ),
+                            )
+                            .catch((e) => setPermError(e instanceof Error ? e.message : 'Could not update override.'))
+                            .finally(() => setPermBusyKey(null))
+                        }}
+                      >
+                        {effective ? 'Yes' : 'No'}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </Modal>
     </>
   )
 }

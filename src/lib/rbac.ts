@@ -20,6 +20,7 @@
  */
 
 import type { SystemRole } from '../types/database'
+import { resolveEffectiveCapability } from './permissionsStore'
 
 export type Role = SystemRole
 export type { SystemRole }
@@ -165,8 +166,8 @@ const BACK_OFFICE: ReadonlySet<SystemRole> = new Set<SystemRole>(['Owner', 'Admi
  * (a queued transition is checked against the stage at drain time, which may be
  * hours later). Adding a second, quieter offline rule here would duplicate that.
  */
-export function canConfirmRental(role: SystemRole): boolean {
-  return BOOKING_DESK.has(role)
+export function canConfirmRental(role: SystemRole, userId?: string | null): boolean {
+  return resolveEffectiveCapability(role, 'booking.confirm', BOOKING_DESK.has(role), userId)
 }
 
 /**
@@ -177,8 +178,8 @@ export function canConfirmRental(role: SystemRole): boolean {
  * `clients_insert`: Owner, Admin, Manager, Coordinator, Warehouse. Coordinator
  * is in it because taking a walk-in's details is the booking desk's work.
  */
-export function canCreateClient(role: SystemRole): boolean {
-  return BOOKING_DESK.has(role)
+export function canCreateClient(role: SystemRole, userId?: string | null): boolean {
+  return resolveEffectiveCapability(role, 'client.create', BOOKING_DESK.has(role), userId)
 }
 
 /**
@@ -196,8 +197,8 @@ export function canCreateClient(role: SystemRole): boolean {
  * narrow branch. A capability named for the general act of flagging would be
  * wrong here; this one is named for the block specifically.
  */
-export function canBlockClient(role: SystemRole): boolean {
-  return role === 'Owner' || role === 'Admin' || role === 'Manager'
+export function canBlockClient(role: SystemRole, userId?: string | null): boolean {
+  return resolveEffectiveCapability(role, 'client.block', role === 'Owner' || role === 'Admin' || role === 'Manager', userId)
 }
 
 /**
@@ -308,8 +309,8 @@ export function canEditServicePlan(role: SystemRole): boolean {
 }
 
 /** RULING 2026-09-29: product-wide bulk stock corrections require Manager+. */
-export function canAdjustStock(role: SystemRole): boolean {
-  return role === 'Owner' || role === 'Admin' || role === 'Manager'
+export function canAdjustStock(role: SystemRole, userId?: string | null): boolean {
+  return resolveEffectiveCapability(role, 'inventory.adjust', role === 'Owner' || role === 'Admin' || role === 'Manager', userId)
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -444,13 +445,18 @@ export function canApproveDiscount(_role: SystemRole, percent: number, _isOnline
 }
 
 /** Check if role can void an invoice */
-export function canVoidInvoice(role: SystemRole, isOnline: boolean = true): boolean {
+export function canVoidInvoice(role: SystemRole, isOnline: boolean = true, userId?: string | null): boolean {
   if (!isOnline) return false // Money action blocked offline
   // RULING 2026-11-01 (R-3): Owner · Admin · Manager · Accounts — Babin: "1 yes". This is R-05 /
   // PERMISSIONS `invoice.void` and exactly the database gate `auth_is_finance_or_admin()`. Coordinator
   // is excluded (PERMISSIONS C6: cannot void). Commit 68485549 had added Coordinator; that is undone.
   // Revert = `role === 'Owner' || role === 'Accounts'` (and the three test files named in R-3).
-  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Accounts'
+  return resolveEffectiveCapability(
+    role,
+    'invoice.void',
+    role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Accounts',
+    userId,
+  )
 }
 
 /**
@@ -568,7 +574,11 @@ export type OperationName = 'pack' | 'handover' | 'return' | 'reset'
  */
 /** Check if role can manage operations sessions (pack, handover, return, reset) */
 export function canPerformOperations(role: SystemRole): boolean {
-  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Warehouse' || role === 'Technician'
+  return resolveEffectiveCapability(
+    role,
+    'operations.perform',
+    role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Warehouse' || role === 'Technician',
+  )
 }
 
 export function canPack(role: SystemRole): boolean {
@@ -644,9 +654,14 @@ export function canPerformOp(role: SystemRole, op: OperationName): boolean {
 }
 
 /** Check if role can record payments or security deposits */
-export function canRecordPayment(role: SystemRole, isOnline: boolean = true): boolean {
+export function canRecordPayment(role: SystemRole, isOnline: boolean = true, userId?: string | null): boolean {
   if (!isOnline) return false // Money action blocked offline
-  return role === 'Owner' || role === 'Coordinator' || role === 'Accounts'
+  return resolveEffectiveCapability(
+    role,
+    'payment.create',
+    role === 'Owner' || role === 'Coordinator' || role === 'Accounts',
+    userId,
+  )
 }
 
 /**
@@ -691,15 +706,25 @@ export function canReversePayment(role: SystemRole, isOnline: boolean = true): b
  * not confirmed is the one thing a closing must never be.
  */
 // RULING 2026-10-18: closing.approve is Owner/Admin/Manager/Accounts — the set 0117's auth_is_finance_or_admin() admits.
-export function canApproveDailyClosing(role: SystemRole, isOnline: boolean = true): boolean {
+export function canApproveDailyClosing(role: SystemRole, isOnline: boolean = true, userId?: string | null): boolean {
   if (!isOnline) return false
-  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Accounts'
+  return resolveEffectiveCapability(
+    role,
+    'closing.approve',
+    role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Accounts',
+    userId,
+  )
 }
 
 /** Check if role can override client credit limits */
-export function canOverrideCreditLimit(role: SystemRole, isOnline: boolean = true): boolean {
+export function canOverrideCreditLimit(role: SystemRole, isOnline: boolean = true, userId?: string | null): boolean {
   if (!isOnline) return false // Approval action blocked offline
-  return role === 'Owner' || role === 'Admin' || role === 'Manager'
+  return resolveEffectiveCapability(
+    role,
+    'credit.override',
+    role === 'Owner' || role === 'Admin' || role === 'Manager',
+    userId,
+  )
 }
 
 /**
@@ -755,8 +780,8 @@ export function canApproveLateFeeWaiver(role: SystemRole): boolean {
 }
 
 /** Check if role can manage users and system configuration */
-export function canManageSettings(role: SystemRole): boolean {
-  return role === 'Owner'
+export function canManageSettings(role: SystemRole, userId?: string | null): boolean {
+  return resolveEffectiveCapability(role, 'settings.manage', role === 'Owner', userId)
 }
 
 /** RULING 2026-11-05 C-6: only Owner approves glossary wording; DB 0225 enforces it. */

@@ -479,6 +479,7 @@ export const FINANCE_TAB_ROUTES: Readonly<Record<string, string | null>> = {
      `/finance?tab=<tab>` in App.tsx.
      RULING 2026-10-13: note corrected (it said "local state, not by URL"). */
   Dashboard: '/finance',
+  'Who owes': '/finance',
   Invoices: '/finance',
   /* §9.3 — `modules/finance/Payments.tsx`, added 12 Aug 2026. The receipt
      ledger with its deposits rail and the shared Record Payment modal, reading
