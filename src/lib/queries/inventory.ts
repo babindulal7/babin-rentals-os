@@ -411,6 +411,8 @@ export interface InventoryUnitRow {
   serialNo: string | null
   /** `product_units.asset_tag` — `text not null`, unique (0004:195, :233). */
   assetTag: string
+  /** A unit's optimistic revision, from product_units_v.updated_at. */
+  updatedAt?: string | null
   barcode: string | null
   qrCode: string | null
   /** `product_units.status` — the `inventory_state` enum the eleven chips are built from. */
@@ -604,6 +606,7 @@ interface RawUnitRow {
   /** NULLABLE in the schema (0004:194). */
   serial_no: string | null
   asset_tag: string
+  updated_at?: string | null
   barcode: string | null
   qr_code: string | null
   status: InventoryStateDb
@@ -628,7 +631,7 @@ interface RawUnitRow {
 }
 
 const UNIT_COLUMNS =
-  'id, product_id, serial_no, asset_tag, barcode, qr_code, status, condition, ' +
+  'id, product_id, serial_no, asset_tag, updated_at, barcode, qr_code, status, condition, ' +
   'branch_id, warehouse_id, storage_zone_id, rack, shelf, bin, container_id, ' +
   'running_hours, last_maintenance_at, next_maintenance_at, ' +
   'warranty_expires_at, insurance_expires_at, retired_at, retirement_reason'
@@ -724,6 +727,7 @@ function toUnitRow(r: RawUnitRow): InventoryUnitRow {
     productId: r.product_id,
     serialNo: r.serial_no,
     assetTag: r.asset_tag,
+    updatedAt: r.updated_at ?? null,
     barcode: r.barcode,
     qrCode: r.qr_code,
     state: r.status,

@@ -31,7 +31,7 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  transition: all var(--dur-fast, 150ms) var(--ease);
+  transition: all var(--dur-fast) var(--ease);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
@@ -122,7 +122,7 @@
   cursor: pointer;
   font-family: inherit;
   white-space: nowrap;
-  transition: all var(--dur-fast, 150ms) var(--ease);
+  transition: all var(--dur-fast) var(--ease);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
@@ -179,7 +179,7 @@
   font-weight: 600;
   text-align: center;
   border-bottom: 2px solid var(--border);
-  transition: all var(--dur-fast, 150ms) var(--ease);
+  transition: all var(--dur-fast) var(--ease);
 }
 
 .crew-calendar-day-header.is-today {
@@ -198,7 +198,7 @@
   font-weight: 600;
   overflow: hidden;
   white-space: nowrap;
-  transition: all var(--dur-fast, 120ms) var(--ease);
+  transition: all var(--dur-fast) var(--ease);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
@@ -223,7 +223,7 @@
 
 .crew-row {
   border-bottom: 1px solid var(--border);
-  transition: background var(--dur-fast, 120ms) var(--ease);
+  transition: background var(--dur-fast) var(--ease);
 }
 
 .crew-row:hover {
@@ -247,7 +247,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  transition: all var(--dur-fast, 150ms) var(--ease);
+  transition: all var(--dur-fast) var(--ease);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
@@ -272,7 +272,7 @@
   text-align: left;
   width: 100%;
   color: inherit;
-  transition: all var(--dur-fast, 120ms) var(--ease);
+  transition: all var(--dur-fast) var(--ease);
 }
 
 .crew-alert-row:hover {

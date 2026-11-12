@@ -50,7 +50,7 @@
   cursor: pointer;
   font-family: inherit;
   white-space: nowrap;
-  transition: all var(--dur-fast, 150ms) var(--ease);
+  transition: all var(--dur-fast) var(--ease);
 }
 
 .calendar-tab-btn:hover {
@@ -90,7 +90,7 @@
   cursor: pointer;
   font-family: inherit;
   white-space: nowrap;
-  transition: all var(--dur-fast, 150ms) var(--ease);
+  transition: all var(--dur-fast) var(--ease);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
@@ -169,7 +169,7 @@
   text-align: left;
   font-family: inherit;
   cursor: pointer;
-  transition: all var(--dur-fast, 150ms) var(--ease);
+  transition: all var(--dur-fast) var(--ease);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
   overflow: hidden;
 }
@@ -258,7 +258,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: all var(--dur-fast, 120ms) var(--ease);
+  transition: all var(--dur-fast) var(--ease);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
@@ -289,7 +289,7 @@
   width: 7px;
   height: 7px;
   border-radius: var(--r-badge, 9999px);
-  transition: opacity var(--dur-fast, 150ms) var(--ease);
+  transition: opacity var(--dur-fast) var(--ease);
 }
 
 .calendar-dot:hover {
@@ -321,7 +321,7 @@
   font-weight: 600;
   cursor: pointer;
   text-align: left;
-  transition: background var(--dur-fast, 150ms) var(--ease);
+  transition: background var(--dur-fast) var(--ease);
 }
 
 .calendar-timeline-header-sort:hover {
@@ -334,7 +334,7 @@
   padding: 18px 4px 8px;
   text-align: center;
   border-right: 1px solid var(--border);
-  transition: background var(--dur-fast, 150ms) var(--ease);
+  transition: background var(--dur-fast) var(--ease);
 }
 
 .calendar-timeline-col-header.is-today {
@@ -357,7 +357,7 @@
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  transition: all var(--dur-fast, 150ms) var(--ease);
+  transition: all var(--dur-fast) var(--ease);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
@@ -384,7 +384,7 @@
   background: var(--card2);
   text-align: left;
   font-family: inherit;
-  transition: all var(--dur-fast, 150ms) var(--ease);
+  transition: all var(--dur-fast) var(--ease);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
@@ -412,7 +412,7 @@ button.calendar-agenda-item:hover {
   color: var(--text);
   cursor: pointer;
   font-family: inherit;
-  transition: all var(--dur-fast, 150ms) var(--ease);
+  transition: all var(--dur-fast) var(--ease);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
@@ -445,7 +445,7 @@ button.calendar-agenda-item:hover {
   cursor: pointer;
   display: grid;
   place-items: center;
-  transition: all var(--dur-fast, 120ms) var(--ease);
+  transition: all var(--dur-fast) var(--ease);
 }
 
 .calendar-mini-day:hover:not(.is-today) {

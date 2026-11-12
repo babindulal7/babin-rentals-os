@@ -6,14 +6,14 @@
  * - All other evidence photos shrink to ≤ 3 MB (3 * 1024 * 1024 bytes).
  * - Stepwise reduction: lower long edge and JPEG quality step by step, keeping serial numbers readable.
  * - EXIF location stripped: canvas drawImage + toBlob discards original camera EXIF/GPS coordinates.
- * - HEIC / HEIF converted to standard JPEG.
- * - Graceful fallback in environments without DOM/Canvas (e.g. Node test runners).
+ * - HEIC / HEIF converted to JPEG only if the device can actually decode them.
+ * - Without a working decoder/canvas, fail closed; never truncate or relabel bytes.
  */
 
 export interface CompressionOptions {
-  /** Maximum pixel length for the longest edge. Default 2048 (or 2560 for damage). */
+  /** Maximum pixel length for the longest edge. Default 1600 (or 2560 for damage). */
   maxDimension?: number
-  /** Initial JPEG quality between 0.0 and 1.0. Default 0.85. */
+  /** Initial JPEG quality between 0.0 and 1.0. Default 0.85 (0.90 for damage). */
   quality?: number
   /** Flag indicating whether this is a damage photo (up to 10 MB cap instead of standard 3 MB cap). */
   isDamage?: boolean
@@ -109,6 +109,16 @@ export function calculateTargetDimensions(
   }
 }
 
+/** Never upscale a photo on a later compression attempt. In particular, the
+ * standard 1600px path must not jump to 1800px after a size-cap failure. */
+export function compressionDimensionSteps(initialMaxDim: number): number[] {
+  if (!Number.isFinite(initialMaxDim) || initialMaxDim < 1) {
+    throw new Error('Photo dimension limit must be a positive finite number')
+  }
+  return [...new Set([initialMaxDim, 1800, 1600, 1400, 1200]
+    .filter((dim) => dim <= initialMaxDim))]
+}
+
 function canvasToBlobAsync(canvas: HTMLCanvasElement, quality: number): Promise<Blob | null> {
   return new Promise((resolve) => {
     canvas.toBlob((b) => resolve(b), 'image/jpeg', quality)
@@ -121,7 +131,7 @@ function canvasToBlobAsync(canvas: HTMLCanvasElement, quality: number): Promise<
  * Stepwise lowers long edge and quality to satisfy W27 size caps:
  *   - Damage: ≤ 10 MB
  *   - Standard: ≤ 3 MB
- * Converts HEIC to JPEG.
+ * Converts HEIC to JPEG only when supported by the browser decoder.
  */
 export async function compressEvidencePhoto(
   file: Blob | File,
@@ -129,7 +139,7 @@ export async function compressEvidencePhoto(
 ): Promise<CompressedImageResult> {
   const targetCap = options.maxSizeBytes ?? options.maxBytes ?? (options.isDamage ? MAX_DAMAGE_PHOTO_BYTES : MAX_STANDARD_PHOTO_BYTES)
   const initialMaxDim = options.maxDimension ?? (options.isDamage ? 2560 : MAX_EVIDENCE_DIMENSION)
-  const initialQuality = options.quality ?? DEFAULT_JPEG_QUALITY
+  const initialQuality = options.quality ?? (options.isDamage ? 0.90 : DEFAULT_JPEG_QUALITY)
   const originalBytes = file.size
   const isHeic = isHeicFile(file)
 
@@ -140,52 +150,27 @@ export async function compressEvidencePhoto(
     typeof document.createElement === 'function' &&
     Boolean(document.createElement('canvas')?.getContext)
 
-  // Fallback for non-browser / Node test environments
+  // Evidence must never be a truncated or relabelled binary masquerading as a JPEG.
+  // Without a decoder/canvas we cannot prove image integrity or remove EXIF/GPS.
   if (!hasCanvasSupport) {
-    const outBlob =
-      originalBytes > targetCap
-        ? file.slice(0, targetCap, 'image/jpeg')
-        : isHeic || file.type !== 'image/jpeg'
-          ? new Blob([file], { type: 'image/jpeg' })
-          : file
-
-    const { width, height } = calculateTargetDimensions(2400, 1800, initialMaxDim)
-    return {
-      blob: outBlob,
-      originalBytes,
-      compressedBytes: outBlob.size,
-      width,
-      height,
-      format: 'image/jpeg',
-    }
+    throw new Error('Photo processing is unavailable on this device. The photo was not saved.')
   }
 
   return new Promise<CompressedImageResult>((resolve, reject) => {
     const objectUrl = URL.createObjectURL(file)
     const img = new Image()
 
-    const finishWithFallback = () => {
-      // If browser cannot decode HEIC natively or decodes with error, convert as binary JPEG fallback
-      const outBlob =
-        originalBytes > targetCap
-          ? file.slice(0, targetCap, 'image/jpeg')
-          : new Blob([file], { type: 'image/jpeg' })
-
-      resolve({
-        blob: outBlob,
-        originalBytes,
-        compressedBytes: outBlob.size,
-        width: 1600,
-        height: 1200,
-        format: 'image/jpeg',
-      })
+    const rejectUnsupportedImage = () => {
+      reject(new Error(isHeic
+        ? 'This device cannot decode HEIC photos. Convert the photo to JPEG and try again; nothing was saved.'
+        : 'This device could not encode the photo as JPEG. Nothing was saved.'))
     }
 
     img.onload = async () => {
       URL.revokeObjectURL(objectUrl)
       try {
         const qualitySteps = [initialQuality, 0.80, 0.75, 0.70, 0.65]
-        const dimensionSteps = [initialMaxDim, 1800, 1600, 1400, 1200]
+        const dimensionSteps = compressionDimensionSteps(initialMaxDim)
 
         let bestResult: CompressedImageResult | null = null
 
@@ -225,14 +210,14 @@ export async function compressEvidencePhoto(
           }
         }
 
-        if (bestResult) {
+        if (bestResult && bestResult.blob.size <= targetCap && bestResult.blob.type === 'image/jpeg') {
           resolve(bestResult)
         } else {
-          finishWithFallback()
+          reject(new Error('Photo could not be compressed below the upload limit. Nothing was saved.'))
         }
       } catch (err) {
         if (isHeic) {
-          finishWithFallback()
+          rejectUnsupportedImage()
         } else {
           reject(err instanceof Error ? err : new Error(String(err)))
         }
@@ -242,7 +227,7 @@ export async function compressEvidencePhoto(
     img.onerror = () => {
       URL.revokeObjectURL(objectUrl)
       if (isHeic) {
-        finishWithFallback()
+        rejectUnsupportedImage()
       } else {
         reject(new Error('Selected file could not be decoded as an image'))
       }

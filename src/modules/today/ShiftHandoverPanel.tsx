@@ -59,7 +59,7 @@ const checkItemStyle: React.CSSProperties = {
   padding: '10px 12px',
   borderRadius: '10px',
   border: '1px solid var(--border)',
-  transition: 'background 0.15s',
+  transition: 'background var(--dur)',
   minHeight: 'var(--tap, 44px)',
 }
 

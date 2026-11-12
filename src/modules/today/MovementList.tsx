@@ -273,7 +273,7 @@ function HoverCard({ m }: { m: MovementRow }) {
             alignItems: 'center',
             textDecoration: 'none',
             cursor: 'pointer',
-            transition: 'all 0.15s ease',
+            transition: 'all var(--dur) var(--ease)',
           }
           if (to) {
             return (

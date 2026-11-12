@@ -43,7 +43,7 @@ const chipStyle = (active: boolean): React.CSSProperties => ({
   border: active ? '1px solid var(--primary)' : '1px solid var(--border)',
   background: active ? 'var(--select-bg)' : 'transparent',
   color: active ? 'var(--select-fg)' : 'var(--text3)',
-  transition: 'all 0.15s',
+  transition: 'all var(--dur)',
 })
 
 const stepperStepStyle = (isCurrent: boolean, isPast: boolean): React.CSSProperties => ({
@@ -61,7 +61,7 @@ const stepperStepStyle = (isCurrent: boolean, isPast: boolean): React.CSSPropert
   background: isCurrent ? 'var(--info)' : isPast ? 'var(--success-soft)' : 'var(--surface)',
   color: isCurrent ? 'var(--on-primary, #fff)' : isPast ? 'var(--success-text)' : 'var(--text3)',
   border: isCurrent ? '1px solid var(--info)' : isPast ? '1px solid var(--success-border, var(--border))' : '1px solid var(--border)',
-  transition: 'all 0.15s',
+  transition: 'all var(--dur)',
 })
 
 export default function ProductionsList() {

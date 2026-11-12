@@ -101,7 +101,7 @@
   color: var(--muted, #64748b);
   cursor: pointer;
   border-radius: var(--r-input, 8px);
-  transition: color var(--dur-fast, 150ms) var(--ease, ease);
+  transition: color var(--dur-fast) var(--ease);
 }
 
 .auth-password-toggle:hover {
@@ -189,7 +189,7 @@
   gap: 0.5rem;
   box-shadow: var(--shadow-sm);
   min-height: 44px;
-  transition: all 0.15s ease;
+  transition: all var(--dur) var(--ease);
 }
 
 .auth-mock-btn:hover {
@@ -269,7 +269,7 @@
   font-size: var(--t-meta, 0.8125rem);
   font-weight: 600;
   text-decoration: none;
-  transition: color var(--dur-fast, 150ms) var(--ease, ease), background var(--dur-fast, 150ms) var(--ease, ease);
+  transition: color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
 }
 
 .auth-footer-link:hover {
@@ -363,7 +363,7 @@
   width: 100%;
   text-align: left;
   font-family: inherit;
-  transition: background var(--dur-fast, 150ms) ease, border-color var(--dur-fast, 150ms) ease;
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
 }
 
 .roster-item-btn:hover:not(:disabled) {

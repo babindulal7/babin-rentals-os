@@ -253,7 +253,7 @@ export function RentalMoreActions({
             gap: 6,
             cursor: 'pointer',
             fontFamily: 'inherit',
-            transition: 'background var(--dur-fast, 120ms) var(--ease)',
+            transition: 'background var(--dur-fast) var(--ease)',
             ...triggerStyle,
           }}
         >

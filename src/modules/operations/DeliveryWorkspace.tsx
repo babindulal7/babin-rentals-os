@@ -2626,7 +2626,7 @@ function RoutePlannerView() {
                   borderRadius: '8px',
                   opacity: draggingId === stop.id ? 0.5 : 1,
                   cursor: canSetRoute ? 'grab' : 'default',
-                  transition: 'opacity 0.1s',
+                  transition: 'opacity var(--dur-fast)',
                 }}
                 role="listitem"
                 aria-grabbed={draggingId === stop.id}

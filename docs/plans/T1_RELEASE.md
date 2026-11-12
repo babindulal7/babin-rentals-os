@@ -20,6 +20,8 @@ business RPCs are still executable by `anon` on live (`adjust_stock`,
 
 ---
 
+**12 Nov 2026 hosted checkpoint (supersedes the old project-creation task wording):** Independent `babin-staging` already exists in the same region; do **not** create another project. It currently has **0 app tables and 0 migration-history entries**. Transaction-scoped hosted rehearsal of `0001`–`0003` succeeded and rolled back, preserving the blank schema. Security/role acceptance and production deployment remain HOLD. Evidence: [hosted staging rehearsal](../live/STAGING_HOSTED_REHEARSAL_2026-11-12.md), [migration reconciliation](../live/STAGING_RECONCILIATION_2026-11-12.md). The remaining T1-02 work is a reviewed schema install/test dataset and backup/recovery proof, not project creation.
+
 ### T1-01 · Fresh production backup + restore drill            status: todo · size: S · lane A + Babin
 **What** — Babin runs `scripts/backup-db.ps1` per [`../archive/BACKUP_PROTOCOL.md`](../archive/BACKUP_PROTOCOL.md) §1; the dump is checked with
 `npm run check:dump`; its SHA-256 is recorded. The restore drill is T1-02 (restoring it into staging).

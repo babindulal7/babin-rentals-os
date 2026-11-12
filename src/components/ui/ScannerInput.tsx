@@ -164,7 +164,7 @@ export const ScannerInput: React.FC<ScannerInputProps> = ({
                 : pulse === 'error'
                 ? '0 0 12px color-mix(in srgb, var(--st-danger-fg, #ef4444) 40%, transparent)'
                 : 'var(--shadow-card)',
-            transition: 'outline 0.15s ease-in-out, box-shadow 0.15s ease-in-out',
+            transition: 'outline var(--dur) var(--ease), box-shadow var(--dur) var(--ease)',
           }}
         >
           <div style={{ position: 'absolute', left: 14, display: 'flex', alignItems: 'center', pointerEvents: 'none', color: 'var(--nav-active-accent)' }}>

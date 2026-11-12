@@ -136,7 +136,7 @@ export function triggerVisualScanFlash(tone: ScanFeedbackTone): void {
     flashEl.style.inset = '0'
     flashEl.style.pointerEvents = 'none'
     flashEl.style.zIndex = '99999'
-    flashEl.style.transition = 'opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1)'
+    flashEl.style.transition = 'opacity var(--dur-drawer) var(--ease), box-shadow var(--dur-drawer) var(--ease)'
     document.body.appendChild(flashEl)
   }
 

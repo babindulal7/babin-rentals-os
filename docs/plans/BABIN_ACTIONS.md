@@ -4,6 +4,8 @@ Everything here waits on you: accounts, money, approvals, merging, the live data
 people. Agents build the rest; Claude reviews and sends files. Dates are AD · BS. Tick a box by
 editing this file or telling Claude at a check-in.
 
+> **2 Nov owner update — Booqable renewal is 18 February 2027, NOT 20 March.** The March run-off/cancellation bullets in the earlier schedule are obsolete and need a fresh, safe cutover timeline. The owner approved a staged rollout but did not approve automatic cancellation or bypass release checks. See [2 Nov owner rulings](../../RULINGS-2026-11-02-OWNER.md). Confirm contract notice terms and reconcile open rentals before choosing the cancellation day.
+
 ## Week 1 — by Sun 1 Nov 2026 (16 Kartik 2083)
 
 - [x] Review and merge the plan pull request (T0-01) — merged 26 Oct.
@@ -126,8 +128,8 @@ editing this file or telling Claude at a check-in.
       Cloudflare redirect `babinrentals.com/*` → `book.babinrentals.com/*` (B5, T9-05).
 - [ ] At go-live: write the **first offer email**, or ask Claude for a draft — every email carries an
       unsubscribe link (B31, T5-12).
-- [ ] By **1 Mar (17 Falgun)**: last Booqable rental closed; export the Booqable archive (T9-08).
-- [ ] By **10 Mar (26 Falgun)**: **cancel Booqable** (renews 20 Mar · 6 Chaitra) (T9-08).
+- [ ] **Replan run-off before the confirmed 18 Feb renewal:** verify every open Booqable booking, export the archive and set a safe last-rental date (T9-08).
+- [ ] **Before 18 February 2027:** check cancellation notice terms, complete a verified cutover and archive, then **Babin explicitly cancels** Booqable; existing March 10 cancellation plan is no longer valid (T9-08).
 - [ ] **Every month from February:** usability round on the first Sunday, 11:00–13:00 ⭐ — 7 Feb
       (24 Magh), 7 Mar (23 Falgun), 4 Apr (21 Chaitra) (T9-09).
 

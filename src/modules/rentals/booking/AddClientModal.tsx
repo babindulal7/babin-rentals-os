@@ -767,7 +767,7 @@ export function AddClientModal({
         padding: 'var(--sp-lg)',
         background: SCRIM,
         opacity: isOpen ? 1 : 0,
-        transition: 'opacity var(--dur) ease',
+        transition: 'opacity var(--dur) var(--ease)',
       }}
     >
       <div style={{ position: 'fixed', inset: 0 }} onClick={requestClose} aria-hidden="true" />
@@ -793,7 +793,7 @@ export function AddClientModal({
           overflow: 'hidden',
           opacity: isOpen ? 1 : 0,
           transform: 'none',
-          transition: 'opacity var(--dur) ease',
+          transition: 'opacity var(--dur) var(--ease)',
         }}
       >
         {/* Header */}
