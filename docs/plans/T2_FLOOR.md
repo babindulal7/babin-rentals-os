@@ -53,7 +53,7 @@ compressed on the device (1600 px, JPEG 0.8, EXIF stripped), retry with the same
 **Not built yet → T2-18:** several photos per pick, a damage photo per flagged unit at Return, the
 10 MB damage-photo size and an honest offline message. The staging checks (Done when 1–3) wait for T1-06.
 
-### T2-18 · Finish evidence capture (what T2-16 left)            status: todo · size: L · lane A · [go-live]
+### T2-18 · Finish evidence capture (what T2-16 left)            status: doing — H2 fail-closed evidence reads in draft · size: L · lane A · [go-live]
 **What** — Finish what T2-01 left (Claude's review of `3fca220`, 26 Oct). **Items 3 and 4 below were built by T2-16 (several photos, size caps) — check them, do not rebuild;** items 1, 2, 5, 6 and 7 are still open:
 1) **Honest offline message.** Offline, the screens say the photo "was saved / kept on device and will
    upload when connectivity is restored", but nothing keeps or uploads it (`OperationEvidenceStatus.tsx`
@@ -103,7 +103,7 @@ after Pack is complete saves; gates green; driven in `dev:mock` at 375, 820 and
 1440 px as Warehouse and Technician.
 **Needs** — T2-01 (done in part). Staging checks of T2-01 (Done when 1–3) still wait for T1-06.
 
-### T2-17 · Save a unit's details            status: todo · size: M · lane A · [go-live]
+### T2-17 · Save a unit's details            status: doing · size: M · lane A · [go-live]
 **What** — On the equipment page, the unit editor (`AssetDetail.tsx`, `UnitEditor`) lets staff change
 a unit's asset tag, serial, status, rack, shelf, bin and condition, then says "Editing this session
 only — there is no unit-update action yet, so nothing is persisted" (line 223). Staff label and

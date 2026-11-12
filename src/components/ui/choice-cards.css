@@ -36,7 +36,7 @@
   background: var(--card);
   color: var(--text);
   cursor: pointer;
-  transition: border-color var(--dur-fast, 120ms) var(--ease, ease), background var(--dur-fast, 120ms) var(--ease, ease);
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
 }
 
 /* The native radio stays in the tree for keyboard and assistive tech; the card

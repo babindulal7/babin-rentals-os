@@ -1,27 +1,26 @@
 name: Windows PR smoke
 
 # Legacy workflow filename retained to preserve the existing workflow history.
-# Full PR CI is mandatory on Mac ARM64 in ci.yml; this complementary Windows
-# job is intentionally light and is NOT a substitute for database/security,
-# migration, lifecycle, financial-integrity, or coverage gates.
-# One same-repository PR = one Windows smoke, without GitHub-hosted minutes.
+# Full PR CI is mandatory on Mac ARM64 in ci.yml, even while office Windows
+# machines are offline. Windows smoke is *manual only* until Windows runners
+# are available; do not schedule unattended PR checks that cannot start.
+# This optional check covers native Windows PowerShell/runtime behavior and
+# is NOT a substitute for database, security, migration or coverage gates.
 on:
-  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# A new head SHA replaces older checks for the same PR only.
+# Manual Windows smoke runs cannot cancel required automatic CI on Mac.
 # Do not cancel unrelated PRs or required automatic main CI.
 concurrency:
-  group: windows-pr-smoke-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   windows-smoke:
     name: Windows · dependency-free smoke
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 15
     env:

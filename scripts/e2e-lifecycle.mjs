@@ -855,6 +855,64 @@ const STEPS = [
   },
 
   {
+    id: 'L68',
+    title: 'Return completion requires a saved damage photo for each flagged unit',
+    expect: 'green',
+    async run() {
+      const booking = bookingIds.a
+      const actor = U.Warehouse
+      await db.exec('begin')
+      try {
+        const session = await one(`insert into operation_sessions
+          (client_uuid, booking_id, operation, session_no, state, warehouse_staff_id, created_by)
+          values (gen_random_uuid(), $1, 'Return', 1, 'In Progress', $2, $2) returning id`, [booking, actor])
+        const line = await as('Warehouse', () => one(`insert into return_lines
+          (client_uuid, booking_line_id, state, qty_expected, session_id, returned_at, created_by)
+          values (gen_random_uuid(), (select id from booking_lines where booking_id = $1 limit 1),
+            'Returned', 1, $2, now(), $3) returning id`, [booking, session, actor]))
+        for (const unit of UNITS.slice(0, 2)) {
+          await q(`insert into damage_findings
+            (client_uuid, source, return_line_id, unit_id, damage_type, description, severity, created_by)
+            values (gen_random_uuid(), 'Return inspection', $1, $2, 'Damaged', 'Test damage', 'Not assessed', $3)`, [line, unit, actor])
+        }
+        const savePhoto = async (unit) => {
+          const file = await one(`insert into evidence_files
+            (client_uuid, content_hash, storage_path, original_filename, media_type, format, size_bytes, category, created_by)
+            values (gen_random_uuid(), gen_random_uuid()::text, gen_random_uuid()::text, 'damage.jpg',
+              'Image', 'jpeg', 100, 'Damage', $1) returning id`, [actor])
+          await q(`insert into evidence_references
+            (client_uuid, evidence_file_id, operation_stage, booking_id, item_id, created_by)
+            values (gen_random_uuid(), $1, 'Damage', $2, $3, $4)`, [file, booking, unit, actor])
+        }
+        const complete = "update operation_sessions set state = 'Completed' where id = $1"
+        await savePhoto(UNITS[0])
+        await as('Warehouse', async () => {
+          await db.exec('savepoint one_damage_photo')
+          try {
+            await refuses('second unit has no photo', complete, [session], /gate\.return\.damage_photo_per_unit/)
+          } finally {
+            await db.exec('rollback to savepoint one_damage_photo')
+          }
+          try {
+            await refuses('second unit has no photo at stage advance',
+              `insert into booking_stage_transitions
+                 (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role)
+               values (gen_random_uuid(), $1, $2, 'On Rent', 'Returned', $3, 'Warehouse')`,
+              [booking, BRANCH, actor], /gate\.return\.damage_photo_per_unit/)
+          } finally {
+            await db.exec('rollback to savepoint one_damage_photo')
+          }
+        })
+        await savePhoto(UNITS[1])
+        await as('Warehouse', () => q(complete, [session]))
+        assertEq(await one('select state from operation_sessions where id = $1', [session]), 'Completed', 'both unit photos allow completion')
+      } finally {
+        await db.exec('rollback')
+      }
+    },
+  },
+
+  {
     id: 'L7',
     title: 'A partial return: one unit back, one missing',
     expect: 'green',
@@ -1907,6 +1965,74 @@ const STEPS = [
           [bookingIds['ext_test']],
           /42501|may not extend/i,
         )
+      })
+
+      // 2b. A supplied actor ID is never an authorization credential or
+      // audit identity, even for a Coordinator who may otherwise extend.
+      await as('Coordinator', async () => {
+        await refuses(
+          'Coordinator impersonating Owner while extending',
+          `select extend_booking(jsonb_build_object(
+            'booking_id', $1::uuid,
+            'days', 2,
+            'reason', 'Attempt with forged audit actor identity',
+            'actor_id', $2::uuid
+          ))`,
+          [bookingIds['ext_test'], U.Owner],
+          /supplied actor does not match/i,
+        )
+        await refuses(
+          'Coordinator impersonating Owner through extended_by',
+          `select extend_booking(jsonb_build_object(
+            'booking_id', $1::uuid,
+            'days', 2,
+            'reason', 'Attempt with forged secondary audit actor',
+            'extended_by', $2::uuid
+          ))`,
+          [bookingIds['ext_test'], U.Owner],
+          /supplied actor does not match/i,
+        )
+        await refuses(
+          'Coordinator directly rewriting a Draft invoice',
+          'select resync_draft_invoice($1::uuid)',
+          [bookingIds['ext_test']],
+          /permission denied for function resync_draft_invoice/i,
+        )
+      })
+      assertEq(
+        new Date(await one('select return_at from bookings where id = $1', [bookingIds['ext_test']])).toISOString(),
+        '2105-06-03T04:00:00.000Z',
+        'forged actor tests leave the booking date unchanged',
+      )
+
+      // 2c. The security-definer RPC must not let a Coordinator change a
+      // booking belonging to another branch. All setup is rolled back.
+      await undone(async () => {
+        const foreignBranch = '00000000-0000-4000-8000-00000000f9ab'
+        await q(
+          `insert into branches (id, client_uuid, branch_code, name, address, phone, created_by)
+           values ($1, gen_random_uuid(), 'BR-TEST-EXT', 'Lifecycle Other Branch',
+                   'Separate test site', '9800009999', $2)`,
+          [foreignBranch, U.Owner],
+        )
+        await q('update users set branch_id = $1 where id = $2', [foreignBranch, U.Coordinator])
+        await as('Coordinator', async () => {
+          await db.exec('savepoint extension_branch_probe;')
+          try {
+            await refuses(
+              'Coordinator extending another branch booking',
+              `select extend_booking(jsonb_build_object(
+                'booking_id', $1::uuid,
+                'days', 2,
+                'reason', 'Cross branch request must be refused'
+              ))`,
+              [bookingIds['ext_test']],
+              /booking belongs to another branch/i,
+            )
+          } finally {
+            await db.exec('rollback to savepoint extension_branch_probe; release savepoint extension_branch_probe;')
+          }
+        })
       })
 
       // 3. Coordinator extends booking by 2 days via extend_booking RPC

@@ -259,43 +259,61 @@ afterEach(async () => {
 const text = () => container.textContent ?? ''
 const allButtons = () => [...document.body.querySelectorAll('button')]
 const button = (label: string) => allButtons().find((b) => b.textContent?.trim() === label)
+const quickActionHeadings = () =>
+  [...(container ?? document.body).querySelectorAll('h1, h2, h3, h4')]
+    .filter((h) => h.textContent?.trim() === 'Quick Actions')
+const allRecordPaymentButtons = () =>
+  [...(container ?? document.body).querySelectorAll('button')]
+    .filter((b) => b.textContent?.trim() === 'Record Payment')
 const reasons = () =>
   [...document.body.querySelectorAll('span[aria-disabled]')].map((s) => s.getAttribute('aria-label') ?? '')
 const hasReason = (fragment: string) => reasons().some((r) => r.includes(fragment))
 
 describe('L1 / P0 — Quick Actions Record Payment in BookingDetail', () => {
-  it('renders Quick Actions in the InformationDrawer with an active Record Payment button for Owner', async () => {
-    invoiceRows = [INVOICE_UNPAID]
-    await mount(1440)
-
-    expect(text()).toContain('Quick Actions')
-    const recordBtn = button('Record Payment')
-    expect(recordBtn).toBeDefined()
-    expect(recordBtn?.disabled).toBe(false)
-  })
-
-  it('renders Quick Actions with active Record Payment for Accounts and Coordinator', async () => {
-    for (const testRole of ['Accounts', 'Coordinator']) {
+  // RULING 2026-11-10: Card 1 / G-1 — Deduplicated Quick Actions card
+  it('renders exactly one Quick Actions card and exactly one Record Payment button for money roles on desktop', async () => {
+    for (const testRole of ['Owner', 'Coordinator', 'Accounts']) {
       role = testRole
       invoiceRows = [INVOICE_UNPAID]
       await mount(1440)
 
-      expect(text()).toContain('Quick Actions')
-      const recordBtn = button('Record Payment')
-      expect(recordBtn).toBeDefined()
-      expect(recordBtn?.disabled).toBe(false)
+      expect(quickActionHeadings()).toHaveLength(1)
+      expect(allRecordPaymentButtons()).toHaveLength(1)
+      expect(button('Record Payment')?.disabled).toBe(false)
+      if (testRole === 'Owner' || testRole === 'Accounts') {
+        expect(button('View invoice INV-901')).toBeDefined()
+      }
 
       if (root) await act(async () => root.unmount())
       container?.remove()
     }
   })
 
-  it('completely omits Quick Actions and Record Payment for money-blind roles (Warehouse/Technician)', async () => {
-    for (const blindRole of ['Warehouse', 'Technician']) {
+  it('renders exactly one Quick Actions card and exactly one Record Payment button in phone Money segment', async () => {
+    invoiceRows = [INVOICE_UNPAID]
+    await mount(390)
+
+    // Switch to Money segment on mobile
+    const moneyTab = [...container.querySelectorAll('[role="tab"]')].find((t) => t.textContent?.trim() === 'Money')
+    await act(async () => {
+      moneyTab?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    await flush()
+
+    expect(quickActionHeadings()).toHaveLength(1)
+    expect(allRecordPaymentButtons()).toHaveLength(1)
+    expect(button('Record Payment')?.disabled).toBe(false)
+    expect(button('View invoice INV-901')).toBeDefined()
+  })
+
+  it('completely omits Quick Actions and Record Payment for money-blind roles (Warehouse/Technician/Driver)', async () => {
+    for (const blindRole of ['Warehouse', 'Technician', 'Driver']) {
       role = blindRole
       invoiceRows = [INVOICE_UNPAID]
       await mount(1440)
 
+      expect(quickActionHeadings()).toHaveLength(0)
+      expect(allRecordPaymentButtons()).toHaveLength(0)
       expect(text()).not.toContain('Quick Actions')
       expect(button('Record Payment')).toBeUndefined()
       // No financial rupee figures in DOM

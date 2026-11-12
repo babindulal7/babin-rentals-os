@@ -2,6 +2,7 @@ const { app, BrowserWindow, shell, ipcMain, safeStorage } = require('electron');
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
+const { resolveSecureStoragePath } = require('./secure-storage-path.cjs');
 
 // Global error handlers to prevent silent crashes
 process.on('uncaughtException', (err) => {
@@ -18,6 +19,7 @@ if (process.env.ELECTRON_DISABLE_GPU === 'true') {
 
 let mainWindow = null;
 let staticServer = null;
+let trustedRendererOrigin = null;
 
 function createStaticDistServer(callback) {
   const distDir = path.join(__dirname, '../dist');
@@ -117,6 +119,12 @@ function createWindow() {
     },
   });
 
+  // The token IPC bridge may only be used by the origin loaded by this app.
+  const loadTrustedAppUrl = (url) => {
+    trustedRendererOrigin = new URL(url).origin;
+    return mainWindow.loadURL(url);
+  };
+
   let isShown = false;
   const showWindow = () => {
     if (!isShown && mainWindow && !mainWindow.isDestroyed()) {
@@ -150,7 +158,7 @@ function createWindow() {
 
   if (isDev) {
     const tryLoadDev = (retries = 2) => {
-      mainWindow.loadURL(devUrl).catch((err) => {
+      loadTrustedAppUrl(devUrl).catch((err) => {
         console.warn(`[Electron] Could not reach ${devUrl}: ${err.message}`);
         if (retries > 0) {
           setTimeout(() => tryLoadDev(retries - 1), 1000);
@@ -159,7 +167,7 @@ function createWindow() {
           createStaticDistServer((serverUrl, server) => {
             staticServer = server;
             if (mainWindow && !mainWindow.isDestroyed()) {
-              mainWindow.loadURL(serverUrl);
+              loadTrustedAppUrl(serverUrl);
               showWindow();
             }
           });
@@ -172,7 +180,7 @@ function createWindow() {
     createStaticDistServer((serverUrl, server) => {
       staticServer = server;
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.loadURL(serverUrl);
+        loadTrustedAppUrl(serverUrl);
         showWindow();
       }
     });
@@ -181,6 +189,7 @@ function createWindow() {
   mainWindow.on('closed', () => {
     clearTimeout(safetyTimer);
     mainWindow = null;
+    trustedRendererOrigin = null;
   });
 }
 
@@ -203,20 +212,25 @@ if (!gotTheLock) {
     }
   });
 
-  // Register safeStorage IPC handlers for secure token persistence
-ipcMain.handle('safe-storage-get', async (event, key) => {
+  // Protect the token store from untrusted subframes or foreign WebContents.
+function isTrustedStorageSender(event) {
+  const contents = mainWindow?.webContents;
+  if (!contents || contents.isDestroyed() || event.sender !== contents
+    || event.senderFrame !== contents.mainFrame || !trustedRendererOrigin) return false;
   try {
-    if (!safeStorage.isEncryptionAvailable()) return null;
-    const store = require('electron-store') || null;
-    // Use a simple file-based approach since electron-store may not be installed
-    const fs = require('fs');
-    const path = require('path');
-    const storageDir = path.join(app.getPath('userData'), 'secure-storage');
-    if (!fs.existsSync(storageDir)) fs.mkdirSync(storageDir, { recursive: true });
-    const filePath = path.join(storageDir, key);
-    if (!fs.existsSync(filePath)) return null;
-    const encrypted = fs.readFileSync(filePath);
-    return safeStorage.decryptString(encrypted);
+    return new URL(event.senderFrame.url).origin === trustedRendererOrigin;
+  } catch {
+    return false;
+  }
+}
+
+// The renderer supplies a key, never a filesystem path.
+ipcMain.handle('safe-storage-get', async (event, key) => {
+  if (!isTrustedStorageSender(event)) return null;
+  try {
+    const filePath = resolveSecureStoragePath(app.getPath('userData'), key);
+    if (!safeStorage.isEncryptionAvailable() || !fs.existsSync(filePath)) return null;
+    return safeStorage.decryptString(fs.readFileSync(filePath));
   } catch (err) {
     console.error('[Electron] safe-storage-get error:', err);
     return null;
@@ -224,15 +238,13 @@ ipcMain.handle('safe-storage-get', async (event, key) => {
 });
 
 ipcMain.handle('safe-storage-set', async (event, key, value) => {
+  if (!isTrustedStorageSender(event)) return false;
   try {
+    const filePath = resolveSecureStoragePath(app.getPath('userData'), key);
+    if (typeof value !== 'string' || Buffer.byteLength(value, 'utf8') > 1024 * 1024) return false;
     if (!safeStorage.isEncryptionAvailable()) return false;
-    const fs = require('fs');
-    const path = require('path');
-    const storageDir = path.join(app.getPath('userData'), 'secure-storage');
-    if (!fs.existsSync(storageDir)) fs.mkdirSync(storageDir, { recursive: true });
-    const filePath = path.join(storageDir, key);
-    const encrypted = safeStorage.encryptString(value);
-    fs.writeFileSync(filePath, encrypted);
+    fs.mkdirSync(path.dirname(filePath), { recursive: true, mode: 0o700 });
+    fs.writeFileSync(filePath, safeStorage.encryptString(value), { mode: 0o600 });
     return true;
   } catch (err) {
     console.error('[Electron] safe-storage-set error:', err);
@@ -241,11 +253,9 @@ ipcMain.handle('safe-storage-set', async (event, key, value) => {
 });
 
 ipcMain.handle('safe-storage-remove', async (event, key) => {
+  if (!isTrustedStorageSender(event)) return false;
   try {
-    const fs = require('fs');
-    const path = require('path');
-    const storageDir = path.join(app.getPath('userData'), 'secure-storage');
-    const filePath = path.join(storageDir, key);
+    const filePath = resolveSecureStoragePath(app.getPath('userData'), key);
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     return true;
   } catch (err) {

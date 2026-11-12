@@ -50,20 +50,23 @@ until Claude's `fix-red-checks.patch` (31 Oct) or this card removes them.
 **Needs** — none. Data entry: BABIN_ACTIONS (staff, December).
 
 ### T3-03 · Cancellation fee tiers            status: todo · size: M · lane C + Babin
-**What** — Settings ▸ Financial ▸ "Cancellation fee tiers": rows of *notice before pickup* → *fee %*.
-⭐ Fee base: the booking's rental total **before VAT**. When a booking with a paid advance is
-cancelled, the cancel sheet **suggests** the fee from the tiers (staff may lower it with a reason —
-same shape as the late-fee waiver), then: fee → an invoice line "Cancellation fee"; any advance
-above the fee → refund as a **reversal row** (Law 4). No tiers set → no fee suggested (today's
-behaviour) and the card says so.
-**Why** — D12; replaces `CANCELLATION_TIERS_UNAVAILABLE` (`src/data/settings.ts` ~line 644).
-**Where** — `src/modules/settings/sections/Financial.tsx`, `src/actions/rentals/cancelRental.ts`,
-`src/modules/rentals/modals/CancelRentalModal.tsx`, settings table (0158).
-**Database** — migration (claim number) if tiers need a typed table rather than a settings key;
-lifecycle step "cancel with advance → fee line + reversal, totals reconcile".
-**Done when** — tiers 48 h / 24 h / 0 h example on staging produce the right fee and refund; VAT on
-the fee follows the accountant's answer (ask with O-7).
-**Needs** — Babin enters the real tiers (O-10).
+**What** — Implement the **2 Nov owner-approved Option A** in Settings ▸ Financial ▸ "Cancellation fees" and the Cancel Rental dialog. **Do not apply the previous unapproved notice-only/50%-duration-only guesses.** For confirmed, pre-start bookings:
+
+| Time before scheduled rental start | 1–2 rental days | >2 rental days |
+| --- | --- | --- |
+| >48 h | Free | Free |
+| >24 h to ≤48 h | Free | 50% of booking's equipment-rental subtotal before VAT |
+| 0–24 h inclusive | One rental day's charge | Higher of one rental day's charge or 50% of subtotal before VAT |
+
+**Draft/unconfirmed bookings cancel free.** For a multi-day booking cancelled 12 hours before pickup, **do not add** the one-day amount to the percentage: pick the greater. Exactly 2 rental days belongs to the short-booking column. Exactly 48 h uses the middle tier; exactly 24 h uses the last tier. Use server timestamps for scheduled start (Kathmandu operational context), not the time the booking was originally created. After booking start/handover, do not apply the pre-start calculator: use the separate return/no-show rules.
+
+**Price base** — The percentage uses *equipment rental subtotal before VAT* (no VAT, deposit, crew, delivery or pass-through). Determine the one-day charge through the canonical pricing engine and the booking's applicable rate/discount, not a fixed amount. Staff authorized to change financial charges may waive/reduce the suggested fee only with a reason and audit trail; keep existing role gates. Any advance above the cancellation charge is a refund via an **immutable reversal row**, never delete/edit the payment (Law 4). VAT on a cancellation fee still awaits accountant/legal confirmation; do not infer non-VAT status from a waived/zero fee.
+
+**Why** — D12, owner clarification 2 Nov 2026 in `RULINGS-2026-11-02-OWNER.md`. Replaces `CANCELLATION_TIERS_UNAVAILABLE` (`src/data/settings.ts`), preserving permission/security gates.
+**Where** — `src/modules/settings/sections/Financial.tsx`, `src/actions/rentals/cancelRental.ts`, `src/modules/rentals/modals/CancelRentalModal.tsx`, settings table (0158) and shared pricing logic.
+**Database** — claim a free migration number if typed fee configuration is needed; inspect authoritative schema first.
+**Done when** — verified on staging with ≥ two distinct staff roles and automated tests for >48 h, exactly 48 h, 36 h, exactly 24 h, 12 h, exactly 2 days vs 3+ days, bad/stale client clock, refunds and RBAC. Sample: 5 days × Rs 3,500, rental total Rs 17,500 → 72 h Rs 0, 36 h Rs 8,750, 12 h Rs 8,750; 2 days × Rs 3,500 at 36 h Rs 0, at 12 h Rs 3,500 (before VAT). No double charge; Warehouse cannot override money.
+**Needs** — accountant ruling on VAT treatment before using the cancellation fee on tax documents; existing booking financial integrity tests and audit gates.
 
 ### T3-04 · Non-VAT bills            status: todo · size: M · lane C + accountant
 **What** — Each invoice carries a VAT treatment: **Standard 13%** or **Non-VAT bill** (D13). The VAT

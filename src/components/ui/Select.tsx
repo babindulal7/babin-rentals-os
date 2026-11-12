@@ -355,7 +355,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
               border: '1px solid',
               borderColor: error ? 'var(--danger)' : isOpen ? 'var(--input-focus)' : 'var(--input-border)',
               color: activeValue !== undefined && activeValue !== '' ? 'var(--text)' : 'var(--muted)',
-              transition: 'border-color 0.15s ease',
+              transition: 'border-color var(--dur) var(--ease)',
               cursor: props.disabled ? 'not-allowed' : 'pointer',
               opacity: props.disabled ? 0.5 : 1,
               ...style,
@@ -373,7 +373,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
                 pointerEvents: 'none',
                 color: 'var(--muted)',
                 transform: isOpen ? 'rotate(180deg)' : 'none',
-                transition: 'transform 0.2s ease',
+                transition: 'transform var(--dur-theme) var(--ease)',
               }}
             >
               <Icon name="chevron_down" size={16} />
@@ -456,7 +456,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      transition: 'background 0.1s ease',
+                      transition: 'background var(--dur-fast) var(--ease)',
                     }}
                   >
                     <span>{opt.label}</span>

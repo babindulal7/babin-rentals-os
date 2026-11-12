@@ -35,8 +35,6 @@ export default defineConfig({
       include: [
         /responsive\.css/,
         /preset-black-light\.css/,
-        /shadcn-luma-ui\.css/,
-        /shadcn-rhea-ui\.css/,
         /modules[\\/]today[\\/]dashboard\.css/,
         /modules[\\/]rentals[\\/].*\.css/,
         /modules[\\/]operations[\\/].*\.css/,

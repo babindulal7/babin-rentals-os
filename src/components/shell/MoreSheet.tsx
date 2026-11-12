@@ -122,7 +122,7 @@ export default function MoreSheet({ open, onClose }: { open: boolean; onClose: (
         justifyContent: 'center',
         background: 'rgba(0, 0, 0, 0.6)',
         opacity: open ? 1 : 0,
-        transition: 'opacity var(--dur) ease',
+        transition: 'opacity var(--dur) var(--ease)',
       }}
     >
       <div style={{ position: 'fixed', inset: 0 }} onClick={onClose} aria-hidden="true" />
@@ -147,7 +147,7 @@ export default function MoreSheet({ open, onClose }: { open: boolean; onClose: (
           paddingBottom: 'env(safe-area-inset-bottom, 0px)',
           transform: open ? 'translateY(0)' : 'translateY(12px)',
           opacity: open ? 1 : 0,
-          transition: 'opacity var(--dur) ease, transform var(--dur) ease',
+          transition: 'opacity var(--dur) var(--ease), transform var(--dur) var(--ease)',
         }}
       >
         <div

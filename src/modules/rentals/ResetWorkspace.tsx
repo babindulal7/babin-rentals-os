@@ -1380,7 +1380,7 @@ export default function ResetWorkspace({
                   </span>
                 </div>
                 <div aria-hidden style={{ height: 8, borderRadius: 'var(--r-badge)', background: 'var(--card2)', marginTop: 6, overflow: 'hidden' }}>
-                  <div style={{ width: '100%', height: '100%', background: 'var(--success)', borderRadius: 'var(--r-badge)', transform: `scaleX(${totalUnits > 0 ? readyUnits / totalUnits : 0})`, transformOrigin: 'left', transition: 'transform var(--dur) ease' }} />
+                  <div style={{ width: '100%', height: '100%', background: 'var(--success)', borderRadius: 'var(--r-badge)', transform: `scaleX(${totalUnits > 0 ? readyUnits / totalUnits : 0})`, transformOrigin: 'left', transition: 'transform var(--dur) var(--ease)' }} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5, fontSize: 'var(--t-meta)', color: remainingCount ? 'var(--progress-text)' : 'var(--success-text)', fontWeight: 600 }}>
                   <Icon name={remainingCount ? 'alert_triangle' : 'checklist'} size={12} />
@@ -1442,7 +1442,7 @@ export default function ResetWorkspace({
                     ...cardStyle,
                     padding: '12px 14px',
                     border: `1px solid ${STATUS[t.tone].border || 'var(--border)'}`,
-                    transition: 'border-color var(--dur) ease, box-shadow var(--dur) ease',
+                    transition: 'border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease)',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1849,7 +1849,7 @@ export default function ResetWorkspace({
                         <span className="figure" style={{ marginLeft: 'auto', fontWeight: 700, color: 'var(--text)' }}>{overallDone} / {overallTotal}</span>
                       </div>
                       <div aria-hidden style={{ height: 7, borderRadius: 'var(--r-badge)', background: 'var(--card2)', marginTop: 6, overflow: 'hidden' }}>
-                        <div style={{ width: '100%', height: '100%', background: 'var(--success)', borderRadius: 'var(--r-badge)', transform: `scaleX(${overallPct / 100})`, transformOrigin: 'left', transition: 'transform var(--dur) ease' }} />
+                        <div style={{ width: '100%', height: '100%', background: 'var(--success)', borderRadius: 'var(--r-badge)', transform: `scaleX(${overallPct / 100})`, transformOrigin: 'left', transition: 'transform var(--dur) var(--ease)' }} />
                       </div>
 
                       {selRows.length > 0 && (

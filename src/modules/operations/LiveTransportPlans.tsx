@@ -153,7 +153,7 @@ export default function LiveTransportPlans() {
                   fontSize: 'var(--t-meta, 13px)',
                   fontWeight: methodFilter === 'All' ? 700 : 500,
                   cursor: 'pointer',
-                  transition: 'all var(--dur-fast) ease',
+                  transition: 'all var(--dur-fast) var(--ease)',
                 }}
               >
                 All Methods ({data?.length ?? 0})
@@ -176,7 +176,7 @@ export default function LiveTransportPlans() {
                       fontSize: 'var(--t-meta, 13px)',
                       fontWeight: active ? 700 : 500,
                       cursor: 'pointer',
-                      transition: 'all var(--dur-fast) ease',
+                      transition: 'all var(--dur-fast) var(--ease)',
                     }}
                   >
                     {m} ({count})
@@ -424,7 +424,7 @@ export default function LiveTransportPlans() {
                   </thead>
                   <tbody>
                     {filteredData.map((item) => (
-                      <tr key={item.id} style={{ transition: 'background-color var(--dur-fast) ease' }}>
+                      <tr key={item.id} style={{ transition: 'background-color var(--dur-fast) var(--ease)' }}>
                         <td style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', fontWeight: 600 }}>
                           <Link
                             to={`/rentals/${encodeURIComponent(item.bookingNo)}`}

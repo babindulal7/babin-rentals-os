@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   calculateTargetDimensions,
+  compressionDimensionSteps,
   compressEvidencePhoto,
   isHeicImage,
   resolveMaxBytes,
@@ -42,6 +43,22 @@ describe('calculateTargetDimensions', () => {
   })
 })
 
+describe('compressionDimensionSteps', () => {
+  it('never increases a standard photo beyond its initial 1600px cap', () => {
+    expect(compressionDimensionSteps(1600)).toEqual([1600, 1400, 1200])
+  })
+
+  it('keeps the higher-resolution damage first attempt and steps downward', () => {
+    expect(compressionDimensionSteps(2560)).toEqual([2560, 1800, 1600, 1400, 1200])
+  })
+
+  it('does not upscale small source limits and refuses invalid dimension caps', () => {
+    expect(compressionDimensionSteps(900)).toEqual([900])
+    expect(() => compressionDimensionSteps(0)).toThrow(/positive finite/)
+    expect(() => compressionDimensionSteps(Number.NaN)).toThrow(/positive finite/)
+  })
+})
+
 describe('W27 Photo Rules — size caps, HEIC, and fallback', () => {
   it('identifies HEIC images by MIME type or file extension', () => {
     const heicMime = new Blob(['sample'], { type: 'image/heic' })
@@ -65,33 +82,20 @@ describe('W27 Photo Rules — size caps, HEIC, and fallback', () => {
     expect(resolveMaxBytes({ maxBytes: 5000 })).toBe(5000)
   })
 
-  it('compresses a 12 MB standard phone photo to <= 3 MB (W27)', async () => {
-    const twelveMbBytes = 12 * 1024 * 1024
-    const largePhonePhoto = new Blob([new Uint8Array(twelveMbBytes)], { type: 'image/jpeg' })
-
-    const result = await compressEvidencePhoto(largePhonePhoto, { isDamage: false })
-    expect(result.originalBytes).toBe(twelveMbBytes)
-    expect(result.compressedBytes).toBeLessThanOrEqual(STANDARD_PHOTO_MAX_BYTES)
-    expect(result.blob.size).toBeLessThanOrEqual(3 * 1024 * 1024)
-    expect(result.format).toBe('image/jpeg')
+  it('refuses an oversized JPEG when no image decoder is available instead of truncating it', async () => {
+    const photo = new Blob([new Uint8Array(12 * 1024 * 1024)], { type: 'image/jpeg' })
+    await expect(compressEvidencePhoto(photo, { isDamage: false })).rejects.toThrow(/not saved/i)
+    await expect(compressEvidencePhoto(photo, { isDamage: true })).rejects.toThrow(/not saved/i)
   })
 
-  it('compresses a 12 MB damage photo to <= 10 MB (W27)', async () => {
-    const twelveMbBytes = 12 * 1024 * 1024
-    const largeDamagePhoto = new Blob([new Uint8Array(twelveMbBytes)], { type: 'image/jpeg' })
-
-    const result = await compressEvidencePhoto(largeDamagePhoto, { isDamage: true })
-    expect(result.originalBytes).toBe(twelveMbBytes)
-    expect(result.compressedBytes).toBeLessThanOrEqual(DAMAGE_PHOTO_MAX_BYTES)
-    expect(result.blob.size).toBeLessThanOrEqual(10 * 1024 * 1024)
-    expect(result.format).toBe('image/jpeg')
+  it('refuses HEIC without a decoder instead of relabelling raw bytes as JPEG', async () => {
+    const heic = new Blob(['raw heic camera bytes'], { type: 'image/heic' })
+    await expect(compressEvidencePhoto(heic)).rejects.toThrow(/not saved/i)
   })
 
-  it('converts HEIC photos to JPEG format with image/jpeg mime type', async () => {
-    const heicBlob = new Blob(['raw heic camera bytes'], { type: 'image/heic' })
-    const result = await compressEvidencePhoto(heicBlob)
-
-    expect(result.format).toBe('image/jpeg')
-    expect(result.blob.type).toBe('image/jpeg')
+  it('refuses even a small JPEG without canvas because EXIF stripping cannot be guaranteed', async () => {
+    const photo = new Blob(['fake jpeg bytes'], { type: 'image/jpeg' })
+    await expect(compressEvidencePhoto(photo)).rejects.toThrow(/not saved/i)
   })
+
 })

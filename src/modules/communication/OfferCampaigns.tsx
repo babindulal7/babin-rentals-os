@@ -12,19 +12,7 @@ import {
   fetchOfferCampaigns,
   type OfferCampaignRecord,
 } from '../../lib/queries/offerCampaigns'
-import {
-  Mail,
-  Send,
-  Eye,
-  CheckCircle2,
-  AlertCircle,
-  ShieldAlert,
-  Loader2,
-  Users,
-  Image,
-  RefreshCw,
-  Sparkles,
-} from 'lucide-react'
+import Icon from '../../components/ui/Icon'
 
 export function OfferCampaigns(): React.ReactElement {
   const { user } = useAuth()
@@ -295,7 +283,7 @@ export function OfferCampaigns(): React.ReactElement {
       <div className="p-8 max-w-2xl mx-auto" role="alert">
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-center">
           <div className="w-12 h-12 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto mb-4">
-            <ShieldAlert className="w-6 h-6" />
+            <Icon name="shield_alert" size={24} />
           </div>
           <h2 className="text-lg font-bold text-slate-900">Access Restricted</h2>
           <p className="mt-2 text-sm text-slate-700 leading-relaxed">
@@ -314,7 +302,7 @@ export function OfferCampaigns(): React.ReactElement {
       {/* Offline Alert */}
       {isOffline && (
         <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-lg text-sm flex items-center gap-3" role="status">
-          <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+          <Icon name="alert_circle" size={20} className="text-amber-600 shrink-0" />
           <div>
             <strong>Offline mode:</strong> You are currently disconnected. Campaign creation and email broadcasting require an active server connection.
           </div>
@@ -350,7 +338,7 @@ export function OfferCampaigns(): React.ReactElement {
             title="Refresh campaigns"
             aria-label="Refresh campaigns"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <Icon name="refresh" size={16} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
       </div>
@@ -358,13 +346,13 @@ export function OfferCampaigns(): React.ReactElement {
       {/* Notification Banners */}
       {actionSuccess && (
         <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 px-4 py-3 rounded-lg text-sm flex items-center gap-2" role="alert">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+          <Icon name="check_circle" size={20} className="text-emerald-600 shrink-0" />
           <span>{actionSuccess}</span>
         </div>
       )}
       {actionError && (
         <div className="bg-rose-50 border border-rose-200 text-rose-900 px-4 py-3 rounded-lg text-sm flex items-center gap-2" role="alert">
-          <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+          <Icon name="alert_circle" size={20} className="text-rose-600 shrink-0" />
           <span>{actionError}</span>
         </div>
       )}
@@ -375,7 +363,7 @@ export function OfferCampaigns(): React.ReactElement {
         <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-5">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-              <Mail className="w-4 h-4 text-sky-600" />
+              <Icon name="mail" size={16} className="text-sky-600" />
               {activeCampaignId ? 'Edit Campaign Draft' : 'Compose Offer'}
             </h2>
             <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50">
@@ -446,7 +434,7 @@ export function OfferCampaigns(): React.ReactElement {
                     placeholder="https://babinrentals.com/images/promo-banner.jpg"
                     className="w-full pl-9 pr-3.5 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
-                  <Image className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <Icon name="image" size={16} className="text-slate-400 absolute left-3 top-2.5" />
                 </div>
               </div>
 
@@ -512,7 +500,7 @@ export function OfferCampaigns(): React.ReactElement {
               disabled={saving || isOffline}
               className="inline-flex items-center justify-center min-h-[44px] px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-50"
             >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {saving ? <Icon name="loader" size={16} className="animate-spin mr-2" /> : null}
               {activeCampaignId ? 'Update Draft' : 'Save Draft'}
             </button>
             <div className="text-xs text-slate-400">
@@ -529,7 +517,7 @@ export function OfferCampaigns(): React.ReactElement {
           <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                <Users className="w-4 h-4 text-sky-600" />
+                <Icon name="users" size={16} className="text-sky-600" />
                 Authoritative Audience
               </h3>
               <span className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-mono">Postgres Gate</span>
@@ -557,7 +545,7 @@ export function OfferCampaigns(): React.ReactElement {
               <div className="flex items-baseline justify-between">
                 <span className="text-xs text-slate-600 font-medium">Will go to:</span>
                 <span className="text-lg font-bold text-slate-900 font-mono">
-                  {audienceLoading ? <Loader2 className="w-4 h-4 animate-spin inline" /> : `${audienceCounts?.eligible ?? 0} clients`}
+                  {audienceLoading ? <Icon name="loader" size={16} className="animate-spin inline" /> : `${audienceCounts?.eligible ?? 0} clients`}
                 </span>
               </div>
               <div className="text-xs text-slate-500 flex justify-between pt-2 border-t border-slate-200/60">
@@ -578,7 +566,7 @@ export function OfferCampaigns(): React.ReactElement {
           <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                <Send className="w-4 h-4 text-sky-600" />
+                <Icon name="send" size={16} className="text-sky-600" />
                 Pre-Flight Test Send
               </h3>
               <span className={`text-xs px-2 py-0.5 rounded font-medium ${
@@ -614,13 +602,13 @@ export function OfferCampaigns(): React.ReactElement {
               disabled={testing || isOffline}
               className="inline-flex items-center justify-center min-h-[44px] w-full px-4 py-2 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
             >
-              {testing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
+              {testing ? <Icon name="loader" size={16} className="animate-spin mr-2" /> : <Icon name="eye" size={16} className="mr-2" />}
               Send Test to Author
             </button>
 
             {testSentInfo && (
               <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-800 flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <Icon name="check_circle" size={16} className="text-emerald-600 shrink-0" />
                 <span>Test sent to <strong>{testSentInfo.email}</strong> at {testSentInfo.at}.</span>
               </div>
             )}
@@ -630,7 +618,7 @@ export function OfferCampaigns(): React.ReactElement {
           <div className="bg-slate-900 text-white rounded-xl p-5 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold flex items-center gap-2 text-white">
-                <Sparkles className="w-4 h-4 text-amber-400" />
+                <Icon name="sparkles" size={16} className="text-amber-400" />
                 Queue Broadcast
               </h3>
               <span className="text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded">Owner · Admin · Manager</span>
@@ -647,9 +635,9 @@ export function OfferCampaigns(): React.ReactElement {
               className="inline-flex items-center justify-center min-h-[56px] w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-semibold rounded-lg shadow-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-base"
             >
               {broadcasting ? (
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                <Icon name="loader" size={20} className="animate-spin mr-2" />
               ) : (
-                <Send className="w-5 h-5 mr-2" />
+                <Icon name="send" size={20} className="mr-2" />
               )}
               {campaignStatus === 'queued'
                 ? 'Campaign Queued'
@@ -677,7 +665,7 @@ export function OfferCampaigns(): React.ReactElement {
         {/* State 2: Loading State */}
         {loading && (
           <div className="p-8 text-center" role="status" aria-live="polite">
-            <Loader2 className="w-8 h-8 text-sky-600 animate-spin mx-auto mb-2" />
+            <Icon name="loader" size={32} className="text-sky-600 animate-spin mx-auto mb-2" />
             <p className="text-sm text-slate-500">Loading campaign records...</p>
           </div>
         )}
@@ -685,7 +673,7 @@ export function OfferCampaigns(): React.ReactElement {
         {/* State 3: Error State */}
         {!loading && error && (
           <div className="p-6 text-center" role="alert">
-            <AlertCircle className="w-8 h-8 text-rose-500 mx-auto mb-2" />
+            <Icon name="alert_circle" size={32} className="text-rose-500 mx-auto mb-2" />
             <p className="text-sm text-rose-600">{error}</p>
           </div>
         )}
@@ -693,7 +681,7 @@ export function OfferCampaigns(): React.ReactElement {
         {/* State 4: Empty State */}
         {!loading && !error && campaigns.length === 0 && (
           <div className="p-10 text-center">
-            <Mail className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+            <Icon name="mail" size={40} className="text-slate-300 mx-auto mb-3" />
             <h3 className="text-base font-medium text-slate-900">No campaigns yet</h3>
             <p className="mt-1 text-sm text-slate-500 max-w-sm mx-auto">
               Draft your first marketing offer above. Test it against your email, preview the audience, and queue the broadcast.
