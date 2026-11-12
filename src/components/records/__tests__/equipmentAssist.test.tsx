@@ -3,9 +3,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import {
-  EQUIPMENT_STAGES,
-  getEquipmentStageState,
-  EquipmentWizardStepper,
+  equipmentSectionState,
+  EquipmentSectionLinks,
   UnitBarcodeModal,
   EquipmentCatalogPreviewModal,
   EquipmentInformationDrawerContent,
@@ -14,7 +13,7 @@ import type { RecordValues } from '../../../lib/recordEditor'
 
 ;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
 
-describe('equipmentAssist — 5-Stage Precision Cinema Equipment Intake', () => {
+describe('equipmentAssist — One-page seven-section Equipment Intake (D19, T3-08)', () => {
   let container: HTMLDivElement
   let root: Root
 
@@ -29,102 +28,75 @@ describe('equipmentAssist — 5-Stage Precision Cinema Equipment Intake', () => 
     container.remove()
   })
 
-  it('defines 5 clear sequential operational stages', () => {
-    expect(EQUIPMENT_STAGES).toHaveLength(5)
-    expect(EQUIPMENT_STAGES.map((s) => s.shortName)).toEqual([
-      'Basic Info',
-      'Structure',
-      'Pricing & Terms',
-      'Relationships',
-      'Review & Save',
-    ])
-  })
-
-  it('correctly calculates stage 1 completion', () => {
-    const values: RecordValues = {
+  it('computes section state for each of the seven sections', () => {
+    const completeValues: RecordValues = {
       name: 'Sony FX3',
       category_id: 'cat-camera',
       brand: 'Sony',
       tracking_mode: 'Serialised',
+      daily_rate: '4500',
+      replacement_value: '450000',
     }
-    const rows: RecordValues[] = [
+    const completeRows: RecordValues[] = [
       { serial_no: 'SN-001', warehouse_id: 'wh-1' },
     ]
-    const stage1 = getEquipmentStageState(1, values, rows, true, {})
-    expect(stage1.state).toBe('complete')
-  })
+    expect(equipmentSectionState('Identity', completeValues, completeRows)).toBe('complete')
+    expect(equipmentSectionState('Stock & Units', completeValues, completeRows)).toBe('complete')
+    expect(equipmentSectionState('Location', completeValues, completeRows)).toBe('complete')
+    expect(equipmentSectionState('Pricing & Rental', completeValues, completeRows)).toBe('complete')
+    expect(equipmentSectionState('Purchase', completeValues, completeRows)).toBe('complete')
+    expect(equipmentSectionState('Relationships', completeValues, completeRows)).toBe('optional')
+    expect(equipmentSectionState('Maintenance & Documents', completeValues, completeRows)).toBe('optional')
 
-  it('marks stage 1 as todo when name or category is missing', () => {
-    const values: RecordValues = {
+    const incompleteValues: RecordValues = {
       name: '',
       category_id: '',
-      brand: 'Sony',
+      brand: '',
       tracking_mode: 'Serialised',
     }
-    const rows: RecordValues[] = []
-    const stage1 = getEquipmentStageState(1, values, rows, true, {})
-    expect(stage1.state).toBe('todo')
-    expect(stage1.label).toBe('Required')
+    expect(equipmentSectionState('Identity', incompleteValues, [])).toBe('todo')
+    expect(equipmentSectionState('Stock & Units', incompleteValues, [])).toBe('todo')
+    expect(equipmentSectionState('Pricing & Rental', incompleteValues, [])).toBe('todo')
   })
 
-  it('enforces money-blind RBAC in Stage 3 (Pricing)', () => {
-    const values: RecordValues = {
-      name: 'Sony FX3',
-      tracking_mode: 'Serialised',
-      daily_rate: '',
-    }
-    const rows: RecordValues[] = []
-    // When canViewMoney is false (Warehouse, Technician), Stage 3 is complete with 'RBAC Blind'
-    const stage3Blind = getEquipmentStageState(3, values, rows, false, {})
-    expect(stage3Blind.state).toBe('complete')
-    expect(stage3Blind.label).toBe('RBAC Blind')
-
-    // When canViewMoney is true (Owner, Admin), daily rate is required
-    const stage3Privileged = getEquipmentStageState(3, values, rows, true, {})
-    expect(stage3Privileged.state).toBe('todo')
-  })
-
-  it('renders EquipmentWizardStepper with all 5 steps and mode toggle', async () => {
-    const onSelectStage = vi.fn()
-    const onToggleWizardMode = vi.fn()
+  it('renders EquipmentSectionLinks with all seven section anchors and no wizard toggle', async () => {
+    const sections = [
+      'Identity',
+      'Stock & Units',
+      'Relationships',
+      'Location',
+      'Purchase',
+      'Pricing & Rental',
+      'Maintenance & Documents',
+    ]
+    const idOf = (sec: string) => `record-section-${sec.toLowerCase().replace(/[^a-z]+/g, '-')}`
 
     await act(async () => {
       root.render(
-        createElement(EquipmentWizardStepper, {
-          currentStage: 1,
-          onSelectStage,
-          wizardMode: true,
-          onToggleWizardMode,
-          values: { tracking_mode: 'Serialised' },
-          rows: [],
-          canViewMoney: true,
-          errors: {},
+        createElement(EquipmentSectionLinks, {
+          sections,
+          stateOf: (sec) => equipmentSectionState(sec, { tracking_mode: 'Serialised' }, []),
+          idOf,
         })
       )
     })
 
-    const nav = container.querySelector('nav[aria-label="Add Equipment 5 Stages"]')
+    const nav = container.querySelector('nav[aria-label="Form sections"]')
     expect(nav).not.toBeNull()
-    expect(container.textContent).toContain('Basic Info')
-    expect(container.textContent).toContain('Structure')
-    expect(container.textContent).toContain('Review & Save')
-
-    const stepButtons = container.querySelectorAll('.equipment-wizard-step')
-    expect(stepButtons.length).toBe(5)
-
-    // Click step 2
-    await act(async () => {
-      const step2Btn = stepButtons[1] as HTMLButtonElement
-      step2Btn.click()
-    })
-    expect(onSelectStage).toHaveBeenCalledWith(2)
-
-    // Toggle mode
-    const allSectionsBtn = container.querySelectorAll('.equipment-mode-btn')[1] as HTMLButtonElement
-    await act(async () => {
-      allSectionsBtn.click()
-    })
-    expect(onToggleWizardMode).toHaveBeenCalledWith(false)
+    const links = Array.from(container.querySelectorAll('a.record-section-link')) as HTMLAnchorElement[]
+    expect(links).toHaveLength(7)
+    expect(links.map((a) => a.getAttribute('href'))).toEqual([
+      '#record-section-identity',
+      '#record-section-stock-units',
+      '#record-section-relationships',
+      '#record-section-location',
+      '#record-section-purchase',
+      '#record-section-pricing-rental',
+      '#record-section-maintenance-documents',
+    ])
+    expect(container.textContent).not.toContain('Step by Step')
+    expect(container.querySelector('.equipment-mode-toggle')).toBeNull()
+    expect(container.querySelector('.equipment-wizard-stepper')).toBeNull()
   })
 
   it('renders UnitBarcodeModal with Code128 SVG and unit metadata', async () => {

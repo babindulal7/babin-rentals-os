@@ -120,7 +120,7 @@ row, Law 4 spirit) + RLS money roles only; lifecycle step "closing = opening + i
 Warehouse cannot read the table.
 **Needs** — none.
 
-### T3-08 · Equipment form: one page, seven sections            status: todo · size: S · lane C
+### T3-08 · Equipment form: one page, seven sections            status: ready — awaiting merge (lane-c/T3-08-equipment-form-one-page-seven-sections) · size: S · lane C
 **What** — Remove the five-step mode from `EquipmentRecordEditor` (`wizardMode`, ~line 69 and its
 render branches); keep the seven section anchors and jump links.
 **Why** — D19; closes OPEN_DECISIONS §19.
