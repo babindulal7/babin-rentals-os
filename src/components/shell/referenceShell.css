@@ -122,10 +122,11 @@
   border-color: var(--br-active-stroke);
   box-shadow: none !important;
 }
-.br-reference-shell .app-navigation nav a[aria-current='page'] svg,
-.br-reference-shell .app-navigation nav a[aria-current='page'] > span[aria-hidden] {
+.br-reference-shell .app-navigation nav a[aria-current='page'] svg {
   color: var(--br-active-ink) !important;
-  background-color: var(--br-active-ink);
+}
+.br-reference-shell .app-navigation nav a[aria-current='page'] > span[aria-hidden] {
+  background-color: var(--br-active-ink) !important;
 }
 .br-reference-shell .app-navigation nav a:not(.app-nav__new-rental):not([aria-current='page']):hover {
   background: var(--hover-sidebar) !important;
@@ -336,7 +337,7 @@
   }
   .br-reference-workbench { grid-template-columns: minmax(0, 1fr); }
   .br-reference-inspector--desktop { display: none; }
-  .br-reference-inspector--phone { display: block; margin-bottom: 12px; }
+  .br-reference-inspector--phone { display: block; margin-bottom: 12px; order: -1; }
   .br-reference-inspector--phone .br-reference-inspector__card { margin-top: 8px; }
   .br-reference-shell .app-shell-layout { min-width: 0; }
   .br-reference-shell .app-global-header { min-height: 64px; }
