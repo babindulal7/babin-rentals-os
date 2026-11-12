@@ -18,7 +18,7 @@ import { useList, type ListQueryResult, type ListResult } from '../../lib/querie
 import { useViewport } from '../../lib/device'
 import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext'
 import type { BookingStatus } from '../../lib/workflow'
-import RawDashboardMovementPanel from './DashboardMovementPanel'
+import RawDashboardMovementPanel, { dashboardAction } from './DashboardMovementPanel'
 import LegacyExportCard from './LegacyExportCard'
 import RoleTaskCockpit from './RoleTaskCockpit'
 import './dashboard.css'
@@ -580,6 +580,8 @@ export default function Today() {
   // It never fabricates a client, conflict, amount, scan or inspection result.
   const nextPickup = pickups.rows.find((row) => row.flags.includes('Overdue')) ?? pickups.rows[0]
   const nextReturn = returns.rows[0]
+  const pickupStep = nextPickup ? dashboardAction(nextPickup, 'outgoing') : null
+  const returnStep = nextReturn ? dashboardAction(nextReturn, 'incoming') : null
   const loadedToPack = pickups.rows.filter((row) => row.status !== 'Packed').length
 
   const renderReferenceInspector = () => (
@@ -595,7 +597,7 @@ export default function Today() {
             <h2 className="br-reference-inspector__title">{nextPickup.bookingNo} · {nextPickup.client}</h2>
             <p className="br-reference-inspector__detail">Current stage: {nextPickup.status || 'Booked'}</p>
             <div className="br-reference-inspector__gate">
-              <strong>{nextPickup.status === 'Packed' ? 'Next: Complete client handover' : 'Next: Prepare and scan equipment'}</strong>
+              <strong>{pickupStep?.job === 'Handover' ? 'Next: Complete client handover' : 'Next: Prepare and scan equipment'}</strong>
               <small>Unit-level testing, cleaning, packing and photo-evidence gates are checked inside the actual booking operations workspace.</small>
               <button
                 type="button"
@@ -603,10 +605,10 @@ export default function Today() {
                 onClick={() => openOperations(
                   nextPickup.bookingNo,
                   (nextPickup.status as BookingStatus) || 'Booked',
-                  nextPickup.status === 'Packed' ? 'Handover' : 'Pack',
+                  pickupStep?.job ?? 'Pack',
                 )}
               >
-                {nextPickup.status === 'Packed' ? 'Open Handover' : 'Open Packing & Scan'}
+                {pickupStep?.label ?? 'Open Packing & Scan'}
               </button>
             </div>
           </>
@@ -625,7 +627,7 @@ export default function Today() {
           <strong>{returns.loading || returns.error ? '—' : returns.total ?? '—'}</strong>
         </div>
         <div className="br-reference-inspector__row">
-          <span>Loaded units to pack</span>
+          <span>Loaded bookings to pack</span>
           <strong>{pickups.loading || pickups.error ? '—' : loadedToPack}</strong>
         </div>
         {nextReturn && !returns.error && (
@@ -638,10 +640,10 @@ export default function Today() {
               onClick={() => openOperations(
                 nextReturn.bookingNo,
                 (nextReturn.status as BookingStatus) || 'On Rent',
-                'Return',
+                returnStep?.job ?? 'Return',
               )}
             >
-              Open Return & Inspection
+              {returnStep?.label ?? 'Return & Inspect'}
             </button>
           </div>
         )}
