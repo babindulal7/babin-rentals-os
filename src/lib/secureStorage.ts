@@ -22,6 +22,44 @@ export interface SupportedStorage {
 
 export type PlatformType = 'capacitor' | 'tauri' | 'electron' | 'web';
 
+/**
+ * Purge any auth, token, or supabase session keys from window.localStorage.
+ * In native and secure environments (or on secure adapter initialization),
+ * sensitive session tokens must NEVER linger in plaintext localStorage.
+ */
+export function purgeRendererLocalStorageTokens(): string[] {
+  if (typeof window === 'undefined' || !window.localStorage) return [];
+  const purged: string[] = [];
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i);
+      if (key && (key.includes('auth') || key.includes('sb-') || key.includes('token'))) {
+        keysToRemove.push(key);
+      }
+    }
+    for (const key of keysToRemove) {
+      window.localStorage.removeItem(key);
+      purged.push(key);
+    }
+  } catch {
+    // Storage restricted
+  }
+  return purged;
+}
+
+/** Allowed key regex pattern for secure token persistence. */
+const ALLOWED_SECURE_KEY_REGEX = /^(sb-[a-zA-Z0-9_.-]+-(?:auth-token|token)|supabase\.auth\.[a-zA-Z0-9_.-]+|app\.[a-zA-Z0-9_.-]+|br\.[a-zA-Z0-9_.-]+)$/;
+
+export function isAuthorizedSecureKey(key: string): boolean {
+  if (typeof key !== 'string') return false;
+  if (key.length === 0 || key.length > 256) return false;
+  if (key.startsWith('__') || key.includes('..') || key.includes('/') || key.includes('\\')) {
+    return false;
+  }
+  return ALLOWED_SECURE_KEY_REGEX.test(key);
+}
+
 /** Detect the current runtime environment. */
 export function detectPlatform(): PlatformType {
   if (typeof window === 'undefined') return 'web';
@@ -36,6 +74,9 @@ export function detectPlatform(): PlatformType {
     electronAPI?: {
       isElectron?: boolean;
     };
+    electron?: {
+      isElectron?: boolean;
+    };
   };
 
   if (win.Capacitor?.isNativePlatform?.() || (win.Capacitor?.getPlatform && win.Capacitor.getPlatform() !== 'web')) {
@@ -46,7 +87,7 @@ export function detectPlatform(): PlatformType {
     return 'tauri';
   }
 
-  if (win.electronAPI?.isElectron) {
+  if (win.electronAPI?.isElectron || win.electron?.isElectron) {
     return 'electron';
   }
 
@@ -107,6 +148,10 @@ export class CapacitorKeystoreAdapter implements SupportedStorage {
   // Failed writes must override readable but stale persistent values. A null
   // tombstone also prevents a failed removal from restoring a signed-out session.
   private pending = new Map<string, string | null>();
+
+  constructor() {
+    purgeRendererLocalStorageTokens();
+  }
 
   private getPlugin(): {
     get: (opts: { key: string }) => Promise<{ value: string | null }>;
@@ -184,6 +229,10 @@ export class TauriStrongholdAdapter implements SupportedStorage {
   // tombstone also prevents a failed removal from restoring a signed-out session.
   private pending = new Map<string, string | null>();
 
+  constructor() {
+    purgeRendererLocalStorageTokens();
+  }
+
   private getTauriInvoke(): ((cmd: string, args?: Record<string, unknown>) => Promise<unknown>) | null {
     if (typeof window === 'undefined') return null;
     const win = window as unknown as {
@@ -250,6 +299,10 @@ export class TauriStrongholdAdapter implements SupportedStorage {
 export class ElectronSafeStorageAdapter implements SupportedStorage {
   private pending = new Map<string, string | null>();
 
+  constructor() {
+    purgeRendererLocalStorageTokens();
+  }
+
   private getElectronStorage(): {
     getItem: (key: string) => Promise<string | null>;
     setItem: (key: string, value: string) => Promise<boolean>;
@@ -264,19 +317,27 @@ export class ElectronSafeStorageAdapter implements SupportedStorage {
           removeItem: (key: string) => Promise<boolean>;
         };
       };
+      electron?: {
+        secureStorage?: {
+          getItem: (key: string) => Promise<string | null>;
+          setItem: (key: string, value: string) => Promise<boolean>;
+          removeItem: (key: string) => Promise<boolean>;
+        };
+      };
     };
-    return win.electronAPI?.secureStorage ?? null;
+    return win.electronAPI?.secureStorage ?? win.electron?.secureStorage ?? null;
   }
 
   async getItem(key: string): Promise<string | null> {
+    if (!isAuthorizedSecureKey(key)) {
+      return Promise.reject(new Error(`[SecureStorage] Access to unauthorized key denied: ${key}`));
+    }
     if (this.pending.has(key)) return this.pending.get(key) ?? null;
     const storage = this.getElectronStorage();
     if (storage) {
       try {
         const val = await storage.getItem(key);
-        if (typeof window !== 'undefined' && window.localStorage) {
-          try { window.localStorage.removeItem(key); } catch { /* ignore */ }
-        }
+        purgeRendererLocalStorageTokens();
         return val ?? null;
       } catch (err) {
         console.error('[ElectronSafeStorageAdapter] Failed to read from safeStorage:', err);
@@ -287,15 +348,16 @@ export class ElectronSafeStorageAdapter implements SupportedStorage {
   }
 
   async setItem(key: string, value: string): Promise<void> {
+    if (!isAuthorizedSecureKey(key)) {
+      return Promise.reject(new Error(`[SecureStorage] Access to unauthorized key denied: ${key}`));
+    }
     const storage = this.getElectronStorage();
     if (storage) {
       try {
         const ok = await storage.setItem(key, value);
         if (ok) {
           this.pending.delete(key);
-          if (typeof window !== 'undefined' && window.localStorage) {
-            try { window.localStorage.removeItem(key); } catch { /* ignore */ }
-          }
+          purgeRendererLocalStorageTokens();
           return;
         }
       } catch (err) {
@@ -303,23 +365,26 @@ export class ElectronSafeStorageAdapter implements SupportedStorage {
       }
     }
     this.pending.set(key, value);
+    purgeRendererLocalStorageTokens();
   }
 
   async removeItem(key: string): Promise<void> {
+    if (!isAuthorizedSecureKey(key)) {
+      return Promise.reject(new Error(`[SecureStorage] Access to unauthorized key denied: ${key}`));
+    }
     const storage = this.getElectronStorage();
     if (storage) {
       try {
         await storage.removeItem(key);
         this.pending.delete(key);
-        if (typeof window !== 'undefined' && window.localStorage) {
-          try { window.localStorage.removeItem(key); } catch { /* ignore */ }
-        }
+        purgeRendererLocalStorageTokens();
         return;
       } catch (err) {
         console.error('[ElectronSafeStorageAdapter] Failed to remove from safeStorage:', err);
       }
     }
     this.pending.set(key, null);
+    purgeRendererLocalStorageTokens();
   }
 }
 

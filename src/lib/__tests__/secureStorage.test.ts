@@ -6,6 +6,9 @@ import {
   WebLocalStorageAdapter,
   CapacitorKeystoreAdapter,
   TauriStrongholdAdapter,
+  ElectronSafeStorageAdapter,
+  purgeRendererLocalStorageTokens,
+  isAuthorizedSecureKey,
 } from '../secureStorage';
 
 describe('secureStorage', () => {
@@ -309,10 +312,133 @@ describe('secureStorage', () => {
     });
   });
 
+  describe('purgeRendererLocalStorageTokens', () => {
+    it('purges all auth, sb-, and token keys from localStorage leaving unrelated keys intact', () => {
+      localStorage.setItem('sb-12345-auth-token', 'jwt.token.here');
+      localStorage.setItem('supabase.auth.token', 'secret');
+      localStorage.setItem('app_session_token', 'session_data');
+      localStorage.setItem('babin_data_wiped', 'true');
+      localStorage.setItem('other_pref', 'dark');
+
+      const purged = purgeRendererLocalStorageTokens();
+      expect(purged).toContain('sb-12345-auth-token');
+      expect(purged).toContain('supabase.auth.token');
+      expect(purged).toContain('app_session_token');
+
+      // Requirement 1: Must return [] — no sb-*-auth-token or session keys in renderer localStorage
+      const remainingAuthKeys = Object.keys(window.localStorage).filter(
+        (k) => k.includes('auth') || k.includes('sb-') || k.includes('token')
+      );
+      expect(remainingAuthKeys).toEqual([]);
+      expect(localStorage.getItem('babin_data_wiped')).toBe('true');
+      expect(localStorage.getItem('other_pref')).toBe('dark');
+    });
+  });
+
+  describe('isAuthorizedSecureKey', () => {
+    it('approves legitimate Supabase and app session tokens', () => {
+      expect(isAuthorizedSecureKey('sb-xyz123-auth-token')).toBe(true);
+      expect(isAuthorizedSecureKey('supabase.auth.token')).toBe(true);
+      expect(isAuthorizedSecureKey('app.session.user')).toBe(true);
+      expect(isAuthorizedSecureKey('br.auth-token')).toBe(true);
+    });
+
+    it('rejects unauthorized, probe, and path traversal keys', () => {
+      expect(isAuthorizedSecureKey('__unauthorized_key__')).toBe(false);
+      expect(isAuthorizedSecureKey('../secret.txt')).toBe(false);
+      expect(isAuthorizedSecureKey('path/traversal')).toBe(false);
+      expect(isAuthorizedSecureKey('arbitrary_disk_file')).toBe(false);
+      expect(isAuthorizedSecureKey('')).toBe(false);
+    });
+  });
+
+  describe('ElectronSafeStorageAdapter', () => {
+    it('detects electron platform when window.electron or window.electronAPI is present', () => {
+      (window as any).electron = { isElectron: true };
+      expect(detectPlatform()).toBe('electron');
+      delete (window as any).electron;
+
+      (window as any).electronAPI = { isElectron: true };
+      expect(detectPlatform()).toBe('electron');
+      delete (window as any).electronAPI;
+    });
+
+    it('rejects / fails closed on arbitrary IPC key access (#141)', async () => {
+      const mockStorage = {
+        getItem: vi.fn(),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+      };
+      (window as any).electron = { secureStorage: mockStorage };
+
+      const adapter = new ElectronSafeStorageAdapter();
+
+      // Calling with __unauthorized_key__ must reject / fail closed
+      await expect(adapter.getItem('__unauthorized_key__')).rejects.toThrow(
+        /Access to unauthorized key denied/
+      );
+      await expect(adapter.setItem('__unauthorized_key__', 'val')).rejects.toThrow(
+        /Access to unauthorized key denied/
+      );
+      await expect(adapter.removeItem('__unauthorized_key__')).rejects.toThrow(
+        /Access to unauthorized key denied/
+      );
+
+      expect(mockStorage.getItem).not.toHaveBeenCalled();
+      expect(mockStorage.setItem).not.toHaveBeenCalled();
+      expect(mockStorage.removeItem).not.toHaveBeenCalled();
+
+      delete (window as any).electron;
+    });
+
+    it('purges localStorage and routes legitimate tokens via window.electron.secureStorage', async () => {
+      localStorage.setItem('sb-test-auth-token', 'leak_in_local_storage');
+      const mockStorage = {
+        getItem: vi.fn().mockResolvedValue('encrypted_vault_token'),
+        setItem: vi.fn().mockResolvedValue(true),
+        removeItem: vi.fn().mockResolvedValue(true),
+      };
+      (window as any).electron = { secureStorage: mockStorage };
+
+      const adapter = new ElectronSafeStorageAdapter();
+
+      // Must purge upon adapter instantiation
+      const authKeys = Object.keys(window.localStorage).filter(
+        (k) => k.includes('auth') || k.includes('sb-') || k.includes('token')
+      );
+      expect(authKeys).toEqual([]);
+
+      await adapter.setItem('sb-test-auth-token', 'my_token');
+      expect(mockStorage.setItem).toHaveBeenCalledWith('sb-test-auth-token', 'my_token');
+
+      const val = await adapter.getItem('sb-test-auth-token');
+      expect(val).toBe('encrypted_vault_token');
+
+      // Renderer localStorage must still have 0 token keys
+      expect(
+        Object.keys(window.localStorage).filter(
+          (k) => k.includes('auth') || k.includes('sb-') || k.includes('token')
+        )
+      ).toEqual([]);
+
+      await adapter.removeItem('sb-test-auth-token');
+      expect(mockStorage.removeItem).toHaveBeenCalledWith('sb-test-auth-token');
+
+      delete (window as any).electron;
+    });
+  });
+
   describe('getSecureAuthStorage', () => {
     it('returns WebLocalStorageAdapter in standard browser environment', () => {
       const storage = getSecureAuthStorage();
       expect(storage).toBeInstanceOf(WebLocalStorageAdapter);
+    });
+
+    it('returns ElectronSafeStorageAdapter when in electron environment', () => {
+      (window as any).electron = { isElectron: true };
+      const storage = getSecureAuthStorage();
+      expect(storage).toBeInstanceOf(ElectronSafeStorageAdapter);
+      delete (window as any).electron;
     });
   });
 });

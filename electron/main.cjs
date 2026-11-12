@@ -203,56 +203,81 @@ if (!gotTheLock) {
     }
   });
 
+  // Allowed key pattern for secure storage: strictly alphanumeric, dots, hyphens, and underscores.
+  // Prohibits path traversal, slashes, backslashes, hidden files, or arbitrary unauthorized probe keys.
+  function isAuthorizedStorageKey(key) {
+    if (typeof key !== 'string') return false;
+    if (key.length === 0 || key.length > 256) return false;
+    // Reject explicit unauthorized/probe test keys
+    if (key.startsWith('__') || key.includes('..') || key.includes('/') || key.includes('\\')) {
+      return false;
+    }
+    // Must match authorized storage key patterns:
+    // e.g. sb-*-auth-token, supabase.auth.token, app.session.*, br.*
+    const ALLOWED_KEY_REGEX = /^(sb-[a-zA-Z0-9_\-\.]+-(?:auth-token|token)|supabase\.auth\.[a-zA-Z0-9_\-\.]+|app\.[a-zA-Z0-9_\-\.]+|br\.[a-zA-Z0-9_\-\.]+)$/;
+    return ALLOWED_KEY_REGEX.test(key);
+  }
+
   // Register safeStorage IPC handlers for secure token persistence
-ipcMain.handle('safe-storage-get', async (event, key) => {
-  try {
-    if (!safeStorage.isEncryptionAvailable()) return null;
-    const store = require('electron-store') || null;
-    // Use a simple file-based approach since electron-store may not be installed
-    const fs = require('fs');
-    const path = require('path');
-    const storageDir = path.join(app.getPath('userData'), 'secure-storage');
-    if (!fs.existsSync(storageDir)) fs.mkdirSync(storageDir, { recursive: true });
-    const filePath = path.join(storageDir, key);
-    if (!fs.existsSync(filePath)) return null;
-    const encrypted = fs.readFileSync(filePath);
-    return safeStorage.decryptString(encrypted);
-  } catch (err) {
-    console.error('[Electron] safe-storage-get error:', err);
-    return null;
-  }
-});
+  ipcMain.handle('safe-storage-get', async (event, key) => {
+    try {
+      if (!isAuthorizedStorageKey(key)) {
+        console.warn(`[Electron] Blocked unauthorized safe-storage-get for key: ${key}`);
+        return null;
+      }
+      if (!safeStorage.isEncryptionAvailable()) return null;
+      const fs = require('fs');
+      const path = require('path');
+      const storageDir = path.join(app.getPath('userData'), 'secure-storage');
+      if (!fs.existsSync(storageDir)) fs.mkdirSync(storageDir, { recursive: true });
+      const filePath = path.join(storageDir, key);
+      if (!fs.existsSync(filePath)) return null;
+      const encrypted = fs.readFileSync(filePath);
+      return safeStorage.decryptString(encrypted);
+    } catch (err) {
+      console.error('[Electron] safe-storage-get error:', err);
+      return null;
+    }
+  });
 
-ipcMain.handle('safe-storage-set', async (event, key, value) => {
-  try {
-    if (!safeStorage.isEncryptionAvailable()) return false;
-    const fs = require('fs');
-    const path = require('path');
-    const storageDir = path.join(app.getPath('userData'), 'secure-storage');
-    if (!fs.existsSync(storageDir)) fs.mkdirSync(storageDir, { recursive: true });
-    const filePath = path.join(storageDir, key);
-    const encrypted = safeStorage.encryptString(value);
-    fs.writeFileSync(filePath, encrypted);
-    return true;
-  } catch (err) {
-    console.error('[Electron] safe-storage-set error:', err);
-    return false;
-  }
-});
+  ipcMain.handle('safe-storage-set', async (event, key, value) => {
+    try {
+      if (!isAuthorizedStorageKey(key)) {
+        console.warn(`[Electron] Blocked unauthorized safe-storage-set for key: ${key}`);
+        return false;
+      }
+      if (!safeStorage.isEncryptionAvailable()) return false;
+      const fs = require('fs');
+      const path = require('path');
+      const storageDir = path.join(app.getPath('userData'), 'secure-storage');
+      if (!fs.existsSync(storageDir)) fs.mkdirSync(storageDir, { recursive: true });
+      const filePath = path.join(storageDir, key);
+      const encrypted = safeStorage.encryptString(value);
+      fs.writeFileSync(filePath, encrypted);
+      return true;
+    } catch (err) {
+      console.error('[Electron] safe-storage-set error:', err);
+      return false;
+    }
+  });
 
-ipcMain.handle('safe-storage-remove', async (event, key) => {
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    const storageDir = path.join(app.getPath('userData'), 'secure-storage');
-    const filePath = path.join(storageDir, key);
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    return true;
-  } catch (err) {
-    console.error('[Electron] safe-storage-remove error:', err);
-    return false;
-  }
-});
+  ipcMain.handle('safe-storage-remove', async (event, key) => {
+    try {
+      if (!isAuthorizedStorageKey(key)) {
+        console.warn(`[Electron] Blocked unauthorized safe-storage-remove for key: ${key}`);
+        return false;
+      }
+      const fs = require('fs');
+      const path = require('path');
+      const storageDir = path.join(app.getPath('userData'), 'secure-storage');
+      const filePath = path.join(storageDir, key);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      return true;
+    } catch (err) {
+      console.error('[Electron] safe-storage-remove error:', err);
+      return false;
+    }
+  });
 
 app.whenReady().then(() => {
     createWindow();
