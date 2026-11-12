@@ -167,7 +167,7 @@ export default function Sidebar({ active }: SidebarProps) {
         {!rail && (
           <span className="br-reference-brand-title">
             <strong>Babin Rentals OS</strong>
-            <small>Kathmandu · Nepal Time</small>
+            <small>Rental Management</small>
           </span>
         )}
         {/* Manual collapse remains available on tablet and desktop. */}
