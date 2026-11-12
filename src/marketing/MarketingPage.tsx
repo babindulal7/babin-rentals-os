@@ -4,6 +4,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useGSAP } from '@gsap/react'
 import { IconArrowRight, IconArrowLeft } from '@tabler/icons-react'
 import { tokens } from '@babin-rentals/design-tokens'
+import PublicGearCatalogue from './PublicGearCatalogue'
 import './design-tokens.css'
 
 gsap.registerPlugin(ScrollTrigger, useGSAP)
@@ -348,13 +349,14 @@ export default function MarketingPage() {
             <span className="font-display text-[15px] font-semibold tracking-tight">Babin Rentals</span>
           </a>
           <div className="ml-auto hidden items-center gap-7 text-sm text-ash md:flex">
+            <a href="#catalogue" className="text-gold font-medium transition-colors hover:text-bone">Catalogue</a>
             <a href="#kit" className="transition-colors hover:text-bone">Kit</a>
             <a href="#packages" className="transition-colors hover:text-bone">Packages</a>
             <a href="#gates" className="transition-colors hover:text-bone">How it works</a>
             <a href="#membership" className="transition-colors hover:text-bone">Membership</a>
           </div>
           <a
-            href="#contact"
+            href="#catalogue"
             className="rounded-full bg-bone px-4 py-2 text-sm font-semibold text-ink transition-transform duration-300 hover:scale-[1.04]"
           >
             Check availability
@@ -541,6 +543,9 @@ export default function MarketingPage() {
           </div>
         </div>
       </section>
+
+      {/* ── Public Gear Catalogue (Babinrentals.com public catalogue) ── */}
+      <PublicGearCatalogue />
 
       {/* ── Interest: bento ────────────────────────────────────────── */}
       <section id="kit" className="px-5 py-32 md:py-48">
