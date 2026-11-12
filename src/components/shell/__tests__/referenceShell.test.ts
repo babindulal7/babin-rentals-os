@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { PRIMARY_NAV, filterNavByRole } from '../../data/nav'
-import referenceStyles from '../shell/referenceShell.css?raw'
-import todaySource from '../../modules/today/Today.tsx?raw'
-import appSource from '../../App.tsx?raw'
-import sidebarSource from '../shell/Sidebar.tsx?raw'
+import { PRIMARY_NAV, filterNavByRole } from '../../../data/nav'
+import referenceStyles from '../referenceShell.css?raw'
+import todaySource from '../../../modules/today/Today.tsx?raw'
+import appSource from '../../../App.tsx?raw'
+import sidebarSource from '../Sidebar.tsx?raw'
 
 /**
  * Contract checks for the 12 Nov prototype translation. The uploaded prototype
