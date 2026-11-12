@@ -271,11 +271,11 @@ describe('Tier 1: Feature Coverage (Happy Path & Isolations)', { timeout: 90000 
       expect(breadcrumbNav?.textContent).toContain('Rentals')
       expect(breadcrumbNav?.textContent).toContain('BK-2026-0001')
 
-      // Command palette trigger button with Ctrl+K / ⌘K
+      // Command palette Ctrl K shortcut hint (G-16: no global search box on desktop)
       const searchBtn = container.querySelector('button[aria-label="Search bookings, clients, equipment and pages"]')
       expect(searchBtn).not.toBeNull()
-      expect(searchBtn?.textContent).toContain('Search or scan…')
-      expect(searchBtn?.textContent).toContain('Ctrl+K / ⌘K')
+      expect(searchBtn?.textContent).not.toContain('Search or scan…')
+      expect(searchBtn?.textContent).toContain('Ctrl K')
 
       // User profile trigger representation
       const profileBtn = container.querySelector('button[aria-label*="user profile"]')

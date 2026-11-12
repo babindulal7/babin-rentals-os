@@ -97,11 +97,41 @@ describe('RULING 2026-10-16 — a page whose More carries Search frees the phone
     expect(phoneSearchSlot()).not.toBeNull()
   })
 
-  it('leaves the tablet and desktop search where it was', async () => {
-    for (const vp of ['tablet', 'desktop']) {
+  it('renders a 44px search icon on tablet and a compact Ctrl K Kbd hint without a global search box on desktop (G-16)', async () => {
+    state.viewport = 'tablet'
+    await renderRecord(true)
+    const tabletBtn = desktopSearch() as HTMLButtonElement | null
+    expect(tabletBtn).not.toBeNull()
+    expect(tabletBtn?.style.minWidth).toBe('44px')
+    expect(tabletBtn?.style.minHeight).toBe('44px')
+    expect(tabletBtn?.textContent).toBe('')
+
+    state.viewport = 'desktop'
+    await renderRecord(true)
+    const desktopHint = desktopSearch() as HTMLButtonElement | null
+    expect(desktopHint).not.toBeNull()
+    expect(desktopHint?.querySelector('[data-slot="kbd"]')?.textContent).toBe('Ctrl K')
+    expect(container.textContent).not.toContain('Search or scan')
+  })
+
+  it('keeps exactly one search owner per page across phone, tablet, and desktop when page search is active (G-16)', async () => {
+    function SearchPage() {
+      const [query, setQuery] = useState('')
+      return <PageHeader title="Rentals" search={{ value: query, onChange: setQuery, ariaLabel: 'Search rentals' }} />
+    }
+    for (const vp of ['phone', 'tablet', 'desktop'] as const) {
       state.viewport = vp
-      await renderRecord(true)
-      expect(desktopSearch(), vp).not.toBeNull()
+      await act(async () => root.render(<MemoryRouter><WorkspaceProvider>
+        <Header crumbs={[{ label: 'Rentals' }]} /><SearchPage />
+      </WorkspaceProvider></MemoryRouter>))
+      expect(container.querySelector('header [data-slot="kbd"]'), vp).toBeNull()
+      expect(desktopSearch(), vp).toBeNull()
+      if (vp === 'phone') {
+        expect(container.querySelector('header [aria-label="Search Rentals"]'), vp).not.toBeNull()
+        expect(container.querySelector('header [aria-label="Search"]'), vp).toBeNull()
+      } else {
+        expect(container.querySelector('header [aria-label="Search rentals"]'), vp).not.toBeNull()
+      }
     }
   })
 })

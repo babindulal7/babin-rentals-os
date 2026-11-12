@@ -255,7 +255,8 @@ describe('Header — Phase 5, 390px phone layout & Law 15 hit targets', () => {
     expect(link?.getAttribute('href')).toBe('/rentals')
     expect(breadcrumb?.textContent).toContain('Rentals')
     expect(breadcrumb?.textContent).toContain('B-715')
-    expect(container.textContent).toContain('⌘K')
+    expect(container.textContent).toContain('Ctrl K')
+    expect(container.textContent).not.toContain('Search or scan')
   })
 
   it('keeps phone header free of overlap at 390px with single crumb and 44px targets', async () => {

@@ -1,5 +1,37 @@
 # Progress Log
 
+## 2026-11-12 — Card 9 (Lane B): Search — page search everywhere, global by Ctrl/Cmd+K or icon
+
+**Did**
+- `src/components/shell/Header.tsx`: removed the desktop global search box (`Search or scan…`) when `searchOwner === 'command-palette'` and replaced it with a compact `<Kbd size="sm">Ctrl K</Kbd>` trigger (`G-16`); rendered a 44×44px search icon button on tablet (`isTablet`) to match phone's single 44px `CommandPalette` trigger. Kept existing `/` key behavior unchanged (on tablet/desktop with `PageHeader` `search`, `/` focuses the header page-search input; on phone, `MobileHeaderSearch` opens its panel and focuses its input).
+- `src/components/shell/__tests__/headerOwnership.test.tsx`, `src/components/shell/__tests__/shell.test.tsx`, and `src/__tests__/e2e/tier1-features.test.tsx`: updated desktop/tablet global search assertions for `Ctrl K` `<Kbd>` hint, 44px tablet icon, and single search owner across phone/tablet/desktop.
+
+**Ruled**
+- RULING 2026-11-10 G-16: layout only; no permissions, RLS, routes, or business logic changed. Existing `CommandPalette.tsx` already enforces role-filtered navigation/actions/records before render and restores focus to the opener on close.
+
+**Verified**
+- `npm run typecheck`, `npm run lint`, `npm run lint:shell`, `npm run lint:ui-copy`, `npm run check:contrast`, `npm run build`: exit `0`.
+- `VITE_DATA_SOURCE=mock npm test`: exit `0` (603/603 test files, 7,095/7,095 tests passed).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +1 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 233 files · check:pglite not run this session (pass --migrations to run). Suite: PASS — 7095/7095 passed, 0 failed (recorded 2026-11-12T12:52:23.688Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Branch `lane-b/card-9-search-header-palette` awaits Babin's review and merge.
+- Next in G-13..G-17 order: Card 8 (Inventory & Clients More menus), Card 10 (Settings 4 + Admin group), Card 7 (Reports 5 groups + pinned).
+
 ## 2026-11-10 — Card 4: register D-UX-01 to D-UX-05 as O-23 to O-27 (docs only)
 
 **Did**

@@ -9,6 +9,7 @@ import { useSync } from '../../lib/syncContext'
 import { useOptionalWorkspace, type PageHeaderSearchConfig } from '../../lib/workspaceContext'
 import { InfoTooltip } from '../ui/InfoTooltip'
 import { Button } from '../ui/Button'
+import { Kbd } from '../ui/Kbd'
 import { ConfirmDialog } from '../ui/ConfirmDialog'
 import type { OverflowMenuItem } from '../ui/OverflowMenu'
 import { extractValidActions, PageActions, ActionsOverflowMenu, type PageActionsProps } from '../ui/PageActions'
@@ -701,70 +702,39 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                 )}
               </label>
             ) : searchOwner === 'command-palette' ? (
-              <button
-                type="button"
-                onClick={() => openCommandPalette()}
-                aria-label="Search bookings, clients, equipment and pages"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 'var(--sp-sm)',
-                  width: '100%',
-                  flexShrink: 1,
-                  minWidth: 0,
-                  height: 44,
-                  minHeight: 44, /* TouchInset compliant (Law 15) */
-                  padding: '0 14px',
-                  borderRadius: 'var(--r-input)',
-                  background: 'var(--input-bg)',
-                  border: '1px solid var(--input-border)',
-                  boxShadow: 'var(--specular-rim), 0 1px 3px rgba(0, 0, 0, 0.04)',
-                  boxSizing: 'border-box',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--input-focus)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--input-border)'
-                }}
-              >
-                <Icon name="search" size={15} style={{ color: 'var(--muted)', flexShrink: 0 }} />
-                <span
+              // RULING 2026-11-10: G-16 — Desktop drops the global search box in favour of a Ctrl K hint;
+              // tablet (iPad) and phone keep a single 44px search icon opening the CommandPalette.
+              isTablet ? (
+                <button
+                  type="button"
+                  onClick={() => openCommandPalette()}
+                  aria-label="Search bookings, clients, equipment and pages"
+                  title="Search (Ctrl+K)"
+                  style={iconBtn}
+                >
+                  <Icon name="search" size={17} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => openCommandPalette()}
+                  aria-label="Search bookings, clients, equipment and pages"
+                  title="Global search (Ctrl+K)"
                   style={{
-                    flex: 1,
-                    minWidth: 0,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    fontSize: 'var(--t-ui)',
-                    color: 'var(--muted)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minWidth: 44,
+                    minHeight: 44,
+                    padding: '0 8px',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
                   }}
                 >
-                  Search or scan…
-                </span>
-                {!isTablet && (
-                  <kbd
-                    className="figure"
-                    style={{
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      color: 'var(--muted)',
-                      flexShrink: 0,
-                      marginLeft: 'auto',
-                      padding: '2px 8px',
-                      borderRadius: 999,
-                      background: 'var(--card)',
-                      border: '1px solid var(--border)',
-                      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
-                    }}
-                  >
-                    Ctrl+K / ⌘K
-                  </kbd>
-                )}
-              </button>
+                  <Kbd size="sm">Ctrl K</Kbd>
+                </button>
+              )
             ) : null}
 
             {/* Mount point for pages that render their own search in the application header */}
