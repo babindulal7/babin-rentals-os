@@ -159,3 +159,24 @@ Bash and PowerShell.
 **Database** — account language uses self-owned Auth metadata. Owner-approved shared glossary revisions require migration 0225, claimed in the ledger before SQL. Append-only revisions, idempotent Owner-only RPC, staff-only text reads and local lifecycle/permission proof. C-7 authorizes only this migration after backup and combined-source verification.
 **Done when** — draft exports remain pending, import records explicit reviewer/date and exact text; language activation requires all module conversions/reviews/layout checks and owner approval; user choices follow their own account; docs use one authority/status contract; regression tests and local gates pass; screen checks recorded; Babin merges. Unperformed owner/device acceptance remains pending.
 **Needs** — the three original owner answers, plus Owner-only immediate approved glossary editing, all received 5 Nov 2026.
+
+### T0-13 · Last-unit race on two real connections            status: todo · size: S · lane A · [go-live]
+**What** — Add `scripts/test-last-unit-race-live.mjs` (`npm run test:race:pg`): the same contest as
+`scripts/test-last-unit-race.mjs`, but against the LOCAL Supabase Postgres (`npm run db:start`,
+`npm run db:apply`) with N separate `pg` connections that fire the Quote → Booked transition for the
+same unit and window at the same moment (`Promise.all`, each in its own transaction, released
+together by a shared advisory lock). Repeat for a quantity-tracked product at the capacity ceiling
+(0045). Run each contest 50 times.
+**Why** — The current race test says in its own header that PGlite is one connection, so the
+contenders run one after another. It proves the constraint exists; it does not prove two staff
+booking at the same second cannot both win. Raised by the 12 Nov scalability review.
+**Where** — `scripts/test-last-unit-race-live.mjs` (new), `package.json`, `docs/plans/README.md`
+(listed as a local-stack check, not one of the 17 gates, because it needs Docker).
+**Database** — none. No migration. If a round ever shows two winners, STOP and report; the fix is a
+separate card.
+**Done when** — 1) 50 rounds × 8 contenders on one serialised unit: exactly one winner and one live
+`inventory_reservations` row every round; 2) 50 rounds at the quantity ceiling: holds never exceed
+stock on hand; 3) every loser fails with the exclusion or ceiling error, never a deadlock or a
+timeout; 4) the script refuses any host that is not `127.0.0.1`/`localhost` (N-5); 5) results
+pasted into PROGRESS.md.
+**Needs** — nothing.

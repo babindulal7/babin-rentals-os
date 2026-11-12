@@ -325,3 +325,22 @@ Sources: [Cloudflare Pages limits](https://developers.cloudflare.com/pages/platf
 [Azure Static Web Apps quotas](https://learn.microsoft.com/azure/static-web-apps/quotas) ·
 [Cloudflare Access](https://www.cloudflare.com/en-au/products/cloudflare-access) ·
 [Turnstile plans](https://developers.cloudflare.com/turnstile/plans/)
+
+### T1-19 · Speed with five years of data            status: todo · size: M · lane A
+**What** — Add `scripts/seed-volume.mjs` (`npm run seed:volume`) that fills the LOCAL Supabase
+Postgres with a growth-sized data set through plain inserts: 3 branches, 5,000 units, 2,000 clients,
+60,000 bookings over five years with lines, reservations, stage transitions, invoices and payments.
+Then add `scripts/check-volume.mjs` (`npm run check:volume`) that runs the query behind each busy
+screen as a signed-in staff role (RLS on) with `EXPLAIN (ANALYZE, BUFFERS)` and records the time:
+Rentals list, Calendar month, availability check for one booking, Inventory list, Clients list,
+Operations queues, global search, and the five most used reports.
+**Why** — 298 indexes exist but nothing has measured them against real volume. T1-14 measures the
+bundle on devices; this card measures the database. Raised by the 12 Nov scalability review.
+**Where** — `scripts/seed-volume.mjs`, `scripts/check-volume.mjs` (both new), `package.json`,
+`docs/reference/VOLUME_BASELINE.md` (new: the table of numbers).
+**Database** — none in this card. A slow query gets its own card and its own migration number.
+**Done when** — 1) the seed finishes on a fresh local stack and prints row counts; 2) each listed
+query has a recorded time and plan; 3) budget ⭐: list and search queries under 300 ms, availability
+check under 150 ms, reports under 2 s; 4) every query over budget is listed with its plan and a
+proposed index or rewrite, not fixed here; 5) both scripts refuse any non-local host (N-5).
+**Needs** — nothing. Run before T1-10 so slow queries are known before live batches.
