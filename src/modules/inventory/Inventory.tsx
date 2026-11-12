@@ -5,6 +5,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
 import { Card, Button, PageHeader, PageActions, KpiStrip } from '../../components/ui/Page'
+import type { OverflowMenuItem } from '../../components/ui/OverflowMenu'
 import { GlobalAddMenu } from '../../components/ui/creation/GlobalAddMenu'
 import { PageShell } from '../../components/ui/PageShell'
 import { StatusPill } from '../../components/ui/module-shell'
@@ -21,7 +22,7 @@ import { InspectorNavigator } from '../../components/ui/InspectorNavigator'
 import { useInspectorTraversal } from '../../components/ui/useInspectorTraversal'
 import { SavedViewsMenu, type SavedListView } from '../../components/ui/SavedViewsMenu'
 import { captureInventoryView, restoreInventoryView, type InventoryViewChoices } from '../../lib/inventoryViewPresets'
-import { canPublishTeamViews } from '../../lib/rbac'
+import { canPublishTeamViews, isStaff } from '../../lib/rbac'
 import { useDisplayDensity } from '../../lib/displayDensity'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { Unavailable } from '../../components/ui/Unavailable'
@@ -1673,6 +1674,35 @@ export default function Inventory() {
    * the icons stay.
    */
   const phone = viewport === 'phone'
+  // RULING 2026-11-10: G-14 — Inventory keeps 4 primary tabs; Cases, Warranty & RMA,
+  // QR & Barcode Labels, and Purchase Requests live in one More menu, gated by staff access.
+  const inventoryToolsOverflow: OverflowMenuItem[] =
+    user && isStaff(user.role)
+      ? [
+          {
+            label: 'Cases',
+            icon: 'flag',
+            onClick: () => navigate('/inventory/cases'),
+          },
+          {
+            label: 'Warranty & RMA',
+            icon: 'check',
+            onClick: () => navigate('/inventory/warranty'),
+          },
+          // RULING 2026-10-18: QR & barcode labels moved here from Tools (Babin's ruling).
+          {
+            label: 'QR & Barcode Labels',
+            icon: 'barcode',
+            onClick: () => navigate('/inventory/labels'),
+          },
+          {
+            label: 'Purchase Requests',
+            icon: 'receipt',
+            onClick: () => navigate('/inventory/purchase-requests'),
+          },
+        ]
+      : []
+
   const equipmentActions =
     tab === 'Equipment' && !isNew && !isImport ? (
       <PageActions
@@ -1689,17 +1719,7 @@ export default function Inventory() {
             icon: 'alert_triangle' as const,
             onClick: () => navigate('/reports/inventory'),
           },
-          {
-            label: 'Warranty Tracker',
-            icon: 'check',
-            onClick: () => navigate('/inventory/warranty'),
-          },
-          // RULING 2026-10-18: QR & barcode labels moved here from Tools (Babin's ruling).
-          {
-            label: 'QR & Barcode Labels',
-            icon: 'barcode' as const,
-            onClick: () => navigate('/inventory/labels'),
-          },
+          ...inventoryToolsOverflow,
           // BQ-407 (Booqable adoption): catalogue CSV import with a mandatory
           // dry-run. Owner/Admin/Manager only — the same seat that may create
           // equipment, per the import capability in lib/productImport.
@@ -1721,7 +1741,10 @@ export default function Inventory() {
     ) : tab === 'Bundles' && params.get('action') !== 'new' ? (
       <PageActions
         primary={<GlobalAddMenu module="bundles" />}
+        overflow={inventoryToolsOverflow}
       />
+    ) : inventoryToolsOverflow.length > 0 ? (
+      <PageActions overflow={inventoryToolsOverflow} />
     ) : null;
 
   return (

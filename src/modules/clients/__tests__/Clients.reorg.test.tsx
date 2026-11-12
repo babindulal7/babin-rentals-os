@@ -14,10 +14,11 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 let money = true
+let role: 'Owner' | 'Admin' | 'Manager' | 'Coordinator' | 'Accounts' | 'Warehouse' | 'Technician' | 'Driver' | 'Client' = 'Owner'
 
 vi.mock('../../../lib/moneyVisibility', () => ({ useCanViewMoney: () => money }))
 vi.mock('../../../lib/auth', () => ({
-  useAuth: () => ({ user: { id: 'u-1', name: 'Test', role: money ? 'Owner' : 'Warehouse' } }),
+  useAuth: () => ({ user: { id: 'u-1', name: 'Test', role } }),
 }))
 vi.mock('../../../components/ui/Toast', () => ({ useToast: () => ({ showSuccessToast: vi.fn() }) }))
 vi.mock('../../../lib/queries/useClients', () => ({
@@ -67,6 +68,7 @@ afterEach(async () => {
   root = undefined
   host = undefined
   money = true
+  role = 'Owner'
 })
 
 describe('Clients ▸ More after the 18 Oct moves', () => {
@@ -79,11 +81,33 @@ describe('Clients ▸ More after the 18 Oct moves', () => {
 
   it('offers neither money item to a money-blind role', async () => {
     money = false
+    role = 'Warehouse'
     await mount('/clients')
     const items = await moreItems()
     expect(items).toContain('Referral Codes')
     expect(items).not.toContain('Client Credit')
     expect(items).not.toContain('Coupons & Promos')
+  })
+
+  it.each([
+    ['Owner', true, true, true],
+    ['Admin', true, true, true],
+    ['Manager', true, true, true],
+    ['Coordinator', true, true, true],
+    ['Accounts', false, true, true],
+    ['Warehouse', false, false, true],
+    ['Technician', false, false, true],
+    ['Driver', false, false, true],
+    ['Client', false, false, false],
+  ] as const)('gates Import, Coupons, Duplicates, and Referrals for %s (G-15)', async (testRole, expectImport, expectMoney, expectStaff) => {
+    role = testRole
+    money = expectMoney
+    await mount('/clients')
+    const items = await moreItems()
+    expect(items.includes('Import Clients')).toBe(expectImport)
+    expect(items.includes('Coupons & Promos')).toBe(expectMoney)
+    expect(items.includes('Duplicate Center')).toBe(expectStaff)
+    expect(items.includes('Referral Codes')).toBe(expectStaff)
   })
 })
 

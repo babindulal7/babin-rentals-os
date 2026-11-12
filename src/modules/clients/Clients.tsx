@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { recordExport } from '../../lib/exportAudit'
-import { canExportClientPii } from '../../lib/rbac'
+import { canExportClientPii, isStaff } from '../../lib/rbac'
 import { useAuth } from '../../lib/auth'
 import { Link, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
@@ -238,13 +238,14 @@ export default function Clients() {
             // RULING 2026-10-13: on a phone, Export lives in More so the title and Add keep the header.
             // RULING 2026-10-15: at every width (title read "Cli…" at 1280px). Revert = restore
             // the `phone ?` branches on secondary/overflow.
+            // RULING 2026-11-10: G-15 — Import, Duplicates, Referrals, and Coupons live in one More menu.
             overflow={[
               ...(!clientsLoading && !clientsError ? [{ label: t('clients.actions.exportDirectory', 'Export loaded directory'), icon: 'download' as const, onClick: exportCsv }] : []),
               ...(user && canImportClients(user.role) ? [{ label: t('clients.actions.importClients', 'Import Clients'), icon: 'upload' as const, onClick: () => setTab('import') }] : []),
-              { label: t('clients.actions.duplicateCenter', 'Duplicate Center'), icon: 'users', onClick: () => setTab('duplicates') },
+              ...(user && isStaff(user.role) ? [{ label: t('clients.actions.duplicateCenter', 'Duplicate Center'), icon: 'users' as const, onClick: () => setTab('duplicates') }] : []),
               // RULING 2026-10-18: the tier policy moved to Settings ▸ Business; this opens the client-level credit view.
               ...(money ? [{ label: t('clients.actions.clientCredit', 'Client Credit'), icon: 'card' as const, onClick: () => setTab('credit') }] : []),
-              { label: t('clients.actions.referralCodes', 'Referral Codes'), icon: 'sparkles', onClick: () => setTab('referral') },
+              ...(user && isStaff(user.role) ? [{ label: t('clients.actions.referralCodes', 'Referral Codes'), icon: 'sparkles' as const, onClick: () => setTab('referral') }] : []),
               ...(money ? [{ label: t('clients.actions.couponsPromos', 'Coupons & Promos'), icon: 'receipt' as const, onClick: () => setTab('coupons') }] : []),
             ]}
           />

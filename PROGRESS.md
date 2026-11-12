@@ -1,5 +1,38 @@
 # Progress Log
 
+## 2026-11-12 — Card 8 (Lane B): Inventory and Clients — one More menu each
+
+**Did**
+- `src/modules/inventory/Inventory.tsx`: added a shared `inventoryToolsOverflow` (gated by `isStaff(user.role)`) to the header `More` menu across Inventory tabs (`Equipment`, `Bundles`, `Stock Check`, `Maintenance`) with **Cases** (`/inventory/cases`), **Warranty & RMA** (`/inventory/warranty`), **QR & Barcode Labels** (`/inventory/labels`), and **Purchase Requests** (`/inventory/purchase-requests`), while keeping the 4 primary tabs untouched (`G-14`).
+- `src/modules/clients/Clients.tsx`: gated `Duplicate Center` and `Referral Codes` in `Clients ▸ More` with `isStaff(user.role)` alongside `canImportClients(user.role)` (`Import Clients`) and `money` (`Coupons & Promos`, `Client Credit`) (`G-15`), keeping the 2 primary tabs (`Directory`, `Membership`) and `?tab=` routes unchanged.
+- `src/modules/inventory/__tests__/inventoryMoreMenu.test.tsx` & `src/modules/clients/__tests__/Clients.reorg.test.tsx`: added 9-role access tests matching route/capability gates (`Owner`, `Admin`, `Manager`, `Coordinator`, `Accounts`, `Warehouse`, `Technician`, `Driver`, `Client`).
+
+**Ruled**
+- RULING 2026-11-10 G-14, G-15: layout only; no permissions, RLS, routes, or business logic changed. Tap count from Inventory/Clients landing to each of the 8 tools is 2 taps (`More actions` → tool entry), with no duplicate module-level entry points added.
+
+**Verified**
+- `npm run typecheck`, `npm run lint`, `npm run lint:shell`, `npm run lint:ui-copy`, `npm run check:contrast`, `npm run build`: exit `0`.
+- `VITE_DATA_SOURCE=mock npm test`: exit `0` (604/604 test files, 7,113/7,113 tests passed).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +1 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 233 files · check:pglite not run this session (pass --migrations to run). Suite: PASS — 7113/7113 passed, 0 failed (recorded 2026-11-12T13:49:41.849Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Branch `lane-b/card-8-inventory-clients-more` awaits Babin's review and merge.
+- Next in `G-13..G-17` order: Card 10 (Settings 4 + Admin group), Card 7 (Reports 5 groups + pinned).
+
 ## 2026-11-10 — Card 4: register D-UX-01 to D-UX-05 as O-23 to O-27 (docs only)
 
 **Did**
