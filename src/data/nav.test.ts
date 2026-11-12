@@ -65,11 +65,12 @@ describe('canonical primary and secondary nav', () => {
 })
 
 describe('Law 6 — money-blind roles never see money surfaces', () => {
-  it('drops /finance and /reports for a money-blind role and keeps the other ten primary items', () => {
+  it('drops /finance, /reports, and /crew for Warehouse per PERMISSIONS.md §3', () => {
     const warehouse = permittedNav('Warehouse')
     expect(warehouse.map((s) => s.to)).not.toContain('/finance')
     expect(warehouse.map((s) => s.to)).not.toContain('/reports')
-    expect(warehouse).toHaveLength(10)
+    expect(warehouse.map((s) => s.to)).not.toContain('/crew')
+    expect(warehouse).toHaveLength(9)
   })
 
   it('keeps all eleven primary items for an Owner', () => {
@@ -295,5 +296,60 @@ describe('SPEC_TABS records what each updated spec ruled', () => {
 
   it('09_FINANCE — seven tabs, including Documents', () => {
     expect(SPEC_TABS['/finance']).toEqual(['Dashboard', 'Invoices', 'Payments', 'Expenses', 'Documents', 'Closing', 'Reports'])
+  })
+})
+
+describe('Card E-1 — role-scoped sidebar navigation (G-10, G-11, Q4, Q5)', () => {
+  const routesFor = (role: Parameters<typeof permittedNav>[0]) => permittedNav(role).map((s) => s.to)
+
+  it('Owner, Admin, and Manager see all 11 destinations (Q4)', () => {
+    for (const role of ['Owner', 'Admin', 'Manager'] as const) {
+      expect(routesFor(role)).toHaveLength(11)
+    }
+  })
+
+  it('Coordinator omits Finance from sidebar (G-11)', () => {
+    const routes = routesFor('Coordinator')
+    expect(routes).not.toContain('/finance')
+    expect(routes).toContain('/rentals/new')
+    expect(routes).toHaveLength(10)
+  })
+
+  it('Warehouse sees New Rental (W1) and omits Finance and Crew Assist', () => {
+    const routes = routesFor('Warehouse')
+    expect(routes).toContain('/rentals/new')
+    expect(routes).not.toContain('/finance')
+    expect(routes).not.toContain('/crew')
+    expect(routes).toContain('/settings')
+    expect(routes).toHaveLength(9)
+  })
+
+  it('Technician omits New Rental until Card 6 merges (G-10), plus Finance and Crew Assist', () => {
+    const routes = routesFor('Technician')
+    expect(routes).not.toContain('/rentals/new')
+    expect(routes).not.toContain('/finance')
+    expect(routes).not.toContain('/crew')
+    expect(routes).toContain('/operations')
+    expect(routes).toContain('/settings')
+    expect(routes).toHaveLength(8)
+  })
+
+  it('Accounts sees Finance, Tools, and Crew Assist, and omits New Rental and Operations', () => {
+    const routes = routesFor('Accounts')
+    expect(routes).toContain('/finance')
+    expect(routes).toContain('/crew')
+    expect(routes).not.toContain('/rentals/new')
+    expect(routes).not.toContain('/operations')
+    expect(routes).toContain('/settings')
+    expect(routes).toHaveLength(9)
+  })
+
+  it('Driver sees Today, Operations, Rentals, Calendar, Clients, and Settings (Q5)', () => {
+    const routes = routesFor('Driver')
+    expect(routes).toEqual(['/today', '/operations', '/rentals', '/calendar', '/clients', '/settings'])
+  })
+
+  it('Client is portal-only with zero sidebar items', () => {
+    expect(routesFor('Client')).toEqual([])
   })
 })

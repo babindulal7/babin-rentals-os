@@ -75,6 +75,23 @@ export const NAV: NavSection[] = PRIMARY_NAV
 
 export const SETTINGS_NAV: NavSection = SETTINGS_SECTION
 
+// RULING 2026-11-10: E-1, G-10, G-11 — role-scoped sidebar navigation per PERMISSIONS.md §3.
+// Coordinator omits Finance (G-11: booking-only payments); Technician omits New Rental
+// until Card 6 merges (G-10); Settings stays visible to all staff for own profile/prefs (Q5).
+const NAV_ALLOWED_ROLES: Readonly<Record<string, readonly SystemRole[]>> = {
+  '/rentals/new': ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse'],
+  '/today': ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts', 'Driver'],
+  '/operations': ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Driver'],
+  '/rentals': ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts', 'Driver'],
+  '/calendar': ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts', 'Driver'],
+  '/crew': ['Owner', 'Admin', 'Manager', 'Coordinator', 'Accounts'],
+  '/inventory': ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts'],
+  '/clients': ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts', 'Driver'],
+  '/finance': ['Owner', 'Admin', 'Manager', 'Accounts'],
+  '/tools': ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts'],
+  '/settings': ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts', 'Driver'],
+}
+
 export function filterNavByRole(sections: NavSection[], role: SystemRole | undefined): NavSection[] {
   if (!role) return []
   let nav = sections
@@ -84,6 +101,10 @@ export function filterNavByRole(sections: NavSection[], role: SystemRole | undef
   if (!isStaff(role)) {
     nav = nav.filter((s) => !isStaffSurface(s.to))
   }
+  nav = nav.filter((s) => {
+    const allowed = NAV_ALLOWED_ROLES[s.to]
+    return allowed ? allowed.includes(role) : true
+  })
   return nav
 }
 
