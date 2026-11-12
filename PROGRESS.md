@@ -24,13 +24,13 @@
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 102 / 102 (100%) | +1 |
+| Backend | actions implemented / total | 102 / 102 (100%) | +0 |
 | Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
 | DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
-| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +1 |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
 | Lifecycle | steps green / total | not measured — current receipt required | — |
 | Overall | structural mean of five | not measured | — |
-Migrations 233 files · check:pglite not run this session (pass --migrations to run). Suite: Historical suite: 7096/7096 passed, 0 failed (recorded 2026-11-12T12:19:49.346Z); current source NOT VERIFIED.
+Migrations 233 files · check:pglite not run this session (pass --migrations to run). Suite: PASS — 7096/7096 passed, 0 failed (recorded 2026-11-12T12:30:38.823Z); source fingerprint matches.
 Coverage suite: NOT VERIFIED — invalid test receipt.
 Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
 Counted by `npm run completion`, not typed.
@@ -38,7 +38,7 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 
 ### Remaining
 - Non-status `--primary` fills documented in `docs/verification/GRAPHITE_REPAINT_DESIGN.md` Section 3 (checkboxes, progress bar fills, slider thumbs, `--active-row` tint, KPI highlights) remain blue awaiting Babin's ruling.
-- Branch `lane-b/card-5-graphite-repaint-glass-removal` awaits Babin's review and merge.
+- Branch `lane-b/card-5-graphite-paper-repaint` awaits Babin's review and merge.
 
 
 ## 2026-11-10 — Card 4: register D-UX-01 to D-UX-05 as O-23 to O-27 (docs only)
