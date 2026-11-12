@@ -1,5 +1,56 @@
 # Progress Log
 
+## 2026-11-13 — Card 7: organize 22 reports into 5 groups with user pinning (Lane B, G-13)
+
+**Did**
+- Replaced the 11-family strip in `src/components/ui/ReportFamiliesNav.tsx` with 5 groups: **Money** · **Rentals** · **Equipment** · **Clients** · **Team**, based on `RULINGS-2026-11-10-design.md` G-13.
+- Mapped all 22 active report routes (`src/lib/reportsNav.ts`):
+  - **Money** (8 reports, all `money: true`): Revenue (`/reports/revenue`), Sales Register (`/reports/sales`), VAT / Tax (`/reports/vat-tax`), Crew TDS (`/reports/tds` — missing from ruling table, grouped under Money), Expenses (`/reports/expenses`), Cash Flow (`/reports/cash-flow`), Working Capital (`/reports/working-capital`), Promotions (`/reports/promotions`).
+  - **Rentals** (5 reports, `money: false`): Pulse (`/reports/pulse`), Rental Reports (`/reports/rentals`), Operations (`/reports/operations`), Forecasting (`/reports/forecasting`), Custom (`/reports/custom`).
+  - **Equipment** (6 reports): Inventory (`/reports/inventory`), Product (`/reports/products`), Equipment Performance (`/reports/equipment-performance`), Asset ROI (`/reports/asset-roi`, `money: true`), Damage & Maintenance (`/reports/damage-maintenance`), Cases (`/reports/cases`).
+  - **Clients** (1 report): Client Ledger (`/reports/clients`, `money: true`).
+  - **Team** (2 reports, `money: false`): Staff Performance (`/reports/staff`), Activity (`/reports/activity`).
+- Added per-user pinning backed by `safeStorage` using key `babin-rentals:report-pins:${userId}` (defaulting to Pulse, Revenue, Rentals, Inventory).
+- Pinned reports strip renders first on Reports landing (`Pulse.tsx`) and in `ReportFamiliesNav`.
+- Strict money-blindness enforcement (Law 6, P10, G-13): Money-gated reports (including Asset ROI and Client Ledger) are completely omitted from the DOM for money-blind roles (`Warehouse`, `Technician`, `Driver`, `Client`). Any group with 0 visible reports (`Money` and `Clients`) is omitted from the DOM. Money-blind roles see 3 groups (Rentals, Equipment, Team) and 12 reports.
+- All 22 reports reachable in at most 2 taps from Reports (Tap 1: Group tab, Tap 2: Report link; or 1 tap via Pinned strip).
+- Preserved all existing `/reports/...` URLs and Forecasting honest empty state.
+- Registered Tabler icons `pin` and `pinned` in `src/components/ui/Icon.tsx`.
+- Updated `src/modules/reports/Pulse.tsx` to embed `<ReportFamiliesNav current="Pulse" />`, eliminating duplicated inline nav.
+- Added comprehensive unit and UI tests in `src/modules/reports/__tests__/reportFamilies.test.tsx` (9/9 passed).
+
+**Ruled**
+- RULING 2026-11-10: G-13 — 5 groups + pinned reports. Reports open on five groups: Money · Rentals · Equipment · Clients · Team. Each user can pin reports; pinned ones show first. No report is removed and no report URL changes.
+- Crew TDS (`/reports/tds`) missing from ruling table; registered in Money group per prompt rule.
+- Money-gated reports stay absent from the DOM for money-blind roles, whichever group they sit in. A group with nothing a role may see is not shown to that role.
+
+**Verified**
+- `npx vitest run src/modules/reports/`: 18 test files, 137 tests passed.
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (`eslint src --max-warnings 0`).
+- `npm run lint:shell`: clean (876 files checked).
+- `npm run lint:ui-copy`: clean (0 violations).
+- `npm run check:contrast`: 97/97 passed, 0 failures.
+- `npm run build`: built in 1m 14s.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | 72 / 72 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 233 files · check:pglite 233/233 applied, 0 failed (recorded 2026-11-12T22:45:00.805Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-12T22:46:55.265Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Await Babin local merge for `lane-b/card-7-reports-5-groups`.
+
 ## 2026-11-10 — Card 4: register D-UX-01 to D-UX-05 as O-23 to O-27 (docs only)
 
 **Did**

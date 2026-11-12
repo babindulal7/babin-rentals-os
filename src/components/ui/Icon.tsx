@@ -94,6 +94,8 @@ import {
   IconLoader2,
   IconWifiOff,
   IconMailX,
+  IconPin,
+  IconPinned,
   type Icon as TablerIconType,
 } from '@tabler/icons-react'
 import { captureError } from '../../lib/monitoring'
@@ -234,6 +236,8 @@ const REGISTRY = {
   wifi_off: IconWifiOff,
   mail_x: IconMailX,
   image: IconPhoto,
+  pin: IconPin,
+  pinned: IconPinned,
 } satisfies Record<string, TablerIconType>
 
 export type IconName = keyof typeof REGISTRY

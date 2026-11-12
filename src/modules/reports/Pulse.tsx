@@ -21,6 +21,7 @@ import { canWriteBookingDesk, isStaff } from '../../lib/rbac'
 import { useLoad } from '../../lib/queries/useLoad'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import { useViewport } from '../../lib/device'
+import { ReportFamiliesNav } from '../../components/ui/ReportFamiliesNav'
 import './reports.css'
 import { IS_MOCK } from '../../lib/supabase'
 import {
@@ -140,50 +141,8 @@ const selStyle = {
   fontFamily: 'inherit',
 }
 
-/* Law 14 / v4.1 §7.3 — 44px hit area on every interactive target, and §5's
-   escape hatch: "compact visual allowed ONLY with an invisible pseudo-element
-   extending the hit area to 44 — the law is the HIT AREA, not the paint."
 
-   The paint stays 30 here on purpose, and the difference from every other strip
-   on this screen is that this constant dresses TWO different things: the `Link`
-   for a family that has a page, and an `aria-disabled` `<span>` for the eight
-   that do not. Growing the box would have inflated the span as well — a hit area
-   on something with nothing to hit — and shrinking only the interactive half
-   would leave a strip of 44px links beside 30px spans, which reads as two kinds
-   of tab rather than one kind in two states. So the constant keeps the shared
-   paint and the interactive consumer alone carries `className="tap"`, which
-   grows its target underneath the pill without moving a pixel of the strip. */
-const tabStyle = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  height: 30,
-  padding: '0 11px',
-  borderRadius: 'var(--r-badge)',
-  fontSize: 'var(--t-meta)',
-  fontWeight: 600,
-  textDecoration: 'none',
-  whiteSpace: 'nowrap' as const,
-}
 
-/**
- * `Reports.md` §8 — eleven tabs, in the render's order. `to` is `null` where the
- * family has no page in this build; `money` marks the two §12 keeps away from a
- * money-blind role. Both facts are read off this table rather than typed into
- * the caption, so the strip and its explanation cannot drift apart.
- */
-const TAB_FAMILIES: Array<{ label: string; to: string | null; money: boolean }> = [
-  { label: 'Dashboard', to: '/reports/pulse', money: false },
-  { label: 'Revenue', to: null, money: true },
-  { label: 'Rentals', to: null, money: false },
-  { label: 'Inventory', to: '/reports/inventory', money: false },
-  { label: 'Clients', to: '/reports/clients', money: true },
-  { label: 'Operations', to: null, money: false },
-  { label: 'Finance', to: '/reports/cash-flow', money: true },
-  { label: 'Maintenance', to: '/reports/equipment-performance', money: false },
-  { label: 'Cases', to: '/reports/cases', money: false },
-  { label: 'Staff', to: '/reports/staff', money: false },
-  { label: 'Custom', to: null, money: false },
-]
 
 /* ── the four chart views ──────────────────────────────────────────────── */
 
@@ -834,16 +793,6 @@ function DemoPulse({ states }: { states: PulseStates }) {
 
   const upcoming = [...UPCOMING].sort((a, b) => a.due.getTime() - b.due.getTime())
 
-  /* §8's eleven families. `to` is set only where a page really exists; §12 also
-     keeps the two money families out of a money-blind role's reach. */
-  const tabs = TAB_FAMILIES.map((t) => ({
-    label: t.label,
-    current: t.label === 'Dashboard',
-    to: t.to === null ? null : t.money && !money ? null : t.to,
-    gated: t.to !== null && t.money && !money,
-  }))
-  const unbuiltTabs = tabs.filter((t) => t.to === null && !t.gated).map((t) => t.label)
-  const gatedTabs = tabs.filter((t) => t.gated).map((t) => t.label)
 
   // §5.3's cards are dense — icon, label, value, delta and a link — so below
   // desktop they get the same treatment as BookingDetail's facts strip: two
@@ -911,68 +860,8 @@ function DemoPulse({ states }: { states: PulseStates }) {
         </p>
       )}
 
-      {/* §8 — the eleven report families, as the render lays them out. Three of
-          them have a page in this build and are links; the rest are drawn in a
-          visibly unavailable state with the reason stated below the strip,
-          because a tab that goes nowhere is worse than one that admits it. */}
-      <nav aria-label="Report families">
-        {/* The row gap is no longer the column gap, and the reason is the tap
-            areas rather than the look: eleven tabs wrap on any laptop, and a
-            30px tab whose target is 44 reaches 7px past its own edge top and
-            bottom. At the old symmetric 6px gap the second line's targets
-            climbed 8px into the first line's, and the later element in the DOM
-            wins a contested point — so a click just under "Inventory" would have
-            opened whatever sat below it. 16px is the first step on the 4px grid
-            that clears the 14px the two halves need. Columns stay tight at 6:
-            every label is wider than 44, so no tab grows sideways. */}
-        <div style={{ display: 'flex', columnGap: 6, rowGap: 'var(--sp-lg)', flexWrap: 'wrap', borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
-          {tabs.map((t) =>
-            t.to ? (
-              <Link
-                key={t.label}
-                to={t.to}
-                className="tap"
-                aria-current={t.current ? 'page' : undefined}
-                style={{
-                  ...tabStyle,
-                  border: `1px solid ${t.current ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-                  background: t.current ? 'var(--select-bg)' : 'var(--card)',
-                  color: t.current ? 'var(--select-fg)' : 'var(--text2)',
-                }}
-              >
-                {t.label}
-              </Link>
-            ) : (
-              <span
-                key={t.label}
-                aria-disabled="true"
-                style={{
-                  ...tabStyle,
-                  border: '1px dashed var(--border)',
-                  background: 'transparent',
-                  /* `--disabled` measures 2.6:1 on the light card and §6 wants
-                     4.5:1 read in both themes. The dashed border, the
-                     `aria-disabled` and the caption carry the state instead —
-                     never the colour alone. */
-                  color: 'var(--muted)',
-                  cursor: 'not-allowed',
-                }}
-              >
-                {t.label}
-              </span>
-            ),
-          )}
-        </div>
-        <p style={{ margin: '7px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
-          {unbuiltTabs.length > 0 && (
-            <>
-              Not built: {unbuiltTabs.join(' · ')} {/* — Reports §8 names these families; nothing behind them exists in this
-              build yet. */}These reports are not available yet. {' '}
-            </>
-          )}
-          {gatedTabs.length > 0 && <>Not in your role&rsquo;s view: {gatedTabs.join(' · ')}.</>}
-        </p>
-      </nav>
+      {/* RULING 2026-11-10: G-13 — 5 groups + pinned reports */}
+      <ReportFamiliesNav current="Pulse" />
 
       <div style={{ display: 'grid', gridTemplateColumns: bodyCols, gap: 'var(--sp-md)', alignItems: 'start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0 }}>

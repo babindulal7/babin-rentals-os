@@ -1,112 +1,338 @@
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import type { CSSProperties } from 'react'
 import { Link } from 'react-router-dom'
+import Icon from './Icon'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
+import { useAuth } from '../../lib/auth'
+import {
+  REPORT_GROUPS,
+  ALL_REPORTS,
+  getReportPins,
+  toggleReportPin,
+  isReportPinned,
+  findGroupByReport,
+  type ReportGroupKey,
+  type ReportNavItem,
+} from '../../lib/reportsNav'
 
-export interface ReportFamilyItem {
-  label: string
-  to: string | null
-  money: boolean
+export {
+  REPORT_GROUPS,
+  ALL_REPORTS,
+  getReportPins,
+  toggleReportPin,
+  isReportPinned,
+  findGroupByReport,
+  type ReportGroupKey,
+  type ReportNavItem,
 }
 
-export const REPORT_FAMILIES: readonly ReportFamilyItem[] = [
-  { label: 'Dashboard', to: '/reports/pulse', money: false },
-  { label: 'Revenue', to: '/reports/revenue', money: true },
-  { label: 'Rentals', to: '/reports/rentals', money: false },
-  { label: 'Inventory', to: '/reports/inventory', money: false },
-  { label: 'Clients', to: '/reports/clients', money: true },
-  { label: 'Operations', to: '/reports/operations', money: false },
-  { label: 'Finance', to: '/reports/cash-flow', money: true },
-  { label: 'Maintenance', to: '/reports/damage-maintenance', money: false },
-  { label: 'Cases', to: '/reports/cases', money: false },
-  { label: 'Staff', to: '/reports/staff', money: false },
-  { label: 'Custom', to: '/reports/custom', money: false },
-] as const
+export interface ReportFamiliesNavProps {
+  current?: string
+  className?: string
+  style?: CSSProperties
+}
 
 const tabStyle: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   height: 30,
-  padding: '0 11px',
-  borderRadius: 'var(--r-badge)',
-  fontSize: 'var(--t-meta)',
+  padding: '0 12px',
+  borderRadius: 'var(--r-badge, 15px)',
+  fontSize: 'var(--t-meta, 12px)',
   fontWeight: 600,
   textDecoration: 'none',
   whiteSpace: 'nowrap',
+  transition: 'all 0.15s ease',
 }
 
-interface ReportFamiliesNavProps {
-  current: string
+const pinBtnStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 22,
+  height: 22,
+  marginLeft: 4,
+  padding: 0,
+  border: 'none',
+  background: 'transparent',
+  cursor: 'pointer',
+  borderRadius: '50%',
+  color: 'inherit',
 }
 
-export function ReportFamiliesNav({ current }: ReportFamiliesNavProps) {
-  const money = useCanViewMoney()
+export function ReportFamiliesNav({ current = 'Pulse', className, style }: ReportFamiliesNavProps) {
+  const canSeeMoney = useCanViewMoney()
+  const { user } = useAuth()
+  const userId = user?.id ?? null
 
-  const tabs = REPORT_FAMILIES.map((t) => ({
-    label: t.label,
-    current: t.label.toLowerCase() === current.toLowerCase(),
-    to: t.to === null ? null : t.money && !money ? null : t.to,
-    gated: t.to !== null && t.money && !money,
-  }))
+  const [pins, setPins] = useState<string[]>(() => getReportPins(userId))
 
-  const unbuiltTabs = tabs.filter((t) => t.to === null && !t.gated).map((t) => t.label)
-  const gatedTabs = tabs.filter((t) => t.gated).map((t) => t.label)
+  useEffect(() => {
+    setPins(getReportPins(userId))
+  }, [userId])
+
+  useEffect(() => {
+    const handlePinsChange = (e: Event) => {
+      const detail = (e as CustomEvent<{ pins: string[] }>).detail
+      if (detail?.pins) {
+        setPins(detail.pins)
+      } else {
+        setPins(getReportPins(userId))
+      }
+    }
+    window.addEventListener('babin-rentals:report-pins-change', handlePinsChange)
+    return () => window.removeEventListener('babin-rentals:report-pins-change', handlePinsChange)
+  }, [userId])
+
+  const handleTogglePin = useCallback(
+    (route: string) => {
+      const next = toggleReportPin(userId, route)
+      setPins(next)
+    },
+    [userId],
+  )
+
+  // Determine current report and its group
+  const currentReport = useMemo(() => {
+    const needle = current.toLowerCase().trim()
+    return ALL_REPORTS.find(
+      (r) =>
+        r.id.toLowerCase() === needle ||
+        r.label.toLowerCase() === needle ||
+        r.to.toLowerCase() === needle ||
+        (needle === 'dashboard' && r.id === 'pulse') ||
+        (needle === 'maintenance' && r.id === 'damage-maintenance') ||
+        (needle === 'finance' && r.id === 'cash-flow'),
+    )
+  }, [current])
+
+  const currentGroupKey = useMemo(() => {
+    return findGroupByReport(current) ?? 'rentals'
+  }, [current])
+
+  // Groups visible to this role (omits group if 0 visible reports)
+  const visibleGroups = useMemo(() => {
+    return REPORT_GROUPS.filter((g) => {
+      const reports = ALL_REPORTS.filter((r) => r.group === g.key)
+      return reports.some((r) => canSeeMoney || !r.money)
+    })
+  }, [canSeeMoney])
+
+  const [selectedGroupKey, setSelectedGroupKey] = useState<ReportGroupKey>(() => {
+    const defaultKey = currentGroupKey
+    if (visibleGroups.some((g) => g.key === defaultKey)) {
+      return defaultKey
+    }
+    return visibleGroups[0]?.key ?? 'rentals'
+  })
+
+  // Synchronize selected group if current changes
+  useEffect(() => {
+    if (visibleGroups.some((g) => g.key === currentGroupKey)) {
+      setSelectedGroupKey(currentGroupKey)
+    }
+  }, [currentGroupKey, visibleGroups])
+
+  // Pinned reports visible to this role
+  const visiblePinnedReports = useMemo(() => {
+    return ALL_REPORTS.filter((r) => pins.includes(r.to) && (canSeeMoney || !r.money))
+  }, [pins, canSeeMoney])
+
+  // Reports in currently selected group visible to this role
+  const groupReports = useMemo(() => {
+    return ALL_REPORTS.filter((r) => r.group === selectedGroupKey && (canSeeMoney || !r.money))
+  }, [selectedGroupKey, canSeeMoney])
 
   return (
-    <nav aria-label="Report families" style={{ marginTop: 'var(--sp-xs)', marginBottom: 'var(--sp-sm)' }}>
+    <nav
+      aria-label="Report families"
+      className={className}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--sp-xs, 8px)',
+        marginTop: 'var(--sp-xs, 4px)',
+        marginBottom: 'var(--sp-sm, 12px)',
+        ...style,
+      }}
+    >
+      {/* 1. Pinned Reports Strip (G-13: pinned ones show first) */}
+      {visiblePinnedReports.length > 0 && (
+        <div
+          data-testid="pinned-reports-strip"
+          aria-label="Pinned reports"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            flexWrap: 'wrap',
+            paddingBottom: 4,
+          }}
+        >
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              fontSize: 'var(--t-meta, 12px)',
+              fontWeight: 700,
+              color: 'var(--text2)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              marginRight: 2,
+            }}
+          >
+            <Icon name="pinned" size={13} style={{ color: 'var(--primary)' }} />
+            Pinned:
+          </span>
+          {visiblePinnedReports.map((r) => {
+            const isCurrent = currentReport?.id === r.id
+            return (
+              <div
+                key={r.to}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  borderRadius: 'var(--r-badge, 14px)',
+                  border: `1px solid ${isCurrent ? 'var(--nav-active-accent)' : 'var(--border)'}`,
+                  background: isCurrent ? 'var(--select-bg)' : 'var(--card)',
+                  color: isCurrent ? 'var(--select-fg)' : 'var(--text2)',
+                  padding: '2px 4px 2px 10px',
+                }}
+              >
+                <Link
+                  to={r.to}
+                  className="tap"
+                  aria-current={isCurrent ? 'page' : undefined}
+                  style={{
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    fontSize: 'var(--t-meta, 12px)',
+                    fontWeight: isCurrent ? 700 : 500,
+                  }}
+                >
+                  {r.label}
+                </Link>
+                <button
+                  type="button"
+                  aria-label={`Unpin ${r.label}`}
+                  title={`Unpin ${r.label}`}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    handleTogglePin(r.to)
+                  }}
+                  style={pinBtnStyle}
+                >
+                  <Icon name="close" size={11} style={{ opacity: 0.7 }} />
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* 2. Five Report Groups Bar */}
       <div
+        role="tablist"
+        aria-label="Report groups"
         style={{
           display: 'flex',
           columnGap: 6,
-          rowGap: 'var(--sp-lg)',
+          rowGap: 6,
           flexWrap: 'wrap',
           borderBottom: '1px solid var(--border)',
           paddingBottom: 8,
         }}
       >
-        {tabs.map((t) =>
-          t.to ? (
-            <Link
-              key={t.label}
-              to={t.to}
+        {visibleGroups.map((g) => {
+          const isSelected = g.key === selectedGroupKey
+          return (
+            <button
+              key={g.key}
+              role="tab"
+              type="button"
+              aria-selected={isSelected}
+              onClick={() => setSelectedGroupKey(g.key)}
               className="tap"
-              aria-current={t.current ? 'page' : undefined}
               style={{
                 ...tabStyle,
-                border: `1px solid ${t.current ? 'var(--nav-active-accent)' : 'var(--border)'}`,
-                background: t.current ? 'var(--select-bg)' : 'var(--card)',
-                color: t.current ? 'var(--select-fg)' : 'var(--text2)',
+                border: `1px solid ${isSelected ? 'var(--nav-active-accent)' : 'var(--border)'}`,
+                background: isSelected ? 'var(--select-bg)' : 'var(--card)',
+                color: isSelected ? 'var(--select-fg)' : 'var(--text2)',
+                cursor: 'pointer',
               }}
             >
-              {t.label}
-            </Link>
-          ) : (
-            <span
-              key={t.label}
-              aria-disabled="true"
-              style={{
-                ...tabStyle,
-                border: '1px dashed var(--border)',
-                background: 'transparent',
-                color: 'var(--muted)',
-                cursor: 'not-allowed',
-              }}
-            >
-              {t.label}
-            </span>
-          ),
-        )}
+              {g.label}
+            </button>
+          )
+        })}
       </div>
-      {(unbuiltTabs.length > 0 || gatedTabs.length > 0) && (
-        <p style={{ margin: '7px 0 0', fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
-          {unbuiltTabs.length > 0 && (
-            <>
-              Not built: {unbuiltTabs.join(' · ')} {/* — Reports §8 names these families; nothing behind them exists in this
-              build yet. */}These reports are not available yet. {' '}
-            </>
-          )}
-          {gatedTabs.length > 0 && <>Not in your role&rsquo;s view: {gatedTabs.join(' · ')}.</>}
-        </p>
-      )}
+
+      {/* 3. Sub-strip of Reports in the Selected Group */}
+      <div
+        data-testid="group-reports-strip"
+        role="tabpanel"
+        aria-label={`${REPORT_GROUPS.find((g) => g.key === selectedGroupKey)?.label ?? ''} reports`}
+        style={{
+          display: 'flex',
+          columnGap: 6,
+          rowGap: 6,
+          flexWrap: 'wrap',
+          paddingTop: 4,
+        }}
+      >
+        {groupReports.map((r) => {
+          const isCurrent = currentReport?.id === r.id
+          const pinned = pins.includes(r.to)
+          return (
+            <div
+              key={r.to}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                borderRadius: 'var(--r-badge, 14px)',
+                border: `1px solid ${isCurrent ? 'var(--nav-active-accent)' : 'var(--border)'}`,
+                background: isCurrent ? 'var(--select-bg)' : 'var(--card)',
+                color: isCurrent ? 'var(--select-fg)' : 'var(--text2)',
+                padding: '2px 6px 2px 10px',
+              }}
+            >
+              <Link
+                to={r.to}
+                className="tap"
+                aria-current={isCurrent ? 'page' : undefined}
+                style={{
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  fontSize: 'var(--t-meta, 12px)',
+                  fontWeight: isCurrent ? 700 : 500,
+                }}
+              >
+                {r.label}
+              </Link>
+              <button
+                type="button"
+                aria-label={pinned ? `Unpin ${r.label}` : `Pin ${r.label}`}
+                aria-pressed={pinned}
+                title={pinned ? `Unpin ${r.label}` : `Pin ${r.label}`}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  handleTogglePin(r.to)
+                }}
+                style={pinBtnStyle}
+              >
+                <Icon
+                  name={pinned ? 'pinned' : 'pin'}
+                  size={12}
+                  style={{ color: pinned ? 'var(--primary)' : 'var(--muted)' }}
+                />
+              </button>
+            </div>
+          )
+        })}
+      </div>
     </nav>
   )
 }
