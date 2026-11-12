@@ -1,0 +1,347 @@
+/*
+ * Babin Rentals OS — reference-shell visual layer.
+ *
+ * Translates the owner-provided React prototype (12 Nov 2026) onto the actual
+ * operational app. It deliberately does NOT import mock bookings, PINs, revenue,
+ * conflict "resolution" handlers or alternate role enums from that prototype.
+ *
+ * Scoped to <Shell>; the login, public portal and marketing surfaces retain
+ * their existing design. Both light and dark remain functional; user theme
+ * preferences and the locked real navigation/authorization contracts remain.
+ */
+.br-reference-shell {
+  --r-card: 16px;
+  --r-btn: 12px;
+  --r-input: 12px;
+  --density-card-pad: 16px;
+  --density-panel-gap: 16px;
+  --br-shell-gap: 16px;
+  --br-highlight: #4d8dff;
+  --br-active-ink: #87b5ff;
+  --br-active-bg: rgba(47, 125, 255, 0.16);
+  --br-active-stroke: rgba(77, 141, 255, 0.38);
+  --br-shell-outline: rgba(148, 163, 184, 0.2);
+  --br-shell-recessed: var(--card2);
+  background: var(--app);
+  color: var(--text);
+}
+
+:root[data-theme='dark'] .br-reference-shell {
+  --app: #050b12;
+  --bg: #050b12;
+  --bg0: #050b12;
+  --surface: #0b1622;
+  --surface-2: #102337;
+  --card: #0b1622;
+  --card2: #081522;
+  --inset: #081522;
+  --sidebar: #08111c;
+  --text: #eaf2fa;
+  --text2: #b4c3d4;
+  --muted: #9caec1;
+  --hover-card: #142739;
+  --hover-sidebar: #15283c;
+  --surface-card: #0b1622;
+  --surface-card-hover: #12283d;
+  --br-shell-outline: rgba(186, 208, 230, 0.19);
+  --br-shell-recessed: #081522;
+  --br-brand-action: #245ed8; /* white text on accessible dark-blue CTA */
+  --br-subtle: #8e9bab;
+  --br-shell-shadow: 0 6px 22px rgba(0, 0, 0, 0.17);
+}
+:root[data-theme='light'] .br-reference-shell {
+  --app: #f1f5f9;
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --card: #ffffff;
+  --card2: #f8fafc;
+  --inset: #f8fafc;
+  --sidebar: #ffffff;
+  --text: #0f172a;
+  --text2: #334155;
+  --muted: #526075;
+  --hover-sidebar: #eef4fb;
+  --surface-card: #ffffff;
+  --br-highlight: #2456d6;
+  --br-active-ink: #1e49b8;
+  --br-active-bg: #e9f1ff;
+  --br-active-stroke: #9bbaff;
+  --br-shell-outline: #c5d1df;
+  --br-brand-action: #2456d6;
+  --br-subtle: #526075;
+  --br-shell-shadow: 0 4px 16px rgba(15, 23, 42, 0.07);
+}
+
+/* Tall sidebar + accent tile, matching the reference without changing the
+   permittedNav() role filtering or the existing 44px minimum touch rows. */
+.br-reference-shell .app-navigation {
+  border-right: 1px solid var(--br-shell-outline) !important;
+}
+.br-reference-brand-mark {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border-radius: 12px;
+  background: var(--br-brand-action);
+  color: #ffffff !important;
+  font-size: 14px !important;
+  font-family: var(--font-display);
+  box-shadow: 0 5px 16px rgba(35, 95, 217, 0.2);
+}
+.br-reference-brand-title {
+  min-width: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+}
+.br-reference-brand-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  letter-spacing: -0.015em;
+}
+.br-reference-brand-title small {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.br-reference-shell .app-navigation nav a:not(.app-nav__new-rental) {
+  border: 1px solid transparent;
+  border-radius: 12px !important;
+  transition: color 150ms ease, background 150ms ease, border-color 150ms ease;
+}
+.br-reference-shell .app-navigation nav a:not(.app-nav__new-rental)[aria-current='page'] {
+  color: var(--br-active-ink) !important;
+  background: var(--br-active-bg) !important;
+  border-color: var(--br-active-stroke);
+  box-shadow: none !important;
+}
+.br-reference-shell .app-navigation nav a[aria-current='page'] svg,
+.br-reference-shell .app-navigation nav a[aria-current='page'] > span[aria-hidden] {
+  color: var(--br-active-ink) !important;
+  background-color: var(--br-active-ink);
+}
+.br-reference-shell .app-navigation nav a:not(.app-nav__new-rental):not([aria-current='page']):hover {
+  background: var(--hover-sidebar) !important;
+}
+.br-reference-session {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--br-shell-outline);
+  border-radius: 12px;
+  background: var(--br-shell-recessed);
+}
+.br-reference-session__text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.br-reference-session__text strong,
+.br-reference-session__text small {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.br-reference-session__text strong { font-size: 12px; }
+.br-reference-session__text small { font-size: 11px; color: var(--muted); }
+
+.br-reference-shell .app-global-header {
+  border-color: var(--br-shell-outline) !important;
+}
+.br-reference-shell .app-workspace-main {
+  background: var(--app);
+}
+.br-reference-shell .app-global-header button,
+.br-reference-shell .app-global-header a {
+  border-radius: var(--r-btn);
+}
+
+/* Source mock's "four KPI bento" translated to actual dispatch data only. */
+.br-reference-shell .rental-dashboard .dispatch-summaries {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.br-reference-shell .rental-dashboard .dispatch-summary {
+  min-height: 106px;
+  align-items: flex-start;
+  padding: 15px;
+  gap: 10px;
+  border: 1px solid var(--br-shell-outline);
+  border-radius: 16px;
+  box-shadow: var(--br-shell-shadow);
+}
+.br-reference-shell .rental-dashboard .dispatch-summary__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+}
+.br-reference-shell .rental-dashboard .dispatch-summary__heading {
+  gap: 4px 8px;
+}
+.br-reference-shell .rental-dashboard .dispatch-summary__count {
+  font-size: clamp(22px, 2vw, 30px);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.br-reference-shell .rental-dashboard .dispatch-summary__period {
+  margin-left: 0;
+}
+.br-reference-shell .rental-dashboard .dispatch-summary--packing .dispatch-summary__icon {
+  background: rgba(212, 168, 36, 0.13);
+  color: var(--ready-text);
+}
+.br-reference-shell .rental-dashboard .dispatch-summary--overdue .dispatch-summary__icon {
+  background: rgba(199, 58, 58, 0.14);
+  color: var(--danger-text);
+}
+.br-reference-workbench {
+  display: grid;
+  align-items: start;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) minmax(290px, 32%);
+  min-width: 0;
+}
+.br-reference-workbench__queues { min-width: 0; }
+.br-reference-shell .br-reference-workbench .rental-dashboard__panels {
+  grid-template-columns: 1fr;
+}
+.br-reference-shell .rental-dashboard .movement-panel,
+.br-reference-shell .rental-dashboard .movement-card,
+.br-reference-shell .rental-dashboard .dispatch-toolbar__presets,
+.br-reference-shell .br-reference-inspector__card {
+  border-radius: 16px;
+  border-color: var(--br-shell-outline);
+}
+.br-reference-inspector {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.br-reference-inspector__card {
+  padding: 16px;
+  background: var(--card);
+  border: 1px solid var(--br-shell-outline);
+  box-shadow: var(--br-shell-shadow);
+}
+.br-reference-inspector__eyebrow {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--br-active-ink);
+}
+.br-reference-inspector__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--text);
+}
+.br-reference-inspector__detail {
+  margin: 7px 0 0;
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.5;
+}
+.br-reference-inspector__gate {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 14px;
+  padding: 13px;
+  border: 1px solid var(--br-shell-outline);
+  border-radius: 12px;
+  background: var(--br-shell-recessed);
+}
+.br-reference-inspector__gate strong { font-size: 13px; }
+.br-reference-inspector__gate small { font-size: 12px; line-height: 1.4; color: var(--text2); }
+.br-reference-inspector__cta {
+  min-height: 44px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 12px;
+  font: 700 13px/1.2 var(--font-body);
+  color: #ffffff;
+  background: var(--br-brand-action);
+  cursor: pointer;
+}
+.br-reference-inspector__cta:hover { filter: brightness(1.1); }
+.br-reference-inspector__cta:focus-visible,
+.br-reference-shell .app-navigation nav a:focus-visible {
+  outline: 3px solid var(--br-highlight);
+  outline-offset: 2px;
+}
+.br-reference-inspector__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 0;
+  font-size: 12px;
+  border-bottom: 1px solid var(--br-shell-outline);
+}
+.br-reference-inspector__row:last-child { border-bottom: 0; }
+.br-reference-inspector__row span { color: var(--text2); }
+.br-reference-inspector__row strong { font-variant-numeric: tabular-nums; }
+.br-reference-inspector--phone { display: none; }
+.br-reference-inspector--phone > summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 12px 14px;
+  border: 1px solid var(--br-shell-outline);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--text);
+  font-weight: 700;
+}
+
+@media (min-width: 1720px) {
+  .br-reference-shell .br-reference-workbench .rental-dashboard__panels {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 768px) and (max-width: 1279px) {
+  .br-reference-workbench { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+  .br-reference-shell .rental-dashboard .dispatch-summaries { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 767px) {
+  .br-reference-shell { --br-shell-gap: 12px; }
+  .br-reference-shell .rental-dashboard .dispatch-summaries {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .br-reference-shell .rental-dashboard .dispatch-summary {
+    padding: 11px;
+    min-height: 112px;
+    gap: 8px;
+  }
+  .br-reference-shell .rental-dashboard .dispatch-summary__icon {
+    width: 32px;
+    height: 32px;
+  }
+  .br-reference-workbench { grid-template-columns: minmax(0, 1fr); }
+  .br-reference-inspector--desktop { display: none; }
+  .br-reference-inspector--phone { display: block; margin-bottom: 12px; }
+  .br-reference-inspector--phone .br-reference-inspector__card { margin-top: 8px; }
+  .br-reference-shell .app-shell-layout { min-width: 0; }
+  .br-reference-shell .app-global-header { min-height: 64px; }
+  .br-reference-shell .rental-dashboard .dispatch-summary__heading h2 { font-size: 13px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .br-reference-shell .app-navigation nav a { transition: none; }
+}
