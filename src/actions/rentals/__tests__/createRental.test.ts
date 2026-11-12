@@ -441,10 +441,10 @@ describe('the dispatcher gate', () => {
     })
   })
 
-  it('denies Technician, whom bookings_insert excludes', async () => {
-    await expect(createRental(input() as never, { userId: 'u', role: 'Technician' })).rejects.toBeInstanceOf(
-      ActionPermissionError,
-    )
+  it('admits Technician, whom 0236 bookings_insert admits (G-10, G-18)', async () => {
+    await expect(createRental(input() as never, { userId: 'u', role: 'Technician' })).resolves.toMatchObject({
+      success: true,
+    })
   })
 
   it('denies the external Client role', async () => {

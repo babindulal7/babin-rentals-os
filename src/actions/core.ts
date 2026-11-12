@@ -238,7 +238,9 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
      * every role including Owner for three days. Twenty-four more of the same
      * trap were sitting unsprung.
      */
+    // RULING 2026-11-10: G-10, G-18 — Technician may create a booking (W1), without cancel/extend/draft/client-update.
     case 'rental.create':
+      return rbac.canCreateBooking(ctx.role);
     case 'rental.draft':
     case 'rental.cancel':
     case 'rental.extend':

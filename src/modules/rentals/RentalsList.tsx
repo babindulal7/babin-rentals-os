@@ -41,6 +41,7 @@ import { businessNowAd } from '../../lib/queries/today'
 import { formatAd, getBusinessToday } from '../../lib/bs'
 import { useCanViewMoney } from '../../lib/moneyVisibility'
 import {
+  canCreateBooking,
   canWriteBookingDesk,
   canPerformOperations,
   canRecordPayment,
@@ -873,6 +874,7 @@ export default function RentalsList() {
   const workspace = useOptionalWorkspace()
   const role: SystemRole = user ? user.role : 'Client'
   const canWriteDesk = canWriteBookingDesk(role)
+  const canCreateRental = canCreateBooking(role)
   const canOperate = canPerformOperations(role)
   const canRecord = canRecordPayment(role)
   /** The single money gate. Mirrors `auth_can_view_money()` — see Law 6 above. */
@@ -1959,7 +1961,7 @@ export default function RentalsList() {
 
       </WorkspaceHeaderMoreActions>
       <WorkspaceHeaderAddActions>
-          {canWriteDesk && (
+          {canCreateRental && (
             <Button
               variant="primary"
               size="sm"
@@ -2310,7 +2312,7 @@ export default function RentalsList() {
               /* From main's 32c4d29: the unfiltered empty list offers its one
                  next step. Gated like `rental.create` so a role that cannot
                  create is not offered a page that refuses it. */
-              {...(!isFiltered && canWriteDesk
+              {...(!isFiltered && canCreateRental
                 ? { emptyActionLabel: t('rentals.actions.newRental', 'New Rental'), onEmptyAction: () => navigate('/rentals/new') }
                 : {})}
             >

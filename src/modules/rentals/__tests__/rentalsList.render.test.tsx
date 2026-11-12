@@ -576,10 +576,10 @@ describe('§Step 8 & 9 — quick action permissions and mobile card parity', () 
     expect(menuItem('Scan Barcode')).toBeDefined()
   })
 
-  it('hides New Rental and Record Payment for Technician, keeps Fast Return', async () => {
+  it('shows New Rental and Fast Return for Technician, hides Record Payment (Card 6, G-10/G-18)', async () => {
     authStub.role = 'Technician'
     await mount(1280)
-    expect(button('New Rental')).toBeUndefined()
+    expect(button('New Rental')).toBeDefined()
     await openMore()
     expect(menuItem('Record Payment')).toBeUndefined()
     expect(menuItem('Fast Return')).toBeDefined()

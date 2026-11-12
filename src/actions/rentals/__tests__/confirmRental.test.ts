@@ -657,7 +657,7 @@ describe('the dispatcher — implemented, and ruled 15 Aug 2026', () => {
    *       auth_user_role() = any (array['Owner','Admin','Manager','Coordinator','Warehouse'])
    *       and actor_id = nullif(current_setting('app.current_user_id', true), '')::uuid )
    */
-  it.each(['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse'] as const)(
+  it.each(['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician'] as const)(
     'admits %s — the roles the RLS policy on booking_stage_transitions admits',
     async (role) => {
       setUpConfirmable()
@@ -667,7 +667,7 @@ describe('the dispatcher — implemented, and ruled 15 Aug 2026', () => {
     },
   )
 
-  it.each(['Technician', 'Accounts', 'Driver', 'Client'] as const)(
+  it.each(['Accounts', 'Driver', 'Client'] as const)(
     'denies %s, and writes nothing',
     async (role) => {
       setUpConfirmable()
@@ -678,18 +678,12 @@ describe('the dispatcher — implemented, and ruled 15 Aug 2026', () => {
     },
   )
 
-  /*
-   * Technician is the one worth stating twice. `operations.perform` — the
-   * capability the four floor verbs use — admits them, and this one must not:
-   * the header of `confirmRental.ts` refused to borrow that capability for
-   * exactly this reason, and the database would reject the row anyway.
-   */
-  it('denies Technician although operations.perform admits them to the floor verbs', async () => {
+  it('admits Technician for rental.confirm (Card 6, G-10/G-18)', async () => {
     setUpConfirmable()
     expect(canPerformOperations('Technician')).toBe(true)
-    await expect(confirmRental({ id: 'B-715' }, { userId: 'u-1', role: 'Technician' })).rejects.toThrow(
-      /requires rental\.confirm/,
-    )
+    await expect(confirmRental({ id: 'B-715' }, { userId: 'u-1', role: 'Technician' })).resolves.toMatchObject({
+      success: true,
+    })
   })
 
   it('refuses a call with no session context — a confirm has an actor or it is not recorded', async () => {

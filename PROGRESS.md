@@ -1,5 +1,48 @@
 # Progress Log
 
+## 2026-11-12 — Lane B Card 6: Technician may create a booking (G-10, G-18)
+
+**Did**
+- Claimed `0236` in `docs/plans/MIGRATION_LEDGER.md` (`verified` locally; NOT applied to live Supabase, N-5) and wrote `supabase/migrations/0236_technician_new_rental.sql`:
+  - `bookings_insert` admits `'Technician'` (`bookings_update` stays `BOOKING_DESK` only — no cancel, no extend).
+  - Split `booking_lines_all` into `booking_lines_insert` (includes `'Technician'`) and `booking_lines_update`/`booking_lines_delete` (`BOOKING_DESK` only).
+  - Split `booking_line_units_all` into `booking_line_units_insert` (includes `'Technician'`) and `booking_line_units_update`/`booking_line_units_delete` (`BOOKING_DESK` only).
+  - Updated `get_model_daily_rate(uuid,uuid)` (`0170`) so `create_booking` (`app.in_create_booking = 'on'`) preserves server-side pricing for `'Technician'` as well as `'Warehouse'` while remaining blocked outside `create_booking`.
+- Updated `src/lib/rbac.ts` (`canCreateBooking` and `canConfirmRental` return `BOOKING_DESK.has(role) || role === 'Technician'`; `BOOKING_DESK` and `canWriteBookingDesk` unchanged), `src/actions/core.ts` (`rental.create` -> `canCreateBooking`), `CreationActionRegistry.ts`, `PermissionGate.tsx`, `QuickCreateMenu.tsx`, and `RentalsList.tsx`.
+- Updated `docs/PERMISSIONS.md` §3 (`New Rental` Technician = `◐ W1`) and §3.1 (`W1` Role = `Warehouse · Technician`, citing `0236`, `0180`, G-10, G-18).
+- Added lifecycle step `L72` in `scripts/e2e-lifecycle.mjs` (Technician creates & confirms a booking; refused discount, cancel, and extend), added `src/modules/rentals/__tests__/technicianNewRental.test.tsx`, and updated the 5 pre-Card-6 tests that asserted Technician denial.
+
+**Ruled**
+- Design note `docs/verification/TECHNICIAN_NEW_RENTAL_DESIGN.md` approved by Babin (`"1 full 2 all"`): narrow `INSERT`-only RLS split + full `W1` scope (create & confirm, no discount line, no money in DOM, no cancel, no extend).
+
+**Verified**
+- `npm run check:pglite`: exit 0 (`234/234 applied, 0 failed`, 41 views, 19 functions, 197 definers).
+- `npm run check:lifecycle`: exit 0 (`73/73 green, 0 known-red, 0 failed`, including `L72`).
+- `npm run check:security`: exit 0 (18 Phase 0 SQL regressions, operations branch grants, 14/14 reset branch boundary, glossary revisions).
+- `npm run typecheck`, `npm run lint`: exit 0.
+- `VITE_DATA_SOURCE=mock npm test`: exit 0 (`604` files, `7097/7097` passed).
+- `npm run build`, `npm run lint:shell`, `npm run lint:ui-copy`, `npm run lint:transitions`, `npm run check:contrast` (`97/97 pass`): exit 0.
+- Migration `0236` is **VERIFIED** locally (PGlite + lifecycle green); **NOT APPLIED** to live Supabase (N-5).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +1 |
+| Lifecycle | steps green / total | 73 / 73 (100%) | +2 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 234 files · check:pglite 234/234 applied, 0 failed (recorded 2026-11-12T14:20:17.454Z). Suite: PASS — 7097/7097 passed, 0 failed (recorded 2026-11-12T14:15:58.405Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-12T14:20:27.077Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Apply `0236_technician_new_rental.sql` to live Supabase during Babin's cutover window (N-5).
+- Merge `lane-b/card-6-technician-new-rental` into `main` (Babin merges locally).
+
 ## 2026-11-10 — Card 4: register D-UX-01 to D-UX-05 as O-23 to O-27 (docs only)
 
 **Did**

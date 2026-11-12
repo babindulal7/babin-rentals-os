@@ -135,7 +135,7 @@ Legend: **✅** Full · **👁** View · **◐** Limited (explained in §3.1 by 
 | Module / surface | Owner | Admin | Manager | Coord. | Ware-house | Tech. | Accounts | Driver | Client |
 |---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | **Dashboard** (jobs only, no money KPIs) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 👁 | ◐ D1 | ✕ |
-| **New Rental** (full page) | ✅ | ✅ | ✅ | ✅ | ◐ W1 | ✕ | ✕ | ✕ | ✕ |
+| **New Rental** (full page) | ✅ | ✅ | ✅ | ✅ | ◐ W1 | ◐ W1 | ✕ | ✕ | ✕ |
 | **Operations — Pack** | ✅ | ✅ | ✅ | ◐ C9 | ✅ | ✅ | ✕ | ✕ | ✕ |
 | **Operations — Handover** | ✅ | ✅ | ✅ | ◐ C9 | ◐ W2 | ◐ W2 | ✕ | ◐ D2 | ✕ |
 | **Operations — Return & triage** | ✅ | ✅ | ✅ | ◐ C9 | ◐ W3 | ◐ W3 | ✕ | ◐ D2 | ✕ |
@@ -179,7 +179,7 @@ Staff never see the Client Portal as themselves; a Coordinator opening it uses "
 
 | Code | Role | What "Limited" means |
 |---|---|---|
-| **W1** | Warehouse | May create and confirm a booking (matches applied RLS `bookings_insert`, `booking_stage_transitions_insert`). Cannot add a discount line (`booking_discounts_money_blind`) — the whole RPC is rejected, never silently dropped. Pricing rail, totals and advance figures not rendered. |
+| **W1** | Warehouse · Technician | May create and confirm a booking (matches applied RLS `bookings_insert`, `booking_lines_insert`, `booking_line_units_insert` per `0236`, `booking_stage_transitions_insert` per `0180`; G-10, G-18). Cannot add a discount line (`booking_discounts_money_blind`) — the whole RPC is rejected, never silently dropped. Pricing rail, totals and advance figures not rendered. |
 | **W2** | Warehouse · Technician (D3) | Completes handover sessions: scan, checklist, signatures, evidence. Payment/deposit gates render **pass/fail with no amount**. May release with payment outstanding **after the warning, logged** (his ruling; 21 Jul soft gate). May override receiver-verification with a reason of at least 10 characters (D2, 0179; corrected 27 Oct, K7). |
 | **W3** | Warehouse · Technician | Full return triage (scan-in, OK/Flag, Damage photo, Missing note, condition). Enters damage description/evidence/severity — **no cost field**. Deductions and refund figures not rendered. |
 | **W4** | Warehouse · Technician | Raise a case, add evidence and notes. Cannot set disposition, cost or close. |

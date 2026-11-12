@@ -117,10 +117,13 @@ describe('createAction — fails closed', () => {
       await expect(run()).resolves.toEqual({ ok: true })
     })
 
-    it('still denies rental.confirm to Technician, whom the RLS policy excludes', async () => {
-      const { run, execute } = reach('rental.confirm', 'Technician')
-      await expect(run()).rejects.toBeInstanceOf(ActionPermissionError)
-      expect(execute).not.toHaveBeenCalled()
+    it('admits rental.confirm to Technician (Card 6, G-10/G-18), while still denying rental.cancel', async () => {
+      const confirm = reach('rental.confirm', 'Technician')
+      await expect(confirm.run()).resolves.toEqual({ ok: true })
+
+      const cancel = reach('rental.cancel', 'Technician')
+      await expect(cancel.run()).rejects.toBeInstanceOf(ActionPermissionError)
+      expect(cancel.execute).not.toHaveBeenCalled()
     })
 
     it('denies client.block to Coordinator, who may create a client but not block one', async () => {

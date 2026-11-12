@@ -1491,6 +1491,7 @@ const STEPS = [
               lines: [
                 {
                   client_uuid: crypto.randomUUID(),
+                  line_type: 'Equipment',
                   product_id: SERIAL_PRODUCT,
                   qty: 1,
                   days: 1,
@@ -7865,6 +7866,107 @@ STEPS.push({
       const coordDocs = (await q(`select id, document_no, document_type from document_registry where id = '${proFormaDocId}'`)).rows
       assertEq(coordDocs.length, 1, 'Coordinator can view Pro Forma document in document_registry')
       assertEq(coordDocs[0].document_type, 'Pro Forma', 'Document type is Pro Forma')
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L72',
+  title: 'Technician creates & confirms a booking (W1), but is refused discount, cancel, and extend (G-10, G-18)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      // 1. Technician creates a Quote via create_booking without rate or discount
+      let techBookingId
+      await as('Technician', async () => {
+        const created = await one('select create_booking($1::jsonb)', [
+          JSON.stringify({
+            client_uuid: crypto.randomUUID(),
+            created_by: U.Technician,
+            branch_id: BRANCH,
+            client_id: CLIENT,
+            pickup_at: '2099-12-20T04:00:00Z',
+            return_at: '2099-12-22T04:00:00Z',
+            delivery_type: 'Client Pickup',
+            lines: [
+              {
+                client_uuid: crypto.randomUUID(),
+                line_type: 'Equipment',
+                product_id: SERIAL_PRODUCT,
+                qty: 1,
+                days: 2,
+              },
+            ],
+          }),
+        ])
+        techBookingId = created.booking_id
+      })
+      bookingIds.l72 = techBookingId
+      assertEq(await stageOf('l72'), 'Quote', 'Technician created booking starts in Quote')
+
+      // 2. Technician confirms Quote -> Booked
+      await transition('l72', 'Quote', 'Booked', 'Technician')
+      assertEq(await stageOf('l72'), 'Booked', 'Technician confirmed booking to Booked')
+
+      // 3. Technician cannot update bookings directly (cancel / extend blocked by bookings_update RLS)
+      await as('Technician', async () => {
+        const cancelRows = (
+          await q(
+            "update bookings set cancelled_at = now(), cancellation_reason = 'Technician cancel attempt' where id = $1 returning id",
+            [techBookingId],
+          )
+        ).rows
+        assertEq(cancelRows.length, 0, 'Technician cannot cancel booking via bookings_update')
+
+        const extendRows = (
+          await q("update bookings set return_at = '2099-12-23T04:00:00Z' where id = $1 returning id", [techBookingId])
+        ).rows
+        assertEq(extendRows.length, 0, 'Technician cannot extend booking via bookings_update')
+      })
+      assertEq(await stageOf('l72'), 'Booked', 'Booking remains Booked after Technician cancel/extend attempts')
+
+      // 4. Technician is refused a discount in create_booking (gate.discount.money_blind)
+      await as('Technician', async () => {
+        await q('savepoint tech_discount_probe')
+        try {
+          await refuses(
+            'create_booking with discounts by Technician',
+            'select create_booking($1::jsonb)',
+            [
+              JSON.stringify({
+                client_uuid: crypto.randomUUID(),
+                created_by: U.Technician,
+                branch_id: BRANCH,
+                client_id: CLIENT,
+                pickup_at: '2099-12-24T04:00:00Z',
+                return_at: '2099-12-25T04:00:00Z',
+                delivery_type: 'Client Pickup',
+                lines: [
+                  {
+                    client_uuid: crypto.randomUUID(),
+                    line_type: 'Equipment',
+                    product_id: SERIAL_PRODUCT,
+                    qty: 1,
+                    days: 1,
+                  },
+                ],
+                discounts: [
+                  {
+                    client_uuid: crypto.randomUUID(),
+                    discount_source: 'Commercial Negotiation',
+                    percent: 10,
+                    reason: 'Technician discount attempt',
+                  },
+                ],
+              }),
+            ],
+            /gate\.discount\.money_blind/,
+          )
+        } finally {
+          await q('rollback to savepoint tech_discount_probe')
+          await q('release savepoint tech_discount_probe')
+        }
+      })
     })
   },
 })

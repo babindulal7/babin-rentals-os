@@ -12,6 +12,7 @@ import type { IconName } from '../Icon'
 import type { Role as SystemRole } from '../../../lib/rbac'
 import {
   canViewMoney,
+  canCreateBooking,
   canWriteBookingDesk,
   canCreateClient,
   canCreateBundle,
@@ -135,7 +136,8 @@ export const CREATION_ACTIONS: CreationActionDefinition[] = [
     // RULING 2026-10-13: header creation opens the real workspace; the quick wizard confirmed nothing.
     openingMode: 'route',
     route: '/rentals?action=new',
-    isPermitted: (role) => canWriteBookingDesk(role),
+    // RULING 2026-11-10: G-10, G-18 — Technician may open New Rental (W1).
+    isPermitted: (role) => canCreateBooking(role),
     resolveContext: (facts) => ({
       clientId: facts.clientId,
       clientName: facts.clientName,

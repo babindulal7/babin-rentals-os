@@ -165,8 +165,9 @@ const BACK_OFFICE: ReadonlySet<SystemRole> = new Set<SystemRole>(['Owner', 'Admi
  * (a queued transition is checked against the stage at drain time, which may be
  * hours later). Adding a second, quieter offline rule here would duplicate that.
  */
+// RULING 2026-11-10: G-10, G-18 — Technician may confirm a booking (mirrors booking_stage_transitions_insert in 0180).
 export function canConfirmRental(role: SystemRole): boolean {
-  return BOOKING_DESK.has(role)
+  return BOOKING_DESK.has(role) || role === 'Technician'
 }
 
 /**
@@ -347,6 +348,12 @@ export function canAdjustStock(role: SystemRole): boolean {
  * `canWriteBackOffice` — a sub-rental flow that creates suppliers inline needs
  * both.
  */
+// RULING 2026-11-10: G-10, G-18 — Technician may create a booking (mirrors bookings_insert in 0236),
+// without gaining cancel, extend, discount, or client-edit authority from BOOKING_DESK.
+export function canCreateBooking(role: SystemRole): boolean {
+  return BOOKING_DESK.has(role) || role === 'Technician'
+}
+
 export function canWriteBookingDesk(role: SystemRole): boolean {
   return BOOKING_DESK.has(role)
 }

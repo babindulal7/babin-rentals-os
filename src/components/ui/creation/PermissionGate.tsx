@@ -9,7 +9,7 @@ import type { ReactNode } from 'react'
 import type { Role as SystemRole } from '../../../lib/rbac'
 import {
   canViewMoney,
-  canWriteBookingDesk,
+  canCreateBooking,
   canCreateClient,
   canCreateBundle,
   canPerformOperations,
@@ -44,7 +44,7 @@ export function hasCapability(
 
   switch (capability) {
     case 'rental.create':
-      return canWriteBookingDesk(role)
+      return canCreateBooking(role)
     case 'client.create':
       return canCreateClient(role)
     case 'inventory.create':

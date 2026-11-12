@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Icon from '../ui/Icon'
 import type { IconName } from '../ui/Icon'
 import { Button } from '../ui/Button'
-import { canCreateBundle, canCreateClient, canWriteBookingDesk, canWriteSharedTriage } from '../../lib/rbac'
+import { canCreateBooking, canCreateBundle, canCreateClient, canWriteSharedTriage } from '../../lib/rbac'
 import type { SystemRole } from '../../types/database'
 
 export interface QuickCreateAction {
@@ -22,7 +22,7 @@ export interface QuickCreateAction {
 export function quickCreateActions(role: SystemRole | undefined): QuickCreateAction[] {
   if (!role) return []
   return [
-    ...(canWriteBookingDesk(role)
+    ...(canCreateBooking(role)
       ? [{ id: 'rental', label: 'New rental', detail: 'Start a booking', to: '/rentals/new', icon: 'plus' as const }]
       : []),
     ...(canCreateClient(role)

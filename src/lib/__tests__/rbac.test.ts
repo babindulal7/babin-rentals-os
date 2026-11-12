@@ -380,21 +380,20 @@ describe('canApproveLateFeeWaiver', () => {
  */
 
 describe('canConfirmRental', () => {
-  it('is the booking desk and the floor, mirroring booking_stage_transitions_insert', () => {
+  it('is the booking desk plus Technician, mirroring booking_stage_transitions_insert (0180, G-10/G-18)', () => {
     const allowed = ALL_ROLES.filter((r) => canConfirmRental(r))
-    expect(allowed).toEqual(['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse'])
+    expect(allowed).toEqual(['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician'])
   })
 
   /*
-   * The contrast that made borrowing `operations.perform` wrong, stated as a
-   * test so it cannot be quietly re-merged later. The two sets differ in BOTH
-   * directions.
+   * Coordinator is admitted to confirm bookings even though operations.perform
+   * excludes them; Technician is admitted to both (G-10, G-18).
    */
-  it('is not canPerformOperations: it admits Coordinator and excludes Technician', () => {
+  it('is not canPerformOperations: it admits Coordinator and Technician', () => {
     expect(canConfirmRental('Coordinator')).toBe(true)
     expect(canPerformOperations('Coordinator')).toBe(false)
 
-    expect(canConfirmRental('Technician')).toBe(false)
+    expect(canConfirmRental('Technician')).toBe(true)
     expect(canPerformOperations('Technician')).toBe(true)
   })
 
@@ -475,10 +474,15 @@ describe('canWriteBookingDesk', () => {
   /* It is the same set BOOKING_DESK was named for, so the three 15 Aug rules
      built on it must agree exactly. If they ever diverge, one of them was
      edited without its policy moving. */
-  it('is the same set as canConfirmRental and canCreateClient', () => {
+  it('is the same set as canCreateClient, while canConfirmRental also admits Technician (G-10, G-18)', () => {
     for (const role of ALL_ROLES) {
-      expect(canWriteBookingDesk(role)).toBe(canConfirmRental(role))
       expect(canWriteBookingDesk(role)).toBe(canCreateClient(role))
+      if (role === 'Technician') {
+        expect(canWriteBookingDesk(role)).toBe(false)
+        expect(canConfirmRental(role)).toBe(true)
+      } else {
+        expect(canWriteBookingDesk(role)).toBe(canConfirmRental(role))
+      }
     }
   })
 })
