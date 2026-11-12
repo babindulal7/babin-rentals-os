@@ -287,7 +287,7 @@ the same code within ⭐ 1.5 s, server check per code.
 **Done when** — scan → line added with that unit; a booked unit says who has it and offers T3-13.
 **Needs** — T2-14 (shared scan lookup).
 
-### T3-20 · Who owes            status: todo · size: M · lane C · [go-live]
+### T3-20 · Who owes            status: ready — awaiting merge (lane-c/T3-20-who-owes) · size: M · lane C · [go-live]
 **What** — Finance ▸ **Who owes**: one list of clients with unpaid balances, oldest first, with age
 (days since completion), amount, last reminder sent, "Paused" flag; tap → the client's **statement**
 (PDF: every open invoice and booking balance, payments so far) to share (T3-16). Many production

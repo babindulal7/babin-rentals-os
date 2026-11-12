@@ -995,3 +995,205 @@ export function generateReturnReportPdf(data: ReturnReportPdfData): Uint8Array {
 
   return builder.build()
 }
+
+export interface ClientStatementPdfInvoice {
+  invoiceNo: string
+  bookingNo?: string | null
+  issueDateAd: string
+  dueDateAd: string
+  totalPaisa: Paisa | number
+  paidPaisa: Paisa | number
+  outstandingPaisa: Paisa | number
+}
+
+export interface ClientStatementPdfPayment {
+  paymentNo: string
+  dateAd: string
+  method: string
+  amountPaisa: Paisa | number
+}
+
+export interface ClientStatementPdfData {
+  asOfDateAd: string
+  client: {
+    name: string
+    phone?: string | null
+    email?: string | null
+    panVat?: string | null
+  }
+  company?: InvoicePdfCompany
+  totalOutstandingPaisa: Paisa | number
+  invoices: ClientStatementPdfInvoice[]
+  payments: ClientStatementPdfPayment[]
+}
+
+/**
+ * Generates a PDF 1.4 Client Statement listing all open invoices, balances, and payments so far (T3-20).
+ */
+export function generateClientStatementPdf(data: ClientStatementPdfData): Uint8Array {
+  const builder = new PdfDocumentBuilder()
+
+  const darkSlate = '0.09 0.13 0.24'
+  const mutedText = '0.38 0.44 0.52'
+  const borderGray = '0.80 0.84 0.88'
+  const bgLight = '0.96 0.97 0.98'
+
+  const companyName = data.company?.name?.trim() || 'Babin Rentals'
+  const companyVat = data.company?.panVat?.trim()
+  const companyContact = [
+    companyVat ? `PAN/VAT: ${companyVat}` : '',
+    data.company?.address?.trim(),
+    data.company?.phone?.trim(),
+  ].filter(Boolean).join(' · ')
+  const companyDescription = [data.company?.description?.trim(), data.company?.email?.trim()].filter(Boolean).join(' · ')
+  const asOf = formatAd(data.asOfDateAd ? new Date(data.asOfDateAd) : new Date())
+
+  const streamOps: string[] = []
+
+  // Top header accent band
+  streamOps.push(`${darkSlate} rg`)
+  streamOps.push(`40 802 515 6 re f`)
+
+  // Company Name & Info
+  streamOps.push(`BT /F2 16 Tf 40 776 Td (${escapePdfText(companyName)}) Tj ET`)
+  streamOps.push(`${mutedText} rg`)
+  if (companyContact) streamOps.push(`BT /F1 9 Tf 40 762 Td (${escapePdfText(companyContact)}) Tj ET`)
+  if (companyDescription) streamOps.push(`BT /F1 9 Tf 40 750 Td (${escapePdfText(companyDescription)}) Tj ET`)
+
+  // Document Title (Top Right)
+  streamOps.push(`${darkSlate} rg`)
+  streamOps.push(`BT /F2 16 Tf 350 776 Td (CLIENT STATEMENT) Tj ET`)
+  streamOps.push(`${mutedText} rg`)
+  streamOps.push(`BT /F1 9 Tf 350 760 Td (As of: ${escapePdfText(asOf)}) Tj ET`)
+  streamOps.push(`BT /F2 10 Tf 350 745 Td (Balance Due: ${escapePdfText(formatMoney(data.totalOutstandingPaisa as Paisa))}) Tj ET`)
+
+  // Header Divider
+  streamOps.push(`${borderGray} RG 0.75 w`)
+  streamOps.push(`40 735 m 555 735 l S`)
+
+  // Client block
+  streamOps.push(`${bgLight} rg`)
+  streamOps.push(`40 665 515 60 re f`)
+  streamOps.push(`${borderGray} RG 0.5 w`)
+  streamOps.push(`40 665 515 60 re S`)
+
+  streamOps.push(`${darkSlate} rg`)
+  streamOps.push(`BT /F2 9 Tf 50 712 Td (STATEMENT FOR:) Tj ET`)
+  streamOps.push(`BT /F2 11 Tf 50 697 Td (${escapePdfText(data.client.name)}) Tj ET`)
+  streamOps.push(`${mutedText} rg`)
+  const clientMeta = [
+    data.client.phone ? `Phone: ${data.client.phone}` : '',
+    data.client.email ? `Email: ${data.client.email}` : '',
+    data.client.panVat ? `PAN/VAT: ${data.client.panVat}` : '',
+  ].filter(Boolean).join(' · ')
+  if (clientMeta) {
+    streamOps.push(`BT /F1 8.5 Tf 50 682 Td (${escapePdfText(clientMeta)}) Tj ET`)
+  }
+  streamOps.push(`BT /F1 8.5 Tf 50 670 Td (${escapePdfText(`${data.invoices.length} open invoice(s) · ${data.payments.length} payment(s) recorded`)}) Tj ET`)
+
+  // Open Invoices Section
+  let curY = 640
+  streamOps.push(`${darkSlate} rg`)
+  streamOps.push(`BT /F2 10 Tf 40 ${curY} Td (OPEN INVOICES & BALANCES) Tj ET`)
+  curY -= 18
+
+  // Table header
+  streamOps.push(`${darkSlate} rg`)
+  streamOps.push(`40 ${curY} 515 20 re f`)
+  streamOps.push(`1 1 1 rg`)
+  streamOps.push(`BT /F2 8 Tf 48 ${curY + 6} Td (Invoice #) Tj ET`)
+  streamOps.push(`BT /F2 8 Tf 130 ${curY + 6} Td (Booking) Tj ET`)
+  streamOps.push(`BT /F2 8 Tf 210 ${curY + 6} Td (Due Date) Tj ET`)
+  streamOps.push(`BT /F2 8 Tf 295 ${curY + 6} Td (Total) Tj ET`)
+  streamOps.push(`BT /F2 8 Tf 385 ${curY + 6} Td (Paid) Tj ET`)
+  streamOps.push(`BT /F2 8 Tf 475 ${curY + 6} Td (Balance) Tj ET`)
+  curY -= 20
+
+  const maxInvoices = Math.min(data.invoices.length, 10)
+  for (let i = 0; i < maxInvoices; i++) {
+    const inv = data.invoices[i]!
+    if (i % 2 === 1) {
+      streamOps.push(`${bgLight} rg`)
+      streamOps.push(`40 ${curY} 515 18 re f`)
+    }
+    streamOps.push(`${borderGray} RG 0.4 w`)
+    streamOps.push(`40 ${curY} 515 18 re S`)
+    streamOps.push(`${darkSlate} rg`)
+    streamOps.push(`BT /F3 8 Tf 48 ${curY + 5} Td (${escapePdfText(inv.invoiceNo)}) Tj ET`)
+    streamOps.push(`BT /F1 8 Tf 130 ${curY + 5} Td (${escapePdfText(inv.bookingNo || '—')}) Tj ET`)
+    streamOps.push(`BT /F1 8 Tf 210 ${curY + 5} Td (${escapePdfText(inv.dueDateAd)}) Tj ET`)
+    streamOps.push(`BT /F3 8 Tf 295 ${curY + 5} Td (${escapePdfText(formatMoney(inv.totalPaisa as Paisa))}) Tj ET`)
+    streamOps.push(`BT /F3 8 Tf 385 ${curY + 5} Td (${escapePdfText(formatMoney(inv.paidPaisa as Paisa))}) Tj ET`)
+    streamOps.push(`BT /F2 8 Tf 475 ${curY + 5} Td (${escapePdfText(formatMoney(inv.outstandingPaisa as Paisa))}) Tj ET`)
+    curY -= 18
+  }
+  if (data.invoices.length > maxInvoices) {
+    streamOps.push(`${mutedText} rg`)
+    streamOps.push(`BT /F1 8 Tf 48 ${curY + 4} Td (...and ${data.invoices.length - maxInvoices} more open invoice(s)) Tj ET`)
+    curY -= 16
+  }
+
+  // Payments So Far Section
+  curY -= 14
+  streamOps.push(`${darkSlate} rg`)
+  streamOps.push(`BT /F2 10 Tf 40 ${curY} Td (PAYMENTS RECORDED SO FAR) Tj ET`)
+  curY -= 18
+
+  if (data.payments.length === 0) {
+    streamOps.push(`${mutedText} rg`)
+    streamOps.push(`BT /F1 8.5 Tf 48 ${curY} Td (No payments recorded yet.) Tj ET`)
+  } else {
+    streamOps.push(`${darkSlate} rg`)
+    streamOps.push(`40 ${curY} 515 20 re f`)
+    streamOps.push(`1 1 1 rg`)
+    streamOps.push(`BT /F2 8 Tf 48 ${curY + 6} Td (Receipt #) Tj ET`)
+    streamOps.push(`BT /F2 8 Tf 165 ${curY + 6} Td (Date) Tj ET`)
+    streamOps.push(`BT /F2 8 Tf 290 ${curY + 6} Td (Method) Tj ET`)
+    streamOps.push(`BT /F2 8 Tf 450 ${curY + 6} Td (Amount) Tj ET`)
+    curY -= 20
+
+    const maxPayments = Math.min(data.payments.length, 8)
+    for (let i = 0; i < maxPayments; i++) {
+      const p = data.payments[i]!
+      if (i % 2 === 1) {
+        streamOps.push(`${bgLight} rg`)
+        streamOps.push(`40 ${curY} 515 18 re f`)
+      }
+      streamOps.push(`${borderGray} RG 0.4 w`)
+      streamOps.push(`40 ${curY} 515 18 re S`)
+      streamOps.push(`${darkSlate} rg`)
+      streamOps.push(`BT /F3 8 Tf 48 ${curY + 5} Td (${escapePdfText(p.paymentNo)}) Tj ET`)
+      streamOps.push(`BT /F1 8 Tf 165 ${curY + 5} Td (${escapePdfText(p.dateAd)}) Tj ET`)
+      streamOps.push(`BT /F1 8 Tf 290 ${curY + 5} Td (${escapePdfText(p.method)}) Tj ET`)
+      streamOps.push(`BT /F3 8 Tf 450 ${curY + 5} Td (${escapePdfText(formatMoney(p.amountPaisa as Paisa))}) Tj ET`)
+      curY -= 18
+    }
+    if (data.payments.length > maxPayments) {
+      streamOps.push(`${mutedText} rg`)
+      streamOps.push(`BT /F1 8 Tf 48 ${curY + 4} Td (...and ${data.payments.length - maxPayments} more payment(s)) Tj ET`)
+    }
+  }
+
+  // Footer
+  streamOps.push(`${borderGray} RG 0.5 w`)
+  streamOps.push(`40 45 515 0.5 re S`)
+  streamOps.push(`${mutedText} rg`)
+  streamOps.push(`BT /F1 7.5 Tf 40 30 Td (${escapePdfText(`${companyName} · Client Statement generated by Babin Rentals OS`)}) Tj ET`)
+
+  const contentStream = streamOps.join('\n')
+
+  builder.addObject(`<<\n  /Type /Catalog\n  /Pages 2 0 R\n>>`)
+  builder.addObject(`<<\n  /Type /Pages\n  /Kids [3 0 R]\n  /Count 1\n>>`)
+  builder.addObject(
+    `<<\n  /Type /Page\n  /Parent 2 0 R\n  /MediaBox [0 0 595.28 841.89]\n  /Contents 4 0 R\n  /Resources <<\n    /Font <<\n      /F1 5 0 R\n      /F2 6 0 R\n      /F3 7 0 R\n    >>\n  >>\n>>`,
+  )
+  builder.addObject(`<<\n  /Length ${contentStream.length}\n>>\nstream\n${contentStream}\nendstream`)
+  builder.addObject(`<<\n  /Type /Font\n  /Subtype /Type1\n  /BaseFont /Helvetica\n  /Encoding /WinAnsiEncoding\n>>`)
+  builder.addObject(`<<\n  /Type /Font\n  /Subtype /Type1\n  /BaseFont /Helvetica-Bold\n  /Encoding /WinAnsiEncoding\n>>`)
+  builder.addObject(`<<\n  /Type /Font\n  /Subtype /Type1\n  /BaseFont /Courier\n  /Encoding /WinAnsiEncoding\n>>`)
+  builder.addObject(
+    `<<\n  /Title (Client Statement - ${escapePdfText(data.client.name)})\n  /Author (${escapePdfText(companyName)})\n  /Creator (Babin Rentals OS PDF Engine)\n  /CreationDate (D:${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)}Z)\n>>`,
+  )
+
+  return builder.build()
+}

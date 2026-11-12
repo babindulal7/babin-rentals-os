@@ -293,7 +293,7 @@ describe('SPEC_TABS records what each updated spec ruled', () => {
     expect(SPEC_TABS['/inventory']).toEqual(['Equipment', 'Bundles', 'Stock Check', 'Maintenance'])
   })
 
-  it('09_FINANCE — seven tabs, including Documents', () => {
-    expect(SPEC_TABS['/finance']).toEqual(['Dashboard', 'Invoices', 'Payments', 'Expenses', 'Documents', 'Closing', 'Reports'])
+  it('09_FINANCE — eight tabs, including Who owes and Documents', () => {
+    expect(SPEC_TABS['/finance']).toEqual(['Dashboard', 'Who owes', 'Invoices', 'Payments', 'Expenses', 'Documents', 'Closing', 'Reports'])
   })
 })

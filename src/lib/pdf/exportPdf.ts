@@ -15,10 +15,12 @@ import {
   generateDocumentPdf,
   generatePackingListPdf,
   generateReturnReportPdf,
+  generateClientStatementPdf,
   type InvoicePdfData,
   type DocumentPdfData,
   type PackingListPdfData,
   type ReturnReportPdfData,
+  type ClientStatementPdfData,
 } from './generatePdf'
 
 export interface ExportPdfOptions {
@@ -407,5 +409,36 @@ export function openPdfForPrint(blob: Blob, _title?: string): void {
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
+  }
+}
+
+/**
+ * Exports a Client Statement PDF (T3-20) and optionally triggers browser download.
+ */
+export async function exportClientStatementPdf(
+  statementData: ClientStatementPdfData,
+  options: Pick<ExportPdfOptions, 'download' | 'filename'> = {},
+): Promise<ExportPdfResult> {
+  const safeName = sanitizePathSegment(`Statement_${statementData.client.name}`)
+  const filename = options.filename || `${safeName}.pdf`
+  const bytes = generateClientStatementPdf(statementData)
+  const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
+
+  if (options.download && typeof window !== 'undefined' && typeof document !== 'undefined') {
+    const downloadUrl = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = downloadUrl
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(downloadUrl), 5000)
+  }
+
+  return {
+    blob,
+    bytes,
+    filename,
+    fileSizeBytes: bytes.byteLength,
   }
 }

@@ -449,7 +449,7 @@ export const SPEC_TABS: Record<string, string[]> = {
 
   /* Finance tabs: Dashboard · Invoices · Payments · Expenses · Closing · Reports.
      Documents is a dedicated primary module in Business & Back Office. */
-  '/finance': ['Dashboard', 'Invoices', 'Payments', 'Expenses', 'Documents', 'Closing', 'Reports'],
+  '/finance': ['Dashboard', 'Who owes', 'Invoices', 'Payments', 'Expenses', 'Documents', 'Closing', 'Reports'],
 
   /* `08_CLIENTS.md` line 3 says "Directory only — no tabs." **Deliberately
      overridden, 12 Aug 2026 (user ruling).** Clients keeps Memberships.
