@@ -578,11 +578,13 @@ export default function Today() {
   // Reference "one obvious action" panel derives exclusively from the same
   // RLS-filtered movement rows already used by the Pickup/Return queues.
   // It never fabricates a client, conflict, amount, scan or inspection result.
-  const nextPickup = pickups.rows.find((row) => row.flags.includes('Overdue')) ?? pickups.rows[0]
-  const nextReturn = returns.rows[0]
+  const pickupRows = pickups?.rows ?? []
+  const returnRows = returns?.rows ?? []
+  const nextPickup = pickupRows.find((row) => row.flags?.includes('Overdue')) ?? pickupRows[0]
+  const nextReturn = returnRows[0]
   const pickupStep = nextPickup ? dashboardAction(nextPickup, 'outgoing') : null
   const returnStep = nextReturn ? dashboardAction(nextReturn, 'incoming') : null
-  const loadedToPack = pickups.rows.filter((row) => row.status !== 'Packed').length
+  const loadedToPack = pickupRows.filter((row) => row.status !== 'Packed').length
 
   const renderReferenceInspector = () => (
     <div className="br-reference-inspector">

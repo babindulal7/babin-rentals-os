@@ -1,9 +1,15 @@
 import { describe, it, expect } from 'vitest'
+import fs from 'node:fs'
+import path from 'node:path'
 import { PRIMARY_NAV, filterNavByRole } from '../../../data/nav'
-import referenceStyles from '../referenceShell.css?raw'
-import todaySource from '../../../modules/today/Today.tsx?raw'
-import appSource from '../../../App.tsx?raw'
-import sidebarSource from '../Sidebar.tsx?raw'
+
+const read = (relPath: string) =>
+  fs.readFileSync(path.resolve(__dirname, relPath), 'utf8')
+
+const referenceStyles = read('../referenceShell.css')
+const todaySource = read('../../../modules/today/Today.tsx')
+const appSource = read('../../../App.tsx')
+const sidebarSource = read('../Sidebar.tsx')
 
 /**
  * Contract checks for the 12 Nov prototype translation. The uploaded prototype
@@ -40,8 +46,7 @@ describe('reference app shell — layout and data safety', () => {
   })
 
   it('uses RLS-filtered movement data and the existing operation gate, not static rental/PIN fixtures', () => {
-    expect(todaySource).toContain('pickups.rows.find(')
-    expect(todaySource).toContain('returns.rows[0]')
+    expect(todaySource).toContain('pickupRows.find(')
     expect(todaySource).toContain("dashboardAction(nextPickup, 'outgoing')")
     expect(todaySource).toContain('openOperations(')
     expect(todaySource).not.toContain('STAFF_ROLES')

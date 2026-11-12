@@ -185,11 +185,11 @@ export default function Sidebar({ active }: SidebarProps) {
 
       <div style={{ flexShrink: 0, borderTop: '1px solid var(--border)', padding: 10 }}>
         {!rail && user && (
-          <div className="br-reference-session" aria-label={`Signed in as ${user.name}, ${user.role}`}>
+          <div className="br-reference-session" aria-label={`Signed in as ${user.name || 'Staff'}, ${user.role || 'Staff'}`}>
             <Icon name="lock" size={16} style={{ color: 'var(--br-active-ink)', flexShrink: 0 }} />
             <span className="br-reference-session__text">
               <strong>{user.name || 'Staff'}</strong>
-              <small>{user.role} · Verified session</small>
+              <small>{user.role || 'Staff'} · Verified session</small>
             </span>
           </div>
         )}
