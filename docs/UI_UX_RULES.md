@@ -24,7 +24,7 @@ Ease of use outranks visual flourish while remaining subordinate to non-negotiab
   - Identifiers, Barcodes, Booking Numbers: `--font-id` (`JetBrains Mono Variable`, monospace)
   - *Banned Fonts:* `Inter` is not used anywhere in the codebase.
 - **Color System:**
-  - **Light is the default theme; dark is a per-user toggle** (DESIGN_DIRECTION_SPEC_v4.2 §2.1; `index.html`, `src/lib/theme.tsx`). Other supported modes: `system`, `high-contrast`, `glass`, `glass-light`. Gold accents (`#d8a93a`) and blue workspace accents (`#3b82f6`).
+  - **Light is the default theme; dark is a per-user toggle** (DESIGN_DIRECTION_SPEC_v4.2 §2.1; `index.html`, `src/lib/theme.tsx`). Other supported modes: `system`, `high-contrast` (RULING 2026-11-10: G-2 removed `glass` and `glass-light`). Primary buttons use Graphite/Paper tokens (`--btn-primary-bg`: `#181A1F` light / `#F3F4F6` dark); `--primary` blue is reserved for Booked/Reserved statuses, links, and focus rings (G-1, G-3).
   - Strict token consumption: Use semantic CSS variables (`var(--app)`, `var(--card)`, `var(--border)`, `var(--text-primary)`, etc.). Never introduce hardcoded hex colors or untracked Tailwind palette classes.
 
 ---

@@ -536,7 +536,7 @@ export function FieldRow({ f }: { f: Field }) {
   /* Null only outside the provider, which nothing in this module is. Optional
      rather than asserted so a future caller gets read-only, not a crash. */
   const edit = useContext(EditCtx)
-  const { theme, glass, choose } = useTheme()
+  const { theme, choose } = useTheme()
   const [textSize, setTextSize] = useState<TextSize>(() => readTextSize())
   // This is the only toggle retained here: it writes to device-local storage.
   // T1-16 removes every switch that had no persistence or real save handler.
@@ -618,10 +618,8 @@ export function FieldRow({ f }: { f: Field }) {
         </span>
       ) : f.label === 'Theme' ? (
         <span style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-          {(['light', 'dark', 'glass'] as const).map((m) => {
-            // RULING 2026-10-13: Glass is a finish on either base, so it can be
-            // pressed alongside Light or Dark.
-            const on = m === 'glass' ? glass : theme === m
+          {(['light', 'dark'] as const).map((m) => {
+            const on = theme === m
             return (
               /* Same pair of reasons as Text size: `controlStyle` needs `tap`
                  to reach 44 vertically, and each button carries an icon plus a
@@ -641,7 +639,7 @@ export function FieldRow({ f }: { f: Field }) {
                   textTransform: 'capitalize',
                 }}
               >
-                <Icon name={m === 'glass' ? 'sparkles' : m === 'dark' ? 'moon' : 'sun'} size={13} />
+                <Icon name={m === 'dark' ? 'moon' : 'sun'} size={13} />
                 {m}
               </button>
             )

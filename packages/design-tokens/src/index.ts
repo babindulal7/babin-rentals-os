@@ -9,17 +9,17 @@
 // ============================================================================
 
 export const lightColors = {
-  // Core elevations
-  bg0: '#eae6de',
-  bg: '#f5f7fb',
-  bgGlow: '#edf2f9',
-  surface: '#ffffff',
-  surface2: '#edf3fa',
-  inset: '#f5f3ee',
-  inset2: '#eae6de',
-  border: '#cbd5e1',
-  border2: '#d8e2ee',
-  divider: '#cbd5e1',
+  // Core elevations (RULING 2026-11-10: G-1 Graphite/Paper)
+  bg0: '#E8EAEE',
+  bg: '#F7F7F8',
+  bgGlow: '#EFF0F3',
+  surface: '#FFFFFF',
+  surface2: '#F1F2F4',
+  inset: '#F1F2F4',
+  inset2: '#E8EAEE',
+  border: '#D8DBE0',
+  border2: '#C4C8D0',
+  divider: 'color-mix(in srgb, #D8DBE0 68%, transparent)',
 
   // Translucent alpha scale (slate-based)
   w02: 'rgba(15, 23, 42, 0.02)',
@@ -45,9 +45,9 @@ export const lightColors = {
   bezelOuterBg: 'rgba(16, 32, 59, 0.025)',
 
   // Text
-  text: '#1c1e22',
-  text2: '#4b4e54',
-  muted: '#6d7076',
+  text: '#17191D',
+  text2: '#373D47',
+  muted: '#545C67',
   disabled: '#9b9ea4',
 
   // Brand & status
@@ -98,24 +98,24 @@ export const lightColors = {
   hoverButton: '#1e49b8',
   hoverRow: '#eef4fb',
 
-  // Buttons
-  btnPrimaryBg: '#2456d6',
-  btnPrimaryFg: '#ffffff',
+  // Buttons (RULING 2026-11-10: G-1, G-3)
+  btnPrimaryBg: '#181A1F',
+  btnPrimaryFg: '#FFFFFF',
   btnSecondaryBg: 'transparent',
-  btnSecondaryBorder: '#dbe5f0',
+  btnSecondaryBorder: '#7D8591',
   btnDangerBg: '#c73a3a',
   btnDangerFg: '#ffffff',
 
-  // Nav
-  navActiveAccent: '#2456d6',
-  navActiveBg: '#e7efff',
-  navIcon: '#6d7076',
+  // Nav (RULING 2026-11-10: G-4)
+  navActiveAccent: '#17191D',
+  navActiveBg: '#F1F2F4',
+  navIcon: '#545C67',
 
   // Inputs
-  inputBg: '#ffffff',
-  inputBorder: '#afc0d4',
-  inputPlaceholder: '#6d7e95',
-  inputFocus: '#2456d6',
+  inputBg: '#FFFFFF',
+  inputBorder: '#7D8591',
+  inputPlaceholder: '#545C67',
+  inputFocus: '#2456D6',
 
   // Tables
   thBg: '#edf3fa',
@@ -158,17 +158,17 @@ export const lightColors = {
 };
 
 export const darkColors = {
-  // Core elevations (5-tier obsidian)
-  bg0: '#02060b',
-  bg: '#050b12',
-  bgGlow: '#0a1826',
-  surface: '#0b1622',
-  surface2: '#0d1a29',
-  inset: '#081522',
-  inset2: '#0b1b2c',
-  border: 'rgba(255, 255, 255, 0.08)',
-  border2: 'rgba(255, 255, 255, 0.12)',
-  divider: 'rgba(255, 255, 255, 0.08)',
+  // Core elevations (RULING 2026-11-10: G-1 Graphite)
+  bg0: '#000000',
+  bg: '#090A0D',
+  bgGlow: '#111318',
+  surface: '#17191D',
+  surface2: '#23262C',
+  inset: '#090A0D',
+  inset2: '#17191D',
+  border: '#3A4049',
+  border2: '#4A515C',
+  divider: 'rgba(255, 255, 255, 0.14)',
 
   // Translucent alpha scale (white-based)
   w02: 'rgba(255, 255, 255, 0.02)',
@@ -194,9 +194,9 @@ export const darkColors = {
   bezelOuterBg: 'rgba(255, 255, 255, 0.02)',
 
   // Text
-  text: '#f1f5f9',
-  text2: '#94a3b8',
-  muted: '#8b8e96',
+  text: '#F7F8FA',
+  text2: '#D4D8DF',
+  muted: '#B0B7C2',
   disabled: '#475569',
 
   // Brand & status
@@ -234,37 +234,37 @@ export const darkColors = {
   brandMark: '#85b2ff',
 
   // Surfaces
-  app: '#050b12',
-  sidebar: '#050b12',
-  card: '#0b1622',
-  card2: '#0d1a29',
-  modal: '#0d1a29',
-  dropdown: '#0d1a29',
+  app: '#090A0D',
+  sidebar: '#090A0D',
+  card: '#17191D',
+  card2: '#23262C',
+  modal: '#17191D',
+  dropdown: '#17191D',
 
   // Hover
-  hoverCard: '#0f1e30',
-  hoverSidebar: '#0d1a29',
-  hoverButton: '#2f5ce0',
-  hoverRow: 'rgba(255, 255, 255, 0.035)',
+  hoverCard: '#23262C',
+  hoverSidebar: '#23262C',
+  hoverButton: '#E5E7EB',
+  hoverRow: 'rgba(255, 255, 255, 0.05)',
 
-  // Buttons
-  btnPrimaryBg: '#386af7',
-  btnPrimaryFg: '#ffffff',
+  // Buttons (RULING 2026-11-10: G-1, G-3)
+  btnPrimaryBg: '#F3F4F6',
+  btnPrimaryFg: '#111215',
   btnSecondaryBg: 'transparent',
-  btnSecondaryBorder: '#263849',
+  btnSecondaryBorder: '#858D99',
   btnDangerBg: '#c73a3a',
   btnDangerFg: '#ffffff',
 
-  // Nav
-  navActiveAccent: '#386af7',
-  navActiveBg: '#102b48',
-  navIcon: '#94a3b8',
+  // Nav (RULING 2026-11-10: G-4)
+  navActiveAccent: '#F7F8FA',
+  navActiveBg: '#23262C',
+  navIcon: '#B0B7C2',
 
   // Inputs
-  inputBg: '#081522',
-  inputBorder: 'rgba(255, 255, 255, 0.12)',
-  inputPlaceholder: '#64748b',
-  inputFocus: '#386af7',
+  inputBg: '#17191D',
+  inputBorder: '#858D99',
+  inputPlaceholder: '#B0B7C2',
+  inputFocus: '#8DB7FF',
 
   // Tables
   thBg: '#081522',

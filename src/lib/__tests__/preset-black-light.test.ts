@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import palette from '../../styles/preset-black-light.css?inline'
+import paletteRaw from '../../styles/theme.css?raw'
 import entry from '../../main.tsx?raw'
 
-const LIGHT = ":root[data-theme='light']:not([data-style='glass'])"
-const DARK = ":root[data-theme='dark']:not([data-style='glass'])"
+const palette = paletteRaw.replace(/\r\n/g, '\n')
+
+const LIGHT = ":root,\n:root[data-theme='light']"
+const DARK = ":root[data-theme='dark']"
 
 function variables(selector: string): Record<string, string> {
   const start = palette.indexOf(selector + ' {')
@@ -30,21 +32,38 @@ function contrast(a: string, b: string): number {
   return ((hi ?? 0) + 0.05) / ((lo ?? 0) + 0.05)
 }
 
-describe('shadcn b1avaxO6a black/light local adaptation', () => {
-  it('loads after canonical tokens, before component styles', () => {
-    expect(entry).toMatch(/import '\.\/styles\/theme\.css'[\s\S]*import '\.\/styles\/preset-black-light\.css'[\s\S]*import '\.\/styles\/ui-v2\.css'/)
+describe('Graphite/Paper theme.css palette (G-1, G-2, G-3, G-4)', () => {
+  it('loads canonical theme.css before ui-v2.css without preset-black-light.css', () => {
+    expect(entry).toMatch(/import '\.\/styles\/theme\.css'[\s\S]*import '\.\/styles\/ui-v2\.css'/)
+    expect(entry).not.toContain('preset-black-light.css')
   })
 
-  it('preserves semantic, role, touch target, high contrast and glass contracts', () => {
-    expect(palette).not.toMatch(/^\s*--(?:primary|success|danger|warn|ready|neutral|on-primary|st-[a-z-]+|r-[a-z-]+|font-[a-z-]+|control-height|tap):/m)
-    expect(palette).not.toContain('@media')
-    expect(palette).not.toContain("data-theme='high-contrast'")
-    expect(palette).toContain(":not([data-style='glass'])")
-    expect(palette).not.toContain('!important')
+  it('removes [data-style="glass"] blocks while preserving high-contrast', () => {
+    expect(palette).not.toContain("data-style='glass'")
+    expect(palette).not.toContain('data-style="glass"')
+    expect(palette).toContain("data-theme='high-contrast'")
+  })
+
+  it('uses Graphite/Paper primary buttons and neutral sidebar active tokens while keeping --primary blue', () => {
+    const light = variables(LIGHT)
+    const dark = variables(DARK)
+
+    expect(light['--primary']).toBe('#2456d6')
+    expect(dark['--primary']).toBe('#386af7')
+
+    expect(light['--btn-primary-bg']).toBe('#181A1F')
+    expect(light['--btn-primary-fg']).toBe('#FFFFFF')
+    expect(dark['--btn-primary-bg']).toBe('#F3F4F6')
+    expect(dark['--btn-primary-fg']).toBe('#111215')
+
+    expect(light['--nav-active-bg']).toBe('#F1F2F4')
+    expect(light['--nav-active-accent']).toBe('#17191D')
+    expect(dark['--nav-active-bg']).toBe('#23262C')
+    expect(dark['--nav-active-accent']).toBe('#F7F8FA')
   })
 
   for (const mode of [LIGHT, DARK]) {
-    it(`meets accessible body contrast in ${mode}`, () => {
+    it(`meets accessible body contrast in ${mode.replace(/\n/g, ' ')}`, () => {
       const vars = variables(mode)
       for (const surface of ['--bg', '--surface', '--surface-2', '--inset2']) {
         for (const text of ['--text', '--text2', '--muted']) {
@@ -59,7 +78,7 @@ describe('shadcn b1avaxO6a black/light local adaptation', () => {
     })
   }
 
-  it('makes the dark canvas black and the light canvas visibly light', () => {
+  it('makes the dark canvas near-black and the light canvas visibly light', () => {
     expect(luminance(variables(DARK)['--bg']!)).toBeLessThan(0.01)
     expect(luminance(variables(LIGHT)['--bg']!)).toBeGreaterThan(0.85)
   })

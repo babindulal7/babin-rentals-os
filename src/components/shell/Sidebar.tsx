@@ -98,7 +98,7 @@ interface SidebarProps {
  * theme either.
  */
 export default function Sidebar({ active }: SidebarProps) {
-  const { theme, glass, choose } = useTheme()
+  const { theme, choose } = useTheme()
   const { user } = useAuth()
   const viewport = useViewport()
   const isTablet = viewport === 'tablet'
@@ -260,33 +260,6 @@ export default function Sidebar({ active }: SidebarProps) {
                 )
               })}
             </div>
-            <button
-              type="button"
-              onClick={() => choose('glass')}
-              aria-pressed={glass}
-              aria-label="Toggle glass finish"
-              title={glass ? 'Glass finish enabled (click to toggle off)' : 'Enable glass finish'}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 5,
-                minHeight: 44,
-                padding: '0 12px',
-                borderRadius: 'var(--r-btn)',
-                border: `1.5px solid ${glass ? 'var(--primary, #386af7)' : 'var(--border)'}`,
-                background: glass ? 'color-mix(in srgb, var(--primary, #386af7) 14%, var(--card))' : 'transparent',
-                color: glass ? 'var(--primary-text, #2456d6)' : 'var(--text2)',
-                fontSize: 'var(--t-meta)',
-                fontWeight: glass ? 600 : 500,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                transition: 'all var(--dur-fast) var(--ease)',
-              }}
-            >
-              <Icon name="sparkles" size={14} style={{ color: glass ? 'var(--primary-text, #2456d6)' : undefined }} />
-              Glass
-            </button>
           </div>
         )}
       </div>

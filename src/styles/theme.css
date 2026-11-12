@@ -100,19 +100,19 @@
 
 :root,
 :root[data-theme='light'] {
-  /* ---- §3.1 core elevation ladder ---- */
-  --bg0: #e2e8f0;
-  --bg: #eaeff5;
-  --bgglow: #e4eaf2;
-  --surface: #ffffff;
-  --surface-2: #edf3fa;
-  --card: #ffffff;
-  --card2: #faf8f4;
-  --inset: #f1f5f9;
-  --inset2: #e2e8f0;
-  --border: #8b9bb2;
-  --border2: #a2b0c4;
-  --divider: #9aa9bc;
+  /* ---- §3.1 core elevation ladder (RULING 2026-11-10: G-1 Graphite/Paper) ---- */
+  --bg0: #E8EAEE;
+  --bg: #F7F7F8;
+  --bgglow: #EFF0F3;
+  --surface: #FFFFFF;
+  --surface-2: #F1F2F4;
+  --card: #FFFFFF;
+  --card2: #F1F2F4;
+  --inset: #F1F2F4;
+  --inset2: #E8EAEE;
+  --border: #D8DBE0;
+  --border2: #C4C8D0;
+  --divider: color-mix(in srgb, var(--border) 68%, transparent);
 
   /* Universal 9-tier translucent alpha border scale (Light mode: slate-based) */
   --w02: rgba(15, 23, 42, 0.02);
@@ -126,42 +126,19 @@
   --w30: rgba(15, 23, 42, 0.30);
   --w40: rgba(15, 23, 42, 0.40);
 
-  /* Shared cool canvas, matched to the Pickup & Return dashboard. */
-  --bg-gradient-1: #eaeff5;
-  --bg-gradient-2: #e4eaf2;
+  /* Shared neutral paper canvas */
+  --bg-gradient-1: #F7F7F8;
+  --bg-gradient-2: #EFF0F3;
   --bg-radial-mesh: none;
   --surface-card: var(--surface);
   --surface-card-hover: var(--surface-2);
-  --glass-tint: 0.88;
   --specular-rim: 0 0 0 transparent;
-  --bezel-outer-ring: 0 0 0 1px rgba(16, 32, 59, 0.06);
-  --bezel-outer-bg: rgba(16, 32, 59, 0.025);
+  --bezel-outer-ring: 0 0 0 1px rgba(23, 25, 29, 0.06);
+  --bezel-outer-bg: rgba(23, 25, 29, 0.025);
 
-  --text: #0f172a;
-  --text2: #334155;
-  /*
-   * v4.1 shipped #6d7076 here with the comment "measured 4.97:1 on white" —
-   * which was true, and was the whole problem. `--muted` is not painted on
-   * white; it is painted on the app's own tinted surfaces, and the ratio was
-   * only ever measured against the lightest of them. On `#eef4fb` (the Today
-   * dashboard's card) #6d7076 measures 4.48:1 and on `--surface-2` #edf3fa
-   * 4.45:1 — both UNDER WCAG AA's 4.5:1 for body text. Lighthouse flagged it
-   * live on `/dashboard` (`movement-card__project`, `movement-card__items-count`).
-   *
-   * #63666d is the same hue nudged down until it clears 4.5:1 on the DARKEST
-   * light-theme surface (`--inset2` #eae6de, 4.62:1) rather than on white, so
-   * every surface in the ladder passes, not just the one that was measured.
-   * `check:contrast` now asserts the muted-on-tinted pairs so this cannot
-   * regress behind a passing white-only check.
-   *
-   * 8 Oct 2026 (RULINGS-2026-10-08.md, "looks old and lacks contrast"): text
-   * was already AA; the STRUCTURE was not — borders 1.48:1 on cards, cards
-   * 1.07:1 on the page, input outlines ~1.8:1 (under WCAG 1.4.11's 3:1).
-   * One cool slate family now (the cream insets are gone); muted #526075 is
-   * 6.39:1 on white and 5.18:1 on the darkest inset #e2e8f0; text2 #334155
-   * 10.35:1; input border #7c8ba1 3.46:1; cards carry a soft shadow.
-   */
-  --muted: #526075;
+  --text: #17191D;
+  --text2: #373D47;
+  --muted: #545C67;
   --disabled: #9b9ea4;
 
   --primary: #2456d6;
@@ -208,39 +185,41 @@
   --gold: #2456d6;
   --brand-mark: #2456d6;
 
-  --app: #e9eef5;
-  --sidebar: #ffffff;
-  --card: #ffffff;
-  --card2: #edf3fa;
-  --modal: #ffffff;
-  --dropdown: #ffffff;
+  --app: #F7F7F8;
+  --sidebar: #FFFFFF;
+  --card: #FFFFFF;
+  --card2: #F1F2F4;
+  --modal: #FFFFFF;
+  --dropdown: #FFFFFF;
 
-  --hover-card: #eef4fb;
-  --hover-sidebar: #eef4fb;
-  --hover-button: #1e49b8;
-  --hover-row: #eef4fb;
+  --hover-card: #F1F2F4;
+  --hover-sidebar: #F1F2F4;
+  --hover-button: #2D3139;
+  --hover-row: #F1F2F4;
   --active-row: color-mix(in srgb, var(--primary) 10%, var(--card));
 
-  --btn-primary-bg: #2456d6;
-  --btn-primary-fg: #ffffff;
+  /* RULING 2026-11-10: G-1, G-3 — Graphite primary button fill; --primary stays blue for statuses/links */
+  --btn-primary-bg: #181A1F;
+  --btn-primary-fg: #FFFFFF;
   --btn-secondary-bg: transparent;
-  --btn-secondary-border: #64748b;
+  --btn-secondary-border: #7D8591;
   --btn-danger-bg: #c73a3a;
   --btn-danger-fg: #ffffff;
 
-  --nav-active-accent: #2456d6;
-  --nav-active-bg: #e7efff;
-  --nav-icon: #6d7076;
+  /* RULING 2026-11-10: G-4 — neutral grey active sidebar item, no emerald */
+  --nav-active-accent: #17191D;
+  --nav-active-bg: #F1F2F4;
+  --nav-icon: #545C67;
 
-  --input-bg: #ffffff;
-  --input-border: #7c8ba1;
-  --input-placeholder: #5f6e83;
-  --input-focus: #2456d6;
+  --input-bg: #FFFFFF;
+  --input-border: #7D8591;
+  --input-placeholder: #545C67;
+  --input-focus: #2456D6;
 
-  --th-bg: #edf3fa;
-  --tr-bg: #ffffff;
-  --tr-hover: #eef4fb;
-  --tr-alt: #f5f7fb;
+  --th-bg: #F1F2F4;
+  --tr-bg: #FFFFFF;
+  --tr-hover: #F1F2F4;
+  --tr-alt: #FAFAFB;
 
   /* DESIGN_DIRECTION_SPEC v4.2 §6 Shadow Scale — tinted to match background hue */
   --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.07), 0 0 0 1px rgba(15, 23, 42, 0.03);
@@ -277,19 +256,19 @@
 }
 
 :root[data-theme='dark'] {
-  /* ---- §3.1 5-Tier Obsidian Dark Elevation Ladder ---- */
-  --bg0: #020509;
-  --bg: #04080d;
-  --bgglow: #0a1826;
-  --surface: #0f1b2a;
-  --surface-2: #13233a;
-  --card: #0f1b2a;
-  --card2: #13233a;
-  --inset: #081522;
-  --inset2: #0b1b2c;
-  --sidebar: #050b12;
-  --modal: #0d1a29;
-  --dropdown: #0d1a29;
+  /* ---- §3.1 Graphite Dark Elevation Ladder (RULING 2026-11-10: G-1) ---- */
+  --bg0: #000000;
+  --bg: #090A0D;
+  --bgglow: #111318;
+  --surface: #17191D;
+  --surface-2: #23262C;
+  --card: #17191D;
+  --card2: #23262C;
+  --inset: #090A0D;
+  --inset2: #17191D;
+  --sidebar: #090A0D;
+  --modal: #17191D;
+  --dropdown: #17191D;
 
   /* Universal 9-tier translucent alpha border scale (Dark mode: pure white) */
   --w02: rgba(255, 255, 255, 0.02);
@@ -303,24 +282,23 @@
   --w30: rgba(255, 255, 255, 0.30);
   --w40: rgba(255, 255, 255, 0.40);
 
-  --border: rgba(255, 255, 255, 0.22);
-  --border2: rgba(255, 255, 255, 0.30);
-  --divider: rgba(255, 255, 255, 0.20);
+  --border: #3A4049;
+  --border2: #4A515C;
+  --divider: rgba(255, 255, 255, 0.14);
 
-  /* Obsidian Spatial Gradients & Glows */
-  --bg-gradient-1: #04080d;
-  --bg-gradient-2: #020509;
-  --bg-radial-mesh: radial-gradient(ellipse 80% 50% at 50% -20%, #0a1826 0%, #050b12 100%);
-  --surface-card: linear-gradient(180deg, var(--card2) 0%, var(--card) 100%);
-  --surface-card-hover: var(--card2);
-  --glass-tint: 0.88;
-  --specular-rim: 0 1px 0 rgba(255, 255, 255, 0.08) inset;
+  /* Flat Graphite Surfaces (preset-black-light folded) */
+  --bg-gradient-1: #090A0D;
+  --bg-gradient-2: #000000;
+  --bg-radial-mesh: none;
+  --surface-card: var(--surface);
+  --surface-card-hover: var(--surface-2);
+  --specular-rim: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
   --bezel-outer-ring: 0 0 0 1px var(--w12);
   --bezel-outer-bg: rgba(255, 255, 255, 0.02);
 
-  --text: #f1f5f9;
-  --text2: #b8c4d3;
-  --muted: #9eaabb;
+  --text: #F7F8FA;
+  --text2: #D4D8DF;
+  --muted: #B0B7C2;
   --disabled: #475569;
 
   --primary: #386af7;      /* WCAG AA 4.59:1 with white on-primary */
@@ -354,52 +332,47 @@
   --dim: #24262c;          /* DIM — finished / inactive. 4.61:1 with on-dim */
   --on-dim: #8b8e96;
 
-  --ext-fg: #85b2ff;
+  --ext-fg: #8DB7FF;
   --ext-line: #386af7;
   --ext-bg: rgba(56, 106, 247, 0.14);
   --gold: #386af7;
-  --brand-mark: #85b2ff;
+  --brand-mark: #8DB7FF;
 
-  --app: #04080d;
-  --sidebar: #050b12;
-  --card: #0f1b2a;
-  --card2: #13233a;
-  --modal: #0d1a29;
-  --dropdown: #0d1a29;
+  --app: #090A0D;
+  --sidebar: #090A0D;
+  --card: #17191D;
+  --card2: #23262C;
+  --modal: #17191D;
+  --dropdown: #17191D;
 
-  --hover-card: #0f1e30;
-  --hover-sidebar: #0d1a29;
-  --hover-button: #2f5ce0;
-  --hover-row: rgba(255, 255, 255, 0.055);
+  --hover-card: #23262C;
+  --hover-sidebar: #23262C;
+  --hover-button: #E5E7EB;
+  --hover-row: rgba(255, 255, 255, 0.05);
   --active-row: color-mix(in srgb, var(--primary) 15%, var(--card));
 
-  --btn-primary-bg: #386af7;
-  --btn-primary-fg: #ffffff;
+  /* RULING 2026-11-10: G-1, G-3 — Paper primary button fill in dark mode; --primary stays blue */
+  --btn-primary-bg: #F3F4F6;
+  --btn-primary-fg: #111215;
   --btn-secondary-bg: transparent;
-  --btn-secondary-border: rgba(255, 255, 255, 0.44);
+  --btn-secondary-border: #858D99;
   --btn-danger-bg: #c73a3a;
   --btn-danger-fg: #ffffff;
 
-  /*
-   * The ACTIVE sidebar item's ink. #386af7 measured 4.30:1 on the dark rail
-   * (#050b12) — under AA for 14px text, and the rail is where the current
-   * destination is announced, so it is the last place to be illegible.
-   * Lightened to #6b95fc, the same hue: 6.9:1 on the rail, 5.0:1 on
-   * `--nav-active-bg`, 6.4:1 on `--surface`. Asserted by `check:contrast`.
-   */
-  --nav-active-accent: #6b95fc;
-  --nav-active-bg: #102b48;
-  --nav-icon: #94a3b8;
+  /* RULING 2026-11-10: G-4 — neutral grey active sidebar item in dark mode, no emerald */
+  --nav-active-accent: #F7F8FA;
+  --nav-active-bg: #23262C;
+  --nav-icon: #B0B7C2;
 
-  --input-bg: #081522;
-  --input-border: rgba(255, 255, 255, 0.44);
-  --input-placeholder: #64748b;
-  --input-focus: #386af7;
+  --input-bg: #17191D;
+  --input-border: #858D99;
+  --input-placeholder: #B0B7C2;
+  --input-focus: #8DB7FF;
 
-  --th-bg: #081522;
-  --tr-bg: #0b1622;
-  --tr-hover: rgba(255, 255, 255, 0.035);
-  --tr-alt: #081522;
+  --th-bg: #17191D;
+  --tr-bg: #14161A;
+  --tr-hover: rgba(255, 255, 255, 0.05);
+  --tr-alt: #101215;
 
   --shadow-xs: 0 1px 2px 0 rgba(2, 6, 11, 0.35);
   --shadow-sm: 0 1px 3px 0 rgba(2, 6, 11, 0.4), 0 1px 2px -1px rgba(2, 6, 11, 0.3);
@@ -447,9 +420,7 @@
   --bg-gradient-2: #050505;
   --bg-radial-mesh: none;
   --surface-card: #0a0a0a;
-  --surface-card-hover: #171717;
-  --glass-tint: 1;
-  --specular-rim: 0 0 0 transparent;
+  --surface-card-hover: #171717;  --specular-rim: 0 0 0 transparent;
   --bezel-outer-ring: 0 0 0 2px #facc15;
   --bezel-outer-bg: transparent;
 
@@ -1342,13 +1313,6 @@ textarea:focus {
   box-shadow: 0 0 0 3px rgba(56, 106, 247, 0.22) !important;
 }
 
-/* ── Glassmorphism Utility ── */
-.glass {
-  background: var(--surface) !important;
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1.5px solid var(--border);
-}
 
 /* ── Card Levitation & Micro-Elevation ──
    Hover feedback is shadow/border only — a card that lifts with translateY
@@ -1739,140 +1703,3 @@ p {
   }
 }
 
-/* ── RULING 2026-10-13 — "Glass" theme: the Obsidian Glass hybrid ───────────
-   Babin chose (13 Oct, option A): Obsidian Glass chrome + cards, Black Titanium
-   solid tables/inputs, blue as the ONLY accent. Status hues are untouched —
-   every --st-* / --success / --warn / --danger value is inherited from the
-   dark block above, so this layer cannot change what a status means.
-
-   It is a STYLE LAYER on the dark theme, not a fourth palette: lib/theme.tsx
-   resolves mode 'glass' to data-theme='dark' and stamps data-style='glass', so
-   every `theme === 'dark'` branch in the app still holds.
-
-   Kept from v4.2 §4: tint floor 0.85 (text over a moving backdrop must stay
-   verifiable at 4.5:1), tables solid, [data-floor] kill-switch (it redefines
-   --card/--surface-card on <main> and so still wins on floor screens), and the
-   reduced-transparency / more-contrast kill-switch (re-declared below because
-   this selector out-ranks the one in that block).
-
-   Revert = delete from this comment to the end of the file, and the 'glass'
-   additions in lib/theme.tsx, index.html, Settings.tsx, sections/shared.tsx
-   and Sidebar.tsx.
-
-   13 Oct, later: Glass is now a FINISH on either base — Light + Glass is the
-   frosted twin below. `check:contrast` gates both by compositing. */
-:root[data-theme='dark'][data-style='glass'] {
-  --app: #05080e;
-  --bg: #05080e;
-  --bg0: #030509;
-
-  /* Black Titanium — the SOLID surfaces (tables, inputs, menus) */
-  --surface: #121722;
-  --surface-2: #181f2c;
-  --inset: #0c1018;
-  --inset2: #10151f;
-  --modal: #131924;
-  --dropdown: #131924;
-
-  /* Obsidian Glass — translucent cards and chrome, floor 0.85 */
-  --glass-tint: 0.85;
-  --card: rgba(18, 24, 36, 0.85);
-  --card2: rgba(26, 33, 48, 0.85);
-  --surface-card: rgba(18, 24, 36, 0.85);
-  --surface-card-hover: rgba(26, 33, 48, 0.88);
-  --sidebar: rgba(8, 12, 19, 0.85);
-
-  --border: rgba(255, 255, 255, 0.12);
-  --specular-rim: 0 1px 0 rgba(255, 255, 255, 0.07) inset;
-  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 12px 32px rgba(0, 0, 0, 0.42);
-}
-
-/* ── RULING 2026-10-13 — Glass on Light ("frosted") ─────────────────────────
-   The same finish on the light base (mode 'glass-light' → data-theme='light' +
-   data-style='glass'). Porcelain solid surfaces are simply Light's own — tables,
-   inputs and menus stay #fff, so nothing is redeclared for them. Frosted white
-   cards and chrome at the same 0.85 floor; status hues, primary and the orange
-   booking-date ink are inherited from the light block unchanged.
-
-   On a light canvas a glow DARKENS what sits on it (the opposite of Obsidian),
-   so the blue is kept faint enough that muted text on the bare canvas still
-   clears 4.5:1. `check:contrast` composites every layer and fails the gate if
-   it does not. The white bloom only lightens, so it cannot cost contrast.
-   Revert = delete this palette and its body rule, and 'glass-light' in
-   lib/theme.tsx and index.html. */
-:root[data-theme='light'][data-style='glass'] {
-  --app: #e4ebf5;
-  --bg: #e4ebf5;
-  --bg0: #dae3ef;
-
-  --glass-tint: 0.85;
-  --card: rgba(255, 255, 255, 0.85);
-  --card2: rgba(237, 243, 250, 0.85);
-  --surface-card: rgba(255, 255, 255, 0.85);
-  --surface-card-hover: rgba(238, 244, 251, 0.9);
-  --sidebar: rgba(255, 255, 255, 0.85);
-
-  --specular-rim: 0 1px 0 rgba(255, 255, 255, 0.9) inset;
-  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.85) inset, 0 10px 28px rgba(15, 23, 42, 0.09);
-}
-
-/* The glow the glass refracts. Blue only — no violet, no amber (13 Oct: amber
-   would read as the orange On Rent / yellow Packed status). Fixed so it does
-   not scroll with long lists. */
-:root[data-theme='dark'][data-style='glass'] body {
-  background-image:
-    radial-gradient(110% 85% at 68% -12%, rgba(47, 125, 255, 0.40), transparent 62%),
-    radial-gradient(95% 90% at 8% 112%, rgba(47, 125, 255, 0.32), transparent 64%),
-    radial-gradient(55% 60% at 100% 75%, rgba(96, 120, 170, 0.18), transparent 65%);
-  background-attachment: fixed;
-}
-:root[data-theme='light'][data-style='glass'] body {
-  background-image:
-    radial-gradient(110% 85% at 68% -12%, rgba(108, 155, 255, 0.18), transparent 62%),
-    radial-gradient(95% 90% at 8% 112%, rgba(108, 155, 255, 0.16), transparent 64%),
-    radial-gradient(60% 60% at 100% 72%, rgba(255, 255, 255, 0.75), transparent 65%);
-  background-attachment: fixed;
-}
-
-/* Everything below is the finish itself, shared by both bases. */
-
-/* Chrome: the sidebar is the one shell surface with no blur of its own. */
-:root[data-style='glass'] .app-navigation {
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-}
-
-/* Cards pick up the hairline rim the glass needs to read as an edge. --w08 is
-   white on dark and slate on light, so the one rule fits both. */
-:root[data-style='glass'] .card {
-  border: 1.5px solid var(--w12);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-}
-
-/* Floating layers (menus, listboxes, popovers, dialogs, tooltips) paint with
-   the same translucent var(--card) as panels, but they sit OVER text, so
-   without blur the page reads through them (13 Oct bug: Today's "24 coming
-   back" showed through the More menu). Blur makes them true glass. Selected by
-   role so no component changes; the kill-switches below still remove it. */
-:root[data-style='glass'] :is([role='menu'], [role='listbox'], [role='dialog'], [role='alertdialog'], [role='tooltip'], .global-add-menu) {
-  backdrop-filter: blur(24px) saturate(140%);
-  -webkit-backdrop-filter: blur(24px) saturate(140%);
-}
-
-@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
-  :root[data-theme='dark'][data-style='glass'],
-  :root[data-theme='light'][data-style='glass'] {
-    --card: var(--surface);
-    --card2: var(--surface-2);
-    --surface-card: var(--surface);
-    --surface-card-hover: var(--surface-2);
-    --sidebar: var(--surface);
-  }
-  /* Theme-scoped on purpose: a bare :root[data-style='glass'] body would lose
-     to the two glow rules above on specificity and leave the glow on. */
-  :root[data-theme='dark'][data-style='glass'] body,
-  :root[data-theme='light'][data-style='glass'] body {
-    background-image: none;
-  }
-}

@@ -34,7 +34,7 @@ export default defineConfig({
     css: {
       include: [
         /responsive\.css/,
-        /preset-black-light\.css/,
+        /theme\.css/,
         /modules[\\/]today[\\/]dashboard\.css/,
         /modules[\\/]rentals[\\/].*\.css/,
         /modules[\\/]operations[\\/].*\.css/,

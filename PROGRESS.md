@@ -1,5 +1,46 @@
 # Progress Log
 
+## 2026-11-12 — Card 5 (Lane B): Graphite/Paper repaint and Glass removal
+
+**Did**
+- `src/styles/theme.css`: applied the Graphite/Paper palette for Light (`#F7F7F8` canvas, `#FFFFFF` surface, `#F1F2F4` surface-2, `#17191D` text, `#545C67` muted, `#181A1F`/`#FFFFFF` primary button, `#F1F2F4`/`#17191D` sidebar active pill) and Dark (`#090A0D` canvas, `#101317` sidebar, `#17191D` surface, `#23262C` surface-2, `#F7F8FA` text, `#B0B7C2` muted, `#F3F4F6`/`#111215` primary button, `#23262C`/`#F7F8FA` sidebar active pill). Kept `--primary` blue (`#2456d6` / `#386af7`) for status/links/focus rings. Removed `.glass` and all `[data-style='glass']` blocks while preserving `high-contrast`.
+- Removed `src/styles/preset-black-light.css` and its import in `src/main.tsx`; updated `vitest.config.ts` to include `/theme\.css/`.
+- `src/lib/theme.tsx` & `index.html`: removed `glass` and `glass-light` from `ThemeMode`/`ThemeChoice`/`ThemeCtx` and migrated saved `'glass'` → `'dark'` and `'glass-light'` → `'light'` on load (`br-theme-mode`).
+- `src/components/shell/Sidebar.tsx`, `src/modules/settings/Settings.tsx`, `src/modules/settings/sections/shared.tsx`, and shell test mocks: removed Glass toggle buttons/options.
+- `scripts/check-contrast.cjs`: read directly from `src/styles/theme.css` and removed `GLASS-D`/`GLASS-L` checks.
+- `src/lib/__tests__/themeGlass.test.tsx` & `src/lib/__tests__/preset-black-light.test.ts`: updated tests for Glass→Light/Dark migration, `high-contrast` preservation, and Graphite/Paper tokens.
+- `docs/UI_UX_RULES.md` & `packages/design-tokens/src/index.ts`: updated to Graphite/Paper and removed Glass references.
+- `docs/verification/GRAPHITE_REPAINT_DESIGN.md` & `docs/audits/card5-repaint/`: recorded Step 0 design note and captured 54 screenshots (9 screens × 375/820/1440px × light/dark).
+
+**Ruled**
+- RULING 2026-11-10 G-1, G-2, G-3, G-4: Graphite/Paper neutral palette and primary buttons, neutral sidebar active pill, Glass finish removed (migrates on load), `--primary` kept blue for status (`--st-primary-bg`), links, and focus rings. No new product or permission decision.
+
+**Verified**
+- `npm run check:contrast`: exit 0 (75/75 pass, 0 FAIL).
+- `npm run lint:shell`, `npm run lint:ui-copy`, `npm run lint:transitions`: exit 0.
+- `npm run typecheck`, `npm run lint`, `npm run build`: exit 0.
+- `VITE_DATA_SOURCE=mock npm test`: exit 0 (604/604 test files, 7,096/7,096 tests passed).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +1 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 233 files · check:pglite not run this session (pass --migrations to run). Suite: Historical suite: 7096/7096 passed, 0 failed (recorded 2026-11-12T12:19:49.346Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Non-status `--primary` fills documented in `docs/verification/GRAPHITE_REPAINT_DESIGN.md` Section 3 (checkboxes, progress bar fills, slider thumbs, `--active-row` tint, KPI highlights) remain blue awaiting Babin's ruling.
+- Branch `lane-b/card-5-graphite-repaint-glass-removal` awaits Babin's review and merge.
+
+
 ## 2026-11-10 — Card 4: register D-UX-01 to D-UX-05 as O-23 to O-27 (docs only)
 
 **Did**
