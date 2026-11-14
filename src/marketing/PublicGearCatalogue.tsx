@@ -34,7 +34,7 @@ export default function PublicGearCatalogue() {
       })
     }
     return () => { active = false }
-  }, [evaluation.pickupIso, evaluation.returnIso, evaluation.isFullySelected])
+  }, [evaluation])
 
   const filteredItems = useMemo(() => {
     return PUBLIC_CATALOGUE_ITEMS.filter((item) => {
