@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
+import './components/shell/referenceShell.css'
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { AUDIT_LOG_PATH, PROBLEM_REPORTS_PATH, PRODUCTIONS_HUB_PATH, financeTabPath, type FinanceTabSlug } from './lib/routeTargets'
@@ -1240,6 +1241,7 @@ function Shell({
 
   return (
     <div
+      className="br-reference-shell"
       style={{
         display: 'flex',
         flexDirection: 'column',
