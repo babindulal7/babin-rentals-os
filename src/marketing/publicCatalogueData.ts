@@ -240,25 +240,62 @@ export function evaluatePublicSchedule(state: PublicScheduleState): PublicSchedu
   }
 }
 
+export type CatalogueAvailabilityStatus = 'available' | 'unavailable' | 'unknown'
+
+export interface CatalogueItemAvailability {
+  status: CatalogueAvailabilityStatus
+  isAvailable: boolean
+  /**
+   * Internal bookable count for calculations.
+   * Law §2: NEVER disclose to the public customer UI.
+   */
+  bookableCount?: number
+}
+
 /**
  * Derives equipment availability for a fully-selected schedule.
  * Gated strictly on schedule validity. If not fully selected, availability is LOCKED.
+ * Never leaks raw stock counts or internal identifiers to public consumers.
  */
 export function getCatalogueItemAvailability(
   item: PublicCatalogueItem,
   schedule: PublicScheduleEvaluation,
-): { isAvailable: boolean; bookableCount: number } | null {
+): CatalogueItemAvailability | null {
   if (!schedule.isFullySelected || !schedule.rentalDays || schedule.rentalDays < 1) {
     return null
   }
 
-  // Authoritative availability based on stock and simulated commitments
-  // Every item has reliable positive capacity unless booked out
+  // Authoritative availability based on stock and commitments
   const booked = item.bookedCount ?? 0
   const bookable = Math.max(0, item.totalStock - booked)
+  const isAvailable = bookable > 0
 
   return {
-    isAvailable: bookable > 0,
+    status: isAvailable ? 'available' : 'unavailable',
+    isAvailable,
     bookableCount: bookable,
   }
+}
+
+/**
+ * Simulated or RPC-backed query contract for bulk catalogue availability.
+ * In accordance with Unified Launch Plan §2: returns available/unavailable/unknown.
+ * Unknown is NOT available.
+ */
+export async function queryCatalogueAvailability(
+  items: PublicCatalogueItem[],
+  schedule: PublicScheduleEvaluation,
+): Promise<Map<string, CatalogueAvailabilityStatus>> {
+  const result = new Map<string, CatalogueAvailabilityStatus>()
+
+  if (!schedule.isFullySelected || !schedule.rentalDays || schedule.rentalDays < 1) {
+    return result
+  }
+
+  for (const item of items) {
+    const avail = getCatalogueItemAvailability(item, schedule)
+    result.set(item.id, avail ? avail.status : 'unknown')
+  }
+
+  return result
 }

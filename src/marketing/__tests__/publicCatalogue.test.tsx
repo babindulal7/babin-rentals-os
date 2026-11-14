@@ -124,7 +124,9 @@ describe('Issue #153 Acceptance: Public Gear Catalogue & Gating', () => {
 
       const unlockedBadges = container.querySelectorAll('[data-testid="availability-unlocked-badge"]')
       expect(unlockedBadges.length).toBeGreaterThan(0)
-      expect(unlockedBadges[0]?.textContent).toMatch(/Available \(\d+ free\)/)
+      expect(unlockedBadges[0]?.textContent).toContain('Available')
+      // Unified Launch Plan §2: Never disclose internal stock counts, booking names or serial numbers
+      expect(unlockedBadges[0]?.textContent).not.toMatch(/\d+ free/)
     })
   })
 

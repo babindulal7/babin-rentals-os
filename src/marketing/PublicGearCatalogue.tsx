@@ -286,7 +286,7 @@ export default function PublicGearCatalogue() {
                     </span>
                   </div>
 
-                  {/* Availability Badge (Strictly Gated) */}
+                  {/* Availability Badge (Strictly Gated, No Count Leakage) */}
                   <div className="absolute top-4 right-4">
                     {avail === null ? (
                       <span
@@ -296,13 +296,21 @@ export default function PublicGearCatalogue() {
                         <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
                         Select dates
                       </span>
+                    ) : avail.status === 'unknown' ? (
+                      <span
+                        data-testid="availability-unknown-badge"
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-950/90 backdrop-blur-md border border-amber-500/40 text-xs font-mono text-amber-300 font-semibold"
+                      >
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                        Unable to check
+                      </span>
                     ) : avail.isAvailable ? (
                       <span
                         data-testid="availability-unlocked-badge"
                         className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950/90 backdrop-blur-md border border-emerald-500/40 text-xs font-mono text-emerald-300 font-semibold"
                       >
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        Available ({avail.bookableCount} free)
+                        Available
                       </span>
                     ) : (
                       <span
@@ -342,9 +350,18 @@ export default function PublicGearCatalogue() {
               {/* Price & Action Footer */}
               <div className="p-6 pt-0 mt-4 border-t border-slate-line/50 flex items-center justify-between gap-4">
                 <div>
-                  <div className="font-mono text-xs text-ash/60">Rate per rental day</div>
+                  <div className="font-mono text-xs text-ash/60">
+                    {evaluation.rentalDays && evaluation.rentalDays > 1
+                      ? `Estimated rate (${evaluation.rentalDays} rental days)`
+                      : 'Rate per rental day'}
+                  </div>
                   <div className="font-display text-lg font-bold text-bone">
-                    Rs {formatMoney(item.dailyRatePaisa)}
+                    Rs{' '}
+                    {formatMoney(
+                      evaluation.rentalDays && evaluation.rentalDays > 1
+                        ? ((item.dailyRatePaisa * evaluation.rentalDays) as import('../lib/money').Paisa)
+                        : item.dailyRatePaisa,
+                    )}
                     <span className="text-xs font-normal text-ash/70 ml-1">+ VAT</span>
                   </div>
                 </div>
