@@ -14,7 +14,7 @@ export interface IssuedInvoiceSource {
   voided_at: string | null
 }
 
-export type BucketCoverage = 'full' | 'in-progress' | 'clipped'
+export type BucketCoverage = 'full' | 'in-progress' | 'clipped' | 'future-inclusive'
 
 export interface RevenueMonth {
   periodStartUtc: string
@@ -95,6 +95,7 @@ export function monthLongLabel(startDay: string, endDay: string, coverage: Bucke
   if (coverage === 'full') return `${MONTHS_LONG[monthIdx] ?? ''} ${startDay.slice(0, 4)}`
   const span = monthSpan(startDay, endDay)
   if (coverage === 'clipped') return `${span} (part month)`
+  if (coverage === 'future-inclusive') return `${span} (includes future dates)`
   return startDay.endsWith('-01') ? `${span} (month to date)` : `${span} (part month, to date)`
 }
 
@@ -104,6 +105,9 @@ export function coverageNotes(trend: RevenueTrend): string[] {
   const first = trend.months[0]
   const last = trend.months[trend.months.length - 1]
   if (!first || !last) return notes
+  if (trend.months.some(month => month.coverage === 'future-inclusive')) {
+    notes.push('Selected reporting window includes future dates; issued-invoice totals are not a forecast.')
+  }
   if (last.coverage === 'in-progress' && last.startDay && last.endDay) {
     notes.push(
       last.startDay.endsWith('-01')
@@ -145,11 +149,13 @@ export function aggregateIssuedRevenue(
     // RULING 2026-10-17 (R17-3): the month holding today is "to date" even on
     // its last day — invoices for today can still be issued until the day ends.
     const coverage: BucketCoverage =
-      today !== undefined && today >= startDay && today <= endDay
-        ? 'in-progress'
-        : startDay > first || endDay < last
-          ? 'clipped'
-          : 'full'
+      today !== undefined && today < endDay
+        ? 'future-inclusive'
+        : today !== undefined && today >= startDay && today === endDay
+          ? 'in-progress'
+          : startDay > first || endDay < last
+            ? 'clipped'
+            : 'full'
     months.push({
       periodStartUtc: cursor.toISOString(),
       label: cursor.toLocaleString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' }),
