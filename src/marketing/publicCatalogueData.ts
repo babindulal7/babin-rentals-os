@@ -293,14 +293,23 @@ export async function queryCatalogueAvailability(
   if (items.length === 0 || !items.every(item => UUID_RE.test(item.id))) return result
 
   try {
-    const { supabase, IS_MOCK } = await import('../lib/supabase')
-    if (IS_MOCK) return result
-    const { data, error } = await supabase.rpc('public_availability', {
-      product_ids: items.map(item => item.id),
-      from: schedule.pickupIso,
-      to: schedule.returnIso,
+    // Public site must not import the staff OS Supabase/auth client.
+    // The anon key is intentionally public; the backend controls every grant.
+    const baseUrl = import.meta.env['VITE_SUPABASE_URL'] as string | undefined
+    const anonKey = import.meta.env['VITE_SUPABASE_ANON_KEY'] as string | undefined
+    if (!baseUrl || !anonKey) return result
+    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/rest/v1/rpc/public_availability`, {
+      method: 'POST',
+      headers: { apikey: anonKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        product_ids: items.map(item => item.id),
+        from: schedule.pickupIso,
+        to: schedule.returnIso,
+      }),
     })
-    if (error || !Array.isArray(data)) return result
+    if (!response.ok) return result
+    const data: unknown = await response.json()
+    if (!Array.isArray(data)) return result
     for (const row of data) {
       if (!row || typeof row !== 'object') continue
       const record = row as Record<string, unknown>
