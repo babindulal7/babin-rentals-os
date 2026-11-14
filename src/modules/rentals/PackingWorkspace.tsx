@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
 import { Card, Button, cardStyle } from '../../components/ui/Page'
+import { OverflowMenu } from '../../components/ui/OverflowMenu'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { OperationAside } from '../operations/FloorAside'
@@ -1526,18 +1527,15 @@ export default function PackingWorkspace({
                   title="Packing Checklist"
                   bodyStyle={{ padding: 0 }}
                   action={
-                    phone ? (
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <Button icon="zap" onClick={quickPackAll}>Quick Pack</Button>
-                        <Button icon="checklist" onClick={markPendingPacked}>Pending</Button>
-                      </div>
-                    ) : (
-                      <>
-                        <Button icon="zap" onClick={quickPackAll}>Quick Pack All</Button>
-                        <Button icon="checklist" onClick={markPendingPacked}>Mark Pending Packed</Button>
-                        <Button icon="camera" onClick={() => setShowScanner(true)}>Scan / Camera</Button>
-                      </>
-                    )
+                    /* RULING 2026-11-10: R-10.7 — Scan + list + 1 button (56px Complete Packing). Secondary actions behind More menu. */
+                    <OverflowMenu
+                      ariaLabel="More packing actions"
+                      items={[
+                        { label: 'Quick Pack All', icon: 'zap' as const, onClick: quickPackAll },
+                        { label: 'Mark Pending Packed', icon: 'checklist' as const, onClick: markPendingPacked },
+                        ...(restoredFromStorage ? [{ label: 'Start Fresh', icon: 'refresh' as const, onClick: discardRestoredScan }] : []),
+                      ]}
+                    />
                   }
                 >
                   <div className="floor-scanner-hud">

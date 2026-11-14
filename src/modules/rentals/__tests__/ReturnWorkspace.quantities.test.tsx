@@ -31,9 +31,18 @@ vi.mock('../../../lib/queries/bookings', () => ({ fetchFloorBooking: async () =>
 let host: HTMLDivElement
 let root: Root
 const confirmed = vi.fn()
-const buttons = () => [...host.querySelectorAll<HTMLButtonElement>('button')]
+const buttons = () => [...host.querySelectorAll<HTMLButtonElement>('button'), ...document.body.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')]
 const button = (label: string) => {
-  const found = buttons().find(item => item.textContent?.trim() === label)
+  let found = buttons().find(item => item.textContent?.trim() === label)
+  if (!found) {
+    const more = host.querySelector<HTMLButtonElement>('button[aria-label="More return actions"]')
+    if (more) {
+      act(() => {
+        more.click()
+      })
+      found = buttons().find(item => item.textContent?.trim() === label)
+    }
+  }
   if (!found) throw new Error(`No ${label} button`)
   return found
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import { Card, Button, cardStyle } from '../../components/ui/Page'
+import { OverflowMenu } from '../../components/ui/OverflowMenu'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { OperationAside } from '../operations/FloorAside'
@@ -1903,17 +1904,14 @@ export default function HandoverWorkspace({
                   title="Equipment"
                   bodyStyle={{ padding: 0 }}
                   action={
-                    phone ? (
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <Button icon="checklist" onClick={markReadyPickedUp}>Mark Ready Picked Up</Button>
-                      </div>
-                    ) : (
-                      <>
-                        <Button icon="checklist" onClick={markReadyPickedUp}>Mark Ready Picked Up</Button>
-                        <Button icon="camera" onClick={() => setShowScanner(true)}>Scan Barcode</Button>
-                        <Button icon="truck" onClick={() => setShowDriverModal(true)}>Field Delivery</Button>
-                      </>
-                    )
+                    /* RULING 2026-11-10: R-10.7 — Scan + list + 1 button (56px Complete Handover). Secondary actions behind More menu. */
+                    <OverflowMenu
+                      ariaLabel="More handover actions"
+                      items={[
+                        { label: 'Mark Ready Picked Up', icon: 'checklist', onClick: markReadyPickedUp },
+                        { label: 'Field Delivery', icon: 'truck', onClick: () => setShowDriverModal(true) },
+                      ]}
+                    />
                   }
                 >
                   <div style={{ display: 'flex', gap: 10, padding: '10px 12px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap', alignItems: 'center', background: 'var(--card2)' }}>

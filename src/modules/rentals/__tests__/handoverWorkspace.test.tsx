@@ -195,7 +195,19 @@ afterEach(async () => {
 /** The dialog portals to `document.body`, so assertions read the document. */
 const text = () => document.body.textContent ?? ''
 const buttons = () => [...document.body.querySelectorAll('button')]
-const button = (label: string) => buttons().find((b) => (b.textContent ?? '').trim() === label)
+const button = (label: string) => {
+  let found = buttons().find((b) => (b.textContent ?? '').trim() === label)
+  if (!found) {
+    const more = buttons().find((b) => b.getAttribute('aria-label')?.includes('More handover actions'))
+    if (more) {
+      act(() => {
+        more.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      })
+      found = buttons().find((b) => (b.textContent ?? '').trim() === label)
+    }
+  }
+  return found
+}
 const enabled = (label: string) => buttons().filter((b) => (b.textContent ?? '').trim() === label && !b.disabled)
 
 async function click(el: Element | null | undefined) {

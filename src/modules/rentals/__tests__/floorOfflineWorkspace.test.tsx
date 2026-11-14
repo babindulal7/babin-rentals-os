@@ -185,8 +185,16 @@ describe('T2-10 Floor Offline UI & Confirm Button Safety Gates', () => {
       await new Promise((resolve) => setTimeout(resolve, 50))
     })
 
-    // Click "Quick Pack All" to mark all pending units packed
-    const packAllBtn = Array.from(container!.querySelectorAll('button')).find((btn) =>
+    // Open More menu to access Quick Pack All (R-10.7)
+    const moreBtn = Array.from(container!.querySelectorAll('button')).find((btn) =>
+      btn.getAttribute('aria-label')?.includes('More packing actions'),
+    )
+    if (moreBtn) {
+      await act(async () => {
+        moreBtn.click()
+      })
+    }
+    const packAllBtn = Array.from(document.body.querySelectorAll('button')).find((btn) =>
       btn.textContent?.includes('Quick Pack All'),
     )
     expect(packAllBtn).toBeDefined()

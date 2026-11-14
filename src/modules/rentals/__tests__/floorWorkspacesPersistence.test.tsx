@@ -202,6 +202,10 @@ describe('Floor Workspaces State Persistence (AUD-018)', () => {
         )
       })
       await flush()
+      const moreBtn = [...document.body.querySelectorAll('button')].find((b) => b.getAttribute('aria-label')?.includes('More return actions'))
+      if (moreBtn) {
+        await act(async () => moreBtn.click())
+      }
       const bulk = [...document.body.querySelectorAll('button')].find((b) => /^Check In All(?: Clean)?$/.test(b.textContent?.trim() ?? ''))
       expect(bulk).toBeTruthy()
       await act(async () => bulk?.click())

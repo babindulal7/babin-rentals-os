@@ -32,7 +32,19 @@ vi.mock('../../../lib/acousticFeedback', () => ({ playScanSuccess: vi.fn(), play
 let root: Root
 let host: HTMLDivElement
 const buttons = () => [...document.querySelectorAll<HTMLButtonElement>('button')]
-const button = (text: string) => buttons().find(item => item.textContent?.trim() === text)
+const button = (text: string) => {
+  let found = buttons().find(item => item.textContent?.trim() === text)
+  if (!found) {
+    const more = buttons().find(item => item.getAttribute('aria-label')?.includes('More packing actions') || item.getAttribute('aria-label')?.includes('More reset actions'))
+    if (more) {
+      act(() => {
+        more.click()
+      })
+      found = buttons().find(item => item.textContent?.trim() === text)
+    }
+  }
+  return found
+}
 async function flush() { for (let i = 0; i < 10; i++) await act(async () => { await new Promise(resolve => setTimeout(resolve, 5)) }) }
 async function click(item: HTMLElement | null | undefined) { expect(item, document.body.textContent ?? '').toBeTruthy(); await act(async () => { item?.click(); await vi.dynamicImportSettled() }); await flush() }
 async function mount(job: 'Pack' | 'Handover' | 'Return' | 'Reset') {

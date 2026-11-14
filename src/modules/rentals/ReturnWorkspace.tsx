@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import { Card, Button, cardStyle } from '../../components/ui/Page'
+import { OverflowMenu } from '../../components/ui/OverflowMenu'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { OperationAside } from '../operations/FloorAside'
@@ -1801,17 +1802,18 @@ export default function ReturnWorkspace({
                   title="Equipment Checklist"
                   bodyStyle={{ padding: 0 }}
                   action={
-                    phone ? (
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <Button icon="zap" onClick={checkInAllClean} disabled={!quantitiesVerified}>Check In All</Button>
-                        <Button icon="camera" onClick={() => setShowScanner(true)}>Scan</Button>
-                      </div>
-                    ) : (
-                      <>
-                        <Button icon="zap" onClick={checkInAllClean} disabled={!quantitiesVerified}>Check In All Clean</Button>
-                        <Button icon="camera" onClick={() => setShowScanner(true)}>Scan / Camera</Button>
-                      </>
-                    )
+                    /* RULING 2026-11-10: R-10.7 — Scan + list + 1 button (56px Complete Return). Secondary actions behind More menu. */
+                    <OverflowMenu
+                      ariaLabel="More return actions"
+                      items={[
+                        {
+                          label: 'Check In All Clean',
+                          icon: 'zap' as const,
+                          onClick: checkInAllClean,
+                          ...(!quantitiesVerified ? { unavailable: 'Quantities must be verified before checking in all' } : {}),
+                        },
+                      ]}
+                    />
                   }
                 >
                   <div className="floor-scanner-hud">

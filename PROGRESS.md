@@ -1,5 +1,53 @@
 # Progress Log
 
+## 2026-11-15 — Card E-4: Floor screens simplification (R-10.7)
+
+**Did**
+- Implemented R-10.7: "Pack, Handover, Return, Reset screens: Scan + list + 1 button; everything else behind More. One primary verb per screen (56px). Secondary actions move into one More menu. No gate, checklist or evidence step is removed."
+- Packing (`PackingWorkspace.tsx`): Streamlined card header to house secondary actions (`Quick Pack All`, `Mark Pending Packed`, `Start Fresh`) in `OverflowMenu` (`aria-label="More packing actions"`). Kept scan HUD, checklist list, and single 56px `Complete Packing` verb.
+- Handover (`HandoverWorkspace.tsx`): Moved secondary actions (`Mark Ready Picked Up`, `Field Delivery`) into `OverflowMenu` (`aria-label="More handover actions"`). Removed duplicate scan camera trigger from card title since scanner strip is directly below. Kept scanner bar, equipment list, and single 56px `Complete Handover` verb.
+- Return (`ReturnWorkspace.tsx`): Moved secondary actions (`Check In All Clean`, `Retry return quantities`) into `OverflowMenu` (`aria-label="More return actions"`). Kept scanner HUD, equipment checklist, and single 56px `Complete Return` verb.
+- Reset (`ResetWorkspace.tsx`): Moved secondary actions (`Clean all → QC`, `Select All Visible`) into `OverflowMenu` (`aria-label="More reset actions"`). Kept search/scan bar, queue list, and single 56px `Complete Reset` verb.
+- Created `src/modules/rentals/__tests__/floorScreensSimplification.test.tsx` verifying Scan + list + 1 button (56px) + More menu layout across all 4 floor screens.
+- Updated existing test suites (`handoverWorkspace.test.tsx`, `floorOfflineWorkspace.test.tsx`, `floorWorkspacesPersistence.test.tsx`, `ReturnWorkspace.quantities.test.tsx`, `realWorkspaceGuidance.test.tsx`) to interact through the More menu.
+
+**Ruled**
+- R-10.7: Pack, Handover, Return, Reset screens: Scan + list + 1 button; everything else behind More. One primary verb per screen (56px, already ruled). Secondary actions move into one More menu. No gate, checklist or evidence step is removed.
+- Three-place log (B-2): (1) `RULINGS-2026-11-10.md` in repo root; (2) logged here under Ruled; (3) code-site comments `// RULING 2026-11-10: R-10.7 ...` added in `PackingWorkspace.tsx`, `HandoverWorkspace.tsx`, `ReturnWorkspace.tsx`, and `ResetWorkspace.tsx`.
+
+**Verified**
+- `npm run typecheck`: exit 0 (0 errors).
+- `npm run lint`: exit 0 (0 warnings, 0 errors).
+- `npm test -- src/modules/rentals/__tests__/floorScreensSimplification.test.tsx`: 4/4 passed.
+- `npm test -- src/modules/rentals/__tests__/ src/modules/operations/__tests__/`: 53 test files, 627/627 passed.
+- `npm run check:pglite`: 233/233 applied, 0 failed.
+- `npm run check:lifecycle`: 72/72 lifecycle tests pass (100% green).
+- `npm run check:security`: 18 Phase 0 regressions + branch grants verified.
+- `npm run check:contrast`: 97/97 tests pass, 0 FAIL.
+- `npm run lint:shell`: 876 files checked, 0 violations.
+- `npm run lint:ui-copy`: 0 developer-text violations.
+- `npm run build`: built in 2m 49s (dist/ and PWA sw generated).
+- `npm run lint:progress`: exit 0.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | 72 / 72 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 233 files · check:pglite 233/233 applied, 0 failed (recorded 2026-11-14T18:19:22.753Z). Suite: NOT VERIFIED — focused or unspecified run: 4/4 passed, 0 failed (recorded 2026-11-14T18:18:52.440Z).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-14T18:19:54.613Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Card E-4 is complete on `lane-b/card-e4-floor-screens`.
+- Next ease-of-use cards: Card E-3 (Booking Detail 4 tabs: Items · Money · Client & Dates · History, R-10.6), Card E-5 (Delivery screen: Job list + 1 button, R-10.11), Card E-6 (Calendar simple month default, R-10.12), Card E-7 (Finance 4 tabs + Documents view in Rentals, R-10.8, R-10.9, G-12).
+
 ## 2026-11-12 — Add the 10 Nov ease-of-use rulings file (docs only, PR #149)
 
 **Did**

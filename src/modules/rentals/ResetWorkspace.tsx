@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import './rentals.css'
 import Icon from '../../components/ui/Icon'
 import { Card, Button, cardStyle } from '../../components/ui/Page'
+import { OverflowMenu } from '../../components/ui/OverflowMenu'
 import { Badge } from '../../components/ui/Badge'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
@@ -1557,17 +1558,14 @@ export default function ResetWorkspace({
                   title="Reset Queue"
                   bodyStyle={{ padding: 0 }}
                   action={
-                    phone ? (
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <Button icon="zap" onClick={quickResetAll}>Clean all → QC</Button>
-                        <Button icon="checklist" onClick={selectAllVisible}>Select All</Button>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <Button icon="zap" onClick={quickResetAll}>Clean all → QC</Button>
-                        <Button icon="checklist" onClick={selectAllVisible}>Select All Visible</Button>
-                      </div>
-                    )
+                    /* RULING 2026-11-10: R-10.7 — Scan + list + 1 button (56px Complete Reset). Secondary actions behind More menu. */
+                    <OverflowMenu
+                      ariaLabel="More reset actions"
+                      items={[
+                        { label: 'Clean all → QC', icon: 'zap', onClick: quickResetAll },
+                        { label: 'Select All Visible', icon: 'checklist', onClick: selectAllVisible },
+                      ]}
+                    />
                   }
                 >
                   {phone ? (
