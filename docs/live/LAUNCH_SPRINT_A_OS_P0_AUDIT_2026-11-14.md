@@ -11,7 +11,7 @@
 
 ### Current Git & Remote Reference
 - **Repo:** `babindulal7/babin-rentals-os`
-- **Exact `main` HEAD SHA:** `d4486a4ac681da766b345089ad4aa36b2b6e9075`
+- **`main` HEAD at the time of the original audit:** `d4486a4ac681da766b345089ad4aa36b2b6e9075` (historical; verify current SHA before any action).
 - **Latest Full CI Run on `main` Code:** [Run #43102033588](https://github.com/babindulal7/babin-rentals-os/actions/runs/43102033588) (commit `27407e01d99f61aaafda0771e915225efed0698a`)
   - `Mac · full CI (main)`: **SUCCESS** (Runner: `BABIN-MAC-01`, 5m 20s)
   - `typecheck · test · build`: **SUCCESS** (Runner: `BABIN-MAC-02`, 26s)
@@ -46,12 +46,12 @@
 
 | PR # | Branch | Title | Status / CI | Scope / Relationship to #152 |
 | :--- | :--- | :--- | :--- | :--- |
-| **#157** | `feat/launch-sprint-c-client-portal` | feat(portal): verified-email client portal, server discounts, and guest booking queue (#154) | **GREEN** (`typecheck · test · build` Passed) | Sprint C (Windows PC 2 lane). Closes #154. Verified-email auth, ClientPortalView, guest request queue, atomic stock checks. |
-| **#156** | `feat/launch-sprint-b-public-catalogue` | feat(marketing): public gear catalogue with mandatory date-range gating and BS/AD support (#153) | **GREEN** (`typecheck · test · build` Passed) | Sprint B (Windows PC 1 lane). Closes #153. Date-range gating, 06:00 NPT BS/AD calendar, responsive viewports. |
+| **#157** | `feat/launch-sprint-c-client-portal` | Client portal prototype (#154) | **CI GREEN; DRAFT / NOT READY** | Uses caller-supplied email verification flag, in-memory client/booking/invoice/guest queue fixtures and non-atomic stock Map. Replace with hosted Auth/RLS + persistent server-side request/stock contracts. |
+| **#156** | `feat/launch-sprint-b-public-catalogue` | Public catalogue prototype (#153) | **CI GREEN; DRAFT / NOT READY** | Date/time control built, but item prices/stock and `bookedCount` are hardcoded fixtures; availability is not backed by actual booking-window reservations. |
 | **#155** | `docs/unified-launch-2026-11-12` | docs(launch): coordinate OS, company website and client portal by Feb 2027 | Docs only | Establishes the 3-surface architecture and unified launch milestone (Feb 18, 2027). |
 | **#151** | `chore/dependency-security-hardening` | chore(deps): safe non-breaking dependency security audit fix | **GREEN** (`typecheck · test · build` Passed) | Security dependency updates. Non-breaking. |
 | **#150** | `feat/reference-shell-ui-20261112` | feat(ui): adopt owner's cinematic reference shell and real-data Today inspector | **GREEN** (`typecheck · test · build` Passed) | Repaired in separate scope; reference shell UI and real-data Today inspector tests green. |
-| **#149** | `docs/rulings-2026-11-10-ease-of-use` | docs(rulings): add 10 Nov ease-of-use rulings (R-10.1 to R-10.12) | Docs only | Authoritative product rulings. |
+| **#149** | `docs/rulings-2026-11-10-ease-of-use` | 10 Nov ease-of-use rulings | **MERGED 14 Nov** | Exact-head full CI passed (run #43583334145); squash merge `9b5efb663cea27e6c472c9d16c9708234851f263`. |
 | **#148** | `docs/ui-ux-reference-reconciliation-20261112` | docs(ui-ux): reconcile standalone 25-screen registry with live app and responsive gates | Docs only | UI-UX screen contract registry. |
 | **#147** | `fix/security-verified-staff-switch-20261112` | security(auth): isolate staff PIN verification and block premature session adoption | **GREEN** (`typecheck · test · build` Passed) | **P0 (Issue #62)**: Implements isolated auth verification client, blocks premature session adoption, clears state on failed PIN. |
 
@@ -62,9 +62,9 @@
 ### 1. Issue #56: Release HOLD — Live Migrations Reconcile & Staging Verification
 - **Status:** **HOLD REMAINS IN EFFECT** (No live production DDL).
 - **Work Completed to Date:**
-  - Lexical and content hash triage completed in [MIGRATION_LEXICAL_TRIAGE_2026-11-12.md](file:///Users/babindulal/babin-rentals-os/docs/live/MIGRATION_LEXICAL_TRIAGE_2026-11-12.md) and [MIGRATION_CONTENT_HASH_AUDIT_2026-11-12.md](file:///Users/babindulal/babin-rentals-os/docs/live/MIGRATION_CONTENT_HASH_AUDIT_2026-11-12.md).
+  - Lexical and content hash triage completed in [MIGRATION_LEXICAL_TRIAGE_2026-11-12.md](MIGRATION_LEXICAL_TRIAGE_2026-11-12.md) and [MIGRATION_CONTENT_HASH_AUDIT_2026-11-12.md](MIGRATION_CONTENT_HASH_AUDIT_2026-11-12.md).
   - All 76 byte mismatches between local repo and live Supabase history classified; prioritized 22 real structural differences for staging rehearsal.
-  - Staging rehearsal runbooks established in [STAGING_HOSTED_REHEARSAL_2026-11-12.md](file:///Users/babindulal/babin-rentals-os/docs/live/STAGING_HOSTED_REHEARSAL_2026-11-12.md) and [STAGING_RECONCILIATION_2026-11-12.md](file:///Users/babindulal/babin-rentals-os/docs/live/STAGING_RECONCILIATION_2026-11-12.md).
+  - Staging rehearsal runbooks established in [STAGING_HOSTED_REHEARSAL_2026-11-12.md](STAGING_HOSTED_REHEARSAL_2026-11-12.md) and [STAGING_RECONCILIATION_2026-11-12.md](STAGING_RECONCILIATION_2026-11-12.md).
 - **Remaining Production Acceptance Criteria:**
   - Owner approval of dedicated staging project/branch compute costs.
   - Rehearsal execution on isolated staging branch in dependency order.
@@ -104,7 +104,15 @@
 ## 4. Immediate Safe Delivery Sequence
 
 1. **Keep Database Release HOLD in effect**: Zero direct DDL against live Supabase project `sxguwvgoserhdolewibb`.
-2. **Merge PRs #147, #150, #151, #156, #157**:
-   - All 5 pull requests are fully green on CI (`typecheck · test · build` SUCCESS) and resolve their isolated scopes cleanly.
+2. **Do not bulk-merge green PRs.** PRs #156 and #157 are draft prototypes with non-production data/auth/availability and require substantial backend corrections. PR #147 requires hosted JWT/RLS and physical shared-device acceptance; PR #150 overlaps `src/App.tsx` with #147 and requires integration/device review; PR #151 needs dependency advisory review and post-integration gates. Each remains subject to exact-head CI and safe review.
+   - Green offline test gates alone are not sufficient evidence of hosted security, real pricing, stock contention or production readiness.
 3. **Stage Rehearsal & Migration Closeout**:
    - Follow `docs/live/STAGING_HOSTED_REHEARSAL_2026-11-12.md` upon staging environment provisioning.
+
+
+## 5. Follow-up review — 14 November 2026
+
+- Reviewed **9 originally open PRs**. PR #149 is merged; PRs #156 and #157 have explicit blocking implementation comments and were converted to draft. The remaining six PRs must be verified individually; none should be bulk-merged based solely on green CI.
+- **CI accounting:** at original heads, eight PRs (#147–#151, #155–#157) had complete successful 17-gate workflows; PR #158 had no CI run when this review was written. The latest `main` SHA after merging #149 must receive its own CI check; a successful prior `main` run at `27407e01` does not certify newer code.
+- **Integration order:** land reviewed documentation first; apply prerequisite authentication/security fixes before reference-shell integration; cross-test `src/App.tsx` changes from #147 and #150 together in a temporary integration worktree. Complete live catalogue/portal backend contracts only in isolated branches with synthetic staging, never production.
+- **Release safety:** issue #56 database staging/reconciliation HOLD, hosted role security validation and physical device acceptance remain unresolved. No live schema/hosting/domain/payment changes are authorized by this audit.
