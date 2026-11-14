@@ -85,6 +85,7 @@ import { listActiveDrafts, type RentalDraftRecord } from '../../actions/rentals/
 import { useDomainEvent } from '../../events/useDomainEvent'
 import { EVENT_TYPES } from '../../events/eventBus'
 const NewRental = lazy(() => import('./NewRental'))
+const Documents = lazy(() => import('../documents/Documents'))
 import { CancelRentalModal } from './modals/CancelRentalModal'
 import { FloatingBulkActionBar } from '../../components/ui/QuickActionPanel'
 import { BooqableRentalFilterDrawer } from '../../components/ui/BooqableRentalFilterDrawer'
@@ -647,7 +648,7 @@ function RowOperations({
 
             <div style={{ borderTop: '1px solid var(--border)', margin: '6px 0' }} />
 
-            {OPERATIONS.map((o) => {
+            {(OPERATIONS ?? []).map((o) => {
               // Law 3 — cancellation is `cancelled_at`, and a cancelled booking
               // runs no operation.
               const enabled = !row.isCancelled && o.enabledAt.includes(row.status)
@@ -927,9 +928,10 @@ export default function RentalsList() {
    */
   const [rawParams, setRawParams] = useSearchParams()
   const isNew = rawParams.get('action') === 'new' || rawParams.get('tab') === 'new' || Boolean(rawParams.get('draft'))
+  const isDocumentsView = rawParams.get('tab') === 'documents' || rawParams.get('view') === 'documents'
   const perPage = useMemo(() => {
     const n = Number(rawParams.get('per'))
-    return (ROWS_PER_PAGE as readonly number[]).includes(n) ? n : 20
+    return (ROWS_PER_PAGE as readonly number[] | undefined)?.includes(n) ? n : 20
   }, [rawParams])
 
   /**
@@ -966,9 +968,9 @@ export default function RentalsList() {
          agree it is not a filter. Validating it only on the way to
          `rentalsQuery` would leave the first two counting it. */
       allow: {
-        stage: ['Draft', ...STATUS_ORDER],
-        project_type: [...PROJECT_TYPES],
-        quick: Object.keys(CHIP_MEANS),
+        stage: ['Draft', ...(STATUS_ORDER ?? [])],
+        project_type: [...(PROJECT_TYPES ?? [])],
+        quick: Object.keys(CHIP_MEANS ?? {}),
         sub: ['on'],
       },
     }),
@@ -1015,7 +1017,7 @@ export default function RentalsList() {
       )
       const columns = new Set(
         (saved?.hiddenColumns ?? []).filter((column): column is OptionalColumn =>
-          (OPTIONAL_COLUMNS as readonly string[]).includes(column),
+          ((OPTIONAL_COLUMNS ?? []) as readonly string[]).includes(column),
         ),
       )
       setHiddenCols(columns)
@@ -1155,7 +1157,7 @@ export default function RentalsList() {
   const tabular = viewport !== 'phone'
 
   /** §8.3 — Total Amount is not offerable as a column when money is not visible. */
-  const optionalColumns = useMemo(() => OPTIONAL_COLUMNS.filter((c) => c !== 'Total Amount' || money), [money])
+  const optionalColumns = useMemo(() => (OPTIONAL_COLUMNS ?? []).filter((c) => c !== 'Total Amount' || money), [money])
 
   /*
    * The whole filter set: one chip plus the Status accordion, intersected.
@@ -1794,6 +1796,43 @@ export default function RentalsList() {
     )
   }
 
+  /* G-12 & R-10.9 — Documents view across all bookings hosted inside Rentals */
+  if (isDocumentsView) {
+    return (
+      <PageShell className="rentals-list-page" role="region" aria-label="Rentals Documents">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: 'var(--sp-sm) var(--sp-md)' }}>
+            <SegmentedControl
+              size="sm"
+              ariaLabel="List view"
+              options={[
+                ...(tabular ? [{ id: 'Table' as const, label: 'Table', icon: 'checklist' as const }] : []),
+                { id: 'Cards' as const, label: 'Cards', icon: 'queues' as const },
+                { id: 'Timeline' as const, label: 'Timeline', icon: 'calendar' as const },
+                { id: 'Documents' as const, label: 'Documents', icon: 'file' as const },
+              ]}
+              value="Documents"
+              onChange={(next) => {
+                if (next !== 'Documents') {
+                  setRawParams((prev) => {
+                    const p = new URLSearchParams(prev)
+                    p.delete('tab')
+                    p.delete('view')
+                    return p
+                  })
+                  setView(next as 'Table' | 'Cards' | 'Timeline')
+                }
+              }}
+            />
+          </div>
+          <Suspense fallback={<LoadingSkeleton type="table" label="Loading documents…" />}>
+            <Documents embedded={false} />
+          </Suspense>
+        </div>
+      </PageShell>
+    )
+  }
+
   return (
     <PageShell className="rentals-v2">
       {workspace && headerBulkSelection && (
@@ -2142,9 +2181,20 @@ export default function RentalsList() {
                 ...(tabular ? [{ id: 'Table' as const, label: 'Table', icon: 'checklist' as const }] : []),
                 { id: 'Cards' as const, label: 'Cards', icon: 'queues' as const },
                 { id: 'Timeline' as const, label: 'Timeline', icon: 'calendar' as const },
+                { id: 'Documents' as const, label: 'Documents', icon: 'file' as const },
               ]}
-              value={!tabular && view === 'Table' ? 'Cards' : view}
-              onChange={(next) => setView(next as 'Table' | 'Cards' | 'Timeline')}
+              value={isDocumentsView ? 'Documents' : (!tabular && view === 'Table' ? 'Cards' : view)}
+              onChange={(next) => {
+                if (next === 'Documents') {
+                  setRawParams((prev) => {
+                    const p = new URLSearchParams(prev)
+                    p.set('tab', 'documents')
+                    return p
+                  })
+                } else {
+                  setView(next as 'Table' | 'Cards' | 'Timeline')
+                }
+              }}
             />
           </span>
         }

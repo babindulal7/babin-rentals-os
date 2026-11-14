@@ -487,7 +487,8 @@ export default function App() {
           }
         />
 
-        <Route path="/documents" element={<Navigate to="/finance?tab=documents" replace />} />
+        {/* G-12 & R-10.9: Documents view is hosted in Rentals */}
+        <Route path="/documents" element={<Navigate to="/rentals?tab=documents" replace />} />
 
         <Route
           path="/operations"

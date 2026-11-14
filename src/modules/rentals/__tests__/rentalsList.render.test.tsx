@@ -758,4 +758,18 @@ describe('selected rentals use the canonical header selection mode', () => {
     await act(async () => out.click())
     expect(container.querySelector('output[aria-label="Registered selected rental count"]')?.textContent).toBe('0')
   })
+
+  it('G-12: renders Documents view across all bookings when ?tab=documents is passed', async () => {
+    await mount(1280, '/rentals?tab=documents')
+    const documentsView = container.querySelector('[aria-label="Rentals Documents"]')
+    expect(documentsView).not.toBeNull()
+  })
+
+  it('G-12: SegmentedControl includes Documents option', async () => {
+    await mount(1280, '/rentals')
+    const viewControl = container.querySelector('[aria-label="List view"]')
+    expect(viewControl).not.toBeNull()
+    const options = [...(viewControl?.querySelectorAll('button') ?? [])].map((b) => b.textContent?.trim())
+    expect(options).toContain('Documents')
+  })
 })

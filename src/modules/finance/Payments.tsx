@@ -25,6 +25,8 @@ import {
   type PaymentListRow,
 } from '../../lib/queries/finance'
 import type { Database } from '../../types/supabase'
+import DailyClosing from './DailyClosing'
+import { Modal } from '../../components/ui/Modal'
 import { RecordPaymentModal } from './modals/RecordPaymentModal'
 import { RefundPaymentModal } from './modals/RefundPaymentModal'
 import { DateField } from '../../components/ui/DateField'
@@ -474,6 +476,22 @@ export default function Payments({ embedded = false }: { embedded?: boolean }) {
 
   const [recordOpen, setRecordOpen] = useState(false)
   const [reversing, setReversing] = useState<PaymentListRow | null>(null)
+  const [closingOpen, setClosingOpen] = useState(
+    params.get('action') === 'closing' || params.get('closing') === 'true'
+  )
+
+  useEffect(() => {
+    if (params.get('action') === 'closing' || params.get('closing') === 'true') {
+      setClosingOpen(true)
+    }
+  }, [params])
+
+  const handleCloseClosing = () => {
+    setClosingOpen(false)
+    if (params.get('action') === 'closing' || params.get('closing') === 'true') {
+      patch({ action: null, closing: null })
+    }
+  }
 
   const hasLoadedInvoices = useRef(false)
   const shouldLoadInvoices = recordOpen
@@ -668,6 +686,18 @@ export default function Payments({ embedded = false }: { embedded?: boolean }) {
               ) : undefined
             }
             secondary={[
+              ...(money ? [
+                <Button
+                  key="closing"
+                  icon="checklist"
+                  aria-label="Daily Closing"
+                  data-testid="daily-closing-button"
+                  onClick={() => setClosingOpen(true)}
+                  style={{ minHeight: 'var(--tap, 44px)' }}
+                >
+                  {phone ? '' : 'Daily Closing'}
+                </Button>,
+              ] : []),
               <Button key="refresh" icon="refresh" aria-label="Refresh" onClick={refreshAll}>
                 {phone ? '' : 'Refresh'}
               </Button>,
@@ -948,6 +978,20 @@ export default function Payments({ embedded = false }: { embedded?: boolean }) {
         {railBesideList ? <Rail label="Deposits">{railContent}</Rail> : railContent}
       </div>
 
+
+      {/* Daily Closing modal (Card E-7, R-10.9) */}
+      {money && closingOpen && (
+        <Modal
+          isOpen={closingOpen}
+          onClose={handleCloseClosing}
+          title="Daily Closing"
+          size="xl"
+        >
+          <div style={{ padding: 'var(--sp-md)' }}>
+            <DailyClosing embedded />
+          </div>
+        </Modal>
+      )}
 
       {/*
         Mounted only while open, and unmounted on close: `RecordPaymentModal`

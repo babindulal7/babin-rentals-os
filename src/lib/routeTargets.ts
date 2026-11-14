@@ -10,8 +10,21 @@ export function rentalAuditLogPath(recordId: string): string {
   return AUDIT_LOG_PATH + '?' + new URLSearchParams({ recordId }).toString()
 }
 
-/** Keep query filters and hash intact when canonicalizing legacy Finance routes. */
+/** Keep query filters and hash intact when canonicalizing legacy Finance routes.
+ * R-10.9 & G-12: documents moves to Rentals; closing is an action in Payments.
+ */
 export function financeTabPath(tab: FinanceTabSlug, existingSearch = '', hash = ''): string {
+  if (tab === 'documents') {
+    const params = new URLSearchParams(existingSearch)
+    params.set('tab', 'documents')
+    return '/rentals?' + params.toString() + hash
+  }
+  if (tab === 'closing') {
+    const params = new URLSearchParams(existingSearch)
+    params.set('tab', 'payments')
+    params.set('action', 'closing')
+    return '/finance?' + params.toString() + hash
+  }
   const params = new URLSearchParams(existingSearch)
   params.set('tab', tab)
   return '/finance?' + params.toString() + hash

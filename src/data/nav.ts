@@ -447,9 +447,10 @@ export const SPEC_TABS: Record<string, string[]> = {
      lists. */
   '/inventory': ['Equipment', 'Bundles', 'Stock Check', 'Maintenance'],
 
-  /* Finance tabs: Dashboard · Invoices · Payments · Expenses · Closing · Reports.
-     Documents is a dedicated primary module in Business & Back Office. */
-  '/finance': ['Dashboard', 'Invoices', 'Payments', 'Expenses', 'Documents', 'Closing', 'Reports'],
+  /* Finance tabs: Invoices · Payments · Expenses · Reports (Card E-7, R-10.8).
+     Dashboard sits at top of Reports (R-10.9), Closing is an action in Payments (R-10.9),
+     and Documents view moves to Rentals (G-12). */
+  '/finance': ['Invoices', 'Payments', 'Expenses', 'Reports'],
 
   /* `08_CLIENTS.md` line 3 says "Directory only — no tabs." **Deliberately
      overridden, 12 Aug 2026 (user ruling).** Clients keeps Memberships.
@@ -472,13 +473,8 @@ export const SPEC_TABS: Record<string, string[]> = {
  * **Where each Finance tab actually goes.**
  */
 export const FINANCE_TAB_ROUTES: Readonly<Record<string, string | null>> = {
-  /* Both are the Finance page itself. `Finance.tsx` keys every tab off `?tab=`
-     (Dashboard is the bare URL, Invoices is `?tab=invoices`), so each tab has
-     its own address; the paths here and below are the older entry points, and
-     every `/finance/<tab>` (Closing included, since 13 Oct) redirects to
-     `/finance?tab=<tab>` in App.tsx.
-     RULING 2026-10-13: note corrected (it said "local state, not by URL"). */
-  Dashboard: '/finance',
+  /* Invoices is the default Finance landing. `Finance.tsx` keys tabs off `?tab=`
+     (Invoices is the bare URL `/finance`, Payments is `?tab=payments`, etc.). */
   Invoices: '/finance',
   /* §9.3 — `modules/finance/Payments.tsx`, added 12 Aug 2026. The receipt
      ledger with its deposits rail and the shared Record Payment modal, reading
@@ -487,8 +483,6 @@ export const FINANCE_TAB_ROUTES: Readonly<Record<string, string | null>> = {
   /* §9.4 — `modules/finance/Expenses.tsx`, added 12 Aug 2026. Reads `expenses`
      through `lib/queries/finance.ts`. */
   Expenses: '/finance/expenses',
-  Documents: '/finance/documents',
-  Closing: '/finance/closing',
   /* §9.6's catalog of 45 is not built; Pulse is the report index that exists. */
   Reports: '/reports/pulse',
 }

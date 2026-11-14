@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { recordExport } from '../../lib/exportAudit'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import Icon, { type IconName } from '../../components/ui/Icon'
 import { Card, PageHeader, PageActions, Button, Rail } from '../../components/ui/Page'
 import { ModuleSubHeader, ModuleKpiStrip, ModuleFilterBar, StatusPill } from '../../components/ui/module-shell'
@@ -50,10 +50,8 @@ import { RecordPaymentModal } from './modals/RecordPaymentModal'
 import { CreateInvoiceModal } from './modals/CreateInvoiceModal'
 import type { CreateInvoiceResult } from '../../actions/finance/createInvoice'
 import { VoidInvoiceModal } from './modals/VoidInvoiceModal'
-import Documents from '../documents/Documents'
 import Payments from './Payments'
 import Expenses from './Expenses'
-import DailyClosing from './DailyClosing'
 import { ReportCatalog } from '../reports/ReportCatalog'
 import { DateField } from '../../components/ui/DateField'
 import { exportInvoicePdf } from '../../lib/pdf/exportPdf'
@@ -258,7 +256,7 @@ const OUTSTANDING_INVOICES: ListFilters = outstandingInvoices()
  * ruling.
  */
 const FINANCE_TABS = SPEC_TABS['/finance'] ?? []
-type FinanceTab = 'Dashboard' | 'Invoices' | 'Payments' | 'Expenses' | 'Closing' | 'Documents' | 'Reports'
+type FinanceTab = 'Invoices' | 'Payments' | 'Expenses' | 'Reports'
 
 /**
  * §9.2's chip row — `(All)(Draft)(Sent)(Partially Paid)(Paid)(Overdue)(Void)`.
@@ -573,12 +571,28 @@ export default function Finance() {
    */
   const canIssueInvoice = user ? rbacCanIssueInvoice(user.role) : false
 
+  const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const tabParam = params.get('tab')?.toLowerCase()
+
+  // Redirect legacy tabs per R-10.9 & G-12
+  useEffect(() => {
+    if (tabParam === 'dashboard') {
+      navigate('/finance?tab=reports', { replace: true })
+    } else if (tabParam === 'closing') {
+      navigate('/finance?tab=payments&action=closing', { replace: true })
+    } else if (tabParam === 'documents') {
+      navigate('/rentals?tab=documents', { replace: true })
+    }
+  }, [tabParam, navigate])
+
   const tab: FinanceTab = useMemo(() => {
-    if (!tabParam) return 'Dashboard'
+    if (!tabParam) return 'Invoices'
+    if (tabParam === 'dashboard') return 'Reports'
+    if (tabParam === 'closing') return 'Payments'
+    if (tabParam === 'documents') return 'Invoices'
     const found = (FINANCE_TABS as readonly string[]).find((t) => t.toLowerCase() === tabParam)
-    return (found as FinanceTab) ?? 'Dashboard'
+    return (found as FinanceTab) ?? 'Invoices'
   }, [tabParam])
 
   const setTab = useCallback(
@@ -586,7 +600,7 @@ export default function Finance() {
       setParams(
         (prev) => {
           const p = new URLSearchParams(prev)
-          if (next === 'Dashboard') p.delete('tab')
+          if (next === 'Invoices') p.delete('tab')
           else p.set('tab', next.toLowerCase())
           return p
         },
@@ -624,9 +638,6 @@ export default function Finance() {
   const [expenseFiltersOpen, setExpenseFiltersOpen] = useState(false)
   const [expenseSearch, setExpenseSearch] = useState('')
   const [expenseFilterCount, setExpenseFilterCount] = useState(0)
-  const [documentFiltersOpen, setDocumentFiltersOpen] = useState(false)
-  const [documentSearch, setDocumentSearch] = useState('')
-  const [documentFilterCount, setDocumentFilterCount] = useState(0)
   const [reportSearch, setReportSearch] = useState('')
   const [page, setPage] = useState(1)
 
@@ -1120,6 +1131,95 @@ export default function Finance() {
     </>
   )
 
+  const dashboardCards = (
+    <div style={{ display: 'grid', gridTemplateColumns: phone ? '1fr' : 'repeat(auto-fit, minmax(360px, 1fr))', gap: 'var(--sp-md)' }}>
+      {/* §9.1's Collections by day slot (R-10.9) */}
+      <Card title="Collections by day" action={<span style={{ display: 'flex', gap: 10, alignItems: 'center' }}><BsAdDate date={period.fromAd} /><span>–</span><BsAdDate date={period.toAd} /></span>}>
+        {receivedTotal === null ? (
+          <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.6 }}>
+            {received.loading
+              ? 'Loading payments…'
+              : received.error
+                ? 'Payments for this period could not be loaded.'
+                : 'Payment records unavailable.'}
+          </p>
+        ) : dailyCollections.length === 0 ? (
+          <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.6 }}>
+            No payments received in this period.
+          </p>
+        ) : (
+          <>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, height: 190, overflowX: 'auto', overflowY: 'hidden' }} role="img" aria-label="Daily collections">
+              {dailyCollections.map((d) => (
+                <div key={d.dayAd} style={{ width: 72, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', flexShrink: 0 }}>
+                  <span className="finance-daily-bar" title={formatMoney(d.total as Paisa)} style={{ width: 32, alignSelf: 'center', height: Math.max(d.total / dailyPeak * 100, 2), minHeight: 2 }} />
+                  <span style={{ marginTop: 8, fontSize: 'var(--t-th)', textAlign: 'center' }}><BsAdDate date={d.dayAd} /></span>
+                </div>
+              ))}
+            </div>
+            {/* Law 11 — the bars are never the only statement. The
+                busiest day and the total are printed. */}
+            <p style={{ margin: '10px 0 0', fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.6 }}>
+              Collections recorded on {dailyCollections.length} day
+              {dailyCollections.length === 1 ? '' : 's'}. Busiest: <BsAdDate date={busiestDay.dayAd} layout="inline" />.
+            </p>
+          </>
+        )}
+      </Card>
+
+      {/* §9.1's OUTSTANDING INVOICES table */}
+      <Card
+        title={`Outstanding invoices${outstanding.total === null ? '' : ` (${outstanding.total})`}`}
+        bodyStyle={{ padding: 0 }}
+      >
+        <PageBody
+          loading={outstanding.loading}
+          error={outstanding.error}
+          onRetry={refreshAll}
+          hasRows={outstanding.rows.length > 0}
+          empty={outstanding.isEmpty}
+          noun="outstanding invoices"
+          skeleton="table"
+          skeletonRows={4}
+          emptyTitle="Nothing outstanding"
+          emptyMessage="All issued invoices have been settled."
+          {...restriction}
+        >
+          <DataTableShell ariaLabel="Outstanding invoices" className="finance-table-shell">
+            <table className="finance-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ background: 'var(--th-bg)' }}>
+                  {['Invoice', 'Client', 'Due', 'Outstanding'].map((h, i) => (
+                    <th key={h} style={i === 3 ? { ...th, textAlign: 'right' } : th}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {outstanding.rows.slice(0, 8).map((i) => (
+                  <tr key={i.id} className="finance-row">
+                    <td className="identifier finance-mono" style={{ ...td, color: 'var(--link)', fontWeight: 600 }}>{i.invoiceNo}</td>
+                    <td style={td}>{i.clientName}</td>
+                    <td className="finance-mono" style={{ ...td, color: 'var(--text2)' }}><BsAdDate date={i.dueDateAd} /></td>
+                    <td className="figure finance-mono" style={{ ...td, textAlign: 'right', fontWeight: 600 }}>
+                      {formatMoney(i.outstandingAmount)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </DataTableShell>
+          {outstanding.total !== null && outstanding.total > 8 && (
+            <p style={{ margin: 0, padding: '10px 14px', fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
+              The eight due soonest, of {outstanding.total}. The Invoices tab lists them all.
+            </p>
+          )}
+        </PageBody>
+      </Card>
+    </div>
+  )
+
   const headerActions = (
     <PageActions
       extra={!phone ? <BsAdDate date={dayAd} /> : undefined}
@@ -1304,22 +1404,6 @@ export default function Finance() {
             placeholder: 'Search expense no, vendor, or description… (press /)',
             ariaLabel: 'Search expenses by expense number, vendor, or description',
           },
-        } : tab === 'Documents' ? {
-          leading: !phone ? (
-            <FilterButton
-              onClick={() => setDocumentFiltersOpen((open) => !open)}
-              activeCount={documentFilterCount}
-              controls="documents-filters"
-              expanded={documentFiltersOpen}
-            />
-          ) : undefined,
-          search: {
-            value: documentSearch,
-            onChange: setDocumentSearch,
-            onClear: () => setDocumentSearch(''),
-            placeholder: 'Search in documents… (press /)',
-            ariaLabel: 'Search documents by name, ID, type, record or client',
-          },
         } : money && tab === 'Reports' ? {
           search: {
             value: reportSearch,
@@ -1332,28 +1416,22 @@ export default function Finance() {
         icon="card"
         title="Finance"
         // RULING 2026-10-21: keep Payment and information reachable at 375px.
-        searchInMore={phone && (tab === 'Dashboard' || tab === 'Invoices')}
+        searchInMore={phone && tab === 'Invoices'}
         module={tab === 'Expenses' ? 'expenses' : 'payments'}
-        {...(money && (tab === 'Dashboard' || tab === 'Invoices') ? { actions: headerActions } : phone && ((money && tab === 'Expenses') || tab === 'Documents') ? {
+        {...(money && tab === 'Invoices' ? { actions: headerActions } : phone && (money && tab === 'Expenses') ? {
           // RULING 2026-10-14: hosted Finance filters use phone More, matching Invoices and Calendar.
           actions: <PageActions overflow={[{
-            label: (tab === 'Expenses' ? expenseFilterCount : documentFilterCount) > 0
-              ? `Filters (${tab === 'Expenses' ? expenseFilterCount : documentFilterCount})`
+            label: expenseFilterCount > 0
+              ? `Filters (${expenseFilterCount})`
               : 'Filters',
             icon: 'filter',
-            onClick: () => tab === 'Expenses' ? setExpenseFiltersOpen(true) : setDocumentFiltersOpen(true),
+            onClick: () => setExpenseFiltersOpen(true),
           }]} />,
         } : {})}
       />
 
       {/*
-        §9.4 — the six tabs. Every one of them renders its screen HERE; none is
-        a link out. `overflowX` because the strip is six items wide and §9.1's
-        phone note is "tabs scroll" — it scrolls rather than wrapping or
-        truncating, so no tab becomes unreachable at 320px.
-
-        The labels come from `SPEC_TABS['/finance']`; see `FINANCE_TABS` above
-        for why, and for where the deleted fifth "Audit" tab went.
+        Finance tabs (Card E-7, R-10.8): Invoices · Payments · Expenses · Reports
       */}
       <div style={{ overflowX: 'auto', paddingBottom: 2, maxWidth: '100%' }}>
         <SegmentedControl<FinanceTab>
@@ -1363,24 +1441,11 @@ export default function Finance() {
           onChange={(next) => {
             if (next !== 'Invoices') setInvoiceFiltersOpen(false)
             if (next !== 'Expenses') setExpenseFiltersOpen(false)
-            if (next !== 'Documents') setDocumentFiltersOpen(false)
             setTab(next)
           }}
         />
       </div>
 
-      {/*
-        The four re-hosted screens.
-
-        Each is its own component with its own queries, its own money gate and
-        its own restricted state — this file hosts them and does not reach into
-        them. `embedded` strips only the duplicate title block (and, on
-        Documents, the second search field); see `TabHeader.tsx`.
-
-        Mounted here rather than inside the `PageBody` below because each screen
-        applies `financeRestriction` itself: nesting them would render the
-        restricted state twice, once from this page and once from theirs.
-      */}
       {tab === 'Payments' && <Payments embedded />}
       {tab === 'Expenses' && (
         <Expenses
@@ -1392,18 +1457,20 @@ export default function Finance() {
           onActiveFilterCountChange={setExpenseFilterCount}
         />
       )}
-      {tab === 'Closing' && <DailyClosing embedded />}
-      {tab === 'Documents' && (
-        <Documents
-          embedded
-          filtersOpen={documentFiltersOpen}
-          onFiltersClose={() => setDocumentFiltersOpen(false)}
-          searchQuery={documentSearch}
-          onSearchChange={setDocumentSearch}
-          onActiveFilterCountChange={setDocumentFilterCount}
-        />
+      {tab === 'Reports' && (
+        <PageBody noun="finance records" {...restriction}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
+            {/* Dashboard at top of Reports (Card E-7, R-10.9) */}
+            <ModuleSubHeader
+              counter={`${list.total ?? 0} invoices · ${outstanding.total ?? 0} outstanding · ${overdue.total ?? 0} overdue`}
+              loadedAt={new Date()}
+              loading={list.loading || outstanding.loading}
+            />
+            {dashboardCards}
+            <ReportCatalog searchQuery={reportSearch} onSearchChange={setReportSearch} />
+          </div>
+        </PageBody>
       )}
-      {tab === 'Reports' && <ReportCatalog searchQuery={reportSearch} onSearchChange={setReportSearch} />}
 
       {/*
         THE gate. `restricted` outranks every other state in `PageBody`, so a
@@ -1414,11 +1481,11 @@ export default function Finance() {
         list, which has its own `PageBody` inside, and a failing KPI count must
         not blank the whole page.
 
-        Scoped to the two tabs this file itself owns. The other four are mounted
+        Scoped to the Invoices tab this file owns. The other three tabs are mounted
         above and bring their own gate; rendering this one around them would
         stack two restricted states on one screen.
       */}
-      {(tab === 'Dashboard' || tab === 'Invoices') && (
+      {tab === 'Invoices' && (
       <PageBody noun="finance records" {...restriction}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
           <ModuleSubHeader
@@ -1537,128 +1604,16 @@ export default function Finance() {
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0 }}>
-              {tab === 'Dashboard' ? (
-                <>
-                  {/*
-                    §9.1's `REVENUE (chart)` slot.
+              <Card title={invoiceCardTitle} bodyStyle={{ padding: 0 }}>
+                {/*
+                  Fixed ladder: restricted → error → loading → empty → children.
+                  `restricted` is spread here as well as on the page body: this
+                  card is the surface whose empty state would otherwise read
+                  "No invoices yet" for a session that was simply refused.
 
-                    ⚠ It is titled **Collections**, not Revenue, and that is not
-                    a cosmetic choice. Revenue needs a recognition basis — is a
-                    14-day hire earned on the day it is booked, spread across the
-                    rental days, or recognised at return? `data/pulse.ts` records
-                    that question as an open TODO(decision) (`PERIOD_BASIS`), and
-                    no column in `supabase/migrations` answers it. What this
-                    screen can prove is what ARRIVED, day by day: the same
-                    `paymentsInPeriod` rows the Received KPI and the method donut
-                    are built from, bucketed by payment date.
-
-                    So the chart is real and reconciles to the KPI above it by
-                    construction, and it is labelled as the quantity it actually
-                    is rather than as the one the box is captioned.
-                  */}
-                  <Card title="Collections by day" action={<span style={{ display: 'flex', gap: 10, alignItems: 'center' }}><BsAdDate date={period.fromAd} /><span>–</span><BsAdDate date={period.toAd} /></span>}>
-                    {receivedTotal === null ? (
-                      <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.6 }}>
-                        {received.loading
-                          ? 'Loading payments…'
-                          : received.error
-                            ? 'Payments for this period could not be loaded.'
-                            : 'Payment records unavailable.'}
-                      </p>
-                    ) : dailyCollections.length === 0 ? (
-                      <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.6 }}>
-                        No payments received in this period.
-                      </p>
-                    ) : (
-                      <>
-                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, height: 190, overflowX: 'auto', overflowY: 'hidden' }} role="img" aria-label="Daily collections">
-                          {dailyCollections.map((d) => (
-                            <div key={d.dayAd} style={{ width: 72, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', flexShrink: 0 }}>
-                              <span className="finance-daily-bar" title={formatMoney(d.total as Paisa)} style={{ width: 32, alignSelf: 'center', height: Math.max(d.total / dailyPeak * 100, 2), minHeight: 2 }} />
-                              <span style={{ marginTop: 8, fontSize: 'var(--t-th)', textAlign: 'center' }}><BsAdDate date={d.dayAd} /></span>
-                            </div>
-                          ))}
-                        </div>
-                        {/* Law 11 — the bars are never the only statement. The
-                            busiest day and the total are printed. */}
-                        <p style={{ margin: '10px 0 0', fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.6 }}>
-                          Collections recorded on {dailyCollections.length} day
-                          {dailyCollections.length === 1 ? '' : 's'}. Busiest: <BsAdDate date={busiestDay.dayAd} layout="inline" />.
-                        </p>
-                      </>
-                    )}
-                  </Card>
-
-                  {/*
-                    §9.1's `OUTSTANDING INVOICES` table — `inv# │ client │ due │
-                    amount`, exactly the four columns drawn.
-
-                    It reuses the `outstandingInvoices()` query the KPI already
-                    runs, so the count in the tile and the rows in the table
-                    cannot disagree: they are the same result set, printed twice.
-                  */}
-                  <Card
-                    title={`Outstanding invoices${outstanding.total === null ? '' : ` (${outstanding.total})`}`}
-                    bodyStyle={{ padding: 0 }}
-                  >
-                    <PageBody
-                      loading={outstanding.loading}
-                      error={outstanding.error}
-                      onRetry={refreshAll}
-                      hasRows={outstanding.rows.length > 0}
-                      empty={outstanding.isEmpty}
-                      noun="outstanding invoices"
-                      skeleton="table"
-                      skeletonRows={4}
-                      emptyTitle="Nothing outstanding"
-                      emptyMessage="All issued invoices have been settled."
-                      {...restriction}
-                    >
-                      <DataTableShell ariaLabel="Outstanding invoices" className="finance-table-shell">
-                        <table className="finance-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-                          <thead>
-                            <tr style={{ background: 'var(--th-bg)' }}>
-                              {['Invoice', 'Client', 'Due', 'Outstanding'].map((h, i) => (
-                                <th key={h} style={i === 3 ? { ...th, textAlign: 'right' } : th}>
-                                  {h}
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {outstanding.rows.slice(0, 8).map((i) => (
-                              <tr key={i.id} className="finance-row">
-                                <td className="identifier finance-mono" style={{ ...td, color: 'var(--link)', fontWeight: 600 }}>{i.invoiceNo}</td>
-                                <td style={td}>{i.clientName}</td>
-                                <td className="finance-mono" style={{ ...td, color: 'var(--text2)' }}><BsAdDate date={i.dueDateAd} /></td>
-                                <td className="figure finance-mono" style={{ ...td, textAlign: 'right', fontWeight: 600 }}>
-                                  {formatMoney(i.outstandingAmount)}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </DataTableShell>
-                      {outstanding.total !== null && outstanding.total > 8 && (
-                        <p style={{ margin: 0, padding: '10px 14px', fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
-                          The eight due soonest, of {outstanding.total}. The Invoices tab lists them all.
-                        </p>
-                      )}
-                    </PageBody>
-                  </Card>
-                </>
-              ) : (
-                <>
-                <Card title={invoiceCardTitle} bodyStyle={{ padding: 0 }}>
-                  {/*
-                    Fixed ladder: restricted → error → loading → empty → children.
-                    `restricted` is spread here as well as on the page body: this
-                    card is the surface whose empty state would otherwise read
-                    "No invoices yet" for a session that was simply refused.
-
-                    `hasRows` keeps a failed REFRESH from blanking a table
-                    somebody is reading — the banner renders above the rows.
-                  */}
+                  `hasRows` keeps a failed REFRESH from blanking a table
+                  somebody is reading — the banner renders above the rows.
+                */}
                   <PageBody
                     loading={list.loading}
                     error={list.error}
@@ -1858,8 +1813,6 @@ export default function Finance() {
                     )}
                   </PageBody>
                 </Card>
-                </>
-              )}
             </div>
 
             {/*
