@@ -10,6 +10,7 @@ import { formatMoney, rupees } from '../../lib/money'
 import { businessDayAd } from '../../lib/bs'
 import { useAuth } from '../../lib/auth'
 import { getIssuedRevenueTrend, type IssuedRevenueReport } from '../../lib/queries/reportRevenueTrend'
+import { coverageNotes } from '../../lib/intel/revenueTrend'
 import { averageReportAmount, hasRevenueActivity, precedingReportWindow, reportMoneyChange } from '../../lib/intel/reportPresentation'
 import {
   ReportAreaChart,
@@ -58,8 +59,8 @@ export default function RevenueReport() {
       24
 
   const filtered = Boolean(filters.dateRange?.fromAd || filters.dateRange?.toAd)
-  const load = useLoad<IssuedRevenueReport>(() => getIssuedRevenueTrend(from, to), {
-    key: `${from}|${to}`,
+  const load = useLoad<IssuedRevenueReport>(() => getIssuedRevenueTrend(from, to, today), {
+    key: `${from}|${to}|${today}`,
     enabled: permitted && windowIsValid,
   })
 
@@ -69,8 +70,8 @@ export default function RevenueReport() {
   const previousWindow = useMemo(() => windowIsValid ? precedingReportWindow(from, to) : null, [from, to, windowIsValid])
   const priorLoad = useLoad<IssuedRevenueReport>(() => {
     if (!previousWindow) return Promise.reject(new Error('Invalid comparison window'))
-    return getIssuedRevenueTrend(previousWindow.fromAd, previousWindow.toAd)
-  }, { key: previousWindow ? `${previousWindow.fromAd}|${previousWindow.toAd}` : 'invalid', enabled: permitted && windowIsValid && compare === 'previous' })
+    return getIssuedRevenueTrend(previousWindow.fromAd, previousWindow.toAd, today)
+  }, { key: previousWindow ? `${previousWindow.fromAd}|${previousWindow.toAd}|${today}` : 'invalid', enabled: permitted && windowIsValid && compare === 'previous' })
   const prior = compare === 'previous' && previousWindow && !priorLoad.loading && !priorLoad.error && report?.fromAd === from && report.toAd === to && priorLoad.data?.fromAd === previousWindow.fromAd && priorLoad.data.toAd === previousWindow.toAd ? priorLoad.data : null
 
   const rows: ReportCsvRow[] = useMemo(() => {
@@ -92,9 +93,9 @@ export default function RevenueReport() {
       ['Paid voids needing credit review', report.creditReconciliation.paidVoidMismatchCount],
       ['Credit notes on active invoices for review', report.creditReconciliation.activeInvoiceCreditNoteCount],
       ['Month', 'Taxable value', 'Issued invoices'],
-      ...report.months.map((m) => [m.label, formatMoney(m.amountPaisa), m.invoiceCount] as ReportCsvRow),
+      ...report.months.map((m) => [m.longLabel || m.label, formatMoney(m.amountPaisa), m.invoiceCount] as ReportCsvRow),
       ['Total', formatMoney(report.totalPaisa), report.issuedCount],
-      ...(prior ? [[], ['Previous period monthly detail'], ['Month', 'Taxable value', 'Issued invoices'], ...prior.months.map(month => [month.label, formatMoney(month.amountPaisa), month.invoiceCount]), ['Total', formatMoney(prior.totalPaisa), prior.issuedCount]] as ReportCsvRow[] : []),
+      ...(prior ? [[], ['Previous period monthly detail'], ['Month', 'Taxable value', 'Issued invoices'], ...prior.months.map(month => [month.longLabel || month.label, formatMoney(month.amountPaisa), month.invoiceCount]), ['Total', formatMoney(prior.totalPaisa), prior.issuedCount]] as ReportCsvRow[] : []),
     ]
   }, [report, displayedFrom, displayedTo, compare, previousWindow, prior])
 
@@ -105,12 +106,16 @@ export default function RevenueReport() {
       periodLabel: m.label,
       value: m.amountPaisa,
       formattedValue: formatMoney(m.amountPaisa),
-      subText: `${m.invoiceCount} issued invoice${m.invoiceCount === 1 ? '' : 's'}`,
+      subText: `${m.longLabel} · ${m.invoiceCount} issued invoice${m.invoiceCount === 1 ? '' : 's'}`,
     }))
   }, [report])
 
   const averageInvoicePaisa = useMemo(() => {
     return report ? averageReportAmount(report.totalPaisa, report.issuedCount) : rupees(0)
+  }, [report])
+  const notes = useMemo(() => {
+    if (!report) return []
+    return coverageNotes(report)
   }, [report])
   const detailRows = useMemo(() => [
     ...(report?.months ?? []).map(month => ({ ...month, series: 'Current', id: `current-${month.periodStartUtc}` })),
@@ -223,7 +228,11 @@ export default function RevenueReport() {
                     basis="Actual taxable invoice amounts before VAT · AD calendar months"
                     dateWindow={`${displayedFrom} to ${displayedTo}`}
                     source="Finance · issued invoices"
-                    description="Current nonvoid invoice snapshot grouped by issue month. Later voids may restate older months. Draft and void invoices excluded. Credit notes record paid amounts, not taxable sales deductions."
+                    description={
+                      notes.length > 0
+                        ? `Current nonvoid invoice snapshot grouped by issue month. ${notes.join(' ')} Draft and void invoices excluded. Credit notes record paid amounts, not taxable sales deductions.`
+                        : "Current nonvoid invoice snapshot grouped by issue month. Later voids may restate older months. Draft and void invoices excluded. Credit notes record paid amounts, not taxable sales deductions."
+                    }
                     ariaLabel="Issued invoice revenue trend"
                     reconciliation={
                       <section aria-label="Credit-note reconciliation for selected invoice dates" style={{ marginTop: 20, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
@@ -280,7 +289,7 @@ export default function RevenueReport() {
                     getRowId={row => row.id}
                     sourceAction={<Link to="/finance?tab=invoices" style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center', color: 'var(--link)' }}>Open source invoices</Link>}
                     columns={[
-                      { id: 'period', header: 'Month', cell: row => row.label, sortValue: row => row.periodStartUtc },
+                      { id: 'period', header: 'Month', cell: row => row.longLabel || row.label, sortValue: row => row.periodStartUtc },
                       { id: 'series', header: 'Period', cell: row => row.series, sortValue: row => row.series },
                       { id: 'amount', header: 'Taxable value', align: 'right', cell: row => formatMoney(row.amountPaisa), sortValue: row => row.amountPaisa },
                       { id: 'count', header: 'Issued invoices', align: 'right', cell: row => row.invoiceCount, sortValue: row => row.invoiceCount },
