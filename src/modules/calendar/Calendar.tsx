@@ -2351,6 +2351,10 @@ export default function Calendar() {
 
   const [fullChoice, setFullChoice] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
+  // RULING 2026-11-10: R-10.12 — Calendar default: Simple month. Month view opens first; other views and filters sit behind one View menu.
+  const [viewMenuOpen, setViewMenuOpen] = useState(false)
+  const viewMenuRef = useRef<HTMLDivElement>(null)
+  const viewMenuTriggerRef = useRef<HTMLButtonElement>(null)
   const [zoom, setZoom] = useState<number>(DEFAULT_ZOOM)
   /**
    * The window's first day. `TODAY` sits one column in, as the render shows.
@@ -2486,6 +2490,34 @@ export default function Calendar() {
       document.body.style.overflow = prev
     }
   }, [full, dayOverlayOpen])
+
+  /* ── view menu dismissal on click outside or escape ─────────────────── */
+  useEffect(() => {
+    if (!viewMenuOpen) return
+    const handleClickOutside = (e: MouseEvent | PointerEvent) => {
+      const target = e.target as Node | null
+      if (
+        viewMenuRef.current &&
+        !viewMenuRef.current.contains(target) &&
+        viewMenuTriggerRef.current &&
+        !viewMenuTriggerRef.current.contains(target)
+      ) {
+        setViewMenuOpen(false)
+      }
+    }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setViewMenuOpen(false)
+        viewMenuTriggerRef.current?.focus()
+      }
+    }
+    document.addEventListener('pointerdown', handleClickOutside)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [viewMenuOpen])
 
   /* ── the one read ───────────────────────────────────────────────────────
    *
@@ -3075,7 +3107,10 @@ export default function Calendar() {
             role="tab"
             id={`calendar-view-tab-${urlSlug(v)}`}
             aria-controls={`calendar-view-panel-${urlSlug(v)}`}
-            onClick={() => setViewChoice(v)}
+            onClick={() => {
+              setViewChoice(v)
+              setViewMenuOpen(false)
+            }}
             aria-selected={on}
             tabIndex={on ? 0 : -1}
             className={`calendar-tab-btn ${on ? 'is-active' : ''}`}
@@ -3137,7 +3172,6 @@ export default function Calendar() {
    * because §5.1 asks for the overlays and the day the tables have rows this is
    * where they come back.
    */
-  const layerToggles = null
 
   /**
    * The Row Type filter — **Timeline only**.
@@ -3268,6 +3302,139 @@ export default function Calendar() {
         Quotes and drafts are provisional and do not reserve equipment.
       </span>
     </div>
+  )
+
+  // RULING 2026-11-10: R-10.12 — Calendar default: Simple month. Month view opens first; other views and filters sit behind one View menu.
+  const viewMenu = (
+    <div className="calendar-view-menu-wrapper" style={{ position: 'relative', display: 'inline-flex' }}>
+      <button
+        ref={viewMenuTriggerRef}
+        type="button"
+        data-testid="calendar-view-menu"
+        aria-label={t('calendar.actions.viewMenu', 'View menu')}
+        aria-haspopup="menu"
+        aria-expanded={viewMenuOpen}
+        onClick={() => setViewMenuOpen((v) => !v)}
+        className="calendar-view-menu-trigger"
+        style={{
+          minHeight: 'var(--tap, 44px)',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '0 12px',
+          borderRadius: 'var(--r-btn, 8px)',
+          border: '1px solid var(--border)',
+          background: viewMenuOpen ? 'var(--card2)' : 'var(--card)',
+          color: 'var(--text)',
+          fontSize: 'var(--t-meta, 13px)',
+          fontWeight: 600,
+          cursor: 'pointer',
+          fontFamily: 'inherit',
+        }}
+      >
+        <Icon name="layout" size={15} />
+        <span>{t('calendar.view', 'View')}: {viewLabel(view)}</span>
+        <Icon name={viewMenuOpen ? 'chevron_up' : 'chevron_down'} size={14} />
+        {activeFilterCount > 0 && (
+          <span
+            aria-label={`${activeFilterCount} active filters`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '1px 6px',
+              borderRadius: 10,
+              background: 'var(--accent, #3182ce)',
+              color: '#fff',
+              fontSize: 11,
+              fontWeight: 700,
+            }}
+          >
+            {activeFilterCount}
+          </span>
+        )}
+      </button>
+
+      <div
+        ref={viewMenuRef}
+        role="region"
+        aria-label="View and filters menu"
+        data-testid="calendar-view-menu-dropdown"
+        className="calendar-view-menu-dropdown"
+        style={{
+          display: viewMenuOpen ? 'flex' : 'none',
+          position: 'absolute',
+          top: 'calc(100% + 6px)',
+          left: 0,
+          zIndex: 'var(--z-dropdown, 50)',
+          minWidth: 320,
+          maxWidth: 'min(90vw, 420px)',
+          flexDirection: 'column',
+          gap: 12,
+          padding: 14,
+          borderRadius: 'var(--r-card, 10px)',
+          background: 'var(--card)',
+          border: '1px solid var(--border)',
+          boxShadow: 'var(--shadow-md, 0 4px 14px rgba(0,0,0,0.12))',
+        }}
+      >
+        <div>
+          <div style={{ fontSize: 'var(--t-th)', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+            {t('calendar.viewMode', 'View Mode')}
+          </div>
+          {viewTabs}
+        </div>
+
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+          <div style={{ fontSize: 'var(--t-th)', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+            {t('calendar.viewFilters', 'View Filters')}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {kindChips}
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+              {rowTypeControl}
+              {clientControl}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
+  const activeFilterBadge = activeFilterCount > 0 && (
+    <span
+      className="calendar-active-filter-badge"
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '4px 10px',
+        borderRadius: 'var(--r-badge)',
+        background: 'var(--st-primary-bg)',
+        color: 'var(--st-primary-fg)',
+        fontSize: 'var(--t-th)',
+        fontWeight: 600,
+      }}
+    >
+      <Icon name="filter" size={13} />
+      <span>{activeFilterCount} filter{activeFilterCount === 1 ? '' : 's'} active</span>
+      <button
+        type="button"
+        onClick={clearAll}
+        aria-label="Clear all active filters"
+        style={{
+          background: 'none',
+          border: 'none',
+          color: 'inherit',
+          cursor: 'pointer',
+          padding: 0,
+          display: 'inline-flex',
+          alignItems: 'center',
+        }}
+      >
+        <Icon name="close" size={12} />
+      </button>
+    </span>
   )
 
   const markerLegend = (
@@ -3927,13 +4094,21 @@ export default function Calendar() {
 
         {monthStepNote}
 
-        <div style={{ display: 'flex', gap: 'var(--sp-md)', alignItems: 'center', flexWrap: 'wrap' }}>
-          {viewTabs}
-          {layerToggles}
-          <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-            {rowTypeControl}
-            {clientControl}
-          </span>
+        {/* RULING 2026-11-10: R-10.12 — Calendar default: Simple month.
+            Month view opens first; other views and filters sit behind one View menu. */}
+        <div className="calendar-view-bar" style={{ display: 'flex', gap: 'var(--sp-md)', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', position: 'relative' }}>
+          <div style={{ display: 'flex', gap: 'var(--sp-sm)', alignItems: 'center', flexWrap: 'wrap' }}>
+            {viewMenu}
+            {activeFilterBadge}
+          </div>
+          {view !== 'Month' && (
+            <div style={{ fontSize: 'var(--t-th)', color: 'var(--muted)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <span>Active view: <strong>{viewLabel(view)}</strong></span>
+              <Button size="sm" onClick={() => setViewChoice('Month')}>
+                Return to Simple Month
+              </Button>
+            </div>
+          )}
         </div>
 
         <div
@@ -4135,25 +4310,32 @@ export default function Calendar() {
           comment in a JSX children position it is a string literal, and it
           rendered on the calendar as visible body text. */}
 
-      {(viewTabs || layerToggles || desktop) && (
-        <div style={{ display: 'flex', gap: 'var(--sp-md)', alignItems: 'center', flexWrap: 'wrap' }}>
-          {viewTabs}
-          {layerToggles}
-          {/* Below 1280 these two live in the Filters panel instead of doubling
-              in the header — the same controls, one place. */}
-          {desktop && (
-            <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-              {rowTypeControl}
-              {clientControl}
-            </span>
-          )}
+      {/* RULING 2026-11-10: R-10.12 — Calendar default: Simple month.
+          Month view opens first; other views and filters sit behind one View menu. */}
+      <div
+        className="calendar-view-bar"
+        style={{
+          display: 'flex',
+          gap: 'var(--sp-md)',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          position: 'relative',
+        }}
+      >
+        <div style={{ display: 'flex', gap: 'var(--sp-sm)', alignItems: 'center', flexWrap: 'wrap' }}>
+          {viewMenu}
+          {activeFilterBadge}
         </div>
-      )}
-
-      {/* The event-type chip row is a desktop affordance; §5.1 puts filters
-          behind `[filters ▾]`, and twelve chips ahead of the grid on a phone is
-          a scroll, not a filter. Below 1280 they render inside Filters. */}
-      {desktop && <div style={{ display: 'flex', gap: 'var(--sp-sm)', alignItems: 'center', flexWrap: 'wrap' }}>{kindChips}</div>}
+        {view !== 'Month' && (
+          <div style={{ fontSize: 'var(--t-th)', color: 'var(--muted)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span>Active view: <strong>{viewLabel(view)}</strong></span>
+            <Button size="sm" onClick={() => setViewChoice('Month')}>
+              Return to Simple Month
+            </Button>
+          </div>
+        )}
+      </div>
 
       {desktop ? (
         <div

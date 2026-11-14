@@ -462,3 +462,56 @@ button.calendar-agenda-item:hover {
 .calendar-mini-day.is-weekend {
   color: var(--danger-text);
 }
+
+/* ── Calendar View Menu (R-10.12 Card E-6) ───────────────────────────────── */
+.calendar-view-bar {
+  display: flex;
+  gap: var(--sp-md, 12px);
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  position: relative;
+}
+
+.calendar-view-menu-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.calendar-view-menu-trigger {
+  min-height: var(--tap, 44px);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border-radius: var(--r-btn, 8px);
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  font-size: var(--t-meta, 13px);
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all var(--dur-fast, 150ms) var(--ease);
+}
+
+.calendar-view-menu-trigger:hover {
+  background: var(--hover-card, rgba(0, 0, 0, 0.03));
+  border-color: var(--border2, var(--border));
+}
+
+.calendar-view-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: var(--z-dropdown, 50);
+  min-width: 320px;
+  max-width: min(90vw, 420px);
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--r-card, 10px);
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md, 0 4px 14px rgba(0, 0, 0, 0.12));
+}
