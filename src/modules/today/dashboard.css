@@ -3327,6 +3327,30 @@
   gap: 6px;
 }
 
+/* RULING 2026-11-10: R-10.5, G-6 — Today is glance-only; row opens the booking */
+.rental-dashboard .rental-dashboard__panels .movement-card__view-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: var(--r-btn, 8px);
+  border: 1px solid var(--border);
+  background: var(--surface-2, var(--card));
+  color: var(--text);
+  font-size: var(--t-meta, 13px);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: all var(--dur-fast, 120ms) var(--ease);
+}
+
+.rental-dashboard .rental-dashboard__panels .movement-card__view-btn:hover {
+  background: var(--surface-hover, var(--border));
+  color: var(--text);
+}
+
 .rental-dashboard .rental-dashboard__panels .movement-card .movement-card__cta-btn {
   width: auto;
   margin-left: 0;

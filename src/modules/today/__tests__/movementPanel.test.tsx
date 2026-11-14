@@ -45,33 +45,36 @@ describe('movement board task clarity', () => {
     await mount()
     expect(host.textContent).not.toContain('Return scheduled')
     expect(host.textContent).not.toContain('Due today')
-    expect(host.textContent).toContain('Return & Inspect')
     expect(host.textContent).toContain('8 items booked')
     expect(host.textContent).not.toContain('outstanding')
   })
-  it('shows the pickup date for multi-day filters and allows 1-click packing', async () => {
+  it('shows the pickup date for multi-day filters and provides glance view link to the booking (R-10.5, G-6)', async () => {
     await mount({ status: 'Booked' }, 'outgoing')
     expect(host.querySelector('.movement-card__time')?.textContent).toMatch(/22 Sept? 2026/)
-    const action = host.querySelector<HTMLButtonElement>('.movement-card__cta-btn')!
-    expect(action.textContent).toBe('Start Packing')
-    expect(action.getAttribute('aria-label')).toContain('Start Packing')
+    const viewBtn = host.querySelector<HTMLAnchorElement>('.movement-card__view-btn')!
+    expect(viewBtn).not.toBeNull()
+    expect(viewBtn.getAttribute('href')).toBe('/rentals/B-901')
+    expect(viewBtn.getAttribute('aria-label')).toContain('View booking B-901')
+    // Per R-10.5 & G-6: work buttons (Pack, Handover, Return, Reset) do NOT render on Today rows
+    expect(host.querySelector('.movement-card__cta-btn')).toBeNull()
     expect(host.textContent).not.toContain('unchecked')
-    await act(async () => action.click())
-    expect(openOperations).toHaveBeenCalledWith('B-901', 'Booked', 'Pack')
   })
-  it('uses a native detail link separate from the operational action', async () => {
+  it('uses a native detail link to open the booking (R-10.5, G-6)', async () => {
     await mount()
     expect(host.querySelector('article[role="link"]')).toBeNull()
     expect(host.querySelector('a')?.textContent).toContain('AV Production')
     expect(host.querySelector('a')?.getAttribute('href')).toBe('/clients/client-1')
     expect(host.querySelector('a[href="/rentals/B-901"]')).not.toBeNull()
-    await act(async () => host.querySelector<HTMLButtonElement>('.movement-card__cta-btn')!.click())
-    expect(openOperations).toHaveBeenCalledWith('B-901', 'On Rent', 'Return')
+    const viewBtn = host.querySelector<HTMLAnchorElement>('.movement-card__view-btn')!
+    expect(viewBtn.getAttribute('href')).toBe('/rentals/B-901')
   })
-  it('keeps overdue status explicit and opens the gated handover workspace for packed rentals', async () => {
+  it('keeps overdue status explicit and maintains glance-only navigation to booking (R-10.5, G-6)', async () => {
     await mount({ status: 'Packed', flags: ['Overdue'], statusNote: '1 day late' }, 'outgoing')
-    await act(async () => host.querySelector<HTMLButtonElement>('.movement-card__cta-btn')!.click())
-    expect(openOperations).toHaveBeenCalledWith('B-901', 'Packed', 'Handover')
+    const viewBtn = host.querySelector<HTMLAnchorElement>('.movement-card__view-btn')!
+    expect(viewBtn).not.toBeNull()
+    expect(viewBtn.getAttribute('href')).toBe('/rentals/B-901')
+    // No work buttons on Today
+    expect(host.querySelector('.movement-card__cta-btn')).toBeNull()
   })
   it('exposes truthful page progress and a single load-more action when more rows exist', async () => {
     const onLoadMore = vi.fn()
@@ -143,10 +146,10 @@ describe('one row, each fact once (ruled 15 Oct 2026)', () => {
     expect(status[0]!.closest('.movement-card__badge-wrap')).not.toBeNull()
   })
 
-  it("keeps main's overflow menu beside the verb, in one actions cell", async () => {
+  it("keeps overflow menu beside the view link, in one actions cell", async () => {
     await mount()
     const actions = card().querySelector('.movement-card__actions')!
-    expect(actions.querySelector('.movement-card__cta-btn')).not.toBeNull()
+    expect(actions.querySelector('.movement-card__view-btn')).not.toBeNull()
     expect(actions.querySelector('button[aria-label="More actions for booking B-901"]')).not.toBeNull()
   })
 
@@ -180,12 +183,12 @@ describe('one row, each fact once (ruled 15 Oct 2026)', () => {
     expect(visibleText(card())).not.toMatch(/2083|2026/)
   })
 
-  it('keeps the floor verb one tap from the row (R-39 row 2)', async () => {
+  it('Today is glance only: row opens the booking and has no floor work verbs (R-10.5, G-6)', async () => {
     await mount({ flags: ['Overdue'], statusNote: '86 days late', atDayAd: '2026-07-21' })
-    const verb = card().querySelector<HTMLButtonElement>(':scope > .movement-card__actions > .movement-card__cta-btn')!
-    expect(verb.textContent).toBe('Return & Inspect')
-    await act(async () => verb.click())
-    expect(openOperations).toHaveBeenCalledWith('B-901', 'On Rent', 'Return')
+    expect(card().querySelector('.movement-card__cta-btn')).toBeNull()
+    const viewBtn = card().querySelector<HTMLAnchorElement>('.movement-card__view-btn')!
+    expect(viewBtn).not.toBeNull()
+    expect(viewBtn.getAttribute('href')).toBe('/rentals/B-901')
   })
 })
 

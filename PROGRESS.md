@@ -1,5 +1,50 @@
 # Progress Log
 
+## 2026-11-14 — Card E-2: Today = glance, Operations = work (R-10.5, G-6)
+
+**Did**
+- Implemented R-10.5 and G-6 ruling: "Today = glance, Operations = work". Today is a dashboard for counts and alerts; execution verbs live in Operations (`/operations`).
+- Removed execution action buttons (`Start Packing`, `Handover`, `Return & Inspect`, `Cleaning & Reset`, `Pack`, `Return`) from movement card rows on Today in `DashboardMovementPanel.tsx` and `MovementList.tsx`.
+- Replaced action verb with a 44px accessible "View Booking" link navigating directly to `/rentals/${bookingNo}` on each movement card.
+- Retained `OverflowMenu` for secondary actions (View Booking, Reschedule Dates) without floor work CTAs.
+- Added styled `.movement-card__view-btn` in `dashboard.css` with WCAG AA compliance (44px min-height tap target, theme-aware palette).
+- Updated `src/modules/today/__tests__/movementPanel.test.tsx` verifying Today movement rows do not render floor work CTAs and provide direct booking navigation.
+
+**Ruled**
+- R-10.5 & G-6: Today = glance, Operations = work. Confirmed: work buttons live exclusively in Operations; Today movement rows open the booking.
+- Three-place log (B-2): (1) `RULINGS-2026-11-10.md` and `RULINGS-2026-11-10-design.md` present in repo root; (2) logged here under Ruled; (3) code-site comments `// RULING 2026-11-10: G-6, R-10.5` added in `DashboardMovementPanel.tsx`, `MovementList.tsx`, and `dashboard.css`.
+
+**Verified**
+- `npm run typecheck`: exit 0.
+- `npm run lint`: exit 0 (0 warnings).
+- `vitest run src/modules/today/__tests__/`: 9 test files, 160/160 tests passed.
+- `vitest run src/__tests__/`: 9 test files, 68/68 E2E tests passed.
+- `npm run lint:shell`: exit 0 (875 files checked, 0 violations).
+- `npm run lint:ui-copy`: exit 0 (0 developer-text violations, 12 test assertions passed).
+- `npm run check:contrast`: exit 0 (97/97 tests passed, 0 failures).
+- `npm run build`: exit 0 (`tsc --noEmit && vite build` built in 1m 14s, dist/ ready).
+- `npm run completion`: exit 0.
+- `npm run lint:progress`: exit 0.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 233 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Card E-2 is complete on `lane-b/card-e2-today-glance`.
+- Next design / ease-of-use cards in sequence: Card E-4 (Floor screens: Pack, Handover, Return, Reset: Scan + list + 1 primary verb button, R-10.7), Card E-3 (Booking Detail 4 tabs, R-10.6), Card E-5 (Delivery screen, R-10.11), Card E-6 (Calendar simple default, R-10.12), Card E-7 (Finance tabs, R-10.8, R-10.9, G-12).
+
 ## 2026-11-12 — Add the 10 Nov ease-of-use rulings file (docs only, PR #149)
 
 **Did**

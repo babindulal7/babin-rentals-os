@@ -456,7 +456,7 @@ export default function MovementList({
   badge,
   badgeStatus,
   list,
-  side,
+  side: _side,
   noun,
   periodLabel,
   viewAll,
@@ -464,7 +464,6 @@ export default function MovementList({
   filteredByChips,
 }: MovementListProps) {
   const navigate = useNavigate()
-  const { openOperations } = useOperationsWorkspace()
   /* Law 14 — width decides. Below 768 the row is a card, not a table row; the
      `.movement-row` grid in `styles/theme.css` has no phone breakpoint and this
      file may not add one, so the arrangement branches here instead. */
@@ -601,9 +600,6 @@ export default function MovementList({
                 })}
         >
           {shown.map((r, i) => {
-            /* Spec 02 Notes — one primary button per row. `primaryFor` picks the
-               single next step and nothing else on the row is a filled button. */
-            const primary = primaryFor(r, side)
             const clock = timeOf(r).split(' ')
 
             const bookingChip = (
@@ -670,18 +666,11 @@ export default function MovementList({
               </span>
             )
 
+            {/* RULING 2026-11-10: G-6, R-10.5 — Today is glance-only. Row opens the booking. */}
             const primaryButton = (
               <Link
-                to={primary.to}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  const job = primary.label === 'Pack' ? 'Pack' : primary.label === 'Handover' ? 'Handover' : primary.label === 'Return' ? 'Return' : null
-                  if (job) {
-                    e.preventDefault()
-                    openOperations(r.bookingNo, r.status, job)
-                  }
-                }}
-                aria-label={`${primary.hint} for ${r.client}, booking ${r.bookingNo}`}
+                to={`/rentals/${r.bookingNo}`}
+                aria-label={`View booking ${r.bookingNo}`}
                 className="press"
                 style={{
                   display: 'inline-flex',
@@ -691,17 +680,17 @@ export default function MovementList({
                   minWidth: phone ? 128 : 78,
                   padding: '0 14px',
                   borderRadius: 'var(--r-btn)',
-                  background: 'var(--btn-primary-bg)',
-                  color: 'var(--btn-primary-fg)',
-                  border: '1px solid transparent',
+                  background: 'var(--surface-2, var(--card))',
+                  color: 'var(--text)',
+                  border: '1px solid var(--border)',
                   fontSize: 'var(--t-meta)',
-                  fontWeight: 700,
+                  fontWeight: 600,
                   textDecoration: 'none',
                   whiteSpace: 'nowrap',
                   flexShrink: 0,
                 }}
               >
-                {primary.label}
+                View Booking
               </Link>
             )
 

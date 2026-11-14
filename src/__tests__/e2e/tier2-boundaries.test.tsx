@@ -235,9 +235,11 @@ describe('Tier 2: Boundaries, Corner Cases & Guardrails', () => {
       const card = container.querySelector('.movement-card--overdue')
       expect(card).not.toBeNull()
       expect(container.textContent).toContain('2 days overdue')
-      const action = container.querySelector<HTMLButtonElement>('.movement-card__cta-btn')
-      expect(action).not.toBeNull()
-      expect(action?.textContent).toContain('Return')
+      // RULING 2026-11-10: R-10.5, G-6 — Today is glance-only: opens booking, no floor verbs
+      const viewLink = container.querySelector<HTMLAnchorElement>('.movement-card__view-btn')
+      expect(viewLink).not.toBeNull()
+      expect(viewLink?.getAttribute('href')).toBe('/rentals/BK-2026-0901')
+      expect(container.querySelector('.movement-card__cta-btn')).toBeNull()
     })
   })
 

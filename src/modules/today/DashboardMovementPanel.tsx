@@ -8,13 +8,12 @@ import { PageBody } from '../../components/ui/PageBody'
 import { OverflowMenu } from '../../components/ui/OverflowMenu'
 import { businessDayAd, has, movementAtAd, timeOf, type MovementRow } from '../../lib/queries/today'
 import type { ListResult } from '../../lib/queries/useList'
-import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext'
 import { useAuth } from '../../lib/auth'
 import { gateContext } from '../../lib/fieldGating'
 import { IntelCard } from '../../components/ui/IntelCard'
 import { movementGlance, movementDetail } from '../../data/movementIntel'
 import { ClientIntelFromId } from '../../components/intel/ClientIntelFromId'
-import type { BookingStatus, JobName } from '../../lib/workflow'
+import type { JobName } from '../../lib/workflow'
 
 interface DashboardMovementPanelProps {
   side: 'outgoing' | 'incoming'
@@ -104,7 +103,6 @@ export default function DashboardMovementPanel({
   tabId,
 }: DashboardMovementPanelProps) {
   const navigate = useNavigate()
-  const { openOperations } = useOperationsWorkspace()
   const { user } = useAuth()
   const intelGate = useMemo(() => gateContext(user?.role ?? 'Client'), [user?.role])
   const count = list.loading || list.error ? '—' : String(list.total ?? list.rows.length)
@@ -249,10 +247,7 @@ export default function DashboardMovementPanel({
           ) : (
             <div className="movement-cards-list">
               {rows.map((row, rowIndex) => {
-                const action = dashboardAction(row, side)
                 const isOverdue = has(row, 'Overdue')
-                const isReady = row.status === 'Packed'
-                const actionLabel = action.label
                 const isPartial =
                   (row.status ?? '').toLowerCase().includes('partial') ||
                   (row.statusNote ?? '').toLowerCase().includes('partial') ||
@@ -368,18 +363,18 @@ export default function DashboardMovementPanel({
                       )}
                     </div>
 
+                    {/* RULING 2026-11-10: R-10.5, G-6 — Today = glance, Operations = work.
+                        Today shows counts and alerts only. Pack / Handover / Return / Reset buttons
+                        live in Operations. A Today row opens the booking. */}
                     <div className="movement-card__actions">
-                      <button
-                        type="button"
-                        className={`movement-card__cta-btn ${(side === 'incoming' || isReady) ? 'is-dominant' : 'is-prep'}`}
-                        onClick={() => {
-                          const bookingStatus: BookingStatus = (row.status as BookingStatus) || (side === 'incoming' ? 'On Rent' : 'Booked')
-                          openOperations(row.bookingNo, bookingStatus, action.job)
-                        }}
-                        aria-label={`${actionLabel} for ${row.client}, booking ${row.bookingNo}`}
+                      <Link
+                        to={`/rentals/${row.bookingNo}`}
+                        className="movement-card__view-btn press tap"
+                        aria-label={`View booking ${row.bookingNo}`}
                       >
-                        <span>{actionLabel}</span><Icon name="arrow_right" size={15} />
-                      </button>
+                        <span>View Booking</span>
+                        <Icon name="arrow_right" size={14} />
+                      </Link>
                       <OverflowMenu
                         ariaLabel={`More actions for booking ${row.bookingNo}`}
                         items={[
@@ -392,14 +387,6 @@ export default function DashboardMovementPanel({
                             label: 'Reschedule Dates',
                             icon: 'calendar',
                             onClick: () => navigate(`/rentals/${row.bookingNo}`),
-                          },
-                          {
-                            label: 'Cancel No-Show',
-                            icon: 'close',
-                            onClick: () => {
-                              const bookingStatus: BookingStatus = (row.status as BookingStatus) || (side === 'incoming' ? 'On Rent' : 'Booked')
-                              openOperations(row.bookingNo, bookingStatus, action.job)
-                            },
                           },
                         ]}
                       />
