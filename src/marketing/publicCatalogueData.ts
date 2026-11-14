@@ -2,6 +2,7 @@ import { toBs, formatBs, kathmanduCivil } from '../lib/bs'
 import { rentalDaysBetween } from '../lib/rentalDays'
 import { rupees, type Paisa } from '../lib/money'
 
+/** Prototype records are NOT public, server-authoritative inventory records. */
 export interface PublicCatalogueItem {
   id: string
   name: string
@@ -245,57 +246,71 @@ export type CatalogueAvailabilityStatus = 'available' | 'unavailable' | 'unknown
 export interface CatalogueItemAvailability {
   status: CatalogueAvailabilityStatus
   isAvailable: boolean
-  /**
-   * Internal bookable count for calculations.
-   * Law §2: NEVER disclose to the public customer UI.
-   */
-  bookableCount?: number
+}
+
+/** Kathmandu civil dates must never be derived from a UTC ISO slice. */
+export function rentalPresetDates(now: Date, daysSpan: number): { pickupDate: string; returnDate: string } {
+  if (!Number.isInteger(daysSpan) || daysSpan < 1) throw new Error('Rental preset must be a positive day count')
+  const todayCivil = kathmanduCivil(now)
+  return {
+    pickupDate: new Date(todayCivil + 86_400_000).toISOString().slice(0, 10),
+    returnDate: new Date(todayCivil + (daysSpan + 1) * 86_400_000).toISOString().slice(0, 10),
+  }
 }
 
 /**
- * Derives equipment availability for a fully-selected schedule.
- * Gated strictly on schedule validity. If not fully selected, availability is LOCKED.
- * Never leaks raw stock counts or internal identifiers to public consumers.
+ * Never infer a free unit from fixture stock. Only server-sourced availability
+ * for the exact selected instant range may produce 'available' or 'unavailable'.
  */
 export function getCatalogueItemAvailability(
-  item: PublicCatalogueItem,
+  _item: PublicCatalogueItem,
   schedule: PublicScheduleEvaluation,
+  verifiedStatus?: CatalogueAvailabilityStatus,
 ): CatalogueItemAvailability | null {
-  if (!schedule.isFullySelected || !schedule.rentalDays || schedule.rentalDays < 1) {
-    return null
-  }
-
-  // Authoritative availability based on stock and commitments
-  const booked = item.bookedCount ?? 0
-  const bookable = Math.max(0, item.totalStock - booked)
-  const isAvailable = bookable > 0
-
-  return {
-    status: isAvailable ? 'available' : 'unavailable',
-    isAvailable,
-    bookableCount: bookable,
-  }
+  if (!schedule.isFullySelected || !schedule.rentalDays || schedule.rentalDays < 1) return null
+  const status = verifiedStatus === 'available' || verifiedStatus === 'unavailable'
+    ? verifiedStatus
+    : 'unknown'
+  return { status, isAvailable: status === 'available' }
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
 /**
- * Simulated or RPC-backed query contract for bulk catalogue availability.
- * In accordance with Unified Launch Plan §2: returns available/unavailable/unknown.
- * Unknown is NOT available.
+ * Read-only public availability contract. Unknown is NOT a bookable state.
+ * The prototype's PUB-* fixture IDs are deliberately excluded; real catalogue
+ * UUIDs must come from public_catalogue_v before the RPC can confirm stock.
+ * An absent RPC, rejected permissions, malformed response or network failure
+ * stays unknown. Never fall back to totalStock/bookedCount.
  */
 export async function queryCatalogueAvailability(
   items: PublicCatalogueItem[],
   schedule: PublicScheduleEvaluation,
 ): Promise<Map<string, CatalogueAvailabilityStatus>> {
   const result = new Map<string, CatalogueAvailabilityStatus>()
+  if (!schedule.isFullySelected || !schedule.pickupIso || !schedule.returnIso) return result
+  for (const item of items) result.set(item.id, 'unknown')
+  if (items.length === 0 || !items.every(item => UUID_RE.test(item.id))) return result
 
-  if (!schedule.isFullySelected || !schedule.rentalDays || schedule.rentalDays < 1) {
-    return result
+  try {
+    const { supabase, IS_MOCK } = await import('../lib/supabase')
+    if (IS_MOCK) return result
+    const { data, error } = await supabase.rpc('public_availability', {
+      product_ids: items.map(item => item.id),
+      from: schedule.pickupIso,
+      to: schedule.returnIso,
+    })
+    if (error || !Array.isArray(data)) return result
+    for (const row of data) {
+      if (!row || typeof row !== 'object') continue
+      const record = row as Record<string, unknown>
+      const productId = record['product_id']
+      const status = record['status']
+      if (typeof productId !== 'string' || !result.has(productId)) continue
+      if (status === 'available' || status === 'unavailable') result.set(productId, status)
+    }
+  } catch {
+    // Public availability is not provisioned yet; fail closed, never expose fixtures.
   }
-
-  for (const item of items) {
-    const avail = getCatalogueItemAvailability(item, schedule)
-    result.set(item.id, avail ? avail.status : 'unknown')
-  }
-
   return result
 }

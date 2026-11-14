@@ -1,11 +1,13 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   PUBLIC_CATALOGUE_ITEMS,
   evaluatePublicSchedule,
   getCatalogueItemAvailability,
+  queryCatalogueAvailability,
+  rentalPresetDates,
+  type CatalogueAvailabilityStatus,
   type PublicScheduleState,
 } from './publicCatalogueData'
-import { formatMoney } from '../lib/money'
 
 const CATEGORIES = ['All', 'Camera', 'Lens', 'Lighting', 'Support', 'Audio', 'Power', 'Media'] as const
 
@@ -21,6 +23,18 @@ export default function PublicGearCatalogue() {
   const [searchQuery, setSearchQuery] = useState('')
 
   const evaluation = useMemo(() => evaluatePublicSchedule(schedule), [schedule])
+  const [verifiedStatuses, setVerifiedStatuses] = useState<Map<string, CatalogueAvailabilityStatus>>(new Map())
+
+  useEffect(() => {
+    let active = true
+    setVerifiedStatuses(new Map())
+    if (evaluation.isFullySelected) {
+      void queryCatalogueAvailability(PUBLIC_CATALOGUE_ITEMS, evaluation).then(statuses => {
+        if (active) setVerifiedStatuses(statuses)
+      })
+    }
+    return () => { active = false }
+  }, [evaluation.pickupIso, evaluation.returnIso, evaluation.isFullySelected])
 
   const filteredItems = useMemo(() => {
     return PUBLIC_CATALOGUE_ITEMS.filter((item) => {
@@ -36,12 +50,7 @@ export default function PublicGearCatalogue() {
 
   const handleDatePreset = (daysSpan: number) => {
     // Current business baseline or forward anchor
-    const base = new Date()
-    const pDate = new Date(base.getTime() + 86400000) // tomorrow
-    const rDate = new Date(pDate.getTime() + daysSpan * 86400000)
-
-    const pStr = pDate.toISOString().slice(0, 10)
-    const rStr = rDate.toISOString().slice(0, 10)
+    const { pickupDate: pStr, returnDate: rStr } = rentalPresetDates(new Date(), daysSpan)
 
     setSchedule({
       pickupDate: pStr,
@@ -59,11 +68,11 @@ export default function PublicGearCatalogue() {
           Public Gear Catalogue
         </div>
         <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-bone">
-          Live Inventory &amp; Production Gear
+          Production Gear Catalogue Preview
         </h2>
         <p className="mt-4 text-base sm:text-lg text-ash">
-          Select both pickup and return date &amp; time to unlock live gear availability, bookable stock counts,
-          and transparent daily rates in Kathmandu (+05:45 NPT).
+          Select pickup and return dates and times. Live stock and approved rates are not yet connected;
+          availability remains unconfirmed until the server verifies it.
         </p>
       </div>
 
@@ -212,7 +221,7 @@ export default function PublicGearCatalogue() {
           ) : (
             <div data-testid="schedule-locked-notice" className="text-sm text-ash/80 flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-amber-400/80" />
-              Pick both pickup and return date &amp; time above to check live availability &amp; stock.
+              Pick both pickup and return date &amp; time to request availability verification.
             </div>
           )}
 
@@ -257,7 +266,7 @@ export default function PublicGearCatalogue() {
       {/* Gear Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
         {filteredItems.map((item) => {
-          const avail = getCatalogueItemAvailability(item, evaluation)
+          const avail = getCatalogueItemAvailability(item, evaluation, verifiedStatuses.get(item.id))
 
           return (
             <article
@@ -350,19 +359,9 @@ export default function PublicGearCatalogue() {
               {/* Price & Action Footer */}
               <div className="p-6 pt-0 mt-4 border-t border-slate-line/50 flex items-center justify-between gap-4">
                 <div>
-                  <div className="font-mono text-xs text-ash/60">
-                    {evaluation.rentalDays && evaluation.rentalDays > 1
-                      ? `Estimated rate (${evaluation.rentalDays} rental days)`
-                      : 'Rate per rental day'}
-                  </div>
-                  <div className="font-display text-lg font-bold text-bone">
-                    Rs{' '}
-                    {formatMoney(
-                      evaluation.rentalDays && evaluation.rentalDays > 1
-                        ? ((item.dailyRatePaisa * evaluation.rentalDays) as import('../lib/money').Paisa)
-                        : item.dailyRatePaisa,
-                    )}
-                    <span className="text-xs font-normal text-ash/70 ml-1">+ VAT</span>
+                  <div className="font-mono text-xs text-ash/60">Approved rental rate</div>
+                  <div className="font-display text-sm font-semibold text-bone">
+                    Confirm with Babin Rentals
                   </div>
                 </div>
 

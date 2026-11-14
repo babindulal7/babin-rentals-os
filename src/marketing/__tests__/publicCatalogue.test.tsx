@@ -7,6 +7,8 @@ import {
   evaluatePublicSchedule,
   getCatalogueItemAvailability,
   PUBLIC_CATALOGUE_ITEMS,
+  queryCatalogueAvailability,
+  rentalPresetDates,
 } from '../publicCatalogueData'
 
 ;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
@@ -105,7 +107,7 @@ describe('Issue #153 Acceptance: Public Gear Catalogue & Gating', () => {
       expect(lockedBadges.length).toBe(PUBLIC_CATALOGUE_ITEMS.length)
     })
 
-    it('unlocks availability and stock counts when valid pickup and return are selected', async () => {
+    it('keeps availability unknown when valid dates are entered but live stock is not proven', async () => {
       await mount()
       const pickupDateInput = container.querySelector<HTMLInputElement>('[data-testid="pickup-date-input"]')!
       const returnDateInput = container.querySelector<HTMLInputElement>('[data-testid="return-date-input"]')!
@@ -122,11 +124,28 @@ describe('Issue #153 Acceptance: Public Gear Catalogue & Gating', () => {
       const lockedBadges = container.querySelectorAll('[data-testid="availability-locked-badge"]')
       expect(lockedBadges.length).toBe(0)
 
-      const unlockedBadges = container.querySelectorAll('[data-testid="availability-unlocked-badge"]')
-      expect(unlockedBadges.length).toBeGreaterThan(0)
-      expect(unlockedBadges[0]?.textContent).toContain('Available')
-      // Unified Launch Plan §2: Never disclose internal stock counts, booking names or serial numbers
-      expect(unlockedBadges[0]?.textContent).not.toMatch(/\d+ free/)
+      expect(container.querySelectorAll('[data-testid="availability-unlocked-badge"]').length).toBe(0)
+      expect(container.querySelectorAll('[data-testid="availability-unknown-badge"]').length).toBe(PUBLIC_CATALOGUE_ITEMS.length)
+      expect(container.textContent).not.toMatch(/Available \(\d+ free\)/)
+      expect(container.textContent).not.toContain('Rs 8,000')
+    })
+  })
+
+  it('never derives availability from hardcoded demo stock and rates', async () => {
+    const schedule = evaluatePublicSchedule({
+      pickupDate: '2026-11-20', pickupTime: '06:00',
+      returnDate: '2026-11-21', returnTime: '06:00',
+    })
+    expect(getCatalogueItemAvailability(PUBLIC_CATALOGUE_ITEMS[0]!, schedule)).toEqual({
+      status: 'unknown', isAvailable: false,
+    })
+    const statuses = await queryCatalogueAvailability(PUBLIC_CATALOGUE_ITEMS, schedule)
+    expect([...statuses.values()].every(status => status === 'unknown')).toBe(true)
+  })
+
+  it('uses Kathmandu civil date for 00:45 NPT quick presets', () => {
+    expect(rentalPresetDates(new Date('2026-11-14T19:00:00Z'), 1)).toEqual({
+      pickupDate: '2026-11-16', returnDate: '2026-11-17',
     })
   })
 
