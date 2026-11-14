@@ -8,12 +8,16 @@ import {
   getClientPortalInvoices,
   submitGuestBookingRequest,
   validateStockOnStaffApproval,
+  approveGuestBookingRequest,
+  declineGuestBookingRequest,
   MOCK_CLIENT_PORTAL_DATA,
   SERVER_MEMBERSHIP_DISCOUNTS,
 } from '../../../lib/clientPortalEngine'
 import ClientPortalView from '../ClientPortalView'
 import { isStaffSurface, STAFF_ROUTES } from '../../../data/nav'
 import { canViewMoney } from '../../../lib/rbac'
+
+;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
 
 describe('Client Portal Authorization and Integrity (Issue #154)', () => {
   beforeEach(() => {
@@ -159,6 +163,48 @@ describe('Client Portal Authorization and Integrity (Issue #154)', () => {
 
       // Restore stock
       MOCK_CLIENT_PORTAL_DATA.inventoryStock.set('PUB-CAM-FX6', 3)
+    })
+
+    it('approves request and deducts inventory when authorized staff confirms', async () => {
+      const res = await submitGuestBookingRequest({
+        guestName: 'Anil Gurung',
+        guestEmail: 'anil@test.com',
+        guestPhone: '+9779811111111',
+        pickupDate: '2026-12-05',
+        returnDate: '2026-12-07',
+        productIds: ['PUB-CAM-FX6'],
+      })
+
+      const stockBefore = MOCK_CLIENT_PORTAL_DATA.inventoryStock.get('PUB-CAM-FX6') ?? 0
+      const approval = await approveGuestBookingRequest(res.requestId, 'staff-user-uuid')
+
+      expect(approval.success).toBe(true)
+      expect(approval.status).toBe('Approved')
+      expect(approval.bookingId).toMatch(/^BK-\d+/)
+      expect(MOCK_CLIENT_PORTAL_DATA.inventoryStock.get('PUB-CAM-FX6')).toBe(stockBefore - 1)
+    })
+
+    it('declines request with reason and leaves inventory untouched', async () => {
+      const res = await submitGuestBookingRequest({
+        guestName: 'Maya Magar',
+        guestEmail: 'maya@test.com',
+        guestPhone: '+9779822222222',
+        pickupDate: '2026-12-05',
+        returnDate: '2026-12-07',
+        productIds: ['PUB-CAM-ALEXA'],
+      })
+
+      const stockBefore = MOCK_CLIENT_PORTAL_DATA.inventoryStock.get('PUB-CAM-ALEXA') ?? 0
+      const decline = await declineGuestBookingRequest(
+        res.requestId,
+        'staff-user-uuid',
+        'Dates conflict with scheduled warehouse maintenance.',
+      )
+
+      expect(decline.success).toBe(true)
+      expect(decline.status).toBe('Declined')
+      expect(decline.reason).toContain('scheduled warehouse maintenance')
+      expect(MOCK_CLIENT_PORTAL_DATA.inventoryStock.get('PUB-CAM-ALEXA')).toBe(stockBefore)
     })
   })
 

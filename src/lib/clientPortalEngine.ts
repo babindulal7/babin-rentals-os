@@ -421,3 +421,74 @@ export async function validateStockOnStaffApproval(
 
   return { allowed: true }
 }
+
+export interface StaffApprovalResult {
+  success: boolean
+  status: 'Approved' | 'Declined'
+  bookingId?: string | undefined
+  reason?: string | undefined
+}
+
+/**
+ * 6. Staff Approval of Guest Request.
+ * Executes atomic stock check; if allowed, transitions request to 'Approved' and mints reservation.
+ */
+export async function approveGuestBookingRequest(
+  requestId: string,
+  staffUserId: string,
+): Promise<StaffApprovalResult> {
+  if (!staffUserId) {
+    return { success: false, status: 'Declined', reason: 'Unauthorized: staff credentials required.' }
+  }
+
+  const stockCheck = await validateStockOnStaffApproval(requestId)
+  if (!stockCheck.allowed) {
+    return { success: false, status: 'Declined', reason: stockCheck.reason }
+  }
+
+  const req = MOCK_CLIENT_PORTAL_DATA.guestRequestsQueue.find((r) => r.id === requestId)
+  if (!req) {
+    return { success: false, status: 'Declined', reason: 'Request not found.' }
+  }
+
+  // Deduct inventory atomically
+  for (const pid of req.productIds) {
+    const current = MOCK_CLIENT_PORTAL_DATA.inventoryStock.get(pid) ?? 0
+    MOCK_CLIENT_PORTAL_DATA.inventoryStock.set(pid, Math.max(0, current - 1))
+  }
+
+  req.status = 'Approved'
+  const bookingId = `BK-${Date.now().toString().slice(-4)}`
+
+  return {
+    success: true,
+    status: 'Approved',
+    bookingId,
+  }
+}
+
+/**
+ * 7. Staff Decline of Guest Request.
+ * Rejects request with logged reason and sends notification without modifying stock.
+ */
+export async function declineGuestBookingRequest(
+  requestId: string,
+  staffUserId: string,
+  reason: string,
+): Promise<StaffApprovalResult> {
+  if (!staffUserId) {
+    return { success: false, status: 'Declined', reason: 'Unauthorized: staff credentials required.' }
+  }
+
+  const req = MOCK_CLIENT_PORTAL_DATA.guestRequestsQueue.find((r) => r.id === requestId)
+  if (!req) {
+    return { success: false, status: 'Declined', reason: 'Request not found.' }
+  }
+
+  req.status = 'Declined'
+  return {
+    success: true,
+    status: 'Declined',
+    reason: reason || 'Booking request declined by operations staff.',
+  }
+}
