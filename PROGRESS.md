@@ -31,13 +31,13 @@
 |---|---|---|---|
 | Backend | actions implemented / total | 102 / 102 (100%) | +0 |
 | Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
-| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
 | Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
-| Lifecycle | steps green / total | not measured — current receipt required | — |
-| Overall | structural mean of five | not measured | — |
-Migrations 233 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+| Lifecycle | steps green / total | 72 / 72 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 233 files · check:pglite 233/233 applied, 0 failed (recorded 2026-11-14T17:28:01.175Z). Suite: NOT VERIFIED — focused or unspecified run: 169/169 passed, 0 failed (recorded 2026-11-14T17:24:28.340Z).
 Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Gates read from .lifecycle-result.json, written 2026-11-14T17:28:12.812Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
