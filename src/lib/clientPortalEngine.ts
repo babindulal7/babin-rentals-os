@@ -1,18 +1,11 @@
-import { rupees, type Paisa } from './money'
+import type { Paisa } from './money'
 import type { MembershipTier } from '../data/clients'
 
 /**
- * Server-authoritative membership tier discount rates (Babin Rentals standard).
- * Clients can NEVER supply or override discount rates.
+ * Client portal transport contracts. Do not substitute fixtures for JWT-backed
+ * access, server-derived discounts, or durable booking requests.
+ * This PR remains a draft until its backend/RLS release gate is implemented.
  */
-export const SERVER_MEMBERSHIP_DISCOUNTS: Record<MembershipTier, number> = {
-  Academy: 20,
-  Creator: 10,
-  Cinematographer: 15,
-  'Production Alliance': 10,
-  Elite: 25,
-}
-
 export interface ClientPortalProfile {
   id: string
   clientCode: string
@@ -62,11 +55,12 @@ export interface GuestBookingRequestInput {
   guestPhone: string
   company?: string
   pickupDate: string
+  pickupTime?: string
   returnDate: string
+  returnTime?: string
   productIds: string[]
-  clientSuppliedDiscount?: number // Tamper attempt field
+  clientSuppliedDiscount?: number
 }
-
 export interface GuestBookingRequestResult {
   success: boolean
   requestId: string
@@ -74,354 +68,11 @@ export interface GuestBookingRequestResult {
   serverDerivedDiscountPercent: number
   error?: string
 }
-
 export interface StaffApprovalStockCheckResult {
   allowed: boolean
   reason?: string
   conflicts?: Array<{ productId: string; requested: number; available: number }>
 }
-
-/**
- * Mock data store for client records & portal views
- */
-export const MOCK_CLIENT_PORTAL_DATA = {
-  clients: [
-    {
-      id: 'client-uuid-001',
-      clientCode: 'C-001',
-      name: 'Aarav Cinema Works',
-      email: 'aarav@cinema.test',
-      isEmailVerified: true,
-      company: 'Aarav Productions Pvt. Ltd.',
-      membershipTier: 'Cinematographer' as MembershipTier,
-      serverDiscountPercent: 15,
-      panVat: '601234567',
-      phone: '+9779801234567',
-      isBound: true,
-    },
-    {
-      id: 'client-uuid-002',
-      clientCode: 'C-002',
-      name: 'Bina Media Creations',
-      email: 'bina@media.test',
-      isEmailVerified: true,
-      company: 'Bina Films',
-      membershipTier: 'Creator' as MembershipTier,
-      serverDiscountPercent: 10,
-      panVat: '609876543',
-      phone: '+9779841234567',
-      isBound: true,
-    },
-    {
-      id: 'client-uuid-003-unverified',
-      clientCode: 'C-003',
-      name: 'Unverified Visitor',
-      email: 'unverified@test.com',
-      isEmailVerified: false,
-      membershipTier: 'Creator' as MembershipTier,
-      serverDiscountPercent: 10,
-      phone: '+9779812345678',
-      isBound: false,
-    },
-  ],
-  bookings: [
-    {
-      id: 'bk-uuid-001',
-      clientId: 'client-uuid-001',
-      bookingNo: 'BK-710',
-      project: 'Pokhara Feature Film',
-      stage: 'Booked' as const,
-      pickupAtAd: '2026-11-20T06:00:00+05:45',
-      returnAtAd: '2026-11-23T06:00:00+05:45',
-      itemCount: 4,
-      items: [
-        { name: 'Sony FX6 Cinema Camera', quantity: 1, dailyRatePaisa: rupees(6000) },
-        { name: 'NISI Athena Prime Set', quantity: 1, dailyRatePaisa: rupees(4500) },
-      ],
-    },
-    {
-      id: 'bk-uuid-002',
-      clientId: 'client-uuid-002',
-      bookingNo: 'BK-712',
-      project: 'Music Video Shoot',
-      stage: 'On Rent' as const,
-      pickupAtAd: '2026-11-15T06:00:00+05:45',
-      returnAtAd: '2026-11-18T06:00:00+05:45',
-      itemCount: 3,
-      items: [
-        { name: 'RED Komodo 6K', quantity: 1, dailyRatePaisa: rupees(12000) },
-      ],
-    },
-  ],
-  invoices: [
-    {
-      id: 'inv-uuid-001',
-      clientId: 'client-uuid-001',
-      invoiceNo: 'INV-2026-0081',
-      bookingNo: 'BK-710',
-      issueDateAd: '2026-11-12',
-      dueDateAd: '2026-11-25',
-      currency: 'NPR' as const,
-      subtotal: rupees(31500),
-      discountPercent: 15,
-      discountAmount: rupees(4725),
-      taxableAmount: rupees(26775),
-      vatAmount: rupees(3480.75),
-      totalAmount: rupees(30255.75),
-      paidAmount: rupees(0),
-      outstandingAmount: rupees(30255.75),
-      isVoid: false,
-    },
-    {
-      id: 'inv-uuid-002',
-      clientId: 'client-uuid-002',
-      invoiceNo: 'INV-2026-0082',
-      bookingNo: 'BK-712',
-      issueDateAd: '2026-11-10',
-      dueDateAd: '2026-11-24',
-      currency: 'NPR' as const,
-      subtotal: rupees(36000),
-      discountPercent: 10,
-      discountAmount: rupees(3600),
-      taxableAmount: rupees(32400),
-      vatAmount: rupees(4212),
-      totalAmount: rupees(36612),
-      paidAmount: rupees(36612),
-      outstandingAmount: rupees(0),
-      isVoid: false,
-    },
-    {
-      id: 'inv-uuid-voided',
-      clientId: 'client-uuid-001',
-      invoiceNo: 'INV-2026-0079',
-      bookingNo: 'BK-709',
-      issueDateAd: '2026-11-01',
-      dueDateAd: '2026-11-15',
-      currency: 'NPR' as const,
-      subtotal: rupees(10000),
-      discountPercent: 0,
-      discountAmount: rupees(0),
-      taxableAmount: rupees(10000),
-      vatAmount: rupees(1300),
-      totalAmount: rupees(11300),
-      paidAmount: rupees(0),
-      outstandingAmount: rupees(0),
-      isVoid: true, // VOIDED: must not show in active client receipts
-    },
-  ],
-  inventoryStock: new Map<string, number>([
-    ['PUB-CAM-FX6', 3],
-    ['PUB-CAM-ALEXA', 2],
-    ['PUB-CAM-KOMODO', 2],
-    ['PUB-LNS-NISI', 3],
-  ]),
-  guestRequestsQueue: [] as Array<{
-    id: string
-    guestName: string
-    guestEmail: string
-    guestPhone: string
-    status: 'Pending Staff Review' | 'Approved' | 'Declined'
-    productIds: string[]
-    serverDiscountPercent: number
-    submittedAtAd: string
-  }>,
-}
-
-/**
- * 1. Authenticate / Bind Client Account by Verified Email.
- * Unverified accounts cannot bind or access client data.
- */
-export async function authenticateClientSession(
-  email: string,
-  isEmailVerified: boolean,
-): Promise<{ client: ClientPortalProfile | null; error: string | null }> {
-  if (!isEmailVerified) {
-    return {
-      client: null,
-      error: 'Unverified email: Email must be verified via secure one-time passcode before account access.',
-    }
-  }
-
-  const found = MOCK_CLIENT_PORTAL_DATA.clients.find(
-    (c) => c.email.toLowerCase() === email.toLowerCase(),
-  )
-
-  if (!found) {
-    return {
-      client: null,
-      error: 'Account not bound to an active client record.',
-    }
-  }
-
-  if (!found.isEmailVerified) {
-    return {
-      client: null,
-      error: 'Client record requires verified email status before portal access is granted.',
-    }
-  }
-
-  return {
-    client: {
-      id: found.id,
-      clientCode: found.clientCode,
-      name: found.name,
-      email: found.email,
-      isEmailVerified: found.isEmailVerified,
-      company: found.company,
-      membershipTier: found.membershipTier,
-      serverDiscountPercent: SERVER_MEMBERSHIP_DISCOUNTS[found.membershipTier] ?? 0,
-      panVat: found.panVat,
-      phone: found.phone,
-      isBound: true,
-    },
-    error: null,
-  }
-}
-
-/**
- * 2. Fetch Own Bookings for Client Portal.
- * Guaranteed IDOR isolation: reads only matching client ID.
- */
-export async function getClientPortalBookings(
-  authenticatedClientId: string,
-): Promise<ClientPortalBooking[]> {
-  if (!authenticatedClientId) return []
-  return MOCK_CLIENT_PORTAL_DATA.bookings
-    .filter((b) => b.clientId === authenticatedClientId)
-    .map(({ id, bookingNo, project, stage, pickupAtAd, returnAtAd, itemCount, items }) => ({
-      id,
-      bookingNo,
-      project,
-      stage,
-      pickupAtAd,
-      returnAtAd,
-      itemCount,
-      items,
-    }))
-}
-
-/**
- * 3. Fetch Own Invoices/Receipts for Client Portal.
- * Filters strictly to non-void NPR currency invoices for the authenticated client.
- */
-export async function getClientPortalInvoices(
-  authenticatedClientId: string,
-): Promise<ClientPortalInvoice[]> {
-  if (!authenticatedClientId) return []
-  return MOCK_CLIENT_PORTAL_DATA.invoices
-    .filter((inv) => inv.clientId === authenticatedClientId && !inv.isVoid)
-    .map(
-      ({
-        id,
-        invoiceNo,
-        bookingNo,
-        issueDateAd,
-        dueDateAd,
-        currency,
-        subtotal,
-        discountPercent,
-        discountAmount,
-        taxableAmount,
-        vatAmount,
-        totalAmount,
-        paidAmount,
-        outstandingAmount,
-        isVoid,
-      }) => ({
-        id,
-        invoiceNo,
-        bookingNo,
-        issueDateAd,
-        dueDateAd,
-        currency,
-        subtotal,
-        discountPercent,
-        discountAmount,
-        taxableAmount,
-        vatAmount,
-        totalAmount,
-        paidAmount,
-        outstandingAmount,
-        isVoid,
-      }),
-    )
-}
-
-/**
- * 4. Submit Guest Booking Request (No Client Account Required).
- * Enters OS staff queue for manual approval and strictly ignores any client-supplied discount.
- */
-export async function submitGuestBookingRequest(
-  input: GuestBookingRequestInput,
-): Promise<GuestBookingRequestResult> {
-  if (!input.guestName.trim() || !input.guestEmail.trim() || !input.guestPhone.trim()) {
-    return {
-      success: false,
-      requestId: '',
-      status: 'Pending Staff Review',
-      serverDerivedDiscountPercent: 0,
-      error: 'Name, email, and mobile phone are required for guest booking.',
-    }
-  }
-
-  // Server-authoritative discount derivation: Guests receive 0% discount
-  // Any input.clientSuppliedDiscount is strictly discarded (anti-tamper)
-  const serverDerivedDiscount = 0
-
-  const requestId = `REQ-${Date.now().toString().slice(-6)}`
-  const queueEntry = {
-    id: requestId,
-    guestName: input.guestName.trim(),
-    guestEmail: input.guestEmail.trim(),
-    guestPhone: input.guestPhone.trim(),
-    status: 'Pending Staff Review' as const,
-    productIds: input.productIds,
-    serverDiscountPercent: serverDerivedDiscount,
-    submittedAtAd: new Date().toISOString(),
-  }
-
-  MOCK_CLIENT_PORTAL_DATA.guestRequestsQueue.push(queueEntry)
-
-  return {
-    success: true,
-    requestId,
-    status: 'Pending Staff Review',
-    serverDerivedDiscountPercent: serverDerivedDiscount,
-  }
-}
-
-/**
- * 5. Atomic Stock Check on Staff Approval of Guest Request.
- * Validates availability before staff can approve the guest booking.
- */
-export async function validateStockOnStaffApproval(
-  requestId: string,
-): Promise<StaffApprovalStockCheckResult> {
-  const req = MOCK_CLIENT_PORTAL_DATA.guestRequestsQueue.find((r) => r.id === requestId)
-  if (!req) {
-    return { allowed: false, reason: 'Request not found in staff queue.' }
-  }
-
-  const conflicts: Array<{ productId: string; requested: number; available: number }> = []
-
-  for (const pid of req.productIds) {
-    const stock = MOCK_CLIENT_PORTAL_DATA.inventoryStock.get(pid) ?? 0
-    if (stock <= 0) {
-      conflicts.push({ productId: pid, requested: 1, available: stock })
-    }
-  }
-
-  if (conflicts.length > 0) {
-    return {
-      allowed: false,
-      reason: 'Atomic stock check failed: Insufficient physical inventory for requested lines.',
-      conflicts,
-    }
-  }
-
-  return { allowed: true }
-}
-
 export interface StaffApprovalResult {
   success: boolean
   status: 'Approved' | 'Declined'
@@ -429,66 +80,99 @@ export interface StaffApprovalResult {
   reason?: string | undefined
 }
 
+const PORTAL_UNAVAILABLE = 'Secure client portal data access is not yet connected; no client records were loaded.'
+const REQUEST_UNAVAILABLE = 'Booking request could not be saved to the staff queue. Please contact Babin Rentals directly.'
+
 /**
- * 6. Staff Approval of Guest Request.
- * Executes atomic stock check; if allowed, transitions request to 'Approved' and mints reservation.
+ * Never trust caller-provided email/verification state. A Supabase-authenticated
+ * confirmed email and its OWN RLS-protected portal_users binding are prerequisites.
+ * Read-only: DO NOT call the binding mutation on behalf of a signed-in browser.
+ * Refuse to render profile data until a real session-scoped client reader is added.
  */
-export async function approveGuestBookingRequest(
-  requestId: string,
-  staffUserId: string,
-): Promise<StaffApprovalResult> {
-  if (!staffUserId) {
-    return { success: false, status: 'Declined', reason: 'Unauthorized: staff credentials required.' }
+export async function authenticateClientSession(
+  _claimedEmail?: string,
+  _claimedVerified?: boolean,
+): Promise<{ client: ClientPortalProfile | null; error: string | null }> {
+  try {
+    const { supabase, IS_MOCK } = await import('./supabase')
+    if (IS_MOCK) return { client: null, error: PORTAL_UNAVAILABLE }
+    const { data, error } = await supabase.auth.getUser()
+    if (error || !data.user?.email || !data.user.email_confirmed_at) {
+      return { client: null, error: 'Verified Supabase email session required for client portal access.' }
+    }
+    const { data: portal, error: portalError } = await supabase
+      .from('portal_users')
+      .select('client_id')
+      .eq('auth_user_id', data.user.id)
+      .eq('status', 'Active')
+      .is('deactivated_at', null)
+      .maybeSingle()
+    if (portalError || !portal?.client_id) {
+      return { client: null, error: 'No verified client account binding for this session.' }
+    }
+  } catch {
+    return { client: null, error: PORTAL_UNAVAILABLE }
   }
+  // A binding alone does not prove the whole client profile, bookings and
+  // invoices have been mapped through correct RLS readers.
+  return { client: null, error: PORTAL_UNAVAILABLE }
+}
 
-  const stockCheck = await validateStockOnStaffApproval(requestId)
-  if (!stockCheck.allowed) {
-    return { success: false, status: 'Declined', reason: stockCheck.reason }
-  }
+/** Caller-supplied client IDs must not permit in-browser filtering of records. */
+export async function getClientPortalBookings(_clientId?: string): Promise<ClientPortalBooking[]> {
+  throw new Error(PORTAL_UNAVAILABLE)
+}
+export async function getClientPortalInvoices(_clientId?: string): Promise<ClientPortalInvoice[]> {
+  throw new Error(PORTAL_UNAVAILABLE)
+}
 
-  const req = MOCK_CLIENT_PORTAL_DATA.guestRequestsQueue.find((r) => r.id === requestId)
-  if (!req) {
-    return { success: false, status: 'Declined', reason: 'Request not found.' }
-  }
-
-  // Deduct inventory atomically
-  for (const pid of req.productIds) {
-    const current = MOCK_CLIENT_PORTAL_DATA.inventoryStock.get(pid) ?? 0
-    MOCK_CLIENT_PORTAL_DATA.inventoryStock.set(pid, Math.max(0, current - 1))
-  }
-
-  req.status = 'Approved'
-  const bookingId = `BK-${Date.now().toString().slice(-4)}`
-
-  return {
-    success: true,
-    status: 'Approved',
-    bookingId,
-  }
+function validDay(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const d = new Date(value + 'T00:00:00.000Z')
+  return Number.isFinite(d.getTime()) && d.toISOString().slice(0, 10) === value
 }
 
 /**
- * 7. Staff Decline of Guest Request.
- * Rejects request with logged reason and sends notification without modifying stock.
+ * A guest request must be persisted by a real staff-readable server action
+ * before returning success. No browser-memory queue, fake request ID or
+ * unverified inventory hold is allowed.
  */
-export async function declineGuestBookingRequest(
-  requestId: string,
-  staffUserId: string,
-  reason: string,
+export async function submitGuestBookingRequest(
+  input: GuestBookingRequestInput,
+): Promise<GuestBookingRequestResult> {
+  const base = { success: false, requestId: '', status: 'Pending Staff Review' as const, serverDerivedDiscountPercent: 0 }
+  if (!input.guestName.trim() || !input.guestEmail.trim() || !input.guestPhone.trim()) {
+    return { ...base, error: 'Name, email, and phone are required.' }
+  }
+  if (!validDay(input.pickupDate) || !validDay(input.returnDate) ||
+      input.returnDate <= input.pickupDate || input.productIds.length === 0) {
+    return { ...base, error: 'Choose valid pickup and return dates and at least one item.' }
+  }
+  if (input.pickupTime || input.returnTime) {
+    if (!input.pickupTime || !input.returnTime ||
+        !/^([01]\d|2[0-3]):[0-5]\d$/.test(input.pickupTime) ||
+        !/^([01]\d|2[0-3]):[0-5]\d$/.test(input.returnTime)) {
+      return { ...base, error: 'Choose both pickup and return times.' }
+    }
+  }
+  // clientSuppliedDiscount and product IDs are never trusted for pricing/stock.
+  return { ...base, error: REQUEST_UNAVAILABLE }
+}
+
+/** Staff cannot book inventory through a browser-side stock Map. */
+export async function validateStockOnStaffApproval(_requestId: string): Promise<StaffApprovalStockCheckResult> {
+  return { allowed: false, reason: 'Atomic server reservation verification is not yet available.' }
+}
+export async function approveGuestBookingRequest(
+  _requestId: string,
+  _staffUserId: string,
 ): Promise<StaffApprovalResult> {
-  if (!staffUserId) {
-    return { success: false, status: 'Declined', reason: 'Unauthorized: staff credentials required.' }
-  }
-
-  const req = MOCK_CLIENT_PORTAL_DATA.guestRequestsQueue.find((r) => r.id === requestId)
-  if (!req) {
-    return { success: false, status: 'Declined', reason: 'Request not found.' }
-  }
-
-  req.status = 'Declined'
-  return {
-    success: true,
-    status: 'Declined',
-    reason: reason || 'Booking request declined by operations staff.',
-  }
+  return { success: false, status: 'Declined', reason: 'Server-side staff approval is not yet configured.' }
+}
+export async function declineGuestBookingRequest(
+  _requestId: string,
+  _staffUserId: string,
+  _reason: string,
+): Promise<StaffApprovalResult> {
+  return { success: false, status: 'Declined', reason: 'Server-side audited decline is not yet configured.' }
 }

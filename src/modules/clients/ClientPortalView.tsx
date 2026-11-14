@@ -9,13 +9,7 @@ import {
 } from '../../lib/clientPortalEngine'
 import { formatMoney } from '../../lib/money'
 
-export default function ClientPortalView({
-  clientEmail,
-  isEmailVerified = true,
-}: {
-  clientEmail?: string
-  isEmailVerified?: boolean
-}) {
+export default function ClientPortalView() {
   const [profile, setProfile] = useState<ClientPortalProfile | null>(null)
   const [bookings, setBookings] = useState<ClientPortalBooking[]>([])
   const [invoices, setInvoices] = useState<ClientPortalInvoice[]>([])
@@ -27,8 +21,7 @@ export default function ClientPortalView({
     async function load() {
       setLoading(true)
       setError(null)
-      const emailToUse = clientEmail || 'aarav@cinema.test'
-      const authRes = await authenticateClientSession(emailToUse, isEmailVerified)
+      const authRes = await authenticateClientSession()
 
       if (authRes.error || !authRes.client) {
         setError(authRes.error || 'Authentication failed.')
@@ -38,18 +31,23 @@ export default function ClientPortalView({
 
       setProfile(authRes.client)
 
-      const [bks, invs] = await Promise.all([
-        getClientPortalBookings(authRes.client.id),
-        getClientPortalInvoices(authRes.client.id),
-      ])
-
-      setBookings(bks)
-      setInvoices(invs)
-      setLoading(false)
+      try {
+        const [bks, invs] = await Promise.all([
+          getClientPortalBookings(),
+          getClientPortalInvoices(),
+        ])
+        setBookings(bks)
+        setInvoices(invs)
+      } catch {
+        setProfile(null)
+        setError('Secure client records are unavailable; no data will be displayed.')
+      } finally {
+        setLoading(false)
+      }
     }
 
     load()
-  }, [clientEmail, isEmailVerified])
+  }, [])
 
   if (loading) {
     return (
