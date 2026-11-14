@@ -210,14 +210,15 @@ const { default: BookingDetail } = await import('../BookingDetail')
 let container: HTMLDivElement
 let root: Root
 
-async function mount(no = 'B-715') {
+async function mount(no = 'B-715', initialPath?: string) {
   Object.defineProperty(window, 'innerWidth', { value: 1280, configurable: true, writable: true })
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
+  const entry = initialPath ?? `/rentals/${no}`
   await act(async () => {
     root.render(
-      <MemoryRouter initialEntries={[`/rentals/${no}`]}>
+      <MemoryRouter initialEntries={[entry]}>
         <ToastProvider>
           <Routes>
             <Route path="/rentals/:bookingNo" element={<BookingDetail />} />
@@ -230,6 +231,22 @@ async function mount(no = 'B-715') {
     await act(async () => {
       await Promise.resolve()
     })
+  }
+}
+
+async function selectTab(label: string) {
+  const tabButton = [...container.querySelectorAll('[role="tab"]')].find((t) =>
+    t.textContent?.includes(label),
+  )
+  if (tabButton) {
+    await act(async () => {
+      tabButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    for (let i = 0; i < 4; i++) {
+      await act(async () => {
+        await Promise.resolve()
+      })
+    }
   }
 }
 
@@ -277,6 +294,7 @@ describe('Law 1 — the money on screen is the invoice’s, not the screen’s',
 
   it('states the deposit through bookings_deposit_v, as a separate ledger (Law 5)', async () => {
     await mount('B-715')
+    await selectTab('Money')
     expect(text()).toContain('Deposit Required')
     expect(text()).toContain('50,000')
     // Received/pending have no sanctioned read yet — stated, not zeroed.
@@ -285,6 +303,7 @@ describe('Law 1 — the money on screen is the invoice’s, not the screen’s',
 
   it('renders "—" for a payment with no bank account — never an inferred Cash', async () => {
     await mount('B-715')
+    await selectTab('Money')
     const methodCells = [...container.querySelectorAll('td')].filter((c) => c.textContent?.trim() === '—')
     expect(methodCells.length).toBeGreaterThan(0)
     // The row itself is the live payments read, not the seed's history.
@@ -294,6 +313,7 @@ describe('Law 1 — the money on screen is the invoice’s, not the screen’s',
 
   it('keeps Law 4 in words where a correction would be attempted', async () => {
     await mount('B-715')
+    await selectTab('Money')
     expect(text()).toContain('Payments and deposit movements are immutable')
     expect(text()).toContain('reversal row or a credit note')
   })
@@ -302,6 +322,7 @@ describe('Law 1 — the money on screen is the invoice’s, not the screen’s',
 describe('Law 16 — no fake affordances over missing reads', () => {
   it('offers Edit only as Unavailable-with-reason — inline edit went with the seed', async () => {
     await mount('B-715')
+    await selectTab('Client & Dates')
     const edit = buttons('Edit')[0]
     expect(edit).toBeDefined()
     expect(edit?.disabled).toBe(true)
@@ -311,6 +332,7 @@ describe('Law 16 — no fake affordances over missing reads', () => {
 
   it('shows an empty queried crew list and the remaining transport gap', async () => {
     await mount('B-715')
+    await selectTab('Client & Dates')
     expect(text()).toContain('No crew assigned to this booking yet.')
     expect(text()).toContain('Delivery details are not available yet.')
     // The seed's invented crew never render.
@@ -319,6 +341,7 @@ describe('Law 16 — no fake affordances over missing reads', () => {
 
   it('states the documents gap instead of five tiles that belong to no booking', async () => {
     await mount('B-715')
+    await selectTab('Client & Dates')
     expect(text()).toContain('No documents available for this rental yet.')
     expect(text()).not.toContain('Rental Agreement')
   })

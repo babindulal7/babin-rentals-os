@@ -278,6 +278,20 @@ afterEach(async () => {
 })
 
 const text = () => container.textContent ?? ''
+
+async function pickTab(tabName: string) {
+  const tab = [...container.querySelectorAll('[role="tab"]')].find((t) => t.textContent?.trim() === tabName)
+  if (tab) {
+    await act(async () => {
+      tab.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    for (let i = 0; i < 2; i++) {
+      await act(async () => {
+        await Promise.resolve()
+      })
+    }
+  }
+}
 const allButtons = () => [...container.querySelectorAll('button')]
 const button = (label: string) => allButtons().find((b) => b.textContent?.trim() === label)
 
@@ -334,34 +348,33 @@ describe('Phase 9 — the age badge', () => {
   })
 })
 
-describe('§4.2 — the phone segmented control', () => {
-  it('is absent above 768, where every section renders at once', async () => {
+describe('R-10.6 — the 4-tab layout (Items · Money · Client & Dates · History)', () => {
+  it('offers all 4 tabs on desktop, starting on Items', async () => {
     await mount(1280)
-    expect(container.querySelector('[role="tablist"]')).toBeNull()
-    expect(text()).toContain('Client & Schedule')
-    expect(text()).toContain('Pricing & Payments')
-    expect(text()).toContain('Documents')
-  })
-
-  it('offers [Items][Money][Docs] on phone, showing one at a time', async () => {
-    await mount(420)
     const tabs = [...(container.querySelector('[role="tablist"]')?.querySelectorAll('[role="tab"]') ?? [])].map((t) =>
       t.textContent?.trim(),
     )
-    expect(tabs).toEqual(['Items', 'Money', 'Docs'])
-    // Items is the opening segment — witnessed by Block 2's heading, which
-    // appears in no other segment.
+    expect(tabs).toEqual(['Items', 'Money', 'Client & Dates', 'History'])
     expect(text()).toContain('Equipment, Bundles & Services')
     expect(text()).not.toContain('No documents available for this rental yet.')
   })
 
-  it('switches the page when a segment is picked', async () => {
+  it('offers all 4 tabs on phone, showing one tab at a time', async () => {
     await mount(420)
-    const docs = [...container.querySelectorAll('[role="tab"]')].find((t) => t.textContent?.trim() === 'Docs')
-    await act(async () => {
-      docs?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-    })
+    const tabs = [...(container.querySelector('[role="tablist"]')?.querySelectorAll('[role="tab"]') ?? [])].map((t) =>
+      t.textContent?.trim(),
+    )
+    expect(tabs).toEqual(['Items', 'Money', 'Client & Dates', 'History'])
+    // Items is the opening tab — witnessed by Block 2's heading
+    expect(text()).toContain('Equipment, Bundles & Services')
+    expect(text()).not.toContain('No documents available for this rental yet.')
+  })
+
+  it('switches the page when a tab is picked', async () => {
+    await mount(420)
+    await pickTab('Client & Dates')
     expect(text()).toContain('No documents available for this rental yet.')
+    expect(text()).toContain('Client & Schedule')
     expect(text()).not.toContain('Equipment, Bundles & Services')
   })
 })
@@ -411,10 +424,10 @@ describe('Law 6 — money blocks are OMITTED for money-blind roles, not greyed',
     expect(button('Receive Payment')).toBeUndefined()
   })
 
-  it('drops the Money SEGMENT on phone, rather than offering an empty tab', async () => {
+  it('drops the Money tab for money-blind roles, rather than offering an empty tab', async () => {
     await mount(420, 'Warehouse')
     const tabs = [...container.querySelectorAll('[role="tab"]')].map((t) => t.textContent?.trim())
-    expect(tabs).toEqual(['Items', 'Docs'])
+    expect(tabs).toEqual(['Items', 'Client & Dates', 'History'])
   })
 
   it('drops the sticky bar entirely below 1280 — every part of it is money', async () => {
@@ -433,6 +446,7 @@ describe('Law 6 — money blocks are OMITTED for money-blind roles, not greyed',
 describe('Law 5 — the deposit is a liability and says so where it could be misread', () => {
   it('states it beside the deposit ledger', async () => {
     await mount(1280)
+    await pickTab('Money')
     expect(text()).toContain('never reduces Outstanding')
   })
 })
@@ -440,6 +454,7 @@ describe('Law 5 — the deposit is a liability and says so where it could be mis
 describe('Law 16 — unwired surfaces do not invent booking data', () => {
   it('keeps only the activity gap and never invents an alert', async () => {
     await mount(1280)
+    await pickTab('History')
     expect(text()).toContain('No activity recorded yet.')
     // And none of the seed's invented content survives.
     expect(text()).not.toContain('only 2 left this week')
@@ -624,6 +639,7 @@ describe('16 Oct phone header — a one-word stage action and Search in the More
 describe('Law 17 — a stored delivery type never reaches the DOM raw', () => {
   it('renders "Client Pickup" for the stored delivery type', async () => {
     await mount(1440)
+    await pickTab('Client & Dates')
     expect(text()).toContain('Client Pickup')
   })
 

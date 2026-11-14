@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState, useRef, Suspense, lazy } fro
 import { useParams, Link } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
-import { Card, PageHeader, Button, Rail, SummaryRows, cardStyle } from '../../components/ui/Page'
+import { Card, PageHeader, Button, SummaryRows, cardStyle } from '../../components/ui/Page'
 import { DataTableShell } from '../../components/ui/DataTable'
 import { PageShell } from '../../components/ui/PageShell'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
@@ -577,29 +577,48 @@ function dotTone(stage: BookingStatus, current: BookingStatus): BrandKey {
  */
 
 /**
- * §4.2's phone segmented control — `[Items][Money][Docs]`. **`Money` is
- * omitted, not disabled**, for a money-blind role (Law 6): the caller builds
- * the segment list from the same gate the blocks themselves use.
+ * RULING 2026-11-10: R-10.6 · Booking Detail 4 tabs: Items · Money · Client & Dates · History.
+ * Money tab is omitted, not disabled, for money-blind roles (Law 6).
  */
-type PhoneSegment = 'Items' | 'Money' | 'Docs'
+export type BookingTab = 'Items' | 'Money' | 'Client & Dates' | 'History'
 
-function Segmented({
-  segments,
+function BookingTabsControl({
+  tabs,
   active,
   onPick,
+  viewport,
 }: {
-  segments: readonly PhoneSegment[]
-  active: PhoneSegment
-  onPick: (s: PhoneSegment) => void
+  tabs: readonly BookingTab[]
+  active: BookingTab
+  onPick: (tab: BookingTab) => void
+  viewport: 'phone' | 'tablet' | 'desktop'
 }) {
+  const options = tabs.map((t) => {
+    const icon: IconName =
+      t === 'Items'
+        ? 'package'
+        : t === 'Money'
+          ? 'receipt'
+          : t === 'Client & Dates'
+            ? 'users'
+            : 'clock'
+    return {
+      id: t,
+      label: t,
+      icon,
+    }
+  })
+
   return (
-    <SegmentedControl<PhoneSegment>
-      ariaLabel="Booking sections"
-      fullWidth
-      options={segments.map((s) => ({ id: s, label: s }))}
-      value={active}
-      onChange={onPick}
-    />
+    <div style={{ overflowX: 'auto', paddingBottom: 2 }}>
+      <SegmentedControl<BookingTab>
+        ariaLabel="Booking view tabs"
+        fullWidth={viewport === 'desktop'}
+        options={options}
+        value={active}
+        onChange={onPick}
+      />
+    </div>
   )
 }
 
@@ -1816,18 +1835,63 @@ function BookingDetailView() {
     [id, user, showSuccessToast, refreshBookingData],
   )
 
-  const segments: PhoneSegment[] = canBookingMoney ? ['Items', 'Money', 'Docs'] : ['Items', 'Docs']
-  const [segment, setSegment] = useState<PhoneSegment>('Items')
-  const onPhone = viewport === 'phone'
-  const activeSegment: PhoneSegment = segments.includes(segment) ? segment : 'Items'
-  /** On phone each segment owns the page; at every other width all three show. */
-  const showSegment = (s: PhoneSegment) => !onPhone || activeSegment === s
+  // RULING 2026-11-10: R-10.6 · Booking Detail 4 tabs: Items · Money · Client & Dates · History
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabParam = searchParams.get('tab')
 
-  // Facts strip — the money column is omitted from the
-  // TEMPLATE (not left visually empty) when this role can't see booking money.
+  const validTabs: readonly BookingTab[] = useMemo(() => {
+    return canBookingMoney
+      ? ['Items', 'Money', 'Client & Dates', 'History']
+      : ['Items', 'Client & Dates', 'History']
+  }, [canBookingMoney])
+
+  const resolveTab = useCallback((param: string | null | undefined): BookingTab => {
+    if (!param) return 'Items'
+    const p = param.trim().toLowerCase()
+    if (p === 'money') {
+      return canBookingMoney ? 'Money' : 'Items'
+    }
+    if (p === 'client' || p === 'client-dates' || p === 'client_dates' || p === 'dates' || p === 'docs') {
+      return 'Client & Dates'
+    }
+    if (p === 'history' || p === 'notes' || p === 'activity' || p === 'timeline') {
+      return 'History'
+    }
+    return 'Items'
+  }, [canBookingMoney])
+
+  const [tab, setTabState] = useState<BookingTab>(() => resolveTab(tabParam))
+
+  useEffect(() => {
+    if (tabParam) {
+      setTabState(resolveTab(tabParam))
+    }
+  }, [tabParam, resolveTab])
+
+  const onPhone = viewport === 'phone'
+  const activeTab: BookingTab = (tab === 'Money' && !canBookingMoney)
+    ? 'Items'
+    : (validTabs.includes(tab) ? tab : 'Items')
+
+  const setTab = useCallback((nextTab: BookingTab) => {
+    setTabState(nextTab)
+    const nextParams = new URLSearchParams(searchParams)
+    const slug =
+      nextTab === 'Items'
+        ? 'items'
+        : nextTab === 'Money'
+          ? 'money'
+          : nextTab === 'Client & Dates'
+            ? 'client-dates'
+            : 'history'
+    nextParams.set('tab', slug)
+    setSearchParams(nextParams, { replace: true })
+  }, [searchParams, setSearchParams])
+
+  // Facts strip — 4 facts: Client, Pickup, Return, Rental Days.
   const factsCols =
     viewport === 'desktop'
-      ? 'repeat(3, minmax(0,1fr))'
+      ? 'repeat(4, minmax(0,1fr))'
       : viewport === 'tablet'
         ? 'repeat(2, minmax(0,1fr))'
         : '1fr'
@@ -2261,115 +2325,6 @@ function BookingDetailView() {
     )
   }
 
-  const railBody = (
-    <>
-      {blockers.length > 0 && showSegment('Items') && (
-        <Card
-          title={`Attention (${blockers.length})`}
-          style={{
-            borderLeft: '3px solid var(--danger, #dc2626)',
-            background: 'color-mix(in srgb, var(--danger, #dc2626) 3%, var(--card))',
-          }}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-xs)' }}>
-            {blockers.map((b) => (
-              <div
-                key={b}
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: 8,
-                  fontSize: 'var(--t-meta)',
-                  color: 'var(--danger-text)',
-                  padding: '4px 0',
-                }}
-              >
-                <Icon name="alert_triangle" size={14} style={{ flexShrink: 0, marginTop: 2, color: 'var(--danger)' }} />
-                <span>{b}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      {/* Payment is a quick action on the existing booking. Reuse the invoice-
-          linked modal and its payment.create RBAC gate; never post money from
-          a row button or route the operator away to the Finance ledger.
-          On phones this rail belongs to the Money segment.
-          RULING 2026-11-10: G-1 / Card 1 — Single Quick Actions card (deduplicated).
-          Contains Record Payment, Create/View Invoice, Pro Forma (if draft),
-          and invoice read-error line with Retry. */}
-      {canBookingMoney && showSegment('Money') && (
-        <>
-          <Card title="Quick Actions">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
-              {canTakePayment && recordPaymentButton('Record Payment')}
-              {canRaiseInvoice && createInvoiceButton(hasInvoice ? 'View Invoice' : 'Create Invoice')}
-              {draftInvoice && (
-                <Button
-                  variant="secondary"
-                  icon="file"
-                  loading={generatingProForma}
-                  onClick={() => void handleGenerateProForma(draftInvoice.id)}
-                >
-                  Pro Forma Invoice
-                </Button>
-              )}
-              {invoicesList.error && (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4 }}>
-                  <span style={{ fontSize: 'var(--t-meta)', color: 'var(--danger-text)' }}>Could not read invoices</span>
-                  <Button variant="secondary" size="sm" onClick={() => invoicesList.refetch()}>
-                    Retry
-                  </Button>
-                </div>
-              )}
-            </div>
-          </Card>
-
-          <Card title="Booking Summary">
-            {!hasInvoice && (
-              <p style={{ margin: '8px 0 0', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-                {invoicesUnknownReason ??
-                  'No invoice has been raised for this booking, so there is no Rental Total to state yet.'}
-              </p>
-            )}
-            {hasInvoice && (
-              <SummaryRows
-                rows={[
-                  { label: 'Rental Total', value: money(totals.total), tone: 'neutral' as BrandKey },
-                  { label: 'Rental Paid', value: money(totals.paid), tone: 'success' as BrandKey },
-                  { label: 'Rental Outstanding', value: money(totals.outstanding), tone: totals.outstanding > 0 ? 'danger' as BrandKey : 'success' as BrandKey },
-                ]}
-              />
-            )}
-          </Card>
-        </>
-      )}
-
-      {showSegment('Docs') && (
-        <>
-          <NotesCard
-            bookingId={bookingId ?? ''}
-            ctx={user ? { userId: user.id, role: user.role } : null}
-            canWrite={canWriteNotes}
-            rows={notesList.rows}
-            loading={notesList.loading}
-            error={notesList.error}
-            onRetry={notesList.refetch}
-            onSaved={() => {
-              showSuccessToast('Note Added', `Recorded against ${booking.bookingNo}`)
-              notesList.refetch()
-            }}
-          />
-
-          <Card title="Activity Timeline">
-            <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
-              {/* Stage transitions live in booking_stage_transitions. No activity recorded yet. */}No activity recorded yet. </p>
-          </Card>
-        </>
-      )}
-    </>
-  )
 
   const bookingMoreItems: OverflowMenuItem[] = [
     {
@@ -2653,9 +2608,8 @@ function BookingDetailView() {
         />
       )}
 
-      {onPhone && <Segmented segments={segments} active={activeSegment} onPick={setSegment} />}
 
-      {/* Facts strip — schedule on the left, money on the right. */}
+      {/* Facts strip — Client, Pickup, Return, Rental Days. */}
       <div
         className="new-rental-section-card"
         style={{
@@ -2667,6 +2621,33 @@ function BookingDetailView() {
           background: 'var(--card)',
         }}
       >
+        <Fact icon="users" label="Client" viewport={viewport}>
+          <Link
+            to={`/clients/${booking.clientId}`}
+            style={{
+              fontSize: 'var(--t-body)',
+              fontWeight: 600,
+              color: 'var(--primary)',
+              textDecoration: 'none',
+              display: 'block',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {booking.clientName}
+          </Link>
+          {clientPhone ? (
+            <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)', display: 'block' }}>
+              {clientPhone}
+            </span>
+          ) : (
+            <span style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)', display: 'block' }}>
+              {contact.kind === 'loading' ? 'Loading phone…' : 'No phone on file'}
+            </span>
+          )}
+        </Fact>
+
         {[
           { label: 'Pickup', iso: booking.pickupAtAd },
           { label: 'Return', iso: booking.returnAtAd },
@@ -2701,6 +2682,28 @@ function BookingDetailView() {
         </Fact>
 
       </div>
+
+      {contact.kind === 'failed' && (
+        <div
+          role="alert"
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 'var(--sp-sm)',
+            padding: '10px 12px',
+            borderRadius: 'var(--r-sm)',
+            border: '1px solid var(--st-progress-fg, #a16207)',
+            background: 'var(--st-progress-bg, rgba(234, 179, 8, 0.15))',
+            fontSize: 'var(--t-meta)',
+            color: 'var(--text)',
+          }}
+        >
+          <Icon name="alert_triangle" size={14} style={{ flexShrink: 0, marginTop: 2, color: 'var(--st-progress-fg, #a16207)' }} />
+          <span>
+            This client’s record could not be read, so their phone number is <strong>unknown</strong>, not absent. Check the connection before concluding they have no phone.
+          </span>
+        </div>
+      )}
 
       {draftOverlapNotice && (
         <div
@@ -2784,117 +2787,155 @@ function BookingDetailView() {
         </div>
       )}
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: viewport === 'desktop' ? 'minmax(0,1fr) auto' : '1fr',
-          gap: 'var(--sp-md)',
-          alignItems: 'start',
-        }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0 }}>
-          {showSegment('Items') && (
-            <Block no="1" title="Client & Schedule">
-              {/* Read-only. The inline-edit mode this block used to carry
-                  edited a module constant for the session and persisted
-                  nothing; over live rows that becomes values that silently
-                  revert on reload — a fabricated write, so it is gone until a
-                  real booking-update action exists. */}
+      {closeError && (
+          <div
+            role="alert"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'var(--sp-sm)',
+              padding: '10px 12px',
+              borderRadius: 'var(--r-sm)',
+              border: '1px solid var(--danger)',
+              background: 'var(--st-danger-bg)',
+              fontSize: 'var(--t-meta)',
+              color: 'var(--danger-text)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--sp-sm)' }}>
+              <Icon name="alert_triangle" size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+              <span>{closeError}</span>
+            </div>
+            {closeError.includes('nothing has been invoiced') &&
+              (user?.role === 'Owner' || user?.role === 'Admin') && (
+                <div style={{ marginTop: 'var(--sp-xs)', display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)' }}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setOverrideError(null)
+                      setOverrideReason('')
+                      setOverrideModalOpen(true)
+                    }}
+                  >
+                    {/* Close with Zero-Value Override (§4.51) */}Close with Zero-Value Override </Button>
+                </div>
+              )}
+            {/deposit/i.test(closeError) &&
+              ['Owner', 'Admin', 'Manager'].includes(String(user?.role)) &&
+              getSetting('allowDepositSkipOnClose') === 'On' && (
+                <div style={{ marginTop: 'var(--sp-xs)', display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)' }}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setDepositSkipError(null)
+                      setDepositSkipReason('')
+                      setDepositSkipOpen(true)
+                    }}
+                  >
+                    Close without settling deposit
+                  </Button>
+                </div>
+              )}
+          </div>
+        )}
+
+      {/* RULING 2026-11-10: R-10.6 · Above the tabs, always visible: Booking Summary and Quick Actions.
+          Omitted entirely from the DOM for money-blind roles (Law 6). */}
+      {canBookingMoney && (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: viewport === 'desktop' ? 'minmax(0, 1.2fr) minmax(0, 1fr)' : '1fr',
+            gap: 'var(--sp-md)',
+            alignItems: 'stretch',
+          }}
+        >
+          <Card title="Booking Summary">
+            {!hasInvoice && (
+              <p style={{ margin: '8px 0 0', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
+                {invoicesUnknownReason ??
+                  'No invoice has been raised for this booking, so there is no Rental Total to state yet.'}
+              </p>
+            )}
+            {hasInvoice && (
               <SummaryRows
                 rows={[
-                  {
-                    label: 'Client',
-                    value: booking.clientId ? (
-                      <ClientIntelFromId clientId={booking.clientId} name={booking.clientName} context="rental-detail" gateContext={gctx} actionContext={user ? { userId: user.id, role: user.role } : null}>
-                        <Link to={`/clients/${booking.clientId}`} style={{ color: 'var(--link)', textDecoration: 'none', fontWeight: 600 }}>
-                          {booking.clientName}
-                        </Link>
-                      </ClientIntelFromId>
-                    ) : (
-                      booking.clientName
-                    ),
-                  },
-                  {
-                    label: 'Phone',
-                    value:
-                      contact.kind === 'ready' && contact.phone
-                        ? contact.phone
-                        : contact.kind === 'loading'
-                          ? 'Loading…'
-                          : 'Not recorded',
-                  },
-                  { label: 'Project', value: (booking.projectName ?? booking.project) ?? 'Not recorded' },
-                  { label: 'Shoot Location', value: booking.shootLocation ?? 'Not recorded' },
-                  { label: 'Project Type', value: displayProjectType(booking.projectType, booking.projectTypeOther) },
-                  { label: 'Pickup Location', value: booking.pickupLocation ?? 'Not recorded' },
-                  { label: 'Return Location', value: booking.returnLocation ?? 'Not recorded' },
+                  { label: 'Rental Total', value: money(totals.total), tone: 'neutral' as BrandKey },
+                  { label: 'Rental Paid', value: money(totals.paid), tone: 'success' as BrandKey },
+                  { label: 'Rental Outstanding', value: money(totals.outstanding), tone: totals.outstanding > 0 ? 'danger' as BrandKey : 'success' as BrandKey },
                 ]}
               />
-              {/* Law 16 — Edit exists but is Unavailable-with-reason. A missing
-                  button reads as "read-only by design"; a disabled one with a
-                  reason states the truth: the write path is not yet wired. */}
-              <div style={{ marginTop: 'var(--sp-sm)' }}>
-                {booking.stage === 'Quote' && !booking.isCancelled && Boolean(user?.role && ['Owner','Admin','Manager','Coordinator'].includes(user.role)) ? <Link to="?action=edit"><Button>Edit booking</Button></Link> : <Unavailable reason="General editing is available before confirmation. Use this booking's operational actions."><Button disabled>Edit</Button></Unavailable>}
-              </div>
-              {/* Focused project edit — header fields with a real write path
-                  (`updateBookingProject`). Coordinator+ only; floor roles keep
-                  the read-only lines above (spec §24). */}
-              {(() => {
-                const editorUser =
-                  user && (user.role === 'Owner' || user.role === 'Admin' || user.role === 'Manager' || user.role === 'Coordinator')
-                    ? user
-                    : null
-                return editorUser ? (
-                  <details style={{ marginTop: 'var(--sp-xs)' }}>
-                    <summary style={{ cursor: 'pointer', minHeight: 44, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--t-meta, 13px)', color: 'var(--text2)', fontWeight: 600 }}>
-                      Edit project details
-                    </summary>
-                    <div style={{ marginTop: 8 }}>
-                      <ProjectTypeEditor
-                        key={`${booking.id}·${booking.projectType ?? ''}·${booking.projectTypeOther ?? ''}·${booking.projectName ?? ''}·${booking.shootLocation ?? ''}`}
-                        bookingId={booking.id}
-                        currentType={booking.projectType}
-                        currentOther={booking.projectTypeOther}
-                        currentProjectName={booking.projectName ?? booking.project}
-                        currentShootLocation={booking.shootLocation}
-                        userId={editorUser.id}
-                        role={editorUser.role}
-                        onSaved={() => refreshBookingData()}
-                      />
-                    </div>
-                  </details>
-                ) : null
-              })()}
-              {/* BD-08 — inline and persistent, in the block this failure is
-                  ABOUT (§12: errors inline, toasts for successes only). Without
-                  it the only trace of a failed client read was a greyed row
-                  inside a closed overflow menu, and the sentence it carried
-                  there blamed the client's record.
+            )}
+          </Card>
 
-                  The copy says "until the booking is reopened" and not "until it
-                  loads" because THIS SCREEN CANNOT RETRY: the contact effect has
-                  one dependency, `booking?.clientId`, and nothing else re-runs
-                  it — the two retry controls on the page call
-                  `invoicesList.refetch()` and `paymentsList.refetch()`. Only a
-                  remount re-reads the client. A retry control here would be the
-                  better fix; it is not in this change's scope, so the sentence
-                  states what is true today rather than promising a recovery that
-                  never arrives. TODO(decision) is NOT needed — this is a build
-                  task, not a ruling. */}
-              {contact.kind === 'failed' && (
-                <p
-                  role="alert"
-                  style={{ margin: '10px 0 0', fontSize: 'var(--t-meta)', color: 'var(--danger-text)', lineHeight: 1.5 }}
+          <Card title="Quick Actions">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
+              {canTakePayment && recordPaymentButton('Record Payment')}
+              {canRaiseInvoice && createInvoiceButton(hasInvoice ? 'View Invoice' : 'Create Invoice')}
+              {draftInvoice && (
+                <Button
+                  variant="secondary"
+                  icon="file"
+                  loading={generatingProForma}
+                  onClick={() => void handleGenerateProForma(draftInvoice.id)}
                 >
-                  This client’s record could not be read, so their phone number is <strong>unknown</strong>, not
-                  absent. WhatsApp messages and the payment receipt stay unavailable until the booking is reopened.{' '}
-                  {contact.message}
-                </p>
+                  Pro Forma Invoice
+                </Button>
               )}
-            </Block>
-          )}
+              {invoicesList.error && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4 }}>
+                  <span style={{ fontSize: 'var(--t-meta)', color: 'var(--danger-text)' }}>Could not read invoices</span>
+                  <Button variant="secondary" size="sm" onClick={() => invoicesList.refetch()}>
+                    Retry
+                  </Button>
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
 
-          {showSegment('Items') && (
+      {/* RULING 2026-11-10: R-10.6 · 4 tabs: Items · Money · Client & Dates · History */}
+      <BookingTabsControl
+        tabs={validTabs}
+        active={activeTab}
+        onPick={setTab}
+        viewport={viewport}
+      />
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0, marginTop: 'var(--sp-md)' }}>
+        {activeTab === 'Items' && (
+          <>
+            {blockers.length > 0 && (
+              <Card
+                title={`Attention (${blockers.length})`}
+                style={{
+                  borderLeft: '3px solid var(--danger, #dc2626)',
+                  background: 'color-mix(in srgb, var(--danger, #dc2626) 3%, var(--card))',
+                }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-xs)' }}>
+                  {blockers.map((b) => (
+                    <div
+                      key={b}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: 8,
+                        fontSize: 'var(--t-meta)',
+                        color: 'var(--danger-text)',
+                        padding: '4px 0',
+                      }}
+                    >
+                      <Icon name="alert_triangle" size={14} style={{ flexShrink: 0, marginTop: 2, color: 'var(--danger)' }} />
+                      <span>{b}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
             <Block no="2" title="Equipment, Bundles & Services">
               {/* §12 — a failed release is inline and persistent, above the
                   table whose chip refused to clear. Success is a toast. */}
@@ -2960,83 +3001,10 @@ function BookingDetailView() {
                 </div>
               )}
             </Block>
-          )}
+          </>
+        )}
 
-          {showSegment('Items') && (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: viewport === 'desktop' ? 'minmax(0,1.05fr) minmax(0,1fr)' : '1fr',
-                gap: 'var(--sp-md)',
-              }}
-            >
-              <Block
-                no="3"
-                title="Crew & Transport"
-                action={
-                  user && canAssignPricedCrew(user.role) && !booking.isCancelled && booking.stage !== 'Closed' ?
-                    <Button icon="plus" onClick={() => setShowCrewModal(true)}>
-                      Add Member
-                    </Button> : undefined
-                }
-              >
-                <BookingCrewList key={`${booking.id}:${user?.id}:${canCrewMoney}`} bookingId={booking.id} includeMoney={canCrewMoney} version={crewVersion} />
-              </Block>
-
-              <Card title="Transport & Delivery">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-                  <div style={{ display: 'flex', gap: 10, fontSize: 'var(--t-meta)', alignItems: 'flex-start' }}>
-                    <span style={{ color: 'var(--text2)', flex: 1, minWidth: 0 }}>Delivery Type</span>
-                    {/*
-                      ⛔ This carried `STATUS.in` — the green §2 reserves for
-                      "home & ready / settled". `delivery_type` is not a status:
-                      it is how the gear travels, it is chosen at creation and
-                      nothing the booking does changes it. Painting it green
-                      told a reader scanning the card by colour that a Courier
-                      delivery was settled, and spent one of the seven
-                      one-meaning hues on a field that has no state.
-
-                      Same resolution `ItemBadge` above reached for `line_type`:
-                      one neutral surface with a border, distinguished by its
-                      WORD, which is the only thing that ever carried the fact.
-                    */}
-                    <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        height: 20,
-                        padding: '0 8px',
-                        borderRadius: 'var(--r-chip)',
-                        background: 'var(--card2)',
-                        color: 'var(--text2)',
-                        border: '1px solid var(--border)',
-                        fontSize: 'var(--t-meta)',
-                        fontWeight: 600,
-                      }}
-                    >
-                      {deliveryTypeLabel(booking.deliveryType)}
-                    </span>
-                  </div>
-                  {[
-                    { label: 'Pickup Location', value: booking.pickupLocation ?? 'Not recorded' },
-                    { label: 'Return Location', value: booking.returnLocation ?? 'Not recorded' },
-                  ].map((t) => (
-                    <div key={t.label} style={{ display: 'flex', gap: 10, fontSize: 'var(--t-meta)', alignItems: 'flex-start' }}>
-                      <span style={{ color: 'var(--text2)', flex: 1, minWidth: 0 }}>{t.label}</span>
-                      <span style={{ color: 'var(--text)', textAlign: 'right', maxWidth: 170 }}>{t.value}</span>
-                    </div>
-                  ))}
-                  <NotWiredNote>
-                    {/* Vehicle, driver and delivery instructions live in booking_transport, which has no query module
-                    yet. */}Delivery details are not available yet. </NotWiredNote>
-                </div>
-              </Card>
-            </div>
-          )}
-
-          {/* Law 6 — the whole money block is omitted outright for a role that
-              can't see it, not masked field by field. */}
-          {canBookingMoney && showSegment('Money') && (
+        {activeTab === 'Money' && canBookingMoney && (
             <Block no="4" title="Pricing & Payments">
               {invoicesList.error || paymentsList.error ? (
                 <ErrorBanner
@@ -3326,9 +3294,179 @@ function BookingDetailView() {
                 </div>
               )}
             </Block>
-          )}
+        )}
 
-          {showSegment('Docs') && (
+        {activeTab === 'Client & Dates' && (
+          <>
+            <Block no="1" title="Client & Schedule">
+              {/* Read-only. The inline-edit mode this block used to carry
+                  edited a module constant for the session and persisted
+                  nothing; over live rows that becomes values that silently
+                  revert on reload — a fabricated write, so it is gone until a
+                  real booking-update action exists. */}
+              <SummaryRows
+                rows={[
+                  {
+                    label: 'Client',
+                    value: booking.clientId ? (
+                      <ClientIntelFromId clientId={booking.clientId} name={booking.clientName} context="rental-detail" gateContext={gctx} actionContext={user ? { userId: user.id, role: user.role } : null}>
+                        <Link to={`/clients/${booking.clientId}`} style={{ color: 'var(--link)', textDecoration: 'none', fontWeight: 600 }}>
+                          {booking.clientName}
+                        </Link>
+                      </ClientIntelFromId>
+                    ) : (
+                      booking.clientName
+                    ),
+                  },
+                  {
+                    label: 'Phone',
+                    value:
+                      contact.kind === 'ready' && contact.phone
+                        ? contact.phone
+                        : contact.kind === 'loading'
+                          ? 'Loading…'
+                          : 'Not recorded',
+                  },
+                  { label: 'Project', value: (booking.projectName ?? booking.project) ?? 'Not recorded' },
+                  { label: 'Shoot Location', value: booking.shootLocation ?? 'Not recorded' },
+                  { label: 'Project Type', value: displayProjectType(booking.projectType, booking.projectTypeOther) },
+                  { label: 'Pickup Location', value: booking.pickupLocation ?? 'Not recorded' },
+                  { label: 'Return Location', value: booking.returnLocation ?? 'Not recorded' },
+                ]}
+              />
+              {/* Law 16 — Edit exists but is Unavailable-with-reason. A missing
+                  button reads as "read-only by design"; a disabled one with a
+                  reason states the truth: the write path is not yet wired. */}
+              <div style={{ marginTop: 'var(--sp-sm)' }}>
+                {booking.stage === 'Quote' && !booking.isCancelled && Boolean(user?.role && ['Owner','Admin','Manager','Coordinator'].includes(user.role)) ? <Link to="?action=edit"><Button>Edit booking</Button></Link> : <Unavailable reason="General editing is available before confirmation. Use this booking's operational actions."><Button disabled>Edit</Button></Unavailable>}
+              </div>
+              {/* Focused project edit — header fields with a real write path
+                  (`updateBookingProject`). Coordinator+ only; floor roles keep
+                  the read-only lines above (spec §24). */}
+              {(() => {
+                const editorUser =
+                  user && (user.role === 'Owner' || user.role === 'Admin' || user.role === 'Manager' || user.role === 'Coordinator')
+                    ? user
+                    : null
+                return editorUser ? (
+                  <details style={{ marginTop: 'var(--sp-xs)' }}>
+                    <summary style={{ cursor: 'pointer', minHeight: 44, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--t-meta, 13px)', color: 'var(--text2)', fontWeight: 600 }}>
+                      Edit project details
+                    </summary>
+                    <div style={{ marginTop: 8 }}>
+                      <ProjectTypeEditor
+                        key={`${booking.id}·${booking.projectType ?? ''}·${booking.projectTypeOther ?? ''}·${booking.projectName ?? ''}·${booking.shootLocation ?? ''}`}
+                        bookingId={booking.id}
+                        currentType={booking.projectType}
+                        currentOther={booking.projectTypeOther}
+                        currentProjectName={booking.projectName ?? booking.project}
+                        currentShootLocation={booking.shootLocation}
+                        userId={editorUser.id}
+                        role={editorUser.role}
+                        onSaved={() => refreshBookingData()}
+                      />
+                    </div>
+                  </details>
+                ) : null
+              })()}
+              {/* BD-08 — inline and persistent, in the block this failure is
+                  ABOUT (§12: errors inline, toasts for successes only). Without
+                  it the only trace of a failed client read was a greyed row
+                  inside a closed overflow menu, and the sentence it carried
+                  there blamed the client's record.
+
+                  The copy says "until the booking is reopened" and not "until it
+                  loads" because THIS SCREEN CANNOT RETRY: the contact effect has
+                  one dependency, `booking?.clientId`, and nothing else re-runs
+                  it — the two retry controls on the page call
+                  `invoicesList.refetch()` and `paymentsList.refetch()`. Only a
+                  remount re-reads the client. A retry control here would be the
+                  better fix; it is not in this change's scope, so the sentence
+                  states what is true today rather than promising a recovery that
+                  never arrives. TODO(decision) is NOT needed — this is a build
+                  task, not a ruling. */}
+              {contact.kind === 'failed' && (
+                <p
+                  role="alert"
+                  style={{ margin: '10px 0 0', fontSize: 'var(--t-meta)', color: 'var(--danger-text)', lineHeight: 1.5 }}
+                >
+                  This client’s record could not be read, so their phone number is <strong>unknown</strong>, not
+                  absent. WhatsApp messages and the payment receipt stay unavailable until the booking is reopened.{' '}
+                  {contact.message}
+                </p>
+              )}
+            </Block>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: viewport === 'desktop' ? 'minmax(0,1.05fr) minmax(0,1fr)' : '1fr',
+                gap: 'var(--sp-md)',
+              }}
+            >
+              <Block
+                no="3"
+                title="Crew & Transport"
+                action={
+                  user && canAssignPricedCrew(user.role) && !booking.isCancelled && booking.stage !== 'Closed' ?
+                    <Button icon="plus" onClick={() => setShowCrewModal(true)}>
+                      Add Member
+                    </Button> : undefined
+                }
+              >
+                <BookingCrewList key={`${booking.id}:${user?.id}:${canCrewMoney}`} bookingId={booking.id} includeMoney={canCrewMoney} version={crewVersion} />
+              </Block>
+
+              <Card title="Transport & Delivery">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                  <div style={{ display: 'flex', gap: 10, fontSize: 'var(--t-meta)', alignItems: 'flex-start' }}>
+                    <span style={{ color: 'var(--text2)', flex: 1, minWidth: 0 }}>Delivery Type</span>
+                    {/*
+                      ⛔ This carried `STATUS.in` — the green §2 reserves for
+                      "home & ready / settled". `delivery_type` is not a status:
+                      it is how the gear travels, it is chosen at creation and
+                      nothing the booking does changes it. Painting it green
+                      told a reader scanning the card by colour that a Courier
+                      delivery was settled, and spent one of the seven
+                      one-meaning hues on a field that has no state.
+
+                      Same resolution `ItemBadge` above reached for `line_type`:
+                      one neutral surface with a border, distinguished by its
+                      WORD, which is the only thing that ever carried the fact.
+                    */}
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        height: 20,
+                        padding: '0 8px',
+                        borderRadius: 'var(--r-chip)',
+                        background: 'var(--card2)',
+                        color: 'var(--text2)',
+                        border: '1px solid var(--border)',
+                        fontSize: 'var(--t-meta)',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {deliveryTypeLabel(booking.deliveryType)}
+                    </span>
+                  </div>
+                  {[
+                    { label: 'Pickup Location', value: booking.pickupLocation ?? 'Not recorded' },
+                    { label: 'Return Location', value: booking.returnLocation ?? 'Not recorded' },
+                  ].map((t) => (
+                    <div key={t.label} style={{ display: 'flex', gap: 10, fontSize: 'var(--t-meta)', alignItems: 'flex-start' }}>
+                      <span style={{ color: 'var(--text2)', flex: 1, minWidth: 0 }}>{t.label}</span>
+                      <span style={{ color: 'var(--text)', textAlign: 'right', maxWidth: 170 }}>{t.value}</span>
+                    </div>
+                  ))}
+                  <NotWiredNote>
+                    {/* Vehicle, driver and delivery instructions live in booking_transport, which has no query module
+                    yet. */}Delivery details are not available yet. </NotWiredNote>
+                </div>
+              </Card>
+            </div>
+
             <Block
               no="5"
               title="Documents"
@@ -3403,72 +3541,31 @@ function BookingDetailView() {
                 </div>
               )}
             </Block>
-          )}
-        </div>
-
-        {/* Rulings §7 — rails reflow below 1280, never hide. */}
-        {viewport === 'desktop' ? (
-          <Rail>{railBody}</Rail>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0 }}>{railBody}</div>
+          </>
         )}
 
-        {/* The close dispatch's own failure. R-07 keeps Close a HARD gate, so a
-            refusal here is the normal, expected answer when money is outstanding
-            or the deposit is unresolved — it must be readable, not a toast
-            (Law 12 — errors inline, toasts for successes only). */}
-        {closeError && (
-          <div
-            role="alert"
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 'var(--sp-sm)',
-              padding: '10px 12px',
-              borderRadius: 'var(--r-sm)',
-              border: '1px solid var(--danger)',
-              background: 'var(--st-danger-bg)',
-              fontSize: 'var(--t-meta)',
-              color: 'var(--danger-text)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--sp-sm)' }}>
-              <Icon name="alert_triangle" size={14} style={{ flexShrink: 0, marginTop: 2 }} />
-              <span>{closeError}</span>
-            </div>
-            {closeError.includes('nothing has been invoiced') &&
-              (user?.role === 'Owner' || user?.role === 'Admin') && (
-                <div style={{ marginTop: 'var(--sp-xs)', display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)' }}>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => {
-                      setOverrideError(null)
-                      setOverrideReason('')
-                      setOverrideModalOpen(true)
-                    }}
-                  >
-                    {/* Close with Zero-Value Override (§4.51) */}Close with Zero-Value Override </Button>
-                </div>
-              )}
-            {/deposit/i.test(closeError) &&
-              ['Owner', 'Admin', 'Manager'].includes(String(user?.role)) &&
-              getSetting('allowDepositSkipOnClose') === 'On' && (
-                <div style={{ marginTop: 'var(--sp-xs)', display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)' }}>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => {
-                      setDepositSkipError(null)
-                      setDepositSkipReason('')
-                      setDepositSkipOpen(true)
-                    }}
-                  >
-                    Close without settling deposit
-                  </Button>
-                </div>
-              )}
-          </div>
+        {activeTab === 'History' && (
+          <>
+            <NotesCard
+              bookingId={bookingId ?? ''}
+              ctx={user ? { userId: user.id, role: user.role } : null}
+              canWrite={canWriteNotes}
+              rows={notesList.rows}
+              loading={notesList.loading}
+              error={notesList.error}
+              onRetry={notesList.refetch}
+              onSaved={() => {
+                showSuccessToast('Note Added', `Recorded against ${booking.bookingNo}`)
+                notesList.refetch()
+              }}
+            />
+
+            <Card title="Activity Timeline">
+              <p style={{ margin: 0, fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
+                No activity recorded yet.
+              </p>
+            </Card>
+          </>
         )}
       </div>
 

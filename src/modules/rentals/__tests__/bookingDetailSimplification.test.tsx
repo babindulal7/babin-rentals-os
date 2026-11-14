@@ -204,6 +204,14 @@ describe('BookingDetail Simplification (Task 4)', () => {
 
   it('links client name to client detail page and shows contact phone', async () => {
     await mount()
+    const clientTab = [...container.querySelectorAll('[role="tab"]')].find(
+      (b) => b.textContent?.includes('Client & Dates'),
+    ) as HTMLElement | undefined
+    if (clientTab) {
+      await act(async () => {
+        clientTab.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      })
+    }
     const link = [...container.querySelectorAll('a')].find((a) => a.getAttribute('href') === '/clients/c-1')
     expect(link).toBeDefined()
     expect(link?.textContent).toContain('Himalayan Films Pvt. Ltd.')

@@ -1,5 +1,62 @@
 # Progress Log
 
+## 2026-11-15 — Card E-3: Booking Detail 4 tabs (R-10.6, Lane B)
+
+**Did**
+- Regrouped `BookingDetail.tsx` into 4 tabs on all viewports:
+  1. `Items`: Equipment, Bundles & Services (Block 2) + Attention card (blockers).
+  2. `Money`: Pricing & Payments (Block 4) containing Rental Charges, Deposit, Late Return Assessment, Payment History.
+  3. `Client & Dates`: Client & Schedule (Block 1) + Crew & Transport (Block 3) + Transport & Delivery card + Documents (Block 5).
+  4. `History`: NotesCard + Activity Timeline.
+- Moved `Booking Summary` (Rental Total, Rental Paid, Rental Outstanding) and `Quick Actions` (Record Payment, View invoice) ABOVE the tabs so balance and key financial actions are always visible without tab switching.
+- Enforced Law 6 (money blindness): for money-blind roles (`Warehouse`, `Technician`, `Driver`, `Client`), the `Money` tab, `Booking Summary`, and `Quick Actions` are strictly omitted from the DOM.
+- Implemented accessible `BookingTabsControl` with `role="tablist"`, `role="tab"`, `aria-selected`, keyboard navigation (ArrowLeft, ArrowRight, Home, End), and minimum 44px touch targets (`minHeight: 44px`, Law 15).
+- Synchronized active tab with URL query parameter `?tab=items|money|client-dates|history` with fallback to `items` if a money-blind role accesses `?tab=money`.
+- Cleaned up obsolete `railBody` and unused `Rail` import.
+- Added comprehensive unit test suite `src/modules/rentals/__tests__/bookingDetailTabs.test.tsx` (7 tests) verifying 4 tabs across viewports (1280px, 1024px, 420px), persistent Summary & Quick Actions, money-blind omission, tab switching, query param sync, keyboard navigation, and touch targets.
+- Updated `BookingDetail.layout.test.tsx`, `BookingDetail.edit.test.tsx`, and `bookingDetailSimplification.test.tsx` to align with the 4-tab model.
+
+**Ruled**
+- R-10.6 stands: 4 tabs on all viewports (`Items`, `Money`, `Client & Dates`, `History`). Summary and Quick Actions sit above tabs.
+- Law 6 stands: money surfaces and tabs are omitted from the DOM, never greyed.
+- Law 15 stands: minimum 44px touch targets.
+
+**Verified**
+- `npm run typecheck`: exit 0 (tsc clean).
+- `npm run lint`: exit 0 (eslint src --max-warnings 0 clean).
+- `npx vitest run src/modules/rentals/__tests__/bookingDetailTabs.test.tsx`: 7/7 passed.
+- `npx vitest run src/modules/rentals/__tests__/BookingDetail.layout.test.tsx src/modules/rentals/__tests__/BookingDetail.edit.test.tsx src/modules/rentals/__tests__/bookingDetailSimplification.test.tsx`: 53/53 passed.
+- `npx vitest run src/modules/rentals/__tests__/BookingDetail.honesty.test.tsx`: 21/21 passed.
+- `npm run check:security`: 18 Phase 0 SQL regressions passed, 14 Reset branch regression groups passed, glossary passed.
+- `npm run check:contrast`: 97/97 passed, 0 fail.
+- `npm run lint:shell`: 876 files checked, ✓ All pages satisfy PageHeader, single primary CTA, 44px floor, and no dev notes.
+- `npm run lint:ui-copy`: 0 developer-text violations, all tests passed.
+- `npm run check:pglite`: 233/233 applied, 0 failed.
+- `npm run check:lifecycle`: 72/72 steps green, 0 failed.
+- `npm run build`: built in 39s without errors.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | 72 / 72 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 233 files · check:pglite 233/233 applied, 0 failed (recorded 2026-11-14T19:48:46.830Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-14T19:49:42.696Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Card E-3 is complete on Lane B.
+- Next Ease-of-Use cards:
+  - Card E-5: Delivery screen: Job list + 1 button per job (R-10.11).
+  - Card E-6: Calendar default: Simple month (R-10.12).
+  - Card E-7: Finance tabs: 4 tabs + Documents view in Rentals (R-10.8, R-10.9, G-12).
+
 ## 2026-11-12 — Add the 10 Nov ease-of-use rulings file (docs only, PR #149)
 
 **Did**

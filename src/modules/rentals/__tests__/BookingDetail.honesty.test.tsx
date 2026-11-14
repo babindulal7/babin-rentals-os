@@ -304,6 +304,16 @@ afterEach(async () => {
 })
 
 const text = () => container.textContent ?? ''
+
+async function pickTab(tabName: string) {
+  const tab = [...container.querySelectorAll('[role="tab"]')].find((t) => t.textContent?.trim() === tabName)
+  if (tab) {
+    await act(async () => {
+      tab.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    await flush(4)
+  }
+}
 // Menus and dialogs portal to <body> (shell clearance, 7 Oct 2026), so the
 // operator-visible page is document.body, not the component's container.
 const allButtons = () => [...document.body.querySelectorAll('button')]
@@ -546,6 +556,7 @@ describe('BD-16 — a status hue means one thing, and only a status wears one', 
     invoiceRows = [INVOICE]
     paymentRows = [payment('1', 'Received'), payment('2', 'Failed')]
     await mount()
+    await pickTab('Money')
 
     const chip = (label: string) =>
       [...container.querySelectorAll('span')].find((s) => s.textContent?.trim() === label)
@@ -561,6 +572,7 @@ describe('BD-16 — a status hue means one thing, and only a status wears one', 
 
   it('gives the delivery type a neutral marker, not the green of a settled status', async () => {
     await mount()
+    await pickTab('Client & Dates')
     const pill = [...container.querySelectorAll('span')].find((s) => s.textContent?.trim() === 'Client Pickup')
     expect(pill).toBeTruthy()
     expect(pill?.getAttribute('style')).not.toContain('--st-in-bg')
@@ -569,6 +581,7 @@ describe('BD-16 — a status hue means one thing, and only a status wears one', 
 
   it('paints no note-type TOGGLE in a status hue, selected or not', async () => {
     await mount()
+    await pickTab('History')
     const chips = [...container.querySelectorAll('button')].filter((b) =>
       ['Booking', 'Internal'].includes((b.textContent ?? '').trim()),
     )
@@ -586,6 +599,7 @@ describe('BD-16 — a status hue means one thing, and only a status wears one', 
   it('paints no note-type CHIP on a recorded note in a status hue either', async () => {
     noteRows = [INTERNAL_NOTE]
     await mount()
+    await pickTab('History')
     const chip = [...container.querySelectorAll('span')].find((s) => s.textContent?.trim() === 'Internal')
     expect(chip).toBeTruthy()
     const style = chip?.getAttribute('style') ?? ''
