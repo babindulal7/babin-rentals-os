@@ -1,5 +1,53 @@
 # Progress Log
 
+## 2026-11-15 — Card E-6: Calendar default to Simple Month (R-10.12)
+
+**Did**
+- Implemented Card E-6 per Babin's ease-of-use ruling R-10.12 (`RULINGS-2026-11-10.md` §1 line 26, §5).
+- Reduced Calendar clutter from baseline 37 buttons to a clean Simple Month view default.
+- Consolidated view switching tabs (`Month`, `Week`, `Day`, `Timeline`, `Availability`), row type and client filters into a single unified `[View: Month ▾]` menu (`data-testid="calendar-view-menu"`, dropdown `data-testid="calendar-view-menu-dropdown"`).
+- Added explicit `Return to Simple Month` button when any non-month secondary view is active.
+- Added active filter count badge with one-click clear button.
+- Retained full keyboard accessibility: roving tablist navigation inside View menu, click-outside and `Escape` key dismissal with focus restoration to the menu trigger.
+- Enforced Law 15 minimum touch target (>= 44px) on trigger and menu options.
+- Added regression test suite in `src/modules/calendar/__tests__/calendarSimplification.test.tsx` (5 tests covering default view, menu interaction, view selection, Escape dismissal, and touch targets).
+
+**Ruled**
+- Ruling R-10.12 (Babin, 10 Nov 2026): Calendar default (37 buttons) → Simple month. Month view opens first; other views and filters sit behind one View menu. Revert criterion: Restore the previous default view.
+- Three-place log rule fulfilled: `RULINGS-2026-11-10.md` §1, `PROGRESS.md`, and code-site comments in `src/modules/calendar/Calendar.tsx`, `calendar.css`, and `calendarSimplification.test.tsx`.
+
+**Verified**
+- `npm run typecheck`: passed (exit 0, 0 errors).
+- `npm run lint`: passed (exit 0, 0 warnings/errors).
+- `npx vitest run src/modules/calendar/__tests__/`: 8 test files passed, 40 tests passed.
+- `npm run lint:shell`: passed (876 files checked, 0 violations).
+- `npm run lint:ui-copy`: passed (0 developer-text violations).
+- `npm run check:contrast`: passed (97/97 pass, 0 fail).
+- `npm run check:security`: passed (18 Phase 0 SQL regressions passed, 14/14 Reset branch regressions passed, glossary baseline passed).
+- `npm run build`: passed (tsc --noEmit && vite build, built in 2m 25s, exit 0).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | 72 / 72 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 233 files · check:pglite 233/233 applied, 0 failed (recorded 2026-11-14T21:08:25.354Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-14T21:09:40.283Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Card E-6 branch `lane-b/card-e6-calendar-simple-month` ready for Babin's review and local merge.
+- Remaining ease-of-use cards: Card E-1 (sidebar per role) on Lane B, and remaining cards E-2 through E-5, E-7.
+- Q4 (Manager sidebar) and Q5 (personal settings for floor roles) of `RULINGS-2026-11-10.md` are open and not yet in `docs/OPEN_DECISIONS.md` or `PLAN.md` §4.2.
+- D-UX-01 to D-UX-05 (O-23 to O-27) await Babin's answers.
+
 ## 2026-11-12 — Add the 10 Nov ease-of-use rulings file (docs only, PR #149)
 
 **Did**
