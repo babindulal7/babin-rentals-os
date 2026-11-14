@@ -39,6 +39,7 @@ export default defineConfig({
         /modules[\\/]rentals[\\/].*\.css/,
         /modules[\\/]operations[\\/].*\.css/,
         /components[\\/]shell[\\/]shell\.css/, // headerAddSlot.test.ts reads the slot floors
+        /components[\\/]shell[\\/]referenceShell\.css/, // referenceShell.test.ts reads the visual layer
       ],
     },
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],

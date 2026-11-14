@@ -1,5 +1,47 @@
 # Progress Log
 
+## 2026-11-12 — Add the 10 Nov ease-of-use rulings file (docs only, PR #149)
+
+**Did**
+- Added `RULINGS-2026-11-10.md` to the repo root: Babin's ease-of-use rulings R-10.1 to R-10.12 of 10 Nov 2026, as recorded that day.
+- Added one note under its section 4: Q1, Q2, Q3 and Q6 were answered later on 10 Nov in `RULINGS-2026-11-10-design.md` (G-10 and G-18, G-11, G-12, G-9). Q4 and Q5 are still open.
+- Branch `docs/rulings-2026-11-10-ease-of-use`, cut from `origin/main` `d4486a4`. PR #149 awaits Babin's review and merge.
+- This closes the Remaining line in the Card 4 entry below that said the file was not in the repo.
+
+**Ruled**
+- No new ruling in this session. R-10.1 to R-10.12 are Babin's answers of 10 Nov; this entry records that they are now in the repo.
+- **Recorded, not implemented:** none of R-10.1 to R-10.12 is built by this change. Cards E-1 to E-7 implement them; each card adds its own `// RULING 2026-11-10` code-site comment (B-2 place 3) when it lands.
+- W74 stands. Babin gave a one-time exception in chat on 12 Nov 2026 for Claude to open this docs-only PR.
+
+**Verified**
+- `git diff --stat origin/main`: two files, `RULINGS-2026-11-10.md` (new) and `PROGRESS.md`. No source, migration, permission or setting file changed.
+- `npm run lint:progress` (run as `node scripts/lint-progress.mjs`): exit 0.
+- `npm run completion` (run as `node scripts/completion.mjs`): exit 0; block below is its output.
+- **Not run:** `npm ci`, typecheck, lint, tests, `check:pglite`, `check:security`, `check:lifecycle`, contract tests, `check:contrast`, `lint:shell`, `lint:ui-copy`, build, `npm run gates`. The cloud session did not install dependencies. Run `npm run gates` before merging.
+- Cross-file links: not checked. The text uses plain paths only.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +1 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 233 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- PR #149 awaits Babin's review and merge; local gates have not been run on it.
+- R-10.1 to R-10.12 are not built. Card E-1 (sidebar per role) is next; E-2 to E-7 wait until the floor loop is on staging (G-9).
+- Q4 (Manager sidebar) and Q5 (personal settings for floor roles) of `RULINGS-2026-11-10.md` are open and not yet in `docs/OPEN_DECISIONS.md` or `PLAN.md` §4.2.
+- D-UX-01 to D-UX-05 (O-23 to O-27) await Babin's answers.
+- Next session starts with: card E-1 on Lane B.
+
 ## 2026-11-10 — Card 4: register D-UX-01 to D-UX-05 as O-23 to O-27 (docs only)
 
 **Did**

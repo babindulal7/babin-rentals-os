@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom'
+import './components/shell/referenceShell.css'
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { AUDIT_LOG_PATH, PROBLEM_REPORTS_PATH, PRODUCTIONS_HUB_PATH, financeTabPath, type FinanceTabSlug } from './lib/routeTargets'
@@ -115,7 +116,7 @@ const AuthFallback = (
 export default function App() {
   const location = useLocation()
   const queryRentalCreation = () => new URLSearchParams(location.search).get('action') === 'new'
-  const { user } = useAuth()
+  const { user, limboState } = useAuth()
   const [showOnboarding, setShowOnboarding] = useState(false)
 
   useEffect(() => {
@@ -125,6 +126,24 @@ export default function App() {
       setShowOnboarding(true)
     }
   }, [])
+
+  // T1-15 — do not merely paint a PIN overlay over sensitive mounted pages.
+  // The whole business tree (including sync effects, Finance queries and stale
+  // React role state) must be unmounted until verification/adoption completes.
+  if (limboState !== 'idle') {
+    return (
+      <div role={limboState === 'aborted' ? 'alert' : 'status'} aria-live="polite"
+        style={{ position: 'fixed', inset: 0, display: 'grid', placeItems: 'center',
+          background: 'var(--app)', color: 'var(--text)', padding: 24 }}>
+        <div style={{ maxWidth: 420, textAlign: 'center' }}>
+          <h1 style={{ fontSize: 22, marginBottom: 12 }}>Babin Rentals — Staff verification</h1>
+          <p>{limboState === 'aborted'
+            ? 'The session could not be safely cleared. Close this app before signing in again.'
+            : 'Checking your staff session and clearing the previous user’s data…'}</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <ToastProvider>
@@ -1222,6 +1241,7 @@ function Shell({
 
   return (
     <div
+      className="br-reference-shell"
       style={{
         display: 'flex',
         flexDirection: 'column',
