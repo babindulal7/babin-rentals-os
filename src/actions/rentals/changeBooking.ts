@@ -1,7 +1,7 @@
 import { createAction, type ActionConfig } from '../core'
 import { newClientUuid, supabase } from '../../lib/supabase'
 import type { BookingChangeSnapshot } from '../../lib/queries/changeBooking'
-import { bookingChangePayload } from '../../lib/queries/changeBooking'
+import { bookingChangePayload, bookingChangeToDraft } from '../../lib/queries/changeBooking'
 import type { RentalDraftData } from './saveDraft'
 import type { Paisa } from '../../lib/money'
 
@@ -59,7 +59,24 @@ export const changeBookingConfig: ActionConfig<ChangeBookingInput, BookingChange
     if (ctx.isOnline === false) {
       throw new Error('Connect to save this booking. Your changes are still here.')
     }
-    const payload = bookingChangePayload(input.draft, input.snapshot, input.depositPaisa, input.reason)
+    if (ctx.role === 'Warehouse') {
+      const original = bookingChangeToDraft(input.snapshot)
+      const crewSummary = (draft: RentalDraftData) => draft.crew.map(c => [c.bookingCrewLineId ?? null, c.crewMemberId ?? null, c.name, c.role, c.phone, c.days, c.overtimeDays])
+      const transportSummary = (draft: RentalDraftData) => [draft.deliveryType, draft.vehicle, draft.numberPlate, draft.driverContact,
+        draft.specialInstructions, draft.returnPickupType, draft.returnPickupAddress, draft.returnPickupTime]
+      if (JSON.stringify(crewSummary(input.draft)) !== JSON.stringify(crewSummary(original)) ||
+          JSON.stringify(transportSummary(input.draft)) !== JSON.stringify(transportSummary(original))) {
+        throw new Error('Ask the booking desk to change crew or delivery details.')
+      }
+    }
+    const fullPayload = bookingChangePayload(input.draft, input.snapshot, input.depositPaisa, input.reason)
+    const payload = ctx.role === 'Warehouse'
+      ? {
+          values: Object.fromEntries(Object.entries(fullPayload.values).filter(([key]) => key !== 'deposit_required')),
+          lines: fullPayload.lines.map(({ rate: _rate, discount_amount: _discount, ...line }) => line),
+          reason: fullPayload.reason,
+        }
+      : fullPayload
     const { data, error } = await supabase.rpc('change_booking', {
       p_payload: {
         booking_id: input.bookingId,

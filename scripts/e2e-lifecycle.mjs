@@ -7872,10 +7872,34 @@ STEPS.push({
       await actionPackRental({ key: 'l73_pack', actor: 'Warehouse', units: [UNITS[2]] })
     })
 
+    await q(`insert into booking_transport (client_uuid, booking_id, delivery_charge, fuel_charge, special_instructions, created_by)
+      values (gen_random_uuid(), $1, 450.75, 50, $2, $3)`, [bId,
+      'Use gate B | Return Pickup: Babin Pickup from "Studio" at 18:00 (Return Pickup Fee: Rs 450.75)', U.Owner])
+
+    await as('Warehouse', async () => {
+      const snapshot = await one('select read_booking_for_change($1)', [bId])
+      assert(!('deposit_required' in snapshot.values) && !('rate' in snapshot.lines[0]) && !('discount_amount' in snapshot.lines[0]), 'Warehouse snapshot contains no monetary fields')
+      assert(!JSON.stringify(snapshot).includes('450.75'), 'Warehouse never receives the fee embedded in transport instructions')
+      assertEq(snapshot.transport.special_instructions, 'Use gate B | Return Pickup: Babin Pickup from "Studio" at 18:00', 'Warehouse keeps operational return-pickup instructions')
+      const request = { booking_id: bId, client_uuid: crypto.randomUUID(), revision: snapshot.revision,
+        values: { project: 'Warehouse update' }, lines: snapshot.lines }
+      await refuses('money-blind staff cannot submit editor financial data',
+        'select change_booking($1::jsonb)', [JSON.stringify({ ...request, values: { deposit_required: 1 } })], /money fields/i)
+      const saved = await one('select change_booking($1::jsonb)', [JSON.stringify(request)])
+      assertEq(saved.values.project, 'Warehouse update', 'Warehouse can update the booking')
+      assert(!('rate' in saved.lines[0]), 'Warehouse save response contains no line rate')
+    })
+
     // Now attempt to remove the packed line via change_booking without unpacking
     await as('Coordinator', async () => {
       const packSnapshot = await one('select read_booking_for_change($1)', [bId])
       assert(packSnapshot.lines[0].is_packed === true, 'Line is marked is_packed in read_booking_for_change')
+
+      const alteredLine = { ...packSnapshot.lines[0], qty: 2 }
+      await refuses('a packed line cannot change quantity', 'select change_booking($1::jsonb)',
+        [JSON.stringify({ booking_id: bId, client_uuid: crypto.randomUUID(), revision: packSnapshot.revision, lines: [alteredLine] })], /unpack/i)
+      await refuses('a caller cannot impersonate another actor', 'select change_booking($1::jsonb)',
+        [JSON.stringify({ booking_id: bId, client_uuid: crypto.randomUUID(), revision: packSnapshot.revision, actor_id: U.Owner, lines: packSnapshot.lines })], /signed-in user/i)
 
       const removeLinePayload = {
         booking_id: bId,
@@ -7952,6 +7976,62 @@ STEPS.push({
     await as('Coordinator', async () => {
       const snapshot = await one('select read_booking_for_change($1)', [linkedId])
       assertEq(snapshot.parent_booking_id, parentId, 'read_booking_for_change reports parent_booking_id')
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L75',
+  title: 'Numbered invoices prevent confirmed booking edits (T3-18, T3-14/O-14)',
+  expect: 'green',
+  run: async () => {
+    let bookingId
+    let snapshot
+    await as('Coordinator', async () => {
+      const created = await createBooking({
+        key: 'l75_numbered', window: ['2100-01-10T04:00:00Z', '2100-01-12T04:00:00Z'], actor: 'Coordinator',
+        lines: [{ productId: QTY_PRODUCT, description: 'L75 cable', qty: 1, days: 2, rate: 250 }],
+      })
+      bookingId = created.booking_id
+      await transition('l75_numbered', 'Quote', 'Booked', 'Coordinator')
+      snapshot = await one('select read_booking_for_change($1)', [bookingId])
+    })
+    const draftId = await one("select id from invoices where booking_id = $1 and status = 'Draft'", [bookingId])
+    await as('Accounts', async () => {
+      await one('select issue_invoice($1::jsonb)', [JSON.stringify({ invoice_id: draftId, issued_by: U.Accounts })])
+    })
+    const before = await one('select to_jsonb(b) from bookings b where id = $1', [bookingId])
+    for (const role of ['Coordinator', 'Warehouse']) {
+      await as(role, async () => {
+        const ownSnapshot = role === 'Warehouse' ? await one('select read_booking_for_change($1)', [bookingId]) : snapshot
+        await refuses('a numbered invoice blocks booking changes', 'select change_booking($1::jsonb)', [JSON.stringify({
+          booking_id: bookingId, client_uuid: crypto.randomUUID(), revision: ownSnapshot.revision,
+          values: { project: 'Must remain unchanged' }, lines: ownSnapshot.lines,
+        })], /numbered invoice/i)
+      })
+    }
+    const after = await one('select to_jsonb(b) from bookings b where id = $1', [bookingId])
+    assertEq(JSON.stringify(after), JSON.stringify(before), 'A refused change leaves the booking unchanged')
+  },
+})
+
+STEPS.push({
+  id: 'L76',
+  title: 'Stored line totals cannot be separated from their rate or discount (T3-18)',
+  expect: 'green',
+  run: async () => {
+    await as('Coordinator', async () => {
+      const created = await createBooking({
+        key: 'l76_stored_price', window: ['2100-01-15T04:00:00Z', '2100-01-17T04:00:00Z'], actor: 'Coordinator',
+        lines: [{ productId: QTY_PRODUCT, description: 'L76 cable', qty: 1, days: 2, rate: 250 }],
+      })
+      const snapshot = await one('select read_booking_for_change($1)', [created.booking_id])
+      for (const patch of [{ rate: 1 }, { discount_amount: 1 }]) {
+        await refuses('a stored-price line refuses an unpriced financial edit', 'select change_booking($1::jsonb)', [JSON.stringify({
+          booking_id: created.booking_id, client_uuid: crypto.randomUUID(), revision: snapshot.revision,
+          values: {}, lines: snapshot.lines.map(line => ({ ...line, ...patch })),
+        })], /stored pricing/i)
+      }
     })
   },
 })

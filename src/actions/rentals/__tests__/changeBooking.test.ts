@@ -218,6 +218,20 @@ describe('T3-18 · Change confirmed booking & linked booking', () => {
       expect(pPayload['actor_id']).toBe('user-coord-1')
     })
 
+    it('does not send financial fields when Warehouse saves', async () => {
+      rpc.state.reply = { data: { id: 'b-001', code: 'BK-100', stage: 'Booked', revision: 'new-rev' }, error: null }
+      await changeBooking(baseInput, { userId: 'warehouse-1', role: 'Warehouse', isOnline: true })
+      const sent = (rpc.state.calls[0]?.args as { p_payload: Record<string, unknown> }).p_payload
+      expect(sent['values']).not.toHaveProperty('deposit_required')
+      expect(sent).not.toHaveProperty('discount_percent')
+      expect(sent).not.toHaveProperty('crew')
+      expect(sent).not.toHaveProperty('transport')
+      for (const line of sent['lines'] as Record<string, unknown>[]) {
+        expect(line).not.toHaveProperty('rate')
+        expect(line).not.toHaveProperty('discount_amount')
+      }
+    })
+
     it('prepares stable change attempt via prepareBookingChangeSave', () => {
       const attempt1 = prepareBookingChangeSave(
         {

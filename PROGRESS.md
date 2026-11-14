@@ -1,5 +1,79 @@
 # Progress Log
 
+## 2026-11-15 — Lane C T3-18 follow-through: numbered invoices and atomic retries
+
+**Did**
+- Continued the existing T3-18 repair worktree, preserving unrelated changes in the original checkout. Corrected the card from ready to doing because functional and staging acceptance remain incomplete.
+- Added the T3-14/O-14 guard against changing a booking with a non-void numbered invoice, and covered both Coordinator and Warehouse in lifecycle step L75.
+- Covered stored rate and discount changes in the existing pricing guard (L76), preventing a stored line total from silently diverging.
+- Made the mock booking save, revision and retry receipt synchronous and persist in one overlay write, with rollback if a later row fails.
+- Removed generated return-pickup fees embedded in transport instruction text from Warehouse snapshots and save responses, retaining the operational pickup instructions.
+
+**Ruled**
+- Existing W88, Law 6, Law 8 and T3-14/O-14 apply. No new product decision or permission expansion. This card remains doing.
+
+**Verified**
+- Regression tests first reproduced the simultaneous-retry failure and missing numbered-invoice/stored-price guards. The focused mock suite passes 8/8, including a forced failure proving rollback and no partial storage write.
+- Current-source `npm run gates`: PASS, all 17 steps. Mock suite and coverage each passed 6,955/6,955 tests in 589 files; migrations 229/229; lifecycle 76/76; financial integrity, security, server contracts, partial return, receipt checks, copy/shell/contrast checks and production build all passed.
+- The 14 November full gate result in the next entry is historical after these edits. No hosted or physical-device verification performed.
+- Required pre-commit dependency audit reported 37 findings (4 critical, 13 high, 17 moderate, 3 low), recorded locally in artifacts/t3-18-dependency-audit.json. No dependency or lockfile changed by this repair; dependency remediation remains separate lane A work.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | 76 / 76 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 229 files · check:pglite 229/229 applied, 0 failed (recorded 2026-11-14T19:51:51.254Z). Suite: PASS — 6955/6955 passed, 0 failed (recorded 2026-11-14T20:06:44.463Z); source fingerprint matches.
+Coverage suite: PASS — 6955/6955 passed, 0 failed (recorded 2026-11-14T20:06:44.463Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-14T19:53:55.581Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Current-source local gates passed. Review packet: docs/verification/T3-18_REPAIR_CHECKPOINT.md. Card remains doing; Babin has not merged this work.
+- Complete stored-price repricing and money-blind bundle/component support; the current guarded limitations do not satisfy every T3-18 acceptance case.
+- Browser checks at 375/820/1440, staging with two devices, accountant decisions O-14/O-17, and Babin's merge remain pending. Migration 0232 is WRITTEN, NOT APPLIED or PRODUCTION-VERIFIED.
+
+
+## 2026-11-14 — T3-18 security repair in progress (Lane C)
+
+**Did**
+- Restricted booking change RPC monetary fields for Warehouse, bound audit actors to the signed-in user, protected packed items, and renewed quantity holds when lines change.
+- Added a money-blind Warehouse editor contract. Stored-price changes are refused until safely repriced; bundle additions and crew/delivery edits require a money-visible desk user.
+- Implemented mock change persistence, revision checks and retry receipts, with tests for reload and money masking.
+
+**Ruled**
+- This is not merge-ready pending the full local gate, independent review, and screen/device acceptance. No product ruling changed.
+
+**Verified**
+- Full local gate PASS: typecheck, lint, local API guards, 6,950/6,950 mock tests in 589 files, 229/229 PGlite migrations, financial integrity, security, 74/74 lifecycle, server contracts, partial return, progress/receipt/shell/UI/contrast checks, build, and coverage (6,950/6,950). Browser inventory reported local browser access unavailable; no screen or physical-device check performed.
+- Migration 0232 NOT APPLIED or PRODUCTION-VERIFIED. Mock availability is not a substitute for the Postgres reservation constraints.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | 74 / 74 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 229 files · check:pglite 229/229 applied, 0 failed (recorded 2026-11-14T14:56:40.233Z). Suite: PASS — 6950/6950 passed, 0 failed (recorded 2026-11-14T15:08:57.978Z); source fingerprint matches.
+Coverage suite: PASS — 6950/6950 passed, 0 failed (recorded 2026-11-14T15:08:57.978Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-14T14:57:55.685Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+## Remaining
+- Independently review pricing, reservations, idempotency and role boundaries; the full local gate passed.
+- Complete browser and physical-device checks for the changed screen; confirm deliberate restrictions on stored-price lines and money-blind bundle additions.
+- Babin reviews and merges; migration application and production verification are separate owner actions.
+
+
+
 ## 2026-11-10 — T3-18: Change a confirmed booking & link add-gear bookings (Lane C)
 
 **Did**

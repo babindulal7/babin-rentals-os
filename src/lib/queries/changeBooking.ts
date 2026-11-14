@@ -31,6 +31,7 @@ export interface BookingChangeSnapshot {
   code: string
   stage: string
   parent_booking_id: string | null
+  money_visible?: boolean
   revision: string
   values: RecordValues
   lines: BookingChangeLine[]
@@ -64,7 +65,7 @@ export function bookingChangeToDraft(snapshot: BookingChangeSnapshot): RentalDra
   const [pickup, pickupTime] = wallClock(v.pickup_at)
   const [returnDate, returnTime] = wallClock(v.return_at)
 
-  if (v.deposit_required == null || !Number.isFinite(Number(v.deposit_required))) {
+  if (snapshot.money_visible !== false && (v.deposit_required == null || !Number.isFinite(Number(v.deposit_required)))) {
     throw new Error('The saved deposit could not be loaded. Reload before editing.')
   }
   const clientPickup = v.delivery_type !== 'Babin Delivery'

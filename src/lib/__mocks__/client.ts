@@ -65,7 +65,10 @@ function loadOverlay(): Overlay {
   }
 }
 
+let bookingChangeBatchActive = false
+
 function saveOverlay(o: Overlay): void {
+  if (bookingChangeBatchActive) return
   try {
     localStorage.setItem(OVERLAY_KEY, JSON.stringify(o))
   } catch {
@@ -1354,6 +1357,54 @@ function changeClientMembership(payload: Record<string, unknown>): { data: Row |
 
 /* ── The client ────────────────────────────────────────────────────────── */
 
+function readBookingChangeMock(id: string): { data: Row | null; error: PgError | null } {
+  const b = (store['bookings'] ?? []).find(r => r['id'] === id || r['booking_no'] === id)
+  if (!b) return { data: null, error: pgErr('P0002', 'Booking not found.') }
+  const lines = (store['booking_lines'] ?? []).filter(l => l['booking_id'] === b['id'] && !l['voided_at'])
+  const crew = (store['booking_crew_lines'] ?? []).filter(c => c['booking_id'] === b['id'] && !c['voided_at'])
+  const transport = (store['booking_transport'] ?? []).find(t => t['booking_id'] === b['id']) ?? null
+  const discounts = (store['booking_discounts'] ?? []).filter(d => d['booking_id'] === b['id'])
+  const actor = readSession()?.user.id
+  const moneyVisible = store['users']?.find(row => row['id'] === actor)?.['primary_role'] !== 'Warehouse'
+  const pick = (row: Row, fields: string[]): Row => Object.fromEntries(fields.filter(field => Object.prototype.hasOwnProperty.call(row, field)).map(field => [field, row[field]]))
+  const transportRow = transport ? pick(transport, ['id', 'vehicle', 'number_plate', 'driver_contact', 'special_instructions', ...(moneyVisible ? ['delivery_charge', 'fuel_charge'] : [])]) : null
+  if (!moneyVisible && transportRow && typeof transportRow['special_instructions'] === 'string') {
+    transportRow['special_instructions'] = transportRow['special_instructions'].replace(/ \(Return Pickup Fee: Rs [\d,.]+\)/g, '')
+  }
+  const result = {
+    id: b['id'], code: b['booking_no'], stage: b['stage'], parent_booking_id: b['parent_booking_id'] ?? null,
+    money_visible: moneyVisible, revision: `mock-rev-${String(b['mock_change_revision'] ?? 0)}`,
+    values: pick(b, ['client_id', 'contact_id', 'branch_id', 'project', 'project_name', 'shoot_location', 'project_type', 'project_type_other', 'pickup_at', 'return_at', 'delivery_type', 'pickup_location', 'return_location', ...(moneyVisible ? ['deposit_required'] : [])]),
+    lines: lines.map(l => ({ ...pick(l, ['id', 'client_uuid', 'parent_line_id', 'line_type', 'product_id', 'bundle_id', 'description', 'qty', 'days', 'is_included', 'service_basis', 'line_note', 'sort_order', ...(moneyVisible ? ['rate', 'discount_amount'] : [])]),
+      name: l['description'], parent_client_uuid: lines.find(parent => parent['id'] === l['parent_line_id'])?.['client_uuid'] ?? null,
+      is_packed: (store['packing_lines'] ?? []).some(row => row['booking_line_id'] === l['id'] && row['state'] === 'Packed') ||
+        (['Packed', 'On Rent'].includes(String(b['stage'])) && (store['booking_line_units'] ?? []).some(row => row['booking_line_id'] === l['id'] && !row['released_at'])) })),
+    crew: crew.map(c => pick(c, ['id', 'client_uuid', 'crew_member_id', 'name', 'crew_role', 'phone', 'days', 'overtime', ...(moneyVisible ? ['day_rate', 'accommodation', 'meals'] : [])])),
+    transport: transportRow,
+    discounts: moneyVisible ? discounts.map(d => pick(d, ['id', 'percent'])) : [],
+  }
+  return { data: result, error: null }
+}
+
+/** Persist booking changes and their retry receipt together, with rollback on failure. */
+function commitBookingChangeMock(write: () => ReturnType<typeof readBookingChangeMock>): ReturnType<typeof readBookingChangeMock> {
+  const before = structuredClone({ store, overlay })
+  bookingChangeBatchActive = true
+  try {
+    const result = write()
+    if (result.error) throw new Error(result.error.message)
+    bookingChangeBatchActive = false
+    saveOverlay(overlay)
+    return result
+  } catch (error) {
+    for (const table of Object.keys(store)) delete store[table]
+    Object.assign(store, before.store)
+    Object.assign(overlay, before.overlay)
+    bookingChangeBatchActive = false
+    return { data: null, error: pgErr('P0001', error instanceof Error ? error.message : 'Booking change failed.') }
+  }
+}
+
 export const mockSupabase = {
   from(table: string) {
     if (table === 'glossary_term_revisions') store[table] ??= []
@@ -1608,45 +1659,163 @@ export const mockSupabase = {
       const payload = (args?.['p_payload'] ?? {}) as Record<string, unknown>
       return Promise.resolve(createBooking(payload))
     }
+    if (name === 'read_booking_for_change' || name === 'change_booking') {
+      const actor = readSession()?.user.id
+      const user = store['users']?.find(row => row['id'] === actor && row['is_active'] !== false)
+      const role = user?.['primary_role']
+      if (typeof role !== 'string' || !['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse'].includes(role)) {
+        return Promise.resolve({ data: null, error: pgErr('42501', 'This booking editor is unavailable for your role.') })
+      }
+    }
     if (name === 'read_booking_for_change') {
-      const id = String(args?.['p_id'] ?? '')
-      const b = (store['bookings'] ?? []).find(r => r['id'] === id || r['booking_no'] === id)
-      if (!b) return Promise.resolve({ data: null, error: pgErr('P0002', 'Booking not found.') })
-      const lines = (store['booking_lines'] ?? []).filter(l => l['booking_id'] === b['id'] && !l['voided_at'])
-      const crew = (store['booking_crew_lines'] ?? []).filter(c => c['booking_id'] === b['id'])
-      const transport = (store['booking_transport'] ?? []).find(t => t['booking_id'] === b['id']) ?? null
-      const discounts = (store['booking_discounts'] ?? []).filter(d => d['record_id'] === b['id'])
-      return Promise.resolve({
-        data: {
-          id: b['id'],
-          code: b['booking_no'],
-          stage: b['stage'],
-          parent_booking_id: b['parent_booking_id'] ?? null,
-          revision: 'mock-rev-1',
-          values: b,
-          lines: lines.map(l => ({ ...l, is_packed: false })),
-          crew,
-          transport,
-          discounts,
-        },
-        error: null,
-      })
+      return Promise.resolve(readBookingChangeMock(String(args?.['p_id'] ?? '')))
     }
     if (name === 'change_booking') {
       const payload = (args?.['p_payload'] ?? {}) as Record<string, unknown>
       const bId = String(payload['booking_id'] ?? '')
       const b = (store['bookings'] ?? []).find(r => r['id'] === bId)
       if (!b) return Promise.resolve({ data: null, error: pgErr('P0002', 'Booking not found.') })
-      return Promise.resolve({
-        data: {
-          booking_id: b['id'],
-          booking_no: b['booking_no'],
-          stage: b['stage'],
-          parent_booking_id: b['parent_booking_id'] ?? null,
-          replayed: false,
-        },
-        error: null,
-      })
+      const actor = readSession()?.user.id
+      const key = String(payload['client_uuid'] ?? '')
+      if (!actor || (payload['actor_id'] != null && payload['actor_id'] !== actor)) {
+        return Promise.resolve({ data: null, error: pgErr('42501', 'The save actor must be the signed-in user.') })
+      }
+      const moneyVisible = store['users']?.find(row => row['id'] === actor)?.['primary_role'] !== 'Warehouse'
+      if (!moneyVisible && ((payload['values'] && typeof payload['values'] === 'object' && 'deposit_required' in payload['values']) ||
+        'discount_percent' in payload || 'crew' in payload || 'transport' in payload ||
+        (Array.isArray(payload['lines']) && payload['lines'].some((line: Row) => ['rate', 'discount_amount', 'line_total', 'price_breakdown', 'supplier_cost', 'markup_amount'].some(field => field in line))))) {
+        return Promise.resolve({ data: null, error: pgErr('42501', 'Money fields cannot be changed by this role.') })
+      }
+      const request = JSON.stringify(payload)
+      const prior = (store['mock_booking_change_receipts'] ?? []).find(r => r['id'] === key)
+      if (prior) {
+        if (prior['actor'] !== actor || prior['request'] !== request) {
+          return Promise.resolve({ data: null, error: pgErr('P0001', 'This save key belongs to another change.') })
+        }
+        if (!moneyVisible && (prior['response'] as Row)?.['money_visible'] !== false) return Promise.resolve({ data: null, error: pgErr('42501', 'Reload this booking before retrying after a role change.') })
+        return Promise.resolve({ data: structuredClone(prior['response']), error: null })
+      }
+      if (!key || payload['revision'] !== `mock-rev-${String(b['mock_change_revision'] ?? 0)}`) {
+        return Promise.resolve({ data: null, error: pgErr('40001', 'This booking changed since you opened it. Reload before saving.') })
+      }
+      if (!Array.isArray(payload['lines']) || !payload['values'] || typeof payload['values'] !== 'object') {
+        return Promise.resolve({ data: null, error: pgErr('22023', 'Invalid booking change.') })
+      }
+      if (b['closed_at'] || b['cancelled_at'] || !['Quote', 'Booked', 'Packed', 'On Rent'].includes(String(b['stage']))) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', 'This booking cannot be changed.') })
+      }
+      if ((store['invoices'] ?? []).some(invoice => invoice['booking_id'] === bId && invoice['invoice_no'] != null && invoice['status'] !== 'Void' && !invoice['voided_at'])) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', 'This booking has a numbered invoice. Changes are blocked pending the accountant-approved correction workflow.') })
+      }
+      const incoming = payload['lines'] as Row[]
+      const existingLines = (store['booking_lines'] ?? []).filter(row => row['booking_id'] === bId && !row['voided_at'])
+      const seen = new Set<string>()
+      for (const line of incoming) {
+        const lineId = line['id'] == null ? '' : String(line['id'])
+        const old = existingLines.find(row => row['id'] === lineId)
+        const lineKey = String(line['client_uuid'] ?? '')
+        if (!lineKey || seen.has(lineKey) || (lineId && (!old || old['client_uuid'] !== lineKey)) ||
+            (!lineId && (store['booking_lines'] ?? []).some(row => row['client_uuid'] === lineKey)) ||
+            !Number.isInteger(Number(line['qty'])) || Number(line['qty']) < 1 ||
+            !Number.isInteger(Number(line['days'])) || Number(line['days']) < 1) {
+          return Promise.resolve({ data: null, error: pgErr('22023', 'A booking line is invalid or duplicated.') })
+        }
+        if (old && (old['line_total'] != null || old['price_breakdown'] != null) &&
+            (['qty', 'days', 'product_id', 'bundle_id', 'line_type', 'service_basis', 'is_included'].some(field => (line[field] ?? null) !== (old[field] ?? null)) ||
+             (moneyVisible && ['rate', 'discount_amount'].some(field => field in line && Number(line[field]) !== Number(old[field] ?? 0))))) {
+          return Promise.resolve({ data: null, error: pgErr('P0001', 'This line has stored pricing and cannot be changed until it is repriced safely.') })
+        }
+        seen.add(lineKey)
+      }
+      if (!moneyVisible && incoming.some(line => {
+        const old = existingLines.find(row => row['id'] === line['id'])
+        return old && ['product_id', 'bundle_id', 'line_type', 'is_included'].some(field => (line[field] ?? (field === 'is_included' ? false : null)) !== (old[field] ?? (field === 'is_included' ? false : null)))
+      })) return Promise.resolve({ data: null, error: pgErr('22023', 'Remove and add an item to change its identity.') })
+      if (!moneyVisible && incoming.some(line => !line['id'] && (line['parent_client_uuid'] || line['is_included']))) {
+        return Promise.resolve({ data: null, error: pgErr('42501', 'A money-visible desk user must add bundle components.') })
+      }
+      if (!moneyVisible && incoming.some(line => !line['id'] && !line['parent_client_uuid'] && !line['is_included'] &&
+        !((store['products'] ?? []).some(row => row['id'] === line['product_id'] && row['daily_rate'] != null) ||
+          (store['bundles'] ?? []).some(row => row['id'] === line['bundle_id'] && row['daily_rate'] != null)))) {
+        return Promise.resolve({ data: null, error: pgErr('22023', 'A priced catalogue item is required.') })
+      }
+      const packed = (line: Row) => (store['packing_lines'] ?? []).some(row => row['booking_line_id'] === line['id'] && row['state'] === 'Packed') ||
+        (['Packed', 'On Rent'].includes(String(b['stage'])) && (store['booking_line_units'] ?? []).some(row => row['booking_line_id'] === line['id'] && !row['released_at']))
+      for (const old of existingLines.filter(packed)) {
+        const next = incoming.find(row => row['id'] === old['id'])
+        if (!next || ['product_id', 'bundle_id', 'line_type', 'qty'].some(field => (next[field] ?? null) !== (old[field] ?? null))) {
+          return Promise.resolve({ data: null, error: pgErr('P0001', 'Unpack the unit before changing it.') })
+        }
+      }
+      const allowed = (source: Row, fields: string[]): Row => Object.fromEntries(fields.filter(field => Object.prototype.hasOwnProperty.call(source, field)).map(field => [field, source[field]]))
+      const header = allowed(payload['values'] as Row, ['project', 'project_name', 'shoot_location', 'project_type', 'project_type_other', 'pickup_at', 'return_at', 'delivery_type', 'pickup_location', 'return_location', 'deposit_required'])
+      if (!moneyVisible && header['delivery_type'] != null && header['delivery_type'] !== b['delivery_type']) {
+        return Promise.resolve({ data: null, error: pgErr('42501', 'Ask the booking desk to change delivery details.') })
+      }
+      if ((header['pickup_at'] ?? b['pickup_at']) && (header['return_at'] ?? b['return_at']) && String(header['return_at'] ?? b['return_at']) < String(header['pickup_at'] ?? b['pickup_at'])) {
+        return Promise.resolve({ data: null, error: pgErr('22023', 'Return date cannot be earlier than pickup date.') })
+      }
+      const at = new Date().toISOString()
+      const fields = ['line_type', 'product_id', 'bundle_id', 'description', 'qty', 'days', 'rate', 'discount_amount', 'is_included', 'service_basis', 'line_note', 'sort_order']
+      const mapped = new Map<string, string>()
+      for (const line of incoming) mapped.set(String(line['client_uuid']), String(line['id'] ?? crypto.randomUUID()))
+      if (incoming.some(line => line['parent_client_uuid'] && !mapped.has(String(line['parent_client_uuid'])))) {
+        return Promise.resolve({ data: null, error: pgErr('22023', 'The bundle parent is missing.') })
+      }
+      const crewRows = payload['crew']
+      if (crewRows != null && !Array.isArray(crewRows)) return Promise.resolve({ data: null, error: pgErr('22023', 'Invalid crew rows.') })
+      const currentCrew = (store['booking_crew_lines'] ?? []).filter(row => row['booking_id'] === bId && !row['voided_at'])
+      if (Array.isArray(crewRows) && crewRows.some((row: Row) => row['id'] && !currentCrew.some(old => old['id'] === row['id']))) {
+        return Promise.resolve({ data: null, error: pgErr('22023', 'This crew row does not belong to the booking.') })
+      }
+      const discount = payload['discount_percent'] == null ? null : Number(payload['discount_percent'])
+      if (discount !== null && (!Number.isFinite(discount) || discount < 0 || discount > 100)) {
+        return Promise.resolve({ data: null, error: pgErr('22023', 'Discount must be between 0 and 100 percent.') })
+      }
+      return Promise.resolve(commitBookingChangeMock(() => {
+        const insert = (table: string, rows: Row[]) => {
+          const result = hooks.insert(table, rows)
+          if (result.error) throw new Error(result.error.message)
+        }
+        for (const old of existingLines) {
+          if (!incoming.some(line => line['id'] === old['id'])) hooks.update('booking_lines', { voided_at: at, voided_reason: 'Removed while changing booking' }, row => row['id'] === old['id'])
+        }
+        for (const line of incoming) {
+          const id = mapped.get(String(line['client_uuid'])) as string
+          const patch = { ...allowed(line, fields), parent_line_id: line['parent_client_uuid'] ? mapped.get(String(line['parent_client_uuid'])) : null }
+          if (!moneyVisible && !line['id']) {
+            const product = (store['products'] ?? []).find(row => row['id'] === line['product_id']) ?? (store['bundles'] ?? []).find(row => row['id'] === line['bundle_id'])
+            Object.assign(patch, { rate: line['parent_client_uuid'] || line['is_included'] ? 0 : product?.['daily_rate'], discount_amount: 0 })
+          }
+          if (line['id']) hooks.update('booking_lines', patch, row => row['id'] === id)
+          else insert('booking_lines', [{ ...patch, id, booking_id: bId, client_uuid: line['client_uuid'], created_by: actor }])
+        }
+        if (Array.isArray(crewRows)) {
+          for (const old of currentCrew) if (!crewRows.some((row: Row) => row['id'] === old['id'])) hooks.update('booking_crew_lines', { voided_at: at }, row => row['id'] === old['id'])
+          for (const crew of crewRows as Row[]) {
+            const patch = allowed(crew, ['crew_member_id', 'name', 'crew_role', 'phone', 'day_rate', 'days', 'overtime', 'accommodation', 'meals'])
+            if (crew['id']) hooks.update('booking_crew_lines', patch, row => row['id'] === crew['id'])
+            else insert('booking_crew_lines', [{ ...patch, booking_id: bId, client_uuid: crypto.randomUUID(), created_by: actor }])
+          }
+        }
+        if (payload['transport'] && typeof payload['transport'] === 'object' && !Array.isArray(payload['transport'])) {
+          const transport = allowed(payload['transport'] as Row, ['vehicle', 'number_plate', 'driver_contact', 'delivery_charge', 'fuel_charge', 'special_instructions'])
+          const old = (store['booking_transport'] ?? []).find(row => row['booking_id'] === bId)
+          if (old) hooks.update('booking_transport', transport, row => row['id'] === old['id'])
+          else if (Object.keys(transport).length) insert('booking_transport', [{ ...transport, booking_id: bId, client_uuid: crypto.randomUUID(), created_by: actor }])
+        }
+        if (discount !== null) {
+          const currentDiscounts = (store['booking_discounts'] ?? []).filter(row => row['booking_id'] === bId)
+          if (currentDiscounts.length) currentDiscounts.forEach((row, index) => hooks.update('booking_discounts', { percent: index === 0 ? discount : 0 }, hit => hit['id'] === row['id']))
+          else if (discount > 0) insert('booking_discounts', [{ booking_id: bId, client_uuid: crypto.randomUUID(), percent: discount, applied_by: actor }])
+        }
+        hooks.update('bookings', { ...header, updated_at: at, updated_by: actor, mock_change_revision: Number(b['mock_change_revision'] ?? 0) + 1 }, row => row['id'] === bId)
+        const result = readBookingChangeMock(bId)
+        if (!result.error) {
+          insert('mock_booking_change_receipts', [{ id: key, actor, request, response: structuredClone(result.data) }])
+        }
+        return result
+      }))
     }
     if (name === 'change_client_membership') {
       const payload = (args?.['p_payload'] ?? {}) as Record<string, unknown>

@@ -393,7 +393,7 @@ export function useNewRentalDraft({
         setQuoteSnapshot(snapshot as unknown as QuoteSnapshot)
         setDraftBookingNo(snapshot.code)
         quoteInitial.current = null
-        setSavedDepositPaisa(rupees(Number(snapshot.values.deposit_required)))
+        setSavedDepositPaisa(rupees(Number(snapshot.values.deposit_required ?? 0)))
         setManualDepositOverride(false)
         setManualDepositAmount('')
         setDepositOverrideReason('')

@@ -627,6 +627,7 @@ begin
     'code', b.booking_no,
     'stage', b.stage,
     'parent_booking_id', b.parent_booking_id,
+    'money_visible', coalesce(auth_can_view_money(), false),
     'values', record_editor_private.pick(to_jsonb(b), array[
       'client_id', 'contact_id', 'branch_id', 'project', 'project_name', 'shoot_location',
       'project_type', 'project_type_other', 'pickup_at', 'return_at',
@@ -638,9 +639,22 @@ begin
     'discounts', discounts
   );
 
-  return result || jsonb_build_object(
+  result := result || jsonb_build_object(
     'revision', md5((result || jsonb_build_object('updated_at', b.updated_at, 'version', b.version))::text)
   );
+  if not coalesce(auth_can_view_money(), false) then
+    result := result || jsonb_build_object(
+      'values', (result -> 'values') - 'deposit_required',
+      'lines', coalesce((select jsonb_agg(x - 'rate' - 'discount_amount') from jsonb_array_elements(result -> 'lines') x), '[]'::jsonb),
+      'crew', coalesce((select jsonb_agg(x - 'day_rate' - 'accommodation' - 'meals') from jsonb_array_elements(result -> 'crew') x), '[]'::jsonb),
+      'transport', case when result -> 'transport' is null or result -> 'transport' = 'null'::jsonb then null else
+        ((result -> 'transport') - 'delivery_charge' - 'fuel_charge') || jsonb_build_object(
+          'special_instructions', regexp_replace(result -> 'transport' ->> 'special_instructions', ' \(Return Pickup Fee: Rs [0-9,.]+\)', '', 'g')
+        ) end,
+      'discounts', '[]'::jsonb
+    );
+  end if;
+  return result;
 end;
 $$;
 
@@ -691,6 +705,15 @@ begin
       using errcode = '42501';
   end if;
 
+  if not coalesce(auth_can_view_money(), false) and (
+    coalesce(p_payload -> 'values', '{}'::jsonb) ? 'deposit_required'
+    or p_payload ? 'discount_percent' or p_payload ? 'crew' or p_payload ? 'transport'
+    or exists (select 1 from jsonb_array_elements(case when jsonb_typeof(p_payload -> 'lines') = 'array' then p_payload -> 'lines' else '[]'::jsonb end) x
+               where x ?| array['rate', 'discount_amount', 'line_total', 'price_breakdown', 'supplier_cost', 'markup_amount'])
+  ) then
+    raise exception 'Money fields cannot be changed by this role.' using errcode = '42501';
+  end if;
+
   if v_booking_id is null then
     raise exception 'change_booking: booking_id is required.';
   end if;
@@ -699,14 +722,10 @@ begin
     raise exception 'Reload this booking before saving.';
   end if;
 
-  v_actor := coalesce(nullif(p_payload ->> 'actor_id', '')::uuid, auth.uid());
-  if v_actor is null then
-    select id into v_actor
-      from users
-     where primary_role in ('Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse')
-       and is_active
-     order by created_at
-     limit 1;
+  v_actor := auth.uid();
+  if v_actor is null or (nullif(p_payload ->> 'actor_id', '') is not null
+      and (p_payload ->> 'actor_id')::uuid <> v_actor) then
+    raise exception 'The save actor must be the signed-in user.' using errcode = '42501';
   end if;
 
   req := jsonb_build_object('booking', v_booking_id, 'revision', v_revision, 'payload', p_payload);
@@ -717,6 +736,9 @@ begin
   if found then
     if receipt.actor <> auth.uid() or receipt.request <> req then
       raise exception 'This save key belongs to another change.';
+    end if;
+    if not coalesce(auth_can_view_money(), false) and coalesce((receipt.response ->> 'money_visible')::boolean, true) then
+      raise exception 'Reload this booking before retrying after a role change.' using errcode = '42501';
     end if;
     return receipt.response;
   end if;
@@ -745,6 +767,12 @@ begin
   perform 1 from booking_discounts where booking_id = v_booking_id for update;
   perform 1 from invoices where booking_id = v_booking_id for update;
   perform 1 from inventory_reservations where booking_id = v_booking_id for update;
+
+  -- T3-14/O-14: a numbered invoice cannot silently diverge from its booking.
+  if exists (select 1 from invoices where booking_id = v_booking_id
+              and invoice_no is not null and status <> 'Void' and voided_at is null) then
+    raise exception 'This booking has a numbered invoice. Changes are blocked pending the accountant-approved correction workflow.';
+  end if;
 
   -- 3. Revision check
   v_old_snapshot := read_booking_for_change(v_booking_id::text);
@@ -787,6 +815,10 @@ begin
 
   -- 5. Dates and header fields update
   patch := coalesce(p_payload -> 'values', '{}'::jsonb);
+  if not coalesce(auth_can_view_money(), false) and patch ? 'delivery_type'
+     and (patch ->> 'delivery_type') is distinct from b.delivery_type::text then
+    raise exception 'Ask the booking desk to change delivery details.' using errcode = '42501';
+  end if;
   v_new_pickup := coalesce((patch ->> 'pickup_at')::timestamptz, b.pickup_at);
   v_new_return := coalesce((patch ->> 'return_at')::timestamptz, b.return_at);
 
@@ -824,6 +856,21 @@ begin
       if row_data ->> 'client_uuid' is distinct from existing ->> 'client_uuid' then
         raise exception 'A line identity cannot change.';
       end if;
+      if b.stage in ('Packed', 'On Rent') and (
+        exists (select 1 from packing_lines pl where pl.booking_line_id = row_id and pl.state = 'Packed')
+        or exists (select 1 from booking_line_units blu where blu.booking_line_id = row_id and blu.released_at is null)
+      ) and (
+        (row_data ->> 'product_id') is distinct from (existing ->> 'product_id')
+        or (row_data ->> 'bundle_id') is distinct from (existing ->> 'bundle_id')
+        or (row_data ->> 'line_type') is distinct from (existing ->> 'line_type')
+        or (row_data ->> 'qty')::integer is distinct from (existing ->> 'qty')::integer
+        or (row_data ->> 'parent_client_uuid') is distinct from (
+          select parent.client_uuid::text from booking_lines parent
+           where parent.id = (existing ->> 'parent_line_id')::uuid
+        )
+      ) then
+        raise exception 'Unpack the unit in Warehouse before changing its identity or quantity.';
+      end if;
     else
       existing := null;
     end if;
@@ -831,20 +878,74 @@ begin
     if row_data ->> 'client_uuid' is null then
       raise exception 'Every line needs a stable key.';
     end if;
+    if not coalesce(auth_can_view_money(), false) and existing is null
+       and (row_data ->> 'parent_client_uuid' is not null or coalesce((row_data ->> 'is_included')::boolean, false)) then
+      raise exception 'A money-visible desk user must add bundle components.' using errcode = '42501';
+    end if;
+
+    -- A stored pricing breakdown needs the full pricing pipeline to change.
+    -- Do not leave a stale line_total behind for invoice resynchronisation.
+    if existing is not null and (existing -> 'line_total' <> 'null'::jsonb or existing -> 'price_breakdown' <> 'null'::jsonb)
+       and ((row_data ->> 'qty')::integer is distinct from (existing ->> 'qty')::integer
+         or (row_data ->> 'days')::integer is distinct from (existing ->> 'days')::integer
+         or (row_data ->> 'product_id') is distinct from (existing ->> 'product_id')
+         or (row_data ->> 'bundle_id') is distinct from (existing ->> 'bundle_id')
+         or (row_data ->> 'line_type') is distinct from (existing ->> 'line_type')
+         or (row_data ->> 'service_basis') is distinct from (existing ->> 'service_basis')
+         or coalesce((row_data ->> 'is_included')::boolean, false) is distinct from coalesce((existing ->> 'is_included')::boolean, false)
+         or (coalesce(auth_can_view_money(), false) and (
+           (row_data ? 'rate' and (row_data ->> 'rate')::numeric is distinct from (existing ->> 'rate')::numeric)
+           or (row_data ? 'discount_amount' and coalesce((row_data ->> 'discount_amount')::numeric, 0) is distinct from coalesce((existing ->> 'discount_amount')::numeric, 0))
+         ))) then
+      raise exception 'This line has stored pricing and cannot be changed until it is repriced safely.';
+    end if;
+    if existing is not null and (row_data ->> 'qty')::integer < (
+      select count(*) from booking_line_units where booking_line_id = row_id and released_at is null
+    ) then
+      raise exception 'Unassign units before reducing the quantity.';
+    end if;
+
+    if existing is not null and (
+      (row_data ->> 'product_id') is distinct from (existing ->> 'product_id')
+      or (row_data ->> 'qty')::integer is distinct from (existing ->> 'qty')::integer
+    ) then
+      if (row_data ->> 'product_id') is distinct from (existing ->> 'product_id') and exists (
+        select 1 from booking_line_units where booking_line_id = row_id and released_at is null
+      ) then
+        raise exception 'Unassign the units before changing the item.';
+      end if;
+      update inventory_reservations set released_at = now(), released_reason = 'Booking line changed'
+       where booking_line_id = row_id and released_at is null and asset_id is null;
+    end if;
 
     patch := record_editor_private.pick(row_data, array[
       'line_type', 'product_id', 'bundle_id', 'description', 'qty', 'days',
       'rate', 'discount_amount', 'is_included', 'service_basis', 'line_note', 'sort_order'
     ]);
 
-    if row_data ->> 'parent_client_uuid' is not null or coalesce((patch ->> 'is_included')::boolean, false) then
+    if not coalesce(auth_can_view_money(), false) and existing is not null and (
+      (patch ->> 'product_id') is distinct from (existing ->> 'product_id')
+      or (patch ->> 'bundle_id') is distinct from (existing ->> 'bundle_id')
+      or (patch ->> 'line_type') is distinct from (existing ->> 'line_type')
+      or coalesce((patch ->> 'is_included')::boolean, false) is distinct from coalesce((existing ->> 'is_included')::boolean, false)
+    ) then
+      raise exception 'Remove and add an item to change its identity.';
+    end if;
+    if not coalesce(auth_can_view_money(), false) and existing is not null then
+      -- Preserve the existing negotiated rate and discount; never accept money from the caller.
+      rate := (existing ->> 'rate')::numeric;
+      patch := patch || jsonb_build_object('rate', rate, 'rate_overridden', coalesce((existing ->> 'rate_overridden')::boolean, false));
+    elsif row_data ->> 'parent_client_uuid' is not null or coalesce((patch ->> 'is_included')::boolean, false) then
       rate := 0; base_rate := 0;
+      patch := patch || jsonb_build_object('rate', rate, 'rate_overridden', false);
     else
       base_rate := get_model_daily_rate((patch ->> 'product_id')::uuid, (patch ->> 'bundle_id')::uuid);
+      if not coalesce(auth_can_view_money(), false) and base_rate is null then
+        raise exception 'A priced catalogue item is required.';
+      end if;
       rate := coalesce((patch ->> 'rate')::numeric, base_rate, 0);
+      patch := patch || jsonb_build_object('rate', rate, 'rate_overridden', base_rate is not null and rate <> base_rate);
     end if;
-
-    patch := patch || jsonb_build_object('rate', rate, 'rate_overridden', base_rate is not null and rate <> base_rate);
 
     if row_id is null then
       patch := patch || jsonb_build_object('booking_id', v_booking_id, 'client_uuid', row_data ->> 'client_uuid', 'created_by', v_actor);
