@@ -93,9 +93,9 @@ function invoicesIssuedIn(fromAd: string, toAd: string): Promise<IssuedInvoiceWi
  * Pagination failures, inaccessible note rows and invalid values must not
  * silently turn into "zero revenue" or an audited net sales claim.
  */
-export async function getIssuedRevenueTrend(fromAd: string, toAd: string): Promise<IssuedRevenueReport> {
+export async function getIssuedRevenueTrend(fromAd: string, toAd: string, today?: string): Promise<IssuedRevenueReport> {
   // Validate the range before any database request.
-  aggregateIssuedRevenue([], fromAd, toAd)
+  aggregateIssuedRevenue([], fromAd, toAd, today)
   const invoices = await invoicesIssuedIn(fromAd, toAd)
 
   const notes: InvoiceCreditNoteSource[] = []
@@ -115,7 +115,7 @@ export async function getIssuedRevenueTrend(fromAd: string, toAd: string): Promi
     if (notes.length > MAX_ROWS) throw new Error('Credit-note report exceeds safe limit')
   }
 
-  const trend = aggregateIssuedRevenue(invoices, fromAd, toAd)
+  const trend = aggregateIssuedRevenue(invoices, fromAd, toAd, today)
   const creditReconciliation = reconcileInvoiceCredits(invoices, notes)
   return { ...trend, creditReconciliation }
 }

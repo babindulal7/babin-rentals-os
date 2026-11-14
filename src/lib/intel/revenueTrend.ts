@@ -14,11 +14,17 @@ export interface IssuedInvoiceSource {
   voided_at: string | null
 }
 
+export type BucketCoverage = 'full' | 'in-progress' | 'clipped'
+
 export interface RevenueMonth {
   periodStartUtc: string
   label: string
   amountPaisa: Paisa
   invoiceCount: number
+  startDay?: string | undefined
+  endDay?: string | undefined
+  coverage?: BucketCoverage | undefined
+  longLabel?: string | undefined
 }
 
 export interface RevenueTrend {
@@ -52,6 +58,68 @@ function sourcePaisa(source: string | number): Paisa {
   return parsed
 }
 
+const MONTHS_LONG = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+] as const
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const
+
+/** "14 Oct 2026" — a civil day. Deterministic: no locale data. */
+export function dayLabel(day: string): string {
+  const monthIdx = Number(day.slice(5, 7)) - 1
+  const monthName = MONTHS_SHORT[monthIdx] ?? ''
+  return `${Number(day.slice(8, 10))} ${monthName} ${day.slice(0, 4)}`
+}
+
+/** "1 Jul 2026 – 14 Oct 2026". */
+export function windowLabel(fromAd: string, toAd: string): string {
+  return fromAd === toAd ? dayLabel(fromAd) : `${dayLabel(fromAd)} – ${dayLabel(toAd)}`
+}
+
+/** "17–31 July 2026", or "31 July 2026" for a one-day bucket. */
+export function monthSpan(startDay: string, endDay: string): string {
+  const monthIdx = Number(startDay.slice(5, 7)) - 1
+  const month = `${MONTHS_LONG[monthIdx] ?? ''} ${startDay.slice(0, 4)}`
+  const from = Number(startDay.slice(8, 10))
+  const to = Number(endDay.slice(8, 10))
+  return from === to ? `${from} ${month}` : `${from}–${to} ${month}`
+}
+
+/**
+ * RULING 2026-10-17 (R17-3): "month to date" only when the bucket starts on the
+ * 1st — a "Last 7 days" bucket holding today is "part month, to date", never a
+ * claim about the whole month so far.
+ */
+export function monthLongLabel(startDay: string, endDay: string, coverage: BucketCoverage): string {
+  const monthIdx = Number(startDay.slice(5, 7)) - 1
+  if (coverage === 'full') return `${MONTHS_LONG[monthIdx] ?? ''} ${startDay.slice(0, 4)}`
+  const span = monthSpan(startDay, endDay)
+  if (coverage === 'clipped') return `${span} (part month)`
+  return startDay.endsWith('-01') ? `${span} (month to date)` : `${span} (part month, to date)`
+}
+
+/** Plain sentences about coverage, for under the chart. */
+export function coverageNotes(trend: RevenueTrend): string[] {
+  const notes: string[] = []
+  const first = trend.months[0]
+  const last = trend.months[trend.months.length - 1]
+  if (!first || !last) return notes
+  if (last.coverage === 'in-progress' && last.startDay && last.endDay) {
+    notes.push(
+      last.startDay.endsWith('-01')
+        ? `${last.label} is month to date, through ${dayLabel(last.endDay)}.`
+        : `${last.label} covers ${monthSpan(last.startDay, last.endDay)} only, to date.`,
+    )
+  }
+  if (first.coverage === 'clipped' && first.startDay && first.endDay) {
+    notes.push(`${first.label} covers ${monthSpan(first.startDay, first.endDay)} only.`)
+  }
+  if (last.coverage === 'clipped' && trend.months.length > 1 && last.startDay && last.endDay) {
+    notes.push(`${last.label} covers ${monthSpan(last.startDay, last.endDay)} only.`)
+  }
+  return notes
+}
+
 /**
  * Requires the caller to have fetched a COMPLETE, deduplicated period.
  * An incomplete page is not an actual trend.
@@ -60,6 +128,7 @@ export function aggregateIssuedRevenue(
   invoices: readonly IssuedInvoiceSource[],
   fromAd: string,
   toAd: string,
+  today?: string,
 ): RevenueTrend {
   const start = asDate(fromAd)
   const end = asDate(toAd)
@@ -69,11 +138,27 @@ export function aggregateIssuedRevenue(
   const months: RevenueMonth[] = []
   for (let cursor = firstMonth; cursor <= lastMonth; cursor = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, 1))) {
     if (months.length >= 24) throw new Error('Choose a report window of 24 months or less')
+    const first = cursor.toISOString().slice(0, 10)
+    const last = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, 0)).toISOString().slice(0, 10)
+    const startDay = first < fromAd ? fromAd : first
+    const endDay = last > toAd ? toAd : last
+    // RULING 2026-10-17 (R17-3): the month holding today is "to date" even on
+    // its last day — invoices for today can still be issued until the day ends.
+    const coverage: BucketCoverage =
+      today !== undefined && today >= startDay && today <= endDay
+        ? 'in-progress'
+        : startDay > first || endDay < last
+          ? 'clipped'
+          : 'full'
     months.push({
       periodStartUtc: cursor.toISOString(),
       label: cursor.toLocaleString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' }),
       amountPaisa: 0 as Paisa,
       invoiceCount: 0,
+      startDay,
+      endDay,
+      coverage,
+      longLabel: monthLongLabel(startDay, endDay, coverage),
     })
   }
   const byMonth = new Map(months.map((m) => [m.periodStartUtc.slice(0, 7), m]))
