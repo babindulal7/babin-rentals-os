@@ -1,5 +1,60 @@
 # Progress Log
 
+## 2026-11-15 — Card E-5: Delivery screen simplification (R-10.11, Lane B)
+
+**Did**
+- Implemented Ruling R-10.11 in `src/modules/operations/DeliveryWorkspace.tsx`:
+  - Enforced "Job list + 1 button per job": each delivery job in Table View, Mobile Card View, and Dispatch Board (Kanban) displays address, items, exactly one next-step button, and secondary actions behind More menu.
+  - Added items summary display on all job rows/cards (`d.items || (d.itemCount != null ? `${d.itemCount} items` : d.notes || 'Equipment package')`), with item count badge.
+  - Added optional `items?: string` and populated realistic item packages across mock `INITIAL_DELIVERIES` and database query in `src/lib/queries/delivery.ts`.
+  - Streamlined primary actions to 1 next-step verb per status:
+    - Scheduled: `Assign Driver` / `Assign` (if unassigned and canAssign), or `Stage Ready` / `Ready` (if assigned and canReady).
+    - Ready: `Dispatch Now` / `Dispatch` (with `data-primary-verb`).
+    - In Transit: `Confirm Delivered ✓` / `Delivered ✓` (with `data-primary-verb`).
+    - Delivered: `Attach Proof` / `Proof` (if canAttachProof).
+    - Failed: `Change Time` / `Reschedule` (if canReschedule).
+  - Moved secondary actions behind `OverflowMenu` (`aria-label="More actions for [id]"`): Print Gate Pass, Rider Link, Assign Driver, Stage Ready, Change Time, Attach Proof, Mark Failed.
+  - Retained strict Law 6 money blindness for Driver and Warehouse roles (no delivery fee or revenue KPI).
+  - Maintained accessible touch targets >= 44px (`minHeight: 44px` on floor buttons, Law 15).
+- Created `src/modules/operations/__tests__/deliverySimplification.test.tsx` (5 tests) verifying table & mobile views, address/items visibility, 1-button constraint, More menu secondary actions, touch targets, and Driver role permissions.
+- Updated `src/modules/operations/__tests__/DeliveryWorkspace.test.tsx` to access secondary actions through More menu.
+
+**Ruled**
+- R-10.11: Delivery screen (53 buttons) → Job list + 1 button per job. Each job row: address, items, one next-step button; the rest behind More.
+- Three-place log (B-2): (1) `RULINGS-2026-11-10.md` in repo root; (2) logged here under Ruled; (3) code-site comment `// RULING 2026-11-10: R-10.11 ...` added in `DeliveryWorkspace.tsx`.
+
+**Verified**
+- `npm run typecheck`: exit 0 (tsc clean, 0 errors).
+- `npm run lint`: exit 0 (eslint src --max-warnings 0 clean, 0 warnings).
+- `npx vitest run src/modules/operations/__tests__/deliverySimplification.test.tsx`: 5/5 passed.
+- `npx vitest run src/modules/operations/__tests__/DeliveryWorkspace.test.tsx src/modules/operations/__tests__/RiderDeliveryPage.test.tsx src/components/ui/__tests__/buttonConsistency.test.tsx`: 13/13 passed.
+- `npm run lint:shell`: 876 files checked, 0 violations.
+- `npm run lint:ui-copy`: 0 developer-text violations, all tests passed.
+- `npm run check:contrast`: 97/97 passed, 0 FAIL.
+- `npm run check:security`: 18 Phase 0 regressions + 14 Reset branch groups + glossary passed.
+- `npm run build`: built in production mode without errors.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | 72 / 72 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 233 files · check:pglite 233/233 applied, 0 failed (recorded 2026-11-14T19:48:46.830Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-14T19:49:42.696Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Card E-5 is complete on `lane-b/card-e5-delivery-simplification`.
+- Next ease-of-use cards:
+  - Card E-6: Calendar default: Simple month (R-10.12).
+  - Card E-7: Finance tabs: 4 tabs + Documents view in Rentals (R-10.8, R-10.9, G-12).
+
 ## 2026-11-12 — Add the 10 Nov ease-of-use rulings file (docs only, PR #149)
 
 **Did**

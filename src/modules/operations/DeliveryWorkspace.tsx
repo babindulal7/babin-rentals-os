@@ -8,6 +8,7 @@ import { SignaturePad, type SignaturePadRef } from '../../components/ui/Signatur
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
 import { PageHeader, PageActions, Button } from '../../components/ui/Page'
+import { OverflowMenu, type OverflowMenuItem } from '../../components/ui/OverflowMenu'
 import { PageShell } from '../../components/ui/PageShell'
 import { PageBody } from '../../components/ui/PageBody'
 import { DataTableShell } from '../../components/ui/DataTable'
@@ -566,6 +567,154 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
     }
   }
 
+  // RULING 2026-11-10: R-10.11 — Delivery screen: Job list + 1 button per job.
+  // Each job row/card renders address, items, one next-step button, and the rest behind More.
+  const getJobNextStep = (d: DeliveryRecord) => {
+    const canReady = canTransitionDeliveryJob(role, 'Scheduled', 'Ready')
+    const canTransit = canTransitionDeliveryJob(role, 'Ready', 'In Transit')
+    const canDeliver = canTransitionDeliveryJob(role, 'In Transit', 'Delivered')
+    const canReschedule = canRescheduleDeliveryJob(role) && d.status !== 'Delivered' && d.status !== 'Failed'
+    const hasDriver = !!(d.driverId || d.driverName)
+
+    if (d.status === 'Scheduled') {
+      if (!hasDriver && canAssign) {
+        return {
+          label: 'Assign Driver',
+          shortLabel: 'Assign',
+          variant: 'secondary' as const,
+          icon: 'user' as const,
+          onClick: () => handleOpenAssign(d),
+        }
+      }
+      if (canReady) {
+        return {
+          label: 'Stage Ready',
+          shortLabel: 'Ready',
+          variant: 'secondary' as const,
+          icon: 'box' as const,
+          onClick: () => handleMarkReady(d),
+        }
+      }
+      if (canAssign) {
+        return {
+          label: 'Assign Driver',
+          shortLabel: 'Assign',
+          variant: 'secondary' as const,
+          icon: 'user' as const,
+          onClick: () => handleOpenAssign(d),
+        }
+      }
+    }
+
+    if (d.status === 'Ready' && canTransit) {
+      return {
+        label: 'Dispatch Now',
+        shortLabel: 'Dispatch',
+        variant: 'primary' as const,
+        isPrimaryVerb: true,
+        disabled: !hasDriver,
+        title: !hasDriver ? 'Assign a driver before dispatching' : undefined,
+        onClick: () => handleStartTransit(d),
+      }
+    }
+
+    if (d.status === 'In Transit' && canDeliver) {
+      return {
+        label: 'Confirm Delivered ✓',
+        shortLabel: 'Delivered ✓',
+        variant: 'primary' as const,
+        isPrimaryVerb: true,
+        onClick: () => handleOpenDeliver(d),
+      }
+    }
+
+    if (d.status === 'Delivered' && canAttachProof) {
+      return {
+        label: 'Attach Proof',
+        shortLabel: 'Proof',
+        variant: 'secondary' as const,
+        icon: 'camera' as const,
+        onClick: () => handleOpenProof(d),
+      }
+    }
+
+    if (d.status === 'Failed' && canReschedule) {
+      return {
+        label: 'Change Time',
+        shortLabel: 'Change Time',
+        variant: 'secondary' as const,
+        icon: 'timer' as const,
+        onClick: () => handleOpenReschedule(d),
+      }
+    }
+
+    return null
+  }
+
+  const getJobMoreItems = (d: DeliveryRecord, nextStepLabel?: string): OverflowMenuItem[] => {
+    const canReady = canTransitionDeliveryJob(role, 'Scheduled', 'Ready')
+    const canFail = canTransitionDeliveryJob(role, d.status, 'Failed')
+    const canReschedule = canRescheduleDeliveryJob(role) && d.status !== 'Delivered' && d.status !== 'Failed'
+
+    const items: OverflowMenuItem[] = [
+      {
+        label: 'Print Gate Pass',
+        icon: 'file',
+        onClick: () => setGatePassSlip(d),
+      },
+    ]
+
+    if (canAssign && d.status !== 'Delivered' && d.status !== 'Failed') {
+      items.push({
+        label: 'Rider Link',
+        icon: 'external_link',
+        onClick: () => setRiderModalTarget(d),
+      })
+    }
+
+    if (canAssign && d.status === 'Scheduled' && nextStepLabel !== 'Assign Driver' && nextStepLabel !== 'Assign') {
+      items.push({
+        label: 'Assign Driver',
+        icon: 'user',
+        onClick: () => handleOpenAssign(d),
+      })
+    }
+
+    if (canReady && d.status === 'Scheduled' && nextStepLabel !== 'Stage Ready' && nextStepLabel !== 'Ready') {
+      items.push({
+        label: 'Stage Ready',
+        icon: 'box',
+        onClick: () => handleMarkReady(d),
+      })
+    }
+
+    if (canReschedule && nextStepLabel !== 'Change Time') {
+      items.push({
+        label: 'Change Time',
+        icon: 'timer',
+        onClick: () => handleOpenReschedule(d),
+      })
+    }
+
+    if (canAttachProof && d.status === 'Delivered' && nextStepLabel !== 'Attach Proof' && nextStepLabel !== 'Proof') {
+      items.push({
+        label: 'Attach Proof',
+        icon: 'camera',
+        onClick: () => handleOpenProof(d),
+      })
+    }
+
+    if (canFail && (d.status === 'Scheduled' || d.status === 'Ready' || d.status === 'In Transit')) {
+      items.push({
+        label: 'Mark Failed',
+        icon: 'alert_circle',
+        onClick: () => handleOpenFail(d),
+      })
+    }
+
+    return items
+  }
+
   return (
     <PageShell
       title="Delivery & Logistics"
@@ -788,12 +937,8 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
                         </div>
                       ) : (
                         colDeliveries.map((d) => {
-                          const canReady = canTransitionDeliveryJob(role, 'Scheduled', 'Ready')
-                          const canTransit = canTransitionDeliveryJob(role, 'Ready', 'In Transit')
-                          const canDeliver = canTransitionDeliveryJob(role, 'In Transit', 'Delivered')
-                          const canFail = canTransitionDeliveryJob(role, d.status, 'Failed')
-                          const canReschedule = canRescheduleDeliveryJob(role) && d.status !== 'Delivered' && d.status !== 'Failed'
-                          const hasDriver = !!(d.driverId || d.driverName)
+                          const nextStep = getJobNextStep(d)
+                          const moreItems = getJobMoreItems(d, nextStep?.label)
 
                           return (
                             <div key={d.id} className="delivery-card-item">
@@ -819,27 +964,23 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
                                     </Link>
                                   </div>
                                 </div>
-                                <button
-                                  type="button"
-                                  title="Print Gate Pass"
-                                  aria-label={`Print Gate Pass for ${d.id}`}
-                                  onClick={() => setGatePassSlip(d)}
+                                <span
                                   style={{
-                                    minWidth: 'var(--tap, 44px)',
-                                    minHeight: 'var(--tap, 44px)',
-                                    padding: '4px 6px',
-                                    borderRadius: 'var(--r-xs)',
-                                    background: 'var(--surface2)',
-                                    border: '1px solid var(--border)',
-                                    color: 'var(--text2)',
-                                    cursor: 'pointer',
                                     display: 'inline-flex',
                                     alignItems: 'center',
-                                    justifyContent: 'center',
+                                    gap: 3,
+                                    fontSize: '11px',
+                                    fontWeight: 700,
+                                    color: colBadge.color,
+                                    background: colBadge.bg,
+                                    padding: '2px 6px',
+                                    borderRadius: 'var(--r-badge, 4px)',
+                                    border: colBadge.border,
                                   }}
                                 >
-                                  <Icon name="file" size={13} />
-                                </button>
+                                  <Icon name={colBadge.icon} size={11} />
+                                  {d.status}
+                                </span>
                               </div>
 
                               <div>
@@ -849,6 +990,10 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
                                 <div style={{ fontSize: '12px', color: 'var(--text3)', marginTop: 2, display: 'flex', alignItems: 'flex-start', gap: 4 }}>
                                   <span style={{ flexShrink: 0, marginTop: 1 }}><Icon name="truck" size={12} /></span>
                                   <span style={{ wordBreak: 'break-word' }}>{d.address}</span>
+                                </div>
+                                <div style={{ fontSize: '12px', color: 'var(--text3)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                  <Icon name="box" size={12} />
+                                  <span>{d.items || (d.itemCount != null ? `${d.itemCount} items` : d.notes || 'Equipment package')}</span>
                                 </div>
                                 {d.clientPhone && (
                                   <a
@@ -884,103 +1029,26 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
                                 )}
                               </div>
 
-                              {/* Card action footer */}
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
-                                <div style={{ display: 'flex', gap: 6 }}>
-                                  {canAssign && d.status === 'Scheduled' && (
-                                    <Button
-                                      variant="secondary"
-                                      size="sm"
-                                      style={{ width: '100%' }}
-                                      onClick={() => handleOpenAssign(d)}
-                                    >
-                                      Assign Driver
-                                    </Button>
-                                  )}
-                                  {canAssign && d.status !== 'Delivered' && d.status !== 'Failed' && (
-                                    <Button
-                                      variant="secondary"
-                                      size="sm"
-                                      style={{ width: '100%' }}
-                                      onClick={() => setRiderModalTarget(d)}
-                                      title="Generate one-time rider link (T4-08/W49)"
-                                    >
-                                      <Icon name="external_link" size={13} /> Rider Link
-                                    </Button>
-                                  )}
-                                  {canReady && d.status === 'Scheduled' && (
-                                    <Button
-                                      variant="secondary"
-                                      size="sm"
-                                      style={{ width: '100%' }}
-                                      onClick={() => handleMarkReady(d)}
-                                    >
-                                      Stage Ready
-                                    </Button>
-                                  )}
-                                  {canTransit && d.status === 'Ready' && (
-                                    <Button
-                                      variant="primary"
-                                      data-primary-verb
-                                      size="sm"
-                                      style={{ width: '100%' }}
-                                      disabled={!hasDriver}
-                                      onClick={() => handleStartTransit(d)}
-                                    >
-                                      Dispatch Now
-                                    </Button>
-                                  )}
-                                  {canDeliver && d.status === 'In Transit' && (
-                                    <Button
-                                      variant="primary"
-                                      data-primary-verb
-                                      size="sm"
-                                      style={{ width: '100%' }}
-                                      onClick={() => handleOpenDeliver(d)}
-                                    >
-                                      Confirm Delivered ✓
-                                    </Button>
-                                  )}
-                                </div>
-
-                                {canReschedule && (
+                              {/* Card action footer: Job list + 1 button per job + More (R-10.11) */}
+                              <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 8 }}>
+                                {nextStep && (
                                   <Button
-                                    variant="secondary"
+                                    variant={nextStep.variant}
+                                    data-primary-verb={nextStep.isPrimaryVerb ? true : undefined}
                                     size="sm"
-                                    style={{ width: '100%' }}
-                                    onClick={() => handleOpenReschedule(d)}
+                                    style={{ flex: 1, minHeight: 44, justifyContent: 'center' }}
+                                    disabled={nextStep.disabled}
+                                    title={nextStep.title}
+                                    onClick={nextStep.onClick}
                                   >
-                                    Change Time
+                                    {nextStep.icon && <Icon name={nextStep.icon} size={13} />}
+                                    {nextStep.label}
                                   </Button>
                                 )}
-
-                                {canFail && (d.status === 'Scheduled' || d.status === 'Ready' || d.status === 'In Transit') && (
-                                  <Button
-                                    variant="danger"
-                                    size="sm"
-                                    onClick={() => handleOpenFail(d)}
-                                  >
-                                    Mark Failed
-                                  </Button>
-                                )}
-
-                                {d.status === 'Delivered' && (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%' }}>
-                                    <div style={{ fontSize: '11px', color: 'var(--text3)', width: '100%', textAlign: 'center', padding: '4px' }}>
-                                      ✓ Received{d.recipientName ? ` by ${d.recipientName}` : ''}
-                                    </div>
-                                    {canAttachProof && (
-                                      <Button
-                                        variant="secondary"
-                                        size="sm"
-                                        style={{ width: '100%' }}
-                                        onClick={() => handleOpenProof(d)}
-                                      >
-                                        <Icon name="camera" size={13} /> Attach Proof
-                                      </Button>
-                                    )}
-                                  </div>
-                                )}
+                                <OverflowMenu
+                                  items={moreItems}
+                                  ariaLabel={`More actions for ${d.id}`}
+                                />
                               </div>
                             </div>
                           )
@@ -996,12 +1064,8 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
               {filtered.map((d) => {
                 const badge = STATUS_BADGE_STYLE[d.status]
-                const canReady = canTransitionDeliveryJob(role, 'Scheduled', 'Ready')
-                const canTransit = canTransitionDeliveryJob(role, 'Ready', 'In Transit')
-                const canDeliver = canTransitionDeliveryJob(role, 'In Transit', 'Delivered')
-                const canFail = canTransitionDeliveryJob(role, d.status, 'Failed')
-                const canReschedule = canRescheduleDeliveryJob(role) && d.status !== 'Delivered' && d.status !== 'Failed'
-                const hasDriver = !!(d.driverId || d.driverName)
+                const nextStep = getJobNextStep(d)
+                const moreItems = getJobMoreItems(d, nextStep?.label)
 
                 return (
                   <article
@@ -1017,7 +1081,7 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
                       boxShadow: 'var(--shadow-sm)',
                     }}
                   >
-                    {/* Header: ID, Booking, Status Badge, Gatepass */}
+                    {/* Header: ID, Booking, Status Badge */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1059,30 +1123,9 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
                           </Link>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        title="Print Gate Pass"
-                        aria-label={`Print Gate Pass for ${d.id}`}
-                        onClick={() => setGatePassSlip(d)}
-                        style={{
-                          minWidth: 'var(--tap, 44px)',
-                          minHeight: 'var(--tap, 44px)',
-                          padding: '4px 8px',
-                          borderRadius: 'var(--r-xs)',
-                          background: 'var(--surface2)',
-                          border: '1px solid var(--border)',
-                          color: 'var(--text2)',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <Icon name="file" size={14} />
-                      </button>
                     </div>
 
-                    {/* Client & Address */}
+                    {/* Client, Address & Items */}
                     <div>
                       <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)' }}>
                         {d.clientName}
@@ -1090,6 +1133,10 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
                       <div style={{ fontSize: '13px', color: 'var(--text2)', marginTop: 4, display: 'flex', alignItems: 'flex-start', gap: 6 }}>
                         <Icon name="truck" size={14} style={{ flexShrink: 0, marginTop: 2, color: 'var(--muted)' }} />
                         <span style={{ wordBreak: 'break-word' }}>{d.address}</span>
+                      </div>
+                      <div style={{ fontSize: '12.5px', color: 'var(--text3)', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Icon name="box" size={13} />
+                        <span>{d.items || (d.itemCount != null ? `${d.itemCount} items` : d.notes || 'Equipment package')}</span>
                       </div>
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6, flexWrap: 'wrap' }}>
                         {d.clientPhone && (
@@ -1163,91 +1210,25 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
                       </div>
                     )}
 
-                    {/* Actions */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 2 }}>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        {canAssign && d.status === 'Scheduled' && (
-                          <Button
-                            variant="secondary"
-                            style={{ flex: 1, minHeight: 44, justifyContent: 'center' }}
-                            onClick={() => handleOpenAssign(d)}
-                          >
-                            Assign Driver
-                          </Button>
-                        )}
-                        {canReady && d.status === 'Scheduled' && (
-                          <Button
-                            variant="secondary"
-                            style={{ flex: 1, minHeight: 44, justifyContent: 'center' }}
-                            onClick={() => handleMarkReady(d)}
-                          >
-                            Stage Ready
-                          </Button>
-                        )}
-                        {canTransit && d.status === 'Ready' && (
-                          <Button
-                            variant="primary"
-                            data-primary-verb
-                            style={{ width: '100%', minHeight: 48, justifyContent: 'center', fontWeight: 600 }}
-                            disabled={!hasDriver}
-                            onClick={() => handleStartTransit(d)}
-                          >
-                            Dispatch Now
-                          </Button>
-                        )}
-                        {canDeliver && d.status === 'In Transit' && (
-                          <Button
-                            variant="primary"
-                            data-primary-verb
-                            style={{ width: '100%', minHeight: 48, justifyContent: 'center', fontWeight: 600 }}
-                            onClick={() => handleOpenDeliver(d)}
-                          >
-                            Confirm Delivered ✓
-                          </Button>
-                        )}
-                      </div>
-
-                      {canReschedule && (
+                    {/* Mobile Action Footer: 1 button per job + More (R-10.11) */}
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 4 }}>
+                      {nextStep && (
                         <Button
-                          variant="secondary"
-                          style={{ minHeight: 44, justifyContent: 'center' }}
-                          onClick={() => handleOpenReschedule(d)}
+                          variant={nextStep.variant}
+                          data-primary-verb={nextStep.isPrimaryVerb ? true : undefined}
+                          style={{ flex: 1, minHeight: 44, justifyContent: 'center' }}
+                          disabled={nextStep.disabled}
+                          title={nextStep.title}
+                          onClick={nextStep.onClick}
                         >
-                          Change Time
+                          {nextStep.icon && <Icon name={nextStep.icon} size={13} />}
+                          {nextStep.label}
                         </Button>
                       )}
-
-                      {canFail && (d.status === 'Scheduled' || d.status === 'Ready' || d.status === 'In Transit') && (
-                        <Button
-                          variant="danger"
-                          style={{ minHeight: 40, justifyContent: 'center' }}
-                          onClick={() => handleOpenFail(d)}
-                        >
-                          Mark Failed
-                        </Button>
-                      )}
-
-                      {d.status === 'Delivered' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          <div style={{ fontSize: '12px', color: 'var(--success-text)', textAlign: 'center', padding: '6px' }}>
-                            ✓ Delivered{d.recipientName ? ` to ${d.recipientName}` : ''}
-                          </div>
-                          {canAttachProof && (
-                            <Button
-                              variant="secondary"
-                              style={{ width: '100%', minHeight: 44, justifyContent: 'center' }}
-                              onClick={() => handleOpenProof(d)}
-                            >
-                              <Icon name="camera" size={14} /> Attach Proof
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                      {d.status === 'Failed' && (
-                        <div style={{ fontSize: '12px', color: 'var(--st-danger-fg)', textAlign: 'center', padding: '6px' }}>
-                          ✕ Delivery Failed {d.notes ? `(${d.notes})` : ''}
-                        </div>
-                      )}
+                      <OverflowMenu
+                        items={moreItems}
+                        ariaLabel={`More actions for ${d.id}`}
+                      />
                     </div>
                   </article>
                 )
@@ -1261,23 +1242,19 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
                   <thead>
                     <tr>
                       <th>DISPATCH / BOOKING</th>
-                      <th>CLIENT & DESTINATION</th>
+                      <th>CLIENT, DESTINATION & ITEMS</th>
                       <th>SCHEDULED</th>
                       <th>RIDER / VEHICLE</th>
                       <th>STATUS</th>
                       {canMoney && <th>FEE</th>}
-                      <th style={{ textAlign: 'right' }}>ACTIONS</th>
+                      <th style={{ textAlign: 'right' }}>ACTION</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filtered.map((d) => {
                       const badge = STATUS_BADGE_STYLE[d.status]
-                      const canReady = canTransitionDeliveryJob(role, 'Scheduled', 'Ready')
-                      const canTransit = canTransitionDeliveryJob(role, 'Ready', 'In Transit')
-                      const canDeliver = canTransitionDeliveryJob(role, 'In Transit', 'Delivered')
-                      const canFail = canTransitionDeliveryJob(role, d.status, 'Failed')
-                      const canReschedule = canRescheduleDeliveryJob(role) && d.status !== 'Delivered' && d.status !== 'Failed'
-                      const hasDriver = !!(d.driverId || d.driverName)
+                      const nextStep = getJobNextStep(d)
+                      const moreItems = getJobMoreItems(d, nextStep?.label)
 
                       return (
                         <tr key={d.id} className="delivery-row">
@@ -1303,11 +1280,15 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
                             </Link>
                           </td>
 
-                          {/* Client & Address */}
-                          <td style={{ maxWidth: '300px' }}>
+                          {/* Client, Address & Items */}
+                          <td style={{ maxWidth: '320px' }}>
                             <div style={{ fontWeight: 700, color: 'var(--text)' }}>{d.clientName}</div>
                             <div style={{ fontSize: '12px', color: 'var(--text3)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: 4 }}>
                               <Icon name="truck" size={12} /> {d.address}
+                            </div>
+                            <div style={{ fontSize: '12px', color: 'var(--text3)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <Icon name="box" size={12} />
+                              <span>{d.items || (d.itemCount != null ? `${d.itemCount} items` : d.notes || 'Equipment package')}</span>
                             </div>
                             <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 4 }}>
                               {d.clientPhone && (
@@ -1406,116 +1387,27 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
                             </td>
                           )}
 
-                          {/* Actions */}
+                          {/* Actions: Job list + 1 button per job + More (R-10.11) */}
                           <td style={{ textAlign: 'right' }}>
-                            <div style={{ display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
-                              <button
-                                type="button"
-                                title="Print Gate Pass / Delivery Slip"
-                                onClick={() => setGatePassSlip(d)}
-                                style={{
-                                  minWidth: 'var(--tap, 44px)',
-                                  minHeight: 'var(--tap, 44px)',
-                                  padding: '0 10px',
-                                  borderRadius: 'var(--r-btn)',
-                                  background: 'var(--surface2)',
-                                  border: '1px solid var(--border)',
-                                  color: 'var(--text2)',
-                                  cursor: 'pointer',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: 4,
-                                  fontSize: '12px',
-                                }}
-                              >
-                                <Icon name="file" size={14} />
-                                <span>Slip</span>
-                              </button>
-
-                              {canAssign && d.status === 'Scheduled' && (
+                            <div style={{ display: 'inline-flex', gap: '8px', alignItems: 'center', justifyContent: 'flex-end' }}>
+                              {nextStep && (
                                 <Button
-                                  variant="secondary"
+                                  variant={nextStep.variant}
+                                  data-primary-verb={nextStep.isPrimaryVerb ? true : undefined}
                                   size="sm"
-                                  onClick={() => handleOpenAssign(d)}
+                                  disabled={nextStep.disabled}
+                                  title={nextStep.title}
+                                  onClick={nextStep.onClick}
+                                  style={{ minHeight: 44 }}
                                 >
-                                  Assign
+                                  {nextStep.icon && <Icon name={nextStep.icon} size={13} />}
+                                  {nextStep.label}
                                 </Button>
                               )}
-
-                              {canAssign && d.status !== 'Delivered' && d.status !== 'Failed' && (
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={() => setRiderModalTarget(d)}
-                                  title="Generate one-time rider link (T4-08/W49)"
-                                >
-                                  <Icon name="external_link" size={13} /> Rider
-                                </Button>
-                              )}
-
-                              {canReady && d.status === 'Scheduled' && (
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={() => handleMarkReady(d)}
-                                >
-                                  Ready
-                                </Button>
-                              )}
-
-                              {canTransit && d.status === 'Ready' && (
-                                <Button
-                                  variant="primary"
-                                  data-primary-verb
-                                  size="sm"
-                                  disabled={!hasDriver}
-                                  onClick={() => handleStartTransit(d)}
-                                >
-                                  Dispatch
-                                </Button>
-                              )}
-
-                              {canDeliver && d.status === 'In Transit' && (
-                                <Button
-                                  variant="primary"
-                                  data-primary-verb
-                                  size="sm"
-                                  onClick={() => handleOpenDeliver(d)}
-                                >
-                                  Delivered ✓
-                                </Button>
-                              )}
-
-                              {canReschedule && (
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={() => handleOpenReschedule(d)}
-                                >
-                                  Change Time
-                                </Button>
-                              )}
-
-                              {canAttachProof && d.status === 'Delivered' && (
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={() => handleOpenProof(d)}
-                                >
-                                  <Icon name="camera" size={13} /> Proof
-                                </Button>
-                              )}
-
-                      {canFail && (d.status === 'Scheduled' || d.status === 'Ready' || d.status === 'In Transit') && (
-                                <Button
-                                  variant="danger"
-                                  size="sm"
-                                  onClick={() => handleOpenFail(d)}
-                                >
-                                  Fail
-                                </Button>
-                              )}
+                              <OverflowMenu
+                                items={moreItems}
+                                ariaLabel={`More actions for ${d.id}`}
+                              />
                             </div>
                           </td>
                         </tr>

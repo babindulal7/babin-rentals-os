@@ -161,11 +161,18 @@ describe('DeliveryWorkspace (T4-01)', () => {
     expect(container.textContent).toContain('Delivery Revenue')
     expect(container.textContent).toContain('FEE')
 
-    // Management actions present
+    // Management actions present: primary 1-button + secondary actions in More (R-10.11)
     expect(container.textContent).toContain('+ New Dispatch')
     expect(container.textContent).toContain('Assign')
-    expect(container.textContent).toContain('Fail')
-    expect(container.textContent).toContain('Change Time')
+
+    // Per R-10.11, secondary actions (Fail, Change Time) sit behind More menu
+    const moreBtn = container.querySelector<HTMLButtonElement>('button[aria-label*="More actions"]')
+    expect(moreBtn).toBeTruthy()
+    await act(async () => {
+      moreBtn?.click()
+    })
+    expect(document.body.textContent).toContain('Mark Failed')
+    expect(document.body.textContent).toContain('Change Time')
   })
 
   it('Rescheduling a delivery moves scheduled time only, enforces Ruling D8, and prepares WhatsApp draft', async () => {
@@ -179,14 +186,20 @@ describe('DeliveryWorkspace (T4-01)', () => {
       )
     })
 
-    // Find and click the first "Change Time" button
-    const changeTimeBtns = Array.from(container.querySelectorAll('button')).filter(
+    // Per R-10.11, open the More menu to access Change Time
+    const moreBtn = container.querySelector<HTMLButtonElement>('button[aria-label*="More actions"]')
+    expect(moreBtn).toBeTruthy()
+    await act(async () => {
+      moreBtn?.click()
+    })
+
+    const changeTimeBtn = Array.from(document.body.querySelectorAll('button')).find(
       (b) => b.textContent?.includes('Change Time'),
     )
-    expect(changeTimeBtns.length).toBeGreaterThan(0)
+    expect(changeTimeBtn).toBeTruthy()
 
     await act(async () => {
-      changeTimeBtns[0]?.click()
+      changeTimeBtn?.click()
     })
 
     // Modal is opened

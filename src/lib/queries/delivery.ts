@@ -70,6 +70,8 @@ export interface DeliveryRecord {
   address: string
   neighborhood: string
   mode: DeliveryMode
+  itemCount?: number | undefined
+  items?: string | undefined
   driverId?: string | undefined
   driverName?: string | undefined
   driverPhone?: string | undefined
@@ -95,6 +97,8 @@ export const INITIAL_DELIVERIES: DeliveryRecord[] = [
     address: 'Bakhundole, Lalitpur (Near Summit Hotel)',
     neighborhood: 'Sanepa / Bakhundole',
     mode: 'Babin Delivery',
+    itemCount: 4,
+    items: 'ARRI Alexa Mini LF + NiSi Cine Primes (2 Pelican cases)',
     driverName: 'Suman Rai',
     driverPhone: '+977 9851098765',
     vehiclePlate: 'Ba 3 Cha 8821 (Scorpio Van)',
@@ -115,6 +119,8 @@ export const INITIAL_DELIVERIES: DeliveryRecord[] = [
     address: 'Naxal, Kathmandu (Opposite Narayanhiti Gate 3)',
     neighborhood: 'Naxal',
     mode: 'Courier / Rider',
+    itemCount: 2,
+    items: 'Sony FX6 Cinema Kit + GM Zoom Trio',
     driverName: 'Ramesh Thapa (Pathao Rider)',
     driverPhone: '+977 9813009988',
     vehiclePlate: 'Ba 92 Pa 3314',
@@ -134,6 +140,8 @@ export const INITIAL_DELIVERIES: DeliveryRecord[] = [
     address: 'Jhamsikhel, Lalitpur',
     neighborhood: 'Jhamsikhel',
     mode: 'Babin Delivery',
+    itemCount: 6,
+    items: 'Aputure 600d Pro + Light Dome 150 (2 lighting cases)',
     driverName: 'Suman Rai',
     driverPhone: '+977 9851098765',
     vehiclePlate: 'Ba 3 Cha 8821 (Scorpio Van)',
@@ -156,6 +164,8 @@ export const INITIAL_DELIVERIES: DeliveryRecord[] = [
     address: 'Baluwatar, Kathmandu',
     neighborhood: 'Baluwatar',
     mode: 'Babin Delivery',
+    itemCount: 3,
+    items: 'RED V-Raptor kit + heavy-duty Sachtler tripod',
     status: 'Scheduled',
     scheduledDate: '2026-07-15',
     scheduledTime: '08:00',
@@ -170,6 +180,8 @@ export const INITIAL_DELIVERIES: DeliveryRecord[] = [
     address: 'Kalanki Highway Cargo Hub, Kathmandu',
     neighborhood: 'Kalanki',
     mode: 'Courier / Rider',
+    itemCount: 8,
+    items: 'Sound Devices 833 + Wireless Audio Kit (consignment box)',
     status: 'Scheduled',
     scheduledDate: '2026-07-15',
     scheduledTime: '14:00',
@@ -320,6 +332,7 @@ interface BookingInfo {
   id: string
   booking_no: string
   delivery_type: string
+  item_count: number | null
   pickup_at: string
   return_at: string
   pickup_location: string | null
@@ -380,6 +393,7 @@ export async function fetchDeliveries(role: SystemRole | null): Promise<Delivery
       id,
       booking_no,
       delivery_type,
+      item_count,
       pickup_at,
       return_at,
       pickup_location,
@@ -443,6 +457,8 @@ export async function fetchDeliveries(role: SystemRole | null): Promise<Delivery
       address: client?.address_line || booking?.pickup_location || 'Warehouse / Studio',
       neighborhood: '',
       mode,
+      itemCount: booking?.item_count != null ? Number(booking.item_count) : undefined,
+      items: job.last_note || (booking?.item_count != null ? `${booking.item_count} items` : undefined),
       driverId: job.assigned_driver_id || undefined,
       driverName: job.rider_name || (job.assigned_driver_id ? 'Assigned Driver' : undefined),
       driverPhone: job.rider_phone || undefined,
