@@ -5,7 +5,7 @@ import { bottomBarSlots, permittedNav, activeNavTo } from '../../data/nav'
 import type { BottomBarSlot } from '../../data/nav'
 import { useAuth } from '../../lib/auth'
 import { useTranslation } from '../../lib/i18n'
-import { toggleScanner } from './ScannerFab'
+import { toggleScanner } from '../../lib/scannerEvents'
 import MoreSheet from './MoreSheet'
 
 /** The bar's own height, above the home-indicator inset — see {@link BAR_BOX}. */

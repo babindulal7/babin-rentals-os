@@ -42,21 +42,8 @@ type Feedback = { tone: 'ok' | 'wrong-job' | 'unknown' | 'duplicate'; text: stri
  * lifts the FAB clear of the bottom bar), so it already satisfied the spec's
  * "exists at every width — not phone-only".
  */
-export const SCANNER_TOGGLE_EVENT = 'br:scanner:toggle'
-
-/** Open or close the single Scanner from anywhere. */
-export function toggleScanner(): void {
-  window.dispatchEvent(new CustomEvent(SCANNER_TOGGLE_EVENT))
-}
-
-export const ITEM_CARD_OPEN_EVENT = 'br:item-card:open'
-
-/** Opens the rich item card for any equipment barcode, QR, serial, or asset code (T2-14, W91). */
-export function openItemCard(code: string): void {
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent(ITEM_CARD_OPEN_EVENT, { detail: { code } }))
-  }
-}
+import { SCANNER_TOGGLE_EVENT, ITEM_CARD_OPEN_EVENT, toggleScanner, openItemCard } from '../../lib/scannerEvents'
+export { SCANNER_TOGGLE_EVENT, ITEM_CARD_OPEN_EVENT, toggleScanner, openItemCard }
 
 function isInsideFloorWorkspace(): boolean {
   if (typeof window === 'undefined') return false
