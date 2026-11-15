@@ -104,7 +104,7 @@ Babin's terms text (O-11), signed at Handover (T2-02). 3) Quote PDF uses the sam
 booking.
 **Needs** — T2-02; Babin's terms text; accountant.
 
-### T3-07 · Opening balances and daily closing carry-forward            status: todo · size: M · lane C
+### T3-07 · Opening balances and daily closing carry-forward            status: doing — opening-balances slice merged in PR #164; daily/shift carry-forward and staging acceptance still unverified · size: M · lane C
 **What** — Accounts (or Owner) enters an **opening balance** once per cash drawer and per bank
 account, with the date. Daily closing then shows *opening + money in − money out = closing* per
 account and carries the closing to the next day. Money in/out includes rental payments, payment
@@ -279,7 +279,7 @@ instead of overwriting it.
 **Done when** — the three cases work on staging with two devices; no double booking; audit rows exist.
 **Needs** — T3-14.
 
-### T3-19 · Add gear by scanning in New Rental            status: todo · size: S · lane C · [soon]
+### T3-19 · Add gear by scanning in New Rental            status: acceptance_pending — PR #163 merged; scanner/device and reservation acceptance pending · size: S · lane C · [soon]
 **What** — In New Rental, scanning an item's QR/asset code (camera or Bluetooth) adds that product —
 and reserves that exact unit if it is free — in one action (W8).
 **Why** — W8.
@@ -319,7 +319,7 @@ failed — retry" look different. Never apply "latest wins" to a write.
 shown to floor roles.
 **Needs** — none.
 
-### T3-22 · Availability in two taps            status: ready — awaiting merge (lane-c/T3-22-availability-in-two-taps) · size: S · lane C · [go-live]
+### T3-22 · Availability in two taps            status: acceptance_pending — PR #161 merged; staging/device and New Rental parity acceptance pending · size: S · lane C · [go-live]
 **What** — From anywhere: tap **Availability** (header) → type or scan an item → see free units for
 any dates, the next free date, and **who has it now** (from T2-14). Reuses `CheckAvailabilityModal`.
 **Why** — W91 "checking what's available".
