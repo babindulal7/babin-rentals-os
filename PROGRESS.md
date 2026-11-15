@@ -4,7 +4,7 @@
 
 **Did**
 - **Consumable Unit Sale Pricing (T3-30, B14, B35):**
-  - Migration `0237_consumables_pricing_restock_and_low_stock.sql` claimed in `docs/plans/MIGRATION_LEDGER.md` (Next free number: `0238`):
+  - Migration `0238_consumables_pricing_restock_and_low_stock.sql` claimed in `docs/plans/MIGRATION_LEDGER.md` (Next free number: `0239`):
     - Added `products.unit_sale_price numeric(14,2)` column for consumable products.
     - Updated `products_v` to enforce Law 6: `unit_sale_price` is masked to `NULL` for floor roles (`Warehouse`, `Technician`, `Driver`).
     - Updated `get_model_daily_rate(uuid)` to return `unit_sale_price` when product `tracking_mode = 'Consumable'`.
