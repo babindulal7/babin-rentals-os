@@ -111,7 +111,7 @@ export async function getCashFlowSummary(options: ReportFilterOptions = {}): Pro
 
   // Fetch opening balance for the period (T3-07)
   const asOfDate = options.to ?? new Date().toISOString().slice(0, 10)
-  const openingBalance = await fetchLatestOpeningBalance('cash', null, asOfDate).catch(() => null)
+  const openingBalance = await fetchLatestOpeningBalance('cash', null, asOfDate, options.branchId).catch(() => null)
   const openingCash = openingBalance?.amountPaisa ?? null
   const closingCash = openingCash !== null ? (openingCash + (collected - refunds - expensesPaid)) as Paisa : null
 

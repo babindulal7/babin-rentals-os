@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0236**
+**Next free number: 0237**
 
 > **Legacy exception:** `0188` exists as two distinct, locally verified migration files
 > (`0188_smart_reservation_holds.sql` and `0188_staff_renting_gear.sql`). Both are preserved because
@@ -80,6 +80,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0233 | T3-security | extend-booking-and-resync-auth | repair/pr-53-invoice-extension-auth | verified (PR #135 merged) |
 | 0234 | T2-18 | return-damage-photo-per-unit | lane-a/T2-18-finish-evidence-capture-what-t2-16 | verified (PR #80 merged) |
 | 0235 | T4-09-security | delivery-route-branch-hardening | fix/t4-09-route-branch-hardening-0209 | verified |
+| 0236 | T3-07 | opening-balances-append-only | lane-c/T3-07-opening-balances | written |
 
 ## Expected migrations (not yet claimed)
 
@@ -90,7 +91,6 @@ Listed so lanes can see what is coming. A card marked "if needed" may turn out n
 | T2-06 | Maintenance job ↔ damage finding link; clearance on completion |
 | T3-03 | Cancellation tiers table (if not a settings key) |
 | T3-04 | Invoice VAT treatment + backfill |
-| T3-07 | Opening balances (append-only) |
 | T4-02 | Delivery reschedule RPC (if needed) |
 | T4-03 | Delivery proof evidence link (if needed) |
 | T4-05 | `shift_handovers` + acknowledgements |
