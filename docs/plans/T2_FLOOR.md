@@ -405,7 +405,7 @@ price; Warehouse has no price in the DOM or the payload; 2) Handover deducts the
 same `client_uuid` twice adds one line; 4) screen check.
 **Needs** — T3-30.
 
-### T2-21 · Planned downtime with a reason            status: blocked — awaiting design review (lane-a/T2-21-planned-downtime-with-a-reason) · size: M · lane A · [go-live] · slips first
+### T2-21 · Planned downtime with a reason            status: ready — awaiting merge (lane-a/T2-21-planned-downtime-with-a-reason) · size: M · lane A · [go-live] · slips first
 **What** — Block a unit (or part of a quantity-tracked product) for **dates you know in advance**, with
 a **reason from a list** (B10): ⭐ **Repair · Service or calibration · Our own shoot · Lent to a
 partner · Marketing shoot · Other (type it)**. In that range the unit cannot be booked — New Rental,
