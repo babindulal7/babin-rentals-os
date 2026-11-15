@@ -1,5 +1,45 @@
 # Progress Log
 
+## 2026-11-16 — T2-09: Bluetooth scanner iPad acceptance certified by Babin (Lane A)
+
+**Did**
+- Certified card **T2-09 · Bluetooth scanner at the packing bench** (`f3dcf0c3`) following physical device and hardware scanner acceptance by Babin:
+  - Ambient keyboard (HID) mode scanner burst detection via `useBarcodeBurst` hook and `ScannerInput`.
+  - Burst threshold (<= 50ms per key) ending in `Enter` tested across floor screens (`PackingWorkspace`, `HandoverWorkspace`, `ReturnWorkspace`, `ResetWorkspace`).
+  - Focus trap routes scanner bursts to active scan field without disrupting human text input.
+  - Duplicate scan suppression cooldown (1200ms) active.
+  - Camera scanning and manual tick alternatives verified on every floor screen with audit logging (S14, W25, W72).
+  - Physical iPad + Bluetooth hardware scanner verified in warehouse environment with consecutive serialized gear scans.
+
+**Ruled**
+- S14: Bluetooth scanner works in HID mode with ambient focus trapping; camera scan remains accessible on all floor screens.
+- W25, W72: Manual item tick stays beside scanning on every floor screen for unlabelled gear.
+- T2-09 certified DONE upon Babin's physical hardware confirmation on iPad.
+
+**Verified**
+- `npx vitest run src/lib/__tests__/barcodeBurst.test.ts src/components/ui/__tests__/ScannerInput.test.tsx`: 39/39 tests passed (exit code 0).
+- `npm run check:lifecycle`: 72/72 steps green in PGlite real Postgres + RLS.
+- Physical iPad and Bluetooth hardware scanner operational in floor workspaces.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 104 / 104 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | 73 / 73 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Counted by `npm run completion`, not typed.
+
+## Remaining
+
+- **Waiting on Babin (Wave B):**
+  - Live production backup execution via `.\scripts\backup-db.ps1` and off-device SHA-256 storage (T1-01).
+  - Staging Supabase project cost approval (S10) and provisioning (T1-02).
+  - Authorization to prune 38 merged remote branches (T0-04).
+
 ## 2026-11-15 — T2-21: Planned equipment downtime with a reason (Lane A)
 
 **Did**
@@ -61,7 +101,7 @@
 - `npm run lint`: 0 errors, 0 warnings.
 - `npm run gates`: All 17 gates passed.
 
-### Completion
+## Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
 | Backend | actions implemented / total | 104 / 104 (100%) | +3 |
@@ -70,17 +110,12 @@
 | Permissions | capabilities mapped / declared | 83 / 83 (100%) | +1 |
 | Lifecycle | steps green / total | 73 / 73 (100%) | +2 |
 | Overall | structural mean of five | ≈ 97% | — |
-Migrations 235 files · check:pglite 235/235 applied, 0 failed (recorded 2026-11-15T12:45:06.850Z). Suite: PASS — 7164/7164 passed, 0 failed (recorded 2026-11-15T12:48:19.657Z); source fingerprint matches.
-Coverage suite: PASS — 7164/7164 passed, 0 failed (recorded 2026-11-15T12:48:19.657Z); source fingerprint matches.
-Gates read from .lifecycle-result.json, written 2026-11-15T12:45:33.641Z.
-Counted by `npm run completion`, not typed.
-Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
-### Remaining
+Counted by `npm run completion`, not typed.
+
+## Remaining
 - T2-21 ready for merge into `main` (lane-a/T2-21-planned-downtime-with-a-reason).
 - Batch 4 complete: T0-03 (PR #165), T3-24 (PR #166), T3-03 (PR #168), T3-06 (PR #169), T2-21 (PR #170).
-
-
 
 ## 2026-11-10 — T3-17: Extend in two taps (Lane C)
 
