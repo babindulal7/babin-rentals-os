@@ -279,7 +279,7 @@ instead of overwriting it.
 **Done when** — the three cases work on staging with two devices; no double booking; audit rows exist.
 **Needs** — T3-14.
 
-### T3-19 · Add gear by scanning in New Rental            status: todo · size: S · lane C · [soon]
+### T3-19 · Add gear by scanning in New Rental            status: ready — awaiting merge (lane-c/T3-19-scan-add-equipment) · size: S · lane C · [soon]
 **What** — In New Rental, scanning an item's QR/asset code (camera or Bluetooth) adds that product —
 and reserves that exact unit if it is free — in one action (W8).
 **Why** — W8.

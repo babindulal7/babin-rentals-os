@@ -15,15 +15,19 @@
  */
 
 import { resolveScannedCode, type ScanLookupResult } from './scannerLookup'
-import type { BookingLineDraft } from '../modules/rentals/booking/itemCatalogue'
+import type { BookingLineDraft, BookingWindow, EquipmentResult } from '../modules/rentals/booking/itemCatalogue'
+import type { Line } from '../modules/rentals/booking/RentalLineItemsTree'
 import { generateClientUuid } from './dataAccess'
 import { rupees } from './money'
+import { supabase } from './supabase'
 
 export interface ScanToAddOptions {
   days: number
-  existingLines: readonly BookingLineDraft[]
+  existingLines: ReadonlyArray<BookingLineDraft | Line | { id: string; serial?: string | undefined; name?: string | undefined }>
   onAddLine: (line: BookingLineDraft) => void
-  onConflict?: (details: { code: string; name: string; reason: string }) => void
+  onConflict?: ((details: { code: string; name: string; reason: string; similarChoices?: boolean }) => void) | undefined
+  window?: BookingWindow | undefined
+  catalogue?: readonly EquipmentResult[] | undefined
 }
 
 export interface ScanToAddResult {
@@ -32,6 +36,7 @@ export interface ScanToAddResult {
   action: 'added' | 'ignored_duplicate' | 'already_in_draft' | 'conflict' | 'unrecognized'
   message?: string
   line?: BookingLineDraft
+  similarChoices?: boolean
 }
 
 // 1.5-second scan cache for duplicate burst suppression
@@ -105,14 +110,45 @@ export async function processScanToAddEquipment(
 
     // Unit status check
     const status = lookup.unitStatus.toLowerCase()
-    if (status === 'rented' || status === 'on rent' || status === 'maintenance' || status === 'lost') {
+    if (status === 'rented' || status === 'on rent' || status === 'maintenance' || status === 'lost' || status === 'retired') {
       isAvailable = false
       conflictReason = `Unit ${serialNo || assetTag || code} is currently ${lookup.unitStatus}.`
+    }
+
+    // Server-authoritative reservation check for window if provided
+    if (isAvailable && options.window?.pickupAd && options.window?.returnAd) {
+      try {
+        const pStart = options.window.pickupAd.toISOString()
+        const pEnd = options.window.returnAd.toISOString()
+        const { data: resData, error: resErr } = await supabase
+          .from('inventory_reservations')
+          .select('booking:bookings(booking_no, stage)')
+          .eq('asset_id', lookup.unitId)
+          .is('released_at', null)
+          .overlaps('period', `[${pStart},${pEnd})`)
+          .maybeSingle()
+
+        if (!resErr && resData) {
+          isAvailable = false
+          const bNo = (resData as unknown as { booking?: { booking_no?: string } })?.booking?.booking_no ?? 'another booking'
+          conflictReason = `Unit ${serialNo || assetTag || code} is already reserved by ${bNo} for these dates.`
+        }
+      } catch {
+        // Fallback gracefully on mock or offline
+      }
     }
   } else if (lookup.status === 'product_matched') {
     equipmentId = lookup.productId
     equipmentName = lookup.productName
     assetTag = lookup.assetCode
+
+    if (options.catalogue) {
+      const catItem = options.catalogue.find((c) => c.id === equipmentId || c.name === equipmentName)
+      if (catItem && catItem.availability?.level === 'unavailable') {
+        isAvailable = false
+        conflictReason = `Equipment ${equipmentName} is out of stock for the selected dates.`
+      }
+    }
   }
 
   // 3. Check if this equipment unit or product is already in the draft
@@ -128,25 +164,34 @@ export async function processScanToAddEquipment(
     }
   }
 
-  // 4. Handle unavailability / conflict
+  // 4. Handle unavailability / conflict (offering T3-13 similar choices)
   if (!isAvailable) {
     const reason = conflictReason || `Item is not free for the selected dates.`
-    options.onConflict?.({ code, name: equipmentName, reason })
-    return { success: false, code, action: 'conflict', message: reason }
+    options.onConflict?.({ code, name: equipmentName, reason, similarChoices: true })
+    return { success: false, code, action: 'conflict', message: reason, similarChoices: true }
   }
 
-  // 5. Build draft line and add
+  // 5. Build draft line with catalogue rates and add
   const days = Math.max(1, options.days)
-  const defaultRate = rupees(2500) // Fallback rate; pricing engine recalculates
+  let category = 'Equipment'
+  let ratePaisa = rupees(2500) // Fallback rate; pricing engine recalculates
+
+  if (options.catalogue) {
+    const catItem = options.catalogue.find((c) => c.id === equipmentId || c.name === equipmentName)
+    if (catItem) {
+      if (catItem.category) category = catItem.category
+      if (catItem.ratePaisa) ratePaisa = catItem.ratePaisa
+    }
+  }
 
   const newLine: BookingLineDraft = {
     id: equipmentId,
     clientUuid: generateClientUuid(),
     name: equipmentName,
     lineType: 'Equipment',
-    category: 'Camera',
+    category,
     qty: 1,
-    ratePaisa: defaultRate,
+    ratePaisa,
     days,
     discountPct: 0,
     serial: serialNo ?? assetTag ?? '-',

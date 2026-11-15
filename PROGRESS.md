@@ -1,5 +1,50 @@
 # Progress Log
 
+## 2026-11-15 — Sprint: PR #161/#162 review, T3-19 scan into New Rental, T3-07 collision & T3-30 check
+
+**Did**
+- Reviewed PR #161 (T3-22: Availability in two taps): Head `08c58c730a5a8fdd2b97db871d932ce294e9e41b`. Confirmed GitHub Actions `typecheck · test · build` completed GREEN across all 23 steps. Verified focused availability tests, permissions, and 375/820/1440 layout contracts.
+- Reviewed PR #162 (T3-17: Extend in two taps): Head `7f77a03f94a1a811d44c118b52d16081b63820ff`. Identified exact root causes for RED CI: Lifecycle step L23 failed on missing `pricing_option` in `extend_booking` RPC (PR claims 0232 but omitted migration file), reverts MIGRATION_LEDGER rows 0232-0235, and depends on unmerged T3-13.
+- Implemented T3-19 (Scan gear into New Rental): Integrated verified T2-14 scanner lookup, hardware/ambient Bluetooth scanner burst processing (`useBarcodeBurst`), 1.5s repeat suppression, date-window server availability checking against `inventory_reservations` overlap, truthful conflict handling, and non-blocking manual equipment combobox and serial selection.
+- Investigated T3-07 migration collision without touching live Supabase: Confirmed collision on migration 0224 between Lane C's opening balances trigger and main's offer campaigns. Verified neither has run on live Supabase (issue #56 HOLD preserved). Next free migration number in ledger is 0236.
+- Audited T3-30 and T2-20: Confirmed T3-30 consumables action `addConsumableLine` is `todo`. Recorded blocking dependency for Lane A's T2-20.
+
+**Ruled**
+- B-1 & N-5 preserved: Zero live Supabase migrations or writes; zero credential exposure.
+- R-40 & Law 6: Scanner lookups and booking additions respect role money blindness and server-authoritative reservation bounds.
+- Status integrity: PR #161 is READY (CI green, pending local merge); PR #162 is BLOCKED; T3-19 is READY (awaiting merge); T3-07 requires coordination/renumbering to 0236+; T2-20 is BLOCKED on T3-30.
+
+**Verified**
+- `npm run typecheck`: exit 0 (tsc clean).
+- `npm run lint`: exit 0 (eslint src --max-warnings 0 clean).
+- `npm test`: exit 0 (607 test files passed, 7,129 tests passed, 0 failed in mock mode).
+- `npm run check:pglite`: exit 0 (233/233 migrations applied from scratch, 0 failed, 41 views / 19 RPCs verified).
+- `npm run check:lifecycle`: exit 0 (72/72 lifecycle steps green).
+- `npm run build`: exit 0 (both entry documents + PWA bundle generated).
+- `npm run lint:progress`: exit 0.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | 72 / 72 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 233 files · check:pglite 233/233 applied, 0 failed (recorded 2026-11-15T09:12:44.963Z). Suite: PASS — 7129/7129 passed, 0 failed (recorded 2026-11-15T09:12:28.793Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-15T09:13:02.888Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- PR #161 (T3-22): CI is green (23/23 checks passed). Awaits Babin's review and local merge.
+- PR #162 (T3-17): Blocked. Lane C must provide the `extend_booking` migration for `pricing_option` with a non-colliding migration number (0236+), rebase without overwriting MIGRATION_LEDGER 0232-0235, and resolve T3-13 prerequisite.
+- T3-19 (`lane-c/T3-19-scan-add-equipment`): Implemented and verified across all gates; awaits Babin's review and merge.
+- T3-07: Migration 0224 collision requires Lane C coordination to renumber to 0236+.
+- T2-20: Blocked on Lane C delivering T3-30 `addConsumableLine`. Hand off to Lane A once T3-30 lands.
+
 ## 2026-11-12 — Add the 10 Nov ease-of-use rulings file (docs only, PR #149)
 
 **Did**

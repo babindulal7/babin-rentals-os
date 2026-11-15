@@ -12,15 +12,15 @@ import {
   type BookingWindow,
   type BookingLineDraft,
   type BundleResult,
-  equipmentLineDraft,
   defaultTransportOptions,
 } from './itemCatalogue'
 import { crewPool, type CrewMember } from '../../../lib/queries/crew'
 import type { PricingPipelineResult } from '../../../lib/pricingPipeline'
 import type { GateContext } from '../../../lib/fieldGating'
 import type { AuthUser } from '../../../lib/auth'
-import { supabase, newClientUuid } from '../../../lib/supabase'
+import { newClientUuid } from '../../../lib/supabase'
 import { rupees, type Paisa } from '../../../lib/money'
+import { processScanToAddEquipment } from '../../../lib/scanToAddEquipment'
 import './booking-equipment-section.css'
 
 const inlineInfoStyle = {
@@ -177,44 +177,30 @@ export function BookingEquipmentSection({
   }, [customLineName, customLineRate, customLineQty, customLineType, customLineVendor, days, setLines])
 
   const addScannedEquipment = useCallback(
-    async (rawCode: string): Promise<string | null> => {
-      const code = rawCode.trim()
-      if (!code) return null
-      if (!liveEquipment) {
+    async (rawCode: string, windowParam?: BookingWindow, daysParam?: number): Promise<string | null> => {
+      const targetDays = daysParam || days || 1
+      const targetWindow = windowParam || bookingWindow
+      const res = await processScanToAddEquipment(rawCode, {
+        days: targetDays,
+        existingLines: lines,
+        window: targetWindow,
+        catalogue: liveEquipment ?? undefined,
+        onAddLine: (newLine) => {
+          addDrafts([newLine], { kind: 'equipment', id: newLine.id, name: newLine.name })
+        },
+      })
+      if (res.success && res.line) {
+        return res.line.id
+      }
+      if (res.action === 'ignored_duplicate') {
         return null
       }
-      type ScannedUnit = { product?: { id?: string | null } | null }
-      let unit: ScannedUnit | null = null
-      try {
-        const { data, error } = await supabase
-          .from('product_units_v')
-          .select('product:products_v (id)')
-          .or(`barcode.eq.${code},serial_no.eq.${code},asset_tag.eq.${code}`)
-          .limit(1)
-          .maybeSingle()
-        if (error) throw error
-        if (data) {
-          unit = data as ScannedUnit
-        }
-      } catch {
-        return null
+      if (res.message) {
+        throw new Error(res.message)
       }
-
-      const productId = unit?.product?.id ?? null
-      const match = productId ? liveEquipment.find((item) => item.id === productId) : undefined
-      if (!match) {
-        return null
-      }
-      if (lines.some((line) => line.id === match.id)) {
-        return null
-      }
-      if (match.availability.level === 'unavailable') {
-        return null
-      }
-      addDrafts([equipmentLineDraft(match, days || 1)], { kind: match.kind, id: match.id, name: match.name })
-      return match.id
+      return null
     },
-    [liveEquipment, lines, addDrafts, days],
+    [days, lines, bookingWindow, liveEquipment, addDrafts],
   )
 
   // RULING 2026-10-08: catalogue, selected items, then optional charges follow the rental workflow.

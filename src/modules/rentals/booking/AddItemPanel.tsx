@@ -53,6 +53,7 @@ import './booking-search-field.css'
 import { useCallback, useEffect, useLayoutEffect, useId, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useViewport } from '../../../lib/device'
+import { useBarcodeBurst } from '../../../lib/barcodeBurst'
 import Icon from '../../../components/ui/Icon'
 import { formatMoney, rupees, type Paisa } from '../../../lib/money'
 import { generateClientUuid } from '../../../lib/dataAccess'
@@ -423,26 +424,49 @@ export function AddItemPanel({
     } else anchor.scrollIntoView?.({ block: 'start', behavior: prefersReducedMotion ? 'auto' : 'smooth' })
   }, [])
 
-  const submitScan = async () => {
-    const code = scanCode.trim()
-    if (!code || !onScan || scanBusy) return
-    setScanBusy(true)
-    setScanMessage(null)
-    try {
-      const addedId = await onScan(code, bookingWindow, days)
-      if (addedId) {
-        setScanCode('')
-        setScanMessage({ error: false, text: 'Item added to this booking.' })
-        scanInputRef.current?.focus()
-      } else {
-        setScanMessage({ error: true, text: 'Could not add this code. Check that it matches a rentable item, is available for these dates, and is not already on this booking.' })
+  const submitScanCode = useCallback(
+    async (rawCode: string) => {
+      const code = rawCode.trim()
+      if (!code || !onScan || scanBusy) return
+      setScanBusy(true)
+      setScanMessage(null)
+      try {
+        const addedId = await onScan(code, bookingWindow, days)
+        if (addedId) {
+          setScanCode('')
+          setScanMessage({ error: false, text: 'Item added to this booking.' })
+          scanInputRef.current?.focus()
+        } else {
+          setScanMessage({
+            error: true,
+            text: 'Could not add this code. Check that it matches a rentable item, is available for these dates, and is not already on this booking.',
+          })
+        }
+      } catch (error: unknown) {
+        setScanMessage({
+          error: true,
+          text: error instanceof Error ? error.message : 'Could not look up this code. Try again.',
+        })
+      } finally {
+        setScanBusy(false)
       }
-    } catch (error: unknown) {
-      setScanMessage({ error: true, text: error instanceof Error ? error.message : 'Could not look up this code. Try again.' })
-    } finally {
-      setScanBusy(false)
-    }
-  }
+    },
+    [onScan, scanBusy, bookingWindow, days],
+  )
+
+  const submitScan = () => submitScanCode(scanCode)
+
+  useBarcodeBurst({
+    onScan: (code) => {
+      if (!onScan) return
+      setScannerOpen(true)
+      setScanCode(code)
+      void submitScanCode(code)
+    },
+    enabled: Boolean(onScan),
+    cooldownMs: 1500,
+    targetInputRef: scanInputRef,
+  })
 
   const outcome = useMemo(
     () =>
