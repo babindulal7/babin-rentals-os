@@ -60,7 +60,7 @@ interface ParsedDsn {
 const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g
 const PHONE_REGEX = /(?:\+?977[- ]?)?(?:98\d{8}|97\d{8}|01[- ]?\d{7})/g
 const JWT_REGEX = /eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]*/g
-const TOKEN_HEADER_REGEX = /(?:Bearer\s+)[a-zA-Z0-9_\-\.]{15,}/gi
+const TOKEN_HEADER_REGEX = /(?:Bearer\s+)[a-zA-Z0-9_\-.]{15,}/gi
 const MONEY_PATTERN = /(?:Rs\.?|NPR|रू|रु\.?)\s*[0-9\u0966-\u096F,]+(?:\.[0-9\u0966-\u096F]{1,2})?/gi
 
 /** Redact PII (email, phone, tokens, financial amounts) from any telemetry string. */
@@ -134,7 +134,7 @@ export function formatStaffErrorMessage(err: unknown, suppliedRefCode?: string):
   const isDbOrGate =
     rawMsg.includes('GATE:') ||
     rawMsg.includes('PGRST') ||
-    /relation\s+["']?[\w\.]+["']?\s+does\s+not\s+exist/i.test(rawMsg) ||
+    /relation\s+["']?[\w.]+["']?\s+does\s+not\s+exist/i.test(rawMsg) ||
     /violates\s+.*constraint/i.test(rawMsg) ||
     /\b(?:42501|42P01|23505|23514|23503)\b/.test(rawMsg) ||
     /syntax\s+error\s+at\s+or\s+near/i.test(rawMsg) ||
