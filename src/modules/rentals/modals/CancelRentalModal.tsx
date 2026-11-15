@@ -331,7 +331,7 @@ export function CancelRentalModal({
                     color: refundPaisa > 0 ? 'var(--st-completed-fg)' : 'var(--text)',
                   }}
                 >
-                  <span>Refund via reversal row (Law 4):</span>
+                  <span>Refund to client:</span>
                   <span className="finance-mono">{formatMoney(refundPaisa)}</span>
                 </div>
               </div>
