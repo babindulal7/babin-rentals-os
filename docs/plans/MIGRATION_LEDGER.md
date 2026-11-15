@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0238**
+**Next free number: 0240**
 
 > **Legacy exception:** `0188` exists as two distinct, locally verified migration files
 > (`0188_smart_reservation_holds.sql` and `0188_staff_renting_gear.sql`). Both are preserved because
@@ -81,67 +81,8 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0234 | T2-18 | return-damage-photo-per-unit | lane-a/T2-18-finish-evidence-capture-what-t2-16 | verified (PR #80 merged) |
 | 0235 | T4-09-security | delivery-route-branch-hardening | fix/t4-09-route-branch-hardening-0209 | verified |
 | 0236 | T3-07 | opening-balances-append-only | lane-c/T3-07-opening-balances | written |
-| 0237 | T2-21 | planned-equipment-downtime | lane-a/T2-21-planned-downtime-with-a-reason | written |
+| 0237 | T2-21 | planned-equipment-downtime | lane-a/T2-21-planned-downtime-with-a-reason | verified (check:pglite 236/236 + check:lifecycle 78/78 Step L73) |
+| 0238 | T3-28 | rental-day-start-setting | lane-c/T3-28-rental-day-start-as-a-setting | verified (check:pglite 235/235 + check:lifecycle 77/77) |
+| 0239 | T3-30 | consumables-pricing-restock-and-low-stock | lane-c/T3-30-consumables-unit-price-add-at-the | verified (check:pglite 235/235 + check:lifecycle 73/73 Step L72) |
 
 ## Expected migrations (not yet claimed)
-
-Listed so lanes can see what is coming. A card marked "if needed" may turn out not to need one.
-
-| Task | What the migration does |
-|---|---|
-| T2-06 | Maintenance job ↔ damage finding link; clearance on completion |
-| T3-03 | Cancellation tiers table (if not a settings key) |
-| T3-04 | Invoice VAT treatment + backfill |
-| T4-02 | Delivery reschedule RPC (if needed) |
-| T4-03 | Delivery proof evidence link (if needed) |
-| T4-05 | `shift_handovers` + acknowledgements |
-| T5-01 / T5-05 | `notifications`, event triggers, `notification_preferences` |
-| T5-03 | `email_log` |
-| T5-04 | Morning digest query function + cron schedule |
-| T7-02 | `public_catalogue_v`, `public_availability()`, `catalogue` bucket |
-| T7-03 | Portal binding + RLS ending the `portal_*` deny-all |
-| T7-04 | `booking_requests` + lines |
-| T7-05 | `payment_intents` + allocation function |
-| T7-07 | Online refunds (if a separate table is needed) |
-| T8-02 | `save_membership_plan` RPC (if needed) |
-| T8-03 / T8-04 | Membership change with credit; renewal |
-| T8-06 | Crew overtime fraction (if needed) |
-| T8-08 | Stored TDS on payouts |
-| T9-02 | `external_holds` in the availability check |
-| T2-12 | `client_id_documents` (or the client document store) + `client_collectors`, masked ID columns |
-| T2-13 | `qc_self_checked` flag; CHECK becomes `qc_by <> cleaned_by or qc_self_checked` |
-| T3-12 | `product_aliases` (if needed) |
-| T3-13 | product "similar to" link (if needed) |
-| T3-14 | Draft invoice on Confirm, re-sync while Draft, issue on full payment |
-| T3-18 | `change_booking(jsonb)` RPC, linked-booking column, `rental.change` |
-| T3-21 | search indexes (if a query is slow) |
-| T4-07 | delivery zones table (if not a settings key) |
-| T4-08 | `delivery_job_links` (hashed tokens, expiry, revoke) + link RPCs |
-| T5-07 / T5-08 | `client_message_events`, cron jobs, `reminders_paused` on clients |
-| T5-09 | `push_subscriptions` |
-| T7-02 | `show_online`, `online_bundle_only` on products (with the catalogue view) |
-| T8-09 | staff-client link (if needed) |
-| T1-17 | `aal2` test in `auth_can_view_money()` and the money-write checks, behind an Owner-only setting (27 Oct) |
-| T1-18 | `sign_in_events` (definer-written, Owner/Admin read) |
-| T2-19 | Return gate: flagged lines need a signature or a recorded refusal |
-| T2-21 | planned downtime (a `Downtime` hold or its own table, guarded both ways) |
-| T2-22 | reservation range widened by turnaround or per-product prep/cleaning minutes |
-| T2-23 | `products.allow_overbooking`, short quantity on lines |
-| T2-24 | `temporary_stock` + partner units, money-masked cost |
-| T3-25 | `bookings.tags` + GIN index + set-tags function |
-| T3-26 | `bookings.project_name`, `shoot_location`; `create_booking` accepts both |
-| T3-27 | `Pro Forma` added to `document_type` |
-| T3-28 | `bookings.rental_day_start`; Owner/Admin-only setting row |
-| T3-29 | at-risk record; `gate.extend.clash` decision row |
-| T3-30 | `products.unit_sale_price`; restock movements; `add_consumable_line` |
-| T3-31 | `create_counter_sale(jsonb)` |
-| T4-09 | address map pin; route position on delivery jobs |
-| T4-10 | `calendar_feed_tokens` (hashed) + feed function |
-| T4-12 | `bulk_update_products` (reuses the 0173 section rules) |
-| T5-12 | `offer_campaigns` + recipients + unsubscribe tokens |
-| T5-13 | `message_templates` (versioned) |
-| T7-12 | `product_recommendations` + scheduled refresh |
-| T7-13 | `product_families`, `products.family_id`, `option_label` |
-| T7-14 | Away check in the request function (inside T7-04's migration if still open) |
-| T7-15 | payment links on `payment_intents` (booking, hashed token, expiry) |
-| T7-17 | old store slug beside `external_refs` (if a new entity type is needed) |
