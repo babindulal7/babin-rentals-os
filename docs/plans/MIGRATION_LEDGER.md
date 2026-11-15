@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0233**
+**Next free number: 0237**
 
 > **Legacy exception:** `0188` exists as two distinct, locally verified migration files
 > (`0188_smart_reservation_holds.sql` and `0188_staff_renting_gear.sql`). Both are preserved because
@@ -20,7 +20,6 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
-| 0232 | T3-17 | extend-booking-pricing-option | lane-c/T3-17-extend-in-two-taps | verified |
 | 0225 | T0-12 / T6 glossary | owner-approved-glossary-revisions | lane-a/T0-12-main-integration | APPLIED live 7 Nov 2026 as 20261107105159 after validated backup; 17 local gates and live DB/RLS/RPC post-checks PASS; hosted/device acceptance pending |
 | 0224 | T5-12 | offer-campaigns-and-recipients | lane-b/T5-12-offer-emails-to-clients | verified |
 | 0178 | T2-reset | quantity-only-reset | lane-a/T2-quantity-reset | verified |
@@ -67,7 +66,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0218 | T5-07 | client-message-events | lane-b/T5-07-automatic-client-emails | written |
 | 0219 | T5-08 | payment-reminders | lane-b/T5-08-payment-reminders | written |
 | 0220 | T5-09 | push-subscriptions | lane-b/T5-09-phone-pop-ups | written |
-| 0221 | T1-17 | two-step-sign-in | lane-a/T1-17-two-step-sign-in-for-every | claimed; branch not merged |
+| 0221 | T2-17 | guard-unit-identity-edits | lane-a/T2-17-unit-editor-permissions-preflight | verified (check:pglite 221/221) |
 | 0222 | T3-smart-reservations | repair-confirm-booking-atomic-and-reservation-dedup | audit/system-design-consistency-20261105 | verified |
 | 0223 | T3-12 | product-aliases | lane-c/T3-12-paste-a-whatsapp-gear-list | verified (check:pglite 220/220 + check:lifecycle 63/63) |
 | 0224 | T5-12 | offer-campaigns-and-recipients | lane-b/T5-12-offer-emails-to-clients | verified |
@@ -77,6 +76,11 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0229 | T3-25 | booking-tags | lane-c/T3-25-tags-on-bookings | verified (check:pglite 226/226 + check:lifecycle 68/68 Step L68) |
 | 0230 | T3-26 | project-name-and-shoot-location | lane-c/T3-26-project-name-and-shoot-location-on | verified |
 | 0231 | T3-27 | pro-forma-document-type | lane-c/T3-27-pro-forma-invoice-from-the-draft | verified (check:pglite 228/228 + check:lifecycle 71/71 Step L71) |
+| 0232 | T4-security | secure-temporary-hold-rpcs | repair/pr-55-hold-auth | verified (PR #133 merged) |
+| 0233 | T3-security | extend-booking-and-resync-auth | repair/pr-53-invoice-extension-auth | verified (PR #135 merged) |
+| 0234 | T2-18 | return-damage-photo-per-unit | lane-a/T2-18-finish-evidence-capture-what-t2-16 | verified (PR #80 merged) |
+| 0235 | T4-09-security | delivery-route-branch-hardening | fix/t4-09-route-branch-hardening-0209 | verified |
+| 0236 | T3-07 | opening-balances-append-only | lane-c/T3-07-opening-balances | written |
 
 ## Expected migrations (not yet claimed)
 
@@ -87,7 +91,6 @@ Listed so lanes can see what is coming. A card marked "if needed" may turn out n
 | T2-06 | Maintenance job ↔ damage finding link; clearance on completion |
 | T3-03 | Cancellation tiers table (if not a settings key) |
 | T3-04 | Invoice VAT treatment + backfill |
-| T3-07 | Opening balances (append-only) |
 | T4-02 | Delivery reschedule RPC (if needed) |
 | T4-03 | Delivery proof evidence link (if needed) |
 | T4-05 | `shift_handovers` + acknowledgements |
