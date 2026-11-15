@@ -5,15 +5,23 @@ import {
   readProductModes,
   readQuantityHolds,
 } from './availability'
-import { capacityFor, isRetired, selectUnitsForLine, windowsOverlap } from '../availability'
-import type {
-  AssignmentOutcome,
-  BoundConvention,
-  RentalWindow,
-  QuantityHold,
-  UnitCandidate,
-  UnitHold,
+import {
+  capacityFor,
+  computeDailyAvailability,
+  findNextFreeDate,
+  isRetired,
+  selectUnitsForLine,
+  windowsOverlap,
+  type AssignmentOutcome,
+  type BoundConvention,
+  type NextFreeDateResult,
+  type QuantityHold,
+  type RentalWindow,
+  type UnitCandidate,
+  type UnitHold,
 } from '../availability'
+import { supabase } from '../supabase'
+import { formatDueCountdown } from '../itemCountdown'
 
 /**
  * # One product's availability, for a stated window
@@ -277,3 +285,277 @@ export async function readProductAvailability(
   }
   return out
 }
+
+/* ── COMPREHENSIVE PRODUCT AVAILABILITY DETAIL (T3-22, W91) ───────────────────
+ *
+ * Answers:
+ * 1. Free units for any dates (windowed).
+ * 2. 60-day calendar availability map.
+ * 3. Next free date.
+ * 4. Who has it now (current active custody from T2-14).
+ *
+ * Gated by Law 6: money is strictly omitted if withMoney is false.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+export interface ActiveItemCustody {
+  readonly bookingId: string
+  readonly bookingNo: string
+  readonly clientId: string
+  readonly clientName: string
+  readonly clientPhone: string | null
+  readonly stage: string
+  readonly pickupAt: string
+  readonly returnAt: string
+  readonly isOverdue: boolean
+  readonly countdownText: string
+  readonly unitSerial?: string | null
+  readonly unitAssetTag?: string | null
+  readonly qty?: number
+}
+
+export interface ProductAvailabilityDetail {
+  readonly productId: string
+  readonly productName: string
+  readonly productDescription?: string | null
+  readonly dailyRate?: number | null // Paisa or null if money-blind
+  readonly mode: ProductStockMode
+  readonly unitsOwned: number
+  readonly unitsFree: number
+  readonly unitsHeld: number
+  readonly heldBy: readonly string[]
+  readonly dailyAvailability: Record<string, number>
+  readonly nextFreeDate: NextFreeDateResult
+  readonly whoHasItNow: readonly ActiveItemCustody[]
+}
+
+export async function fetchProductAvailabilityDetail(
+  productId: string,
+  window?: RentalWindow,
+  opts: { withMoney?: boolean } = {},
+): Promise<ProductAvailabilityDetail | null> {
+  const { data: prodRows, error: pErr } = await supabase
+    .from('products_v')
+    .select('id, name, description, daily_rate, total_quantity, tracking_mode')
+    .eq('id', productId)
+    .limit(1)
+
+  if (pErr || !prodRows || prodRows.length === 0) {
+    return null
+  }
+  const prod = prodRows[0]!
+  const isBulk = prod.tracking_mode === 'Quantity' || prod.tracking_mode === 'Consumable'
+
+  const now = new Date()
+  const todayIso = now.toISOString().slice(0, 10)
+  const tmrwIso = new Date(now.getTime() + 86400000).toISOString().slice(0, 10)
+  const evalWindow: RentalWindow = window ?? {
+    fromAd: `${todayIso}T00:15:00Z`,
+    toAd: `${tmrwIso}T00:15:00Z`,
+  }
+
+  const [candidatesByProduct, holds, quantityHolds] = await Promise.all([
+    readCandidates([productId]),
+    readHolds(null),
+    readQuantityHolds([productId], null),
+  ])
+  const rules = availabilityRules()
+  const candidates = candidatesByProduct.get(productId) ?? []
+  const qHolds = quantityHolds.get(productId) ?? []
+
+  const windowAvail = isBulk
+    ? productCapacityFor(productId, prod.total_quantity ?? 0, qHolds, evalWindow, rules)
+    : productAvailabilityFor(productId, candidates, holds, evalWindow, rules)
+
+  const dailyAvailability = computeDailyAvailability({
+    mode: isBulk ? 'quantity' : 'unit',
+    candidates,
+    unitHolds: holds,
+    quantityHolds: qHolds,
+    totalQuantity: prod.total_quantity ?? 0,
+    disqualifyingStates: rules.disqualifyingStates,
+    bounds: rules.bounds,
+    startDateIso: todayIso,
+    daysCount: 60,
+  })
+
+  const nextFreeDate = findNextFreeDate(dailyAvailability, todayIso, 1)
+
+  const whoHasItNow: ActiveItemCustody[] = []
+  const activeStages = ['On Rent', 'Return Due', 'Dispatched', 'Ready', 'Packed', 'Preparing']
+
+  if (!isBulk && candidates.length > 0) {
+    const unitIds = candidates.map((c) => c.unitId)
+    const { data: bluRows } = await supabase
+      .from('booking_line_units')
+      .select('id, booking_id, asset_id, unit_state, returned_at, released_at')
+      .in('asset_id', unitIds)
+      .is('returned_at', null)
+      .is('released_at', null)
+
+    if (bluRows && bluRows.length > 0) {
+      const bIds = [...new Set(bluRows.map((r) => r.booking_id).filter(Boolean))] as string[]
+      if (bIds.length > 0) {
+        const { data: bRows } = await supabase
+          .from('bookings')
+          .select('id, booking_no, client_id, stage, pickup_at, return_at, cancelled_at, actual_return_at')
+          .in('id', bIds)
+          .is('cancelled_at', null)
+          .is('actual_return_at', null)
+
+        if (bRows && bRows.length > 0) {
+          const clientIds = [...new Set(bRows.map((b) => b.client_id).filter(Boolean))] as string[]
+          const clientMap = new Map<string, { name: string; phone: string | null }>()
+          if (clientIds.length > 0) {
+            const { data: cRows } = await supabase.from('clients').select('id, name, phone').in('id', clientIds)
+            if (cRows) {
+              for (const c of cRows) clientMap.set(c.id, { name: c.name, phone: c.phone ?? null })
+            }
+          }
+
+          const unitMap = new Map(candidates.map((c) => [c.unitId, c]))
+
+          for (const blu of bluRows) {
+            const booking = bRows.find((b) => b.id === blu.booking_id && activeStages.includes(b.stage))
+            if (!booking) continue
+            const unit = unitMap.get(blu.asset_id)
+            const client = booking.client_id ? clientMap.get(booking.client_id) : null
+            const countdown = formatDueCountdown(booking.return_at)
+
+            whoHasItNow.push({
+              bookingId: booking.id,
+              bookingNo: booking.booking_no,
+              clientId: booking.client_id ?? '',
+              clientName: client?.name ?? 'Client',
+              clientPhone: client?.phone ?? null,
+              stage: booking.stage,
+              pickupAt: booking.pickup_at,
+              returnAt: booking.return_at,
+              isOverdue: countdown.isOverdue,
+              countdownText: countdown.text,
+              unitSerial: unit?.serialNo ?? null,
+              unitAssetTag: unit?.assetTag ?? null,
+            })
+          }
+        }
+      }
+    }
+  } else if (isBulk) {
+    const { data: lines } = await supabase
+      .from('booking_lines')
+      .select('id, booking_id, qty, product_id, voided_at')
+      .eq('product_id', productId)
+      .is('voided_at', null)
+
+    if (lines && lines.length > 0) {
+      const bIds = [...new Set(lines.map((l) => l.booking_id).filter(Boolean))] as string[]
+      if (bIds.length > 0) {
+        const { data: bRows } = await supabase
+          .from('bookings')
+          .select('id, booking_no, client_id, stage, pickup_at, return_at, cancelled_at, actual_return_at')
+          .in('id', bIds)
+          .is('cancelled_at', null)
+          .is('actual_return_at', null)
+
+        if (bRows && bRows.length > 0) {
+          const clientIds = [...new Set(bRows.map((b) => b.client_id).filter(Boolean))] as string[]
+          const clientMap = new Map<string, { name: string; phone: string | null }>()
+          if (clientIds.length > 0) {
+            const { data: cRows } = await supabase.from('clients').select('id, name, phone').in('id', clientIds)
+            if (cRows) {
+              for (const c of cRows) clientMap.set(c.id, { name: c.name, phone: c.phone ?? null })
+            }
+          }
+
+          for (const line of lines) {
+            const booking = bRows.find((b) => b.id === line.booking_id && activeStages.includes(b.stage))
+            if (!booking) continue
+            const client = booking.client_id ? clientMap.get(booking.client_id) : null
+            const countdown = formatDueCountdown(booking.return_at)
+
+            whoHasItNow.push({
+              bookingId: booking.id,
+              bookingNo: booking.booking_no,
+              clientId: booking.client_id ?? '',
+              clientName: client?.name ?? 'Client',
+              clientPhone: client?.phone ?? null,
+              stage: booking.stage,
+              pickupAt: booking.pickup_at,
+              returnAt: booking.return_at,
+              isOverdue: countdown.isOverdue,
+              countdownText: countdown.text,
+              qty: line.qty,
+            })
+          }
+        }
+      }
+    }
+  }
+
+  return {
+    productId,
+    productName: prod.name,
+    productDescription: prod.description,
+    dailyRate: opts.withMoney ? (prod.daily_rate ?? null) : null,
+    mode: windowAvail.mode,
+    unitsOwned: windowAvail.unitsOwned,
+    unitsFree: windowAvail.unitsFree,
+    unitsHeld: windowAvail.unitsHeld,
+    heldBy: windowAvail.heldBy,
+    dailyAvailability,
+    nextFreeDate,
+    whoHasItNow,
+  }
+}
+
+/**
+ * Searches or scans items for the Availability modal.
+ * Matches: barcode, QR code, serial number, asset tag, product name, SKU, or asset code.
+ */
+export async function searchItemForAvailability(
+  query: string,
+): Promise<Array<{ id: string; name: string; assetTag?: string | null; serialNo?: string | null; totalQuantity?: number }>> {
+  const trimmed = query.trim()
+  if (!trimmed) return []
+
+  // 1. Try unit matching (by barcode, QR, serial_no, or asset_tag)
+  const { data: unitRows } = await supabase
+    .from('product_units_v')
+    .select('id, product_id, asset_tag, serial_no')
+    .or(`asset_tag.ilike.%${trimmed}%,serial_no.ilike.%${trimmed}%`)
+    .limit(5)
+
+  if (unitRows && unitRows.length > 0) {
+    const prodIds = [...new Set(unitRows.map((u) => u.product_id))]
+    const { data: prods } = await supabase.from('products_v').select('id, name, total_quantity').in('id', prodIds)
+    const pMap = new Map((prods ?? []).map((p) => [p.id, p]))
+
+    return unitRows.map((u) => {
+      const p = pMap.get(u.product_id)
+      return {
+        id: u.product_id,
+        name: p?.name ?? 'Equipment',
+        assetTag: u.asset_tag,
+        serialNo: u.serial_no,
+        totalQuantity: p?.total_quantity ?? 1,
+      }
+    })
+  }
+
+  // 2. Try product search (name, sku, asset_code)
+  const { data: prodRows } = await supabase
+    .from('products_v')
+    .select('id, name, total_quantity')
+    .ilike('name', `%${trimmed}%`)
+    .limit(8)
+
+  if (prodRows && prodRows.length > 0) {
+    return prodRows.map((p) => ({
+      id: p.id,
+      name: p.name,
+      totalQuantity: p.total_quantity,
+    }))
+  }
+
+  return []
+}
+
