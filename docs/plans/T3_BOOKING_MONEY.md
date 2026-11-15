@@ -338,7 +338,7 @@ with bill photos**, **crew payouts with TDS** (T8-08), as CSV + PDF, BS and AD d
 **Done when** — the accountant opens a sample pack without asking for anything else (Babin confirms).
 **Needs** — T3-04, T3-24, T8-08.
 
-### T3-24 · Quick expense with a bill photo            status: todo · size: M · lane C · [soon]
+### T3-24 · Quick expense with a bill photo            status: ready — awaiting merge (lane-c/T3-24-quick-expense-bill-photo) · size: M · lane C · [soon]
 **What** — "Add expense" from a phone in ≤ 4 taps: amount, category, photo of the bill (T2-01
 upload, ≤ 3 MB), paid by. Accounts can also enter a week's bills in a batch (W89 "mix"). Approval
 rules unchanged (`gate.expense.approve`). Replaces "Receipt upload is not built yet" in

@@ -1508,6 +1508,12 @@ export interface NewExpenseInput {
   status: ExpenseEntryStatus
   /** `users.id` of whoever entered it. Nullable on the table; there is no trigger that fills it. */
   createdBy?: string | null
+  /** URL or storage path of the attached bill photo/document (T3-24). */
+  receiptUrl?: string | null
+  /** Size of receipt attachment in bytes (capped at 50 MB by DB CHECK, 3 MB by T3-24). */
+  receiptSize?: number | null
+  /** Optional settlement notation (e.g. who paid or settlement channel). */
+  paidBy?: string | null | undefined
 }
 
 /**
@@ -1547,6 +1553,12 @@ export async function createExpense(input: NewExpenseInput, clientUuid: string):
   if (numberError) throw new Error(`createExpense failed to allocate a number: ${numberError.message}`)
   if (!expenseNo) throw new Error('createExpense: next_document_number returned nothing, so the expense has no number')
 
+  const description = input.paidBy?.trim()
+    ? (input.description.includes(`[Paid by:`)
+      ? input.description.trim()
+      : `[Paid by: ${input.paidBy.trim()}] ${input.description.trim()}`)
+    : input.description.trim()
+
   const payload = {
     client_uuid: clientUuid,
     expense_no: expenseNo,
@@ -1559,7 +1571,9 @@ export async function createExpense(input: NewExpenseInput, clientUuid: string):
     amount: toRupees(input.amount),
     expense_date: input.expenseDateAd,
     status: input.status,
-    description: input.description.trim(),
+    description,
+    receipt_url: input.receiptUrl ?? null,
+    receipt_size: input.receiptSize ?? null,
     created_by: input.createdBy ?? null,
   }
 

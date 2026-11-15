@@ -34,6 +34,11 @@ import {
   type ExpenseBranchRow,
   type ExpenseEntryStatus,
 } from '../../lib/queries/finance'
+import {
+  uploadExpenseReceipt,
+  getExpenseReceiptSignedUrl,
+  validateReceiptFile,
+} from '../../lib/expenseStorage'
 import type { Database } from '../../types/supabase'
 import { useList, type ListQueryResult } from '../../lib/queries/useList'
 import type { ListFilters } from '../../lib/queries/listQuery'
@@ -121,21 +126,9 @@ const VAT_UNAVAILABLE =
  */
 const NO_COLUMN_FIELDS = [
   { label: 'Payment method', why: 'expenses records no bank_account_id and no payment channel — unlike payments, it does not say how the cost was settled.' },
-  { label: 'Paid by', why: 'there is no paid_by column. created_by records who ENTERED the expense, which is a different fact and is stamped automatically.' },
   { label: 'Cost centre', why: 'no cost-centre dimension exists on this table or anywhere in the schema. branch_id is the only place an expense is attributed.' },
   { label: 'VAT', why: 'no vat_amount and no vat_rate column — see the VAT column in the table.' },
 ] as const
-
-/**
- * The attachment slot. `receipt_url` and `receipt_size` are real columns
- * (0006:336-337, capped at 50 MB by CHECK), so the DESTINATION exists — what
- * does not exist is the upload: there is no Supabase Storage bucket configured
- * and no `storage.from(...)` call anywhere in `src/`. A file picker that
- * produced no URL would look like it worked.
- */
-const ATTACHMENT_UNAVAILABLE =
-  'Receipt upload is not built yet. expenses.receipt_url and receipt_size exist, but no storage bucket is configured and ' +
-  'nothing in the app uploads a file — so a picker here would accept a receipt and store nothing.'
 
 /**
  * §9.4: *"Correction is a reversal row, never an edit."* Agreed, and not built.
@@ -486,6 +479,10 @@ function AddExpenseSheet({
   const [amount, setAmount] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState<ExpenseEntryStatus | null>(null)
+  const [receiptFile, setReceiptFile] = useState<File | null>(null)
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null)
+  const [settlementNote, setSettlementNote] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   /**
    * Law 8 — the idempotency key is minted ONCE, when the sheet opens, not per
@@ -499,8 +496,40 @@ function AddExpenseSheet({
     if (isOpen) {
       setClientUuid(newClientUuid())
       setError(null)
+      setReceiptFile(null)
+      setReceiptPreview(null)
+      setSettlementNote('')
     }
   }, [isOpen])
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const validation = validateReceiptFile(file, file.name)
+    if (!validation.valid) {
+      setError(validation.error ?? 'Invalid receipt file')
+      return
+    }
+    setError(null)
+    setReceiptFile(file)
+    if (file.type.startsWith('image/')) {
+      const url = URL.createObjectURL(file)
+      setReceiptPreview(url)
+    } else {
+      setReceiptPreview(null)
+    }
+  }
+
+  const clearReceipt = () => {
+    setReceiptFile(null)
+    if (receiptPreview) {
+      URL.revokeObjectURL(receiptPreview)
+      setReceiptPreview(null)
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
 
   const submit = async (status: ExpenseEntryStatus) => {
     if (!categoryId) return setError('Choose a category. Every expense belongs to one — the column is NOT NULL.')
@@ -528,6 +557,20 @@ function AddExpenseSheet({
     setSaving(status)
     setError(null)
     try {
+      let receiptUrl: string | null = null
+      let receiptSize: number | null = null
+
+      if (receiptFile) {
+        const uploadResult = await uploadExpenseReceipt({
+          file: receiptFile,
+          filename: receiptFile.name,
+          userId: createdBy || '00000000-0000-4000-8000-000000000000',
+          clientUuid,
+        })
+        receiptUrl = uploadResult.storagePath
+        receiptSize = uploadResult.fileSizeBytes
+      }
+
       await createExpense(
         {
           categoryId,
@@ -538,6 +581,9 @@ function AddExpenseSheet({
           expenseDateAd: dateAd,
           status,
           createdBy,
+          receiptUrl,
+          receiptSize,
+          paidBy: settlementNote.trim() || null,
         },
         clientUuid,
       )
@@ -653,8 +699,133 @@ function AddExpenseSheet({
           </label>
         </div>
 
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
+            Settlement notation (optional)
+          </span>
+          <input
+            placeholder="e.g. Babin (cash), Company card"
+            value={settlementNote}
+            onChange={(e) => setSettlementNote(e.target.value)}
+            style={inputStyle}
+          />
+        </label>
+
+        {/* Bill photo / receipt attachment (T3-24) */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
+              Bill photo / receipt (optional, ≤ 3 MB)
+            </span>
+            {receiptFile && (
+              <button
+                type="button"
+                className="press"
+                onClick={clearReceipt}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--danger-text)',
+                  fontSize: 'var(--t-meta)',
+                  cursor: 'pointer',
+                  padding: '2px 6px',
+                }}
+              >
+                Remove
+              </button>
+            )}
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf"
+            capture="environment"
+            aria-label="Upload bill photo"
+            onChange={handleFileChange}
+            style={{ display: 'none' }}
+          />
+
+          {!receiptFile ? (
+            <button
+              type="button"
+              className="press"
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                padding: '12px 16px',
+                minHeight: 48,
+                borderRadius: 'var(--r-sm)',
+                border: '1px dashed var(--border)',
+                background: 'var(--card2)',
+                color: 'var(--text2)',
+                fontSize: 'var(--t-meta)',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              <Icon name="photo" size={18} />
+              <span>Take photo or choose bill file</span>
+            </button>
+          ) : (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '8px 12px',
+                borderRadius: 'var(--r-sm)',
+                border: '1px solid var(--border)',
+                background: 'var(--card2)',
+              }}
+            >
+              {receiptPreview ? (
+                <img
+                  src={receiptPreview}
+                  alt="Receipt preview"
+                  style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 'var(--r-sm)' }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 44,
+                    height: 44,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'var(--card)',
+                    borderRadius: 'var(--r-sm)',
+                  }}
+                >
+                  <Icon name="file" size={20} />
+                </div>
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 'var(--t-meta)',
+                    fontWeight: 600,
+                    color: 'var(--text)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {receiptFile.name}
+                </div>
+                <div style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
+                  {(receiptFile.size / 1024).toFixed(0)} KB
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/*
-          The four controls §9.4 draws that have nowhere to write. They are
+          Controls §9.4 draws that have nowhere to write. They are
           NOT rendered as inputs — an input that silently discards what was
           typed is worse than an absent one — but they are named, with the
           reason each is absent, so the gap is on the screen rather than in a
@@ -678,14 +849,86 @@ function AddExpenseSheet({
               <strong style={{ color: 'var(--text2)' }}>{f.label}</strong> — {f.why}
             </div>
           ))}
-          <div>
-            <Unavailable reason={ATTACHMENT_UNAVAILABLE}>
-              <Button icon="upload" disabled>
-                Attach receipt
-              </Button>
-            </Unavailable>
-          </div>
         </div>
+      </div>
+    </Modal>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * RECEIPT VIEWER MODAL (T3-24)
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+function ReceiptViewerModal({
+  expense,
+  onClose,
+}: {
+  expense: ExpenseListRow | null
+  onClose: () => void
+}) {
+  const [url, setUrl] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!expense?.receiptUrl) {
+      setUrl(null)
+      return
+    }
+    setLoading(true)
+    setError(null)
+    void getExpenseReceiptSignedUrl(expense.receiptUrl)
+      .then((signed) => {
+        setUrl(signed)
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : 'Could not load receipt photo')
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [expense])
+
+  if (!expense) return null
+
+  return (
+    <Modal
+      isOpen={Boolean(expense)}
+      onClose={onClose}
+      title={`Receipt for ${expense.expenseNo}`}
+      subtitle={`${expense.vendorName} · ${formatMoney(expense.amount)}`}
+      size="md"
+      footer={
+        <Button variant="secondary" onClick={onClose}>
+          Close
+        </Button>
+      }
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+        {loading && <p style={{ color: 'var(--muted)', fontSize: 'var(--t-meta)' }}>Loading receipt photo…</p>}
+        {error && <ErrorBanner title="Could not display receipt" message={error} />}
+        {url && (
+          <div style={{ maxWidth: '100%', maxHeight: '60vh', overflow: 'auto', textAlign: 'center' }}>
+            {url.toLowerCase().endsWith('.pdf') ? (
+              <div style={{ padding: 20 }}>
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'underline' }}
+                >
+                  Open PDF receipt in new tab
+                </a>
+              </div>
+            ) : (
+              <img
+                src={url}
+                alt={`Receipt for ${expense.expenseNo}`}
+                style={{ maxWidth: '100%', maxHeight: '55vh', objectFit: 'contain', borderRadius: 'var(--r-sm)' }}
+              />
+            )}
+          </div>
+        )}
       </div>
     </Modal>
   )
@@ -763,6 +1006,7 @@ export default function Expenses({
   const [sheetOpen, setSheetOpen] = useState(false)
   const [banner, setBanner] = useState<{ title: string; message: string } | null>(null)
   const [movingId, setMovingId] = useState<string | null>(null)
+  const [selectedReceipt, setSelectedReceipt] = useState<ExpenseListRow | null>(null)
 
   /* ── The two lookups ────────────────────────────────────────────────────
    *
@@ -1073,6 +1317,7 @@ export default function Expenses({
                         <th style={th}>Category</th>
                         <th style={th}>Vendor</th>
                         <th style={{ ...th, textAlign: 'right' }}>Amount</th>
+                        <th style={th}>Receipt</th>
                         <th style={th} aria-label="VAT">
                           <Unavailable reason={VAT_UNAVAILABLE}>
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--muted)' }}>
@@ -1113,6 +1358,35 @@ export default function Expenses({
                           </td>
                           <td className="figure finance-mono" style={{ ...td, textAlign: 'right', fontWeight: 700, whiteSpace: 'nowrap' }}>
                             {formatMoney(r.amount)}
+                          </td>
+                          <td style={td}>
+                            {r.receiptUrl ? (
+                              <button
+                                type="button"
+                                onClick={() => setSelectedReceipt(r)}
+                                className="press"
+                                title="View receipt"
+                                aria-label={`View receipt for ${r.expenseNo}`}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 5,
+                                  padding: '4px 8px',
+                                  borderRadius: 'var(--r-sm)',
+                                  border: '1px solid var(--border)',
+                                  background: 'var(--card2)',
+                                  fontSize: 'var(--t-meta)',
+                                  color: 'var(--accent)',
+                                  cursor: 'pointer',
+                                  minHeight: 32,
+                                }}
+                              >
+                                <Icon name="photo" size={13} />
+                                <span>{r.receiptSizeBytes ? `${Math.round(r.receiptSizeBytes / 1024)} KB` : 'Receipt'}</span>
+                              </button>
+                            ) : (
+                              <span style={{ color: 'var(--muted)', fontSize: 'var(--t-meta)' }}>—</span>
+                            )}
                           </td>
                           <td style={td}>
                             <NoValue reason={VAT_UNAVAILABLE} />
@@ -1163,6 +1437,32 @@ export default function Expenses({
                         <NoValue reason={VAT_UNAVAILABLE} />
                       </span>
 
+                      {r.receiptUrl && (
+                        <div style={{ marginTop: 6 }}>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedReceipt(r)}
+                            className="press"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 5,
+                              padding: '4px 8px',
+                              borderRadius: 'var(--r-sm)',
+                              border: '1px solid var(--border)',
+                              background: 'var(--card2)',
+                              fontSize: 'var(--t-meta)',
+                              color: 'var(--accent)',
+                              cursor: 'pointer',
+                              minHeight: 32,
+                            }}
+                          >
+                            <Icon name="photo" size={13} />
+                            <span>Receipt ({r.receiptSizeBytes ? `${Math.round(r.receiptSizeBytes / 1024)} KB` : 'attached'})</span>
+                          </button>
+                        </div>
+                      )}
+
                       <span style={{ display: 'flex', justifyContent: 'flex-end' }}>
                         <RowMenu row={r} busy={movingId === r.id} onMove={(to) => void move(r, to)} />
                       </span>
@@ -1193,6 +1493,13 @@ export default function Expenses({
           branches={branches}
           lookupsError={lookupsError}
           createdBy={user?.id ?? null}
+        />
+      )}
+
+      {selectedReceipt && (
+        <ReceiptViewerModal
+          expense={selectedReceipt}
+          onClose={() => setSelectedReceipt(null)}
         />
       )}
 
