@@ -133,7 +133,7 @@ export function CancellationFeeTiersCard() {
             <strong style={{ color: 'var(--text2)' }}>Staff overrides:</strong> Authorized staff (Coordinator+) may lower or waive the suggested fee with a mandatory recorded reason.
           </div>
           <div>
-            <strong style={{ color: 'var(--text2)' }}>Reversals (Law 4):</strong> Any client advance paid in excess of the cancellation fee is refunded via an immutable reversal row.
+            <strong style={{ color: 'var(--text2)' }}>Payment reversals:</strong> Any client advance paid in excess of the cancellation fee is refunded via an immutable reversal row.
           </div>
           <div>
             <strong style={{ color: 'var(--text2)' }}>Statutory note (Ruling O-7):</strong> VAT application on cancellation fee awaits final accountant review; charges rendered before VAT.
