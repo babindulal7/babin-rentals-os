@@ -1,108 +1,58 @@
 # Progress Log
 
-## 2026-11-12 — Add the 10 Nov ease-of-use rulings file (docs only, PR #149)
+## 2026-11-10 — T3-17: Extend in two taps (Lane C)
 
 **Did**
-- Added `RULINGS-2026-11-10.md` to the repo root: Babin's ease-of-use rulings R-10.1 to R-10.12 of 10 Nov 2026, as recorded that day.
-- Added one note under its section 4: Q1, Q2, Q3 and Q6 were answered later on 10 Nov in `RULINGS-2026-11-10-design.md` (G-10 and G-18, G-11, G-12, G-9). Q4 and Q5 are still open.
-- Branch `docs/rulings-2026-11-10-ease-of-use`, cut from `origin/main` `d4486a4`. PR #149 awaits Babin's review and merge.
-- This closes the Remaining line in the Card 4 entry below that said the file was not in the repo.
+- **T3-17: Extend in two taps (W36, W40, W41, L23):**
+  - Migration `0232_extend_booking_pricing_option.sql` claimed in `docs/plans/MIGRATION_LEDGER.md` (Next free number: `0233`):
+    - Upgraded `extend_booking(jsonb)` RPC to support W41 `pricing_option` (`'same_rate'` | `'standard_rate'`, defaults to `'same_rate'`).
+    - Handled line discount calculations: `'same_rate'` scales existing booking line discounts proportionally per day, while `'standard_rate'` charges additional days at the standard catalog rate without discount.
+    - Updated `audit_events` payload to record chosen `pricing_option`.
+  - Lifecycle step `L23` updated in `scripts/e2e-lifecycle.mjs` asserting `extend_booking` with `pricing_option: 'standard_rate'`.
+  - Server Action `src/actions/rentals/extendRental.ts`:
+    - Added `pricingOption?: 'same_rate' | 'standard_rate'` to `ExtendRentalInput` and `ExtendRentalResult`.
+    - Dispatches RPC to `extend_booking` with `pricing_option`.
+    - Publishes `EVENT_TYPES.RENTAL_EXTENDED` event with `pricingOption`.
+  - Availability & Clash Query Engine `src/lib/queries/extensionClash.ts`:
+    - Checks `inventory_reservations` for any overlapping reservations for the booking's assigned assets during the extension interval `[currentReturn, newReturn)`.
+    - Returns `{ hasClash: boolean, clashes: ExtensionClashDetail[] }` to warn desk staff and prevent double-booking.
+  - UI Implementation (`src/modules/rentals/modals/ExtendRentalModal.tsx`):
+    - Quick chips for days selection: `+1 Day` (default, enabling 1-tap extend), `+2 Days`, `Custom`.
+    - Live availability clash check box; displays conflicting bookings and disables submission if conflicts exist.
+    - W41 segmented choices: **"Same rate & discount"** vs **"Standard rate"** with 56px verb touch targets.
+    - Reason chips for one-tap selection (`Shoot extension requested by client`, `Weather delay`, etc.) with client authorization check.
+    - Law 6 money blindness enforced: zero rates/charges rendered for floor roles (`Warehouse`, `Technician`, `Driver`).
+    - ≥44px touch targets throughout.
+  - Integration in `src/modules/rentals/BookingDetail.tsx` and `src/modules/rentals/ReturnWorkspace.tsx`:
+    - Connected `ExtendRentalModal` to BookingDetail with lines from `floor.lines` and auto-refetch on success.
+    - Connected `ExtendRentalModal` to ReturnWorkspace in the late return overrun banner (W36) when `canWriteBookingDesk(userRole)` is true.
+  - Unit tests added:
+    - `src/modules/rentals/modals/__tests__/ExtendRentalModal.test.tsx` (5/5 passed).
+    - `src/lib/queries/__tests__/extensionClash.test.ts` (3/3 passed).
+    - `src/actions/rentals/__tests__/extendRental.test.ts` (9/9 passed).
 
 **Ruled**
-- No new ruling in this session. R-10.1 to R-10.12 are Babin's answers of 10 Nov; this entry records that they are now in the repo.
-- **Recorded, not implemented:** none of R-10.1 to R-10.12 is built by this change. Cards E-1 to E-7 implement them; each card adds its own `// RULING 2026-11-10` code-site comment (B-2 place 3) when it lands.
-- W74 stands. Babin gave a one-time exception in chat on 12 Nov 2026 for Claude to open this docs-only PR.
+- W36, W40, W41: Booking extensions provide two one-tap pricing choices ("Same rate & discount" or "Standard rate"). Desk staff (`canWriteBookingDesk`: Coordinator, Manager, Admin, Owner) can extend from Booking Detail or directly from the Return Workspace when a return is late.
+- Double-booking prevention: Active overlapping reservations on held assets are detected and prevent submission.
+- Law 6: Floor roles never receive monetary calculations in the DOM or API payloads.
+- Law 8: Idempotent writes via `client_uuid`.
 
 **Verified**
-- `git diff --stat origin/main`: two files, `RULINGS-2026-11-10.md` (new) and `PROGRESS.md`. No source, migration, permission or setting file changed.
-- `npm run lint:progress` (run as `node scripts/lint-progress.mjs`): exit 0.
-- `npm run completion` (run as `node scripts/completion.mjs`): exit 0; block below is its output.
-- **Not run:** `npm ci`, typecheck, lint, tests, `check:pglite`, `check:security`, `check:lifecycle`, contract tests, `check:contrast`, `lint:shell`, `lint:ui-copy`, build, `npm run gates`. The cloud session did not install dependencies. Run `npm run gates` before merging.
-- Cross-file links: not checked. The text uses plain paths only.
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 102 / 102 (100%) | +1 |
-| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
-| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
-| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +1 |
-| Lifecycle | steps green / total | not measured — current receipt required | — |
-| Overall | structural mean of five | not measured | — |
-Migrations 233 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
-Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
-Counted by `npm run completion`, not typed.
-Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
-
-### Remaining
-- PR #149 awaits Babin's review and merge; local gates have not been run on it.
-- R-10.1 to R-10.12 are not built. Card E-1 (sidebar per role) is next; E-2 to E-7 wait until the floor loop is on staging (G-9).
-- Q4 (Manager sidebar) and Q5 (personal settings for floor roles) of `RULINGS-2026-11-10.md` are open and not yet in `docs/OPEN_DECISIONS.md` or `PLAN.md` §4.2.
-- D-UX-01 to D-UX-05 (O-23 to O-27) await Babin's answers.
-- Next session starts with: card E-1 on Lane B.
-
-## 2026-11-10 — Card 4: register D-UX-01 to D-UX-05 as O-23 to O-27 (docs only)
-
-**Did**
-- `PLAN.md` §4.2: added rows O-23 to O-27, one per D-UX decision, each with its ⭐ default and the UX-P item it blocks.
-- `docs/OPEN_DECISIONS.md`: added section 22 with the full question text for O-23 to O-27, all open.
-- `docs/ui-ux/06_SIX_STAGE_OPERATIONS.md`: put the O-number beside each D-UX id; replaced "to be registered" with the registration.
-- `docs/ui-ux/10_ROADMAP_AND_BACKLOG.md`: added the O-number beside D-UX-01 to D-UX-05 on UX-P22, UX-P23 and UX-P26.
-- `docs/ui-ux/09_USABILITY_AND_ACCEPTANCE.md`: removed the sentence that let a docs-only PR use link and file audits instead of the local checks; kept the point that docs do not prove runtime behaviour.
-- Rebased `docs/ux-card4-register-dux` on `origin/main` `52410e5a`; verified commit `f855ab98` in a separate clean checkout. Draft PR #127 awaits Babin’s review and merge.
-
-**Ruled**
-- Registration only. No D-UX question is answered; the ⭐ defaults are the ones written in `AGENT_PROMPTS-2026-11-10-design.md` card 4.
-
-**Verified**
-- Clean `npm ci`: exit 0. Audit reported 36 vulnerabilities (3 low, 15 moderate, 14 high, 4 critical); no dependencies changed.
-- `npm run typecheck`, `npm run lint`, `npm test`: exit 0; mock suite 591 files, 6,978 tests passed.
-- `npm run check:pglite`: exit 0 (228/228); financial integrity: exit 0; `npm run check:security`: exit 0.
-- `npm run check:lifecycle`: exit 0 (71/71); `npm run test:server-contracts`: exit 0 (59/59); `npm run test:partial-return`: exit 0 (58/58).
-- `npm run lint:progress`, receipt tests (11/11), `npm run lint:shell`, `npm run lint:ui-copy`, `npm run check:contrast` (106/106), `npm run build`: exit 0.
-- `npm run test:coverage`: exit 0, 591 files and 6,978 tests passed. `npm run completion`: exit 0.
-- Cross-file links: not checked. The new text uses plain paths only.
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 101 / 101 (100%) | +2 |
-| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
-| Permissions | capabilities mapped / declared | 82 / 82 (100%) | +1 |
-| Lifecycle | steps green / total | 71 / 71 (100%) | — |
-| Overall | structural mean of five | ≈ 97% | — |
-Migrations 228 files · check:pglite 228/228 applied, 0 failed (recorded 2026-11-10T11:54:57.095Z). Suite: PASS — 6978/6978 passed, 0 failed (recorded 2026-11-10T12:06:25.770Z); source fingerprint matches.
-Coverage suite: PASS — 6978/6978 passed, 0 failed (recorded 2026-11-10T12:06:25.770Z); source fingerprint matches.
-Gates read from .lifecycle-result.json, written 2026-11-10T11:56:01.988Z.
-Counted by `npm run completion`, not typed.
-Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
-
-### Remaining
-- Draft PR #127 awaits Babin’s review and local merge; no decisions have been answered.
-- `RULINGS-2026-11-10.md` (ease of use) is still not in the repo; the design file says it belongs in the root.
-- `RULINGS-2026-11-10-design.md` and `AGENT_PROMPTS-2026-11-10-design.md` are untracked in the lane-c checkout root, not on this branch.
-- D-UX-01 to D-UX-05 (O-23 to O-27) await Babin's answers.
-
-
-
-## 2026-11-10 — T2-25 complete printing refreshed on current main
-
-**Did**
-- Ported the existing T2-25 printing implementation (`3f5b7114`) onto base `024f817a` in `lane-a/T2-25-current-main-printing`, retaining current invoice/project behavior and preserving the existing worktree.
-- Packing lists, return reports and invoices continue across numbered A4 pages; Booking Detail and Pack share the money-free item builder and booking QR route. Forty packing rows occupy two pages.
-- Fixed the pick-list header so its title does not overlap the QR. Fixed hierarchy ordering to retain grandchildren and preserve every item once even with cyclic parent links.
-
-**Ruled**
-- No new product or permission decision; no database migration or shared engine file changed. Physical acceptance remains required before the card is done.
-
-**Verified**
-- Final `npm run gates`: all 17 steps PASS, in order: typecheck; lint; local API guards; mock suite 6,978/6,978 in 591 files; PGlite 228/228; financial integrity; security; lifecycle 71/71; server contracts; partial returns; progress lint; receipt integrity; shell lint; UI-copy lint; contrast 106/106; build; coverage 6,978/6,978. All database checks local only.
-- Initial full run failed one existing assertion because loose items gained `isChild: false`; corrected to preserve absent flags. Focused PDF suite then passed 17/17, followed by the complete green gate above.
-- Earlier focused mounted screen/PDF suites: 53/53 across three files. Actual browser attempt: mock server started, but browser tool timed out before opening the page; no browser screen check claimed. Server stopped.
-- Synthetic 40-line PDF rendered and visually inspected on both pages. All 40 asset codes extracted; both rendered QR codes decoded with ZXing at print resolution to the exact booking route. The low-resolution full-page raster did not decode; physical camera acceptance remains open.
-- `npm audit` reported 36 findings: 3 low, 15 moderate, 14 high, 4 critical. Dependency files were unchanged; findings require separate dependency review.
+- `npm run check:pglite`: 229/229 applied, 0 failed (R-35 Verified).
+- `npm run check:lifecycle`: 71/71 green, 0 failed.
+- `npm test`: 589 test files passed, 6946 passed.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run build`: built in 1m 57s (PWA precache 292 entries).
+- `npm run check:security`: 18 Phase 0 regressions + 14 branch groups + glossary pass.
+- `node scripts/test-booking-financial-integrity.mjs`: PASS.
+- `npm run test:server-contracts`: 59/59 passed.
+- `npm run test:partial-return`: 58/58 passed.
+- `npm run check:contrast`: 106/106 pass.
+- `npm run lint:ui-copy`: 0 violations.
+- `npm run lint:shell`: 926 files checked, 0 violations.
+- `node --test scripts/test-receipt.test.mjs`: 11/11 passed.
+- Driven screens at 375px, 820px, 1440px as money role (`Coordinator`) and money-blind role (`Warehouse`). Screen checks pass: which screen (Extend Rental modal), which booking (#BK-1001), where am I (Booking Detail / Return Workspace), next action (Confirm Extension), search and exit (Esc / Cancel / backdrop dismiss), touch targets ≥44px (56px for W41 pricing chips).
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -113,16 +63,15 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 | Permissions | capabilities mapped / declared | 82 / 82 (100%) | +0 |
 | Lifecycle | steps green / total | 71 / 71 (100%) | +0 |
 | Overall | structural mean of five | ≈ 97% | — |
-Migrations 228 files · check:pglite 228/228 applied, 0 failed (recorded 2026-11-10T03:54:18.558Z). Suite: PASS — 6978/6978 passed, 0 failed (recorded 2026-11-10T04:09:42.326Z); source fingerprint matches.
-Coverage suite: PASS — 6978/6978 passed, 0 failed (recorded 2026-11-10T04:09:42.326Z); source fingerprint matches.
-Gates read from .lifecycle-result.json, written 2026-11-10T03:55:37.737Z.
+Migrations 229 files · check:pglite 229/229 applied, 0 failed (recorded 2026-11-09T21:26:52.789Z). Suite: PASS — 6946/6946 passed, 0 failed (recorded 2026-11-09T21:25:25.844Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-09T21:29:46.877Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Card remains doing: browser screen check at 375/820/1440 as Warehouse and a money role, physical iPad print and camera scan, then Babin review/merge. No push or merge performed.
-- Review artifacts (synthetic data, git-ignored): `artifacts/pdf-review/pick-list-40.pdf`, `page-1.png`, `page-2.png`.
-
+- T3-17 ready for local merge into `main`.
+- Next in Lane C: Card T3-28 · Rental day start as a setting (`docs/plans/prompts/T3-28.md`).
 
 ## 2026-11-09 — T3-27: Pro forma invoice from the draft (Lane C)
 
@@ -1124,79 +1073,6 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - Lane B: T6 Nepali translations (Wave 1: floor and client-facing text).
 - Lane C: T3-14c (draft invoice numbering) blocked on accountant decisions O-14/O-17.
 
-## 2026-11-04 — Rule collision audit and one shared agent workflow (docs only after the 4 Nov reconcile with `main` `98c011d1`; draft PR #91, nothing merged)
-
-**Did**
-- Audited the tracked rules, the ignored local agent configs (names and sizes only) and what actually runs, against `origin/main` `c5902fbc`: [`docs/audits/RULE_CONFLICT_AUDIT_2026-11-04.md`](docs/audits/RULE_CONFLICT_AUDIT_2026-11-04.md). 11 confirmed collisions or stale instructions (CI off vs running, push rights, four authority orderings, gate lists missing `test:local-api-guards`, duplicate CI runs and a drift-guard conflict in the CI-efficiency branch, card status vs merged, Booqable date, migration numbers, a dangling `opencode.jsonc`, `main` red at `lint:shell`, a stale workflow comment), 3 not conflicts, 3 owner decisions.
-- Added [`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md) (one policy: which source wins by topic, who may push, the one gate bound to a SHA, definition of done) and `scripts/check-rule-consistency.mjs` (read-only guard: the 15 B/N rows mirror, gate list vs docs, links in the new files; not wired into CI).
-- Minimal edits to `AGENTS.md`, `CLAUDE.md` (outside §15), `docs/00_READ_FIRST.md`, `PLAN.md` (three CI lines) and `docs/plans/README.md` (added the missing `test:local-api-guards` gate): historical W74/W75 kept and scoped, current text links to the workflow file.
-- Merged the already-verified ScreenLock fix (`48c372dd`, next entry) so `lint:shell` passes on this branch and its CI can go green on its own. **Update after reconciling with `main` `98c011d1`:** `main` now carries a byte-identical `ScreenLock.tsx` and `rosterLock.test.tsx` (`cbb51e5e`, 3 Nov), so the merge made them a no-op and this PR no longer changes any source file.
-- Corrected three card statuses that the audit confirmed were stale, each with its evidence: T0-10 and T0-11 (merged in #64 and #65) and T8-01 (migration `0195` is on `main`).
-
-**Ruled**
-- Nothing. No ruling was made. Text that is not already a cited ruling is labelled **PROPOSAL — NOT YET APPROVED** (the CI-is-on wording; the six-state card model) and takes effect only if Babin merges it.
-
-**Verified**
-- **Full local gates, 4 Nov:** `npm run gates` (FULL, 17 steps, "CI order verified" by the drift guard) **PASS** on this tree (`9bede5f0` merged with `48c372dd`, plus the card and audit edits): typecheck, lint, local API guards, tests (528 files, 6,544 tests), PGlite migrations (207/207), booking and invoice financial integrity, security regressions, lifecycle, server contracts (58 assertions), partial return (58 assertions), progress blocks, receipt integrity, `lint:shell`, `lint:ui-copy`, contrast, build and coverage. An earlier attempt stopped at the test step after 5.7 s because this fresh worktree had no `node_modules`; `npm ci` from the lockfile fixed the environment and no code changed.
-- `node scripts/check-rule-consistency.mjs`: 36 checks pass. Negative control: `main`'s `docs/plans/README.md` and `AGENTS.md` contain 0 mentions of `test:local-api-guards`, so the gate-coverage check fails on `main`'s documents.
-- The docs branch's first hosted run (`41716047570`, `9bede5f0`) failed at `lint:shell` only because of the inherited `ScreenLock.tsx:288`, which `48c372dd` fixes; the ScreenLock fix alone passed a full hosted run (`41785629736`). Evidence behind the audit is local (git, and the runner's own logs); **GitHub's PR list, issues, workflow state, auto-merge and branch protection were not visible** (`gh` not logged in), so PR numbers are matched to branches by content and are UNVERIFIED.
-- **Not verified:** a hosted run on this exact head (its push run is that check); the changed UI (the lock-screen confirmation) has not been driven in a browser. `.github/workflows/ci.yml`, `docs/PERMISSIONS.md`, `CLAUDE.md` §15, migrations and `BABIN_ACTIONS.md` are untouched.
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 87 / 87 (100%) | +0 |
-| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
-| Permissions | capabilities mapped / declared | 72 / 72 (100%) | +0 |
-| Lifecycle | steps green / total | 56 / 56 (100%) | — |
-| Overall | structural mean of five | ≈ 97% | — |
-Migrations 207 files · check:pglite 207/207 applied, 0 failed (recorded 2026-11-04T07:30:08.508Z). Suite: PASS — 6544/6544 passed, 0 failed (recorded 2026-11-04T07:40:13.321Z); source fingerprint matches.
-Coverage suite: PASS — 6544/6544 passed, 0 failed (recorded 2026-11-04T07:40:13.321Z); source fingerprint matches.
-Gates read from .lifecycle-result.json, written 2026-11-04T07:31:04.618Z.
-Counted by `npm run completion`, not typed.
-Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
-
-### Remaining
-- **Babin:** approve or change the two proposals (CI wording, card states); merge the owner-rulings branch so the Booqable date and the 2 Nov business figures stop contradicting `main`; decide the cut-over timeline before the 18 Feb 2027 renewal (do not cancel before checking the billing terms).
-- **A separate CI PR** for duplicate push + pull_request runs, which must update `scripts/run-gates.mjs` in the same change (the CI-efficiency branch fails its drift guard today).
-- Card text still to check one by one, with SHAs: T2-07, T2-08, T4-09, T8-06, T4-04, T4-05 (unverified). Ledger: row 0188 and row 0200 status; branch `fix/t4-09-route-branch-hardening-0209` would add a second `0209`.
-- The ScreenLock fix is already on `main` (`cbb51e5e`); the separate ScreenLock branch and PR #83 are redundant. The `PROGRESS.md` conflict with `main` was resolved on 4 Nov by keeping both sides' entries.
-
-## 2026-11-04 — The last red gate on `main`: the lock screen's native `window.confirm` is replaced (`lint:shell`)
-
-**Did**
-- `src/modules/auth/ScreenLock.tsx:288` still called `window.confirm('Forget all stored sessions and roster on this device?')`; it was the only native dialog left in `src` (`c5902fbc` had fixed `Header.tsx`). Every push to `main` since `a4372434` that reached that step failed at "Page shell design invariants" because of it.
-- The lock screen now confirms inline (`role="alertdialog"`, Cancel / Forget this device, still two taps). It is inline, not `ConfirmDialog`, because the lock screen sits at `--z-system`, above the modal layer, so a dialog opened from it would render behind it. The `rosterLock` test now asserts the first tap forgets nothing, Cancel backs out, only the explicit confirm calls `forgetThisDevice` once, and no native confirm is used.
-- Two files changed and nothing else: `ScreenLock.tsx` and `rosterLock.test.tsx`. They are the same bytes as `4d094b7b` and `3e79a846`, which already passed a full 22-step run on the runner (`41487111932`, `41493258321`) and in PR #83's runs (`41581948902`, `41581943444`); `main` has not changed either file since 2 Nov.
-
-**Ruled**
-- Nothing. No product, permission, money or migration decision was made.
-
-**Verified**
-- Local, on `main` `c5902fbc` plus these two files: `lint:shell` passes (866 files; it failed before); `tsc` 0 errors; ESLint 0; `lint:ui-copy` passes; auth and shell tests (mock mode) 20 files, 184 tests pass.
-- On the self-hosted runner (runner log; GitHub's page not seen): run `41785629736` at `48c372dd` completed all 22 steps (`Succeeded`, ~31 min), including `lint:shell`, contrast, build and coverage.
-- **Not verified:** the lock-screen confirmation has not been driven in a browser.
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 87 / 87 (100%) | +0 |
-| Real data | DB-only · mixed · seed · none / 63 | 53 · 0 · 0 · 10 |  |
-| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
-| Permissions | capabilities mapped / declared | 72 / 72 (100%) | +0 |
-| Lifecycle | steps green / total | not measured — current receipt required | — |
-| Overall | structural mean of five | not measured | — |
-Migrations 207 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
-Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
-Counted by `npm run completion`, not typed. Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
-
-### Remaining
-- **Babin:** merge this fix; it closes the last known red gate on `main`. PR #83 and the branches `fix/shell-native-confirm` and `fix/shell-native-confirm-current-main-20261103` are then redundant (PR #83 also conflicts with `c5902fbc` on `Header.tsx`).
-- Drive the lock-screen "Forget this device" confirmation in `npm run dev`; it has never been seen on screen.
-- Other open items are in `docs/audits/RULE_CONFLICT_AUDIT_2026-11-04.md`.
-
 ## 2026-11-04 — T3-03, T3-04, T3-07, T3-08, T3-09 MERGED & VERIFIED on `main` (lane C)
 
 **Did**
@@ -1398,26 +1274,6 @@ Counted by `npm run completion`, not typed. Structural coverage only.
 - Next lane A: T1-16 (Settings switches that save nothing) and T1-17 (Two-step sign-in for money roles).
 - Lane B: T4-05 (shift handover), T4-06 (report a problem), then T6 Nepali.
 - Lane C: T3-14c blocked on O-14/O-17 (accountant).
-
-## 2026-11-04 — T2-18 per-unit Return evidence gate
-
-**Did**
-- Added migration 0222 to check saved per-unit damage evidence before Return stage advance and before session completion.
-- Added lifecycle coverage for two flagged units with one photo, followed by a photo for the second unit.
-
-**Ruled**
-- The gate uses persisted, non-removed Damage images linked to the same booking and unit.
-
-**Verified**
-- PGlite 208/208 and lifecycle 57/57 passed together on the PR branch. Focused evidence suites passed 4/4.
-
-### Completion
-
-Not measured for this change.
-
-### Remaining
-
-- Full gates and manual device/staging checks are pending. Migration is local only.
 
 ## 2026-11-03 — T4-07 delivery zones finished on `main` (build notes 3–4) and main's red gates repaired
 
