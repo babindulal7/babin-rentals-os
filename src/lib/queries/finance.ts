@@ -243,6 +243,8 @@ export interface InvoiceListRow {
   clientId: string
   /** `clients.name` via the embed. Never a placeholder that could pass for a real client. */
   clientName: string
+  /** `clients.pan_vat` via the embed when available. */
+  clientPanVat?: string | null
   /**
    * `status` — the `invoice_status` enum. **'Overdue' is not stored**; see
    * `STORED_INVOICE_STATUSES` and `overdueInvoices()` below before filtering on
@@ -350,7 +352,7 @@ const INVOICE_COLUMNS =
   'subtotal, discount_amount, discount_percent, taxable_amount, vat_rate, vat_amount, ' +
   'total_amount, paid_amount, outstanding_amount, ' +
   'voided_at, void_reason, credit_note_no, notes, created_at, ' +
-  'clients ( name ), bookings ( booking_no )'
+  'clients ( name, pan_vat ), bookings ( booking_no )'
 
 interface RawInvoiceRow {
   id: string
@@ -379,7 +381,7 @@ interface RawInvoiceRow {
   credit_note_no: string | null
   notes: string | null
   created_at: string
-  clients: { name: string } | null
+  clients: { name: string; pan_vat?: string | null } | null
   bookings: { booking_no: string } | null
 }
 
@@ -410,6 +412,7 @@ function toInvoiceRow(r: RawInvoiceRow): InvoiceListRow {
     projectName: r.project_name ?? null,
     clientId: r.client_id,
     clientName: r.clients?.name ?? '(client not joined)',
+    clientPanVat: r.clients?.pan_vat ?? null,
     status: r.status,
     issueDateAd: r.issue_date,
     dueDateAd: r.due_date,

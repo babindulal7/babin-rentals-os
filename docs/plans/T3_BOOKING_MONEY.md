@@ -91,7 +91,7 @@ spec card set (certification, sync, offline invoices, invoice cancellation rules
 **Done when** — written answer recorded by 30 Nov 2026 (14 Mangsir 2083).
 **Needs** — accountant.
 
-### T3-06 · Invoice and agreement documents            status: todo · size: M · lane C + accountant
+### T3-06 · Invoice and agreement documents            status: ready — awaiting merge (lane-c/T3-06-invoice-and-agreement-documents) · size: M · lane C + accountant
 **What** — 1) The accountant checks the invoice PDF (`src/lib/pdf/generatePdf.ts`) against what an
 invoice in Nepal must show (business PAN, invoice number, date — add the BS date beside AD, buyer
 PAN when given, VAT lines); fix what they mark. 2) Rental Agreement PDF from the booking with
