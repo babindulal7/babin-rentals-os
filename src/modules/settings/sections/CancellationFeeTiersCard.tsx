@@ -1,3 +1,5 @@
+import { useCallback, useEffect, useState } from 'react'
+import { fetchCancellationFeeTiers, type CancellationFeeTier } from '../../../lib/queries/cancellationFeeTiers'
 import { Card } from '../../../components/ui/Page'
 
 /**
@@ -32,12 +34,50 @@ const OPTION_A_ROWS = [
 ] as const
 
 export function CancellationFeeTiersCard() {
+  const [tiers, setTiers] = useState<CancellationFeeTier[]>([])
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  const loadTiers = useCallback(async () => {
+    setLoading(true)
+    setLoadError(null)
+    try {
+      const result = await fetchCancellationFeeTiers()
+      setTiers(result)
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Unknown read error')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadTiers()
+  }, [loadTiers])
+
   return (
     <Card title="Cancellation fees (Option A)">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
         <p style={{ color: 'var(--muted)', fontSize: 'var(--t-meta)', lineHeight: 1.5, margin: 0 }}>
           Owner-approved cancellation policy (Ruling 2 Nov 2026). Applied automatically to confirmed bookings cancelled prior to scheduled pickup.
         </p>
+
+        {loadError ? (
+          <div role="alert" style={{ padding: '12px', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)' }}>
+            Could not retrieve policy tiers: {loadError}
+            <button type="button" onClick={() => void loadTiers()} style={{ marginLeft: 12, minHeight: 44 }}>
+              Retry
+            </button>
+          </div>
+        ) : loading ? (
+          <p role="status">Loading cancellation fee tiers…</p>
+        ) : (
+          <div aria-label="Configured cancellation fee tiers">
+            {tiers.map((tier) => (
+              <p key={tier.id}>{tier.noticeHours}h notice — {tier.feePercent}% fee</p>
+            ))}
+          </div>
+        )}
 
         <div style={{ overflowX: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--t-meta)' }}>
