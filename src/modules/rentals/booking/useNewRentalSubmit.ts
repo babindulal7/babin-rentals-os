@@ -343,7 +343,7 @@ export function useNewRentalSubmit({
                     }
                   : { description: l.name }),
               qty: l.qty,
-              days: l.days,
+              days: l.trackingMode === 'Consumable' || l.isConsumable ? 1 : l.days,
               rate: toRupees(l.ratePaisa),
               ...quoteFieldsForLine(l, pricingTerms, pickupDay, pickupTime, returnTime),
               sortOrder: i,

@@ -88,6 +88,8 @@ export interface BookingLineDraft {
   name: string
   serial: string
   category: string
+  trackingMode?: 'Serialised' | 'Quantity' | 'Consumable' | undefined
+  isConsumable?: boolean
   ratePaisa: Paisa
   /** §8.3 — Days is mandatory and explicit on every line. */
   days: number
@@ -242,6 +244,8 @@ export interface EquipmentResult {
   serial: string
   category: string
   location: string
+  trackingMode?: 'Serialised' | 'Quantity' | 'Consumable' | null
+  isConsumable?: boolean
   /**
    * The unit's own `inventory_state`. **Absent on a live product row** — see
    * `BookingLineDraft.status`. Nothing gates on this; availability does.
@@ -432,6 +436,8 @@ export interface LiveEquipmentRow {
   assetCode?: string | null
   category?: string | null
   dailyRate?: number | null
+  unitSalePrice?: number | null
+  trackingMode?: 'Serialised' | 'Quantity' | 'Consumable' | null
   unitCountExcludingRetired?: number | null
   totalQuantity?: number | null
 }
@@ -547,6 +553,8 @@ export function equipmentResultsFrom(
   return rows.map((r): EquipmentResult => {
     const category = r.category ?? 'Uncategorised'
     const kind: 'equipment' | 'accessory' = ACCESSORY_CATEGORIES.has(category) ? 'accessory' : 'equipment'
+    const isConsumable = r.trackingMode === 'Consumable'
+    const ratePaisa = (isConsumable ? (r.unitSalePrice ?? r.dailyRate ?? 0) : (r.dailyRate ?? 0)) as Paisa
 
     return {
       kind,
@@ -558,11 +566,13 @@ export function equipmentResultsFrom(
       name: r.name,
       serial: '—',
       category,
+      ...(r.trackingMode ? { trackingMode: r.trackingMode } : {}),
+      ...(isConsumable ? { isConsumable: true } : {}),
       location: r.assetCode ?? '—',
       /* No `status`. A product has no `inventory_state`; see
          `BookingLineDraft.status` for what used to be stamped here. */
       committedTo: '—',
-      ratePaisa: (r.dailyRate ?? 0) as Paisa,
+      ratePaisa,
       ...(r.assetCode ? { sku: r.assetCode } : {}),
       ...(r.brand ? { brand: r.brand } : {}),
       inBundles: [],
@@ -1430,6 +1440,8 @@ export interface EquipmentModelGroup {
   name: string
   kind: 'equipment' | 'accessory'
   category: string
+  trackingMode?: 'Serialised' | 'Quantity' | 'Consumable' | undefined
+  isConsumable?: boolean
   ratePaisa: Paisa
   sku?: string
   brand?: string
@@ -1512,15 +1524,18 @@ export function equipmentLineDraft(e: EquipmentResult, days: number): BookingLin
   const isAccessory = e.kind === 'accessory'
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
   const resolvedProductId = isUuid.test(e.productKey) ? e.productKey : isUuid.test(e.id) ? e.id : null
+  const isConsumable = e.isConsumable || e.trackingMode === 'Consumable'
   return {
     id: e.id,
     lineType: isAccessory ? 'Accessory' : 'Equipment',
     ...(resolvedProductId ? { productId: resolvedProductId } : {}),
+    ...(e.trackingMode ? { trackingMode: e.trackingMode } : {}),
+    ...(isConsumable ? { isConsumable: true } : {}),
     name: e.name,
     serial: e.serial,
     category: e.category,
     ratePaisa: e.ratePaisa,
-    days: Math.max(1, Math.round(days) || 1),
+    days: isConsumable ? 1 : Math.max(1, Math.round(days) || 1),
     // A serialised row is one physical unit; only bulk stock varies.
     qty: 1,
     discountPct: 0,

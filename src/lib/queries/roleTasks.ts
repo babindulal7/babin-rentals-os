@@ -28,6 +28,7 @@ export interface WarehouseTechnicianTasks {
   /** Returns scheduled or arrived before 06:00 NPT (W31) */
   earlyMorningReturnCount: number
   resetCount: number
+  lowStockCount?: number
   items: {
     urgentPacks: Array<{ id: string; entityNumber: string; clientName: string; timeAd: string }>
     urgentReturns: Array<{ id: string; entityNumber: string; clientName: string; timeAd: string; isBeforeSixAm: boolean }>
@@ -55,6 +56,7 @@ export interface ManagerTasks {
   lateCount: number
   blockedGearCount: number
   todayMovementsCount: number
+  lowStockCount?: number
 }
 
 export interface OwnerTasks {
@@ -67,6 +69,7 @@ export interface OwnerTasks {
   lateCount: number
   blockedCount: number
   damagedCount: number
+  lowStockCount?: number
   businessPulse: {
     revenueTodayPaisa: Paisa
     fleetUtilizationPct: number
@@ -133,6 +136,7 @@ export async function fetchRoleTaskMetrics(role: SystemRole, _userId?: string): 
         returnCount: 7,
         earlyMorningReturnCount: 3, // W31: 3 early returns before 6 AM
         resetCount: 5,
+        lowStockCount: 2,
         items: {
           urgentPacks: [
             { id: 'b-101', entityNumber: 'BK-2026-0891', clientName: 'Kathmandu Cine Hub', timeAd: `${todayAd}T07:30:00Z` },
@@ -162,12 +166,21 @@ export async function fetchRoleTaskMetrics(role: SystemRole, _userId?: string): 
           .select('id', { count: 'exact', head: true })
           .eq('stage', 'On Rent')
 
+        let lowStockCount = 0
+        try {
+          const { data: alerts } = await supabase.rpc('get_low_stock_alerts')
+          lowStockCount = Array.isArray(alerts) ? alerts.length : 0
+        } catch {
+          lowStockCount = 0
+        }
+
         metrics.warehouse = {
           packCount: packCount ?? 0,
           handoverCount: handoverCount ?? 0,
           returnCount: returnCount ?? 0,
           earlyMorningReturnCount: 2,
           resetCount: 3,
+          lowStockCount,
           items: { urgentPacks: [], urgentReturns: [] },
         }
       } catch {
@@ -177,6 +190,7 @@ export async function fetchRoleTaskMetrics(role: SystemRole, _userId?: string): 
           returnCount: 0,
           earlyMorningReturnCount: 0,
           resetCount: 0,
+          lowStockCount: 0,
           items: { urgentPacks: [], urgentReturns: [] },
         }
       }
@@ -208,17 +222,36 @@ export async function fetchRoleTaskMetrics(role: SystemRole, _userId?: string): 
   // 4. Manager tasks
   if (role === 'Manager') {
     const approvals = await fetchApprovals({ status: 'Pending' })
+    let lowStockCount = 2
+    if (!isMock) {
+      try {
+        const { data: alerts } = await supabase.rpc('get_low_stock_alerts')
+        lowStockCount = Array.isArray(alerts) ? alerts.length : 0
+      } catch {
+        lowStockCount = 0
+      }
+    }
     metrics.manager = {
       approvalsWaitingCount: approvals.length || 3,
       lateCount: 2,
       blockedGearCount: 4,
       todayMovementsCount: 21,
+      lowStockCount,
     }
   }
 
   // 5. Owner & Admin tasks (W79)
   if (role === 'Owner' || role === 'Admin') {
     const approvals = await fetchApprovals({ status: 'Pending' })
+    let lowStockCount = 2
+    if (!isMock) {
+      try {
+        const { data: alerts } = await supabase.rpc('get_low_stock_alerts')
+        lowStockCount = Array.isArray(alerts) ? alerts.length : 0
+      } catch {
+        lowStockCount = 0
+      }
+    }
     metrics.owner = {
       approvalsWaitingCount: approvals.length || 3,
       todayMoney: {
@@ -229,6 +262,7 @@ export async function fetchRoleTaskMetrics(role: SystemRole, _userId?: string): 
       lateCount: 2,
       blockedCount: 3,
       damagedCount: 1,
+      lowStockCount,
       businessPulse: {
         revenueTodayPaisa: rupees(185000),
         fleetUtilizationPct: 84,

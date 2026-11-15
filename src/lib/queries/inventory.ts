@@ -391,8 +391,12 @@ export interface InventoryListRow {
   unitConditions: UnitConditionDb[]
   /** `products_v.daily_rate`. **Money.** Null unless `withMoney` — see MONEY above. */
   dailyRate: Paisa | null
+  /** `products_v.unit_sale_price`. **Money.** Consumable unit sale price. Null unless `withMoney`. */
+  unitSalePrice?: Paisa | null
   /** `products_v.replacement_value`. **Money.** Null unless `withMoney`. */
   replacementValue: Paisa | null
+  /** `products.reorder_level`. Quantity threshold for low stock alert. */
+  reorderLevel?: number | null
 }
 
 /** A single serialised unit, as the per-serial expansion renders it. */
@@ -535,12 +539,12 @@ export const RECORD_STATE_COLUMN = 'status'
  */
 const BASE_COLUMNS =
   'id, asset_code, name, short_name, brand, model, category_id, tracking_mode, status, ' +
-  'total_quantity, quantity_unit, is_active, created_at, ' +
+  'total_quantity, reorder_level, quantity_unit, is_active, created_at, ' +
   `${CATEGORY_ALIAS}:inventory_categories!inner ( code, name ), ` +
   'units:product_units_v ( status, condition )'
 
 /** The money variant. Two of the nine masked columns; never reached without `withMoney`. */
-const COLUMNS_WITH_MONEY = `${BASE_COLUMNS}, daily_rate, replacement_value`
+const COLUMNS_WITH_MONEY = `${BASE_COLUMNS}, daily_rate, replacement_value, unit_sale_price`
 
 /** The semi-join that turns a state chip into a narrowing of the PARENT list. */
 const UNIT_STATE_JOIN = `, ${UNIT_STATE_ALIAS}:product_units_v!inner ( id )`
@@ -588,12 +592,14 @@ interface RawInventoryRow {
   /** `product_record_state`. The catalogue record's state, not a unit's. */
   status: ProductRecordStateDb
   total_quantity: number
+  reorder_level?: number | null
   quantity_unit: UnitOfMeasureDb | null
   is_active: boolean
   created_at: string
   /** `numeric(14,2)` — RUPEES. Absent from the row unless `withMoney` was set; NULL when the view masked it. */
   daily_rate?: number | null
   replacement_value?: number | null
+  unit_sale_price?: number | null
   /** `!inner` to-one. Typed nullable only so an unresolved join is visible rather than fatal. */
   category: { code: string; name: ProductCategoryDb } | null
   /** Every unit of this product, retired included. `[]` / null for a quantity SKU. */
@@ -717,7 +723,9 @@ function toRow(r: RawInventoryRow): InventoryListRow {
     unitsByState,
     unitConditions: UNIT_CONDITIONS.filter((c) => conditions.has(c)),
     dailyRate: toPaisa(r.daily_rate),
+    unitSalePrice: toPaisa(r.unit_sale_price),
     replacementValue: toPaisa(r.replacement_value),
+    reorderLevel: r.reorder_level ?? null,
   }
 }
 

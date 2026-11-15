@@ -16,8 +16,8 @@ import { gateContext, canViewUtilization } from '../../lib/fieldGating'
 import { useEditMode } from '../../lib/edit/useEditMode'
 import { UNIT_FIELDS } from './unitEditFields'
 import { updateUnit, type UnitIdentityPatch } from '../../actions/inventory/updateUnit'
-import { newClientUuid } from '../../lib/supabase'
-import { formatMoney } from '../../lib/money'
+import { supabase, newClientUuid } from '../../lib/supabase'
+import { formatMoney, type Paisa } from '../../lib/money'
 import { formatAd } from '../../lib/bs'
 import { useList } from '../../lib/queries/useList'
 import type { ListQueryResult } from '../../lib/queries/useList'
@@ -39,6 +39,7 @@ import { ServiceDueBadge } from '../../components/ui/ServiceDueBadge'
 import { ServicePlanCard } from './components/ServicePlanCard'
 import { PlannedDowntimeCard } from './sections/PlannedDowntimeCard'
 import { AdjustStockModal } from './AdjustStockModal'
+import { RestockConsumableModal } from './modals/RestockConsumableModal'
 import { AddUnitsModal } from './modals/AddUnitsModal'
 import { RetireUnitModal } from './modals/RetireUnitModal'
 import { recordEditorOptions } from '../../lib/queries/recordEditor'
@@ -353,6 +354,9 @@ function AssetDetailView() {
 
   const [activeTab, setActiveTab] = useState<AssetTab>('Units')
   const [adjustingStock, setAdjustingStock] = useState(false)
+  const [restockingConsumable, setRestockingConsumable] = useState(false)
+  const [restockMovements, setRestockMovements] = useState<Array<{ id: string; qty: number; supplier: string | null; cost: number | null; received_date: string; created_at: string }>>([])
+  const [loadingMovements, setLoadingMovements] = useState(false)
   /* Spec 7.5 — TABLET: bands clamp to 3; PHONE: 2, tables become card rows.
      Same clamp `KpiStrip` applies (Page.tsx). */
   const viewport = useViewport()
@@ -461,6 +465,32 @@ function AssetDetailView() {
       cancelled = true
     }
   }, [units])
+
+  useEffect(() => {
+    if (!product || product.trackingMode !== 'Consumable') return
+    let active = true
+    setLoadingMovements(true)
+    void (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('consumable_restock_movements_v')
+          .select('id, qty, supplier, cost, received_date, created_at')
+          .eq('product_id', product.id)
+          .order('received_date', { ascending: false })
+        if (!active) return
+        if (!error && data) {
+          setRestockMovements(data as Array<{ id: string; qty: number; supplier: string | null; cost: number | null; received_date: string; created_at: string }>)
+        }
+      } catch {
+        // ignore
+      } finally {
+        if (active) setLoadingMovements(false)
+      }
+    })()
+    return () => {
+      active = false
+    }
+  }, [product])
 
   const toggleUnit = (unitId: string) => {
     setExpandedUnits(prev => {
@@ -673,12 +703,91 @@ function AssetDetailView() {
 
       {/* Tab 1: Units */}
       {activeTab === 'Units' && (
-        <Card title="Fleet Units & Serial Records">
+        <Card title={product.trackingMode === 'Consumable' ? 'Consumable Stock & Movements' : 'Fleet Units & Serial Records'}>
           {!serialised ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
-              <span>Recorded bulk quantity: <strong className="figure">{product.totalQuantity}</strong></span>
-              {user && canAdjustStock(user.role) && (
-                <Button variant="secondary" onClick={() => setAdjustingStock(true)}>Adjust Stock</Button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {product.trackingMode === 'Consumable' && product.reorderLevel != null && product.totalQuantity <= product.reorderLevel && (
+                <div
+                  role="alert"
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: 'var(--r-btn, 6px)',
+                    background: 'var(--warning-surface, rgba(245, 158, 11, 0.12))',
+                    color: 'var(--warn-text, #d97706)',
+                    border: '1px solid var(--warn-border, rgba(245, 158, 11, 0.3))',
+                    fontSize: 'var(--t-meta, 13px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
+                  <Icon name="alert_triangle" size={16} />
+                  <span>
+                    <strong>Low Stock Warning:</strong> Current stock ({product.totalQuantity}) is at or below the reorder level ({product.reorderLevel}).
+                  </span>
+                </div>
+              )}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span>Recorded stock: <strong className="figure">{product.totalQuantity}</strong></span>
+                  {product.trackingMode === 'Consumable' && product.reorderLevel !== null && (
+                    <span style={{ fontSize: 'var(--t-meta, 12px)', color: 'var(--muted)' }}>
+                      Reorder level: <strong className="figure">{product.reorderLevel}</strong>
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  {product.trackingMode === 'Consumable' && user && (
+                    <Button variant="primary" onClick={() => setRestockingConsumable(true)}>
+                      + Add Stock
+                    </Button>
+                  )}
+                  {user && canAdjustStock(user.role) && (
+                    <Button variant="secondary" onClick={() => setAdjustingStock(true)}>Adjust Stock</Button>
+                  )}
+                </div>
+              </div>
+
+              {product.trackingMode === 'Consumable' && (
+                <div style={{ marginTop: 12 }}>
+                  <h4 style={{ fontSize: 'var(--t-h3, 14px)', fontWeight: 600, marginBottom: 8, color: 'var(--text)' }}>
+                    Restock Movement History
+                  </h4>
+                  {loadingMovements ? (
+                    <div style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>Loading movement history…</div>
+                  ) : restockMovements.length === 0 ? (
+                    <div style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>No restock movements recorded yet.</div>
+                  ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                      <table className="data-table" style={{ width: '100%', fontSize: 'var(--t-meta, 13px)' }}>
+                        <thead>
+                          <tr>
+                            <th>Date</th>
+                            <th>Quantity</th>
+                            <th>Supplier</th>
+                            {money && <th>Cost / Unit</th>}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {restockMovements.map((m) => (
+                            <tr key={m.id}>
+                              <td>{m.received_date}</td>
+                              <td className="figure" style={{ fontWeight: 600, color: 'var(--success-text, #16a34a)' }}>
+                                +{m.qty}
+                              </td>
+                              <td>{m.supplier || '—'}</td>
+                              {money && (
+                                <td className="figure">
+                                  {m.cost != null ? formatMoney(Math.round(m.cost * 100) as Paisa) : '—'}
+                                </td>
+                              )}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           ) : (
@@ -1105,6 +1214,13 @@ function AssetDetailView() {
                 <NotTracked>Not on record for this asset.</NotTracked>
               )}
             </div>
+            {product.trackingMode === 'Consumable' && product.unitSalePrice != null && (
+              <div style={{ ...cardStyle, padding: '14px 18px' }}>
+                <div style={{ fontSize: '10px', color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>UNIT SALE PRICE</div>
+                <div className="figure" style={{ fontSize: '1.4rem', fontWeight: 700, marginTop: 'var(--sp-xs)', color: 'var(--text)' }}>{formatMoney(product.unitSalePrice)}</div>
+                <div style={{ fontSize: 'var(--t-th)', color: 'var(--text2)', marginTop: 2 }}>Per unit consumable sale price</div>
+              </div>
+            )}
             <div style={{ ...cardStyle, padding: '14px 18px' }}>
               <div style={{ fontSize: '10px', color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>REPLACEMENT VALUE</div>
               {product.replacementValue !== null ? (
@@ -1233,6 +1349,21 @@ function AssetDetailView() {
           currentQuantity={product.totalQuantity}
           onClose={() => setAdjustingStock(false)}
           onAdjusted={detail.refetch}
+        />
+      )}
+      {restockingConsumable && product && user && (
+        <RestockConsumableModal
+          isOpen={restockingConsumable}
+          onClose={() => setRestockingConsumable(false)}
+          productId={product.id}
+          productName={product.name}
+          currentQuantity={product.totalQuantity}
+          userId={user.id}
+          userRole={user.role}
+          onRestocked={() => {
+            detail.refetch()
+            setRestockingConsumable(false)
+          }}
         />
       )}
       {addUnitsOpen && serialised && (
