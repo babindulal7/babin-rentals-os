@@ -95,6 +95,7 @@ export function ExtendRentalModal({
   // 6. Availability clash state
   const [isCheckingClash, setIsCheckingClash] = useState(false)
   const [clashes, setClashes] = useState<ExtensionClashDetail[]>([])
+  const [clashError, setClashError] = useState<string | null>(null)
 
   // 7. Form submission state
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -187,15 +188,23 @@ export function ExtendRentalModal({
     target.setDate(target.getDate() + days)
 
     setIsCheckingClash(true)
+    setClashError(null)
     try {
       const res = await checkExtensionClash(
         bookingId,
         base.toISOString(),
         target.toISOString(),
       )
-      setClashes(res.clashes ?? [])
-    } catch {
-      setClashes([])
+      setClashes(res.clashes)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Availability verification failed.'
+      setClashError(msg)
+      setClashes([
+        {
+          lineDescription: 'Availability check failed',
+          detail: `${msg} Extension cannot proceed until availability is confirmed.`,
+        },
+      ])
     } finally {
       setIsCheckingClash(false)
     }
@@ -227,6 +236,14 @@ export function ExtendRentalModal({
     }
     if (!user) {
       setError('You are not signed in, so this extension cannot be recorded. Please sign in.')
+      return
+    }
+    if (isCheckingClash) {
+      setError('Availability check is currently running. Please wait for confirmation.')
+      return
+    }
+    if (clashError) {
+      setError(`Cannot extend booking: availability verification failed (${clashError}).`)
       return
     }
     if (clashes.length > 0) {
@@ -294,7 +311,7 @@ export function ExtendRentalModal({
           <Button
             variant="primary"
             onClick={() => handleSubmit()}
-            disabled={isSubmitting || (clashes ?? []).length > 0}
+            disabled={isSubmitting || isCheckingClash || Boolean(clashError) || (clashes ?? []).length > 0}
             style={{ minHeight: 44, fontWeight: 700 }}
           >
             {isSubmitting ? 'Extending...' : `Confirm Extension (+${days} day${days === 1 ? '' : 's'})`}
@@ -436,6 +453,32 @@ export function ExtendRentalModal({
         {isCheckingClash ? (
           <div style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
             <Icon name="refresh" size={14} className="animate-spin" /> Checking availability for extended dates...
+          </div>
+        ) : clashError ? (
+          <div
+            role="alert"
+            style={{
+              padding: '12px 14px',
+              borderRadius: 'var(--r-btn)',
+              background: 'var(--st-danger-bg, rgba(220, 38, 38, 0.08))',
+              border: '1px solid var(--danger, #dc2626)',
+              color: 'var(--st-danger-fg, #b91c1c)',
+              fontSize: 'var(--t-meta)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 6,
+            }}
+          >
+            <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Icon name="alert_triangle" size={16} />
+              Availability Verification Failed (Extension Blocked)
+            </div>
+            <div>{clashError}</div>
+            <div>
+              <Button type="button" variant="outline" size="sm" onClick={() => void runClashCheck()} style={{ minHeight: 32, marginTop: 4 }}>
+                Retry Availability Check
+              </Button>
+            </div>
           </div>
         ) : (clashes ?? []).length > 0 ? (
           <div
