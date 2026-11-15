@@ -45,37 +45,95 @@ describe('expenseStorage (T3-24)', () => {
     expect(check.error).toContain('exceeds the 3 MB size limit')
   })
 
-  it('accepts valid receipt image and pdf formats and rejects unsupported formats', () => {
+  it('accepts valid receipt image and pdf formats matching their extension', () => {
+    const jpegBlob = new Blob(['jpeg'], { type: 'image/jpeg' })
+    expect(validateReceiptFile(jpegBlob, 'receipt.jpg').valid).toBe(true)
+    expect(validateReceiptFile(jpegBlob, 'receipt.jpeg').valid).toBe(true)
+
     const pngBlob = new Blob(['png'], { type: 'image/png' })
     expect(validateReceiptFile(pngBlob, 'receipt.png').valid).toBe(true)
 
+    const webpBlob = new Blob(['webp'], { type: 'image/webp' })
+    expect(validateReceiptFile(webpBlob, 'receipt.webp').valid).toBe(true)
+
     const pdfBlob = new Blob(['pdf'], { type: 'application/pdf' })
     expect(validateReceiptFile(pdfBlob, 'invoice.pdf').valid).toBe(true)
-
-    const exeBlob = new Blob(['binary'], { type: 'application/octet-stream' })
-    expect(validateReceiptFile(exeBlob, 'malicious.exe').valid).toBe(false)
   })
 
-  it('uploads receipt to documents bucket under staff path', async () => {
+  it('rejects forged MIME type (e.g. text/html masquerading as JPEG)', () => {
+    const htmlForgedBlob = new Blob(['<html>malicious</html>'], { type: 'text/html' })
+    const result = validateReceiptFile(htmlForgedBlob, 'innocent.jpg')
+    expect(result.valid).toBe(false)
+    expect(result.error).toContain('Disallowed receipt file type: text/html')
+  })
+
+  it('rejects SVG images masquerading as pictures', () => {
+    const svgBlob = new Blob(['<svg></svg>'], { type: 'image/svg+xml' })
+    const result = validateReceiptFile(svgBlob, 'vector.png')
+    expect(result.valid).toBe(false)
+    expect(result.error).toContain('Disallowed receipt file type: image/svg+xml')
+  })
+
+  it('rejects mismatched MIME and extension (e.g. PDF masquerading as PNG)', () => {
+    const pdfBlob = new Blob(['pdf'], { type: 'application/pdf' })
+    const result = validateReceiptFile(pdfBlob, 'fake.png')
+    expect(result.valid).toBe(false)
+    expect(result.error).toContain('Mismatched file type')
+  })
+
+  it('rejects unknown extensions even when MIME is empty', () => {
+    const blankBlob = new Blob(['binary'], { type: '' })
+    const result = validateReceiptFile(blankBlob, 'script.sh')
+    expect(result.valid).toBe(false)
+    expect(result.error).toContain('Unsupported file extension .sh')
+  })
+
+  it('allows mobile HEIC / HEIF with blank MIME type as documented safe path', () => {
+    const blankHeicBlob = new Blob(['heic-bytes'], { type: '' })
+    expect(validateReceiptFile(blankHeicBlob, 'photo.heic').valid).toBe(true)
+    expect(validateReceiptFile(blankHeicBlob, 'photo.heif').valid).toBe(true)
+  })
+
+  it('rejects empty or zero-byte files', () => {
+    const emptyBlob = new Blob([], { type: 'image/jpeg' })
+    const result = validateReceiptFile(emptyBlob, 'empty.jpg')
+    expect(result.valid).toBe(false)
+    expect(result.error).toContain('empty or invalid')
+  })
+
+  it('uploads receipt to documents bucket under staff path with sanitized filename', async () => {
     const userId = '11111111-1111-4111-8111-111111111111'
     const clientUuid = '22222222-2222-4222-8222-222222222222'
     const testBlob = new Blob(['test-receipt-bytes'], { type: 'image/jpeg' })
 
     const result = await uploadExpenseReceipt({
       file: testBlob,
-      filename: 'lunch bill.jpeg',
+      filename: '../../lunch bill!.jpeg',
       userId,
       clientUuid,
     })
 
-    expect(result.storagePath).toBe(`staff/${userId}/receipt_${clientUuid}_lunch_bill.jpeg`)
+    // Path traversal .. stripped, non-alphanumeric converted
+    expect(result.storagePath).toBe(`staff/${userId}/receipt_${clientUuid}_lunch_bill_.jpeg`)
     expect(result.fileSizeBytes).toBe(testBlob.size)
     expect(uploadMock).toHaveBeenCalledWith(
       EXPENSE_RECEIPT_BUCKET,
-      `staff/${userId}/receipt_${clientUuid}_lunch_bill.jpeg`,
+      `staff/${userId}/receipt_${clientUuid}_lunch_bill_.jpeg`,
       testBlob,
       expect.objectContaining({ upsert: false }),
     )
+  })
+
+  it('refuses upload if userId is missing', async () => {
+    const testBlob = new Blob(['test-receipt-bytes'], { type: 'image/jpeg' })
+    await expect(
+      uploadExpenseReceipt({
+        file: testBlob,
+        filename: 'bill.jpg',
+        userId: '',
+        clientUuid: 'uuid-1',
+      }),
+    ).rejects.toThrow('an authenticated staff user ID is required')
   })
 
   it('retrieves signed URL for existing receipt path', async () => {
