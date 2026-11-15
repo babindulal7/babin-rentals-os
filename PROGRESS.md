@@ -1,5 +1,47 @@
 # Progress Log
 
+## 2026-11-15 — T3-20: Who owes receivables view and client statement PDF (Lane C)
+
+**Did**
+- **T3-20: Who owes receivables list (W14, W18, W91, Law 1, Law 6):**
+  - Implemented `src/lib/queries/whoOwes.ts` (`fetchWhoOwesList`, `fetchClientReceivableDetail`, `fetchWhoOwesSummary`): queries clients with unpaid balances from invoices and bookings, sorted oldest first (by oldest outstanding completion/issue date), calculating age in days, last reminder sent, reminder paused flag, and breakdown of open invoices.
+  - Implemented `WhoOwes.tsx` in `src/modules/finance/WhoOwes.tsx` and integrated as tab in `Finance.tsx` (`/finance?tab=who-owes`).
+  - Implemented Client Statement PDF generation and export (`generatePdf.ts` & `exportPdf.ts`), enabling 2-tap sharing to WhatsApp or email (T3-16 integration).
+  - Enforced strict Law 6 money blindness: non-money floor roles (`Warehouse`, `Technician`, `Driver`) and clients cannot view the Who Owes view or receive receivable amounts.
+  - Added unit and component tests in `src/modules/finance/__tests__/WhoOwes.test.tsx` and `src/data/nav.test.ts` (41/41 passing).
+
+**Ruled**
+- W14, W18, W91: Who owes lists clients with unpaid balances oldest first, with age in days, amount, last reminder timestamp, and pause status; tapping generates a formal client statement PDF.
+- Law 6: Who owes and client financial statements are strictly restricted to money roles (`Owner`, `Admin`, `Manager`, `Accounts`, `Coordinator`).
+
+**Verified**
+- `npm run check:pglite`: 229/229 applied, 0 failed.
+- `npm run check:lifecycle`: 71/71 green, 0 failed.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run build`: built in 51.20s (PWA precache 294 entries).
+- Tests: `WhoOwes.test.tsx` and `nav.test.ts` passed (41/41 tests green).
+- Usability / Screen checks: responsive across 375, 820, and 1440 px viewports; role gating confirmed (Coordinator has access; Warehouse denied).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 101 / 102 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 82 / 82 (100%) | +0 |
+| Lifecycle | steps green / total | 71 / 71 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 229 files · check:pglite 229/229 applied, 0 failed (recorded 2026-11-15T18:20:11.385Z). Suite: NOT VERIFIED — focused or unspecified run: 41/41 passed, 0 failed (recorded 2026-11-15T18:18:50.111Z).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-15T18:20:48.489Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T3-20 (`lane-c/T3-20-who-owes`) ready for review and local merge by Babin.
+- Next in Lane C: review PR #161 (T3-22), review PR #162 (T3-17), verify T3-19 scan gear into New Rental.
+
 ## 2026-11-12 — T3-08, T3-22 & T3-10: Equipment one-page editor, Availability in two taps, After-hours service line (Lane C)
 
 **Did**
