@@ -325,6 +325,10 @@ time; a Warehouse seat sees no money.
 **Needs** — none.
 
 ### T2-15 · Damage found during reset            status: ready — awaiting merge (lane-a/T2-15-damage-found-during-reset) · size: S · lane A · [soon]
+**30 Oct triage** — Existing [PR #30](https://github.com/babindulal7/babin-rentals-os/pull/30)
+contains the implementation; its `0185` collides with Team Notes on main. Preserve
+it, claim a free number through the ledger, and rerun both database gates after
+reconciliation. [Evidence](../verification/PR_TRIAGE_2026-10-30.md).
 **What** — When Reset marks an item Damaged after the client has left (W44), the app opens a damage
 case **linked to the booking it last came back from**, defaulting to **claim from the client**; the
 client gets the "damage found — under review" email without an amount (W23, T5-07); the amount
