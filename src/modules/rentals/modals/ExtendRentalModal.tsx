@@ -475,7 +475,7 @@ export function ExtendRentalModal({
             </div>
             <div>{clashError}</div>
             <div>
-              <Button type="button" variant="outline" size="sm" onClick={() => void runClashCheck()} style={{ minHeight: 32, marginTop: 4 }}>
+              <Button type="button" variant="outline" size="sm" onClick={() => void runClashCheck()} style={{ minHeight: 44, marginTop: 4 }}>
                 Retry Availability Check
               </Button>
             </div>
