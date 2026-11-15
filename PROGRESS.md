@@ -1,5 +1,80 @@
 # Progress Log
 
+## 2026-11-16 — Wave A Release Foundation & Environment Hardening (T0-04, T1-01, T1-02, T1-03, T1-12) (Lane A / Windows)
+
+**Did**
+- **T0-04 (Remote Branch Triage):**
+  - Refreshed origin remote heads across all 254 branches (253 non-main).
+  - Categorized against origin/main `3658f2fa`: 37 fully merged branches (ahead = 0), 216 divergent branches (ahead > 0).
+  - Segregated divergent branches into 51 active/recent in-flight branches and 165 historical/stale archive candidates.
+  - Authored comprehensive triage audit and JSON manifest: `docs/verification/REMOTE_BRANCH_AUDIT_2026-11-16.md` and `docs/verification/REMOTE_BRANCH_AUDIT_2026-11-16.json`.
+  - Non-destructive policy strictly enforced: zero remote branches deleted, zero archive tags pushed, awaiting Babin's sign-off.
+- **T1-01 (Backup Script & Checker Verification):**
+  - Verified `scripts/backup-db.ps1`, `scripts/backup-db.mjs`, and `scripts/check-dump.mjs`.
+  - Created automated test harness `scripts/check-dump.test.mjs` verifying exit codes and failure modes on empty files, truncated transfers, missing required business tables (`bookings`, `clients`, `products`, `security_deposits`), schema-only dumps, and positive control synthetic dumps (7/7 tests pass in 552ms).
+  - Ran `scripts/backup-db.test.mjs` confirming environment variable isolation, PGPASSWORD parameterization, overwrite refusal, and credential suppression (3/3 tests pass).
+  - Authored owner-executable production backup protocol `docs/runbooks/OWNER_PRODUCTION_BACKUP_CHECKLIST.md` with zero credential leakage.
+- **T1-02 (Staging Project & Environment Isolation):**
+  - Authored staging runbook and environment isolation checklist `docs/runbooks/STAGING_PROJECT_RUNBOOK.md`.
+  - Established isolation baseline against staging project `babin-staging` (`klhmsrunqrdxjudyhnkm`), forbidding production ref (`sxguwvgoserhdolewibb`).
+  - Verified read-only 9-role staging verification harness `scripts/verify-staging-readonly.test.mjs` (7/7 tests pass in 102ms), validating money blindness and negative permissions.
+  - Specified secure staging-readiness handoff contract for Mac Agent without secrets in Git or chat.
+- **T1-03 (Migration Ledger Reconciliation):**
+  - Authored migration reconciliation report `docs/verification/MIGRATION_LEDGER_RECONCILIATION_2026-11-16.md`.
+  - Audited 235 SQL files in `supabase/migrations/` against live snapshot of 156 applied rows.
+  - Documented disposition for 7 historical renames, 2 unexplained live rows (`archive_bakery_pos_schema`, `0047_seed_tail_b917_equipment_line`), duplicate prefix `0188`, and intentional skips (`0083`, `0084`, `0175`).
+  - Formally verified zero number reuse or collision around `0232`–`0236`, confirmed `0237` planned equipment downtime, and confirmed `0240` as next free number.
+- **T1-12 (Routine Backups & Recovery Runbook):**
+  - Expanded `docs/runbooks/ROUTINE_BACKUP_AND_RESTORE.md` into comprehensive operational runbook.
+  - Established 8-week rolling retention policy, 12-month archival snapshots, and off-machine Google Drive storage.
+  - Defined error isolation protocol (`*.sql.incomplete` quarantine) and credential sanitization.
+  - Designed monthly staging disaster recovery drill log template and execution checklist.
+  - Owner gate: strictly prohibited automated cron tasks or external push without explicit owner approval.
+
+**Ruled**
+- Zero live Supabase mutations or DDL pushes (Rule N-5).
+- Zero credentials or tokens in git, logs, PR comments, or transcripts (Rule N-8).
+- Nothing deleted without non-destructive archive tagging (Law 3).
+- Remote branch deletion and tagging remain gated on Babin's sign-off (T0-04).
+- Production backup and staging restore drill remain gated on Babin's manual execution (T1-01 / T1-02).
+
+**Verified**
+- `node --test scripts/backup-db.test.mjs scripts/check-dump.test.mjs scripts/verify-staging-readonly.test.mjs`: 17/17 tests pass (603ms).
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (0 warnings, 0 errors).
+- `npm run check:pglite`: 235/235 migrations applied from scratch, 41 views checked, 199 functions pinned.
+- `npm run check:lifecycle`: 73/73 steps green.
+- `npm run check:security`: 18 Phase 0 SQL regressions passed, 14 Reset branch groups passed.
+- `node scripts/test-booking-financial-integrity.mjs`: 8/8 assertions passed in isolated PGlite.
+- `npm run test:server-contracts`: 68/68 contract assertions passed.
+- `npm run test:partial-return`: 58/58 assertions passed.
+- `node --test scripts/test-receipt.test.mjs`: 11/11 tests passed.
+- `npm run lint:ui-copy`: 0 developer text violations, 12 unit tests passed.
+- `npm run check:contrast`: 97/97 WCAG AA token contrast pairs passed.
+- `npm run build`: production bundle built successfully (dist/ generated, PWA precache 296 entries).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 104 / 104 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | -1 |
+| Lifecycle | steps green / total | 73 / 73 (100%) | -4 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 235 files · check:pglite 235/235 applied, 0 failed (recorded 2026-11-15T22:01:26.169Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-15T22:01:49.120Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Waiting on Babin for T0-04: Authorize deletion of 37 merged remote branches and approve `archive/<branch>` tagging.
+- Waiting on Babin for T1-01: Execute read-only production backup via `.\scripts\backup-db.ps1`, verify SHA-256 hash, and deposit in Google Drive.
+- Waiting on Babin for T1-02: Approve staging cost and execute restore drill into `babin-staging` (`klhmsrunqrdxjudyhnkm`).
+- Waiting on Babin for T1-03: Execute migration plan rehearsal on restored staging.
+- Waiting on Babin for T1-12: Authorize routine weekly schedule and log initial monthly restore drill.
+
 ## 2026-11-16 — Master Frontend Engineering Audit & Top 10 Remediations (Lane B)
 
 **Did**
