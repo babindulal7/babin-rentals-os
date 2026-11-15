@@ -57,6 +57,108 @@ interface ParsedDsn {
   readonly envelopeUrl: string
 }
 
+const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g
+const PHONE_REGEX = /(?:\+?977[- ]?)?(?:98\d{8}|97\d{8}|01[- ]?\d{7})/g
+const JWT_REGEX = /eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]*/g
+const TOKEN_HEADER_REGEX = /(?:Bearer\s+)[a-zA-Z0-9_\-\.]{15,}/gi
+const MONEY_PATTERN = /(?:Rs\.?|NPR|रू|रु\.?)\s*[0-9\u0966-\u096F,]+(?:\.[0-9\u0966-\u096F]{1,2})?/gi
+
+/** Redact PII (email, phone, tokens, financial amounts) from any telemetry string. */
+export function sanitizeTelemetryString(raw: string): string {
+  if (!raw || typeof raw !== 'string') return ''
+  return raw
+    .replace(JWT_REGEX, '[TOKEN_REDACTED]')
+    .replace(TOKEN_HEADER_REGEX, 'Bearer [TOKEN_REDACTED]')
+    .replace(EMAIL_REGEX, '[EMAIL_REDACTED]')
+    .replace(PHONE_REGEX, '[PHONE_REDACTED]')
+    .replace(MONEY_PATTERN, '[MONEY_REDACTED]')
+}
+
+const FORBIDDEN_CONTEXT_KEYS = new Set([
+  'phone', 'mobile', 'email', 'name', 'client_name', 'clientname', 'full_name', 'fullname',
+  'amount', 'total', 'subtotal', 'rate', 'price', 'balance', 'deposit', 'vat_amount', 'discount',
+])
+
+/** Recursively sanitize context object preventing client PII or rupee values from entering telemetry. */
+export function sanitizeContext(context?: ErrorContext): ErrorContext | undefined {
+  if (!context || typeof context !== 'object') return undefined
+  try {
+    const out: ErrorContext = {}
+    for (const [key, value] of Object.entries(context)) {
+      const lower = key.toLowerCase()
+      if (FORBIDDEN_CONTEXT_KEYS.has(lower)) {
+        out[key] = '[REDACTED]'
+        continue
+      }
+      if (typeof value === 'string') {
+        out[key] = sanitizeTelemetryString(value)
+      } else if (typeof value === 'number' || typeof value === 'boolean' || value === null) {
+        out[key] = value
+      } else if (typeof value === 'object') {
+        try {
+          out[key] = JSON.parse(sanitizeTelemetryString(JSON.stringify(value)))
+        } catch {
+          out[key] = '[Complex Object]'
+        }
+      }
+    }
+    return out
+  } catch {
+    return { sanitized: false }
+  }
+}
+
+/** Formats eventId into a human-readable 8-char reference code (e.g. REF-A1B2C3D4). */
+export function toReferenceCode(eventId: string): string {
+  const clean = eventId.replace(/[^a-f0-9]/gi, '')
+  const prefix = clean.slice(0, 8).toUpperCase()
+  return prefix ? `REF-${prefix}` : 'REF-UNKNOWN'
+}
+
+export interface StaffErrorMessage {
+  title: string
+  line: string
+  action: string
+  referenceCode: string
+}
+
+/**
+ * Transforms an unhandled error into a clean, safe single-line message for staff UI.
+ * Masks raw database errors, syntax exceptions, and internal constraint texts.
+ */
+export function formatStaffErrorMessage(err: unknown, suppliedRefCode?: string): StaffErrorMessage {
+  const refCode = suppliedRefCode || toReferenceCode(newEventId())
+  const rawMsg = err instanceof Error ? err.message : String(err || '')
+
+  // Detect raw database, gate, or internal SQL errors
+  const isDbOrGate =
+    rawMsg.includes('GATE:') ||
+    rawMsg.includes('PGRST') ||
+    /relation\s+["']?[\w\.]+["']?\s+does\s+not\s+exist/i.test(rawMsg) ||
+    /violates\s+.*constraint/i.test(rawMsg) ||
+    /\b(?:42501|42P01|23505|23514|23503)\b/.test(rawMsg) ||
+    /syntax\s+error\s+at\s+or\s+near/i.test(rawMsg) ||
+    /PostgresError/i.test(rawMsg)
+
+  if (isDbOrGate) {
+    console.error(`[StaffError] Raw system error suppressed from screen:`, err)
+    return {
+      title: 'This screen hit a system problem',
+      line: 'An unexpected database or server constraint stopped this action.',
+      action: 'Trying again in a few moments may help. If it persists, quote this reference code to support.',
+      referenceCode: refCode,
+    }
+  }
+
+  const cleanLine = sanitizeTelemetryString(rawMsg).slice(0, 160)
+  return {
+    title: 'This screen hit a problem',
+    line: cleanLine || 'An unexpected error stopped this page from rendering.',
+    action: 'Clicking "Retry" will attempt to recover the screen inline without losing offline state.',
+    referenceCode: refCode,
+  }
+}
+
 /**
  * Reads one key off Vite's env bag.
  *
@@ -200,30 +302,43 @@ export function isMonitoringEnabled(): boolean {
   return DSN !== null
 }
 
+export interface CapturedErrorInfo {
+  eventId: string
+  referenceCode: string
+}
+
 /**
  * Report a caught error.
  *
- * No-ops entirely unless `VITE_SENTRY_DSN` is set at build time. Synchronous,
- * never throws, never rejects.
+ * Sanitizes all PII, phone numbers, tokens, and rupee figures before transmission.
+ * Returns an eventId and short human reference code matching the Sentry event prefix.
  *
  * @param err     Whatever was caught — `Error`, string, or any thrown value.
  * @param context Extra facts. Ids and counts only: no client PII, no rupee
  *                amounts. See the module header.
  */
-export function captureError(err: unknown, context?: ErrorContext): void {
-  if (!DSN) return
-  if (sentCount >= MAX_EVENTS_PER_SESSION) return
+export function captureError(err: unknown, context?: ErrorContext): CapturedErrorInfo | null {
+  const eventId = newEventId()
+  const referenceCode = toReferenceCode(eventId)
+
+  if (!DSN) return { eventId, referenceCode }
+  if (sentCount >= MAX_EVENTS_PER_SESSION) return { eventId, referenceCode }
 
   try {
     const { type, value, stack } = describe(err)
+    const safeType = sanitizeTelemetryString(type)
+    const safeValue = sanitizeTelemetryString(value)
+    const safeStack = sanitizeTelemetryString(stack)
+    const safeContext = sanitizeContext(context)
 
-    const fingerprint = `${type}:${value}`
+    const fingerprint = `${safeType}:${safeValue}`
     const now = Date.now()
     const previous = lastSeen.get(fingerprint)
-    if (previous !== undefined && now - previous < DEDUPE_WINDOW_MS) return
+    if (previous !== undefined && now - previous < DEDUPE_WINDOW_MS) {
+      return { eventId, referenceCode }
+    }
     lastSeen.set(fingerprint, now)
 
-    const eventId = newEventId()
     const event = {
       event_id: eventId,
       timestamp: now / 1000,
@@ -232,11 +347,11 @@ export function captureError(err: unknown, context?: ErrorContext): void {
       logger: 'babin-rentals-os',
       environment: ENVIRONMENT,
       ...(RELEASE ? { release: RELEASE } : {}),
-      exception: { values: [{ type, value }] },
+      exception: { values: [{ type: safeType, value: safeValue }] },
       request: { url: pagePath() },
       extra: {
-        ...(stack ? { stack } : {}),
-        ...(context ?? {}),
+        ...(safeStack ? { stack: safeStack } : {}),
+        ...(safeContext ?? {}),
       },
     }
 
@@ -249,9 +364,23 @@ export function captureError(err: unknown, context?: ErrorContext): void {
 
     sentCount += 1
     post(envelope)
+    return { eventId, referenceCode }
   } catch {
     /* a report that cannot be built is dropped, never surfaced */
+    return { eventId, referenceCode }
   }
+}
+
+/**
+ * Triggers a synthetic test event for staging verification (T1-08).
+ * Contains strictly non-PII test facts to audit ingest without exposing operational data.
+ */
+export function triggerSyntheticTestError(): CapturedErrorInfo | null {
+  return captureError(new Error('SYNTHETIC_STAGING_TEST_ERROR: Stage verification event (T1-08)'), {
+    isSyntheticTest: true,
+    testVerificationCard: 'T1-08',
+    triggeredAt: new Date().toISOString(),
+  })
 }
 
 /**
