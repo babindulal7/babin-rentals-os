@@ -108,7 +108,7 @@ describe('CancelRentalModal - T3-03 Cancellation Fee Tiers', () => {
     expect(container.textContent).toContain('Cancellation Fee Policy (Option A)')
     expect(container.textContent).toContain('One rental day charge')
     expect(container.textContent).toContain('Client advance paid:Rs 6,000')
-    expect(container.textContent).toContain('Refund via reversal row (Law 4):Rs 1,000')
+    expect(container.textContent).toContain('Refund to client:Rs 1,000')
   })
 
   it('enforces override reason if fee is adjusted/waived', async () => {
