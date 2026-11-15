@@ -7869,6 +7869,207 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L72',
+  title: 'Consumables management: 3-day rental with 2 tape rolls charges 2 units, restocking appends movements, and money is masked (T3-30)',
+  expect: 'green',
+  run: async () => {
+    let productId
+    let clientId
+    let bookingId
+
+    // 1. Create a consumable product
+    await asOwnerOfTheDatabase(async () => {
+      const catId = await one('select id from inventory_categories order by name limit 1')
+      const assetCode = await one("select next_document_number('equipment')")
+      const pRes = await q(`
+        insert into products (
+          client_uuid, asset_code, name, brand, category_id, tracking_mode, status,
+          total_quantity, reorder_level, quantity_unit, unit_sale_price, daily_rate, created_by
+        ) values (
+          gen_random_uuid(), '${assetCode}', 'Pro Gaffer Tape 2in Black', 'ProTapes', '${catId}', 'Consumable', 'Active',
+          5, 10, 'roll', 500.00, 500.00, '${U.Owner}'
+        ) returning id
+      `)
+      productId = pRes.rows[0].id
+
+      const cCode = await one("select next_document_number('client')")
+      const cRes = await q(`
+        insert into clients (client_uuid, client_code, name, phone, status, created_by)
+        values (gen_random_uuid(), '${cCode}', 'Consumable Test Client', '+9779800000099', 'Active', '${U.Owner}')
+        returning id
+      `)
+      clientId = cRes.rows[0].id
+    })
+
+    // 2. Law 6 column masking on products_v: Coordinator sees unit_sale_price; Warehouse sees null
+    await as('Coordinator', async () => {
+      const row = (await q(`select unit_sale_price from products_v where id = '${productId}'`)).rows[0]
+      assertEq(Number(row.unit_sale_price), 500, 'Coordinator reads unit_sale_price on products_v')
+    })
+
+    await as('Warehouse', async () => {
+      const row = (await q(`select unit_sale_price from products_v where id = '${productId}'`)).rows[0]
+      assertEq(row.unit_sale_price, null, 'Warehouse reads NULL for unit_sale_price on products_v (Law 6)')
+    })
+
+    // 3. Low stock alerts query returns product (total_quantity 5 <= reorder_level 10)
+    await as('Warehouse', async () => {
+      const alerts = (await q(`select product_id, product_name, total_quantity, reorder_level from get_low_stock_alerts() where product_id = '${productId}'`)).rows
+      assertEq(alerts.length, 1, 'get_low_stock_alerts includes product below reorder level')
+      assertEq(alerts[0].total_quantity, 5, 'Alert reports correct current stock')
+      assertEq(alerts[0].reorder_level, 10, 'Alert reports correct reorder level')
+    })
+
+    // 4. Create a 3-day booking with 2 units of the consumable via create_booking
+    const bookingUuid = crypto.randomUUID()
+    const lineUuid = crypto.randomUUID()
+    await as('Coordinator', async () => {
+      const payload = {
+        client_uuid: bookingUuid,
+        created_by: U.Coordinator,
+        branch_id: BRANCH,
+        client_id: clientId,
+        project_name: 'Consumables Test Shoot',
+        pickup_at: '2026-12-10T10:00:00+05:45',
+        return_at: '2026-12-13T18:00:00+05:45', // 3 operational days
+        delivery_type: 'Client Pickup',
+        lines: [
+          {
+            client_uuid: lineUuid,
+            line_type: 'Equipment',
+            product_id: productId,
+            qty: 2,
+            days: 3, // 3 days requested
+            description: 'Pro Gaffer Tape 2in Black',
+          },
+        ],
+      }
+
+      const res = await q('select public.create_booking($1::jsonb) as res', [JSON.stringify(payload)])
+      bookingId = res.rows[0].res.booking_id
+      assert(bookingId, 'Booking created successfully')
+
+      // Verify line calculation in database: 2 units @ 500 = 1000 NPR, NOT 6 units (3000 NPR)
+      const lineRow = (await q(`select qty, days, rate, line_total from booking_lines_v where booking_id = '${bookingId}' and product_id = '${productId}'`)).rows[0]
+      assertEq(lineRow.qty, 2, 'Consumable line qty is 2')
+      assertEq(Number(lineRow.rate), 500, 'Consumable line rate is 500')
+      assertEq(Number(lineRow.line_total), 1000, '3-day rental with 2 tape rolls charges 1,000 NPR (2 units), NOT 3,000 NPR (6 units)')
+      assertEq(lineRow.days, 1, 'Consumable line days is 1')
+    })
+
+    // 5. Restock consumable via restock_consumable RPC
+    // Warehouse restocks: cost cannot be set by money-blind role (Law 6)
+    const whRestockUuid = crypto.randomUUID()
+    await as('Warehouse', async () => {
+      const restockRes = await q(`
+        select * from public.restock_consumable(
+          '${productId}'::uuid,
+          15,
+          'Tape Suppliers Nepal',
+          450.00,
+          current_date,
+          '${whRestockUuid}'::uuid
+        )
+      `)
+      const row = restockRes.rows[0]
+      assertEq(row.quantity_before, 5, 'Restock records quantity_before = 5')
+      assertEq(row.quantity_after, 20, 'Restock records quantity_after = 20')
+      assertEq(row.cost, null, 'Warehouse receives NULL cost from restock_consumable (Law 6)')
+    })
+
+    // Idempotent retry of same restock
+    await as('Warehouse', async () => {
+      const retryRes = await q(`
+        select * from public.restock_consumable(
+          '${productId}'::uuid,
+          15,
+          'Tape Suppliers Nepal',
+          450.00,
+          current_date,
+          '${whRestockUuid}'::uuid
+        )
+      `)
+      assertEq(retryRes.rows[0].quantity_after, 20, 'Replayed restock is idempotent and returns existing result')
+      const pStock = await one(`select total_quantity from products where id = '${productId}'`)
+      assertEq(pStock, 20, 'Product total_quantity is 20, not double-incremented')
+    })
+
+    // Manager restocks with cost: cost is recorded
+    const mgrRestockUuid = crypto.randomUUID()
+    await as('Manager', async () => {
+      const restockRes = await q(`
+        select * from public.restock_consumable(
+          '${productId}'::uuid,
+          10,
+          'Tape Suppliers Nepal',
+          450.00,
+          current_date,
+          '${mgrRestockUuid}'::uuid
+        )
+      `)
+      const row = restockRes.rows[0]
+      assertEq(row.quantity_before, 20, 'Manager restock quantity_before = 20')
+      assertEq(row.quantity_after, 30, 'Manager restock quantity_after = 30')
+      assertEq(Number(row.cost), 450, 'Manager receives cost from restock_consumable')
+    })
+
+    // Check restock movements view under Law 6
+    await as('Manager', async () => {
+      const movement = (await q(`select cost from consumable_restock_movements_v where client_uuid = '${mgrRestockUuid}'`)).rows[0]
+      assertEq(Number(movement.cost), 450, 'Manager sees restock cost on consumable_restock_movements_v')
+    })
+
+    await as('Warehouse', async () => {
+      const movement = (await q(`select cost from consumable_restock_movements_v where client_uuid = '${mgrRestockUuid}'`)).rows[0]
+      assertEq(movement.cost, null, 'Warehouse sees NULL cost on consumable_restock_movements_v (Law 6)')
+    })
+
+    // 6. Add consumable to existing booking via add_consumable_line RPC
+    const addLineUuid = crypto.randomUUID()
+    await as('Warehouse', async () => {
+      const addRes = await q(`
+        select * from public.add_consumable_line(
+          '${bookingId}'::uuid,
+          '${productId}'::uuid,
+          1,
+          '${addLineUuid}'::uuid,
+          'Added extra tape on floor'
+        )
+      `)
+      const addedRow = addRes.rows[0]
+      assertEq(addedRow.qty, 1, 'Added 1 consumable roll')
+      assertEq(addedRow.unit_price, null, 'Warehouse receives NULL unit_price from add_consumable_line (Law 6)')
+      assertEq(addedRow.line_total, null, 'Warehouse receives NULL line_total from add_consumable_line (Law 6)')
+    })
+
+    // Coordinator inspects booking lines to verify the added line
+    await as('Coordinator', async () => {
+      const addedLine = (await q(`select qty, rate, line_total, line_note from booking_lines_v where client_uuid = '${addLineUuid}'`)).rows[0]
+      assertEq(addedLine.qty, 1, 'Added line has qty 1')
+      assertEq(Number(addedLine.rate), 500, 'Added line has rate 500')
+      assertEq(Number(addedLine.line_total), 500, 'Added line total is 500')
+      assertEq(addedLine.line_note, 'Added extra tape on floor', 'Note is saved')
+    })
+
+    // Idempotent retry of add_consumable_line
+    await as('Warehouse', async () => {
+      const retryAdd = await q(`
+        select * from public.add_consumable_line(
+          '${bookingId}'::uuid,
+          '${productId}'::uuid,
+          1,
+          '${addLineUuid}'::uuid,
+          'Added extra tape on floor'
+        )
+      `)
+      assertEq(retryAdd.rows[0].qty, 1, 'Retry of add_consumable_line is idempotent')
+      const count = await one(`select count(*) from booking_lines_v where client_uuid = '${addLineUuid}'`)
+      assertEq(count, 1, 'Only one booking line exists for client_uuid')
+    })
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break

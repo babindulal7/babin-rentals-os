@@ -1,5 +1,84 @@
 # Progress Log
 
+## 2026-11-15 — T3-30: Consumables Management (Lane C)
+
+**Did**
+- **Consumable Unit Sale Pricing (T3-30, B14, B35):**
+  - Migration `0237_consumables_pricing_restock_and_low_stock.sql` claimed in `docs/plans/MIGRATION_LEDGER.md` (Next free number: `0238`):
+    - Added `products.unit_sale_price numeric(14,2)` column for consumable products.
+    - Updated `products_v` to enforce Law 6: `unit_sale_price` is masked to `NULL` for floor roles (`Warehouse`, `Technician`, `Driver`).
+    - Updated `get_model_daily_rate(uuid)` to return `unit_sale_price` when product `tracking_mode = 'Consumable'`.
+    - Updated `create_booking(jsonb)` RPC: for consumable lines, sets `v_line_days := 1` regardless of rental booking duration; calculates line amount as `qty * unit_sale_price * (1 - discount/100)`.
+    - Created append-only table `consumable_restock_movements` and view `consumable_restock_movements_v` (masks `cost` to `NULL` for floor roles under Law 6).
+    - Created `restock_consumable(p_product_id, p_qty, p_supplier, p_cost, p_received_date, p_client_uuid)` RPC: verifies actor role (`can_write_booking_desk` or `can_write_floor`), prevents negative adjustments, increments `products.total_quantity`, records movement, and provides idempotency.
+    - Created `add_consumable_line(p_booking_id, p_product_id, p_qty, p_client_uuid, p_line_note)` RPC: fetches authoritative `unit_sale_price`, verifies non-terminal booking stage, forces `days = 1`, inserts booking line idempotently via `client_uuid`, and logs audit event.
+    - Created `get_low_stock_alerts()` RPC returning consumable items at or below their `reorder_level`.
+    - Updated `get_morning_digest()` RPC to include `low_stock` consumable alerts for management.
+  - Lifecycle step `L72` added in `scripts/e2e-lifecycle.mjs`:
+    - Tests 3-day rental with 2 tape rolls charges exactly 2 units (Rs. 1,000, NOT 6 units / Rs. 3,000).
+    - Tests restock movements append-only ledger and stock increment.
+    - Tests Law 6 masking: Warehouse cannot view `unit_sale_price` or restock `cost`.
+    - Tests idempotency replay on `add_consumable_line` and `restock_consumable`.
+  - Actions and Permissions:
+    - Added `src/actions/rentals/addConsumableLine.ts` with capability `'rental.add_consumable'`.
+    - Added `src/actions/inventory/restockConsumable.ts` with capability `'inventory.restock_consumable'`.
+    - Mapped capabilities in `src/actions/core.ts` (`canWriteBookingDesk || canWriteFloor`).
+  - Core Pricing Engine Integration:
+    - Added `consumablesSubtotalPaisa` to `PricingPipelineInput` and `PricingPipelineResult` in `src/lib/pricingPipeline.ts`; consumables are subject to 13% VAT alongside rental equipment.
+    - Updated `src/lib/rentalDraftPricing.ts`: consumable lines have `effectiveDays = 1`.
+    - Updated `src/modules/rentals/booking/itemCatalogue.ts`: added `trackingMode` and `isConsumable` to `EquipmentResult`, `LiveEquipmentRow`, and `BookingLineDraft`; `equipmentLineDraft` sets `days = 1` for consumable products.
+    - Updated `src/modules/rentals/booking/useNewRentalSubmit.ts`: forces `days: 1` on consumable line creation payload.
+    - Updated `src/modules/rentals/booking/RentalLineItemsTree.tsx`: displays `1 (sale)` in Days column with tooltip; computes line amount as `qty * rate` without multiplying by rental days.
+  - UI Implementation:
+    - `src/modules/rentals/booking/AddConsumableModal.tsx`: modal to select consumables, adjust quantity (+/− stepper), add optional note, preview unit/line price (masked for floor roles), submit with idempotency `client_uuid`.
+    - `src/modules/rentals/BookingDetail.tsx`: added `+ Add Consumable` button in Equipment/Bundles block for active bookings, opening `AddConsumableModal` with auto-refresh.
+    - `src/modules/inventory/modals/RestockConsumableModal.tsx`: modal to restock consumables, enter qty, supplier, received date, and cost (cost input omitted for floor roles under Law 6).
+    - `src/modules/inventory/AssetDetail.tsx`: for Consumable tracking mode, Units tab presents `Consumable Stock & Movements`, stock warning banner if at/below reorder level, `+ Add Stock` button opening `RestockConsumableModal`, and append-only `Restock Movement History` table (cost masked for floor roles). Money tab displays `Unit Sale Price`.
+    - `src/modules/inventory/Inventory.tsx`: added "Low Stock" badge in table and card views when `trackingMode === 'Consumable' && totalQuantity <= reorderLevel`.
+    - `src/lib/queries/roleTasks.ts` & `src/modules/today/RoleTaskCockpit.tsx`: added `lowStockCount` to task metrics; renders "Low Stock Consumables" alert banner on Today for Warehouse/Technician and card for Manager/Owner.
+
+**Ruled**
+- Consumables are one-time unit sales: pricing is strictly `quantity * unit_sale_price * (1 - discount/100)`, days are fixed to 1 and never multiplied by rental duration.
+- Law 6: Floor roles (`Warehouse`, `Technician`, `Driver`) can see consumable names, quantities and restock dates, but must NEVER receive `unit_sale_price`, line monetary totals, or restock `cost` in the DOM or API payloads. Enforced in Postgres views, definer RPCs, and UI components.
+- Law 8: Idempotent writes via `client_uuid` on `add_consumable_line` and `restock_consumable`.
+- Reorder level: alerts trigger when `total_quantity <= reorder_level`, surfaced on Inventory badges, Today cockpit alert banner, and morning digest.
+
+**Verified**
+- `npm run check:pglite`: 234/234 applied, 0 failed.
+- `npm run check:lifecycle`: 73/73 green, 0 failed (Step L72 verified).
+- `node scripts/test-booking-financial-integrity.mjs`: PASSED.
+- `npm run check:security`: PASSED (18 Astra Phase 0 SQL regressions, operations branch grants, reset branch boundary, glossary revisions).
+- `npm run test:server-contracts`: PASSED (68/68 integration assertions).
+- `npm run test:partial-return`: PASSED (58/58 partial return assertions).
+- `npm test`: 611 test files passed, 7141 tests passed.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 warnings, 0 errors (`eslint src --max-warnings 0`).
+- `npm run test:local-api-guards`: PASSED.
+- `node --test scripts/test-receipt.test.mjs`: PASSED (11/11 tests).
+- `npm run lint:shell`: PASSED (881 files checked).
+- `npm run lint:ui-copy`: PASSED (0 developer text violations, 12 tests passed).
+- `npm run check:contrast`: PASSED (97/97 pass, 0 fail).
+- `npm run build`: PASSED (Vite production build, PWA service worker generated).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 104 / 104 (100%) | +2 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 85 / 85 (100%) | +2 |
+| Lifecycle | steps green / total | 73 / 73 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 234 files · check:pglite 234/234 applied, 0 failed (recorded 2026-11-15T10:55:34.982Z). Suite: Historical suite: 7141/7141 passed, 0 failed (recorded 2026-11-15T10:44:21.432Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-15T10:55:54.557Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T3-30 complete on `lane-c/T3-30-consumables-unit-price-add-at-the`; awaits PR review and merge by Babin.
+- T2-20 (Consumables checkout & intake verification on the floor) is unblocked and can safely begin.
+
 ## 2026-11-10 — T3-17: Extend in two taps (Lane C)
 
 **Did**
