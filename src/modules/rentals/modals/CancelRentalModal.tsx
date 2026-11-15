@@ -316,7 +316,7 @@ export function CancelRentalModal({
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Customer advance paid:</span>
+                  <span>Client advance paid:</span>
                   <span className="finance-mono">{formatMoney(resolvedAdvance)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
