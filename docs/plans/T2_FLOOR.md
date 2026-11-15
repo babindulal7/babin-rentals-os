@@ -390,7 +390,7 @@ cannot complete until signed or the refusal is recorded; 3) the signature is on 
 4) Warehouse and Technician can do it; 5) screen check.
 **Needs** — T2-02 (done), T2-18 (damage photo per flagged unit).
 
-### T2-20 · Floor adds consumables at Pack and Handover            status: todo · size: S · lane A · [go-live] · slips first
+### T2-20 · Floor adds consumables at Pack and Handover            status: ready — awaiting merge (lane-a/T2-20-floor-adds-consumables-at-pack-and) · size: S · lane A · [go-live] · slips first
 **What** — On Pack and Handover, "**Add consumables**" lists the consumable products (tape, gels,
 batteries) with a quantity stepper (B35). Adding writes a consumable line to the booking through
 T3-30's action: the price comes from the server and floor roles never receive it (Law 6). Stock goes

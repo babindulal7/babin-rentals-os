@@ -24,6 +24,7 @@ export interface AddConsumableModalProps {
   userId: string
   userRole: SystemRole
   onAdded?: () => void
+  defaultNote?: string
 }
 
 export function AddConsumableModal({
@@ -33,6 +34,7 @@ export function AddConsumableModal({
   userId,
   userRole,
   onAdded,
+  defaultNote,
 }: AddConsumableModalProps) {
   const { showSuccessToast } = useToast()
   const isMoney = canViewMoney(userRole)
@@ -41,7 +43,7 @@ export function AddConsumableModal({
   const [loadingProducts, setLoadingProducts] = useState(false)
   const [selectedProductId, setSelectedProductId] = useState<string>('')
   const [qty, setQty] = useState<number>(1)
-  const [note, setNote] = useState<string>('')
+  const [note, setNote] = useState<string>(() => defaultNote ?? '')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // Law 8: Idempotency client UUID preserved across retry attempts for the same action
@@ -49,6 +51,9 @@ export function AddConsumableModal({
 
   useEffect(() => {
     if (!isOpen) return
+    if (defaultNote !== undefined) {
+      setNote(defaultNote)
+    }
     let active = true
     setLoadingProducts(true)
     setError(null)
@@ -88,7 +93,7 @@ export function AddConsumableModal({
     return () => {
       active = false
     }
-  }, [isOpen])
+  }, [isOpen, defaultNote])
 
   const selectedProduct = products.find((p) => p.id === selectedProductId)
 

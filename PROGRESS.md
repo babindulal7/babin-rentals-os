@@ -1,5 +1,62 @@
 # Progress Log
 
+## 2026-11-15 — T2-20: Floor adds consumables at Pack and Handover (Lane A)
+
+**Did**
+- **Floor Consumables at Pack and Handover (T2-20, B35, B14):**
+  - Integrated `AddConsumableModal` into `src/modules/rentals/PackingWorkspace.tsx`:
+    - Added "Add Consumables" button in checklist card action header for both desktop and mobile viewports.
+    - Wired modal with `bookingId`, authenticated user ID and role, and default floor note: `Added by <name> at Pack`.
+    - Triggers workspace reload on successful submission so newly added consumable lines appear immediately.
+  - Integrated `AddConsumableModal` into `src/modules/rentals/HandoverWorkspace.tsx`:
+    - Added "Add Consumables" button alongside existing action buttons ("Mark Ready Picked Up", "Scan Barcode", "Field Delivery") across desktop and phone layouts.
+    - Wired modal with default floor note: `Added by <name> at Handover`.
+    - Auto-reloads workspace on addition.
+  - Enhanced `src/modules/rentals/booking/AddConsumableModal.tsx`:
+    - Added `defaultNote?: string` prop and synced with `note` state via `useEffect([isOpen, defaultNote])`.
+  - Added dedicated integration test suite `src/modules/rentals/__tests__/FloorConsumables.test.tsx` (5 tests):
+    - Asserts PackingWorkspace renders "Add Consumables" button.
+    - Asserts HandoverWorkspace renders "Add Consumables" button.
+    - Asserts Law 6 money blindness: `Warehouse` and `Technician` see consumable product names, quantities, and stock, but zero prices, rates, or line totals in DOM.
+    - Asserts desk/owner roles (`Owner`, `Admin`, `Manager`, `Coordinator`) see pricing breakdown and line totals.
+    - Asserts action dispatch calls `addConsumableLine` with booking ID, product ID, quantity, and floor note.
+
+**Ruled**
+- Floor roles (`Warehouse`, `Technician`) can add consumables to active bookings during Pack or Handover.
+- Law 6: Floor roles never receive unit prices or line money totals in the DOM or payloads.
+- Stock deduction happens at Handover via existing consumable checkout mechanics.
+- Added lines record the floor actor name and phase (`Added by <name> at Pack/Handover`) for desk audit before final invoice generation.
+
+**Verified**
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 warnings, 0 errors (`eslint src --max-warnings 0`).
+- `npm run check:pglite`: 235/235 migrations applied, 0 failed.
+- `npm run check:lifecycle`: 73/73 steps green, 0 failed.
+- `npm test src/modules/rentals/__tests__/FloorConsumables.test.tsx`: 5/5 tests passed (1160ms).
+- `npm run build`: PASSED (Vite production bundle generated, PWA service worker precached).
+
+### Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 104 / 104 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 85 / 85 (100%) | +0 |
+| Lifecycle | steps green / total | 73 / 73 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 235 files · check:pglite 235/235 applied, 0 failed (recorded 2026-11-15T15:51:06.022Z). Suite: NOT VERIFIED — focused or unspecified run: 5/5 passed, 0 failed (recorded 2026-11-15T15:53:02.684Z).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-15T15:51:37.069Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T2-20 complete on `lane-a/T2-20-floor-adds-consumables-at-pack-and`; ready for review and local merge by Babin.
+- T3-30 complete on `lane-c/T3-30-consumables-unit-price-add-at-the`; ready for review and local merge by Babin.
+- Next safe floor cards in Lane A: T2-19 (Signature at Return when unit flagged) or T2-21 (Planned downtime with a reason).
+
 ## 2026-11-15 — T3-30: Consumables Management (Lane C)
 
 **Did**
