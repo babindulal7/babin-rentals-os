@@ -1,12 +1,17 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Modal } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Button'
 import { useAuth } from '../../../lib/auth'
 import { useToast } from '../../../components/ui/Toast'
-import { newClientUuid } from '../../../lib/supabase'
+import { newClientUuid, supabase } from '../../../lib/supabase'
 import { cancelRental } from '../../../actions/rentals/cancelRental'
 import { formatGateError } from '../../../lib/gates'
 import type { BookingStatus } from '../../../lib/workflow'
+import {
+  calculateOptionACancellationFee,
+  type CancellationFeeCalculationResult,
+} from '../../../lib/queries/cancellationFeeTiers'
+import { formatMoney, rupees, toRupees, type Paisa } from '../../../lib/money'
 
 export interface CancelRentalModalProps {
   isOpen: boolean
@@ -15,6 +20,12 @@ export interface CancelRentalModalProps {
   bookingId: string
   bookingNo: string
   stage: BookingStatus | string
+  startsAt?: string | null | undefined
+  endsAt?: string | null | undefined
+  rentalDays?: number | null | undefined
+  rentalSubtotalPaisa?: Paisa | null | undefined
+  oneDayChargePaisa?: Paisa | null | undefined
+  paidAdvancePaisa?: Paisa | null | undefined
 }
 
 export function CancelRentalModal({
@@ -24,6 +35,12 @@ export function CancelRentalModal({
   bookingId,
   bookingNo,
   stage,
+  startsAt,
+  endsAt: _endsAt,
+  rentalDays,
+  rentalSubtotalPaisa,
+  oneDayChargePaisa,
+  paidAdvancePaisa,
 }: CancelRentalModalProps) {
   const { user } = useAuth()
   const { showSuccessToast } = useToast()
@@ -32,9 +49,101 @@ export function CancelRentalModal({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const [fetchedBooking, setFetchedBooking] = useState<{
+    startsAt: string | null
+    endsAt: string | null
+    rentalDays: number
+    rentalSubtotalPaisa: Paisa
+    paidAdvancePaisa: Paisa
+  } | null>(null)
+
+  const [overrideFee, setOverrideFee] = useState(false)
+  const [customFeeRupees, setCustomFeeRupees] = useState<number>(0)
+  const [feeOverrideReason, setFeeOverrideReason] = useState('')
+
   const trimmedReason = reason.trim()
   const isReasonValid = trimmedReason.length >= 10
   const isPacked = stage === 'Packed'
+
+  // Fetch booking details if not provided via props
+  useEffect(() => {
+    if (!isOpen || startsAt !== undefined || bookingId === 'draft-new') return
+
+    let cancelled = false
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from('bookings')
+          .select('starts_at, ends_at, rental_days, total_amount, paid_amount')
+          .eq('id', bookingId)
+          .maybeSingle()
+
+        if (!cancelled && data) {
+          const row = data as unknown as {
+            starts_at: string | null
+            ends_at: string | null
+            rental_days: number | null
+            total_amount: number | null
+            paid_amount: number | null
+          }
+          setFetchedBooking({
+            startsAt: row.starts_at,
+            endsAt: row.ends_at,
+            rentalDays: row.rental_days ?? 1,
+            rentalSubtotalPaisa: (row.total_amount ?? 0) as Paisa,
+            paidAdvancePaisa: (row.paid_amount ?? 0) as Paisa,
+          })
+        }
+      } catch {
+        // Fallback to defaults
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, startsAt, bookingId])
+
+  const resolvedStartsAt = startsAt ?? fetchedBooking?.startsAt ?? null
+  const resolvedRentalDays = rentalDays ?? fetchedBooking?.rentalDays ?? 1
+  const resolvedSubtotal: Paisa = (rentalSubtotalPaisa ?? fetchedBooking?.rentalSubtotalPaisa ?? (0 as Paisa)) as Paisa
+  const resolvedAdvance: Paisa = (paidAdvancePaisa ?? fetchedBooking?.paidAdvancePaisa ?? (0 as Paisa)) as Paisa
+  const resolvedOneDay: Paisa =
+    (oneDayChargePaisa ??
+      (resolvedRentalDays > 0 ? Math.round(resolvedSubtotal / resolvedRentalDays) : resolvedSubtotal)) as Paisa
+
+  const hoursUntilStart = useMemo(() => {
+    if (!resolvedStartsAt) return 0
+    const startMs = new Date(resolvedStartsAt).getTime()
+    return Math.max(0, (startMs - Date.now()) / (1000 * 60 * 60))
+  }, [resolvedStartsAt])
+
+  const feeCalc: CancellationFeeCalculationResult | null = useMemo(() => {
+    if (!resolvedStartsAt || stage === 'Closed' || stage === 'Cancelled') return null
+    return calculateOptionACancellationFee({
+      hoursUntilStart,
+      rentalDays: resolvedRentalDays,
+      rentalSubtotalBeforeVatPaisa: resolvedSubtotal,
+      oneDayChargePaisa: resolvedOneDay,
+      paidAdvancePaisa: resolvedAdvance,
+    })
+  }, [resolvedStartsAt, stage, hoursUntilStart, resolvedRentalDays, resolvedSubtotal, resolvedOneDay, resolvedAdvance])
+
+  useEffect(() => {
+    if (feeCalc) {
+      setCustomFeeRupees(toRupees(feeCalc.suggestedFeePaisa))
+    }
+  }, [feeCalc])
+
+  const effectiveFeePaisa: Paisa = overrideFee ? rupees(customFeeRupees) : (feeCalc?.suggestedFeePaisa ?? (0 as Paisa))
+  const isOverridden = Boolean(feeCalc && effectiveFeePaisa !== feeCalc.suggestedFeePaisa)
+
+  const refundPaisa: Paisa = useMemo(() => {
+    if (resolvedAdvance > 0) {
+      return (resolvedAdvance >= effectiveFeePaisa ? resolvedAdvance - effectiveFeePaisa : 0) as Paisa
+    }
+    return 0 as Paisa
+  }, [resolvedAdvance, effectiveFeePaisa])
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
@@ -44,6 +153,10 @@ export function CancelRentalModal({
     }
     if (!isReasonValid) {
       setError('A cancellation reason of at least 10 characters is required.')
+      return
+    }
+    if (isOverridden && feeOverrideReason.trim().length < 10) {
+      setError('An override reason of at least 10 characters is required when adjusting the cancellation fee.')
       return
     }
     if (!confirmed) {
@@ -61,6 +174,8 @@ export function CancelRentalModal({
           id: bookingId,
           reason: trimmedReason,
           clientUuid,
+          cancellationFeePaisa: effectiveFeePaisa,
+          feeOverrideReason: isOverridden ? feeOverrideReason.trim() : null,
         },
         { userId: user.id, role: user.role },
       )
@@ -93,7 +208,12 @@ export function CancelRentalModal({
           <Button
             variant="danger"
             onClick={() => handleSubmit()}
-            disabled={isSubmitting || !isReasonValid || !confirmed}
+            disabled={
+              isSubmitting ||
+              !isReasonValid ||
+              !confirmed ||
+              Boolean(isOverridden && feeOverrideReason.trim().length < 10)
+            }
           >
             {isSubmitting ? 'Cancelling…' : 'Cancel Booking'}
           </Button>
@@ -128,19 +248,160 @@ export function CancelRentalModal({
           }}
         >
           <strong style={{ color: 'var(--text)', display: 'block', marginBottom: 4 }}>
-            {/* Law 3 & Inventory Allocation */}Inventory Allocation </strong>
+            Inventory Allocation
+          </strong>
           Cancelling will immediately release all reserved equipment and inventory allocations for{' '}
           <span style={{ color: 'var(--text)', fontWeight: 600 }}>{bookingNo}</span>. This action is irreversible.
         </div>
+
+        {/* Cancellation Fee Policy (Option A — Ruling 2 Nov 2026) */}
+        {feeCalc && (
+          <div
+            style={{
+              padding: '12px 14px',
+              borderRadius: 'var(--r-btn)',
+              background: 'var(--card2)',
+              border: '1px solid var(--border)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+              fontSize: 'var(--t-meta)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontWeight: 600, color: 'var(--text)' }}>
+                Cancellation Fee Policy (Option A)
+              </span>
+              <span
+                style={{
+                  fontSize: 'var(--t-caption)',
+                  color: feeCalc.isFree ? 'var(--st-completed-fg)' : 'var(--chip-amber-fg)',
+                  fontWeight: 600,
+                }}
+              >
+                {feeCalc.isFree ? 'Free' : 'Fee applies'}
+              </span>
+            </div>
+
+            <div style={{ color: 'var(--muted)', fontSize: 'var(--t-caption)' }}>
+              {feeCalc.tierDescription} · {feeCalc.feeRateDescription}
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                justifyContent: 'space-between',
+                paddingTop: 4,
+                borderTop: '1px solid var(--border)',
+              }}
+            >
+              <span style={{ color: 'var(--text2)' }}>Suggested cancellation fee:</span>
+              <span className="finance-mono" style={{ fontWeight: 700, fontSize: 'var(--t-ui)', color: 'var(--text)' }}>
+                {formatMoney(feeCalc.suggestedFeePaisa)}
+              </span>
+            </div>
+
+            {resolvedAdvance > 0 && (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4,
+                  fontSize: 'var(--t-caption)',
+                  color: 'var(--muted)',
+                  background: 'var(--card)',
+                  padding: '8px 10px',
+                  borderRadius: 'var(--r-sm)',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Customer advance paid:</span>
+                  <span className="finance-mono">{formatMoney(resolvedAdvance)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Fee deducted:</span>
+                  <span className="finance-mono">{formatMoney(effectiveFeePaisa)}</span>
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    fontWeight: 600,
+                    color: refundPaisa > 0 ? 'var(--st-completed-fg)' : 'var(--text)',
+                  }}
+                >
+                  <span>Refund via reversal row (Law 4):</span>
+                  <span className="finance-mono">{formatMoney(refundPaisa)}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Staff override / waiver */}
+            <div style={{ marginTop: 4, paddingTop: 6, borderTop: '1px dashed var(--border)' }}>
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  fontSize: 'var(--t-caption)',
+                  color: 'var(--text2)',
+                  cursor: 'pointer',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={overrideFee}
+                  onChange={(e) => setOverrideFee(e.target.checked)}
+                />
+                <span>Waive or adjust cancellation fee (Manager / Coordinator)</span>
+              </label>
+
+              {overrideFee && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 'var(--t-caption)', color: 'var(--muted)' }}>Adjusted fee (Rs):</span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={customFeeRupees}
+                      onChange={(e) => setCustomFeeRupees(Math.max(0, Number(e.target.value) || 0))}
+                      style={{
+                        padding: '4px 8px',
+                        width: 120,
+                        borderRadius: 'var(--r-btn)',
+                        border: '1px solid var(--border)',
+                        background: 'var(--card)',
+                        color: 'var(--text)',
+                        fontSize: 'var(--t-meta)',
+                      }}
+                    />
+                  </div>
+
+                  <input
+                    placeholder="Reason for waiving/adjusting fee (min 10 characters)..."
+                    value={feeOverrideReason}
+                    onChange={(e) => setFeeOverrideReason(e.target.value)}
+                    style={{
+                      padding: '6px 10px',
+                      borderRadius: 'var(--r-btn)',
+                      border: '1px solid var(--border)',
+                      background: 'var(--card)',
+                      color: 'var(--text)',
+                      fontSize: 'var(--t-meta)',
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {isPacked && (
           <div
             style={{
               padding: '8px 12px',
               borderRadius: 'var(--r-btn)',
-              /* §21 — soft caution callout uses the canonical chip-amber pair,
-                 themed in both modes; the rgba(234,179,8) literal stayed
-                 light-mode yellow under the dark theme. */
               background: 'var(--chip-amber-bg)',
               border: '1px solid color-mix(in srgb, var(--chip-amber-fg) 35%, transparent)',
               color: 'var(--text)',

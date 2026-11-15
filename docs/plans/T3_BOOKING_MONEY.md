@@ -49,7 +49,7 @@ nothing under it); build the editor in it. Its two `// @ts-ignore` lines fail `n
 until Claude's `fix-red-checks.patch` (31 Oct) or this card removes them.
 **Needs** — none. Data entry: BABIN_ACTIONS (staff, December).
 
-### T3-03 · Cancellation fee tiers            status: todo · size: M · lane C + Babin
+### T3-03 · Cancellation fee tiers            status: ready — awaiting merge (lane-c/T3-03-cancellation-fee-tiers) · size: M · lane C + Babin
 **What** — Implement the **2 Nov owner-approved Option A** in Settings ▸ Financial ▸ "Cancellation fees" and the Cancel Rental dialog. **Do not apply the previous unapproved notice-only/50%-duration-only guesses.** For confirmed, pre-start bookings:
 
 | Time before scheduled rental start | 1–2 rental days | >2 rental days |

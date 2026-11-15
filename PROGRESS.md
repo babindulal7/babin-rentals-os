@@ -1,5 +1,49 @@
 # Progress Log
 
+## 2026-11-15 — T3-03: Implement Option A cancellation fee tiers policy
+
+**Did**
+- Implemented owner-approved Option A cancellation fee engine in `src/lib/queries/cancellationFeeTiers.ts`:
+  - >48h before rental start: Free cancellation for all durations.
+  - 24–48h before rental start: Free for 1–2 rental days; 50% of equipment rental subtotal before VAT for >2 rental days.
+  - <=24h before rental start: 1 rental day charge for 1–2 rental days; max(1 rental day charge, 50% rental subtotal) for >2 rental days.
+  - Accurate advance refund and balance owed calculation per Law 4 (reversal rows for customer advance in excess of cancellation fee).
+- Updated `src/modules/settings/sections/CancellationFeeTiersCard.tsx` with clean responsive matrix table presenting the Owner-approved Option A schedule and policy notes (fee base before VAT per Ruling O-13, staff override accountability, reversal row refunds per Law 4, statutory notes per Ruling O-7).
+- Extended `CancelRentalInput` in `src/actions/rentals/cancelRental.ts` to accept `cancellationFeePaisa` and `feeOverrideReason`, embedding structured audit details into the cancellation RPC reason and domain event payload.
+- Wired Option A fee policy card into `src/modules/rentals/modals/CancelRentalModal.tsx`, providing live fee suggestion, advance deduction/refund breakdown, and coordinator+ override/waiver with mandatory recorded reason (>= 10 chars).
+- Created comprehensive unit and modal tests: `src/lib/__tests__/cancellationFeeTiers.test.ts` (7 tests), `src/modules/rentals/modals/__tests__/CancelRentalModal.tiers.test.tsx` (3 tests), and verified existing `CancelRentalModal.test.tsx` (5 tests).
+
+**Ruled**
+- Implemented Owner-approved Option A ruling of 2 Nov 2026 (`RULINGS-2026-11-02-OWNER.md`).
+- Fee base strictly uses equipment rental subtotal before VAT per Ruling O-13.
+- In line with Ruling O-7, tax treatment on cancellation fees awaits final accountant determination; charges are displayed pre-VAT.
+- Any advance refunded to client is preserved as an immutable reversal row per Law 4.
+
+**Verified**
+- `npm test src/lib/__tests__/cancellationFeeTiers.test.ts src/modules/rentals/modals/__tests__/CancelRentalModal.test.tsx src/modules/rentals/modals/__tests__/CancelRentalModal.tiers.test.tsx`: 15/15 tests passing.
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (`eslint src --max-warnings 0` exit 0).
+- `npm run lint:progress`: exit 0.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 233 files · check:pglite Historical, incomplete or failed receipt (2026-11-14T20:12:32.101Z); current source NOT VERIFIED. Suite: Historical suite: 15/15 passed, 0 failed (recorded 2026-11-15T08:55:19.301Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 7117/7117 passed, 0 failed (recorded 2026-11-14T20:14:37.763Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-14T20:12:57.012Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Await accountant ruling on VAT treatment for cancellation fee tax invoices (O-7).
+- Next card in batch: T3-06 (Invoice and Agreement Documents).
+
 ## 2026-11-10 — T3-17: Extend in two taps (Lane C)
 
 **Did**
