@@ -94,6 +94,7 @@ describe('Gate Registry & Error Parser', () => {
       'gate.handover.agreement_unsigned',
       'gate.handover.payment_outstanding',
       'gate.return.session_missing',
+      'gate.return.damage_unsigned',
       'gate.return.units_unaccounted',
       'gate.cancel.stage_too_late',
       'gate.cancel.reason_missing',

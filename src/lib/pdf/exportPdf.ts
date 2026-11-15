@@ -346,7 +346,31 @@ export async function exportReturnReportPdf(
   const safeName = sanitizePathSegment(returnData.documentNo || `RETURN_REPORT_${safeBookingNo}`)
   const filename = options.filename || `${safeName}.pdf`
 
-  const bytes = generateReturnReportPdf(returnData)
+  const acknowledgements = await Promise.all((returnData.acknowledgements ?? []).map(async ack => {
+    if (!ack.signatureUrl || ack.signatureImage) return ack
+    const image = new Image()
+    image.crossOrigin = 'anonymous'
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve()
+      image.onerror = () => reject(new Error('The stored Return signature image could not be loaded for printing.'))
+      image.src = ack.signatureUrl ?? ''
+    })
+    const canvas = document.createElement('canvas')
+    canvas.width = 600
+    canvas.height = Math.max(1, Math.min(600, Math.round(image.naturalHeight * 600 / image.naturalWidth)))
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('The Return signature could not be prepared for printing.')
+    context.fillStyle = '#ffffff'
+    context.fillRect(0, 0, canvas.width, canvas.height)
+    context.drawImage(image, 0, 0, canvas.width, canvas.height)
+    const rgba = context.getImageData(0, 0, canvas.width, canvas.height).data
+    const hex: string[] = []
+    for (let index = 0; index < rgba.length; index++) {
+      if (index % 4 !== 3) hex.push((rgba[index] ?? 0).toString(16).padStart(2, '0'))
+    }
+    return { ...ack, signatureImage: { hex: hex.join(''), width: canvas.width, height: canvas.height } }
+  }))
+  const bytes = generateReturnReportPdf({ ...returnData, acknowledgements })
   const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
 
   let storagePath: string | undefined

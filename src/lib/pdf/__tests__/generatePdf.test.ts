@@ -343,6 +343,21 @@ describe('generatePdf', () => {
   })
 
   describe('generateReturnReportPdf (T2-08, Return report)', () => {
+    it('prints stored signature images and refusal records on separate acknowledgement pages', () => {
+      const bytes = generateReturnReportPdf({ bookingNo: 'BK-ACK', clientName: 'Film Crew', totalUnits: 1, returnedUnits: 0, missingUnits: 1, damagedUnits: 0, photosCount: 1, lines: [],
+        acknowledgements: [
+          { sessionId: 'signed-session', returningName: 'Courier', recordedAt: '2026-11-08T04:00:00Z', refusalReason: null, signatureImage: { width: 1, height: 1, hex: '000000' } },
+          { sessionId: 'refused-session', returningName: 'Crew member', recordedAt: '2026-11-08T05:00:00Z', refusalReason: 'Declined after reviewing the flagged items' },
+        ],
+      })
+      const text = new TextDecoder().decode(bytes)
+      expect(text).toContain('/Count 3')
+      expect(text).toContain('/Subtype /Image')
+      expect(text).toContain('/Signature Do')
+      expect(text).toContain('Returned by Courier for Film Crew')
+      expect(text).toContain('Refused to sign: Declined after reviewing the flagged items')
+      expect(text).toContain('/Kids [3 0 R 8 0 R 11 0 R]')
+    })
     it('generates a valid, money-blind A4 return report PDF with outcomes and evidence photo counts', () => {
       const data: ReturnReportPdfData = {
         bookingNo: 'BK-2026-0088',
@@ -387,8 +402,8 @@ describe('generatePdf', () => {
       expect(text).toContain('Damaged')
       expect(text).toContain('Missing')
       expect(text).toContain('Service / Repair')
-      expect(text).toContain('Inspected By')
-      expect(text).toContain('Returned By')
+      expect(text).toContain('Inspector: Ramesh Karki')
+      expect(text).toContain('No stored flagged-item acknowledgement')
       expect(text.trimEnd().endsWith('%%EOF')).toBe(true)
 
       // Strict money-blindness (Law 6)

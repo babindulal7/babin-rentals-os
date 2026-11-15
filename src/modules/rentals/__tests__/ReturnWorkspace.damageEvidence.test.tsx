@@ -91,6 +91,8 @@ describe('Return damage evidence for individual units (T2-18)', () => {
         'assignment-2': { state: 'Returned', condition: 'Damaged', damageDescription: 'Loose lens mount' },
       },
       scanLog: [], sessionNotes: '', returningName: 'Courier',
+      refusedToSign: true,
+      refusalReason: 'Damage verified on set and courier refused signature',
       sigReturning: { name: 'Courier', atIso: '2026-10-25T00:15:00Z' },
       sigWarehouse: { name: 'Operator', atIso: '2026-10-25T00:16:00Z' },
     })

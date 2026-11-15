@@ -333,7 +333,21 @@ export async function handleSendEmail(req: Request): Promise<Response> {
       })
     }
 
-    const emailHtml = renderEmailHtml(payload, language)
+    let emailHtml = renderEmailHtml(payload, language)
+    if (payload.template_id === 'damage_notice' && payload.data?.returned_by) {
+      const escapeValue = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character] ?? character)
+      let acknowledgement = `<p>Returned by ${escapeValue(payload.data.returned_by)}. `
+      if (payload.data.signature_refusal_reason) {
+        acknowledgement += `Refused to sign: ${escapeValue(payload.data.signature_refusal_reason)}</p>`
+      } else if (payload.data.signature_storage_path) {
+        const { data: image, error: imageError } = await adminClient.storage.from('evidence').createSignedUrl(String(payload.data.signature_storage_path), 604800)
+        if (imageError || !image?.signedUrl) throw new Error('The stored Return signature could not be opened for the damage notice.')
+        acknowledgement += `Signed flagged items acknowledgement.</p><img src="${escapeValue(image.signedUrl)}" alt="Returning person signature" width="300" />`
+      } else {
+        acknowledgement += 'The returning person signed the flagged items acknowledgement.</p>'
+      }
+      emailHtml = emailHtml.replace('</body>', `${acknowledgement}</body>`)
+    }
     const subject = payload.subject || 'Notification from Babin Rentals'
 
     // Dispatch via Provider (e.g. Resend) or Mock

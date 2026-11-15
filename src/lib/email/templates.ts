@@ -84,6 +84,7 @@ export function renderEmailHtml(payload: EmailPayloadData, language = 'en'): str
           <p style="margin:4px 0;color:#991b1b;"><strong>Status:</strong> Under Technical Review</p>
           <p style="margin:4px 0;">Our workshop is assessing the equipment. No charges are applied until formal review is concluded.</p>
         </div>
+        ${data['returned_by'] ? `<p>Returned by ${escapeEmailValue(data['returned_by'])}. ${data['signature_refusal_reason'] ? `Refused to sign: ${escapeEmailValue(data['signature_refusal_reason'])}` : 'The returning person signed the flagged items acknowledgement.'}</p>` : ''}
         <p>We will contact you with any further updates once assessment completes.</p>
       `
       break
@@ -286,4 +287,8 @@ export function renderEmailHtml(payload: EmailPayloadData, language = 'en'): str
     </body>
     </html>
   `.trim()
+}
+
+function escapeEmailValue(value: unknown): string {
+  return String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character] ?? character)
 }

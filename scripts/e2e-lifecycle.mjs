@@ -904,7 +904,13 @@ const STEPS = [
           }
         })
         await savePhoto(UNITS[1])
-        await as('Warehouse', () => q(complete, [session]))
+        await as('Warehouse', async () => {
+          await q(
+            `select record_return_acknowledgement($1, gen_random_uuid(), 'Returning Person', null, 'Damage verified and refused signature on site')`,
+            [session],
+          )
+          await q(complete, [session])
+        })
         assertEq(await one('select state from operation_sessions where id = $1', [session]), 'Completed', 'both unit photos allow completion')
       } finally {
         await db.exec('rollback')
@@ -7302,7 +7308,6 @@ STEPS.push({
   },
 })
 
-
 STEPS.push({
   id: 'L65',
   title: 'Bulk edit products: rates by % is Owner-only, rounded to whole rupees, Manager refused, Warehouse money column refused, re-sent batch idempotent (T4-12, B32, B33, 0226)',
@@ -7403,10 +7408,6 @@ STEPS.push({
     })
   },
 })
-
-
-/* ΓöÇΓöÇ Run ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
-
 
 STEPS.push({
   id: 'L66',
@@ -7865,6 +7866,157 @@ STEPS.push({
       const coordDocs = (await q(`select id, document_no, document_type from document_registry where id = '${proFormaDocId}'`)).rows
       assertEq(coordDocs.length, 1, 'Coordinator can view Pro Forma document in document_registry')
       assertEq(coordDocs[0].document_type, 'Pro Forma', 'Document type is Pro Forma')
+    })
+  },
+})
+
+
+STEPS.push({
+  id: 'L72',
+  title: 'Return damage acknowledgement: clean, signed, refused, role/branch scope, immutable replay (T2-19/B19)',
+  expect: 'green',
+  async run() {
+    await undone(async () => {
+      await as('Coordinator', () => createBooking({ key: 'l72', actor: 'Coordinator',
+        window: ['2099-12-20T04:00:00Z','2099-12-22T04:00:00Z'],
+        lines: [{ productId: SERIAL_PRODUCT, description: 'Return acknowledgement camera', qty: 1, days: 2, rate: 0, units: [UNITS[0]] }] }))
+      await transition('l72','Quote','Booked','Coordinator')
+      await as('Warehouse', () => actionPackRental({ key: 'l72', actor: 'Warehouse', units: [UNITS[0]] }))
+      await as('Warehouse', () => actionHandoverRental({ key: 'l72', actor: 'Warehouse' }))
+      const bookingId=bookingIds.l72
+      const lineId=await one('select id from booking_lines where booking_id=$1 limit 1',[bookingId])
+      const sessionId=crypto.randomUUID(), key=crypto.randomUUID(), completionKey=crypto.randomUUID()
+      await as('Warehouse', async () => {
+        await q(`insert into operation_sessions(id,client_uuid,booking_id,operation,session_no,state,warehouse_staff_id,created_by)
+          values($1,gen_random_uuid(),$2,'Return',1,'In Progress',$3,$3)`,[sessionId,bookingId,U.Warehouse])
+        await q('select claim_return_session($1,$2)',[sessionId,completionKey])
+        assertEq(await one('select client_uuid from operation_sessions where id=$1',[sessionId]),completionKey,'photo-first session adopts the stable completion request')
+        await q('savepoint unit_flag_without_line_pointer')
+        await q(`insert into return_lines(client_uuid,booking_line_id,state,qty_expected,returned_at,condition,inspection_state,inspected_at,inspected_by,created_by)
+          values(gen_random_uuid(),$1,'Returned',1,now(),'Good','Inspected',now(),$2,$2)`,[lineId,U.Warehouse])
+        await q(`update booking_line_units set returned_at=now(),return_session_id=$2,condition='Damaged',unit_state='Returned'
+          where booking_line_id=$1 and asset_id=$3`,[lineId,sessionId,UNITS[0]])
+        await q('savepoint unsigned_unit_probe')
+        try {
+          await refuses('a damaged unit receipt cannot hide behind a clean unbound line',
+            `update operation_sessions set state='Completed' where id=$1`,[sessionId],/return.damage_unsigned/)
+        } finally { await q('rollback to savepoint unsigned_unit_probe'); await q('release savepoint unsigned_unit_probe') }
+        await q('rollback to savepoint unit_flag_without_line_pointer'); await q('release savepoint unit_flag_without_line_pointer')
+        await q(`insert into return_lines(client_uuid,booking_line_id,state,qty_expected,session_id,returned_at,
+          condition,inspection_state,inspected_at,inspected_by,created_by)
+          values(gen_random_uuid(),$1,'Returned',1,$2,now(),'Good','Inspected',now(),$3,$3)`,[lineId,sessionId,U.Warehouse])
+      })
+      const probe = async (label,sql,params,matcher) => {
+        await q('savepoint ack_probe')
+        try { await refuses(label,sql,params,matcher) } finally { await q('rollback to savepoint ack_probe'); await q('release savepoint ack_probe') }
+      }
+      await as('Warehouse',()=>probe('competing completion refused','select claim_return_session($1,$2)',[sessionId,crypto.randomUUID()],/already being recorded/))
+      await as('Warehouse',()=>probe('direct completion identity change denied','update operation_sessions set return_action_uuid=$2 where id=$1',[sessionId,crypto.randomUUID()],/immutable/))
+      // A clean receipt seals with zero signatures. Roll back the seal to test flags.
+      await q('savepoint clean_return')
+      await as('Warehouse', () => q(`update operation_sessions set state='Completed' where id=$1`,[sessionId]))
+      assertEq(Number(await one('select count(*) from signatures where session_id=$1',[sessionId])),0,'clean Return asks for no signatures')
+      await q('rollback to savepoint clean_return'); await q('release savepoint clean_return')
+      await as('Warehouse', () => q(`update return_lines set condition='Damaged',inspector_note='Cracked housing' where session_id=$1`,[sessionId]))
+      await as('Warehouse',()=>q(`update booking_line_units set returned_at=now(),return_session_id=$2,condition='Damaged',unit_state='Returned'
+        where booking_line_id=$1 and asset_id=$3`,[lineId,sessionId,UNITS[0]]))
+      let findingId
+      await as('Warehouse',async()=> {
+        findingId=await one(`insert into damage_findings(client_uuid,source,return_line_id,unit_id,damage_type,description,severity,created_by)
+          select gen_random_uuid(),'Return inspection',r.id,$2,'Damaged','Cracked housing','Not assessed',$3 from return_lines r where r.session_id=$1 returning id`,[sessionId,UNITS[0],U.Warehouse])
+      })
+      await asOwnerOfTheDatabase(async () => {
+        const photoId = await one(
+          `insert into evidence_files(client_uuid,content_hash,storage_path,original_filename,media_type,format,size_bytes,category,created_by)
+           values(gen_random_uuid(),'l72-damage-photo','l72/damage.jpg','damage.jpg','Image','jpeg',256,'Damage',$1) returning id`,
+          [U.Warehouse],
+        )
+        await q(
+          `insert into evidence_references(client_uuid,evidence_file_id,operation_stage,booking_id,item_id,created_by)
+           values(gen_random_uuid(),$1,'Damage',$2,$3,$4)`,
+          [photoId, bookingId, UNITS[0], U.Warehouse],
+        )
+      })
+      await asOwnerOfTheDatabase(async()=>assertEq(await one(`select due_at='infinity'::timestamptz from client_message_events where finding_id=$1 and event_type='damage_notice'`,[findingId]),true,'damage notice waits for session acknowledgement'))
+      await as('Warehouse', () => probe('unsigned partial Return refused',`update operation_sessions set state='Completed' where id=$1`,[sessionId],/return.damage_unsigned/))
+      await as('Warehouse', () => probe('unsigned full Return refused',`insert into booking_stage_transitions(client_uuid,booking_id,branch_id,from_stage,to_stage,actor_id,actor_role,occurred_at)
+        values(gen_random_uuid(),$1,$2,'On Rent','Returned',$3,'Warehouse',now())`,[bookingId,BRANCH,U.Warehouse],/return.damage_unsigned/))
+      const rpc='select record_return_acknowledgement($1,$2,$3,$4,$5)'
+      await as('Warehouse',()=>probe('flagged inspection cannot be detached from its Return',
+        'update return_lines set session_id=null where session_id=$1',[sessionId],/return.damage_unsigned/))
+      await as('Warehouse',()=>probe('flagged inspection cannot be reassigned to another operation',
+        `update return_lines set session_id=(select id from operation_sessions where booking_id=$2 and operation='Packing' limit 1) where session_id=$1`,[sessionId,bookingId],/return.damage_unsigned/))
+      await q('savepoint revoked_return')
+      await asOwnerOfTheDatabase(()=>q(`insert into operations_grants(client_uuid,user_id,branch_id,operation,granted_by,revoked_at,revoked_by)
+        values(gen_random_uuid(),$1,$2,'return',$3,now(),$3)`,[U.Warehouse,BRANCH,U.Owner]))
+      await as('Warehouse',()=>probe('revoked Return branch denied',rpc,[sessionId,key,'Returning Person',null,'Refused after review'],/operations.grant/))
+      await q('rollback to savepoint revoked_return'); await q('release savepoint revoked_return')
+      for(const role of ['Coordinator','Accounts','Driver','Client']) await as(role,async()=> {
+        await probe(`${role} cannot acknowledge`,rpc,[sessionId,key,'Returning Person',null,'Refused after review'],/Permission denied/)
+        await probe(`${role} cannot claim Return`,'select claim_return_session($1,$2)',[sessionId,completionKey],/Permission denied/)
+      })
+      await as('Warehouse',()=>probe('short refusal refused',rpc,[sessionId,key,'Returning Person',null,'short'],/at least 10/))
+      await as('Warehouse',()=>probe('unrelated image refused',rpc,[sessionId,key,'Returning Person',crypto.randomUUID(),null],/signature image/))
+      await q('savepoint missing_return')
+      await as('Warehouse',async()=> {
+        await q(`update return_lines set state='Not Returned',condition='Good',not_returned_reason='Left behind at shoot location',not_returned_decision='Still expected' where session_id=$1`,[sessionId])
+        await probe('missing item needs acknowledgement',`update operation_sessions set state='Completed' where id=$1`,[sessionId],/return.damage_unsigned/)
+        await q(rpc,[sessionId,key,'Returning Person',null,'Refused after reviewing missing items'])
+        await q(`update operation_sessions set state='Completed' where id=$1`,[sessionId])
+      })
+      await q('rollback to savepoint missing_return'); await q('release savepoint missing_return')
+      // Signed path uses real file + session linkage; roll back before testing refusal.
+      await q('savepoint signed_return')
+      let fileId
+      await asOwnerOfTheDatabase(async () => {
+        fileId=await one(`insert into evidence_files(client_uuid,content_hash,storage_path,original_filename,media_type,format,size_bytes,category,created_by)
+          values(gen_random_uuid(),'l72-signature','l72/signature.png','signature-returning.png','Image','png',128,'Client Documents',$1) returning id`,[U.Warehouse])
+        await q(`insert into evidence_references(client_uuid,evidence_file_id,operation_stage,session_id,booking_id,created_by)
+          values(gen_random_uuid(),$1,'Return',$2,$3,$4)`,[fileId,sessionId,bookingId,U.Warehouse])
+      })
+      await as('Technician',async()=> {
+        await q(rpc,[sessionId,key,'Returning Person',fileId,null])
+        assertEq(Number(await one(`select count(*) from signatures where session_id=$1 and signature_role='Returning person'`,[sessionId])),1,'one real session signature')
+        await q('savepoint full_signed_return')
+        await transition('l72','On Rent','Returned','Technician')
+        assertEq(await stageOf('l72'),'Returned','signed flagged Return advances fully')
+        await q('rollback to savepoint full_signed_return'); await q('release savepoint full_signed_return')
+        await q(`update operation_sessions set state='Completed' where id=$1`,[sessionId])
+        const payload=await one(`select build_email_payload('damage_notice',null,$1)`,[bookingId])
+        assertEq(payload.data.returned_by,'Returning Person','damage notice carries persisted returning person')
+        assert(payload.data.signature_storage_path,'damage notice carries stored signature image')
+        assert(!JSON.stringify(payload.data).includes('amount'),'acknowledgement email payload is money-blind')
+        await asOwnerOfTheDatabase(async()=> {
+          assertEq(await one(`select due_at<='now'::timestamptz from client_message_events where finding_id=$1 and event_type='damage_notice'`,[findingId]),true,'notice released after signed Return seals')
+          assertEq(await one(`select payload->>'returned_by' from client_message_events where finding_id=$1 and event_type='damage_notice'`,[findingId]),'Returning Person','notice references the recorded returning person')
+        })
+      })
+      await asOwnerOfTheDatabase(()=>probe('signature immutable',`update signatures set signer_name='Other' where session_id=$1`,[sessionId],/immutable/))
+      await asOwnerOfTheDatabase(()=>probe('signature image immutable',`update evidence_files set storage_path='replacement.png' where id=$1`,[fileId],/immutable/))
+      await q('savepoint later_clean_return')
+      await as('Warehouse',async()=> {
+        const laterSession=await one(`insert into operation_sessions(client_uuid,booking_id,operation,session_no,state,warehouse_staff_id,created_by)
+          values(gen_random_uuid(),$1,'Return',2,'In Progress',$2,$2) returning id`,[bookingId,U.Warehouse])
+        await q(`update return_lines set session_id=$2,condition='Good',inspector_note='Later clean receipt' where session_id=$1`,[sessionId,laterSession])
+        await q(`update operation_sessions set state='Completed' where id=$1`,[laterSession])
+        assertEq(Number(await one('select count(*) from return_acknowledgements where session_id=$1',[laterSession])),0,'old findings do not require a signature for a later clean session')
+      })
+      await q('rollback to savepoint later_clean_return'); await q('release savepoint later_clean_return')
+      await q('rollback to savepoint signed_return'); await q('release savepoint signed_return')
+      await as('Warehouse',async()=> {
+        const first=await one(rpc,[sessionId,key,'Returning Person',null,'Person refused after reviewing flagged items'])
+        const replay=await one(rpc,[sessionId,key,'Returning Person',null,'Person refused after reviewing flagged items'])
+        assertEq(first,replay,'acknowledgement retry reuses record')
+        await asOwnerOfTheDatabase(async()=>assertEq(Number(await one('select count(*) from audit_events where record_id=$1',[first])),1,'refusal audited once'))
+        await probe('changed retry refused',rpc,[sessionId,key,'Other Person',null,'Person refused after reviewing flagged items'],/different details/)
+        await q('savepoint changed_flags')
+        await q(`update return_lines set inspector_note='A different condition description' where session_id=$1`,[sessionId])
+        await probe('changed flagged list invalidates acknowledgement',`update operation_sessions set state='Completed' where id=$1`,[sessionId],/return.damage_unsigned/)
+        await q('rollback to savepoint changed_flags'); await q('release savepoint changed_flags')
+        await q(`update operation_sessions set state='Completed' where id=$1`,[sessionId])
+      })
+      await asOwnerOfTheDatabase(()=>probe('acknowledgement immutable',`update return_acknowledgements set returning_name='Other' where session_id=$1`,[sessionId],/immutable/))
+      await as('Client',async()=>assertEq(Number(await one('select count(*) from return_acknowledgements where session_id=$1',[sessionId])),0,'Client cannot read staff acknowledgement'))
     })
   },
 })

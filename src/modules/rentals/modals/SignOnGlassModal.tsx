@@ -33,6 +33,7 @@ export interface SignOnGlassModalProps {
   depositAmount?: number | null | undefined
   collectors?: Array<{ id: string; name: string; roleTitle?: string | null | undefined; phone?: string | null | undefined }> | undefined
   onSignComplete: (sig: DigitalSignature) => void
+  flaggedItems?: readonly string[]
 }
 
 export function SignOnGlassModal({
@@ -49,6 +50,7 @@ export function SignOnGlassModal({
   depositAmount = null,
   collectors,
   onSignComplete,
+  flaggedItems,
 }: SignOnGlassModalProps) {
   const [mode, setMode] = useState<'draw' | 'type'>('draw')
   const [signerName, setSignerName] = useState(defaultName || '')
@@ -102,6 +104,11 @@ export function SignOnGlassModal({
 
     if (!agreedToTerms) {
       setCanvasError('You must agree to the equipment condition and legal attestation.')
+      return
+    }
+
+    if (role === 'returning' && (!bookingId || !userId)) {
+      setCanvasError('Sign in and reload the booking before signing this return.')
       return
     }
 
@@ -190,6 +197,10 @@ export function SignOnGlassModal({
             ? 'Driver'
             : 'Warehouse staff'
 
+    if (role === 'returning' && !evidenceFileId) {
+      setCanvasError('The signature image could not be stored. Please draw it again.')
+      return
+    }
     onSignComplete({
       name: trimmedName,
       role: mappedRole,
@@ -225,11 +236,11 @@ export function SignOnGlassModal({
           : `Equipment Handover Agreement for Booking ${bookingNo}${deliveryType ? ` (${deliveryType})` : ''}`
       }
       footer={
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 12 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 12 }}>
           <Button variant="secondary" onClick={onClose} disabled={isUploading}>
             Cancel
           </Button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
             {mode === 'draw' && (
               <Button icon="refresh" variant="secondary" onClick={handleClearSignature} disabled={isUploading}>
                 Clear Signature
@@ -252,12 +263,18 @@ export function SignOnGlassModal({
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {role === 'returning' && flaggedItems && (
+          <div>
+            <p>Returned by {signerName.trim() || 'the named person'} for {clientName || 'the client'}; the flagged items are as shown:</p>
+            <ul>{flaggedItems.map((item, index) => <li key={index}>{item}</li>)}</ul>
+          </div>
+        )}
         {/* Attestation Header Banner */}
         <div
           style={{
             padding: '12px 14px',
             borderRadius: 'var(--r-btn, 8px)',
-            background: 'var(--select-bg)',
+            background: 'var(--card2)',
             border: '1px solid color-mix(in srgb, var(--primary, #2563eb) 25%, transparent)',
             display: 'flex',
             alignItems: 'flex-start',
@@ -376,7 +393,7 @@ export function SignOnGlassModal({
               placeholder="Full name of person signing…"
               style={{
                 width: '100%',
-                height: 42,
+                height: 44,
                 padding: '0 12px',
                 borderRadius: 'var(--r-input, 6px)',
                 border: '1px solid var(--border)',
@@ -430,8 +447,8 @@ export function SignOnGlassModal({
             ariaLabel="Signature capture mode"
             size="sm"
             options={[
-              { id: 'draw', label: '✍️ Draw on Glass (Stylus / Touch)' },
-              { id: 'type', label: '⌨️ Type Legal Signature' },
+              { id: 'draw', label: 'Draw signature' },
+              { id: 'type', label: 'Type name' },
             ]}
             value={mode}
             onChange={(val) => setMode(val)}
@@ -523,7 +540,7 @@ export function SignOnGlassModal({
           <div>
             <strong>I acknowledge and accept this digital signature as a legally binding certification.</strong>
             <p style={{ margin: '2px 0 0', color: 'var(--text2)', fontSize: 11 }}>
-              Timestamp, IP telemetry, and sign-on-glass credentials are permanently associated with booking {bookingNo}.
+              {role === 'returning' ? 'The signature image, signer name and timestamp are stored with this Return session when it completes.' : `Timestamp, IP telemetry, and sign-on-glass credentials are permanently associated with booking ${bookingNo}.`}
             </p>
           </div>
         </label>

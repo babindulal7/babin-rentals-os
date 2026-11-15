@@ -14,7 +14,8 @@ import type { CompleteReturnInput } from '../../../actions/rentals/returnRental'
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 const bookingId = '11111111-1111-4111-8111-111111111111'
 let receivedBefore = 0
-vi.mock('../../../lib/auth', () => ({ useAuth: () => ({ user: { id: 'operator', name: 'Operator', role: 'Warehouse' }, loading: false, isLocked: false }) }))
+let operatorRole = 'Warehouse'
+vi.mock('../../../lib/auth', () => ({ useAuth: () => ({ user: { id: 'operator', name: 'Operator', role: operatorRole }, loading: false, isLocked: false }) }))
 vi.mock('../../../lib/queries/returnQuantityFacts', () => ({ fetchReturnQuantityFacts: vi.fn() }))
 vi.mock('../../../lib/queries/operationEvidence', () => ({ fetchOperationEvidence: async () => ({ files: 0, filesByUnit: {} }) }))
 vi.mock('../../../lib/floorPresence', () => ({ useFloorPresence: () => ({ presenceBanner: null }) }))
@@ -62,6 +63,7 @@ async function inspectGood() {
 
 beforeAll(async () => { await loadMockClient() })
 beforeEach(() => {
+  operatorRole = 'Warehouse'
   receivedBefore = 0; localStorage.clear(); sessionStorage.clear(); vi.clearAllMocks()
   vi.mocked(fetchReturnQuantityFacts).mockImplementation(async () => new Map([['quantity-line', receivedBefore]]))
   vi.mocked(completeReturn).mockImplementation(async (input) => {
@@ -78,6 +80,46 @@ beforeEach(() => {
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); localStorage.clear(); sessionStorage.clear() })
 
 describe('Return quantity receipts per session', () => {
+  it('does not offer return or acknowledgement controls to Accounts', async () => {
+    operatorRole = 'Accounts'
+    await mount()
+    expect(host.textContent).toContain('Only staff permitted to receive returns')
+    expect(host.textContent).not.toContain('Refused to sign')
+    expect(confirm()).toBeUndefined()
+    expect(completeReturn).not.toHaveBeenCalled()
+  })
+  it('completes a clean Return without asking for any signature (B19)', async () => {
+    await mount(); await click(button('Mark Returned')); await inspectGood()
+    expect(host.textContent).not.toContain('Sign on Glass')
+    expect(host.textContent).not.toContain('Refused to sign')
+    expect(confirm().disabled).toBe(false)
+    await click(confirm())
+    expect(completeReturn).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(completeReturn).mock.calls[0]?.[0].returnAcknowledgement).toBeUndefined()
+  })
+
+  it('requires a full refusal reason for missing items and dispatches it with the receipt', async () => {
+    await mount(); await click(button('Not Returned'))
+    expect(host.textContent).toContain('Flagged items acknowledgement')
+    const reason = host.querySelector<HTMLInputElement>('[aria-label="Reason Audio cables was not returned"]')!
+    await type(reason, 'Courier left the cables at location')
+    const decision = host.querySelector<HTMLSelectElement>('[aria-label="Decision for Audio cables"]')!
+    await act(async () => { decision.value = 'Still expected'; decision.dispatchEvent(new Event('change', { bubbles: true })) })
+    await flush()
+    expect(confirm().disabled).toBe(true)
+    await click(host.querySelector<HTMLInputElement>('input[type="checkbox"]')!)
+    await type(host.querySelector<HTMLInputElement>('[aria-label="Returning person"]')!, 'Courier')
+    const refusal = host.querySelector<HTMLTextAreaElement>('[aria-label="Reason for refusal"]')!
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(refusal, 'short')
+    await act(async () => refusal.dispatchEvent(new Event('input', { bubbles: true }))); await flush()
+    expect(confirm().disabled).toBe(true)
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(refusal, 'Courier refuses to sign pending discussion')
+    await act(async () => refusal.dispatchEvent(new Event('input', { bubbles: true }))); await flush()
+    expect(confirm().disabled).toBe(false)
+    await click(confirm())
+    expect(vi.mocked(completeReturn).mock.calls[0]?.[0].returnAcknowledgement).toEqual({ returningName: 'Courier', evidenceFileId: null, refusalReason: 'Courier refuses to sign pending discussion' })
+  })
+
   it('records two receipts of 2 then 3, using the verified remaining quantity on reopen', async () => {
     signatureDraft(); await mount()
     expect(host.textContent).toContain('Previously received: 0 · Remaining: 5 of 5')

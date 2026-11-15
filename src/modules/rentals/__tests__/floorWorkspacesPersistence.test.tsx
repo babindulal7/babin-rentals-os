@@ -184,7 +184,7 @@ describe('Floor Workspaces State Persistence (AUD-018)', () => {
   })
 
   describe('ReturnWorkspace', () => {
-    it.each([1440, 390])('bulk receipt at %ipx leaves QC and signatures for explicit capture', async (width) => {
+    it.each([1440, 390])('bulk receipt at %ipx leaves QC for explicit capture and asks no clean-return signature', async (width) => {
       mockBookingStage = 'On Rent'
       Object.defineProperty(window, 'innerWidth', { value: width, configurable: true, writable: true })
       container = document.createElement('div')
@@ -208,7 +208,8 @@ describe('Floor Workspaces State Persistence (AUD-018)', () => {
       const text = document.body.textContent ?? ''
       expect(text).toContain('Sensor QC')
       expect(text).not.toContain('Sensor Clean')
-      expect(text).toContain('Missing: Returning person, Warehouse staff')
+      expect(text).toContain('Every received item carries a condition')
+      expect(text).not.toContain('Flagged items acknowledgement')
       const complete = [...document.body.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Complete Return')
       expect(complete).toBeTruthy()
       expect(complete?.disabled).toBe(true)

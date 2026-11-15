@@ -851,6 +851,15 @@ export interface ReturnReportPdfData {
   lines: ReturnReportPdfLine[]
   company?: InvoicePdfCompany
   notes?: string | null
+  acknowledgements?: Array<{
+    sessionId: string
+    returningName: string
+    recordedAt: string
+    refusalReason: string | null
+    signatureUrl?: string | null
+    signatureImage?: { hex: string; width: number; height: number }
+    flaggedItems?: string[]
+  }>
 }
 
 /**
@@ -1005,11 +1014,7 @@ export function generateReturnReportPdf(data: ReturnReportPdfData): Uint8Array {
   streamOps.push(`40 ${footerY} 515 0.5 re S`)
 
   streamOps.push(`${mutedText} rg`)
-  streamOps.push(`40 ${footerY - 35} 150 0.5 re S`)
-  streamOps.push(`BT /F1 8 Tf 40 ${footerY - 45} Td (Inspected By / Warehouse Staff) Tj ET`)
-
-  streamOps.push(`405 ${footerY - 35} 150 0.5 re S`)
-  streamOps.push(`BT /F1 8 Tf 405 ${footerY - 45} Td (Returned By / Client Representative) Tj ET`)
+  streamOps.push(`BT /F1 8 Tf 40 ${footerY - 25} Td (${escapePdfText(data.acknowledgements?.length ? 'Stored flagged-item acknowledgements follow on the next pages.' : 'No stored flagged-item acknowledgement for this report.')} ) Tj ET`)
 
   streamOps.push(`BT /F1 7.5 Tf 40 25 Td (${escapePdfText(`Babin Rentals OS Return Report · Verified for booking ${bookingNo}. Money-blind floor document.`)} ) Tj ET`)
 
@@ -1054,9 +1059,56 @@ export function generateReturnReportPdf(data: ReturnReportPdfData): Uint8Array {
     return ops.join('\n')
   })
 
-  return buildPagedPdf(
-    builder,
-    [streamOps.join('\n'), ...continuationStreams],
-    `<<\n  /Title (Return Report - ${escapePdfText(bookingNo)})\n  /Author (${escapePdfText(companyName)})\n  /Creator (Babin Rentals OS PDF Engine)\n  /CreationDate (D:${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)}Z)\n>>`,
+  if (!data.acknowledgements || data.acknowledgements.length === 0) {
+    return buildPagedPdf(
+      builder,
+      [streamOps.join('\n'), ...continuationStreams],
+      `<<\n  /Title (Return Report - ${escapePdfText(bookingNo)})\n  /Author (${escapePdfText(companyName)})\n  /Creator (Babin Rentals OS PDF Engine)\n  /CreationDate (D:${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)}Z)\n>>`,
+    )
+  }
+
+  const contentStream = streamOps.join('\n')
+  builder.addObject(`<<\n  /Type /Catalog\n  /Pages 2 0 R\n>>`)
+  const acknowledgements = data.acknowledgements ?? []
+  let nextObjectId = 8
+  const acknowledgementPages = acknowledgements.flatMap(ack => {
+    const lines = [
+      `Return flagged items acknowledgement - ${bookingNo}`,
+      `Returned by ${ack.returningName} for ${data.clientName}; the flagged items are as shown.`,
+      `Session: ${ack.sessionId}`, `Recorded: ${ack.recordedAt}`,
+      ...(ack.flaggedItems ?? []),
+      ack.refusalReason ? `Refused to sign: ${ack.refusalReason}` : 'Returning-person signature (stored image):',
+    ].flatMap(line => line.match(/.{1,85}(?:\s|$)|.{1,85}/g) ?? [line])
+    const pages = []
+    for (let index = 0; index < lines.length; index += 24) {
+      const pageId = nextObjectId++
+      const contentId = nextObjectId++
+      const imageId = ack.signatureImage && index + 24 >= lines.length ? nextObjectId++ : null
+      pages.push({ ack, pageId, contentId, imageId, lines: lines.slice(index, index + 24) })
+    }
+    return pages
+  })
+  builder.addObject(`<<\n  /Type /Pages\n  /Kids [3 0 R ${acknowledgementPages.map(p => `${p.pageId} 0 R`).join(' ')}]\n  /Count ${1 + acknowledgementPages.length}\n>>`)
+  builder.addObject(
+    `<<\n  /Type /Page\n  /Parent 2 0 R\n  /MediaBox [0 0 595.28 841.89]\n  /Contents 4 0 R\n  /Resources <<\n    /Font <<\n      /F1 5 0 R\n      /F2 6 0 R\n      /F3 7 0 R\n    >>\n  >>\n>>`
   )
+  builder.addObject(`<<\n  /Length ${contentStream.length}\n>>\nstream\n${contentStream}\nendstream`)
+  builder.addObject(`<<\n  /Type /Font\n  /Subtype /Type1\n  /BaseFont /Helvetica\n  /Encoding /WinAnsiEncoding\n>>`)
+  builder.addObject(`<<\n  /Type /Font\n  /Subtype /Type1\n  /BaseFont /Helvetica-Bold\n  /Encoding /WinAnsiEncoding\n>>`)
+  builder.addObject(`<<\n  /Type /Font\n  /Subtype /Type1\n  /BaseFont /Courier\n  /Encoding /WinAnsiEncoding\n>>`)
+  for (const { ack, contentId, imageId, lines } of acknowledgementPages) {
+    builder.addObject(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Contents ${contentId} 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R /F3 7 0 R >> ${imageId ? `/XObject << /Signature ${imageId} 0 R >>` : ''} >> >>`)
+    const text = lines.map((line, i) => `BT /F1 10 Tf 40 ${780 - i * 18} Td (${escapePdfText(line)}) Tj ET`).join('\n')
+    const content = `${text}\n${imageId ? 'q 300 0 0 100 40 180 cm /Signature Do Q' : ''}`
+    builder.addObject(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`)
+    if (imageId && ack.signatureImage) {
+      const { hex, width, height } = ack.signatureImage
+      builder.addObject(`<< /Type /XObject /Subtype /Image /Width ${width} /Height ${height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /ASCIIHexDecode /Length ${hex.length + 1} >>\nstream\n${hex}>\nendstream`)
+    }
+  }
+  builder.addObject(
+    `<<\n  /Title (Return Report - ${escapePdfText(bookingNo)})\n  /Author (${escapePdfText(companyName)})\n  /Creator (Babin Rentals OS PDF Engine)\n  /CreationDate (D:${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)}Z)\n>>`
+  )
+
+  return builder.build()
 }

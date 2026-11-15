@@ -370,7 +370,7 @@ Booking Detail and from Pack on the iPad; scanning its QR opens that booking; Wa
 in either PDF; screen check.
 **Needs** — none (T3-26 adds the project line when it lands).
 
-### T2-19 · Signature at Return when damage is found            status: todo · size: S · lane A · [go-live] · slips first
+### T2-19 · Signature at Return when damage is found            status: ready — awaiting merge (lane-a/T2-19-signature-at-return-when-flagged) · size: S · lane A · [go-live] · slips first
 **What** — At Return, when at least one unit is flagged damaged or missing, the person returning the
 gear signs once under the list of flagged items ("returned by <name> for <client>; the flagged items
 are as shown") before Return can complete (B19). With no flags, no signature is asked (R-39). Reuse the

@@ -309,6 +309,9 @@ export function buildWhatsAppDraftMessage(
     case 'damage_notice':
       // Strictly NO amount per Law 6 and W23
       body = `Notice regarding return inspection for booking ${bookingNo}: An item has been flagged for technical review. Our workshop is assessing the equipment. No charges are applied until formal review concludes.`
+      if (task.payload['returned_by']) {
+        body += ` Returned by ${String(task.payload['returned_by'])}. ${task.payload['signature_refusal_reason'] ? `Refused to sign: ${String(task.payload['signature_refusal_reason'])}` : 'The returning person signed the flagged items acknowledgement; see the Return report for the stored signature.'}`
+      }
       break
 
     case 'damage_charge': {

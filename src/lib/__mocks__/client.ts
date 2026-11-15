@@ -1,5 +1,6 @@
 import { readEditor, saveEditor, saveSectionEditor, addUnitsEditor, retireUnitEditor, enrollMembershipEditor } from './recordEditor'
 import type { RecordKind } from '../recordEditor'
+import { recordMockReturnAcknowledgement } from './returnAcknowledgement'
 /**
  * **Mock Supabase client — the drop-in.**
  *
@@ -1358,6 +1359,25 @@ export const mockSupabase = {
     return createBuilder(table, hooks)
   },
   rpc(name: string, args?: Record<string, unknown>): Promise<{ data: unknown; error: PgError | null }> {
+    if (name === 'claim_return_session') {
+      const actor = store['users']?.find(row => row['id'] === readSession()?.user.id)
+      const session = store['operation_sessions']?.find(row => row['id'] === args?.['p_session_id'])
+      if (!actor || !['Owner','Admin','Manager','Warehouse','Technician'].includes(String(actor['primary_role'])) || !session || session['operation'] !== 'Return' || session['state'] !== 'In Progress') return Promise.resolve({ data: null, error: pgErr('42501','An authorized open Return is required.') })
+      const booking = store['bookings']?.find(row => row['id'] === session['booking_id'])
+      const grants = (store['operations_grants'] ?? []).filter(row => row['user_id'] === actor['id'] && row['operation'] === 'return')
+      if (!booking || grants.length && !grants.some(row => row['branch_id'] === booking['branch_id'] && !row['revoked_at'])) return Promise.resolve({ data: null, error: pgErr('42501','Return branch authorization refused.') })
+      if (session['return_action_uuid'] && session['return_action_uuid'] !== args?.['p_action_uuid']) return Promise.resolve({ data: null, error: pgErr('P0001','This Return already belongs to another completion request.') })
+      if (session['client_uuid'] !== args?.['p_action_uuid'] && ((store['session_line_movements'] ?? []).some(row => row['session_id'] === session['id']) || (store['return_lines'] ?? []).some(row => row['session_id'] === session['id']))) return Promise.resolve({ data: null, error: pgErr('P0001','Retry the original Return completion request.') })
+      hooks.update('operation_sessions', { client_uuid: args?.['p_action_uuid'], return_action_uuid: args?.['p_action_uuid'] }, row => row['id'] === session['id'])
+      return Promise.resolve({ data: session['id'], error: null })
+    }
+    if (name === 'record_return_acknowledgement') {
+      try {
+        return Promise.resolve({ data: recordMockReturnAcknowledgement(store, hooks, readSession()?.user.id, args ?? {}), error: null })
+      } catch (error) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', error instanceof Error ? error.message : 'Return acknowledgement failed.') })
+      }
+    }
     if (name === 'set_booking_tags') {
       const actor = readSession()?.user.id
       const role = store['users']?.find(user => user['id'] === actor)?.['primary_role']

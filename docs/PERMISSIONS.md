@@ -20,7 +20,6 @@ Location: `docs/PERMISSIONS.md` (beside Foundation v3.0 and UI_UX.md)
 > | W53 | Sign-in: switch user on a shared device by name + PIN (4 or 6 digits — O-18), restoring that person's own session (not the screen-lock curtain) | T1-15 |
 > | W88 | §4 new capability `rental.change`: booking-desk roles change items and dates after Confirm (today quote-only edits + extend) | T3-18 |
 > | W68 | §6.1 note: a Staff client's 20% discount is an ordinary discount line (Law 10, ungated) | T8-09 |
-> | B19 | §6.1 new row `gate.return.damage_unsigned`: a Return with a flagged unit needs a signature or a recorded refusal (reason ≥ 10 chars), by any staff allowed to do Return | T2-19 |
 > | B21, B40 | §5 mechanics: once Owner arms it, money rows and money writes need the second sign-in step (`aal2`) for Owner · Admin · Manager · Coordinator · Accounts; asked again every 30 days per device; Warehouse · Technician · Driver unchanged | T1-17 |
 > | B22, B23 | §4.10 new capability: read sign-in history — Owner · Admin; new-device email for Owner and Admin accounts only | T1-18 |
 > | B26 | §4.10 new capability: change the rental day start — Owner · Admin | T3-28 |
@@ -518,6 +517,7 @@ Known hole to keep closed: **`security_deposits` was readable by money-blind ses
 | `gate.handover.session_missing` | Packed → On Rent with no handover session | nobody | — | yes | Stage 1 (0115) |
 | `gate.handover.units_unhanded` | Packed unit without handover line | nobody | — | yes | Stage 1 (0115) |
 | `gate.handover.agreement_unsigned` | Agreement unsigned at handover | nobody | — | yes | Stage 1 (0115) |
+| `gate.return.damage_unsigned` | Damaged, lost or missing items in a full or partial Return | No bypass; Owner · Admin · Manager · Warehouse · Technician with an active Return branch grant may capture one signature or record refusal | Stored signature image, or returning person + refusal reason ≥10 trimmed characters | yes — immutable session acknowledgement and audit row | B19 / T2-19 (0226, local only) |
 | `gate.return.session_missing` | On Rent → Returned with no return session | nobody | — | yes | Stage 1 (0115) |
 | `gate.return.units_unaccounted` | On-rent unit with no return line | nobody | — | yes | Stage 1 (0115; non-physical exempt 0139, Consumable exempt 0141) |
 | `gate.handover.consumable_product_missing` | Consumable line whose product row is missing at Handover | nobody | — | no (movement refused, handover held) | 0142 |

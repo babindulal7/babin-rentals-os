@@ -44,6 +44,13 @@ export interface GateDefinition {
 }
 
 export const GATE_REGISTRY: Record<string, GateDefinition> = {
+  'gate.return.damage_unsigned': {
+    id: 'gate.return.damage_unsigned', category: 'return',
+    title: { en: 'Flagged items need acknowledgement', ne: 'समस्या भएका सामानको पुष्टि आवश्यक छ' },
+    message: { en: 'The damaged or missing items need a returning-person signature or a recorded refusal.', ne: 'बिग्रिएका वा हराएका सामानका लागि फिर्ता गर्ने व्यक्तिको हस्ताक्षर वा अस्वीकारको अभिलेख चाहिन्छ।' },
+    howToResolve: { en: 'Review the flagged list, then capture one signature or record refusal with a reason of at least 10 characters.', ne: 'समस्या भएका सामान हेर्नुहोस्, त्यसपछि हस्ताक्षर लिनुहोस् वा कम्तीमा १० अक्षरको कारणसहित अस्वीकार लेख्नुहोस्।' },
+    whoMayOverride: 'Return staff may record refusal; no bypass',
+  },
   // ── S1-1: Stage Gates ──────────────────────────────────────────────────────
   'gate.pack.session_missing': {
     id: 'gate.pack.session_missing',

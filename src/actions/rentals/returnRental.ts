@@ -1,5 +1,6 @@
 import { createAction, type ActionContext } from '../core';
 import { EVENT_TYPES } from '../../events/eventBus';
+import { validateReturnAcknowledgement, type ReturnAcknowledgementInput } from '../../lib/returnAcknowledgement';
 import {
   runFloorVerb,
   validateFloorVerb,
@@ -41,6 +42,7 @@ export type CompleteReturnInput = {
   clientUuid?: string;
   /** AD/UTC. Defaults to now. */
   occurredAt?: string;
+  returnAcknowledgement?: ReturnAcknowledgementInput;
 };
 
 export const completeReturn = createAction<CompleteReturnInput, FloorVerbResult>({
@@ -52,11 +54,16 @@ export const completeReturn = createAction<CompleteReturnInput, FloorVerbResult>
   permissions: ['operations.return'],
   implemented: true,
 
-  validate: (input) =>
+  validate: (input) => {
     validateFloorVerb('Return', {
       bookingRef: input.rentalId,
       ...(input.lines === undefined ? {} : { lines: input.lines }),
-    }),
+    });
+    if (input.returnAcknowledgement) {
+      const problem = validateReturnAcknowledgement(input.returnAcknowledgement);
+      if (problem) throw new Error(problem);
+    }
+  },
 
   execute: async (input, ctx: ActionContext) => {
     const result = await runFloorVerb(
@@ -67,6 +74,7 @@ export const completeReturn = createAction<CompleteReturnInput, FloorVerbResult>
         ...(input.notes === undefined ? {} : { notes: input.notes }),
         ...(input.clientUuid === undefined ? {} : { clientUuid: input.clientUuid }),
         ...(input.occurredAt === undefined ? {} : { occurredAt: input.occurredAt }),
+        ...(input.returnAcknowledgement === undefined ? {} : { returnAcknowledgement: input.returnAcknowledgement }),
       },
       ctx,
     );

@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { SignOnGlassModal } from '../SignOnGlassModal'
+import { uploadEvidencePhoto } from '../../../../lib/evidenceStorage'
 
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 
@@ -85,6 +86,23 @@ describe('SignOnGlassModal (T2-02)', () => {
 
     // Error banner rendered
     expect(host!.textContent).toContain('Please draw your signature on the glass canvas before submitting.')
+  })
+
+  it('shows the exact flagged list and refuses Return signing when upload fails', async () => {
+    const onSignComplete = vi.fn()
+    vi.mocked(uploadEvidencePhoto).mockRejectedValueOnce(new Error('Storage unavailable'))
+    act(() => root!.render(<SignOnGlassModal isOpen onClose={vi.fn()} role="returning" defaultName="Courier" bookingNo="BK-ACK" bookingId="booking" userId="operator" clientName="Film Crew" flaggedItems={['Camera (SN-1): Damaged — Cracked housing']} onSignComplete={onSignComplete} />))
+    expect(host!.textContent).toContain('Returned by Courier for Film Crew')
+    expect(host!.textContent).toContain('Camera (SN-1): Damaged — Cracked housing')
+    const canvas = host!.querySelector('canvas')!
+    act(() => {
+      canvas.dispatchEvent(new PointerEvent('pointerdown', { clientX: 15, clientY: 15, pointerId: 1, bubbles: true }))
+      canvas.dispatchEvent(new PointerEvent('pointermove', { clientX: 35, clientY: 35, pointerId: 1, bubbles: true }))
+      canvas.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1, bubbles: true }))
+    })
+    await act(async () => [...host!.querySelectorAll('button')].find(button => button.textContent?.includes('Accept & Sign Return'))!.click())
+    expect(onSignComplete).not.toHaveBeenCalled()
+    expect(host!.textContent).toContain('Could not store signature: Storage unavailable')
   })
 
   it('accepts drawn signature and passes captured signature to onSignComplete', async () => {

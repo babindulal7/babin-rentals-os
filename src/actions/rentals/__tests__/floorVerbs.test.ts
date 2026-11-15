@@ -1042,6 +1042,22 @@ describe('Return', () => {
     db.state.responses['operation_sessions'] = [[]]
   })
 
+  it('claims a photo-first session before receipts and reconciles a lost seal response by the same completion key', async () => {
+    db.state.responses['booking_lines'] = [[{ id: LINE_A, qty: 5 }]]
+    db.state.responses['return_lines'] = [[], [{ id: 'rl-1', booking_line_id: LINE_A, state: 'Outstanding' }]]
+    db.state.responses['operation_sessions'] = [[{ id: 'evidence-open', session_no: 1, state: 'In Progress', notes: null }]]
+    writes.state.loseSessionSealResponse = true
+    const input = { rentalId: 'B-715', clientUuid: 'completion-after-photo', lines: [{ bookingLineId: LINE_A, qty: 2, condition: 'Good' as const }] }
+    await expect(completeReturn(input, OWNER)).rejects.toThrow('seal committed; response lost')
+    expect(db.state.grants).toContainEqual({ name: 'claim_return_session', args: { p_session_id: 'evidence-open', p_action_uuid: 'completion-after-photo' } })
+    expect(insertsOn('operation_sessions')).toHaveLength(0)
+    db.state.returnKeyRows = [{ id: 'evidence-open', booking_id: BOOKING_ID, operation: 'Return', client_uuid: 'completion-after-photo', session_no: 1, state: 'Completed', notes: null }]
+    writes.reset()
+    const replay = await completeReturn(input, OWNER)
+    expect(replay).toMatchObject({ sessionId: 'evidence-open', sessionClosed: true, movements: 0 })
+    expect(writes.state.ops).toEqual([])
+  })
+
   it('resolves a committed partial receipt by its original completion key after the seal response is lost', async () => {
     db.state.responses['booking_lines'] = [[{ id: LINE_A, qty: 5 }]]
     db.state.responses['return_lines'] = [[], [{ id: 'rl-1', booking_line_id: LINE_A, state: 'Outstanding' }]]
@@ -1355,6 +1371,22 @@ describe('Return', () => {
     )
     expect(insertsOn('damage_findings')).toHaveLength(0)
     expect(result.damageFindings).toBe(0)
+  })
+
+  it('keeps the same damage finding identity when an unsealed Return is retried', async () => {
+    db.state.returnKeyRows = [{ id: 'damaged-open', booking_id: BOOKING_ID, operation: 'Return', client_uuid: 'damage-retry', session_no: 1, state: 'In Progress', notes: null }]
+    const returnRow = { id: 'rl-damage', booking_line_id: LINE_A, state: 'Returned' }
+    db.state.responses['return_lines'] = [[returnRow]]
+    const input = { rentalId: 'B-715', clientUuid: 'damage-retry', lines: [{ bookingLineId: LINE_A, unitIds: ['u1'], condition: 'Damaged' as const,
+      damage: [{ unitId: 'u1', condition: 'Damaged' as const, description: 'Cracked housing' }] }] }
+    writes.state.refuseInsertOn = 'booking_stage_transitions'
+    await expect(completeReturn(input, OWNER)).rejects.toThrow('Gate Check Failure')
+    const firstKey = insertsOn('damage_findings')[0]?.payload['client_uuid']
+    expect(firstKey).toBeTypeOf('string')
+    writes.reset()
+    db.state.responses['bookings'] = [[bookingAt('On Rent')], [bookingAt('Returned')]]
+    await completeReturn(input, OWNER)
+    expect(insertsOn('damage_findings')[0]?.payload['client_uuid']).toBe(firstKey)
   })
 
   it('does not await a Consumable-tracked line with no return row (0141)', async () => {

@@ -1,5 +1,62 @@
 # Progress Log
 
+## 2026-11-15 — T2-19: Signature at Return when damage is found (Lane A)
+
+**Did**
+- **T2-19: Signature at Return when damage is found (B19, R-39, W23):**
+  - Migration `0239_return_damage_acknowledgement.sql` claimed in `docs/plans/MIGRATION_LEDGER.md` (Next free number: `0240`):
+    - Added table `public.return_acknowledgements` with RLS, audit logging, and check constraint requiring either a valid signature or a recorded refusal reason of at least 10 characters.
+    - Database gates: added trigger `zzz_return_damage_acknowledgement_seal` on `operation_sessions` and `return_damage_acknowledgement_stage` on `bookings` enforcing `gate.return.damage_unsigned` across partial and stage transitions. Clean returns with no damaged or missing items seal with zero signatures (R-39).
+    - Session claim RPC `claim_return_session(p_session_id, p_action_uuid)` binds the stable completion request identity before receipts.
+    - Acknowledgement RPC `record_return_acknowledgement(...)` securely records the returning person, signature reference, or refusal reason and emits audit event.
+    - Trigger `return_finding_session_capture` captures return session per finding, preventing cross-session leakage on reused return lines.
+    - Email payload helper `build_email_payload('damage_notice')` enriched with returning person and signature storage path while keeping all payloads money-blind (W23, Law 6).
+  - Lifecycle step `L72` added to `scripts/e2e-lifecycle.mjs` verifying clean, signed, refused, role/branch isolation, and immutable acknowledgement replays. L68 updated for gate order.
+  - Floor action & verification:
+    - Updated `src/modules/rentals/ReturnWorkspace.tsx` to require acknowledgement only for flagged rows (damaged or missing), supporting inline sign-on-glass or refusal checkbox with reason.
+    - Updated `SignOnGlassModal.tsx` and return report PDF export in `src/lib/pdf/generatePdf.ts` to embed return damage acknowledgement signature images and flagged item lists across multi-page layouts.
+    - Added return acknowledgement query layer and action dispatchers.
+  - Tested:
+    - `npm run check:pglite`: 235/235 applied, 0 failed.
+    - `npm run check:lifecycle`: 73/73 green, 0 failed.
+    - `npm test`: 616 test files passed, 7161 passed, 0 failed.
+    - `npm run typecheck`: 0 errors.
+    - `npm run lint`: 0 errors, 0 warnings.
+    - `npm run build`: built in 1m 14s (PWA precache 298 entries).
+
+**Ruled**
+- B19 / R-39: Clean returns require zero signatures. When ≥1 unit is flagged damaged or missing, Return completion is blocked by `gate.return.damage_unsigned` until signed on glass or a refusal reason (≥10 chars) is recorded.
+- Law 6: Floor roles (`Warehouse`, `Technician`, `Driver`) remain strictly money-blind across all return acknowledgement screens, payloads, and PDFs.
+- Gate sequence: Damage photos for flagged units are verified first (`gate.return.damage_photo_per_unit`), followed by customer acknowledgement (`gate.return.damage_unsigned`).
+
+**Verified**
+- `npm run check:pglite`: 235/235 applied, 0 failed.
+- `npm run check:lifecycle`: 73/73 green, 0 failed.
+- `npm test`: 616 test files passed, 7161 passed, 0 failed.
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `npm run build`: built in 1m 14s.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +1 |
+| Lifecycle | steps green / total | 73 / 73 (100%) | +2 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 235 files · check:pglite 235/235 applied, 0 failed (recorded 2026-11-15T17:02:13.026Z). Suite: PASS — 7161/7161 passed, 0 failed (recorded 2026-11-15T17:01:49.535Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-15T17:02:32.945Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Merge PR for T2-19 (`lane-a/T2-19-signature-at-return-when-flagged`).
+- Next Lane A card: T2-21 ("Planned equipment downtime with a reason", branch `lane-a/T2-21-planned-downtime-with-a-reason` with migration 0237).
+- Next Lane C card: T3-30 ("Consumables unit price and add at the desk", branch `lane-c/T3-30-consumables-unit-price-add-at-the` with migration 0238).
+
 ## 2026-11-10 — T3-17: Extend in two taps (Lane C)
 
 **Did**

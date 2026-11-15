@@ -1,10 +1,11 @@
 import { supabase } from '../../lib/supabase'
 import { generateClientUuid, idempotentInsert, safeUpdate } from '../../lib/dataAccess'
-import { operationSessionId } from '../../lib/deterministicId'
+import { deterministicUuid, operationSessionId } from '../../lib/deterministicId'
 import { applyBookingTransition } from '../../lib/bookingTransition'
 import { logAuditEvent } from '../../lib/audit'
 import { captureError } from '../../lib/monitoring'
 import { NON_PACKABLE_LINE_TYPES } from '../../lib/bookingLineTypes'
+import { validateReturnAcknowledgement, type ReturnAcknowledgementInput } from '../../lib/returnAcknowledgement'
 import { JOBS, type BookingStatus, type JobName } from '../../lib/workflow'
 import type { ActionContext } from '../core'
 import type {
@@ -404,6 +405,7 @@ export interface FloorVerbInput {
    * transition trigger fires.
    */
   signatures?: readonly SignatureInput[]
+  returnAcknowledgement?: ReturnAcknowledgementInput
 }
 
 /**
@@ -1313,6 +1315,16 @@ export async function runFloorVerb(
     await safeUpdate('operation_sessions', sessionId, { notes: merged, updated_at: occurredAt }, actionUuid)
   }
 
+  if (job === 'Return') {
+    // A stored signature/photo may have opened this session with its own key.
+    // Claim it atomically before receipts so completion retries find the same
+    // session even when its successful response was lost (T2-18 §6 / T2-19).
+    const { error } = await supabase.rpc('claim_return_session', {
+      p_session_id: sessionId, p_action_uuid: actionUuid,
+    })
+    if (error) throw new Error(`Return session could not be claimed: ${error.message}`)
+  }
+
   /* 5 — the line rows and their movements. */
   const existing = await readLineRows(
     job,
@@ -1345,7 +1357,7 @@ export async function runFloorVerb(
         actionUuid,
       )
       queueCandidates.push(...resetQueueCandidates(line, returnLineId))
-      findings += await writeDamageFindings(line, returnLineId, ctx)
+      findings += await writeDamageFindings(line, returnLineId, sessionId, ctx)
     }
 
     // Absence is never converted into a state (0003:630): a line marked missing,
@@ -1385,6 +1397,22 @@ export async function runFloorVerb(
    *     so a double-submit does nothing rather than double-inserting. */
   if (job === 'Handover' && input.signatures && input.signatures.length > 0) {
     await writeSignatures(sessionId, input.signatures, ctx, occurredAt)
+  }
+
+  if (job === 'Return' && input.returnAcknowledgement) {
+    const acknowledgement = input.returnAcknowledgement
+    const problem = validateReturnAcknowledgement(acknowledgement)
+    if (problem) throw new Error(problem)
+    // Online only. The RPC records signature/refusal and audit atomically before
+    // either the stage transition or the partial-session seal can succeed.
+    const { data, error } = await supabase.rpc('record_return_acknowledgement', {
+      p_session_id: sessionId,
+      p_client_uuid: sessionId,
+      p_returning_name: acknowledgement.returningName.trim(),
+      p_evidence_file_id: acknowledgement.evidenceFileId ?? null,
+      p_refusal_reason: acknowledgement.refusalReason?.trim() || null,
+    })
+    if (error || typeof data !== 'string' || !data) throw new Error(`Return acknowledgement could not be recorded: ${error?.message ?? 'No confirmation was returned.'}`)
   }
 
   /* 5d — Gate 1 override when receiver ID/authorization cannot be verified (T2-04, D2).
@@ -1784,6 +1812,7 @@ async function writeMovements(
 async function writeDamageFindings(
   line: FloorLineInput,
   returnLineId: string,
+  sessionId: string,
   ctx: ActionContext,
 ): Promise<number> {
   const damage = line.damage ?? []
@@ -1791,7 +1820,9 @@ async function writeDamageFindings(
     await idempotentInsert(
       'damage_findings',
       {
-        client_uuid: generateClientUuid(),
+        // Retrying after the acknowledgement or stage response was lost must
+        // preserve the same finding and therefore the same signed snapshot.
+        client_uuid: await deterministicUuid('return-damage-finding', `${sessionId}:${returnLineId}:${d.unitId}`),
         source: 'Return inspection',
         return_line_id: returnLineId,
         unit_id: d.unitId,
