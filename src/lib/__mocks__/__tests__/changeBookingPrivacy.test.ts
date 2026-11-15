@@ -8,7 +8,8 @@ async function boot(role: string, invoices: Array<Record<string, unknown>> = [],
   const data = new Map<string, string>([
     ['babin.mock.overlay.v1', JSON.stringify({ inserts: [
       { table: 'users', row: { id: actor, primary_role: role, is_active: true } },
-      { table: 'bookings', row: { id: booking, booking_no: 'BK-1', stage: 'Booked', deposit_required: 5000 } },
+      { table: 'bookings', row: { id: booking, booking_no: 'BK-1', stage: 'Booked', deposit_required: 5000,
+        pickup_at: '2026-11-20T00:15:00Z', return_at: '2026-11-22T00:15:00Z' } },
       { table: 'booking_lines', row: { id: 'line-1', client_uuid: 'line-key', booking_id: booking, rate: 2000, discount_amount: 0, qty: 1, days: 1, line_type: 'Equipment', ...linePricing } },
       ...invoices.map(row => ({ table: 'invoices', row })),
       ...extraRows,
@@ -109,7 +110,7 @@ describe('booking change mock privacy', () => {
     expect(after.data).toEqual(read.data)
   })
   it.each([{ rate: 1 }, { discount_amount: 1 }])('preserves a stored total when financial fields change: %j', async patch => {
-    const client = await boot('Coordinator', [], { line_total: 2000 })
+    const client = await boot('Coordinator', [], { line_total: 1800 })
     const read = await client.rpc('read_booking_for_change', { p_id: booking })
     const snapshot = read.data as { revision: string; lines: Array<Record<string, unknown>> }
     const saved = await client.rpc('change_booking', { p_payload: {
@@ -132,5 +133,40 @@ describe('booking change mock privacy', () => {
     expect(saved.error?.message).toMatch(/row identity failure/i)
     expect((await client.rpc('read_booking_for_change', { p_id: booking })).data).toEqual(read.data)
     expect(localStorage.setItem).not.toHaveBeenCalled()
+  })
+  it.each(['Coordinator', 'Warehouse'])('recalculates an ordinary stored daily total for %s', async role => {
+    const client = await boot(role, [], { line_total: 1999.50, discount_amount: 0.50 })
+    const read = await client.rpc('read_booking_for_change', { p_id: booking })
+    const snapshot = read.data as { revision: string; lines: Array<Record<string, unknown>> }
+    const saved = await client.rpc('change_booking', { p_payload: {
+      booking_id: booking, client_uuid: 'daily-reprice', revision: snapshot.revision, actor_id: actor,
+      values: {}, lines: snapshot.lines.map(line => ({ ...line, qty: 2, days: 3 })),
+    } })
+    expect(saved.error).toBeNull()
+    const rows = await client.from('booking_lines').select('*')
+    expect(rows.data).toMatchObject([{ qty: 2, days: 3, rate: 2000, discount_amount: 0.50, line_total: 11999.50 }])
+    if (role === 'Warehouse') expect((saved.data as { lines: Row[] }).lines[0]).not.toHaveProperty('line_total')
+  })
+  it('recalculates a daily total when the desk changes a rate and discount', async () => {
+    const client = await boot('Coordinator', [], { line_total: 2000 })
+    const read = await client.rpc('read_booking_for_change', { p_id: booking })
+    const snapshot = read.data as { revision: string; lines: Row[] }
+    const saved = await client.rpc('change_booking', { p_payload: {
+      booking_id: booking, client_uuid: 'new-rate', revision: snapshot.revision, actor_id: actor,
+      values: {}, lines: snapshot.lines.map(line => ({ ...line, qty: 2, days: 3, rate: 250.25, discount_amount: 0.50 })),
+    } })
+    expect(saved.error).toBeNull()
+    expect((await client.from('booking_lines').select('*')).data).toMatchObject([{ line_total: 1501 }])
+  })
+  it('refuses a schedule move for structure pricing without overwriting its snapshot', async () => {
+    const client = await boot('Coordinator', [], { line_total: 1800, price_breakdown: { method: 'structure' } })
+    const read = await client.rpc('read_booking_for_change', { p_id: booking })
+    const snapshot = read.data as { revision: string; lines: Row[] }
+    const saved = await client.rpc('change_booking', { p_payload: {
+      booking_id: booking, client_uuid: 'structure-move', revision: snapshot.revision, actor_id: actor,
+      values: { pickup_at: '2026-11-21T00:15:00Z', return_at: '2026-11-23T00:15:00Z' }, lines: snapshot.lines,
+    } })
+    expect(saved.error?.message).toMatch(/stored pricing/i)
+    expect((await client.rpc('read_booking_for_change', { p_id: booking })).data).toEqual(read.data)
   })
 })

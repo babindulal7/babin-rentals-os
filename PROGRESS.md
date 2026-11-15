@@ -1,5 +1,38 @@
 # Progress Log
 
+## 2026-11-15 — Lane C T3-18 daily repricing and Draft invoice history
+
+**Did**
+- Reprice ordinary daily lines on the server when quantity, charged days, rate or discount changes; preserve Warehouse rates and absolute discounts without returning money. Structure/custom price snapshots remain protected.
+- Reproduced and repaired duplicate Draft charges: the old resync DELETE was silently suppressed by the parent-status trigger. Superseded invoice rows now retain their original values as immutable history; only current lines contribute to totals, finance reads and issue line counts. Resync locks the Draft invoice against concurrent issue.
+- Added lifecycle L77 covering exact paisa, repeated saves/retries, Warehouse privacy, capacity rollback, retained history, finance RLS and invoice issue.
+
+**Ruled**
+- Existing W15/W16/W88, Law 3, Law 6 and Law 8 apply; no new product decision or permission expansion. T3-18 remains doing.
+
+**Verified**
+- Focused daily-pricing regressions reproduced the missing repricing and then passed. New lifecycle test first exposed Rs 2,001 instead of Rs 1,501; the repaired lifecycle passes 77/77 locally.
+- Full current-source gate run is in progress; the previous entry's full gate result is historical after these edits. No production migration, hosted/device acceptance, remote push or merge performed.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | 76 / 76 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 229 files · check:pglite 229/229 applied, 0 failed (recorded 2026-11-14T19:51:51.254Z). Suite: PASS — 6955/6955 passed, 0 failed (recorded 2026-11-14T20:06:44.463Z); source fingerprint matches.
+Coverage suite: PASS — 6955/6955 passed, 0 failed (recorded 2026-11-14T20:06:44.463Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-14T19:53:55.581Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Finish the current-source full gate run and refresh this entry with actual results.
+- Structure/custom repricing, Warehouse bundle/component additions, edit-form field contracts, screen/device acceptance, independent review and Babin's merge remain open. Migration 0232 is WRITTEN, NOT APPLIED or PRODUCTION-VERIFIED.
+
 ## 2026-11-15 — Lane C T3-18 follow-through: numbered invoices and atomic retries
 
 **Did**

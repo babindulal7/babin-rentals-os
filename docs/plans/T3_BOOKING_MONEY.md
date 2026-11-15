@@ -256,7 +256,7 @@ option if it needs a new parameter.
 never double-books.
 **Needs** — T3-13 for the clash options.
 
-### T3-18 · Change a confirmed booking            status: doing — security and retry repair; staging acceptance pending (lane-c/T3-18-change-a-confirmed-booking) · size: L · lane C · [go-live]
+### T3-18 · Change a confirmed booking            status: doing — daily repricing and invoice history repair; staging acceptance pending (lane-c/T3-18-change-a-confirmed-booking) · size: L · lane C · [go-live]
 **What** — **Any desk staff** may change items and dates after Confirm (W88): before Pack — add,
 remove or swap lines and move dates, with reservations updated in the same transaction; after Pack
 — removing an item asks Warehouse to unpack it (a floor session); after Handover — **"Add gear"

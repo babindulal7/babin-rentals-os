@@ -28,7 +28,7 @@ import { PROJECT_TYPES } from '../projectTypes'
 import { MOCK_LOGINS } from '../devQuickLogins'
 import { parseBookingNoSearch } from '../format'
 import { calculateMembershipCredit } from '../membershipCredit'
-import { rupees } from '../money'
+import { rupees, toRupees, type Paisa } from '../money'
 import { GLOSSARY_TERMS, validateGlossaryText } from '../glossaryStore'
 
 const OVERLAY_KEY = 'babin.mock.overlay.v1'
@@ -1357,6 +1357,25 @@ function changeClientMembership(payload: Record<string, unknown>): { data: Row |
 
 /* ── The client ────────────────────────────────────────────────────────── */
 
+/** Match daily booking-line arithmetic using integer paisa before persisting rupees. */
+function dailyBookingLineTotalMock(line: Row): number | null {
+  const qty = Number(line['qty'] ?? 1)
+  const days = Number(line['days'] ?? 1)
+  const rate = Number(line['rate'] ?? 0)
+  const discount = Number(line['discount_amount'] ?? 0)
+  if (!Number.isSafeInteger(qty) || qty < 1 || !Number.isSafeInteger(days) || days < 1 ||
+      !Number.isFinite(rate) || rate < 0 || !Number.isFinite(discount) || discount < 0 ||
+      (line['service_basis'] === 'Flat' && days !== 1)) return null
+  const total = qty * days * rupees(rate) - rupees(discount)
+  return Number.isSafeInteger(total) && total >= 0 ? toRupees(total as Paisa) : null
+}
+
+function hasProtectedBookingPriceMock(line: Row): boolean {
+  const daily = dailyBookingLineTotalMock(line)
+  return line['price_breakdown'] != null || (line['line_total'] != null &&
+    (daily === null || rupees(Number(line['line_total'])) !== rupees(daily)))
+}
+
 function readBookingChangeMock(id: string): { data: Row | null; error: PgError | null } {
   const b = (store['bookings'] ?? []).find(r => r['id'] === id || r['booking_no'] === id)
   if (!b) return { data: null, error: pgErr('P0002', 'Booking not found.') }
@@ -1709,6 +1728,9 @@ export const mockSupabase = {
       }
       const incoming = payload['lines'] as Row[]
       const existingLines = (store['booking_lines'] ?? []).filter(row => row['booking_id'] === bId && !row['voided_at'])
+      const requestedHeader = payload['values'] as Row
+      const datesMoved = ['pickup_at', 'return_at'].some(field => requestedHeader[field] != null &&
+        Date.parse(String(requestedHeader[field])) !== Date.parse(String(b[field])))
       const seen = new Set<string>()
       for (const line of incoming) {
         const lineId = line['id'] == null ? '' : String(line['id'])
@@ -1720,8 +1742,9 @@ export const mockSupabase = {
             !Number.isInteger(Number(line['days'])) || Number(line['days']) < 1) {
           return Promise.resolve({ data: null, error: pgErr('22023', 'A booking line is invalid or duplicated.') })
         }
-        if (old && (old['line_total'] != null || old['price_breakdown'] != null) &&
-            (['qty', 'days', 'product_id', 'bundle_id', 'line_type', 'service_basis', 'is_included'].some(field => (line[field] ?? null) !== (old[field] ?? null)) ||
+        if (old && hasProtectedBookingPriceMock(old) &&
+            (datesMoved || ['qty', 'days', 'product_id', 'bundle_id', 'line_type', 'service_basis', 'is_included'].some(field => (line[field] ?? null) !== (old[field] ?? null)) ||
+             (line['parent_client_uuid'] ?? null) !== (existingLines.find(parent => parent['id'] === old['parent_line_id'])?.['client_uuid'] ?? null) ||
              (moneyVisible && ['rate', 'discount_amount'].some(field => field in line && Number(line[field]) !== Number(old[field] ?? 0))))) {
           return Promise.resolve({ data: null, error: pgErr('P0001', 'This line has stored pricing and cannot be changed until it is repriced safely.') })
         }
@@ -1786,6 +1809,12 @@ export const mockSupabase = {
           if (!moneyVisible && !line['id']) {
             const product = (store['products'] ?? []).find(row => row['id'] === line['product_id']) ?? (store['bundles'] ?? []).find(row => row['id'] === line['bundle_id'])
             Object.assign(patch, { rate: line['parent_client_uuid'] || line['is_included'] ? 0 : product?.['daily_rate'], discount_amount: 0 })
+          }
+          const old = existingLines.find(row => row['id'] === line['id'])
+          if (!old || !hasProtectedBookingPriceMock(old)) {
+            const total = dailyBookingLineTotalMock({ ...old, ...patch })
+            if (total === null) throw new Error('The line charge or discount is invalid.')
+            Object.assign(patch, { line_total: total, price_breakdown: null })
           }
           if (line['id']) hooks.update('booking_lines', patch, row => row['id'] === id)
           else insert('booking_lines', [{ ...patch, id, booking_id: bId, client_uuid: line['client_uuid'], created_by: actor }])

@@ -10,13 +10,14 @@ Branch: `lane-c/T3-18-change-a-confirmed-booking`, continuing base commit `8ec3a
 - Audit identity is the authenticated user; callers cannot impersonate another user. A retry after a role change cannot expose an earlier money-visible response.
 - Packed line removal, quantity and identity changes are refused until the floor work is reversed. Quantity holds are released and rebuilt transactionally when their line changes.
 - A non-void numbered invoice blocks new booking changes, as required by T3-14/O-14. Successful old requests still replay their receipt without another write.
-- Stored line totals cannot be separated from their quantity, duration, item identity, rate, discount or service basis. These edits are refused while the required repricing path is incomplete.
+- Ordinary daily lines now recalculate their stored total from quantity × charged days × rate minus the absolute line discount. Warehouse retains the negotiated server rate and discount. Structure/custom totals remain protected against changes that would invalidate their snapshots.
+- Draft resync retains superseded invoice lines as immutable history and excludes them from current sums, finance reads and issue line counts. It locks the Draft invoice against concurrent issue. This repairs duplicate charging caused by an attempted DELETE that the old trigger silently suppressed.
 - The mock persists booking changes and their retry receipt together in one overlay write. Simultaneous retries return the same result. A forced later-row failure restores the original store and writes no partial overlay.
 - The card status is corrected to `doing`; the migration ledger distinguishes local verification from application and acceptance.
 
 ## Verification
 
-The current-source `npm run gates` passed all 17 steps:
+The previous checkpoint (`a920e097`) passed all 17 steps; these results are historical after the daily-pricing edits:
 
 | Check | Result |
 |---|---|
@@ -30,15 +31,17 @@ The current-source `npm run gates` passed all 17 steps:
 | Production build | PASS |
 | Coverage run | 6,955 tests in 589 files, PASS |
 
-The focused mock suite first reproduced the retry race, missing invoice/rate guards and embedded-fee exposure. Its eight cases now pass; the booking-change action suite contributes ten further passing cases.
+The focused mock suite covers the retry race, invoice/rate guards, embedded-fee exposure, daily repricing and structure-price schedule protection. There are now twelve mock cases and ten booking-change action cases; full-suite verification is pending for this revision.
 
-Migration **0232 is locally VERIFIED, NOT APPLIED or PRODUCTION-VERIFIED**. Local PGlite checks do not certify hosted JWT, PostgREST, Storage or actual devices. Mock saves do not emulate the database reservation or invoice engines.
+The current daily-pricing regression passes lifecycle **77/77**, including exact paisa, repeated edits/retries, Warehouse masking, reservation rollback, immutable history, finance RLS and issuing the current amount. Its first run reproduced the old invoice total of Rs 2,001 instead of Rs 1,501. The full current-source gate run is pending.
+
+Migration **0232 was locally VERIFIED at the previous checkpoint; the current revision awaits the full gates. It is NOT APPLIED or PRODUCTION-VERIFIED**. Local PGlite checks do not certify hosted JWT, PostgREST, Storage or actual devices. Mock saves do not emulate the database reservation or invoice engines.
 
 The required dependency audit reported **37 findings: 4 critical, 13 high, 17 moderate, 3 low**. The report is in the ignored local artifact `artifacts/t3-18-dependency-audit.json`. This card changes no dependency or lockfile; remediation is separate lane A dependency work.
 
 ## Remaining before this card can close
 
-1. Implement and verify the supported repricing path so ordinary stored-price item/date changes work, rather than merely refusing stale totals.
+1. Complete structure/custom repricing using sufficient stored pricing terms. Ordinary daily repricing is implemented; structure/custom edits remain refused. Complete the current-source gates before treating this revision as locally verified.
 2. Complete server-validated bundle/component additions for Warehouse. The current restriction is an unfinished implementation, not a new product policy. Warehouse crew/delivery edits currently produce an explicit refusal.
 3. Review the edit form's remaining field contracts: it sends `fuelChargePaisa` while the RPC reads `fuel_charge`, and sends `client_id` while the RPC preserves the original client. These existing mismatches need explicit preservation/refusal or supported writes before the form can claim a complete save.
 4. Complete the screen check at 375/820/1440 as Coordinator and Warehouse, then staging acceptance with two devices. Browser access was reported unavailable in the 14 November check; no screen or physical-device acceptance has been performed for this checkpoint.

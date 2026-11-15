@@ -19,6 +19,431 @@
 
 begin;
 
+
+-- Draft resync previously attempted DELETE, but the parent-status trigger returned
+-- NEW (NULL on DELETE), silently retaining every old line and doubling charges.
+-- Keep old revisions as immutable history (Law 3), never as current charges.
+alter table public.invoice_lines add column superseded_at timestamptz;
+comment on column public.invoice_lines.superseded_at is
+  'Draft resync history: retained with original values, excluded from active invoice lines.';
+create index invoice_lines_active_invoice_idx on public.invoice_lines(invoice_id)
+  where superseded_at is null;
+create policy invoice_lines_active_select on public.invoice_lines
+  as restrictive for select to authenticated using (superseded_at is null);
+
+create or replace function guard_invoice_lines_parent_status()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_parent_status invoice_status;
+  v_parent_voided timestamptz;
+  v_parent_no text;
+begin
+  if TG_OP = 'DELETE' then
+    raise exception 'Law 3: invoice lines must be retained, not deleted.';
+  end if;
+  if TG_OP = 'UPDATE' and OLD.superseded_at is not null then
+    raise exception 'Superseded invoice lines are immutable history.';
+  end if;
+  -- Check both parents when moving a line; an issued line cannot be moved out.
+  if TG_OP = 'UPDATE' and OLD.invoice_id is distinct from NEW.invoice_id then
+    raise exception 'Invoice lines cannot be moved between invoices.';
+  end if;
+  -- DELETE uses OLD, INSERT/UPDATE use NEW
+  if TG_OP = 'DELETE' then
+    select status, voided_at, invoice_no into v_parent_status, v_parent_voided, v_parent_no
+      from invoices where id = OLD.invoice_id;
+  else
+    select status, voided_at, invoice_no into v_parent_status, v_parent_voided, v_parent_no
+      from invoices where id = NEW.invoice_id;
+  end if;
+
+  if not found then
+    raise exception 'Invoice line parent does not exist.';
+  end if;
+
+  if v_parent_status <> 'Draft' or v_parent_voided is not null then
+    raise exception
+      'invoice_lines: invoice % is not a Draft (status %, voided_at %). An issued invoice''s lines are immutable — correct it with a credit note.',
+      v_parent_no, v_parent_status, v_parent_voided
+      using errcode = 'P0001';
+  end if;
+
+  return NEW;
+end;
+$$;
+
+create or replace function public.recalculate_invoice_totals()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $fn$
+declare
+  v_subtotal numeric(14,2);
+  v_discount_pct numeric(5,2);
+  v_vat_rate numeric(5,4);
+  v_discount numeric(14,2);
+  v_taxable numeric(14,2);
+  v_vat numeric(14,2);
+  v_total numeric(14,2);
+  v_paid numeric(14,2);
+  v_target_invoice_id uuid;
+begin
+  if (TG_OP = 'DELETE') then
+    v_target_invoice_id := OLD.invoice_id;
+  else
+    v_target_invoice_id := NEW.invoice_id;
+  end if;
+
+  -- 1. The subtotal is the sum of the lines. Not rounded — money.ts does not
+  --    round it either, and rounding it here would silently move money that no
+  --    line accounts for.
+  select coalesce(sum(line_total), 0)
+    into v_subtotal
+    from invoice_lines
+   where invoice_id = v_target_invoice_id and superseded_at is null;
+
+  -- 2. The header inputs. STRICT: a missing invoice raises rather than pricing
+  --    at zero VAT (0079's reasoning, kept). vat_rate is NOT NULL, so it needs
+  --    no fallback — see §2 of the header.
+  --
+  --    `paid_amount` is READ here, not re-derived from `payments`. That is
+  --    deliberate and it matters: this function is invoker-rights and runs as
+  --    whoever wrote the line. Under Law 6 the floor roles are held off the
+  --    money tables, so calling invoice_paid_net() here would make appending a
+  --    damage line at return (R-03) fail with `permission denied for table
+  --    payments` for exactly the staff who append it. The stored column is
+  --    authoritative because 0087 rewrites it on every payment and every
+  --    reversal; this path consumes it rather than competing with it.
+  select discount_percent, vat_rate, coalesce(paid_amount, 0)
+    into strict v_discount_pct, v_vat_rate, v_paid
+    from invoices
+   where id = v_target_invoice_id;
+
+  -- 3. money.ts `price()`, step for step. Two rounds, not four: `taxable` and
+  --    `total` are exact sums of already-rounded terms in the engine and are
+  --    exact sums here. See the header for why this departs from §2.2's sketch.
+  v_discount := invoice_discount_amount(v_subtotal, v_discount_pct);
+  v_taxable  := v_subtotal - v_discount;
+  v_vat      := invoice_vat_amount(v_taxable, v_vat_rate);
+  v_total    := v_taxable + v_vat;
+
+  -- 4. MONEY-04. Split the subtraction into its two floored halves, through the
+  --    same two functions the payment path uses, so an overpayment neither
+  --    vanishes nor trips invoices_amounts_non_negative. Before this, live ran
+  --    `v_outstanding := v_total - v_paid` unfloored and an overpaid invoice
+  --    raised 23514 HERE, refusing the line — including the damage line at
+  --    return, which is the charge R-03 exists to add.
+  --
+  -- 5. One UPDATE, so the row is never briefly inconsistent and the audit trail
+  --    carries one event per line change rather than two.
+  --    `paid_amount` is not written: it is the payment path's column (0087).
+  --    `status` is not written either — R-14 (a Draft is sticky) and R-04 (an
+  --    issued invoice's figures are immutable) both live elsewhere, and a line
+  --    edit is not an issue action.
+  update invoices
+     set subtotal           = v_subtotal,
+         discount_amount    = v_discount,
+         taxable_amount     = v_taxable,
+         vat_amount         = v_vat,
+         total_amount       = v_total,
+         outstanding_amount = invoice_outstanding(v_total, v_paid),
+         credit_amount      = invoice_credit(v_total, v_paid),
+         updated_at         = now()
+   where id = v_target_invoice_id;
+
+  return null;
+end;
+$fn$;
+
+create or replace function public.issue_invoice(p_payload jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_invoice_id   uuid    := (p_payload ->> 'invoice_id')::uuid;
+  v_actor        uuid    := nullif(coalesce(p_payload ->> 'issued_by', p_payload ->> 'actor_id', ''), '')::uuid;
+  v_issue_date   date    := nullif(coalesce(p_payload ->> 'issue_date', ''), '')::date;
+  v_role         system_role;
+  v_invoice      invoices%rowtype;
+  v_line_count   integer := 0;
+  v_invoice_no   text;
+  v_terms        text;
+  v_term_days    integer := 0;
+  v_due_date     date;
+  v_new_status   invoice_status;
+begin
+  -- 1. Role & authorization checks (R-05)
+  v_role := auth_user_role();
+  if v_role is null or v_role not in ('Owner', 'Admin', 'Manager', 'Accounts') then
+    raise exception
+      'issue_invoice: this session (%) may not issue an invoice. R-05 gives that to Owner, Admin, Manager and Accounts.',
+      coalesce(v_role::text, 'unidentified')
+      using errcode = '42501';
+  end if;
+
+  if not auth_can_view_money() then
+    raise exception
+      'issue_invoice: this session cannot read money (Law 6), so it cannot issue an invoice.'
+      using errcode = '42501';
+  end if;
+
+  if v_invoice_id is null then
+    raise exception 'issue_invoice: invoice_id is required.';
+  end if;
+
+  -- 2. Verify invoice existence and eligibility — FOR UPDATE locks the row
+  --    so a second concurrent caller blocks here, then re-checks under the lock
+  select * into v_invoice from invoices where id = v_invoice_id for update;
+  if not found then
+    raise exception 'issue_invoice: invoice % does not exist.', v_invoice_id;
+  end if;
+
+  if v_invoice.voided_at is not null or v_invoice.status = 'Void' then
+    raise exception 'issue_invoice: invoice % is voided and cannot be issued.', v_invoice_id;
+  end if;
+
+  if v_invoice.status <> 'Draft' or v_invoice.invoice_no is not null then
+    raise exception
+      'issue_invoice: invoice % is already issued (status %, invoice_no %). Only a Draft can be issued.',
+      v_invoice_id, v_invoice.status, v_invoice.invoice_no;
+  end if;
+
+  select count(*) into v_line_count from invoice_lines where invoice_id = v_invoice_id and superseded_at is null;
+  if v_line_count = 0 then
+    raise exception 'issue_invoice: invoice % has no lines. An empty invoice cannot be issued.', v_invoice_id;
+  end if;
+
+  -- 3. Mint invoice number (R-15) — still inside the same transaction/lock
+  v_invoice_no := next_document_number('invoice');
+  if v_invoice_no is null then
+    raise exception 'issue_invoice: next_document_number failed to mint an invoice number.';
+  end if;
+
+  -- 4. Date calculation
+  v_issue_date := coalesce(v_issue_date, current_date);
+
+  select payment_terms::text into v_terms from clients where id = v_invoice.client_id;
+  v_term_days := case coalesce(v_terms, 'Immediate')
+                   when '7 days'  then 7
+                   when '15 days' then 15
+                   when '30 days' then 30
+                   else 0
+                 end;
+  v_due_date := v_issue_date + v_term_days;
+
+  -- 5. Determine status
+  if v_invoice.outstanding_amount = 0 and v_invoice.total_amount > 0 then
+    v_new_status := 'Paid'::invoice_status;
+  elsif v_invoice.paid_amount > 0 then
+    v_new_status := 'Partially Paid'::invoice_status;
+  else
+    v_new_status := 'Sent'::invoice_status;
+  end if;
+
+  -- 6. Update the invoice row
+  update invoices
+     set invoice_no = v_invoice_no,
+         issue_date = v_issue_date,
+         due_date   = coalesce(v_due_date, due_date),
+         status     = v_new_status,
+         updated_at = now(),
+         updated_by = coalesce(v_actor, v_invoice.updated_by)
+   where id = v_invoice_id;
+
+  -- 7. Read back updated invoice
+  select * into v_invoice from invoices where id = v_invoice_id;
+
+  return jsonb_build_object(
+    'invoice_id',         v_invoice.id,
+    'invoice_no',         v_invoice.invoice_no,
+    'status',             v_invoice.status,
+    'issue_date',         v_invoice.issue_date,
+    'due_date',           v_invoice.due_date,
+    'booking_id',         v_invoice.booking_id,
+    'client_id',          v_invoice.client_id,
+    'line_count',         v_line_count,
+    'subtotal',           v_invoice.subtotal,
+    'discount_amount',    v_invoice.discount_amount,
+    'taxable_amount',     v_invoice.taxable_amount,
+    'vat_amount',         v_invoice.vat_amount,
+    'total_amount',       v_invoice.total_amount,
+    'paid_amount',        v_invoice.paid_amount,
+    'outstanding_amount', v_invoice.outstanding_amount
+  );
+end;
+$$;
+
+create or replace function public.resync_draft_invoice(p_booking_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_booking       bookings%rowtype;
+  v_invoice_id    uuid;
+  v_invoice       invoices%rowtype;
+  v_line_count    integer := 0;
+  v_written       integer;
+  v_client_uuid   uuid;
+begin
+  -- 1. Read booking
+  select * into v_booking from bookings where id = p_booking_id;
+  if not found then
+    raise exception 'resync_draft_invoice: booking % does not exist.', p_booking_id;
+  end if;
+
+  if v_booking.cancelled_at is not null then
+    raise exception 'resync_draft_invoice: booking % is cancelled; cannot resync a Draft.', v_booking.booking_no;
+  end if;
+
+  -- 2. Find the Draft invoice for this booking
+  select id into v_invoice_id
+    from invoices
+   where booking_id = p_booking_id
+     and status = 'Draft'
+     and voided_at is null
+   for update;
+  if not found then
+    raise exception 'resync_draft_invoice: no Draft invoice for booking %.', v_booking.booking_no;
+  end if;
+
+  select * into v_invoice from invoices where id = v_invoice_id;
+  if v_invoice.status <> 'Draft' or v_invoice.invoice_no is not null then
+    raise exception 'resync_draft_invoice: invoice % is not a Draft (status %, invoice_no %).', v_invoice_id, v_invoice.status, v_invoice.invoice_no;
+  end if;
+
+  -- Preserve each old revision's exact quantities, prices and breakdown.
+  -- Only active lines contribute to the invoice or appear in staff queries.
+  update invoice_lines set superseded_at = now()
+   where invoice_id = v_invoice_id and superseded_at is null;
+
+  -- 4. Equipment / Bundle / Accessory / Service / Sub-rental lines
+  --    Source: booking_lines (voided_at is null)
+  --    Arithmetic mirrors 0168:848-877
+  --    client_uuid is NEW for each line (gen_random_uuid) to avoid unique constraint
+  --    collisions across source tables and on concurrent resyncs.
+  insert into invoice_lines (
+    client_uuid, invoice_id, line_kind, description,
+    quantity, days, unit_rate, line_total, discount_percent, sort_order,
+    price_breakdown
+  )
+  select
+    gen_random_uuid(),
+    v_invoice_id,
+    (case bl.line_type
+       when 'Equipment'   then 'Equipment Rental'
+       when 'Bundle'      then 'Equipment Rental'
+       when 'Accessory'   then 'Equipment Rental'
+       when 'Manual item' then 'Equipment Rental'
+       when 'Service'     then 'Services'
+       when 'Sub-rental'  then 'Sub-Rental'
+     end)::line_kind,
+    coalesce(nullif(btrim(bl.description), ''), bl.line_type::text),
+    greatest(1, bl.qty),
+    greatest(1, bl.days),
+    bl.rate,
+    coalesce(bl.line_total, greatest(0, greatest(1, bl.qty) * greatest(1, bl.days) * bl.rate - coalesce(bl.discount_amount, 0))),
+    0,
+    coalesce(bl.sort_order, 0),
+    bl.price_breakdown
+  from booking_lines bl
+  where bl.booking_id = p_booking_id
+    and bl.voided_at is null;
+  get diagnostics v_written = row_count;
+  v_line_count := v_line_count + v_written;
+
+  -- 5. Crew lines
+  --    Source: booking_crew_lines (voided_at is null)
+  --    Arithmetic mirrors 0168:896-912
+  --    line_total = day_rate * days + overtime + accommodation + meals
+  --    unit_rate = day_rate + (extras / days)
+  --    client_uuid is NEW for each line (gen_random_uuid) to avoid unique constraint
+  --    collisions across source tables and on concurrent resyncs.
+  insert into invoice_lines (
+    client_uuid, invoice_id, line_kind, description,
+    quantity, days, unit_rate, line_total, discount_percent, sort_order
+  )
+  select
+    gen_random_uuid(),
+    v_invoice_id,
+    'Crew Charges'::line_kind,
+    coalesce(
+      nullif(btrim(concat_ws(' - ', nullif(btrim(cl.name), ''), cl.crew_role::text)), ''),
+      'Crew'
+    ),
+    1,
+    greatest(1, cl.days),
+    cl.day_rate
+      + (coalesce(cl.overtime, 0) + coalesce(cl.accommodation, 0) + coalesce(cl.meals, 0))
+        / greatest(1, cl.days),
+    cl.day_rate * greatest(1, cl.days)
+      + coalesce(cl.overtime, 0) + coalesce(cl.accommodation, 0) + coalesce(cl.meals, 0),
+    0,
+    1000 + (row_number() over (order by cl.created_at, cl.id))::integer - 1
+  from booking_crew_lines cl
+  where cl.booking_id = p_booking_id
+    and cl.voided_at is null;
+  get diagnostics v_written = row_count;
+  v_line_count := v_line_count + v_written;
+
+  -- 6. Transport lines
+  --    Source: booking_transport
+  --    Arithmetic mirrors 0168:927-946
+  --    client_uuid is NEW for each line (gen_random_uuid) to avoid unique constraint
+  --    collisions across source tables and on concurrent resyncs.
+  insert into invoice_lines (
+    client_uuid, invoice_id, line_kind, description,
+    quantity, days, unit_rate, line_total, discount_percent, sort_order
+  )
+  select
+    gen_random_uuid(),
+    v_invoice_id,
+    'Transport'::line_kind,
+    case
+      when nullif(btrim(coalesce(bt.vehicle, '')), '') is not null
+        then 'Transport - ' || btrim(bt.vehicle)
+      else 'Transport'
+    end,
+    1,
+    1,
+    coalesce(bt.delivery_charge, 0) + coalesce(bt.fuel_charge, 0),
+    coalesce(bt.delivery_charge, 0) + coalesce(bt.fuel_charge, 0),
+    0,
+    2000 + (row_number() over (order by bt.created_at, bt.id))::integer - 1
+  from booking_transport bt
+  where bt.booking_id = p_booking_id
+    and coalesce(bt.delivery_charge, 0) + coalesce(bt.fuel_charge, 0) > 0;
+  get diagnostics v_written = row_count;
+  v_line_count := v_line_count + v_written;
+
+  -- Booking-level discounts follow the booking too. The existing header trigger
+  -- applies the same half-up discount/VAT arithmetic as the line-total trigger.
+  update invoices
+     set discount_percent = (select coalesce(sum(percent), 0) from booking_discounts where booking_id = p_booking_id)
+   where id = v_invoice_id;
+
+  -- 8. Return result
+  return jsonb_build_object(
+    'invoice_id',   v_invoice_id,
+    'invoice_no',   v_invoice.invoice_no,
+    'status',       v_invoice.status,
+    'line_count',   v_line_count,
+    'resynced_at',  now()
+  );
+end;
+$$;
+
+comment on function public.resync_draft_invoice(uuid) is
+  'Rebuilds active Draft lines under an invoice lock; retains superseded revisions unchanged. '
+  'Issued, voided or cancelled records cannot be resynced.';
+
 -- 1. Add parent_booking_id to bookings
 alter table public.bookings
   add column if not exists parent_booking_id uuid references public.bookings(id);
@@ -697,6 +1122,11 @@ declare
   v_dates_moved   boolean := false;
   v_period        tstzrange;
   v_old_snapshot  jsonb;
+  v_protected_price boolean;
+  v_line_qty      integer;
+  v_line_days     integer;
+  v_line_discount numeric(14,2);
+  v_line_total    numeric(14,2);
 begin
   -- 1. Role verification (W88: Any desk staff — Owner, Admin, Manager, Coordinator, Warehouse)
   v_role := auth_user_role();
@@ -883,15 +1313,25 @@ begin
       raise exception 'A money-visible desk user must add bundle components.' using errcode = '42501';
     end if;
 
-    -- A stored pricing breakdown needs the full pricing pipeline to change.
-    -- Do not leave a stale line_total behind for invoice resynchronisation.
-    if existing is not null and (existing -> 'line_total' <> 'null'::jsonb or existing -> 'price_breakdown' <> 'null'::jsonb)
-       and ((row_data ->> 'qty')::integer is distinct from (existing ->> 'qty')::integer
+    -- Ordinary daily lines also store a total (0168). Reprice only when the
+    -- previous total matches its arithmetic; keep structure/custom snapshots.
+    v_protected_price := existing is not null and (
+      coalesce(existing -> 'price_breakdown', 'null'::jsonb) <> 'null'::jsonb
+      or ((existing ->> 'line_total') is not null and (existing ->> 'line_total')::numeric <>
+        greatest(0, (existing ->> 'qty')::integer * (existing ->> 'days')::integer
+          * (existing ->> 'rate')::numeric - coalesce((existing ->> 'discount_amount')::numeric, 0)))
+    );
+    if v_protected_price
+       and (v_dates_moved
+         or (row_data ->> 'qty')::integer is distinct from (existing ->> 'qty')::integer
          or (row_data ->> 'days')::integer is distinct from (existing ->> 'days')::integer
          or (row_data ->> 'product_id') is distinct from (existing ->> 'product_id')
          or (row_data ->> 'bundle_id') is distinct from (existing ->> 'bundle_id')
          or (row_data ->> 'line_type') is distinct from (existing ->> 'line_type')
          or (row_data ->> 'service_basis') is distinct from (existing ->> 'service_basis')
+         or (row_data ->> 'parent_client_uuid') is distinct from (
+           select parent.client_uuid::text from booking_lines parent where parent.id = (existing ->> 'parent_line_id')::uuid
+         )
          or coalesce((row_data ->> 'is_included')::boolean, false) is distinct from coalesce((existing ->> 'is_included')::boolean, false)
          or (coalesce(auth_can_view_money(), false) and (
            (row_data ? 'rate' and (row_data ->> 'rate')::numeric is distinct from (existing ->> 'rate')::numeric)
@@ -945,6 +1385,24 @@ begin
       end if;
       rate := coalesce((patch ->> 'rate')::numeric, base_rate, 0);
       patch := patch || jsonb_build_object('rate', rate, 'rate_overridden', base_rate is not null and rate <> base_rate);
+    end if;
+
+    if not v_protected_price then
+      v_line_qty := coalesce((patch ->> 'qty')::integer, (existing ->> 'qty')::integer, 1);
+      v_line_days := coalesce((patch ->> 'days')::integer, (existing ->> 'days')::integer, 1);
+      if v_line_qty < 1 or v_line_days < 1 then
+        raise exception 'Quantity and charged days must be at least one.';
+      end if;
+      if coalesce(patch ->> 'service_basis', existing ->> 'service_basis') = 'Flat' and v_line_days <> 1 then
+        raise exception 'A flat charge must have one charged day.';
+      end if;
+      rate := rate::numeric(14,2);
+      v_line_discount := coalesce((patch ->> 'discount_amount')::numeric, (existing ->> 'discount_amount')::numeric, 0);
+      v_line_total := v_line_qty * v_line_days * rate - v_line_discount;
+      if v_line_discount < 0 or v_line_total < 0 then
+        raise exception 'A line discount cannot exceed its charge.';
+      end if;
+      patch := patch || jsonb_build_object('line_total', v_line_total, 'price_breakdown', null);
     end if;
 
     if row_id is null then
@@ -1083,7 +1541,19 @@ begin
     end if;
   end if;
 
-  -- 10. Discounts
+  -- 10. Audit event (inserted before child references like booking_discounts)
+  insert into audit_events (
+    id, client_uuid, event_class, category, module, action, severity, status,
+    table_name, record_id, actor_id, actor_role, branch_id, old_values, new_values, reason
+  ) values (
+    audit_id, v_key, 'status change', 'Rentals', 'Rentals', 'Update', 'Informational', 'Success',
+    'bookings', v_booking_id, v_actor, v_role::system_role, b.branch_id,
+    jsonb_build_object('revision', v_revision, 'stage', b.stage),
+    jsonb_build_object('edited', b.stage, 'lines_count', array_length(kept, 1)),
+    coalesce(p_payload ->> 'reason', 'Changed confirmed booking')
+  );
+
+  -- 11. Discounts
   if p_payload ? 'discount_percent' then
     discount_pct := (p_payload ->> 'discount_percent')::numeric;
     if discount_pct is not null and (discount_pct < 0 or discount_pct > 100) then
@@ -1107,22 +1577,10 @@ begin
     end if;
   end if;
 
-  -- 11. Resync Draft invoice if one exists (T3-14 / W15)
+  -- 12. Resync Draft invoice if one exists (T3-14 / W15)
   if exists (select 1 from invoices where booking_id = v_booking_id and status = 'Draft') then
     perform public.resync_draft_invoice(v_booking_id);
   end if;
-
-  -- 12. Audit event
-  insert into audit_events (
-    id, client_uuid, event_class, category, module, action, severity, status,
-    table_name, record_id, actor_id, actor_role, branch_id, old_values, new_values, reason
-  ) values (
-    audit_id, v_key, 'status change', 'Rentals', 'Rentals', 'Update', 'Informational', 'Success',
-    'bookings', v_booking_id, v_actor, v_role::system_role, b.branch_id,
-    jsonb_build_object('revision', v_revision, 'stage', b.stage),
-    jsonb_build_object('edited', b.stage, 'lines_count', array_length(kept, 1)),
-    coalesce(p_payload ->> 'reason', 'Changed confirmed booking')
-  );
 
   -- 13. Read updated booking and record receipt
   result := read_booking_for_change(v_booking_id::text);

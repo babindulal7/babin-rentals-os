@@ -8021,10 +8021,12 @@ STEPS.push({
   expect: 'green',
   run: async () => {
     await as('Coordinator', async () => {
-      const created = await createBooking({
+      const { payload } = createPayload({
         key: 'l76_stored_price', window: ['2100-01-15T04:00:00Z', '2100-01-17T04:00:00Z'], actor: 'Coordinator',
         lines: [{ productId: QTY_PRODUCT, description: 'L76 cable', qty: 1, days: 2, rate: 250 }],
       })
+      payload.lines[0].line_total = 475
+      const created = await one('select create_booking($1::jsonb)', [JSON.stringify(payload)])
       const snapshot = await one('select read_booking_for_change($1)', [created.booking_id])
       for (const patch of [{ rate: 1 }, { discount_amount: 1 }]) {
         await refuses('a stored-price line refuses an unpriced financial edit', 'select change_booking($1::jsonb)', [JSON.stringify({
@@ -8033,6 +8035,70 @@ STEPS.push({
         })], /stored pricing/i)
       }
     })
+  },
+})
+
+STEPS.push({
+  id: 'L77',
+  title: 'Daily booking edits recalculate totals, invoice and quantity holds atomically (T3-18)',
+  expect: 'green',
+  run: async () => {
+    let bookingId
+    await as('Coordinator', async () => {
+      const { payload } = createPayload({
+        key: 'l77_daily', window: ['2100-01-20T04:00:00Z', '2100-01-22T04:00:00Z'], actor: 'Coordinator',
+        lines: [{ productId: QTY_PRODUCT, description: 'L77 cable', qty: 1, days: 2, rate: 250.25 }],
+      })
+      payload.lines[0].discount_amount = 0.50
+      const created = await one('select create_booking($1::jsonb)', [JSON.stringify(payload)])
+      bookingId = created.booking_id
+      bookingIds.l77_daily = bookingId
+      await transition('l77_daily', 'Quote', 'Booked', 'Coordinator')
+      const snapshot = await one('select read_booking_for_change($1)', [bookingId])
+      const request = { booking_id: bookingId, client_uuid: crypto.randomUUID(), revision: snapshot.revision,
+        discount_percent: 10, values: { return_at: '2100-01-23T04:00:00Z' }, lines: snapshot.lines.map(line => ({ ...line, qty: 2, days: 3 })) }
+      const saved = await one('select change_booking($1::jsonb)', [JSON.stringify(request)])
+      const replay = await one('select change_booking($1::jsonb)', [JSON.stringify(request)])
+      assertEq(replay.revision, saved.revision, 'Retry returns the original committed revision')
+    })
+    assertEq(Number(await one('select line_total from booking_lines where booking_id = $1 and voided_at is null', [bookingId])), 1501, 'Daily net total includes exact paisa and stored discount')
+    assertEq(Number(await one("select subtotal from invoices where booking_id = $1 and status = 'Draft'", [bookingId])), 1501, 'Draft invoice follows repricing')
+    assertEq(Number(await one("select discount_amount from invoices where booking_id = $1 and status = 'Draft'", [bookingId])), 150, 'Draft follows the edited booking-level discount')
+    assertEq(Number(await one('select sum(qty) from inventory_reservations where booking_id = $1 and released_at is null', [bookingId])), 2, 'Quantity holds follow edited quantity once')
+    await as('Warehouse', async () => {
+      const snapshot = await one('select read_booking_for_change($1)', [bookingId])
+      const saved = await one('select change_booking($1::jsonb)', [JSON.stringify({
+        booking_id: bookingId, client_uuid: crypto.randomUUID(), revision: snapshot.revision, values: {},
+        lines: snapshot.lines.map(line => ({ ...line, qty: 3, days: 4 })),
+      })])
+      assert(!('rate' in saved.lines[0]) && !('line_total' in saved.lines[0]), 'Warehouse edit still returns no financial fields')
+    })
+    assertEq(Number(await one('select line_total from booking_lines where booking_id = $1 and voided_at is null', [bookingId])), 3002.50, 'Warehouse repricing uses the preserved server rate and discount')
+    assertEq(Number(await one("select subtotal from invoices where booking_id = $1 and status = 'Draft'", [bookingId])), 3002.50, 'Draft invoice follows Warehouse quantity change')
+    assertEq(Number(await one('select sum(qty) from inventory_reservations where booking_id = $1 and released_at is null', [bookingId])), 3, 'Warehouse quantity hold uses the new quantity')
+    await as('Coordinator', async () => {
+      const snapshot = await one('select read_booking_for_change($1)', [bookingId])
+      await refuses('overcapacity repricing rolls back', 'select change_booking($1::jsonb)', [JSON.stringify({
+        booking_id: bookingId, client_uuid: crypto.randomUUID(), revision: snapshot.revision, values: {},
+        lines: snapshot.lines.map(line => ({ ...line, qty: 4 })),
+      })], /capacity|shortfall|stock/i)
+      assertEq((await one('select read_booking_for_change($1)', [bookingId])).revision, snapshot.revision, 'Rejected quantity edit preserves revision')
+    })
+    assertEq(Number(await one('select line_total from booking_lines where booking_id = $1 and voided_at is null', [bookingId])), 3002.50, 'Rejected quantity edit preserves the stored total')
+    const invoiceId = await one('select id from invoices where booking_id = $1', [bookingId])
+    assertEq(Number(await one('select count(*) from invoice_lines where invoice_id = $1 and superseded_at is null', [invoiceId])), 1, 'Only one current invoice line remains after repeated changes')
+    assertEq(Number(await one('select count(*) from invoice_lines where invoice_id = $1 and superseded_at is not null', [invoiceId])), 2, 'Both old invoice revisions are retained')
+    assertEq(Number(await one('select count(*) from invoice_lines where invoice_id = $1 and superseded_at is not null and line_total = 500', [invoiceId])), 1, 'Original invoice price is retained unchanged')
+    await refuses('superseded invoice prices are immutable', 'update invoice_lines set line_total = 1 where invoice_id = $1 and superseded_at is not null', [invoiceId], /immutable history/i)
+    await refuses('invoice history cannot be deleted', 'delete from invoice_lines where invoice_id = $1', [invoiceId], /Law 3/i)
+    await as('Accounts', async () => {
+      assertEq(Number(await one('select count(*) from invoice_lines where invoice_id = $1', [invoiceId])), 1, 'Finance reads only current lines under RLS')
+      const issued = await one('select issue_invoice($1::jsonb)', [JSON.stringify({ invoice_id: invoiceId, issued_by: U.Accounts })])
+      assertEq(Number(issued.line_count), 1, 'Issue counts active lines only')
+      assertEq(Number(issued.subtotal), 3002.50, 'Issue uses only the latest repriced amount')
+      assertEq(Number(issued.discount_amount), 300, 'Warehouse quantity edits preserve the booking-level discount')
+    })
+
   },
 })
 
