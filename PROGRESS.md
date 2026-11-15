@@ -1,5 +1,87 @@
 # Progress Log
 
+## 2026-11-15 — T2-21: Planned equipment downtime with a reason (Lane A)
+
+**Did**
+- **T2-21: Planned equipment downtime with a reason (B10, Law 3, Law 8):**
+  - Claimed Migration `0237` in `docs/plans/MIGRATION_LEDGER.md` (Next free number: `0238`):
+    - `0237_planned_equipment_downtime.sql`:
+      - Altered `inventory_reservations` to make `booking_id` and `booking_line_id` nullable (for standalone downtime holds).
+      - Added enum `reservation_kind ('booking', 'downtime')` with default `'booking'`, `downtime_reason text`, `downtime_notes text`, and `ended_by uuid`.
+      - Added table check constraints:
+        - `inventory_reservations_kind_integrity`: booking holds require `booking_id` and `booking_line_id`; downtime holds require null `booking_id`, null `booking_line_id`, and not null `downtime_reason`.
+        - `inventory_reservations_downtime_reason_valid`: enforces B10 reason list (`'Repair'`, `'Service or calibration'`, `'Our own shoot'`, `'Lent to a partner'`, `'Marketing shoot'`, `'Other'`).
+        - `inventory_reservations_downtime_other_notes`: requires notes (>= 3 chars) when reason is `'Other'`.
+      - Updated `validate_unit_reservability()` trigger to preserve 0184 repair clearance logic while permitting downtime holds on units unless retired.
+      - Extended RLS `inventory_reservations_all` policy to admit `Technician` (can plan and manage downtime).
+      - Implemented atomic, collision-preventing RPC `plan_equipment_downtime(p_client_uuid, p_asset_id, p_product_id, p_qty, p_start_at, p_end_at, p_reason, p_notes)`:
+        - Checks for overlapping active booking reservations and returns friendly error with booking number (`"BK-XXXX has it on those dates"`).
+        - Relies on PostgreSQL kernel-level GiST exclusion constraint (`period && period`) on `inventory_reservations` for zero-race bidirectional collision prevention.
+        - Supports serialized assets and bulk non-serialized quantity items.
+        - Logs audit event `audit_events` with reason and values.
+      - Implemented early release RPC `end_equipment_downtime(p_reservation_id, p_client_uuid)` (Law 3):
+        - Releases active hold immediately (`released_at = now()`, `ended_by = auth.uid()`, `released_reason = 'Downtime ended early'`), freeing dates for booking immediately.
+  - Lifecycle step `L72` added in `scripts/e2e-lifecycle.mjs`:
+    - Asserts technician can plan downtime with B10 reason.
+    - Asserts booking collision over planned downtime is rejected at database kernel level by GiST constraint.
+    - Asserts downtime overlapping an existing booking is rejected with clear booking reference.
+    - Asserts early termination (`end_equipment_downtime`) immediately frees the equipment dates for subsequent reservations.
+  - Domain Events (`src/events/eventBus.ts`):
+    - Added `INVENTORY_DOWNTIME_PLANNED` and `INVENTORY_DOWNTIME_ENDED`.
+  - Actions (`src/actions/inventory/`):
+    - Implemented `planDowntime` action with validation, permissions (`maintenance.create`), and event emission.
+    - Implemented `endDowntime` action with validation, permissions (`maintenance.create`), and event emission.
+  - Queries (`src/lib/queries/`):
+    - Implemented `listProductDowntimes` and `listAssetDowntimes` in `src/lib/queries/downtime.ts`.
+    - Updated `readHolds` and `readQuantityHolds` in `src/lib/queries/availability.ts` to surface downtime holds.
+    - Updated `fetchCalendarBars` in `src/lib/queries/calendar.ts` to surface planned downtime as gray 'Blocked' calendar bars.
+  - UI Implementation:
+    - `src/modules/inventory/modals/PlanDowntimeModal.tsx`: modal with B10 chip selector, date range picker, serialized unit selector / quantity input, and conditional notes.
+    - `src/modules/inventory/sections/PlannedDowntimeCard.tsx`: card in AssetDetail Maintenance tab listing active and scheduled downtimes with "Active Now" / "Scheduled" badges and "End now" action.
+    - Integrated in `src/modules/inventory/AssetDetail.tsx`.
+  - Unit tests added:
+    - `src/actions/inventory/__tests__/planDowntime.test.ts` (7 tests).
+    - `src/actions/inventory/__tests__/endDowntime.test.ts` (3 tests).
+    - `src/lib/queries/__tests__/downtime.test.ts` (2 tests).
+    - `src/modules/inventory/sections/__tests__/PlannedDowntimeCard.test.tsx` (3 tests).
+
+**Ruled**
+- B10: Planned downtime reasons: Repair, Service or calibration, Our own shoot, Lent to a partner, Marketing shoot, Other (notes required).
+- Zero-race bidirectional collision protection: Postgres GiST exclusion constraint on `inventory_reservations` rejects overlapping bookings or downtimes unconditionally.
+- Law 3: "End now" terminates downtime early without data deletion, recording `ended_by` and freeing availability.
+- Law 8: Idempotency via `client_uuid`.
+- Role access: Technician, Warehouse, Manager, Admin, Owner can plan downtime.
+
+**Verified**
+- `npm run check:pglite`: 235/235 applied, 0 failed.
+- `npm run check:anon`: PASS.
+- `npm run check:lifecycle`: 73/73 green, 0 failed.
+- `npm test`: 7164/7164 passed, 0 failed.
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 errors, 0 warnings.
+- `npm run gates`: All 17 gates passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 104 / 104 (100%) | +3 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +1 |
+| Lifecycle | steps green / total | 73 / 73 (100%) | +2 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 235 files · check:pglite 235/235 applied, 0 failed (recorded 2026-11-15T12:45:06.850Z). Suite: PASS — 7164/7164 passed, 0 failed (recorded 2026-11-15T12:48:19.657Z); source fingerprint matches.
+Coverage suite: PASS — 7164/7164 passed, 0 failed (recorded 2026-11-15T12:48:19.657Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-15T12:45:33.641Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T2-21 ready for merge into `main` (lane-a/T2-21-planned-downtime-with-a-reason).
+- Batch 4 complete: T0-03 (PR #165), T3-24 (PR #166), T3-03 (PR #168), T3-06 (PR #169), T2-21 (PR #170).
+
+
+
 ## 2026-11-10 — T3-17: Extend in two taps (Lane C)
 
 **Did**

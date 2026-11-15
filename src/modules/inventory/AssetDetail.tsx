@@ -37,6 +37,7 @@ import {
 import { Badge } from '../../components/ui/Badge'
 import { ServiceDueBadge } from '../../components/ui/ServiceDueBadge'
 import { ServicePlanCard } from './components/ServicePlanCard'
+import { PlannedDowntimeCard } from './sections/PlannedDowntimeCard'
 import { AdjustStockModal } from './AdjustStockModal'
 import { AddUnitsModal } from './modals/AddUnitsModal'
 import { RetireUnitModal } from './modals/RetireUnitModal'
@@ -983,6 +984,12 @@ function AssetDetailView() {
       {/* Tab 3: Maintenance */}
       {activeTab === 'Maintenance' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-lg)' }}>
+        <PlannedDowntimeCard
+          productId={product.id}
+          productName={product.name}
+          isSerialized={product.trackingMode === 'Serialised'}
+          units={units.map((u) => ({ id: u.id, assetTag: u.assetTag }))}
+        />
         {/* RULING 2026-09-08 (R-28): the interval lives on the MODEL, so the card
             that sets it lives on the model's page. Without it nothing on this
             model ever badges — every interval defaults to off. */}
