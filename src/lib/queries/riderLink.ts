@@ -120,11 +120,12 @@ export async function hashRiderToken(rawToken: string): Promise<string> {
     return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
   }
 
-  // Node is permitted only for mock/test runs; production never substitutes
-  // a weak, non-cryptographic hash for SHA-256.
-  if (IS_MOCK) {
+  // Node is permitted only for mock/test runs in environments without WebCrypto;
+  // production never substitutes a weak, non-cryptographic hash for SHA-256.
+  if (IS_MOCK && typeof process !== 'undefined' && process.versions?.node) {
     try {
-      const nodeCrypto = await import('node:crypto')
+      const cryptoModuleName = 'node:crypto'
+      const nodeCrypto = await import(/* @vite-ignore */ cryptoModuleName)
       return nodeCrypto.createHash('sha256').update(trimmed).digest('hex')
     } catch {
       throw new Error('Secure SHA-256 hashing is unavailable; rider link actions are blocked.')

@@ -181,6 +181,8 @@ export const EVENT_TYPES = {
   
   MAINTENANCE_STARTED: 'maintenance.started',
   MAINTENANCE_COMPLETED: 'maintenance.completed',
+  INVENTORY_DOWNTIME_PLANNED: 'inventory.downtime_planned',
+  INVENTORY_DOWNTIME_ENDED: 'inventory.downtime_ended',
 
   // Delivery & Dispatch (T4-01, T4-02)
   DELIVERY_JOB_CREATED: 'delivery.job_created',

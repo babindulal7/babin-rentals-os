@@ -7869,6 +7869,109 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L72',
+  title: 'Planned equipment downtime with a reason and early termination (T2-21, B10, Law 3, Law 8)',
+  expect: 'green',
+  run: async () => {
+    const unitAId = UNITS[0]
+    const unitBId = UNITS[1]
+    const productId = SERIAL_PRODUCT
+    let bookingId
+    let downtimeId
+
+    await as('Owner', async () => {
+      const clientCode = await one("select next_document_number('client')")
+      const clientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+        values (gen_random_uuid(), '${clientCode}', 'L72 Downtime Client', '+9779800009972', 'Active', '${U.Owner}')
+        returning id`)).rows[0].id
+
+      const bookingNo = await one("select next_document_number('booking')")
+      bookingId = (await q(`insert into bookings (client_uuid, booking_no, client_id, branch_id, stage, delivery_type, pickup_at, return_at, created_by, updated_by, project_name)
+        values (gen_random_uuid(), '${bookingNo}', '${clientId}', '${BRANCH}', 'Quote', 'Client Pickup', '2099-12-20 10:00:00+05:45', '2099-12-25 18:00:00+05:45', '${U.Owner}', '${U.Owner}', 'L72 Booking')
+        returning id`)).rows[0].id
+
+      const lineId = (await q(`insert into booking_lines (client_uuid, booking_id, line_type, product_id, description, qty, days, rate, created_by)
+        values (gen_random_uuid(), '${bookingId}', 'Equipment', '${productId}', 'Downtime test camera', 1, 5, 3500, '${U.Owner}')
+        returning id`)).rows[0].id
+
+      await q(`insert into inventory_reservations (client_uuid, booking_id, booking_line_id, asset_id, product_id, qty, period, state, hold_state, kind, created_by)
+        values (gen_random_uuid(), '${bookingId}', '${lineId}', '${unitBId}', null, 1, tstzrange('2099-12-20 10:00:00+05:45', '2099-12-25 18:00:00+05:45', '[)'), 'Reserved', 'confirmed', 'booking', '${U.Owner}')`)
+    })
+
+    // 1. Technician plans downtime on unit A
+    await as('Technician', async () => {
+      const planRes = (await q(`select public.plan_equipment_downtime(
+        '${crypto.randomUUID()}',
+        '${unitAId}',
+        '${productId}',
+        1,
+        '2099-12-20 10:00:00+05:45'::timestamptz,
+        '2099-12-23 18:00:00+05:45'::timestamptz,
+        'Service or calibration',
+        'Routine optical sensor alignment'
+      ) as res`)).rows[0].res
+      assert(planRes.success, 'Downtime plan succeeds')
+      downtimeId = planRes.reservation_id
+    })
+
+    // 2. Lifecycle assert: "a booking over a downtime is refused"
+    let bookingOverDowntimeRefused = false
+    try {
+      await as('Owner', async () => {
+        const dummyLineId = (await q(`insert into booking_lines (client_uuid, booking_id, line_type, product_id, description, qty, days, rate, created_by)
+          values (gen_random_uuid(), '${bookingId}', 'Equipment', '${productId}', 'Downtime test camera', 1, 3, 3500, '${U.Owner}')
+          returning id`)).rows[0].id
+
+        await q(`insert into inventory_reservations (client_uuid, booking_id, booking_line_id, asset_id, product_id, qty, period, state, hold_state, kind, created_by)
+          values (gen_random_uuid(), '${bookingId}', '${dummyLineId}', '${unitAId}', null, 1, tstzrange('2099-12-21 10:00:00+05:45', '2099-12-22 18:00:00+05:45', '[)'), 'Reserved', 'confirmed', 'booking', '${U.Owner}')`)
+      })
+    } catch {
+      bookingOverDowntimeRefused = true
+    }
+    assert(bookingOverDowntimeRefused, 'A booking over a downtime is refused by GiST exclusion constraint')
+
+    // 3. Lifecycle assert: "a downtime over a booking is refused"
+    let downtimeOverBookingRefused = false
+    let failureMsg = ''
+    try {
+      await as('Coordinator', async () => {
+        await q(`select public.plan_equipment_downtime(
+          '${crypto.randomUUID()}',
+          '${unitBId}',
+          '${productId}',
+          1,
+          '2099-12-21 10:00:00+05:45'::timestamptz,
+          '2099-12-22 18:00:00+05:45'::timestamptz,
+          'Repair',
+          'Fix loose battery latch'
+        )`)
+      })
+    } catch (e) {
+      downtimeOverBookingRefused = true
+      failureMsg = e.message
+    }
+    assert(downtimeOverBookingRefused, 'A downtime over a booking is refused')
+    assert(failureMsg.includes('has it on those dates'), 'Refusal names the booking that has it on those dates')
+
+    // 4. Lifecycle assert: "an ended downtime frees the dates"
+    await as('Coordinator', async () => {
+      const endRes = (await q(`select public.end_equipment_downtime('${downtimeId}') as res`)).rows[0].res
+      assert(endRes.success, 'End now terminates downtime')
+    })
+
+    // Now booking unit A over those exact dates succeeds
+    await as('Owner', async () => {
+      const lineId = (await q(`insert into booking_lines (client_uuid, booking_id, line_type, product_id, description, qty, days, rate, created_by)
+        values (gen_random_uuid(), '${bookingId}', 'Equipment', '${productId}', 'Downtime test camera', 1, 3, 3500, '${U.Owner}')
+        returning id`)).rows[0].id
+
+      await q(`insert into inventory_reservations (client_uuid, booking_id, booking_line_id, asset_id, product_id, qty, period, state, hold_state, kind, created_by)
+        values (gen_random_uuid(), '${bookingId}', '${lineId}', '${unitAId}', null, 1, tstzrange('2099-12-21 10:00:00+05:45', '2099-12-22 18:00:00+05:45', '[)'), 'Reserved', 'confirmed', 'booking', '${U.Owner}')`)
+    })
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break

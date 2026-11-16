@@ -1,0 +1,1893 @@
+{
+  "total": 245,
+  "mergedCount": 38,
+  "unmergedCount": 207,
+  "merged": [
+    {
+      "branch": "origin",
+      "sha": "6b1563f3",
+      "date": "2026-11-15",
+      "subj": "feat(rentals): extend rental in two taps with W41 pricing and clash checks (T3-17, #162)"
+    },
+    {
+      "branch": "a11y/jsx-lint-fixes",
+      "sha": "a2c6873c",
+      "date": "2026-11-02",
+      "subj": "fix(a11y): ClientCombobox popup wrapper is not a second listbox"
+    },
+    {
+      "branch": "backup/pr70-f0b72db1",
+      "sha": "f0b72db1",
+      "date": "2026-11-02",
+      "subj": "test(contracts): follow the T8-04 membership migrations in test:server-contracts"
+    },
+    {
+      "branch": "ci/dual-full-ci-main",
+      "sha": "5f84b36a",
+      "date": "2026-11-10",
+      "subj": "ci: add full Mac CI job on main and streamline Mac PR verification"
+    },
+    {
+      "branch": "ci/verify-contracts-fix",
+      "sha": "981e2581",
+      "date": "2026-11-02",
+      "subj": "Merge branch 'a11y/jsx-lint-fixes' into ci/verify-contracts-fix"
+    },
+    {
+      "branch": "ci/verify-fix-e111ca56",
+      "sha": "f393e1c6",
+      "date": "2026-11-02",
+      "subj": "Merge commit 'e111ca56' into ci/windows-self-hosted-runner"
+    },
+    {
+      "branch": "claude/file-update-d4b7b1",
+      "sha": "5fd7ee87",
+      "date": "2026-11-01",
+      "subj": "rule: R-3 Admin and Manager may void invoices; R-4 staffDiscountPercent is a money setting (0202)"
+    },
+    {
+      "branch": "claude/rental-workspace-files-review-30ac3a",
+      "sha": "044df938",
+      "date": "2026-10-19",
+      "subj": "Auto-sync: 2026-10-19 23:43:24"
+    },
+    {
+      "branch": "docs/supabase-staging-preflight-20261102",
+      "sha": "f3363205",
+      "date": "2026-11-10",
+      "subj": "ci: refresh full PR checks on Mac (no file changes)"
+    },
+    {
+      "branch": "fix/T1-16-truthful-settings-toggles",
+      "sha": "9fcef290",
+      "date": "2026-11-02",
+      "subj": "fix(T1-16): map return reminders to T5-07 and payment reminders to T5-08"
+    },
+    {
+      "branch": "fix/ci-dedupe-and-parallel-runner-plan-20261106",
+      "sha": "187e703f",
+      "date": "2026-11-10",
+      "subj": "Merge remote-tracking branch 'origin/main' into fix/ci-dedupe-and-parallel-runner-plan-20261106"
+    },
+    {
+      "branch": "fix/pr-35-rider-crypto-failclosed",
+      "sha": "764fbc08",
+      "date": "2026-11-10",
+      "subj": "test(security): require secure RNG and authentic SHA-256 for rider links"
+    },
+    {
+      "branch": "lane-a/T1-15-switch-user-with-name-plus-pin",
+      "sha": "c1949808",
+      "date": "2026-11-02",
+      "subj": "T1-15: 0208 verified; record gate numbers"
+    },
+    {
+      "branch": "lane-a/T2-09-bluetooth-scanner-at-the-packing-bench",
+      "sha": "f3dcf0c3",
+      "date": "2026-10-28",
+      "subj": "feat(floor): T2-09 bluetooth scanner at the packing bench with burst detection and focus trap"
+    },
+    {
+      "branch": "lane-a/T2-09-main-integration",
+      "sha": "9b84ed8b",
+      "date": "2026-10-30",
+      "subj": "docs: record authorized publication of scanner draft PR"
+    },
+    {
+      "branch": "lane-a/T2-15-damage-found-during-reset",
+      "sha": "9fbba3d9",
+      "date": "2026-11-02",
+      "subj": "Merge L49 fix (main b24675a8) into T2-15; claim 0194 in main's ledger"
+    },
+    {
+      "branch": "lane-a/T2-25-current-main-printing",
+      "sha": "df00ea18",
+      "date": "2026-11-10",
+      "subj": "feat(T2-25): preserve complete paged pick lists on current main"
+    },
+    {
+      "branch": "lane-a/T8-02-plans-admin-screen",
+      "sha": "19797dd7",
+      "date": "2026-10-28",
+      "subj": "feat(clients): add membership plans admin screen (T8-02)"
+    },
+    {
+      "branch": "lane-a/T8-03-change-plan-with-credit-for-unused",
+      "sha": "fd989abb",
+      "date": "2026-10-28",
+      "subj": "feat(clients): change plan with credit for unused days and unified write paths (T8-03, D22)"
+    },
+    {
+      "branch": "lane-a/T8-04-renew-a-lapsed-membership",
+      "sha": "a00977c4",
+      "date": "2026-11-02",
+      "subj": "Merge main (T2-15 + L49 fix) into T8-04; claim 0195-0198 in main's ledger"
+    },
+    {
+      "branch": "lane-a/T8-06-crew-overtime-half-or-full-day",
+      "sha": "28cbd00b",
+      "date": "2026-11-02",
+      "subj": "T8-06: 0207 verified; record gate numbers and main's 15 typecheck errors"
+    },
+    {
+      "branch": "lane-a/T8-07-timesheet-by-the-day",
+      "sha": "d4a3a550",
+      "date": "2026-11-02",
+      "subj": "Merge main (T8-06 landed) into T8-07"
+    },
+    {
+      "branch": "lane-a/T8-08-tds-on-crew-payouts",
+      "sha": "81ae091c",
+      "date": "2026-10-31",
+      "subj": "docs(progress): record T8-08 TDS on crew payouts completion"
+    },
+    {
+      "branch": "lane-a/T8-09-staff-renting-gear",
+      "sha": "fd08c944",
+      "date": "2026-10-29",
+      "subj": "finish T8-09: staff renting gear on lane-a/T8-09-staff-renting-gear-finish"
+    },
+    {
+      "branch": "lane-a/T8-09-staff-renting-gear-finish",
+      "sha": "fd08c944",
+      "date": "2026-10-29",
+      "subj": "finish T8-09: staff renting gear on lane-a/T8-09-staff-renting-gear-finish"
+    },
+    {
+      "branch": "lane-b/T4-01-delivery-dispatch-on-the-database",
+      "sha": "50da0a5c",
+      "date": "2026-10-31",
+      "subj": "docs(progress): record completion table for T4-01"
+    },
+    {
+      "branch": "lane-b/T4-07-delivery-zones",
+      "sha": "4ef35a6a",
+      "date": "2026-10-31",
+      "subj": "T4-07: Update migration ledger - 0187 written"
+    },
+    {
+      "branch": "lane-b/T4-12-bulk-edit-products",
+      "sha": "ebd02b5a",
+      "date": "2026-11-06",
+      "subj": "feat(inventory): bulk edit products with preview, rounded rate %, and audit logging (T4-12, 0223)"
+    },
+    {
+      "branch": "lane-b/T5-12-offer-emails-to-clients",
+      "sha": "6a274741",
+      "date": "2026-11-07",
+      "subj": "feat(communication): offer emails to clients with migration 0224, Resend integration, and consent filtering (T5-12)"
+    },
+    {
+      "branch": "lane-b/T5-13-edit-email-and-document-texts",
+      "sha": "eff02958",
+      "date": "2026-11-08",
+      "subj": "docs(plans): record awaiting merge status for T4-12 and T5-12"
+    },
+    {
+      "branch": "lane-b/T6-02-string-catalogue-and-lint",
+      "sha": "0e801c6d",
+      "date": "2026-11-04",
+      "subj": "feat(i18n): implement module string catalogues, BS Devanagari months, and UI copy lint (T6-02)"
+    },
+    {
+      "branch": "lane-b/T6-06-wave-3-back-office",
+      "sha": "d7edd45b",
+      "date": "2026-11-05",
+      "subj": "Add calendar, client, crew, and rental translations"
+    },
+    {
+      "branch": "lane-b/card-5-graphite-repaint-glass-removal",
+      "sha": "d4486a4a",
+      "date": "2026-11-12",
+      "subj": "docs(release): triage all 76 migration SQL byte mismatches and prioritize 22 reviews (#146)"
+    },
+    {
+      "branch": "lane-c/T3-smart-reservations",
+      "sha": "eaff8493",
+      "date": "2026-10-31",
+      "subj": "feat(rentals): wire smart availability evaluation and conflict modal into BookingDetail and LineItemTree"
+    },
+    {
+      "branch": "lane-nemotron/T4-11-report-problem-20261103",
+      "sha": "ee327545",
+      "date": "2026-11-03",
+      "subj": "T4-11: Report a Problem feature"
+    },
+    {
+      "branch": "lane-nemotron/nem-03-request-perf",
+      "sha": "9b84ed8b",
+      "date": "2026-10-30",
+      "subj": "docs: record authorized publication of scanner draft PR"
+    },
+    {
+      "branch": "lane-nemotron/nem-04-responsive-a11y",
+      "sha": "9b84ed8b",
+      "date": "2026-10-30",
+      "subj": "docs: record authorized publication of scanner draft PR"
+    },
+    {
+      "branch": "lane-nemotron/nem-05-release-gates",
+      "sha": "9b84ed8b",
+      "date": "2026-10-30",
+      "subj": "docs: record authorized publication of scanner draft PR"
+    }
+  ],
+  "unmerged": [
+    {
+      "branch": "audit/ip-independence-2026-10-18",
+      "sha": "f9f19e89",
+      "ahead": 4,
+      "behind": 664,
+      "date": "2026-10-18",
+      "subj": "fix(audit): clean core tests and client search placeholder"
+    },
+    {
+      "branch": "audit/mac-mini-ci-pr-reconcile-20261110",
+      "sha": "d36e1e0d",
+      "ahead": 1,
+      "behind": 45,
+      "date": "2026-11-10",
+      "subj": "docs(audit): Mac mini CI and PR reconciliation report (2026-11-10)"
+    },
+    {
+      "branch": "backup/main-before-babin-rentals-os-sync",
+      "sha": "ba48b427",
+      "ahead": 424,
+      "behind": 847,
+      "date": "2026-10-15",
+      "subj": "Compact the Rentals list and keep desktop page titles readable"
+    },
+    {
+      "branch": "cherrypick/astra-phase0",
+      "sha": "f43861f9",
+      "ahead": 1,
+      "behind": 396,
+      "date": "2026-10-31",
+      "subj": "all ai"
+    },
+    {
+      "branch": "chore/dependency-security-hardening",
+      "sha": "ca49f6ab",
+      "ahead": 1,
+      "behind": 12,
+      "date": "2026-11-12",
+      "subj": "chore(deps): safe non-breaking dependency security audit fix"
+    },
+    {
+      "branch": "chore/workstation-safe-sync-2026-11-09",
+      "sha": "86f311ef",
+      "ahead": 11,
+      "behind": 65,
+      "date": "2026-11-10",
+      "subj": "ci: refresh PR checks on Mac (no file changes)"
+    },
+    {
+      "branch": "ci/mac-full-windows-light-20261110",
+      "sha": "0f4dc8c3",
+      "ahead": 5,
+      "behind": 62,
+      "date": "2026-11-10",
+      "subj": "ci: fix Windows smoke paths, uncached Node setup and early runner preflight"
+    },
+    {
+      "branch": "ci/mac-pr-smoke-20261109",
+      "sha": "838f8087",
+      "ahead": 4,
+      "behind": 97,
+      "date": "2026-11-09",
+      "subj": "ci(mac): run next four security PRs and unblock whitespace-only quick checks"
+    },
+    {
+      "branch": "ci/mac03-lightweight-probe-20261109",
+      "sha": "63314422",
+      "ahead": 1,
+      "behind": 97,
+      "date": "2026-11-09",
+      "subj": "ci(mac): schedule lightweight runner-03 verification without interrupting Mac PR batch"
+    },
+    {
+      "branch": "ci/route-full-pr-checks-to-mac-20261110",
+      "sha": "f69a4adb",
+      "ahead": 1,
+      "behind": 63,
+      "date": "2026-11-10",
+      "subj": "ci: run full PR verification on Mac, retain Windows and Mac full main checks"
+    },
+    {
+      "branch": "ci/route-pr-full-mac-main-windows-20261110",
+      "sha": "f0c9cf3b",
+      "ahead": 1,
+      "behind": 49,
+      "date": "2026-11-10",
+      "subj": "ci: route non-main dispatches and PRs to Mac ARM64 with memory limits"
+    },
+    {
+      "branch": "ci/windows-self-hosted-runner",
+      "sha": "86d41053",
+      "ahead": 1,
+      "behind": 236,
+      "date": "2026-11-02",
+      "subj": "Merge commit 'db45dae8' into ci/windows-self-hosted-runner"
+    },
+    {
+      "branch": "claude/bookable-design-analysis-ecb81e",
+      "sha": "ba48b427",
+      "ahead": 424,
+      "behind": 847,
+      "date": "2026-10-15",
+      "subj": "Compact the Rentals list and keep desktop page titles readable"
+    },
+    {
+      "branch": "claude/booqable-babin-adoption-spec-de72fa",
+      "sha": "370bae9a",
+      "ahead": 353,
+      "behind": 847,
+      "date": "2026-10-26",
+      "subj": "docs(skills): wrap skill description in quotes for YAML parser compatibility"
+    },
+    {
+      "branch": "claude/booqable-followups-port",
+      "sha": "d664277a",
+      "ahead": 6,
+      "behind": 680,
+      "date": "2026-10-17",
+      "subj": "Point the Today row comments at their renumbered rulings and test late pickups"
+    },
+    {
+      "branch": "claude/cool-wozniak-dtw1ps",
+      "sha": "d4bea96f",
+      "ahead": 1,
+      "behind": 664,
+      "date": "2026-10-19",
+      "subj": "Narrow daily-closing approval to the roles RLS admits; fix 8 red tests on main"
+    },
+    {
+      "branch": "claude/equipment-draft-preview-rename-a5f063",
+      "sha": "71b2db9d",
+      "ahead": 3,
+      "behind": 288,
+      "date": "2026-11-02",
+      "subj": "docs: CI is back on via a self-hosted runner (supersedes W75)"
+    },
+    {
+      "branch": "claude/extend-rental-labels",
+      "sha": "06cc22b2",
+      "ahead": 368,
+      "behind": 847,
+      "date": "2026-10-16",
+      "subj": "feat(rentals): ExtendRentalModal test coverage and label improvements"
+    },
+    {
+      "branch": "claude/fix-main-test-failures",
+      "sha": "201b86b5",
+      "ahead": 2,
+      "behind": 651,
+      "date": "2026-10-19",
+      "subj": "docs(progress): record the seven test-failure fixes with the generated completion block"
+    },
+    {
+      "branch": "claude/glass-theme-babin-v2-60f98c",
+      "sha": "a09db744",
+      "ahead": 412,
+      "behind": 847,
+      "date": "2026-10-13",
+      "subj": "docs(progress): glass verified after merging main"
+    },
+    {
+      "branch": "claude/hungry-gauss-e46f5d",
+      "sha": "4f3309dd",
+      "ahead": 425,
+      "behind": 847,
+      "date": "2026-10-15",
+      "subj": "Give Booking Detail a header of title, search and one primary"
+    },
+    {
+      "branch": "claude/intelligent-ptolemy-050b04",
+      "sha": "8847636f",
+      "ahead": 433,
+      "behind": 847,
+      "date": "2026-10-16",
+      "subj": "test(finance): pin a desktop viewport in the permission suite"
+    },
+    {
+      "branch": "claude/main-branch-setup-5c3c4f",
+      "sha": "f04e855d",
+      "ahead": 423,
+      "behind": 847,
+      "date": "2026-10-16",
+      "subj": "feat(ui): per-panel date filters, nav-width pushing filter drawers, solid neutral selected states"
+    },
+    {
+      "branch": "claude/md-brief-gaps",
+      "sha": "1683d905",
+      "ahead": 371,
+      "behind": 847,
+      "date": "2026-10-08",
+      "subj": "fix(mock): fill now()/CURRENT_DATE column defaults on insert"
+    },
+    {
+      "branch": "claude/modest-hypatia-b79e4e",
+      "sha": "622dba3c",
+      "ahead": 437,
+      "behind": 847,
+      "date": "2026-10-16",
+      "subj": "chore: save launch config"
+    },
+    {
+      "branch": "claude/modest-neumann-ccc071",
+      "sha": "57bd2cb1",
+      "ahead": 31,
+      "behind": 847,
+      "date": "2026-10-08",
+      "subj": "commit"
+    },
+    {
+      "branch": "claude/nervous-swartz-57bbce",
+      "sha": "9fd36b53",
+      "ahead": 425,
+      "behind": 847,
+      "date": "2026-10-16",
+      "subj": "Today rows: say each fact once and fit a row"
+    },
+    {
+      "branch": "claude/new-session-yrv8p9",
+      "sha": "97adcb30",
+      "ahead": 10,
+      "behind": 664,
+      "date": "2026-10-19",
+      "subj": "Revenue: second review fixes — chart focus and readout, whole-rupee ticks, focus-safe register paging, Coordinator Finance link"
+    },
+    {
+      "branch": "claude/peaceful-grothendieck-10d979",
+      "sha": "003527a2",
+      "ahead": 425,
+      "behind": 847,
+      "date": "2026-10-16",
+      "subj": "Give Inventory and Clients one search and a one-line toolbar"
+    },
+    {
+      "branch": "claude/phase6-five-states",
+      "sha": "06abbc03",
+      "ahead": 2,
+      "behind": 701,
+      "date": "2026-10-16",
+      "subj": "docs(progress): Phase 6 Task 3.4 inventory, verification and ruling"
+    },
+    {
+      "branch": "claude/phase6-law16-reports",
+      "sha": "9fc85789",
+      "ahead": 2,
+      "behind": 698,
+      "date": "2026-10-17",
+      "subj": "chore(gates): record check:pglite 165/165 for the Law 16 reports run"
+    },
+    {
+      "branch": "claude/pr35-rider-link-security-8bf9b6",
+      "sha": "efa82cc6",
+      "ahead": 28,
+      "behind": 295,
+      "date": "2026-11-02",
+      "subj": "docs(progress): record the rider-link review fixes merged onto main"
+    },
+    {
+      "branch": "claude/remaining-task-49862e",
+      "sha": "4224763b",
+      "ahead": 431,
+      "behind": 847,
+      "date": "2026-10-15",
+      "subj": "fix: Operations/Settings headers below desktop, safe backup script, live registry refresh"
+    },
+    {
+      "branch": "claude/reorg-step1",
+      "sha": "9840ea1b",
+      "ahead": 421,
+      "behind": 847,
+      "date": "2026-10-13",
+      "subj": "Merge branch 'main' into claude/reorg-step1"
+    },
+    {
+      "branch": "claude/reorg-step2",
+      "sha": "872bb635",
+      "ahead": 422,
+      "behind": 847,
+      "date": "2026-10-13",
+      "subj": "fix(rentals): drop the dead \"Productions Hub\" item from Rentals More (reorg step 2)"
+    },
+    {
+      "branch": "claude/scale-test-cards",
+      "sha": "3d288986",
+      "ahead": 1,
+      "behind": 12,
+      "date": "2026-11-12",
+      "subj": "docs(plans): add T0-13 real-connection race test and T1-19 volume baseline cards"
+    },
+    {
+      "branch": "claude/suspicious-wescoff-e2639e",
+      "sha": "57bd2cb1",
+      "ahead": 31,
+      "behind": 847,
+      "date": "2026-10-08",
+      "subj": "commit"
+    },
+    {
+      "branch": "claude/unruffled-hugle-26ac0d",
+      "sha": "5756e7f6",
+      "ahead": 427,
+      "behind": 847,
+      "date": "2026-10-16",
+      "subj": "Log the Booking Detail phone header ruling and drop the preview entry"
+    },
+    {
+      "branch": "claude/wizardly-mirzakhani-d66742",
+      "sha": "a5d8c812",
+      "ahead": 2,
+      "behind": 481,
+      "date": "2026-10-25",
+      "subj": "Merge remote-tracking branch 'origin/main' into claude/wizardly-mirzakhani-d66742"
+    },
+    {
+      "branch": "claude/work-tree-feature-copy-2eb747",
+      "sha": "ec1f855b",
+      "ahead": 347,
+      "behind": 847,
+      "date": "2026-10-16",
+      "subj": "docs: branch features notes"
+    },
+    {
+      "branch": "claude/zen-swartz-228eaa",
+      "sha": "7b270f82",
+      "ahead": 340,
+      "behind": 847,
+      "date": "2026-10-16",
+      "subj": "feat(rentals, finance): draft submission tests, serve-vite script, and modal refinements"
+    },
+    {
+      "branch": "codex/recovery-before-astra-phase0-20261019",
+      "sha": "c9ea1297",
+      "ahead": 4,
+      "behind": 654,
+      "date": "2026-10-19",
+      "subj": "COMMIT"
+    },
+    {
+      "branch": "copilot/release-hold-reconcile-migrations",
+      "sha": "1b11b111",
+      "ahead": 5,
+      "behind": 65,
+      "date": "2026-11-10",
+      "subj": "chore: merge origin/main into copilot/release-hold-reconcile-migrations with driver RLS verification"
+    },
+    {
+      "branch": "docs/2026-11-01-closed-pr-recovery-review",
+      "sha": "f2235a18",
+      "ahead": 4,
+      "behind": 306,
+      "date": "2026-11-01",
+      "subj": "fix(ci): remove duplicate rider UUID import blocking typecheck"
+    },
+    {
+      "branch": "docs/2026-11-01-recovery-current-main",
+      "sha": "44b35517",
+      "ahead": 2,
+      "behind": 300,
+      "date": "2026-11-01",
+      "subj": "docs(recovery): restore CLOSED_UNMERGED_PR_RECOVERY_2026-11-01.md without runtime edits"
+    },
+    {
+      "branch": "docs/2026-11-02-no-cloud-release-verification",
+      "sha": "d41eab42",
+      "ahead": 2,
+      "behind": 291,
+      "date": "2026-11-02",
+      "subj": "docs(local): direct operators to current release checks"
+    },
+    {
+      "branch": "docs/hosted-staging-rehearsal-20261112",
+      "sha": "f427b94c",
+      "ahead": 3,
+      "behind": 15,
+      "date": "2026-11-12",
+      "subj": "docs(release): record hosted staging rollback rehearsal and prerequisites"
+    },
+    {
+      "branch": "docs/migration-content-hash-audit-20261112",
+      "sha": "b93f698b",
+      "ahead": 3,
+      "behind": 14,
+      "date": "2026-11-12",
+      "subj": "docs(release): link hosted rehearsal to full migration hash audit"
+    },
+    {
+      "branch": "docs/migration-lexical-triage-20261112",
+      "sha": "8f6da058",
+      "ahead": 3,
+      "behind": 13,
+      "date": "2026-11-12",
+      "subj": "docs(release): link full hash ledger to lexical triage"
+    },
+    {
+      "branch": "docs/owner-rulings-2026-11-02",
+      "sha": "2c00a2a7",
+      "ahead": 17,
+      "behind": 65,
+      "date": "2026-11-10",
+      "subj": "ci: refresh full PR checks on Mac (no file changes)"
+    },
+    {
+      "branch": "docs/owner-rulings-2026-11-09",
+      "sha": "130f2404",
+      "ahead": 4,
+      "behind": 104,
+      "date": "2026-11-09",
+      "subj": "docs: cancellation tier figures deferred to Settings entry (R-9.6)"
+    },
+    {
+      "branch": "docs/pr-ci-inventory-2026-11-10",
+      "sha": "f2ec1f2b",
+      "ahead": 1,
+      "behind": 65,
+      "date": "2026-11-10",
+      "subj": "docs: deliver 29-PR inventory and CI verification report for 2026-11-10"
+    },
+    {
+      "branch": "docs/reconcile-merged-t3-cards-20261115",
+      "sha": "ca34dd1c",
+      "ahead": 6,
+      "behind": 0,
+      "date": "2026-11-15",
+      "subj": "docs(roadmap): mark integrated branches as awaiting acceptance, not merge"
+    },
+    {
+      "branch": "docs/rules-consolidation-20261104",
+      "sha": "b3a33a4d",
+      "ahead": 10,
+      "behind": 65,
+      "date": "2026-11-10",
+      "subj": "docs(agents): mention test:local-api-guards gate in gate list"
+    },
+    {
+      "branch": "docs/rulings-2026-11-10-ease-of-use",
+      "sha": "6c36ae1e",
+      "ahead": 2,
+      "behind": 12,
+      "date": "2026-11-12",
+      "subj": "docs(progress): log the 10 Nov ease-of-use rulings file"
+    },
+    {
+      "branch": "docs/staging-migration-readonly-preflight-20261112",
+      "sha": "db446973",
+      "ahead": 1,
+      "behind": 18,
+      "date": "2026-11-12",
+      "subj": "docs(release): record read-only staging/migration reconciliation and release hold"
+    },
+    {
+      "branch": "docs/ui-ux-reference-reconciliation-20261112",
+      "sha": "3f6b5f4f",
+      "ahead": 2,
+      "behind": 12,
+      "date": "2026-11-12",
+      "subj": "docs(ui-ux): record owner-approved scan/manual parity and design implementation hold"
+    },
+    {
+      "branch": "docs/unified-launch-2026-11-12",
+      "sha": "f6ac188c",
+      "ahead": 5,
+      "behind": 12,
+      "date": "2026-11-12",
+      "subj": "docs(launch): link three machine-specific sprint assignments"
+    },
+    {
+      "branch": "docs/ux-card4-register-dux",
+      "sha": "47b7bcc3",
+      "ahead": 2,
+      "behind": 47,
+      "date": "2026-11-10",
+      "subj": "docs(plans): record card 4 verification"
+    },
+    {
+      "branch": "feat/2026-10-16-rentals-selection-header",
+      "sha": "b677e868",
+      "ahead": 2,
+      "behind": 793,
+      "date": "2026-10-16",
+      "subj": "Merge updated shared-header parent into Rentals selection PR #21"
+    },
+    {
+      "branch": "feat/interactive-kpi-charts",
+      "sha": "11ba2e2a",
+      "ahead": 16,
+      "behind": 664,
+      "date": "2026-10-18",
+      "subj": "docs(progress): record Phase P0-P6 completion for interactive KPI and analytics design system"
+    },
+    {
+      "branch": "feat/launch-sprint-a-os-p0-audit",
+      "sha": "a7a4f77c",
+      "ahead": 2,
+      "behind": 12,
+      "date": "2026-11-14",
+      "subj": "docs(audit): correct PR merge readiness and mock-data launch blockers"
+    },
+    {
+      "branch": "feat/launch-sprint-b-public-catalogue",
+      "sha": "274e21e2",
+      "ahead": 7,
+      "behind": 5,
+      "date": "2026-11-15",
+      "subj": "test(marketing): align locked notice with verified availability wording"
+    },
+    {
+      "branch": "feat/launch-sprint-c-client-portal",
+      "sha": "8a506fa4",
+      "ahead": 4,
+      "behind": 5,
+      "date": "2026-11-15",
+      "subj": "fix(portal): remove spoofable demo auth and phantom guest queue success"
+    },
+    {
+      "branch": "feat/reference-shell-ui-20261112",
+      "sha": "ed945d03",
+      "ahead": 11,
+      "behind": 12,
+      "date": "2026-11-13",
+      "subj": "fix(shell): apply safe fallbacks for sidebar, today movement bindings, and test fixtures"
+    },
+    {
+      "branch": "feat/unified-crew-delivery-search",
+      "sha": "33de1a0c",
+      "ahead": 308,
+      "behind": 847,
+      "date": "2026-10-03",
+      "subj": "feat: unified search — Crew and Delivery are now functional in AddItemPanel"
+    },
+    {
+      "branch": "feature/today-smart-attention-option-a",
+      "sha": "1cb235bf",
+      "ahead": 6,
+      "behind": 664,
+      "date": "2026-10-18",
+      "subj": "test(today): add cross-platform, accessibility and money-blindness test suite for NeedsAttention"
+    },
+    {
+      "branch": "fix/2026-10-14-client-reports-live-only",
+      "sha": "f118927a",
+      "ahead": 9,
+      "behind": 844,
+      "date": "2026-10-14",
+      "subj": "test(client-reports): verify +05:45 rollover for repeat booking dates"
+    },
+    {
+      "branch": "fix/2026-10-14-unified-button-positions",
+      "sha": "73a00144",
+      "ahead": 29,
+      "behind": 846,
+      "date": "2026-10-14",
+      "subj": "fix(calendar): retain desktop Full View and Today controls when normalizing header actions"
+    },
+    {
+      "branch": "fix/2026-10-15-phase1-header-action-gates",
+      "sha": "a17a2cc6",
+      "ahead": 1,
+      "behind": 796,
+      "date": "2026-10-16",
+      "subj": "Merge latest main into shared-header fix PR #18"
+    },
+    {
+      "branch": "fix/2026-10-18-baseline-and-audit-repairs",
+      "sha": "6912d6d1",
+      "ahead": 18,
+      "behind": 664,
+      "date": "2026-10-19",
+      "subj": "chore(pglite): update pglite result timestamp after test verification"
+    },
+    {
+      "branch": "fix/2026-11-01-ci-team-notes-delivery-tests",
+      "sha": "5ba0099e",
+      "ahead": 10,
+      "behind": 332,
+      "date": "2026-11-01",
+      "subj": "test(contracts): assert first applicable Reserved-status retirement gate"
+    },
+    {
+      "branch": "fix/2026-11-01-driver-client-view-rls-regression",
+      "sha": "9b725b7f",
+      "ahead": 5,
+      "behind": 303,
+      "date": "2026-11-01",
+      "subj": "test(lifecycle): assert earliest Reserved-unit retirement gate without weakening SQL"
+    },
+    {
+      "branch": "fix/2026-11-01-driver-client-view-scope-0203",
+      "sha": "02577b8f",
+      "ahead": 5,
+      "behind": 300,
+      "date": "2026-11-01",
+      "subj": "docs(migrations): 0203 written, hosted security checks still needed"
+    },
+    {
+      "branch": "fix/2026-11-01-equipment-preview-current-main",
+      "sha": "4f9f0753",
+      "ahead": 3,
+      "behind": 300,
+      "date": "2026-11-02",
+      "subj": "test(inventory): allow shared Modal exit transition before asserting preview closed"
+    },
+    {
+      "branch": "fix/2026-11-01-extend-session-identity-branch",
+      "sha": "79429096",
+      "ahead": 3,
+      "behind": 351,
+      "date": "2026-11-01",
+      "subj": "test(security): prove extension actor, invoice writer and branch denials in L23"
+    },
+    {
+      "branch": "fix/2026-11-01-invoice-resync-execute",
+      "sha": "f121005f",
+      "ahead": 2,
+      "behind": 351,
+      "date": "2026-11-10",
+      "subj": "ci: refresh full PR checks on Mac (no file changes)"
+    },
+    {
+      "branch": "fix/2026-11-01-minimal-main-ci-repair",
+      "sha": "b1a5aa24",
+      "ahead": 9,
+      "behind": 311,
+      "date": "2026-11-01",
+      "subj": "fix(ci): preserve Team Notes and retirement contracts alongside staff setting"
+    },
+    {
+      "branch": "fix/2026-11-01-reservation-fail-closed",
+      "sha": "2d9bdfd4",
+      "ahead": 7,
+      "behind": 351,
+      "date": "2026-11-10",
+      "subj": "test(ci): remove unused pagination callback parameter"
+    },
+    {
+      "branch": "fix/2026-11-01-restore-equipment-unsaved-preview",
+      "sha": "a489a5c6",
+      "ahead": 2,
+      "behind": 306,
+      "date": "2026-11-01",
+      "subj": "fix(ci): remove duplicate rider UUID import blocking typecheck"
+    },
+    {
+      "branch": "fix/2026-11-01-rider-crypto-and-regression-gates",
+      "sha": "17e4f1e7",
+      "ahead": 9,
+      "behind": 343,
+      "date": "2026-11-01",
+      "subj": "test(rentals): align expectations and docs with shipped Re-book and 06:00 defaults"
+    },
+    {
+      "branch": "fix/2026-11-01-rider-l47-secure-issuance-test",
+      "sha": "a0119b42",
+      "ahead": 30,
+      "behind": 332,
+      "date": "2026-11-01",
+      "subj": "test(security): give server rider issuance a distinct booked fixture in L47"
+    },
+    {
+      "branch": "fix/2026-11-01-team-notes-all-internal-staff",
+      "sha": "deef6f26",
+      "ahead": 14,
+      "behind": 332,
+      "date": "2026-11-01",
+      "subj": "test(ui): show Team Notes composer access to all staff, never Client"
+    },
+    {
+      "branch": "fix/2026-11-02-availability-fail-closed",
+      "sha": "b7050d05",
+      "ahead": 24,
+      "behind": 287,
+      "date": "2026-11-10",
+      "subj": "ci: refresh full PR checks on Mac (no file changes)"
+    },
+    {
+      "branch": "fix/2026-11-02-ci-coverage-timeout-35min",
+      "sha": "bb807d0c",
+      "ahead": 1,
+      "behind": 295,
+      "date": "2026-11-02",
+      "subj": "fix(ci): extend verify timeout to allow coverage to complete"
+    },
+    {
+      "branch": "fix/2026-11-02-ecc-invoice-extension-auth",
+      "sha": "03edd0f8",
+      "ahead": 3,
+      "behind": 295,
+      "date": "2026-11-02",
+      "subj": "ci: sync 35-minute full-gate timeout from current main"
+    },
+    {
+      "branch": "fix/2026-11-02-hold-auth-0204",
+      "sha": "ce1a7af7",
+      "ahead": 8,
+      "behind": 295,
+      "date": "2026-11-02",
+      "subj": "test(holds): verify replay returns same reservation and released keys cannot re-open holds"
+    },
+    {
+      "branch": "fix/T0-10-mock-safe-tests-current-main",
+      "sha": "9c02c9b8",
+      "ahead": 6,
+      "behind": 290,
+      "date": "2026-11-02",
+      "subj": "docs(T0-10): document no-live-by-default tests for collaborators"
+    },
+    {
+      "branch": "fix/T0-11-current-main-local-gates",
+      "sha": "d769d43f",
+      "ahead": 6,
+      "behind": 289,
+      "date": "2026-11-02",
+      "subj": "rebase(T0-11): carry reviewed scripts/run-gates.test.mjs onto merged T0-10"
+    },
+    {
+      "branch": "fix/T4-07-delivery-zone-money-rls-0205",
+      "sha": "1e98de95",
+      "ahead": 16,
+      "behind": 287,
+      "date": "2026-11-02",
+      "subj": "test(T4-07): transplant updated zone lifecycle tests onto current main without losing 0204 rider-link tests"
+    },
+    {
+      "branch": "fix/calendar-p0-resource-reschedule",
+      "sha": "584950bf",
+      "ahead": 1,
+      "behind": 513,
+      "date": "2026-10-23",
+      "subj": "commit"
+    },
+    {
+      "branch": "fix/ci-electron-local-guard-command-20261112",
+      "sha": "1297a440",
+      "ahead": 2,
+      "behind": 16,
+      "date": "2026-11-12",
+      "subj": "ci: include Electron safety probes inside existing local API guard gate"
+    },
+    {
+      "branch": "fix/ci-jsx-duplicate-attributes-1005",
+      "sha": "9b2f9292",
+      "ahead": 4,
+      "behind": 226,
+      "date": "2026-11-03",
+      "subj": "fix(a11y): document mouse-only input focus forwarding for lint"
+    },
+    {
+      "branch": "fix/ci-law17-client-copy-20261104",
+      "sha": "9fbb5c33",
+      "ahead": 2,
+      "behind": 190,
+      "date": "2026-11-04",
+      "subj": "fix(ci): reconcile Law 17 copy repair with Driver-safe main 0219"
+    },
+    {
+      "branch": "fix/ci-localization-assertions-20261106",
+      "sha": "64e6bbdd",
+      "ahead": 4,
+      "behind": 161,
+      "date": "2026-11-07",
+      "subj": "test(ci): make RecordForm focus assertion resilient to animation-frame scheduling"
+    },
+    {
+      "branch": "fix/ci-main-after-t5-13-20261108",
+      "sha": "f6d94db3",
+      "ahead": 2,
+      "behind": 104,
+      "date": "2026-11-08",
+      "subj": "test(ci): treat offer_campaign.manage as permission rule and stabilize RecordForm focus"
+    },
+    {
+      "branch": "fix/ci-main-i18n-assertions-20261105",
+      "sha": "818dbd73",
+      "ahead": 4,
+      "behind": 180,
+      "date": "2026-11-05",
+      "subj": "test(db): expect active reservation retirement gate and assert no mutation"
+    },
+    {
+      "branch": "fix/ci-main-required-check-on-mac-20261111",
+      "sha": "62e557b7",
+      "ahead": 1,
+      "behind": 20,
+      "date": "2026-11-11",
+      "subj": "ci: route required main check to Mac ARM64 while Windows offline"
+    },
+    {
+      "branch": "fix/ci-main-template-capability-20261109",
+      "sha": "27a72d8a",
+      "ahead": 3,
+      "behind": 98,
+      "date": "2026-11-09",
+      "subj": "test(ci): assert mobile queued-sync indicator and touch target"
+    },
+    {
+      "branch": "fix/ci-mock-tests-and-baseline-2026-10-14",
+      "sha": "263cd363",
+      "ahead": 428,
+      "behind": 847,
+      "date": "2026-10-15",
+      "subj": "all delivry,finance and small changes"
+    },
+    {
+      "branch": "fix/ci-t5-13-six-assertions-20261108",
+      "sha": "e14baec6",
+      "ahead": 1,
+      "behind": 157,
+      "date": "2026-11-08",
+      "subj": "test(ci): repair six capability and localized UI assertions"
+    },
+    {
+      "branch": "fix/ci-windows-smoke-manual-20261112",
+      "sha": "5d7c8528",
+      "ahead": 1,
+      "behind": 19,
+      "date": "2026-11-12",
+      "subj": "ci: make office Windows PR smoke manual while Mac runs required CI"
+    },
+    {
+      "branch": "fix/clients-one-search",
+      "sha": "52e839e7",
+      "ahead": 1,
+      "behind": 648,
+      "date": "2026-10-19",
+      "subj": "Remove the second search box from the Clients directory"
+    },
+    {
+      "branch": "fix/main-green-20261103",
+      "sha": "24b2dc5c",
+      "ahead": 7,
+      "behind": 224,
+      "date": "2026-11-03",
+      "subj": "Merge main into PR #83, keeping only the confirm fix"
+    },
+    {
+      "branch": "fix/offline-durability-2026-10-19",
+      "sha": "b9339b37",
+      "ahead": 5,
+      "behind": 654,
+      "date": "2026-10-19",
+      "subj": "fix: remediate financial reports truth (WF-01..05, WF-08), UI locks (UI-04, UI-06) and Phase 0 security"
+    },
+    {
+      "branch": "fix/p0-sales-vat-truth-20261018",
+      "sha": "f3f82625",
+      "ahead": 1,
+      "behind": 664,
+      "date": "2026-10-18",
+      "subj": "fix(finance): prevent fabricated live Sales/VAT reports"
+    },
+    {
+      "branch": "fix/rental-navigation-links-2026-10-14",
+      "sha": "cc78342e",
+      "ahead": 2,
+      "behind": 845,
+      "date": "2026-10-14",
+      "subj": "Merge current main header layout into rental navigation fixes"
+    },
+    {
+      "branch": "fix/screenlock-native-confirm-20261104",
+      "sha": "48c372dd",
+      "ahead": 1,
+      "behind": 223,
+      "date": "2026-11-04",
+      "subj": "fix(shell): replace the lock screen's native window.confirm"
+    },
+    {
+      "branch": "fix/security-electron-safe-storage-ipc-20261112",
+      "sha": "b72d6958",
+      "ahead": 12,
+      "behind": 17,
+      "date": "2026-11-12",
+      "subj": "ci: reverify Electron security after coverage artifact upload failure"
+    },
+    {
+      "branch": "fix/security-verified-staff-switch-20261112",
+      "sha": "1012dfc5",
+      "ahead": 13,
+      "behind": 12,
+      "date": "2026-11-12",
+      "subj": "security: isolate staff switch BroadcastChannel from global auth clients"
+    },
+    {
+      "branch": "fix/session-evidence-fail-closed",
+      "sha": "3349102e",
+      "ahead": 7,
+      "behind": 654,
+      "date": "2026-11-10",
+      "subj": "ci: refresh full PR checks on Mac (no file changes)"
+    },
+    {
+      "branch": "fix/shell-native-confirm",
+      "sha": "d7390aa9",
+      "ahead": 2,
+      "behind": 228,
+      "date": "2026-11-02",
+      "subj": "docs(progress): log the a11y fixes, the PR #70 merge and the green run of the lint:shell fix"
+    },
+    {
+      "branch": "fix/shell-native-confirm-current-main-20261103",
+      "sha": "3e79a846",
+      "ahead": 1,
+      "behind": 226,
+      "date": "2026-11-03",
+      "subj": "fix(shell): use accessible confirmation before forgetting this device"
+    },
+    {
+      "branch": "fix/t2-07-reset-needed-next-fail-closed",
+      "sha": "58c1b68e",
+      "ahead": 5,
+      "behind": 226,
+      "date": "2026-11-03",
+      "subj": "test(T2-07): query errors, truncated reads and stale pickup priorities"
+    },
+    {
+      "branch": "fix/t2-08-real-qr-and-code128-labels",
+      "sha": "44422023",
+      "ahead": 4,
+      "behind": 226,
+      "date": "2026-11-03",
+      "subj": "fix(T2-08): repair TypeScript QR decode-test regex syntax"
+    },
+    {
+      "branch": "fix/t3-17-fail-closed-extension-clash",
+      "sha": "a75477c6",
+      "ahead": 2,
+      "behind": 0,
+      "date": "2026-11-15",
+      "subj": "fix(ui): meet 44px touch target for extension availability retry"
+    },
+    {
+      "branch": "fix/t4-09-route-branch-hardening-0209",
+      "sha": "d8da62a6",
+      "ahead": 12,
+      "behind": 27,
+      "date": "2026-11-11",
+      "subj": "Merge branch 'main' into fix/t4-09-route-branch-hardening-0209"
+    },
+    {
+      "branch": "fix/t8-06-crew-overtime-actor-validation",
+      "sha": "157df3da",
+      "ahead": 4,
+      "behind": 226,
+      "date": "2026-11-03",
+      "subj": "test(T8-06): detect mismatched approval provenance on idempotent retries"
+    },
+    {
+      "branch": "fix/unit-tests-mock-env",
+      "sha": "8a312849",
+      "ahead": 2,
+      "behind": 85,
+      "date": "2026-11-10",
+      "subj": "docs(progress): log unit suite triage and mock-mode fix (2026-11-10)"
+    },
+    {
+      "branch": "fix/ux-calendar-feed-url-20261106",
+      "sha": "6322447f",
+      "ahead": 2,
+      "behind": 175,
+      "date": "2026-11-06",
+      "subj": "fix(ux): confirm clipboard write before success feedback and test failure path"
+    },
+    {
+      "branch": "fix/ux-evidence-real-files-20261106",
+      "sha": "928b685b",
+      "ahead": 1,
+      "behind": 161,
+      "date": "2026-11-06",
+      "subj": "fix(rentals): isolate real booking evidence from sample fixtures and add fail-closed query handling (UX-04, UX-05)"
+    },
+    {
+      "branch": "fix/ux-filter-touch-targets-20261106",
+      "sha": "8e78c004",
+      "ahead": 3,
+      "behind": 175,
+      "date": "2026-11-06",
+      "subj": "fix(ux): enforce 44px touch target on evidence category filter buttons"
+    },
+    {
+      "branch": "fix/ux-freshness-timestamp-20261106",
+      "sha": "594247f8",
+      "ahead": 1,
+      "behind": 175,
+      "date": "2026-11-06",
+      "subj": "fix: re-apply PR #79 on current main"
+    },
+    {
+      "branch": "fix/ux-push-subscription-truth-20261106",
+      "sha": "c82be803",
+      "ahead": 1,
+      "behind": 175,
+      "date": "2026-11-06",
+      "subj": "fix(ux): require confirmed browser push subscription and show unconfigured state honestly"
+    },
+    {
+      "branch": "fix/ux-real-qr-barcode-labels-20261106",
+      "sha": "a86080d7",
+      "ahead": 1,
+      "behind": 175,
+      "date": "2026-11-06",
+      "subj": "fix: re-apply PR #75 on current main"
+    },
+    {
+      "branch": "fix/ux-scanner-floor-outcome-20261106",
+      "sha": "d632b995",
+      "ahead": 1,
+      "behind": 161,
+      "date": "2026-11-06",
+      "subj": "fix(scanner): distinguish item recognition from recorded custody in floor workflows (UX-01)"
+    },
+    {
+      "branch": "gh-pages",
+      "sha": "0effc9c2",
+      "ahead": 5,
+      "behind": 847,
+      "date": "2026-11-11",
+      "subj": "Updates"
+    },
+    {
+      "branch": "lane-a/T0-03-open-pull-request-triage",
+      "sha": "5b4c65d2",
+      "ahead": 1,
+      "behind": 2,
+      "date": "2026-11-15",
+      "subj": "docs(triage): open PR triage report and branch hygiene ledger (T0-03)"
+    },
+    {
+      "branch": "lane-a/T0-10-safe-mock-test-runner",
+      "sha": "5ee58867",
+      "ahead": 6,
+      "behind": 329,
+      "date": "2026-11-01",
+      "subj": "docs(T0-10): record mock-safe test runner and verification gate"
+    },
+    {
+      "branch": "lane-a/T0-11-local-gates",
+      "sha": "0b5282a1",
+      "ahead": 14,
+      "behind": 329,
+      "date": "2026-11-01",
+      "subj": "docs(T0-11): keep gate reference paragraph readable"
+    },
+    {
+      "branch": "lane-a/T2-17-unit-editor-permissions-preflight",
+      "sha": "6e919e61",
+      "ahead": 24,
+      "behind": 65,
+      "date": "2026-11-10",
+      "subj": "Merge origin/main into lane-a/T2-17-unit-editor-permissions-preflight"
+    },
+    {
+      "branch": "lane-a/T2-18-finish-evidence-capture-what-t2-16",
+      "sha": "8e26cfec",
+      "ahead": 33,
+      "behind": 29,
+      "date": "2026-11-11",
+      "subj": "chore(migrations): renumber migration to 0234 (claims slot after 0233 in PR 135)"
+    },
+    {
+      "branch": "lane-a/T2-19-signature-at-return-when-flagged",
+      "sha": "5fd0f220",
+      "ahead": 1,
+      "behind": 0,
+      "date": "2026-11-15",
+      "subj": "feat(rentals): require signature at Return when damage or missing items found (T2-19)"
+    },
+    {
+      "branch": "lane-a/T2-20-floor-adds-consumables-at-pack-and",
+      "sha": "73b14542",
+      "ahead": 2,
+      "behind": 0,
+      "date": "2026-11-15",
+      "subj": "feat(rentals): floor adds consumables at Pack and Handover (T2-20)"
+    },
+    {
+      "branch": "lane-a/T2-21-planned-downtime-with-a-reason",
+      "sha": "6e42b2e5",
+      "ahead": 2,
+      "behind": 0,
+      "date": "2026-11-15",
+      "subj": "feat(T2-21): planned equipment downtime with a reason and early termination"
+    },
+    {
+      "branch": "lane-a/T8-01-load-babin-s-plans",
+      "sha": "4272d3c8",
+      "ahead": 2,
+      "behind": 423,
+      "date": "2026-10-28",
+      "subj": "Update T8_MEMBERSHIP_CREW.md"
+    },
+    {
+      "branch": "lane-a/T8-05-member-benefits-at-booking",
+      "sha": "5436c495",
+      "ahead": 2,
+      "behind": 417,
+      "date": "2026-11-02",
+      "subj": "fix(rentals): T8-05 review - demo-fallback hardening (mock only) and gate evidence (Law 16)"
+    },
+    {
+      "branch": "lane-a/T8-06-crew-overtime-ui",
+      "sha": "4113cdc8",
+      "ahead": 2,
+      "behind": 417,
+      "date": "2026-10-29",
+      "subj": "feat(T8-06): crew overtime half/full day UI wiring"
+    },
+    {
+      "branch": "lane-b/T4-04-team-notes",
+      "sha": "cde1034b",
+      "ahead": 2,
+      "behind": 424,
+      "date": "2026-10-29",
+      "subj": "T4-04: Update migration ledger - 0185 verified (check:pglite + check:lifecycle green)"
+    },
+    {
+      "branch": "lane-b/T4-05-shift-handovers",
+      "sha": "fb57e8ba",
+      "ahead": 2,
+      "behind": 417,
+      "date": "2026-10-29",
+      "subj": "T4-05: Migration 0186 - shift_handovers table + RPCs"
+    },
+    {
+      "branch": "lane-b/assigned-cards-verification",
+      "sha": "2b9baea5",
+      "ahead": 2,
+      "behind": 4,
+      "date": "2026-11-15",
+      "subj": "docs(plans): update T4-08 card record to reflect merged implementation and pending device acceptance"
+    },
+    {
+      "branch": "lane-b/card-1-duplicate-quick-actions",
+      "sha": "41f7907a",
+      "ahead": 2,
+      "behind": 45,
+      "date": "2026-11-10",
+      "subj": "Merge origin/main into lane-b/card-1-duplicate-quick-actions"
+    },
+    {
+      "branch": "lane-b/card-10-settings-admin-group",
+      "sha": "3048c67d",
+      "ahead": 1,
+      "behind": 12,
+      "date": "2026-11-13",
+      "subj": "feat(settings): organize navigation into 4 sections and Owner/Admin group (Card 10, G-17)"
+    },
+    {
+      "branch": "lane-b/card-3-ui-clean-up",
+      "sha": "83e67554",
+      "ahead": 5,
+      "behind": 45,
+      "date": "2026-11-10",
+      "subj": "Merge origin/main into lane-b/card-3-ui-clean-up"
+    },
+    {
+      "branch": "lane-b/card-5-graphite-paper-repaint",
+      "sha": "f997febc",
+      "ahead": 2,
+      "behind": 12,
+      "date": "2026-11-12",
+      "subj": "docs(progress): update Card 5 completion receipt and branch name"
+    },
+    {
+      "branch": "lane-b/card-6-technician-new-rental",
+      "sha": "fe7f449b",
+      "ahead": 1,
+      "behind": 12,
+      "date": "2026-11-12",
+      "subj": "feat(rentals): allow Technician to create and confirm bookings (G-10, G-18)"
+    },
+    {
+      "branch": "lane-b/card-7-reports-5-groups",
+      "sha": "536ad3ec",
+      "ahead": 1,
+      "behind": 12,
+      "date": "2026-11-13",
+      "subj": "feat(reports): organize 22 reports into 5 groups with user pinning (Card 7, G-13)"
+    },
+    {
+      "branch": "lane-b/card-8-inventory-clients-more",
+      "sha": "d6231f5b",
+      "ahead": 1,
+      "behind": 12,
+      "date": "2026-11-12",
+      "subj": "feat(nav): expose Inventory and Clients tools in one More menu each (Card 8, G-14, G-15)"
+    },
+    {
+      "branch": "lane-b/card-9-search-header-palette",
+      "sha": "146c7af4",
+      "ahead": 1,
+      "behind": 12,
+      "date": "2026-11-12",
+      "subj": "feat(shell): remove desktop global search box in favor of Ctrl K hint (Card 9, G-16)"
+    },
+    {
+      "branch": "lane-b/card-e1-sidebar-per-role",
+      "sha": "379e0f07",
+      "ahead": 1,
+      "behind": 12,
+      "date": "2026-11-12",
+      "subj": "feat(nav): scope sidebar navigation per role (Card E-1, G-10, G-11)"
+    },
+    {
+      "branch": "lane-b/card-e2-today-glance",
+      "sha": "9d1ed38d",
+      "ahead": 2,
+      "behind": 6,
+      "date": "2026-11-14",
+      "subj": "docs(progress): record verified gates and completion for Card E-2 (R-10.5, G-6)"
+    },
+    {
+      "branch": "lane-b/card-e3-booking-detail-tabs",
+      "sha": "84575024",
+      "ahead": 1,
+      "behind": 4,
+      "date": "2026-11-15",
+      "subj": "feat(rentals): regroup Booking Detail into 4 tabs with summary and Quick Actions above (Card E-3, R-10.6)"
+    },
+    {
+      "branch": "lane-b/card-e4-floor-screens",
+      "sha": "303848c1",
+      "ahead": 1,
+      "behind": 6,
+      "date": "2026-11-15",
+      "subj": "feat(floor): simplify Pack, Handover, Return, and Reset screens with Scan + list + 1 button and More menu (Card E-4, R-10.7)"
+    },
+    {
+      "branch": "lane-b/card-e5-delivery-simplification",
+      "sha": "e610710b",
+      "ahead": 1,
+      "behind": 4,
+      "date": "2026-11-15",
+      "subj": "feat(delivery): simplify Delivery screen with Job list + 1 button per job and More menu (Card E-5, R-10.11)"
+    },
+    {
+      "branch": "lane-b/card-e6-calendar-simple-month",
+      "sha": "699833ca",
+      "ahead": 2,
+      "behind": 4,
+      "date": "2026-11-15",
+      "subj": "docs(progress): log Card E-6 Calendar Simple Month completion (R-10.12)"
+    },
+    {
+      "branch": "lane-b/card-e7-finance-tabs",
+      "sha": "47d72cee",
+      "ahead": 1,
+      "behind": 4,
+      "date": "2026-11-15",
+      "subj": "feat(finance): 4 tabs, dashboard in reports, closing in payments, documents in rentals (Card E-7, R-10.8, R-10.9, G-12)"
+    },
+    {
+      "branch": "lane-b/ux-polish-forgiveness-and-sync",
+      "sha": "1e26a19e",
+      "ahead": 2,
+      "behind": 97,
+      "date": "2026-11-09",
+      "subj": "Merge remote-tracking branch 'origin/main' into lane-b/ux-polish-forgiveness-and-sync"
+    },
+    {
+      "branch": "lane-c/141-secure-storage-ipc-sanitization",
+      "sha": "89c849cb",
+      "ahead": 8,
+      "behind": 85,
+      "date": "2026-11-13",
+      "subj": "fix(security): sanitize IPC keys and eliminate localStorage auth tokens (#141)"
+    },
+    {
+      "branch": "lane-c/T3-03-cancellation-fee-tiers",
+      "sha": "ee072b9c",
+      "ahead": 7,
+      "behind": 0,
+      "date": "2026-11-15",
+      "subj": "fix(ui-copy): remove internal law reference from cancellation tiers"
+    },
+    {
+      "branch": "lane-c/T3-06-invoice-and-agreement-documents",
+      "sha": "6570d01e",
+      "ahead": 1,
+      "behind": 0,
+      "date": "2026-11-15",
+      "subj": "feat(documents): invoice and agreement documents (T3-06)"
+    },
+    {
+      "branch": "lane-c/T3-07-expense-payment-authority",
+      "sha": "619f6b73",
+      "ahead": 38,
+      "behind": 160,
+      "date": "2026-11-06",
+      "subj": "Record O-24 ruling on expense payment authority"
+    },
+    {
+      "branch": "lane-c/T3-19-scan-add-equipment",
+      "sha": "3f186ed8",
+      "ahead": 2,
+      "behind": 4,
+      "date": "2026-11-15",
+      "subj": "feat(rentals): integrate scan to add equipment in New Rental with burst protection and conflict checks (T3-19)"
+    },
+    {
+      "branch": "lane-c/T3-20-who-owes",
+      "sha": "b6db2991",
+      "ahead": 6,
+      "behind": 85,
+      "date": "2026-11-12",
+      "subj": "feat(finance): implement Who owes receivables view and client statement PDF (T3-20)"
+    },
+    {
+      "branch": "lane-c/T3-24-quick-expense-bill-photo",
+      "sha": "cf7ecc40",
+      "ahead": 1,
+      "behind": 2,
+      "date": "2026-11-15",
+      "subj": "feat(finance): quick expense with bill photo upload and receipt viewer (T3-24)"
+    },
+    {
+      "branch": "lane-c/T3-30-consumables-unit-price-add-at-the",
+      "sha": "02959d7c",
+      "ahead": 1,
+      "behind": 0,
+      "date": "2026-11-15",
+      "subj": "feat(t3-30): implement consumables pricing, restocking, and low-stock management"
+    },
+    {
+      "branch": "lane-c/card-2-booking-conflict-modal",
+      "sha": "39cfcfa7",
+      "ahead": 2,
+      "behind": 45,
+      "date": "2026-11-10",
+      "subj": "Merge origin/main into lane-c/card-2-booking-conflict-modal"
+    },
+    {
+      "branch": "lane-c/settings-editable-permissions",
+      "sha": "bd64a49f",
+      "ahead": 7,
+      "behind": 85,
+      "date": "2026-11-12",
+      "subj": "feat(settings): editable role matrix and per-staff permission overrides (0233)"
+    },
+    {
+      "branch": "lane-nemotron/nem-02-role-security",
+      "sha": "2e076900",
+      "ahead": 17,
+      "behind": 844,
+      "date": "2026-10-30",
+      "subj": "Update .gitignore"
+    },
+    {
+      "branch": "merge/codex-into-main-2026-10-12",
+      "sha": "c4381251",
+      "ahead": 399,
+      "behind": 847,
+      "date": "2026-10-12",
+      "subj": "Merge step1-foundation (Codex worktree) into main"
+    },
+    {
+      "branch": "merge/codex-step1-into-main",
+      "sha": "e6af99b3",
+      "ahead": 431,
+      "behind": 847,
+      "date": "2026-10-13",
+      "subj": "docs(progress): close the consolidation's open items"
+    },
+    {
+      "branch": "perf/ci-one-run-per-pr-offline-install",
+      "sha": "bd3eff07",
+      "ahead": 3,
+      "behind": 226,
+      "date": "2026-11-10",
+      "subj": "ci: refresh full PR checks on Mac (no file changes)"
+    },
+    {
+      "branch": "pr-19",
+      "sha": "07ea699e",
+      "ahead": 2,
+      "behind": 680,
+      "date": "2026-10-17",
+      "subj": "Merge main into the R-39 budgets PR"
+    },
+    {
+      "branch": "pr-6",
+      "sha": "9b61d6d1",
+      "ahead": 16,
+      "behind": 844,
+      "date": "2026-10-15",
+      "subj": "test(reports): reconcile discounted subtotal, taxable sales and net receivables"
+    },
+    {
+      "branch": "pr-7",
+      "sha": "f118927a",
+      "ahead": 9,
+      "behind": 844,
+      "date": "2026-10-14",
+      "subj": "test(client-reports): verify +05:45 rollover for repeat booking dates"
+    },
+    {
+      "branch": "rebase/pr-28",
+      "sha": "890c69dd",
+      "ahead": 5,
+      "behind": 607,
+      "date": "2026-10-28",
+      "subj": "Update createClient.ts"
+    },
+    {
+      "branch": "rebase/ux-2026-11-03-filter-chip-touch-target-1100",
+      "sha": "e4a84c40",
+      "ahead": 1,
+      "behind": 188,
+      "date": "2026-11-05",
+      "subj": "fix: re-apply PR #89 on current main"
+    },
+    {
+      "branch": "rebase/ux-2026-11-03-mobile-search-ime-0600",
+      "sha": "d8d218fc",
+      "ahead": 1,
+      "behind": 188,
+      "date": "2026-11-05",
+      "subj": "fix: re-apply PR #84 on current main"
+    },
+    {
+      "branch": "rebase/ux-2026-11-03-quantity-stepper-ime",
+      "sha": "a90540a9",
+      "ahead": 1,
+      "behind": 188,
+      "date": "2026-11-05",
+      "subj": "fix: re-apply PR #88 on current main"
+    },
+    {
+      "branch": "rebase/ux-2026-11-03-service-warning-a11y",
+      "sha": "69d10fda",
+      "ahead": 1,
+      "behind": 188,
+      "date": "2026-11-05",
+      "subj": "fix: re-apply PR #86 on current main"
+    },
+    {
+      "branch": "reconcile/T0-11-on-main-20261102",
+      "sha": "d769d43f",
+      "ahead": 6,
+      "behind": 289,
+      "date": "2026-11-02",
+      "subj": "rebase(T0-11): carry reviewed scripts/run-gates.test.mjs onto merged T0-10"
+    },
+    {
+      "branch": "reconcile/T4-07-delivery-money-current-main-20261102",
+      "sha": "1e98de95",
+      "ahead": 16,
+      "behind": 287,
+      "date": "2026-11-02",
+      "subj": "test(T4-07): transplant updated zone lifecycle tests onto current main without losing 0204 rider-link tests"
+    },
+    {
+      "branch": "repair/pr-126-dedup-quick-actions",
+      "sha": "3998662d",
+      "ahead": 3,
+      "behind": 12,
+      "date": "2026-11-12",
+      "subj": "Merge branch 'main' into repair/pr-126-dedup-quick-actions"
+    },
+    {
+      "branch": "repair/pr-129-booking-conflict-modal",
+      "sha": "0a7a8874",
+      "ahead": 3,
+      "behind": 12,
+      "date": "2026-11-12",
+      "subj": "Merge branch 'main' into repair/pr-129-booking-conflict-modal"
+    },
+    {
+      "branch": "repair/pr-53-invoice-extension-auth",
+      "sha": "4bb468f0",
+      "ahead": 1,
+      "behind": 30,
+      "date": "2026-11-11",
+      "subj": "fix(security): enforce extend_booking session identity, branch scope and revoke direct resync (reconciles #53 & #44)"
+    },
+    {
+      "branch": "repair/pr-54-availability-fail-closed",
+      "sha": "c8f6c6a3",
+      "ahead": 2,
+      "behind": 20,
+      "date": "2026-11-11",
+      "subj": "Merge branch 'main' into repair/pr-54-availability-fail-closed"
+    },
+    {
+      "branch": "repair/pr-55-hold-auth",
+      "sha": "31b9ba4b",
+      "ahead": 1,
+      "behind": 45,
+      "date": "2026-11-10",
+      "subj": "fix(security): protect temporary holds using forward-only migration 0232 (replaces #55)"
+    },
+    {
+      "branch": "repair/pr-59-driver-rls-regressions",
+      "sha": "2a6af331",
+      "ahead": 2,
+      "behind": 20,
+      "date": "2026-11-11",
+      "subj": "Merge branch 'main' into repair/pr-59-driver-rls-regressions"
+    },
+    {
+      "branch": "repair/pr-7-client-reports",
+      "sha": "d32da92a",
+      "ahead": 8,
+      "behind": 49,
+      "date": "2026-11-10",
+      "subj": "test(client-reports): verify +05:45 rollover for repeat booking dates"
+    },
+    {
+      "branch": "repair/pr-91-rules-consolidation",
+      "sha": "9e2b0d99",
+      "ahead": 1,
+      "behind": 23,
+      "date": "2026-11-11",
+      "subj": "docs(governance): consolidate agent rules and resolve instruction collisions (reconciles #91)"
+    },
+    {
+      "branch": "repair/team-notes-all-roles-reconcile",
+      "sha": "215e9bed",
+      "ahead": 1,
+      "behind": 36,
+      "date": "2026-11-11",
+      "subj": "test(team-notes): verify UI composer permissions for all 8 staff roles and deny Client (reconciles #36 & #38)"
+    },
+    {
+      "branch": "review/2026-11-01-staff-copy-and-default-time-tests",
+      "sha": "e2c4116e",
+      "ahead": 7,
+      "behind": 348,
+      "date": "2026-11-01",
+      "subj": "test(rentals): align More registry matrix with T3-01 Re-book action"
+    },
+    {
+      "branch": "security/2026-11-01-rider-token-issuance-idempotency",
+      "sha": "8696358c",
+      "ahead": 31,
+      "behind": 332,
+      "date": "2026-11-01",
+      "subj": "fix(ci): allow coverage to finish without cancelling 20-minute verification job"
+    },
+    {
+      "branch": "security/2026-11-01-rider-token-privilege-lockdown",
+      "sha": "c7d8d07f",
+      "ahead": 19,
+      "behind": 332,
+      "date": "2026-11-01",
+      "subj": "fix(edge): explicitly allow token-authenticated rider links without staff JWT"
+    },
+    {
+      "branch": "step1-foundation",
+      "sha": "ea9518f9",
+      "ahead": 371,
+      "behind": 847,
+      "date": "2026-10-12",
+      "subj": "New Rental redesign: phone catalogue panel sizing, rulings and final preview"
+    },
+    {
+      "branch": "test/2026-11-02-local-auth-postgrest-gate",
+      "sha": "879c5513",
+      "ahead": 7,
+      "behind": 290,
+      "date": "2026-11-02",
+      "subj": "test(local-api): also check checker syntax and CLI help in CI"
+    },
+    {
+      "branch": "upload/babin-rentals-os-2026-10-13",
+      "sha": "bdd66daa",
+      "ahead": 423,
+      "behind": 847,
+      "date": "2026-10-14",
+      "subj": "docs(baseline): record release baseline audit, blockers, and calendar header acceptance"
+    },
+    {
+      "branch": "ux/2026-11-03-filter-chip-touch-target-1100",
+      "sha": "f197685c",
+      "ahead": 2,
+      "behind": 224,
+      "date": "2026-11-03",
+      "subj": "test(ux): cover active filter touch target and removal behavior"
+    },
+    {
+      "branch": "ux/2026-11-03-filter-section-single-toggle-0500",
+      "sha": "33fe9616",
+      "ahead": 2,
+      "behind": 226,
+      "date": "2026-11-03",
+      "subj": "test(ux): cover single disclosure and independent filter action"
+    },
+    {
+      "branch": "ux/2026-11-03-filterbar-inert-options",
+      "sha": "b2ec6e46",
+      "ahead": 2,
+      "behind": 226,
+      "date": "2026-11-03",
+      "subj": "test(ux): cover informational quick filters and invalid counts"
+    },
+    {
+      "branch": "ux/2026-11-03-freshness-invalid-timestamp",
+      "sha": "3c7ea091",
+      "ahead": 2,
+      "behind": 226,
+      "date": "2026-11-03",
+      "subj": "test(ux): cover invalid and epoch freshness timestamps"
+    },
+    {
+      "branch": "ux/2026-11-03-inspector-keyboard-guard",
+      "sha": "673a15b2",
+      "ahead": 2,
+      "behind": 226,
+      "date": "2026-11-03",
+      "subj": "test(ux): cover inspector keyboard editing and IME guards"
+    },
+    {
+      "branch": "ux/2026-11-03-mobile-search-ime-0600",
+      "sha": "459d3811",
+      "ahead": 2,
+      "behind": 226,
+      "date": "2026-11-03",
+      "subj": "test(ux): cover mobile header Nepali IME and normal keyboard controls"
+    },
+    {
+      "branch": "ux/2026-11-03-quantity-stepper-ime",
+      "sha": "fc2c696d",
+      "ahead": 2,
+      "behind": 225,
+      "date": "2026-11-03",
+      "subj": "test(ux): cover quantity stepper IME and normal arrow controls"
+    },
+    {
+      "branch": "ux/2026-11-03-search-ime-guard",
+      "sha": "da34414f",
+      "ahead": 2,
+      "behind": 226,
+      "date": "2026-11-03",
+      "subj": "test(ux): cover composed Enter Escape and legacy IME keys"
+    },
+    {
+      "branch": "ux/2026-11-03-service-warning-a11y",
+      "sha": "81142134",
+      "ahead": 2,
+      "behind": 226,
+      "date": "2026-11-03",
+      "subj": "test(a11y): cover service warning accessible descriptions"
+    },
+    {
+      "branch": "wip/main-loose-2026-10-08",
+      "sha": "ef5faa91",
+      "ahead": 29,
+      "behind": 847,
+      "date": "2026-10-08",
+      "subj": "wip: snapshot of main's uncommitted work (8 Oct 2026)"
+    },
+    {
+      "branch": "wip/main-phase9-offline-2026-10-08",
+      "sha": "1313bbc5",
+      "ahead": 35,
+      "behind": 847,
+      "date": "2026-10-08",
+      "subj": "wip: snapshot of main's uncommitted Phase 9 offline & conflict work (8 Oct 2026)"
+    }
+  ]
+}
