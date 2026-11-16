@@ -38,3 +38,32 @@
 ## Owner restrictions
 
 No merge, live Supabase writes, hosted staging expense, domains, payments, workflow cancellation, Booqable cutover or deployment is authorized by this documentation change.
+
+
+## Follow-up reconciliation — 17 Nov 2026 (evidence only)
+
+**Current main reviewed:** `02a0e0b1a963af28cdd2bbfeab381e923b09d42c`. The full main CI run [#43941677032](https://github.com/babindulal7/babin-rentals-os/actions/runs/43941677032) completed successfully. This is not a device, staging, or feature acceptance sign-off. Earlier dated PR-open warnings above are historical snapshots and should not be interpreted as current open status.
+
+### Thirteen roadmap cards marked ready: disposition
+
+| Card | GitHub evidence as of 17 Nov | Safe next step |
+| --- | --- | --- |
+| T2-15 | [PR #30](https://github.com/babindulal7/babin-rentals-os/pull/30) merged 2 Nov | Validate booking-linked damage case and notification; update roadmap only after acceptance |
+| T2-21 | [PR #170](https://github.com/babindulal7/babin-rentals-os/pull/170) merged 15 Nov UTC | Validate downtime exclusion, calendar and early termination |
+| T3-17 | [PR #162](https://github.com/babindulal7/babin-rentals-os/pull/162) merged 15 Nov; follow-up safety [PR #172](https://github.com/babindulal7/babin-rentals-os/pull/172) remains open | **Hold acceptance** until fail-closed availability and quantity-capacity regression are reviewed and tested |
+| T3-22 | [PR #161](https://github.com/babindulal7/babin-rentals-os/pull/161) merged 15 Nov | Verify two-tap workflow, device and stock parity |
+| T8-02 | Named branch `lane-a/T8-02-plans-admin-screen`: 0 commits ahead, 433 behind main | Verify actual implementation and audit/RBAC tests; no branch merge to perform |
+| T8-04 | Named branch `lane-a/T8-04-renew-a-lapsed-membership`: 0 ahead, 280 behind | Verify renewal history and authorization; no branch merge to perform |
+| T8-07 | Named branch `lane-a/T8-07-timesheet-by-the-day`: 0 ahead, 259 behind | Verify day-rate and overtime totals; no branch merge to perform |
+| T8-08 | Named branch `lane-a/T8-08-tds-on-crew-payouts`: 0 ahead, 411 behind | Verify stored TDS calculations and obtain accountant acceptance |
+| T8-09 | Named branch `lane-a/T8-09-staff-renting-gear-finish`: 0 ahead, 433 behind | Verify discount, deposit, invoice and role rules |
+| T2-06 | Named branch not found in GitHub branch search; no matching open implementation PR identified | Trace commits and inspect maintenance close-out behavior |
+| T2-13 | Named branch not found; no matching open implementation PR identified | Trace self-QC implementation and audit constraints |
+| T2-14 | Named branch not found; no matching open implementation PR identified | Trace scanner item-card and finance-hiding behavior |
+| T4-08 | Named branch not found; no matching open implementation PR identified; historical [PR #35](https://github.com/babindulal7/babin-rentals-os/pull/35) closed unmerged | Trace rider-link implementation and verify token expiry, access scope, revocation and privacy |
+
+**Interpretation:** 4 implementation PRs already merged, 5 referenced branches fully contained in main history (zero ahead), 4 branch references unresolved. None of these facts alone certifies `done`. Do not blindly merge obsolete branches or count an open documentation PR as feature completion.
+
+**Next verification order:** T3-17 fail-closed and quantity-capacity safety; T4-08 rider-token privacy; T2-13 solo-QC audit; T2-06 repair availability; remaining cards after evidence. Reconcile the task status headings in a separate reviewed change once acceptance results are recorded.
+
+**Restrictions:** Documentation-only update. No live settings, migrations, deployment, automatic CI reruns, or merge. Avoid claiming exact-head integration readiness for stale PRs.
