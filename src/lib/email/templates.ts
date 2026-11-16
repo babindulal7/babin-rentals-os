@@ -237,6 +237,109 @@ export function renderEmailHtml(payload: EmailPayloadData, language = 'en'): str
       break
     }
 
+    case 'booking_confirmation': {
+      const bookingNo = String(data['booking_no'] ?? '')
+      const startDate = String(data['start_date'] ?? 'As scheduled')
+      const endDate = String(data['end_date'] ?? 'As scheduled')
+      const itemsCount = String(data['items_count'] ?? '')
+      const totalDisplay = data['total_display'] ? String(data['total_display']) : null
+      const pickupTime = String(data['pickup_time'] ?? '10:00 AM')
+
+      mainBody = `
+        <p>Dear ${recipient_name},</p>
+        <p>Your equipment rental reservation with <strong>Babin Rentals</strong> has been confirmed. ✅</p>
+        <div style="background:#f4f5f7;padding:16px;border-radius:8px;margin:16px 0;">
+          <p style="margin:4px 0;"><strong>Booking Reference:</strong> ${bookingNo}</p>
+          <p style="margin:4px 0;"><strong>Rental Period:</strong> ${startDate} → ${endDate}</p>
+          <p style="margin:4px 0;"><strong>Pickup Window:</strong> From ${pickupTime} at our store</p>
+          ${itemsCount ? `<p style="margin:4px 0;"><strong>Reserved Gear:</strong> ${itemsCount} item(s)</p>` : ''}
+          ${totalDisplay ? `<p style="margin:4px 0;font-weight:700;color:#0f172a;"><strong>Rental Total:</strong> ${totalDisplay}</p>` : ''}
+        </div>
+        <p><strong>Reminder:</strong> Please present a valid government-issued photo ID (Citizenship, Passport, or Driving License) during handover.</p>
+      `
+      break
+    }
+
+    case 'quote_document': {
+      const bookingNo = String(data['booking_no'] ?? '')
+      const quoteNo = String(data['quote_no'] ?? bookingNo)
+      const startDate = String(data['start_date'] ?? 'As scheduled')
+      const endDate = String(data['end_date'] ?? 'As scheduled')
+      const totalDisplay = data['total_display'] ? String(data['total_display']) : null
+
+      mainBody = `
+        <p>Dear ${recipient_name},</p>
+        <p>Please find the commercial quotation for your requested rental reservation with Babin Rentals.</p>
+        <div style="background:#f4f5f7;padding:16px;border-radius:8px;margin:16px 0;">
+          <p style="margin:4px 0;"><strong>Quotation Reference:</strong> ${quoteNo}</p>
+          <p style="margin:4px 0;"><strong>Booking:</strong> ${bookingNo}</p>
+          <p style="margin:4px 0;"><strong>Requested Duration:</strong> ${startDate} → ${endDate}</p>
+          ${totalDisplay ? `<p style="margin:4px 0;font-weight:700;color:#0f172a;"><strong>Estimated Total (incl. 13% VAT):</strong> ${totalDisplay}</p>` : ''}
+        </div>
+        <p>To confirm this quotation and lock in equipment availability, please reply to this email or contact our desk.</p>
+      `
+      break
+    }
+
+    case 'invoice_document': {
+      const invoiceNo = String(data['invoice_no'] ?? '')
+      const bookingNo = String(data['booking_no'] ?? '')
+      const totalDisplay = data['total_display'] ? String(data['total_display']) : null
+      const balanceDisplay = data['balance_display'] ? String(data['balance_display']) : null
+
+      mainBody = `
+        <p>Dear ${recipient_name},</p>
+        <p>Please find attached the official Tax Invoice for your rental account with Babin Rentals.</p>
+        <div style="background:#f4f5f7;padding:16px;border-radius:8px;margin:16px 0;">
+          <p style="margin:4px 0;"><strong>Invoice Number:</strong> ${invoiceNo}</p>
+          <p style="margin:4px 0;"><strong>Booking Reference:</strong> ${bookingNo}</p>
+          ${totalDisplay ? `<p style="margin:4px 0;"><strong>Total Billed:</strong> ${totalDisplay}</p>` : ''}
+          ${balanceDisplay ? `<p style="margin:4px 0;font-weight:700;color:#0f172a;"><strong>Balance Due:</strong> ${balanceDisplay}</p>` : ''}
+        </div>
+        <p>Payment can be settled in person, via bank transfer, or via Fonepay / QR.</p>
+      `
+      break
+    }
+
+    case 'receipt_document': {
+      const bookingNo = String(data['booking_no'] ?? '')
+      const receiptNo = String(data['receipt_no'] ?? '')
+      const amountDisplay = String(data['amount_display'] ?? '')
+      const paymentMethod = String(data['method'] ?? 'Payment')
+      const balanceDisplay = data['balance_display'] ? String(data['balance_display']) : null
+
+      mainBody = `
+        <p>Dear ${recipient_name},</p>
+        <p>Thank you! Your payment has been received and credited to your rental account.</p>
+        <div style="background:#f4f5f7;padding:16px;border-radius:8px;margin:16px 0;">
+          ${receiptNo ? `<p style="margin:4px 0;"><strong>Receipt Reference:</strong> ${receiptNo}</p>` : ''}
+          <p style="margin:4px 0;"><strong>Booking Reference:</strong> ${bookingNo}</p>
+          <p style="margin:4px 0;"><strong>Amount Received:</strong> ${amountDisplay} (${paymentMethod})</p>
+          ${balanceDisplay ? `<p style="margin:4px 0;"><strong>Remaining Balance:</strong> ${balanceDisplay}</p>` : '<p style="margin:4px 0;color:#16a34a;font-weight:600;">Status: Fully Settled ✅</p>'}
+        </div>
+      `
+      break
+    }
+
+    case 'rental_agreement': {
+      const bookingNo = String(data['booking_no'] ?? '')
+      const startDate = String(data['start_date'] ?? 'As scheduled')
+      const endDate = String(data['end_date'] ?? 'As scheduled')
+      const itemsCount = String(data['items_count'] ?? '')
+
+      mainBody = `
+        <p>Dear ${recipient_name},</p>
+        <p>Here is your copy of the <strong>Equipment Rental Agreement & Custody Attestation</strong> for booking <strong>${bookingNo}</strong>.</p>
+        <div style="background:#f4f5f7;padding:16px;border-radius:8px;margin:16px 0;">
+          <p style="margin:4px 0;"><strong>Booking Reference:</strong> ${bookingNo}</p>
+          <p style="margin:4px 0;"><strong>Rental Period:</strong> ${startDate} → ${endDate}</p>
+          ${itemsCount ? `<p style="margin:4px 0;"><strong>Verified Equipment:</strong> ${itemsCount} item(s)</p>` : ''}
+        </div>
+        <p>Please keep this document for your production records and inventory insurance tracking.</p>
+      `
+      break
+    }
+
     case 'test_template':
       mainBody = `
         <p>Hello ${recipient_name},</p>

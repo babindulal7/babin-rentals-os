@@ -175,10 +175,47 @@ export interface WaDeliveryRescheduled {
 export interface WaPaymentReceipt {
   clientName: string
   bookingNo: string
+  receiptNo?: string | null | undefined
   amount: Paisa
   method: string
   /** Zero prints "fully paid"; a positive figure prints the remaining balance. */
   balance: Paisa
+  documentUrl?: string | null | undefined
+}
+
+export type WaReceiptDocument = WaPaymentReceipt
+
+export interface WaQuoteDocument {
+  clientName: string
+  bookingNo: string
+  quoteNo?: string | null | undefined
+  startIso: string
+  endIso: string
+  itemCount: number
+  topItems?: string[] | undefined
+  total?: Paisa | null | undefined
+  documentUrl?: string | null | undefined
+}
+
+export interface WaInvoiceDocument {
+  clientName: string
+  bookingNo: string
+  invoiceNo: string
+  total: Paisa
+  paid?: Paisa | null | undefined
+  balance?: Paisa | null | undefined
+  dueDateIso?: string | null | undefined
+  documentUrl?: string | null | undefined
+}
+
+export interface WaAgreementDocument {
+  clientName: string
+  bookingNo: string
+  agreementNo?: string | null | undefined
+  startIso: string
+  endIso: string
+  itemCount: number
+  documentUrl?: string | null | undefined
 }
 
 export interface WaBalanceDue {
@@ -365,19 +402,109 @@ export function deliveryRescheduled(i: WaDeliveryRescheduled, b: WaBusiness): st
 }
 
 export function paymentReceipt(i: WaPaymentReceipt, b: WaBusiness): string {
+  const receiptRef = i.receiptNo ? `Receipt: ${i.receiptNo} (Booking ${i.bookingNo})` : `Booking: ${i.bookingNo}`
   const balanceLine =
     i.balance > 0 ? 'Remaining balance: ' + money(i.balance) : 'Status: fully paid ✅'
+  const docLine = i.documentUrl ? '\n📄 View Payment Receipt:\n' + i.documentUrl : ''
   return [
     open(i.clientName),
     '',
     'Payment received — thank you. 🙏',
     '',
-    'Booking: ' + i.bookingNo,
+    receiptRef,
     'Amount: ' + money(i.amount) + ' (' + i.method + ')',
     balanceLine,
+    docLine,
     '',
     close(b),
-  ].join('\n')
+  ]
+    .filter((line) => line !== '')
+    .join('\n')
+}
+
+export const receiptDocument = paymentReceipt
+
+export function quoteDocument(i: WaQuoteDocument, b: WaBusiness): string {
+  const quoteRef = i.quoteNo
+    ? `Quotation: ${i.quoteNo} (Booking ${i.bookingNo})`
+    : `Quotation for Booking ${i.bookingNo}`
+  const itemsLine =
+    i.topItems && i.topItems.length > 0
+      ? `${i.itemCount} items — ${i.topItems.join(', ')}`
+      : `${i.itemCount} items`
+  const totalLine = i.total != null && i.total > 0 ? 'Estimated Total: ' + money(i.total) : ''
+  const docLine = i.documentUrl ? '📄 View quotation:\n' + i.documentUrl : ''
+
+  return [
+    open(i.clientName),
+    '',
+    `Here is your quotation from ${b.businessName}. 📋`,
+    '',
+    quoteRef,
+    'Rental Period: ' + adBs(i.startIso) + ' → ' + adBs(i.endIso),
+    'Gear: ' + itemsLine,
+    totalLine,
+    docLine,
+    '',
+    'Please let us know if you would like to confirm this reservation.',
+    '',
+    close(b),
+  ]
+    .filter((line) => line !== '')
+    .join('\n')
+}
+
+export function invoiceDocument(i: WaInvoiceDocument, b: WaBusiness): string {
+  const paidLine = i.paid != null && i.paid > 0 ? 'Paid: ' + money(i.paid) : ''
+  const balanceLine =
+    i.balance != null && i.balance > 0
+      ? 'Balance Due: ' + money(i.balance)
+      : 'Status: Fully Paid ✅'
+  const dueLine = i.dueDateIso ? 'Due Date: ' + adBs(i.dueDateIso) : ''
+  const docLine = i.documentUrl ? '📄 View Tax Invoice:\n' + i.documentUrl : ''
+
+  return [
+    open(i.clientName),
+    '',
+    `Here is your Tax Invoice from ${b.businessName}. 🧾`,
+    '',
+    `Invoice: ${i.invoiceNo} (Booking ${i.bookingNo})`,
+    'Total Amount: ' + money(i.total),
+    paidLine,
+    balanceLine,
+    dueLine,
+    docLine,
+    '',
+    'Thank you for your business.',
+    '',
+    close(b),
+  ]
+    .filter((line) => line !== '')
+    .join('\n')
+}
+
+export function agreementDocument(i: WaAgreementDocument, b: WaBusiness): string {
+  const agreementRef = i.agreementNo
+    ? `Agreement: ${i.agreementNo} (Booking ${i.bookingNo})`
+    : `Booking: ${i.bookingNo}`
+  const docLine = i.documentUrl ? '📄 View Rental Agreement:\n' + i.documentUrl : ''
+
+  return [
+    open(i.clientName),
+    '',
+    `Here is your Equipment Rental Agreement from ${b.businessName}. ✍️`,
+    '',
+    agreementRef,
+    'Rental Period: ' + adBs(i.startIso) + ' → ' + adBs(i.endIso),
+    `Equipment: ${i.itemCount} items under verified custody`,
+    docLine,
+    '',
+    'Please review the terms and preserve this copy for your production records.',
+    '',
+    close(b),
+  ]
+    .filter((line) => line !== '')
+    .join('\n')
 }
 
 export function balanceDue(i: WaBalanceDue, b: WaBusiness): string {
