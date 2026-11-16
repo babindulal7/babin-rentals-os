@@ -184,6 +184,49 @@ Counted by `npm run completion`, not typed.
 - T2-21 ready for merge into `main` (lane-a/T2-21-planned-downtime-with-a-reason).
 - Batch 4 complete: T0-03 (PR #165), T3-24 (PR #166), T3-03 (PR #168), T3-06 (PR #169), T2-21 (PR #170).
 
+## 2026-11-15 — T3-24: Quick Expense with Bill Photo (Lane C)
+
+**Did**
+- Implemented card **T3-24 (Quick expense with a bill photo)** in `src/modules/finance/Expenses.tsx`, `src/lib/expenseStorage.ts`, and `src/lib/queries/finance.ts`.
+- Replaced "Receipt upload is not built yet" placeholder with active bill photo file input supporting mobile camera capture (`capture="environment"`), image preview, and format validation.
+- Enforced hard ≤ 3 MB file size cap per specification with inline operator feedback.
+- Configured upload to Supabase Storage bucket `documents` under `staff/<userId>/receipt_<clientUuid>_<cleanFilename>` in compliance with migration 0170 storage RLS.
+- Added optional settlement notation (Paid by) stored in expense description while respecting schema constraints.
+- Added interactive receipt viewer modal and receipt action button in both desktop tabular and mobile card views.
+- Updated `docs/plans/T3_BOOKING_MONEY.md` status to `ready — awaiting merge (lane-c/T3-24-quick-expense-bill-photo)`.
+
+**Ruled**
+- W81 and W89 honored. No invention of unbacked database columns (`receipt_url` and `receipt_size` real columns leveraged).
+- Integer paisa maintained throughout money conversions via `rupees()` and `formatMoney()`.
+- Money blindness (Law 6) preserved: receipts and expenses remain strictly accessible only to authorized money roles.
+
+**Verified**
+- `src/lib/__tests__/expenseStorage.test.ts` (5 tests passing).
+- `src/modules/finance/__tests__/ExpensesReceipt.test.tsx` (4 tests passing).
+- `src/modules/finance/__tests__/Expenses.test.tsx` (18 tests passing).
+- `npm run typecheck`: clean (exit 0).
+- `npm run lint`: clean (exit 0).
+- `npm run lint:progress`: clean (exit 0).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 233 files · check:pglite not run this session. Suite: static inspection.
+Coverage suite: Historical suite.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Card ready for Babin review and local merge (`lane-c/T3-24-quick-expense-bill-photo`).
+- Subsequent accountant pack card (T3-23) can now consume persisted receipt URLs and photos.
+
 ## 2026-11-10 — T3-17: Extend in two taps (Lane C)
 
 **Did**
