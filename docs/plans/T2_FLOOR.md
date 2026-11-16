@@ -243,7 +243,7 @@ Replace the two `<Unavailable reason="Printing … is not built">` blocks.
 **Done when** — PDFs open on iPad and print on the shop printer; Warehouse versions carry no prices.
 **Needs** — none.
 
-### T2-09 · Bluetooth scanner at the packing bench            status: doing — code verified; iPad/scanner acceptance pending (lane-a/T2-09-main-integration) · size: S · lane A + Babin
+### T2-09 · Bluetooth scanner at the packing bench            status: done · merged (`f3dcf0c3`) · verified on iPad by Babin · size: S · lane A + Babin
 **What** — Claude proposes 2–3 iPad-compatible Bluetooth scanners that read QR and Code 128 in
 keyboard (HID) mode, with prices from Nepali sellers; Babin buys one. Make `ScannerInput` accept a
 fast keystroke burst ending in Enter anywhere on the floor screens (focus trap on the scan field,
@@ -324,7 +324,7 @@ match case-insensitively; every code is checked by the server, and an unknown co
 time; a Warehouse seat sees no money.
 **Needs** — none.
 
-### T2-15 · Damage found during reset            status: acceptance_pending — branch commits included in main; staging damage-case/device checks remain · size: S · lane A · [soon]
+### T2-15 · Damage found during reset            status: ready — awaiting merge (lane-a/T2-15-damage-found-during-reset) · size: S · lane A · [soon]
 **What** — When Reset marks an item Damaged after the client has left (W44), the app opens a damage
 case **linked to the booking it last came back from**, defaulting to **claim from the client**; the
 client gets the "damage found — under review" email without an amount (W23, T5-07); the amount
@@ -336,7 +336,7 @@ follows only after a Manager (< Rs 25,000) or Owner (≥ Rs 25,000) approves.
 client gets the notice, and no amount appears until approval.
 **Needs** — T2-01, T5-07 for the email.
 
-### T2-16 · Photo rules from W27: several photos, size caps, HEIC            status: ready — awaiting merge (lane-a/T2-16-photo-rules-w27) · size: S · lane A · [go-live]
+### T2-16 · Photo rules from W27: several photos, size caps, HEIC            status: done · size: S · lane A · [go-live]
 **What** — T2-01 shipped one photo per step with one shrink rule. Bring it to W27: the file input gets
 `multiple`; **one or more photos per step, the gate needs at least one**; shrink on the device until
 **damage photos ≤ 10 MB and every other photo ≤ 3 MB** (lower the long edge and the JPEG quality step
@@ -405,7 +405,7 @@ price; Warehouse has no price in the DOM or the payload; 2) Handover deducts the
 same `client_uuid` twice adds one line; 4) screen check.
 **Needs** — T3-30.
 
-### T2-21 · Planned downtime with a reason            status: todo · size: M · lane A · [go-live] · slips first
+### T2-21 · Planned downtime with a reason            status: ready — awaiting merge (lane-a/T2-21-planned-downtime-with-a-reason) · size: M · lane A · [go-live] · slips first
 **What** — Block a unit (or part of a quantity-tracked product) for **dates you know in advance**, with
 a **reason from a list** (B10): ⭐ **Repair · Service or calibration · Our own shoot · Lent to a
 partner · Marketing shoot · Other (type it)**. In that range the unit cannot be booked — New Rental,

@@ -123,15 +123,36 @@ export default defineConfig({
         marketing: path.resolve(__dirname, 'marketing.html'),
       },
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-supabase': ['@supabase/supabase-js'],
-          'vendor-icons': ['@tabler/icons-react'],
-          'vendor-scanner': ['@zxing/browser', '@zxing/library'],
-          'vendor-dexie': ['dexie'],
-          'vendor-gsap': ['gsap', '@gsap/react'],
-          'vendor-charts': ['recharts'],
-          'vendor-base-ui': ['@base-ui/react'],
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom') || id.includes('@remix-run') || id.includes('@base-ui')) {
+              return 'vendor-react'
+            }
+            if (id.includes('@supabase')) {
+              return 'vendor-supabase'
+            }
+            if (id.includes('@tabler/icons-react')) {
+              return 'vendor-icons'
+            }
+            if (id.includes('@zxing')) {
+              return 'vendor-scanner'
+            }
+            if (id.includes('dexie')) {
+              return 'vendor-dexie'
+            }
+            if (id.includes('gsap') || id.includes('@gsap')) {
+              return 'vendor-gsap'
+            }
+            if (id.includes('recharts') || id.includes('d3-')) {
+              return 'vendor-charts'
+            }
+          }
+          if (id.includes('/src/lib/pdf/')) {
+            return 'app-pdf'
+          }
+          if (id.includes('glossary.ne.json')) {
+            return 'app-i18n'
+          }
         }
       }
     }

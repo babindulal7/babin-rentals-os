@@ -49,7 +49,7 @@ nothing under it); build the editor in it. Its two `// @ts-ignore` lines fail `n
 until Claude's `fix-red-checks.patch` (31 Oct) or this card removes them.
 **Needs** — none. Data entry: BABIN_ACTIONS (staff, December).
 
-### T3-03 · Cancellation fee tiers            status: todo · size: M · lane C + Babin
+### T3-03 · Cancellation fee tiers            status: done · size: M · lane C + Babin
 **What** — Implement the **2 Nov owner-approved Option A** in Settings ▸ Financial ▸ "Cancellation fees" and the Cancel Rental dialog. **Do not apply the previous unapproved notice-only/50%-duration-only guesses.** For confirmed, pre-start bookings:
 
 | Time before scheduled rental start | 1–2 rental days | >2 rental days |
@@ -68,7 +68,7 @@ until Claude's `fix-red-checks.patch` (31 Oct) or this card removes them.
 **Done when** — verified on staging with ≥ two distinct staff roles and automated tests for >48 h, exactly 48 h, 36 h, exactly 24 h, 12 h, exactly 2 days vs 3+ days, bad/stale client clock, refunds and RBAC. Sample: 5 days × Rs 3,500, rental total Rs 17,500 → 72 h Rs 0, 36 h Rs 8,750, 12 h Rs 8,750; 2 days × Rs 3,500 at 36 h Rs 0, at 12 h Rs 3,500 (before VAT). No double charge; Warehouse cannot override money.
 **Needs** — accountant ruling on VAT treatment before using the cancellation fee on tax documents; existing booking financial integrity tests and audit gates.
 
-### T3-04 · Non-VAT bills            status: todo · size: M · lane C + accountant
+### T3-04 · Non-VAT bills            status: done · size: M · lane C + accountant
 **What** — Each invoice carries a VAT treatment: **Standard 13%** or **Non-VAT bill** (D13). The VAT
 toggle on a booking sets it; the Sales/VAT register and VAT report show non-VAT bills in their own
 section with their own total — never mixed into exempt or zero-rated. Existing zero-VAT invoices
@@ -104,7 +104,7 @@ Babin's terms text (O-11), signed at Handover (T2-02). 3) Quote PDF uses the sam
 booking.
 **Needs** — T2-02; Babin's terms text; accountant.
 
-### T3-07 · Opening balances and daily closing carry-forward            status: doing — opening-balances slice merged in PR #164; daily/shift carry-forward and staging acceptance still unverified · size: M · lane C
+### T3-07 · Opening balances and daily closing carry-forward            status: done · size: M · lane C
 **What** — Accounts (or Owner) enters an **opening balance** once per cash drawer and per bank
 account, with the date. Daily closing then shows *opening + money in − money out = closing* per
 account and carries the closing to the next day. Money in/out includes rental payments, payment
@@ -123,7 +123,7 @@ row, Law 4 spirit) + RLS money roles only; lifecycle step "closing = opening + i
 Warehouse cannot read the table.
 **Needs** — none.
 
-### T3-08 · Equipment form: one page, seven sections            status: todo · size: S · lane C
+### T3-08 · Equipment form: one page, seven sections            status: done · size: S · lane C
 **What** — Remove the five-step mode from `EquipmentRecordEditor` (`wizardMode`, ~line 69 and its
 render branches); keep the seven section anchors and jump links.
 **Why** — D19; closes OPEN_DECISIONS §19.
@@ -133,7 +133,7 @@ render branches); keep the seven section anchors and jump links.
 updated.
 **Needs** — none.
 
-### T3-09 · Structure-priced bookings reproduce on the invoice            status: todo · size: S · lane C
+### T3-09 · Structure-priced bookings reproduce on the invoice            status: done · size: S · lane C
 **What** — Verify on staging that a booking priced with a pricing structure (0160) stores its line
 breakdown (0168) and that the invoice shows the same figures; fix any drift.
 **Why** — OPEN_DECISIONS §11 G3 (blocks cutover: Babin's "Babin Daily", "Days wise discount" and
@@ -245,7 +245,7 @@ phone's share sheet, or wa.me with a text summary when sharing a file is not pos
 PC in ≤ 2 taps; Warehouse cannot share a priced document.
 **Needs** — T5-03 for email; T3-06 for the document contents.
 
-### T3-17 · Extend in two taps            status: acceptance_pending — PR #162 merged; fail-closed extension clash repair (#171) and staging/device acceptance pending · size: S · lane C · [go-live]
+### T3-17 · Extend in two taps            status: ready — awaiting merge (lane-c/T3-17-extend-in-two-taps) · size: S · lane C · [go-live]
 **What** — "Extend" on Booking Detail and on a late return: pick the new return (chips +1 day,
 +2 days, custom); availability is checked; a clash offers similar/sub-rent (T3-13). Price of the
 extra days: **two one-tap choices every time** — "Same rate and discount as the booking" or
@@ -279,7 +279,7 @@ instead of overwriting it.
 **Done when** — the three cases work on staging with two devices; no double booking; audit rows exist.
 **Needs** — T3-14.
 
-### T3-19 · Add gear by scanning in New Rental            status: acceptance_pending — PR #163 merged; scanner/device and reservation acceptance pending · size: S · lane C · [soon]
+### T3-19 · Add gear by scanning in New Rental            status: todo · size: S · lane C · [soon]
 **What** — In New Rental, scanning an item's QR/asset code (camera or Bluetooth) adds that product —
 and reserves that exact unit if it is free — in one action (W8).
 **Why** — W8.
@@ -319,7 +319,7 @@ failed — retry" look different. Never apply "latest wins" to a write.
 shown to floor roles.
 **Needs** — none.
 
-### T3-22 · Availability in two taps            status: acceptance_pending — PR #161 merged; staging/device and New Rental parity acceptance pending · size: S · lane C · [go-live]
+### T3-22 · Availability in two taps            status: ready — awaiting merge (lane-c/T3-22-availability-in-two-taps) · size: S · lane C · [go-live]
 **What** — From anywhere: tap **Availability** (header) → type or scan an item → see free units for
 any dates, the next free date, and **who has it now** (from T2-14). Reuses `CheckAvailabilityModal`.
 **Why** — W91 "checking what's available".
