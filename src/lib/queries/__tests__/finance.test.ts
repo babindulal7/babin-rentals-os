@@ -294,7 +294,7 @@ describe('listInvoices — the select string', () => {
 
   it('embeds the client and the booking, and nothing else', async () => {
     await listInvoices()
-    expect(db.state.columns).toContain('clients ( name )')
+    expect(db.state.columns).toContain('clients ( name, pan_vat )')
     expect(db.state.columns).toContain('bookings ( booking_no )')
   })
 

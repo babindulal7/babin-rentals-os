@@ -184,6 +184,56 @@ Counted by `npm run completion`, not typed.
 - T2-21 ready for merge into `main` (lane-a/T2-21-planned-downtime-with-a-reason).
 - Batch 4 complete: T0-03 (PR #165), T3-24 (PR #166), T3-03 (PR #168), T3-06 (PR #169), T2-21 (PR #170).
 
+## 2026-11-15 — T3-06: Invoice and agreement documents (Lane C)
+
+**Did**
+- **Nepal Tax Invoice & Agreement Documents (`src/lib/pdf/generatePdf.ts`, `src/lib/pdf/exportPdf.ts`):**
+  - Added dual calendar support `formatAdWithBs(ad: Date)` combining AD date and BS Bikram Sambat date (e.g. `18/9/2026 (2 Ashwin 2083 BS)`) using `toBs` and `formatBs` from `src/lib/bs.ts`.
+  - Upgraded `generateInvoicePdf` to render Bikram Sambat date beside Gregorian AD date for both `Issue Date` and `Due Date` per Nepal Inland Revenue Department (IRD) practices.
+  - Added Buyer PAN (`Buyer PAN: <pan>`) rendering on the invoice header whenever client PAN/VAT is provided.
+  - Extended `generateDocumentPdf` to support company branding (`data.company`) and dual AD/BS issue dates.
+  - Implemented `generateRentalAgreementPdf(data: RentalAgreementPdfData)`:
+    - Renders official Rental Agreement document with complete equipment inventory schedule, booking dates, deposit notation (Law 5), and O-11 standard rental agreement terms (Kathmandu jurisdiction, verified equipment condition at handover per T2-02, hirer liability, authorized crew operators).
+    - Includes dual signature blocks for Authorized Signatory (Babin Rentals) and Hirer Representative for pre-handover execution.
+  - Implemented `exportRentalAgreementPdf` in `src/lib/pdf/exportPdf.ts` uploading to Supabase Storage bucket `documents` and generating signed download URLs.
+  - Extended `InvoiceListRow` in `src/lib/queries/finance.ts` to embed and extract `clientPanVat` from `clients ( name, pan_vat )` and plumbed through `toInvoicePdfData`.
+  - Added preview and download modal integrations:
+    - `QuotePreviewModal` in `QuoteActionsMenu.tsx` with Law 6 money blindness enforcement.
+    - `InvoicePaymentStatusModal` in `InvoiceActionsMenu.tsx` displaying commercial settlement breakdown and deposit details.
+  - Added comprehensive test suites:
+    - `src/lib/pdf/__tests__/generatePdf.test.ts` (20/20 passed): verifies BS date beside AD date, buyer PAN rendering, and agreement generation.
+    - `src/lib/pdf/__tests__/exportPdf.test.ts` (11/11 passed): verifies agreement storage upload and signed URL generation.
+    - `src/modules/rentals/actions/__tests__/QuoteActionsMenu.test.tsx` (3/3 passed): tests quote modal rendering, Law 6 money hiding, and PDF download.
+    - `src/modules/rentals/actions/__tests__/InvoiceActionsMenu.test.tsx` (1/1 passed): tests invoice payment modal rendering and settlement breakdown.
+
+**Ruled**
+- Nepal IRD invoice compliance: Displays sequential invoice number, company PAN/VAT, Issue & Due dates in both AD and BS formats, Buyer PAN when available, and standard 13% VAT calculation lines.
+- Ruling O-11: Rental Agreement PDF renders verified default terms covering equipment custody, damage liability, authorized operators, and Kathmandu legal jurisdiction with dual signature blocks for execution at T2-02 Handover.
+- Law 6: Quote and invoice previews respect viewer role; financial amounts are hidden from money-blind floor roles.
+
+**Verified**
+- Full gates: `npm run gates` passed all 17/17 checks (Typecheck, Lint, Local API safety guards, Offline mock tests, Migrations from scratch, Financial integrity, Security & branch regressions, Lifecycle, Server contracts, Partial returns, Shell design, Staff UI copy, Contrast WCAG AA, Build, and Coverage).
+- Unit tests: 35/35 passed across `src/lib/pdf/` and `src/modules/rentals/actions/__tests__/`.
+- `npm run lint:progress`: PASS.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 104 / 104 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | 73 / 73 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 236 files · check:pglite 236/236 applied, 0 failed. Suite: PASS — 7157/7157 passed, 0 failed.
+Coverage suite: PASS — 7157/7157 passed, 0 failed.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T3-06 ready for merge into `main` (`lane-c/T3-06-invoice-and-agreement-documents`).
+
 ## 2026-11-15 — T3-03: Implement Option A cancellation fee tiers policy
 
 **Did**
@@ -212,15 +262,15 @@ Counted by `npm run completion`, not typed.
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 102 / 102 (100%) | +0 |
+| Backend | actions implemented / total | 102 / 102 (100%) | +1 |
 | Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
-| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
-| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
-| Lifecycle | steps green / total | not measured — current receipt required | — |
-| Overall | structural mean of five | not measured | — |
-Migrations 233 files · check:pglite Historical, incomplete or failed receipt (2026-11-14T20:12:32.101Z); current source NOT VERIFIED. Suite: Historical suite: 15/15 passed, 0 failed (recorded 2026-11-15T08:55:19.301Z); current source NOT VERIFIED.
-Coverage suite: Historical suite: 7117/7117 passed, 0 failed (recorded 2026-11-14T20:14:37.763Z); current source NOT VERIFIED.
-Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-14T20:12:57.012Z); current source NOT VERIFIED.
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +1 |
+| Lifecycle | steps green / total | 72 / 72 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 234 files · check:pglite 234/234 applied, 0 failed (recorded 2026-11-15T09:19:01.535Z). Suite: PASS — 7157/7157 passed, 0 failed (recorded 2026-11-15T09:21:39.848Z); source fingerprint matches.
+Coverage suite: PASS — 7157/7157 passed, 0 failed (recorded 2026-11-15T09:21:39.848Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-15T09:19:28.085Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
@@ -270,6 +320,7 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 ### Remaining
 - Card ready for Babin review and local merge (`lane-c/T3-24-quick-expense-bill-photo`).
 - Subsequent accountant pack card (T3-23) can now consume persisted receipt URLs and photos.
+>>>>>>> origin/main
 
 ## 2026-11-10 — T3-17: Extend in two taps (Lane C)
 

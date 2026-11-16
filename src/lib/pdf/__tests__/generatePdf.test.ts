@@ -2,12 +2,16 @@ import { describe, it, expect } from 'vitest'
 import {
   generateInvoicePdf,
   generateDocumentPdf,
+  generateRentalAgreementPdf,
   generatePackingListPdf,
   generateReturnReportPdf,
   organizePackingListItems,
+  formatAdWithBs,
+  DEFAULT_RENTAL_AGREEMENT_TERMS,
   type InvoicePdfData,
   type PackingListPdfData,
   type ReturnReportPdfData,
+  type RentalAgreementPdfData,
 } from '../generatePdf'
 import { rupees } from '../../money'
 
@@ -508,6 +512,139 @@ describe('generatePdf', () => {
       // 8. Valid for 7 days
       expect(text).toContain('Valid for 7 days')
       expect(text).toContain('PRO FORMA ESTIMATE')
+    })
+
+    it('prints BS date beside AD date and Buyer PAN on Nepal invoices (T3-06)', () => {
+      const data: InvoicePdfData = {
+        invoiceNo: 'INV-2026-0042',
+        status: 'Issued',
+        issueDateAd: '2026-09-18',
+        dueDateAd: '2026-09-25',
+        bookingNo: 'BK-2026-0100',
+        client: {
+          name: 'Kathmandu Cine Services',
+          panVat: '601234567',
+        },
+        company: {
+          name: 'Babin Rentals Kathmandu',
+          panVat: '123456789',
+          address: 'Anamnagar, Kathmandu',
+        },
+        lines: [
+          {
+            description: 'Sony FX6 Cinema Camera',
+            quantity: 1,
+            rentalDays: 2,
+            ratePaisa: rupees(8000),
+            totalPaisa: rupees(16000),
+          },
+        ],
+        subtotalPaisa: rupees(16000),
+        taxablePaisa: rupees(16000),
+        vatPercent: 13,
+        vatPaisa: rupees(2080),
+        totalPaisa: rupees(18080),
+      }
+
+      const bytes = generateInvoicePdf(data)
+      const text = new TextDecoder().decode(bytes)
+
+      // BS date beside AD date
+      expect(text).toContain('18/9/2026 \\(2 Ashwin 2083 BS\\)')
+      expect(text).toContain('25/9/2026 \\(9 Ashwin 2083 BS\\)')
+
+      // Buyer PAN clearly printed
+      expect(text).toContain('Buyer PAN: 601234567')
+
+      // Business PAN
+      expect(text).toContain('PAN/VAT: 123456789')
+    })
+  })
+
+  describe('formatAdWithBs (T3-06)', () => {
+    it('formats AD calendar date with BS date beside it', () => {
+      const formatted = formatAdWithBs(new Date('2026-09-18T06:00:00Z'))
+      expect(formatted).toBe('18/9/2026 (2 Ashwin 2083 BS)')
+    })
+  })
+
+  describe('generateRentalAgreementPdf (T3-06, Ruling O-11, Handover T2-02)', () => {
+    const agreementData: RentalAgreementPdfData = {
+      agreementNo: 'AGR-BK-2026-0042',
+      bookingNo: 'BK-2026-0042',
+      project: 'Mountaineer Feature Film',
+      issueDateAd: '2026-09-18',
+      rentalStartAd: '2026-09-20',
+      rentalEndAd: '2026-09-25',
+      client: {
+        name: 'Himalayan Visuals Pvt Ltd',
+        phone: '+977-9801122334',
+        email: 'ops@himalayanvisuals.com',
+        address: 'Baluwatar, Kathmandu',
+        panVat: '609876543',
+        idNumber: 'CIT-27-01-72-12345',
+      },
+      company: {
+        name: 'Babin Rentals Kathmandu',
+        panVat: '123456789',
+        address: 'Anamnagar, Kathmandu',
+        phone: '+977-1-4400000',
+      },
+      equipment: [
+        {
+          description: 'ARRI Alexa Mini LF Package',
+          serialNo: 'ALEXA-LF-007',
+          quantity: 1,
+        },
+        {
+          description: 'Master Grip Follow Focus System',
+          serialNo: 'GRIP-FF-12',
+          quantity: 1,
+        },
+      ],
+      depositPaisa: rupees(50000),
+      totalRentalPaisa: rupees(125000),
+    }
+
+    it('generates standard PDF 1.4 binary bytes for rental agreement', () => {
+      const bytes = generateRentalAgreementPdf(agreementData)
+      expect(bytes).toBeInstanceOf(Uint8Array)
+      expect(bytes.byteLength).toBeGreaterThan(500)
+
+      const text = new TextDecoder().decode(bytes)
+
+      // PDF 1.4 header
+      expect(text.startsWith('%PDF-1.4\n')).toBe(true)
+
+      // Document title and agreement identity
+      expect(text).toContain('RENTAL AGREEMENT')
+      expect(text).toContain('AGR-BK-2026-0042')
+      expect(text).toContain('SIGNED AT HANDOVER')
+
+      // Client and rental details
+      expect(text).toContain('Himalayan Visuals Pvt Ltd')
+      expect(text).toContain('PAN: 609876543')
+      expect(text).toContain('CIT-27-01-72-12345')
+      expect(text).toContain('Mountaineer Feature Film')
+
+      // Equipment schedule
+      expect(text).toContain('ARRI Alexa Mini LF Package')
+      expect(text).toContain('ALEXA-LF-007')
+
+      // Security deposit notation per Law 5
+      expect(text).toContain('Security Deposit: Rs 50,000')
+
+      // Standard terms text (Ruling O-11)
+      expect(DEFAULT_RENTAL_AGREEMENT_TERMS).toHaveLength(7)
+      expect(text).toContain('TERMS & CONDITIONS OF HIRE \\(RULING O-11\\):')
+      expect(text).toContain('exclusive property of Babin')
+      expect(text).toContain('Rentals Kathmandu')
+      expect(text).toContain('accepted in clean, sound, and fully operational condition at Handover \\(T2-02\\)')
+
+      // Handover signature blocks
+      expect(text).toContain('Authorized Signatory')
+      expect(text).toContain('Hirer / Client Representative')
+      expect(text).toContain('Sign-off at Handover')
     })
   })
 })
