@@ -17,6 +17,8 @@ export interface QueuedMutation {
   error?: string
   /** Bumped on every failed replay attempt. Past MAX_RETRIES, status is 'failed' for good (dead-letter) instead of retried forever. */
   retryCount?: number
+  /** ISO timestamp after which this mutation may be re-attempted. Prevents aggressive retry spin-loops on flaky cellular connections. */
+  nextRetryAt?: string
 }
 
 /**
@@ -45,6 +47,18 @@ export interface QueuedConflict {
 
 /** After this many failed replay attempts, a mutation stops auto-retrying and needs manual review. */
 const MAX_RETRIES = 5
+
+/**
+ * Calculates exponential backoff with jitter for offline mutation replay attempts.
+ * Prevents aggressive retry spin-loops and radio exhaustion on degraded networks.
+ */
+export function calculateBackoffMs(retryCount: number): number {
+  const baseDelay = 1000
+  const maxDelay = 60000
+  const exponential = Math.min(maxDelay, baseDelay * Math.pow(2, Math.max(0, retryCount)))
+  const jitter = Math.floor(Math.random() * 500)
+  return exponential + jitter
+}
 
 export class OfflineQueueDB extends Dexie {
   mutations!: Table<QueuedMutation, number>
@@ -292,7 +306,12 @@ export async function getPendingMutations(): Promise<QueuedMutation[]> {
   if (!canUseOfflineQueue()) return []
   const identity = await getOfflineSession()
   if (!identity) return []
-  return await db.mutations.where('status').equals('pending').filter(m => ownsOfflineWork(m, identity)).sortBy('timestamp')
+  const now = Date.now()
+  return await db.mutations
+    .where('status')
+    .equals('pending')
+    .filter(m => ownsOfflineWork(m, identity) && (!m.nextRetryAt || new Date(m.nextRetryAt).getTime() <= now))
+    .sortBy('timestamp')
 }
 
 /** Counts only: foreign/legacy payloads are never exposed to another operator. */
@@ -599,8 +618,10 @@ async function replayMutation(mutation: QueuedMutation, identity: OfflineSession
     if (retryCount >= MAX_RETRIES) {
       await db.mutations.update(id, { status: 'failed', error: message, retryCount })
     } else {
-      // Still retryable — back to 'pending' (not 'failed') so the next drain picks it up again.
-      await db.mutations.update(id, { status: 'pending', error: message, retryCount })
+      const backoffMs = calculateBackoffMs(retryCount)
+      const nextRetryAt = new Date(Date.now() + backoffMs).toISOString()
+      // Still retryable — back to 'pending' (not 'failed') with nextRetryAt delay so the next drain picks it up after backoff.
+      await db.mutations.update(id, { status: 'pending', error: message, retryCount, nextRetryAt })
     }
   }
 }
@@ -640,7 +661,43 @@ function drainQuietly(trigger: 'boot' | 'online'): void {
   })
 }
 
+/**
+ * Request persistent storage from the browser to protect Dexie IndexedDB
+ * from eviction under low disk conditions on mobile operating systems.
+ */
+export async function requestPersistentStorage(): Promise<boolean> {
+  if (typeof navigator !== 'undefined' && navigator.storage && typeof navigator.storage.persist === 'function') {
+    try {
+      const isPersisted = await navigator.storage.persisted()
+      if (isPersisted) return true
+      return await navigator.storage.persist()
+    } catch {
+      return false
+    }
+  }
+  return false
+}
+
+/**
+ * Check remaining storage quota estimate in megabytes.
+ */
+export async function checkStorageQuotaMb(): Promise<{ quotaMb: number; usageMb: number; remainingMb: number } | null> {
+  if (typeof navigator !== 'undefined' && navigator.storage && typeof navigator.storage.estimate === 'function') {
+    try {
+      const estimate = await navigator.storage.estimate()
+      const quotaMb = Math.round((estimate.quota ?? 0) / (1024 * 1024))
+      const usageMb = Math.round((estimate.usage ?? 0) / (1024 * 1024))
+      const remainingMb = Math.max(0, quotaMb - usageMb)
+      return { quotaMb, usageMb, remainingMb }
+    } catch {
+      return null
+    }
+  }
+  return null
+}
+
 if (canUseOfflineQueue()) {
+  void requestPersistentStorage().catch(() => {})
   window.addEventListener('online', () => drainQuietly('online'))
   // Covers the case where the app boots already online with mutations queued from a previous,
   // now-closed session — no 'online' event fires for state that was already true on load.

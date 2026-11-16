@@ -200,6 +200,55 @@ export function isMonitoringEnabled(): boolean {
   return DSN !== null
 }
 
+const SENSITIVE_KEY_PATTERN = /(phone|mobile|email|passport|citizenship|pan|client_name|first_name|last_name|amount|paisa|rupees|price|deposit|total|balance|rate|revenue|cost|salary|tax|vat)/i
+const SENSITIVE_VALUE_PATTERN = /(\b9[78]\d{8}\b)|([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)/g
+
+/**
+ * Sanitizes an error context dictionary. Redacts sensitive PII (Nepali phone
+ * numbers, email addresses, identity numbers) and financial keys (rupee amounts,
+ * paisa balances, rates) to guarantee Law 6 money-blindness and client privacy.
+ * Handles cyclic references safely.
+ */
+export function sanitizeContext(context?: ErrorContext): ErrorContext | undefined {
+  if (!context || typeof context !== 'object') return undefined
+  const seen = new WeakSet()
+
+  function scrub(val: unknown): unknown {
+    if (val === null || val === undefined) return val
+    if (typeof val === 'string') {
+      return val.replace(SENSITIVE_VALUE_PATTERN, '[REDACTED]')
+    }
+    if (typeof val === 'number' || typeof val === 'boolean') {
+      return val
+    }
+    if (typeof val === 'object') {
+      if (seen.has(val as object)) return '[Circular]'
+      seen.add(val as object)
+
+      if (Array.isArray(val)) {
+        return val.map(scrub)
+      }
+
+      const cleanObj: Record<string, unknown> = {}
+      for (const [k, v] of Object.entries(val as Record<string, unknown>)) {
+        if (SENSITIVE_KEY_PATTERN.test(k)) {
+          cleanObj[k] = '[REDACTED]'
+        } else {
+          cleanObj[k] = scrub(v)
+        }
+      }
+      return cleanObj
+    }
+    return String(val)
+  }
+
+  try {
+    return scrub(context) as ErrorContext
+  } catch {
+    return { scrub_error: 'Context scrub failed' }
+  }
+}
+
 /**
  * Report a caught error.
  *
@@ -236,7 +285,7 @@ export function captureError(err: unknown, context?: ErrorContext): void {
       request: { url: pagePath() },
       extra: {
         ...(stack ? { stack } : {}),
-        ...(context ?? {}),
+        ...(sanitizeContext(context) ?? {}),
       },
     }
 
