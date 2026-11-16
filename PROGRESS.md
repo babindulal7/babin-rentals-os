@@ -1,5 +1,54 @@
 # Progress Log
 
+## 2026-11-17 — T3-02: Deposits per product, entered before go-live (Lane C)
+
+**Did**
+- Implemented bulk editor for product deposits (`deposit_fixed`, `deposit_percent`, and `replacement_value` where missing) under Inventory ▸ Deposit Setup.
+- Added pure deposit calculation engine and RFC 4180 CSV dry-run parser in `src/lib/productDeposit.ts`:
+  - `depositRuleType()`, `hasDepositRule()`, `calculateEffectiveDeposit()`
+  - `exportDepositSetupCsv()` and `parseDepositSetupCsv()` with full dry run diff detection.
+- Built bulk editor UI in `src/modules/inventory/DepositSetup.tsx`:
+  - Enforced Law 6 (Money blindness): Tab strictly hidden and access restricted for non-money roles (Warehouse, Technician, Driver, Client).
+  - Progress readiness meter: `${configuredCount} / ${totalCount} set (${percentConfigured}%)` with progress bar and badge.
+  - Multi-filter toolbar (All, No deposit set, Deposit set) + search + category filter.
+  - Multi-select table with inline rule editing, dirty tracking, and row-level save calling `bulk_update_products` RPC.
+  - Bulk apply modal applying fixed amount or percent across selected items.
+  - CSV export & import with mandatory rendered dry-run modal showing old vs new values before committing.
+- Authored test suites:
+  - `src/lib/__tests__/productDepositSetup.test.ts` (6 tests)
+  - `src/modules/inventory/__tests__/DepositSetup.test.tsx` (4 tests)
+- Authored verification document `docs/verification/T3-02_VERIFICATION.md` and updated `docs/plans/T3_BOOKING_MONEY.md`.
+
+**Ruled**
+- Law 6: Warehouse and non-money roles cannot access or see the Deposit Setup view or financial figures.
+- Law 12: Inline persistent notices for errors; toasts strictly for successes.
+- Law 8: All RPC bulk updates carry client UUID idempotency tokens.
+
+**Verified**
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (0 errors, 0 warnings).
+- `npm test -- src/modules/inventory/__tests__/DepositSetup.test.tsx src/lib/__tests__/productDepositSetup.test.ts`: 10/10 tests passed.
+- `npm run gates`: 17/17 steps passed (7,217/7,217 tests pass, check:pglite 235/235 green, security green, build clean).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 104 / 104 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | -1 |
+| Lifecycle | steps green / total | 73 / 73 (100%) | -4 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 235 files · check:pglite 235/235 applied, 0 failed (recorded 2026-11-16T22:45:28.170Z). Suite: PASS — 7217/7217 passed, 0 failed (recorded 2026-11-16T22:47:34.230Z); source fingerprint matches.
+Coverage suite: PASS — 7217/7217 passed, 0 failed (recorded 2026-11-16T22:47:34.230Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-16T22:45:53.041Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T2-22 · Time between rentals: account-wide or per product (Lane A).
+- T3-30 · Consumables: unit price, add at desk, restock, low stock (Lane C).
+
 ## 2026-11-16 — Master Frontend Engineering Audit & Top 10 Remediations (Lane B)
 
 **Did**
