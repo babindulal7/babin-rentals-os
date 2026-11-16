@@ -1,5 +1,46 @@
 # Progress Log
 
+## 2026-11-17 — T2-22: Time between rentals: account-wide or per product (Lane A)
+
+**Did**
+- Implemented **T2-22 · Time between rentals: account-wide or per product** (`lane-a/T2-22-time-between-rentals-account-wide-or`):
+  - Created migration `supabase/migrations/0240_time_between_rentals.sql` defining `get_effective_rental_window(p_pickup, p_return, p_prep_minutes, p_cleaning_minutes)` respecting the `timeBetweenRentals` setting (`'Account-wide'` vs `'Per product'`).
+  - Updated `reservations_follow_stage_transition()` and `create_or_extend_hold()` in PostgreSQL to reserve gear across the effective rental turnaround window (widened by prep and cleaning minutes in per-product mode).
+  - Added `timeBetweenRentals` setting to `src/lib/settingsStore.ts` and Operations rules UI in `src/modules/settings/sections/System.tsx`.
+  - Added informational copy to `src/components/records/EquipmentRecordEditor.tsx` explaining prep & cleaning minutes are active when Operations rules ▸ Time between rentals is set to "Per product".
+  - Updated availability queries in `src/lib/queries/availability.ts` and pure engine helper `effectiveRentalWindow` in `src/lib/availability.ts`.
+  - Added unit test coverage in `src/lib/__tests__/availability.test.ts` (4 new tests) and lifecycle steps `L74` and `L75` in `scripts/e2e-lifecycle.mjs`.
+
+**Ruled**
+- Account-wide mode preserves existing `rentalTurnaround` behavior without regression.
+- Per-product mode expands reservation bounds to `[pickup - prep_minutes, return + cleaning_minutes)` to ensure physical maintenance and preparation windows are respected.
+- Database enforces turnaround constraints via GiST exclusion on `reservations`; UI mirrors database availability logic.
+
+**Verified**
+- `npm run check:pglite`: 236/236 migrations applied cleanly, 0 failures, 200 definers pinned.
+- `npm run check:lifecycle`: 75/75 steps green, including `L74` (pickup in cleaning window refused) and `L75` (account-wide turnaround accepted).
+- `npx vitest run src/lib/__tests__/availability.test.ts`: 82/82 tests pass.
+- `npm run gates`: All 17 gates PASS green.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 104 / 104 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | -1 |
+| Lifecycle | steps green / total | 75 / 75 (100%) | -2 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 236 files · check:pglite 236/236 applied, 0 failed (recorded 2026-11-16T23:03:06.739Z). Suite: PASS — 7211/7211 passed, 0 failed (recorded 2026-11-16T23:05:12.755Z); source fingerprint matches.
+Coverage suite: PASS — 7211/7211 passed, 0 failed (recorded 2026-11-16T23:05:12.755Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-16T23:03:31.785Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- PR for T2-22 opened and ready for review.
+- Proceed to Card 5: T3-30 (Consumables: unit price, add at desk, restock, low stock).
+
 ## 2026-11-16 — Master Frontend Engineering Audit & Top 10 Remediations (Lane B)
 
 **Did**

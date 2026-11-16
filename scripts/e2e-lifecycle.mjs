@@ -7972,6 +7972,154 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L74',
+  title: 'per product: a pickup inside the cleaning window is refused (T2-22, B11)',
+  expect: 'green',
+  run: async () => {
+    const unitId = UNITS[0]
+    const productId = SERIAL_PRODUCT
+    let bookingAId
+    let bookingBId
+    let bookingCId
+
+    await as('Owner', async () => {
+      // 1. Set mode to Per product
+      await q(`select public.set_setting('${crypto.randomUUID()}', 'timeBetweenRentals', '"Per product"'::jsonb)`)
+
+      // 2. Set product cleaning time to 120 minutes (2 hours)
+      await q(`update products set cleaning_time_minutes = 120, prep_time_minutes = 0 where id = '${productId}'`)
+
+      const clientCode = await one("select next_document_number('client')")
+      const clientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+        values (gen_random_uuid(), '${clientCode}', 'L74 Per Product Client', '+9779800009974', 'Active', '${U.Owner}')
+        returning id`)).rows[0].id
+
+      // 3. Booking A: 10:00 to 18:00 on 2099-11-01
+      const bookingNoA = await one("select next_document_number('booking')")
+      bookingAId = (await q(`insert into bookings (client_uuid, booking_no, client_id, branch_id, stage, delivery_type, pickup_at, return_at, created_by, updated_by, project_name, project_type)
+        values (gen_random_uuid(), '${bookingNoA}', '${clientId}', '${BRANCH}', 'Quote', 'Client Pickup', '2099-11-01 10:00:00+05:45', '2099-11-01 18:00:00+05:45', '${U.Owner}', '${U.Owner}', 'Booking A', 'Feature Film')
+        returning id`)).rows[0].id
+
+      const lineAId = (await q(`insert into booking_lines (client_uuid, booking_id, line_type, product_id, description, qty, days, rate, created_by)
+        values (gen_random_uuid(), '${bookingAId}', 'Equipment', '${productId}', 'Cleaning buffer camera', 1, 1, 3500, '${U.Owner}')
+        returning id`)).rows[0].id
+
+      await q(`insert into booking_line_units (client_uuid, booking_line_id, asset_id, created_by)
+        values (gen_random_uuid(), '${lineAId}', '${unitId}', '${U.Owner}')`)
+
+      // Confirm Booking A -> period becomes [10:00, 20:00)
+      await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
+        values (gen_random_uuid(), '${bookingAId}', '${BRANCH}', 'Quote', 'Booked', '${U.Owner}', 'Owner', now(), 'Confirmed booking A')`)
+
+      // 4. Booking B: attempts pickup at 19:00 (1 hour after return, inside 2-hour cleaning window)
+      const bookingNoB = await one("select next_document_number('booking')")
+      bookingBId = (await q(`insert into bookings (client_uuid, booking_no, client_id, branch_id, stage, delivery_type, pickup_at, return_at, created_by, updated_by, project_name, project_type)
+        values (gen_random_uuid(), '${bookingNoB}', '${clientId}', '${BRANCH}', 'Quote', 'Client Pickup', '2099-11-01 19:00:00+05:45', '2099-11-01 22:00:00+05:45', '${U.Owner}', '${U.Owner}', 'Booking B', 'Feature Film')
+        returning id`)).rows[0].id
+
+      const lineBId = (await q(`insert into booking_lines (client_uuid, booking_id, line_type, product_id, description, qty, days, rate, created_by)
+        values (gen_random_uuid(), '${bookingBId}', 'Equipment', '${productId}', 'Cleaning buffer camera', 1, 1, 3500, '${U.Owner}')
+        returning id`)).rows[0].id
+
+      await q(`insert into booking_line_units (client_uuid, booking_line_id, asset_id, created_by)
+        values (gen_random_uuid(), '${lineBId}', '${unitId}', '${U.Owner}')`)
+    })
+
+    // Attempting to confirm Booking B must be refused by the database
+    let bookingBRefused = false
+    try {
+      await as('Owner', async () => {
+        await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
+          values (gen_random_uuid(), '${bookingBId}', '${BRANCH}', 'Quote', 'Booked', '${U.Owner}', 'Owner', now(), 'Confirm Booking B')`)
+      })
+    } catch {
+      bookingBRefused = true
+    }
+    assert(bookingBRefused, 'per product: a pickup inside the cleaning window is refused by GiST exclusion')
+
+    // 5. Booking C: starts at 20:00 (exactly when cleaning finishes) -> succeeds
+    await as('Owner', async () => {
+      const clientCode = await one("select next_document_number('client')")
+      const clientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+        values (gen_random_uuid(), '${clientCode}', 'L74 Client C', '+9779800009975', 'Active', '${U.Owner}')
+        returning id`)).rows[0].id
+
+      const bookingNoC = await one("select next_document_number('booking')")
+      bookingCId = (await q(`insert into bookings (client_uuid, booking_no, client_id, branch_id, stage, delivery_type, pickup_at, return_at, created_by, updated_by, project_name, project_type)
+        values (gen_random_uuid(), '${bookingNoC}', '${clientId}', '${BRANCH}', 'Quote', 'Client Pickup', '2099-11-01 20:00:00+05:45', '2099-11-01 23:00:00+05:45', '${U.Owner}', '${U.Owner}', 'Booking C', 'Feature Film')
+        returning id`)).rows[0].id
+
+      const lineCId = (await q(`insert into booking_lines (client_uuid, booking_id, line_type, product_id, description, qty, days, rate, created_by)
+        values (gen_random_uuid(), '${bookingCId}', 'Equipment', '${productId}', 'Cleaning buffer camera', 1, 1, 3500, '${U.Owner}')
+        returning id`)).rows[0].id
+
+      await q(`insert into booking_line_units (client_uuid, booking_line_id, asset_id, created_by)
+        values (gen_random_uuid(), '${lineCId}', '${unitId}', '${U.Owner}')`)
+
+      await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
+        values (gen_random_uuid(), '${bookingCId}', '${BRANCH}', 'Quote', 'Booked', '${U.Owner}', 'Owner', now(), 'Confirm Booking C')`)
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L75',
+  title: 'account-wide mode behaves as before (T2-22, B11)',
+  expect: 'green',
+  run: async () => {
+    const unitId = UNITS[1]
+    const productId = SERIAL_PRODUCT
+    let bookingDId
+    let bookingEId
+
+    await as('Owner', async () => {
+      // 1. Reset mode to Account-wide
+      await q(`select public.set_setting('${crypto.randomUUID()}', 'timeBetweenRentals', '"Account-wide"'::jsonb)`)
+
+      await q(`select public.set_setting('${crypto.randomUUID()}', 'rentalTurnaround', '"Same-instant handover allowed"'::jsonb)`)
+
+      const clientCode = await one("select next_document_number('client')")
+      const clientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+        values (gen_random_uuid(), '${clientCode}', 'L75 Client', '+9779800009976', 'Active', '${U.Owner}')
+        returning id`)).rows[0].id
+
+      // Booking D: 10:00 to 18:00 on 2099-11-02
+      const bookingNoD = await one("select next_document_number('booking')")
+      bookingDId = (await q(`insert into bookings (client_uuid, booking_no, client_id, branch_id, stage, delivery_type, pickup_at, return_at, created_by, updated_by, project_name, project_type)
+        values (gen_random_uuid(), '${bookingNoD}', '${clientId}', '${BRANCH}', 'Quote', 'Client Pickup', '2099-11-02 10:00:00+05:45', '2099-11-02 18:00:00+05:45', '${U.Owner}', '${U.Owner}', 'Booking D', 'Feature Film')
+        returning id`)).rows[0].id
+
+      const lineDId = (await q(`insert into booking_lines (client_uuid, booking_id, line_type, product_id, description, qty, days, rate, created_by)
+        values (gen_random_uuid(), '${bookingDId}', 'Equipment', '${productId}', 'Account wide camera', 1, 1, 3500, '${U.Owner}')
+        returning id`)).rows[0].id
+
+      await q(`insert into booking_line_units (client_uuid, booking_line_id, asset_id, created_by)
+        values (gen_random_uuid(), '${lineDId}', '${unitId}', '${U.Owner}')`)
+
+      await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
+        values (gen_random_uuid(), '${bookingDId}', '${BRANCH}', 'Quote', 'Booked', '${U.Owner}', 'Owner', now(), 'Confirm Booking D')`)
+
+      // Booking E: starts at 18:00 (exact touching endpoint under Same-instant handover allowed)
+      const bookingNoE = await one("select next_document_number('booking')")
+      bookingEId = (await q(`insert into bookings (client_uuid, booking_no, client_id, branch_id, stage, delivery_type, pickup_at, return_at, created_by, updated_by, project_name, project_type)
+        values (gen_random_uuid(), '${bookingNoE}', '${clientId}', '${BRANCH}', 'Quote', 'Client Pickup', '2099-11-02 18:00:00+05:45', '2099-11-02 21:00:00+05:45', '${U.Owner}', '${U.Owner}', 'Booking E', 'Feature Film')
+        returning id`)).rows[0].id
+
+      const lineEId = (await q(`insert into booking_lines (client_uuid, booking_id, line_type, product_id, description, qty, days, rate, created_by)
+        values (gen_random_uuid(), '${bookingEId}', 'Equipment', '${productId}', 'Account wide camera', 1, 1, 3500, '${U.Owner}')
+        returning id`)).rows[0].id
+
+      await q(`insert into booking_line_units (client_uuid, booking_line_id, asset_id, created_by)
+        values (gen_random_uuid(), '${lineEId}', '${unitId}', '${U.Owner}')`)
+
+      // Touching endpoints in Same-instant handover allowed succeeds
+      await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
+        values (gen_random_uuid(), '${bookingEId}', '${BRANCH}', 'Quote', 'Booked', '${U.Owner}', 'Owner', now(), 'Confirm Booking E')`)
+    })
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break
