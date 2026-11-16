@@ -49,7 +49,7 @@ nothing under it); build the editor in it. Its two `// @ts-ignore` lines fail `n
 until Claude's `fix-red-checks.patch` (31 Oct) or this card removes them.
 **Needs** — none. Data entry: BABIN_ACTIONS (staff, December).
 
-### T3-03 · Cancellation fee tiers            status: todo · size: M · lane C + Babin
+### T3-03 · Cancellation fee tiers            status: done · size: M · lane C + Babin
 **What** — Implement the **2 Nov owner-approved Option A** in Settings ▸ Financial ▸ "Cancellation fees" and the Cancel Rental dialog. **Do not apply the previous unapproved notice-only/50%-duration-only guesses.** For confirmed, pre-start bookings:
 
 | Time before scheduled rental start | 1–2 rental days | >2 rental days |
@@ -68,7 +68,7 @@ until Claude's `fix-red-checks.patch` (31 Oct) or this card removes them.
 **Done when** — verified on staging with ≥ two distinct staff roles and automated tests for >48 h, exactly 48 h, 36 h, exactly 24 h, 12 h, exactly 2 days vs 3+ days, bad/stale client clock, refunds and RBAC. Sample: 5 days × Rs 3,500, rental total Rs 17,500 → 72 h Rs 0, 36 h Rs 8,750, 12 h Rs 8,750; 2 days × Rs 3,500 at 36 h Rs 0, at 12 h Rs 3,500 (before VAT). No double charge; Warehouse cannot override money.
 **Needs** — accountant ruling on VAT treatment before using the cancellation fee on tax documents; existing booking financial integrity tests and audit gates.
 
-### T3-04 · Non-VAT bills            status: todo · size: M · lane C + accountant
+### T3-04 · Non-VAT bills            status: done · size: M · lane C + accountant
 **What** — Each invoice carries a VAT treatment: **Standard 13%** or **Non-VAT bill** (D13). The VAT
 toggle on a booking sets it; the Sales/VAT register and VAT report show non-VAT bills in their own
 section with their own total — never mixed into exempt or zero-rated. Existing zero-VAT invoices
@@ -91,7 +91,7 @@ spec card set (certification, sync, offline invoices, invoice cancellation rules
 **Done when** — written answer recorded by 30 Nov 2026 (14 Mangsir 2083).
 **Needs** — accountant.
 
-### T3-06 · Invoice and agreement documents            status: ready — awaiting merge (lane-c/T3-06-invoice-and-agreement-documents) · size: M · lane C + accountant
+### T3-06 · Invoice and agreement documents            status: review — PR #169, accountant + staging acceptance pending · size: M · lane C + accountant
 **What** — 1) The accountant checks the invoice PDF (`src/lib/pdf/generatePdf.ts`) against what an
 invoice in Nepal must show (business PAN, invoice number, date — add the BS date beside AD, buyer
 PAN when given, VAT lines); fix what they mark. 2) Rental Agreement PDF from the booking with
@@ -104,7 +104,7 @@ Babin's terms text (O-11), signed at Handover (T2-02). 3) Quote PDF uses the sam
 booking.
 **Needs** — T2-02; Babin's terms text; accountant.
 
-### T3-07 · Opening balances and daily closing carry-forward            status: todo · size: M · lane C
+### T3-07 · Opening balances and daily closing carry-forward            status: done · size: M · lane C
 **What** — Accounts (or Owner) enters an **opening balance** once per cash drawer and per bank
 account, with the date. Daily closing then shows *opening + money in − money out = closing* per
 account and carries the closing to the next day. Money in/out includes rental payments, payment
@@ -123,7 +123,7 @@ row, Law 4 spirit) + RLS money roles only; lifecycle step "closing = opening + i
 Warehouse cannot read the table.
 **Needs** — none.
 
-### T3-08 · Equipment form: one page, seven sections            status: todo · size: S · lane C
+### T3-08 · Equipment form: one page, seven sections            status: done · size: S · lane C
 **What** — Remove the five-step mode from `EquipmentRecordEditor` (`wizardMode`, ~line 69 and its
 render branches); keep the seven section anchors and jump links.
 **Why** — D19; closes OPEN_DECISIONS §19.
@@ -133,7 +133,7 @@ render branches); keep the seven section anchors and jump links.
 updated.
 **Needs** — none.
 
-### T3-09 · Structure-priced bookings reproduce on the invoice            status: todo · size: S · lane C
+### T3-09 · Structure-priced bookings reproduce on the invoice            status: done · size: S · lane C
 **What** — Verify on staging that a booking priced with a pricing structure (0160) stores its line
 breakdown (0168) and that the invoice shows the same figures; fix any drift.
 **Why** — OPEN_DECISIONS §11 G3 (blocks cutover: Babin's "Babin Daily", "Days wise discount" and
