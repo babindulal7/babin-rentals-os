@@ -1,5 +1,41 @@
 # Progress Log
 
+## 2026-11-16 — Lane C T3-18 audit ordering verified; Warehouse health privacy repaired
+
+**Did**
+- Continued commit be25da5a, which inserts the booking-change audit event before booking_discounts references it. The previous full run stopped on that foreign-key failure; the current lifecycle passes it.
+- Reproduced a Warehouse editor leak at 375 px: client health displayed outstanding money in the warning, tooltip and accessible name. Added a fail-closed display filter shared by the client picker, warning, quick view and add-client result. Operational KYC/equipment reasons remain visible; financial and free-text account details are masked.
+- Removed the pickup-price label for money-blind roles and masked free-text blocked-account amounts in booking alerts. The existing client-directory database view already masks its money columns; no permission expanded.
+
+**Ruled**
+- Existing Law 6 and W88 apply. T3-18 remains doing; passing local checks does not close the card or authorize a merge/application.
+
+**Verified**
+- Current-source `npm run gates`: PASS, all 17 steps. Both mock and coverage suites: 6,963/6,963 tests in 589 files. PGlite migrations: 229/229. Lifecycle: 77/77, including the formerly failing booking-discount audit reference, daily repricing and invoice history.
+- Privacy regression reproduced before the fix; 45 focused tests in three files PASS after it. Typecheck, lint, local API guards, financial integrity, security, server contracts, partial return, receipt/progress/shell/copy/token-contrast checks and production build all PASS in the same full run. Log: artifacts/t3-18-health-gates.log.
+- Isolated dev:mock from this worktree on 127.0.0.1:3018: Warehouse warning, picker and quick view contain no financial figures at 375/820/1440. Viewport restored afterward. A local ignored Vite config permits the parent node_modules fonts for this worktree only.
+- Full screen check: NOT PASSED. Active Client & dates tab has poor contrast; confirmed-booking edit mode uses Draft/confirmation wording. Coordinator browser acceptance is pending because this mock corpus seeds only Owner, Warehouse and Accounts. No staging/physical-device acceptance, live migration, remote push or merge.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | 77 / 77 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 229 files · check:pglite 229/229 applied, 0 failed (recorded 2026-11-16T12:36:08.883Z). Suite: PASS — 6963/6963 passed, 0 failed (recorded 2026-11-16T12:47:38.425Z); source fingerprint matches.
+Coverage suite: PASS — 6963/6963 passed, 0 failed (recorded 2026-11-16T12:47:38.425Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-16T12:37:11.023Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Full local gates passed; source fingerprints match the tested source. Required dependency audit: 37 existing findings (4 critical, 13 high, 17 moderate, 3 low); no dependency or lockfile changed. Independent review and acceptance remain open.
+- Fix the observed edit-mode wording/tab contrast; run Coordinator and remaining five-state/screen checks. Complete structure/custom repricing, Warehouse bundle/component support and edit-form field contracts before closing T3-18.
+- Independent review, staging on two devices, accountant answers O-14/O-17 and Babin's merge remain pending. Migration 0232 is locally VERIFIED (check:pglite and check:lifecycle green together), NOT APPLIED or PRODUCTION-VERIFIED.
+
 ## 2026-11-15 — Lane C T3-18 daily repricing and Draft invoice history
 
 **Did**

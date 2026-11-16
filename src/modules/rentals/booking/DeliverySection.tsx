@@ -146,7 +146,7 @@ export function DeliverySection({
       title={title}
       open={open}
       onToggle={onToggle}
-      summary={clientPickup ? 'Client Pickup · Rs 0' : `Babin Delivery · ${deliveryZone || 'Select zone'} · ${canBookingMoney ? formatMoney(transportPaisa) : 'charged'}`}
+      summary={clientPickup ? (canBookingMoney ? 'Client Pickup · Rs 0' : 'Client Pickup') : `Babin Delivery · ${deliveryZone || 'Select zone'} · ${canBookingMoney ? formatMoney(transportPaisa) : 'charged'}`}
     >
       <div style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : 'repeat(2, minmax(0,1fr))', gap: 'var(--sp-md)' }}>
         {/* Left Column: Delivery Type & Dispatch Details */}

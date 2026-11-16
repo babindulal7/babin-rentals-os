@@ -167,7 +167,7 @@ export function deriveRentalAlertsAndNotices(input: RentalAlertsInput): RentalAl
     ...(input.client && (input.client.isBlocked || input.client.onStop)
       ? [
           {
-            text: `Client is blocked: ${input.client.blockReason || input.client.onStop?.reason || 'Account flagged as on-stop'}`,
+            text: input.canBookingMoney ? `Client is blocked: ${input.client.blockReason || input.client.onStop?.reason || 'Account flagged as on-stop'}` : 'Client account is blocked. Ask the booking desk for details.',
             severity: 'Critical' as const,
             action: 'View Client',
           },

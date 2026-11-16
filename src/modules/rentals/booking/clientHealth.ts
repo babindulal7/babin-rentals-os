@@ -465,6 +465,26 @@ export function clientHealth(
   return { level, label, icon, tone, reasons, summary }
 }
 
+/** Law 6: keep operational reasons, but never render financial or free-text account details. */
+export function clientHealthForDisplay(verdict: ClientHealthVerdict, showMoney: boolean): ClientHealthVerdict {
+  if (showMoney) return verdict
+  const operationalCodes = new Set([
+    'equipment-unreturned', 'equipment-missing', 'late-returns',
+    'damage-history', 'missing-history', 'kyc-rejected', 'kyc-incomplete',
+  ])
+  const reasons: ClientHealthReason[] = []
+  for (const reason of verdict.reasons) {
+    const visible = operationalCodes.has(reason.code) ? reason : reason.code === 'on-stop'
+      ? { ...reason, text: 'Client account is blocked. Ask the booking desk for details.' }
+      : { code: 'account-details-restricted', severity: reason.severity,
+          text: 'Account details are restricted. Ask the booking desk.' }
+    if (!reasons.some(existing => existing.code === visible.code && existing.severity === visible.severity)) reasons.push(visible)
+  }
+  return { ...verdict, reasons, summary: reasons.length
+    ? `${verdict.label} — ${reasons.map(reason => reason.text).join(' · ')}`
+    : `${verdict.label} — account details are restricted` }
+}
+
 /**
  * The accessible name fragment for a client row or the health control, so the
  * health never reaches a screen-reader user as colour-only. Kept here beside

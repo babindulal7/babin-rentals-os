@@ -1,50 +1,58 @@
-# T3-18 repair checkpoint — 15 November 2026
+# T3-18 repair checkpoint — 16 November 2026
 
-**Status: in progress. Do not merge as a completed card.**
+**Status: doing. Do not merge as a completed card.**
 
-Branch: `lane-c/T3-18-change-a-confirmed-booking`, continuing base commit `8ec3a3a8` in `.worktrees/t3-18-security-repair`. The original checkout and its unrelated edits were preserved.
+Branch: `lane-c/T3-18-change-a-confirmed-booking`, worktree `.worktrees/t3-18-security-repair`. Base feature: `8ec3a3a8`; security/retry checkpoint: `a920e097`; daily pricing and audit-order repair: `be25da5a`. The original checkout and its unrelated edits are preserved.
 
-## What changed
+## Current behavior
 
-- The booking editor removes money fields from Warehouse responses and rejects financial input from that role. Generated return-pickup fees are also removed from the transport instruction text, keeping operational instructions.
-- Audit identity is the authenticated user; callers cannot impersonate another user. A retry after a role change cannot expose an earlier money-visible response.
-- Packed line removal, quantity and identity changes are refused until the floor work is reversed. Quantity holds are released and rebuilt transactionally when their line changes.
-- A non-void numbered invoice blocks new booking changes, as required by T3-14/O-14. Successful old requests still replay their receipt without another write.
-- Ordinary daily lines now recalculate their stored total from quantity × charged days × rate minus the absolute line discount. Warehouse retains the negotiated server rate and discount. Structure/custom totals remain protected against changes that would invalidate their snapshots.
-- Draft resync retains superseded invoice lines as immutable history and excludes them from current sums, finance reads and issue line counts. It locks the Draft invoice against concurrent issue. This repairs duplicate charging caused by an attempted DELETE that the old trigger silently suppressed.
-- The mock persists booking changes and their retry receipt together in one overlay write. Simultaneous retries return the same result. A forced later-row failure restores the original store and writes no partial overlay.
-- The card status is corrected to `doing`; the migration ledger distinguishes local verification from application and acceptance.
+- Ordinary daily lines recalculate their stored total from quantity × charged days × rate minus the absolute line discount. Warehouse retains negotiated rates and discounts on the server. Structure/custom snapshots remain protected against changes that would invalidate their pricing.
+- Draft resync locks the invoice, retains superseded lines with their original values, and excludes history from current sums, staff reads and issue line counts. Booking-level discount changes follow the booking. Audit events are inserted before booking-discount references.
+- Warehouse responses remove money, including generated return-pickup fees embedded in transport instructions. Client-health warnings, labels, tooltips, picker rows, quick views and new-client results now mask financial/free-text account details. Operational KYC/equipment reasons remain visible. Pickup-price labels are hidden for money-blind roles.
+- Audit identity is the authenticated user. Saved requests replay once without duplicate writes, including after concurrent mock retries; a role downgrade cannot expose an old financial response. Mock saves and their receipt persist together and roll back on a later-row failure.
+- Packed identity/quantity/removal changes require unpacking first; quantity holds rebuild atomically. A non-void numbered invoice blocks new booking changes under T3-14/O-14.
 
 ## Verification
 
-The previous checkpoint (`a920e097`) passed all 17 steps; these results are historical after the daily-pricing edits:
+Current-source `npm run gates`: **PASS, all 17 steps**. Both mock and coverage suites pass 6,963/6,963 tests in 589 files. Source fingerprints match. Log: `artifacts/t3-18-health-gates.log`.
 
-| Check | Result |
+| Command | Result |
 |---|---|
-| Typecheck, lint, local API safety guards | PASS |
-| Mock test suite | 6,955 tests in 589 files, PASS |
-| PGlite rebuild | 229 migrations, PASS |
-| Financial integrity and authenticated security regressions | PASS |
-| Booking lifecycle | 76/76, PASS; L73 covers generated transport-fee redaction, L75 numbered invoices, L76 stored rate/discount guards |
-| Server contracts and partial Return | PASS |
-| Progress, receipt, shell, UI copy and contrast checks | PASS |
-| Production build | PASS |
-| Coverage run | 6,955 tests in 589 files, PASS |
+| `npm run typecheck` | PASS |
+| `npm run lint` | PASS |
+| `npm run test:local-api-guards` | PASS |
+| `npm test` | PASS, 6,963 tests |
+| `npm run check:pglite` | PASS, 229 migrations |
+| `node scripts/test-booking-financial-integrity.mjs` | PASS |
+| `npm run check:security` | PASS |
+| `npm run check:lifecycle` | PASS, 77/77 |
+| `npm run test:server-contracts` | PASS |
+| `npm run test:partial-return` | PASS |
+| `npm run lint:progress` | PASS |
+| `node --test scripts/test-receipt.test.mjs` | PASS |
+| `npm run lint:shell` | PASS |
+| `npm run lint:ui-copy` | PASS |
+| `npm run check:contrast` | PASS, theme tokens; screen finding below remains |
+| `npm run build` | PASS |
+| `npm run test:coverage` | PASS, 6,963 tests |
 
-The focused mock suite covers the retry race, invoice/rate guards, embedded-fee exposure, daily repricing and structure-price schedule protection. There are now twelve mock cases and ten booking-change action cases; full-suite verification is pending for this revision.
+- `be25da5a`: lifecycle 77/77 PASS. L77 covers exact paisa, discounts, repeated edits/retries, Warehouse masking, capacity rollback, immutable history, finance RLS and issuing the current amount. The prior full attempt stopped on the audit-reference ordering defect; this commit fixes it.
+- Privacy regression first reproduced the money leak, then 45 focused tests in three files passed after the repair.
+- Browser: isolated `dev:mock` from this worktree at `127.0.0.1:3018`, Warehouse at 375/820/1440. Warning, picker and quick-view figures are masked. Temporary viewport overrides were reset. An ignored local Vite config allows this worktree to load fonts from the existing parent node_modules.
+- **Full screen check NOT PASSED:** the active Client & dates tab has poor contrast; confirmed-booking edit mode uses Draft/confirmation wording. Coordinator browser acceptance remains pending: the mock corpus has only Owner, Warehouse and Accounts users. Five-state, staging and physical-device acceptance remain incomplete.
+- Previous checkpoint `a920e097` passed all 17 gates with 6,955 tests, 229 migrations and 76 lifecycle steps. Those results are historical after the current source edits.
 
-The current daily-pricing regression passes lifecycle **77/77**, including exact paisa, repeated edits/retries, Warehouse masking, reservation rollback, immutable history, finance RLS and issuing the current amount. Its first run reproduced the old invoice total of Rs 2,001 instead of Rs 1,501. The full current-source gate run is pending.
+Migration **0232 is locally VERIFIED (PGlite and lifecycle green together), NOT APPLIED or PRODUCTION-VERIFIED.** PGlite does not certify hosted JWT, PostgREST, Storage or real devices. The mock does not emulate database reservation and invoice engines.
 
-Migration **0232 was locally VERIFIED at the previous checkpoint; the current revision awaits the full gates. It is NOT APPLIED or PRODUCTION-VERIFIED**. Local PGlite checks do not certify hosted JWT, PostgREST, Storage or actual devices. Mock saves do not emulate the database reservation or invoice engines.
-
-The required dependency audit reported **37 findings: 4 critical, 13 high, 17 moderate, 3 low**. The report is in the ignored local artifact `artifacts/t3-18-dependency-audit.json`. This card changes no dependency or lockfile; remediation is separate lane A dependency work.
+The required dependency audit reports **37 findings: 4 critical, 13 high, 17 moderate, 3 low**. Local artifact: `artifacts/t3-18-dependency-audit.json`. No dependency or lockfile changes; remediation is separate lane A work.
 
 ## Remaining before this card can close
 
-1. Complete structure/custom repricing using sufficient stored pricing terms. Ordinary daily repricing is implemented; structure/custom edits remain refused. Complete the current-source gates before treating this revision as locally verified.
-2. Complete server-validated bundle/component additions for Warehouse. The current restriction is an unfinished implementation, not a new product policy. Warehouse crew/delivery edits currently produce an explicit refusal.
-3. Review the edit form's remaining field contracts: it sends `fuelChargePaisa` while the RPC reads `fuel_charge`, and sends `client_id` while the RPC preserves the original client. These existing mismatches need explicit preservation/refusal or supported writes before the form can claim a complete save.
-4. Complete the screen check at 375/820/1440 as Coordinator and Warehouse, then staging acceptance with two devices. Browser access was reported unavailable in the 14 November check; no screen or physical-device acceptance has been performed for this checkpoint.
-5. Obtain independent review and Babin's local merge. T3-14 accountant answers O-14/O-17 and T3-28's design review/dependencies remain separate outstanding requirements.
+1. Obtain independent review of the locally verified source; the full gates are green.
+2. Complete structure/custom repricing using sufficient stored pricing terms. Ordinary daily repricing is implemented; structure/custom edits remain refused.
+3. Complete server-validated Warehouse bundle/component additions. The current restriction is unfinished implementation, not a new product policy. Warehouse crew/delivery changes explicitly refuse unsupported edits.
+4. Repair the remaining edit-form contracts: `fuelChargePaisa` versus RPC `fuel_charge`, and a submitted `client_id` that the RPC currently preserves. No complete-save claim until unsupported changes are preserved/refused or implemented.
+5. Repair the observed edit-mode wording/tab contrast, complete Coordinator and five-state checks, then staging on two devices. Accountant answers O-14/O-17 and T3-28 design review/dependencies remain outstanding.
+6. Babin's local merge and later migration application after the required backup/rehearsal.
 
-Shared implementation files such as `src/lib/money.ts`, `src/lib/pricingPipeline.ts`, `src/lib/rbac.ts` and `src/actions/core.ts` are unchanged by this repair. There is no production database action or remote push in this checkpoint.
+Shared implementation files `money.ts`, `pricingPipeline.ts`, `rbac.ts` and `actions/core.ts` are unchanged by these repairs. There is no production database action or remote push.

@@ -7,6 +7,7 @@ import { BookingClientSection } from '../BookingClientSection'
 import type { ClientRecord } from '../../../../lib/queries/clients'
 import { rupees } from '../../../../lib/money'
 import { gateContext } from '../../../../lib/fieldGating'
+import { clientHealth } from '../clientHealth'
 
 const sampleClient: ClientRecord = {
   id: 'client-1',
@@ -103,7 +104,7 @@ describe('BookingClientSection', () => {
     }
   })
 
-  it('renders credit warning banner when client has an outstanding balance', async () => {
+  it.each(['Owner', 'Warehouse'] as const)('protects the client health warning for %s', async role => {
     const host = document.createElement('div')
     document.body.appendChild(host)
     const root = createRoot(host)
@@ -129,13 +130,13 @@ describe('BookingClientSection', () => {
               openAddClient={vi.fn()}
               quickViewOpen={false}
               setQuickViewOpen={vi.fn()}
-              health={null}
+              health={clientHealth(owingClient)}
               days={2}
               dayWord="days"
-              canClientBalance={true}
-              canBookingMoney={true}
-              gctx={gateContext('Owner')}
-              user={{ id: 'usr-1', name: 'Babin', role: 'Owner', isSharedDevice: false }}
+              canClientBalance={role === 'Owner'}
+              canBookingMoney={role === 'Owner'}
+              gctx={gateContext(role)}
+              user={{ id: 'usr-1', name: 'Babin', role, isSharedDevice: false }}
               onOpenHistory={vi.fn()}
               suppressClientListOnFocus={{ current: false }}
               clientFieldRef={{ current: null }}
@@ -157,7 +158,11 @@ describe('BookingClientSection', () => {
       const warning = host.querySelector('[data-testid="client-credit-warning"]')
       expect(warning).not.toBeNull()
       expect(warning?.textContent).toContain('Client Credit Warning')
-      expect(warning?.textContent).toContain('15,000')
+      if (role === 'Owner') {
+        expect(warning?.textContent).toContain('15,000')
+      } else {
+        expect(host.innerHTML).not.toMatch(/Rs |15,000|50,000|Credit limit Rs/i)
+      }
     } finally {
       await act(async () => root.unmount())
       host.remove()

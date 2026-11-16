@@ -286,6 +286,30 @@ describe('deriveRentalAlertsAndNotices', () => {
     expect(result.blockingNotices).toHaveLength(0)
   })
 
+  it('does not expose free-text account amounts in money-blind blocking alerts', () => {
+    const result = deriveRentalAlertsAndNotices({
+      conflictLines: [],
+      availabilitySource: { state: 'ready', byProduct: new Map() },
+      client: { ...validClient, isBlocked: true, blockReason: 'Unpaid Rs 123456.78' },
+      govId: '',
+      kind: 'Feature Film',
+      discountPct: 0,
+      crew: [],
+      canBookingMoney: false,
+      depositRequiredPaisa: rupees(0) as Paisa,
+      depositReceivedPaisa: rupees(0) as Paisa,
+      depositPendingPaisa: rupees(0) as Paisa,
+      outstandingPaisa: rupees(0) as Paisa,
+      days: 2,
+      clientsAreLive: true,
+      lines: [{ id: PRODUCT_UUID, productId: PRODUCT_UUID, name: 'Sony FX3' }],
+      equipmentLines: [{ id: PRODUCT_UUID, productId: PRODUCT_UUID, name: 'Sony FX3' }],
+      pricing: dummyPricing,
+    })
+    expect(JSON.stringify(result)).not.toContain('123456.78')
+    expect(result.confirmBlocked).toBe(true)
+  })
+
   it('a missing client ID/PAN is an advisory, not a Confirm blocker (ruled 8 Oct 2026)', () => {
     const result = deriveRentalAlertsAndNotices({
       conflictLines: [],

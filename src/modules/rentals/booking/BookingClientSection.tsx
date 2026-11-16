@@ -10,7 +10,7 @@ import { clientGlance, clientDetailGroups } from '../../../data/clientIntel'
 import { PROJECT_TYPES, validateProjectType } from '../../../lib/projectTypes'
 import { formatMoney } from '../../../lib/money'
 import type { ClientRecord } from '../../../lib/queries/clients'
-import type { ClientHealthVerdict } from './clientHealth'
+import { clientHealthForDisplay, type ClientHealthVerdict } from './clientHealth'
 import type { GateContext } from '../../../lib/fieldGating'
 import type { AuthUser } from '../../../lib/auth'
 import type { ClientActiveMembership } from '../../../lib/queries/membership'
@@ -74,7 +74,6 @@ export function BookingClientSection({
   days,
   dayWord,
   canClientBalance,
-  canBookingMoney,
   gctx,
   user,
   onOpenHistory,
@@ -94,6 +93,7 @@ export function BookingClientSection({
   setKindOther,
   title = 'Client & Schedule',
 }: BookingClientSectionProps) {
+  const displayHealth = health ? clientHealthForDisplay(health, canClientBalance) : null
   return (
     <Section
       id="section-0"
@@ -169,8 +169,8 @@ export function BookingClientSection({
               }
             />
             {client && <div className="new-rental-client-insights">
-              {health && <ClientHealthEye
-                verdict={health}
+              {displayHealth && <ClientHealthEye
+                verdict={displayHealth}
                 clientName={client.name}
                 open={quickViewOpen}
                 controls="new-rental-client-quick-view"
@@ -232,7 +232,7 @@ export function BookingClientSection({
           </div>
         </div>
 
-        {client && (client.isBlocked || client.onStop || (canBookingMoney && client.outstandingPaisa > 0) || health?.level === 'attention') && (
+        {client && (client.isBlocked || client.onStop || (canClientBalance && client.outstandingPaisa > 0) || displayHealth?.level === 'attention') && (
           <div
             role="alert"
             data-testid="client-credit-warning"
@@ -261,8 +261,8 @@ export function BookingClientSection({
               </div>
               <div>
                 {(client.isBlocked || client.onStop)
-                  ? (client.blockReason || client.onStop?.reason || 'This client is currently blocked from equipment rentals. Quotation and booking confirmation cannot proceed without manager override.')
-                  : (health?.reasons?.map((r) => r.text).join(' · ') || `Client has outstanding balance of ${formatMoney(client.outstandingPaisa)}.`)}
+                  ? (canClientBalance ? (client.blockReason || client.onStop?.reason || 'This client is currently blocked from equipment rentals. Quotation and booking confirmation cannot proceed without manager override.') : 'Client account is blocked. Ask the booking desk for details.')
+                  : (displayHealth?.reasons.map((r) => r.text).join(' · ') || (canClientBalance ? `Client has outstanding balance of ${formatMoney(client.outstandingPaisa)}.` : 'Account details are restricted. Ask the booking desk.'))}
               </div>
             </div>
           </div>

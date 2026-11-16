@@ -28,7 +28,7 @@ import { formatMoney } from '../../../lib/money'
 import Icon from '../../../components/ui/Icon'
 import { Button } from '../../../components/ui/Button'
 import type { ClientRecord } from '../../../lib/queries/clients'
-import { CLIENT_HEALTH_THRESHOLDS, clientHealth, creditCheck } from './clientHealth'
+import { CLIENT_HEALTH_THRESHOLDS, clientHealth, clientHealthForDisplay, creditCheck } from './clientHealth'
 import type { ClientHealthSignals } from './clientHealth'
 import { ClientHealthChip, ClientHealthReasons } from './ClientHealthChip'
 import { Drawer, DrawerRow, DrawerSection, DrawerUnavailable } from './Drawer'
@@ -63,7 +63,7 @@ export function ClientQuickView({
   signals,
   id = 'client-quick-view',
 }: ClientQuickViewProps) {
-  const verdict = signals ? clientHealth(client, signals) : clientHealth(client)
+  const verdict = clientHealthForDisplay(clientHealth(client, signals), showMoney)
   /**
    * Three states, not a ratio-or-null. `unavailable` means a credit limit IS
    * configured but nothing computes how much of it is used, so this panel may

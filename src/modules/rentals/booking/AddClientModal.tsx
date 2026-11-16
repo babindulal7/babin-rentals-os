@@ -27,7 +27,7 @@ import {
   findPhoneDuplicate,
   type NewClientDraft,
 } from './newClientDraft'
-import { clientHealth } from './clientHealth'
+import { clientHealth, clientHealthForDisplay } from './clientHealth'
 import { ClientHealthChip, ClientHealthReasons, TOUCH } from './ClientHealthChip'
 
 /**
@@ -753,7 +753,7 @@ export function AddClientModal({
 
   if (!shouldRender) return null
 
-  const health = created ? clientHealth(created) : null
+  const health = created ? clientHealthForDisplay(clientHealth(created), canSeeMoney) : null
 
   return (
     <div

@@ -20,7 +20,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
-| 0232 | T3-18 | change-confirmed-booking-rpc | lane-c/T3-18-change-a-confirmed-booking | repair checkpoint locally verified (check:pglite 229/229 + check:lifecycle 76/76, L72–L76); implementation/acceptance incomplete; NOT APPLIED |
+| 0232 | T3-18 | change-confirmed-booking-rpc | lane-c/T3-18-change-a-confirmed-booking | locally VERIFIED: full 17 gates PASS, check:pglite 229/229 + check:lifecycle 77/77 (L72–L77); implementation/acceptance incomplete; NOT APPLIED |
 | 0225 | T0-12 / T6 glossary | owner-approved-glossary-revisions | lane-a/T0-12-main-integration | APPLIED live 7 Nov 2026 as 20261107105159 after validated backup; 17 local gates and live DB/RLS/RPC post-checks PASS; hosted/device acceptance pending |
 | 0224 | T5-12 | offer-campaigns-and-recipients | lane-b/T5-12-offer-emails-to-clients | verified |
 | 0178 | T2-reset | quantity-only-reset | lane-a/T2-quantity-reset | verified |

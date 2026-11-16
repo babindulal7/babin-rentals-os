@@ -30,7 +30,7 @@ import { describe, expect, it } from 'vitest'
 
 import { rupees, type Paisa } from '../../../../lib/money'
 import type { ClientRecord } from '../../../../data/clients'
-import { CLIENT_HEALTH_THRESHOLDS, clientHealth, creditCheck } from '../clientHealth'
+import { CLIENT_HEALTH_THRESHOLDS, clientHealth, clientHealthForDisplay, creditCheck } from '../clientHealth'
 
 /** The fields these tests vary. All are required on `ClientRecord`, so spreading them is exact. */
 type Vary = Partial<
@@ -203,3 +203,22 @@ describe('clientHealth — blocked and overdue status (AUD-026)', () => {
   })
 })
 
+
+
+describe('money-blind health reasons', () => {
+  it('redacts figures and free-text account reasons while preserving operational reasons', () => {
+    const c = { ...client({ outstandingPaisa: rupees(137670.50), creditLimitPaisa: rupees(50000), kycStatus: 'Not Submitted' }),
+      isBlocked: true, blockReason: 'Unpaid Rs 1,37,670.50' }
+    const raw = clientHealth(c, { unreturnedUnitCount: 2, depositPendingPaisa: rupees(2500) })
+    const masked = clientHealthForDisplay(raw, false)
+    expect(JSON.stringify(masked)).not.toMatch(/Rs |1,37,670|50,000|2,500|Unpaid/)
+    expect(masked.level).toBe(raw.level)
+    expect(masked.reasons.some(reason => reason.code === 'equipment-unreturned')).toBe(true)
+    expect(masked.reasons.some(reason => reason.code === 'kyc-incomplete')).toBe(true)
+    expect(clientHealthForDisplay(raw, true)).toBe(raw)
+  })
+  it('redacts unknown reasons by default', () => {
+    const raw = { ...clientHealth(client()), reasons: [{ code: 'future-money-rule', text: 'Rs 1234', severity: 'warning' as const }], summary: 'Rs 1234' }
+    expect(JSON.stringify(clientHealthForDisplay(raw, false))).not.toContain('1234')
+  })
+})

@@ -46,7 +46,7 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from '../../../component
 import { formatMoney } from '../../../lib/money'
 import { CLIENTS_DATA } from '../../../lib/queries/clients'
 import type { ClientRecord } from '../../../lib/queries/clients'
-import { clientHealth, healthAccessibleName } from './clientHealth'
+import { clientHealth, clientHealthForDisplay, healthAccessibleName } from './clientHealth'
 import type { ClientHealthVerdict } from './clientHealth'
 import { ClientHealthChip, TOUCH } from './ClientHealthChip'
 import { floatingLayer } from '../../../components/ui/floatingLayer'
@@ -758,7 +758,8 @@ function ClientOptionRow({
   onHover: () => void
   onClick: () => void
 }) {
-  const { client, verdict } = option
+  const { client, verdict: rawVerdict } = option
+  const verdict = clientHealthForDisplay(rawVerdict, showOutstanding)
   const outstanding = showOutstanding
     ? client.outstandingPaisa > 0
       ? `Outstanding ${formatMoney(client.outstandingPaisa)}`
