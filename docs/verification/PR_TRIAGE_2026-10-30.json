@@ -1,0 +1,156 @@
+{
+  "remoteMain": "4126767cf26b5cd79aaade5eeb8c80db83154855",
+  "localMain": "9b84ed8b6c6a015be868c386893a2cfb7512cd71",
+  "openPullRequests": [
+    {
+      "number": 7,
+      "title": "Client Reports: real repeat-client metrics, no fabricated live KPIs",
+      "state": "open",
+      "head": "fix/2026-10-14-client-reports-live-only",
+      "head_sha": "f118927a9977806fe13265d13c1e1dbe3c6710d7",
+      "base": "main",
+      "base_sha": "f5ee531b74fe07a38a848fd5e1c8297ee3abbfad",
+      "draft": true,
+      "mergeable": true,
+      "url": "https://github.com/babindulal7/babin-rentals-os/pull/7"
+    },
+    {
+      "number": 23,
+      "title": "Revenue report: value axis, compare, month-to-date labels, invoice register, count-checked paging, Coordinator gate",
+      "state": "open",
+      "head": "claude/new-session-yrv8p9",
+      "head_sha": "97adcb30010630800a2c9b4e06a575c29a3c0a7f",
+      "base": "main",
+      "base_sha": "ad8ce1e4afc54cc88df841425d0e281bd15665bc",
+      "draft": true,
+      "mergeable": false,
+      "url": "https://github.com/babindulal7/babin-rentals-os/pull/23"
+    },
+    {
+      "number": 24,
+      "title": "Narrow daily-closing approval to the roles RLS admits; fix 8 tests already red on main",
+      "state": "open",
+      "head": "claude/cool-wozniak-dtw1ps",
+      "head_sha": "d4bea96fdcc915c8b58e73409e018abec186d178",
+      "base": "main",
+      "base_sha": "ad8ce1e4afc54cc88df841425d0e281bd15665bc",
+      "draft": true,
+      "mergeable": false,
+      "url": "https://github.com/babindulal7/babin-rentals-os/pull/24"
+    },
+    {
+      "number": 25,
+      "title": "Fix/offline durability 2026 10 19",
+      "state": "open",
+      "head": "fix/offline-durability-2026-10-19",
+      "head_sha": "b9339b378f6637d7a4a6108ec922dd4a8a000d94",
+      "base": "main",
+      "base_sha": "ad8ce1e4afc54cc88df841425d0e281bd15665bc",
+      "draft": false,
+      "mergeable": false,
+      "url": "https://github.com/babindulal7/babin-rentals-os/pull/25"
+    },
+    {
+      "number": 26,
+      "title": "Fix/session evidence fail closed",
+      "state": "open",
+      "head": "fix/session-evidence-fail-closed",
+      "head_sha": "1af5603a3b2cbf485c224f798b0bf0a20a9213f0",
+      "base": "main",
+      "base_sha": "ad8ce1e4afc54cc88df841425d0e281bd15665bc",
+      "draft": false,
+      "mergeable": false,
+      "url": "https://github.com/babindulal7/babin-rentals-os/pull/26"
+    },
+    {
+      "number": 30,
+      "title": "Lane a/t2 15 damage found during reset",
+      "state": "open",
+      "head": "lane-a/T2-15-damage-found-during-reset",
+      "head_sha": "4d1903d093d1e2cfd37fb45b0a986abe595003c4",
+      "base": "main",
+      "base_sha": "2010e592e2c0ed86e797a0efc0b1ea7407467304",
+      "draft": false,
+      "mergeable": false,
+      "url": "https://github.com/babindulal7/babin-rentals-os/pull/30"
+    },
+    {
+      "number": 31,
+      "title": "Integrate reviewed floor scanner and planning branches",
+      "state": "open",
+      "head": "lane-a/T2-09-main-integration",
+      "head_sha": "39edaef51ea31cd0a0b098bab049b1c81b0d79d2",
+      "base": "main",
+      "base_sha": "4126767cf26b5cd79aaade5eeb8c80db83154855",
+      "draft": true,
+      "mergeable": true,
+      "url": "https://github.com/babindulal7/babin-rentals-os/pull/31"
+    }
+  ],
+  "closeoutMain": "7279c92257852cff0a0af3e24dbf1567b7a0b0e1",
+  "closeoutOpenPullRequests": [
+    7,
+    23,
+    26,
+    30
+  ],
+  "closedByThisSession": [
+    24,
+    25
+  ],
+  "independentlyMergedPullRequests": [
+    31
+  ],
+  "gates": [
+    {
+      "command": "npm run test",
+      "exitCode": 0,
+      "startedAt": "2026-10-30T10:01:29.5646372Z",
+      "endedAt": "2026-10-30T10:13:44.4982758Z",
+      "log": ".codex-temp/test.log"
+    },
+    {
+      "command": "npm run check:pglite",
+      "exitCode": 0,
+      "startedAt": "2026-10-30T10:13:44.5752499Z",
+      "endedAt": "2026-10-30T10:13:57.5913378Z",
+      "log": ".codex-temp/check-pglite.log"
+    },
+    {
+      "command": "npm run check:lifecycle",
+      "exitCode": 0,
+      "startedAt": "2026-10-30T10:13:57.6037521Z",
+      "endedAt": "2026-10-30T10:14:12.4263209Z",
+      "log": ".codex-temp/check-lifecycle.log"
+    },
+    {
+      "command": "npm run lint",
+      "exitCode": 0,
+      "startedAt": "2026-10-30T10:14:12.4336493Z",
+      "endedAt": "2026-10-30T10:15:09.8940308Z",
+      "log": ".codex-temp/lint.log"
+    },
+    {
+      "command": "npm run check:contrast",
+      "exitCode": 0,
+      "startedAt": "2026-10-30T10:15:09.9011932Z",
+      "endedAt": "2026-10-30T10:15:11.5594822Z",
+      "log": ".codex-temp/check-contrast.log"
+    },
+    {
+      "command": "npm run build",
+      "exitCode": 0,
+      "startedAt": "2026-10-30T10:15:11.5702835Z",
+      "endedAt": "2026-10-30T10:18:47.2820248Z",
+      "log": ".codex-temp/build.log"
+    }
+  ],
+  "verifiedSourceHash": "f8bf370f0b03d1f7d7af126584936e583e54db86f63b8be2ef7fbf0cb7510edd",
+  "completion": {
+    "exitCode": 1,
+    "reason": "No valid coverage receipt in this isolated worktree; counts printed, coverage not rerun"
+  },
+  "progressLint": {
+    "exitCode": 0
+  }
+}
