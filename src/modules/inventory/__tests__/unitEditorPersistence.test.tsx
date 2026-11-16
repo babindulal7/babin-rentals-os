@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, afterEach, describe, expect, it, vi, type Mock } from 'vitest'
 import type { InventoryUnitRow } from '../../../lib/queries/inventory'
 
 const save = vi.hoisted(() => vi.fn())
@@ -35,9 +35,9 @@ const baseUnit = {
 
 let host: HTMLDivElement
 let root: Root
-let persisted: ReturnType<typeof vi.fn>
-let openLabel: ReturnType<typeof vi.fn>
-let done: ReturnType<typeof vi.fn>
+let persisted: Mock<() => void>
+let openLabel: Mock<(unit: InventoryUnitRow) => void>
+let done: Mock<() => void>
 
 async function mount(unit: InventoryUnitRow = baseUnit) {
   await act(async () => {

@@ -2,6 +2,7 @@ import { supabase } from '../supabase'
 import { getSetting } from '../settingsStore'
 import { dayStartMinutesFrom, operationalDayOf } from '../operationalDay'
 import { todaysOutgoing } from './bookings'
+import { parseTstzRange } from './availability'
 import type { ListFilters } from './listQuery'
 import type { ListQueryResult } from './useList'
 import type { Database } from '../../types/supabase'
@@ -124,7 +125,7 @@ const CALENDAR_STAGES = Object.keys(STAGE_BAR_KIND) as BookingStageDb[]
  * Derived from the map above rather than typed out, so a stage gaining a kind
  * puts its chip on the screen in the same edit.
  */
-export const CALENDAR_BAR_KINDS: readonly BarKind[] = [...new Set<BarKind>(Object.values(STAGE_BAR_KIND)), 'Draft']
+export const CALENDAR_BAR_KINDS: readonly BarKind[] = [...new Set<BarKind>(Object.values(STAGE_BAR_KIND)), 'Draft', 'Blocked']
 
 /**
  * The projection. **No money column appears here and none may be added** — see
@@ -359,7 +360,71 @@ export async function fetchCalendarBars(filters: ListFilters): Promise<ListQuery
   }
   const bookings = await listCalendarBookings(fromAd, toAd)
   const drafts = await listCalendarDrafts(fromAd, toAd)
-  return { rows: [...bookings.rows, ...drafts.rows].sort((a, b) => a.from.getTime() - b.from.getTime() || a.id.localeCompare(b.id)), total: (bookings.total ?? bookings.rows.length) + (drafts.total ?? drafts.rows.length) }
+  const downtimes = await listCalendarDowntimes(fromAd, toAd)
+  const allRows = [...bookings.rows, ...drafts.rows, ...downtimes.rows].sort((a, b) => a.from.getTime() - b.from.getTime() || a.id.localeCompare(b.id))
+  return { rows: allRows, total: (bookings.total ?? bookings.rows.length) + (drafts.total ?? drafts.rows.length) + (downtimes.total ?? downtimes.rows.length) }
+}
+
+export async function listCalendarDowntimes(fromAd: string, toAd: string): Promise<ListQueryResult<Bar>> {
+  const startMinutes = dayStartMinutes()
+  const windowOpen = dayBounds(fromAd).open
+  const windowClose = dayBounds(toAd).close
+
+  const { data, error, count } = await supabase
+    .from('inventory_reservations')
+    .select(`
+      id,
+      asset_id,
+      product_id,
+      period,
+      downtime_reason,
+      downtime_notes,
+      product_units ( asset_tag ),
+      products ( name )
+    `, { count: 'exact' })
+    .eq('kind', 'downtime')
+    .is('released_at', null)
+    .limit(CALENDAR_WINDOW_LIMIT)
+
+  if (error) throw new Error(`Calendar downtimes could not load: ${error.message}`)
+
+  const rows: Bar[] = []
+  interface CalendarDowntimeRow {
+    id: string
+    period: string
+    downtime_reason: string | null
+    downtime_notes: string | null
+    product_units: { asset_tag: string } | null
+    products: { name: string } | null
+  }
+  for (const r of (data ?? []) as unknown as CalendarDowntimeRow[]) {
+    const range = parseTstzRange(r.period)
+    if (!range) continue
+    const startMs = new Date(range.fromAd).getTime()
+    const endMs = new Date(range.toAd).getTime()
+    const openMs = new Date(windowOpen).getTime()
+    const closeMs = new Date(windowClose).getTime()
+
+    if (startMs <= closeMs && endMs >= openMs) {
+      const from = dayOf(range.fromAd, startMinutes)
+      const to = dayOf(range.toAd, startMinutes)
+      const reason = r.downtime_reason ?? 'Planned Downtime'
+      const itemDesc = r.product_units?.asset_tag
+        ? `${r.product_units.asset_tag}${r.products?.name ? ` · ${r.products.name}` : ''}`
+        : (r.products?.name ?? 'Equipment')
+
+      rows.push({
+        id: `dt-${r.id}`,
+        kind: 'Blocked',
+        label: `Downtime · ${reason}`,
+        sub: r.downtime_notes ? `${itemDesc} (${r.downtime_notes})` : itemDesc,
+        from,
+        to: to.getTime() < from.getTime() ? from : to,
+      })
+    }
+  }
+
+  return { rows, total: count ?? rows.length }
 }
 
 /** Provisional dates only: never read the draft's pricing snapshot on this floor surface. */

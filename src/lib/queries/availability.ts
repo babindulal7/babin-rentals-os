@@ -530,13 +530,15 @@ export async function readHolds(bookingIdToExclude: string | null): Promise<Unit
   const rows = await readCompleteAvailability<{
     id: string
     asset_id: string | null
-    booking_id: string
+    booking_id: string | null
     period: string
+    kind?: string | null
+    downtime_reason?: string | null
     bookings: { booking_no: string } | null
   }>((from, to) => {
     let query = supabase
       .from('inventory_reservations')
-      .select('id, asset_id, booking_id, period, bookings ( booking_no )')
+      .select('id, asset_id, booking_id, period, kind, downtime_reason, bookings ( booking_no )')
       .is('released_at', null)
       .not('asset_id', 'is', null)
 
@@ -553,10 +555,11 @@ export async function readHolds(bookingIdToExclude: string | null): Promise<Unit
   for (const row of rows) {
     const window = parseTstzRange(row.period)
     if (row.asset_id === null || window === null) throw new Error('A reservation has an unreadable unit or period; availability could not be checked.')
+    const isDowntime = row.kind === 'downtime' || !row.booking_id
     holds.push({
       unitId: row.asset_id,
-      bookingId: row.booking_id,
-      bookingNo: row.bookings?.booking_no ?? row.booking_id,
+      bookingId: row.booking_id ?? row.id,
+      bookingNo: row.bookings?.booking_no ?? (isDowntime ? (row.downtime_reason ? `Downtime: ${row.downtime_reason}` : 'Downtime') : (row.booking_id ?? 'Hold')),
       window,
     })
   }
@@ -591,13 +594,15 @@ export async function readQuantityHolds(
     id: string
     product_id: string | null
     qty: number | null
-    booking_id: string
+    booking_id: string | null
     period: string
+    kind?: string | null
+    downtime_reason?: string | null
     bookings: { booking_no: string } | { booking_no: string }[] | null
   }>((from, to) => {
     let query = supabase
       .from('inventory_reservations')
-      .select('id, product_id, qty, booking_id, period, bookings ( booking_no )')
+      .select('id, product_id, qty, booking_id, period, kind, downtime_reason, bookings ( booking_no )')
       .is('released_at', null)
       .not('product_id', 'is', null)
       .in('product_id', ids)
@@ -614,9 +619,10 @@ export async function readQuantityHolds(
     if (row.product_id === null || window === null) throw new Error('A stock hold has an unreadable product or period; availability could not be checked.')
     const booking = Array.isArray(row.bookings) ? row.bookings[0] : row.bookings
     const list = byProduct.get(row.product_id) ?? []
+    const isDowntime = row.kind === 'downtime' || !row.booking_id
     list.push({
-      bookingId: row.booking_id,
-      bookingNo: booking?.booking_no ?? row.booking_id,
+      bookingId: row.booking_id ?? row.id,
+      bookingNo: booking?.booking_no ?? (isDowntime ? (row.downtime_reason ? `Downtime: ${row.downtime_reason}` : 'Downtime') : (row.booking_id ?? 'Hold')),
       /* `qty` is `int not null default 1` at the database, so a null is a failed
          read, not a hold of one. It is passed through as NaN rather than
          defaulted: `capacityFor` refuses a hold it cannot count, and defaulting
