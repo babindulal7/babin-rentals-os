@@ -1,5 +1,54 @@
 # Progress Log
 
+## 2026-11-17 — T3-30: Consumables: unit price, add at desk, restock, low stock (Lane C)
+
+**Did**
+- Implemented **T3-30 · Consumables: unit price, add at desk, restock, low stock** (`lane-c/T3-30-consumables-unit-price-add-at-the`):
+  - Created migration `supabase/migrations/0239_consumables_pricing_restock_and_low_stock.sql`:
+    - Added `unit_sale_price numeric(14,2)` to `products`, masked in `products_v` for non-money roles under Law 6.
+    - Added `consumable_restock_movements` table and `consumable_restock_movements_v` view (cost masked under Law 6).
+    - Added RPC `restock_consumable`: audited, atomic, idempotent via `client_uuid`, updates stock and records restock movement.
+    - Added RPC `add_consumable_line`: fast floor addition of consumable items to active bookings with idempotency.
+    - Updated `create_booking` and `confirm_booking_atomic` pricing: consumable lines charge `qty * unit_sale_price`, NEVER multiplied by rental days.
+  - Implemented client actions `src/actions/inventory/restockConsumable.ts` and `src/actions/rentals/addConsumableLine.ts`.
+  - Added UI components:
+    - `src/modules/inventory/modals/RestockConsumableModal.tsx`: modal to restock batches with Law 6 cost gating.
+    - `src/modules/rentals/booking/AddConsumableModal.tsx`: fast addition modal on desk/floor.
+    - `src/modules/inventory/AssetDetail.tsx` & `Inventory.tsx`: displays unit sale price for money roles, stock counts, and restock actions.
+    - `src/modules/rentals/booking/RentalLineItemsTree.tsx` & `BookingDetail.tsx`: integrates consumable lines and triggers desk addition.
+    - `src/modules/today/RoleTaskCockpit.tsx`: low consumable stock warning indicators.
+  - Added unit test suite `src/lib/__tests__/consumablesPricingAndRestock.test.ts` (8/8 pass) and lifecycle step `L73` in `scripts/e2e-lifecycle.mjs`.
+
+**Ruled**
+- Consumables are sold rather than rented: duration does not multiply unit price (B14, B35, B54; OPEN_DECISIONS #4 Option A).
+- Money blindness (Law 6) strictly preserved across products view, restock movements view, restock RPC, and booking line returns.
+- Idempotency via `client_uuid` guaranteed across restocks and line additions (Law 8).
+
+**Verified**
+- `npm run check:pglite`: 236/236 migrations applied cleanly, 0 failed, 202 definers pinned.
+- `npm run check:lifecycle`: 74/74 steps green, including `L73` (3-day rental with 2 tape rolls charges 2 units, restocking appends movements, money is masked).
+- `npm test src/lib/__tests__/consumablesPricingAndRestock.test.ts`: 8/8 tests pass.
+- `npm run gates`: All 17 gates PASS green.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 106 / 106 (100%) | +3 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 85 / 85 (100%) | +1 |
+| Lifecycle | steps green / total | 74 / 74 (100%) | -3 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 236 files · check:pglite 236/236 applied, 0 failed (recorded 2026-11-16T23:15:20.988Z). Suite: PASS — 7215/7215 passed, 0 failed (recorded 2026-11-16T23:17:33.798Z); source fingerprint matches.
+Coverage suite: PASS — 7215/7215 passed, 0 failed (recorded 2026-11-16T23:17:33.798Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-16T23:15:46.679Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- All 5 batch cards completed (PR #181, PR #182, PR #183, PR #184, and T3-30 ready for PR).
+- Await review and merge by Babin.
+
 ## 2026-11-16 — Master Frontend Engineering Audit & Top 10 Remediations (Lane B)
 
 **Did**

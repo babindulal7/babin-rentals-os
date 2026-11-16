@@ -1,4 +1,4 @@
--- Migration 0238: Consumables pricing, restock movements, add consumable line, and low stock alerts (T3-30)
+-- Migration 0239: Consumables pricing, restock movements, add consumable line, and low stock alerts (T3-30)
 -- =============================================================================
 -- RULINGS: B14, B35, B54; OPEN_DECISIONS #4 (Option A confirmed); Law 1, Law 6, Law 8
 --
