@@ -146,7 +146,7 @@ const TARGETS = [
 const MONEY_TABLES = new Set(['invoices', 'payments', 'payment_reversals', 'security_deposits', 'expenses'])
 const MONEY_BLIND = new Set(['Warehouse', 'Technician', 'Driver', 'Client'])
 
-const supabase = createClient(url, key, { auth: { persistSession: false } })
+let supabase = createClient(url, key, { auth: { persistSession: false } })
 
 const pad = (s, n) => String(s).padEnd(n)
 const C = { ok: '\x1b[32m', warn: '\x1b[33m', bad: '\x1b[31m', dim: '\x1b[2m', off: '\x1b[0m' }
@@ -156,20 +156,39 @@ async function main() {
 
   /* ── 1 · identity, first, because it explains everything below ────── */
 
-  const email = argOf('email')
-  const password = argOf('password')
+  const roleArg = argOf('role')
+  const tokenArg = argOf('token') || (roleArg ? (process.env[`BABIN_STAGING_JWT_${roleArg.toUpperCase()}`] || process.env[`BABIN_JWT_${roleArg.toUpperCase()}`]) : null)
+  let email = argOf('email') || (roleArg ? process.env[`BABIN_TEST_EMAIL_${roleArg.toUpperCase()}`] : null)
+  let password = argOf('password') || (roleArg ? process.env[`BABIN_TEST_PASSWORD_${roleArg.toUpperCase()}`] : null)
   let signedIn = false
   let uid = null
 
-  if (email && password) {
+  if (tokenArg) {
+    supabase = createClient(url, key, {
+      auth: { persistSession: false },
+      global: { headers: { Authorization: `Bearer ${tokenArg}` } },
+    })
+    const { data: userData, error: userErr } = await supabase.auth.getUser(tokenArg)
+    if (userErr) {
+      console.log(`  ${C.bad}token validation failed: ${userErr.message}${C.off}`)
+    } else if (userData?.user) {
+      signedIn = true
+      uid = userData.user.id
+      console.log(`  signed in via JWT: ${userData.user.email || uid}${roleArg ? ` (requested role: ${roleArg})` : ''}`)
+    }
+  } else if (email && password) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       console.log(`  ${C.bad}sign-in failed: ${error.message}${C.off}`)
     } else {
       signedIn = true
       uid = data.user?.id ?? null
-      console.log(`  signed in: ${data.user?.email}`)
+      console.log(`  signed in: ${data.user?.email}${roleArg ? ` (requested role: ${roleArg})` : ''}`)
     }
+  } else if (roleArg) {
+    console.log(`  ${C.warn}role requested: ${roleArg}${C.off}`)
+    console.log(`  ${C.dim}No token or credentials found for role ${roleArg}.${C.off}`)
+    console.log(`  ${C.dim}Provide BABIN_STAGING_JWT_${roleArg.toUpperCase()} or pass --email / --password.${C.off}`)
   }
 
   /*
@@ -212,6 +231,9 @@ async function main() {
     console.log(`  ${C.bad}everything. This is the cause of what you see below — fix it first.${C.off}`)
   } else {
     console.log(`  role: ${C.ok}${staffRow.primary_role}${C.off}  (${staffRow.full_name ?? staffRow.id})`)
+    if (roleArg && staffRow.primary_role !== roleArg) {
+      console.log(`  ${C.warn}⚠ Warning: session primary_role (${staffRow.primary_role}) does not match requested --role (${roleArg})${C.off}`)
+    }
   }
   console.log()
 

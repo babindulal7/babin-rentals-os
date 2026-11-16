@@ -74,37 +74,36 @@ export function sanitizeTelemetryString(raw: string): string {
     .replace(MONEY_PATTERN, '[MONEY_REDACTED]')
 }
 
-const FORBIDDEN_CONTEXT_KEYS = new Set([
-  'phone', 'mobile', 'email', 'name', 'client_name', 'clientname', 'full_name', 'fullname',
-  'amount', 'total', 'subtotal', 'rate', 'price', 'balance', 'deposit', 'vat_amount', 'discount',
-])
+const SENSITIVE_KEY_PATTERN = /(phone|mobile|email|passport|citizenship|pan|client_name|clientname|first_name|last_name|fullname|amount|paisa|rupees|price|deposit|total|balance|rate|revenue|cost|salary|tax|vat)/i
 
-/** Recursively sanitize context object preventing client PII or rupee values from entering telemetry. */
+/**
+ * Recursive fail-closed sanitization: redact sensitive keys at any nesting
+ * depth, and use the same PII/token/financial string redactor that protects
+ * raw error messages and stacks. Cycles cannot escape into a Sentry envelope.
+ */
 export function sanitizeContext(context?: ErrorContext): ErrorContext | undefined {
   if (!context || typeof context !== 'object') return undefined
-  try {
-    const out: ErrorContext = {}
-    for (const [key, value] of Object.entries(context)) {
-      const lower = key.toLowerCase()
-      if (FORBIDDEN_CONTEXT_KEYS.has(lower)) {
-        out[key] = '[REDACTED]'
-        continue
+  const seen = new WeakSet<object>()
+  function scrub(value: unknown): unknown {
+    if (value === null || value === undefined) return value
+    if (typeof value === 'string') return sanitizeTelemetryString(value)
+    if (typeof value === 'number' || typeof value === 'boolean') return value
+    if (typeof value === 'object') {
+      if (seen.has(value)) return '[Circular]'
+      seen.add(value)
+      if (Array.isArray(value)) return value.map(scrub)
+      const safe: Record<string, unknown> = {}
+      for (const [key, field] of Object.entries(value as Record<string, unknown>)) {
+        safe[key] = SENSITIVE_KEY_PATTERN.test(key) ? '[REDACTED]' : scrub(field)
       }
-      if (typeof value === 'string') {
-        out[key] = sanitizeTelemetryString(value)
-      } else if (typeof value === 'number' || typeof value === 'boolean' || value === null) {
-        out[key] = value
-      } else if (typeof value === 'object') {
-        try {
-          out[key] = JSON.parse(sanitizeTelemetryString(JSON.stringify(value)))
-        } catch {
-          out[key] = '[Complex Object]'
-        }
-      }
+      return safe
     }
-    return out
+    return String(value)
+  }
+  try {
+    return scrub(context) as ErrorContext
   } catch {
-    return { sanitized: false }
+    return { scrub_error: 'Context scrub failed' }
   }
 }
 
@@ -141,7 +140,6 @@ export function formatStaffErrorMessage(err: unknown, suppliedRefCode?: string):
     /PostgresError/i.test(rawMsg)
 
   if (isDbOrGate) {
-    console.error(`[StaffError] Raw system error suppressed from screen:`, err)
     return {
       title: 'This screen hit a system problem',
       line: 'An unexpected database or server constraint stopped this action.',

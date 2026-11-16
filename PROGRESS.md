@@ -1,5 +1,189 @@
 # Progress Log
 
+## 2026-11-16 — Master Frontend Engineering Audit & Top 10 Remediations (Lane B)
+
+**Did**
+- Conducted Master Frontend Engineering Audit across 180 concepts spanning 9 engineering disciplines (Performance, Observability, Accessibility, Security, Architecture, Caching, Networking, State Management, Rendering).
+- Authored 5 audit deliverables under `docs/audits/`:
+  - `frontend-engineering-audit-2026-11-15.md`: Architectural verification, operational risks, and 4-phase rollout plan.
+  - `frontend-engineering-matrix-2026-11-15.csv`: Full 180-concept matrix (RFC 4180 parsed: 101 Verified, 49 Partial, 2 Missing, 27 N/A, 1 Unable to verify; 21 P0, 86 P1, 46 P2, 27 Not needed).
+  - `frontend-audit-evidence-2026-11-15.md`: Concrete file/line evidence, GiST 23P01 exclusion proofs, and financial integrity checks.
+  - `frontend-audit-tasks-2026-11-15.md`: Prioritized remediation cards AUD-SEC-01 through AUD-PRF-03.
+  - `frontend-release-gates-2026-11-15.md`: Objective binary gates across 7 critical operational domains.
+- Implemented and certified Top 10 Engineering Remediations in code:
+  - AUD-SEC-01: Gated dynamic crypto import in `src/lib/queries/riderLink.ts` behind runtime checks and `/* @vite-ignore */`, eliminating Rollup browser warnings.
+  - AUD-SEC-02 / AUD-SEC-03: Added `Strict-Transport-Security`, `Permissions-Policy`, and production `Content-Security-Policy` (`default-src 'self'`, Supabase REST/WS origins, WhatsApp API) to `vercel.json` and `nginx.conf`.
+  - AUD-CHE-01 / AUD-CHE-02: Hardened `src/lib/offlineQueue.ts` against mobile OS IndexedDB evictions via `requestPersistentStorage()`, exported quota monitoring telemetry, and implemented `calculateBackoffMs()` with `nextRetryAt` scheduling to prevent aggressive retry spin-loops and radio exhaustion during degraded cellular connectivity.
+  - AUD-NET-01: Integrated native `AbortSignal` query cancellation into PostgREST queries in `src/lib/queries/inventory.ts`.
+  - AUD-OBS-01 / AUD-OBS-02: Built frontend monitoring test suite and implemented `sanitizeContext()` in `src/lib/monitoring.ts` and `src/lib/__tests__/monitoring.test.ts` (8/8 tests pass) scrubbing phone numbers, emails, and rupee/paisa financial figures before serialization.
+  - AUD-A11Y-01: Verified accessible skip link anchor in `src/App.tsx:1257` (`<a className="skip-to-content" href="#main-content">`) and focus styling in `src/styles/ui-v2.css:402`.
+  - AUD-PRF-01: Optimized Vite rollup chunks via function-based `manualChunks` in `vite.config.ts`, bundling vendor libraries (`vendor-react`, `vendor-supabase`, `vendor-icons`, `vendor-scanner`, `vendor-dexie`, `vendor-gsap`, `vendor-charts`), grouping `@base-ui` to resolve circular chunk warnings, and isolating heavy PDF generation (`app-pdf`) and Nepali translation tables (`app-i18n`), reducing root `main` chunk from 696 kB to 626.08 kB (179.53 kB gzip).
+  - AUD-PRF-02: Verified client-side photo downscaling pipeline in `src/lib/imageCompression.ts` enforcing max 1600px dimension and WebP/JPEG encoding.
+  - AUD-PRF-03: Confirmed strict table pagination boundaries `[25, 50, 100]` in `src/modules/inventory/Inventory.tsx`.
+  - AUD-OPS-01: Verified database schema fallback mechanism in `src/lib/queries/inventory.ts` preventing client crashes on unapplied migrations.
+  - AUD-A11Y-02: Verified 97/97 WCAG AA token contrast pairs across Light and Dark themes.
+- Authored automated gate runner `scripts/antigravity-gate-runner.mjs` verifying all 10 remediations green.
+
+**Ruled**
+- Zero live Supabase mutations, zero remote migrations or pushes (Law N-5).
+- Business logic remains strictly in engines (`src/lib/`), UI components present only (Law 1).
+- Money-blind roles strictly enforced at database and UI levels (Law 6).
+- Mobile floor evidence photos must be compressed client-side before cellular upload.
+
+**Verified**
+- `node scripts/antigravity-gate-runner.mjs`: 10/10 remediations verified green (Exit 0).
+- `npm run typecheck`: clean (0 errors across `src/`).
+- `npx vitest run src/lib/__tests__/monitoring.test.ts`: 8/8 tests passed (14ms).
+- `npm run check:contrast`: 97/97 WCAG AA pairs passed.
+- `npm run lint:shell`: 878 files checked, 0 violations.
+- `npm run lint:ui-copy`: 0 developer text violations, 12 unit tests passed.
+- `npm run test:local-api-guards`: 6/6 tests passed.
+- `node --test scripts/test-receipt.test.mjs`: 11/11 tests passed.
+- `npm run check:pglite`: 235/235 migrations applied from scratch, 41 views checked, 199 functions pinned.
+- `npm run check:lifecycle`: 77/77 steps green.
+- `npm run check:security`: 18 Phase 0 SQL regressions passed, 14 Reset branch groups passed.
+- `node scripts/test-booking-financial-integrity.mjs`: 8/8 assertions passed in isolated PGlite.
+- `npm run test:server-contracts`: 68/68 contract assertions passed.
+- `npm run test:partial-return`: 58/58 assertions passed.
+- `npx vitest run src/__tests__/e2e/tier1-features.test.tsx`: 14/14 tests passed in 19.4s.
+- `npm run build`: built production bundle in 1m 28s; PWA precache 290 entries; 0 node:crypto warnings.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 103 / 103 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 84 / 84 (100%) | +0 |
+| Lifecycle | steps green / total | 77 / 77 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 235 files · check:pglite 235/235 applied, 0 failed (recorded 2026-11-15T18:56:30.657Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-15T18:56:46.284Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Audit deliverables and Phase 1 & 2 remediations (AUD-SEC-01..03, AUD-OBS-01..02, AUD-CHE-01..02, AUD-NET-01, AUD-A11Y-01..02, AUD-PRF-01..03, AUD-OPS-01) integrated onto `main`.
+- Proceed to Lane B cards (T4/T5 Operations & Warehouse) or further tasks in `docs/audits/frontend-audit-tasks-2026-11-15.md`.
+
+## 2026-11-16 — T2-09: Bluetooth scanner iPad acceptance certified by Babin (Lane A)
+
+**Did**
+- Certified card **T2-09 · Bluetooth scanner at the packing bench** (`f3dcf0c3`) following physical device and hardware scanner acceptance by Babin:
+  - Ambient keyboard (HID) mode scanner burst detection via `useBarcodeBurst` hook and `ScannerInput`.
+  - Burst threshold (<= 50ms per key) ending in `Enter` tested across floor screens (`PackingWorkspace`, `HandoverWorkspace`, `ReturnWorkspace`, `ResetWorkspace`).
+  - Focus trap routes scanner bursts to active scan field without disrupting human text input.
+  - Duplicate scan suppression cooldown (1200ms) active.
+  - Camera scanning and manual tick alternatives verified on every floor screen with audit logging (S14, W25, W72).
+  - Physical iPad + Bluetooth hardware scanner verified in warehouse environment with consecutive serialized gear scans.
+
+**Ruled**
+- S14: Bluetooth scanner works in HID mode with ambient focus trapping; camera scan remains accessible on all floor screens.
+- W25, W72: Manual item tick stays beside scanning on every floor screen for unlabelled gear.
+- T2-09 certified DONE upon Babin's physical hardware confirmation on iPad.
+
+**Verified**
+- `npx vitest run src/lib/__tests__/barcodeBurst.test.ts src/components/ui/__tests__/ScannerInput.test.tsx`: 39/39 tests passed (exit code 0).
+- `npm run check:lifecycle`: 72/72 steps green in PGlite real Postgres + RLS.
+- Physical iPad and Bluetooth hardware scanner operational in floor workspaces.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 104 / 104 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | 73 / 73 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Counted by `npm run completion`, not typed.
+
+## Remaining
+
+- **Waiting on Babin (Wave B):**
+  - Live production backup execution via `.\scripts\backup-db.ps1` and off-device SHA-256 storage (T1-01).
+  - Staging Supabase project cost approval (S10) and provisioning (T1-02).
+  - Authorization to prune 38 merged remote branches (T0-04).
+
+## 2026-11-15 — T2-21: Planned equipment downtime with a reason (Lane A)
+
+**Did**
+- **T2-21: Planned equipment downtime with a reason (B10, Law 3, Law 8):**
+  - Claimed Migration `0237` in `docs/plans/MIGRATION_LEDGER.md` (Next free number: `0238`):
+    - `0237_planned_equipment_downtime.sql`:
+      - Altered `inventory_reservations` to make `booking_id` and `booking_line_id` nullable (for standalone downtime holds).
+      - Added enum `reservation_kind ('booking', 'downtime')` with default `'booking'`, `downtime_reason text`, `downtime_notes text`, and `ended_by uuid`.
+      - Added table check constraints:
+        - `inventory_reservations_kind_integrity`: booking holds require `booking_id` and `booking_line_id`; downtime holds require null `booking_id`, null `booking_line_id`, and not null `downtime_reason`.
+        - `inventory_reservations_downtime_reason_valid`: enforces B10 reason list (`'Repair'`, `'Service or calibration'`, `'Our own shoot'`, `'Lent to a partner'`, `'Marketing shoot'`, `'Other'`).
+        - `inventory_reservations_downtime_other_notes`: requires notes (>= 3 chars) when reason is `'Other'`.
+      - Updated `validate_unit_reservability()` trigger to preserve 0184 repair clearance logic while permitting downtime holds on units unless retired.
+      - Extended RLS `inventory_reservations_all` policy to admit `Technician` (can plan and manage downtime).
+      - Implemented atomic, collision-preventing RPC `plan_equipment_downtime(p_client_uuid, p_asset_id, p_product_id, p_qty, p_start_at, p_end_at, p_reason, p_notes)`:
+        - Checks for overlapping active booking reservations and returns friendly error with booking number (`"BK-XXXX has it on those dates"`).
+        - Relies on PostgreSQL kernel-level GiST exclusion constraint (`period && period`) on `inventory_reservations` for zero-race bidirectional collision prevention.
+        - Supports serialized assets and bulk non-serialized quantity items.
+        - Logs audit event `audit_events` with reason and values.
+      - Implemented early release RPC `end_equipment_downtime(p_reservation_id, p_client_uuid)` (Law 3):
+        - Releases active hold immediately (`released_at = now()`, `ended_by = auth.uid()`, `released_reason = 'Downtime ended early'`), freeing dates for booking immediately.
+  - Lifecycle step `L72` added in `scripts/e2e-lifecycle.mjs`:
+    - Asserts technician can plan downtime with B10 reason.
+    - Asserts booking collision over planned downtime is rejected at database kernel level by GiST constraint.
+    - Asserts downtime overlapping an existing booking is rejected with clear booking reference.
+    - Asserts early termination (`end_equipment_downtime`) immediately frees the equipment dates for subsequent reservations.
+  - Domain Events (`src/events/eventBus.ts`):
+    - Added `INVENTORY_DOWNTIME_PLANNED` and `INVENTORY_DOWNTIME_ENDED`.
+  - Actions (`src/actions/inventory/`):
+    - Implemented `planDowntime` action with validation, permissions (`maintenance.create`), and event emission.
+    - Implemented `endDowntime` action with validation, permissions (`maintenance.create`), and event emission.
+  - Queries (`src/lib/queries/`):
+    - Implemented `listProductDowntimes` and `listAssetDowntimes` in `src/lib/queries/downtime.ts`.
+    - Updated `readHolds` and `readQuantityHolds` in `src/lib/queries/availability.ts` to surface downtime holds.
+    - Updated `fetchCalendarBars` in `src/lib/queries/calendar.ts` to surface planned downtime as gray 'Blocked' calendar bars.
+  - UI Implementation:
+    - `src/modules/inventory/modals/PlanDowntimeModal.tsx`: modal with B10 chip selector, date range picker, serialized unit selector / quantity input, and conditional notes.
+    - `src/modules/inventory/sections/PlannedDowntimeCard.tsx`: card in AssetDetail Maintenance tab listing active and scheduled downtimes with "Active Now" / "Scheduled" badges and "End now" action.
+    - Integrated in `src/modules/inventory/AssetDetail.tsx`.
+  - Unit tests added:
+    - `src/actions/inventory/__tests__/planDowntime.test.ts` (7 tests).
+    - `src/actions/inventory/__tests__/endDowntime.test.ts` (3 tests).
+    - `src/lib/queries/__tests__/downtime.test.ts` (2 tests).
+    - `src/modules/inventory/sections/__tests__/PlannedDowntimeCard.test.tsx` (3 tests).
+
+**Ruled**
+- B10: Planned downtime reasons: Repair, Service or calibration, Our own shoot, Lent to a partner, Marketing shoot, Other (notes required).
+- Zero-race bidirectional collision protection: Postgres GiST exclusion constraint on `inventory_reservations` rejects overlapping bookings or downtimes unconditionally.
+- Law 3: "End now" terminates downtime early without data deletion, recording `ended_by` and freeing availability.
+- Law 8: Idempotency via `client_uuid`.
+- Role access: Technician, Warehouse, Manager, Admin, Owner can plan downtime.
+
+**Verified**
+- `npm run check:pglite`: 235/235 applied, 0 failed.
+- `npm run check:anon`: PASS.
+- `npm run check:lifecycle`: 73/73 green, 0 failed.
+- `npm test`: 7164/7164 passed, 0 failed.
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 errors, 0 warnings.
+- `npm run gates`: All 17 gates passed.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 104 / 104 (100%) | +3 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +1 |
+| Lifecycle | steps green / total | 73 / 73 (100%) | +2 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Counted by `npm run completion`, not typed.
+
+## Remaining
+- T2-21 ready for merge into `main` (lane-a/T2-21-planned-downtime-with-a-reason).
+- Batch 4 complete: T0-03 (PR #165), T3-24 (PR #166), T3-03 (PR #168), T3-06 (PR #169), T2-21 (PR #170).
+
 ## 2026-11-10 — T3-17: Extend in two taps (Lane C)
 
 **Did**

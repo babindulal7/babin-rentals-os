@@ -89,6 +89,25 @@ describe('monitoring.ts — Safe Error Monitoring (T1-08)', () => {
     })
   })
 
+  it('scrubs nested financial fields and cycle references before telemetry leaves the browser', () => {
+    const nested: Record<string, unknown> = {
+      status: 'Packed',
+      detail: {
+        total_paisa: 125000,
+        client_name: 'Sensitive Client',
+        note: 'Call ram@example.com at 9812345678',
+      },
+    }
+    nested['self'] = nested
+    const cleaned = sanitizeContext(nested)
+    expect(cleaned?.['self']).toBe('[Circular]')
+    expect(cleaned?.['detail']).toEqual({
+      total_paisa: '[REDACTED]',
+      client_name: '[REDACTED]',
+      note: 'Call [EMAIL_REDACTED] at [PHONE_REDACTED]',
+    })
+  })
+
   describe('User-Facing Error Message Sanitization (formatStaffErrorMessage)', () => {
     it('masks raw database errors and constraint violations to a safe plain line', () => {
       const dbErrors = [
