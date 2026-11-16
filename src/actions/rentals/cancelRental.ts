@@ -1,6 +1,8 @@
 import { createAction, type ActionConfig, type ActionContext } from '../core'
 import { EVENT_TYPES } from '../../events/eventBus'
 import { supabase } from '../../lib/supabase'
+import type { Paisa } from '../../lib/money'
+import { formatMoney } from '../../lib/money'
 
 /**
  * # CANCEL_RENTAL — Server-owned cancellation action
@@ -35,6 +37,10 @@ export type CancelRentalInput = {
   reason?: string | null | undefined
   /** Law 8 idempotency key. */
   clientUuid?: string | undefined
+  /** Calculated or staff-adjusted cancellation fee in Paisa (T3-03, Option A). */
+  cancellationFeePaisa?: Paisa | null | undefined
+  /** Reason for lowering or waiving the suggested cancellation fee. */
+  feeOverrideReason?: string | null | undefined
 }
 
 export type CancelRentalResult = {
@@ -113,10 +119,15 @@ export const cancelRentalConfig: ActionConfig<CancelRentalInput, CancelRentalRes
     }
 
     // 3. Call cancel_booking RPC
+    const feeSuffix = input.cancellationFeePaisa !== undefined && input.cancellationFeePaisa !== null
+      ? ` [Fee: ${formatMoney(input.cancellationFeePaisa)}${input.feeOverrideReason ? ` | Override: ${input.feeOverrideReason.trim()}` : ''}]`
+      : ''
+    const rpcReason = `${input.reason?.trim() ?? ''}${feeSuffix}`
+
     const { data, error } = await supabase.rpc('cancel_booking', {
       p_payload: {
         booking_id: bookingId,
-        reason: input.reason?.trim() ?? '',
+        reason: rpcReason,
         actor_id: ctx.userId,
         client_uuid: input.clientUuid,
       },
@@ -142,7 +153,9 @@ export const cancelRentalConfig: ActionConfig<CancelRentalInput, CancelRentalRes
         payload: {
           id: bookingId,
           bookingNo: resolvedNo,
-          reason: input.reason?.trim() ?? null,
+          reason: rpcReason,
+          cancellationFeePaisa: input.cancellationFeePaisa ?? null,
+          feeOverrideReason: input.feeOverrideReason?.trim() ?? null,
           timestamp: cancelledAt,
           userId: ctx.userId,
         },

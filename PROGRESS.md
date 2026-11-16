@@ -219,6 +219,49 @@ Counted by `npm run completion`, not typed.
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
+| Backend | actions implemented / total | 104 / 104 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | 73 / 73 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 236 files · check:pglite 236/236 applied, 0 failed. Suite: PASS — 7157/7157 passed, 0 failed.
+Coverage suite: PASS — 7157/7157 passed, 0 failed.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T3-06 ready for merge into `main` (`lane-c/T3-06-invoice-and-agreement-documents`).
+
+## 2026-11-15 — T3-03: Implement Option A cancellation fee tiers policy
+
+**Did**
+- Implemented owner-approved Option A cancellation fee engine in `src/lib/queries/cancellationFeeTiers.ts`:
+  - >48h before rental start: Free cancellation for all durations.
+  - 24–48h before rental start: Free for 1–2 rental days; 50% of equipment rental subtotal before VAT for >2 rental days.
+  - <=24h before rental start: 1 rental day charge for 1–2 rental days; max(1 rental day charge, 50% rental subtotal) for >2 rental days.
+  - Accurate advance refund and balance owed calculation per Law 4 (reversal rows for customer advance in excess of cancellation fee).
+- Updated `src/modules/settings/sections/CancellationFeeTiersCard.tsx` with clean responsive matrix table presenting the Owner-approved Option A schedule and policy notes (fee base before VAT per Ruling O-13, staff override accountability, reversal row refunds per Law 4, statutory notes per Ruling O-7).
+- Extended `CancelRentalInput` in `src/actions/rentals/cancelRental.ts` to accept `cancellationFeePaisa` and `feeOverrideReason`, embedding structured audit details into the cancellation RPC reason and domain event payload.
+- Wired Option A fee policy card into `src/modules/rentals/modals/CancelRentalModal.tsx`, providing live fee suggestion, advance deduction/refund breakdown, and coordinator+ override/waiver with mandatory recorded reason (>= 10 chars).
+- Created comprehensive unit and modal tests: `src/lib/__tests__/cancellationFeeTiers.test.ts` (7 tests), `src/modules/rentals/modals/__tests__/CancelRentalModal.tiers.test.tsx` (3 tests), and verified existing `CancelRentalModal.test.tsx` (5 tests).
+
+**Ruled**
+- Implemented Owner-approved Option A ruling of 2 Nov 2026 (`RULINGS-2026-11-02-OWNER.md`).
+- Fee base strictly uses equipment rental subtotal before VAT per Ruling O-13.
+- In line with Ruling O-7, tax treatment on cancellation fees awaits final accountant determination; charges are displayed pre-VAT.
+- Any advance refunded to client is preserved as an immutable reversal row per Law 4.
+
+**Verified**
+- `npm test src/lib/__tests__/cancellationFeeTiers.test.ts src/modules/rentals/modals/__tests__/CancelRentalModal.test.tsx src/modules/rentals/modals/__tests__/CancelRentalModal.tiers.test.tsx`: 15/15 tests passing.
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (`eslint src --max-warnings 0` exit 0).
+- `npm run lint:progress`: exit 0.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
 | Backend | actions implemented / total | 102 / 102 (100%) | +1 |
 | Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
 | DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
@@ -232,9 +275,52 @@ Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Awaiting merge of PR for T3-06 (`lane-c/T3-06-invoice-and-agreement-documents`) into `main`.
-- Card 5 (T2-21 — Planned Equipment Downtime) design note and review.
-- Hardware printer / touch signature testing during T2-02 Handover flow.
+- Await accountant ruling on VAT treatment for cancellation fee tax invoices (O-7).
+- Next card in batch: T3-06 (Invoice and Agreement Documents).
+
+## 2026-11-15 — T3-24: Quick Expense with Bill Photo (Lane C)
+
+**Did**
+- Implemented card **T3-24 (Quick expense with a bill photo)** in `src/modules/finance/Expenses.tsx`, `src/lib/expenseStorage.ts`, and `src/lib/queries/finance.ts`.
+- Replaced "Receipt upload is not built yet" placeholder with active bill photo file input supporting mobile camera capture (`capture="environment"`), image preview, and format validation.
+- Enforced hard ≤ 3 MB file size cap per specification with inline operator feedback.
+- Configured upload to Supabase Storage bucket `documents` under `staff/<userId>/receipt_<clientUuid>_<cleanFilename>` in compliance with migration 0170 storage RLS.
+- Added optional settlement notation (Paid by) stored in expense description while respecting schema constraints.
+- Added interactive receipt viewer modal and receipt action button in both desktop tabular and mobile card views.
+- Updated `docs/plans/T3_BOOKING_MONEY.md` status to `ready — awaiting merge (lane-c/T3-24-quick-expense-bill-photo)`.
+
+**Ruled**
+- W81 and W89 honored. No invention of unbacked database columns (`receipt_url` and `receipt_size` real columns leveraged).
+- Integer paisa maintained throughout money conversions via `rupees()` and `formatMoney()`.
+- Money blindness (Law 6) preserved: receipts and expenses remain strictly accessible only to authorized money roles.
+
+**Verified**
+- `src/lib/__tests__/expenseStorage.test.ts` (5 tests passing).
+- `src/modules/finance/__tests__/ExpensesReceipt.test.tsx` (4 tests passing).
+- `src/modules/finance/__tests__/Expenses.test.tsx` (18 tests passing).
+- `npm run typecheck`: clean (exit 0).
+- `npm run lint`: clean (exit 0).
+- `npm run lint:progress`: clean (exit 0).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 233 files · check:pglite not run this session. Suite: static inspection.
+Coverage suite: Historical suite.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Card ready for Babin review and local merge (`lane-c/T3-24-quick-expense-bill-photo`).
+- Subsequent accountant pack card (T3-23) can now consume persisted receipt URLs and photos.
+>>>>>>> origin/main
 
 ## 2026-11-10 — T3-17: Extend in two taps (Lane C)
 
