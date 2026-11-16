@@ -1,6 +1,6 @@
 import { RecordActions } from '../../components/ui/RecordWorkspace'
 import type { QuoteSnapshot } from '../../lib/queries/quoteEditor'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import { Card, Rail } from '../../components/ui/Page'
@@ -735,6 +735,13 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     setDepositAuthorizedBy,
   })
 
+  const setWorkspaceHeader = workspace?.setHeaderData
+  useLayoutEffect(() => {
+    if (!setWorkspaceHeader || !editBookingId) return
+    setWorkspaceHeader({ title: `Edit #${draftBookingNo ?? editBookingId}` })
+    return () => setWorkspaceHeader(null)
+  }, [setWorkspaceHeader, editBookingId, draftBookingNo])
+
   const { confirmBooking, saveAsQuote, quoteSaved, setQuoteSaved } = useNewRentalSubmit({
     editBookingId,
     confirmBlocked,
@@ -897,6 +904,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
       canBookingMoney={canBookingMoney}
       pricing={pricing}
       blockingNotices={blockingNotices}
+      editingBooking={Boolean(editBookingId)}
       advisories={advisories}
       validationAttempted={validationAttempted}
       runNoticeAction={runNoticeAction}
@@ -1102,7 +1110,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
           className={activeSection === 'review' ? 'is-active' : ''}
           data-active={activeSection === 'review'}
           onClick={() => jumpToSection('rail-booking-summary')}
-          aria-label={`Review booking${blockingNotices.length ? `, ${blockingNotices.length} outstanding checks` : ''}`}
+          aria-label={`Review booking${!editBookingId && blockingNotices.length ? `, ${blockingNotices.length} outstanding checks` : ''}`}
         >
           {blockingNotices.length > 0 && !editBookingId ? (
             <>
@@ -1116,14 +1124,12 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
             <>
               <Icon name="check" size={17} />
               <span>Review</span>
-              <span className="new-rental-jumpbar__pill new-rental-jumpbar__pill--ready">
-                Ready
-              </span>
+              {!editBookingId && <span className="new-rental-jumpbar__pill new-rental-jumpbar__pill--ready">Ready</span>}
             </>
           )}
         </button>
         <span className="new-rental-jumpbar__meta" role="status">
-          {actionBusy ? 'Saving…' : saveState === 'error' ? 'Not saved' : draftBookingNo ? `Draft #${draftBookingNo}${draftHasUnsavedChanges ? ' · Unsaved changes' : ' · Saved'}` : '* Required to confirm'}
+          {actionBusy ? 'Saving…' : saveState === 'error' ? 'Not saved' : editBookingId ? `Editing booking #${draftBookingNo ?? editBookingId}${quoteDirty ? ' · Unsaved changes' : ''}` : draftBookingNo ? `Draft #${draftBookingNo}${draftHasUnsavedChanges ? ' · Unsaved changes' : ' · Saved'}` : '* Required to confirm'}
         </span>
       </nav>
       {localDraftOffer && !editBookingId && (() => {

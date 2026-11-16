@@ -1729,6 +1729,9 @@ export const mockSupabase = {
       const incoming = payload['lines'] as Row[]
       const existingLines = (store['booking_lines'] ?? []).filter(row => row['booking_id'] === bId && !row['voided_at'])
       const requestedHeader = payload['values'] as Row
+      if ('client_id' in requestedHeader && requestedHeader['client_id'] !== b['client_id']) {
+        return Promise.resolve({ data: null, error: pgErr('22023', 'The client cannot be changed on this booking. Keep the original client or create a new booking.') })
+      }
       const datesMoved = ['pickup_at', 'return_at'].some(field => requestedHeader[field] != null &&
         Date.parse(String(requestedHeader[field])) !== Date.parse(String(b[field])))
       const seen = new Set<string>()

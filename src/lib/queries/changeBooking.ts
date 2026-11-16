@@ -227,7 +227,7 @@ export function bookingChangePayload(
         ((data.deliveryType === 'Babin Delivery' ? data.deliveryChargePaisa : 0) +
           (data.returnPickupType === 'Babin Pickup' ? data.returnPickupChargePaisa ?? 0 : 0)) as Paisa,
       ),
-      fuelChargePaisa: toRupees(
+      fuel_charge: toRupees(
         (data.deliveryType === 'Babin Delivery' || snapshot.values.delivery_type === 'Client Pickup'
           ? data.fuelChargePaisa
           : 0) as Paisa,

@@ -49,7 +49,7 @@ The required dependency audit reports **37 findings: 4 critical, 13 high, 17 mod
 ## Remaining before this card can close
 
 1. Obtain independent review of the locally verified source; the full gates are green.
-2. Complete structure/custom repricing using sufficient stored pricing terms. Ordinary daily repricing is implemented; structure/custom edits remain refused.
+2. User decision, 16 Nov: older custom-priced bookings missing original rules require desk review and a new price before item/date changes. Implement and verify that workflow. Complete structure/custom repricing using sufficient stored pricing terms. Ordinary daily repricing is implemented; structure/custom edits remain refused.
 3. Complete server-validated Warehouse bundle/component additions. The current restriction is unfinished implementation, not a new product policy. Warehouse crew/delivery changes explicitly refuse unsupported edits.
 4. Repair the remaining edit-form contracts: `fuelChargePaisa` versus RPC `fuel_charge`, and a submitted `client_id` that the RPC currently preserves. No complete-save claim until unsupported changes are preserved/refused or implemented.
 5. Repair the observed edit-mode wording/tab contrast, complete Coordinator and five-state checks, then staging on two devices. Accountant answers O-14/O-17 and T3-28 design review/dependencies remain outstanding.

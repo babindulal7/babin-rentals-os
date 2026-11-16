@@ -126,6 +126,15 @@ describe('T3-18 · Change confirmed booking & linked booking', () => {
       expect(payload.lines[0]?.product_id).toBe('prod-1')
     })
 
+    it('sends the fuel charge in the server field and rupee units', () => {
+      const draft = bookingChangeToDraft(mockSnapshot)
+      draft.deliveryType = 'Babin Delivery'
+      draft.fuelChargePaisa = rupees(123.45)
+      const payload = bookingChangePayload(draft, mockSnapshot, rupees(15000))
+      expect(payload.transport.fuel_charge).toBe(123.45)
+      expect(payload.transport).not.toHaveProperty('fuelChargePaisa')
+    })
+
     it('refuses if return date is before pickup date', () => {
       const draft = bookingChangeToDraft(mockSnapshot)
       draft.pickup = '2026-11-25'
@@ -174,6 +183,11 @@ describe('T3-18 · Change confirmed booking & linked booking', () => {
       role: 'Coordinator',
       isOnline: true,
     }
+
+    it('refuses to silently change the client before calling the server', async () => {
+      await expect(changeBooking({ ...baseInput, draft: { ...draft, clientDbId: 'different-client' } }, deskCtx)).rejects.toThrow(/client cannot be changed/i)
+      expect(rpc.state.calls).toHaveLength(0)
+    })
 
     it('refuses unauthorized roles', async () => {
       const floorCtx: ActionContext = {

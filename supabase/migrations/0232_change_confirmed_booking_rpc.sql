@@ -1215,6 +1215,10 @@ begin
     raise exception 'Invalid booking lines.';
   end if;
 
+  if (p_payload -> 'values') ? 'client_id' and (p_payload -> 'values' ->> 'client_id') is distinct from b.client_id::text then
+    raise exception 'The client cannot be changed on this booking. Keep the original client or create a new booking.';
+  end if;
+
   -- 4. Check for packed units being silently removed (W88 / Step L73)
   -- "after Pack — removing an item asks Warehouse to unpack it (a floor session)"
   -- "lifecycle step: a packed unit cannot be silently removed"

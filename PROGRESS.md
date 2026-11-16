@@ -1,5 +1,67 @@
 # Progress Log
 
+## 2026-11-16 — T3-18 client and fuel save contracts
+
+**Did**
+- Corrected the confirmed-booking fuel charge payload to the RPC field. Refused client reassignment explicitly in the action, RPC and mock until the linked invoice workflow supports it.
+- Updated edit-mode status, summary wording, active-tab contrast and responsive header title; removed the misleading Ready label for existing bookings.
+
+**Ruled**
+- T3-18 remains doing; no client reassignment policy or permission was invented.
+- User decision, 16 Nov: older custom-priced bookings without their original rules require a desk review and a new price before item/date changes. The review workflow is not implemented yet; the guard remains in place.
+
+**Verified**
+- Focused action, mock and summary suites: 26 tests PASS. Warehouse mock editor inspected at 375/820/1440: active tab is readable and the desktop edit summary is correct. The title and booking number are visible at all three widths. The full screen check remains open: Coordinator and other screen states were not checked. The current lifecycle passes 78/78, including direct client refusal and fuel persistence into the Draft invoice. Local PGlite rebuild and lifecycle were run; see artifacts/t3-18-contracts-pglite.log and artifacts/t3-18-contracts-lifecycle.log for results. The full gate run was stopped after the user decision introduced additional required pricing work; full gates and visual acceptance remain pending for the final source.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 229 files · check:pglite Historical, incomplete or failed receipt (2026-11-16T15:04:30.177Z); current source NOT VERIFIED. Suite: NOT VERIFIED — invalid test receipt.
+Coverage suite: Historical suite: 6963/6963 passed, 0 failed (recorded 2026-11-16T12:47:38.425Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-16T15:05:40.148Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Finish the full gate run and screen checks. Finish Warehouse bundles and custom pricing; complete client reassignment behavior and visual acceptance, including Coordinator and other screen states.
+- Independent review, two-device staging and Babin's merge remain pending. Migration 0232 is WRITTEN, NOT APPLIED or PRODUCTION-VERIFIED.
+
+## 2026-11-16 — T3-18 edit-mode display follow-up
+
+**Did**
+- Changed the editor status to identify an existing booking as being edited and use its actual dirty state. Adjusted the active section label colour for contrast.
+
+**Ruled**
+- T3-18 remains doing; prior gate results are historical after these changes.
+
+**Verified**
+- Verification is in progress; the changes have not yet passed the full gate suite or the screen check.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 229 files · check:pglite Historical, incomplete or failed receipt (2026-11-16T12:36:08.883Z); current source NOT VERIFIED. Suite: Historical suite: 6963/6963 passed, 0 failed (recorded 2026-11-16T12:47:38.425Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 6963/6963 passed, 0 failed (recorded 2026-11-16T12:47:38.425Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-16T12:37:11.023Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Complete typecheck and full local gates, and visually verify the change at required widths and roles.
+- Fix edit-mode confirmation wording, client and transport field contracts, Warehouse bundles and custom pricing; complete staging acceptance and review before merge.
+
 ## 2026-11-16 — Lane C T3-18 audit ordering verified; Warehouse health privacy repaired
 
 **Did**

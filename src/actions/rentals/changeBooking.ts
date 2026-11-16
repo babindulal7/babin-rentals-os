@@ -59,6 +59,9 @@ export const changeBookingConfig: ActionConfig<ChangeBookingInput, BookingChange
     if (ctx.isOnline === false) {
       throw new Error('Connect to save this booking. Your changes are still here.')
     }
+    if (input.draft.clientDbId !== input.snapshot.values.client_id) {
+      throw new Error('The client cannot be changed on this booking. Keep the original client or create a new booking.')
+    }
     if (ctx.role === 'Warehouse') {
       const original = bookingChangeToDraft(input.snapshot)
       const crewSummary = (draft: RentalDraftData) => draft.crew.map(c => [c.bookingCrewLineId ?? null, c.crewMemberId ?? null, c.name, c.role, c.phone, c.days, c.overtimeDays])

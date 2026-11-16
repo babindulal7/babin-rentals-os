@@ -8055,6 +8055,10 @@ STEPS.push({
       bookingIds.l77_daily = bookingId
       await transition('l77_daily', 'Quote', 'Booked', 'Coordinator')
       const snapshot = await one('select read_booking_for_change($1)', [bookingId])
+      await refuses('changing the client is explicitly refused', 'select change_booking($1::jsonb)', [JSON.stringify({
+        booking_id: bookingId, client_uuid: crypto.randomUUID(), revision: snapshot.revision,
+        values: { client_id: crypto.randomUUID() }, lines: snapshot.lines,
+      })], /client cannot be changed/i)
       const request = { booking_id: bookingId, client_uuid: crypto.randomUUID(), revision: snapshot.revision,
         discount_percent: 10, values: { return_at: '2100-01-23T04:00:00Z' }, lines: snapshot.lines.map(line => ({ ...line, qty: 2, days: 3 })) }
       const saved = await one('select change_booking($1::jsonb)', [JSON.stringify(request)])
@@ -8099,6 +8103,30 @@ STEPS.push({
       assertEq(Number(issued.discount_amount), 300, 'Warehouse quantity edits preserve the booking-level discount')
     })
 
+  },
+})
+
+STEPS.push({
+  id: 'L78',
+  title: 'Confirmed booking fuel charge persists and reaches the Draft invoice',
+  expect: 'green',
+  run: async () => {
+    let bookingId
+    await as('Coordinator', async () => {
+      const created = await createBooking({
+        key: 'l78_fuel', window: ['2100-01-25T04:00:00Z', '2100-01-27T04:00:00Z'], actor: 'Coordinator',
+        lines: [{ productId: QTY_PRODUCT, description: 'L78 cable', qty: 1, days: 2, rate: 250 }],
+      })
+      bookingId = created.booking_id
+      await transition('l78_fuel', 'Quote', 'Booked', 'Coordinator')
+      const snapshot = await one('select read_booking_for_change($1)', [created.booking_id])
+      await one('select change_booking($1::jsonb)', [JSON.stringify({
+        booking_id: created.booking_id, client_uuid: crypto.randomUUID(), revision: snapshot.revision,
+        values: {}, lines: snapshot.lines, transport: { fuel_charge: 123.45 },
+      })])
+    })
+    assertEq(Number(await one('select fuel_charge from booking_transport where booking_id = $1', [bookingId])), 123.45, 'Fuel charge persists in rupees')
+    assertEq(Number(await one("select subtotal from invoices where booking_id = $1 and status = 'Draft'", [bookingId])), 623.45, 'Draft invoice includes the fuel charge')
   },
 })
 

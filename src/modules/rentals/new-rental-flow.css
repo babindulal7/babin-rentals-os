@@ -47,7 +47,7 @@
 }
 .new-rental-jumpbar button.is-active,
 .new-rental-jumpbar button[data-active='true'] {
-  color: var(--st-primary-fg, #2563eb) !important;
+  color: var(--text, #111827) !important;
   font-weight: 600 !important;
   border-bottom: 2px solid var(--st-primary-fg, #2563eb) !important;
   border-radius: 4px 4px 0 0 !important;
@@ -208,4 +208,9 @@
   .new-rental-shell .record-actions > button:nth-last-child(2):not([aria-label]) { grid-column: 1; grid-row: 2; }
   .new-rental-shell .record-actions:has(> button:nth-last-child(2)[aria-label]) > button:last-child { grid-column: 1 / -1; }
   .new-rental-footer-total { display: none; }
+}
+
+/* Keep the edit title and booking number readable in the tablet header. */
+@media (min-width: 768px) and (max-width: 1279px) {
+  body:has(.new-rental-shell) .app-global-header__breadcrumbs { min-width: 190px !important; }
 }

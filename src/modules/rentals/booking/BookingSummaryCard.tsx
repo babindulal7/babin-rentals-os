@@ -15,6 +15,7 @@ export interface BookingSummaryCardProps {
   days: number
   dayWord: string
   canBookingMoney: boolean
+  editingBooking?: boolean
   pricing: {
     rentalTotalPaisa: Paisa
     securityDeposit: { requiredPaisa: Paisa }
@@ -45,6 +46,7 @@ export function BookingSummaryCard({
   days,
   dayWord,
   canBookingMoney,
+  editingBooking = false,
   pricing,
   blockingNotices,
   advisories = [],
@@ -156,7 +158,12 @@ export function BookingSummaryCard({
           </p>
         )}
 
-        {blockingNotices.length > 0 ? (
+        {editingBooking ? (
+          <div className="new-rental-review-attention">
+            <h3>Editing booking</h3>
+            <p>Save changes to update this booking.</p>
+          </div>
+        ) : blockingNotices.length > 0 ? (
           <div
             data-testid="booking-attention-status"
             className={`new-rental-review-attention${validationAttempted ? ' new-rental-review-attention--error' : ''}`}
@@ -186,7 +193,7 @@ export function BookingSummaryCard({
               <Icon name="info" size={17} />
               <h3>Worth checking</h3>
             </div>
-            <p className="new-rental-review-status-copy">Does not block confirming</p>
+            <p className="new-rental-review-status-copy">{editingBooking ? 'Does not block saving' : 'Does not block confirming'}</p>
             {noticeList(advisories)}
           </div>
         )}
