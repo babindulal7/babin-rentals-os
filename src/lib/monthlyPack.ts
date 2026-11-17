@@ -172,7 +172,13 @@ async function fetchExpensesForPeriod(
   endAd: string,
   branchId?: string,
 ): Promise<MonthlyPackExpenseItem[]> {
-  {
+  const expenses: ExpenseDbRow[] = []
+  const seenExpenseIds = new Set<string>()
+  // Supabase/PostgREST can cap each response; a single read is not an
+  // accounting register. Read every bounded, stable page or refuse the ZIP.
+  const pageSize = 400
+  const maxPages = 125
+  for (let page = 0; page < maxPages; page++) {
     let query = supabase
       .from('expenses')
       .select('id, expense_no, expense_date, amount, vendor_name, description, status, expense_categories(name)')
@@ -181,18 +187,30 @@ async function fetchExpensesForPeriod(
       .neq('status', 'Cancelled')
       .neq('status', 'Rejected')
       .order('expense_date', { ascending: true })
+      .order('id', { ascending: true })
 
     if (branchId) {
       query = query.eq('branch_id', branchId)
     }
 
-    const { data, error } = await query
+    const { data, error } = await query.range(page * pageSize, (page + 1) * pageSize - 1)
     if (error || !Array.isArray(data)) {
       // Incomplete accounting registers must never be represented as zero expenses.
       throw new Error(`Monthly expense register read failed: ${error?.message ?? 'No confirmed expense dataset'}`)
     }
+    const batch = data as ExpenseDbRow[]
+    for (const expense of batch) {
+      if (!expense.id || seenExpenseIds.has(expense.id)) {
+        throw new Error('Expense register changed during pagination; export refused.')
+      }
+      seenExpenseIds.add(expense.id)
+      expenses.push(expense)
+    }
+    if (batch.length < pageSize) break
+    if (page === maxPages - 1) throw new Error('Expense register exceeds verified export limit.')
+  }
 
-    return ((data as unknown as ExpenseDbRow[]) ?? []).map((row) => {
+  return expenses.map((row) => {
       const d = row.expense_date ? new Date(row.expense_date) : new Date()
       const bs = toBs(d)
       const bsStr = bs
@@ -222,7 +240,6 @@ async function fetchExpensesForPeriod(
         status: row.status || 'Approved',
       }
     })
-  }
 }
 
 /**
