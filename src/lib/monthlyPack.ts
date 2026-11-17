@@ -154,7 +154,6 @@ interface ExpenseDbRow {
   expense_categories?: { name?: string | null } | null
   description?: string | null
   amount?: number | string | null
-  payment_method?: string | null
   status?: string | null
 }
 
@@ -166,10 +165,10 @@ async function fetchExpensesForPeriod(
   endAd: string,
   branchId?: string,
 ): Promise<MonthlyPackExpenseItem[]> {
-  try {
+  {
     let query = supabase
       .from('expenses')
-      .select('id, expense_no, expense_date, amount, vendor_name, description, status, payment_method, expense_categories(name)')
+      .select('id, expense_no, expense_date, amount, vendor_name, description, status, expense_categories(name)')
       .gte('expense_date', startAd)
       .lte('expense_date', endAd)
       .neq('status', 'Cancelled')
@@ -181,9 +180,9 @@ async function fetchExpensesForPeriod(
     }
 
     const { data, error } = await query
-    if (error) {
-      // In mock/test environments without expenses table, return empty list gracefully
-      return []
+    if (error || !Array.isArray(data)) {
+      // Incomplete accounting registers must never be represented as zero expenses.
+      throw new Error(`Monthly expense register read failed: ${error?.message ?? 'No confirmed expense dataset'}`)
     }
 
     return ((data as unknown as ExpenseDbRow[]) ?? []).map((row) => {
@@ -207,12 +206,11 @@ async function fetchExpensesForPeriod(
         categoryName: catName,
         description: row.description || '',
         amountPaisa: Math.round(Number(row.amount || 0) * 100) as Paisa,
-        paymentMethod: row.payment_method || 'Cash',
+        // The expenses table has no recorded settlement method; never invent Cash.
+        paymentMethod: 'Not recorded',
         status: row.status || 'Approved',
       }
     })
-  } catch {
-    return []
   }
 }
 
