@@ -95,7 +95,7 @@ export function assertCanAcceptOnlineBooking(
     return {
       allowed: false,
       code: 'AWAY_MODE_ACTIVE',
-      message: check.rejectionReason,
+      message: check.rejectionReason ?? 'Online booking requests are temporarily disabled.',
     }
   }
   return { allowed: true }
