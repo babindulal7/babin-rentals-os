@@ -350,6 +350,7 @@ export async function generateMonthlyPack(
     from: startAd,
     to: endAd,
     branchId: options.branchId,
+    requireComplete: true,
   })
   const crewPayouts = crewTdsRes.payouts
 
