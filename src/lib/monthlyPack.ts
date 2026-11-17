@@ -447,8 +447,10 @@ export async function generateMonthlyPack(
   let totalPaymentsPaisa = 0
 
   for (const p of receivedPayments) {
-    const adDateStr = p.paymentDateAd.slice(0, 10)
-    const bs = toBs(new Date(p.paymentDateAd))
+    const civilDate = new Date(kathmanduCivil(new Date(p.paymentDateAd)))
+    if (Number.isNaN(civilDate.getTime())) throw new Error('Invalid receipt timestamp.')
+    const adDateStr = civilDate.toISOString().slice(0, 10)
+    const bs = toBs(civilDate)
     const bsStr = bs
       ? `${bs.year}-${String(bs.month).padStart(2, '0')}-${String(bs.day).padStart(2, '0')}`
       : adDateStr
