@@ -39,6 +39,7 @@ import { supabase, newClientUuid } from '../../lib/supabase'
 import { gateContext, canViewMoneyField } from '../../lib/fieldGating'
 import {
   canRecordPayment,
+  canReversePayment,
   canIssueInvoice,
   canPerformOperations,
   canPerformOp,
@@ -47,6 +48,7 @@ import {
   canManageCollateral,
   canSetBookingTags,
 } from '../../lib/rbac'
+import { ClientTdsModal } from '../finance/modals/ClientTdsModal'
 import { BookingTagsBar } from './BookingTagsBar'
 import { IntelCard } from '../../components/ui/IntelCard'
 import { ClientIntelFromId } from '../../components/intel/ClientIntelFromId'
@@ -1009,6 +1011,7 @@ function BookingDetailView() {
   const [crewVersion, setCrewVersion] = useState(0)
   const [showSubRentalModal, setShowSubRentalModal] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [showTdsModal, setShowTdsModal] = useState(false)
   const [showCreateInvoice, setShowCreateInvoice] = useState(false)
   const [showCreateDocument, setShowCreateDocument] = useState(false)
   const [pickListPrinting, setPickListPrinting] = useState(false)
@@ -1033,6 +1036,10 @@ function BookingDetailView() {
      `rbac.canRecordPayment` (the rule the dispatcher itself resolves
      `payment.create` through). Absent, not disabled. */
   const canTakePayment = user && canBookingMoney ? canRecordPayment(user.role) : false
+  /* RULING 2026-11-17 (R-17.1): client TDS. Recording follows `canRecordPayment`, reversing
+     follows `canReversePayment`; the screen opens for either, and the database decides. */
+  const canRecordTds = user && canBookingMoney ? canRecordPayment(user.role) : false
+  const canReverseTds = user && canBookingMoney ? canReversePayment(user.role) : false
   /*
    * **R-01** — *"Invoice creation … Manual only, from **Finance** and from
    * **Booking Detail**. Nothing generates an invoice at Confirm."* This screen
@@ -2304,6 +2311,11 @@ function BookingDetailView() {
           <Card title="Quick Actions">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
               {canTakePayment && recordPaymentButton('Record Payment')}
+              {(canRecordTds || canReverseTds) && primaryInvoice && (
+                <Button icon="file" variant="secondary" onClick={() => setShowTdsModal(true)}>
+                  Client TDS
+                </Button>
+              )}
               {canRaiseInvoice && createInvoiceButton(hasInvoice ? 'View Invoice' : 'Create Invoice')}
               {draftInvoice && (
                 <Button
@@ -3609,6 +3621,24 @@ function BookingDetailView() {
                 showSuccessToast('Payment Recorded', label)
               }
             })()
+          }}
+        />
+      )}
+
+      {/* RULING 2026-11-17 (R-17.1): record or reverse the TDS a client deducted. Mounted only
+          while open so its idempotency keys are minted per open (Law 8). After a write the
+          invoices are re-read: the database moved paid/outstanding, the screen does not recompute. */}
+      {(canRecordTds || canReverseTds) && showTdsModal && primaryInvoice && (
+        <ClientTdsModal
+          isOpen={showTdsModal}
+          onClose={() => setShowTdsModal(false)}
+          invoice={{ id: primaryInvoice.id, invoiceNo: primaryInvoice.invoiceNo, clientName: primaryInvoice.clientName }}
+          canRecord={canRecordTds}
+          canReverse={canReverseTds}
+          onDone={(message) => {
+            invoicesList.refetch()
+            paymentsList.refetch()
+            showSuccessToast('Client TDS', message)
           }}
         />
       )}

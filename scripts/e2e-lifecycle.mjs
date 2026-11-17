@@ -8038,6 +8038,18 @@ STEPS.push({
     await pay(A.bookingId, A.invoiceId, total - expectedTds)
     assertEq(Number((await inv(A.invoiceId)).outstanding_amount), expectedTds, 'only the TDS is left outstanding after the net payment')
 
+    // The screen's read: the figure shown is the figure that will be written, and money-blind roles get nothing.
+    await as('Accounts', async () => {
+      const s = (await q('select public.client_tds_status($1::uuid) as res', [A.invoiceId])).rows[0].res
+      assertEq(s.can_record, true, 'status: TDS can be recorded')
+      assertEq(Number(s.amount), expectedTds, 'status shows the same 1.5% figure the record will write')
+      assertEq(Number(s.base_amount), taxable, 'status base is the taxable amount')
+      assertEq(s.active, null, 'status: nothing recorded yet')
+    })
+    await as('Warehouse', async () => {
+      await refuses('Warehouse reads client TDS status', 'select public.client_tds_status($1::uuid)', [A.invoiceId], /42501|not available/i)
+    })
+
     const key1 = '00000000-0000-4000-8000-000000008202'
     let rec
     await as('Accounts', async () => { rec = await tds(A.invoiceId, key1, { certificate_number: 'TDS-CERT-0001' }) })
@@ -8058,6 +8070,13 @@ STEPS.push({
         [JSON.stringify({ invoice_id: A.invoiceId, client_uuid: '00000000-0000-4000-8000-000000008203' })], /GATE:tds\.already_recorded/i)
     })
     assertEq(Number(await one('select count(*) from tds_ledger where invoice_id = $1', [A.invoiceId])), 1, 'one ledger row')
+    await as('Coordinator', async () => {
+      // A Coordinator may record but cannot read the ledger table; the status function is how they see what is recorded.
+      const s = (await q('select public.client_tds_status($1::uuid) as res', [A.invoiceId])).rows[0].res
+      assertEq(s.can_record, false, 'status: already recorded, so not recordable again')
+      assertEq(Number(s.active.amount), expectedTds, 'status names the active deduction')
+      assertEq(s.active.certificate_number, 'TDS-CERT-0001', 'status carries the certificate number')
+    })
 
     // 5. The ledger is append-only: no update, no delete, even for the database owner.
     await asOwnerOfTheDatabase(async () => {

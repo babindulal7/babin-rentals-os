@@ -1,5 +1,54 @@
 # Progress Log
 
+## 2026-11-17 — Client TDS recording and reversing screen (Lane B)
+
+**Did**
+- **Screen:** a **Client TDS** button in Booking Detail → Quick Actions, beside Record Payment, opens `ClientTdsModal`. It shows the TDS the system computed, takes an optional certificate number, and records in one tap. For a recorded deduction it shows the amount, date (Nepali month rendered from the AD date) and certificate, and lets Owner, Admin or Manager reverse it with a reason of 10+ characters.
+- **Migration `0240`** gained a read-only `client_tds_status(invoice_id)`: the same rule `record_client_tds` applies, returning the figure, whether it can be recorded, and the active deduction. The page never computes TDS (E6). Money-blind roles are refused. Still not applied to any Supabase project (N-5).
+- `src/lib/queries/clientTds.ts` (the read), `src/lib/__mocks__/tds.ts` (mock copies of the three functions, kept in step with the SQL), wired into the mock client.
+- Lifecycle step `L82` extended: status shows the same figure the record writes, Warehouse is refused, a Coordinator sees the active deduction through the function.
+- **Not built:** supplier TDS (S3), crew payout TDS and the staff 1% line (S4), accountant report with IRD deposit tracking (S5).
+
+**Ruled**
+- Build decisions E6 to E8 in `RULINGS-2026-11-17.md`: the figure comes from the database function; the button lives in Booking Detail; the deduction date is not asked on screen (server uses today in Kathmandu).
+
+**Verified**
+- `npm run gates`, 17 of 17 PASS: typecheck, lint, tests (623 files, 7243/7243), migrations from scratch, financial integrity, security regressions, lifecycle, build, coverage.
+- `check:lifecycle` 74/74 green with L82 including the new status assertions; `check:pglite` 236/236 applied. Both ran in the same gates run.
+- **Driven in the app (mock mode, built-in browser):** Accounts on booking 716 saw Client TDS, the dialog read Rs 226.95 (1.5% of Rs 15,130 taxable), recording with a certificate wrote one ledger row and moved paid to Rs 226.95 and outstanding to Rs 16,870.05, the booking summary refreshed, and the success message showed. Reopened as Accounts: showed the recorded entry, no reverse. As Owner: Reverse needed a 10+ character reason, wrote a Reversal row and re-opened Rs 17,097. Warehouse saw no TDS button or text. No console errors.
+- Not verified: live Supabase (migration not applied), a phone-width pass, and the screen against the real database. The mock cannot prove the SQL; L82 does.
+
+**Session report (CLAUDE.md §15.4)**
+
+| Conflict | Sources that disagreed | Decision | Why | Changed where | Revert |
+|---|---|---|---|---|---|
+| Show the TDS before recording vs pages hold no business logic | R-39 defaults vs "pages never implement business logic" | Database function returns the figure; the page displays it | One rule in one place; the screen figure is the written figure | `0240` `client_tds_status`, `queries/clientTds.ts` | drop the function; the button would then record without a preview |
+| Reverse role vs record role | `canRecordPayment` vs `canReversePayment` | The screen opens for either; each action is gated by its own rule | B-1; the database decides regardless | `BookingDetail.tsx`, `ClientTdsModal.tsx` | n/a |
+| Deduction date on screen | R-39 fewest taps vs back-dating | Not asked; server uses today (Kathmandu) | Fewest taps; the action still accepts a date | `ClientTdsModal.tsx` | add one date input |
+
+### Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 105 / 105 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 | |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | 74 / 74 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 236 files · check:pglite 236/236 applied, 0 failed (recorded 2026-11-17T14:18Z). Suite: PASS 7243/7243 (recorded 14:30Z). Coverage: PASS. Counted by `npm run completion`, not typed. Structural coverage only: functional, hosted, integration and device acceptance are NOT VERIFIED.
+
+### Remaining
+
+*Features to build — 3 TDS slices.* Supplier TDS (S3); crew payout TDS and the staff 1% income-tax line on the timesheet (S4); the accountant TDS report with IRD deposit tracking (S5).
+
+*Bugs to fix — 0 counted.*
+
+*Rulings open — 1.* One deduction per invoice or one per instalment (E5). Other open items are in `PLAN.md` §4.2.
+
+*Next session starts with:* supplier TDS (S3): the supplier type must be required with no default. `0240` and `0228` still need Babin to apply them to the live database after the backup before any of this works there.
+
 ## 2026-11-17 — TDS ledger and client-deducted TDS: slices S1 and S2 (Lane B)
 
 **Did**

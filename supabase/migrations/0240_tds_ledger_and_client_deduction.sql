@@ -13,6 +13,8 @@
 --   S2  record_client_tds / reverse_client_tds — a client deducts TDS from what
 --       they pay us. The invoice SETTLES AT GROSS (R-17.1e): the TDS credit counts
 --       toward invoices.paid_amount, so cash received (net) + TDS credit = gross.
+--       client_tds_status — read-only: the figure the Record TDS screen shows
+--       BEFORE writing, from the same rule (E6, RULINGS-2026-11-17.md).
 --
 -- THE RULES, FIXED IN SQL (not typed per invoice)
 -- -----------------------------------------------
@@ -45,7 +47,7 @@
 --   reverse   Owner, Admin, Manager — as payment_reversals_insert.
 --   Warehouse, Technician, Driver, Client: nothing (Law 6, N-1).
 --
--- REVERT: drop the two functions and the table; restore recompute_invoice_payment_state
+-- REVERT: drop the three functions and the table; restore recompute_invoice_payment_state
 -- and invoice_paid_net from 0087 / 0098 (remove the TDS term). Additive, so no payment
 -- or invoice row is changed by installing or removing this.
 -- ============================================================================
@@ -488,5 +490,80 @@ $fn$;
 
 revoke all on function public.reverse_client_tds(jsonb) from public, anon;
 grant execute on function public.reverse_client_tds(jsonb) to authenticated;
+
+-- ── S2: what the Record TDS screen shows BEFORE anything is written ─────────
+-- The page never computes TDS (pages never implement business logic). It asks the
+-- same rule record_client_tds applies, so the figure on screen is the figure that
+-- will be written. Read-only (stable); writes nothing.
+-- RULING 2026-11-17: R-17.1 — screen shows the system figure, not a page-side sum.
+
+create or replace function public.client_tds_status(p_invoice_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $fn$
+declare
+  c_rate constant numeric(5,2) := 1.50;  -- same constant as record_client_tds; one change = two edits, both in this file
+  v_actor  uuid := auth.uid();
+  v_role   public.system_role;
+  v_inv    public.invoices%rowtype;
+  v_amount numeric(14,2);
+  v_active public.tds_ledger%rowtype;
+  v_reason text;
+begin
+  select primary_role into v_role from public.users where id = v_actor and is_active;
+  -- Fail closed: money-blind roles and no session get nothing (Law 6, N-1).
+  if v_actor is null or v_role is null
+     or v_role not in ('Owner', 'Admin', 'Manager', 'Coordinator', 'Accounts')
+     or not coalesce(public.auth_can_view_money(), false) then
+    raise exception 'TDS is not available to this role.' using errcode = '42501';
+  end if;
+
+  select * into v_inv from public.invoices where id = p_invoice_id;
+  if not found then
+    raise exception 'Invoice was not found.';
+  end if;
+
+  select d.* into v_active
+    from public.tds_ledger d
+   where d.invoice_id = v_inv.id and d.direction = 'Client Deducted' and d.entry_type = 'Deduction'
+     and not exists (select 1 from public.tds_ledger r where r.reverses_id = d.id)
+   order by d.created_at desc
+   limit 1;
+
+  v_amount := round(coalesce(v_inv.taxable_amount, 0) * c_rate / 100.0, 2);
+
+  if v_inv.voided_at is not null or v_inv.status = 'Void'::invoice_status then
+    v_reason := 'This invoice is voided, so it cannot take TDS.';
+  elsif coalesce(v_inv.taxable_amount, 0) <= 0 or v_amount <= 0 then
+    v_reason := 'This invoice has no taxable amount to deduct TDS from.';
+  elsif v_active.id is not null then
+    v_reason := 'TDS is already recorded for this invoice.';
+  elsif v_amount > v_inv.outstanding_amount then
+    v_reason := 'The TDS is more than what is still outstanding on this invoice.';
+  end if;
+
+  return jsonb_build_object(
+    'invoice_id', v_inv.id,
+    'rate_percent', c_rate,
+    'base_amount', v_inv.taxable_amount,
+    'amount', v_amount,
+    'outstanding_amount', v_inv.outstanding_amount,
+    'can_record', v_reason is null,
+    'blocked_reason', v_reason,
+    'active', case when v_active.id is null then null else jsonb_build_object(
+      'ledger_id', v_active.id,
+      'amount', v_active.amount,
+      'certificate_number', v_active.certificate_number,
+      'deducted_on', v_active.deducted_on
+    ) end
+  );
+end;
+$fn$;
+
+revoke all on function public.client_tds_status(uuid) from public, anon;
+grant execute on function public.client_tds_status(uuid) to authenticated;
 
 commit;

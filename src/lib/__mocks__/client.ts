@@ -29,6 +29,7 @@ import { MOCK_LOGINS } from '../devQuickLogins'
 import { parseBookingNoSearch } from '../format'
 import { calculateMembershipCredit } from '../membershipCredit'
 import { rupees } from '../money'
+import { clientTdsStatusMock, recordClientTdsMock, reverseClientTdsMock } from './tds'
 import { GLOSSARY_TERMS, validateGlossaryText } from '../glossaryStore'
 
 const OVERLAY_KEY = 'babin.mock.overlay.v1'
@@ -1617,6 +1618,22 @@ export const mockSupabase = {
     if (name === 'create_invoice') {
       const payload = (args?.['p_payload'] ?? {}) as Record<string, unknown>
       return Promise.resolve(createInvoiceRpc(payload))
+    }
+    // RULING 2026-11-17: R-17.1 — client TDS (migration 0240). Logic lives in ./tds, in step with the SQL.
+    if (name === 'client_tds_status' || name === 'record_client_tds' || name === 'reverse_client_tds') {
+      const actor = readSession()?.user.id ?? null
+      const role = (store['users'] ?? []).find((u) => u['id'] === actor)?.['primary_role']
+      const env = {
+        rows: (table: string) => (store[table] ??= []),
+        insert: hooks.insert,
+        update: hooks.update,
+        actorId: actor,
+        actorRole: typeof role === 'string' ? role : null,
+      }
+      const payload = (args?.['p_payload'] ?? {}) as Record<string, unknown>
+      if (name === 'client_tds_status') return Promise.resolve(clientTdsStatusMock(env, args?.['p_invoice_id']))
+      if (name === 'record_client_tds') return Promise.resolve(recordClientTdsMock(env, payload))
+      return Promise.resolve(reverseClientTdsMock(env, payload))
     }
     if (name === 'close_maintenance_job' || name === 'complete_maintenance_job') {
       try {
