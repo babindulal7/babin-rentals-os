@@ -190,6 +190,25 @@ describe('WhoOwes engine & PDF (T3-20)', () => {
     expect(results.totalOutstandingPaisa).toBe(rupees(40100))
   })
 
+  it('refuses to silently omit invoices from a long one-page PDF', () => {
+    const invoices = Array.from({ length: 11 }, (_, i) => ({
+      invoiceNo: `INV-2026-${String(i).padStart(4, '0')}`,
+      bookingNo: 'BK-2026-0001',
+      issueDateAd: '2026-10-01',
+      dueDateAd: '2026-10-10',
+      totalPaisa: rupees(100),
+      paidPaisa: 0 as Paisa,
+      outstandingPaisa: rupees(100),
+    }))
+    expect(() => generateClientStatementPdf({
+      asOfDateAd: '2026-11-17',
+      client: { name: 'Multiple-invoice client' },
+      totalOutstandingPaisa: rupees(1100),
+      invoices,
+      payments: [],
+    })).toThrow('Full multi-page export is required')
+  })
+
   it('generates a valid PDF 1.4 Client Statement', () => {
     const bytes = generateClientStatementPdf({
       asOfDateAd: '2026-11-12',
