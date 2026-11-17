@@ -1833,7 +1833,7 @@ export default function Inventory() {
           ariaLabel="Inventory sections"
           size={phone ? 'sm' : 'md'}
           options={[
-            ...TABS.map((t) => ({ id: t, label: t })),
+            ...TABS.filter((t) => t !== 'Deposit Setup' || money).map((t) => ({ id: t, label: t })),
             ...(isNew ? [{ id: 'new', label: 'Add Equipment' }] : []),
             ...(isImport ? [{ id: 'import', label: 'Import CSV' }] : []),
           ]}
@@ -1895,7 +1895,7 @@ export default function Inventory() {
          * above it; nothing else differs.
          */
         <StockCheck embedded />
-      ) : tab === 'Deposit Setup' ? (
+      ) : tab === 'Deposit Setup' && money ? (
         <DepositSetup embedded />
       ) : (
         <ListWorkspace className="inventory-v2">

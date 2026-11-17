@@ -96,6 +96,8 @@ export interface BookingLineDraft {
   location: string
   status?: InvStatus
   committedTo: string
+  supplier?: string
+  supplierCost?: number
 }
 
 /** Read by nothing at runtime; here so the coupling above is greppable. */
@@ -1436,6 +1438,8 @@ export interface EquipmentModelGroup {
   inBundles: readonly string[]
   /** Every unit sharing this name, in the order the query already ranked them. */
   units: readonly EquipmentResult[]
+  /** Number of units free for the requested window. */
+  freeCount?: number
   /**
    * The unit tapping the *model name* would add — the first free unit in
    * serial order, or the sole row for bulk stock. Null when nothing is free.
@@ -1501,6 +1505,7 @@ export function groupEquipmentResults(results: readonly EquipmentResult[]): Equi
       ...(first.brand ? { brand: first.brand } : {}),
       inBundles: first.inBundles,
       units,
+      freeCount: free.length,
       autoPick: free[0] ?? null,
       availability,
     }

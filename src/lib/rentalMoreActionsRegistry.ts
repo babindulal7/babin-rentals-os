@@ -116,6 +116,8 @@ export interface SelectedRentalBookingFacts {
   itemCount?: number | undefined
   pickupDate?: string | undefined
   returnDate?: string | undefined
+  clientPhone?: string | null | undefined
+  clientEmail?: string | null | undefined
 }
 
 export interface RentalActionEvaluationContext {

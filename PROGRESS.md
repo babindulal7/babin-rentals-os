@@ -41,6 +41,164 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - PR for T2-22 opened and ready for review.
 - Proceed to Card 5: T3-30 (Consumables: unit price, add at desk, restock, low stock).
 
+## 2026-11-17 — T3-02: Deposits per product, entered before go-live (Lane C)
+
+**Did**
+- Implemented bulk editor for product deposits (`deposit_fixed`, `deposit_percent`, and `replacement_value` where missing) under Inventory ▸ Deposit Setup.
+- Added pure deposit calculation engine and RFC 4180 CSV dry-run parser in `src/lib/productDeposit.ts`:
+  - `depositRuleType()`, `hasDepositRule()`, `calculateEffectiveDeposit()`
+  - `exportDepositSetupCsv()` and `parseDepositSetupCsv()` with full dry run diff detection.
+- Built bulk editor UI in `src/modules/inventory/DepositSetup.tsx`:
+  - Enforced Law 6 (Money blindness): Tab strictly hidden and access restricted for non-money roles (Warehouse, Technician, Driver, Client).
+  - Progress readiness meter: `${configuredCount} / ${totalCount} set (${percentConfigured}%)` with progress bar and badge.
+  - Multi-filter toolbar (All, No deposit set, Deposit set) + search + category filter.
+  - Multi-select table with inline rule editing, dirty tracking, and row-level save calling `bulk_update_products` RPC.
+  - Bulk apply modal applying fixed amount or percent across selected items.
+  - CSV export & import with mandatory rendered dry-run modal showing old vs new values before committing.
+- Authored test suites:
+  - `src/lib/__tests__/productDepositSetup.test.ts` (6 tests)
+  - `src/modules/inventory/__tests__/DepositSetup.test.tsx` (4 tests)
+- Authored verification document `docs/verification/T3-02_VERIFICATION.md` and updated `docs/plans/T3_BOOKING_MONEY.md`.
+
+**Ruled**
+- Law 6: Warehouse and non-money roles cannot access or see the Deposit Setup view or financial figures.
+- Law 12: Inline persistent notices for errors; toasts strictly for successes.
+- Law 8: All RPC bulk updates carry client UUID idempotency tokens.
+
+**Verified**
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (0 errors, 0 warnings).
+- `npm test -- src/modules/inventory/__tests__/DepositSetup.test.tsx src/lib/__tests__/productDepositSetup.test.ts`: 10/10 tests passed.
+- `npm run gates`: 17/17 steps passed (7,217/7,217 tests pass, check:pglite 235/235 green, security green, build clean).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 104 / 104 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | -1 |
+| Lifecycle | steps green / total | 73 / 73 (100%) | -4 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 235 files · check:pglite 235/235 applied, 0 failed (recorded 2026-11-16T22:45:28.170Z). Suite: PASS — 7217/7217 passed, 0 failed (recorded 2026-11-16T22:47:34.230Z); source fingerprint matches.
+Coverage suite: PASS — 7217/7217 passed, 0 failed (recorded 2026-11-16T22:47:34.230Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-16T22:45:53.041Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T2-22 · Time between rentals: account-wide or per product (Lane A).
+- T3-30 · Consumables: unit price, add at desk, restock, low stock (Lane C).
+
+## 2026-11-17 — T3-13: Fully booked → similar item or sub-rent (Lane C)
+
+**Did**
+- Implemented Card **T3-13 · Fully booked → similar item or sub-rent** (`lane-c/T3-13-fully-booked-to-similar-item-or`) per `docs/plans/T3_BOOKING_MONEY.md:184-196`:
+  - When equipment has no free unit for requested dates (`freeCount === 0` or bulk unavailable), `AddItemPanel` displays the dedicated `Fully Booked Alternatives` region directly on the equipment line offering two clear 1-tap paths:
+    1. **"1. Similar we own — free"**: Dynamically evaluated via `findSimilarFreeEquipment(group, allCandidateGroups)` matching same category with free units for the exact date range. Renders 1-tap buttons `+ Similar free: [Name] ([X] free)` adding the unit immediately.
+    2. **"2. Sub-rent from a partner"**: Renders 1-tap quick sub-rent button `+ Sub-rent (GearHouse KTM)` recording vendor and client rate immediately, plus `Choose partner / rate…` button.
+    3. Booked item itself remains blocked (`27 Jul hard block`) with error icons and disabled chips, preventing dishonest direct booking.
+  - Authored `SubRentalPartnerModal.tsx` allowing partner selection across `SUBRENTAL_PARTNERS` (`GearHouse KTM`, `Kathmandu Cinema Works`, `Everest Cine Rentals`, `Pokhara Film Gear`, `Shine Pictures`, or custom) with client rate and supplier cost gated behind `showPrices` (Law 6: Money Blindness).
+  - Enhanced `OverbookingOverrideModal.tsx` to integrate partner chooser and rate input when sub-rent is chosen, with backward compatibility for single-argument callers.
+  - Authored test suites:
+    - `src/lib/__tests__/similarEquipment.test.ts` (6/6 pass)
+    - `src/modules/rentals/booking/__tests__/SubRentalPartnerModal.test.tsx` (2/2 pass)
+    - `src/modules/rentals/booking/__tests__/AddItemPanel.similarSubrent.test.tsx` (5/5 pass)
+  - Authored verification document: `docs/verification/T3-13_VERIFICATION.md`.
+
+**Ruled**
+- Zero live Supabase mutations, zero remote migrations or pushes (Law N-5).
+- Pure availability matching algorithms in `src/lib/availability.ts` (Law 1).
+- Money blindness strictly enforced across UI: client rate & supplier cost omitted from DOM for non-money roles (Law 6).
+- 27 Jul hard block on fully booked units maintained.
+
+**Verified**
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (0 warnings across `src/`).
+- `npm test`: 7220/7220 tests passed across 628 test suites.
+- `npm run gates`: ALL 17 GATES PASSED (Exit 0).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 104 / 104 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | 73 / 73 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 235 files · check:pglite 235/235 applied, 0 failed (recorded 2026-11-16T22:27:20.472Z). Suite: PASS — 7220/7220 passed, 0 failed (recorded 2026-11-16T22:29:26.031Z); source fingerprint matches.
+Coverage suite: PASS — 7220/7220 passed, 0 failed (recorded 2026-11-16T22:29:26.031Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-16T22:27:45.354Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Card 3 (`T3-02` — Deposits per product, entered before go-live).
+- Card 4 (`T2-22` — Time between rentals: account-wide or per product).
+- Card 5 (`T3-30` — Consumables: unit price, add at desk, restock, low stock).
+
+## 2026-11-17 — T3-16: Share documents in one tap (Lane C)
+
+**Did**
+- Implemented universal 1-to-2 tap Document Sharing Engine (`src/lib/documentShare.ts`) supporting Quote, Invoice, Receipt, Rental Agreement, and Booking Confirmation.
+- Implemented 4 core distribution channels:
+  1. WhatsApp: Native file attachment via WebShare API (`navigator.share({ files })`) on supported mobile devices (iOS/Android), or pure text compose link fallback (`wa.me/<number>?text=...`). If phone is missing or invalid according to `normalisePhone`, control is disabled with persistent inline reason `NO_PHONE_REASON` (Law 12).
+  2. Email: Dispatches transactional email through T5-03 client (`src/lib/email/client.ts`) from `no-reply@babinrentals.com`.
+  3. Print (A4): Direct browser print and PDF generation via `openPdfForPrint`.
+  4. Copy Text: Clipboard text copy with instant success toast.
+  5. Booking Confirmation (W20): One-tap send for staff, email first, WhatsApp optional.
+- Added pure template formatters in `src/lib/whatsappTemplates.ts`: `quoteDocument`, `invoiceDocument`, `receiptDocument`, and `agreementDocument`.
+- Added email render templates in `src/lib/email/templates.ts` for `booking_confirmation`, `quote_document`, `invoice_document`, `receipt_document`, and `rental_agreement`.
+- Built `DocumentShareModal` (`src/modules/rentals/modals/DocumentShareModal.tsx`) with accessible touch targets (≥ 44px).
+- Enforced Law 6 money blindness:
+  - Warehouse, Technician, Driver, and Client roles cannot view or share priced documents (Quote, Invoice, Receipt, Booking Confirmation with money totals).
+  - Unpriced operational documents (Agreement, Packing List, Return Report) can be shared by floor staff.
+- Integrated `DocumentShareModal` into `QuoteActionsMenu.tsx` (Send Quote / Share Quote), `InvoiceActionsMenu.tsx` (Share Invoice), and `RentalMoreActions.tsx` (`quote.send`, `invoice.send`).
+- Authored test suites `src/lib/__tests__/documentShare.test.ts` (11 tests) and `src/modules/rentals/modals/__tests__/DocumentShareModal.test.tsx` (6 tests).
+
+**Ruled**
+- Zero live Supabase mutations, zero remote migrations or pushes (Law N-5).
+- Money-blind roles strictly denied access to priced documents (Law 6).
+- Unusable phone numbers must render disabled controls with persistent inline notice `NO_PHONE_REASON`, never a toast (Law 12).
+- One-tap booking confirmation dispatches email first and prepares WhatsApp (W20).
+
+**Verified**
+- `npm run typecheck`: clean (0 errors across `src/`).
+- `npm run lint`: clean (0 warnings).
+- `npx vitest run src/lib/__tests__/documentShare.test.ts src/modules/rentals/modals/__tests__/DocumentShareModal.test.tsx`: 17/17 tests passed.
+- `npm run check:pglite`: 235/235 migrations applied from scratch.
+- `npm run check:lifecycle`: 73/73 steps green.
+- `npm run gates`: all 17 gates passed (7,224/7,224 tests green).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 104 / 104 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | -1 |
+| Lifecycle | steps green / total | 75 / 75 (100%) | -2 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 236 files · check:pglite 236/236 applied, 0 failed (recorded 2026-11-16T23:03:06.739Z). Suite: PASS — 7211/7211 passed, 0 failed (recorded 2026-11-16T23:05:12.755Z); source fingerprint matches.
+Coverage suite: PASS — 7211/7211 passed, 0 failed (recorded 2026-11-16T23:05:12.755Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-16T23:03:31.785Z.
+| Lifecycle | steps green / total | 73 / 73 (100%) | -4 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 235 files · check:pglite 235/235 applied, 0 failed (recorded 2026-11-16T22:01:52.711Z). Suite: PASS — 7224/7224 passed, 0 failed (recorded 2026-11-16T22:03:58.297Z); source fingerprint matches.
+Coverage suite: PASS — 7224/7224 passed, 0 failed (recorded 2026-11-16T22:03:58.297Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-16T22:02:17.597Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- PR for T2-22 opened and ready for review.
+- Proceed to Card 5: T3-30 (Consumables: unit price, add at desk, restock, low stock).
+- T3-13 — Fully booked → similar item or sub-rent (lane-c/T3-13-fully-booked-to-similar-item-or)
+- T3-02 — Deposits per product, entered before go-live (lane-c/T3-02-deposits-per-product-entered-before-go)
+- T2-22 — Time between rentals: account-wide or per product (lane-a/T2-22-time-between-rentals-account-wide-or)
+- T3-30 — Consumables: unit price, add at desk, restock, low stock (lane-c/T3-30-consumables-unit-price-add-at-the)
+
 ## 2026-11-16 — Master Frontend Engineering Audit & Top 10 Remediations (Lane B)
 
 **Did**
