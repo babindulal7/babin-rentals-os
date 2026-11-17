@@ -1,5 +1,34 @@
 # Progress Log
 
+## 2026-11-17 — TDS on rental invoices ruled; no code changed (Lane B)
+
+**Did**
+- Recorded Babin's TDS answers in `RULINGS-2026-11-17.md` (R-17.1, B-2 first place).
+- `docs/OPEN_DECISIONS.md`: new 17 Nov section. `PLAN.md` O-5 row annotated. O-5 stays open for the crew-payout rate.
+- No code, migration or database change.
+
+**Ruled**
+- R-17.1: clients deduct **1.5% TDS** from **rental invoices** only; base is **before VAT**; the invoice **settles at gross** and the deducted TDS is recorded as a credit.
+- Not ruled: the crew-payout TDS rate (O-5), supplier-side TDS, and whether the TDS credit lives on the invoice or in its own ledger. Those are open with Babin or the accountant.
+
+**Verified**
+- `node scripts/lint-progress.mjs` on this branch (run as part of the lint pass for this entry).
+- Docs only. No gate was run that tests behaviour, because no behaviour changed.
+
+### Completion
+
+Not measured this session. This was a docs-only ruling and no code or database gate was run, so the counter has no current receipts to read.
+
+### Remaining
+
+*Features to build — not measured.*
+
+*Bugs to fix — 0 counted this session.*
+
+*Rulings open — see `PLAN.md` §4.2.* O-5 (crew-payout TDS rate) is still open. Supplier-side TDS and the TDS credit treatment are not yet asked.
+
+*Next session starts with:* Babin's answers on crew-payout TDS and on how the TDS credit is recorded, then the build card for R-17.1. Payments stay immutable (Law 5), so the TDS deduction is a separate row, not an edit to the original payment.
+
 ## 2026-11-16 — Master Frontend Engineering Audit & Top 10 Remediations (Lane B)
 
 **Did**

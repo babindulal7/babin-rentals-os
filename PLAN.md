@@ -190,7 +190,7 @@ stay in [`docs/OPEN_DECISIONS.md`](docs/OPEN_DECISIONS.md).
 | O-2 | *(ruled 27 Oct — B39: sub-rent → nearest similar item → full refund or account credit, the client's choice)* | — | T7-07, T3-29 |
 | O-3 | *(ruled 27 Oct — B38: no; the deposit is taken at handover, cash or ID)* | — | T7-05 |
 | O-4 | Morning digest send time. | 05:30 NPT, before the 06:00 rental day | T5-04 |
-| O-5 | TDS rate on crew payouts. | Accountant to supply; payouts show "TDS: rate not set" until then | T8-08 |
+| O-5 | TDS rate on crew payouts. *(Client-side TDS on rental invoices is ruled 17 Nov: 1.5%, before VAT, settles at gross — `RULINGS-2026-11-17.md` R-17.1; the crew-payout rate is still open.)* | Accountant to supply; payouts show "TDS: rate not set" until then | T8-08 |
 | O-6 | Is IRD-certified e-billing required? (D14) | Accountant to confirm by 30 Nov | T3-05 |
 | O-7 | How non-VAT bills appear in the VAT register and returns. | Separate section "Non-VAT bills"; accountant confirms | T3-04 |
 | O-8 | *(replaced by O-16)* | — | — |

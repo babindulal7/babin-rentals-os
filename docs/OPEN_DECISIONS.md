@@ -1,5 +1,12 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 17 November 2026: TDS deducted by clients from rental invoices — answered (R-17.1)
+
+Babin answered in chat. Full wording and implementation notes: [`RULINGS-2026-11-17.md`](../RULINGS-2026-11-17.md).
+- Clients deduct **1.5% TDS** from rental invoices; **before VAT**; **rental invoices only**; the invoice **settles at gross** and the deducted TDS is recorded as a credit.
+- **O-5 stays open** for the **crew-payout** TDS rate, which this ruling does not cover.
+- Supplier-side TDS is not covered. The note Babin pasted listed 10% for equipment rental and 15% for general services; those rates are not used, because Babin ruled 1.5% for rental invoices.
+
 ## 5 November 2026 — Glossary editing in Settings (O-22)
 
 Babin requested glossary changes from Settings during the conflict repair. **Answered 5 Nov 2026:** editing is **Owner only** and **approved term changes apply throughout the app immediately**. The glossary's existing 1 Nov approval remains recorded; automatic OK statuses from the faulty wave exporter are not review evidence. T0-12 implements an explicit Owner approval action, append-only shared revisions and immediate text refresh. Whole-app Nepali activation remains gated independently. No hosted write path is enabled until Babin applies the locally verified migration (N-5).
