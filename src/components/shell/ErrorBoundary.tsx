@@ -1,7 +1,7 @@
 import { Component } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 import { ErrorBanner } from '../ui/StateViews'
-import { captureError } from '../../lib/monitoring'
+import { captureError, formatStaffErrorMessage } from '../../lib/monitoring'
 
 /**
  * §1 (carried into `System States & Patterns v2.0` unchanged): "A blank page
@@ -19,9 +19,13 @@ import { captureError } from '../../lib/monitoring'
  */
 export class ErrorBoundary extends Component<
   { children: ReactNode; fallback?: ReactNode; onReset?: () => void },
-  { error: Error | null; retryCount: number }
+  { error: Error | null; retryCount: number; referenceCode: string | null }
 > {
-  state: { error: Error | null; retryCount: number } = { error: null, retryCount: 0 }
+  state: { error: Error | null; retryCount: number; referenceCode: string | null } = {
+    error: null,
+    retryCount: 0,
+    referenceCode: null,
+  }
 
   static getDerivedStateFromError(error: Error) {
     return { error }
@@ -41,10 +45,14 @@ export class ErrorBoundary extends Component<
      * component stack is component *names*, never props or rendered values, so
      * no client detail and no rupee figure leaves with it.
      */
-    captureError(error, {
+    const result = captureError(error, {
       boundary: 'app-root',
       componentStack: typeof info.componentStack === 'string' ? info.componentStack : null,
     })
+
+    if (result?.referenceCode) {
+      this.setState({ referenceCode: result.referenceCode })
+    }
   }
 
   handleRetry = () => {
@@ -56,7 +64,7 @@ export class ErrorBoundary extends Component<
       window.location.reload()
       return
     }
-    this.setState((prev) => ({ error: null, retryCount: prev.retryCount + 1 }))
+    this.setState((prev) => ({ error: null, retryCount: prev.retryCount + 1, referenceCode: null }))
   }
 
   handleHardReload = () => {
@@ -68,15 +76,31 @@ export class ErrorBoundary extends Component<
       if (this.props.fallback) {
         return this.props.fallback
       }
+      const staffError = formatStaffErrorMessage(this.state.error, this.state.referenceCode || undefined)
+
       return (
         <div style={{ padding: '16px 20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <ErrorBanner
-            title="This screen hit a problem"
+            title={staffError.title}
             message={
               <div>
-                <span>{this.state.error.message || 'An unexpected error stopped this page from rendering.'}</span>
+                <span>{staffError.line}</span>
                 <span style={{ display: 'block', marginTop: 6, fontSize: 'var(--t-caption)', opacity: 0.85 }}>
-                  Clicking "Retry" will attempt to recover the screen inline without losing offline state.
+                  {staffError.action}
+                </span>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    marginTop: 8,
+                    fontSize: '11px',
+                    fontFamily: 'monospace',
+                    padding: '2px 6px',
+                    borderRadius: 4,
+                    background: 'rgba(0,0,0,0.06)',
+                    color: 'var(--text-secondary, #666)',
+                  }}
+                >
+                  Reference: {staffError.referenceCode}
                 </span>
               </div>
             }
@@ -107,3 +131,4 @@ export class ErrorBoundary extends Component<
     return this.props.children
   }
 }
+
