@@ -50,6 +50,14 @@ describe('T7-14 Away Mode Engine and Server Denial Contract', () => {
     expect(serverCheck.allowed).toBe(true)
   })
 
+  it('always returns a concrete server denial message when away', () => {
+    const config: AwayModeConfig = { ...baseConfig, publicMessage: '' }
+    const result = assertCanAcceptOnlineBooking(config, new Date('2026-11-18T10:00:00+05:45'))
+    expect(result.allowed).toBe(false)
+    expect(result.code).toBe('AWAY_MODE_ACTIVE')
+    expect(result.message).toContain('temporarily disabled')
+  })
+
   it('restricts Away mode configuration to Owner, Admin, and Manager', () => {
     expect(canConfigureAwayMode('Owner')).toBe(true)
     expect(canConfigureAwayMode('Admin')).toBe(true)
