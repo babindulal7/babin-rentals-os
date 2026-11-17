@@ -430,7 +430,8 @@ export async function generateMonthlyPack(
   // ── BUILD CSV 3: payments_received_<month>.csv ────────────────────────────
   const paymentsCsvRows: Array<Array<string | number>> = [
     [
-      'Payment No',
+      'Payment / Reversal No',
+      'Original Payment ID',
       'Receipt Date (AD)',
       'Receipt Date (BS)',
       'Booking No',
@@ -456,6 +457,7 @@ export async function generateMonthlyPack(
 
     paymentsCsvRows.push([
       p.paymentNo,
+      '',
       adDateStr,
       bsStr,
       p.bookingNo,
@@ -467,6 +469,46 @@ export async function generateMonthlyPack(
       p.status,
     ])
   }
+
+  let totalRefundsPaisa = 0
+  for (const p of refundedPayments) {
+    totalRefundsPaisa += p.amount
+    const civilDate = new Date(kathmanduCivil(new Date(p.paymentDateAd)))
+    const adDateStr = civilDate.toISOString().slice(0, 10)
+    const bs = toBs(civilDate)
+    const bsStr = bs
+      ? `${bs.year}-${String(bs.month).padStart(2, '0')}-${String(bs.day).padStart(2, '0')}`
+      : adDateStr
+    paymentsCsvRows.push([
+      p.paymentNo, '', adDateStr, bsStr, p.bookingNo, p.invoiceNo || 'N/A',
+      p.clientName, 'Refund (money out)', p.channelGroup || 'Other',
+      (-p.amount / 100).toFixed(2), p.status,
+    ])
+  }
+
+  let totalReversalsPaisa = 0
+  for (const reversal of reversalRows) {
+    const amountPaisa = parseMoney(String(reversal.amount ?? ''))
+    if (amountPaisa === null || amountPaisa <= 0) {
+      throw new Error('Invalid reversal amount in accountant ledger.')
+    }
+    totalReversalsPaisa += amountPaisa
+    const civilDate = new Date(kathmanduCivil(new Date(reversal.reversed_at)))
+    if (Number.isNaN(civilDate.getTime())) throw new Error('Invalid reversal timestamp.')
+    const adDateStr = civilDate.toISOString().slice(0, 10)
+    const bs = toBs(civilDate)
+    const bsStr = bs
+      ? `${bs.year}-${String(bs.month).padStart(2, '0')}-${String(bs.day).padStart(2, '0')}`
+      : adDateStr
+    paymentsCsvRows.push([
+      reversal.reversal_no, reversal.original_payment_id, adDateStr, bsStr,
+      'Refer to original receipt', 'Refer to original receipt',
+      'See original payment ID', 'Reversal (money out)', 'Compensating ledger',
+      (-amountPaisa / 100).toFixed(2), 'Recorded',
+    ])
+  }
+
+  const netCollectionsPaisa = totalPaymentsPaisa - totalRefundsPaisa - totalReversalsPaisa
 
   // ── BUILD CSV 4: tds_withheld_<month>.csv ──────────────────────────────────
   const tdsCsvRows: Array<Array<string | number>> = [
@@ -515,7 +557,7 @@ export async function generateMonthlyPack(
   // Net VAT and period-end receivables cannot be derived from expense totals or
   // "this month's invoices minus this month's receipts". They require an
   // accountant-reviewed input VAT ledger and opening/closing receivable balances.
-  const periodMovementPaisa = totalSalesPaisa - totalPaymentsPaisa
+  const periodMovementPaisa = totalSalesPaisa - netCollectionsPaisa
 
   const summaryLines = [
     '================================================================================',
@@ -543,8 +585,11 @@ export async function generateMonthlyPack(
     '',
     '3. COLLECTIONS & CASH RECEIVED',
     '--------------------------------------------------------------------------------',
-    `Payments Received:            ${receivedPayments.length}`,
-    `Total Collections:            ${formatMoney(totalPaymentsPaisa as Paisa)}`,
+    `Gross Receipts:               ${receivedPayments.length}`,
+    `Gross Collections:            ${formatMoney(totalPaymentsPaisa as Paisa)}`,
+    `Refund Movements:              ${refundedPayments.length}`,
+    `Reversal Movements:            ${reversalRows.length}`,
+    `Net Period Collections:       ${formatMoney(netCollectionsPaisa as Paisa)}`,
     '',
     '4. WITHHOLDING TAX (CREW TDS)',
     '--------------------------------------------------------------------------------',
@@ -563,7 +608,7 @@ export async function generateMonthlyPack(
     '6. PERIOD RECEIVABLES & CASH SUMMARY',
     '--------------------------------------------------------------------------------',
     `Invoiced in Period:           ${formatMoney(totalSalesPaisa as Paisa)}`,
-    `Collected in Period:          ${formatMoney(totalPaymentsPaisa as Paisa)}`,
+    `Net Cash Movement in Period:  ${formatMoney(netCollectionsPaisa as Paisa)}`,
     `Gross Period Movement:        ${formatMoney(periodMovementPaisa as Paisa)}`,
     'Not Closing Receivables:      Opening balances, cross-period payments and reversals not reconciled',
     '',
@@ -623,7 +668,7 @@ export async function generateMonthlyPack(
     counts: {
       invoices: salesInvoices.length,
       expenses: expenses.length,
-      payments: receivedPayments.length,
+      payments: receivedPayments.length + refundedPayments.length + reversalRows.length,
       tdsPayouts: crewPayouts.length,
       invoicePdfs: invoicePdfsCount,
     },
