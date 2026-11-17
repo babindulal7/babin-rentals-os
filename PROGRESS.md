@@ -11,7 +11,7 @@
 - R-17.1: clients deduct **1.5% TDS** from **rental invoices** only; base is **before VAT**; the invoice **settles at gross** and the deducted TDS is recorded as a credit.
 - R-17.2: crew payouts — freelancers **15% TDS**; staff **1%** is a separate income-tax line (confirmed). Closes O-5.
 - R-17.3: the client TDS credit is kept in a **separate TDS ledger**, linked to the invoice.
-- Not ruled: supplier-side TDS.
+- R-17.4: TDS we deduct from supplier payments — VAT-registered services 1.5%; non-VAT services 15%; commission 15%; equipment or vehicle rental 1.5%; base before VAT. Held in the TDS ledger as a liability to deposit.
 
 **Verified**
 - `node scripts/lint-progress.mjs` on this branch (run as part of the lint pass for this entry).
