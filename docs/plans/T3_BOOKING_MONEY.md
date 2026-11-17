@@ -153,7 +153,7 @@ staff can add the charge in two taps when they decide to (D7). No automatic surc
 **Done when** — the line can be added, priced and invoiced; Warehouse cannot see its price.
 **Needs** — none.
 
-### T3-11 · Late fee — acceptance only            status: todo · size: S · lane C
+### T3-11 · Late fee — acceptance only            status: ready — awaiting merge (lane-c/T3-11-late-fee-acceptance-only) · size: S · lane C
 **What** — Confirm on staging: Return suggests the fee (≤ 30 min free · < 2 h half day · ≥ 2 h full
 day); staff apply; a waiver needs Manager or Owner approval (D6 — unchanged).
 **Why** — D6.
