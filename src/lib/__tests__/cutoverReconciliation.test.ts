@@ -125,6 +125,17 @@ describe('T9-01 Cutover Reconciliation Engine', () => {
     }
   })
 
+  it('preserves fractional NPR as integer paisa in quote comparison', () => {
+    const rows = compareThreeDayQuotes([{
+      id: 'fx3', name: 'Camera',
+      dailyRateNpr: 1234.56,
+      booqableThreeDayTotalNpr: 3703.68,
+    }])
+    expect(rows[0]?.osDailyRatePaisa).toBe(123456)
+    expect(rows[0]?.osCalculatedThreeDayTotalPaisa).toBe(370368)
+    expect(rows[0]?.differencePaisa).toBe(0)
+  })
+
   it('rejects unknown entity types cleanly without crash', () => {
     const raw: any = [{ entity: 'unknown_entity', externalId: '123', fields: {} }]
     const report = reconcileBooqableCutover(raw)
