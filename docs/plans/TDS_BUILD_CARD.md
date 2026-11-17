@@ -1,6 +1,6 @@
 # Build card — TDS (client deductions, supplier deductions, crew payouts)
 
-**Status:** draft for review. **No code written.** Source rulings: `RULINGS-2026-11-17.md` (R-17.1 to R-17.4), closes O-5.
+**Status:** open questions answered (R-17.5); awaiting go-ahead to build. **No code written.** Source rulings: `RULINGS-2026-11-17.md` (R-17.1 to R-17.4), closes O-5.
 **Migration:** none claimed yet. Claim the next free number in `docs/plans/MIGRATION_LEDGER.md` before any SQL is written.
 
 ## Goal
@@ -18,11 +18,11 @@ Record TDS correctly in three places, with the rates Babin ruled and nothing typ
 - **Rates are fixed.** They come from the rulings, not from a free-typed field. A rate change is a new ruling.
 - **N-5:** the migration is written, numbered and tested locally. Babin applies it after the backup.
 
-## Open before build starts
+## Settled before build (R-17.5)
 
-1. **Staff 1%** is confirmed as a separate income-tax line (R-17.2a). It is not part of this card's TDS ledger. Decide where the staff income-tax line is shown (payroll view or crew timesheet).
-2. **Supplier payment classification.** The app needs each supplier payment tagged as service (VAT-registered or not), commission, or equipment/vehicle rental, to pick the rate. The tagging field and its default are not yet ruled. Ask Babin before choosing a default.
-3. **Ledger shape.** R-17.3 says a separate ledger linked to the invoice. The columns (direction, amount, rate, base, linked invoice or payment, IRD deposit status) are not yet specified.
+1. **Staff 1% income-tax line** shows on the **crew timesheet**, next to each staff member's pay. It is not part of the TDS ledger.
+2. **Supplier payment type is required.** There is no default; the user picks service (VAT-registered or not), commission, or equipment/vehicle rental before saving.
+3. **Ledger columns:** direction, amount, rate, base, linked invoice or payment, IRD deposit status, **plus** supplier or client name, TDS certificate number, and Nepali month.
 
 ## Proposed slices (after the open items are answered)
 
