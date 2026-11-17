@@ -17,6 +17,7 @@ import os from 'os'
 const accountLedgerFixture = vi.hoisted(() => ({
   reversals: [] as Array<Record<string, unknown>>,
   refunds: [] as Array<Record<string, unknown>>,
+  expenses: [] as Array<Record<string, unknown>>,
 }))
 
 vi.mock('../../../lib/supabase', () => ({
@@ -29,12 +30,14 @@ vi.mock('../../../lib/supabase', () => ({
           gte: () => queryChain,
           lte: () => queryChain,
           order: () => queryChain,
-          range: () => Promise.resolve({
-            data: table === 'payment_reversals' ? accountLedgerFixture.reversals : [],
+          range: (from: number, to: number) => Promise.resolve({
+            data: (table === 'payment_reversals' ? accountLedgerFixture.reversals :
+              table === 'expenses' ? accountLedgerFixture.expenses : []).slice(from, to + 1),
             error: null,
           }),
           then: (resolve: any) => Promise.resolve({
-            data: table === 'payment_reversals' ? accountLedgerFixture.reversals : [],
+            data: table === 'payment_reversals' ? accountLedgerFixture.reversals :
+              table === 'expenses' ? accountLedgerFixture.expenses : [],
             error: null,
           }).then(resolve),
         }
@@ -193,6 +196,7 @@ describe('MonthlyPack generator & verification (T3-23)', () => {
   beforeEach(() => {
     accountLedgerFixture.reversals = []
     accountLedgerFixture.refunds = []
+    accountLedgerFixture.expenses = []
   })
 
   it('correctly resolves period dates for BS and AD months', () => {
@@ -247,6 +251,32 @@ describe('MonthlyPack generator & verification (T3-23)', () => {
     expect(pack.summaryText).toContain('Gross Invoiced Turnover:')
     expect(pack.summaryText).toContain('WITHHOLDING TAX (CREW TDS)')
     expect(pack.summaryText).toContain('STATUTORY TAX POSITION (FILING RECONCILIATION)')
+  })
+
+  it('includes all expenses beyond one API page in the purchase register', async () => {
+    accountLedgerFixture.expenses = Array.from({ length: 401 }, (_, i) => ({
+      id: `exp-${i + 1}`,
+      expense_no: `EXP-2026-${String(i + 1).padStart(4, '0')}`,
+      expense_date: '2026-07-20',
+      amount: '100.00',
+      vendor_name: 'Sample Vendor',
+      description: 'Consumable expense',
+      status: 'Approved',
+      expense_categories: { name: 'Consumables' },
+    }))
+    const pack = await generateMonthlyPack({ calendar: 'AD', year: 2026, month: 7 })
+    expect(pack.counts.expenses).toBe(401)
+    expect(pack.summaryText).toContain('Gross Expenses:')
+    const tmpPath = path.join(os.tmpdir(), `test-expense-pagination-${Date.now()}.zip`)
+    try {
+      fs.writeFileSync(tmpPath, Buffer.from(pack.zipBytes))
+      const csv = execSync(`unzip -p "${tmpPath}" purchase_register_ad_2026_07.csv`, { encoding: 'utf-8' })
+      expect(csv).toContain('EXP-2026-0001')
+      expect(csv).toContain('EXP-2026-0401')
+      expect(csv.split('\\r\\n').length).toBe(402)
+    } finally {
+      if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath)
+    }
   })
 
   it('exports signed cash movements for receipts, refunds and immutable reversals', async () => {
