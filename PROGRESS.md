@@ -9,7 +9,9 @@
 
 **Ruled**
 - R-17.1: clients deduct **1.5% TDS** from **rental invoices** only; base is **before VAT**; the invoice **settles at gross** and the deducted TDS is recorded as a credit.
-- Not ruled: the crew-payout TDS rate (O-5), supplier-side TDS, and whether the TDS credit lives on the invoice or in its own ledger. Those are open with Babin or the accountant.
+- R-17.2: crew payouts — freelancers **15%**; staff **1%** ("income tax", wording to confirm). Closes O-5.
+- R-17.3: the client TDS credit is kept in a **separate TDS ledger**, linked to the invoice.
+- Not ruled: supplier-side TDS.
 
 **Verified**
 - `node scripts/lint-progress.mjs` on this branch (run as part of the lint pass for this entry).

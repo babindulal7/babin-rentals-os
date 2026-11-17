@@ -4,7 +4,8 @@
 
 Babin answered in chat. Full wording and implementation notes: [`RULINGS-2026-11-17.md`](../RULINGS-2026-11-17.md).
 - Clients deduct **1.5% TDS** from rental invoices; **before VAT**; **rental invoices only**; the invoice **settles at gross** and the deducted TDS is recorded as a credit.
-- **O-5 stays open** for the **crew-payout** TDS rate, which this ruling does not cover.
+- **Crew payouts (O-5), answered same day (R-17.2):** freelancers **15%**; staff **1%** ("income tax"). The staff wording needs one confirmation before the build.
+- **TDS credit (R-17.3):** recorded in a **separate TDS ledger**, linked to the invoice, not on the invoice.
 - Supplier-side TDS is not covered. The note Babin pasted listed 10% for equipment rental and 15% for general services; those rates are not used, because Babin ruled 1.5% for rental invoices.
 
 ## 5 November 2026 — Glossary editing in Settings (O-22)
