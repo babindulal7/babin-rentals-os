@@ -39,7 +39,7 @@ npm run check:lifecycle
 npm run gates
 ```
 
-The new script reads local SQL files, calculates a SHA-256 inventory fingerprint, reports suspicious seed/large files and duplicate numeric prefixes. **It connects to no database and executes no SQL.** The original script was added earlier; rerun its syntax and fixture tests on latest main and update it to verify source identity against the refreshed 237-file inventory. Run it again in the full repository and keep its real output in the internal verification evidence.
+The preflight script reads local SQL files, calculates a SHA-256 inventory fingerprint, **verifies each file's Git blob SHA-1 and byte length against the pinned 237-file inventory**, and reports suspicious seed/large files and duplicate numeric prefixes. It exits 2 on a stale/missing/modified SQL file to block a misleading 'ready' signal. Run on a freshly synced checkout of the recorded source baseline, because this draft PR's original base branch predates 0239 and 0240. **It connects to no database and executes no SQL.** The script has now been updated to enforce pinned source identity; its full-repository execution and local gate pass must be attached by Windows/Mac Antigravity before promotion. It remains a source preflight, **not** a hosted staging acceptance test. Run it again in the full repository and keep its real output in the internal verification evidence.
 
 ## 3. Work split: existing two-computer setup
 
