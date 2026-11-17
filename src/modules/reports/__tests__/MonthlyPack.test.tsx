@@ -310,6 +310,12 @@ describe('MonthlyPack generator & verification (T3-23)', () => {
     }
   })
 
+  it('refuses branch-specific packs without verified reversal and receipt scoping', async () => {
+    await expect(generateMonthlyPack({
+      calendar: 'AD', year: 2026, month: 7, branchId: 'branch-1',
+    })).rejects.toThrow('Branch-scoped accountant packs require verified receipt and reversal branch filtering')
+  })
+
   it('refuses tax invoice copies without verified issuer and invoice-line data', async () => {
     await expect(generateMonthlyPack({
       calendar: 'BS', year: 2083, month: 4, includeInvoicePdfs: true,
