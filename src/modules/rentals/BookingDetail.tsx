@@ -899,7 +899,7 @@ type ClientContact =
   | { kind: 'absent' }
   | { kind: 'loading' }
   /** Read completed. `phone` is `null` when the client genuinely has none. */
-  | { kind: 'ready'; phone: string | null }
+  | { kind: 'ready'; phone: string | null; email?: string | null }
   /** `getClient` threw — network, RLS refusal, anything. The reason is kept to be shown. */
   | { kind: 'failed'; message: string }
 
@@ -1881,7 +1881,7 @@ function BookingDetailView() {
     setContact({ kind: 'loading' })
     getClient(cid)
       .then((c) => {
-        if (!cancelled) setContact({ kind: 'ready', phone: c?.phone ?? null })
+        if (!cancelled) setContact({ kind: 'ready', phone: c?.phone ?? null, email: c?.email ?? null })
       })
       .catch((err: unknown) => {
         if (!cancelled) setContact({ kind: 'failed', message: err instanceof Error ? err.message : String(err) })
@@ -1895,6 +1895,7 @@ function BookingDetailView() {
      and `whatsappActionsFor` is told so by the menu below rather than by a
      null it would translate into NO_PHONE_REASON. */
   const clientPhone = contact.kind === 'ready' ? contact.phone : null
+  const clientEmail = contact.kind === 'ready' ? (contact.email ?? null) : null
 
   const waActions = useMemo(() => {
     if (!booking || !user) return []
@@ -2550,6 +2551,8 @@ function BookingDetailView() {
                   paidAmount: totals.paid,
                   outstandingAmount: totals.outstanding,
                   depositRequired: booking.depositRequired,
+                  clientPhone,
+                  clientEmail,
                 }}
                 selectedCount={1}
                 ariaLabel="More booking actions"

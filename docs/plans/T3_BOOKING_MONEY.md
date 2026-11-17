@@ -33,7 +33,7 @@ discounts copied only when ticked; 3) retired or deactivated products are listed
 available any more" and left out; 4) tap count recorded against R-39.
 **Needs** — none.
 
-### T3-02 · Deposits per product, entered before go-live            status: todo — only an empty tab is on `main` (`af06b08`, merged 31 Oct); the editor below is not built · size: M · lane C + staff
+### T3-02 · Deposits per product, entered before go-live            status: ready — awaiting merge (lane-c/T3-02-deposits-per-product-entered-before-go) · size: M · lane C + staff
 **What** — A bulk editor for `products.deposit_fixed` / `deposit_percent` (and `replacement_value`
 where missing): an Inventory view "Deposit setup" listing every active product with its rule, inline
 edit, filter "no deposit set", and CSV round-trip through the products import (dry run first).
