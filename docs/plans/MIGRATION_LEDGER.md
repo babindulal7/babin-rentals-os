@@ -87,5 +87,6 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0238 | T3-28 | rental-day-start-setting | lane-c/T3-28-rental-day-start-as-a-setting | verified (check:pglite 235/235 + check:lifecycle 77/77) |
 | 0239 | T3-30 | consumables-pricing-restock-and-low-stock | lane-c/T3-30-consumables-unit-price-add-at-the | verified (check:pglite 236/236 + check:lifecycle 76/76 Step L73) |
 | 0240 | T2-22 | time-between-rentals-account-wide-or-per-product | lane-a/T2-22-time-between-rentals-account-wide-or | verified (check:pglite 236/236 + check:lifecycle 76/76 Step L74-L75) |
+| 0241 | T3-29 | extension-clash-manager-decides-and-at-risk | lane-c/T3-29-extension-clash-the-manager-decides | in progress |
 
 ## Expected migrations (not yet claimed)
