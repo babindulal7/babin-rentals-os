@@ -14,17 +14,29 @@ import os from 'os'
 
 ;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
 
+const accountLedgerFixture = vi.hoisted(() => ({
+  reversals: [] as Array<Record<string, unknown>>,
+  refunds: [] as Array<Record<string, unknown>>,
+}))
+
 vi.mock('../../../lib/supabase', () => ({
   supabase: {
-    from: () => ({
+    from: (table: string) => ({
       select: () => {
         const queryChain: any = {
           eq: () => queryChain,
           neq: () => queryChain,
           gte: () => queryChain,
           lte: () => queryChain,
-          order: () => Promise.resolve({ data: [], error: null }),
-          then: (resolve: any) => Promise.resolve({ data: [], error: null }).then(resolve),
+          order: () => queryChain,
+          range: () => Promise.resolve({
+            data: table === 'payment_reversals' ? accountLedgerFixture.reversals : [],
+            error: null,
+          }),
+          then: (resolve: any) => Promise.resolve({
+            data: table === 'payment_reversals' ? accountLedgerFixture.reversals : [],
+            error: null,
+          }).then(resolve),
         }
         return queryChain
       },
@@ -153,8 +165,9 @@ vi.mock('../../../lib/queries/finance', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../../lib/queries/finance')>()
   return {
     ...actual,
-    listPayments: async () => ({
-      rows: [
+    listPayments: async (opts?: { chips?: { payment_type?: string[] } }) => {
+      const refunds = opts?.chips?.payment_type?.includes('Refund')
+      const rows = refunds ? accountLedgerFixture.refunds : [
         {
           id: 'pay-1',
           paymentNo: 'PAY-2083-001',
@@ -170,13 +183,18 @@ vi.mock('../../../lib/queries/finance', async (importOriginal) => {
           paymentDateAd: '2026-07-20T10:00:00Z',
           channelGroup: 'Bank',
         },
-      ],
-      total: 1,
-    }),
+      ]
+      return { rows, total: rows.length }
+    },
   }
 })
 
 describe('MonthlyPack generator & verification (T3-23)', () => {
+  beforeEach(() => {
+    accountLedgerFixture.reversals = []
+    accountLedgerFixture.refunds = []
+  })
+
   it('correctly resolves period dates for BS and AD months', () => {
     const bsPeriod = resolveMonthlyPackPeriod('BS', 2083, 4) // Shrawan 2083
     expect(bsPeriod.monthName).toBe('Shrawan 2083 BS')
