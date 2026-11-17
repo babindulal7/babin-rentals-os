@@ -30,7 +30,8 @@ copy-paste prompt in [`prompts/`](prompts/README.md).
   Babin's computer.
 - **Babin** merges locally, applies migrations to live after a backup, and does the owner tasks.
 - **Claude** reviews: reads GitHub at 7:38 AM and 7:38 PM NPT, re-runs the fast checks on `main`, and
-  sends a short summary, problems and the next prompt. Claude never pushes; its work arrives as files.
+  sends a short summary, problems and the next prompt. A cloud Claude chat never pushes (W74); its work
+  arrives as files. Local agents push branches only — see [`../AGENT_WORKFLOW.md`](../AGENT_WORKFLOW.md) §3.
 
 ## Picking the next task
 
@@ -64,18 +65,22 @@ Needs    — cards or Babin actions that must be done first.
 Sizes: **S** ≤ 1 session · **M** 2–3 · **L** 4–6 · **XL** 7+. A session is one focused agent
 run that ends in a branch ready to merge and a PROGRESS.md entry.
 
-## Gates every card must pass (CI is off — these are the gate, W75)
+## Gates every card must pass (the list `npm run gates` and CI both run)
 
-**After T0-10 and T0-11 are merged:** run `npm run gates` for all checks in the exact CI order. `npm run gates -- --quick` skips only coverage and **does not** certify a release. Both force mock mode for tests even when `.env.local` contains live credentials. The script refuses to run if the workflow order changes; the list below remains the audit reference.
+W75 turned CI off on 26 Oct for billing (historical); it now runs on the owner's self-hosted runner, and the local run
+below is still required before you push — see [`../AGENT_WORKFLOW.md`](../AGENT_WORKFLOW.md) §5–6.
+
+Run `npm run gates` for all checks in the exact CI order (T0-10 and T0-11 are merged). `npm run gates -- --quick` skips only coverage and **does not** certify a release. Both force mock mode for tests even when `.env.local` contains live credentials. The script refuses to run if the workflow order changes; the list below remains the audit reference.
 
 
-The same steps `.github/workflows/ci.yml` ran, in its order (T0-11 turns this into one command).
+The same steps `.github/workflows/ci.yml` runs, in its order (`npm run gates` is this list as one command).
 A gate that is skipped is how a red check reaches `main` — on 26 Oct the UI-copy check went red
 that way.
 
 ```bash
 npm run typecheck
 npm run lint
+npm run test:local-api-guards         # pure, no network: local API checks reject hosted URLs, privileged keys and inconclusive RLS reads
 npm test                             # T0-10 branch: mock is forced by runner even if .env.local points at live
 npm run check:pglite                  # with check:lifecycle, both green in one run = migration Verified (R-35)
 node scripts/test-booking-financial-integrity.mjs

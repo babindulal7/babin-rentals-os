@@ -60,10 +60,13 @@ import type { BundleRecord } from '../../../lib/queries/bundles'
 import { AvailabilityChip, BundlePreview, KitCapacityLine } from './BundlePreview'
 import { TOUCH } from './ClientHealthChip'
 import { OverbookingOverrideModal } from './OverbookingOverrideModal'
+import { SubRentalPartnerModal } from './SubRentalPartnerModal'
+import { SUBRENTAL_PARTNERS, findSimilarFreeEquipment } from '../../../lib/availability'
 import { getAllowOverbooking } from '../../../lib/bookingRules'
 import './add-item-panel.css'
 import {
   DERIVED_CATEGORIES,
+  EQUIPMENT_RESULTS,
   OMITTED_SORTS,
   SERVICES_UNAVAILABLE_REASON,
   SORT_OPTIONS,
@@ -341,6 +344,7 @@ export function AddItemPanel({
   // header comment: Settings and this panel are never mounted together.
   const [allowOverbooking] = useState<boolean>(() => getAllowOverbooking())
   const [overrideUnit, setOverrideUnit] = useState<EquipmentResult | null>(null)
+  const [subRentModalUnit, setSubRentModalUnit] = useState<EquipmentResult | null>(null)
   const [availability, setAvailability] = useState<AvailabilityLevel | 'any'>('any')
   const [sort, setSort] = useState<SortKey>('recommended')
   const [filtersExpanded, setFiltersExpanded] = useState(false)
@@ -476,6 +480,24 @@ export function AddItemPanel({
   }, [outcome.groups, previewResults])
   const options = useMemo(() => flatten(visibleGroups), [visibleGroups])
 
+  const allCandidatePool = useMemo(() => {
+    return (equipment ?? EQUIPMENT_RESULTS).filter((e) => e.kind === 'equipment' || e.kind === 'accessory')
+  }, [equipment])
+
+  const allCandidateGroups = useMemo(() => {
+    const groups = groupEquipmentResults(allCandidatePool)
+    return groups.map((g) => {
+      const freeCount = g.units.filter(
+        (u) =>
+          u.availability.level !== 'unavailable' &&
+          u.status !== 'On Rent' &&
+          u.status !== 'Reserved' &&
+          u.status !== 'Maintenance',
+      ).length
+      return { ...g, freeCount }
+    })
+  }, [allCandidatePool])
+
   // Clamp the cursor whenever the result set changes under it.
   useEffect(() => {
     setActiveIndex((i) => (i >= options.length ? 0 : i))
@@ -506,13 +528,13 @@ export function AddItemPanel({
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target as Node | null
       if (rootRef.current && !rootRef.current.contains(target)) {
-        if (preview !== null || overrideUnit !== null) return
+        if (preview !== null || overrideUnit !== null || subRentModalUnit !== null) return
         setOpen(false)
       }
     }
     document.addEventListener('pointerdown', onPointerDown)
     return () => document.removeEventListener('pointerdown', onPointerDown)
-  }, [open, preview, overrideUnit])
+  }, [open, preview, overrideUnit, subRentModalUnit])
 
   /** ⌘K / Ctrl+K — open the panel and put the cursor in the field. */
   useEffect(() => {
@@ -548,7 +570,7 @@ export function AddItemPanel({
   )
 
   const addSubRentEquipment = useCallback(
-    (e: EquipmentResult, partner = 'GearHouse KTM', customRate?: Paisa) => {
+    (e: EquipmentResult, partner = SUBRENTAL_PARTNERS[0] as string, customRate?: Paisa, supplierCost?: number) => {
       const draft = equipmentLineDraft(e, days)
       const subDraft: BookingLineDraft = {
         ...draft,
@@ -563,6 +585,8 @@ export function AddItemPanel({
         days: Math.max(1, days || 1),
         qty: 1,
         committedTo: '—',
+        supplier: partner,
+        ...(supplierCost !== undefined ? { supplierCost } : {}),
       }
       onAdd([subDraft], { kind: e.kind, id: subDraft.id, name: subDraft.name })
     },
@@ -584,6 +608,7 @@ export function AddItemPanel({
         qty: Math.max(1, qty),
         discountPct: 0,
         committedTo: '—',
+        supplier: partner,
       }
       onAdd([draft], { kind: 'equipment', id: draft.id, name: draft.name })
     },
@@ -1225,6 +1250,7 @@ export function AddItemPanel({
                             )
                           }
                           if (o.type === 'equipmentGroup') {
+                            const similarCandidates = findSimilarFreeEquipment(o.group, allCandidateGroups, { limit: 2 })
                             return (
                               <EquipmentGroupRow
                                 key={o.group.key}
@@ -1235,6 +1261,7 @@ export function AddItemPanel({
                                 showPrices={showPrices}
                                 allowOverbooking={allowOverbooking}
                                 isSubRentalMode={tab === 'sub-rentals'}
+                                similarCandidates={similarCandidates}
                                 onHover={() => setActiveIndex(o.index)}
                                 onAutoPick={() => {
                                   if (tab === 'sub-rentals') {
@@ -1251,7 +1278,9 @@ export function AddItemPanel({
                                     addEquipment(unit)
                                   }
                                 }}
-                                onSubRent={(unit) => addSubRentEquipment(unit)}
+                                onPickSimilar={(unit) => addEquipment(unit)}
+                                onSubRent={(unit, partner, customRate, supplierCost) => addSubRentEquipment(unit, partner, customRate, supplierCost)}
+                                onOpenSubRentModal={(unit) => setSubRentModalUnit(unit)}
                                 onRequestOverride={(unit) => setOverrideUnit(unit)}
                               />
                             )
@@ -1382,9 +1411,20 @@ export function AddItemPanel({
         isOpen={overrideUnit !== null}
         unit={overrideUnit}
         allowOverbooking={allowOverbooking}
+        showPrices={showPrices}
         onClose={() => setOverrideUnit(null)}
         onOverbook={(unit) => addEquipment(unit)}
-        onSubRent={(unit) => addSubRentEquipment(unit)}
+        onSubRent={(unit, partner, customRate, supplierCost) => addSubRentEquipment(unit, partner, customRate, supplierCost)}
+      />
+
+      {/* T3-13: Sub-rent from partner dialog for fully booked items */}
+      <SubRentalPartnerModal
+        isOpen={subRentModalUnit !== null}
+        unit={subRentModalUnit}
+        days={days}
+        showPrices={showPrices}
+        onClose={() => setSubRentModalUnit(null)}
+        onConfirm={(unit, partner, customRate, supplierCost) => addSubRentEquipment(unit, partner, customRate, supplierCost)}
       />
     </div>
   )
@@ -1789,10 +1829,13 @@ function EquipmentGroupRow({
   showPrices,
   allowOverbooking,
   isSubRentalMode,
+  similarCandidates = [],
   onHover,
   onAutoPick,
   onPickUnit,
+  onPickSimilar,
   onSubRent,
+  onOpenSubRentModal,
   onRequestOverride,
 }: {
   id: string
@@ -1803,10 +1846,13 @@ function EquipmentGroupRow({
   /** §3 — Settings ▸ Financial ▸ Booking rules ▸ Allow overbooking. Off by default. */
   allowOverbooking: boolean
   isSubRentalMode?: boolean
+  similarCandidates?: readonly EquipmentModelGroup[]
   onHover: () => void
   onAutoPick: () => void
   onPickUnit: (unit: EquipmentResult) => void
-  onSubRent?: (unit: EquipmentResult) => void
+  onPickSimilar?: (unit: EquipmentResult) => void
+  onSubRent?: (unit: EquipmentResult, partner?: string, customRate?: Paisa, supplierCost?: number) => void
+  onOpenSubRentModal?: (unit: EquipmentResult) => void
   /** A booked/maintenance chip while the valve is on opens the override dialog instead of adding directly. */
   onRequestOverride: (unit: EquipmentResult) => void
 }) {
@@ -1819,6 +1865,7 @@ function EquipmentGroupRow({
       u.status !== 'Reserved' &&
       u.status !== 'Maintenance',
   ).length
+  const isFullyBooked = !isSubRentalMode && (freeCount === 0 || (bulk && group.availability.level === 'unavailable'))
   const allOnBooking = group.units.every((u) => existing.has(u.id))
   const meta = [group.kind === 'accessory' ? 'Accessory' : 'Equipment', group.category, group.sku ?? null, group.brand ?? null].filter(
     (x): x is string => Boolean(x),
@@ -2151,6 +2198,167 @@ function EquipmentGroupRow({
                 </button>
               )
             })}
+          </div>
+        </div>
+      )}
+
+      {isFullyBooked && (
+        <div
+          role="region"
+          aria-label={`Alternatives for fully booked ${group.name}`}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') e.stopPropagation()
+          }}
+          style={{
+            marginTop: 4,
+            padding: '8px 10px',
+            borderRadius: 'var(--r-btn, 6px)',
+            background: 'var(--card, #fff)',
+            border: '1px solid var(--border, #e5e7eb)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+          }}
+        >
+          {/* Fully booked banner */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Icon name="alert_triangle" size={13} style={{ color: 'var(--st-danger-fg, #ef4444)' }} />
+              <span style={{ fontSize: 'var(--t-meta, 12px)', fontWeight: 700, color: 'var(--st-danger-fg, #ef4444)' }}>
+                Fully booked for these dates (27 Jul hard block)
+              </span>
+            </div>
+            <span style={{ fontSize: '11px', color: 'var(--muted, #6b7280)' }}>
+              Staff picks a real option, not a lie
+            </span>
+          </div>
+
+          {/* The 2 Choices (T3-13, W10) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {/* Choice 1: Similar we own — free */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <Icon name="check" size={12} style={{ color: 'var(--st-success-fg, #10b981)' }} />
+                <span style={{ fontSize: 'var(--t-meta, 12px)', fontWeight: 600, color: 'var(--text, #111)' }}>
+                  1. Similar we own — free:
+                </span>
+              </div>
+              {similarCandidates && similarCandidates.length > 0 ? (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                  {similarCandidates.map((sim) => (
+                    <button
+                      key={sim.key}
+                      type="button"
+                      className="press"
+                      aria-label={`Add free similar item: ${sim.name}`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        const targetUnit = sim.autoPick || sim.units[0]
+                        if (targetUnit && onPickSimilar) onPickSimilar(targetUnit)
+                      }}
+                      style={{
+                        position: 'relative',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        minHeight: 30,
+                        padding: '3px 10px',
+                        borderRadius: 'var(--r-btn, 6px)',
+                        border: '1px solid var(--st-success-fg, #10b981)',
+                        background: 'var(--st-success-bg, rgba(16, 185, 129, 0.1))',
+                        color: 'var(--st-success-fg, #10b981)',
+                        fontSize: 'var(--t-meta, 12px)',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <TouchInset />
+                      <Icon name="plus" size={12} />
+                      <span>{sim.name}</span>
+                      <span style={{ fontSize: '11px', opacity: 0.85 }}>({sim.freeCount ?? 1} free)</span>
+                      {showPrices && (
+                        <span style={{ fontSize: '11px', fontWeight: 700 }}>· {formatMoney(sim.ratePaisa)}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <span style={{ fontSize: 'var(--t-meta, 12px)', color: 'var(--muted, #6b7280)', fontStyle: 'italic', paddingLeft: 18 }}>
+                  No similar free gear in stock for these dates
+                </span>
+              )}
+            </div>
+
+            {/* Choice 2: Sub-rent from a partner */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <Icon name="box" size={12} style={{ color: 'var(--primary, #2563eb)' }} />
+                <span style={{ fontSize: 'var(--t-meta, 12px)', fontWeight: 600, color: 'var(--text, #111)' }}>
+                  2. Sub-rent from a partner:
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  className="press"
+                  aria-label={`Sub-rent ${group.name} from ${SUBRENTAL_PARTNERS[0]}`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    const target = group.units[0]
+                    if (target && onSubRent) onSubRent(target, SUBRENTAL_PARTNERS[0])
+                  }}
+                  style={{
+                    position: 'relative',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    minHeight: 30,
+                    padding: '3px 10px',
+                    borderRadius: 'var(--r-btn, 6px)',
+                    border: '1px solid var(--primary, #2563eb)',
+                    background: 'var(--primary, #2563eb)',
+                    color: '#fff',
+                    fontSize: 'var(--t-meta, 12px)',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <TouchInset />
+                  <Icon name="box" size={12} />
+                  <span>+ Sub-rent ({SUBRENTAL_PARTNERS[0]})</span>
+                </button>
+
+                <button
+                  type="button"
+                  className="press"
+                  aria-label={`Choose partner or supplier rate to sub-rent ${group.name}`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    const target = group.units[0]
+                    if (target && onOpenSubRentModal) onOpenSubRentModal(target)
+                  }}
+                  style={{
+                    position: 'relative',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    minHeight: 30,
+                    padding: '3px 10px',
+                    borderRadius: 'var(--r-btn, 6px)',
+                    border: '1px solid var(--border, #d1d5db)',
+                    background: 'var(--card2, #f9fafb)',
+                    color: 'var(--text, #111)',
+                    fontSize: 'var(--t-meta, 12px)',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <TouchInset />
+                  <span>Choose partner / rate…</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

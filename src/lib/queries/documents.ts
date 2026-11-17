@@ -167,6 +167,7 @@ function mapTypeToCategory(docType: string): Exclude<CategoryKey, 'Archived'> {
     case 'Credit Note':
     case 'Debit Note':
     case 'Quotation':
+    case 'Pro Forma':
       return 'Finance'
     case 'Rental Agreement':
     case 'Packing List':
@@ -207,7 +208,7 @@ function mapStatusToDocStatus(status: string): DocStatus {
 }
 
 function isFinanceDocument(docType: string): boolean {
-  return ['Tax Invoice', 'Receipt', 'Credit Note', 'Debit Note', 'Quotation'].includes(docType)
+  return ['Tax Invoice', 'Receipt', 'Credit Note', 'Debit Note', 'Quotation', 'Pro Forma'].includes(docType)
 }
 
 

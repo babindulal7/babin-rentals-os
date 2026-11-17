@@ -691,7 +691,7 @@ export default function NotificationsDrawer({ isOpen, onClose }: NotificationsDr
                     background: notif.isRead ? 'var(--card)' : 'var(--card2)',
                     border: notif.isRead ? '1px solid var(--border)' : '1px solid var(--primary, #0284c7)',
                     cursor: 'pointer',
-                    transition: 'background var(--dur, 150ms) ease, border-color var(--dur, 150ms) ease',
+                    transition: 'background var(--dur) var(--ease), border-color var(--dur) var(--ease)',
                     minHeight: 56,
                     position: 'relative',
                   }}

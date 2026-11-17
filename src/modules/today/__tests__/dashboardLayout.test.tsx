@@ -174,6 +174,17 @@ describe('focused pickup and return dashboard', () => {
     expect(panels.map((panel) => panel.className)).toEqual(initialPanelStyles)
   })
 
+  it('puts pickup and return work ahead of secondary role shortcuts without hiding their one-tap actions', async () => {
+    await mount()
+    const panels = container.querySelector('.rental-dashboard__panels')
+    const tasks = container.querySelector<HTMLDetailsElement>('details.dashboard-other-tasks')
+    expect(panels).not.toBeNull()
+    expect(tasks).not.toBeNull()
+    expect(Boolean(panels!.compareDocumentPosition(tasks!) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true)
+    expect(tasks?.open).toBe(true)
+    expect(tasks?.querySelector('summary')?.textContent).toContain('Other tasks and shortcuts')
+  })
+
   it('renders only the two operational panels', async () => {
     await mount()
     expect(container.textContent).toContain('Pickups')
@@ -197,10 +208,10 @@ describe('focused pickup and return dashboard', () => {
     expect(control.querySelector('.dashboard-master-date-control__secondary')).toBeNull()
   })
 
-  it('summarizes only the two movements from authoritative query totals (23 Oct wireframes)', async () => {
+  it('summarizes movement queries and loaded queue overview (23 Oct wireframes & reference bento)', async () => {
     queueResults.counts = [125, 62]
     await mount()
-    expect(container.querySelectorAll('.dispatch-summary')).toHaveLength(2)
+    expect(container.querySelectorAll('.dispatch-summary')).toHaveLength(4)
     expect(container.querySelector('.dispatch-summary--pickups .dispatch-summary__count')?.textContent).toBe('125')
     expect(container.querySelector('.dispatch-summary--returns .dispatch-summary__count')?.textContent).toBe('62')
     expect(container.querySelector('.kpi-tile')).toBeNull()
@@ -213,7 +224,8 @@ describe('focused pickup and return dashboard', () => {
     queueResults.error = state === 'error' ? 'Unavailable' : null
     queueResults.counts = state === 'unknown' ? [null, null] : [10, 20]
     await mount()
-    expect([...container.querySelectorAll('.dispatch-summary__count')].map(node => node.textContent)).toEqual(['—', '—'])
+    expect(container.querySelector('.dispatch-summary--pickups .dispatch-summary__count')?.textContent).toBe('—')
+    expect(container.querySelector('.dispatch-summary--returns .dispatch-summary__count')?.textContent).toBe('—')
     expect(container.querySelector('.dispatch-summaries')?.textContent).toContain(
       state === 'loading' ? 'Loading movements' : state === 'error' ? 'Movements unavailable' : 'Count unavailable',
     )

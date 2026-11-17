@@ -445,7 +445,7 @@ export function LineItemTree({
                       width: 22,
                       height: 22,
                       color: 'var(--muted)',
-                      transition: 'transform var(--dur-fast, 120ms)',
+                      transition: 'transform var(--dur-fast)',
                       transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
                     }}
                   >

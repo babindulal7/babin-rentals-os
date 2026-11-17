@@ -226,6 +226,7 @@ function draftToRentalListRow(d: RentalDraftRecord): RentalListRow {
     deposit: null,
     totalAmount: calculateDraftTotal(data),
     isExternal: hasSubRental,
+    tags: [],
   }
 }
 
@@ -945,7 +946,7 @@ export default function RentalsList() {
    */
   const urlSchema = useMemo(
     () => ({
-      chips: ['stage', 'project_type'],
+      chips: ['stage', 'project_type', 'tags'],
       dateColumn: 'pickup_at',
       /* Sort round-trips so a shared/bookmarked type-sorted view keeps its
          order; the screen still defaults to pickup_at (see listFilters). */
@@ -975,7 +976,7 @@ export default function RentalsList() {
   )
   const f = useFilters({
     url: urlSchema,
-    labels: { stage: 'Stage', project_type: 'Project Type', quick: 'Quick filter', sub: 'Sub-Rental', pickup_at: 'Pickup' },
+    labels: { stage: 'Stage', project_type: 'Project Type', tags: 'Tag', quick: 'Quick filter', sub: 'Sub-Rental', pickup_at: 'Pickup' },
   })
   const page = f.page
   const setPage = f.setPage
@@ -1111,6 +1112,16 @@ export default function RentalsList() {
     f.toggleChip('project_type', t)
   }
 
+  /* Tags facet (T3-25, B16, B55) — chip group on `tags` text[] column. */
+  const tagKey = (f.filters.chips?.tags ?? []).join('|')
+  const tagFilter = useMemo(
+    () => new Set(tagKey ? tagKey.split('|') : []),
+    [tagKey],
+  )
+  function toggleTag(t: string) {
+    f.toggleChip('tags', t)
+  }
+
   const from = f.filters.dateRange?.fromAd ?? ''
   const to = f.filters.dateRange?.toAd ?? ''
 
@@ -1118,7 +1129,7 @@ export default function RentalsList() {
   // Changing page, rows per page, or any filter criteria invalidates and resets selection.
   useEffect(() => {
     setSelectedIds(new Set())
-  }, [page, perPage, chip, subOn, statusKey, from, to])
+  }, [page, perPage, chip, subOn, statusKey, tagKey, from, to])
   /**
    * The filter panel is now an overlay, not a column.
    *
@@ -1358,6 +1369,11 @@ export default function RentalsList() {
   }
   const list = useList<RentalListRow>(fetchRentals, listFilters, { isFilteredOverride: isFiltered })
 
+  const availableTags = useMemo(
+    () => Array.from(new Set(list.rows.flatMap((r) => r.tags ?? []))),
+    [list.rows],
+  )
+
   /*
    * ADOPTIONS item 8 — Status counts in the rail. One HEAD count per stage,
    * true-faceted (other narrowings kept), run only while the drawer is open.
@@ -1559,6 +1575,7 @@ export default function RentalsList() {
       { head: 'Client', cell: (r) => r.client || '' },
       { head: 'Project', cell: (r) => r.project || '' },
       { head: 'Project Type', cell: (r) => r.projectTypeDisplay || '' },
+      { head: 'Tags', cell: (r: (typeof rows)[number]) => (r.tags ? r.tags.join('; ') : '') },
       { head: 'Status', cell: (r) => r.status },
       ...(shown('Pickup') ? [{ head: 'Pickup Date', cell: (r: (typeof rows)[number]) => r.pickup?.date || '' }] : []),
       ...(shown('Return') ? [{ head: 'Return Date', cell: (r: (typeof rows)[number]) => r.ret?.date || '' }] : []),
@@ -1996,6 +2013,9 @@ export default function RentalsList() {
         onToggleStatus={toggleStatus}
         projectTypeFilter={projectTypeFilter}
         onToggleProjectType={toggleProjectType}
+        tagFilter={tagFilter}
+        onToggleTag={toggleTag}
+        availableTags={availableTags}
         quickFilter={chip}
         onSelectQuickFilter={pickChip}
         dateRange={{ from, to }}
@@ -2636,6 +2656,37 @@ export default function RentalsList() {
                                   {r.isExternal === true && <ExternalGearMark />}
                                 </div>
                               )}
+                              {r.tags && r.tags.length > 0 && (
+                                <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                                  {r.tags.map((tag) => (
+                                    <button
+                                      key={tag}
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        toggleTag(tag)
+                                      }}
+                                      title={`Filter by tag: ${tag}`}
+                                      aria-label={`Filter by tag: ${tag}`}
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        padding: '1px 6px',
+                                        fontSize: '11px',
+                                        fontWeight: 600,
+                                        borderRadius: 'var(--r-full, 9999px)',
+                                        border: tagFilter.has(tag) ? '1px solid var(--primary)' : '1px solid var(--border)',
+                                        background: tagFilter.has(tag) ? 'var(--active-row)' : 'var(--card-bg, rgba(255, 255, 255, 0.05))',
+                                        color: tagFilter.has(tag) ? 'var(--primary)' : 'var(--text2)',
+                                        cursor: 'pointer',
+                                      }}
+                                    >
+                                      #{tag}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
                             </IntelCard>
                           </td>
 
@@ -2995,6 +3046,7 @@ export default function RentalsList() {
 
             <InspectorFacts title="Client" facts={[
               { key: 'client', label: 'Client', value: activeRental.client, strong: true },
+              ...(activeRental.shootLocation ? [{ key: 'shoot-location', label: 'Shoot location', value: activeRental.shootLocation }] : []),
               { key: 'pickup-location', label: 'Pickup location', value: activeRental.pickupLocation ?? 'Lalitpur Warehouse' },
             ]} />
 

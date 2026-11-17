@@ -1066,6 +1066,10 @@ export function EquipmentRecordEditor({
           />
         </label>
 
+        <div className="record-field-hint" style={{ gridColumn: '1 / -1', fontSize: '12px', color: 'var(--muted, #64748b)', marginTop: '-8px', marginBottom: '8px' }}>
+          Preparation and cleaning minutes are used only when Operations rules ▸ Time between rentals is set to &ldquo;Per product&rdquo;.
+        </div>
+
         <label className="record-field record-field--inline" htmlFor="record-inspection_required" style={{ marginTop: 20 }}>
           <input
             id="record-inspection_required"

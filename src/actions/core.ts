@@ -193,6 +193,9 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     // RULING 2026-10-22: new capability, mirrors `client_memberships_all` (0037) — Owner, Admin, Manager, Coordinator.
     case 'client.change_membership':
       return rbac.canChangeMembership(ctx.role);
+    // RULING (T3-25, B16, B55): booking tags write capability — Owner, Admin, Manager, Coordinator.
+    case 'rental.tag':
+      return rbac.canSetBookingTags(ctx.role);
     case 'inventory.create':
       return rbac.canCreateBundle(ctx.role);
     /*
@@ -206,6 +209,10 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     // RULING 2026-09-08 (R-34): new capability, Owner/Admin/Manager, mirrored from live RLS.
     case 'inventory.update':
       return rbac.canUpdateBundle(ctx.role);
+    // T2-17 — product_units_update: exactly Owner, Admin, Manager, Warehouse.
+    // Technician's condition-at-intake permission does not cover unit identity.
+    case 'inventory.update_unit_identity':
+      return rbac.canEditUnitIdentity(ctx.role);
     /*
      * `inventory.edit_service_plan` — R-28, 8 Sep 2026. Owner · Admin · Manager,
      * as `PERMISSIONS.md` §4.3 states it. Ruled with the action rather than
@@ -263,6 +270,11 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     // Postgres, so the rule survives a caller that skips `checkCapability`.
     case 'inventory.edit_product_aliases':
       return rbac.canWriteBookingDesk(ctx.role);
+
+    // T3-30: Consumable restock and booking line addition. Admitted to booking desk and floor staff.
+    case 'rental.add_consumable':
+    case 'inventory.restock_consumable':
+      return rbac.canWriteBookingDesk(ctx.role) || rbac.canWriteFloor(ctx.role);
 
     /* `closing.approve` (1 Sep, §5.4) mirrors `daily_closings_finance_insert`
        (0078) — `auth_is_finance_or_admin()`, read off the live project the day
@@ -322,6 +334,9 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'collateral.receive':
     case 'collateral.return':
       return rbac.canManageCollateral(ctx.role);
+    // T3-29: Resolve at-risk booking (0241) — Owner · Admin · Manager · Coordinator
+    case 'rental.resolve_at_risk':
+      return rbac.canResolveAtRisk(ctx.role);
 
     case 'rental.pickup':
     case 'rental.return':

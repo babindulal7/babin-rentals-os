@@ -43,9 +43,13 @@ import {
   canPerformOperations,
   canPerformOp,
   canWriteBookingDesk,
+  canWriteFloor,
   canCloseRental,
   canManageCollateral,
+  canSetBookingTags,
+  canResolveAtRisk,
 } from '../../lib/rbac'
+import { BookingTagsBar } from './BookingTagsBar'
 import { IntelCard } from '../../components/ui/IntelCard'
 import { ClientIntelFromId } from '../../components/intel/ClientIntelFromId'
 import { useToast } from '../../components/ui/Toast'
@@ -60,12 +64,16 @@ import { ExtendRentalModal } from './modals/ExtendRentalModal'
 import { ReturnCollateralModal } from './modals/ReturnCollateralModal'
 import { AssignCrewModal } from './modals/AssignCrewModal'
 import { BookingCrewList } from './BookingCrewList'
+import { fetchBookingAtRisk, type BookingAtRiskRow } from '../../lib/queries/atRisk'
+import { ResolveAtRiskModal } from './modals/ResolveAtRiskModal'
 import { canAssignPricedCrew } from '../../lib/crewAssignment'
 import { CreateSubRentalModal } from './modals/CreateSubRentalModal'
+import { AddConsumableModal } from './booking/AddConsumableModal'
 import { RecordPaymentModal } from '../finance/modals/RecordPaymentModal'
 import { CreateInvoiceModal } from '../finance/modals/CreateInvoiceModal'
 import { CreateDocumentModal } from '../documents/CreateDocumentModal'
 import { LineItemTree } from './LineItemTree'
+import { generateProForma } from '../../actions/documents/generateProForma'
 import { listDocuments, documentsForBooking, type DocRow } from '../../lib/queries/documents'
 import { formatGateError } from '../../lib/gates'
 import type { ActionContext } from '../../actions/core'
@@ -103,6 +111,8 @@ import { RentalSummaryModal } from './modals/RentalSummaryModal'
 import { RentalMoreActions } from './actions/RentalMoreActions'
 import { BookingConflictModal } from './booking/BookingConflictModal'
 import type { LineEvaluationResult, BookingAvailabilityEvaluation } from '../../lib/availabilityEvaluation'
+import { exportPackingListPdf, openPdfForPrint } from '../../lib/pdf/exportPdf'
+import { buildPackingListPdfItems } from '../../lib/pdf/generatePdf'
 
 /**
  * # Booking Detail — live, for ANY `:bookingNo`
@@ -211,6 +221,8 @@ function ProjectTypeEditor({
   bookingId,
   currentType,
   currentOther,
+  currentProjectName,
+  currentShootLocation,
   userId,
   role,
   onSaved,
@@ -218,25 +230,42 @@ function ProjectTypeEditor({
   bookingId: string
   currentType: string | null
   currentOther: string | null
+  currentProjectName?: string | null | undefined
+  currentShootLocation?: string | null | undefined
   userId: string
   role: ActionContext['role']
-  onSaved: (projectType: string | null, projectTypeOther: string | null) => void
+  onSaved: (projectType?: string | null, projectTypeOther?: string | null) => void
 }) {
   const { showSuccessToast } = useToast()
   const [draft, setDraft] = useState(currentType ?? '')
   const [draftOther, setDraftOther] = useState(currentOther ?? '')
+  const [draftProjectName, setDraftProjectName] = useState(currentProjectName ?? '')
+  const [draftShootLocation, setDraftShootLocation] = useState(currentShootLocation ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const dirty =
     (draft.trim() !== '' ? draft : null) !== currentType ||
-    (draft === 'Other' && draftOther.trim() !== '' ? draftOther.trim() : null) !== (currentOther ?? null)
+    (draft === 'Other' && draftOther.trim() !== '' ? draftOther.trim() : null) !== (currentOther ?? null) ||
+    (draftProjectName.trim() || null) !== (currentProjectName ?? null) ||
+    (draftShootLocation.trim() || null) !== (currentShootLocation ?? null)
+
   const validation = validateProjectType(draft.trim() !== '' ? draft : null, draftOther)
+  const projectNameValid = draftProjectName.trim().length <= 120
+  const shootLocationValid = draftShootLocation.trim().length <= 120
 
   async function save() {
     if (saving) return
     if (!validation.valid) {
       setError(validation.message ?? 'Select a project type from the list.')
+      return
+    }
+    if (!projectNameValid) {
+      setError('Project name must be 120 characters or fewer.')
+      return
+    }
+    if (!shootLocationValid) {
+      setError('Shoot location must be 120 characters or fewer.')
       return
     }
     setSaving(true)
@@ -247,13 +276,15 @@ function ProjectTypeEditor({
           id: bookingId,
           projectType: draft.trim() !== '' ? draft : null,
           projectTypeOther: draft === 'Other' && draftOther.trim() !== '' ? draftOther.trim() : null,
+          projectName: draftProjectName.trim() || null,
+          shootLocation: draftShootLocation.trim() || null,
         },
         { userId, role },
       )
       onSaved(out.projectType, out.projectTypeOther)
-      showSuccessToast('Project Type Updated', `Updated to ${out.projectType ?? 'None / Unset'}`)
+      showSuccessToast('Project Details Updated', `Saved project details for this booking.`)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not update project type. Your previous value has been restored.')
+      setError(e instanceof Error ? e.message : 'Could not update project details. Your previous values have been restored.')
     } finally {
       setSaving(false)
     }
@@ -262,6 +293,26 @@ function ProjectTypeEditor({
   return (
     <div style={{ marginTop: 'var(--sp-sm)', display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
+        <Input
+          aria-label="Project / production name"
+          value={draftProjectName}
+          maxLength={120}
+          onChange={(e) => {
+            setDraftProjectName(e.target.value)
+            setError(null)
+          }}
+          placeholder="Project / production name (max 120 chars)"
+        />
+        <Input
+          aria-label="Shoot location"
+          value={draftShootLocation}
+          maxLength={120}
+          onChange={(e) => {
+            setDraftShootLocation(e.target.value)
+            setError(null)
+          }}
+          placeholder="Shoot location (max 120 chars)"
+        />
         <Select
           aria-label="Project type"
           value={isProjectType(draft) ? draft : ''}
@@ -292,8 +343,12 @@ function ProjectTypeEditor({
         </div>
       )}
       <div>
-        <Button type="button" disabled={!dirty || saving || !validation.valid} onClick={() => void save()}>
-          {saving ? 'Saving…' : 'Save project type'}
+        <Button
+          type="button"
+          disabled={!dirty || saving || !validation.valid || !projectNameValid || !shootLocationValid}
+          onClick={() => void save()}
+        >
+          {saving ? 'Saving…' : 'Save project details'}
         </Button>
       </div>
     </div>
@@ -847,7 +902,7 @@ type ClientContact =
   | { kind: 'absent' }
   | { kind: 'loading' }
   /** Read completed. `phone` is `null` when the client genuinely has none. */
-  | { kind: 'ready'; phone: string | null }
+  | { kind: 'ready'; phone: string | null; email?: string | null }
   /** `getClient` threw — network, RLS refusal, anything. The reason is kept to be shown. */
   | { kind: 'failed'; message: string }
 
@@ -961,6 +1016,8 @@ function BookingDetailView() {
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [showCreateInvoice, setShowCreateInvoice] = useState(false)
   const [showCreateDocument, setShowCreateDocument] = useState(false)
+  const [pickListPrinting, setPickListPrinting] = useState(false)
+  const [pickListError, setPickListError] = useState<string | null>(null)
   const { showSuccessToast } = useToast()
   const { openOperations } = useOperationsWorkspace()
   const viewport = useViewport()
@@ -992,6 +1049,7 @@ function BookingDetailView() {
    */
   const canRaiseInvoice = user ? canIssueInvoice(user.role) : false
   const canOperate = user ? canPerformOperations(user.role) : false
+  const canSetTags = user ? canSetBookingTags(user.role) : false
 
   /* ── the booking head — `listBookings`, filtered to this one number ──────
    *
@@ -1092,6 +1150,23 @@ function BookingDetailView() {
 
   const activeCollateral = collaterals.find((c) => c.returned_at === null) ?? null
   const userCanManageCollateral = user ? canManageCollateral(user.role) : false
+  const userCanResolveAtRisk = user ? canResolveAtRisk(user.role) : false
+
+  const [atRiskRecords, setAtRiskRecords] = useState<BookingAtRiskRow[]>([])
+  const [showResolveAtRiskModal, setShowResolveAtRiskModal] = useState(false)
+
+  const fetchAtRisk = useCallback(async () => {
+    if (!bookingId) {
+      setAtRiskRecords([])
+      return
+    }
+    const rows = await fetchBookingAtRisk(bookingId)
+    setAtRiskRecords(rows)
+  }, [bookingId])
+
+  useEffect(() => {
+    void fetchAtRisk()
+  }, [fetchAtRisk])
 
   /* ── lines + units — `fetchFloorBooking`, the per-booking read ────────────
    * Not a list, so it does not go through `useList`; same cancellation rule.
@@ -1162,6 +1237,7 @@ function BookingDetailView() {
    * write rather than minting a second action.
    */
   const canReleaseUnits = user ? canWriteBookingDesk(user.role) : false
+  const [showAddConsumableModal, setShowAddConsumableModal] = useState(false)
   const [releasingUnitId, setReleasingUnitId] = useState<string | null>(null)
   const [releaseError, setReleaseError] = useState<string | null>(null)
   const [confirmRelease, setConfirmRelease] = useState<{ unitRowId: string; label: string } | null>(null)
@@ -1260,6 +1336,31 @@ function BookingDetailView() {
   /* Law 3 — a voided invoice still exists, but its money is settled by its
      credit note, so the totals this page states are over the live ones. */
   const liveInvoices = useMemo(() => invoicesList.rows.filter((r) => !r.isVoid), [invoicesList.rows])
+  const draftInvoice = useMemo(() => liveInvoices.find((r) => r.status === 'Draft'), [liveInvoices])
+
+  const [generatingProForma, setGeneratingProForma] = useState(false)
+  const [proFormaError, setProFormaError] = useState<string | null>(null)
+
+  const handleGenerateProForma = useCallback(
+    async (invoiceId?: string) => {
+      if (!bookingId || !user) return
+      setGeneratingProForma(true)
+      setProFormaError(null)
+      try {
+        await generateProForma(
+          { bookingId, invoiceId, download: true },
+          { userId: user.id, role: user.role },
+        )
+        showSuccessToast('Pro Forma Ready', `Generated pro forma for ${booking?.bookingNo ?? id}`)
+        void documentsList.refetch()
+      } catch (err: unknown) {
+        setProFormaError(err instanceof Error ? err.message : 'Failed to generate pro forma')
+      } finally {
+        setGeneratingProForma(false)
+      }
+    },
+    [bookingId, user, booking?.bookingNo, id, showSuccessToast, documentsList],
+  )
 
   /**
    * ## "No invoice" is a THIRD state, not the absence of a first (Law 12)
@@ -1440,22 +1541,31 @@ function BookingDetailView() {
   const [conflictsList, setConflictsList] = useState<readonly LineEvaluationResult[]>([])
   const [draftOverlapNotice, setDraftOverlapNotice] = useState<string | null>(null)
   const [availabilityEvaluation, setAvailabilityEvaluation] = useState<BookingAvailabilityEvaluation | null>(null)
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
+    setAvailabilityEvaluation(null)
+    setAvailabilityError(null)
     if (booking?.stage === 'Quote' && id) {
       void import('../../lib/queries/smartReservationQueries')
         .then((m) => m.queryBookingAvailability(id))
         .then((res) => {
           if (active && res.evaluation) {
             setAvailabilityEvaluation(res.evaluation)
+            setAvailabilityError(null)
             const conflicts = res.evaluation.lineResults.filter((r) => r.status !== 'available')
             if (conflicts.length > 0) {
               setConflictsList(conflicts)
             }
           }
         })
-        .catch(() => {})
+        .catch(() => {
+          if (!active) return
+          setAvailabilityEvaluation(null)
+          setConflictsList([])
+          setAvailabilityError('Availability cannot be verified right now. Retry before confirming this rental.')
+        })
     }
     return () => {
       active = false
@@ -1791,7 +1901,7 @@ function BookingDetailView() {
     setContact({ kind: 'loading' })
     getClient(cid)
       .then((c) => {
-        if (!cancelled) setContact({ kind: 'ready', phone: c?.phone ?? null })
+        if (!cancelled) setContact({ kind: 'ready', phone: c?.phone ?? null, email: c?.email ?? null })
       })
       .catch((err: unknown) => {
         if (!cancelled) setContact({ kind: 'failed', message: err instanceof Error ? err.message : String(err) })
@@ -1805,6 +1915,7 @@ function BookingDetailView() {
      and `whatsappActionsFor` is told so by the menu below rather than by a
      null it would translate into NO_PHONE_REASON. */
   const clientPhone = contact.kind === 'ready' ? contact.phone : null
+  const clientEmail = contact.kind === 'ready' ? (contact.email ?? null) : null
 
   const waActions = useMemo(() => {
     if (!booking || !user) return []
@@ -1856,7 +1967,33 @@ function BookingDetailView() {
   }, [booking, user, clientPhone, floor, canBookingMoney, hasInvoice, totals])
 
   const stage = (booking?.stage ?? 'Draft') as BookingStatus
+  const isTerminalStage = stage === 'Returned' || stage === 'Closed' || !!booking?.isCancelled
+  const canAddConsumables = !isTerminalStage && !!user && (canWriteBookingDesk(user.role) || canWriteFloor(user.role))
   const lines: FloorLine[] = floor?.lines ?? []
+  const printPickList = async () => {
+    if (!floor || floor.linesPresence !== 'present' || floor.lines.length === 0) return
+    setPickListPrinting(true)
+    setPickListError(null)
+    try {
+      const result = await exportPackingListPdf({
+        bookingNo: floor.bookingNo,
+        bookingUrl: new URL(`/rentals/${encodeURIComponent(floor.bookingNo)}`, window.location.origin).href,
+        clientName: floor.clientName ?? 'Client',
+        project: floor.project,
+        pickupAtAd: floor.pickupAtAd,
+        returnAtAd: floor.returnAtAd,
+        deliveryType: floor.deliveryType ? deliveryTypeLabel(floor.deliveryType) : 'Client Pickup',
+        packedBy: user?.name ?? null,
+        items: buildPackingListPdfItems(floor.lines),
+      })
+      openPdfForPrint(result.blob, `Pick_List_${floor.bookingNo}`)
+      showSuccessToast('Pick List Ready', `Opened printable pick list for ${floor.bookingNo}.`)
+    } catch (error) {
+      setPickListError(error instanceof Error ? error.message : 'The pick list could not be generated.')
+    } finally {
+      setPickListPrinting(false)
+    }
+  }
   const missingSerialsCount = lines
     .filter((l) => l.lineType === 'Equipment' && l.trackingMode === 'Serialised')
     .reduce((sum, l) => sum + Math.max(0, l.qty - l.units.length), 0)
@@ -2184,24 +2321,26 @@ function BookingDetailView() {
       {/* Payment is a quick action on the existing booking. Reuse the invoice-
           linked modal and its payment.create RBAC gate; never post money from
           a row button or route the operator away to the Finance ledger.
-          On phones this rail belongs to the Money segment. */}
-      {canBookingMoney && showSegment('Money') && (
-        <Card title="Quick Actions">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
-            {canTakePayment && recordPaymentButton('Record Payment')}
-            {canRaiseInvoice && createInvoiceButton(hasInvoice ? 'View Invoice' : 'Create Invoice')}
-          </div>
-        </Card>
-      )}
-
-      {/* Live invoice values; never combine the refundable deposit with rental
-          payments or display balances to money-blind warehouse roles. */}
+          On phones this rail belongs to the Money segment.
+          RULING 2026-11-10: G-1 / Card 1 — Single Quick Actions card (deduplicated).
+          Contains Record Payment, Create/View Invoice, Pro Forma (if draft),
+          and invoice read-error line with Retry. */}
       {canBookingMoney && showSegment('Money') && (
         <>
           <Card title="Quick Actions">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
               {canTakePayment && recordPaymentButton('Record Payment')}
-              {canRaiseInvoice && !hasInvoice && createInvoiceButton('Create Invoice')}
+              {canRaiseInvoice && createInvoiceButton(hasInvoice ? 'View Invoice' : 'Create Invoice')}
+              {draftInvoice && (
+                <Button
+                  variant="secondary"
+                  icon="file"
+                  loading={generatingProForma}
+                  onClick={() => void handleGenerateProForma(draftInvoice.id)}
+                >
+                  Pro Forma Invoice
+                </Button>
+              )}
               {invoicesList.error && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4 }}>
                   <span style={{ fontSize: 'var(--t-meta)', color: 'var(--danger-text)' }}>Could not read invoices</span>
@@ -2309,6 +2448,22 @@ function BookingDetailView() {
   const moreItems: OverflowMenuItem[] = [
     /* RULING 2026-10-16: on a phone the shell's Search button lives here (`searchInMore`). */
     ...(onPhone ? [{ label: 'Search', icon: 'search' as const, onClick: openCommandPalette }] : []),
+    {
+      label: pickListPrinting ? 'Preparing pick list…' : 'Print pick list',
+      icon: 'file' as const,
+      onClick: () => void printPickList(),
+      ...(floorLoading
+        ? { unavailable: 'The booking items are still loading.' }
+        : floorError
+          ? { unavailable: 'The booking items could not be read. Retry the item read first.' }
+          : !floor || floor.linesPresence !== 'present'
+            ? { unavailable: 'The booking item list is unavailable.' }
+            : floor.lines.length === 0
+              ? { unavailable: 'This booking has no equipment lines to print.' }
+              : pickListPrinting
+                ? { unavailable: 'The pick list is already being prepared.' }
+                : {}),
+    },
     { label: 'Print booking', icon: 'file' as const, onClick: () => window.print() },
     ...bookingMoreItems,
   ]
@@ -2344,8 +2499,14 @@ function BookingDetailView() {
           title={booking.clientName ? `${booking.bookingNo} · ${booking.clientName}` : booking.bookingNo}
           searchInMore={onPhone}
           description={
-            booking.project || booking.projectType
-              ? `${booking.project ?? 'Untitled project'} · ${displayProjectType(booking.projectType, booking.projectTypeOther)}`
+            booking.project || booking.projectType || booking.shootLocation
+              ? [
+                  booking.project ?? 'Untitled project',
+                  displayProjectType(booking.projectType, booking.projectTypeOther),
+                  booking.shootLocation ? `Location: ${booking.shootLocation}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
               : undefined
           }
           status={
@@ -2353,6 +2514,7 @@ function BookingDetailView() {
               {/* The stage is named by the stepper below ("Closed — current stage"), so no badge here. */}
               {booking.isCancelled && <Badge flag="Cancelled" />}
               {subRental && <SubRentedMark label="Sub-rental" />}
+              {atRiskRecords.length > 0 && <Badge tone="danger" label="⚠️ At Risk — Clash" />}
               {stage === 'Quote' && availabilityEvaluation && !availabilityEvaluation.isAllAvailable && (
                 <Badge tone="danger" label="Needs attention / Availability changed" />
               )}
@@ -2410,6 +2572,8 @@ function BookingDetailView() {
                   paidAmount: totals.paid,
                   outstandingAmount: totals.outstanding,
                   depositRequired: booking.depositRequired,
+                  clientPhone,
+                  clientEmail,
                 }}
                 selectedCount={1}
                 ariaLabel="More booking actions"
@@ -2508,6 +2672,16 @@ function BookingDetailView() {
         <Stepper status={stage} dots={onPhone} />
       </div>
 
+      {booking && (
+        <BookingTagsBar
+          bookingId={booking.id}
+          bookingNo={booking.bookingNo}
+          tags={booking.tags ?? []}
+          canEdit={canSetTags}
+          onTagsChanged={refreshBookingData}
+        />
+      )}
+
       {onPhone && <Segmented segments={segments} active={activeSegment} onPick={setSegment} />}
 
       {/* Facts strip — schedule on the left, money on the right. */}
@@ -2574,6 +2748,63 @@ function BookingDetailView() {
         >
           <Icon name="info" size={14} style={{ flexShrink: 0, marginTop: 2, color: 'var(--st-progress-fg, #a16207)' }} />
           <span>{draftOverlapNotice}</span>
+        </div>
+      )}
+
+      {atRiskRecords.length > 0 && (
+        <div
+          role="alert"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 'var(--sp-md)',
+            padding: '12px 16px',
+            borderRadius: 'var(--r-sm)',
+            border: '1px solid var(--danger)',
+            background: 'var(--st-danger-bg)',
+            fontSize: 'var(--t-meta)',
+            color: 'var(--danger-text)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)' }}>
+            <Icon name="alert_triangle" size={16} style={{ flexShrink: 0 }} />
+            <div>
+              <strong>Booking is At-Risk (Equipment Clash / Overdue Return)</strong>
+              <div style={{ fontSize: 'var(--t-caption)', color: 'var(--text2)', marginTop: 2 }}>
+                Pack stage is blocked until this clash is resolved. Choose a resolution (similar item, sub-rental, credit, or refund).
+              </div>
+            </div>
+          </div>
+          {userCanResolveAtRisk && (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => setShowResolveAtRiskModal(true)}
+            >
+              Resolve At-Risk
+            </Button>
+          )}
+        </div>
+      )}
+
+      {availabilityError && (
+        <div
+          role="alert"
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 'var(--sp-sm)',
+            padding: '10px 12px',
+            borderRadius: 'var(--r-sm)',
+            border: '1px solid var(--danger)',
+            background: 'var(--st-danger-bg)',
+            fontSize: 'var(--t-meta)',
+            color: 'var(--danger-text)',
+          }}
+        >
+          <Icon name="alert_triangle" size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+          <span>{availabilityError}</span>
         </div>
       )}
 
@@ -2658,7 +2889,8 @@ function BookingDetailView() {
                           ? 'Loading…'
                           : 'Not recorded',
                   },
-                  { label: 'Project', value: booking.project ?? 'Not recorded' },
+                  { label: 'Project', value: (booking.projectName ?? booking.project) ?? 'Not recorded' },
+                  { label: 'Shoot Location', value: booking.shootLocation ?? 'Not recorded' },
                   { label: 'Project Type', value: displayProjectType(booking.projectType, booking.projectTypeOther) },
                   { label: 'Pickup Location', value: booking.pickupLocation ?? 'Not recorded' },
                   { label: 'Return Location', value: booking.returnLocation ?? 'Not recorded' },
@@ -2670,9 +2902,9 @@ function BookingDetailView() {
               <div style={{ marginTop: 'var(--sp-sm)' }}>
                 {booking.stage === 'Quote' && !booking.isCancelled && Boolean(user?.role && ['Owner','Admin','Manager','Coordinator'].includes(user.role)) ? <Link to="?action=edit"><Button>Edit booking</Button></Link> : <Unavailable reason="General editing is available before confirmation. Use this booking's operational actions."><Button disabled>Edit</Button></Unavailable>}
               </div>
-              {/* Focused project-type edit (0144) — the one header field with a
-                  real write path (`updateBookingProject`). Coordinator+ only;
-                  floor roles keep the read-only line above (spec §24). */}
+              {/* Focused project edit — header fields with a real write path
+                  (`updateBookingProject`). Coordinator+ only; floor roles keep
+                  the read-only lines above (spec §24). */}
               {(() => {
                 const editorUser =
                   user && (user.role === 'Owner' || user.role === 'Admin' || user.role === 'Manager' || user.role === 'Coordinator')
@@ -2681,14 +2913,16 @@ function BookingDetailView() {
                 return editorUser ? (
                   <details style={{ marginTop: 'var(--sp-xs)' }}>
                     <summary style={{ cursor: 'pointer', minHeight: 44, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--t-meta, 13px)', color: 'var(--text2)', fontWeight: 600 }}>
-                      Edit project type
+                      Edit project details
                     </summary>
                     <div style={{ marginTop: 8 }}>
                       <ProjectTypeEditor
-                        key={`${booking.id}·${booking.projectType ?? ''}·${booking.projectTypeOther ?? ''}`}
+                        key={`${booking.id}·${booking.projectType ?? ''}·${booking.projectTypeOther ?? ''}·${booking.projectName ?? ''}·${booking.shootLocation ?? ''}`}
                         bookingId={booking.id}
                         currentType={booking.projectType}
                         currentOther={booking.projectTypeOther}
+                        currentProjectName={booking.projectName ?? booking.project}
+                        currentShootLocation={booking.shootLocation}
                         userId={editorUser.id}
                         role={editorUser.role}
                         onSaved={() => refreshBookingData()}
@@ -2727,12 +2961,31 @@ function BookingDetailView() {
           )}
 
           {showSegment('Items') && (
-            <Block no="2" title="Equipment, Bundles & Services">
+            <Block
+              no="2"
+              title="Equipment, Bundles & Services"
+              action={
+                canAddConsumables ? (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowAddConsumableModal(true)}
+                    style={{ minHeight: 36, padding: '0 12px', fontSize: 'var(--t-meta, 13px)' }}
+                  >
+                    + Add Consumable
+                  </Button>
+                ) : undefined
+              }
+            >
               {/* §12 — a failed release is inline and persistent, above the
                   table whose chip refused to clear. Success is a toast. */}
               {releaseError && (
                 <div style={{ marginBottom: 'var(--sp-sm)' }}>
                   <ErrorBanner title="Could not release the unit" message={releaseError} />
+                </div>
+              )}
+              {pickListError && (
+                <div style={{ marginBottom: 'var(--sp-sm)' }}>
+                  <ErrorBanner title="Could not print the pick list" message={pickListError} />
                 </div>
               )}
               {floorError ? (
@@ -2918,8 +3171,41 @@ function BookingDetailView() {
                           <span className="figure" style={{ fontFamily: 'var(--font-id, sans-serif)', fontSize: '15px' }}>{money(totals.total)}</span>
                         </div>
                         <p style={{ margin: '8px 0 0', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-                          From {liveInvoices.length === 1 ? `invoice ${liveInvoices[0]?.invoiceNo}` : `${liveInvoices.length} live invoices`}.
+                          From {liveInvoices.length === 1 ? `invoice ${liveInvoices[0]?.invoiceNo ?? 'Draft'}` : `${liveInvoices.length} live invoices`}.
                         </p>
+                        {draftInvoice && (
+                          <div style={{ marginTop: 10 }}>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              icon="file"
+                              loading={generatingProForma}
+                              onClick={() => void handleGenerateProForma(draftInvoice.id)}
+                            >
+                              Pro Forma Invoice
+                            </Button>
+                          </div>
+                        )}
+                        {proFormaError && (
+                          <div
+                            role="alert"
+                            style={{
+                              marginTop: 10,
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              gap: 8,
+                              padding: '8px 12px',
+                              borderRadius: 'var(--r-sm)',
+                              border: '1px solid var(--danger)',
+                              background: 'var(--st-danger-bg)',
+                              fontSize: 'var(--t-meta)',
+                              color: 'var(--danger-text)',
+                            }}
+                          >
+                            <Icon name="alert_triangle" size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+                            <span>{proFormaError}</span>
+                          </div>
+                        )}
                       </>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
@@ -3116,7 +3402,6 @@ function BookingDetailView() {
                         </DataTableShell>
                       </div>
                     )}
-                    {onPhone && canTakePayment && <div style={{ marginTop: 10 }}>{recordPaymentButton('Record Payment')}</div>}
                   </div>
                 </div>
               )}
@@ -3159,14 +3444,28 @@ function BookingDetailView() {
                           <tr key={doc.id} style={{ borderBottom: '1px solid var(--border)' }}>
                             <td className="figure" style={{ ...td, fontSize: 'var(--t-meta)', fontWeight: 600 }}>
                               {doc.fileUrl ? (
-                                <Link
-                                  to={`/rentals/${booking.id}/evidence`}
-                                  style={{ color: 'var(--primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                                  title="View signed document"
-                                >
-                                  <Icon name="file" size={13} />
-                                  <span>{doc.id}</span>
-                                </Link>
+                                doc.fileUrl.startsWith('data:') || doc.fileUrl.startsWith('http') || doc.fileUrl.startsWith('blob:') ? (
+                                  <a
+                                    href={doc.fileUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    download={doc.fileUrl.startsWith('data:') ? `${doc.id}.pdf` : undefined}
+                                    style={{ color: 'var(--primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                    title={`Download / view ${doc.name}`}
+                                  >
+                                    <Icon name="file" size={13} />
+                                    <span>{doc.id}</span>
+                                  </a>
+                                ) : (
+                                  <Link
+                                    to={`/rentals/${booking.id}/evidence`}
+                                    style={{ color: 'var(--primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                    title="View signed document"
+                                  >
+                                    <Icon name="file" size={13} />
+                                    <span>{doc.id}</span>
+                                  </Link>
+                                )
                               ) : (
                                 doc.id
                               )}
@@ -3434,16 +3733,29 @@ function BookingDetailView() {
         isOpen={showExtendModal}
         onClose={() => setShowExtendModal(false)}
         bookingId={id}
+        bookingNo={booking.bookingNo}
         client={booking.clientName}
-        /* The queried return instant — the prop whose absence made this modal
-           structurally un-submittable from this page (page doc §7.6). The
-           action behind it is still a stub that fails closed; the modal now at
-           least states THAT reason instead of a missing-prop one. */
         currentReturnDate={booking.returnAtAd}
+        lines={floor?.lines}
         onSuccess={(ext) => {
           showSuccessToast('Rental Extended', `${ext.days} day${ext.days === 1 ? '' : 's'} added — new return ${ext.newReturnDate}`)
+          refetchHead()
+          setFloorVersion((v) => v + 1)
+          void fetchAtRisk()
         }}
       />
+
+      {atRiskRecords.length > 0 && atRiskRecords[0] && (
+        <ResolveAtRiskModal
+          isOpen={showResolveAtRiskModal}
+          onClose={() => setShowResolveAtRiskModal(false)}
+          atRisk={atRiskRecords[0]}
+          onResolved={() => {
+            void fetchAtRisk()
+            refreshBookingData()
+          }}
+        />
+      )}
 
       <AssignCrewModal
         key={`${booking.id}:${user?.id}`}
@@ -3468,6 +3780,20 @@ function BookingDetailView() {
           showSuccessToast('Sub-Rental Created', `${subR.itemName} — ${subR.vendor}`)
         }}
       />
+
+      {showAddConsumableModal && user && (
+        <AddConsumableModal
+          isOpen={showAddConsumableModal}
+          onClose={() => setShowAddConsumableModal(false)}
+          bookingId={id}
+          userId={user.id}
+          userRole={user.role}
+          onAdded={() => {
+            setFloorVersion((v) => v + 1)
+            refreshBookingData()
+          }}
+        />
+      )}
 
       <Modal
         isOpen={depositSkipOpen}

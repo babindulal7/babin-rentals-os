@@ -201,6 +201,23 @@ export function canBlockClient(role: SystemRole): boolean {
 }
 
 /**
+ * Check if role may decide an extension clash (Owner · Admin · Manager only).
+ * Mirrors gate.extend.clash (0241, T3-29, B41, B42). Coordinator and floor roles
+ * cannot decide or override alone.
+ */
+export function canDecideExtensionClash(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin' || role === 'Manager'
+}
+
+/**
+ * Check if role may resolve an at-risk booking (Owner · Admin · Manager · Coordinator).
+ * Mirrors gate.pack.at_risk resolution (0241, T3-29).
+ */
+export function canResolveAtRisk(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+}
+
+/**
  * Check if role can put a client on a membership plan, or move them to another.
  *
  * RULING 2026-10-22, by mirroring the database like the two rules above.
@@ -214,6 +231,16 @@ export function canBlockClient(role: SystemRole): boolean {
  * bypasses RLS — the two must change together, and never widen.
  */
 export function canChangeMembership(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+}
+
+/**
+ * Check if role can add, edit, or remove tags on bookings.
+ * Owner, Admin, Manager, Coordinator (Booking desk roles). Floor roles and Client are read-only.
+ *
+ * Mirrors `set_booking_tags` RPC (0228, T3-25, B16, B55).
+ */
+export function canSetBookingTags(role: SystemRole): boolean {
   return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
 }
 
@@ -295,6 +322,16 @@ export function canUpdateBundle(role: SystemRole): boolean {
 // revert = point `case 'inventory.edit_service_plan'` at `canUpdateBundle` and delete this.
 export function canEditServicePlan(role: SystemRole): boolean {
   return role === 'Owner' || role === 'Admin' || role === 'Manager'
+}
+
+/**
+ * T2-17 — editable per-unit identity and shelf coordinates.
+ * Mirrors product_units_update (0018): Owner, Admin, Manager, Warehouse.
+ * Technician may inspect condition at intake, but may not edit identity/location.
+ * This predicate gates the UI only; database RLS remains authoritative.
+ */
+export function canEditUnitIdentity(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Warehouse'
 }
 
 /** RULING 2026-09-29: product-wide bulk stock corrections require Manager+. */

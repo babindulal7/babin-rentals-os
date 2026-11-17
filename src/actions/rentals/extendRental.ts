@@ -34,8 +34,20 @@ export type ExtendRentalInput = {
    * Stated extension reason (minimum 10 characters).
    */
   reason?: string | null | undefined
+  /**
+   * W41 pricing option for the extra days:
+   * - 'same_rate': same rate & discount as original booking (default)
+   * - 'standard_rate': full catalog standard rate without extra discount
+   */
+  pricingOption?: 'same_rate' | 'standard_rate' | undefined
   /** Law 8 idempotency key. */
   clientUuid?: string | undefined
+  /** T3-29: Manager decision when an availability clash occurs */
+  clashDecision?: {
+    decision: 'move_next_booking' | 'mark_at_risk' | 'refuse'
+    reason: string
+    conflictingBookingId?: string | undefined
+  } | undefined
 }
 
 export type ExtendRentalResult = {
@@ -45,6 +57,9 @@ export type ExtendRentalResult = {
   oldReturnAt: string
   newReturnAt: string
   daysAdded: number
+  pricingOption: 'same_rate' | 'standard_rate'
+  refused?: boolean | undefined
+  decision?: 'move_next_booking' | 'mark_at_risk' | 'refuse' | undefined
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -65,6 +80,14 @@ export const extendRentalConfig: ActionConfig<ExtendRentalInput, ExtendRentalRes
     }
     if (!input.reason || input.reason.trim().length < 10) {
       throw new Error('Extension reason of at least ten characters is required.')
+    }
+    if (input.clashDecision) {
+      if (!['move_next_booking', 'mark_at_risk', 'refuse'].includes(input.clashDecision.decision)) {
+        throw new Error('Invalid manager clash decision.')
+      }
+      if (!input.clashDecision.reason || input.clashDecision.reason.trim().length < 10) {
+        throw new Error('Manager clash decision reason must be at least 10 characters.')
+      }
     }
   },
 
@@ -89,14 +112,66 @@ export const extendRentalConfig: ActionConfig<ExtendRentalInput, ExtendRentalRes
       bookingId = data.id
     }
 
+    const pricingOption = input.pricingOption ?? 'same_rate'
+
+    // If Manager decision was provided, record it first
+    if (input.clashDecision) {
+      const { error: decisionErr } = await supabase.rpc('record_extension_clash_decision', {
+        p_payload: {
+          booking_id: bookingId,
+          conflicting_booking_id: input.clashDecision.conflictingBookingId ?? null,
+          days,
+          decision: input.clashDecision.decision,
+          reason: input.clashDecision.reason.trim(),
+          client_uuid: input.clientUuid ?? null,
+        },
+      })
+
+      if (decisionErr) {
+        throw new Error(`Failed to record manager clash decision: ${decisionErr.message}`)
+      }
+
+      // If decision was 'refuse', stop here and do not extend
+      if (input.clashDecision.decision === 'refuse') {
+        const { data: bData } = await supabase
+          .from('bookings')
+          .select('booking_no, return_at')
+          .eq('id', bookingId)
+          .maybeSingle()
+
+        return {
+          result: {
+            success: true,
+            refused: true,
+            decision: 'refuse',
+            bookingId,
+            bookingNo: bData?.booking_no,
+            oldReturnAt: bData?.return_at ?? '',
+            newReturnAt: bData?.return_at ?? '',
+            daysAdded: 0,
+            pricingOption,
+          },
+          events: [],
+        }
+      }
+    }
+
+    const rpcPayload: Record<string, unknown> = {
+      booking_id: bookingId,
+      days,
+      reason,
+      pricing_option: pricingOption,
+      actor_id: ctx.userId ?? null,
+      client_uuid: input.clientUuid ?? null,
+    }
+
+    if (input.clashDecision) {
+      rpcPayload.clash_decision = input.clashDecision.decision
+      rpcPayload.clash_decision_reason = input.clashDecision.reason
+    }
+
     const { data: rpcResult, error: rpcError } = await supabase.rpc('extend_booking', {
-      p_payload: {
-        booking_id: bookingId,
-        days,
-        reason,
-        actor_id: ctx.userId ?? null,
-        client_uuid: input.clientUuid ?? null,
-      },
+      p_payload: rpcPayload,
     })
 
     if (rpcError) {
@@ -110,6 +185,7 @@ export const extendRentalConfig: ActionConfig<ExtendRentalInput, ExtendRentalRes
       old_return_at: string
       new_return_at: string
       days_added: number
+      pricing_option?: 'same_rate' | 'standard_rate'
     }
 
     const events = [
@@ -121,6 +197,7 @@ export const extendRentalConfig: ActionConfig<ExtendRentalInput, ExtendRentalRes
           daysAdded: res.days_added,
           oldReturnAt: res.old_return_at,
           newReturnAt: res.new_return_at,
+          pricingOption,
           reason,
           timestamp: new Date().toISOString(),
           userId: ctx.userId,
@@ -136,6 +213,7 @@ export const extendRentalConfig: ActionConfig<ExtendRentalInput, ExtendRentalRes
         oldReturnAt: res.old_return_at,
         newReturnAt: res.new_return_at,
         daysAdded: res.days_added,
+        pricingOption,
       },
       events,
     }

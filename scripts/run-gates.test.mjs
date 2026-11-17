@@ -6,8 +6,8 @@ import { GATES, assertMatchesCi, commandText, runSequence, selectedGates, main }
 test('local verification list mirrors every CI gate and its order', () => {
   const yml = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8')
   assert.equal(assertMatchesCi(yml), true)
-  assert.equal(GATES.length, 16)
-  assert.equal(commandText(GATES[12]), 'npm run lint:ui-copy')
+  assert.equal(GATES.length, 17)
+  assert.equal(commandText(GATES[13]), 'npm run lint:ui-copy')
 })
 
 test('CI drift rejects a removed UI-copy gate (never silently skip)', () => {
@@ -18,10 +18,10 @@ test('CI drift rejects a removed UI-copy gate (never silently skip)', () => {
 test('--quick skips only coverage and preserves all other gates', () => {
   const full = selectedGates(false)
   const quick = selectedGates(true)
-  assert.equal(full.length, 16)
-  assert.equal(quick.length, 15)
+  assert.equal(full.length, 17)
+  assert.equal(quick.length, 16)
   assert.equal(quick.every((step, index) => step === full[index]), true)
-  assert.equal(full[15].coverage, true)
+  assert.equal(full[16].coverage, true)
 })
 
 test('first failed gate stops execution; later gates are not executed', async () => {

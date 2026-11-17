@@ -1,5 +1,8 @@
 # PLAN.md — Babin Rentals OS: the road to go-live
 
+> **Owner scope update — 12 Nov 2026 (design/plan, NOT shipped):** Coordinated launch target by **18 February 2027** now includes the **full company website at babinrentals.com**, **client portal and booking at book.babinrentals.com**, and staff **Babin Rentals OS**. This supersedes the older interpreted B5/T10 choice to build the full marketing website after launch. Public booking starts with **pickup AND return date/time**; launch defaults are manual staff approval, guest requests on, public base prices on, eligible signed-in client discounts on and new-request staff notifications on, all Owner/Admin-configurable in OS Settings with backend audit. See [owner rulings](RULINGS-2026-11-12-unified-launch.md) and the [unified workstream/release plan](docs/plans/UNIFIED_LAUNCH_2027-02-18.md). Existing G1–G10 release safety gates remain mandatory; this update does **not** approve a merge, hosted staging charge, live settings/schema mutation, domain change, payment activation, deployment or Booqable cancellation.
+
+
 **Version 1.4 · 31 Oct 2026 (14 Kartik 2083) · Owner: Babin Dulal · Status: ACTIVE**
 
 *v1.4 (31 Oct, on `main` `9e219db`): the Booqable round of 27 Oct — [`RULINGS-2026-10-27-booqable.md`](RULINGS-2026-10-27-booqable.md) B1–B56 and Claude's K1–K7 — adds 29 cards across T1–T7 (store parity, stock tools, sign-in security, team tools), all tagged **[go-live] · slips first** except T1-16 and T2-25; closes O-1, O-2 and O-3; indexes O-18 (PIN length) and O-19 (who writes team notes); sizes recounted by script (§3).*
@@ -78,7 +81,7 @@ older receipt.
 | Actions implemented (`npm run completion`) | **55 / 58** — the 3 missing are inspection stubs nothing calls |
 | Routed screens on the database | **50 / 60** — 0 on seed data; the other 10 are sign-in, 404, onboarding and three static pages |
 | Capabilities mapped | **48 / 48** |
-| GitHub CI | **Off.** No run has passed since 15 Oct 19:23 UTC; the run on PR #29 (25 Oct) shows GitHub refusing to start the job for a billing reason. Babin ruled CI stays off; local checks are the gate (W75, §6.4). |
+| GitHub CI | **Historical, 26 Oct:** off — no run had passed since 15 Oct 19:23 UTC and the run on PR #29 (25 Oct) showed GitHub refusing to start the job for a billing reason; Babin ruled CI stays off (W75). **Today, 4 Nov:** `ci.yml` runs on the owner's self-hosted Windows runner (see [`docs/audits/RULE_CONFLICT_AUDIT_2026-11-04.md`](docs/audits/RULE_CONFLICT_AUDIT_2026-11-04.md) for the run evidence). The local gates (§6.4) stay the pre-push check; the wording of the CI policy is a **proposal awaiting owner approval** — [`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md) §6. |
 
 What stops go-live today:
 
@@ -176,6 +179,8 @@ starts it, the desk takes payment, T3-31).
 
 **Answered 5 Nov 2026 — conflict repair:** Babin's latest explicit product ruling wins over older specifications (Foundation is the fallback); Nepali activates only after the whole staff app is approved; agents ask Babin about new product decisions while resolving routine engineering independently. Recorded in `RULINGS-2026-11-05.md` C-2–C-4; implementation tracked by T0-12. These are answered rules, not new open decisions.
 
+**Owner update, 2 November 2026 (takes precedence over older defaults below):** See [RULINGS-2026-11-02-OWNER.md](RULINGS-2026-11-02-OWNER.md) and [latest Open Decisions entry](docs/OPEN_DECISIONS.md). O-4 05:30 digest and O-12 excess credit are confirmed. O-14: issued invoice → separate additional invoice for new charges; draft → edit the same draft, subject to O-17 accounting sign-off. Scooter delivery NPR 150 inside / NPR 250 outside; van fee per vehicle × zone in Settings, amounts pending. O-20 Elite fixed annual fee, amount pending. O-5 owner states 1.5% TDS for service, O-6 owner states IRD-certified e-billing is not needed, O-7 no VAT on explicitly Non-VAT bills; all three require accountant/legal classification validation before automating. O-10 **answered with recommended Option A, accepted by Babin 2 Nov**: confirmed pre-start bookings cancelled >48 h before start free; >24 h to 48 h: >2-day bookings pay 50% of rental subtotal before VAT, 1–2-day bookings free; final 24 h: 1–2-day bookings pay one rental day, >2-day bookings pay **higher of one rental day or 50%**. Applies by notice before scheduled booking start, not time since booking creation. Drafts free. This is a **decision only, not shipped pricing logic**. Staff may override cancellation suggestions only within authorized audited roles. O-11 agreement approach and O-16 printer/scanner selection approved in principle, final terms/models still due. Booqable renewal confirmed by owner as **18 February 2027**; any March 2027 renewal/cancellation references are stale and cutover chronology must be reconciled.
+
 Each has a ⭐ default the build may use until Babin answers (CLAUDE.md B-5). Full text and history
 stay in [`docs/OPEN_DECISIONS.md`](docs/OPEN_DECISIONS.md).
 
@@ -189,20 +194,25 @@ stay in [`docs/OPEN_DECISIONS.md`](docs/OPEN_DECISIONS.md).
 | O-6 | Is IRD-certified e-billing required? (D14) | Accountant to confirm by 30 Nov | T3-05 |
 | O-7 | How non-VAT bills appear in the VAT register and returns. | Separate section "Non-VAT bills"; accountant confirms | T3-04 |
 | O-8 | *(replaced by O-16)* | — | — |
-| O-9 | **Answered — loaded 28 Oct (T8-01, migration 0195); only Elite's fee is open (O-20).** | — | T8-01 done |
-| O-10 | **Shape chosen 9 Nov (RULINGS-2026-11-09 R-9.6):** all three shapes selectable in Settings. **Figures still open** — Babin types them in Settings. | No fee until figures entered | T3-03 |
-| O-11 | **Answered 9 Nov (R-9.14):** Claude drafts, Babin approves; accountant/lawyer checks before client use. Draft not yet written. | Current template until approved | T3-06 |
+| O-9 | Membership plan table content (D32). | Babin sends it; plans stay empty until then | T8-01 |
+| O-10 | **Answered 2 Nov — Option A:** free >48 h; >24–48 h, 50% only for duration >2 rental days; final 24 h, one day or (duration >2 d) higher of one day and 50%. | Documentation approved; T3-03 must still implement, test and configure. | T3-03 |
+| O-11 | Rental agreement terms text. | Babin supplies; current template wording until then | T3-06 |
 | O-12 | A plan downgrade where the unused-days credit is larger than the new fee. | The rest becomes the client's account credit, not cash | T8-03 |
 | O-13 | What a cancellation fee % is taken from. | The booking's rental total before VAT | T3-03 |
 | O-14 | A numbered (fully paid) invoice that later changes — extension, late fee, damage (W17). | Accountant decides: second invoice or credit note; until then the app blocks the change with a clear message | T3-14 step 4 |
-| O-15 | **Structure answered 9 Nov (R-9.5): one fee per zone, four zones.** Amounts still open — Babin types them in Settings (none invented). | "delivery fee not set" until entered | T4-07 |
+| O-15 | Fee for each delivery zone (W48, L6). | Rs 3,500 for each valley zone; outside the valley quoted | T4-07 |
 | O-16 | Label printer and Bluetooth scanner models (W54, S14). | Claude proposes 2–3 of each with Nepal prices at a check-in; Babin buys | T2-08, T2-09 |
 | O-17 | VAT timing: may the tax invoice wait until the client pays in full (W16), even for credit clients who pay weeks later? [VAT Act 2052 §6](https://nepallaws.com/Laws/value-added-tax-act-2052/section-6-place-and-time-of-supply/) puts the time of a supply at the earliest of invoice, service or payment, with its own rule for part payments | As ruled (number on full payment) until the accountant answers; if the invoice must come earlier, the numbering moment becomes one setting. The numbering step ships only after the answer | T3-14 |
 | O-18 | **Answered 1 Nov (Babin: "4 pin"):** the switch-user PIN is **4 digits**. The shipped `0066` still enforces 6, so T1-15 includes the migration that moves it to 4 (stricter rules kept: weak-PIN list, lockout) | 4 digits | T1-15 code |
 | O-19 | **Answered 1 Nov (Babin: "all staff yes"):** every staff member may write team notes. `rbac.canCreateTeamNote` now matches `0185` | Every staff role (not Client) | T4-04 — done |
-| O-20 | **Answered 9 Nov (R-9.7): negotiated per client.** (was: What fee sits on a custom-fee plan (Elite's annual fee is blank in the plans Babin sent) — a listed fee, or per-client negotiation? (D22 implementation, T8-03 review) | ⭐ Per-client negotiation kept: the change into the plan is refused without a negotiated fee (`GATE:membership.custom_fee`), the negotiated fee is recorded on the membership row and prices later changes out of it (a renewal carries it onto the new term), and a membership with no fee on record anywhere is refused (`GATE:membership.fee_unknown`). Babin answers to unblock | T8-03 |
+| O-20 | What fee sits on a custom-fee plan (Elite's annual fee is blank in the plans Babin sent) — a listed fee, or per-client negotiation? (D22 implementation, T8-03 review) | ⭐ Per-client negotiation kept: the change into the plan is refused without a negotiated fee (`GATE:membership.custom_fee`), the negotiated fee is recorded on the membership row and prices later changes out of it (a renewal carries it onto the new term), and a membership with no fee on record anywhere is refused (`GATE:membership.fee_unknown`). Babin answers to unblock | T8-03 |
 | O-21 | Payment method picker: keep the seven distinct labels (Bank Transfer · Cash · Fonepay · eSewa · Khalti · Card · Cheque) or cut to T3-15's four buttons (Cash · Bank transfer · Fonepay · eSewa/Khalti)? | ⭐ Seven kept: eSewa and Khalti are different wallets and Card/Cheque are real receipts; every method stays one tap, so the card's ≤4-tap condition holds | — |
 | O-22 — answered 5 Nov | Glossary editing in Settings: who may edit, and draft approval versus immediate application? | Babin: Owner only; approved term changes apply throughout the app immediately. Whole-app activation remains separately gated. | T0-12 / T6 glossary; `RULINGS-2026-11-05.md` C-6 |
+| O-23 (D-UX-01) | Reusable cases and containers: what is a case ID, who labels it, who is responsible after return? | No persistent case manifest; no case count shown | UX-P22 |
+| O-24 (D-UX-02) | Which sub-items are stock-tracked and which are checklist-only? Which version applies to old rentals? | Keep today's behaviour | UX-P21, UX-P22 |
+| O-25 (D-UX-03) | Testing bay: saved in the database or a local note? How is custody shown? | Local note only; no custody change | UX-P23 |
+| O-26 (D-UX-04) | QC templates per category, handling of client media and settings resets, quick-shelve eligibility. | No templates; current Reset checklist | UX-P26 |
+| O-27 (D-UX-05) | Should the future-availability rule of 24 Oct change? | **Do not change** | UX-P26 |
 
 ### §4.3 How a new decision gets in
 
@@ -268,10 +278,11 @@ Ruled 26 Oct afternoon (W74–W78, W90, L5).
 3. **One card = one branch.** Branch name `lane-<a|b|c>/<card-id>-<slug>`, e.g.
    `lane-a/T2-01-camera-evidence`. Each card has a ready prompt in
    [`docs/plans/prompts/`](docs/plans/prompts/README.md) — paste it into the lane's agent.
-4. **CI is off; these local checks are the gate** (W75). Before an agent says a card is done, and
-   again before Babin merges it locally, run **every step `.github/workflows/ci.yml` ran, in its
-   order** — the list is in [`docs/plans/README.md`](docs/plans/README.md) until T0-11 makes it one
-   command: typecheck · lint · tests (mock data) · migrations from scratch · financial integrity ·
+4. **Run these local checks before you push** (W75 turned CI off on 26 Oct for billing; it now runs on
+   the owner's runner — [`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md) §6). Before an agent says a card
+   is done, and again before Babin merges it, run **every step `.github/workflows/ci.yml` runs, in its
+   order** — the list is in [`docs/plans/README.md`](docs/plans/README.md), and `npm run gates` is the same
+   list as one command: typecheck · lint · local API guards · tests (mock data) · migrations from scratch · financial integrity ·
    security · lifecycle · server contracts · partial Return · lint:progress · receipt test · page
    shell · UI copy · contrast · build (coverage before each live batch). SQL changes need
    `check:pglite` and `check:lifecycle` green in the same run (R-35 "Verified"). Drive the changed
@@ -310,7 +321,7 @@ Ruled 26 Oct afternoon (W74–W78, W90, L5).
 | Photo storage growth | Storage quota warnings | Compress on device (⭐ long edge 1600 px); monthly size check |
 | One person approves everything | Owner actions slip | [`BABIN_ACTIONS.md`](docs/plans/BABIN_ACTIONS.md) has dated owner tasks |
 | Scope creep | New ideas land in go-live tracks | Anything not in §1 goes to T10 |
-| CI is off | A merge breaks `main` unnoticed | Local gates before every merge (§6.4); Claude re-runs the fast checks on `main` twice a day and reports red at once |
+| CI runs only on one desktop and is often red | A merge breaks `main` unnoticed, or a stale green run is trusted | Local gates before every merge (§6.4); a complete CI run on the **same head** where it is available ([`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md) §5); Claude re-runs the fast checks on `main` twice a day and reports red at once |
 | Automatic client emails go wrong | Wrong time, wrong client, an amount before approval | Server-built emails only (never browser text); one send per booking + event; the T5-06 register and its test; staging dry run with test clients |
 | ~283 agent sessions open (31 Oct count), ~68 of them slips first | A lane falls behind its weekly pace (about 5–6 core sessions); lane C merged ≈ 3 sessions of cards in the week to 31 Oct against ≈ 106 open | Slips-first cards move after day X first (B56), then [soon] cards; Claude reports each lane's pace at the check-ins and flags a lane more than a week behind; if one stays behind for two check-ins, Babin decides what else moves to T10 |
 | Five cards change availability (downtime, time between rentals, overbooking, temporary stock, day start) | Two cards edit the same availability code; a booking slips through | One lane owns the stock changes (K1); each such card has a design note and lifecycle steps; the double-booking guard is never bypassed (K4) |

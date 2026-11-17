@@ -1,14 +1,24 @@
 # Babin Rentals OS — Open Decisions Register
 
-## 9 November 2026 — owner interview answers (RULINGS-2026-11-09)
-
-Babin answered in chat; full wording and reverts in `RULINGS-2026-11-09.md`. Answered: O-10 shape (figures still open), O-11 process, O-15 structure (amounts open), O-20 Elite fee per client, F-a, F-b/F-c/F-e (Rs 25,000), F-d (Rs 50,000 Manager cap), D-a (Driver handover on assigned trips), CI as merge gate, I-a and K-a (Coordinator), the S/A/N/P defaults, the O-4/O-12/O-13/O-21 defaults, and the 13 online-booking defaults. Still open: cancellation tier figures, delivery zone amounts, and the seven accountant questions (due 30 Nov).
-
----
-
 ## 5 November 2026 — Glossary editing in Settings (O-22)
 
 Babin requested glossary changes from Settings during the conflict repair. **Answered 5 Nov 2026:** editing is **Owner only** and **approved term changes apply throughout the app immediately**. The glossary's existing 1 Nov approval remains recorded; automatic OK statuses from the faulty wave exporter are not review evidence. T0-12 implements an explicit Owner approval action, append-only shared revisions and immediate text refresh. Whole-app Nepali activation remains gated independently. No hosted write path is enabled until Babin applies the locally verified migration (N-5).
+
+## 2 November 2026 — Owner replies, implementation and tax checks still pending
+
+The latest owner decisions are recorded in [RULINGS-2026-11-02-OWNER.md](../RULINGS-2026-11-02-OWNER.md). This is a **docs-only record**; no financial rule has been shipped or verified in the app.
+
+**Answered in business terms:** O-4 digest 05:30 NPT; O-12 excess membership credit remains account credit; O-14 new separate invoice for additional charges once the original is issued, while unissued drafts are updated in place; O-20 Elite has a **fixed** (amount not yet supplied) annual fee; O-15 scooter inside/outside fees NPR 150/250 and vehicle-zone prices configurable in Settings; Booqable renewal **18 February 2027**; staged launch and A/B/C development lanes approved in principle.
+
+**Owner answers requiring compliance checks:** O-5 owner specified 1.5% withholding on services (accountant to verify); O-6 owner believes IRD-certified e-billing is not needed (requires statutory verification); O-7 expressly non-VAT bills do not charge VAT (classification and returns need accountant check); O-11 agreement approach approved but final terms text missing; O-16 printer/scanner purchase approved in principle, models not chosen; O-20 Elite fixed fee, amount missing.
+
+**O-10 cancellation policy — ANSWERED via approved Option A:** A confirmed, not-yet-started booking cancelled **more than 48 hours** before scheduled start is free. Cancellation **more than 24 and up to 48 hours** before start is **50% of pre-VAT rental subtotal for bookings longer than 2 rental days**, else free. Cancellation **within the final 24 hours** costs **one rental day's charge for a 1–2-day booking**, or **the higher of one rental day's charge and 50% of pre-VAT rental subtotal** for a booking longer than 2 days. Drafts/unconfirmed free. Staff override requires authorized role, reason and audit. This supersedes historical incomplete O-10 entries below. Full test cases in [RULINGS-2026-11-02-OWNER.md](../RULINGS-2026-11-02-OWNER.md). **Not implemented**; tax treatment is a compliance check, not a pending cancellation-rate decision.
+
+**Still unanswered:** O-17 VAT invoice issuance timing; VAT classification/treatment for cancellation fees and non-VAT bills; van zone rates and inside/outside boundaries; Elite fixed fee amount; final agreement text, scanner/printer models and legal/tax confirmation. The user did **not** authorize paid staging by approving development lanes A/B/C.
+
+**Safety:** Retain the P0 release HOLD. Do not alter issued invoices in place, assume tax compliance, deploy, or create paid staging without explicit approvals. Treat the above dated ruling as newer than the historic entries below.
+
+---
 
 ## 28 October 2026: switch-user PIN length (T1-15) — ANSWERED 1 Nov: 4 digits (O-18)
 
@@ -352,3 +362,20 @@ second step for eSewa-vs-Khalti (and somewhere for Card/Cheque)? Until Babin ans
 no ledger fact is lost, and narrowing the list would. Blocks nothing.
 
 
+
+## 22. Operations UX decisions D-UX-01 to D-UX-05 (registered 10 November 2026) — open
+
+Source: `docs/ui-ux/06_SIX_STAGE_OPERATIONS.md`, "Explicit decisions before engineering expansion".
+Registered as O-23 to O-27 in `PLAN.md` §4.2. Babin has not answered any of them, and nothing in this
+section is an approved product policy. Each is `TODO(decision)` until he does.
+
+- **O-23 (D-UX-01)** — Definition and ownership of reusable container IDs/cases, labels and
+  responsibility after return. Blocks UX-P22. ⭐ No persistent case manifest; no case count shown.
+- **O-24 (D-UX-02)** — Which sub-items are separately stock-tracked versus checklist-only, and which
+  versions govern legacy rentals. Blocks UX-P21 and UX-P22. ⭐ Keep today's behaviour.
+- **O-25 (D-UX-03)** — Whether Testing Bay occupancy needs persistence or is merely a local operator
+  note, and how custody is represented. Blocks UX-P23. ⭐ Local note only; no custody change.
+- **O-26 (D-UX-04)** — Category QC templates, approved handling of client media and configuration
+  resets, and quick-shelve eligibility. Blocks UX-P26. ⭐ No templates; current Reset checklist.
+- **O-27 (D-UX-05)** — Whether the future-availability policy should remain as ruled (24 October).
+  Blocks UX-P26. ⭐ **Do not change.**

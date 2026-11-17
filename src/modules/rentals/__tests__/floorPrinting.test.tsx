@@ -3,8 +3,8 @@
  * T2-08 · Floor printing tests
  *
  * Verifies that:
- * 1. PackingWorkspace offers a live "Print Packing List" button (not wrapped in <Unavailable>).
- * 2. Clicking "Print Packing List" builds the hierarchical manifest and invokes exportPackingListPdf.
+ * 1. PackingWorkspace offers a live "Print pick list" button (not wrapped in <Unavailable>).
+ * 2. Clicking "Print pick list" builds the hierarchical manifest and invokes exportPackingListPdf.
  * 3. ReturnWorkspace offers a live "Print Return Report" button (not wrapped in <Unavailable>).
  * 4. Clicking "Print Return Report" generates the return inspection PDF without any monetary leaks.
  */
@@ -197,7 +197,7 @@ afterEach(async () => {
 })
 
 describe('Floor Printing (T2-08)', () => {
-  it('PackingWorkspace offers live "Print Packing List" button and exports parent-first manifest on click', async () => {
+  it('PackingWorkspace offers live "Print pick list" button and exports parent-first manifest on click', async () => {
     await act(async () => {
       root.render(
         <ToastProvider>
@@ -213,7 +213,7 @@ describe('Floor Printing (T2-08)', () => {
 
     // Button must exist and not be disabled
     const buttons = Array.from(container.querySelectorAll('button'))
-    const printBtn = buttons.find((b) => b.textContent?.includes('Print Packing List'))
+    const printBtn = buttons.find((b) => b.textContent?.includes('Print pick list'))
     expect(printBtn).toBeDefined()
     expect(printBtn?.disabled).toBe(false)
 
@@ -226,11 +226,13 @@ describe('Floor Printing (T2-08)', () => {
     expect(printCalls.packing.length).toBe(1)
     const call = printCalls.packing[0] as {
       bookingNo: string
+      bookingUrl: string
       clientName: string
       items: Array<{ id: string; name: string; isParent?: boolean; parentLineId?: string | null }>
     }
 
     expect(call.bookingNo).toBe('BK-PACK-100')
+    expect(call.bookingUrl).toContain('/rentals/BK-PACK-100')
     expect(call.clientName).toContain('Kathmandu Visuals')
     expect(call.items.length).toBeGreaterThan(0)
 

@@ -106,7 +106,7 @@ export function CreateDocumentModal({
     fontFamily: 'inherit',
     outline: 'none',
     boxSizing: 'border-box' as const,
-    transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+    transition: 'border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease)',
   }
 
   const labelStyle = {

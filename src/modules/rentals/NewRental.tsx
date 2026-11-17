@@ -17,7 +17,7 @@ import { useViewport } from '../../lib/device'
 import { useNetwork } from '../../lib/network'
 import { formatAd } from '../../lib/bs'
 import { isProjectType } from '../../lib/projectTypes'
-import { fetchLastProjectType } from '../../lib/queries/bookings'
+import { fetchLastProjectType, fetchRecentClientProjects } from '../../lib/queries/bookings'
 import { formatMoney, rupees } from '../../lib/money'
 import type { Paisa } from '../../lib/money'
 import type { RentalDraftData } from '../../actions/rentals/saveDraft'
@@ -58,6 +58,8 @@ import type { PromoCodeDefinition } from '../../lib/pricingPipeline'
 import { buildRebookPrefill, formatRebookCopyOptions, type RebookPrefill } from '../../lib/rebook'
 import { RebookDialog } from './actions/RebookDialog'
 import { Modal } from '../../components/ui/Modal'
+import { BookingConflictModal } from './booking/BookingConflictModal'
+import type { LineEvaluationResult, FreeDateWindow } from '../../lib/availabilityEvaluation'
 import { newClientUuid } from '../../lib/supabase'
 import { useNewRentalProductDeposits } from './booking/useNewRentalProductDeposits'
 export type { Line, CrewLine, BlockingNotice, ConfirmWriteState }
@@ -312,6 +314,11 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
      demo literals — a named project, a kind, and a July 2026 window — which
      made every fresh draft look priced and dated before anyone touched it. */
   const [project, setProject] = useState('')
+  const [shootLocation, setShootLocation] = useState('')
+  const [recentProjects, setRecentProjects] = useState<{ projectNames: string[]; shootLocations: string[] }>({
+    projectNames: [],
+    shootLocations: [],
+  })
   const [kind, setKind] = useState('')
   /** Custom description, only meaningful while `kind` is 'Other' (spec §7). */
   const [kindOther, setKindOther] = useState('')
@@ -332,9 +339,13 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     if (!clientDbId) {
       if (prefilledKind.current !== null && kindNow.current === prefilledKind.current) setKind('')
       prefilledKind.current = null
+      setRecentProjects({ projectNames: [], shootLocations: [] })
       return
     }
     let cancelled = false
+    void fetchRecentClientProjects(clientDbId).then((rec) => {
+      if (!cancelled) setRecentProjects(rec)
+    })
     void fetchLastProjectType(clientDbId).then((last) => {
       if (cancelled || !replaceable()) return
       const next = last && isProjectType(last.projectType) ? last.projectType : ''
@@ -430,7 +441,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     setLines((prev) => {
       let changed = false
       const next = prev.map((l) => {
-        if (l.daysOverridden === true || l.days === days) return l
+        if (l.serviceBasis === 'Flat' || l.daysOverridden === true || l.days === days) return l
         changed = true
         return { ...l, days }
       })
@@ -505,6 +516,71 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     [equipmentLines, availabilitySource],
   )
   const conflictLines = conflictSummary.conflicts
+
+  const [conflictModalOpen, setConflictModalOpen] = useState(false)
+
+  const conflictsList = useMemo<readonly LineEvaluationResult[]>(() => {
+    if (conflictSummary.state !== 'ready' || conflictLines.length === 0 || !liveEquipment) return []
+
+    return conflictLines.map((conflict) => {
+      const matchingLine = lines.find(
+        (l) => l.productId === conflict.productId || l.id === conflict.productId || l.name === conflict.name,
+      )
+      const lineId = matchingLine?.id ?? conflict.productId
+
+      const altUnits: { unitId: string; assetTag: string }[] = []
+
+      // Compatible substitutes from liveEquipment in the same category where unitsFree > 0
+      const currentProduct = liveEquipment.find((e) => e.id === conflict.productId)
+      const compatibleSubstitutes: { productId: string; name: string }[] = []
+      if (currentProduct) {
+        for (const eq of liveEquipment) {
+          if (eq.id !== currentProduct.id && eq.category === currentProduct.category) {
+            const avail = availabilitySource.state === 'ready' ? availabilitySource.byProduct.get(eq.id) : undefined
+            if (avail && avail.unitsFree > 0) {
+              compatibleSubstitutes.push({
+                productId: eq.id,
+                name: eq.name,
+              })
+              if (compatibleSubstitutes.length >= 3) break
+            }
+          }
+        }
+      }
+
+      // Free date windows: suggest shifting forward by 1 day
+      const freeDateWindows: FreeDateWindow[] = []
+      if (pickupAt && returnAt) {
+        const pDate = new Date(pickupAt)
+        const rDate = new Date(returnAt)
+        const spanMs = rDate.getTime() - pDate.getTime()
+        const nextPickup = new Date(pDate.getTime() + 86400000)
+        const nextReturn = new Date(nextPickup.getTime() + spanMs)
+        freeDateWindows.push({
+          fromIso: nextPickup.toISOString(),
+          toIso: nextReturn.toISOString(),
+        })
+      }
+
+      return {
+        lineId,
+        productId: conflict.productId,
+        productName: conflict.name,
+        requestedQty: conflict.needed,
+        availableQty: conflict.free,
+        status: 'conflict' as const,
+        conflictingBookingNo: conflict.heldBy[0],
+        conflictingReason: conflict.text,
+        suggestedSolutions: {
+          alternativeUnits: altUnits,
+          compatibleSubstitutes,
+          freeDateWindows,
+          canReduceQuantity: conflict.free > 0,
+          canSubRent: true,
+        },
+      }
+    })
+  }, [conflictSummary, conflictLines, lines, liveEquipment, availabilitySource, pickupAt, returnAt])
   /**
    * Law 10 as amended 31 Aug 2026, through the engine rather than a
    * re-derivation on the page. The gate is GONE (D3, Babin: "don't put any
@@ -591,7 +667,8 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
      loader and the local restore both call it, so they cannot drift apart. */
   const applyDraftFields = useCallback((data: RentalDraftData) => {
     setSelectedClientId(data.selectedClientId)
-    setProject(data.project)
+    setProject(data.projectName ?? data.project)
+    if (data.shootLocation) setShootLocation(data.shootLocation)
     /* Legacy drafts stored free-text `kind`; only allow-listed values
        survive the restore — anything else would fail validation on save. */
     setKind(isProjectType(data.kind) ? data.kind : '')
@@ -690,6 +767,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     setQuoteSnapshot,
     selectedClientId,
     project,
+    shootLocation,
     kind,
     kindOther,
     govId,
@@ -738,6 +816,8 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     lines,
     equipmentLines,
     project,
+    projectName: project,
+    shootLocation,
     pickupAt,
     returnAt,
     deliveryType,
@@ -908,6 +988,9 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     if (!confirmBlocked) { void confirmBooking(); return }
     const firstNotice = blockingNotices[0]
     if (firstNotice?.action) {
+      if (firstNotice.action === 'Open Equipment' && conflictLines.length > 0) {
+        setConflictModalOpen(true)
+      }
       runNoticeAction(firstNotice.action)
       setTimeout(() => {
         let targetId = 'section-0'
@@ -1230,19 +1313,34 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
             <Icon name="alert_triangle" size={16} style={{ flexShrink: 0 }} />
             <span>{conflictLines.length} equipment conflict{conflictLines.length > 1 ? 's' : ''}</span>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => jumpToSection('section-2')}
-            style={{
-              whiteSpace: 'nowrap',
-              borderColor: 'currentColor',
-              color: 'inherit',
-              padding: '0 10px',
-              fontSize: 'var(--t-meta)',
-            }}
-          >
-            Review
-          </Button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <Button
+              variant="outline"
+              onClick={() => setConflictModalOpen(true)}
+              style={{
+                whiteSpace: 'nowrap',
+                borderColor: 'currentColor',
+                color: 'inherit',
+                padding: '0 10px',
+                fontSize: 'var(--t-meta)',
+                fontWeight: 600,
+              }}
+            >
+              Resolve Conflicts
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => jumpToSection('section-2')}
+              style={{
+                whiteSpace: 'nowrap',
+                color: 'inherit',
+                padding: '0 8px',
+                fontSize: 'var(--t-meta)',
+              }}
+            >
+              Review
+            </Button>
+          </div>
         </div>
       )}
 
@@ -1286,6 +1384,10 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
               isPhone={isPhone}
               project={project}
               setProject={setProject}
+              shootLocation={shootLocation}
+              setShootLocation={setShootLocation}
+              recentProjectNames={recentProjects.projectNames}
+              recentShootLocations={recentProjects.shootLocations}
               kind={kind}
               setKind={setKind}
               kindOther={kindOther}
@@ -1592,6 +1694,67 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
             `/rentals?action=new&rebook=${encodeURIComponent(bookingNo)}` +
             (copy ? `&copy=${encodeURIComponent(copy)}` : ''),
           )
+        }}
+      />
+
+      <BookingConflictModal
+        isOpen={conflictModalOpen}
+        onClose={() => setConflictModalOpen(false)}
+        bookingNo={undefined}
+        rentalWindow={
+          pickupAt && returnAt
+            ? { fromAd: pickupAt.toISOString(), toAd: returnAt.toISOString() }
+            : undefined
+        }
+        conflicts={conflictsList}
+        onKeepDraft={() => setConflictModalOpen(false)}
+        onReassignUnit={(lineId, unitId) => {
+          setLines((prev) =>
+            prev.map((l) => (l.id === lineId ? { ...l, serial: unitId } : l))
+          )
+          setConflictModalOpen(false)
+        }}
+        onSelectSubstitute={(lineId, substituteProductId) => {
+          const substitute = liveEquipment?.find((e) => e.id === substituteProductId)
+          if (substitute) {
+            setLines((prev) =>
+              prev.map((l) => {
+                if (l.id !== lineId) return l
+                return {
+                  ...l,
+                  productId: substitute.id,
+                  name: substitute.name,
+                  category: substitute.category ?? l.category,
+                  ratePaisa: substitute.ratePaisa ?? l.ratePaisa,
+                  serial: '',
+                }
+              })
+            )
+          }
+          setConflictModalOpen(false)
+        }}
+        onAdjustDates={(w) => {
+          setPickup(w.fromIso.slice(0, 10))
+          setRet(w.toIso.slice(0, 10))
+          setConflictModalOpen(false)
+        }}
+        onRemoveItem={(lineId) => {
+          setLines((prev) => prev.filter((l) => l.id !== lineId))
+          setConflictModalOpen(false)
+        }}
+        onSubRent={(lineId) => {
+          setLines((prev) =>
+            prev.map((l) =>
+              l.id === lineId
+                ? {
+                    ...l,
+                    lineType: 'Sub-rental' as const,
+                    lineNote: l.lineNote ? `${l.lineNote} (Sub-rental requested)` : 'Sub-rental requested',
+                  }
+                : l
+            )
+          )
+          setConflictModalOpen(false)
         }}
       />
     </PageShell>

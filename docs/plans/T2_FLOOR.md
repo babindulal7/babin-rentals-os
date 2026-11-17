@@ -53,7 +53,7 @@ compressed on the device (1600 px, JPEG 0.8, EXIF stripped), retry with the same
 **Not built yet → T2-18:** several photos per pick, a damage photo per flagged unit at Return, the
 10 MB damage-photo size and an honest offline message. The staging checks (Done when 1–3) wait for T1-06.
 
-### T2-18 · Finish evidence capture (what T2-16 left)            status: todo · size: L · lane A · [go-live]
+### T2-18 · Finish evidence capture (what T2-16 left)            status: doing — H2 fail-closed evidence reads in draft · size: L · lane A · [go-live]
 **What** — Finish what T2-01 left (Claude's review of `3fca220`, 26 Oct). **Items 3 and 4 below were built by T2-16 (several photos, size caps) — check them, do not rebuild;** items 1, 2, 5, 6 and 7 are still open:
 1) **Honest offline message.** Offline, the screens say the photo "was saved / kept on device and will
    upload when connectivity is restored", but nothing keeps or uploads it (`OperationEvidenceStatus.tsx`
@@ -103,7 +103,7 @@ after Pack is complete saves; gates green; driven in `dev:mock` at 375, 820 and
 1440 px as Warehouse and Technician.
 **Needs** — T2-01 (done in part). Staging checks of T2-01 (Done when 1–3) still wait for T1-06.
 
-### T2-17 · Save a unit's details            status: todo · size: M · lane A · [go-live]
+### T2-17 · Save a unit's details            status: doing · size: M · lane A · [go-live]
 **What** — On the equipment page, the unit editor (`AssetDetail.tsx`, `UnitEditor`) lets staff change
 a unit's asset tag, serial, status, rack, shelf, bin and condition, then says "Editing this session
 only — there is no unit-update action yet, so nothing is persisted" (line 223). Staff label and
@@ -243,7 +243,7 @@ Replace the two `<Unavailable reason="Printing … is not built">` blocks.
 **Done when** — PDFs open on iPad and print on the shop printer; Warehouse versions carry no prices.
 **Needs** — none.
 
-### T2-09 · Bluetooth scanner at the packing bench            status: doing — code verified; iPad/scanner acceptance pending (lane-a/T2-09-main-integration) · size: S · lane A + Babin
+### T2-09 · Bluetooth scanner at the packing bench            status: done · merged (`f3dcf0c3`) · verified on iPad by Babin · size: S · lane A + Babin
 **What** — Claude proposes 2–3 iPad-compatible Bluetooth scanners that read QR and Code 128 in
 keyboard (HID) mode, with prices from Nepali sellers; Babin buys one. Make `ScannerInput` accept a
 fast keystroke burst ending in Enter anywhere on the floor screens (focus trap on the scan field,
@@ -325,6 +325,10 @@ time; a Warehouse seat sees no money.
 **Needs** — none.
 
 ### T2-15 · Damage found during reset            status: ready — awaiting merge (lane-a/T2-15-damage-found-during-reset) · size: S · lane A · [soon]
+**30 Oct triage** — Existing [PR #30](https://github.com/babindulal7/babin-rentals-os/pull/30)
+contains the implementation; its `0185` collides with Team Notes on main. Preserve
+it, claim a free number through the ledger, and rerun both database gates after
+reconciliation. [Evidence](../verification/PR_TRIAGE_2026-10-30.md).
 **What** — When Reset marks an item Damaged after the client has left (W44), the app opens a damage
 case **linked to the booking it last came back from**, defaulting to **claim from the client**; the
 client gets the "damage found — under review" email without an amount (W23, T5-07); the amount
@@ -336,7 +340,7 @@ follows only after a Manager (< Rs 25,000) or Owner (≥ Rs 25,000) approves.
 client gets the notice, and no amount appears until approval.
 **Needs** — T2-01, T5-07 for the email.
 
-### T2-16 · Photo rules from W27: several photos, size caps, HEIC            status: ready — awaiting merge (lane-a/T2-16-photo-rules-w27) · size: S · lane A · [go-live]
+### T2-16 · Photo rules from W27: several photos, size caps, HEIC            status: done · size: S · lane A · [go-live]
 **What** — T2-01 shipped one photo per step with one shrink rule. Bring it to W27: the file input gets
 `multiple`; **one or more photos per step, the gate needs at least one**; shrink on the device until
 **damage photos ≤ 10 MB and every other photo ≤ 3 MB** (lower the long edge and the JPEG quality step
@@ -350,7 +354,7 @@ on retry; offline still refuses inline.
 step and the gate passes on the first, a HEIC file uploads as JPEG, retry reuses the uuid.
 **Needs** — T2-01 (done).
 
-### T2-25 · Print every line; the pick list from the booking            status: todo · size: S · lane A · [go-live]
+### T2-25 · Print every line; the pick list from the booking            status: done · size: S · lane A · [go-live]
 **What** — T2-08 (done) prints the packing list from Pack and the return report from Return. Two gaps:
 1) **Long bookings are cut short on paper.** The packing list stops after 16 lines ("…and N more
    equipment lines listed on digital manifest"), the return report after 14 and the document PDF after
@@ -390,7 +394,7 @@ cannot complete until signed or the refusal is recorded; 3) the signature is on 
 4) Warehouse and Technician can do it; 5) screen check.
 **Needs** — T2-02 (done), T2-18 (damage photo per flagged unit).
 
-### T2-20 · Floor adds consumables at Pack and Handover            status: todo · size: S · lane A · [go-live] · slips first
+### T2-20 · Floor adds consumables at Pack and Handover            status: ready — awaiting merge (mac/T2-20-floor-consumables) · size: S · lane A · [go-live] · slips first
 **What** — On Pack and Handover, "**Add consumables**" lists the consumable products (tape, gels,
 batteries) with a quantity stepper (B35). Adding writes a consumable line to the booking through
 T3-30's action: the price comes from the server and floor roles never receive it (Law 6). Stock goes
@@ -405,7 +409,7 @@ price; Warehouse has no price in the DOM or the payload; 2) Handover deducts the
 same `client_uuid` twice adds one line; 4) screen check.
 **Needs** — T3-30.
 
-### T2-21 · Planned downtime with a reason            status: todo · size: M · lane A · [go-live] · slips first
+### T2-21 · Planned downtime with a reason            status: ready — awaiting merge (lane-a/T2-21-planned-downtime-with-a-reason) · size: M · lane A · [go-live] · slips first
 **What** — Block a unit (or part of a quantity-tracked product) for **dates you know in advance**, with
 a **reason from a list** (B10): ⭐ **Repair · Service or calibration · Our own shoot · Lent to a
 partner · Marketing shoot · Other (type it)**. In that range the unit cannot be booked — New Rental,
@@ -429,7 +433,7 @@ those days only; 2) a downtime over an existing booking is refused with the book
 frees the dates at once; 4) the calendar bar shows the reason to every staff role; 5) screen check.
 **Needs** — T3-22 merged first if it is open (both change `src/lib/queries/availability.ts`).
 
-### T2-22 · Time between rentals: account-wide or per product            status: todo · size: M · lane A · [go-live] · slips first
+### T2-22 · Time between rentals: account-wide or per product            status: ready — awaiting merge (lane-a/T2-22-time-between-rentals-account-wide-or) · size: M · lane A · [go-live] · slips first
 **What** — Settings ▸ Operations rules gets "**Time between rentals: Account-wide · Per product**"
 (B11, reading). *Account-wide* is today's `rentalTurnaround` setting. *Per product* uses each product's
 **prep minutes before pickup** and **cleaning minutes after return** — `products.prep_time_minutes` and

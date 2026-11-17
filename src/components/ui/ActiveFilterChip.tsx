@@ -95,7 +95,7 @@ export function ActiveFilterChip({
           cursor: disabled ? 'not-allowed' : 'pointer',
           padding: 0,
           marginLeft: '2px',
-          transition: 'background 120ms ease, color 120ms ease',
+          transition: 'background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease)',
         }}
         onMouseEnter={(e) => {
           if (!disabled) {

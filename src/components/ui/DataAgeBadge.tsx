@@ -66,9 +66,15 @@ export function DataAgeBadge({
   }, [])
 
   const now = Date.now()
+  // An invalid cache timestamp must never look like a fresh successful read.
+  // Keep the ordinary pre-load state quiet on phones, but show corrupt timestamps.
+  const loadedDate = loadedAt === null || loadedAt === undefined || loadedAt === ''
+    ? null
+    : loadedAt instanceof Date ? loadedAt : new Date(loadedAt)
+  const invalidTimestamp = loadedDate !== null && !Number.isFinite(loadedDate.getTime())
 
-  if (!loadedAt) {
-    if (quietWhenFresh) return null
+  if (loadedDate === null || invalidTimestamp) {
+    if (quietWhenFresh && !invalidTimestamp) return null
     return (
       <div
         className={className}
@@ -80,22 +86,49 @@ export function DataAgeBadge({
           borderRadius: 'var(--r-xs, 4px)',
           background: variant === 'muted' ? 'transparent' : 'var(--surface-2)',
           border: variant === 'muted' ? 'none' : '1px solid var(--border)',
-          color: 'var(--muted)',
+          color: invalidTimestamp ? 'var(--warn-text)' : 'var(--muted)',
           fontSize: variant === 'muted' ? '12px' : '11px',
           fontWeight: 600,
           fontFamily: 'var(--font-id, sans-serif)',
           fontVariantNumeric: 'tabular-nums',
           ...style,
         }}
-        title="No data has been loaded yet"
+        title={invalidTimestamp ? 'Last refresh time is invalid; refresh to check data' : 'No data has been loaded yet'}
       >
-        <Icon name="timer" size={13} style={{ color: 'var(--muted)', flexShrink: 0 }} />
-        <span>No cache</span>
+        <Icon
+          name={invalidTimestamp ? 'alert_triangle' : 'timer'}
+          size={13}
+          style={{ color: invalidTimestamp ? 'var(--warn-text)' : 'var(--muted)', flexShrink: 0 }}
+        />
+        <span>{invalidTimestamp ? 'Time unavailable' : 'No cache'}</span>
+        {invalidTimestamp && onRefresh && (
+          <button
+            type="button"
+            onClick={() => void onRefresh()}
+            disabled={loading}
+            aria-label="Refresh data"
+            title="Refresh data from server"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minWidth: 44,
+              minHeight: 44,
+              padding: 0,
+              border: 'none',
+              borderRadius: 'var(--r-xs, 4px)',
+              background: 'transparent',
+              color: 'inherit',
+              cursor: loading ? 'not-allowed' : 'pointer',
+            }}
+          >
+            <Icon name="refresh" size={13} style={{ animation: loading ? 'spin 1s linear infinite' : undefined }} />
+          </button>
+        )}
       </div>
     )
   }
 
-  const loadedDate = typeof loadedAt === 'string' || typeof loadedAt === 'number' ? new Date(loadedAt) : loadedAt
   const loadedMs = loadedDate.getTime()
   const diffMs = Math.max(0, now - loadedMs)
   const isStale = diffMs >= staleThresholdMs

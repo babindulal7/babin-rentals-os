@@ -6,14 +6,16 @@ const state = vi.hoisted(() => ({
     evidence_files: [] as Array<Record<string, unknown>>,
     evidence_references: [] as Array<Record<string, unknown>>,
     operation_sessions: [] as Array<Record<string, unknown>>,
+    bookings: [] as Array<Record<string, unknown>>,
   },
   fail: '' as string,
   uploads: [] as string[],
   signs: 0,
+  generatedIds: 0,
 }))
 
 vi.mock('../dataAccess', () => ({
-  generateClientUuid: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  generateClientUuid: () => `aaaaaaaa-aaaa-4aaa-8aaa-${String(++state.generatedIds).padStart(12, '0')}`,
 }))
 
 vi.mock('../supabase', () => {
@@ -22,7 +24,10 @@ vi.mock('../supabase', () => {
     let staged: Record<string, unknown> | undefined
     const q = {
       select: () => q,
+      order: () => q,
+      limit: () => q,
       eq: (key: string, val: unknown) => { filters[key] = val; return q },
+      is: (key: string, val: null) => { filters[key] = val; return q },
       insert: (payload: Record<string, unknown>) => { staged = payload; return q },
       async maybeSingle() {
         if (state.fail === `${tableName}:read`) return { data: null, error: { message: 'read denied' } }
@@ -87,9 +92,11 @@ beforeEach(() => {
   state.rows.evidence_files.length = 0
   state.rows.evidence_references.length = 0
   state.rows.operation_sessions = [{ id: SESSION, booking_id: BOOKING, operation: 'Handover', state: 'In Progress' }]
+  state.rows.bookings = [{ id: BOOKING, delivery_type: 'Client Pickup' }]
   state.fail = ''
   state.uploads.length = 0
   state.signs = 0
+  state.generatedIds = 0
 })
 
 describe('P2B: fail-closed proof-of-delivery evidence persistence', () => {
@@ -142,10 +149,137 @@ describe('P2B: fail-closed proof-of-delivery evidence persistence', () => {
     expect(state.rows.evidence_references).toHaveLength(1)
   })
 
+  it('keeps a pre-Return unit Damage photo session-free and idempotent on retry', async () => {
+    // A damaged unit needs evidence BEFORE the Return floor verb is allowed to
+    // complete. The photo must not consume an operation_sessions Return key.
+    state.rows.operation_sessions = []
+    const unitId = '00000000-0000-4000-8000-000000000005'
+    const input = {
+      ...evidenceInput(),
+      category: 'Damage' as const,
+      reference: { bookingId: BOOKING, itemId: unitId, operationStage: 'Damage' as const },
+    }
+
+    const first = await uploadEvidencePhoto(input)
+    const retry = await uploadEvidencePhoto(input)
+
+    expect(retry.id).toBe(first.id)
+    expect(retry.referenceId).toBe(first.referenceId)
+    expect(state.rows.operation_sessions).toHaveLength(0)
+    expect(state.rows.evidence_references).toHaveLength(1)
+    expect(state.rows.evidence_references[0]).toMatchObject({
+      booking_id: BOOKING,
+      item_id: unitId,
+      session_id: null,
+      operation_stage: 'Damage',
+    })
+    expect(state.uploads).toHaveLength(1)
+  })
+
+  it('does not mistake a unit-specific Damage link for a booking-level link of identical bytes', async () => {
+    state.rows.operation_sessions = []
+    const itemId = '00000000-0000-4000-8000-000000000005'
+    const input = {
+      ...evidenceInput(),
+      category: 'Damage' as const,
+      reference: { bookingId: BOOKING, operationStage: 'Damage' as const, itemId },
+    }
+
+    const unit = await uploadEvidencePhoto(input)
+    const booking = await uploadEvidencePhoto({
+      ...input,
+      reference: { bookingId: BOOKING, operationStage: 'Damage' as const },
+    })
+
+    expect(booking.id).toBe(unit.id) // Same file bytes are de-duplicated.
+    expect(booking.referenceId).not.toBe(unit.referenceId)
+    expect(state.uploads).toHaveLength(1)
+    expect(state.rows.evidence_references).toHaveLength(2)
+    expect(state.rows.evidence_references.map((row) => row.item_id)).toEqual([itemId, null])
+
+    const bookingRetry = await uploadEvidencePhoto({
+      ...input,
+      reference: { bookingId: BOOKING, operationStage: 'Damage' as const },
+    })
+    expect(bookingRetry.referenceId).toBe(booking.referenceId)
+    expect(state.rows.evidence_references).toHaveLength(2)
+  })
+
+  it('does not mistake a session-bound link for session-free Damage evidence', async () => {
+    const input = evidenceInput()
+    await uploadEvidencePhoto(input)
+    const unitId = '00000000-0000-4000-8000-000000000005'
+    const damage = await uploadEvidencePhoto({
+      ...input,
+      category: 'Damage',
+      reference: { bookingId: BOOKING, operationStage: 'Damage', itemId: unitId },
+    })
+    expect(state.rows.evidence_references).toHaveLength(2)
+    expect(state.rows.evidence_references[1]).toMatchObject({
+      id: damage.referenceId, session_id: null, item_id: unitId, operation_stage: 'Damage',
+    })
+  })
+
   it('refuses to reuse a retry UUID with changed image bytes', async () => {
     await uploadEvidencePhoto(evidenceInput())
     await expect(uploadEvidencePhoto(evidenceInput('image-B'))).rejects.toThrow(/different image bytes/)
     expect(state.uploads).toHaveLength(1)
+  })
+
+  it('creates a Handover session with the stored delivery method after Pack', async () => {
+    state.rows.operation_sessions = []
+    const input = evidenceInput()
+    const result = await uploadEvidencePhoto({
+      ...input,
+      reference: { bookingId: BOOKING, operationStage: 'Pickup' },
+    })
+    expect(result.referenceId).toBeDefined()
+    expect(state.rows.operation_sessions).toHaveLength(1)
+    expect(state.rows.operation_sessions[0]).toMatchObject({
+      operation: 'Handover',
+      booking_id: BOOKING,
+      delivery_method: 'Client Pickup',
+      state: 'In Progress',
+    })
+    expect(state.rows.evidence_references[0]).toMatchObject({
+      operation_stage: 'Pickup',
+      session_id: state.rows.operation_sessions[0]?.id,
+    })
+  })
+
+  it('refuses a Handover session if the booking delivery method cannot be read', async () => {
+    state.rows.operation_sessions = []
+    state.fail = 'bookings:read'
+    const input = evidenceInput()
+    await expect(uploadEvidencePhoto({
+      ...input,
+      reference: { bookingId: BOOKING, operationStage: 'Pickup' },
+    })).rejects.toThrow(/Could not verify the booking delivery method/)
+    expect(state.rows.operation_sessions).toHaveLength(0)
+    expect(state.uploads).toHaveLength(0)
+  })
+
+  it('does not open another session when the existing-session read fails', async () => {
+    state.fail = 'operation_sessions:read'
+    const input = evidenceInput()
+    await expect(uploadEvidencePhoto({
+      ...input,
+      reference: { bookingId: BOOKING, operationStage: 'Pickup' },
+    })).rejects.toThrow(/Could not verify open Handover session/)
+    expect(state.uploads).toHaveLength(0)
+  })
+
+  it('attaches Inspection evidence to a Return session, not Handover', async () => {
+    state.rows.operation_sessions[0]!.operation = 'Return'
+    const input = evidenceInput()
+    const result = await uploadEvidencePhoto({
+      ...input,
+      reference: { ...input.reference, operationStage: 'Inspection' },
+    })
+    expect(result.referenceId).toBeDefined()
+    expect(state.rows.evidence_references[0]).toMatchObject({
+      operation_stage: 'Inspection', session_id: SESSION, booking_id: BOOKING,
+    })
   })
 
   it('rejects sessions from other bookings before writing anything', async () => {

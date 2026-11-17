@@ -144,7 +144,7 @@ export default function TimelinePanel({
                   borderRadius: 'var(--r-xs)',
                   position: 'relative',
                   textDecoration: 'none',
-                  transition: 'background-color 0.15s ease',
+                  transition: 'background-color var(--dur) var(--ease)',
                 }}
               >
                 {/* The current moment is a ring, not a bigger dot — reads at a glance. */}

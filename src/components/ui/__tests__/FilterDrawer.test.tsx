@@ -335,6 +335,40 @@ describe('ActiveFilterChips — §8', () => {
 })
 
 describe('FilterSection — Collapsible Filter Group', () => {
+  it('uses one 44px disclosure target instead of a second small chevron button', () => {
+    mount(
+      <FilterSection title="Status" id="sec-status">
+        <p>Active items</p>
+      </FilterSection>,
+    )
+    const section = container.querySelector('.filter-section')!
+    const disclosure = section.querySelector<HTMLButtonElement>('button#sec-status-heading')!
+    expect(section.querySelectorAll('button')).toHaveLength(1)
+    expect(disclosure.style.minHeight).toBe('var(--tap)')
+    expect(disclosure.querySelector('[aria-hidden="true"]')).not.toBeNull()
+    expect(disclosure.getAttribute('aria-expanded')).toBe('true')
+
+    act(() => disclosure.click())
+    expect(disclosure.getAttribute('aria-expanded')).toBe('false')
+    expect(section.querySelectorAll('button')).toHaveLength(1)
+  })
+
+  it('keeps a separate filter action independently clickable without collapsing', () => {
+    let cleared = 0
+    mount(
+      <FilterSection title="Status" id="sec-status" action={<button onClick={() => (cleared += 1)}>Reset</button>}>
+        <p>Active items</p>
+      </FilterSection>,
+    )
+    const disclosure = container.querySelector<HTMLButtonElement>('button#sec-status-heading')!
+    const action = [...container.querySelectorAll<HTMLButtonElement>('.filter-section button')]
+      .find((button) => button.textContent === 'Reset')!
+    expect(container.querySelectorAll('.filter-section button')).toHaveLength(2)
+    act(() => action.click())
+    expect(cleared).toBe(1)
+    expect(disclosure.getAttribute('aria-expanded')).toBe('true')
+  })
+
   it('renders expanded by default with title, chevron and content', () => {
     mount(
       <FilterSection title="Status" id="sec-status">

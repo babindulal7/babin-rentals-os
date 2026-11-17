@@ -119,6 +119,18 @@ describe('validation', () => {
   it('refuses an empty idempotency key', async () => {
     await expect(run({ id: 'B-715', projectType: 'Wedding', clientUuid: '  ' })).rejects.toThrow(/idempotency key/)
   })
+
+  it('refuses project name longer than 120 chars', async () => {
+    await expect(
+      run({ id: 'B-715', projectType: 'Wedding', projectName: 'a'.repeat(121) }),
+    ).rejects.toThrow(/Project name must be 120 characters or fewer/)
+  })
+
+  it('refuses shoot location longer than 120 chars', async () => {
+    await expect(
+      run({ id: 'B-715', projectType: 'Wedding', shootLocation: 'b'.repeat(121) }),
+    ).rejects.toThrow(/Shoot location must be 120 characters or fewer/)
+  })
 })
 
 describe('the write', () => {
@@ -131,6 +143,27 @@ describe('the write', () => {
       payload: { project_type: 'Feature Film', project_type_other: null },
     })
     expect(out).toMatchObject({ bookingNo: 'B-715', projectType: 'Feature Film', projectTypeOther: null, unchanged: false })
+  })
+
+  it('writes project name and shoot location when provided', async () => {
+    const out = await run({
+      id: 'B-715',
+      projectType: 'Music Video',
+      projectName: 'Kathmandu Diaries',
+      shootLocation: 'Pokhara, Phewa lake',
+    })
+    expect(writes.state.updates[0]?.payload).toEqual({
+      project_type: 'Music Video',
+      project_type_other: null,
+      project_name: 'Kathmandu Diaries',
+      project: 'Kathmandu Diaries',
+      shoot_location: 'Pokhara, Phewa lake',
+    })
+    expect(out).toMatchObject({
+      projectName: 'Kathmandu Diaries',
+      shootLocation: 'Pokhara, Phewa lake',
+      projectType: 'Music Video',
+    })
   })
 
   it('writes an Other description alongside Other', async () => {

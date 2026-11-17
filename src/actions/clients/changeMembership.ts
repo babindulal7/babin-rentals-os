@@ -30,6 +30,11 @@ export interface ChangeMembershipInput {
   feePaid?: number | null | undefined
   /** Optional free text, kept as the audit reason. At most 500 characters. */
   note?: string | undefined
+  /**
+   * R-9.2: keep the client's original join date (the renewal anniversary stays put).
+   * Omitted or false restarts the term from the change date.
+   */
+  keepJoinDate?: boolean | undefined
   /** One per attempt (Law 8). The caller keeps it across retries of the same request. */
   clientUuid: string
 }
@@ -44,6 +49,8 @@ export interface ChangeMembershipResult {
   superseded_membership_id: string | null
   /** The new row's join date (Kathmandu business day). */
   joined_on: string
+  /** True when the original join date was kept (R-9.2). */
+  join_date_kept?: boolean
   old_fee?: number
   days_left?: number
   total_days?: number
@@ -92,6 +99,7 @@ export const changeMembershipConfig: ActionConfig<ChangeMembershipInput, ChangeM
         ...(input.effectiveDate ? { effective_date: input.effectiveDate } : {}),
         ...(input.feePaid != null ? { fee_paid: toRupees(input.feePaid as Paisa) } : {}),
         ...(note ? { note } : {}),
+        ...(input.keepJoinDate ? { keep_join_date: true } : {}),
       },
     })
     if (error?.code === 'PGRST202') {

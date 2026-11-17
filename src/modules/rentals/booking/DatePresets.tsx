@@ -131,7 +131,7 @@ export function DatePresets({
               fontSize: 'var(--t-meta)',
               fontWeight: isActive ? 700 : 500,
               cursor: disabled ? 'not-allowed' : 'pointer',
-              transition: 'background 120ms, border-color 120ms, color 120ms',
+              transition: 'background var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast)',
             }}
             onClick={() => {
               if (targetReturn) onPick(targetDay, targetReturn)
@@ -178,7 +178,7 @@ export function DatePresets({
             alignItems: 'center',
             gap: 6,
             whiteSpace: 'nowrap',
-            transition: 'background 120ms, border-color 120ms, color 120ms',
+            transition: 'background var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast)',
           }}
           aria-pressed={p.isActive}
           aria-disabled={disabled || !p.isValid}

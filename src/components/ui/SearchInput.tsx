@@ -130,11 +130,15 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(functi
         className={['ui-input', className].filter(Boolean).join(' ')}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === 'Escape' && value) {
+          // Enter accepts an IME candidate (including Nepali input); Escape can
+          // dismiss it. Neither key should submit or clear the search mid-composition.
+          // keyCode 229 covers older browser/IME combinations that omit isComposing.
+          const composing = e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229
+          if (!composing && e.key === 'Escape' && value) {
             e.preventDefault()
             e.stopPropagation()
             handleClear()
-          } else if (e.key === 'Enter' && onSearchSubmit) {
+          } else if (!composing && e.key === 'Enter' && onSearchSubmit) {
             e.preventDefault()
             onSearchSubmit(value)
           }

@@ -70,7 +70,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
             background: 'var(--input-bg)',
             border: `1px solid ${error ? 'var(--danger)' : 'var(--input-border)'}`,
             color: 'var(--text)',
-            transition: 'border-color 0.15s ease',
+            transition: 'border-color var(--dur) var(--ease)',
             ...style,
             ...(icon ? { paddingLeft: 38 } : {}),
             ...(showClear ? { paddingRight: 52 } : showRightIcon ? { paddingRight: 38 } : {}),

@@ -482,6 +482,7 @@ const ROW: BookingListRow = {
   depositRequired: null,
   isCancelled: false,
   isClosed: false,
+  tags: [],
 }
 
 /** Before both instants above, so nothing is overdue unless a test says so. */

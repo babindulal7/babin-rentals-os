@@ -1,96 +1,12 @@
 /**
- * QrGeneratorModal — Deterministic SVG QR and barcode generator.
- *
- * Ported from the standalone's QR generator (script_1.js:6908-6926).
- * Generates offline printable equipment QR and Code128 barcode labels
- * from serial numbers or SKU tags.
+ * Equipment tag generator. QR and Code128 previews use the exact real
+ * encoding functions used for printing. Never display simulated patterns.
  */
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Card } from '../../components/ui/Page'
 import { Button } from '../../components/ui/Button'
 import Icon from '../../components/ui/Icon'
-import { printLabel } from '../../lib/labelPrinter'
-
-function qrSeedHash(seed: string): number {
-  let h = 2166136261
-  for (let i = 0; i < seed.length; i++) {
-    h ^= seed.charCodeAt(i)
-    h = Math.imul(h, 16777619) >>> 0
-  }
-  return h
-}
-
-function renderQrSvg(seed: string) {
-  const n = 21
-  let h = qrSeedHash(seed) || 1
-  const rnd = () => {
-    h ^= h << 13
-    h >>>= 0
-    h ^= h >>> 17
-    h ^= h << 5
-    h >>>= 0
-    return h / 4294967296
-  }
-
-  const finder = (r: number, c: number) => {
-    const boxes: [number, number][] = [[0, 0], [0, n - 7], [n - 7, 0]]
-    for (const [br, bc] of boxes) {
-      if (r >= br && r < br + 7 && c >= bc && c < bc + 7) {
-        const rr = r - br, cc = c - bc
-        return {
-          hit: true,
-          on: (rr === 0 || rr === 6 || cc === 0 || cc === 6) || (rr >= 2 && rr <= 4 && cc >= 2 && cc <= 4),
-        }
-      }
-    }
-    return { hit: false, on: false }
-  }
-
-  const rects = []
-  for (let r = 0; r < n; r++) {
-    for (let c = 0; c < n; c++) {
-      const f = finder(r, c)
-      const on = f.hit ? f.on : rnd() > 0.52
-      if (on) {
-        rects.push(<rect key={`${r}-${c}`} x={c} y={r} width={1} height={1} fill="#0A0A0A" />)
-      }
-    }
-  }
-
-  return (
-    <svg viewBox="0 0 21 21" width={110} height={110} style={{ background: '#fff', borderRadius: '6px', padding: '6px' }}>
-      {rects}
-    </svg>
-  )
-}
-
-function renderBarcodeSvg(seed: string) {
-  let h = qrSeedHash(seed) || 1
-  const rnd = () => {
-    h ^= h << 13
-    h >>>= 0
-    h ^= h >>> 17
-    h ^= h << 5
-    h >>>= 0
-    return h / 4294967296
-  }
-
-  const bars = []
-  let x = 0
-  for (let i = 0; i < 43; i++) {
-    const w = 1 + Math.floor(rnd() * 3)
-    if (i % 2 === 0) {
-      bars.push(<rect key={i} x={x} y={0} width={w} height={36} fill="#0A0A0A" />)
-    }
-    x += w
-  }
-
-  return (
-    <svg viewBox={`0 0 ${x} 36`} preserveAspectRatio="none" style={{ background: '#fff', borderRadius: '6px', padding: '6px', width: '220px', height: '54px' }}>
-      {bars}
-    </svg>
-  )
-}
+import { generateCode128Svg, generateQrSvg, printLabel } from '../../lib/labelPrinter'
 
 const PRESET_ITEMS = [
   { name: 'Sony FX3 Body', serial: 'FX3-9941', category: 'Cameras' },
@@ -103,6 +19,18 @@ const PRESET_ITEMS = [
 export default function QrGenerator() {
   const [tagText, setTagText] = useState('FX3-9941')
   const [format, setFormat] = useState<'QR' | 'Barcode'>('QR')
+  const assetCode = tagText.trim()
+  const supported = assetCode.length > 0 && (format === 'QR' || /^[\\x20-\\x7E]+$/.test(assetCode))
+  // Only numeric SVG geometry comes from these generators; asset text is never
+  // interpolated into raw markup. A failure is shown as unavailable, not faked.
+  const previewSvg = useMemo(() => {
+    if (!supported) return null
+    try {
+      return format === 'QR' ? generateQrSvg(assetCode) : generateCode128Svg(assetCode)
+    } catch {
+      return null
+    }
+  }, [assetCode, format, supported])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -117,6 +45,7 @@ export default function QrGenerator() {
           <input
             id="qr-tag-text"
             type="text"
+            maxLength={64}
             value={tagText}
             onChange={(e) => setTagText(e.target.value)}
             style={{
@@ -202,22 +131,38 @@ export default function QrGenerator() {
             <div style={{ fontSize: '10px', fontWeight: 700, color: '#444', letterSpacing: '0.05em', marginBottom: '8px', textTransform: 'uppercase' }}>
               Babin Rentals · Asset ID
             </div>
-            {format === 'QR' ? renderQrSvg(tagText || 'SAMPLE') : renderBarcodeSvg(tagText || 'SAMPLE')}
+            {previewSvg ? (
+              <div
+                role="img"
+                aria-label={`${format === 'QR' ? 'QR code' : 'Code 128 barcode'} for ${assetCode}`}
+                style={{ width: format === 'QR' ? 140 : 220, maxWidth: '100%' }}
+                // Safe: generateQrSvg and generateCode128Svg produce only fixed
+                // numeric rectangles from locally encoded matrices.
+                dangerouslySetInnerHTML={{ __html: previewSvg }}
+              />
+            ) : (
+              <p role="alert" style={{ fontSize: 12, color: '#942c22', maxWidth: 220 }}>
+                {assetCode ? 'Cannot encode this tag in the selected format.' : 'Enter an asset ID to generate a scannable label.'}
+              </p>
+            )}
             <div style={{ fontSize: '13px', fontWeight: 700, fontFamily: 'var(--font-id, sans-serif)', fontVariantNumeric: 'tabular-nums', color: '#0A0A0A', marginTop: '8px' }}>
-              {tagText || 'SAMPLE'}
+              {assetCode || 'No asset ID'}
             </div>
           </div>
 
           <Button
+            disabled={previewSvg === null}
             onClick={() => {
+              if (!previewSvg) return
               printLabel(
                 {
-                  assetCode: tagText || 'SAMPLE',
-                  title: tagText || 'Equipment Tag',
-                  barcodeValue: tagText || 'SAMPLE',
+                  assetCode,
+                  title: assetCode,
+                  barcodeValue: assetCode,
+                  symbology: format === 'QR' ? 'qr' : 'code128',
                   orgName: 'BABIN RENTALS OS',
                 },
-                'standard',
+                format === 'QR' ? 'case' : 'standard',
               )
             }}
           >

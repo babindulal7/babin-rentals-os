@@ -1,5 +1,8 @@
 # Online booking and payments — specification (T7-01)
 
+> **12 Nov 2026 owner's approved launch direction:** Build the full company website, client portal and staff OS as a coordinated release target by 18 Feb 2027. The latest explicit owner [rulings](../RULINGS-2026-11-12-unified-launch.md) and [integrated launch plan](plans/UNIFIED_LAUNCH_2027-02-18.md) supersede older scheduling/defaults wherever they conflict. **Pickup AND return dates/times are selected before browsing equipment.** Guest request submission is enabled without creating a client portal account, but account records always require verified identity. Manual staff approval, public base rates, eligible signed-in client discounts and staff notifications are design-approved defaults, configurable by Owner/Admin in OS → Settings → Website & Client Portal with server authorization and audit. **SPECIFICATION ONLY:** no live setting, permission, migration or payment activation occurred. Older seven-screen model and verified-email-only request path below must be reconciled to include guest flow and full website before implementation; they are historical design details, not permission to exclude the latest owner decisions.
+
+
 **Status:** SPEC ONLY — design written 1 Nov 2026 by Claude; arrives as a file for Babin to approve
 (`PLAN.md` §6). No code, migration or permission changed in this commit.
 **Binds:** [T7-02 … T7-11](plans/T7_ONLINE_BOOKING.md) (lane C · Codex-2). Each card builds the part

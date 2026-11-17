@@ -12,6 +12,7 @@ vi.mock('../../../lib/auth', () => ({ useAuth: () => ({ user: mocks.user }) }))
 vi.mock('../../../lib/theme', () => ({ useTheme: () => ({ theme: 'light', toggle: vi.fn() }) }))
 vi.mock('../../../lib/queries/globalSearch', () => ({ searchRecords: mocks.search }))
 vi.mock('../ScannerFab', () => ({ toggleScanner: mocks.scan }))
+vi.mock('../../../lib/scannerEvents', () => ({ toggleScanner: mocks.scan }))
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 
 let host: HTMLDivElement
@@ -87,7 +88,7 @@ it('offers an inline retry without making the user retype the query', async () =
   act(() => retry.click())
   expect(document.activeElement).toBe(host.querySelector('input'))
   await debounce()
-  expect(mocks.search).toHaveBeenLastCalledWith({ role: 'Owner', term: 'b-715', limit: 4 })
+  expect(mocks.search).toHaveBeenLastCalledWith(expect.objectContaining({ role: 'Owner', term: 'b-715', limit: 4 }))
   expect(host.textContent).toContain('#715')
 })
 

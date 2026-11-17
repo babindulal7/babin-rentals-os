@@ -309,7 +309,8 @@ export class ElectronSafeStorageAdapter implements SupportedStorage {
     const storage = this.getElectronStorage();
     if (storage) {
       try {
-        await storage.removeItem(key);
+        const removed = await storage.removeItem(key);
+        if (!removed) throw new Error('Native secure-storage removal was not confirmed');
         this.pending.delete(key);
         if (typeof window !== 'undefined' && window.localStorage) {
           try { window.localStorage.removeItem(key); } catch { /* ignore */ }

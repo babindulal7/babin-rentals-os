@@ -241,6 +241,7 @@ Ladder shorthand: `M+` = Owner · Admin · Manager. `C+` = M+ · Coordinator. `F
 | `rental.discount` | C+ (Coordinator included) | `booking_discounts_money_blind` refuses Floor. **Ungated in amount** (31 Aug): no cap, no reason, no approver. | ○ split from `rental.create` |
 | `rental.extend` | C+ | invoice update in place; blocked on collision with next booking (system, not role) | ✓ |
 | `rental.update_project` | C+ · Warehouse (UI offers edit to C+; floor views) | narrow `project_type`/`project_type_other` text edit via `updateBookingProject`; audited old→new; 0102 money trigger untouched | ○ |
+| `rental.tag` | C+ | `set_booking_tags` RPC (0228, T3-25, B16, B55); adds and removes tags; floor roles read-only | ✓ |
 | `rental.cancel` (before Packed) | C+ | stage-transition policy; cancellation fee tiers from Settings | ✓ |
 | `rental.cancel` (Packed or later) | M+ | reason ≥10 chars, audited | ✓ (same string; stage checked in engine) |
 | `rental.override_overbooking` | M+ | releases the **losing** reservation (`released_at` + `override_records` row + reason ≥10 chars) and re-runs the transition; the GiST constraint is never disabled and never `deferrable` (R-26, 8 Sep) | ○ |
@@ -337,6 +338,7 @@ model**. Nothing is stored: `product_units_service_v` derives it at read time.
 | `inventory.view` | all staff | money columns per §5 | ✓ |
 | `inventory.create` (Quick Add) | M+ · Warehouse | ⭐ Coordinator I-a | ✓ |
 | `inventory.edit_identity` (name, serial, tag, location, condition-at-intake, labels) | M+ · Warehouse · Technician (condition/meters only) | | ✓ |
+| `inventory.update_unit_identity` (T2-17: unit tag, serial, rack, shelf, bin only) | Owner · Admin · Manager · Warehouse; **not Technician or Coordinator** | action capability + draft 0221 column-change trigger; 0180 RLS separately permits Technician **floor** updates. Server-owned revision (0097), audit trigger (0010) | ○ draft; isolated and staging proof pending |
 | `inventory.edit_pricing` (rates, deposit, min days) | M+ | Coordinator view | ✓ |
 | `inventory.edit_purchase` (purchase price, replacement value, supplier, warranty, depreciation) | M+ · Accounts | | ✓ |
 | `inventory.retire` / `inventory.dispose` | M+ (Owner above write-off threshold) | never delete | ✓ |
@@ -487,6 +489,8 @@ Known hole to keep closed: **`security_deposits` was readable by money-blind ses
 | `gate.reset.qc_self_check` | Pass QC on an item cleaned by same person when alone on shift | Warehouse · Technician · Manager+ | "I am alone on shift" mandatory tick (`qc_self_checked = true`) | yes, `qc_self_checked` recorded in row and audited | W43, L7 (27 Oct 2026, 0183, T2-13) |
 | `gate.handover.receiver_unverified` | Receiver not verified at handover | **Any staff allowed to hand over** | ≥10 chars | yes, per session | D2 (26 Oct 2026, 0179) |
 | `gate.conflict.overbooking` | Overbooking (GiST conflict) | M+ | mandatory | yes; losing reservation deactivated | 21 Jul |
+| `gate.extend.clash` | Extension into another booking's dates | Owner · Admin · Manager | mandatory (≥10 chars) | yes, recorded in extension_clash_decisions and audited | B41, B42 (27 Oct 2026, 0241, T3-29) |
+| `gate.pack.at_risk` | At-risk booking cannot reach Pack until covered or resolved | None (hard block) | N/A | yes, booking_at_risk resolution required | B39, B42 (27 Oct 2026, 0241, T3-29) |
 | `gate.conflict.crew` | Crew double-booking | M+ | mandatory | yes | Crew v3.1 |
 | `gate.discount.general` | Discount — any % | C+ | **none** | line audited like any booking write | 31 Aug: ungated |
 | `gate.case.charge_tier1` | Damage / case charge **< Rs 25,000** | Owner · Admin · Manager | yes | yes | 21 Jul |

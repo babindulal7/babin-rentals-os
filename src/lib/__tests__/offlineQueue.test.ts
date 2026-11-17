@@ -10,6 +10,7 @@ import {
   countUnresolvedConflicts,
   resolveConflict,
   OfflineQueueDB,
+  calculateBackoffMs,
 } from '../offlineQueue'
 
 vi.mock('../supabase', () => ({
@@ -54,5 +55,24 @@ describe('offlineQueue — Phase 9 & Law 8 Guard Rails', () => {
     await expect(markMutationFailed(1, 'Network error')).resolves.not.toThrow()
     await expect(resolveMutation(1)).resolves.not.toThrow()
     await expect(resolveConflict(1, 'keep_server')).resolves.not.toThrow()
+  })
+
+  it('calculates exponential backoff with jitter and respects 60s ceiling', () => {
+    const delay0 = calculateBackoffMs(0)
+    expect(delay0).toBeGreaterThanOrEqual(1000)
+    expect(delay0).toBeLessThan(1600)
+
+    const delay1 = calculateBackoffMs(1)
+    expect(delay1).toBeGreaterThanOrEqual(2000)
+    expect(delay1).toBeLessThan(2600)
+
+    const delay2 = calculateBackoffMs(2)
+    expect(delay2).toBeGreaterThanOrEqual(4000)
+    expect(delay2).toBeLessThan(4600)
+
+    const delayLarge = calculateBackoffMs(10)
+    // 60,000 + up to 500ms jitter
+    expect(delayLarge).toBeGreaterThanOrEqual(60000)
+    expect(delayLarge).toBeLessThanOrEqual(60500)
   })
 })

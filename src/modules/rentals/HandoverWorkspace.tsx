@@ -57,6 +57,8 @@ import {
 } from '../../lib/queries/clients'
 import { AddClientIdModal } from '../clients/modals/AddClientIdModal'
 import { AddCollectorModal } from '../clients/modals/AddCollectorModal'
+import { AddConsumableModal } from './booking/AddConsumableModal'
+import type { SystemRole } from '../../types/database'
 import './rentals.css'
 
 
@@ -538,6 +540,7 @@ export default function HandoverWorkspace({
    * on the resolved promise. */
   const [marks, setMarks] = useState<Record<string, Mark>>({})
   const [showScanner, setShowScanner] = useState(false)
+  const [showAddConsumable, setShowAddConsumable] = useState(false)
   const [showDriverModal, setShowDriverModal] = useState(false)
   const presence = useFloorPresence(floor?.bookingNo, user?.name || 'Warehouse staff', user?.role)
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('Ready')
@@ -1575,7 +1578,7 @@ export default function HandoverWorkspace({
                   </span>
                 </div>
                 <div aria-hidden style={{ height: 8, borderRadius: 'var(--r-badge)', background: 'var(--card2)', marginTop: 6, overflow: 'hidden' }}>
-                  <div style={{ width: '100%', height: '100%', background: 'var(--success)', borderRadius: 'var(--r-badge)', transform: `scaleX(${pct / 100})`, transformOrigin: 'left', transition: 'transform var(--dur) ease' }} />
+                  <div style={{ width: '100%', height: '100%', background: 'var(--success)', borderRadius: 'var(--r-badge)', transform: `scaleX(${pct / 100})`, transformOrigin: 'left', transition: 'transform var(--dur) var(--ease)' }} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5, fontSize: 'var(--t-meta)', color: readyUnits ? 'var(--progress-text)' : 'var(--success-text)', fontWeight: 600 }}>
                   <Icon name={readyUnits ? 'alert_triangle' : 'checklist'} size={12} />
@@ -1906,12 +1909,14 @@ export default function HandoverWorkspace({
                     phone ? (
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         <Button icon="checklist" onClick={markReadyPickedUp}>Mark Ready Picked Up</Button>
+                        <Button icon="package" onClick={() => setShowAddConsumable(true)}>Add Consumables</Button>
                       </div>
                     ) : (
                       <>
                         <Button icon="checklist" onClick={markReadyPickedUp}>Mark Ready Picked Up</Button>
                         <Button icon="camera" onClick={() => setShowScanner(true)}>Scan Barcode</Button>
                         <Button icon="truck" onClick={() => setShowDriverModal(true)}>Field Delivery</Button>
+                        <Button icon="package" onClick={() => setShowAddConsumable(true)}>Add Consumables</Button>
                       </>
                     )
                   }
@@ -1932,7 +1937,7 @@ export default function HandoverWorkspace({
                             : scanPulse === 'error'
                             ? '0 0 12px color-mix(in srgb, var(--danger, #ef4444) 40%, transparent)'
                             : 'none',
-                        transition: 'outline 0.15s ease-in-out, box-shadow 0.15s ease-in-out',
+                        transition: 'outline var(--dur) var(--ease), box-shadow var(--dur) var(--ease)',
                       }}
                     >
 
@@ -2632,6 +2637,21 @@ export default function HandoverWorkspace({
                   setDepositReceived(true)
                   showSuccessToast('Collateral Recorded', `ID card held as deposit (${col.documentNumber})`)
                 }}
+              />
+            )}
+
+            {showAddConsumable && floor && user && (
+              <AddConsumableModal
+                isOpen={showAddConsumable}
+                onClose={() => setShowAddConsumable(false)}
+                bookingId={floor.id}
+                userId={user.id}
+                userRole={user.role as SystemRole}
+                onAdded={() => {
+                  setShowAddConsumable(false)
+                  setReload((r) => r + 1)
+                }}
+                defaultNote={`Added by ${user.name || 'floor staff'} at Handover`}
               />
             )}
 

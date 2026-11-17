@@ -40,6 +40,8 @@ import { RentalAuditDrawer, type AuditCategoryFilter } from './RentalAuditDrawer
 import { QuotePreviewModal } from './QuoteActionsMenu'
 import { InvoicePaymentStatusModal } from './InvoiceActionsMenu'
 import { CreateInvoiceModal } from '../../finance/modals/CreateInvoiceModal'
+import { DocumentShareModal } from '../modals/DocumentShareModal'
+import type { DocumentShareType } from '../../../lib/documentShare'
 import { canManageRentalLifecycle } from '../../../lib/rbac'
 import { formatRebookCopyOptions } from '../../../lib/rebook'
 import { rentalCanArchive, rentalRevertTargets } from '../../../lib/rentalLifecycle'
@@ -106,6 +108,10 @@ export function RentalMoreActions({
   const [quotePreviewOpen, setQuotePreviewOpen] = useState(false)
   const [invoiceStatusOpen, setInvoiceStatusOpen] = useState(false)
   const [createInvoiceOpen, setCreateInvoiceOpen] = useState(false)
+  const [shareModalState, setShareModalState] = useState<{ open: boolean; docType: DocumentShareType }>({
+    open: false,
+    docType: 'confirmation',
+  })
 
   const triggerRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -188,10 +194,12 @@ export function RentalMoreActions({
         setAuditInitialCategory('all')
         setAuditDrawerOpen(true)
         break
+      case 'quote.send':
+        setShareModalState({ open: true, docType: 'quote' })
+        break
       case 'quote.view':
       case 'quote.preview':
       case 'quote.download_pdf':
-      case 'quote.send':
       case 'quote.create':
       case 'quote.edit_draft':
       case 'quote.duplicate':
@@ -201,13 +209,15 @@ export function RentalMoreActions({
       case 'invoice.create':
         setCreateInvoiceOpen(true)
         break
+      case 'invoice.send':
+        setShareModalState({ open: true, docType: 'invoice' })
+        break
       case 'invoice.payment_status':
       case 'invoice.payment_history':
       case 'invoice.view':
       case 'invoice.edit_draft':
       case 'invoice.preview':
       case 'invoice.download_pdf':
-      case 'invoice.send':
       case 'invoice.corrections':
         setInvoiceStatusOpen(true)
         break
@@ -253,7 +263,7 @@ export function RentalMoreActions({
             gap: 6,
             cursor: 'pointer',
             fontFamily: 'inherit',
-            transition: 'background var(--dur-fast, 120ms) var(--ease)',
+            transition: 'background var(--dur-fast) var(--ease)',
             ...triggerStyle,
           }}
         >
@@ -818,6 +828,19 @@ export function RentalMoreActions({
             bookingNo={booking.bookingNo}
             onSuccess={() => {
               setCreateInvoiceOpen(false)
+              onActionCompleted?.()
+            }}
+          />
+
+          <DocumentShareModal
+            isOpen={shareModalState.open}
+            onClose={() => setShareModalState((prev) => ({ ...prev, open: false }))}
+            docType={shareModalState.docType}
+            booking={booking}
+            userRole={user?.role}
+            clientPhone={booking.clientPhone}
+            clientEmail={booking.clientEmail}
+            onSuccess={() => {
               onActionCompleted?.()
             }}
           />

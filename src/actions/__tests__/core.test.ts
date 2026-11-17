@@ -610,6 +610,11 @@ describe('every declared capability resolves to a rule', () => {
       'inspection.create',
       'inspection.pass',
       'inspection.fail',
+      // Permission-level template rule (PERMISSIONS.md §4.8); actions use settings.manage_templates.
+      // Keep the orphan guard strict for every other capability.
+      'comms.templates',
+      // Shared offer-campaign permission rule (PERMISSIONS.md §4.8); create/send are action capabilities.
+      'offer_campaign.manage',
     ]
     const orphaned = handled().filter((c) => !declared().includes(c) && !APP_LEVEL.includes(c))
     expect(orphaned).toEqual([])

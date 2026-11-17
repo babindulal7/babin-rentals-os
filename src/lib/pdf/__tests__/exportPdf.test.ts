@@ -40,7 +40,7 @@ vi.mock('../../supabase', () => ({
   IS_MOCK: false,
 }))
 
-import { exportInvoicePdf, exportDocumentPdf, exportPackingListPdf, exportReturnReportPdf } from '../exportPdf'
+import { exportInvoicePdf, exportDocumentPdf, exportRentalAgreementPdf, exportPackingListPdf, exportReturnReportPdf } from '../exportPdf'
 import { supabase } from '../../supabase'
 
 describe('exportPdf', () => {
@@ -196,5 +196,19 @@ describe('exportPdf', () => {
     expect(res.blob).toBeInstanceOf(Blob)
     expect(res.bytes.byteLength).toBeGreaterThan(500)
     expect(res.filename).toContain('BK-200')
+  })
+
+  it('exports rental agreement PDF and uploads to documents storage (T3-06, Ruling O-11)', async () => {
+    const res = await exportRentalAgreementPdf({
+      agreementNo: 'AGR-2026-0099',
+      bookingNo: 'BK-2026-0099',
+      client: { name: 'Test Production' },
+      equipment: [{ description: 'Camera Kit', quantity: 1 }],
+    })
+
+    expect(res.blob).toBeInstanceOf(Blob)
+    expect(res.bytes.byteLength).toBeGreaterThan(500)
+    expect(res.filename).toBe('AGR-2026-0099.pdf')
+    expect(res.signedUrl).toBe('https://example.com/signed')
   })
 })

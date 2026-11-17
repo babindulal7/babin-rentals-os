@@ -39,6 +39,7 @@ const VALID_DOC_TYPES = new Set([
   'Incident Report',
   'Insurance Claim',
   'Call Sheet',
+  'Pro Forma',
 ]);
 
 export const createDocumentConfig: ActionConfig<CreateDocumentInput, CreateDocumentResult> = {
@@ -97,6 +98,8 @@ export const createDocumentConfig: ActionConfig<CreateDocumentInput, CreateDocum
         docType = 'Rental Agreement';
       } else if (trimmed.toLowerCase().includes('quote')) {
         docType = 'Quotation';
+      } else if (trimmed.toLowerCase().includes('pro forma') || trimmed.toLowerCase().includes('proforma')) {
+        docType = 'Pro Forma';
       } else if (trimmed.toLowerCase().includes('invoice')) {
         docType = 'Tax Invoice';
       }
@@ -146,6 +149,7 @@ export const createDocumentConfig: ActionConfig<CreateDocumentInput, CreateDocum
       else if (docType === 'Packing List') bookingDocType = 'Packing List';
       else if (docType === 'Delivery Note') bookingDocType = 'Delivery Note';
       else if (docType === 'Tax Invoice') bookingDocType = 'Invoice';
+      else if (docType === 'Pro Forma') bookingDocType = 'Pro Forma';
       else if (docType === 'Receipt') bookingDocType = 'Receipt';
       else if (docType === 'Inspection Report') bookingDocType = 'Inspection Report';
       else if (docType === 'Damage Report') bookingDocType = 'Damage Report';

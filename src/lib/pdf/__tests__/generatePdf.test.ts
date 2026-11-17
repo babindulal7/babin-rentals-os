@@ -2,12 +2,16 @@ import { describe, it, expect } from 'vitest'
 import {
   generateInvoicePdf,
   generateDocumentPdf,
+  generateRentalAgreementPdf,
   generatePackingListPdf,
   generateReturnReportPdf,
   organizePackingListItems,
+  formatAdWithBs,
+  DEFAULT_RENTAL_AGREEMENT_TERMS,
   type InvoicePdfData,
   type PackingListPdfData,
   type ReturnReportPdfData,
+  type RentalAgreementPdfData,
 } from '../generatePdf'
 import { rupees } from '../../money'
 
@@ -46,6 +50,18 @@ describe('generatePdf', () => {
       expect(text).not.toContain('4400000')
       expect(text).not.toContain('Kathmandu, Nepal')
       expect(text).not.toContain('Professional Camera, Lighting')
+    })
+
+    it('prints project name on invoice when provided (B52, T3-26)', () => {
+      const bytes = generateInvoicePdf({
+        ...basicInvoice,
+        company: { name: 'Recorded Rentals' },
+        vatPaisa: rupees(0),
+        project: 'Kathmandu Diaries — music video',
+      })
+      const text = new TextDecoder().decode(bytes)
+      expect(text).toContain('Project:')
+      expect(text).toContain('Kathmandu Diaries')
     })
 
     it('produces valid PDF 1.4 binary bytes with standard structure', () => {
@@ -137,14 +153,14 @@ describe('generatePdf', () => {
       expect(xrefSlice).toBe('xref')
     })
 
-    it('handles zero VAT percent dynamically and displays overflow indicator for >12 lines', () => {
+    it('handles zero VAT percent dynamically and prints every invoice line over multiple pages', () => {
       const overflowData: InvoicePdfData = {
         invoiceNo: 'INV-2026-0099',
         status: 'Sent',
         bookingNo: 'BK-999',
         client: { name: 'Large Project Crew' },
         company: { name: 'Recorded Rentals', panVat: '123456789' },
-        lines: Array.from({ length: 15 }, (_, i) => ({
+        lines: Array.from({ length: 40 }, (_, i) => ({
           description: `Gear Item #${i + 1}`,
           quantity: 1,
           rentalDays: 1,
@@ -162,7 +178,10 @@ describe('generatePdf', () => {
       const text = new TextDecoder().decode(bytes)
 
       expect(text).toContain('VAT \\(0%\\):')
-      expect(text).toContain('...and 4 more items included in totals')
+      expect(text).toContain('Gear Item #1')
+      expect(text).toContain('Gear Item #40')
+      expect(text).toContain('Page 1 of')
+      expect(text).not.toContain('more items included in totals')
     })
 
     it('handles Draft invoices with no invoice_no cleanly', () => {
@@ -293,6 +312,38 @@ describe('generatePdf', () => {
       expect(text).not.toContain('Subtotal')
       expect(text).not.toContain('Total:')
     })
+
+    it('prints every line across A4 pages with booking identity, page numbers, and a scannable booking route', () => {
+      const items = Array.from({ length: 40 }, (_, index) => ({
+        id: `line-${index + 1}`,
+        name: `Equipment line ${String(index + 1).padStart(2, '0')}`,
+        assetCode: `ASSET-${String(index + 1).padStart(2, '0')}`,
+        quantity: 1,
+        location: `Shelf ${index + 1}`,
+      }))
+
+      const text = new TextDecoder().decode(generatePackingListPdf({
+        bookingNo: 'BK-2026-0040',
+        bookingUrl: 'https://rentals.example.test/rentals/BK-2026-0040',
+        clientName: 'Forty Line Films',
+        project: 'Full Manifest Test',
+        pickupAtAd: '2026-11-04T04:15:00.000Z',
+        items,
+      }))
+
+      expect(text).toContain('/Count 2')
+      expect(text).toContain('Equipment line 01')
+      expect(text).toContain('Equipment line 40')
+      expect(text).toContain('ASSET-01')
+      expect(text).toContain('ASSET-40')
+      expect(text).toContain('Page 1 of 2')
+      expect(text).toContain('Page 2 of 2')
+      expect(text.match(/BK-2026-0040/g)?.length).toBeGreaterThanOrEqual(2)
+      expect(text).toContain('QR booking route: https://rentals.example.test/rentals/BK-2026-0040')
+      expect(text).not.toContain('more equipment lines')
+      expect(text).not.toContain('NPR')
+      expect(text).not.toContain('Subtotal')
+    })
   })
 
   describe('generateReturnReportPdf (T2-08, Return report)', () => {
@@ -352,5 +403,270 @@ describe('generatePdf', () => {
       expect(text).not.toContain('Subtotal')
       expect(text).not.toContain('Total Amount')
     })
+
+    it('prints all 40 return lines across numbered pages', () => {
+      const lines = Array.from({ length: 40 }, (_, index) => ({
+        id: `return-${index + 1}`,
+        name: `Returned equipment ${String(index + 1).padStart(2, '0')}`,
+        serialNo: `RET-${String(index + 1).padStart(2, '0')}`,
+        quantity: 1,
+        outcome: 'Received',
+      }))
+      const text = new TextDecoder().decode(generateReturnReportPdf({
+        bookingNo: 'BK-RETURN-40',
+        clientName: 'Return Test Films',
+        totalUnits: 40,
+        returnedUnits: 40,
+        missingUnits: 0,
+        damagedUnits: 0,
+        photosCount: 0,
+        lines,
+      }))
+
+      expect(text).toContain('Returned equipment 01')
+      expect(text).toContain('Returned equipment 40')
+      expect(text).toContain('Page 1 of 2')
+      expect(text).toContain('Page 2 of 2')
+      expect(text).not.toContain('more items verified')
+    })
+  })
+
+  describe('generateInvoicePdf (Pro Forma - T3-27, B18, B55, Law 7)', () => {
+    it('generates a pro forma invoice PDF with all required fields and no invoice number', () => {
+      const proFormData: InvoicePdfData = {
+        invoiceNo: null,
+        documentTitle: 'PRO FORMA INVOICE — not a tax invoice',
+        status: 'Pro Forma',
+        isProForma: true,
+        issueDateAd: '2026-11-10',
+        dueDateAd: '2026-11-17',
+        bookingNo: 'BK-2026-0777',
+        project: 'Everest Commercial Shoot',
+        client: {
+          name: 'Himalayan Pictures Pvt Ltd',
+          phone: '+977-9801234567',
+          email: 'accounts@himalayan.com',
+          panVat: '601234567',
+        },
+        company: {
+          name: 'Babin Rentals Kathmandu',
+          panVat: '109876543',
+        },
+        lines: [
+          {
+            description: 'ARRI Alexa Mini LF Package',
+            quantity: 1,
+            rentalDays: 3,
+            ratePaisa: 5000000, // Rs 50,000
+            totalPaisa: 15000000, // Rs 150,000
+          },
+          {
+            description: 'Cooke S4/i Prime Set (5 lenses)',
+            quantity: 1,
+            rentalDays: 3,
+            ratePaisa: 3000000, // Rs 30,000
+            totalPaisa: 9000000, // Rs 90,000
+          },
+        ],
+        subtotalPaisa: 24000000,
+        discountPaisa: 0,
+        taxablePaisa: 24000000,
+        vatPercent: 13,
+        vatPaisa: 3120000,
+        totalPaisa: 27120000,
+        paidPaisa: 0,
+        outstandingPaisa: 27120000,
+        advanceDuePaisa: 8136000, // ~30% advance
+        validityDays: 7,
+      }
+
+      const bytes = generateInvoicePdf(proFormData)
+      expect(bytes).toBeInstanceOf(Uint8Array)
+
+      const text = new TextDecoder().decode(bytes)
+
+      // 1. PDF structure
+      expect(text.startsWith('%PDF-1.4\n')).toBe(true)
+      expect(text.trimEnd().endsWith('%%EOF')).toBe(true)
+
+      // 2. Pro Forma title (not a tax invoice)
+      expect(text).toContain('PRO FORMA INVOICE')
+
+      // 3. Names booking number instead of invoice number (Law 7)
+      expect(text).toContain('BK-2026-0777')
+      expect(text).not.toContain('INV-2026-')
+
+      // 4. Project name printed (T3-26, B52)
+      expect(text).toContain('Everest Commercial Shoot')
+
+      // 5. Line items
+      expect(text).toContain('ARRI Alexa Mini LF Package')
+      expect(text).toContain('Cooke S4/i Prime Set')
+
+      // 6. Estimated VAT
+      expect(text).toContain('Estimated VAT \\(13%\\):')
+
+      // 7. Advance Due
+      expect(text).toContain('Advance Due:')
+
+      // 8. Valid for 7 days
+      expect(text).toContain('Valid for 7 days')
+      expect(text).toContain('PRO FORMA ESTIMATE')
+    })
+
+    it('prints BS date beside AD date and Buyer PAN on Nepal invoices (T3-06)', () => {
+      const data: InvoicePdfData = {
+        invoiceNo: 'INV-2026-0042',
+        status: 'Issued',
+        issueDateAd: '2026-09-18',
+        dueDateAd: '2026-09-25',
+        bookingNo: 'BK-2026-0100',
+        client: {
+          name: 'Kathmandu Cine Services',
+          panVat: '601234567',
+        },
+        company: {
+          name: 'Babin Rentals Kathmandu',
+          panVat: '123456789',
+          address: 'Anamnagar, Kathmandu',
+        },
+        lines: [
+          {
+            description: 'Sony FX6 Cinema Camera',
+            quantity: 1,
+            rentalDays: 2,
+            ratePaisa: rupees(8000),
+            totalPaisa: rupees(16000),
+          },
+        ],
+        subtotalPaisa: rupees(16000),
+        taxablePaisa: rupees(16000),
+        vatPercent: 13,
+        vatPaisa: rupees(2080),
+        totalPaisa: rupees(18080),
+      }
+
+      const bytes = generateInvoicePdf(data)
+      const text = new TextDecoder().decode(bytes)
+
+      // BS date beside AD date
+      expect(text).toContain('18/9/2026 \\(2 Ashwin 2083 BS\\)')
+      expect(text).toContain('25/9/2026 \\(9 Ashwin 2083 BS\\)')
+
+      // Buyer PAN clearly printed
+      expect(text).toContain('Buyer PAN: 601234567')
+
+      // Business PAN
+      expect(text).toContain('PAN/VAT: 123456789')
+    })
+  })
+
+  describe('formatAdWithBs (T3-06)', () => {
+    it('formats AD calendar date with BS date beside it', () => {
+      const formatted = formatAdWithBs(new Date('2026-09-18T06:00:00Z'))
+      expect(formatted).toBe('18/9/2026 (2 Ashwin 2083 BS)')
+    })
+  })
+
+  describe('generateRentalAgreementPdf (T3-06, Ruling O-11, Handover T2-02)', () => {
+    const agreementData: RentalAgreementPdfData = {
+      agreementNo: 'AGR-BK-2026-0042',
+      bookingNo: 'BK-2026-0042',
+      project: 'Mountaineer Feature Film',
+      issueDateAd: '2026-09-18',
+      rentalStartAd: '2026-09-20',
+      rentalEndAd: '2026-09-25',
+      client: {
+        name: 'Himalayan Visuals Pvt Ltd',
+        phone: '+977-9801122334',
+        email: 'ops@himalayanvisuals.com',
+        address: 'Baluwatar, Kathmandu',
+        panVat: '609876543',
+        idNumber: 'CIT-27-01-72-12345',
+      },
+      company: {
+        name: 'Babin Rentals Kathmandu',
+        panVat: '123456789',
+        address: 'Anamnagar, Kathmandu',
+        phone: '+977-1-4400000',
+      },
+      equipment: [
+        {
+          description: 'ARRI Alexa Mini LF Package',
+          serialNo: 'ALEXA-LF-007',
+          quantity: 1,
+        },
+        {
+          description: 'Master Grip Follow Focus System',
+          serialNo: 'GRIP-FF-12',
+          quantity: 1,
+        },
+      ],
+      depositPaisa: rupees(50000),
+      totalRentalPaisa: rupees(125000),
+    }
+
+    it('generates standard PDF 1.4 binary bytes for rental agreement', () => {
+      const bytes = generateRentalAgreementPdf(agreementData)
+      expect(bytes).toBeInstanceOf(Uint8Array)
+      expect(bytes.byteLength).toBeGreaterThan(500)
+
+      const text = new TextDecoder().decode(bytes)
+
+      // PDF 1.4 header
+      expect(text.startsWith('%PDF-1.4\n')).toBe(true)
+
+      // Document title and agreement identity
+      expect(text).toContain('RENTAL AGREEMENT')
+      expect(text).toContain('AGR-BK-2026-0042')
+      expect(text).toContain('SIGNED AT HANDOVER')
+
+      // Client and rental details
+      expect(text).toContain('Himalayan Visuals Pvt Ltd')
+      expect(text).toContain('PAN: 609876543')
+      expect(text).toContain('CIT-27-01-72-12345')
+      expect(text).toContain('Mountaineer Feature Film')
+
+      // Equipment schedule
+      expect(text).toContain('ARRI Alexa Mini LF Package')
+      expect(text).toContain('ALEXA-LF-007')
+
+      // Security deposit notation per Law 5
+      expect(text).toContain('Security Deposit: Rs 50,000')
+
+      // Standard terms text (Ruling O-11)
+      expect(DEFAULT_RENTAL_AGREEMENT_TERMS).toHaveLength(7)
+      expect(text).toContain('TERMS & CONDITIONS OF HIRE \\(RULING O-11\\):')
+      expect(text).toContain('exclusive property of Babin')
+      expect(text).toContain('Rentals Kathmandu')
+      expect(text).toContain('accepted in clean, sound, and fully operational condition at Handover \\(T2-02\\)')
+
+      // Handover signature blocks
+      expect(text).toContain('Authorized Signatory')
+      expect(text).toContain('Hirer / Client Representative')
+      expect(text).toContain('Sign-off at Handover')
+    })
+  })
+})
+
+
+describe('complete packing hierarchy', () => {
+  it('prints every level of nested packages before loose equipment', () => {
+    const result = organizePackingListItems([
+      { id: 'leaf', name: 'Lens', quantity: 1, parentLineId: 'inner' },
+      { id: 'loose', name: 'Tripod', quantity: 1 },
+      { id: 'outer', name: 'Camera package', quantity: 1, isParent: true },
+      { id: 'inner', name: 'Lens case', quantity: 1, parentLineId: 'outer', isParent: true },
+    ])
+    expect(result.map(item => item.id)).toEqual(['outer', 'inner', 'leaf', 'loose'])
+    expect(result.find(item => item.id === 'leaf')?.isChild).toBe(true)
+  })
+
+  it('preserves every line once when parent relationships contain a cycle', () => {
+    const result = organizePackingListItems([
+      { id: 'a', name: 'Case A', quantity: 1, parentLineId: 'b' },
+      { id: 'b', name: 'Case B', quantity: 1, parentLineId: 'a' },
+    ])
+    expect(result.map(item => item.id)).toEqual(['a', 'b'])
   })
 })

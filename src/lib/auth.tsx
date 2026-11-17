@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback, ReactNode } from 'react'
-import { supabase, IS_MOCK, newClientUuid } from './supabase'
+import { supabase, IS_MOCK, newClientUuid, createStaffSwitchClient } from './supabase'
+import { verifyStaffSwitchCandidate, type StaffSwitchPinResult } from './staffSwitch'
 import { getSetting } from './settingsStore'
 import { hydrateSharedSettings } from './settingsSync'
 import { hydrateUserLanguage } from './languagePreferences'
@@ -23,10 +24,34 @@ import {
   updateRosterPinStatus,
   createRosterEntryFromUser,
   onTokenRefreshed,
-  abortLimbo,
 } from './deviceSession'
 
 export type { RosterEntry, LimboState }
+
+// A tab interrupted after target refresh may still have A's persistent global
+// session. Never rehydrate that session on reload without a fresh sign-in.
+const STAFF_SWITCH_FENCE = 'babin.staff-switch.incomplete'
+function hasUnfinishedStaffSwitch(): boolean {
+  try {
+    return typeof sessionStorage !== 'undefined' &&
+      sessionStorage.getItem(STAFF_SWITCH_FENCE) === '1'
+  } catch {
+    return true // unreadable device state: refuse a privileged auto-restore
+  }
+}
+function beginStaffSwitchFence(): boolean {
+  try {
+    if (typeof sessionStorage === 'undefined') return false
+    sessionStorage.setItem(STAFF_SWITCH_FENCE, '1')
+    return true
+  } catch {
+    return false
+  }
+}
+function clearStaffSwitchFence(): void {
+  try { sessionStorage.removeItem(STAFF_SWITCH_FENCE) } catch { /* remains fail-closed on reload */ }
+}
+
 
 /**
  * The session role IS the system role. They were separate unions until 8 Aug 2026,
@@ -199,6 +224,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roster, setRoster] = useState<RosterEntry[]>([])
   const [limboState, setLimboState] = useState<LimboState>('idle')
   const limboUserIdRef = useRef<string | null>(null)
+  const switchInProgressRef = useRef(false)
+  const authGenerationRef = useRef(0)
+  const passwordSignInInProgressRef = useRef(false)
 
   const refreshRoster = useCallback(async () => {
     try {
@@ -215,11 +243,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * tamper with and which no RLS policy consults.
    */
   const loadProfile = useCallback(async (authId: string, fallbackEmail: string | undefined) => {
+    const generation = authGenerationRef.current
     const { data, error } = await supabase
       .from('users')
       .select('id, full_name, primary_role')
       .eq('id', authId)
       .maybeSingle()
+
+    // A pre-switch / pre-logout read must never restore its former role after
+    // verification has begun, even if that HTTP response arrives very late.
+    if (generation !== authGenerationRef.current || limboUserIdRef.current !== null) return
 
     /*
      * ⛔ THE READ FAILED. This is NOT the same fact as "there is no staff row",
@@ -316,8 +349,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     void refreshRoster()
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (cancelled) return
+    if (hasUnfinishedStaffSwitch()) {
+      // Recovering from a crashed/closed tab during an unfinished switch:
+      // a prior Owner token is not authority to reopen the business app.
+      authGenerationRef.current += 1
+      setUser(null)
+      setLoading(false)
+      void supabase.auth.signOut({ scope: 'local' }).then(({ error }) => {
+        if (!error) clearStaffSwitchFence()
+      }).catch(() => { /* keep fence on refusal */ })
+    } else supabase.auth.getSession().then(({ data }) => {
+      if (cancelled || hasUnfinishedStaffSwitch()) return
       const session = data.session
       hydrateUserLanguage(session?.user.id ?? null, session?.user.user_metadata)
       if (!session) {
@@ -331,7 +373,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (cancelled) return
+      if (cancelled || limboUserIdRef.current !== null) return
+      if (hasUnfinishedStaffSwitch() && !passwordSignInInProgressRef.current) {
+        // Crashed switch is not a signed-in actor, regardless of broadcast.
+        setUser(null)
+        setLoading(false)
+        return
+      }
+
+      // Supabase broadcasts auth changes across tabs. A verified B session in
+      // one tab must NOT silently promote another tab that is still Owner A.
+      // Only an explicit password sign-in or this tab's verified PIN path may
+      // authorize an identity change here. The other tab fails closed.
+      if (session && userIdRef.current && session.user.id !== userIdRef.current &&
+          !passwordSignInInProgressRef.current) {
+        authGenerationRef.current += 1
+        setUser(null)
+        setLocked(true)
+        void supabase.auth.signOut({ scope: 'local' })
+        return
+      }
       hydrateUserLanguage(session?.user.id ?? null, session?.user.user_metadata)
 
       /*
@@ -402,9 +463,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * and only this call produces one.
    */
   const signIn = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    // onAuthStateChange populates `user`; only the failure path is reported here.
-    return { error: error ? error.message : null }
+    passwordSignInInProgressRef.current = true
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (!error) clearStaffSwitchFence() // explicit password replaces an interrupted switch
+      // onAuthStateChange populates `user`; only the failure path is reported here.
+      return { error: error ? error.message : null }
+    } finally {
+      passwordSignInInProgressRef.current = false
+    }
   }, [])
 
   /**
@@ -660,88 +727,159 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   /**
-   * Switch to another user on a shared device.
-   * Restores their encrypted refresh token, verifies their PIN via verify_staff_pin,
-   * and swaps the active session. Fails closed on any error.
+   * Switch on shared devices: refresh and verify B through a separate,
+   * non-persistent Supabase client. The shared client stays A until PIN,
+   * identity, profile, cache and audit checks have ALL succeeded.
+   *
+   * The App unmounts its entire business workspace for any LIMBO state. Even a
+   * late old profile response cannot reactivate A because of authGenerationRef.
+   * An aborted attempt signs out locally and requires password sign-in; it
+   * NEVER silently reopens the previous Owner session.
    */
   const switchUser = useCallback(
     async (targetUserId: string, pin: string): Promise<SwitchOutcome> => {
-      if (limboState !== 'idle') return { success: false, error: 'Switch already in progress' }
+      if (switchInProgressRef.current || limboState !== 'idle') {
+        return { success: false, error: 'Another staff switch is already in progress.' }
+      }
+      if (IS_MOCK) return { success: false, error: 'Staff PIN switching requires real server verification.' }
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        return { success: false, error: 'Offline. User switching requires an active server connection to verify PIN.' }
+        return { success: false, error: 'Offline. Sign in with your password when the connection returns.' }
+      }
+      if (!targetUserId || targetUserId === userIdRef.current) {
+        return { success: false, error: 'Select another staff member to switch.' }
       }
 
-      setLimboState('restoring')
+      if (!beginStaffSwitchFence()) {
+        return { success: false, error: 'This browser cannot securely remember a pending switch. Sign in with your password.' }
+      }
+      switchInProgressRef.current = true
+      const previousUserId = userIdRef.current
+      authGenerationRef.current += 1
       limboUserIdRef.current = targetUserId
+      setLimboState('restoring')
+      setUser(null)
+      setLocked(true)
+      setHasPin(false)
 
-      // 1. Restore target user's encrypted refresh token
-      let refreshToken: string | null = null
+      let safeToExitLimbo = false
       try {
-        refreshToken = await getAndDecryptSession(targetUserId)
-        if (!refreshToken) throw new Error('No stored session for this user')
-      } catch {
-        await abortLimbo(supabase)
-        setLimboState('aborted')
-        setTimeout(() => setLimboState('idle'), 100)
-        return { success: false, error: 'Session expired or not found. Please sign in with email and password.' }
-      }
+        const refreshToken = await getAndDecryptSession(targetUserId)
+        if (!refreshToken) throw new Error('No stored staff session. Sign in with email and password.')
 
-      // 2. Restore session in limbo (curtain stays up, no business reads)
-      setLimboState('verifying')
-      const { data: sessionData, error: authError } = await supabase.auth.setSession({
-        access_token: '',
-        refresh_token: refreshToken,
-      })
-      if (authError || !sessionData?.session) {
-        await abortLimbo(supabase)
-        setLimboState('aborted')
-        setTimeout(() => setLimboState('idle'), 100)
-        return { success: false, error: authError?.message ?? 'Failed to restore session' }
-      }
-
-      // 3. Verify PIN via server RPC (0066 verify_staff_pin against target user's identity)
-      const verdict = await verifyStaffPin(pin)
-      if (!verdict.ok) {
-        if (verdict.reason === 'locked' && verdict.lockedUntil) {
-          await updateRosterLockout(targetUserId, verdict.lockedUntil)
-        }
-        await abortLimbo(supabase)
-        await refreshRoster()
-        const errMsg =
-          verdict.message ||
-          (verdict.reason === 'locked'
-            ? 'Account locked due to too many incorrect attempts'
-            : 'Incorrect PIN')
-        return { success: false, error: errMsg }
-      }
-
-      // 4. Success: target user is verified. Clear any lockout, touch roster, audit
-      await updateRosterLockout(targetUserId, null)
-      await touchRosterEntry(targetUserId)
-
-      try {
-        await supabase.from('audit_events').insert({
-          action: 'Login',
-          entity_type: 'auth',
-          entity_id: targetUserId,
-          new_values: { via: 'device-switch' },
-          client_uuid: newClientUuid(),
+        const isolated = createStaffSwitchClient()
+        setLimboState('verifying')
+        const decision = await verifyStaffSwitchCandidate(targetUserId, pin, refreshToken, {
+          refreshTarget: async (token) => {
+            const { data, error } = await isolated.auth.refreshSession({ refresh_token: token })
+            if (error) throw new Error('Stored staff session expired. Sign in with your password.')
+            return { session: data.session, userId: data.user?.id ?? null }
+          },
+          saveRotatedToken: storeSession,
+          verifyTargetPin: async (entered) => {
+            const { data, error } = await isolated.rpc('verify_staff_pin', { p_pin: entered })
+            if (error) throw new Error('Unable to verify PIN on the server. Sign in with your password.')
+            return (data ?? {}) as StaffSwitchPinResult
+          },
         })
-      } catch {
-        // audit best effort
+
+        if (decision.status === 'denied') {
+          if (decision.reason === 'locked' && decision.lockedUntil) {
+            await updateRosterLockout(targetUserId, decision.lockedUntil)
+          }
+          throw new Error(decision.message)
+        }
+
+        const { data: staff, error: staffError } = await isolated
+          .from('users')
+          .select('id, full_name, primary_role, is_active')
+          .eq('id', targetUserId)
+          .maybeSingle()
+        if (
+          staffError || !staff || staff.id !== targetUserId ||
+          staff.is_active !== true || !staff.full_name ||
+          !staff.primary_role || staff.primary_role === 'Client'
+        ) {
+          throw new Error('Verified PIN but no active staff profile was available. Sign in with your password.')
+        }
+
+        // Workbox and Dexie reads may contain the former Owner's financial data.
+        // Never adopt B while an old read cache or unsynced A write survives.
+        const purge = await purgeDeviceReadCaches()
+        if (purge.failures.length || purge.pendingLeft > 0) {
+          throw new Error('Device has unsent work or unreadable caches. Finish the pending work and sign in again.')
+        }
+
+        // Verified server-side audit under B's isolated JWT, not the former A
+        // session. Do not claim a successful switch if attribution was refused.
+        const { error: auditError } = await isolated.from('audit_events').insert({
+          client_uuid: newClientUuid(),
+          event_class: 'session',
+          category: 'Authentication',
+          module: 'Authentication',
+          action: 'Login',
+          severity: 'Informational',
+          status: 'Success',
+          table_name: 'auth.sessions',
+          record_id: targetUserId,
+          actor_id: targetUserId,
+          actor_role: staff.primary_role,
+          device_type: 'Desktop',
+          new_values: { event: 'auth.switch', from_user_id: previousUserId },
+        })
+        if (auditError) throw new Error('Switch could not be audited. Sign in with your password.')
+
+        // The ONLY shared-client session activation, after all checks succeed.
+        const { data: adopted, error: adoptError } = await supabase.auth.setSession({
+          access_token: decision.session.access_token,
+          refresh_token: decision.session.refresh_token,
+        })
+        if (adoptError || adopted.session?.user.id !== targetUserId) {
+          throw new Error('Verified staff session could not be activated. Sign in with your password.')
+        }
+
+        await updateRosterLockout(targetUserId, null)
+        await touchRosterEntry(targetUserId)
+        await refreshRoster()
+        hydrateUserLanguage(targetUserId, adopted.session.user.user_metadata)
+        userIdRef.current = targetUserId
+        setUser({
+          id: targetUserId,
+          name: staff.full_name as string,
+          role: staff.primary_role as Role,
+          isSharedDevice: true,
+        })
+        setLocked(false)
+        safeToExitLimbo = true
+        clearStaffSwitchFence()
+        return { success: true, userId: targetUserId }
+      } catch (cause) {
+        // Failed PIN, stale token, audit failure, cache failure or network loss:
+        // sign out the previous A session locally and refuse either identity.
+        const message = cause instanceof Error ? cause.message : 'Staff verification failed. Sign in again.'
+        let signedOut = false
+        try {
+          const result = await supabase.auth.signOut({ scope: 'local' })
+          signedOut = !result.error
+        } catch {
+          // Failure retains the full-screen LIMBO curtain (no business mount).
+        }
+        hydrateUserLanguage(null)
+        setUser(null)
+        setHasPin(false)
+        setLocked(false)
+        safeToExitLimbo = signedOut
+        if (signedOut) clearStaffSwitchFence()
+        return {
+          success: false,
+          error: signedOut ? message : 'Local sign-out failed. Close the app and sign in again on a trusted device.',
+        }
+      } finally {
+        limboUserIdRef.current = null
+        switchInProgressRef.current = false
+        setLimboState(safeToExitLimbo ? 'idle' : 'aborted')
       }
-
-      limboUserIdRef.current = null
-      setLimboState('unlocked')
-      setTimeout(() => setLimboState('idle'), 100)
-
-      await loadProfile(sessionData.session.user.id, sessionData.session.user.email)
-      await refreshRoster()
-      setLocked(false)
-
-      return { success: true, userId: targetUserId }
     },
-    [limboState, verifyStaffPin, loadProfile, refreshRoster],
+    [limboState, refreshRoster],
   )
 
   const removeMeFromDevice = useCallback(

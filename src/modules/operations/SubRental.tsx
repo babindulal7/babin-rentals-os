@@ -669,7 +669,7 @@ export function SubRental({
                   ? chip.label === 'Overdue' ? 'var(--bad)' : 'var(--nav-active-accent)'
                   : 'var(--card)',
                 color: activeFilter === chip.label ? (chip.label === 'Overdue' ? 'var(--on-danger)' : 'var(--on-primary)') : 'var(--text)',
-                transition: 'all 0.15s ease',
+                transition: 'all var(--dur) var(--ease)',
               }}
             >
               {chip.label} <span className="figure" style={{ opacity: 0.85, marginLeft: 'var(--sp-xs)' }}>{chip.count}</span>
@@ -781,7 +781,7 @@ export function SubRental({
                   return (
                     <tr
                       key={c.id}
-                      style={{ borderBottom: '1px solid var(--border)', transition: 'background-color 0.1s ease' }}
+                      style={{ borderBottom: '1px solid var(--border)', transition: 'background-color var(--dur-fast) var(--ease)' }}
                     >
                       <td style={{ padding: '12px 14px' }}>
                         <input

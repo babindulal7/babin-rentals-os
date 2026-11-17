@@ -30,6 +30,21 @@ describe('riderLink query & mutation layer (T4-08, W49)', () => {
       expect(/^[0-9a-f]{32}$/i.test(token1)).toBe(true)
     })
 
+    it('refuses to mint a bearer token when secure random generation is missing', () => {
+      vi.stubGlobal('crypto', undefined)
+      try {
+        expect(() => generateRiderRawToken()).toThrow(/Secure random generation is unavailable/)
+      } finally {
+        vi.unstubAllGlobals()
+      }
+    })
+
+    it('uses the real SHA-256 algorithm, never a simulated 64-char hash', async () => {
+      expect(await hashRiderToken('abc')).toBe(
+        'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+      )
+    })
+
     it('hashes token with SHA-256 to 64 hex chars', async () => {
       const rawToken = 'a1b2c3d4e5f60718293a4b5c6d7e8f90'
       const hash = await hashRiderToken(rawToken)

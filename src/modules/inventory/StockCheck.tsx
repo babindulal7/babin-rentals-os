@@ -995,7 +995,7 @@ export default function StockCheck({ embedded = false }: { embedded?: boolean } 
                       background: 'var(--nav-active-accent)',
                       transform: `scaleX(${(progressPct ?? 0) / 100})`,
                       transformOrigin: 'left',
-                      transition: 'transform 0.2s ease',
+                      transition: 'transform var(--dur-theme) var(--ease)',
                     }}
                   />
                 </div>

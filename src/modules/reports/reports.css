@@ -42,7 +42,7 @@
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  transition: all var(--dur-fast, 120ms) var(--ease);
+  transition: all var(--dur-fast) var(--ease);
 }
 
 .report-toggle-btn:hover {
@@ -80,7 +80,7 @@
   font-size: var(--t-meta, 13px);
   font-family: inherit;
   cursor: pointer;
-  transition: border-color var(--dur-fast, 120ms) var(--ease);
+  transition: border-color var(--dur-fast) var(--ease);
   outline: none;
 }
 
@@ -116,7 +116,7 @@
   padding: 16px 18px;
   display: flex;
   flex-direction: column;
-  transition: all var(--dur-fast, 150ms) var(--ease);
+  transition: all var(--dur-fast) var(--ease);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
@@ -184,7 +184,7 @@
   background: var(--card);
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-  transition: border-color var(--dur-fast, 120ms) var(--ease);
+  transition: border-color var(--dur-fast) var(--ease);
 }
 
 .report-group-card:hover {

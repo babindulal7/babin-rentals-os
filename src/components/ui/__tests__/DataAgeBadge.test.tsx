@@ -63,6 +63,43 @@ describe('DataAgeBadge — Phase 9 operational data age tracking (PLAN.md §4.27
       expect(host!.textContent).toContain('No cache')
     })
 
+    it('shows invalid timestamps as a warning and offers an accessible refresh', () => {
+      const onRefresh = vi.fn()
+      act(() => {
+        root!.render(<DataAgeBadge loadedAt="not-a-date" quietWhenFresh onRefresh={onRefresh} />)
+      })
+      expect(host!.textContent).toContain('Time unavailable')
+      expect(host!.textContent).not.toContain('Updated')
+      expect(host!.textContent).not.toContain('Invalid Date')
+      const button = host!.querySelector('button[aria-label="Refresh data"]') as HTMLButtonElement
+      expect(button).not.toBeNull()
+      expect(button.style.minWidth).toBe('44px')
+      expect(button.style.minHeight).toBe('44px')
+      act(() => {
+        button.click()
+      })
+      expect(onRefresh).toHaveBeenCalledTimes(1)
+    })
+
+    it('treats invalid Date and NaN values as unknown, not fresh', () => {
+      for (const loadedAt of [new Date('invalid'), Number.NaN]) {
+        act(() => {
+          root!.render(<DataAgeBadge loadedAt={loadedAt} />)
+        })
+        expect(host!.textContent).toContain('Time unavailable')
+        expect(host!.textContent).not.toContain('Updated')
+      }
+    })
+
+    it('accepts the Unix epoch as a valid stale timestamp rather than no cache', () => {
+      vi.setSystemTime(60 * 60 * 1000)
+      act(() => {
+        root!.render(<DataAgeBadge loadedAt={0} staleThresholdMs={1000} />)
+      })
+      expect(host!.textContent).toContain('Stale · 1h ago')
+      expect(host!.textContent).not.toContain('No cache')
+    })
+
     it('renders fresh age with "Updated Just now" when newly loaded', () => {
       const now = Date.now()
       vi.setSystemTime(now)

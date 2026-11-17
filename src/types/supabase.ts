@@ -12680,6 +12680,7 @@ export type Database = {
         | "Damage Report"
         | "Client Documents"
         | "Insurance"
+        | "Pro Forma"
       booking_flag:
         | "Partial Pickup"
         | "Partial Return"
@@ -12999,6 +13000,7 @@ export type Database = {
         | "Incident Report"
         | "Insurance Claim"
         | "Call Sheet"
+        | "Pro Forma"
       environment: "Sandbox" | "Live"
       equipment_health_band: "Excellent" | "Good" | "Fair" | "Poor" | "Replace"
       evidence_category:
@@ -14117,6 +14119,7 @@ export const Constants = {
         "Damage Report",
         "Client Documents",
         "Insurance",
+        "Pro Forma",
       ],
       booking_flag: [
         "Partial Pickup",
@@ -14464,6 +14467,7 @@ export const Constants = {
         "Incident Report",
         "Insurance Claim",
         "Call Sheet",
+        "Pro Forma",
       ],
       environment: ["Sandbox", "Live"],
       equipment_health_band: ["Excellent", "Good", "Fair", "Poor", "Replace"],

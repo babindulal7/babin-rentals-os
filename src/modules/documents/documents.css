@@ -42,7 +42,7 @@
   font-family: inherit;
   white-space: nowrap;
   margin-bottom: -1px;
-  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all var(--dur) var(--ease);
 }
 
 .doc-tab-btn:hover {
@@ -97,7 +97,7 @@
   cursor: pointer;
   font-family: inherit;
   text-align: left;
-  transition: all 0.12s ease;
+  transition: all var(--dur-fast) var(--ease);
 }
 
 .doc-rail-cat-btn:hover {
@@ -191,7 +191,7 @@
   cursor: pointer;
   display: grid;
   place-items: center;
-  transition: all 0.12s ease;
+  transition: all var(--dur-fast) var(--ease);
 }
 
 .doc-view-btn:hover {
@@ -239,7 +239,7 @@
   border: 1px solid var(--border);
   background: var(--card);
   box-shadow: var(--shadow-card, 0 1px 3px rgba(0, 0, 0, 0.04));
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  transition: box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease);
   position: relative;
 }
 
@@ -325,7 +325,7 @@
 }
 
 .doc-row {
-  transition: background-color 0.12s ease;
+  transition: background-color var(--dur-fast) var(--ease);
 }
 
 .doc-row:hover {
@@ -359,7 +359,7 @@
   background: transparent;
   color: var(--muted);
   cursor: pointer;
-  transition: all 0.12s ease;
+  transition: all var(--dur-fast) var(--ease);
 }
 
 .doc-action-btn:hover:not(:disabled) {
@@ -393,7 +393,7 @@
   border-radius: var(--r-sm, 6px);
   background: var(--card2);
   border: 1px solid var(--border2);
-  transition: border-color 0.12s ease;
+  transition: border-color var(--dur-fast) var(--ease);
 }
 
 .doc-alert-item:hover {
@@ -432,7 +432,7 @@
   cursor: not-allowed;
   text-align: center;
   line-height: 1.25;
-  transition: all 0.12s ease;
+  transition: all var(--dur-fast) var(--ease);
 }
 
 /* Modal Form Styles */
@@ -454,7 +454,7 @@
   font-family: inherit;
   outline: none;
   box-sizing: border-box;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
 
 .doc-modal-input:focus {

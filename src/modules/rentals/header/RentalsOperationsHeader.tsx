@@ -199,7 +199,7 @@ function OperationsDropdown({
           gap: 6,
           cursor: 'pointer',
           fontFamily: 'inherit',
-          transition: 'background var(--dur-fast, 120ms) var(--ease)',
+          transition: 'background var(--dur-fast) var(--ease)',
         }}
       >
         <Icon name="package" size={15} style={{ color: 'var(--text2)' }} />

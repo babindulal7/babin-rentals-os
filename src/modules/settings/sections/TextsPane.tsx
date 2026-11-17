@@ -308,7 +308,7 @@ export function TextsPane() {
                     textAlign: 'left',
                     minHeight: 56,
                     cursor: 'pointer',
-                    transition: 'all 0.15s ease',
+                    transition: 'all var(--dur) var(--ease)',
                   }}
                   aria-pressed={isSelected}
                 >

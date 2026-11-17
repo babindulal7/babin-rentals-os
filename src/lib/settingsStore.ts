@@ -61,6 +61,7 @@ export type SettingKey =
    * developer. See the doc comment on each spec for which ruling it carries. */
   | 'unitAvailabilityRule'
   | 'rentalTurnaround'
+  | 'timeBetweenRentals'
   | 'packingTreeGrouping'
   | 'packingPhotosRequired'
   | 'evidenceRetentionDays'
@@ -345,6 +346,18 @@ export const SETTING_SPECS: Record<SettingKey, SettingSpec> = {
     default: 'Same-instant handover allowed',
     kind: 'select',
     options: ['Same-instant handover allowed', 'Turnaround required'],
+  },
+
+  /**
+   * **B11 · Time between rentals: Account-wide · Per product**.
+   *
+   * Account-wide uses `rentalTurnaround` setting ('Same-instant handover allowed' vs 'Turnaround required').
+   * Per product uses each product's prep_time_minutes and cleaning_time_minutes.
+   */
+  timeBetweenRentals: {
+    default: 'Account-wide',
+    kind: 'select',
+    options: ['Account-wide', 'Per product'],
   },
 
   /** **PLAN.md §4.31(2)** — how the packing tree is grouped on the bench. */
@@ -655,6 +668,7 @@ export function writeSettings(patch: Partial<SettingsRecord>): void {
     if (problem) throw new Error(problem)
     writeLocal(PREFIX + k, String(v))
   }
+  listeners.forEach((fn) => fn())
 }
 
 /** One setting, read fresh. For modules that need a value without the whole record. */
@@ -688,4 +702,5 @@ export function resetSettings(): void {
   for (const key of Object.keys(SETTING_SPECS) as SettingKey[]) {
     removeLocal(PREFIX + key)
   }
+  listeners.forEach((fn) => fn())
 }

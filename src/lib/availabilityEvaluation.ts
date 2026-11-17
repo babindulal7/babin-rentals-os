@@ -50,6 +50,10 @@ export interface UnitInventoryCandidate {
   readonly productId: string
   readonly state: string
   readonly condition?: string | undefined
+  /** Physical safety issue from an open damage finding or failed QC. */
+  readonly safetyHold?: string | null | undefined
+  /** A retired unit is never usable, even if its stale status says In Stock. */
+  readonly retiredAt?: string | null | undefined
   readonly isSubRental?: boolean | undefined
   readonly subRentalCommitted?: boolean | undefined
 }
@@ -278,9 +282,13 @@ export function evaluateBookingAvailability(params: {
     if (product?.trackingMode === 'Serialised') {
       const totalUnits = candidates.length
       const usableUnits = candidates.filter(
-        (u) => !DISQUALIFYING_UNIT_STATES.has(u.state) && (!u.isSubRental || u.subRentalCommitted),
+        (u) => !DISQUALIFYING_UNIT_STATES.has(u.state) && !u.safetyHold && !u.retiredAt &&
+          u.condition !== 'Damaged' && u.condition !== 'Lost' &&
+          (!u.isSubRental || u.subRentalCommitted),
       )
-      const maintenanceUnits = candidates.filter((u) => u.state === 'Maintenance')
+      const maintenanceUnits = candidates.filter((u) =>
+        u.state === 'Maintenance' || Boolean(u.safetyHold) || u.condition === 'Damaged' || u.condition === 'Lost',
+      )
       const unverifiedUnits = candidates.filter((u) => u.isSubRental && !u.subRentalCommitted)
 
       // Find free units over the requested window

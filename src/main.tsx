@@ -58,11 +58,6 @@ import './styles/ui-v2.css'
  * a screen so no screen can forget it.
  */
 import './styles/responsive.css'
-import './styles/shadcn-preset-pilot.css'
-// Luma Full UI layer (b1aJD8RZg)
-import './styles/shadcn-luma-ui.css'
-// Rhea UI layer (b2Dd1dt6u)
-import './styles/shadcn-rhea-ui.css'
 import { REFERENCE_CASE_ERROR } from './lib/money'
 import { startAuditLogging } from './events/auditLogger'
 import { installGlobalErrorHandlers } from './lib/monitoring'

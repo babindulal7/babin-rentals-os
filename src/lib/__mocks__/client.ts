@@ -471,6 +471,31 @@ function createBooking(payload: Record<string, unknown>): { data: Row | null; er
     return { data: null, error: { code: '23502', message: 'create_booking: created_by is required; there is no system actor', details: '', hint: '' } }
   }
 
+  /* 0229 — project name and shoot location, checked <= 120 chars */
+  const projectName =
+    typeof payload['project_name'] === 'string' && payload['project_name'].trim() !== ''
+      ? payload['project_name'].trim()
+      : typeof payload['project'] === 'string' && payload['project'].trim() !== ''
+        ? payload['project'].trim()
+        : null
+  const shootLocation =
+    typeof payload['shoot_location'] === 'string' && payload['shoot_location'].trim() !== ''
+      ? payload['shoot_location'].trim()
+      : null
+
+  if (projectName && projectName.length > 120) {
+    return {
+      data: null,
+      error: { code: '22026', message: 'create_booking: project_name must be 120 characters or fewer. Nothing was created.', details: '', hint: '' },
+    }
+  }
+  if (shootLocation && shootLocation.length > 120) {
+    return {
+      data: null,
+      error: { code: '22026', message: 'create_booking: shoot_location must be 120 characters or fewer. Nothing was created.', details: '', hint: '' },
+    }
+  }
+
   /* 0144 — project-type validation, mirroring the RPC allow-list so mock and
      Postgres refuse the same payloads. NULL is accepted (Drafts). */
   const projectType =
@@ -509,6 +534,8 @@ function createBooking(payload: Record<string, unknown>): { data: Row | null; er
         booking_id: existing['id'],
         booking_no: existing['booking_no'],
         stage: existing['stage'],
+        project_name: existing['project_name'] ?? existing['project'] ?? null,
+        shoot_location: existing['shoot_location'] ?? null,
         replayed: true,
       } as Row,
       error: null,
@@ -528,7 +555,9 @@ function createBooking(payload: Record<string, unknown>): { data: Row | null; er
     branch_id: payload['branch_id'] ?? null,
     client_id: payload['client_id'] ?? null,
     contact_id: payload['contact_id'] ?? null,
-    project: payload['project'] ?? null,
+    project: projectName ?? payload['project'] ?? null,
+    project_name: projectName,
+    shoot_location: shootLocation,
     project_type: projectType,
     project_type_other: projectTypeOther,
     stage: 'Quote',
@@ -832,6 +861,8 @@ function createBooking(payload: Record<string, unknown>): { data: Row | null; er
       unit_count: builtUnits.length,
       crew_lines: builtCrew.length,
       transport_written: builtTransport !== null,
+      project_name: projectName,
+      shoot_location: shootLocation,
       replayed: false,
     } as Row,
     error: null,
@@ -955,6 +986,7 @@ function createInvoiceRpc(payload: Record<string, unknown>): { data: Row | null;
       taxable_amount: invoice['taxable_amount'],
       vat_amount: invoice['vat_amount'],
       total: invoice['total_amount'],
+      project_name: invoice['project_name'] ?? null,
       replayed,
     }) as Row
 
@@ -1050,6 +1082,7 @@ function createInvoiceRpc(payload: Record<string, unknown>): { data: Row | null;
     booking_id: bookingId,
     client_id: booking['client_id'] ?? null,
     branch_id: booking['branch_id'] ?? null,
+    project_name: (booking['project_name'] as string | null) ?? (booking['project'] as string | null) ?? null,
     status: 'Draft',
     due_date: dueDate,
     currency: 'NPR',
@@ -1281,9 +1314,16 @@ function changeClientMembership(payload: Record<string, unknown>): { data: Row |
     client['account_credit'] = Number(client['account_credit'] ?? 0) + excessCredit
   }
 
+  // R-9.2 (migration 0226): keep the original join date on a plan change to a live
+  // membership. Refused when the change is a renewal, as the database does.
+  const keepJoin = Boolean(payload['keep_join_date']) && Boolean(old)
+  if (keepJoin && isRenewEffective) {
+    return fail('P0001', 'GATE:membership.keep_join_lapsed: The current term has already ended, so the original join date cannot be kept. Restart the term instead.')
+  }
+  const joinDateKept = keepJoin && !isRenewEffective
   const now = new Date().toISOString()
   const newId = crypto.randomUUID()
-  const joinedOn = effectiveDate
+  const joinedOn = joinDateKept && old ? String(old['join_date']) : effectiveDate
   if (old) hooks.update('client_memberships', { superseded_at: now, superseded_by_id: newId }, (r) => r['id'] === old['id'])
   commitInsert('client_memberships', {
     id: newId, client_uuid: key, client_id: clientId, plan_id: plan['id'], join_date: joinedOn,
@@ -1294,6 +1334,7 @@ function changeClientMembership(payload: Record<string, unknown>): { data: Row |
   const result: Row = {
     client_id: clientId, plan_id: plan['id'], plan_level: plan['level'], previous_level: previous,
     membership_id: newId, superseded_membership_id: old ? old['id'] : null, joined_on: joinedOn,
+    join_date_kept: joinDateKept,
     is_renewal: isRenewEffective,
     old_fee: oldFee, days_left: daysLeft, total_days: daysInOldTerm,
     credit: credit, new_fee: newFee, new_fee_due: newFeeDue, account_credit: excessCredit,
@@ -1317,6 +1358,77 @@ export const mockSupabase = {
     return createBuilder(table, hooks)
   },
   rpc(name: string, args?: Record<string, unknown>): Promise<{ data: unknown; error: PgError | null }> {
+    if (name === 'set_booking_tags') {
+      const actor = readSession()?.user.id
+      const role = store['users']?.find(user => user['id'] === actor)?.['primary_role']
+      if (!['Owner', 'Admin', 'Manager', 'Coordinator'].includes(String(role))) {
+        return Promise.resolve({ data: null, error: pgErr('42501', 'GATE:tags.role|Only booking-desk roles (Owner, Admin, Manager, Coordinator) may modify booking tags') })
+      }
+      const clientUuid = args?.['p_client_uuid']
+      const bookingId = args?.['p_booking_id']
+      const rawTags = (args?.['p_tags'] as string[]) ?? []
+      if (!clientUuid) {
+        return Promise.resolve({ data: null, error: pgErr('23502', 'client_uuid is required for idempotency (Law 8)') })
+      }
+      const booking = store['bookings']?.find(b => b['id'] === bookingId)
+      if (!booking) {
+        return Promise.resolve({ data: null, error: pgErr('P0002', `Booking ${bookingId} not found`) })
+      }
+      // Idempotency check via audit_events
+      const auditRows = store['audit_events'] ??= []
+      const existingAudit = auditRows.find(a => a['client_uuid'] === clientUuid && a['record_id'] === bookingId && a['reason'] === 'Booking tags updated (T3-25)')
+      if (existingAudit) {
+        return Promise.resolve({
+          data: {
+            booking_id: bookingId,
+            tags: (booking['tags'] as string[]) ?? [],
+            idempotent: true,
+          },
+          error: null,
+        })
+      }
+      // Clean tags: trim, max 30, case-insensitive deduplication
+      const cleaned: string[] = []
+      for (const t of rawTags) {
+        if (typeof t !== 'string') continue
+        const trimmed = t.trim()
+        if (trimmed.length === 0) continue
+        if (trimmed.length > 30) {
+          return Promise.resolve({ data: null, error: pgErr('22023', `Tag "${trimmed}" exceeds 30 characters limit`) })
+        }
+        const lower = trimmed.toLowerCase()
+        if (!cleaned.some(x => x.toLowerCase() === lower)) {
+          cleaned.push(trimmed)
+        }
+      }
+      // Update booking tags
+      const oldTags = (booking['tags'] as string[]) ?? []
+      booking['tags'] = cleaned
+      // Log audit event
+      const auditEvent = {
+        id: crypto.randomUUID(),
+        client_uuid: clientUuid,
+        table_name: 'bookings',
+        record_id: bookingId,
+        actor_id: actor,
+        actor_role: role,
+        action: 'Update',
+        old_values: { tags: oldTags },
+        new_values: { tags: cleaned },
+        diff: { tags: cleaned },
+        reason: 'Booking tags updated (T3-25)',
+        created_at: new Date().toISOString(),
+      }
+      hooks.insert('audit_events', [auditEvent])
+      return Promise.resolve({
+        data: {
+          booking_id: bookingId,
+          tags: cleaned,
+          idempotent: false,
+        },
+        error: null,
+      })
+    }
     if (name === 'approve_glossary_term') {
       const actor = readSession()?.user.id
       const role = store['users']?.find(user => user['id'] === actor)?.['primary_role']
@@ -1481,6 +1593,174 @@ export const mockSupabase = {
         }
         store.stock_adjustments = [...(store.stock_adjustments ?? []), adjustmentRecord]
         return Promise.resolve({ data: [{ product_id: productId, quantity_before: before, quantity_after: after }], error: null })
+      } catch (error) {
+        return Promise.resolve({ data: null, error: { code: 'P0001', message: error instanceof Error ? error.message : String(error), details: '', hint: '' } as PgError })
+      }
+    }
+
+    if (name === 'restock_consumable') {
+      try {
+        const actor = readSession()?.user.id
+        const role = store['users']?.find(row => row['id'] === actor)?.['primary_role'] as string | undefined
+        if (!actor || !role) {
+          throw new Error('GATE:gate.restock.auth_required|Staff authentication is required to restock inventory.')
+        }
+        const productId = String(args?.['p_product_id'])
+        const qty = Number(args?.['p_qty'])
+        const supplier = typeof args?.['p_supplier'] === 'string' ? args['p_supplier'].trim() : null
+        const cost = typeof args?.['p_cost'] === 'number' ? args['p_cost'] : null
+        const receivedDate = typeof args?.['p_received_date'] === 'string' ? args['p_received_date'] : new Date().toISOString().slice(0, 10)
+        const clientUuid = String(args?.['p_client_uuid'] ?? crypto.randomUUID())
+
+        if (!qty || qty <= 0 || !Number.isSafeInteger(qty)) {
+          throw new Error('GATE:gate.restock.invalid_qty|Restock quantity must be a positive integer.')
+        }
+        const prod = store['products']?.find(p => p['id'] === productId)
+        if (!prod) throw new Error('GATE:gate.restock.product_not_found|Product not found.')
+        if (prod['tracking_mode'] === 'Serialised') {
+          throw new Error('GATE:gate.restock.wrong_tracking_mode|Serialised products must be restocked by adding individual units with serial numbers.')
+        }
+
+        const canMoney = !['Warehouse', 'Technician', 'Driver', 'Client'].includes(role)
+        const effectiveCost = canMoney ? cost : null
+
+        const existing = (store['consumable_restock_movements'] ?? []).find(m => m['client_uuid'] === clientUuid)
+        if (existing) {
+          return Promise.resolve({
+            data: [{
+              id: existing['id'],
+              product_id: existing['product_id'],
+              qty: existing['qty'],
+              quantity_before: existing['quantity_before'],
+              quantity_after: existing['quantity_after'],
+              supplier: existing['supplier'],
+              cost: canMoney ? existing['cost'] : null,
+              received_date: existing['received_date'],
+            }],
+            error: null,
+          })
+        }
+
+        const before = Number(prod['total_quantity'] ?? 0)
+        const after = before + qty
+        prod['total_quantity'] = after
+        prod['updated_at'] = new Date().toISOString()
+
+        const movementId = crypto.randomUUID()
+        const movementRecord: Row = {
+          id: movementId,
+          client_uuid: clientUuid,
+          product_id: productId,
+          qty,
+          supplier,
+          cost: effectiveCost,
+          received_date: receivedDate,
+          quantity_before: before,
+          quantity_after: after,
+          created_at: new Date().toISOString(),
+          created_by: actor,
+        }
+        store['consumable_restock_movements'] = [...(store['consumable_restock_movements'] ?? []), movementRecord]
+
+        return Promise.resolve({
+          data: [{
+            id: movementId,
+            product_id: productId,
+            qty,
+            quantity_before: before,
+            quantity_after: after,
+            supplier,
+            cost: effectiveCost,
+            received_date: receivedDate,
+          }],
+          error: null,
+        })
+      } catch (error) {
+        return Promise.resolve({ data: null, error: { code: 'P0001', message: error instanceof Error ? error.message : String(error), details: '', hint: '' } as PgError })
+      }
+    }
+
+    if (name === 'add_consumable_line') {
+      try {
+        const actor = readSession()?.user.id
+        const role = store['users']?.find(row => row['id'] === actor)?.['primary_role'] as string | undefined
+        if (!actor || !role) {
+          throw new Error('GATE:gate.consumable.auth_required|Staff authentication is required to add consumables.')
+        }
+        const bookingId = String(args?.['p_booking_id'])
+        const productId = String(args?.['p_product_id'])
+        const qty = Number(args?.['p_qty'])
+        const clientUuid = String(args?.['p_client_uuid'] ?? crypto.randomUUID())
+        const lineNote = typeof args?.['p_line_note'] === 'string' ? args['p_line_note'].trim() : null
+
+        if (!qty || qty <= 0 || !Number.isSafeInteger(qty)) {
+          throw new Error('GATE:gate.consumable.invalid_quantity|Quantity must be a positive integer.')
+        }
+
+        const booking = store['bookings']?.find(b => b['id'] === bookingId)
+        if (!booking) throw new Error('GATE:gate.consumable.booking_not_found|Booking not found.')
+        if (booking['stage'] === 'Returned' || booking['stage'] === 'Closed' || booking['cancelled_at']) {
+          throw new Error('GATE:gate.consumable.booking_terminal|Cannot add consumables to a cancelled, returned or closed booking.')
+        }
+
+        const prod = store['products']?.find(p => p['id'] === productId)
+        if (!prod) throw new Error('GATE:gate.consumable.product_not_found|Product not found.')
+        if (prod['tracking_mode'] !== 'Consumable') {
+          throw new Error(`GATE:gate.consumable.not_consumable|Product "${prod['name']}" is not tracked as a consumable.`)
+        }
+
+        const canMoney = !['Warehouse', 'Technician', 'Driver', 'Client'].includes(role)
+        const unitPrice = Number(prod['unit_sale_price'] ?? prod['daily_rate'] ?? 0)
+
+        const existing = (store['booking_lines'] ?? []).find(l => l['client_uuid'] === clientUuid)
+        if (existing) {
+          return Promise.resolve({
+            data: [{
+              line_id: existing['id'],
+              booking_id: bookingId,
+              product_id: productId,
+              product_name: String(prod['name']),
+              qty: existing['qty'],
+              unit_price: canMoney ? existing['rate'] : null,
+              line_total: canMoney ? existing['line_total'] : null,
+            }],
+            error: null,
+          })
+        }
+
+        const lineId = crypto.randomUUID()
+        const lineRecord: Row = {
+          id: lineId,
+          client_uuid: clientUuid,
+          booking_id: bookingId,
+          line_type: 'Equipment',
+          product_id: productId,
+          description: String(prod['name']),
+          qty,
+          days: 1,
+          rate: unitPrice,
+          rate_overridden: false,
+          discount_amount: 0,
+          line_total: qty * unitPrice,
+          price_breakdown: { unit_sale_price: unitPrice, qty, is_consumable: true },
+          line_note: lineNote,
+          created_at: new Date().toISOString(),
+          created_by: actor,
+        }
+        store['booking_lines'] = [...(store['booking_lines'] ?? []), lineRecord]
+
+        return Promise.resolve({
+          data: [{
+            line_id: lineId,
+            booking_id: bookingId,
+            product_id: productId,
+            product_name: String(prod['name']),
+            qty,
+            unit_price: canMoney ? unitPrice : null,
+            line_total: canMoney ? qty * unitPrice : null,
+          }],
+          error: null,
+        })
       } catch (error) {
         return Promise.resolve({ data: null, error: { code: 'P0001', message: error instanceof Error ? error.message : String(error), details: '', hint: '' } as PgError })
       }

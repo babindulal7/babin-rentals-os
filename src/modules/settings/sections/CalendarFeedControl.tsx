@@ -56,9 +56,9 @@ export function CalendarFeedControl() {
       const result = await createCalendarFeedToken({})
       setRawToken(result.rawToken)
       setHasToken(true)
+      setCreatedAt(new Date().toISOString())
       setRevokedAt(null)
       setError(null)
-      loadStatus()
       showSuccessToast('Calendar feed link created. Copy it now — it won\'t be shown again.')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create calendar feed link')
@@ -75,8 +75,8 @@ export function CalendarFeedControl() {
       if (result.revoked) {
         setRawToken(null)
         setHasToken(false)
+        setRevokedAt(new Date().toISOString())
         setError(null)
-        loadStatus()
         showSuccessToast('Calendar feed link revoked. The old link no longer works.')
       }
     } catch (err) {
@@ -142,14 +142,21 @@ export function CalendarFeedControl() {
             <p style={{ margin: '0 0 var(--sp-sm)', fontSize: 'var(--t-th)', color: 'var(--text2)' }}>
               Your calendar feed link is active. Created {createdAt ? new Date(createdAt).toLocaleString() : 'recently'}.
             </p>
+            {!feedUrl && (
+              <p role="status" style={{ margin: '0 0 var(--sp-sm)', fontSize: 'var(--t-th)', color: 'var(--text2)' }}>
+                This private link is still active, but its URL was shown only when created and cannot be recovered here.
+                {canRevoke ? ' Revoke it to create a replacement link.' : ' Ask an authorized administrator to revoke it if you need a new link.'}
+              </p>
+            )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
-              <div style={{ display: 'flex', gap: 'var(--sp-sm)' }}>
+              {feedUrl && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--sp-sm)' }}>
                 <input
                   type={showToken ? 'text' : 'password'}
-                  value={feedUrl || ''}
+                  value={feedUrl}
                   readOnly
                   style={{
-                    flex: 1,
+                    flex: '1 1 220px',
+                    minWidth: 0,
                     padding: '8px 12px',
                     border: '1px solid var(--border)',
                     borderRadius: '6px',
@@ -161,13 +168,13 @@ export function CalendarFeedControl() {
                 <Button variant="secondary" size="sm" onClick={() => setShowToken(!showToken)}>
                   {showToken ? 'Hide' : 'Show'}
                 </Button>
-                <Button variant="secondary" size="sm" onClick={() => copyToClipboard(feedUrl || '')}>
+                <Button variant="secondary" size="sm" onClick={() => copyToClipboard(feedUrl)}>
                   <Icon name="copy" size={16} fill />
                 </Button>
-              </div>
-              <div style={{ display: 'flex', gap: 'var(--sp-sm)' }}>
-                <a
-                  href={feedUrl || ''}
+              </div>}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--sp-sm)' }}>
+                {feedUrl && <a
+                  href={feedUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
@@ -186,10 +193,10 @@ export function CalendarFeedControl() {
                 >
                   <Icon name="external_link" size={16} />
                   Open in Calendar
-                </a>
-                <Button variant="danger" size="sm" onClick={handleRevoke} loading={saving}>
+                </a>}
+                {canRevoke && <Button variant="danger" size="sm" onClick={handleRevoke} loading={saving}>
                   Revoke link
-                </Button>
+                </Button>}
               </div>
             </div>
             <p style={{ margin: 'var(--sp-sm) 0 0', fontSize: 'var(--t-th)', color: 'var(--text3)' }}>

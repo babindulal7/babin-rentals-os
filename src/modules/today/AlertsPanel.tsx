@@ -170,7 +170,7 @@ export default function AlertsPanel({
                   alignItems: 'center',
                   color: 'inherit',
                   textDecoration: 'none',
-                  transition: 'background-color 0.15s ease',
+                  transition: 'background-color var(--dur) var(--ease)',
                 }}
               >
                 <span

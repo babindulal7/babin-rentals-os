@@ -147,7 +147,7 @@ export function WhatsAppShareButton({
                   textAlign: 'left',
                   fontSize: 'var(--t-meta)',
                   opacity: disabled ? 0.6 : 1,
-                  transition: 'background 0.15s ease',
+                  transition: 'background var(--dur) var(--ease)',
                 }}
                 onMouseEnter={(e) => {
                   if (!disabled) e.currentTarget.style.background = 'var(--card2)'

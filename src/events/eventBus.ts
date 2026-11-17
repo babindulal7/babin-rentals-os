@@ -125,6 +125,10 @@ export const EVENT_TYPES = {
   RENTAL_EXTENDED: 'rental.extended',
   /** Project Type edit (0144) — emitted by UPDATE_BOOKING_PROJECT. */
   RENTAL_PROJECT_UPDATED: 'rental.project_updated',
+  /** T3-25: Tags update (0228) — emitted by SET_BOOKING_TAGS. */
+  RENTAL_TAGS_UPDATED: 'rental.tags_updated',
+  /** T3-29: At-risk clash resolution (0241) — emitted by RESOLVE_AT_RISK. */
+  BOOKING_AT_RISK_RESOLVED: 'booking.at_risk_resolved',
   NOTE_ADDED: 'booking.note_added',
   UNIT_RELEASED: 'booking.unit_released',
   /** WHATSAPP_LINKS_SPEC v1.0 §5.4 — one branch-day signed off (0078). */
@@ -179,6 +183,8 @@ export const EVENT_TYPES = {
   
   MAINTENANCE_STARTED: 'maintenance.started',
   MAINTENANCE_COMPLETED: 'maintenance.completed',
+  INVENTORY_DOWNTIME_PLANNED: 'inventory.downtime_planned',
+  INVENTORY_DOWNTIME_ENDED: 'inventory.downtime_ended',
 
   // Delivery & Dispatch (T4-01, T4-02)
   DELIVERY_JOB_CREATED: 'delivery.job_created',

@@ -220,7 +220,7 @@ export function CreationActionSearch({
             border: '1px solid var(--border)',
             background: 'var(--card)',
             boxShadow: 'var(--shadow-xs)',
-            transition: 'border-color var(--dur-fast, 120ms) ease, box-shadow var(--dur-fast, 120ms) ease',
+            transition: 'border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease)',
           }}
         >
           <span style={{ color: 'var(--primary)', display: 'flex', alignItems: 'center' }}>
@@ -264,7 +264,7 @@ export function CreationActionSearch({
                 border: 'none',
                 color: 'var(--muted)',
                 cursor: 'pointer',
-                transition: 'background var(--dur-fast, 120ms) ease',
+                transition: 'background var(--dur-fast) var(--ease)',
               }}
             >
               <Icon name="close" size={14} />
@@ -302,7 +302,7 @@ export function CreationActionSearch({
                 gap: 6,
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
-                transition: 'all var(--dur-fast, 120ms) ease',
+                transition: 'all var(--dur-fast) var(--ease)',
               }}
             >
               <span>All</span>
@@ -335,7 +335,7 @@ export function CreationActionSearch({
                     gap: 6,
                     cursor: 'pointer',
                     whiteSpace: 'nowrap',
-                    transition: 'all var(--dur-fast, 120ms) ease',
+                    transition: 'all var(--dur-fast) var(--ease)',
                   }}
                 >
                   <Icon name={def.icon} size={13} />
@@ -507,7 +507,7 @@ export function CreationActionSearch({
                             boxShadow: isFocused ? '0 0 0 1px var(--primary), var(--shadow-sm)' : 'none',
                             cursor: 'pointer',
                             textAlign: 'left',
-                            transition: 'all var(--dur-fast, 120ms) ease',
+                            transition: 'all var(--dur-fast) var(--ease)',
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
@@ -522,7 +522,7 @@ export function CreationActionSearch({
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 flexShrink: 0,
-                                transition: 'all var(--dur-fast, 120ms) ease',
+                                transition: 'all var(--dur-fast) var(--ease)',
                               }}
                             >
                               <Icon name={act.icon} size={18} />

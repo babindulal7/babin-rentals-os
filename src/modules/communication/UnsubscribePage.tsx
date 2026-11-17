@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { unsubscribeClient } from '../../actions/marketing/offerCampaigns'
-import { CheckCircle2, AlertCircle, Loader2, WifiOff, MailX } from 'lucide-react'
+import Icon from '../../components/ui/Icon'
 
 export function UnsubscribePage(): React.ReactElement {
   const [searchParams] = useSearchParams()
@@ -76,7 +76,7 @@ export function UnsubscribePage(): React.ReactElement {
           {isOffline && (
             <div className="text-center py-6" role="alert" aria-live="polite">
               <div className="w-12 h-12 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                <WifiOff className="w-6 h-6" />
+                <Icon name="wifi_off" size={24} />
               </div>
               <h2 className="text-lg font-semibold text-slate-900">You are offline</h2>
               <p className="mt-2 text-sm text-slate-600">
@@ -88,7 +88,7 @@ export function UnsubscribePage(): React.ReactElement {
           {/* State 2: Loading */}
           {!isOffline && loading && (
             <div className="text-center py-8" role="status" aria-live="polite">
-              <Loader2 className="w-10 h-10 text-sky-600 animate-spin mx-auto mb-4" />
+              <Icon name="loader" size={40} className="text-sky-600 animate-spin mx-auto mb-4" />
               <h2 className="text-base font-semibold text-slate-900">Updating preferences...</h2>
               <p className="mt-1 text-xs text-slate-500">Unsubscribing you from marketing communications</p>
             </div>
@@ -98,7 +98,7 @@ export function UnsubscribePage(): React.ReactElement {
           {!isOffline && !loading && error && (
             <div className="text-center py-6" role="alert">
               <div className="w-12 h-12 bg-rose-100 text-rose-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                <AlertCircle className="w-6 h-6" />
+                <Icon name="alert_circle" size={24} />
               </div>
               <h2 className="text-lg font-semibold text-slate-900">Unsubscribe Unsuccessful</h2>
               <p className="mt-2 text-sm text-slate-600">{error}</p>
@@ -117,7 +117,7 @@ export function UnsubscribePage(): React.ReactElement {
           {!isOffline && !loading && success && (
             <div className="text-center py-6" role="region" aria-label="Unsubscribe confirmation">
               <div className="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="w-6 h-6" />
+                <Icon name="check_circle" size={24} />
               </div>
               <h2 className="text-lg font-bold text-slate-900">Unsubscribed Successfully</h2>
               <p className="mt-2 text-sm text-slate-600">
@@ -130,7 +130,7 @@ export function UnsubscribePage(): React.ReactElement {
               )}
               <div className="mt-4 p-3 bg-blue-50/70 border border-blue-100 rounded-lg text-left">
                 <div className="flex gap-2">
-                  <MailX className="w-5 h-5 text-blue-700 shrink-0 mt-0.5" />
+                  <Icon name="mail_x" size={20} className="text-blue-700 shrink-0 mt-0.5" />
                   <p className="text-xs text-blue-900 leading-relaxed">
                     <strong>Note:</strong> You will continue to receive essential, transactional notices regarding your active gear reservations, security deposits, and handover receipts.
                   </p>

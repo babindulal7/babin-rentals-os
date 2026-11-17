@@ -16,6 +16,8 @@ export interface OperationEvidenceStatusProps {
   bookingId?: string | null
   stage?: SessionStage
   itemId?: string | null
+  /** Accessible name for a specific damaged unit, without showing other units' totals. */
+  itemLabel?: string
   category?: EvidenceCategory
   sessionId?: string | null
   onPhotoUploaded?: () => void
@@ -27,6 +29,7 @@ export function OperationEvidenceStatus({
   bookingId,
   stage = 'Packing',
   itemId,
+  itemLabel,
   category = 'Inspection',
   sessionId,
   onPhotoUploaded,
@@ -180,9 +183,11 @@ export function OperationEvidenceStatus({
           color: (status.error || uploadError) ? 'var(--danger-text)' : 'var(--muted)',
         }}
       >
-        {status.error ?? uploadError ?? uploadProgress ?? (
+        {uploadError ?? status.error ?? uploadProgress ?? (
           status.evidence
-            ? `${status.evidence.files} saved booking photo(s).`
+            ? (itemId
+              ? `${status.evidence.filesByUnit[itemId] ?? 0} saved photo(s) linked to ${itemLabel ?? 'this unit'}.`
+              : `${status.evidence.files} saved booking photo(s).`)
             : 'Verifying saved booking evidence…'
         )}
       </p>
@@ -229,12 +234,13 @@ export function OperationEvidenceStatus({
               disabled={isUploading}
               onChange={handleFileChange}
               style={{ display: 'none' }}
-              aria-label={`Take or select ${stage} evidence photo`}
+              aria-label={`Take or select ${category} evidence photo${itemLabel ? ` for ${itemLabel}` : ''}`}
             />
             <Button
               variant="secondary"
               disabled={isUploading}
               onClick={() => fileInputRef.current?.click()}
+              aria-label={`Take / Upload ${category} Photo${itemLabel ? ` for ${itemLabel}` : ''}`}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',

@@ -16,12 +16,18 @@ export type UpdateBookingProjectInput = {
   projectType: string | null
   /** Custom text; only with 'Other'. */
   projectTypeOther?: string | null
+  /** Project / production name (T3-26, up to 120 chars). */
+  projectName?: string | null
+  /** Shoot location (T3-26, up to 120 chars). */
+  shootLocation?: string | null
 }
 
 export type UpdateBookingProjectResult = {
   success: true
   bookingId: string
   bookingNo: string
+  projectName?: string | null
+  shootLocation?: string | null
   projectType: string | null
   projectTypeOther: string | null
   /** True when nothing differed and no write or audit row was produced. */
@@ -66,6 +72,12 @@ export const updateBookingProjectConfig: ActionConfig<UpdateBookingProjectInput,
           'or omit it — an empty string is neither. Nothing was sent.',
       )
     }
+    if (input.projectName !== undefined && input.projectName !== null && input.projectName.trim().length > 120) {
+      throw new Error('Project name must be 120 characters or fewer. Nothing was sent.')
+    }
+    if (input.shootLocation !== undefined && input.shootLocation !== null && input.shootLocation.trim().length > 120) {
+      throw new Error('Shoot location must be 120 characters or fewer. Nothing was sent.')
+    }
     const check = validateProjectType(input.projectType, input.projectTypeOther)
     if (!check.valid) {
       throw new Error(`${check.message ?? 'Select a project type from the list.'} Nothing was sent.`)
@@ -78,28 +90,43 @@ export const updateBookingProjectConfig: ActionConfig<UpdateBookingProjectInput,
     const target = isUuid ? input.id : parseBookingNoSearch(input.id)
     const { data, error } = await supabase
       .from('bookings')
-      .select('id, booking_no, branch_id, project_type, project_type_other')
+      .select('id, booking_no, branch_id, project, project_name, shoot_location, project_type, project_type_other')
       .eq(column, target)
       .maybeSingle()
-    if (error) throw new Error(`Could not read the booking, so its project type was not changed: ${error.message}`)
+    if (error) throw new Error(`Could not read the booking, so its project was not changed: ${error.message}`)
     if (!data) throw new Error(`No booking matches ${input.id}. Nothing was changed.`)
 
     const current = data as unknown as {
       id: string
       booking_no: string
       branch_id: string
+      project: string | null
+      project_name: string | null
+      shoot_location: string | null
       project_type: string | null
       project_type_other: string | null
     }
     const nextType = input.projectType?.trim() ? input.projectType.trim() : null
     const nextOther = nextType === 'Other' && input.projectTypeOther?.trim() ? input.projectTypeOther.trim() : null
+    const nextProjectName = input.projectName !== undefined
+      ? (input.projectName?.trim() ? input.projectName.trim() : null)
+      : undefined
+    const nextShootLocation = input.shootLocation !== undefined
+      ? (input.shootLocation?.trim() ? input.shootLocation.trim() : null)
+      : undefined
 
-    if (current.project_type === nextType && (current.project_type_other ?? null) === nextOther) {
+    const isSameType = current.project_type === nextType && (current.project_type_other ?? null) === nextOther
+    const isSameName = nextProjectName === undefined || (current.project_name ?? current.project ?? null) === nextProjectName
+    const isSameLocation = nextShootLocation === undefined || (current.shoot_location ?? null) === nextShootLocation
+
+    if (isSameType && isSameName && isSameLocation) {
       return {
         result: {
           success: true as const,
           bookingId: current.id,
           bookingNo: current.booking_no,
+          projectName: current.project_name ?? current.project ?? null,
+          shootLocation: current.shoot_location ?? null,
           projectType: current.project_type,
           projectTypeOther: current.project_type_other,
           unchanged: true,
@@ -113,15 +140,44 @@ export const updateBookingProjectConfig: ActionConfig<UpdateBookingProjectInput,
     const key = input.clientUuid ?? newClientUuid()
     /* `safeUpdate` throws on failure (Law 12's inline error comes from that
        throw) — there is no error return to branch on. */
+    const updatePatch: Record<string, unknown> = {
+      project_type: nextType,
+      project_type_other: nextOther,
+    }
+    if (nextProjectName !== undefined) {
+      updatePatch.project_name = nextProjectName
+      updatePatch.project = nextProjectName
+    }
+    if (nextShootLocation !== undefined) {
+      updatePatch.shoot_location = nextShootLocation
+    }
+
     const updated = await safeUpdate(
       'bookings',
       current.id,
-      { project_type: nextType, project_type_other: nextOther },
+      updatePatch,
       key,
     )
 
     /* Audit (spec §43) — old and new, who and when. This is a metadata edit;
        'status change' is the closest enum member; engine defaults to it anyway. */
+    const auditOldValues: Record<string, unknown> = {
+      project_type: current.project_type,
+      project_type_other: current.project_type_other,
+    }
+    const auditNewValues: Record<string, unknown> = {
+      project_type: nextType,
+      project_type_other: nextOther,
+    }
+    if (nextProjectName !== undefined) {
+      auditOldValues.project_name = current.project_name ?? current.project
+      auditNewValues.project_name = nextProjectName
+    }
+    if (nextShootLocation !== undefined) {
+      auditOldValues.shoot_location = current.shoot_location
+      auditNewValues.shoot_location = nextShootLocation
+    }
+
     const audit = await logAuditEvent({
       eventClass: 'status change',
       category: 'Rentals',
@@ -133,19 +189,26 @@ export const updateBookingProjectConfig: ActionConfig<UpdateBookingProjectInput,
       actorId: ctx.userId,
       actorRole: ctx.role,
       branchId: current.branch_id,
-      oldValues: { project_type: current.project_type, project_type_other: current.project_type_other },
-      newValues: { project_type: nextType, project_type_other: nextOther },
-      reason: `Project type changed ${current.project_type ?? '—'} → ${nextType ?? '—'}`,
+      oldValues: auditOldValues as Record<string, string | null>,
+      newValues: auditNewValues as Record<string, string | null>,
+      reason: `Project details updated: ${nextProjectName ?? current.project_name ?? '—'} (${nextType ?? '—'})`,
     })
     if (!audit.ok) {
       console.error(`[updateBookingProject] ${current.booking_no} saved with NO audit row.`, audit.error)
     }
 
-    const row = (updated.data ?? {}) as { project_type?: string | null; project_type_other?: string | null }
+    const row = (updated.data ?? {}) as {
+      project_name?: string | null
+      shoot_location?: string | null
+      project_type?: string | null
+      project_type_other?: string | null
+    }
     const result: UpdateBookingProjectResult = {
       success: true as const,
       bookingId: current.id,
       bookingNo: current.booking_no,
+      projectName: row.project_name ?? (nextProjectName !== undefined ? nextProjectName : (current.project_name ?? current.project ?? null)),
+      shootLocation: row.shoot_location ?? (nextShootLocation !== undefined ? nextShootLocation : (current.shoot_location ?? null)),
       projectType: row.project_type ?? nextType,
       projectTypeOther: row.project_type_other ?? nextOther,
       unchanged: false,

@@ -418,6 +418,57 @@ describe('Task 5 — Operations popup navigation and state', () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 
+  it('shows Previous and Next in the modal and navigates backward and forward without committing', async () => {
+    await mount(vi.fn(), 'On Rent', 'Return')
+    const prev = [...container.querySelectorAll<HTMLButtonElement>('.operations-shell__navigation button')]
+      .find(b => b.textContent?.includes('Handover'))
+    expect(prev).toBeDefined()
+    await act(async () => prev?.click())
+    expect(openStage()).toContain('Handover')
+    expect(container.textContent).toContain('Status: On Rent')
+    const next = [...container.querySelectorAll<HTMLButtonElement>('.operations-shell__navigation button')]
+      .find(b => b.textContent?.includes('Next: Return'))
+    expect(next?.disabled).toBe(false)
+    await act(async () => next?.click())
+    expect(openStage()).toContain('Return & Inspection')
+    expect(container.textContent).toContain('Status: On Rent')
+    expect(completionCalls).not.toHaveBeenCalled()
+  })
+
+  it('keeps future navigation locked until a stage is completed', async () => {
+    await mount(vi.fn(), 'Booked', 'Pack')
+    const next = container.querySelector<HTMLButtonElement>('button[aria-label="Next stage: Handover"]')
+    expect(next).not.toBeNull()
+    expect(next?.disabled).toBe(true)
+    expect(next?.title).toContain('Confirm the current operation first')
+    expect(completionCalls).not.toHaveBeenCalled()
+  })
+
+  it('explains approved equipment corrections when revisiting completed Packing', async () => {
+    await mount(vi.fn(), 'Packed', 'Handover')
+    const prev = [...container.querySelectorAll<HTMLButtonElement>('.operations-shell__navigation button')]
+      .find(b => b.textContent?.includes('Packing'))
+    await act(async () => prev?.click())
+    expect(openStage()).toContain('Packing')
+    expect(container.textContent).toContain('Booking actions → Revert stage')
+    expect(container.textContent).toContain('Status: Packed')
+    expect([...container.querySelectorAll('button')].some(b => b.textContent?.trim() === 'Completed ✓')).toBe(true)
+  })
+
+  it('protects unsaved work when browsing forward between completed stages', async () => {
+    dirty = true
+    await mount(vi.fn(), 'On Rent', 'Pack')
+    const next = container.querySelector<HTMLButtonElement>('button[aria-label="Next stage: Handover"]')
+    expect(next?.disabled).toBe(false)
+    await act(async () => next?.click())
+    expect(openStage()).toContain('Packing')
+    expect(container.textContent).toContain('You have unsaved changes.')
+    await act(async () => [...container.querySelectorAll<HTMLButtonElement>('button')]
+      .find(b => b.textContent?.trim() === 'Stay Here')?.click())
+    expect(openStage()).toContain('Packing')
+    expect(completionCalls).not.toHaveBeenCalled()
+  })
+
   it('keeps completed previous stages accessible for viewing', async () => {
     // When booking is On Rent, Packing is already completed
     await mount(vi.fn(), 'On Rent', 'Return')

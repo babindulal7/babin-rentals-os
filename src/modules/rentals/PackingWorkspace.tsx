@@ -8,6 +8,7 @@ import { DataTableShell } from '../../components/ui/DataTable'
 import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import { OperationAside } from '../operations/FloorAside'
 import { useOperationShell } from '../operations/RentalOperationShell'
+import { StickyFloorBar } from '../operations/StickyFloorBar'
 import { EmptyState, ErrorBanner } from '../../components/ui/StateViews'
 import { PageBody } from '../../components/ui/PageBody'
 import { STATUS, jobStateChip } from '../../lib/status'
@@ -47,8 +48,10 @@ import {
 } from '../../lib/acousticFeedback'
 import { getCinemaKitDependencies, evaluateKitCompleteness } from '../../lib/kitBuildVerification'
 import { exportPackingListPdf, openPdfForPrint } from '../../lib/pdf/exportPdf'
-import type { PackingListPdfItem } from '../../lib/pdf/generatePdf'
+import { buildPackingListPdfItems } from '../../lib/pdf/generatePdf'
 import { FloorOfflineStatus } from '../../components/ui/FloorOfflineStatus'
+import { AddConsumableModal } from './booking/AddConsumableModal'
+import type { SystemRole } from '../../types/database'
 import './rentals.css'
 
 
@@ -291,52 +294,6 @@ export function buildRows(floor: FloorBooking): PackRow[] {
     }
   }
   return rows
-}
-
-export function buildPackingPdfItems(lines: readonly FloorLine[]): PackingListPdfItem[] {
-  const parentIds = new Set(lines.map((l) => l.parentLineId).filter((p): p is string => p !== null))
-  const items: PackingListPdfItem[] = []
-
-  for (const line of lines) {
-    if (parentIds.has(line.id) || line.lineType === 'Bundle') {
-      items.push({
-        id: line.id,
-        name: line.productName ?? line.description ?? 'Equipment Package',
-        quantity: line.qty,
-        isParent: true,
-        parentLineId: line.parentLineId,
-      })
-    }
-  }
-
-  for (const line of lines) {
-    if (parentIds.has(line.id)) continue
-    if (NON_PACKABLE_LINE_TYPES.has(line.lineType)) continue
-
-    const baseName = line.productName ?? line.description ?? 'Equipment'
-    if (line.unitsPresence === 'present' && line.units.length > 0) {
-      line.units.forEach((u, i) => {
-        items.push({
-          id: u.id,
-          name: line.units.length > 1 ? `${baseName} (Unit ${i + 1})` : baseName,
-          serialNo: u.serial ?? u.assetTag ?? null,
-          quantity: 1,
-          location: u.location,
-          parentLineId: line.parentLineId,
-        })
-      })
-    } else {
-      items.push({
-        id: line.id,
-        name: baseName,
-        quantity: line.qty,
-        location: null,
-        parentLineId: line.parentLineId,
-      })
-    }
-  }
-
-  return items
 }
 
 /**
@@ -594,6 +551,7 @@ export default function PackingWorkspace({
   const [verifiedKitDeps, setVerifiedKitDeps] = useState<Record<string, string[]>>({})
   const [restoredFromStorage, setRestoredFromStorage] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
+  const [showAddConsumable, setShowAddConsumable] = useState(false)
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('Pending')
   const [queryInput, setQueryInput] = useState('')
   const [query, setQuery] = useState('')
@@ -648,9 +606,10 @@ export default function PackingWorkspace({
     if (!floor) return
     setPrinting(true)
     try {
-      const items = buildPackingPdfItems(floor.lines)
+      const items = buildPackingListPdfItems(floor.lines)
       const result = await exportPackingListPdf({
         bookingNo: floor.bookingNo,
+        bookingUrl: new URL(`/rentals/${encodeURIComponent(floor.bookingNo)}`, window.location.origin).href,
         clientName: floor.clientName ?? 'Client',
         pickupAtAd: floor.pickupAtAd,
         returnAtAd: floor.returnAtAd,
@@ -1462,7 +1421,7 @@ export default function PackingWorkspace({
                   </span>
                 </div>
                 <div aria-hidden style={{ height: 8, borderRadius: 'var(--r-badge)', background: 'var(--card2)', marginTop: 6, overflow: 'hidden' }}>
-                  <div style={{ width: '100%', height: '100%', background: 'var(--success)', borderRadius: 'var(--r-badge)', transform: `scaleX(${pct / 100})`, transformOrigin: 'left', transition: 'transform var(--dur) ease' }} />
+                  <div style={{ width: '100%', height: '100%', background: 'var(--success)', borderRadius: 'var(--r-badge)', transform: `scaleX(${pct / 100})`, transformOrigin: 'left', transition: 'transform var(--dur) var(--ease)' }} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 5, fontSize: 'var(--t-meta)', color: pendingUnits ? 'var(--progress-text)' : 'var(--success-text)', fontWeight: 600 }}>
                   <Icon name={pendingUnits ? 'alert_triangle' : 'checklist'} size={12} />
@@ -1489,7 +1448,7 @@ export default function PackingWorkspace({
                     loading={printing}
                     disabled={printing}
                   >
-                    Print Packing List
+                    Print pick list
                   </Button>
                 )}
                 {/* RULING 2026-10-14: Save Draft removed. It called `saveDraft({ id })`, which with no draft
@@ -1574,12 +1533,14 @@ export default function PackingWorkspace({
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         <Button icon="zap" onClick={quickPackAll}>Quick Pack</Button>
                         <Button icon="checklist" onClick={markPendingPacked}>Pending</Button>
+                        <Button icon="package" onClick={() => setShowAddConsumable(true)}>Add Consumables</Button>
                       </div>
                     ) : (
                       <>
                         <Button icon="zap" onClick={quickPackAll}>Quick Pack All</Button>
                         <Button icon="checklist" onClick={markPendingPacked}>Mark Pending Packed</Button>
                         <Button icon="camera" onClick={() => setShowScanner(true)}>Scan / Camera</Button>
+                        <Button icon="package" onClick={() => setShowAddConsumable(true)}>Add Consumables</Button>
                       </>
                     )
                   }
@@ -1604,7 +1565,7 @@ export default function PackingWorkspace({
                               : scanPulse === 'error'
                               ? '0 0 12px color-mix(in srgb, var(--danger, #ef4444) 40%, transparent)'
                               : 'none',
-                          transition: 'outline 0.15s ease-in-out, box-shadow 0.15s ease-in-out',
+                          transition: 'outline var(--dur) var(--ease), box-shadow var(--dur) var(--ease)',
                         }}
                       >
 
@@ -2368,6 +2329,32 @@ export default function PackingWorkspace({
               </div>
             </div>
 
+            {phone && !embedded && (
+              <StickyFloorBar
+                progress={{
+                  current: packedRows.length,
+                  total: rows.length,
+                  label: pendingRows.length ? `${pendingRows.length} remaining` : 'All items packed',
+                  complete: canComplete,
+                }}
+                onScan={() => {
+                  unlockAudioContext()
+                  setShowScanner(true)
+                }}
+                primaryAction={{
+                  label: dispatching
+                    ? 'Recording…'
+                    : !isOnline
+                    ? 'Needs connection to complete'
+                    : 'Complete Packing',
+                  onClick: completePacking,
+                  disabled: !isOnline || !canComplete,
+                  loading: dispatching,
+                  icon: isOnline ? 'checklist' : 'alert_triangle',
+                }}
+              />
+            )}
+
             <BarcodeScannerModal
               isOpen={showScanner}
               onClose={() => setShowScanner(false)}
@@ -2380,6 +2367,21 @@ export default function PackingWorkspace({
                  rail behind it recorded. */
               onItemScanned={(item) => pack(item.id, 'scan')}
             />
+
+            {showAddConsumable && floor && user && (
+              <AddConsumableModal
+                isOpen={showAddConsumable}
+                onClose={() => setShowAddConsumable(false)}
+                bookingId={floor.id}
+                userId={user.id}
+                userRole={user.role as SystemRole}
+                onAdded={() => {
+                  setShowAddConsumable(false)
+                  setReload((r) => r + 1)
+                }}
+                defaultNote={`Added by ${user.name || 'floor staff'} at Pack`}
+              />
+            )}
           </div>
         )}
       </PageBody>

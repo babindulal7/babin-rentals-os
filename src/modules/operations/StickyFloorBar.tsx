@@ -9,7 +9,7 @@ export interface StickyFloorBarProps {
     label?: string | undefined
     complete?: boolean | undefined
   }
-  onScan: () => void
+  onScan?: (() => void) | undefined
   primaryAction: {
     label: string
     onClick: () => void
@@ -161,30 +161,32 @@ export const StickyFloorBar: FC<StickyFloorBarProps> = ({
         )}
 
         {/* Quick Scan trigger */}
-        <button
-          type="button"
-          onClick={onScan}
-          aria-label="Scan barcode or QR code"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 5,
-            minHeight: 44,
-            padding: '0 12px',
-            borderRadius: 'var(--r-btn)',
-            border: '1px solid var(--border)',
-            background: 'var(--card2)',
-            color: 'var(--text)',
-            fontSize: 'var(--t-meta)',
-            fontWeight: 600,
-            fontFamily: 'inherit',
-            cursor: 'pointer',
-          }}
-        >
-          <Icon name="queues" size={16} />
-          <span>Scan</span>
-        </button>
+        {onScan && (
+          <button
+            type="button"
+            onClick={onScan}
+            aria-label="Scan barcode or QR code"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 5,
+              minHeight: 44,
+              padding: '0 12px',
+              borderRadius: 'var(--r-btn)',
+              border: '1px solid var(--border)',
+              background: 'var(--card2)',
+              color: 'var(--text)',
+              fontSize: 'var(--t-meta)',
+              fontWeight: 600,
+              fontFamily: 'inherit',
+              cursor: 'pointer',
+            }}
+          >
+            <Icon name="queues" size={16} />
+            <span>Scan</span>
+          </button>
+        )}
 
         {/* Primary Completion trigger */}
         <button
@@ -197,11 +199,11 @@ export const StickyFloorBar: FC<StickyFloorBarProps> = ({
             alignItems: 'center',
             justifyContent: 'center',
             gap: 6,
-            minHeight: 48,
-            padding: '0 14px',
+            minHeight: 56,
+            padding: '0 16px',
             borderRadius: 'var(--r-btn)',
-            fontSize: 'var(--t-meta)',
-            fontWeight: 600,
+            fontSize: 'var(--t-ui)',
+            fontWeight: 700,
             fontFamily: 'inherit',
             cursor: primaryAction.disabled ? 'not-allowed' : 'pointer',
             border: primaryAction.disabled ? '1px solid var(--border)' : '1px solid transparent',
@@ -216,7 +218,7 @@ export const StickyFloorBar: FC<StickyFloorBarProps> = ({
                 }),
           }}
         >
-          <Icon name={primaryAction.icon ?? 'check'} size={15} />
+          <Icon name={primaryAction.icon ?? 'check'} size={16} />
           <span>{primaryAction.label}</span>
         </button>
       </div>

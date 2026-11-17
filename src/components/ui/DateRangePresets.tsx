@@ -89,7 +89,7 @@ export function DateRangePresets({
                       whiteSpace: 'nowrap',
                       textOverflow: 'ellipsis',
                       overflow: 'hidden',
-                      transition: 'all 120ms ease',
+                      transition: 'all var(--dur-fast) var(--ease)',
                     }}
                   >
                     {p.label}

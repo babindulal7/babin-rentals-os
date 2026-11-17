@@ -100,6 +100,50 @@ describe('SearchInput Component', () => {
     expect(handleClear).toHaveBeenCalledTimes(1)
   })
 
+  it('does not submit or clear a search while an IME candidate is being composed', () => {
+    const handleClear = vi.fn()
+    const handleSubmit = vi.fn()
+    const handleKeyDown = vi.fn()
+    mount(
+      <SearchInput
+        value="क्यामेरा"
+        onChange={() => {}}
+        onClear={handleClear}
+        onSearchSubmit={handleSubmit}
+        onKeyDown={handleKeyDown}
+      />,
+    )
+    const input = container.querySelector('input')!
+
+    for (const key of ['Enter', 'Escape']) {
+      const event = new KeyboardEvent('keydown', {
+        key,
+        bubbles: true,
+        cancelable: true,
+        isComposing: true,
+      })
+      act(() => input.dispatchEvent(event))
+      expect(event.defaultPrevented).toBe(false)
+    }
+
+    expect(handleSubmit).not.toHaveBeenCalled()
+    expect(handleClear).not.toHaveBeenCalled()
+    expect(handleKeyDown).toHaveBeenCalledTimes(2)
+  })
+
+  it('ignores legacy IME keyCode 229 while Enter commits a candidate', () => {
+    const handleSubmit = vi.fn()
+    mount(<SearchInput value="क्यामेरा" onChange={() => {}} onSearchSubmit={handleSubmit} />)
+    const input = container.querySelector('input')!
+    const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+    Object.defineProperty(event, 'keyCode', { value: 229 })
+
+    act(() => input.dispatchEvent(event))
+
+    expect(event.defaultPrevented).toBe(false)
+    expect(handleSubmit).not.toHaveBeenCalled()
+  })
+
   it('triggers onSearchSubmit on Enter key', () => {
     const handleSubmit = vi.fn()
     mount(<SearchInput value="RED V-Raptor" onChange={() => {}} onSearchSubmit={handleSubmit} />)

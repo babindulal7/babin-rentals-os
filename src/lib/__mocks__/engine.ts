@@ -172,6 +172,7 @@ type Op =
   | { t: 'is'; col: string; val: null | boolean }
   | { t: 'notis'; col: string }
   | { t: 'contains'; col: string; val: unknown }
+  | { t: 'overlaps'; col: string; val: unknown }
   | { t: 'match'; obj: Record<string, unknown> }
   | { t: 'or'; clauses: { col: string; op?: string; pattern: string }[] }
 
@@ -237,7 +238,13 @@ function matchesOp(row: Row, op: Op): boolean {
     case 'gte': return cmp(get(row, op.col), op.val) >= 0
     case 'lt': return cmp(get(row, op.col), op.val) < 0
     case 'lte': return cmp(get(row, op.col), op.val) <= 0
-    case 'in': return op.vals.includes(get(row, op.col) as never)
+    case 'in': {
+      const v = get(row, op.col)
+      if (Array.isArray(v)) {
+        return (op.vals as unknown[]).some((val) => v.includes(val))
+      }
+      return op.vals.includes(v as never)
+    }
     case 'is': {
       const v = get(row, op.col)
       return op.val === null ? v === null || v === undefined : v === op.val
@@ -251,6 +258,12 @@ function matchesOp(row: Row, op: Op): boolean {
       if (!Array.isArray(v)) return false
       const want = Array.isArray(op.val) ? op.val : [op.val]
       return want.every((w) => (v as unknown[]).includes(w))
+    }
+    case 'overlaps': {
+      const v = get(row, op.col)
+      if (!Array.isArray(v)) return false
+      const want = Array.isArray(op.val) ? op.val : [op.val]
+      return want.some((w) => (v as unknown[]).includes(w))
     }
     case 'match':
       return Object.entries(op.obj).every(([k, v]) => get(row, k) === v)
@@ -288,6 +301,7 @@ export interface MockBuilderLike extends PromiseLike<Result> {
   is(col: string, val: null | boolean): MockBuilderLike
   not(col: string, operator: string, val: unknown): MockBuilderLike
   contains(col: string, val: unknown): MockBuilderLike
+  overlaps(col: string, val: unknown): MockBuilderLike
   match(obj: Record<string, unknown>): MockBuilderLike
   or(filters: string, opts?: { referencedTable?: string }): MockBuilderLike
   order(col: string, opts?: { ascending?: boolean }): MockBuilderLike
@@ -363,6 +377,7 @@ export function createBuilder(table: string, hooks: EngineHooks): MockBuilderLik
       else warnOnce(`unsupported .not(${col}, ${operator}, …) — ignored`)
     }),
     contains: chain((col: string, val: unknown) => { ops.push({ t: 'contains', col, val }) }),
+    overlaps: chain((col: string, val: unknown) => { ops.push({ t: 'overlaps', col, val }) }),
     match: chain((obj: Record<string, unknown>) => { ops.push({ t: 'match', obj }) }),
     or: chain((filters: string) => {
       const clauses = filters

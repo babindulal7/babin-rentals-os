@@ -971,6 +971,10 @@ export interface RentalListRow {
   avatarTone: StatusKey
   /** `bookings.project`, nullable (0002:28). Renders as an explicit non-value. */
   project: string | null
+  /** Project / production name (T3-26, B8, B52). */
+  projectName?: string | null
+  /** Shoot location (T3-26, B8). */
+  shootLocation?: string | null
   /**
    * `bookings.project_type` + `project_type_other` (0144) — the ALREADY-DISPLAYED
    * answer, resolved once here so no screen re-derives it. `Other` renders its
@@ -1046,6 +1050,7 @@ export interface RentalListRow {
    * Law 11, colour never alone — and it fires on `true` only.
    */
   isExternal: boolean | null
+  tags: string[]
 }
 
 /** "31 Jul 2026" + "09:00 AM", both rendered in Kathmandu (Law 7). */
@@ -1105,6 +1110,8 @@ export function toRentalListRow(
     monogram: monogramOf(row.clientName),
     avatarTone: avatarToneFor(row.clientId),
     project: row.project,
+    projectName: row.projectName ?? row.project ?? null,
+    shootLocation: row.shootLocation ?? null,
     projectTypeDisplay: displayProjectType(row.projectType, row.projectTypeOther),
     projectTypeValue: row.projectType,
     pickupLocation: row.pickupLocation,
@@ -1146,6 +1153,7 @@ export function toRentalListRow(
     // unknown; deliberately NOT defaulted to `false`, which would assert "no
     // external gear" from a question nobody asked. See the field's own comment.
     isExternal: subRentalOf(subRentedBookingIds, row.id),
+    tags: row.tags ?? [],
   }
 }
 

@@ -33,7 +33,7 @@ discounts copied only when ticked; 3) retired or deactivated products are listed
 available any more" and left out; 4) tap count recorded against R-39.
 **Needs** — none.
 
-### T3-02 · Deposits per product, entered before go-live            status: todo — only an empty tab is on `main` (`af06b08`, merged 31 Oct); the editor below is not built · size: M · lane C + staff
+### T3-02 · Deposits per product, entered before go-live            status: acceptance_pending — PR #183 merged 17 Nov; staged role/CSV checks and staff deposit data-entry coverage pending · size: M · lane C + staff
 **What** — A bulk editor for `products.deposit_fixed` / `deposit_percent` (and `replacement_value`
 where missing): an Inventory view "Deposit setup" listing every active product with its rule, inline
 edit, filter "no deposit set", and CSV round-trip through the products import (dry run first).
@@ -49,23 +49,26 @@ nothing under it); build the editor in it. Its two `// @ts-ignore` lines fail `n
 until Claude's `fix-red-checks.patch` (31 Oct) or this card removes them.
 **Needs** — none. Data entry: BABIN_ACTIONS (staff, December).
 
-### T3-03 · Cancellation fee tiers            status: todo · size: M · lane C + Babin
-**What** — Settings ▸ Financial ▸ "Cancellation fee tiers": rows of *notice before pickup* → *fee %*.
-⭐ Fee base: the booking's rental total **before VAT**. When a booking with a paid advance is
-cancelled, the cancel sheet **suggests** the fee from the tiers (staff may lower it with a reason —
-same shape as the late-fee waiver), then: fee → an invoice line "Cancellation fee"; any advance
-above the fee → refund as a **reversal row** (Law 4). No tiers set → no fee suggested (today's
-behaviour) and the card says so.
-**Why** — D12; replaces `CANCELLATION_TIERS_UNAVAILABLE` (`src/data/settings.ts` ~line 644).
-**Where** — `src/modules/settings/sections/Financial.tsx`, `src/actions/rentals/cancelRental.ts`,
-`src/modules/rentals/modals/CancelRentalModal.tsx`, settings table (0158).
-**Database** — migration (claim number) if tiers need a typed table rather than a settings key;
-lifecycle step "cancel with advance → fee line + reversal, totals reconcile".
-**Done when** — tiers 48 h / 24 h / 0 h example on staging produce the right fee and refund; VAT on
-the fee follows the accountant's answer (ask with O-7).
-**Needs** — Babin enters the real tiers (O-10).
+### T3-03 · Cancellation fee tiers            status: done · size: M · lane C + Babin
+**What** — Implement the **2 Nov owner-approved Option A** in Settings ▸ Financial ▸ "Cancellation fees" and the Cancel Rental dialog. **Do not apply the previous unapproved notice-only/50%-duration-only guesses.** For confirmed, pre-start bookings:
 
-### T3-04 · Non-VAT bills            status: todo · size: M · lane C + accountant
+| Time before scheduled rental start | 1–2 rental days | >2 rental days |
+| --- | --- | --- |
+| >48 h | Free | Free |
+| >24 h to ≤48 h | Free | 50% of booking's equipment-rental subtotal before VAT |
+| 0–24 h inclusive | One rental day's charge | Higher of one rental day's charge or 50% of subtotal before VAT |
+
+**Draft/unconfirmed bookings cancel free.** For a multi-day booking cancelled 12 hours before pickup, **do not add** the one-day amount to the percentage: pick the greater. Exactly 2 rental days belongs to the short-booking column. Exactly 48 h uses the middle tier; exactly 24 h uses the last tier. Use server timestamps for scheduled start (Kathmandu operational context), not the time the booking was originally created. After booking start/handover, do not apply the pre-start calculator: use the separate return/no-show rules.
+
+**Price base** — The percentage uses *equipment rental subtotal before VAT* (no VAT, deposit, crew, delivery or pass-through). Determine the one-day charge through the canonical pricing engine and the booking's applicable rate/discount, not a fixed amount. Staff authorized to change financial charges may waive/reduce the suggested fee only with a reason and audit trail; keep existing role gates. Any advance above the cancellation charge is a refund via an **immutable reversal row**, never delete/edit the payment (Law 4). VAT on a cancellation fee still awaits accountant/legal confirmation; do not infer non-VAT status from a waived/zero fee.
+
+**Why** — D12, owner clarification 2 Nov 2026 in `RULINGS-2026-11-02-OWNER.md`. Replaces `CANCELLATION_TIERS_UNAVAILABLE` (`src/data/settings.ts`), preserving permission/security gates.
+**Where** — `src/modules/settings/sections/Financial.tsx`, `src/actions/rentals/cancelRental.ts`, `src/modules/rentals/modals/CancelRentalModal.tsx`, settings table (0158) and shared pricing logic.
+**Database** — claim a free migration number if typed fee configuration is needed; inspect authoritative schema first.
+**Done when** — verified on staging with ≥ two distinct staff roles and automated tests for >48 h, exactly 48 h, 36 h, exactly 24 h, 12 h, exactly 2 days vs 3+ days, bad/stale client clock, refunds and RBAC. Sample: 5 days × Rs 3,500, rental total Rs 17,500 → 72 h Rs 0, 36 h Rs 8,750, 12 h Rs 8,750; 2 days × Rs 3,500 at 36 h Rs 0, at 12 h Rs 3,500 (before VAT). No double charge; Warehouse cannot override money.
+**Needs** — accountant ruling on VAT treatment before using the cancellation fee on tax documents; existing booking financial integrity tests and audit gates.
+
+### T3-04 · Non-VAT bills            status: done · size: M · lane C + accountant
 **What** — Each invoice carries a VAT treatment: **Standard 13%** or **Non-VAT bill** (D13). The VAT
 toggle on a booking sets it; the Sales/VAT register and VAT report show non-VAT bills in their own
 section with their own total — never mixed into exempt or zero-rated. Existing zero-VAT invoices
@@ -88,7 +91,7 @@ spec card set (certification, sync, offline invoices, invoice cancellation rules
 **Done when** — written answer recorded by 30 Nov 2026 (14 Mangsir 2083).
 **Needs** — accountant.
 
-### T3-06 · Invoice and agreement documents            status: todo · size: M · lane C + accountant
+### T3-06 · Invoice and agreement documents            status: acceptance_pending — PR #169 merged 16 Nov; accountant PDF sign-off and staged signed-agreement storage pending · size: M · lane C + accountant
 **What** — 1) The accountant checks the invoice PDF (`src/lib/pdf/generatePdf.ts`) against what an
 invoice in Nepal must show (business PAN, invoice number, date — add the BS date beside AD, buyer
 PAN when given, VAT lines); fix what they mark. 2) Rental Agreement PDF from the booking with
@@ -101,7 +104,7 @@ Babin's terms text (O-11), signed at Handover (T2-02). 3) Quote PDF uses the sam
 booking.
 **Needs** — T2-02; Babin's terms text; accountant.
 
-### T3-07 · Opening balances and daily closing carry-forward            status: todo · size: M · lane C
+### T3-07 · Opening balances and daily closing carry-forward            status: done · size: M · lane C
 **What** — Accounts (or Owner) enters an **opening balance** once per cash drawer and per bank
 account, with the date. Daily closing then shows *opening + money in − money out = closing* per
 account and carries the closing to the next day. Money in/out includes rental payments, payment
@@ -120,7 +123,7 @@ row, Law 4 spirit) + RLS money roles only; lifecycle step "closing = opening + i
 Warehouse cannot read the table.
 **Needs** — none.
 
-### T3-08 · Equipment form: one page, seven sections            status: todo · size: S · lane C
+### T3-08 · Equipment form: one page, seven sections            status: done · size: S · lane C
 **What** — Remove the five-step mode from `EquipmentRecordEditor` (`wizardMode`, ~line 69 and its
 render branches); keep the seven section anchors and jump links.
 **Why** — D19; closes OPEN_DECISIONS §19.
@@ -130,7 +133,7 @@ render branches); keep the seven section anchors and jump links.
 updated.
 **Needs** — none.
 
-### T3-09 · Structure-priced bookings reproduce on the invoice            status: todo · size: S · lane C
+### T3-09 · Structure-priced bookings reproduce on the invoice            status: done · size: S · lane C
 **What** — Verify on staging that a booking priced with a pricing structure (0160) stores its line
 breakdown (0168) and that the invoice shows the same figures; fix any drift.
 **Why** — OPEN_DECISIONS §11 G3 (blocks cutover: Babin's "Babin Daily", "Days wise discount" and
@@ -141,7 +144,7 @@ invoice creation.
 **Done when** — three structure-priced bookings invoice to the paisa of their quote.
 **Needs** — Batch 1 on staging.
 
-### T3-10 · After-hours line            status: todo · size: S · lane C
+### T3-10 · After-hours line            status: ready — awaiting merge (mac/T3-10-after-hours-line) · size: S · lane C
 **What** — Add a service product "After-hours handover" (no fixed price; staff type the amount) so
 staff can add the charge in two taps when they decide to (D7). No automatic surcharge.
 **Why** — D7 (§4.64d).
@@ -242,7 +245,7 @@ phone's share sheet, or wa.me with a text summary when sharing a file is not pos
 PC in ≤ 2 taps; Warehouse cannot share a priced document.
 **Needs** — T5-03 for email; T3-06 for the document contents.
 
-### T3-17 · Extend in two taps            status: todo · size: S · lane C · [go-live]
+### T3-17 · Extend in two taps            status: acceptance_pending — PRs #162 and #172 merged; staged authoritative extension/clash and pricing tests pending · size: S · lane C · [go-live]
 **What** — "Extend" on Booking Detail and on a late return: pick the new return (chips +1 day,
 +2 days, custom); availability is checked; a clash offers similar/sub-rent (T3-13). Price of the
 extra days: **two one-tap choices every time** — "Same rate and discount as the booking" or
@@ -300,7 +303,7 @@ houses pay on credit (W14), so this is the chase screen; reminders themselves ar
 open it; a statement PDF shares to WhatsApp in two taps.
 **Needs** — T3-16.
 
-### T3-21 · Find anything in one box            status: todo · size: M · lane C · [go-live]
+### T3-21 · Find anything in one box            status: done (merged 9 Nov) · size: M · lane C · [go-live]
 **What** — The header search (⌘K / phone search) finds a booking by **number, client name, client
 phone, collector name, item name, serial or asset code**, and shows recent items first; results
 open in one tap. Today `globalSearch.ts` covers booking, client, equipment and invoice — add phone,
@@ -316,7 +319,7 @@ failed — retry" look different. Never apply "latest wins" to a write.
 shown to floor roles.
 **Needs** — none.
 
-### T3-22 · Availability in two taps            status: todo · size: S · lane C · [go-live]
+### T3-22 · Availability in two taps            status: acceptance_pending — PR #161 merged; real-date stock query, mobile two-tap and owner acceptance pending · size: S · lane C · [go-live]
 **What** — From anywhere: tap **Availability** (header) → type or scan an item → see free units for
 any dates, the next free date, and **who has it now** (from T2-14). Reuses `CheckAvailabilityModal`.
 **Why** — W91 "checking what's available".
@@ -335,7 +338,7 @@ with bill photos**, **crew payouts with TDS** (T8-08), as CSV + PDF, BS and AD d
 **Done when** — the accountant opens a sample pack without asking for anything else (Babin confirms).
 **Needs** — T3-04, T3-24, T8-08.
 
-### T3-24 · Quick expense with a bill photo            status: todo · size: M · lane C · [soon]
+### T3-24 · Quick expense with a bill photo            status: acceptance_pending — PR #166 merged 16 Nov; staging bill-photo storage permissions and receipt verification pending · size: M · lane C · [soon]
 **What** — "Add expense" from a phone in ≤ 4 taps: amount, category, photo of the bill (T2-01
 upload, ≤ 3 MB), paid by. Accounts can also enter a week's bills in a batch (W89 "mix"). Approval
 rules unchanged (`gate.expense.approve`). Replaces "Receipt upload is not built yet" in
@@ -346,7 +349,7 @@ rules unchanged (`gate.expense.approve`). Replaces "Receipt upload is not built 
 **Done when** — an expense with a photo is saved from an iPhone; the photo appears in the monthly pack.
 **Needs** — T2-01.
 
-### T3-25 · Tags on bookings            status: todo · size: S · lane C · [go-live] · slips first
+### T3-25 · Tags on bookings            status: done (merged 9 Nov, `6c1d62a8`) · size: S · lane C · [go-live] · slips first
 **What** — Free tags on a booking (B16): type a new one or pick one already used ("wedding",
 "repeat", "festival"); several per booking; chips on Booking Detail and the booking list; the list and
 saved views (0159, `SavedViewsMenu`) filter by tag; search (T3-21) finds by tag. Booking-desk roles add
@@ -362,7 +365,7 @@ row; lifecycle "tags never change a booking's stage or money".
 and no money; screen check.
 **Needs** — none (if T7-04 is open, coordinate on `RentalsList.tsx`).
 
-### T3-26 · Project name and shoot location on every booking            status: todo · size: S · lane C · [go-live] · slips first
+### T3-26 · Project name and shoot location on every booking            status: done (merged 9 Nov, `6c1d62a8`) · size: S · lane C · [go-live] · slips first
 **What** — Two fields on every booking (B8, B52): **Project / production name** (e.g. "Kathmandu
 Diaries — music video") and **Shoot location** (e.g. "Pokhara, Phewa lake"), ⭐ up to 120 characters
 each. They sit beside the existing **project type** (0144 — Feature Film, Commercial / Advertisement,
@@ -382,7 +385,7 @@ name; lifecycle "create_booking stores both".
 prints the project name; screen check.
 **Needs** — none.
 
-### T3-27 · Pro forma invoice from the draft            status: todo · size: S · lane C · [go-live] · slips first
+### T3-27 · Pro forma invoice from the draft            status: done · size: S · lane C · [go-live] · slips first
 **What** — On a booking with a draft invoice (T3-14), "**Pro forma**" makes a PDF from the draft
 (B18): titled **"PRO FORMA INVOICE — not a tax invoice"**, **no invoice number** (it names the booking
 number), the project name (T3-26), lines, VAT shown as an estimate, the advance due, payment details,
@@ -422,7 +425,7 @@ total; 4) Manager cannot change it (the database refuses); 5) Today and daily cl
 day start; 6) all gates green, financial integrity included.
 **Needs** — T3-14 and T3-18 merged first (both price bookings).
 
-### T3-29 · Extension clash: the Manager decides            status: todo · size: M · lane C · [go-live] · slips first
+### T3-29 · Extension clash: the Manager decides            status: complete · size: M · lane C · [go-live] · slips first
 **What** — When an extension (T3-17) needs a unit that the next booking already holds (B41), the desk
 neither refuses nor overrides alone: the request goes to a **Manager decision** (Owner · Admin ·
 Manager), one tap each with a reason, audited: **a)** extend, and move the next booking to a similar
@@ -446,7 +449,7 @@ steps are offered; 4) a refund is a reversal row and "keep as credit" adds accou
 audited; 5) no double booking at any point.
 **Needs** — T3-17, T3-13; T5-10 for the inbox (until then the Today card).
 
-### T3-30 · Consumables: unit price, add at the desk, restock, low stock            status: todo · size: M · lane C · [go-live] · slips first
+### T3-30 · Consumables: unit price, add at the desk, restock, low stock            status: acceptance_pending — PR #185 merged 17 Nov; staged pricing/RLS, restock and low-stock acceptance pending · size: M · lane C · [go-live] · slips first
 **What** — Consumables (tracking mode `Consumable`: tape, gels, batteries) are already deducted at
 Handover (0142) and need no return (0141). Finish them (B14, B35): 1) a **sale price per unit** — the
 line is quantity × unit price, never × days (pricing pipeline); 2) the desk adds them in New Rental and

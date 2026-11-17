@@ -1,4 +1,5 @@
 import { canonicalPhone, isValidLocalPhone } from './phone'
+import { sanitizeEmail, sanitizePan, sanitizePhone } from './formForgiveness'
 import { parseMoney, toRupees } from './money'
 
 export type RecordKind = 'client' | 'equipment' | 'bundle'
@@ -52,9 +53,12 @@ export function validateRecord(kind: RecordKind, values: RecordValues): Record<s
     if(f.type === 'number' && value !== null && value !== undefined && value !== '' && (!Number.isFinite(Number(value)) || Number(value)<0)) errors[f.key] = 'Enter a non-negative number.'
   }
   if(kind==='client') {
-    if(!isValidLocalPhone(String(values.phone ?? '')) && !/^\+977(97|98)\d{8}$/.test(String(values.phone))) errors.phone = 'Enter a 10-digit Nepali mobile starting 97 or 98.'
-    if(values.pan_vat && !/^\d{9}$/.test(String(values.pan_vat))) errors.pan_vat = 'PAN/VAT must be exactly nine digits.'
-    if(values.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(values.email))) errors.email = 'Enter a valid email address.'
+    const p = sanitizePhone(String(values.phone ?? ''))
+    if(!isValidLocalPhone(p) && !/^\+977(97|98)\d{8}$/.test(String(values.phone))) errors.phone = 'Enter a 10-digit Nepali mobile starting 97 or 98.'
+    const pan = sanitizePan(String(values.pan_vat ?? ''))
+    if(values.pan_vat && !/^\d{9}$/.test(pan)) errors.pan_vat = 'PAN/VAT must be exactly nine digits.'
+    const em = sanitizeEmail(String(values.email ?? ''))
+    if(values.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) errors.email = 'Enter a valid email address.'
   }
   return errors
 }
@@ -67,6 +71,11 @@ export function recordPayload(kind:RecordKind, values:RecordValues, editing:bool
     if(v===undefined) continue
     result[f.key]= f.type==='money' ? (v==='' || v===null ? null : toRupees(parseMoney(String(v))!)) : f.type==='number' ? (v==='' || v===null ? null : Number(v)) : typeof v==='string' ? (v.trim() || null) : v
   }
-  if(kind==='client') { result.phone=canonicalPhone(String(values.phone)); if(result.type_parent!=='Organisation') result.org_subtype=null }
+  if(kind==='client') {
+    result.phone = canonicalPhone(sanitizePhone(String(values.phone)))
+    if (result.pan_vat) result.pan_vat = sanitizePan(String(result.pan_vat))
+    if (result.email) result.email = sanitizeEmail(String(result.email))
+    if(result.type_parent!=='Organisation') result.org_subtype=null
+  }
   return result
 }

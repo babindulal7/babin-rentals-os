@@ -5,14 +5,14 @@ export interface OperationEvidence {
   filesByUnit: Readonly<Record<string, number>>
 }
 
-/** Only persisted, nonremoved photo files linked to this booking satisfy evidence gates. */
+/** Booking totals count all saved images; per-unit damage gates count only saved Damage-category images. */
 export async function fetchOperationEvidence(bookingId: string): Promise<OperationEvidence> {
   const seen = new Set<string>()
   const files = new Set<string>()
   const units = new Map<string, Set<string>>()
   for (;;) {
     const { data, error } = await supabase.from('evidence_references')
-      .select('id, item_id, file:evidence_files(id, media_type, removed_at)')
+      .select('id, item_id, file:evidence_files(id, media_type, removed_at, category)')
       .eq('booking_id', bookingId).is('removed_at', null)
       .order('id', { ascending: true }).range(seen.size, seen.size + 499)
     if (error || !Array.isArray(data)) throw new Error('Saved booking evidence could not be verified. Refresh evidence before confirming.')
@@ -26,10 +26,11 @@ export async function fetchOperationEvidence(bookingId: string): Promise<Operati
       const nested = Array.isArray(row.file) ? row.file[0] : row.file
       if (!nested || typeof nested !== 'object') throw new Error('A linked evidence file could not be verified.')
       const file = nested as Record<string, unknown>
-      if (typeof file.id !== 'string' || typeof file.media_type !== 'string' || !('removed_at' in file)) throw new Error('Saved booking evidence is incomplete.')
+      if (typeof file.id !== 'string' || typeof file.media_type !== 'string' || typeof file.category !== 'string' || !('removed_at' in file)) throw new Error('Saved booking evidence is incomplete.')
       if (file.media_type !== 'Image' || file.removed_at !== null) continue
       files.add(file.id)
-      if (typeof row.item_id === 'string') {
+      // A Pack/Inspection image cannot clear a later per-unit damage gate.
+      if (typeof row.item_id === 'string' && file.category === 'Damage') {
         const photos = units.get(row.item_id) ?? new Set<string>()
         photos.add(file.id)
         units.set(row.item_id, photos)

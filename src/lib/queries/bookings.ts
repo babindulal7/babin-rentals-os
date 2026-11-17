@@ -60,6 +60,10 @@ export interface BookingListRow {
   clientId: string
   clientName: string
   project: string | null
+  /** Project / production name (up to 120 chars, B8, B52, T3-26). */
+  projectName?: string | null
+  /** Shoot location (up to 120 chars, B8, T3-26). */
+  shootLocation?: string | null
   /**
    * `bookings.project_type` — the controlled production kind (0144,
    * `src/lib/projectTypes.ts`). NULL for legacy rows and Drafts; renders as
@@ -122,6 +126,7 @@ export interface BookingListRow {
   totalAmount?: Paisa | null
   isCancelled: boolean
   isClosed: boolean
+  tags: string[]
 }
 
 /* ── DELIVERY · delivery_type vs delivery_method, settled ─────────────────
@@ -276,7 +281,7 @@ export interface BookingListRow {
  * the `withDeposit` treatment below.
  */
 const BASE_COLUMNS =
-  'id, booking_no, client_id, project, project_type, project_type_other, stage, pickup_at, return_at, actual_return_at, ' +
+  'id, booking_no, client_id, project, project_name, shoot_location, project_type, project_type_other, stage, tags, pickup_at, return_at, actual_return_at, ' +
   'delivery_type, pickup_location, return_location, quote_expires_at, ' +
   'cancelled_at, closed_at, created_at, ' +
   'clients ( name ), booking_lines ( id, qty )'
@@ -298,9 +303,12 @@ interface RawBookingRow {
   booking_no: string
   client_id: string
   project: string | null
+  project_name?: string | null
+  shoot_location?: string | null
   project_type?: string | null
   project_type_other?: string | null
   stage: BookingStageDb
+  tags?: string[] | null
   pickup_at: string
   return_at: string
   actual_return_at: string | null
@@ -359,7 +367,9 @@ function toRow(r: RawBookingRow): BookingListRow {
     // query bug, not a data state. Say so rather than printing a friendly dash
     // that hides it.
     clientName: r.clients?.name ?? '(client not joined)',
-    project: r.project,
+    project: r.project_name ?? r.project,
+    projectName: r.project_name ?? r.project ?? null,
+    shootLocation: r.shoot_location ?? null,
     projectType: r.project_type ?? null,
     projectTypeOther: r.project_type_other ?? null,
     stage: r.stage,
@@ -390,6 +400,7 @@ function toRow(r: RawBookingRow): BookingListRow {
     ),
     isCancelled: r.cancelled_at !== null,
     isClosed: r.closed_at !== null,
+    tags: Array.isArray(r.tags) ? r.tags : [],
   }
 }
 
@@ -1174,6 +1185,10 @@ export interface FloorBooking {
   stage: string
   clientName: string | null
   project: string | null
+  /** Project / production name (T3-26, B8, B52). */
+  projectName?: string | null
+  /** Shoot location (T3-26, B8). */
+  shootLocation?: string | null
   pickupAtAd: string | null
   returnAtAd: string | null
   actualReturnAtAd: string | null
@@ -1224,6 +1239,8 @@ interface RawFloorBooking {
   client_id?: string | null | undefined
   stage: string
   project: string | null
+  project_name?: string | null
+  shoot_location?: string | null
   pickup_at: string | null
   return_at: string | null
   actual_return_at: string | null
@@ -1258,7 +1275,7 @@ interface RawFloorBooking {
  * that existed to straddle them is gone.
  */
 const FLOOR_COLUMNS =
-  'id, booking_no, client_id, stage, project, pickup_at, return_at, actual_return_at, delivery_type, cancelled_at, closed_at, ' +
+  'id, booking_no, client_id, stage, project, project_name, shoot_location, pickup_at, return_at, actual_return_at, delivery_type, cancelled_at, closed_at, ' +
   'clients ( name ), ' +
   'booking_lines ( id, qty, line_type, description, product_id, parent_line_id, sort_order, ' +
   'products ( name, tracking_mode ), ' +
@@ -1307,7 +1324,9 @@ export async function fetchFloorBooking(bookingRef: string): Promise<FloorBookin
     clientId: raw.client_id ?? null,
     stage: raw.stage,
     clientName: raw.clients?.name ?? null,
-    project: raw.project,
+    project: raw.project_name ?? raw.project,
+    projectName: raw.project_name ?? raw.project ?? null,
+    shootLocation: raw.shoot_location ?? null,
     pickupAtAd: raw.pickup_at,
     returnAtAd: raw.return_at,
     actualReturnAtAd: raw.actual_return_at,
@@ -1442,4 +1461,48 @@ export async function fetchLastProjectType(
   const rows = data as unknown as { project_type: string | null; project_type_other: string | null }[]
   const hit = rows.find((r) => r.project_type)
   return hit ? { projectType: hit.project_type!, projectTypeOther: hit.project_type_other } : null
+}
+
+/**
+ * T3-26 · Project name and shoot location on every booking (B8, B52).
+ *
+ * New Rental asks for both right after the client, offering the client's last five
+ * as one-tap chips (not required — a quick re-book or a counter sale may leave them blank).
+ *
+ * Fetches up to 5 distinct recent project names and 5 distinct shoot locations for this client.
+ */
+export async function fetchRecentClientProjects(
+  clientDbId: string,
+): Promise<{ projectNames: string[]; shootLocations: string[] }> {
+  if (!clientDbId) return { projectNames: [], shootLocations: [] }
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('project, project_name, shoot_location, created_at')
+    .eq('client_id', clientDbId)
+    .order('created_at', { ascending: false })
+    .limit(30)
+  if (error || !data) return { projectNames: [], shootLocations: [] }
+
+  const rows = data as unknown as {
+    project: string | null
+    project_name?: string | null
+    shoot_location?: string | null
+  }[]
+
+  const projectNames: string[] = []
+  const shootLocations: string[] = []
+
+  for (const r of rows) {
+    const pName = (r.project_name ?? r.project ?? '').trim()
+    if (pName && !projectNames.some((p) => p.toLowerCase() === pName.toLowerCase())) {
+      if (projectNames.length < 5) projectNames.push(pName)
+    }
+    const sLoc = (r.shoot_location ?? '').trim()
+    if (sLoc && !shootLocations.some((s) => s.toLowerCase() === sLoc.toLowerCase())) {
+      if (shootLocations.length < 5) shootLocations.push(sLoc)
+    }
+    if (projectNames.length >= 5 && shootLocations.length >= 5) break
+  }
+
+  return { projectNames, shootLocations }
 }

@@ -363,6 +363,17 @@ export default function OperationsShell({
     (taskFacts.resetDone === taskFacts.total || taskFacts.problems > 0)
   const isCurrentJobCompleted = job === 'Reset' ? resetDone : currentJobOrder > jobRunsAtOrder
 
+  // Browsing a stage is not a custody transition. Only an already-reached stage
+  // can be visited; the separate Confirm action owns all persisted writes.
+  const nextViewJob = NEXT_JOB[job]
+  const nextViewOrder = nextViewJob ? BOOKING_STATUS[JOBS[nextViewJob].runsAt]?.order ?? 0 : 0
+  const nextViewAllowed = Boolean(nextViewJob && currentJobOrder >= nextViewOrder)
+  const nextViewReason = !nextViewJob
+    ? 'Cleaning & Reset is the final operation.'
+    : !nextViewAllowed
+      ? `${LABEL[nextViewJob]} opens when the booking reaches ${JOBS[nextViewJob].runsAt}. Confirm the current operation first.`
+      : null
+
   // Left and Right footer button labels
   const leftLabel = job === 'Pack' ? 'Close' : `← ${LABEL[PREV_JOB[job]!]}`
   const rightLabel = busy
@@ -524,14 +535,26 @@ export default function OperationsShell({
             <div
               className="operations-shell__actions"
             >
-              <Button
-                variant="secondary"
-                onClick={requestPrev}
-                disabled={floorLoading || busy}
-                style={{ minHeight: 'var(--tap)' }}
-              >
-                {leftLabel}
-              </Button>
+              <div className="operations-shell__navigation" role="group" aria-label="Browse operation stages">
+                <Button
+                  variant="secondary"
+                  onClick={requestPrev}
+                  disabled={floorLoading || busy || !!awaitingCompletion.current}
+                  style={{ minHeight: 'var(--tap)' }}
+                >
+                  {leftLabel}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => { if (nextViewJob && nextViewAllowed) requestJob(nextViewJob) }}
+                  disabled={!nextViewAllowed || floorLoading || !!floorError || busy || !!awaitingCompletion.current}
+                  title={nextViewReason ?? undefined}
+                  aria-label={nextViewJob ? `Next stage: ${LABEL[nextViewJob]}` : 'Final operation — no next stage'}
+                  style={{ minHeight: 'var(--tap)' }}
+                >
+                  {nextViewJob ? `Next: ${LABEL[nextViewJob]} →` : 'Final stage'}
+                </Button>
+              </div>
               <Button
                 variant="primary"
                 onClick={() => {
@@ -599,7 +622,13 @@ export default function OperationsShell({
               fontSize: 'var(--t-meta)',
             }}
           >
-            {job === 'Reset' && liveStatus === 'Closed' ? 'This booking is Closed. Saved Reset tasks are read-only here.' : currentGate.reason}
+            {job === 'Reset' && liveStatus === 'Closed'
+              ? 'This booking is Closed. Saved Reset tasks are read-only here.'
+              : job === 'Pack' && liveStatus === 'Packed'
+                ? 'Packing is confirmed. To add or change equipment before handover, expand Booking details → Booking actions → Revert stage… (authorized staff and reason required). Browsing stages does not reverse the booking.'
+                : job === 'Pack' && (liveStatus === 'On Rent' || liveStatus === 'Returned' || liveStatus === 'Closed')
+                  ? 'Packing was signed off at handover and is read-only. Later changes require an authorized, recorded correction; browsing stages does not change custody.'
+                  : currentGate.reason}
           </p>
         )}
 

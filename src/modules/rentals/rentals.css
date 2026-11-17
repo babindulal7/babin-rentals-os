@@ -446,7 +446,7 @@
   border-right: 1px solid var(--border);
   min-width: 0;
   flex: 1 1 auto;
-  transition: background-color var(--dur-fast, 120ms) var(--ease, ease);
+  transition: background-color var(--dur-fast) var(--ease);
 }
 
 .floor-summary-cell:last-child {
@@ -524,7 +524,7 @@
   font-size: var(--t-body, 14px) !important;
   font-feature-settings: 'tnum' 1 !important;
   color: var(--text) !important;
-  transition: border-color var(--dur-fast, 120ms) var(--ease, ease), box-shadow var(--dur-fast, 120ms) var(--ease, ease) !important;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease) !important;
 }
 
 .floor-scanner-input:focus {
@@ -551,7 +551,7 @@
 /* ── Floor Checklist Table & Cards ── */
 .floor-table-row {
   border-bottom: 1px solid var(--border);
-  transition: background-color var(--dur-fast, 120ms) var(--ease, ease);
+  transition: background-color var(--dur-fast) var(--ease);
 }
 
 .floor-table-row:hover {
@@ -589,7 +589,7 @@
   flex-direction: column;
   gap: 8px;
   background: var(--card);
-  transition: border-color var(--dur-fast, 120ms) var(--ease, ease), box-shadow var(--dur-fast, 120ms) var(--ease, ease);
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
 }
 
 .floor-card-item:hover {
@@ -623,7 +623,7 @@
   cursor: pointer;
   font-family: inherit;
   text-align: left;
-  transition: all var(--dur-fast, 120ms) var(--ease, ease);
+  transition: all var(--dur-fast) var(--ease);
 }
 
 .floor-group-item-btn:hover {
@@ -652,7 +652,7 @@
   border-radius: var(--r-xs, 4px);
   font-size: var(--t-meta, 12px);
   line-height: 1.45;
-  transition: background-color var(--dur-fast, 120ms) var(--ease, ease);
+  transition: background-color var(--dur-fast) var(--ease);
 }
 
 .floor-gate-row.is-pass {
@@ -664,7 +664,7 @@
 
 /* ── Nested Flight Case & Line Item Tree (Cinema Architecture) ── */
 .flight-case-container {
-  transition: border-color var(--dur-fast, 120ms) var(--ease, ease), box-shadow var(--dur-fast, 120ms) var(--ease, ease);
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
 }
 
 .flight-case-container:hover {
@@ -677,7 +677,7 @@
 }
 
 .unit-barcode-chip {
-  transition: all var(--dur-fast, 120ms) var(--ease, ease);
+  transition: all var(--dur-fast) var(--ease);
 }
 
 .unit-barcode-chip:hover {

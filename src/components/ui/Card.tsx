@@ -130,7 +130,7 @@ export function KpiCard({ label, value, subtext, trend, icon, onClick }: KpiCard
         flexDirection: 'column',
         gap: 'var(--sp-sm)',
         cursor: onClick ? 'pointer' : undefined,
-        transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+        transition: 'all var(--dur-theme) var(--ease)',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--muted)' }}>

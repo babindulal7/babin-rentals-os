@@ -6,7 +6,8 @@ import type { Database } from '../types/supabase'
 export const EVIDENCE_STORAGE_BUCKET = 'evidence'
 
 type EvidenceCategory = Database['public']['Enums']['evidence_category']
-export type SessionStage = 'Packing' | 'Pickup' | 'Delivery' | 'Return' | 'Reset' | 'Damage' | 'Inspection'
+/** All persisted evidence stages, including stages without a session. */
+export type SessionStage = Database['public']['Enums']['evidence_operation_stage']
 
 /**
  * A session reference for operational evidence.
@@ -77,23 +78,36 @@ async function resolveOrCreateSession(
   operation: 'Packing' | 'Handover' | 'Return',
   userId: string,
 ): Promise<{ id: string; state: string }> {
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from('operation_sessions')
     .select('id, state')
     .eq('booking_id', bookingId)
     .eq('operation', operation)
     .eq('state', 'In Progress')
     .maybeSingle()
+  if (existingError) throw new Error(`Could not verify open ${operation} session: ${existingError.message}`)
   if (existing) return existing
 
-  const { data: last } = await supabase
+  const { data: last, error: lastError } = await supabase
     .from('operation_sessions')
     .select('session_no')
     .eq('booking_id', bookingId)
     .order('session_no', { ascending: false })
     .limit(1)
     .maybeSingle()
+  if (lastError) throw new Error(`Could not verify ${operation} session history: ${lastError.message}`)
   const nextNo = (last?.session_no ?? 0) + 1
+
+  // CHECK 0003:91 requires a real delivery_method for Handover sessions.
+  let deliveryMethod: Database['public']['Enums']['delivery_method'] | null = null
+  if (operation === 'Handover') {
+    const { data: booking, error: bookingError } = await supabase
+      .from('bookings').select('delivery_type').eq('id', bookingId).single()
+    if (bookingError || !booking?.delivery_type) {
+      throw new Error(`Could not verify the booking delivery method: ${bookingError?.message ?? 'missing value'}`)
+    }
+    deliveryMethod = booking.delivery_type
+  }
   const newId = generateClientUuid()
   const { data: created, error } = await supabase
     .from('operation_sessions')
@@ -103,6 +117,7 @@ async function resolveOrCreateSession(
       booking_id: bookingId,
       operation,
       session_no: nextNo,
+      delivery_method: deliveryMethod,
       state: 'In Progress',
       started_at: new Date().toISOString(),
       started_by: userId,
@@ -150,7 +165,7 @@ export async function uploadEvidencePhoto(
   if (needsSession) {
     const expectedOperation = stage === 'Packing'
       ? 'Packing'
-      : stage === 'Return'
+      : stage === 'Return' || stage === 'Inspection'
         ? 'Return'
         : 'Handover'
 
@@ -238,12 +253,15 @@ export async function uploadEvidencePhoto(
     .eq('operation_stage', reference.operationStage)
     .eq('booking_id', reference.bookingId)
 
-  if (resolvedSessionId) {
-    linkQuery = linkQuery.eq('session_id', resolvedSessionId)
-  }
-  if (reference.itemId) {
-    linkQuery = linkQuery.eq('item_id', reference.itemId)
-  }
+  // A booking-level reference must not accidentally reuse a unit-specific link,
+  // and a session-free Damage link must not reuse a session-bound reference.
+  // PostgREST eq(null) is not a valid SQL NULL predicate: use IS NULL.
+  linkQuery = resolvedSessionId
+    ? linkQuery.eq('session_id', resolvedSessionId)
+    : linkQuery.is('session_id', null)
+  linkQuery = reference.itemId
+    ? linkQuery.eq('item_id', reference.itemId)
+    : linkQuery.is('item_id', null)
 
   const { data: alreadyLinked, error: lookupError } = await linkQuery.maybeSingle()
   if (lookupError) throw new Error(`Could not verify evidence session link: ${lookupError.message}`)

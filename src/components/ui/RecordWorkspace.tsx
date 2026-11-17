@@ -125,15 +125,24 @@ export function RecordSection({
   )
 }
 
+/**
+ * Only the latest focus request may move focus. Validation and error-summary
+ * clicks can queue overlapping animation-frame callbacks; the earlier one
+ * must not steal keyboard focus back from a field the operator selected.
+ */
+let latestRecordFocusRequest = 0
+
 /** Open the collapsed section that holds a field, then move focus to it. */
 export function focusRecordField(fieldId: string): boolean {
   const target = document.getElementById(fieldId)
   if (!target) return false
+  const requestId = ++latestRecordFocusRequest
   const section = target.closest<HTMLElement>('[data-record-section]')
   if (section?.dataset.open === 'false') {
     section.querySelector<HTMLButtonElement>('[data-record-toggle]')?.click()
   }
   const move = () => {
+    if (requestId !== latestRecordFocusRequest || !target.isConnected) return
     target.scrollIntoView({ block: 'center', behavior: 'smooth' })
     try {
       target.focus({ preventScroll: true })

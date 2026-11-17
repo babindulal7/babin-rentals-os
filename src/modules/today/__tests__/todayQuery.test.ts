@@ -99,6 +99,7 @@ function raw(over: Partial<Raw> = {}): Raw {
     depositRequired: null,
     isCancelled: false,
     isClosed: false,
+    tags: [],
     ...over,
   }
 }

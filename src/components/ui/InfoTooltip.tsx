@@ -184,7 +184,7 @@ export function InfoTooltip({ content, label = 'More info', size = 14, style }: 
           color: isOpen ? 'var(--primary, #3b82f6)' : 'var(--muted, #94a3b8)',
           cursor: 'pointer',
           lineHeight: 1,
-          transition: 'color 0.15s ease, background 0.15s ease',
+          transition: 'color var(--dur) var(--ease), background var(--dur) var(--ease)',
           outline: 'none',
         }}
       >

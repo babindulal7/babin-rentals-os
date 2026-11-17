@@ -95,6 +95,7 @@ const ROW: BookingListRow = {
   depositRequired: null,
   isCancelled: false,
   isClosed: false,
+  tags: [],
 }
 
 /* The mocked count, so a test can have more rows than one page. `vi.hoisted`

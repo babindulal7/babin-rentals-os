@@ -36,6 +36,8 @@ describe('parseBookingNoSearch — all three forms find the same rental', () => 
     expect(parseBookingNoSearch('880')).toBe('880')
     expect(parseBookingNoSearch('#880')).toBe('880')
     expect(parseBookingNoSearch('B-880')).toBe('880')
+    expect(parseBookingNoSearch('BK-880')).toBe('880')
+    expect(parseBookingNoSearch('bk-880')).toBe('880')
     // Staff type in a hurry; the retired prefix was lowercase in some exports.
     expect(parseBookingNoSearch('b-880')).toBe('880')
   })

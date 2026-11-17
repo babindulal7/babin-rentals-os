@@ -35,12 +35,11 @@ export default defineConfig({
       include: [
         /responsive\.css/,
         /preset-black-light\.css/,
-        /shadcn-luma-ui\.css/,
-        /shadcn-rhea-ui\.css/,
         /modules[\\/]today[\\/]dashboard\.css/,
         /modules[\\/]rentals[\\/].*\.css/,
         /modules[\\/]operations[\\/].*\.css/,
         /components[\\/]shell[\\/]shell\.css/, // headerAddSlot.test.ts reads the slot floors
+        /components[\\/]shell[\\/]referenceShell\.css/, // referenceShell.test.ts reads the visual layer
       ],
     },
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],

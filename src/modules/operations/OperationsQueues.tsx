@@ -359,7 +359,7 @@ function chipStyle(on: boolean): CSSProperties {
     whiteSpace: 'nowrap' as const,
     flexShrink: 0,
     boxShadow: on ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
-    transition: 'all 120ms ease',
+    transition: 'all var(--dur-fast) var(--ease)',
   }
 }
 

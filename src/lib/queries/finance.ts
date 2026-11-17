@@ -238,9 +238,13 @@ export interface InvoiceListRow {
   bookingId: string
   /** `bookings.booking_no` via the embed. `'(booking not joined)'` if the join is missing — see `toInvoiceRow`. */
   bookingNo: string
+  /** Snapshot of booking project name on invoice (B52, T3-26). */
+  projectName?: string | null
   clientId: string
   /** `clients.name` via the embed. Never a placeholder that could pass for a real client. */
   clientName: string
+  /** `clients.pan_vat` via the embed when available. */
+  clientPanVat?: string | null
   /**
    * `status` — the `invoice_status` enum. **'Overdue' is not stored**; see
    * `STORED_INVOICE_STATUSES` and `overdueInvoices()` below before filtering on
@@ -344,17 +348,18 @@ const UNSETTLED_INVOICE_STATUSES = ['Sent', 'Partially Paid'] as const satisfies
  * and this embed names `booking_no` only.
  */
 const INVOICE_COLUMNS =
-  'id, invoice_no, booking_id, client_id, status, issue_date, due_date, currency, ' +
+  'id, invoice_no, booking_id, client_id, project_name, status, issue_date, due_date, currency, ' +
   'subtotal, discount_amount, discount_percent, taxable_amount, vat_rate, vat_amount, ' +
   'total_amount, paid_amount, outstanding_amount, ' +
   'voided_at, void_reason, credit_note_no, notes, created_at, ' +
-  'clients ( name ), bookings ( booking_no )'
+  'clients ( name, pan_vat ), bookings ( booking_no )'
 
 interface RawInvoiceRow {
   id: string
   invoice_no: string
   booking_id: string
   client_id: string
+  project_name?: string | null
   status: InvoiceStatusDb
   /** `date` — 'YYYY-MM-DD'. */
   issue_date: string
@@ -376,7 +381,7 @@ interface RawInvoiceRow {
   credit_note_no: string | null
   notes: string | null
   created_at: string
-  clients: { name: string } | null
+  clients: { name: string; pan_vat?: string | null } | null
   bookings: { booking_no: string } | null
 }
 
@@ -404,8 +409,10 @@ function toInvoiceRow(r: RawInvoiceRow): InvoiceListRow {
     // than a data state. Say so, the way `queries/bookings.ts:303` does, instead
     // of printing a dash that hides it.
     bookingNo: r.bookings?.booking_no ?? '(booking not joined)',
+    projectName: r.project_name ?? null,
     clientId: r.client_id,
     clientName: r.clients?.name ?? '(client not joined)',
+    clientPanVat: r.clients?.pan_vat ?? null,
     status: r.status,
     issueDateAd: r.issue_date,
     dueDateAd: r.due_date,
@@ -1504,6 +1511,12 @@ export interface NewExpenseInput {
   status: ExpenseEntryStatus
   /** `users.id` of whoever entered it. Nullable on the table; there is no trigger that fills it. */
   createdBy?: string | null
+  /** URL or storage path of the attached bill photo/document (T3-24). */
+  receiptUrl?: string | null
+  /** Size of receipt attachment in bytes (capped at 50 MB by DB CHECK, 3 MB by T3-24). */
+  receiptSize?: number | null
+  /** Optional settlement notation (e.g. who paid or settlement channel). */
+  paidBy?: string | null | undefined
 }
 
 /**
@@ -1543,6 +1556,12 @@ export async function createExpense(input: NewExpenseInput, clientUuid: string):
   if (numberError) throw new Error(`createExpense failed to allocate a number: ${numberError.message}`)
   if (!expenseNo) throw new Error('createExpense: next_document_number returned nothing, so the expense has no number')
 
+  const description = input.paidBy?.trim()
+    ? (input.description.includes(`[Paid by:`)
+      ? input.description.trim()
+      : `[Paid by: ${input.paidBy.trim()}] ${input.description.trim()}`)
+    : input.description.trim()
+
   const payload = {
     client_uuid: clientUuid,
     expense_no: expenseNo,
@@ -1555,7 +1574,9 @@ export async function createExpense(input: NewExpenseInput, clientUuid: string):
     amount: toRupees(input.amount),
     expense_date: input.expenseDateAd,
     status: input.status,
-    description: input.description.trim(),
+    description,
+    receipt_url: input.receiptUrl ?? null,
+    receipt_size: input.receiptSize ?? null,
     created_by: input.createdBy ?? null,
   }
 

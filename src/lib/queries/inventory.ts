@@ -391,8 +391,12 @@ export interface InventoryListRow {
   unitConditions: UnitConditionDb[]
   /** `products_v.daily_rate`. **Money.** Null unless `withMoney` — see MONEY above. */
   dailyRate: Paisa | null
+  /** `products_v.unit_sale_price`. **Money.** Consumable unit sale price. Null unless `withMoney`. */
+  unitSalePrice?: Paisa | null
   /** `products_v.replacement_value`. **Money.** Null unless `withMoney`. */
   replacementValue: Paisa | null
+  /** `products.reorder_level`. Quantity threshold for low stock alert. */
+  reorderLevel?: number | null
 }
 
 /** A single serialised unit, as the per-serial expansion renders it. */
@@ -411,6 +415,8 @@ export interface InventoryUnitRow {
   serialNo: string | null
   /** `product_units.asset_tag` — `text not null`, unique (0004:195, :233). */
   assetTag: string
+  /** A unit's optimistic revision, from product_units_v.updated_at. */
+  updatedAt?: string | null
   barcode: string | null
   qrCode: string | null
   /** `product_units.status` — the `inventory_state` enum the eleven chips are built from. */
@@ -533,12 +539,12 @@ export const RECORD_STATE_COLUMN = 'status'
  */
 const BASE_COLUMNS =
   'id, asset_code, name, short_name, brand, model, category_id, tracking_mode, status, ' +
-  'total_quantity, quantity_unit, is_active, created_at, ' +
+  'total_quantity, reorder_level, quantity_unit, is_active, created_at, ' +
   `${CATEGORY_ALIAS}:inventory_categories!inner ( code, name ), ` +
   'units:product_units_v ( status, condition )'
 
 /** The money variant. Two of the nine masked columns; never reached without `withMoney`. */
-const COLUMNS_WITH_MONEY = `${BASE_COLUMNS}, daily_rate, replacement_value`
+const COLUMNS_WITH_MONEY = `${BASE_COLUMNS}, daily_rate, replacement_value, unit_sale_price`
 
 /** The semi-join that turns a state chip into a narrowing of the PARENT list. */
 const UNIT_STATE_JOIN = `, ${UNIT_STATE_ALIAS}:product_units_v!inner ( id )`
@@ -586,12 +592,14 @@ interface RawInventoryRow {
   /** `product_record_state`. The catalogue record's state, not a unit's. */
   status: ProductRecordStateDb
   total_quantity: number
+  reorder_level?: number | null
   quantity_unit: UnitOfMeasureDb | null
   is_active: boolean
   created_at: string
   /** `numeric(14,2)` — RUPEES. Absent from the row unless `withMoney` was set; NULL when the view masked it. */
   daily_rate?: number | null
   replacement_value?: number | null
+  unit_sale_price?: number | null
   /** `!inner` to-one. Typed nullable only so an unresolved join is visible rather than fatal. */
   category: { code: string; name: ProductCategoryDb } | null
   /** Every unit of this product, retired included. `[]` / null for a quantity SKU. */
@@ -604,6 +612,7 @@ interface RawUnitRow {
   /** NULLABLE in the schema (0004:194). */
   serial_no: string | null
   asset_tag: string
+  updated_at?: string | null
   barcode: string | null
   qr_code: string | null
   status: InventoryStateDb
@@ -628,7 +637,7 @@ interface RawUnitRow {
 }
 
 const UNIT_COLUMNS =
-  'id, product_id, serial_no, asset_tag, barcode, qr_code, status, condition, ' +
+  'id, product_id, serial_no, asset_tag, updated_at, barcode, qr_code, status, condition, ' +
   'branch_id, warehouse_id, storage_zone_id, rack, shelf, bin, container_id, ' +
   'running_hours, last_maintenance_at, next_maintenance_at, ' +
   'warranty_expires_at, insurance_expires_at, retired_at, retirement_reason'
@@ -714,7 +723,9 @@ function toRow(r: RawInventoryRow): InventoryListRow {
     unitsByState,
     unitConditions: UNIT_CONDITIONS.filter((c) => conditions.has(c)),
     dailyRate: toPaisa(r.daily_rate),
+    unitSalePrice: toPaisa(r.unit_sale_price),
     replacementValue: toPaisa(r.replacement_value),
+    reorderLevel: r.reorder_level ?? null,
   }
 }
 
@@ -724,6 +735,7 @@ function toUnitRow(r: RawUnitRow): InventoryUnitRow {
     productId: r.product_id,
     serialNo: r.serial_no,
     assetTag: r.asset_tag,
+    updatedAt: r.updated_at ?? null,
     barcode: r.barcode,
     qrCode: r.qr_code,
     state: r.status,
@@ -763,6 +775,10 @@ export interface InventoryListOptions extends ListFilters {
    * literal `true`, and never a boolean held in component state.
    */
   withMoney?: boolean
+  /**
+   * Optional AbortSignal to cancel stale in-flight search queries during rapid typing.
+   */
+  signal?: AbortSignal
 }
 
 /** True only when a chip group will actually constrain. `[]` is the "All" chip: no constraint. */
@@ -796,9 +812,10 @@ export async function listInventory(opts: InventoryListOptions = {}): Promise<Li
     if (narrows(filters, UNIT_STATE_COLUMN)) columns += UNIT_STATE_JOIN
     if (narrows(filters, UNIT_CONDITION_COLUMN)) columns += UNIT_CONDITION_JOIN
 
-    const base = supabase
+    let base = supabase
       .from('products_v')
       .select(columns, { count: 'exact', head: true })
+    if (opts.signal) base = base.abortSignal(opts.signal)
 
     const query = applyListFilters(base, {
       ...filters,
@@ -818,9 +835,10 @@ export async function listInventory(opts: InventoryListOptions = {}): Promise<Li
   if (narrows(filters, UNIT_STATE_COLUMN)) columns += UNIT_STATE_JOIN
   if (narrows(filters, UNIT_CONDITION_COLUMN)) columns += UNIT_CONDITION_JOIN
 
-  const base = supabase
+  let base = supabase
     .from('products_v')
     .select(columns, withCount ? { count: 'exact' } : undefined)
+  if (opts.signal) base = base.abortSignal(opts.signal)
 
   // No cast. `applyListFilters` is structurally typed against the postgrest
   // builder on purpose — see the long note at the equivalent call in
@@ -855,6 +873,10 @@ export interface InventoryUnitOptions extends ListFilters {
   withCount?: boolean
   /** Include `purchase_price` and `replacement_value`. **Money.** Gate on `useCanViewMoney()`. */
   withMoney?: boolean
+  /**
+   * Optional AbortSignal to cancel stale in-flight search queries during rapid typing.
+   */
+  signal?: AbortSignal
 }
 
 /**
@@ -930,6 +952,10 @@ export interface AssetDetailRecord {
 export interface AssetDetailOptions {
   /** Include the money columns. **Money.** Pass `useCanViewMoney()`, never a literal — see MONEY above. */
   withMoney?: boolean
+  /**
+   * Optional AbortSignal to cancel stale in-flight search queries during rapid typing.
+   */
+  signal?: AbortSignal
 }
 
 /**
@@ -1113,14 +1139,14 @@ async function fetchCustody(
 
   const { data: bluRows, error: bluErr } = await supabase
     .from('booking_line_units')
-    .select('id, booking_id, asset_id, unit_state, returned_at, released_at')
+    .select('id, booking_line_id, asset_id, unit_state, returned_at, released_at, booking_lines ( booking_id )')
     .eq('asset_id', unitId)
 
   if (bluErr || !bluRows || bluRows.length === 0) return null
 
   const activeBlu = bluRows.filter((r) => !r.returned_at && !r.released_at)
   const candidateBookingIds = (activeBlu.length > 0 ? activeBlu : bluRows)
-    .map((r) => r.booking_id)
+    .map((r) => ((r as unknown as { booking_lines?: { booking_id?: string } | null }).booking_lines?.booking_id ?? (r as unknown as { booking_id?: string }).booking_id))
     .filter(Boolean) as string[]
 
   if (candidateBookingIds.length === 0) return null
@@ -1267,7 +1293,8 @@ async function fetchNextBooking(
 async function fetchLastReset(unitId: string | null): Promise<ItemCardLastReset | null> {
   if (!unitId) return null
 
-  const { data: resetRows, error } = await supabase
+  let resetRows: Array<Record<string, unknown>> | null = null
+  const initialReset = await supabase
     .from('cleaning_queue_entries')
     .select(`
       id,
@@ -1288,22 +1315,47 @@ async function fetchLastReset(unitId: string | null): Promise<ItemCardLastReset 
     .order('completed_at', { ascending: false, nullsFirst: false })
     .limit(1)
 
-  if (error || !resetRows || resetRows.length === 0) return null
+  if (initialReset.error && (initialReset.error.code === '42703' || initialReset.error.message.includes('qc_self_checked'))) {
+    const fallbackReset = await supabase
+      .from('cleaning_queue_entries')
+      .select(`
+        id,
+        unit_id,
+        state,
+        clean_completed_at,
+        reset_completed_at,
+        completed_at,
+        cleaned_by,
+        qc_by,
+        qc_at,
+        qc_skipped,
+        qc_skip_reason,
+        problem_state
+      `)
+      .eq('unit_id', unitId)
+      .order('completed_at', { ascending: false, nullsFirst: false })
+      .limit(1)
+    resetRows = (fallbackReset.data ?? []) as Array<Record<string, unknown>>
+  } else if (!initialReset.error) {
+    resetRows = (initialReset.data ?? []) as Array<Record<string, unknown>>
+  }
+
+  if (!resetRows || resetRows.length === 0) return null
   const entry = resetRows[0]
   if (!entry) return null
 
-  const completedAt = entry.completed_at || entry.reset_completed_at || entry.clean_completed_at
+  const completedAt = String(entry.completed_at || entry.reset_completed_at || entry.clean_completed_at || '')
   if (!completedAt) return null
 
   let cleanedByName: string | null = null
   let qcByName: string | null = null
-  const staffIds = [entry.cleaned_by, entry.qc_by].filter(Boolean) as string[]
+  const staffIds = [entry.cleaned_by, entry.qc_by].filter(Boolean).map(String)
   if (staffIds.length > 0) {
     const { data: staffList } = await supabase.from('users').select('id, full_name').in('id', staffIds)
     if (staffList) {
       const map = new Map(staffList.map((s) => [s.id, s.full_name]))
-      if (entry.cleaned_by) cleanedByName = map.get(entry.cleaned_by) ?? null
-      if (entry.qc_by) qcByName = map.get(entry.qc_by) ?? null
+      if (entry.cleaned_by) cleanedByName = map.get(String(entry.cleaned_by)) ?? null
+      if (entry.qc_by) qcByName = map.get(String(entry.qc_by)) ?? null
     }
   }
 
@@ -1313,7 +1365,7 @@ async function fetchLastReset(unitId: string | null): Promise<ItemCardLastReset 
       ? `Cleaned & self-checked by ${cleanedByName} (alone on shift, W43)`
       : 'Cleaned & self-checked (alone on shift, W43)'
   } else if (entry.qc_skipped) {
-    const reason = entry.qc_skip_reason ? ` (${entry.qc_skip_reason})` : ''
+    const reason = entry.qc_skip_reason ? ` (${String(entry.qc_skip_reason)})` : ''
     summary = cleanedByName ? `Cleaned by ${cleanedByName} · QC skipped${reason}` : `QC skipped${reason}`
   } else if (qcByName) {
     summary = cleanedByName
@@ -1329,8 +1381,8 @@ async function fetchLastReset(unitId: string | null): Promise<ItemCardLastReset 
     qcBy: qcByName,
     qcSelfChecked: Boolean(entry.qc_self_checked),
     qcSkipped: Boolean(entry.qc_skipped),
-    qcSkipReason: entry.qc_skip_reason ?? null,
-    problemState: entry.problem_state ?? null,
+    qcSkipReason: entry.qc_skip_reason ? String(entry.qc_skip_reason) : null,
+    problemState: entry.problem_state ? (entry.problem_state as UnitConditionDb) : null,
     summary,
   }
 }

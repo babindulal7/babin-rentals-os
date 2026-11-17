@@ -189,7 +189,7 @@ export function AddDropdownButton({ action }: { action: PageActionItem }) {
           gap: 6,
           cursor: 'pointer',
           fontFamily: 'inherit',
-          transition: 'opacity var(--dur-fast, 120ms) var(--ease)',
+          transition: 'opacity var(--dur-fast) var(--ease)',
         }}
       >
         <Icon name={action.icon ?? 'plus'} size={15} />

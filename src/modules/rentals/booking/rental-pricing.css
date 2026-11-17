@@ -21,7 +21,7 @@
   min-height: 44px !important;
   padding: 6px !important;
   line-height: 1.25;
-  transition: border-color 140ms ease, background 140ms ease;
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
 }
 
 .new-rental-pricing-presets [role='group'] button:hover {

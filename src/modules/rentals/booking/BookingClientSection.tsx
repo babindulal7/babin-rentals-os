@@ -42,6 +42,10 @@ export interface BookingClientSectionProps {
   isPhone: boolean
   project: string
   setProject: (p: string) => void
+  shootLocation?: string
+  setShootLocation?: (loc: string) => void
+  recentProjectNames?: string[]
+  recentShootLocations?: string[]
   kind: string
   setKind: (k: string) => void
   kindOther: string
@@ -80,6 +84,10 @@ export function BookingClientSection({
   isPhone,
   project,
   setProject,
+  shootLocation = '',
+  setShootLocation,
+  recentProjectNames = [],
+  recentShootLocations = [],
   kind,
   setKind,
   kindOther,
@@ -262,9 +270,83 @@ export function BookingClientSection({
       </Field>
 
       <div style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : 'repeat(2, minmax(0,1fr))', gap: 11, marginTop: 11 }}>
-        <Field label="Project">
-          <Input value={project} onChange={(e) => setProject(e.target.value)} style={inputStyle} />
+        <Field label="Project" error={project.length > 120 ? 'Max 120 characters' : undefined}>
+          <Input
+            value={project}
+            maxLength={120}
+            aria-label="Project / production name"
+            placeholder="Project / production name (e.g. Kathmandu Diaries — music video)"
+            onChange={(e) => setProject(e.target.value)}
+            style={inputStyle}
+          />
+          {recentProjectNames && recentProjectNames.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }} aria-label="Recent project names">
+              <span style={{ fontSize: 11, color: 'var(--text3)', alignSelf: 'center' }}>Recent:</span>
+              {recentProjectNames.map((name) => (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => setProject(name)}
+                  style={{
+                    background: project === name ? 'var(--primary-subtle, #e0e7ff)' : 'var(--surface-sunken, #f3f4f6)',
+                    border: `1px solid ${project === name ? 'var(--primary, #4f46e5)' : 'var(--border, #e5e7eb)'}`,
+                    color: project === name ? 'var(--primary, #4f46e5)' : 'var(--text2, #374151)',
+                    borderRadius: 12,
+                    padding: '2px 8px',
+                    fontSize: 11,
+                    cursor: 'pointer',
+                    maxWidth: 160,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                  title={name}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          )}
         </Field>
+
+        <Field label="Shoot Location" error={shootLocation && shootLocation.length > 120 ? 'Max 120 characters' : undefined}>
+          <Input
+            value={shootLocation}
+            maxLength={120}
+            placeholder="e.g. Pokhara, Phewa lake"
+            onChange={(e) => setShootLocation?.(e.target.value)}
+            style={inputStyle}
+          />
+          {recentShootLocations && recentShootLocations.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }} aria-label="Recent shoot locations">
+              <span style={{ fontSize: 11, color: 'var(--text3)', alignSelf: 'center' }}>Recent:</span>
+              {recentShootLocations.map((loc) => (
+                <button
+                  key={loc}
+                  type="button"
+                  onClick={() => setShootLocation?.(loc)}
+                  style={{
+                    background: shootLocation === loc ? 'var(--primary-subtle, #e0e7ff)' : 'var(--surface-sunken, #f3f4f6)',
+                    border: `1px solid ${shootLocation === loc ? 'var(--primary, #4f46e5)' : 'var(--border, #e5e7eb)'}`,
+                    color: shootLocation === loc ? 'var(--primary, #4f46e5)' : 'var(--text2, #374151)',
+                    borderRadius: 12,
+                    padding: '2px 8px',
+                    fontSize: 11,
+                    cursor: 'pointer',
+                    maxWidth: 160,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                  title={loc}
+                >
+                  {loc}
+                </button>
+              ))}
+            </div>
+          )}
+        </Field>
+
         <Field
           label="Project Type *"
           error={

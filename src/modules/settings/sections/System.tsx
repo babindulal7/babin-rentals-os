@@ -153,6 +153,12 @@ export const SYSTEM_SECTIONS: Section[] = [
         readBy: 'lib/queries/availability.ts (every Confirm)',
       },
       {
+        label: 'Time between rentals',
+        note: 'Account-wide uses the turnaround setting below. Per product uses each product\'s prep minutes before pickup and cleaning minutes after return.',
+        settingKey: 'timeBetweenRentals',
+        readBy: 'lib/queries/availability.ts (every Confirm & reservation)',
+      },
+      {
         label: 'Turnaround between rentals',
         note: 'Whether gear returning at 18:00 can go out again at 18:00, or needs time in between.',
         settingKey: 'rentalTurnaround',

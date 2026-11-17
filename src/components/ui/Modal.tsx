@@ -266,7 +266,7 @@ export function Modal({
         padding: sheet || sidePeek || fillScreen ? 0 : 'var(--sp-md)',
         background: 'var(--scrim)',
         opacity: isOpen ? 1 : 0,
-        transition: 'opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+        transition: 'opacity var(--dur-theme) var(--ease)',
       }}
     >
       <div
@@ -303,7 +303,7 @@ export function Modal({
           overflow: 'hidden',
           opacity: isOpen ? 1 : 0,
           transform: isOpen ? 'translate(0, 0)' : sidePeek ? 'translateX(12px)' : 'translateY(8px)',
-          transition: 'opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+          transition: 'opacity var(--dur-theme) var(--ease), transform var(--dur-theme) var(--ease)',
           ...surfaceStyle,
         }}
       >

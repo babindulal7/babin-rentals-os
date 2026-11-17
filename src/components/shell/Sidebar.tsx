@@ -147,7 +147,7 @@ export default function Sidebar({ active }: SidebarProps) {
            as a one-off on collapse. theme.css's prefers-reduced-motion block
            (`* { transition: none !important }`) beats this inline value, so the
            opt-out is already honoured. */
-        transition: 'width 240ms var(--ease), background-color var(--dur-theme) ease',
+        transition: 'width var(--dur-drawer) var(--ease), background-color var(--dur-theme) var(--ease)',
       }}
     >
       <div
@@ -161,18 +161,13 @@ export default function Sidebar({ active }: SidebarProps) {
         }}
       >
         {/* The wordmark is brand voice, not a figure — §4.3.2 gives it Outfit. */}
-        <span
-          className="title"
-          style={{ fontWeight: 700, fontSize: 'var(--t-kpi)', color: 'var(--brand-mark)', lineHeight: 1, flexShrink: 0 }}
-        >
+        <span className="title br-reference-brand-mark" aria-label="Babin Rentals OS">
           BR
         </span>
         {!rail && (
-          <span style={{ lineHeight: 1.15, minWidth: 0, flex: 1 }}>
-            <span style={{ display: 'block', fontWeight: 700, fontSize: 'var(--t-ui)', color: 'var(--text)' }}>Babin</span>
-            <span style={{ display: 'block', fontWeight: 700, fontSize: 'var(--t-ui)', color: 'var(--text)' }}>
-              Rentals OS
-            </span>
+          <span className="br-reference-brand-title">
+            <strong>Babin Rentals OS</strong>
+            <small>Rental Management</small>
           </span>
         )}
         {/* Manual collapse remains available on tablet and desktop. */}
@@ -189,6 +184,15 @@ export default function Sidebar({ active }: SidebarProps) {
       <NavList groups={allowedGroups} moreSections={allowedMore} activeTo={activeTo} rail={rail} />
 
       <div style={{ flexShrink: 0, borderTop: '1px solid var(--border)', padding: 10 }}>
+        {!rail && user && (
+          <div className="br-reference-session" aria-label={`Signed in as ${user.name || 'Staff'}, ${user.role || 'Staff'}`}>
+            <Icon name="lock" size={16} style={{ color: 'var(--br-active-ink)', flexShrink: 0 }} />
+            <span className="br-reference-session__text">
+              <strong>{user.name || 'Staff'}</strong>
+              <small>{user.role || 'Staff'} · Verified session</small>
+            </span>
+          </div>
+        )}
 
         {/* Two labelled halves, not an icon button — the renders always show both
             options with the current one filled. Collapsed to one icon toggle in
@@ -281,7 +285,7 @@ export default function Sidebar({ active }: SidebarProps) {
                 fontWeight: glass ? 600 : 500,
                 cursor: 'pointer',
                 fontFamily: 'inherit',
-                transition: 'all var(--dur-fast, 120ms) ease',
+                transition: 'all var(--dur-fast) var(--ease)',
               }}
             >
               <Icon name="sparkles" size={14} style={{ color: glass ? 'var(--primary-text, #2456d6)' : undefined }} />
@@ -743,7 +747,7 @@ function NavList({
                   width: '100%',
                   textAlign: 'left',
                   fontFamily: 'inherit',
-                  transition: 'background-color var(--dur) ease, color var(--dur) ease',
+                  transition: 'background-color var(--dur) var(--ease), color var(--dur) var(--ease)',
                 }}
               >
                 {isMoreActive && (
@@ -814,7 +818,7 @@ function NavList({
                           background: on ? 'var(--select-bg)' : 'transparent',
                           position: 'relative',
                           cursor: 'pointer',
-                          transition: 'background-color var(--dur) ease, color var(--dur) ease',
+                          transition: 'background-color var(--dur) var(--ease), color var(--dur) var(--ease)',
                         }}
                       >
                         {on && (

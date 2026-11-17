@@ -72,7 +72,7 @@
 
 .new-rental-header-primary--incomplete {
   opacity: 0.6 !important;
-  transition: opacity 160ms ease, background 160ms ease;
+  transition: opacity var(--dur) var(--ease), background var(--dur) var(--ease);
 }
 .new-rental-header-primary--incomplete:hover {
   opacity: 0.85 !important;

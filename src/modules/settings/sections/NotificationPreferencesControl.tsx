@@ -70,7 +70,7 @@ export function ToggleSwitch({
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: checked ? 'flex-end' : 'flex-start',
-          transition: 'background 0.15s ease',
+          transition: 'background var(--dur) var(--ease)',
         }}
       >
         <span
@@ -377,7 +377,7 @@ export function NotificationPreferencesControl() {
                     ? '1px solid var(--border)'
                     : 'none',
                 background: isSaving ? 'var(--select-bg)' : 'transparent',
-                transition: 'background 0.2s ease',
+                transition: 'background var(--dur-theme) var(--ease)',
               }}
             >
               {/* Category Info */}

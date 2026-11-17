@@ -16,11 +16,12 @@
 // =============================================================================
 
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import Icon, { type IconName } from '../../components/ui/Icon'
 import { useAuth } from '../../lib/auth'
 import { canViewMoney } from '../../lib/rbac'
 import { formatMoney } from '../../lib/money'
+import { URL_KEY } from '../../data/operations'
 import {
   fetchRoleTaskMetrics,
   type RoleTaskMetrics,
@@ -163,7 +164,7 @@ function TaskCard({
           alignItems: 'center',
           justifyContent: 'center',
           gap: '8px',
-          transition: 'all 0.15s ease',
+          transition: 'all var(--dur) var(--ease)',
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.background = 'var(--primary)'
@@ -298,6 +299,40 @@ export function RoleTaskCockpit() {
       {/* 1. Warehouse & Technician (W61, W31, Law 6) */}
       {(role === 'Warehouse' || role === 'Technician') && metrics?.warehouse && (
         <div>
+          {/* Warehouse / Technician: Low Stock Consumables Alert Banner */}
+          {metrics.warehouse.lowStockCount !== undefined && metrics.warehouse.lowStockCount > 0 && (
+            <div
+              style={{
+                padding: '12px 16px',
+                borderRadius: '8px',
+                background: 'var(--amber-subtle, rgba(245, 158, 11, 0.1))',
+                border: '1px solid var(--amber, #f59e0b)',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Icon name="alert_circle" size={18} />
+                <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>
+                  {metrics.warehouse.lowStockCount} Consumables Low on Stock
+                </span>
+              </div>
+              <Link
+                to="/inventory"
+                style={{
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: 'var(--primary)',
+                  textDecoration: 'none',
+                }}
+              >
+                View in Inventory &rarr;
+              </Link>
+            </div>
+          )}
+
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
             <h2 style={{ fontSize: 'var(--t-h2, 18px)', fontWeight: 700, margin: 0, color: 'var(--text)' }}>
               Floor Work Queues
@@ -319,7 +354,7 @@ export function RoleTaskCockpit() {
               count={metrics.warehouse.packCount}
               subtitle="Bookings staged for preparation today"
               actionLabel="Pack Gear"
-              actionPath="/operations?tab=pack"
+              actionPath={`/operations?queue=${URL_KEY.Pack}`}
               icon="box"
               isFloorVerb
             />
@@ -328,7 +363,7 @@ export function RoleTaskCockpit() {
               count={metrics.warehouse.handoverCount}
               subtitle="Packed orders waiting for client pickup"
               actionLabel="Start Handover"
-              actionPath="/operations?tab=handover"
+              actionPath={`/operations?queue=${URL_KEY.Handover}`}
               icon="checklist"
               isFloorVerb
             />
@@ -341,7 +376,7 @@ export function RoleTaskCockpit() {
                   : 'Scheduled returns for intake & check'
               }
               actionLabel="Intake Return"
-              actionPath="/operations?tab=return"
+              actionPath={`/operations?queue=${URL_KEY.Return}`}
               icon="return_arrow"
               badge={metrics.warehouse.earlyMorningReturnCount > 0 ? `${metrics.warehouse.earlyMorningReturnCount} Early (<6 AM)` : undefined}
               badgeTone={metrics.warehouse.earlyMorningReturnCount > 0 ? 'warning' : undefined}
@@ -352,7 +387,7 @@ export function RoleTaskCockpit() {
               count={metrics.warehouse.resetCount}
               subtitle="Returned gear undergoing cleaning & QC check"
               actionLabel="Reset Gear"
-              actionPath="/operations?tab=reset"
+              actionPath={`/operations?queue=${URL_KEY.Reset}`}
               icon="tool"
               isFloorVerb
             />
@@ -411,11 +446,23 @@ export function RoleTaskCockpit() {
               count={metrics.coordinator.lateReturnsCount}
               subtitle="Rentals past scheduled return time"
               actionLabel="Manage Overdue"
-              actionPath="/operations?tab=return"
+              actionPath={`/operations?queue=${URL_KEY.Return}`}
               icon="alert_triangle"
               badge={metrics.coordinator.lateReturnsCount > 0 ? 'Overdue' : undefined}
               badgeTone="danger"
             />
+            {metrics.coordinator.atRiskCount !== undefined && metrics.coordinator.atRiskCount > 0 && (
+              <TaskCard
+                title="At-Risk Bookings"
+                count={metrics.coordinator.atRiskCount}
+                subtitle="Bookings blocked from packing due to clashes"
+                actionLabel="Resolve At-Risk"
+                actionPath="/rentals"
+                icon="alert_triangle"
+                badge="At Risk"
+                badgeTone="danger"
+              />
+            )}
           </div>
         </div>
       )}
@@ -518,6 +565,30 @@ export function RoleTaskCockpit() {
               actionPath="/operations"
               icon="truck"
             />
+            {metrics.manager.atRiskCount !== undefined && metrics.manager.atRiskCount > 0 && (
+              <TaskCard
+                title="At-Risk Bookings"
+                count={metrics.manager.atRiskCount}
+                subtitle="Bookings blocked from packing due to clashes"
+                actionLabel="Resolve At-Risk"
+                actionPath="/rentals"
+                icon="alert_triangle"
+                badge="At Risk"
+                badgeTone="danger"
+              />
+            )}
+            {metrics.manager.lowStockCount !== undefined && metrics.manager.lowStockCount > 0 && (
+              <TaskCard
+                title="Low Stock Consumables"
+                count={metrics.manager.lowStockCount}
+                subtitle="Consumable items needing restock"
+                actionLabel="View Consumables"
+                actionPath="/inventory"
+                icon="alert_triangle"
+                badge="Restock"
+                badgeTone="warning"
+              />
+            )}
           </div>
         </div>
       )}
@@ -588,6 +659,32 @@ export function RoleTaskCockpit() {
               badge={`${metrics.owner.businessPulse.fleetUtilizationPct}% Util`}
               badgeTone="info"
             />
+
+            {metrics.owner.atRiskCount !== undefined && metrics.owner.atRiskCount > 0 && (
+              <TaskCard
+                title="At-Risk Bookings"
+                count={metrics.owner.atRiskCount}
+                subtitle="Bookings blocked from packing due to clashes"
+                actionLabel="Resolve At-Risk"
+                actionPath="/rentals"
+                icon="alert_triangle"
+                badge="At Risk"
+                badgeTone="danger"
+              />
+            )}
+
+            {metrics.owner.lowStockCount !== undefined && metrics.owner.lowStockCount > 0 && (
+              <TaskCard
+                title="Low Stock Consumables"
+                count={metrics.owner.lowStockCount}
+                subtitle="Items needing restock"
+                actionLabel="View Consumables"
+                actionPath="/inventory"
+                icon="alert_triangle"
+                badge="Restock"
+                badgeTone="warning"
+              />
+            )}
           </div>
         </div>
       )}

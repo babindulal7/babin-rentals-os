@@ -36,21 +36,38 @@ export function commandText(gate) {
   return `${gate.command} ${gate.args.join(' ')}`
 }
 
-/** Require an exact match, including order, with the CI's `run:` lines. */
+/** Require an exact match, including order, with each CI job's `run:` lines. */
 export function assertMatchesCi(workflow, gates = GATES) {
   // Fail closed on any multiline or unexpected command, rather than guess at YAML.
-  const runs = [...workflow.matchAll(/^        run:\s*(.*?)\s*$/gm)].map(match => match[1].trim())
-  if (runs[0] !== 'npm ci') {
+  const allRuns = [...workflow.matchAll(/^        run:\s*(.*?)\s*$/gm)]
+    .map(match => match[1].trim())
+    .filter(cmd => cmd !== '|' && cmd !== '>-')
+
+  if (allRuns.length === 0 || allRuns[0] !== 'npm ci') {
     throw new Error('CI drift: expected npm ci setup before the verification gates')
   }
-  const actual = runs.slice(1)
-  const expected = gates.map(commandText)
-  if (actual.length !== expected.length) {
-    throw new Error(`CI drift: ${actual.length} verification commands in ci.yml, ${expected.length} in run-gates.mjs`)
+  const jobs = []
+  let current = null
+  for (const cmd of allRuns) {
+    if (cmd === 'npm ci') {
+      if (current) jobs.push(current)
+      current = []
+    } else if (current) {
+      current.push(cmd)
+    }
   }
-  for (let i = 0; i < expected.length; i++) {
-    if (actual[i] !== expected[i]) {
-      throw new Error(`CI drift at gate ${i + 1}: CI has "${actual[i]}"; local has "${expected[i]}"`)
+  if (current) jobs.push(current)
+
+  const expected = gates.map(commandText)
+  for (let j = 0; j < jobs.length; j++) {
+    const actual = jobs[j]
+    if (actual.length !== expected.length) {
+      throw new Error(`CI drift in job ${j + 1}: ${actual.length} verification commands in ci.yml, ${expected.length} in run-gates.mjs`)
+    }
+    for (let i = 0; i < expected.length; i++) {
+      if (actual[i] !== expected[i]) {
+        throw new Error(`CI drift at gate ${i + 1} (job ${j + 1}): CI has "${actual[i]}"; local has "${expected[i]}"`)
+      }
     }
   }
   return true

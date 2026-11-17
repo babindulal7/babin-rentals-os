@@ -199,7 +199,7 @@ function GlobalAddMenuView({
     cursor: 'pointer',
     fontFamily: 'inherit',
     boxShadow: 'var(--shadow-xs)',
-    transition: 'background var(--dur-fast, 120ms) ease, opacity var(--dur-fast, 120ms) ease, box-shadow var(--dur-fast, 120ms) ease',
+    transition: 'background var(--dur-fast) var(--ease), opacity var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease)',
   } as const
 
   return (
@@ -313,7 +313,7 @@ function GlobalAddMenuView({
                     fontWeight: 500,
                     cursor: 'pointer',
                     textAlign: 'left',
-                    transition: 'all var(--dur-fast, 120ms) ease',
+                    transition: 'all var(--dur-fast) var(--ease)',
                   }}
                 >
                   <span
@@ -327,7 +327,7 @@ function GlobalAddMenuView({
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0,
-                      transition: 'all var(--dur-fast, 120ms) ease',
+                      transition: 'all var(--dur-fast) var(--ease)',
                     }}
                   >
                     <Icon name={item.action.icon} size={15} />
@@ -372,7 +372,7 @@ function GlobalAddMenuView({
                   fontWeight: 600,
                   cursor: 'pointer',
                   textAlign: 'left',
-                  transition: 'all var(--dur-fast, 120ms) ease',
+                  transition: 'all var(--dur-fast) var(--ease)',
                 }}
               >
                 <span

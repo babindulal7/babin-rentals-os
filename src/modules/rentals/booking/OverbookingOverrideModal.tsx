@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import Icon from '../../../components/ui/Icon'
 import { Modal } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Button'
+import { SUBRENTAL_PARTNERS } from '../../../lib/availability'
+import { rupees, type Paisa } from '../../../lib/money'
 import type { EquipmentResult } from './itemCatalogue'
 
 /**
@@ -69,10 +71,11 @@ export interface OverbookingOverrideModalProps {
    * When false (default), "Add it anyway" cannot be chosen and overbooking is blocked.
    */
   allowOverbooking?: boolean
+  showPrices?: boolean
   /** Fires for "Add it anyway" — the caller adds the unit as an internal pick with the clash listed. */
   onOverbook: (unit: EquipmentResult) => void
   /** Fires when sub-renting — adds the unit as a Sub-rental line to be cross-hired from partner. */
-  onSubRent?: (unit: EquipmentResult) => void
+  onSubRent?: (unit: EquipmentResult, partner?: string, customRate?: Paisa, supplierCost?: number) => void
 }
 
 export function OverbookingOverrideModal({
@@ -80,6 +83,7 @@ export function OverbookingOverrideModal({
   onClose,
   unit,
   allowOverbooking = false,
+  showPrices = false,
   onOverbook,
   onSubRent,
 }: OverbookingOverrideModalProps) {
@@ -89,6 +93,10 @@ export function OverbookingOverrideModal({
   // Default to Sub-rent (preferred) if supported; otherwise fallback to overbooking if allowed.
   const defaultChoice: 'sub-rent' | 'overbook' = hasSubRent ? 'sub-rent' : 'overbook'
   const [choice, setChoice] = useState<'sub-rent' | 'overbook'>(defaultChoice)
+  const [partner, setPartner] = useState<string>(SUBRENTAL_PARTNERS[0])
+  const [customPartner, setCustomPartner] = useState('')
+  const [rateRupees, setRateRupees] = useState<string>('')
+  const [costRupees, setCostRupees] = useState<string>('')
 
   useEffect(() => {
     if (isOpen) {
@@ -99,8 +107,15 @@ export function OverbookingOverrideModal({
       } else {
         setChoice('sub-rent')
       }
+      setPartner(SUBRENTAL_PARTNERS[0])
+      setCustomPartner('')
+      if (unit) {
+        const defaultRate = unit.ratePaisa ? Math.round(unit.ratePaisa / 100) : 0
+        setRateRupees(defaultRate > 0 ? String(defaultRate) : '5000')
+        setCostRupees('')
+      }
     }
-  }, [isOpen, hasSubRent, hasOverbook])
+  }, [isOpen, hasSubRent, hasOverbook, unit])
 
   const close = () => {
     setChoice(defaultChoice)
@@ -120,7 +135,14 @@ export function OverbookingOverrideModal({
   const handleConfirm = () => {
     if (choice === 'sub-rent') {
       if (hasSubRent && onSubRent) {
-        onSubRent(unit)
+        if (onSubRent.length > 1) {
+          const effectivePartner = partner === 'Custom' ? customPartner.trim() : partner
+          const customRate = showPrices && rateRupees ? (rupees(Number(rateRupees) || 0) as Paisa) : undefined
+          const supplierCostNum = showPrices && costRupees ? Number(costRupees) || 0 : undefined
+          onSubRent(unit, effectivePartner || undefined, customRate, supplierCostNum)
+        } else {
+          onSubRent(unit)
+        }
         close()
       }
       return
@@ -233,11 +255,131 @@ export function OverbookingOverrideModal({
 
         {choice === 'sub-rent' ? (
           hasSubRent ? (
-            <p style={{ margin: 0, display: 'flex', gap: 7, alignItems: 'flex-start', fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.45 }}>
-              <Icon name="info" size={13} style={{ flexShrink: 0, marginTop: 2, color: 'var(--muted)' }} />
-              The equipment is added to this booking as a <strong>Sub-Rental</strong> line. It will be cross-hired
-              from an external partner/supplier, bypassing the internal inventory conflict for these dates.
-            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm, 8px)' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <label
+                  htmlFor="override-partner-select"
+                  style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}
+                >
+                  Partner / External Supplier
+                </label>
+                <select
+                  id="override-partner-select"
+                  value={partner}
+                  onChange={(e) => setPartner(e.target.value)}
+                  style={{
+                    width: '100%',
+                    height: 34,
+                    padding: '0 8px',
+                    borderRadius: 'var(--r-input, 6px)',
+                    border: '1px solid var(--border)',
+                    background: 'var(--card)',
+                    color: 'var(--text)',
+                    fontSize: 'var(--t-meta)',
+                  }}
+                >
+                  {SUBRENTAL_PARTNERS.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                  <option value="Custom">Custom / Other Partner…</option>
+                </select>
+              </div>
+
+              {partner === 'Custom' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <label
+                    htmlFor="override-custom-partner"
+                    style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}
+                  >
+                    Custom Partner Name
+                  </label>
+                  <input
+                    id="override-custom-partner"
+                    type="text"
+                    required
+                    value={customPartner}
+                    onChange={(e) => setCustomPartner(e.target.value)}
+                    placeholder="e.g. CineLab Nepal"
+                    style={{
+                      width: '100%',
+                      height: 34,
+                      padding: '0 8px',
+                      borderRadius: 'var(--r-input, 6px)',
+                      border: '1px solid var(--border)',
+                      background: 'var(--card)',
+                      color: 'var(--text)',
+                      fontSize: 'var(--t-meta)',
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Money gating: visible to money roles only (Law 6) */}
+              {showPrices && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <label
+                      htmlFor="override-client-rate"
+                      style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}
+                    >
+                      Client Rate / Day (Rs.)
+                    </label>
+                    <input
+                      id="override-client-rate"
+                      type="number"
+                      min="0"
+                      value={rateRupees}
+                      onChange={(e) => setRateRupees(e.target.value)}
+                      style={{
+                        width: '100%',
+                        height: 34,
+                        padding: '0 8px',
+                        borderRadius: 'var(--r-input, 6px)',
+                        border: '1px solid var(--border)',
+                        background: 'var(--card)',
+                        color: 'var(--text)',
+                        fontSize: 'var(--t-meta)',
+                      }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <label
+                      htmlFor="override-supplier-cost"
+                      style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}
+                    >
+                      Supplier Cost (Rs.)
+                    </label>
+                    <input
+                      id="override-supplier-cost"
+                      type="number"
+                      min="0"
+                      value={costRupees}
+                      onChange={(e) => setCostRupees(e.target.value)}
+                      placeholder="Optional cost"
+                      style={{
+                        width: '100%',
+                        height: 34,
+                        padding: '0 8px',
+                        borderRadius: 'var(--r-input, 6px)',
+                        border: '1px solid var(--border)',
+                        background: 'var(--card)',
+                        color: 'var(--text)',
+                        fontSize: 'var(--t-meta)',
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <p style={{ margin: 0, display: 'flex', gap: 7, alignItems: 'flex-start', fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.45 }}>
+                <Icon name="info" size={13} style={{ flexShrink: 0, marginTop: 2, color: 'var(--muted)' }} />
+                The equipment is added to this booking as a <strong>Sub-Rental</strong> line from{' '}
+                <strong>{partner === 'Custom' ? customPartner || 'partner' : partner}</strong>. It will be cross-hired
+                from an external supplier, bypassing the internal inventory conflict for these dates.
+              </p>
+            </div>
           ) : (
             <p style={{ margin: 0, display: 'flex', gap: 7, alignItems: 'flex-start', fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.45 }}>
               <Icon name="info" size={13} style={{ flexShrink: 0, marginTop: 2, color: 'var(--muted)' }} />

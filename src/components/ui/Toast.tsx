@@ -93,7 +93,7 @@ function ToastCard({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: str
         boxShadow: 'var(--shadow-xl)',
         opacity: mounted ? 1 : 0,
         transform: mounted ? 'translateY(0) scale(1)' : 'translateY(12px) scale(0.96)',
-        transition: 'opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+        transition: 'opacity var(--dur-drawer) var(--ease), transform var(--dur-drawer) var(--ease)',
       }}
     >
       <span

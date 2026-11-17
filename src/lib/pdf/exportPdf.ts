@@ -13,10 +13,12 @@ import { supabase } from '../supabase'
 import {
   generateInvoicePdf,
   generateDocumentPdf,
+  generateRentalAgreementPdf,
   generatePackingListPdf,
   generateReturnReportPdf,
   type InvoicePdfData,
   type DocumentPdfData,
+  type RentalAgreementPdfData,
   type PackingListPdfData,
   type ReturnReportPdfData,
 } from './generatePdf'
@@ -134,6 +136,75 @@ export async function exportInvoicePdf(
 }
 
 /**
+ * Exports a Pro Forma invoice as a PDF, uploads it to Supabase Storage bucket 'documents',
+ * retrieves a signed URL, and persists `document_registry.file_url`.
+ * A pro forma is not a tax invoice, takes no invoice number, and is valid for 7 days (B18, Law 7).
+ */
+export async function exportProFormaPdf(
+  invoiceData: InvoicePdfData,
+  options: ExportPdfOptions = {},
+): Promise<ExportPdfResult> {
+  const {
+    uploadToStorage = true,
+    expiresInSeconds = 86400,
+    download = false,
+    documentId,
+  } = options
+
+  const proFormData: InvoicePdfData = {
+    ...invoiceData,
+    isProForma: true,
+    documentTitle: invoiceData.documentTitle || 'PRO FORMA INVOICE — not a tax invoice',
+    status: 'Pro Forma',
+  }
+
+  const safeBookingNo = sanitizePathSegment(invoiceData.bookingNo || 'BOOKING')
+  const safeName = sanitizePathSegment(options.filename?.replace(/\.pdf$/i, '') || `PRO_FORMA_${safeBookingNo}`)
+  const filename = options.filename || `${safeName}.pdf`
+
+  const bytes = generateInvoicePdf(proFormData)
+  const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
+
+  let storagePath: string | undefined
+  let signedUrl: string | undefined
+
+  if (uploadToStorage) {
+    const stored = await uploadPrivatePdf(blob, safeName, expiresInSeconds)
+    storagePath = stored.storagePath
+    signedUrl = stored.signedUrl
+    const reference = documentId || safeName
+    if (reference) {
+      await supabase
+        .from('document_registry')
+        .update({ file_url: storagePath, file_size_bytes: bytes.byteLength })
+        .eq(documentId ? 'id' : 'document_no', reference)
+    }
+  }
+
+  if (download && typeof window !== 'undefined' && typeof document !== 'undefined') {
+    const downloadUrl = signedUrl || URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = downloadUrl
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    if (!signedUrl) {
+      setTimeout(() => URL.revokeObjectURL(downloadUrl), 5000)
+    }
+  }
+
+  return {
+    blob,
+    bytes,
+    storagePath,
+    signedUrl,
+    filename,
+    fileSizeBytes: bytes.byteLength,
+  }
+}
+
+/**
  * Exports a registered document as a PDF, uploads to Supabase Storage bucket 'documents',
  * retrieves a signed URL, and persists `document_registry.file_url`.
  */
@@ -167,6 +238,70 @@ export async function exportDocumentPdf(
         .update({ file_url: storagePath, file_size_bytes: bytes.byteLength })
         .eq(documentId ? 'id' : 'document_no', reference).select('id').maybeSingle()
       if (error || !data?.id) throw new Error('Document PDF attachment was not confirmed. The uploaded file was preserved.')
+    }
+  }
+
+  if (download && typeof window !== 'undefined' && typeof document !== 'undefined') {
+    const downloadUrl = signedUrl || URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = downloadUrl
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    if (!signedUrl) {
+      setTimeout(() => URL.revokeObjectURL(downloadUrl), 5000)
+    }
+  }
+
+  return {
+    blob,
+    bytes,
+    storagePath,
+    signedUrl,
+    filename,
+    fileSizeBytes: bytes.byteLength,
+  }
+}
+
+/**
+ * Exports an Equipment Rental Agreement as a PDF, uploads to Supabase Storage bucket 'documents',
+ * retrieves a signed URL, and updates `document_registry.file_url`.
+ */
+export async function exportRentalAgreementPdf(
+  agreementData: RentalAgreementPdfData,
+  options: ExportPdfOptions = {},
+): Promise<ExportPdfResult> {
+  const {
+    uploadToStorage = true,
+    expiresInSeconds = 86400,
+    download = false,
+    documentId,
+  } = options
+
+  const safeName = sanitizePathSegment(agreementData.agreementNo || documentId || 'AGREEMENT')
+  const filename = options.filename || `${safeName}.pdf`
+
+  const bytes = generateRentalAgreementPdf(agreementData)
+  const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
+
+  let storagePath: string | undefined
+  let signedUrl: string | undefined
+
+  if (uploadToStorage) {
+    try {
+      const stored = await uploadPrivatePdf(blob, safeName, expiresInSeconds)
+      storagePath = stored.storagePath
+      signedUrl = stored.signedUrl
+      const reference = documentId || agreementData.agreementNo
+      if (reference) {
+        await supabase
+          .from('document_registry')
+          .update({ file_url: storagePath, file_size_bytes: bytes.byteLength })
+          .eq(documentId ? 'id' : 'document_no', reference)
+      }
+    } catch {
+      // Storage upload failure in floor/offline mode does not block printing or local download
     }
   }
 
