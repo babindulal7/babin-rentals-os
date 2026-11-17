@@ -594,7 +594,7 @@ export async function generateMonthlyPack(
       !recorded && p.tdsAmount !== null ? (p.tdsAmount / 100).toFixed(2) : 'Not determined',
       p.netPayout !== null ? (p.netPayout / 100).toFixed(2) : 'Not determined',
       p.payoutStatus,
-      p.paidAt ? p.paidAt.slice(0, 10) : 'Pending',
+      p.paidAt ? new Date(kathmanduCivil(new Date(p.paidAt))).toISOString().slice(0, 10) : 'Pending',
       recorded ? 'Saved paid withholding snapshot' : 'No confirmed withholding snapshot',
     ])
   }
