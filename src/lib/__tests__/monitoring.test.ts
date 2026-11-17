@@ -128,10 +128,14 @@ describe('monitoring.ts — Safe Error Monitoring (T1-08)', () => {
       }
     })
 
-    it('returns sanitized error messages for regular UI errors without leaking PII', () => {
-      const err = new Error('Could not contact client at ram@example.com on phone 9841234567')
+    it('never renders arbitrary thrown text even when it contains unstructured PII', () => {
+      const err = new Error('Camera handover failed for Sita at Boudha Studio, invoice 75000')
       const staffMsg = formatStaffErrorMessage(err, 'REF-ABC12345')
-      expect(staffMsg.line).toBe('Could not contact client at [EMAIL_REDACTED] on phone [PHONE_REDACTED]')
+      expect(staffMsg.line).toBe('An unexpected error stopped this screen. No changes were confirmed.')
+      expect(staffMsg.line).not.toContain('Sita')
+      expect(staffMsg.line).not.toContain('Boudha')
+      expect(staffMsg.line).not.toContain('75000')
+      expect(staffMsg.action).toContain('local reference')
       expect(staffMsg.referenceCode).toBe('REF-ABC12345')
     })
   })
