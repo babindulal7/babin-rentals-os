@@ -1,5 +1,13 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 18 November 2026 — Delivery fee grid follow-ups (R-9.18, R-9.20)
+
+Babin ruled the grid (9 Nov 2026): zone × vehicle, twelve Settings values, outside valley quoted per trip. Built as migration 0244 and the 'not set' helper. Three product questions are not answered and are NOT decided by the build:
+
+- **O-28 (Q-1, TODO(decision)):** Does the grid replace the existing per-zone fee on delivery_zones (migration 0189, fee_paisa default 0), or do both stay? Until answered, dispatch still uses the old zone fee and the hard-coded Rs 1,500 at src/actions/delivery/createDeliveryJob.ts:57 (mock path) remains.
+- **O-29 (Q-2, TODO(decision)):** Who may type grid amounts: Owner only (built, stricter under B-1) or Manager and up (the 0189 zone-fee rule)?
+- **O-30 (Q-3, TODO(decision)):** How does a delivery job get its zone (Inside Ring Road, Outside Ring Road, Far valley, Outside valley)? Set at booking, at dispatch, or from the address? Not ruled.
+
 ## 5 November 2026 — Glossary editing in Settings (O-22)
 
 Babin requested glossary changes from Settings during the conflict repair. **Answered 5 Nov 2026:** editing is **Owner only** and **approved term changes apply throughout the app immediately**. The glossary's existing 1 Nov approval remains recorded; automatic OK statuses from the faulty wave exporter are not review evidence. T0-12 implements an explicit Owner approval action, append-only shared revisions and immediate text refresh. Whole-app Nepali activation remains gated independently. No hosted write path is enabled until Babin applies the locally verified migration (N-5).

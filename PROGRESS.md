@@ -1,5 +1,47 @@
 # Progress Log
 
+## 2026-11-18 — R-9.18 / R-9.20: Delivery fee grid (zone × vehicle), quoted zones
+
+**Did**
+- `supabase/migrations/0244_delivery_zone_vehicle_fee_grid.sql` (written, NOT applied, N-5):
+  - `delivery_zone_vehicle_fees`: zone × vehicle class, fee in paisa, NULL = not set. Vehicle CHECK covers the three ruled classes. RLS: read for money-visible roles only; no direct writes.
+  - `set_delivery_zone_vehicle_fee()`: Owner only; refuses a fixed amount for a quoted zone and a negative amount.
+  - `delivery_zone_quoted` and `set_delivery_zone_quoted()`: Owner only. A quoted zone takes no amounts (R-9.20).
+  - `delivery_zones` (0189) is not altered: `list_delivery_zones()` returns the whole row, so adding a column broke lifecycle L46. Found by the gate, fixed by moving the flag to its own table.
+- `src/lib/deliveryFeeGrid.ts`: `resolveDeliveryFee()` returns set, not-set or quoted-per-trip. NULL is never a free delivery. `deliveryFeeLabel()` states each state in words.
+- `docs/OPEN_DECISIONS.md` and `PLAN.md` §4.2: three open questions recorded as O-28 (replace the per-zone fee?), O-29 (who types amounts), O-30 (how a job gets its zone). Not decided by the build.
+- `docs/plans/MIGRATION_LEDGER.md`: 0244 claimed; next free number 0245.
+
+**Ruled**
+- R-9.18 (9 Nov 2026): zone × vehicle grid, twelve Settings values, not set until typed. R-9.20: outside valley quoted per trip. `// RULING 2026-11-09` comments at the migration and in `deliveryFeeGrid.ts`.
+- Built stricter under B-1 pending O-29: amounts are Owner only.
+
+**Verified**
+- `npx tsc --noEmit`: exit 0.
+- `npx eslint` on the two new TS files, `--max-warnings 0`: exit 0.
+- `npx vitest run src/lib/__tests__/deliveryFeeGrid.test.ts`: 7/7 pass.
+- `npm run check:pglite`: 238/238 applied, 0 failed, all gates pass (includes 0244 and its post-conditions).
+- `npm run check:lifecycle`: 76/76 green (after the redesign; the first version failed L46).
+- Scratch behavioural check of the 0244 RPCs against local PGlite (outside the repo): 8/8 pass. Covers Owner set and read-back, clear to NULL, Manager and Coordinator refused, quoted zone refused, negative refused, unknown vehicle refused by CHECK.
+- Not verified: the RLS read policies under real JWTs (PGlite has no JWT); the Settings screen (not built); the live Supabase project. Not Verified in the R-35 sense while unapplied.
+
+**Not done (blocked on O-28 to O-30)**
+- The hard-coded Rs 1,500 at `src/actions/delivery/createDeliveryJob.ts:57` (mock path only) and the dispatch fee source are unchanged. Replacing them needs O-28 (which fee) and O-30 (how a job gets its zone).
+- The Settings screen for the grid is not built.
+
+**Blocked**
+- Applying 0244 to the live project needs Babin's go-ahead and a confirmed backup (N-5).
+- 0244 is numbered after 0241 to 0243, which are on unmerged branches. Merge in order.
+
+### Completion (from `npm run completion`)
+- Backend 106/106 · Real data 56 DB-only of 67 · DB enforcement 9/9 · Permissions 85/85 · Lifecycle 76/76 · Overall ≈ 97%.
+
+### Remaining
+- Features to build: 2 (R-9.8 driver handover on assigned trips; R-9.6 cancellation selector in Settings).
+- Bugs to fix: 0 new. Delivery fee grid: Settings screen and dispatch wiring wait on O-28 to O-30.
+- Rulings open: 3 (O-28 to O-30).
+- Next session starts with: answers to O-28 to O-30, then R-9.8 driver handover permissions, one commit with PERMISSIONS.md, RLS and tests (B-3).
+
 ## 2026-11-17 — T2-20: Consumables at Pack and Handover (Mac Antigravity)
 
 **Did**
