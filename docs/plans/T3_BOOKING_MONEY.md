@@ -425,7 +425,7 @@ total; 4) Manager cannot change it (the database refuses); 5) Today and daily cl
 day start; 6) all gates green, financial integrity included.
 **Needs** — T3-14 and T3-18 merged first (both price bookings).
 
-### T3-29 · Extension clash: the Manager decides            status: todo · size: M · lane C · [go-live] · slips first
+### T3-29 · Extension clash: the Manager decides            status: complete · size: M · lane C · [go-live] · slips first
 **What** — When an extension (T3-17) needs a unit that the next booking already holds (B41), the desk
 neither refuses nor overrides alone: the request goes to a **Manager decision** (Owner · Admin ·
 Manager), one tap each with a reason, audited: **a)** extend, and move the next booking to a similar
