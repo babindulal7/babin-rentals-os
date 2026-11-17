@@ -144,7 +144,7 @@ invoice creation.
 **Done when** — three structure-priced bookings invoice to the paisa of their quote.
 **Needs** — Batch 1 on staging.
 
-### T3-10 · After-hours line            status: todo · size: S · lane C
+### T3-10 · After-hours line            status: ready — awaiting merge (mac/T3-10-after-hours-line) · size: S · lane C
 **What** — Add a service product "After-hours handover" (no fixed price; staff type the amount) so
 staff can add the charge in two taps when they decide to (D7). No automatic surcharge.
 **Why** — D7 (§4.64d).
@@ -328,7 +328,7 @@ any dates, the next free date, and **who has it now** (from T2-14). Reuses `Chec
 **Done when** — ≤ 2 taps to an answer from any screen; matches New Rental's availability exactly.
 **Needs** — T2-14.
 
-### T3-23 · Monthly pack for the accountant            status: ready — awaiting merge (mac/T3-23-accountant-monthly-pack); accountant staging verification pending · size: M · lane C · [soon]
+### T3-23 · Monthly pack for the accountant            status: todo · size: M · lane C · [soon]
 **What** — Finance ▸ Reports ▸ **Monthly pack**: pick a Nepali month (or AD month) → one zip with the
 **Sales/VAT register** (standard and non-VAT sections, T3-04), **payments and refunds**, **expenses
 with bill photos**, **crew payouts with TDS** (T8-08), as CSV + PDF, BS and AD dates. Money roles only.
