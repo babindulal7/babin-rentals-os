@@ -449,7 +449,7 @@ export const SPEC_TABS: Record<string, string[]> = {
 
   /* Finance tabs: Dashboard · Invoices · Payments · Expenses · Closing · Reports.
      Documents is a dedicated primary module in Business & Back Office. */
-  '/finance': ['Dashboard', 'Invoices', 'Payments', 'Expenses', 'Documents', 'Closing', 'Reports'],
+  '/finance': ['Dashboard', 'Who owes', 'Invoices', 'Payments', 'Expenses', 'Documents', 'Closing', 'Reports'],
 
   /* `08_CLIENTS.md` line 3 says "Directory only — no tabs." **Deliberately
      overridden, 12 Aug 2026 (user ruling).** Clients keeps Memberships.
@@ -479,6 +479,7 @@ export const FINANCE_TAB_ROUTES: Readonly<Record<string, string | null>> = {
      `/finance?tab=<tab>` in App.tsx.
      RULING 2026-10-13: note corrected (it said "local state, not by URL"). */
   Dashboard: '/finance',
+  'Who owes': '/finance/who-owes',
   Invoices: '/finance',
   /* §9.3 — `modules/finance/Payments.tsx`, added 12 Aug 2026. The receipt
      ledger with its deposits rail and the shared Record Payment modal, reading
