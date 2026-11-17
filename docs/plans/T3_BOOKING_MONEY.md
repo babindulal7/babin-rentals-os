@@ -401,7 +401,7 @@ N-6); lifecycle "a pro forma takes no document number and stays out of the VAT r
 VAT or sales reports; Warehouse cannot open it (money); screen check.
 **Needs** — T3-14, T3-26.
 
-### T3-28 · Rental day start as a setting            status: todo · size: L · lane C · [go-live] · slips first
+### T3-28 · Rental day start as a setting            status: complete · size: L · lane C · [go-live] · slips first
 **What** — The 06:00 → 06:00 rental day becomes a setting (B24): Settings ▸ Operations rules ▸
 **"Rental day starts at"** (⭐ 06:00; quarter hours). **Owner and Admin** change it (B26), enforced in
 Postgres, with an audit row. **Design note first** — an engine change: today the boundary is the

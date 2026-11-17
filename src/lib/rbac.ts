@@ -786,6 +786,14 @@ export function canManageSettings(role: SystemRole): boolean {
   return role === 'Owner'
 }
 
+/**
+ * Check if role can manage operations rules (T3-28, B26: operationalDayStart setting).
+ * Owner and Admin only. Enforced in Postgres (0237 `set_setting` with GATE:gate.settings.role).
+ */
+export function canManageOperationsRules(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin'
+}
+
 /** RULING 2026-11-05 C-6: only Owner approves glossary wording; DB 0225 enforces it. */
 export function canManageGlossary(role: SystemRole, online = true): boolean {
   return role === 'Owner' && online

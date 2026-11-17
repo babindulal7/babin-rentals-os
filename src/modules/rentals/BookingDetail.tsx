@@ -1446,7 +1446,7 @@ function BookingDetailView() {
     if (!actualReturn) return null
     const due = new Date(booking.returnAtAd)
     if (actualReturn.getTime() <= due.getTime()) return null
-    const rentalDaysCount = rentalDaysBetween(booking.pickupAtAd, booking.returnAtAd) ?? 1
+    const rentalDaysCount = rentalDaysBetween(booking.pickupAtAd, booking.returnAtAd, booking.rentalDayStart ?? 360) ?? 1
     const dailyRatePaisa = Math.max(1, Math.round(totals.total / rentalDaysCount)) as Paisa
     const result = lateFee({
       scheduledReturnAt: due,
@@ -2192,7 +2192,7 @@ function BookingDetailView() {
                 })),
               }
 
-  const days = rentalDaysBetween(booking.pickupAtAd, booking.returnAtAd)
+  const days = rentalDaysBetween(booking.pickupAtAd, booking.returnAtAd, booking.rentalDayStart ?? 360)
   const allUnits = lines.flatMap((l) => l.units)
   const subRental = isSubRentalBooking(lines.map((l) => ({ lineType: l.lineType })))
 
@@ -3948,7 +3948,7 @@ function BookingDetailView() {
           actualReturnIso={booking.actualReturnAtAd ?? new Date().toISOString()}
           dayRatePaisa={
             totals.total > 0
-              ? (Math.max(1, Math.round(totals.total / (rentalDaysBetween(booking.pickupAtAd, booking.returnAtAd) ?? 1))) as Paisa)
+              ? (Math.max(1, Math.round(totals.total / (rentalDaysBetween(booking.pickupAtAd, booking.returnAtAd, booking.rentalDayStart ?? 360) ?? 1))) as Paisa)
               : null
           }
           dayRateBasis={lateFeeData?.basis ?? 'Derived from rental total'}

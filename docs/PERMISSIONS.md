@@ -23,7 +23,7 @@ Location: `docs/PERMISSIONS.md` (beside Foundation v3.0 and UI_UX.md)
 > | B19 | §6.1 new row `gate.return.damage_unsigned`: a Return with a flagged unit needs a signature or a recorded refusal (reason ≥ 10 chars), by any staff allowed to do Return | T2-19 |
 > | B21, B40 | §5 mechanics: once Owner arms it, money rows and money writes need the second sign-in step (`aal2`) for Owner · Admin · Manager · Coordinator · Accounts; asked again every 30 days per device; Warehouse · Technician · Driver unchanged | T1-17 |
 > | B22, B23 | §4.10 new capability: read sign-in history — Owner · Admin; new-device email for Owner and Admin accounts only | T1-18 |
-> | B26 | §4.10 new capability: change the rental day start — Owner · Admin | T3-28 |
+> | B26 | §4.10 new capability: change the rental day start — Owner · Admin | T3-28 (in code, lane-c/T3-28-rental-day-start-as-a-setting) |
 > | B20 | §4.10 new capability: edit email and document texts — Owner · Admin | T5-13 |
 > | B32 | §4.4 / §6.1: change rates by a percentage in bulk — **Owner only**; every other bulk field follows the existing section-save cells (0173) | T4-12 |
 > | B12 (K4) | §4.4: "Allow overbooking" per product — the product-edit roles; a short line confirms with no extra approval, audited | T2-23 |
@@ -424,6 +424,7 @@ model**. Nothing is stored: `product_units_service_v` derives it at read time.
 |---|---|---|---|
 | `settings.view` | M+ · Coordinator · Accounts (money-gated tab follows §5) | | ○ |
 | `settings.manage` (General, Financial, Branches) | ⛔ **Code is `Owner` only** (`canManageSettings`), not Owner · Admin. **Since 0158 (7 Oct 2026, written, not yet applied to live) the `settings` table exists:** read = staff, money keys (`settings_is_money_key`) need `auth_can_view_money()`; write = `set_setting()` RPC, Owner only; `settings_history` append-only. Until 0158 is applied on live, settings are still `localStorage` there and D-9 is untestable on live (it runs under PGlite: `npm run test:settings`). | `settings`, `settings_history`, `set_setting()` — 0158 | ✓ string · ⛔ roles |
+| `settings.rental_day_start` | Owner · Admin | Change rental day start in quarter-hour increments (06:00 default) (Ruling B24, B25, B26, T3-28). Refuses other roles with `GATE:gate.settings.role`. PGlite lifecycle L75, L76. | `set_setting()` — 0237, `rbac.canManageOperationsRules` | ✓ (T3-28) |
 | `delivery_zone.read` | all staff (zone name, description, active flag) — `fee_paisa` only when `auth_can_view_money()` | `list_delivery_zones()` returns `fee_paisa = null` for Warehouse · Technician · Driver; `get_delivery_zone_fee()` raises `insufficient_privilege` for them (Law 6, T4-07 build note 1). Clients are denied by RLS. | `delivery_zones_read_staff`, `list_delivery_zones()`, `get_delivery_zone_fee()` — 0189 (amended 3 Nov 2026) | ✓ (T4-07) |
 | `delivery_zone.create` | M+ | INSERT only; the Settings ▸ System ▸ Delivery zones control gates on this capability, not `settings.manage` (T4-07 build note 3) | `delivery_zones_insert_manager_plus`, `create_delivery_zone()` | ✓ (T4-07) |
 | `delivery_zone.manage` | M+ | UPDATE + `deactivate_delivery_zone()`; **no DELETE policy** — deactivate is terminal (Law 3, N-4, T4-07 build note 2) | `delivery_zones_update_manager_plus`, `update_delivery_zone()`, `deactivate_delivery_zone()` | ✓ (T4-07) |

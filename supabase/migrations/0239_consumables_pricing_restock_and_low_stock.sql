@@ -236,6 +236,10 @@ declare
   /* 0229 */
   v_project_name       text := nullif(btrim(coalesce(p_payload ->> 'project_name', p_payload ->> 'project', '')), '');
   v_shoot_location     text := nullif(btrim(coalesce(p_payload ->> 'shoot_location', '')), '');
+  /* 0238 */
+  v_rental_day_start          integer;
+  v_existing_rental_day_start integer;
+  v_setting_val               text;
   /* T3-30 */
   v_is_consumable     boolean;
 begin
@@ -253,6 +257,29 @@ begin
   end if;
   if length(v_shoot_location) > 120 then
     raise exception 'create_booking: shoot_location must be 120 characters or fewer. Nothing was created.'
+      using errcode = '22026';
+  end if;
+
+  -- 0238 rental_day_start resolution
+  if p_payload ? 'rental_day_start' and p_payload ->> 'rental_day_start' is not null then
+    v_rental_day_start := (p_payload ->> 'rental_day_start')::integer;
+  else
+    select s.value #>> '{}' into v_setting_val
+      from settings s
+     where s.key = 'operationalDayStart'
+       and (s.location_id = v_branch or s.location_id is null)
+     order by s.location_id nulls last
+     limit 1;
+
+    if v_setting_val is not null and v_setting_val ~ '^([01][0-9]|2[0-3]):(00|15|30|45)$' then
+      v_rental_day_start := split_part(v_setting_val, ':', 1)::integer * 60 + split_part(v_setting_val, ':', 2)::integer;
+    else
+      v_rental_day_start := 360; -- 06:00 default
+    end if;
+  end if;
+
+  if v_rental_day_start is null or v_rental_day_start < 0 or v_rental_day_start >= 1440 or (v_rental_day_start % 15) <> 0 then
+    raise exception 'create_booking: rental_day_start must be between 0 and 1439 in 15-minute increments. Nothing was created.'
       using errcode = '22026';
   end if;
 
@@ -284,18 +311,19 @@ begin
   end if;
 
   -- ── Law 8 replay check, BEFORE anything is written or any counter moves ──
-  select id, booking_no, stage::text
-    into v_existing_id, v_existing_no, v_existing_stage
+  select id, booking_no, stage::text, rental_day_start
+    into v_existing_id, v_existing_no, v_existing_stage, v_existing_rental_day_start
     from bookings
    where client_uuid = v_client_uuid;
   if found then
     return jsonb_build_object(
-      'booking_id',     v_existing_id,
-      'booking_no',     v_existing_no,
-      'stage',          v_existing_stage,
-      'project_name',   v_project_name,
-      'shoot_location', v_shoot_location,
-      'replayed',       true
+      'booking_id',        v_existing_id,
+      'booking_no',        v_existing_no,
+      'stage',             v_existing_stage,
+      'project_name',      v_project_name,
+      'shoot_location',    v_shoot_location,
+      'rental_day_start',  v_existing_rental_day_start,
+      'replayed',          true
     );
   end if;
 
@@ -320,7 +348,7 @@ begin
     client_uuid, booking_no, branch_id, client_id, contact_id,
     project, project_name, shoot_location, project_type, project_type_other, pickup_at, return_at, delivery_type,
     pickup_location, return_location, quote_expires_at, deposit_required,
-    vat_rate, created_by, updated_by
+    vat_rate, rental_day_start, created_by, updated_by
   )
   values (
     v_client_uuid,
@@ -341,6 +369,7 @@ begin
     (p_payload ->> 'quote_expires_at')::timestamptz,
     coalesce((p_payload ->> 'deposit_required')::numeric, 0),
     case when p_payload ? 'vat_rate' then (p_payload ->> 'vat_rate')::numeric else null end,
+    v_rental_day_start,
     v_actor,
     v_actor
   )
@@ -683,6 +712,7 @@ begin
     'transport_written', v_transport_written,
     'project_name',      v_project_name,
     'shoot_location',    v_shoot_location,
+    'rental_day_start',  v_rental_day_start,
     'replayed',          false
   );
 end;
