@@ -1,5 +1,70 @@
 # Progress Log
 
+## 2026-11-18 — T3-29: Extension clash: the Manager decides (Lane C)
+
+**Did**
+- Implemented **T3-29 · Extension clash: the Manager decides** (`lane-c/T3-29-extension-clash-the-manager-decides`):
+  - Created migration `supabase/migrations/0241_extension_clash_manager_decision_and_at_risk.sql`:
+    - Table `public.extension_clash_decisions` tracking audited manager clash decisions (`booking_id`, `conflicting_booking_id`, `decision`, `reason`, `decided_by`, `decided_at`).
+    - Table `public.booking_at_risk` tracking bookings flagged as at-risk (`cause`, `clashing_booking_id`, `product_id`, `asset_id`, `raised_by`, `raised_at`, `resolved_by`, `resolved_at`, `resolution`, `resolution_notes`).
+    - Table `public.client_account_credits` and column `account_credit` on `public.clients` for credit balance storage.
+    - RPC `record_extension_clash_decision`: Owner, Admin, Manager only (`gate.extend.clash`).
+    - RPC `resolve_booking_at_risk`: Owner, Admin, Manager, Coordinator (`gate.pack.at_risk`).
+    - RPC `mark_booking_will_be_late`: flags bookings starting within 24h as at-risk.
+    - Updated `extend_booking`: validates overlaps on held units; enforces manager decision on clash (`gate.extend.clash`); releases conflicting hold on `mark_at_risk` to avoid exclusion constraint collision.
+    - Trigger `trg_enforce_pack_at_risk_gate` on `booking_stage_transitions`: blocks transition to `Packed` while an at-risk record is unresolved (`gate.pack.at_risk`).
+  - Added gate entries to `docs/PERMISSIONS.md` §6.1 (`gate.extend.clash` and `gate.pack.at_risk`).
+  - Claimed migration `0241` in `docs/plans/MIGRATION_LEDGER.md`.
+  - Added RBAC helper `canResolveAtRisk` and `canDecideExtensionClash` in `src/lib/rbac.ts`.
+  - Added `BOOKING_AT_RISK_RESOLVED` event in `src/events/eventBus.ts`.
+  - Implemented client actions `src/actions/rentals/extendRental.ts` (with `clashDecision`) and `src/actions/rentals/resolveAtRisk.ts`.
+  - Added queries `fetchBookingAtRisk` and `fetchActiveAtRiskBookings` in `src/lib/queries/atRisk.ts`.
+  - Updated `src/modules/rentals/modals/ExtendRentalModal.tsx`:
+    - Manager sees 3 one-tap choices (`move_next_booking`, `mark_at_risk`, `refuse`) and mandatory decision reason (≥10 chars).
+    - Non-manager sees "Send to Manager for Decision" and is blocked from confirming.
+  - Implemented `src/modules/rentals/modals/ResolveAtRiskModal.tsx` with 4 O-2 resolution options (similar item, sub-rental with partner picker, credit balance, full refund reversal) and WhatsApp/Email draft with 1-tap clipboard copy.
+  - Updated `src/modules/rentals/BookingDetail.tsx` with At-Risk warning badge, alert banner with 1-tap "Resolve At-Risk" button, and modal mounting.
+  - Updated `src/modules/today/RoleTaskCockpit.tsx`: added "At-Risk Bookings" card on Coordinator, Manager, and Owner cockpits.
+  - Added lifecycle steps `L76` and `L77` in `scripts/e2e-lifecycle.mjs` (78/78 green).
+  - Added unit tests:
+    - `src/actions/rentals/__tests__/extendRental.test.ts`: 11/11 tests pass.
+    - `src/modules/rentals/modals/__tests__/ExtendRentalModal.test.tsx`: 6/6 tests pass.
+    - `src/modules/rentals/modals/__tests__/ResolveAtRiskModal.test.tsx`: 4/4 tests pass.
+
+**Ruled**
+- When extending a rental clashes with an existing booking hold, the desk staff cannot override alone; a Manager decision (`gate.extend.clash`, Owner · Admin · Manager) with an audited reason of ≥10 characters is mandatory (B41).
+- Decision b (`mark_at_risk`) releases conflicting unit reservation hold so the extension can proceed without double-booking exclusion violation, while flagging the upcoming booking in `booking_at_risk` (B42).
+- At-risk bookings cannot reach `Packed` until covered or resolved (`gate.pack.at_risk`).
+
+**Verified**
+- `npm run check:pglite`: 238/238 migrations applied, 0 failed, 207 definers pinned.
+- `npm run check:lifecycle`: 78/78 green, 0 failed.
+- `npm run check:security`: all security regressions pass.
+- `npm run build`: built production bundle cleanly.
+- `npm run gates`: Full 17 gates PASS green.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 107 / 107 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 68 | 57 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 86 / 86 (100%) | +1 |
+| Lifecycle | steps green / total | 78 / 78 (100%) | +2 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 238 files · check:pglite 238/238 applied, 0 failed (recorded 2026-11-17T20:09:11.811Z). Suite: PASS — 7335/7335 passed, 0 failed (recorded 2026-11-17T20:11:51.371Z); source fingerprint matches.
+Coverage suite: PASS — 7335/7335 passed, 0 failed (recorded 2026-11-17T20:11:51.371Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-17T20:09:17.049Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Batch 6 Remaining Cards:
+  - T2-19: Signature at Return when damage is found (Size: S · Priority: [go-live · slips first])
+  - T3-11: Late fee — acceptance only (Size: S · Priority: [go-live])
+  - T3-28: Rental day start as a setting (Size: L · Priority: [go-live · slips first])
+  - T3-18: Change a confirmed booking (Size: L · Priority: [go-live])
+
 ## 2026-11-17 — T2-20: Consumables at Pack and Handover (Mac Antigravity)
 
 **Did**
