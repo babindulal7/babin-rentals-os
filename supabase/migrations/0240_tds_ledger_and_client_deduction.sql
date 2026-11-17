@@ -339,6 +339,8 @@ begin
   end if;
 
   -- One ACTIVE deduction per invoice: a deduction with no reversal row against it.
+  -- RULING 2026-11-18: Babin ruled one TDS deduction per invoice, not per instalment (E5).
+  -- Revert = relax this check and add an instalment key to tds_ledger.
   if exists (
     select 1 from public.tds_ledger d
      where d.invoice_id = v_inv.id and d.direction = 'Client Deducted' and d.entry_type = 'Deduction'

@@ -1,5 +1,43 @@
 # Progress Log
 
+## 2026-11-18 — One client TDS deduction per invoice ruled (Lane B)
+
+**Did**
+- Recorded Babin's answer to E5 as R-18.1 in `RULINGS-2026-11-17.md`. It matches what `record_client_tds` already does, so no behaviour changed.
+- Added a `// RULING 2026-11-18` comment at the one-active-deduction check in `0240` (comment only). Closed the question in `TDS_BUILD_CARD.md` and `TDS_GEMINI_HANDOFF.md`.
+
+**Ruled**
+- **R-18.1 (Babin: "Once per invoice"):** one client TDS deduction per invoice, on the full taxable value, not one per instalment. Revert: relax the check in `0240` and add an instalment key to `tds_ledger`.
+- **R-18.2:** crew freelancer TDS goes in the same `tds_ledger` under a new `Crew Deducted` direction.
+- **R-18.3:** freelancer vs staff is set per crew payout, not on a profile flag.
+
+**Verified**
+- `check:pglite` 236/236 applied and `check:lifecycle` 74/74 (L82 included), re-run in the same session after the comment edit.
+- Not re-run: the unit test suite and the full gates. The change is a SQL comment and documents only. Nothing was applied to any Supabase project (N-5).
+
+### Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 105 / 105 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 | |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | 74 / 74 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 236 files · check:pglite 236/236 applied, 0 failed (recorded 2026-11-17T18:16Z). Lifecycle read 18:16Z. Suite receipt is the earlier 7243/7243 run (14:30Z); current source NOT VERIFIED by the counter. Counted by `npm run completion`, not typed. Structural coverage only.
+
+### Remaining
+
+*Features to build — 3 TDS slices.* Supplier TDS (S3); crew payout TDS and the staff 1% income-tax line on the timesheet (S4); the accountant TDS report with IRD deposit tracking (S5).
+
+*Bugs to fix — 0 counted.*
+
+*Rulings open — 0 on TDS.* E5 closed (R-18.1). Crew direction and freelancer/staff split ruled (R-18.2, R-18.3). Other items are in `PLAN.md` §4.2.
+
+*Next session starts with:* supplier TDS (S3), by Gemini from `docs/plans/TDS_GEMINI_HANDOFF.md`. `0228` and `0240` still need Babin to apply them to the live database after the backup.
+
 ## 2026-11-17 — Client TDS recording and reversing screen (Lane B)
 
 **Did**

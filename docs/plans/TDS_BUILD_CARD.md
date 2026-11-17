@@ -1,6 +1,6 @@
 # Build card — TDS (client deductions, supplier deductions, crew payouts)
 
-**Status:** S1 and S2 built and verified locally (migration 0240, `recordClientTds.ts`, lifecycle L82); not applied to the live database (N-5). The recording and reversing screen is built (Booking Detail → Client TDS) and was driven in mock mode. S3 to S5 are not built. Source rulings: `RULINGS-2026-11-17.md` (R-17.1 to R-17.4), closes O-5.
+**Status:** S1 and S2 built and verified locally (migration 0240, `recordClientTds.ts`, lifecycle L82); not applied to the live database (N-5). The recording and reversing screen is built (Booking Detail → Client TDS) and was driven in mock mode. S3 to S5 are not built. One client deduction per invoice is ruled (R-18.1). Source rulings: `RULINGS-2026-11-17.md` (R-17.1 to R-17.4), closes O-5.
 **Migration:** none claimed yet. Claim the next free number in `docs/plans/MIGRATION_LEDGER.md` before any SQL is written.
 
 ## Goal
