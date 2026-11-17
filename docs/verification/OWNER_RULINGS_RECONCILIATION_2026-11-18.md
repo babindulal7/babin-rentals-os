@@ -2,7 +2,7 @@
 
 **Status:** review evidence only; **not** a policy change, owner approval, production migration, legal opinion or permission change.
 **Scope:** PR #194 (head `33d9ba5`) versus existing `main` at `c29cb2120c20`, including the already-committed `RULINGS-2026-11-09.md` and `docs/OPEN_DECISIONS.md`.
-**Merge strategy:** retain the current main source files without rewriting them; reconcile divergent interpretations in this separate, non-operational record. The earlier PR branch's conflicting file versions are superseded by the current main tree plus this review memo.
+**Merge strategy:** retain current main's original ruling statements and existing records; append only the documented R-9.9 CI-on policy to `RULINGS-2026-11-09.md` and reconcile divergent interpretations in this separate, non-operational record. The old PR branch's conflicting file versions are superseded by the current main tree plus these two intentional documentation edits.
 **No live change:** do not activate website/portal toggles, permission changes, Supabase migrations, cancellation fees, delivery tariffs or tax settings from this document.
 
 ## Existing authoritative record preserved
@@ -21,7 +21,7 @@
 | **O-20 Elite membership fee** | 2 Nov record says fixed annual fee, amount still open | R-9.7 says negotiated per client | **Unresolved later-vs-earlier decision:** confirm which rule supersedes before applying membership price/renewal changes |
 | **R-9.2 membership term** | Main reports the migration and UI/action path already written (not applied live) | Branch says DB impact still to be checked | Preserve main's implementation record; verify migration/app state independently |
 | **Crew overtime** | Day rate; approved additional days, not calculated from hours (R-9.3 and D24) | R-9.21 clarifies half/full overtime days can be entered and charged to the client / paid to crew | Compatible as a candidate clarification, but requires acceptance and client/crew approval workflow review; do not infer hourly automation |
-| **R-9.9 CI** | 9 Nov ruling in PR #194 and separate PR #193 | CI is ON, an exact-commit merge gate | Apply through reviewed #193 documentation; do not bypass missing PR CI evidence |
+| **R-9.9 CI** | Confirmed 9 Nov owner instruction; previously missing from existing main ruling file | CI is ON, an exact-commit merge gate | A narrow R-9.9 addendum is now proposed in this PR; align remaining guidance through reviewed #193; do not bypass missing PR CI evidence |
 
 ## Other unmerged interview notes
 
@@ -33,7 +33,7 @@ O-5 crew payout TDS, O-6 IRD e-billing, O-7 non-VAT entries, O-14 numbered invoi
 
 ## Review gates for PR #194
 
-1. Confirm `RULINGS-2026-11-09.md`, `docs/OPEN_DECISIONS.md`, `PLAN.md` and `PROGRESS.md` are unchanged from current main by this merge.
-2. Ensure this document is the only new diff (except a documented, intentional amendment); `git diff --check`, `npm run lint:progress` and exact-head checks wherever the workflow supports them.
+1. Confirm `docs/OPEN_DECISIONS.md`, `PLAN.md` and `PROGRESS.md` are unchanged from pinned main. In `RULINGS-2026-11-09.md` only the narrow R-9.9 addendum may be added; preserve R-9.1–R-9.4 word-for-word.
+2. Ensure the diff contains only this memo and the R-9.9 addendum; `git diff --check`, `npm run lint:progress` and exact-head checks wherever the workflow supports them. Absence of a docs-only run is **not** green CI.
 3. Treat each contradiction above as unresolved until direct source/owner validation. Do not label this memo an approved business-policy update or implementation complete.
 4. Preserve all nine confirmed open-vs-review blockers as such; keep this PR in draft until document review and checks complete.
