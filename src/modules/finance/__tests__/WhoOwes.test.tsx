@@ -190,8 +190,8 @@ describe('WhoOwes engine & PDF (T3-20)', () => {
     expect(results.totalOutstandingPaisa).toBe(rupees(40100))
   })
 
-  it('refuses to silently omit invoices from a long one-page PDF', () => {
-    const invoices = Array.from({ length: 11 }, (_, i) => ({
+  it('creates continuation pages containing every invoice and receipt', () => {
+    const invoices = Array.from({ length: 52 }, (_, i) => ({
       invoiceNo: `INV-2026-${String(i).padStart(4, '0')}`,
       bookingNo: 'BK-2026-0001',
       issueDateAd: '2026-10-01',
@@ -200,13 +200,24 @@ describe('WhoOwes engine & PDF (T3-20)', () => {
       paidPaisa: 0 as Paisa,
       outstandingPaisa: rupees(100),
     }))
-    expect(() => generateClientStatementPdf({
+    const payments = Array.from({ length: 20 }, (_, i) => ({
+      paymentNo: `PAY-2026-${String(i).padStart(4, '0')}`,
+      dateAd: '2026-10-07',
+      method: 'Bank',
+      amountPaisa: rupees(5),
+    }))
+    const pdf = generateClientStatementPdf({
       asOfDateAd: '2026-11-17',
       client: { name: 'Multiple-invoice client' },
-      totalOutstandingPaisa: rupees(1100),
+      totalOutstandingPaisa: rupees(5200),
       invoices,
-      payments: [],
-    })).toThrow('Full multi-page export is required')
+      payments,
+    })
+    const text = new TextDecoder('latin1').decode(pdf)
+    expect(text).toMatch(/\/Count [3-9]/)
+    for (const inv of invoices) expect(text).toContain(inv.invoiceNo)
+    for (const payment of payments) expect(text).toContain(payment.paymentNo)
+    expect(text).not.toContain('and  more')
   })
 
   it('generates a valid PDF 1.4 Client Statement', () => {
