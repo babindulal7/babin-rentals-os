@@ -19,8 +19,7 @@ import { toBs, toAd, BS_MONTHS, BS_MONTH_DAYS, type BsDate } from './bs'
 import { formatMoney, type Paisa } from './money'
 import { getSalesVatReport, type SalesInvoiceItem } from './queries/salesVatReports'
 import { getCrewTdsReport } from './queries/crewTdsReport'
-import { listPayments, type PaymentListRow } from './queries/finance'
-import { generateInvoicePdf, type InvoicePdfData } from './pdf/generatePdf'
+import { listPayments, paymentsInPeriod, type PaymentListRow } from './queries/finance'
 
 export type MonthCalendar = 'BS' | 'AD'
 
@@ -220,6 +219,11 @@ async function fetchExpensesForPeriod(
 export async function generateMonthlyPack(
   options: MonthlyPackOptions,
 ): Promise<MonthlyPackResult> {
+  // Tax invoices must include persisted issuer details and exact invoice lines.
+  // Until a verified invoice record source is connected, never fabricate copies.
+  if (options.includeInvoicePdfs) {
+    throw new Error('Accountant invoice PDFs require verified issuer data and persisted invoice lines; export refused.')
+  }
   const period = resolveMonthlyPackPeriod(options.calendar, options.year, options.month)
   const { startAd, endAd, monthSlug } = period
 
@@ -235,16 +239,27 @@ export async function generateMonthlyPack(
   const expenses = await fetchExpensesForPeriod(startAd, endAd, options.branchId)
 
   // 3. Fetch Payments Received
-  const paymentsRes = await listPayments({
-    dateRange: { column: 'payment_date', fromAd: startAd, toAd: endAd },
-    range: { from: 0, to: 999 },
-  })
-  const receivedPayments: PaymentListRow[] = paymentsRes.rows.filter(
-    (p) =>
-      p.status === 'Received' &&
-      p.paymentDateAd.slice(0, 10) >= startAd &&
-      p.paymentDateAd.slice(0, 10) <= endAd,
-  )
+  // Payment_date is a UTC instant. Filter server-side by the shared
+  // Kathmandu civil-month boundary, not an ISO UTC date slice.
+  const receivedPayments: PaymentListRow[] = []
+  const seenPaymentIds = new Set<string>()
+  const paymentFilters = paymentsInPeriod(startAd, endAd)
+  const paymentPageSize = 400
+  for (let page = 0; page < 125; page++) {
+    const { rows: batch } = await listPayments({
+      ...paymentFilters,
+      range: { from: page * paymentPageSize, to: (page + 1) * paymentPageSize - 1 },
+    })
+    for (const payment of batch) {
+      if (!payment.id || seenPaymentIds.has(payment.id)) {
+        throw new Error('Payment ledger changed during pagination; accountant export refused.')
+      }
+      seenPaymentIds.add(payment.id)
+      receivedPayments.push(payment)
+    }
+    if (batch.length < paymentPageSize) break
+    if (page === 124) throw new Error('Payment ledger exceeds verified export limit.')
+  }
 
   // 4. Fetch Crew TDS Payouts
   const crewTdsRes = await getCrewTdsReport({
@@ -265,6 +280,7 @@ export async function generateMonthlyPack(
       'Buyer PAN',
       'Total Amount (NPR)',
       'Exempt Amount (NPR)',
+      'Non-VAT Amount (NPR)',
       'Taxable Amount (NPR)',
       '13% VAT Amount (NPR)',
       'Status',
@@ -274,8 +290,18 @@ export async function generateMonthlyPack(
   let totalSalesPaisa = 0
   let totalTaxableSalesPaisa = 0
   let totalOutputVatPaisa = 0
+  let totalExemptSalesPaisa = 0
+  let totalNonVatSalesPaisa = 0
 
   for (const inv of salesInvoices) {
+    if (inv.taxableAmount === undefined || inv.discountAmount === undefined) {
+      throw new Error('Persisted invoice tax base or discount is missing; accountant export refused.')
+    }
+    const nonVat = inv.vatTreatment === 'non_vat'
+    const exempt = !nonVat && inv.taxAmount === 0
+    const taxableBase = !nonVat && !exempt ? inv.taxableAmount : 0
+    const exemptBase = exempt ? inv.taxableAmount : 0
+    const nonVatBase = nonVat ? inv.taxableAmount : 0
     const d = inv.issueDate ? new Date(inv.issueDate) : new Date(startAd)
     const bs = toBs(d)
     const bsStr = bs
@@ -283,7 +309,9 @@ export async function generateMonthlyPack(
       : inv.issueDate
 
     totalSalesPaisa += inv.grandTotal
-    totalTaxableSalesPaisa += inv.subtotal
+    totalTaxableSalesPaisa += taxableBase
+    totalExemptSalesPaisa += exemptBase
+    totalNonVatSalesPaisa += nonVatBase
     totalOutputVatPaisa += inv.taxAmount
 
     salesCsvRows.push([
@@ -294,8 +322,9 @@ export async function generateMonthlyPack(
       inv.clientName,
       inv.clientPan || 'N/A',
       (inv.grandTotal / 100).toFixed(2),
-      '0.00',
-      (inv.subtotal / 100).toFixed(2),
+      (exemptBase / 100).toFixed(2),
+      (nonVatBase / 100).toFixed(2),
+      (taxableBase / 100).toFixed(2),
       (inv.taxAmount / 100).toFixed(2),
       inv.status,
     ])
@@ -330,8 +359,8 @@ export async function generateMonthlyPack(
       exp.categoryName,
       exp.description,
       (exp.amountPaisa / 100).toFixed(2),
-      (exp.amountPaisa / 100).toFixed(2),
-      '0.00',
+      'Not recorded',
+      'Not recorded',
       exp.paymentMethod,
       exp.status,
     ])
@@ -422,9 +451,10 @@ export async function generateMonthlyPack(
   }
 
   // ── BUILD SUMMARY.TXT ──────────────────────────────────────────────────────
-  const netVatPaisa = Math.max(0, totalOutputVatPaisa - 0) // Output VAT - Input VAT
-  const totalTaxObligationPaisa = netVatPaisa + totalTdsPaisa
-  const periodReceivablesPaisa = Math.max(0, totalSalesPaisa - totalPaymentsPaisa)
+  // Net VAT and period-end receivables cannot be derived from expense totals or
+  // "this month's invoices minus this month's receipts". They require an
+  // accountant-reviewed input VAT ledger and opening/closing receivable balances.
+  const periodMovementPaisa = totalSalesPaisa - totalPaymentsPaisa
 
   const summaryLines = [
     '================================================================================',
@@ -441,13 +471,14 @@ export async function generateMonthlyPack(
     `Gross Invoiced Turnover:      ${formatMoney(totalSalesPaisa as Paisa)}`,
     `Taxable Sales (13%):          ${formatMoney(totalTaxableSalesPaisa as Paisa)}`,
     `Output VAT Collected (13%):   ${formatMoney(totalOutputVatPaisa as Paisa)}`,
-    'Exempt Sales:                 NPR 0.00',
+    `Exempt Sales:                 ${formatMoney(totalExemptSalesPaisa as Paisa)}`,
+    `Non-VAT Sales (separate):      ${formatMoney(totalNonVatSalesPaisa as Paisa)}`,
     '',
     '2. PURCHASES & OPERATING EXPENSES',
     '--------------------------------------------------------------------------------',
     `Expenses Recorded:            ${expenses.length}`,
     `Gross Expenses:               ${formatMoney(totalExpensesPaisa as Paisa)}`,
-    'Reclaimable Input VAT:        NPR 0.00',
+    'Reclaimable Input VAT:        NOT VERIFIED - source expenses do not store VAT breakdown',
     '',
     '3. COLLECTIONS & CASH RECEIVED',
     '--------------------------------------------------------------------------------',
@@ -463,15 +494,17 @@ export async function generateMonthlyPack(
     '',
     '5. STATUTORY TAX POSITION (FILING RECONCILIATION)',
     '--------------------------------------------------------------------------------',
-    `Net Output VAT Payable:       ${formatMoney(netVatPaisa as Paisa)}`,
-    `TDS Withholding Payable:      ${formatMoney(totalTdsPaisa as Paisa)}`,
-    `Total Statutory Tax Due:      ${formatMoney(totalTaxObligationPaisa as Paisa)}`,
+    `Output VAT Before Credits:    ${formatMoney(totalOutputVatPaisa as Paisa)}`,
+    'Net VAT Payable:              NOT DETERMINED - reconcile input credits',
+    `TDS Withholding (provisional): ${formatMoney(totalTdsPaisa as Paisa)}`,
+    'Filing-ready Total:           NOT DETERMINED - accountant review required',
     '',
     '6. PERIOD RECEIVABLES & CASH SUMMARY',
     '--------------------------------------------------------------------------------',
     `Invoiced in Period:           ${formatMoney(totalSalesPaisa as Paisa)}`,
     `Collected in Period:          ${formatMoney(totalPaymentsPaisa as Paisa)}`,
-    `Period Net Movement:          ${formatMoney(periodReceivablesPaisa as Paisa)}`,
+    `Gross Period Movement:        ${formatMoney(periodMovementPaisa as Paisa)}`,
+    'Not Closing Receivables:      Opening balances, cross-period payments and reversals not reconciled',
     '',
     '================================================================================',
     'ARCHIVE CONTENTS:',
@@ -511,53 +544,8 @@ export async function generateMonthlyPack(
     },
   ]
 
-  // Optional: Individual Invoice PDFs
-  let invoicePdfsCount = 0
-  if (options.includeInvoicePdfs && salesInvoices.length > 0) {
-    for (const inv of salesInvoices) {
-      try {
-        const pdfData: InvoicePdfData = {
-          company: {
-            name: 'Babin Rentals',
-            panVat: '623587106',
-            address: 'Kathmandu, Nepal',
-            phone: '+977 9801234567',
-          },
-          invoiceNo: inv.invoiceNo,
-          bookingNo: inv.bookingNo,
-          issueDateAd: inv.issueDate,
-          dueDateAd: inv.dueDate,
-          client: {
-            name: inv.clientName,
-            panVat: inv.clientPan ?? null,
-          },
-          lines: [
-            {
-              description: `Rental equipment & services under booking ${inv.bookingNo}`,
-              quantity: 1,
-              ratePaisa: inv.subtotal,
-              totalPaisa: inv.subtotal,
-            },
-          ],
-          subtotalPaisa: inv.subtotal,
-          taxablePaisa: inv.subtotal,
-          vatPaisa: inv.taxAmount,
-          vatPercent: 13,
-          totalPaisa: inv.grandTotal,
-          paidPaisa: inv.paidAmount,
-          outstandingPaisa: Math.max(0, inv.grandTotal - inv.paidAmount) as Paisa,
-        }
-        const pdfBytes = generateInvoicePdf(pdfData)
-        zipEntries.push({
-          filename: `invoices/${inv.invoiceNo}.pdf`,
-          data: pdfBytes,
-        })
-        invoicePdfsCount += 1
-      } catch {
-        // Continue if a single PDF fails
-      }
-    }
-  }
+  // Invoice PDF copies cannot be generated from synthetic issuer/line metadata.
+  const invoicePdfsCount = 0
 
   // Create final ZIP bytes
   const zipBytes = createZip(zipEntries)
