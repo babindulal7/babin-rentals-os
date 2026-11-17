@@ -144,7 +144,7 @@ invoice creation.
 **Done when** — three structure-priced bookings invoice to the paisa of their quote.
 **Needs** — Batch 1 on staging.
 
-### T3-10 · After-hours line            status: todo · size: S · lane C
+### T3-10 · After-hours line            status: ready — awaiting merge (mac/T3-10-after-hours-line) · size: S · lane C
 **What** — Add a service product "After-hours handover" (no fixed price; staff type the amount) so
 staff can add the charge in two taps when they decide to (D7). No automatic surcharge.
 **Why** — D7 (§4.64d).
@@ -290,7 +290,7 @@ the same code within ⭐ 1.5 s, server check per code.
 **Done when** — scan → line added with that unit; a booked unit says who has it and offers T3-13.
 **Needs** — T2-14 (shared scan lookup).
 
-### T3-20 · Who owes            status: ready — awaiting merge (mac/T3-20-who-owes) · size: M · lane C · [go-live]
+### T3-20 · Who owes            status: todo · size: M · lane C · [go-live]
 **What** — Finance ▸ **Who owes**: one list of clients with unpaid balances, oldest first, with age
 (days since completion), amount, last reminder sent, "Paused" flag; tap → the client's **statement**
 (PDF: every open invoice and booking balance, payments so far) to share (T3-16). Many production

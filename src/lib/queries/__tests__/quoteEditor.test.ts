@@ -32,6 +32,32 @@ describe('quote editor round trips', () => {
     expect(payload.transport).toMatchObject({ delivery_charge: 350, fuel_charge: 25, special_instructions: 'Collect after wrap' })
   })
 
+  it('normalizes existing and newly added flat after-hours services on quote updates', () => {
+    const draft = quoteToDraft(snapshot)
+    draft.lines[0]!.days = 3
+    draft.lines.push({
+      ...draft.lines[0]!,
+      id: 'after-hours-line',
+      bookingLineId: undefined,
+      clientUuid: 'after-hours-uuid',
+      name: 'After-hours handover',
+      serviceBasis: 'Flat',
+      days: 4,
+      ratePaisa: rupees(1500),
+      discountPct: 10,
+    })
+    const payload = quoteUpdatePayload(draft, snapshot, rupees(750))
+    expect(payload.lines[0]).toMatchObject({ days: 1, service_basis: 'Flat', discount_amount: 45 })
+    expect(payload.lines[1]).toMatchObject({
+      id: null,
+      description: 'After-hours handover',
+      days: 1,
+      rate: 1500,
+      discount_amount: 150,
+      service_basis: 'Flat',
+    })
+  })
+
   it('saves changed service terms and links newly selected crew to the roster', () => {
     const draft = quoteToDraft(snapshot)
     draft.lines[0]!.lineNote = 'Updated setup'

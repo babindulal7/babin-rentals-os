@@ -1,56 +1,58 @@
 # Progress Log
 
-## 2026-11-17 — T3-20: Who owes receivables view + client statement PDF (Mac Antigravity)
+## 2026-11-17 — T2-20: Consumables at Pack and Handover (Mac Antigravity)
 
 **Did**
-- Implemented **T3-20 · Who owes receivables view + shareable statement** (`mac/T3-20-who-owes`):
-  - Created `src/lib/queries/whoOwes.ts`:
-    - `buildWhoOwesRows`: aggregates unpaid balances by client, oldest first, days since completion / due date (labeled explicitly as due date), computes exact paisa totals matching Finance receivables.
-    - `fetchWhoOwes`: queries open invoices and client metadata with Law 6 money blindness guard.
-    - `fetchClientStatementData`: loads open invoices, recorded payments, and company details with Law 6 guard.
-  - Implemented `src/modules/finance/WhoOwes.tsx`:
-    - Full Who Owes screen with KPI summary (Total Outstanding, Clients Who Owe, Reminders Paused), status filter chips (All / Active / Paused), and client search.
-    - Detailed responsive tables and cards with Age explicitly labeled by due date basis (`Age (due date)`).
-    - Drill-through statement modal listing open invoices and payments recorded so far.
-    - Statement PDF export and WhatsApp share flow in two taps with native sharing or direct `wa.me` fallback without duplicate reminders.
-    - Pause / Resume reminders toggle wired with reason prompt calling `pauseClientReminders` / `resumeClientReminders` RPCs.
-  - Implemented client actions `src/actions/clients/reminders.ts` calling audited database RPCs `pause_client_payment_reminders` and `resume_client_payment_reminders` (0219) with Law 8 `client_uuid` idempotency.
-  - Implemented `generateClientStatementPdf` in `src/lib/pdf/generatePdf.ts` and `exportClientStatementPdf` in `src/lib/pdf/exportPdf.ts`.
-  - Added `'Who owes'` tab to `SPEC_TABS['/finance']` in `src/data/nav.ts`, mapped in `FINANCE_TAB_ROUTES`, added `/finance/who-owes` redirect route in `src/App.tsx`, and wired into `src/modules/finance/Finance.tsx`.
-  - Added unit test suite `src/modules/finance/__tests__/WhoOwes.test.tsx` (4/4 pass) testing exact paisa balance aggregation, valid PDF 1.4 generation, Coordinator viewing and sharing in two taps, and Law 6 money-blind role blocking.
-  - Updated `docs/plans/T3_BOOKING_MONEY.md`: marked T3-20 status as `ready — awaiting merge (mac/T3-20-who-owes)`.
+- Implemented **T2-20 · Floor adds consumables at Pack and Handover** (`mac/T2-20-floor-consumables`):
+  - Updated `src/modules/rentals/PackingWorkspace.tsx`: added "Add Consumables" button in Packing Checklist card actions (mobile and desktop), rendering `AddConsumableModal` with floor context note `Added by ${user.name || 'floor staff'} at Pack`.
+  - Updated `src/modules/rentals/HandoverWorkspace.tsx`: added "Add Consumables" button in Equipment card actions (mobile and desktop), rendering `AddConsumableModal` with floor context note `Added by ${user.name || 'floor staff'} at Handover`.
+  - Updated `src/modules/rentals/booking/AddConsumableModal.tsx`:
+    - Added `defaultNote?: string` support.
+    - Added search filtering input (`#consumable-search-input`) allowing floor staff to quickly search and filter consumable SKUs by name or asset code.
+    - Preserved quantity stepper and manual integer input.
+    - Protected Law 6 role-based money blindness: all pricing information, unit sale rates, and line totals are strictly masked and hidden from non-money floor roles (Warehouse, Technician, Driver).
+    - Preserved Law 8 idempotency via `clientUuid` passed to `addConsumableLine`.
+  - Added test suite `src/modules/rentals/__tests__/FloorConsumables.test.tsx` (6/6 tests pass):
+    - PackingWorkspace renders "Add Consumables" button.
+    - HandoverWorkspace renders "Add Consumables" button.
+    - AddConsumableModal strictly hides all pricing from Warehouse role (Law 6 money blindness).
+    - AddConsumableModal reveals pricing to Owner / money roles.
+    - Submitting modal invokes `addConsumableLine` with correct parameters, quantity, and floor note.
+    - Search input correctly filters consumable items.
+  - Updated `docs/plans/T2_FLOOR.md`: marked T2-20 status as `ready — awaiting merge (mac/T2-20-floor-consumables)`.
 
 **Ruled**
-- Client balances aggregate directly from open invoices, preserving financial integrity to the paisa across partial payments and reversals.
-- Law 6 money blindness is strictly enforced: non-money floor roles (Warehouse, Technician, Driver) and external Client portal roles cannot access or view client balances via route, payload, or queries.
-- Payment reminders pause / resume persistence is audited via PostgreSQL security-definer RPCs `pause_client_payment_reminders` and `resume_client_payment_reminders` with mandatory reasons and idempotency keys (0219).
+- Consumable additions on the floor are priced via server-side RPC `add_consumable_line` (T3-30); floor roles never see or write financial amounts (Law 6).
+- Stock is deducted strictly at Handover, never at Pack (enforced in database custody rules).
+- Retries with the same `client_uuid` remain idempotent (Law 8).
 
 **Verified**
-- `npm test src/modules/finance/__tests__/WhoOwes.test.tsx src/data/nav.test.ts src/modules/finance/__tests__/ExpensesRoute.test.ts`: all pass.
+- `npm test src/modules/rentals/__tests__/FloorConsumables.test.tsx`: 6/6 tests pass.
 - `npm run typecheck`: clean, 0 errors.
 - `npm run lint`: clean, 0 warnings.
 - `npm run check:pglite`: 237/237 migrations applied cleanly, 0 failed, 203 definers pinned.
 - `npm run check:lifecycle`: 76/76 lifecycle steps pass.
-- `npm run check:security`: 18 Phase 0, 14 Reset branch, operations grants, and glossary regressions pass.
+- `npm run check:security`: all 18 Phase 0, 14 Reset branch, operations grants, and glossary regressions pass.
 - `npm run build`: built production bundle cleanly.
 - `npm run gates`: Full 17 gates PASS green.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 106 / 107 (99%) | +0 |
+| Backend | actions implemented / total | 106 / 106 (100%) | +0 |
 | Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
 | DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
 | Permissions | capabilities mapped / declared | 85 / 85 (100%) | +0 |
 | Lifecycle | steps green / total | 76 / 76 (100%) | +2 |
 | Overall | structural mean of five | ≈ 97% | — |
-Migrations 237 files · check:pglite 237/237 applied, 0 failed (recorded 2026-11-17T07:19:42.022Z). Suite: PASS — 7271/7271 passed, 0 failed (recorded 2026-11-17T07:21:50.940Z); source fingerprint matches.
-Coverage suite: PASS — 7271/7271 passed, 0 failed (recorded 2026-11-17T07:21:50.940Z); source fingerprint matches.
-Gates read from .lifecycle-result.json, written 2026-11-17T07:20:07.134Z.
+Migrations 237 files · check:pglite 237/237 applied, 0 failed (recorded 2026-11-17T07:01:23.759Z). Suite: PASS — 7273/7273 passed, 0 failed (recorded 2026-11-17T07:03:38.527Z); source fingerprint matches.
+Coverage suite: PASS — 7273/7273 passed, 0 failed (recorded 2026-11-17T07:03:38.527Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-17T07:01:48.836Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
+- MAC-03 (T3-20: Who Owes receivables view + shareable statement)
 - MAC-04 (T3-23: Monthly accountant export pack)
 - MAC-05 to MAC-07 (T3-29, T2-23, T2-24: Design first)
 - MAC-08 to MAC-10 (T3-31, T2-19, T3-18: Dependency hold / design-only)
