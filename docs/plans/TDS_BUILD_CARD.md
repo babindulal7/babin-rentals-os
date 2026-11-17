@@ -1,6 +1,6 @@
 # Build card — TDS (client deductions, supplier deductions, crew payouts)
 
-**Status:** open questions answered (R-17.5); awaiting go-ahead to build. **No code written.** Source rulings: `RULINGS-2026-11-17.md` (R-17.1 to R-17.4), closes O-5.
+**Status:** S1 and S2 built and verified locally (migration 0240, `recordClientTds.ts`, lifecycle L82); not applied to the live database (N-5). S3 to S5 and the recording screen are not built. Source rulings: `RULINGS-2026-11-17.md` (R-17.1 to R-17.4), closes O-5.
 **Migration:** none claimed yet. Claim the next free number in `docs/plans/MIGRATION_LEDGER.md` before any SQL is written.
 
 ## Goal

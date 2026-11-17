@@ -1,5 +1,58 @@
 # Progress Log
 
+## 2026-11-17 — TDS ledger and client-deducted TDS: slices S1 and S2 (Lane B)
+
+**Did**
+- **Migration `0240_tds_ledger_and_client_deduction.sql`** (claimed in the ledger first), written and verified locally:
+  - `tds_ledger`: append-only (update and delete refused for every role), RLS read for Owner, Admin, Manager, Accounts only; writes only through the two RPCs. Holds both directions so the supplier slice needs no new table.
+  - `record_client_tds`: fixed rate 1.5%, base `invoices.taxable_amount` (before VAT), one active deduction per invoice, cannot exceed what is outstanding, idempotent on `client_uuid`, audited.
+  - `reverse_client_tds`: a Reversal row with a reason of 10+ characters. Owner, Admin, Manager.
+  - `recompute_invoice_payment_state` and `invoice_paid_net` now count the client TDS credit inside `paid_amount`, so the invoice settles at gross and cash takings stay net.
+- `src/actions/finance/recordClientTds.ts`: `RECORD_CLIENT_TDS` (reuses `payment.create`) and `REVERSE_CLIENT_TDS` (reuses `payment.reverse`). Sends no rate or amount. Emits no payment event.
+- Lifecycle step `L82`; 35 unit tests in `recordClientTds.test.ts`.
+- **Not built:** the screen where staff record TDS, supplier TDS (S3), crew payout TDS (S4), the accountant report and IRD deposit tracking (S5).
+
+**Ruled**
+- R-17.1 to R-17.5 (see `RULINGS-2026-11-17.md`). Build decisions E1 to E5 are in the same file.
+
+**Verified**
+- `npm run gates` (17 steps, fail-fast): all PASS, including typecheck, lint, tests, build and coverage.
+- `check:pglite` 236/236 applied, 0 failed; `check:lifecycle` 74/74 green with L82, in the same run. Security regressions, financial integrity, server contracts and partial return all PASS.
+- Unit and screen tests: 620 files, 7208/7208 passed. The new action tests: 35/35.
+- Not verified: no screen was driven, because no screen exists yet. Nothing was applied to any Supabase project (N-5).
+
+**Session report (CLAUDE.md §15.4)**
+
+| Conflict | Sources that disagreed | Decision | Why | Changed where | Revert |
+|---|---|---|---|---|---|
+| Nepali month column | R-17.5c (Babin) vs "BS is rendered, never stored" | Store the AD date; render the Nepali month | Hard rule; the month is still shown | `0240` (`deducted_on`) | n/a |
+| Who may record TDS | `payments_insert` RLS (Admin, Manager allowed) vs `canRecordPayment` (Owner, Coordinator, Accounts) | Owner, Coordinator, Accounts | B-1 stricter wins | `0240` `record_client_tds` | widen the role list in one line |
+| Where the credit is counted | Separate outstanding term vs inside `paid_amount` | Inside `paid_amount` | One writer per column (0098); later line edits cannot undo it | `recompute_invoice_payment_state`, `invoice_paid_net` | remove the TDS term from both |
+| "Rental invoices only" | R-17.1d vs no invoice-kind column | Every booking invoice counts as rental | Every invoice belongs to a booking | `record_client_tds` | add a kind filter if a non-rental invoice type is introduced |
+
+### Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 105 / 105 (100%) | — |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 | |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | — |
+| Lifecycle | steps green / total | 74 / 74 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 236 files · check:pglite 236/236 applied, 0 failed (recorded 2026-11-17T11:35Z). Suite: PASS 7208/7208 (recorded 12:01Z). Coverage: PASS. Counted by `npm run completion`, not typed. Structural coverage only: functional, hosted, integration and device acceptance are NOT VERIFIED.
+
+### Remaining
+
+*Features to build — 4 TDS slices.* The screen to record and reverse client TDS; supplier TDS (S3); crew payout TDS and the staff 1% income-tax line on the timesheet (S4); the accountant TDS report with IRD deposit tracking (S5).
+
+*Bugs to fix — 0 counted.*
+
+*Rulings open — 1.* One deduction per invoice or one per instalment (E5). Other open items are in `PLAN.md` §4.2.
+
+*Next session starts with:* the screen for recording client TDS. It must show the system-computed figure, not compute TDS in the page, and the live database needs `0240` applied by Babin after the backup before it works there.
+
 ## 2026-11-17 — TDS on rental invoices ruled; no code changed (Lane B)
 
 **Did**
