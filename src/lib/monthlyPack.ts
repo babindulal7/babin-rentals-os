@@ -15,8 +15,8 @@
 import { supabase } from './supabase'
 import { csvCell } from './csv'
 import { createZip, type ZipFileInput } from './zip'
-import { toBs, toAd, BS_MONTHS, BS_MONTH_DAYS, type BsDate } from './bs'
-import { formatMoney, type Paisa } from './money'
+import { toBs, toAd, kathmanduCivil, BS_MONTHS, BS_MONTH_DAYS, type BsDate } from './bs'
+import { formatMoney, parseMoney, type Paisa } from './money'
 import { getSalesVatReport, type SalesInvoiceItem } from './queries/salesVatReports'
 import { getCrewTdsReport } from './queries/crewTdsReport'
 import { listPayments, paymentsInPeriod, type PaymentListRow } from './queries/finance'
@@ -145,6 +145,14 @@ export function buildCsvText(rows: Array<Array<string | number>>): string {
   return rows.map((r) => r.map(csvCell).join(',')).join('\r\n')
 }
 
+interface PaymentReversalDbRow {
+  id: string
+  reversal_no: string
+  original_payment_id: string
+  amount: number | string
+  reversed_at: string
+}
+
 interface ExpenseDbRow {
   id: string
   expense_no?: string | null
@@ -204,7 +212,11 @@ async function fetchExpensesForPeriod(
         vendorName: row.vendor_name || 'Vendor',
         categoryName: catName,
         description: row.description || '',
-        amountPaisa: Math.round(Number(row.amount || 0) * 100) as Paisa,
+        amountPaisa: (() => {
+          const amount = parseMoney(String(row.amount ?? ''))
+          if (amount === null) throw new Error('Invalid expense amount in accountant register.')
+          return amount
+        })(),
         // The expenses table has no recorded settlement method; never invent Cash.
         paymentMethod: 'Not recorded',
         status: row.status || 'Approved',
@@ -259,6 +271,55 @@ export async function generateMonthlyPack(
     }
     if (batch.length < paymentPageSize) break
     if (page === 124) throw new Error('Payment ledger exceeds verified export limit.')
+  }
+
+  // Refunds are outgoing cash. They are not positive collections.
+  const refundedPayments: PaymentListRow[] = []
+  const seenRefundIds = new Set<string>()
+  for (let page = 0; page < 125; page++) {
+    const { rows: batch } = await listPayments({
+      ...paymentFilters,
+      chips: { ...paymentFilters.chips, payment_type: ['Refund'] },
+      range: { from: page * paymentPageSize, to: (page + 1) * paymentPageSize - 1 },
+    })
+    for (const payment of batch) {
+      if (!payment.id || seenRefundIds.has(payment.id) || seenPaymentIds.has(payment.id)) {
+        throw new Error('Refund ledger overlaps or changed during pagination.')
+      }
+      seenRefundIds.add(payment.id)
+      refundedPayments.push(payment)
+    }
+    if (batch.length < paymentPageSize) break
+    if (page === 124) throw new Error('Refund ledger exceeds verified export limit.')
+  }
+
+  // Compensating reversal entries are immutable and date from reversed_at, not
+  // the original receipt's payment_date. Include cross-month corrections.
+  const fromUtc = paymentFilters.dateRange?.fromAd
+  const toUtc = paymentFilters.dateRange?.toAd
+  if (!fromUtc || !toUtc) throw new Error('No confirmed Kathmandu period bounds for reversal ledger.')
+  const reversalRows: PaymentReversalDbRow[] = []
+  const reversalIds = new Set<string>()
+  for (let page = 0; page < 125; page++) {
+    const { data, error } = await supabase
+      .from('payment_reversals')
+      .select('id, reversal_no, original_payment_id, amount, reversed_at')
+      .gte('reversed_at', fromUtc)
+      .lte('reversed_at', toUtc)
+      .order('reversed_at', { ascending: true })
+      .order('id', { ascending: true })
+      .range(page * paymentPageSize, (page + 1) * paymentPageSize - 1)
+    if (error || !Array.isArray(data)) {
+      throw new Error('Payment reversals could not be verified; accountant export refused.')
+    }
+    const batch = data as PaymentReversalDbRow[]
+    for (const row of batch) {
+      if (!row.id || reversalIds.has(row.id)) throw new Error('Reversal ledger changed during pagination.')
+      reversalIds.add(row.id)
+      reversalRows.push(row)
+    }
+    if (batch.length < paymentPageSize) break
+    if (page === 124) throw new Error('Reversal ledger exceeds verified export limit.')
   }
 
   // 4. Fetch Crew TDS Payouts
