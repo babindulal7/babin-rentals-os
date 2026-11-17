@@ -11,7 +11,7 @@
  */
 
 import { type Paisa } from '../money'
-import { toBs, BS_MONTHS, formatAdMonth } from '../bs'
+import { toBs, kathmanduCivil, BS_MONTHS, formatAdMonth } from '../bs'
 import { getCrewPayoutTdsPercent } from '../settingsStore'
 import { listCrewAssignments } from './crew'
 import type { ReportFilterOptions } from './reportSupport'
@@ -42,6 +42,9 @@ export interface CrewTdsItem {
   grossPayout: Paisa
   tdsRatePercent: number | null
   tdsAmount: Paisa | null
+  // Only true for a paid assignment whose TDS amount was saved in the ledger.
+  // A configured-rate calculation is a forecast, never evidence of withholding.
+  tdsIsRecorded?: boolean
   netPayout: Paisa | null
   payoutStatus: string
   paidAt: string | null
@@ -98,12 +101,28 @@ export async function getCrewTdsReport(
   // Filter cancelled rows (they owe nobody anything per Law 3)
   let live = allAssignments.filter((a) => !a.cancelled)
 
-  // Apply date range filters if supplied
-  if (options?.from) {
-    live = live.filter((a) => a.startDateAd >= options.from!)
-  }
-  if (options?.to) {
-    live = live.filter((a) => a.startDateAd <= options.to!)
+  // Monthly accountant packs recognise actually paid crew in the Nepal day
+  // of the recorded payout; the shoot start day is only an estimate period for
+  // unpaid work. Otherwise a July shoot paid in August would be falsely shown
+  // as July withholding. Preserve original start-date filters for UI reports.
+  if (options?.requireComplete) {
+    live = live.filter((a) => {
+      let day = a.startDateAd
+      if (a.payoutStatus === 'Paid') {
+        if (!a.paidAt) {
+          throw new Error('Paid crew assignment has no payout timestamp; accountant export refused.')
+        }
+        const date = new Date(a.paidAt)
+        if (Number.isNaN(date.getTime())) {
+          throw new Error('Invalid paid crew timestamp; accountant export refused.')
+        }
+        day = new Date(kathmanduCivil(date)).toISOString().slice(0, 10)
+      }
+      return (!options.from || day >= options.from) && (!options.to || day <= options.to)
+    })
+  } else {
+    if (options?.from) live = live.filter((a) => a.startDateAd >= options.from!)
+    if (options?.to) live = live.filter((a) => a.startDateAd <= options.to!)
   }
 
   const monthlyMap = new Map<string, {
@@ -198,6 +217,7 @@ export async function getCrewTdsReport(
       grossPayout: a.totalCostPaisa,
       tdsRatePercent: itemTdsRate,
       tdsAmount: itemTdsAmount,
+      tdsIsRecorded: a.payoutStatus === 'Paid' && a.tdsAmountPaisa != null,
       netPayout: itemNetPayout,
       payoutStatus: a.payoutStatus,
       paidAt: a.paidAt ?? null,
