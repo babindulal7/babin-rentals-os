@@ -43,6 +43,7 @@ import {
   canPerformOperations,
   canPerformOp,
   canWriteBookingDesk,
+  canWriteFloor,
   canCloseRental,
   canManageCollateral,
   canSetBookingTags,
@@ -64,6 +65,7 @@ import { AssignCrewModal } from './modals/AssignCrewModal'
 import { BookingCrewList } from './BookingCrewList'
 import { canAssignPricedCrew } from '../../lib/crewAssignment'
 import { CreateSubRentalModal } from './modals/CreateSubRentalModal'
+import { AddConsumableModal } from './booking/AddConsumableModal'
 import { RecordPaymentModal } from '../finance/modals/RecordPaymentModal'
 import { CreateInvoiceModal } from '../finance/modals/CreateInvoiceModal'
 import { CreateDocumentModal } from '../documents/CreateDocumentModal'
@@ -1215,6 +1217,7 @@ function BookingDetailView() {
    * write rather than minting a second action.
    */
   const canReleaseUnits = user ? canWriteBookingDesk(user.role) : false
+  const [showAddConsumableModal, setShowAddConsumableModal] = useState(false)
   const [releasingUnitId, setReleasingUnitId] = useState<string | null>(null)
   const [releaseError, setReleaseError] = useState<string | null>(null)
   const [confirmRelease, setConfirmRelease] = useState<{ unitRowId: string; label: string } | null>(null)
@@ -1944,6 +1947,8 @@ function BookingDetailView() {
   }, [booking, user, clientPhone, floor, canBookingMoney, hasInvoice, totals])
 
   const stage = (booking?.stage ?? 'Draft') as BookingStatus
+  const isTerminalStage = stage === 'Returned' || stage === 'Closed' || !!booking?.isCancelled
+  const canAddConsumables = !isTerminalStage && !!user && (canWriteBookingDesk(user.role) || canWriteFloor(user.role))
   const lines: FloorLine[] = floor?.lines ?? []
   const printPickList = async () => {
     if (!floor || floor.linesPresence !== 'present' || floor.lines.length === 0) return
@@ -2898,7 +2903,21 @@ function BookingDetailView() {
           )}
 
           {showSegment('Items') && (
-            <Block no="2" title="Equipment, Bundles & Services">
+            <Block
+              no="2"
+              title="Equipment, Bundles & Services"
+              action={
+                canAddConsumables ? (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowAddConsumableModal(true)}
+                    style={{ minHeight: 36, padding: '0 12px', fontSize: 'var(--t-meta, 13px)' }}
+                  >
+                    + Add Consumable
+                  </Button>
+                ) : undefined
+              }
+            >
               {/* §12 — a failed release is inline and persistent, above the
                   table whose chip refused to clear. Success is a toast. */}
               {releaseError && (
@@ -3690,6 +3709,20 @@ function BookingDetailView() {
           showSuccessToast('Sub-Rental Created', `${subR.itemName} — ${subR.vendor}`)
         }}
       />
+
+      {showAddConsumableModal && user && (
+        <AddConsumableModal
+          isOpen={showAddConsumableModal}
+          onClose={() => setShowAddConsumableModal(false)}
+          bookingId={id}
+          userId={user.id}
+          userRole={user.role}
+          onAdded={() => {
+            setFloorVersion((v) => v + 1)
+            refreshBookingData()
+          }}
+        />
+      )}
 
       <Modal
         isOpen={depositSkipOpen}

@@ -449,7 +449,7 @@ steps are offered; 4) a refund is a reversal row and "keep as credit" adds accou
 audited; 5) no double booking at any point.
 **Needs** — T3-17, T3-13; T5-10 for the inbox (until then the Today card).
 
-### T3-30 · Consumables: unit price, add at the desk, restock, low stock            status: todo · size: M · lane C · [go-live] · slips first
+### T3-30 · Consumables: unit price, add at the desk, restock, low stock            status: ready — awaiting merge (lane-c/T3-30-consumables-unit-price-add-at-the) · size: M · lane C · [go-live] · slips first
 **What** — Consumables (tracking mode `Consumable`: tape, gels, batteries) are already deducted at
 Handover (0142) and need no return (0141). Finish them (B14, B35): 1) a **sale price per unit** — the
 line is quantity × unit price, never × days (pricing pipeline); 2) the desk adds them in New Rental and
