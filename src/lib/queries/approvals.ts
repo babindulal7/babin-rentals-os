@@ -26,6 +26,7 @@ export type ApprovalType =
   | 'purchase_request'
   | 'refund'
   | 'write_off'
+  | 'extension_clash'
 
 export type ApprovalStatus = 'Pending' | 'Approved' | 'Declined'
 
@@ -335,6 +336,40 @@ export async function fetchApprovals(
         linkUrl: `/inventory/damage/${row.id}`,
       }
     })
+
+    // Fetch pending extension clashes (T3-29)
+    try {
+      const { data: clashData } = await supabase
+        .from('extension_clashes_v')
+        .select('*')
+        .eq('status', 'Pending')
+
+      if (clashData) {
+        for (const c of clashData) {
+          dbItems.push({
+            id: `clash-${c.id}`,
+            type: 'extension_clash',
+            status: 'Pending',
+            entityId: c.id,
+            entityNumber: c.booking_no ? `#${c.booking_no}` : c.booking_id.slice(0, 8),
+            title: `Extension Clash: ${c.booking_no ? `#${c.booking_no}` : c.booking_id.slice(0, 8)} (+${c.requested_days}d)`,
+            description: `${c.reason}. Clashes with ${c.conflicting_booking_no ? `#${c.conflicting_booking_no}` : 'upcoming reservation'} on ${c.conflicting_asset_tag || c.conflicting_product_name || 'equipment'}.`,
+            amountPaisa: null,
+            requiredLevel: 'Manager',
+            submittedBy: {
+              id: c.requested_by,
+              name: 'Desk Staff',
+              role: 'Coordinator',
+            },
+            submittedAtAd: c.created_at,
+            submittedAtBs: '2083-07-14',
+            linkUrl: `/rentals/${c.booking_id}`,
+          })
+        }
+      }
+    } catch {
+      // Graceful fallback
+    }
 
     return dbItems
   } catch {

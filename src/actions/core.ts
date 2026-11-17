@@ -223,6 +223,9 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     // RULING 2026-09-08 (R-28): the preventive-service plan is set by Owner/Admin/Manager.
     case 'inventory.edit_service_plan':
       return rbac.canEditServicePlan(ctx.role);
+    // T3-29 / B41: gate.extend.clash (Owner · Admin · Manager only)
+    case 'gate.extend.clash':
+      return rbac.canDecideClashingExtension(ctx.role);
     case 'inventory.stock_adjust':
       return online && rbac.canAdjustStock(ctx.role);
     /*
@@ -242,6 +245,8 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'rental.draft':
     case 'rental.cancel':
     case 'rental.extend':
+    case 'rental.extend_clash_request':
+    case 'rental.at_risk_resolve':
     // `rental.update_project` (0144) mirrors `bookings_update` (0018) — the
     // desk five. The action writes two non-money text columns only (the 0102
     // trigger guards numeric money columns), and the screens offer the control

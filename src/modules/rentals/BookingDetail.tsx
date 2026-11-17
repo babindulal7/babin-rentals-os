@@ -36,6 +36,7 @@ import { EVENT_TYPES } from '../../events/eventBus'
 import { Unavailable } from '../../components/ui/Unavailable'
 import { useAuth } from '../../lib/auth'
 import { supabase, newClientUuid } from '../../lib/supabase'
+import { checkBookingAtRisk, type AtRiskBookingItem } from '../../lib/queries/atRiskBookings'
 import { gateContext, canViewMoneyField } from '../../lib/fieldGating'
 import {
   canRecordPayment,
@@ -1074,6 +1075,19 @@ function BookingDetailView() {
   const booking = head.rows[0]
   const bookingId = booking?.id ?? null
 
+  const [atRiskItem, setAtRiskItem] = useState<AtRiskBookingItem | null>(null)
+
+  useEffect(() => {
+    if (!bookingId) return
+    let active = true
+    void checkBookingAtRisk(bookingId).then((res) => {
+      if (active) setAtRiskItem(res)
+    })
+    return () => {
+      active = false
+    }
+  }, [bookingId])
+
   interface CollateralDoc {
     id: string
     booking_id: string
@@ -2089,10 +2103,15 @@ function BookingDetailView() {
   /**
    * The booking-level refusal shared by every row in the one Operations
    * dropdown. Cancellation comes first because it is more fundamental than
-   * the booking's current stage.
+   * the booking's current stage. An At-Risk booking cannot advance to Pack (B42).
    */
   const operationsUnavailable: string | null =
-    cancelledReason ?? (stage === 'Quote' ? 'Operations open once this booking is Booked' : null)
+    cancelledReason ??
+    (stage === 'Quote'
+      ? 'Operations open once this booking is Booked'
+      : atRiskItem && stage === 'Booked'
+        ? 'Booking is At Risk and cannot reach Pack until equipment coverage is resolved (B42).'
+        : null)
 
   const isServiceOnly = lines.length > 0 && lines.every((l) => NON_PACKABLE_LINE_TYPES.has(l.lineType))
 
@@ -2493,6 +2512,12 @@ function BookingDetailView() {
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--sp-xs)' }}>
               {/* The stage is named by the stepper below ("Closed — current stage"), so no badge here. */}
               {booking.isCancelled && <Badge flag="Cancelled" />}
+              {atRiskItem && (
+                <Badge
+                  tone="danger"
+                  label={`At Risk (B42): ${atRiskItem.clashingAssetTag || atRiskItem.clashingProductName || 'Equipment conflict'}`}
+                />
+              )}
               {subRental && <SubRentedMark label="Sub-rental" />}
               {stage === 'Quote' && availabilityEvaluation && !availabilityEvaluation.isAllAvailable && (
                 <Badge tone="danger" label="Needs attention / Availability changed" />

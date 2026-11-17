@@ -1090,4 +1090,14 @@ export function getRoleHomePath(role: SystemRole): string {
   }
 }
 
+/**
+ * T3-29 / B41 / PERMISSIONS.md §6.1: gate.extend.clash.
+ * Only Owner, Admin, and Manager can decide on an extension that clashes with upcoming reservations.
+ */
+export function canDecideClashingExtension(role: SystemRole | null | undefined): boolean {
+  if (!role) return false
+  return role === 'Owner' || role === 'Admin' || role === 'Manager'
+}
+
+
 

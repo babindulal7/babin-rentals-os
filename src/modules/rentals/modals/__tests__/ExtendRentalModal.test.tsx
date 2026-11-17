@@ -5,6 +5,8 @@ import { createRoot, type Root } from 'react-dom/client'
 import { ExtendRentalModal } from '../ExtendRentalModal'
 
 const mockExtendRental = vi.fn()
+const mockRequestClashingExtension = vi.fn()
+const mockDecideClashingExtension = vi.fn()
 const mockShowSuccessToast = vi.fn()
 const mockCheckExtensionClash = vi.fn()
 
@@ -23,6 +25,14 @@ vi.mock('../../../../lib/supabase', () => ({
 
 vi.mock('../../../../actions/rentals/extendRental', () => ({
   extendRental: (...args: unknown[]) => mockExtendRental(...args),
+}))
+
+vi.mock('../../../../actions/rentals/requestClashingExtension', () => ({
+  requestClashingExtension: (...args: unknown[]) => mockRequestClashingExtension(...args),
+}))
+
+vi.mock('../../../../actions/rentals/decideClashingExtension', () => ({
+  decideClashingExtension: (...args: unknown[]) => mockDecideClashingExtension(...args),
 }))
 
 vi.mock('../../../../lib/queries/extensionClash', () => ({
@@ -89,9 +99,13 @@ describe('ExtendRentalModal (T3-17)', () => {
   beforeEach(() => {
     mockUserRole = 'Coordinator'
     mockExtendRental.mockReset()
+    mockRequestClashingExtension.mockReset()
+    mockDecideClashingExtension.mockReset()
     mockShowSuccessToast.mockReset()
     mockCheckExtensionClash.mockReset()
     mockCheckExtensionClash.mockResolvedValue({ hasClash: false, clashes: [] })
+    mockRequestClashingExtension.mockResolvedValue({ success: true, clashId: 'clash-123' })
+    mockDecideClashingExtension.mockResolvedValue({ success: true, clashId: 'clash-123', decision: 'extend_at_risk' })
     mockExtendRental.mockResolvedValue({
       ok: true,
       bookingId: 'bk-1',
@@ -244,7 +258,7 @@ describe('ExtendRentalModal (T3-17)', () => {
     )
   })
 
-  it('detects upcoming reservation clashes and prevents double booking', async () => {
+  it('detects upcoming reservation clashes and prevents direct Coordinator confirmation (T3-29)', async () => {
     mockCheckExtensionClash.mockResolvedValueOnce({
       hasClash: true,
       clashes: [
@@ -279,11 +293,127 @@ describe('ExtendRentalModal (T3-17)', () => {
     expect(container.textContent).toContain('Sony FX3 Cinema Camera')
     expect(container.textContent).toContain('BK-2002')
 
-    // Submit button must be disabled
-    const submitBtn = Array.from(container.querySelectorAll('button')).find((b) =>
+    // Confirm Extension button must not be available to Coordinator on clash
+    const confirmBtn = Array.from(container.querySelectorAll('button')).find((b) =>
       b.textContent?.includes('Confirm Extension')
     )
-    expect(submitBtn?.disabled).toBe(true)
+    expect(confirmBtn).toBeUndefined()
+
+    // Coordinator sees Send to Manager for Decision button
+    const escalateBtn = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Send to Manager for Decision')
+    )
+    expect(escalateBtn).toBeDefined()
+  })
+
+  it('allows Coordinator to escalate clash to Manager via requestClashingExtension (T3-29)', async () => {
+    mockCheckExtensionClash.mockResolvedValueOnce({
+      hasClash: true,
+      clashes: [
+        {
+          lineDescription: 'Sony FX3 Cinema Camera',
+          assetTag: 'AST-101',
+          conflictingBookingNo: 'bk-2',
+          detail: 'Sony FX3 Cinema Camera is reserved by BK-2002',
+        },
+      ],
+    })
+
+    const handleClose = vi.fn()
+    await mountModal({
+      isOpen: true,
+      onClose: handleClose,
+      bookingId: 'bk-1',
+      bookingNo: 'BK-1001',
+      client: 'Avishek Shrestha',
+      currentReturnDate: '2026-11-10T18:00:00Z',
+      lines: sampleLines,
+    })
+
+    await flush(6)
+
+    // Select reason
+    const shootChip = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Shoot extension')
+    )
+    shootChip?.click()
+    await flush()
+
+    const escalateBtn = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Send to Manager for Decision')
+    )
+    expect(escalateBtn).toBeDefined()
+    await act(async () => {
+      escalateBtn?.click()
+    })
+    await flush()
+
+    expect(mockRequestClashingExtension).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bookingId: 'bk-1',
+        days: 1,
+        conflictingBookingId: 'bk-2',
+      }),
+      expect.anything(),
+    )
+    expect(container.textContent).toContain('Escalated to Manager for Decision')
+
+    const doneBtn = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Done')
+    )
+    expect(doneBtn).toBeDefined()
+    await act(async () => {
+      doneBtn?.click()
+    })
+    await flush()
+    expect(handleClose).toHaveBeenCalled()
+  })
+
+  it('presents Manager with 3 audited clash decision actions (T3-29)', async () => {
+    mockUserRole = 'Manager'
+    mockCheckExtensionClash.mockResolvedValueOnce({
+      hasClash: true,
+      clashes: [
+        {
+          reservationId: 'res-99',
+          bookingId: 'bk-2',
+          bookingNo: 'BK-2002',
+          clientName: 'Other Studio',
+          equipmentId: 'prod-1',
+          itemName: 'Sony FX3 Cinema Camera',
+          reservedFrom: '2026-11-11T09:00:00Z',
+          reservedTo: '2026-11-12T18:00:00Z',
+          detail: 'Sony FX3 Cinema Camera is reserved by BK-2002',
+        },
+      ],
+    })
+
+    await mountModal({
+      isOpen: true,
+      onClose: vi.fn(),
+      bookingId: 'bk-1',
+      bookingNo: 'BK-1001',
+      client: 'Avishek Shrestha',
+      currentReturnDate: '2026-11-10T18:00:00Z',
+      lines: sampleLines,
+    })
+
+    await flush(6)
+
+    // Manager should see the 3 decision buttons
+    const refuseBtn = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Refuse Extension')
+    )
+    const reassignBtn = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Extend & Reassign Next')
+    )
+    const atRiskBtn = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Extend & Flag Next At-Risk')
+    )
+
+    expect(refuseBtn).toBeDefined()
+    expect(reassignBtn).toBeDefined()
+    expect(atRiskBtn).toBeDefined()
   })
 
   it('enforces Law 6 money blindness for floor roles (Warehouse)', async () => {

@@ -5,8 +5,10 @@ import { Button } from '../../../components/ui/Button'
 import Icon from '../../../components/ui/Icon'
 import { rupees, formatMoney, type Paisa } from '../../../lib/money'
 import { extendRental } from '../../../actions/rentals/extendRental'
+import { requestClashingExtension } from '../../../actions/rentals/requestClashingExtension'
+import { decideClashingExtension } from '../../../actions/rentals/decideClashingExtension'
 import { useAuth } from '../../../lib/auth'
-import { canViewMoney } from '../../../lib/rbac'
+import { canViewMoney, canDecideClashingExtension } from '../../../lib/rbac'
 import { checkExtensionClash, type ExtensionClashDetail } from '../../../lib/queries/extensionClash'
 import { supabase } from '../../../lib/supabase'
 
@@ -58,6 +60,7 @@ export function ExtendRentalModal({
   const { user } = useAuth()
   const userRole = user?.role
   const canSeeMoney = userRole ? canViewMoney(userRole) : false
+  const isManagerOrAbove = userRole ? canDecideClashingExtension(userRole) : false
   const radioGroupId = useId()
 
   // 1. Day selection: +1 day default (1-tap budget), +2 days, or custom
@@ -96,6 +99,7 @@ export function ExtendRentalModal({
   const [isCheckingClash, setIsCheckingClash] = useState(false)
   const [clashes, setClashes] = useState<ExtensionClashDetail[]>([])
   const [clashError, setClashError] = useState<string | null>(null)
+  const [escalated, setEscalated] = useState(false)
 
   // 7. Form submission state
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -280,6 +284,95 @@ export function ExtendRentalModal({
     }
   }
 
+  // T3-29 / B41: Coordinator escalates clash to Manager
+  const handleEscalateToManager = async () => {
+    if (!reason.trim() || reason.trim().length < 10) {
+      setError('Please state an extension reason of at least 10 characters before escalating.')
+      return
+    }
+    if (!user) {
+      setError('You are not signed in. Please sign in.')
+      return
+    }
+
+    setIsSubmitting(true)
+    setError(null)
+    try {
+      const firstClash = clashes[0]
+      await requestClashingExtension(
+        {
+          bookingId,
+          days,
+          pricingOption,
+          reason: reason.trim(),
+          conflictingBookingId: firstClash?.conflictingBookingNo ?? null,
+          conflictingAssetId: firstClash?.assetTag ?? null,
+        },
+        { userId: user.id, role: user.role },
+      )
+      setEscalated(true)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to escalate to Manager')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // T3-29 / B41: Manager decides clashing extension
+  const handleManagerDecision = async (decision: 'extend_at_risk' | 'extend_alternative' | 'refuse') => {
+    if (!reason.trim() || reason.trim().length < 10) {
+      setError('Please state a decision reason of at least 10 characters.')
+      return
+    }
+    if (!user) {
+      setError('You are not signed in. Please sign in.')
+      return
+    }
+
+    setIsSubmitting(true)
+    setError(null)
+    try {
+      const firstClash = clashes[0]
+      // 1. Create or ensure clash row exists
+      const reqRes = await requestClashingExtension(
+        {
+          bookingId,
+          days,
+          pricingOption,
+          reason: reason.trim(),
+          conflictingBookingId: firstClash?.conflictingBookingNo ?? null,
+          conflictingAssetId: firstClash?.assetTag ?? null,
+        },
+        { userId: user.id, role: user.role },
+      )
+
+      // 2. Decide
+      await decideClashingExtension(
+        {
+          clashId: reqRes.clashId,
+          decision,
+          decisionReason: reason.trim(),
+        },
+        { userId: user.id, role: user.role },
+      )
+
+      if (decision !== 'refuse') {
+        onSuccess?.({
+          days,
+          extraAmountPaisa: rupees(extraAmount),
+          newReturnDate: newReturnDateStr ?? '',
+          reason: reason.trim(),
+          pricingOption,
+        })
+      }
+      onClose()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to record Manager decision')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <Modal
       isOpen={isOpen}
@@ -304,19 +397,71 @@ export function ExtendRentalModal({
       }
       size="md"
       footer={
-        <>
-          <Button variant="secondary" onClick={onClose} disabled={isSubmitting} style={{ minHeight: 44 }}>
-            Cancel
+        escalated ? (
+          <Button variant="primary" onClick={onClose} style={{ minHeight: 44 }}>
+            Done
           </Button>
-          <Button
-            variant="primary"
-            onClick={() => handleSubmit()}
-            disabled={isSubmitting || isCheckingClash || Boolean(clashError) || (clashes ?? []).length > 0}
-            style={{ minHeight: 44, fontWeight: 700 }}
-          >
-            {isSubmitting ? 'Extending...' : `Confirm Extension (+${days} day${days === 1 ? '' : 's'})`}
-          </Button>
-        </>
+        ) : (clashes ?? []).length > 0 && !isCheckingClash && !clashError ? (
+          isManagerOrAbove ? (
+            <div style={{ display: 'flex', gap: 'var(--sp-sm)', flexWrap: 'wrap', width: '100%', justifyContent: 'flex-end' }}>
+              <Button variant="secondary" onClick={onClose} disabled={isSubmitting} style={{ minHeight: 44 }}>
+                Cancel
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleManagerDecision('refuse')}
+                disabled={isSubmitting}
+                style={{ minHeight: 44, color: 'var(--danger)' }}
+              >
+                Refuse Extension
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => handleManagerDecision('extend_alternative')}
+                disabled={isSubmitting}
+                style={{ minHeight: 44 }}
+              >
+                Extend &amp; Reassign Next
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => handleManagerDecision('extend_at_risk')}
+                disabled={isSubmitting}
+                style={{ minHeight: 44, fontWeight: 700 }}
+              >
+                Extend &amp; Flag Next At-Risk
+              </Button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 'var(--sp-sm)', width: '100%', justifyContent: 'flex-end' }}>
+              <Button variant="secondary" onClick={onClose} disabled={isSubmitting} style={{ minHeight: 44 }}>
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleEscalateToManager}
+                disabled={isSubmitting}
+                style={{ minHeight: 44, fontWeight: 700 }}
+              >
+                {isSubmitting ? 'Escalating...' : 'Send to Manager for Decision'}
+              </Button>
+            </div>
+          )
+        ) : (
+          <>
+            <Button variant="secondary" onClick={onClose} disabled={isSubmitting} style={{ minHeight: 44 }}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => handleSubmit()}
+              disabled={isSubmitting || isCheckingClash || Boolean(clashError) || (clashes ?? []).length > 0}
+              style={{ minHeight: 44, fontWeight: 700 }}
+            >
+              {isSubmitting ? 'Extending...' : `Confirm Extension (+${days} day${days === 1 ? '' : 's'})`}
+            </Button>
+          </>
+        )
       }
     >
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
@@ -486,21 +631,34 @@ export function ExtendRentalModal({
             style={{
               padding: '12px 14px',
               borderRadius: 'var(--r-btn)',
-              background: 'var(--st-danger-bg, rgba(220, 38, 38, 0.08))',
-              border: '1px solid var(--danger, #dc2626)',
-              color: 'var(--st-danger-fg, #b91c1c)',
+              background: escalated ? 'var(--st-success-bg, rgba(22, 163, 74, 0.08))' : 'var(--st-danger-bg, rgba(220, 38, 38, 0.08))',
+              border: escalated ? '1px solid var(--success, #16a34a)' : '1px solid var(--danger, #dc2626)',
+              color: escalated ? 'var(--st-success-fg, #15803d)' : 'var(--st-danger-fg, #b91c1c)',
               fontSize: 'var(--t-meta)',
             }}
           >
             <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-              <Icon name="alert_triangle" size={16} />
-              Reservation Clash Detected
+              <Icon name={escalated ? 'check' : 'alert_triangle'} size={16} />
+              {escalated ? 'Escalated to Manager for Decision' : 'Reservation Clash Detected (B41)'}
             </div>
-            {clashes.map((c, idx) => (
-              <div key={idx} style={{ marginTop: 2 }}>
-                • {c.detail}
+            {escalated ? (
+              <div>
+                This clash has been submitted to Manager review in the Approvals inbox. The next booking will remain protected until a decision is recorded.
               </div>
-            ))}
+            ) : (
+              <>
+                {clashes.map((c, idx) => (
+                  <div key={idx} style={{ marginTop: 2 }}>
+                    • {c.detail}
+                  </div>
+                ))}
+                <div style={{ marginTop: 8, fontSize: 'var(--t-fine, 12px)', color: 'var(--text)' }}>
+                  {isManagerOrAbove
+                    ? 'As a Manager, choose one of the audited resolution actions below: extend & flag next booking At-Risk (B42), reassign to an alternative/sub-rent (T3-13), or refuse the extension.'
+                    : 'Desk staff cannot override reservation clashes directly. Tap "Send to Manager for Decision" to escalate for audited review.'}
+                </div>
+              </>
+            )}
           </div>
         ) : (
           <div style={{ fontSize: 'var(--t-meta)', color: 'var(--success, #16a34a)', display: 'flex', alignItems: 'center', gap: 6 }}>

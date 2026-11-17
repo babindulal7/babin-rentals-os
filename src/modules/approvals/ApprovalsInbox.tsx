@@ -228,6 +228,7 @@ export function ApprovalsInbox() {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {[
             { id: 'all', label: 'All Items' },
+            { id: 'extension_clash', label: 'Extension Clashes' },
             { id: 'damage_charge', label: 'Damage Charges' },
             { id: 'late_fee_waiver', label: 'Waivers' },
             { id: 'commercial_override', label: 'Overrides' },

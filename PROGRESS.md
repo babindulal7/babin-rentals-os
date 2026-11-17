@@ -1,5 +1,45 @@
 # Progress Log
 
+## 2026-11-18 — T3-29: Extension clash: the Manager decides (Mac Antigravity)
+
+**Did**
+- Implemented **T3-29 · Extension clash: the Manager decides** (`mac/T3-29-clashing-extensions`):
+  - Created migration `supabase/migrations/0241_extension_clashes_and_at_risk_bookings.sql`:
+    - Created tables `public.extension_clashes` and `public.at_risk_bookings`.
+    - Created views `public.extension_clashes_v` and `public.at_risk_bookings_v` (anon read revoked, authenticated granted).
+    - Created RPCs `request_clashing_extension`, `decide_clashing_extension`, and `resolve_at_risk_booking` (all SECURITY DEFINER with pinned `search_path = public, pg_temp` and anon execute revoked).
+    - Updated `apply_booking_stage_transition()`: enforces gate `gate.pack.at_risk` rejecting advance to `Packed` if an active `at_risk_bookings` record exists.
+    - Updated `docs/plans/MIGRATION_LEDGER.md` with row `0241`.
+  - Added RBAC gate in `src/lib/rbac.ts`: `canDecideClashingExtension` strictly for Owner, Admin, Manager (`gate.extend.clash`).
+  - Mapped capabilities in `src/actions/core.ts`: `gate.extend.clash`, `rental.extend_clash_request`, `rental.at_risk_resolve`.
+  - Implemented client actions:
+    - `src/actions/rentals/requestClashingExtension.ts`
+    - `src/actions/rentals/decideClashingExtension.ts`
+    - `src/actions/rentals/resolveAtRiskBooking.ts`
+  - Implemented queries and UI:
+    - `src/lib/queries/atRiskBookings.ts`: `fetchActiveAtRiskBookings`, `checkBookingAtRisk`.
+    - `src/lib/queries/approvals.ts` and `src/modules/approvals/ApprovalsInbox.tsx`: added `'extension_clash'` approval type and view integration.
+    - `src/modules/rentals/modals/ExtendRentalModal.tsx`: on clash, non-manager roles see "Send to Manager for Decision" (B41); managers see the 3 audited decision actions (`extend_at_risk`, `extend_alternative`, `refuse`).
+    - `src/modules/rentals/BookingDetail.tsx`: shows At-Risk alert and locks stage advance to `Packed` while active (`gate.pack.at_risk`).
+  - Added test suites:
+    - `src/lib/__tests__/extensionClashes.test.ts` (14/14 tests pass).
+    - `src/modules/rentals/modals/__tests__/ExtendRentalModal.test.tsx` (7/7 tests pass).
+  - Updated plan `docs/plans/T3_BOOKING_MONEY.md`: marked T3-29 as `ready — awaiting merge (mac/T3-29-clashing-extensions)`.
+  - Authored design doc `docs/verification/T3-29_DESIGN.md` and verification doc `docs/verification/T3-29_VERIFICATION.md`.
+
+**Ruled**
+- Desk Coordinators cannot override or double-book units; clashing extensions must be escalated to a Manager (B41).
+- Only Owner, Admin, and Manager hold `gate.extend.clash` authority.
+- An At-Risk booking cannot advance to `Packed` until covered or reconciled (`gate.pack.at_risk`).
+- Law 6 money blindness preserved: floor roles cannot view financial totals or extension surcharge calculations.
+
+**Verified**
+- `npm run check:pglite`: 238/238 migrations applied cleanly, 0 failures, 44 views checked (0 anon leak), 206 definer search paths pinned.
+- `npm run typecheck`: clean, 0 errors.
+- `npm run lint`: clean, 0 errors, 0 warnings.
+- `npm test -- src/lib/__tests__/extensionClashes.test.ts src/modules/rentals/modals/__tests__/ExtendRentalModal.test.tsx`: 21/21 tests pass.
+- `CI=true VITE_DATA_SOURCE=mock npm run build`: built production bundle cleanly in 5.57s.
+
 ## 2026-11-17 — T2-20: Consumables at Pack and Handover (Mac Antigravity)
 
 **Did**
