@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Icon from '../../components/ui/Icon'
 import { Button, Card } from '../../components/ui/Page'
 import { PageBody } from '../../components/ui/PageBody'
@@ -68,6 +68,8 @@ export default function WhoOwes({ embedded: _embedded }: WhoOwesProps) {
   const [statementLoading, setStatementLoading] = useState(false)
   const [statementError, setStatementError] = useState<string | null>(null)
   const [sharing, setSharing] = useState(false)
+  // Reject responses for a closed modal or a previously selected client.
+  const statementRequestId = useRef(0)
 
   // Pause/Resume state
   const [pausePromptOpen, setPausePromptOpen] = useState(false)
@@ -98,7 +100,9 @@ export default function WhoOwes({ embedded: _embedded }: WhoOwesProps) {
 
   const openStatement = useCallback(
     async (row: WhoOwesRow) => {
+      const requestId = ++statementRequestId.current
       setSelected(row)
+      setStatement(null)
       setPausePromptOpen(false)
       setPauseReason('')
       setPauseError(null)
@@ -106,12 +110,14 @@ export default function WhoOwes({ embedded: _embedded }: WhoOwesProps) {
       setStatementLoading(true)
       try {
         const res = await fetchClientStatementData(row.clientId, money)
-        setStatement(res)
+        if (statementRequestId.current === requestId) setStatement(res)
       } catch (e) {
-        setStatementError(e instanceof Error ? e.message : 'Could not load client statement.')
-        setStatement(null)
+        if (statementRequestId.current === requestId) {
+          setStatementError(e instanceof Error ? e.message : 'Could not load client statement.')
+          setStatement(null)
+        }
       } finally {
-        setStatementLoading(false)
+        if (statementRequestId.current === requestId) setStatementLoading(false)
       }
     },
     [money],
@@ -165,7 +171,7 @@ export default function WhoOwes({ embedded: _embedded }: WhoOwesProps) {
   )
 
   const handleDownloadStatement = useCallback(async () => {
-    if (!selected) return
+    if (!selected || !statement || statementLoading) return
     setSharing(true)
     setStatementError(null)
     try {
@@ -177,10 +183,10 @@ export default function WhoOwes({ embedded: _embedded }: WhoOwesProps) {
     } finally {
       setSharing(false)
     }
-  }, [buildPdfPayload, selected, statement, showSuccessToast])
+  }, [buildPdfPayload, selected, statement, statementLoading, showSuccessToast])
 
   const handleShareWhatsApp = useCallback(async () => {
-    if (!selected) return
+    if (!selected || !statement || statementLoading) return
     setSharing(true)
     setStatementError(null)
     try {
@@ -209,9 +215,10 @@ export default function WhoOwes({ embedded: _embedded }: WhoOwesProps) {
       } else if (typeof window !== 'undefined') {
         const phoneDigits = normalizePhoneForWhatsApp(selected.clientPhone)
         const base = phoneDigits ? `https://wa.me/${phoneDigits}` : 'https://wa.me/'
-        const url = `${base}?text=${encodeURIComponent(text)}`
+        const manualText = [...lines.slice(0, -1), 'Please attach the downloaded statement PDF manually before sending.'].join('\n')
+        const url = `${base}?text=${encodeURIComponent(manualText)}`
         window.open(url, '_blank', 'noopener,noreferrer')
-        showSuccessToast('Statement PDF ready for WhatsApp')
+        showSuccessToast('WhatsApp opened — attach the downloaded PDF manually')
       }
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') return
@@ -219,7 +226,7 @@ export default function WhoOwes({ embedded: _embedded }: WhoOwesProps) {
     } finally {
       setSharing(false)
     }
-  }, [buildPdfPayload, selected, statement, todayAd, showSuccessToast])
+  }, [buildPdfPayload, selected, statement, statementLoading, todayAd, showSuccessToast])
 
   const handlePauseConfirm = useCallback(async () => {
     if (!selected) return
@@ -455,7 +462,12 @@ export default function WhoOwes({ embedded: _embedded }: WhoOwesProps) {
 
       <Modal
         isOpen={Boolean(selected)}
-        onClose={() => setSelected(null)}
+        onClose={() => {
+          statementRequestId.current += 1
+          setSelected(null)
+          setStatement(null)
+          setStatementLoading(false)
+        }}
         title={selected ? `Statement — ${selected.clientName}` : 'Client Statement'}
         subtitle={
           selected
@@ -491,7 +503,7 @@ export default function WhoOwes({ embedded: _embedded }: WhoOwesProps) {
                 <Button
                   variant="secondary"
                   icon="download"
-                  disabled={statementLoading || sharing}
+                  disabled={statementLoading || sharing || !statement}
                   onClick={() => void handleDownloadStatement()}
                 >
                   Download PDF
@@ -499,7 +511,7 @@ export default function WhoOwes({ embedded: _embedded }: WhoOwesProps) {
                 <Button
                   variant="primary"
                   icon="message"
-                  disabled={statementLoading || sharing}
+                  disabled={statementLoading || sharing || !statement}
                   onClick={() => void handleShareWhatsApp()}
                 >
                   Share to WhatsApp
