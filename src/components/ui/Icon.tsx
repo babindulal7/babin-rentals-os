@@ -94,6 +94,7 @@ import {
   IconLoader2,
   IconWifiOff,
   IconMailX,
+  IconPrinter,
   type Icon as TablerIconType,
 } from '@tabler/icons-react'
 import { captureError } from '../../lib/monitoring'
@@ -233,6 +234,7 @@ const REGISTRY = {
   loader: IconLoader2,
   wifi_off: IconWifiOff,
   mail_x: IconMailX,
+  printer: IconPrinter,
   image: IconPhoto,
 } satisfies Record<string, TablerIconType>
 
