@@ -27,7 +27,7 @@ export const MONEY_ROLES: SystemRole[] = [
   'Admin',
   'Manager',
   'Coordinator',
-  'Accountant',
+  'Accounts',
 ]
 
 export interface SessionSecurityContext {

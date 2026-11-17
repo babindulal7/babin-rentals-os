@@ -19,7 +19,7 @@ describe('T1-17 Money Role MFA Boundary', () => {
 
   it('correctly categorises money vs money-blind roles', () => {
     expect(isMoneyRole('Owner')).toBe(true)
-    expect(isMoneyRole('Accountant')).toBe(true)
+    expect(isMoneyRole('Accounts')).toBe(true)
     expect(isMoneyRole('Warehouse')).toBe(false)
     expect(isMoneyRole('Technician')).toBe(false)
     expect(isMoneyRole('Driver')).toBe(false)
@@ -39,7 +39,7 @@ describe('T1-17 Money Role MFA Boundary', () => {
   it('allows money roles at AAL1 when MFA policy is OFF (staged rollout)', () => {
     const accountantAal1: SessionSecurityContext = {
       userId: 'user-acc',
-      role: 'Accountant',
+      role: 'Accounts',
       currentAal: 'aal1',
     }
     const res = assertMoneyAccess(accountantAal1, stagedOffPolicy)
@@ -49,7 +49,7 @@ describe('T1-17 Money Role MFA Boundary', () => {
   it('requires AAL2 when MFA policy is ARMED and no trusted device exists', () => {
     const accountantAal1: SessionSecurityContext = {
       userId: 'user-acc',
-      role: 'Accountant',
+      role: 'Accounts',
       currentAal: 'aal1',
     }
     const res = assertMoneyAccess(accountantAal1, armedPolicy)
