@@ -1,5 +1,46 @@
 # Progress Log
 
+## 2026-11-18 (b) — Open decisions answered: fees, payment buttons, document texts (Lane B)
+
+**Did**
+- New `RULINGS-2026-11-18.md` (R-18.4 to R-18.7). Updated `PLAN.md` §4.2 rows O-11, O-15, O-20, O-21 and `docs/OPEN_DECISIONS.md`.
+- New build card `docs/plans/SETTINGS_DOCUMENT_TEXTS_CARD.md` for pasting or uploading agreement terms and other texts in Settings.
+- Docs only. No code, migration or database change.
+
+**Ruled**
+- **R-18.4 (O-15):** van fee per zone is set later in Settings; empty until entered. Replaces the Rs 3,500 default.
+- **R-18.5 (O-20):** Elite fee negotiated per client. Supersedes the 2 Nov "fixed fee" wording (newer wins). Matches what is already built.
+- **R-18.6 (O-21):** payment buttons are four plus More. Not built yet; Card and Cheque become two taps.
+- **R-18.7:** agreement terms and other texts are pasted or uploaded in a new Settings area (card written, not built).
+- The `// RULING` code-site comments land with each build, since no code changed here (B-2).
+
+**Verified**
+- `npm run completion` re-run; `npm run lint:progress` passes. No code changed, so no gates were re-run.
+- Not verified: a printer setup in Settings. Babin says one exists; none was found in `src/`. O-16 stays open.
+
+### Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 105 / 105 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 | |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | 74 / 74 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Counted by `npm run completion`, not typed. Receipts are from 17 Nov (check:pglite 236/236, lifecycle 74/74, suite 7243/7243); current source NOT VERIFIED by the counter for the suite. Structural coverage only.
+
+### Remaining
+
+*Features to build — 5.* Three TDS slices (S3 supplier, S4 crew and staff line, S5 report); payment buttons four plus More (O-21); Settings document texts (3 slices in the new card).
+
+*Bugs to fix — 0 counted.*
+
+*Rulings open — Babin only: 2.* O-9 membership plan table; O-16 printer (where is it). *Accountant first: 4.* O-6, O-7, O-14, O-17. UX defaults O-23 to O-27 stand.
+
+*Next session starts with:* supplier TDS (S3) by Gemini from `docs/plans/TDS_GEMINI_HANDOFF.md`.
+
 ## 2026-11-18 — One client TDS deduction per invoice ruled (Lane B)
 
 **Did**

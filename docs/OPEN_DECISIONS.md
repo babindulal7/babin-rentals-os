@@ -1,5 +1,14 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 18 November 2026: fees, payment buttons, document texts — answered (R-18.4 to R-18.7)
+
+Babin answered in chat. Full wording: [`RULINGS-2026-11-18.md`](../RULINGS-2026-11-18.md). TDS answers the same day (R-18.1 to R-18.3) are in `RULINGS-2026-11-17.md`.
+- **O-15:** van fee per zone is **set later in Settings** (empty until entered).
+- **O-20:** Elite fee is **negotiated per client**; supersedes the 2 Nov "fixed fee" wording.
+- **O-21:** payment buttons are **four plus More**.
+- **O-11:** agreement terms and other texts will be **pasted or uploaded in Settings** (new card; its open questions are listed in the card).
+- **O-16:** Babin says a printer is already in Settings; none found in `src/`. Still open until he shows where.
+
 ## 17 November 2026: TDS deducted by clients from rental invoices — answered (R-17.1)
 
 Babin answered in chat. Full wording and implementation notes: [`RULINGS-2026-11-17.md`](../RULINGS-2026-11-17.md).
