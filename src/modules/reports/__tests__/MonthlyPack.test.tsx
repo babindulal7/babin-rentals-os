@@ -71,6 +71,8 @@ vi.mock('../../../lib/queries/salesVatReports', () => ({
           issueDate: '2026-07-20',
           dueDate: '2026-07-30',
           subtotal: rupees(30000),
+          taxableAmount: rupees(30000),
+          discountAmount: 0 as Paisa,
           taxAmount: rupees(3900),
           grandTotal: rupees(33900),
           paidAmount: rupees(33900),
@@ -85,6 +87,8 @@ vi.mock('../../../lib/queries/salesVatReports', () => ({
           issueDate: '2026-07-25',
           dueDate: '2026-08-05',
           subtotal: rupees(20000),
+          taxableAmount: rupees(20000),
+          discountAmount: 0 as Paisa,
           taxAmount: rupees(2600),
           grandTotal: rupees(22600),
           paidAmount: 0 as Paisa,
@@ -192,13 +196,13 @@ describe('MonthlyPack generator & verification (T3-23)', () => {
       calendar: 'BS',
       year: 2083,
       month: 4,
-      includeInvoicePdfs: true,
+      includeInvoicePdfs: false,
     })
 
     expect(pack.counts.invoices).toBe(2)
     expect(pack.counts.payments).toBe(1)
     expect(pack.counts.tdsPayouts).toBe(1)
-    expect(pack.counts.invoicePdfs).toBe(2)
+    expect(pack.counts.invoicePdfs).toBe(0)
     expect(pack.fileSizeBytes).toBeGreaterThan(1000)
 
     // Write to a temporary file and run system unzip -t to verify ZIP archive structure
@@ -212,8 +216,8 @@ describe('MonthlyPack generator & verification (T3-23)', () => {
       expect(res).toContain('payments_received_bs_2083_04.csv')
       expect(res).toContain('tds_withheld_bs_2083_04.csv')
       expect(res).toContain('summary.txt')
-      expect(res).toContain('invoices/INV-2083-001.pdf')
-      expect(res).toContain('invoices/INV-2083-002.pdf')
+      expect(res).not.toContain('invoices/INV-2083-001.pdf')
+      expect(res).not.toContain('invoices/INV-2083-002.pdf')
     } finally {
       if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath)
     }
@@ -225,6 +229,12 @@ describe('MonthlyPack generator & verification (T3-23)', () => {
     expect(pack.summaryText).toContain('Gross Invoiced Turnover:')
     expect(pack.summaryText).toContain('WITHHOLDING TAX (CREW TDS)')
     expect(pack.summaryText).toContain('STATUTORY TAX POSITION (FILING RECONCILIATION)')
+  })
+
+  it('refuses tax invoice copies without verified issuer and invoice-line data', async () => {
+    await expect(generateMonthlyPack({
+      calendar: 'BS', year: 2083, month: 4, includeInvoicePdfs: true,
+    })).rejects.toThrow('verified issuer data and persisted invoice lines')
   })
 
   it('evaluates role access predicate canAccountantExport strictly for financial roles only', () => {
