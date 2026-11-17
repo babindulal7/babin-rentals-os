@@ -412,5 +412,24 @@ describe('T2-20 Floor adds consumables at Pack and Handover', () => {
 
     expect(select.options.length).toBe(1)
     expect(select.options[0]?.text).toContain('AA Lithium Battery')
+
+    // Searching for a nonexistent item must clear the previous selected ID.
+    // A stale hidden product must never be billed after a no-match search.
+    await act(async () => {
+      setInputValue(searchInput, 'not-a-real-consumable')
+    })
+    expect(select.value).toBe('')
+    expect(select.options[0]?.text).toContain('No matching consumables found')
+    const submit = Array.from(document.body.querySelectorAll('button'))
+      .find((b) => b.textContent?.trim() === 'Add Consumable') as HTMLButtonElement
+    expect(submit).toBeTruthy()
+    expect(submit.disabled).toBe(true)
+
+    // Re-entering a matching search picks only a visible product.
+    await act(async () => {
+      setInputValue(searchInput, 'gaffer')
+    })
+    expect(select.value).toBe('p-gaffer-1')
+    expect(submit.disabled).toBe(false)
   })
 })
