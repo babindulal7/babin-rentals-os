@@ -9,6 +9,8 @@ import {
   receivedPayments,
   type InvoiceListRow,
   type PaymentListRow,
+  type ListInvoicesOptions,
+  type ListPaymentsOptions,
 } from './finance'
 import { fetchInvoiceCompany } from './invoiceCompany'
 import type { InvoicePdfCompany } from '../pdf/generatePdf'
@@ -42,6 +44,38 @@ export interface ClientStatementData {
 }
 
 const MS_PER_DAY = 86_400_000
+
+// Financial totals must not silently stop at PostgREST's first result page.
+// If an unusually large ledger exceeds the bounded page scan, fail the whole
+// report rather than present an understated amount or incomplete statement.
+const FINANCE_PAGE_SIZE = 400
+const FINANCE_MAX_PAGES = 250
+
+async function allInvoices(filters: ListInvoicesOptions): Promise<InvoiceListRow[]> {
+  const rows: InvoiceListRow[] = []
+  for (let page = 0; page < FINANCE_MAX_PAGES; page++) {
+    const { rows: batch } = await listInvoices({
+      ...filters,
+      range: { from: page * FINANCE_PAGE_SIZE, to: (page + 1) * FINANCE_PAGE_SIZE - 1 },
+    })
+    rows.push(...batch)
+    if (batch.length < FINANCE_PAGE_SIZE) return rows
+  }
+  throw new Error('Receivables invoice ledger exceeds verification limit; export refused.')
+}
+
+async function allPayments(filters: ListPaymentsOptions): Promise<PaymentListRow[]> {
+  const rows: PaymentListRow[] = []
+  for (let page = 0; page < FINANCE_MAX_PAGES; page++) {
+    const { rows: batch } = await listPayments({
+      ...filters,
+      range: { from: page * FINANCE_PAGE_SIZE, to: (page + 1) * FINANCE_PAGE_SIZE - 1 },
+    })
+    rows.push(...batch)
+    if (batch.length < FINANCE_PAGE_SIZE) return rows
+  }
+  throw new Error('Payment ledger exceeds verification limit; statement export refused.')
+}
 
 /**
  * Computes whole calendar days between two `YYYY-MM-DD` AD dates, clamped to `>= 0`.
@@ -160,10 +194,7 @@ export async function fetchWhoOwes(canViewMoney: boolean, todayAd: string): Prom
     return { rows: [], totalOutstandingPaisa: 0 as Paisa, pausedCount: 0 }
   }
 
-  const { rows: openInvoices } = await listInvoices({
-    ...outstandingInvoices(),
-    range: { from: 0, to: 499 },
-  })
+  const openInvoices = await allInvoices(outstandingInvoices())
 
   const clientIds = Array.from(new Set(openInvoices.map((i) => i.clientId).filter(Boolean)))
   const clientMeta = new Map<
@@ -238,17 +269,30 @@ export async function fetchClientStatementData(
     return { invoices: [], payments: [], company: undefined }
   }
 
-  const [invRes, payRes] = await Promise.all([
-    listInvoices({ ...outstandingInvoices(), ...invoicesForClient(clientId), range: { from: 0, to: 199 } }),
-    listPayments({ ...receivedPayments(), ...paymentsForClient(clientId), range: { from: 0, to: 199 } }),
+  const outstanding = outstandingInvoices()
+  const clientInvoices = invoicesForClient(clientId)
+  const received = receivedPayments()
+  const clientPayments = paymentsForClient(clientId)
+  const [invoices, payments] = await Promise.all([
+    allInvoices({
+      ...outstanding,
+      ...clientInvoices,
+      chips: { ...outstanding.chips, ...clientInvoices.chips },
+      presence: { ...outstanding.presence, ...clientInvoices.presence },
+    }),
+    allPayments({
+      ...received,
+      ...clientPayments,
+      chips: { ...received.chips, ...clientPayments.chips },
+    }),
   ])
 
-  const firstBookingId = invRes.rows[0]?.bookingId
+  const firstBookingId = invoices[0]?.bookingId
   const company = firstBookingId ? await fetchInvoiceCompany(firstBookingId).catch(() => undefined) : undefined
 
   return {
-    invoices: invRes.rows.filter((i) => !i.isVoid && (i.outstandingAmount as number) > 0),
-    payments: payRes.rows,
+    invoices: invoices.filter((i) => !i.isVoid && (i.outstandingAmount as number) > 0),
+    payments,
     company,
   }
 }
