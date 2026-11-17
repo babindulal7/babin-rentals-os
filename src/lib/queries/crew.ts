@@ -101,22 +101,38 @@ interface CrewMemberDbRow {
 
 export async function listCrewAssignments(_filters?: ListFilters): Promise<ListQueryResult<CrewAssignment>> {
   try {
-    const { data: bookingRows, error: bookingErr } = await supabase
+    const bookingQuery = supabase
       .from('crew_bookings_v')
       .select('id, crew_booking_no, production_id, booking_id, crew_member_id, position, day_rate, days, start_date, end_date, location, state, payout_state, tds_rate_percent, tds_amount, net_payout, payout_notes, paid_at, paid_by, cancelled_at, created_at')
       .order('start_date', { ascending: false })
 
+    // The accountant export opts into explicit, stable pages. Keep the
+    // original unpaged query for existing staff-screen consumers.
+    const { data: bookingRows, error: bookingErr } = _filters?.range
+      ? await bookingQuery.order('id', { ascending: false }).range(_filters.range.from, _filters.range.to)
+      : await bookingQuery
+
     if (bookingErr) throw new Error(bookingErr.message)
     if (!bookingRows || bookingRows.length === 0) {
       return {
-        rows: IS_MOCK ? [...CREW_DATA] : [],
-        total: IS_MOCK ? CREW_DATA.length : 0,
+        rows: IS_MOCK && !_filters?.range ? [...CREW_DATA] : [],
+        total: IS_MOCK && !_filters?.range ? CREW_DATA.length : 0,
       }
     }
 
-    const { data: memberRows, error: memberError } = await supabase
+    // A paginated booking page references at most that page's distinct
+    // members. Fetch only those IDs: no truncated unpaged roster read.
+    const memberIds = [...new Set((bookingRows as CrewBookingDbRow[])
+      .map((b) => b.crew_member_id)
+      .filter((id): id is string => typeof id === 'string' && id.length > 0))]
+    const memberQuery = supabase
       .from('crew_members_v')
       .select('id, full_name, position, phone, engagement_type, day_rate, deactivated_at')
+    const { data: memberRows, error: memberError } = _filters?.range
+      ? memberIds.length
+        ? await memberQuery.in('id', memberIds)
+        : { data: [] as CrewMemberDbRow[], error: null }
+      : await memberQuery
     if (memberError) throw new Error(memberError.message)
 
     const memberMap = new Map<string, CrewMemberDbRow>()
@@ -124,6 +140,9 @@ export async function listCrewAssignments(_filters?: ListFilters): Promise<ListQ
       for (const m of memberRows as unknown as CrewMemberDbRow[]) {
         memberMap.set(m.id, m)
       }
+    }
+    if (_filters?.range && memberIds.some((id) => !memberMap.has(id))) {
+      throw new Error('Crew member lookup incomplete; accountant export must not omit named crew.')
     }
 
     const rows: CrewAssignment[] = (bookingRows as unknown as CrewBookingDbRow[]).map((b) => {
