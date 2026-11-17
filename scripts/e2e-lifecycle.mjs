@@ -8321,6 +8321,134 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L76',
+  title: 'clashing extension without manager decision is refused (T3-29, B41)',
+  expect: 'green',
+  run: async () => {
+    const unitId = UNITS[2]
+    const productId = SERIAL_PRODUCT
+    let bookingFId
+    let bookingGId
+
+    await as('Owner', async () => {
+      const clientCode = await one("select next_document_number('client')")
+      const clientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+        values (gen_random_uuid(), '${clientCode}', 'L76 Client', '+9779800009977', 'Active', '${U.Owner}')
+        returning id`)).rows[0].id
+
+      // Booking F: 2099-12-01 10:00 to 2099-12-02 10:00
+      const bookingNoF = await one("select next_document_number('booking')")
+      bookingFId = (await q(`insert into bookings (client_uuid, booking_no, client_id, branch_id, stage, delivery_type, pickup_at, return_at, created_by, updated_by, project_name, project_type)
+        values (gen_random_uuid(), '${bookingNoF}', '${clientId}', '${BRANCH}', 'Quote', 'Client Pickup', '2099-12-01 10:00:00+05:45', '2099-12-02 10:00:00+05:45', '${U.Owner}', '${U.Owner}', 'Booking F', 'Feature Film')
+        returning id`)).rows[0].id
+
+      const lineFId = (await q(`insert into booking_lines (client_uuid, booking_id, line_type, product_id, description, qty, days, rate, created_by)
+        values (gen_random_uuid(), '${bookingFId}', 'Equipment', '${productId}', 'Clash Test Camera', 1, 1, 3500, '${U.Owner}')
+        returning id`)).rows[0].id
+
+      await q(`insert into booking_line_units (client_uuid, booking_line_id, asset_id, created_by)
+        values (gen_random_uuid(), '${lineFId}', '${unitId}', '${U.Owner}')`)
+
+      await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
+        values (gen_random_uuid(), '${bookingFId}', '${BRANCH}', 'Quote', 'Booked', '${U.Owner}', 'Owner', now(), 'Confirm Booking F')`)
+
+      // Booking G: 2099-12-02 11:00 to 2099-12-03 10:00 on the same unit
+      const bookingNoG = await one("select next_document_number('booking')")
+      bookingGId = (await q(`insert into bookings (client_uuid, booking_no, client_id, branch_id, stage, delivery_type, pickup_at, return_at, created_by, updated_by, project_name, project_type)
+        values (gen_random_uuid(), '${bookingNoG}', '${clientId}', '${BRANCH}', 'Quote', 'Client Pickup', '2099-12-02 11:00:00+05:45', '2099-12-03 10:00:00+05:45', '${U.Owner}', '${U.Owner}', 'Booking G', 'Feature Film')
+        returning id`)).rows[0].id
+
+      const lineGId = (await q(`insert into booking_lines (client_uuid, booking_id, line_type, product_id, description, qty, days, rate, created_by)
+        values (gen_random_uuid(), '${bookingGId}', 'Equipment', '${productId}', 'Clash Test Camera', 1, 1, 3500, '${U.Owner}')
+        returning id`)).rows[0].id
+
+      await q(`insert into booking_line_units (client_uuid, booking_line_id, asset_id, created_by)
+        values (gen_random_uuid(), '${lineGId}', '${unitId}', '${U.Owner}')`)
+
+      await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
+        values (gen_random_uuid(), '${bookingGId}', '${BRANCH}', 'Quote', 'Booked', '${U.Owner}', 'Owner', now(), 'Confirm Booking G')`)
+
+      // Attempt to extend Booking F by 1 day: new return is 2099-12-03 10:00, which overlaps with Booking G [12-02 11:00, 12-03 10:00)
+      let refused = false
+      try {
+        await q(`select public.extend_booking(jsonb_build_object(
+          'booking_id', '${bookingFId}',
+          'days', 1,
+          'reason', 'Client requested shoot extension for an additional day',
+          'actor_id', '${U.Owner}'
+        ))`)
+      } catch (err) {
+        if (err.message && err.message.includes('gate.extend.clash')) {
+          refused = true
+        } else {
+          throw err
+        }
+      }
+      if (!refused) throw new Error('Expected extend_booking to be refused with gate.extend.clash')
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L77',
+  title: 'decision b) marks next booking at risk, blocking Pack until resolved (T3-29, B42)',
+  expect: 'green',
+  run: async () => {
+    await as('Owner', async () => {
+      const bF = (await q(`select id from bookings where project_name = 'Booking F' limit 1`)).rows[0].id
+      const bG = (await q(`select id from bookings where project_name = 'Booking G' limit 1`)).rows[0].id
+
+      // 1. Manager records decision 'mark_at_risk'
+      await q(`select public.record_extension_clash_decision(jsonb_build_object(
+        'booking_id', '${bF}',
+        'conflicting_booking_id', '${bG}',
+        'days', 1,
+        'decision', 'mark_at_risk',
+        'reason', 'Approved shoot extension; mark following booking at risk for alternative gear'
+      ))`)
+
+      // 2. Extension now succeeds!
+      await q(`select public.extend_booking(jsonb_build_object(
+        'booking_id', '${bF}',
+        'days', 1,
+        'reason', 'Client requested shoot extension for an additional day',
+        'actor_id', '${U.Owner}'
+      ))`)
+
+      // 3. Booking G is now flagged At Risk in booking_at_risk
+      const atRiskRows = (await q(`select * from public.booking_at_risk where booking_id = '${bG}' and resolved_at is null`)).rows
+      if (atRiskRows.length === 0) throw new Error('Expected Booking G to have an active booking_at_risk row')
+      const atRiskId = atRiskRows[0].id
+
+      // 4. Booking G cannot reach Pack while At Risk
+      let packRefused = false
+      try {
+        await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
+          values (gen_random_uuid(), '${bG}', '${BRANCH}', 'Booked', 'Packed', '${U.Owner}', 'Owner', now(), 'Attempt Pack')`)
+      } catch (err) {
+        if (err.message && err.message.includes('gate.pack.at_risk')) {
+          packRefused = true
+        } else {
+          throw err
+        }
+      }
+      if (!packRefused) throw new Error('Expected transition to Packed to be refused with gate.pack.at_risk')
+
+      // 5. Resolve At Risk via similar item
+      await q(`select public.resolve_booking_at_risk(jsonb_build_object(
+        'at_risk_id', '${atRiskId}',
+        'resolution', 'similar_item',
+        'notes', 'Assigned alternative camera package for shoot'
+      ))`)
+
+      // Verify resolved
+      const resolved = (await q(`select resolved_at from public.booking_at_risk where id = '${atRiskId}'`)).rows[0].resolved_at
+      if (!resolved) throw new Error('Expected at_risk row to have resolved_at timestamp')
+    })
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break

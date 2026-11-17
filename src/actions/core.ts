@@ -334,6 +334,9 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'collateral.receive':
     case 'collateral.return':
       return rbac.canManageCollateral(ctx.role);
+    // T3-29: Resolve at-risk booking (0241) — Owner · Admin · Manager · Coordinator
+    case 'rental.resolve_at_risk':
+      return rbac.canResolveAtRisk(ctx.role);
 
     case 'rental.pickup':
     case 'rental.return':

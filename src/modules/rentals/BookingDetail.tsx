@@ -47,6 +47,7 @@ import {
   canCloseRental,
   canManageCollateral,
   canSetBookingTags,
+  canResolveAtRisk,
 } from '../../lib/rbac'
 import { BookingTagsBar } from './BookingTagsBar'
 import { IntelCard } from '../../components/ui/IntelCard'
@@ -63,6 +64,8 @@ import { ExtendRentalModal } from './modals/ExtendRentalModal'
 import { ReturnCollateralModal } from './modals/ReturnCollateralModal'
 import { AssignCrewModal } from './modals/AssignCrewModal'
 import { BookingCrewList } from './BookingCrewList'
+import { fetchBookingAtRisk, type BookingAtRiskRow } from '../../lib/queries/atRisk'
+import { ResolveAtRiskModal } from './modals/ResolveAtRiskModal'
 import { canAssignPricedCrew } from '../../lib/crewAssignment'
 import { CreateSubRentalModal } from './modals/CreateSubRentalModal'
 import { AddConsumableModal } from './booking/AddConsumableModal'
@@ -1147,6 +1150,23 @@ function BookingDetailView() {
 
   const activeCollateral = collaterals.find((c) => c.returned_at === null) ?? null
   const userCanManageCollateral = user ? canManageCollateral(user.role) : false
+  const userCanResolveAtRisk = user ? canResolveAtRisk(user.role) : false
+
+  const [atRiskRecords, setAtRiskRecords] = useState<BookingAtRiskRow[]>([])
+  const [showResolveAtRiskModal, setShowResolveAtRiskModal] = useState(false)
+
+  const fetchAtRisk = useCallback(async () => {
+    if (!bookingId) {
+      setAtRiskRecords([])
+      return
+    }
+    const rows = await fetchBookingAtRisk(bookingId)
+    setAtRiskRecords(rows)
+  }, [bookingId])
+
+  useEffect(() => {
+    void fetchAtRisk()
+  }, [fetchAtRisk])
 
   /* ── lines + units — `fetchFloorBooking`, the per-booking read ────────────
    * Not a list, so it does not go through `useList`; same cancellation rule.
@@ -2494,6 +2514,7 @@ function BookingDetailView() {
               {/* The stage is named by the stepper below ("Closed — current stage"), so no badge here. */}
               {booking.isCancelled && <Badge flag="Cancelled" />}
               {subRental && <SubRentedMark label="Sub-rental" />}
+              {atRiskRecords.length > 0 && <Badge tone="danger" label="⚠️ At Risk — Clash" />}
               {stage === 'Quote' && availabilityEvaluation && !availabilityEvaluation.isAllAvailable && (
                 <Badge tone="danger" label="Needs attention / Availability changed" />
               )}
@@ -2727,6 +2748,43 @@ function BookingDetailView() {
         >
           <Icon name="info" size={14} style={{ flexShrink: 0, marginTop: 2, color: 'var(--st-progress-fg, #a16207)' }} />
           <span>{draftOverlapNotice}</span>
+        </div>
+      )}
+
+      {atRiskRecords.length > 0 && (
+        <div
+          role="alert"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 'var(--sp-md)',
+            padding: '12px 16px',
+            borderRadius: 'var(--r-sm)',
+            border: '1px solid var(--danger)',
+            background: 'var(--st-danger-bg)',
+            fontSize: 'var(--t-meta)',
+            color: 'var(--danger-text)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)' }}>
+            <Icon name="alert_triangle" size={16} style={{ flexShrink: 0 }} />
+            <div>
+              <strong>Booking is At-Risk (Equipment Clash / Overdue Return)</strong>
+              <div style={{ fontSize: 'var(--t-caption)', color: 'var(--text2)', marginTop: 2 }}>
+                Pack stage is blocked until this clash is resolved. Choose a resolution (similar item, sub-rental, credit, or refund).
+              </div>
+            </div>
+          </div>
+          {userCanResolveAtRisk && (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => setShowResolveAtRiskModal(true)}
+            >
+              Resolve At-Risk
+            </Button>
+          )}
         </div>
       )}
 
@@ -3683,8 +3741,21 @@ function BookingDetailView() {
           showSuccessToast('Rental Extended', `${ext.days} day${ext.days === 1 ? '' : 's'} added — new return ${ext.newReturnDate}`)
           refetchHead()
           setFloorVersion((v) => v + 1)
+          void fetchAtRisk()
         }}
       />
+
+      {atRiskRecords.length > 0 && atRiskRecords[0] && (
+        <ResolveAtRiskModal
+          isOpen={showResolveAtRiskModal}
+          onClose={() => setShowResolveAtRiskModal(false)}
+          atRisk={atRiskRecords[0]}
+          onResolved={() => {
+            void fetchAtRisk()
+            refreshBookingData()
+          }}
+        />
+      )}
 
       <AssignCrewModal
         key={`${booking.id}:${user?.id}`}
