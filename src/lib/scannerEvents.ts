@@ -19,8 +19,8 @@ export function toggleScanner(): void {
   if (typeof window === 'undefined') return
   if (scannerToggleSubscribers === 0) {
     pendingToggleParity = !pendingToggleParity
-    return
   }
+  // Keep the existing DOM-event contract for other consumers and tests.
   window.dispatchEvent(new CustomEvent(SCANNER_TOGGLE_EVENT))
 }
 
@@ -45,7 +45,6 @@ export function openItemCard(code: string): void {
   if (itemCardSubscribers === 0) {
     // Last scan wins while the scanner chunk is still loading.
     pendingItemCode = code
-    return
   }
   window.dispatchEvent(new CustomEvent(ITEM_CARD_OPEN_EVENT, { detail: { code } }))
 }
