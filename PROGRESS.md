@@ -1,5 +1,45 @@
 # Progress Log
 
+## 2026-11-18 — T3-11: Late fee — acceptance only (Lane C)
+
+**Did**
+- Verified & hardened **T3-11 · Late fee — acceptance only** (`lane-c/T3-11-late-fee-acceptance-only`):
+  - Hardened `src/modules/rentals/modals/ReturnSettlementModal.tsx`:
+    - Enforced `canApproveLateFeeWaiver(user.role)` on late fee waivers, ensuring only Manager and Owner roles can authorize waivers (D6, Law 10).
+    - Blocked unauthorized roles (Coordinator, Warehouse, Technician, Driver) with descriptive error messages.
+  - Added test suite `src/modules/rentals/__tests__/LateFeeAcceptance.test.tsx` (5/5 tests pass):
+    - Three return boundaries verified:
+      - 20 min late (≤30 min grace): produces 0 late fee (`band === 'None'`, Rs 0), renders grace notification.
+      - 90 min late (<2h): produces half day fee suggestion (`band === 'Half Day'`, `feePaisa = dayRate / 2`), renders floor overage text without money figures (Law 6), provides Apply/Waive controls.
+      - 3 hours late (≥2h): produces full day fee suggestion (`band === 'Full Day'`, `feePaisa = dayRate`), provides Apply/Waive controls.
+    - Verified waiver policy: enforces reason minimum 10 characters and restricts approval to Manager/Owner.
+  - Verified `src/modules/rentals/__tests__/ReturnSettlementModal.test.tsx` (5/5 tests pass) and `src/lib/__tests__/lateFee.test.ts` (17/17 tests pass).
+  - Updated `docs/plans/T3_BOOKING_MONEY.md`: marked T3-11 as `ready — awaiting merge (lane-c/T3-11-late-fee-acceptance-only)`.
+
+**Ruled**
+- Late fees are suggested, never applied automatically (D6).
+- Floor roles view overrun duration and band consequence without monetary figures under Law 6.
+- Waivers require a written reason (≥10 chars) and Manager or Owner authorization (D6, Law 10).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 107 / 108 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 86 / 86 (100%) | +0 |
+| Lifecycle | steps green / total | 80 / 80 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 239 files · check:pglite 239/239 applied, 0 failed (recorded 2026-11-17T21:07:09.013Z). Suite: PASS — 7373/7373 passed, 0 failed (recorded 2026-11-17T21:07:01.051Z); source fingerprint matches.
+Coverage suite: Historical suite: 7341/7341 passed, 0 failed (recorded 2026-11-17T20:53:13.353Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-17T21:07:14.483Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T3-28: Rental day start as a setting (Batch 6 Card 4 · Size: L · Priority: [go-live · slips first])
+- T3-18: Change a confirmed booking (Batch 6 Card 5 · Size: L · Priority: [go-live])
+
 ## 2026-11-18 — T2-19: Signature at Return when damage is found (Lane A)
 
 **Did**
