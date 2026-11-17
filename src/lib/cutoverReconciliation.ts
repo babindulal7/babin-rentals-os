@@ -12,7 +12,7 @@
  * - Integer paisa money comparisons for quoting (20-item quote test vectors)
  */
 
-import { parseMoney, type Paisa } from './money'
+import { rupees, type Paisa } from './money'
 
 export type CutoverEntityType =
   | 'client'
@@ -366,12 +366,12 @@ export function compareThreeDayQuotes(
 ): PricingComparisonVector[] {
   return items.map((item) => {
     // OS rates are stored in integer paisa (1 NPR = 100 Paisa)
-    const osDailyPaisa = Math.round(item.dailyRateNpr * 100)
+    const osDailyPaisa = rupees(item.dailyRateNpr)
     // 3-day calculation under standard rental multiplier (e.g. 3 days base, or discount tier if applicable)
     // Standard 3 days = 3 * daily rate
-    const osTotalPaisa = osDailyPaisa * 3
+    const osTotalPaisa = (osDailyPaisa * 3) as Paisa
 
-    const booqableTotalPaisa = Math.round(item.booqableThreeDayTotalNpr * 100)
+    const booqableTotalPaisa = rupees(item.booqableThreeDayTotalNpr)
     const diffPaisa = Math.abs(osTotalPaisa - booqableTotalPaisa)
 
     // Known rounding difference tolerance (<= 1 NPR / 100 Paisa allowed by ruling)
