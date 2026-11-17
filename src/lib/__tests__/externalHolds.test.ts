@@ -74,6 +74,19 @@ describe('T9-02 External Booqable Holds Model', () => {
     expect(checkExternalHoldConflicts(candidateCompleted, existingHolds).hasConflict).toBe(false)
   })
 
+  it('refuses an availability decision when the Booqable feed is unhealthy', () => {
+    const candidate: OsReservationCandidate = {
+      productId: 'prod-fx3',
+      startDateUtc: '2026-11-28T00:15:00Z',
+      endDateUtc: '2026-11-29T00:15:00Z',
+    }
+    // Even where no known hold overlaps, an unhealthy feed cannot prove availability.
+    const result = checkExternalHoldConflicts(candidate, existingHolds, false)
+    expect(result.hasConflict).toBe(true)
+    expect(result.conflictingHolds).toEqual([])
+    expect(checkExternalHoldConflicts(candidate, existingHolds, true).hasConflict).toBe(false)
+  })
+
   it('fails closed on sync failure, preserving existing active holds', () => {
     const retained = syncExternalHolds([], existingHolds, false)
     expect(retained.length).toBe(2)
