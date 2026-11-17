@@ -5,6 +5,7 @@ const fixture = vi.hoisted(() => ({
   total: 401,
   failFrom: -1,
   duplicateAt: -1,
+  paidAt: '2026-07-20T10:00:00Z' as string | null,
   offsets: [] as number[],
 }))
 
@@ -38,7 +39,7 @@ vi.mock('../crew', () => ({
         tdsAmountPaisa: null,
         tdsRatePercent: null,
         netPayoutPaisa: null,
-        paidAt: null,
+        paidAt: fixture.paidAt,
         payoutNotes: null,
       }
     })
@@ -51,6 +52,7 @@ describe('accountant crew TDS source pagination', () => {
     fixture.total = 401
     fixture.failFrom = -1
     fixture.duplicateAt = -1
+    fixture.paidAt = '2026-07-20T10:00:00Z'
     fixture.offsets = []
   })
 
@@ -70,6 +72,30 @@ describe('accountant crew TDS source pagination', () => {
     fixture.failFrom = 400
     await expect(getCrewTdsReport({ requireComplete: true })).rejects.toThrow('Crew page read failed')
     expect(fixture.offsets).toEqual([0, 400])
+  })
+
+  it('assigns paid TDS to Nepal payout month, not the shoot start month', async () => {
+    fixture.total = 1
+    // July 31 20:00 UTC is August 1 in Kathmandu.
+    fixture.paidAt = '2026-07-31T20:00:00Z'
+    const july = await getCrewTdsReport({
+      from: '2026-07-01', to: '2026-07-31', requireComplete: true,
+    })
+    expect(july.payouts).toHaveLength(0)
+
+    const august = await getCrewTdsReport({
+      from: '2026-08-01', to: '2026-08-31', requireComplete: true,
+    })
+    expect(august.payouts).toHaveLength(1)
+    expect(august.payouts[0]?.tdsIsRecorded).toBe(false)
+  })
+
+  it('refuses paid crew without a recorded payment date', async () => {
+    fixture.total = 1
+    fixture.paidAt = null
+    await expect(getCrewTdsReport({ requireComplete: true })).rejects.toThrow(
+      'Paid crew assignment has no payout timestamp',
+    )
   })
 
   it('refuses duplicate assignments across pages', async () => {
