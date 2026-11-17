@@ -207,6 +207,24 @@ export const GATE_REGISTRY: Record<string, GateDefinition> = {
     whoMayOverride: 'Nobody',
   },
 
+  'gate.return.damage_unsigned': {
+    id: 'gate.return.damage_unsigned',
+    category: 'return',
+    title: {
+      en: 'Signature Required for Flagged Return',
+      ne: 'क्षतिग्रस्त वा हराएको सामान फिर्ता गर्न हस्ताक्षर आवश्यक छ',
+    },
+    message: {
+      en: 'A Return with flagged items requires the returning person signature or a recorded refusal (≥10 chars).',
+      ne: 'सामानमा क्षति वा हराएको फेला परेमा फिर्ता गर्ने व्यक्तिको हस्ताक्षर वा कम्तीमा १० अक्षरको अस्वीकार कारण आवश्यक छ।',
+    },
+    howToResolve: {
+      en: 'Capture returning person signature under flagged items or record refusal reason (≥10 chars).',
+      ne: 'सामान फिर्ता गर्ने व्यक्तिको हस्ताक्षर लिनुहोस् वा अस्वीकार गरिएको कारण (कम्तीमा १० अक्षर) प्रविष्ट गर्नुहोस्।',
+    },
+    whoMayOverride: 'Any staff allowed to perform Return (with recorded refusal ≥10 chars)',
+  },
+
   'gate.cancel.stage_too_late': {
     id: 'gate.cancel.stage_too_late',
     category: 'cancel',

@@ -5,6 +5,7 @@ import {
   validateFloorVerb,
   type FloorLineInput,
   type FloorVerbResult,
+  type SignatureInput,
 } from './floorVerb';
 
 /**
@@ -41,6 +42,12 @@ export type CompleteReturnInput = {
   clientUuid?: string;
   /** AD/UTC. Defaults to now. */
   occurredAt?: string;
+  /** Returning person signature (T2-19, B19). Required when damage or missing gear is found. */
+  signatures?: readonly SignatureInput[];
+  /** If the returning person refuses to sign under flagged items (T2-19, B19). */
+  signatureRefused?: boolean;
+  /** Mandatory reason when signatureRefused is true (≥10 chars). */
+  signatureRefusalReason?: string;
 };
 
 export const completeReturn = createAction<CompleteReturnInput, FloorVerbResult>({
@@ -67,6 +74,9 @@ export const completeReturn = createAction<CompleteReturnInput, FloorVerbResult>
         ...(input.notes === undefined ? {} : { notes: input.notes }),
         ...(input.clientUuid === undefined ? {} : { clientUuid: input.clientUuid }),
         ...(input.occurredAt === undefined ? {} : { occurredAt: input.occurredAt }),
+        ...(input.signatures === undefined ? {} : { signatures: input.signatures }),
+        ...(input.signatureRefused === undefined ? {} : { signatureRefused: input.signatureRefused }),
+        ...(input.signatureRefusalReason === undefined ? {} : { signatureRefusalReason: input.signatureRefusalReason }),
       },
       ctx,
     );
