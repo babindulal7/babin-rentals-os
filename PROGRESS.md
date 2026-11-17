@@ -1,5 +1,7 @@
 # Progress Log
 
+# Progress Log
+
 ## 2026-11-17 — T3-13: Fully booked → similar item or sub-rent (Lane C)
 
 **Did**
@@ -47,6 +49,60 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - Card 3 (`T3-02` — Deposits per product, entered before go-live).
 - Card 4 (`T2-22` — Time between rentals: account-wide or per product).
 - Card 5 (`T3-30` — Consumables: unit price, add at desk, restock, low stock).
+
+## 2026-11-17 — T3-16: Share documents in one tap (Lane C)
+
+**Did**
+- Implemented universal 1-to-2 tap Document Sharing Engine (`src/lib/documentShare.ts`) supporting Quote, Invoice, Receipt, Rental Agreement, and Booking Confirmation.
+- Implemented 4 core distribution channels:
+  1. WhatsApp: Native file attachment via WebShare API (`navigator.share({ files })`) on supported mobile devices (iOS/Android), or pure text compose link fallback (`wa.me/<number>?text=...`). If phone is missing or invalid according to `normalisePhone`, control is disabled with persistent inline reason `NO_PHONE_REASON` (Law 12).
+  2. Email: Dispatches transactional email through T5-03 client (`src/lib/email/client.ts`) from `no-reply@babinrentals.com`.
+  3. Print (A4): Direct browser print and PDF generation via `openPdfForPrint`.
+  4. Copy Text: Clipboard text copy with instant success toast.
+  5. Booking Confirmation (W20): One-tap send for staff, email first, WhatsApp optional.
+- Added pure template formatters in `src/lib/whatsappTemplates.ts`: `quoteDocument`, `invoiceDocument`, `receiptDocument`, and `agreementDocument`.
+- Added email render templates in `src/lib/email/templates.ts` for `booking_confirmation`, `quote_document`, `invoice_document`, `receipt_document`, and `rental_agreement`.
+- Built `DocumentShareModal` (`src/modules/rentals/modals/DocumentShareModal.tsx`) with accessible touch targets (≥ 44px).
+- Enforced Law 6 money blindness:
+  - Warehouse, Technician, Driver, and Client roles cannot view or share priced documents (Quote, Invoice, Receipt, Booking Confirmation with money totals).
+  - Unpriced operational documents (Agreement, Packing List, Return Report) can be shared by floor staff.
+- Integrated `DocumentShareModal` into `QuoteActionsMenu.tsx` (Send Quote / Share Quote), `InvoiceActionsMenu.tsx` (Share Invoice), and `RentalMoreActions.tsx` (`quote.send`, `invoice.send`).
+- Authored test suites `src/lib/__tests__/documentShare.test.ts` (11 tests) and `src/modules/rentals/modals/__tests__/DocumentShareModal.test.tsx` (6 tests).
+
+**Ruled**
+- Zero live Supabase mutations, zero remote migrations or pushes (Law N-5).
+- Money-blind roles strictly denied access to priced documents (Law 6).
+- Unusable phone numbers must render disabled controls with persistent inline notice `NO_PHONE_REASON`, never a toast (Law 12).
+- One-tap booking confirmation dispatches email first and prepares WhatsApp (W20).
+
+**Verified**
+- `npm run typecheck`: clean (0 errors across `src/`).
+- `npm run lint`: clean (0 warnings).
+- `npx vitest run src/lib/__tests__/documentShare.test.ts src/modules/rentals/modals/__tests__/DocumentShareModal.test.tsx`: 17/17 tests passed.
+- `npm run check:pglite`: 235/235 migrations applied from scratch.
+- `npm run check:lifecycle`: 73/73 steps green.
+- `npm run gates`: all 17 gates passed (7,224/7,224 tests green).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 104 / 104 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | -1 |
+| Lifecycle | steps green / total | 73 / 73 (100%) | -4 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 235 files · check:pglite 235/235 applied, 0 failed (recorded 2026-11-16T22:01:52.711Z). Suite: PASS — 7224/7224 passed, 0 failed (recorded 2026-11-16T22:03:58.297Z); source fingerprint matches.
+Coverage suite: PASS — 7224/7224 passed, 0 failed (recorded 2026-11-16T22:03:58.297Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-16T22:02:17.597Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T3-13 — Fully booked → similar item or sub-rent (lane-c/T3-13-fully-booked-to-similar-item-or)
+- T3-02 — Deposits per product, entered before go-live (lane-c/T3-02-deposits-per-product-entered-before-go)
+- T2-22 — Time between rentals: account-wide or per product (lane-a/T2-22-time-between-rentals-account-wide-or)
+- T3-30 — Consumables: unit price, add at desk, restock, low stock (lane-c/T3-30-consumables-unit-price-add-at-the)
 
 ## 2026-11-16 — Master Frontend Engineering Audit & Top 10 Remediations (Lane B)
 
