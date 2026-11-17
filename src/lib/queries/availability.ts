@@ -6,6 +6,7 @@ import {
   rankLeastUsed,
   unitStatesForRule,
   boundsForTurnaround,
+  effectiveRentalWindow,
   capacityFor,
   explainCapacityShortfall,
   windowsOverlap,
@@ -84,6 +85,8 @@ export interface AssignableLine {
   readonly trackingMode: string
   /** `products_v.total_quantity` — the ceiling 0045's trigger compares a quantity hold against. */
   readonly totalQuantity: number
+  readonly prepMinutes?: number
+  readonly cleaningMinutes?: number
 }
 
 /**
@@ -169,10 +172,15 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  * Both resolvers fall back to the ruled default on an unrecognised label rather
  * than to something permissive — see their doc comments in `lib/availability`.
  */
-export function availabilityRules(): { disqualifyingStates: ReadonlySet<string>; bounds: BoundConvention } {
+export function availabilityRules(): {
+  disqualifyingStates: ReadonlySet<string>
+  bounds: BoundConvention
+  timeBetweenRentals: string
+} {
   return {
     disqualifyingStates: unitStatesForRule(String(getSetting('unitAvailabilityRule'))),
     bounds: boundsForTurnaround(String(getSetting('rentalTurnaround'))),
+    timeBetweenRentals: String(getSetting('timeBetweenRentals') ?? 'Account-wide'),
   }
 }
 
@@ -224,12 +232,16 @@ function isSerialisedMode(trackingMode: string): boolean {
 interface ProductMode {
   readonly trackingMode: string
   readonly totalQuantity: number
+  readonly prepMinutes: number
+  readonly cleaningMinutes: number
 }
 
 interface ProductModeRow {
   id: string
   tracking_mode: string | null
   total_quantity: number | null
+  prep_time_minutes: number | null
+  cleaning_time_minutes: number | null
 }
 
 /**
@@ -258,7 +270,7 @@ export async function readProductModes(productIds: readonly string[]): Promise<M
   const uniqueIds = [...new Set(productIds)]
   const rows = await readCompleteAvailability<ProductModeRow>((from, to) => supabase
     .from('products_v')
-    .select('id, tracking_mode, total_quantity')
+    .select('id, tracking_mode, total_quantity, prep_time_minutes, cleaning_time_minutes')
     .in('id', uniqueIds)
     .order('id', { ascending: true })
     .range(from, to), 'product tracking and stock')
@@ -272,6 +284,8 @@ export async function readProductModes(productIds: readonly string[]): Promise<M
          nobody supplied. */
       trackingMode: row.tracking_mode ?? 'Serialised',
       totalQuantity: typeof row.total_quantity === 'number' ? row.total_quantity : 0,
+      prepMinutes: typeof row.prep_time_minutes === 'number' ? row.prep_time_minutes : 0,
+      cleaningMinutes: typeof row.cleaning_time_minutes === 'number' ? row.cleaning_time_minutes : 0,
     })
   }
 
@@ -279,7 +293,7 @@ export async function readProductModes(productIds: readonly string[]): Promise<M
   if (missing.length > 0) {
     const baseRows = await readCompleteAvailability<ProductModeRow>((from, to) => supabase
       .from('products')
-      .select('id, tracking_mode, total_quantity')
+      .select('id, tracking_mode, total_quantity, prep_time_minutes, cleaning_time_minutes')
       .in('id', missing)
       .order('id', { ascending: true })
       .range(from, to), 'product tracking fallback')
@@ -288,6 +302,8 @@ export async function readProductModes(productIds: readonly string[]): Promise<M
       byId.set(row.id, {
         trackingMode: row.tracking_mode ?? 'Serialised',
         totalQuantity: typeof row.total_quantity === 'number' ? row.total_quantity : 0,
+        prepMinutes: typeof row.prep_time_minutes === 'number' ? row.prep_time_minutes : 0,
+        cleaningMinutes: typeof row.cleaning_time_minutes === 'number' ? row.cleaning_time_minutes : 0,
       })
     }
   }
@@ -367,6 +383,8 @@ async function readLines(bookingId: string): Promise<{
       qty: row.qty,
       trackingMode: mode.trackingMode,
       totalQuantity: mode.totalQuantity,
+      prepMinutes: mode.prepMinutes,
+      cleaningMinutes: mode.cleaningMinutes,
     })
   }
 
@@ -784,11 +802,15 @@ export async function planAssignment(bookingRef: string): Promise<AssignmentPlan
   const rules = availabilityRules()
 
   for (const line of assignable) {
+    const lineWindow = rules.timeBetweenRentals === 'Per product'
+      ? effectiveRentalWindow(window, line.prepMinutes ?? 0, line.cleaningMinutes ?? 0, 'Per product')
+      : window
+
     if (isSerialisedMode(line.trackingMode)) {
       const pool = (candidatesByProduct.get(line.productId) ?? []).filter((unit) => !claimed.has(unit.unitId))
       const outcome = selectUnitsForLine({
         needed: line.qty,
-        window,
+        window: lineWindow,
         candidates: pool,
         holds,
         disqualifyingStates: rules.disqualifyingStates,
@@ -800,11 +822,11 @@ export async function planAssignment(bookingRef: string): Promise<AssignmentPlan
     }
 
     const capacity = capacityFor({
-      window,
+      window: lineWindow,
       holds: [
         ...(quantityHoldsByProduct.get(line.productId) ?? []),
         ...serialHoldsAsQuantity(line.productId, candidatesByProduct, holds),
-        ...planClaimAsHold(line.productId, claimedQty, window, booking.id, booking.booking_no),
+        ...planClaimAsHold(line.productId, claimedQty, lineWindow, booking.id, booking.booking_no),
       ],
       totalQuantity: line.totalQuantity,
       qtyRequested: line.qty,
@@ -939,10 +961,12 @@ export async function planCreationUnits(
   let candidatesByProduct: Map<string, UnitCandidate[]>
   let holds: UnitHold[]
   let usage: Map<string, number>
+  let modes: Map<string, ProductMode>
   try {
-    ;[candidatesByProduct, holds] = await Promise.all([
+    ;[candidatesByProduct, holds, modes] = await Promise.all([
       readCandidates(assignable.map((line) => line.productId as string)),
       readHolds(null),
+      readProductModes(assignable.map((line) => line.productId as string)),
     ])
     const allUnitIds = [...candidatesByProduct.values()].flat().map((unit) => unit.unitId)
     usage = await readUsageCounts(allUnitIds)
@@ -963,13 +987,18 @@ export async function planCreationUnits(
   const problems: string[] = []
 
   for (const line of assignable) {
+    const mode = modes.get(line.productId as string)
+    const lineWindow = rules.timeBetweenRentals === 'Per product'
+      ? effectiveRentalWindow(window, mode?.prepMinutes ?? 0, mode?.cleaningMinutes ?? 0, 'Per product')
+      : window
+
     const pool = rankLeastUsed(
       (candidatesByProduct.get(line.productId as string) ?? []).filter((unit) => !claimed.has(unit.unitId)),
       usage,
     )
     const outcome = selectUnitsForLine({
       needed: line.qty,
-      window,
+      window: lineWindow,
       candidates: pool,
       holds,
       disqualifyingStates: rules.disqualifyingStates,

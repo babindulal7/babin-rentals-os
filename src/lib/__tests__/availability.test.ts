@@ -8,6 +8,7 @@ import {
   explainShortfall,
   unitStatesForRule,
   boundsForTurnaround,
+  effectiveRentalWindow,
   UNIT_AVAILABILITY_PRESETS,
   DISQUALIFYING_UNIT_STATES,
   RENTAL_WINDOW_BOUNDS,
@@ -909,6 +910,54 @@ describe('Turnaround buffers — Pillar 1', () => {
 
     const explanation = explainTurnaroundViolation(firstViolation, 'CAM-01')
     expect(explanation).toContain('CAM-01 has only 3h turnaround gap with booking B-100 (minimum recommended: 6h).')
+  })
+
+  describe('effectiveRentalWindow (T2-22, B11)', () => {
+    const rawWindow: RentalWindow = {
+      fromAd: '2026-10-01T09:00:00+05:45',
+      toAd: '2026-10-01T18:00:00+05:45',
+    }
+
+    it('returns unmodified window in Account-wide mode', () => {
+      const res = effectiveRentalWindow(rawWindow, 60, 120, 'Account-wide')
+      expect(res.fromAd).toBe(rawWindow.fromAd)
+      expect(res.toAd).toBe(rawWindow.toAd)
+    })
+
+    it('widens window by prep and cleaning minutes in Per product mode', () => {
+      // 60 prep minutes before 09:00 -> 08:00
+      // 120 cleaning minutes after 18:00 -> 20:00
+      const res = effectiveRentalWindow(rawWindow, 60, 120, 'Per product')
+      expect(new Date(res.fromAd).getTime()).toBe(new Date('2026-10-01T08:00:00+05:45').getTime())
+      expect(new Date(res.toAd).getTime()).toBe(new Date('2026-10-01T20:00:00+05:45').getTime())
+    })
+
+    it('returns unmodified window when prep and cleaning are both 0 in Per product mode', () => {
+      const res = effectiveRentalWindow(rawWindow, 0, 0, 'Per product')
+      expect(res.fromAd).toBe(rawWindow.fromAd)
+      expect(res.toAd).toBe(rawWindow.toAd)
+    })
+
+    it('detects conflict 1 hour after return when cleaning is 2 hours (B11)', () => {
+      // Booking A returns at 18:00 with 120 cleaning minutes -> free at 20:00
+      const bookingAEffective = effectiveRentalWindow(
+        { fromAd: '2026-10-01T10:00:00+05:45', toAd: '2026-10-01T18:00:00+05:45' },
+        0,
+        120,
+        'Per product',
+      )
+      // Booking B attempts pickup at 19:00 (1 hour after return)
+      const bookingB = { fromAd: '2026-10-01T19:00:00+05:45', toAd: '2026-10-01T22:00:00+05:45' }
+
+      // Inside cleaning window -> overlap
+      expect(windowsOverlap(bookingB, bookingAEffective, 'half-open')).toBe(true)
+
+      // Booking C attempts pickup at 20:00 (exactly at the end of cleaning window)
+      const bookingC = { fromAd: '2026-10-01T20:00:00+05:45', toAd: '2026-10-01T23:00:00+05:45' }
+
+      // At or after cleaning window under half-open convention -> free!
+      expect(windowsOverlap(bookingC, bookingAEffective, 'half-open')).toBe(false)
+    })
   })
 })
 
