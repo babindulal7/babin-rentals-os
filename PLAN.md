@@ -110,7 +110,7 @@ What stops go-live today:
 
 | ID | Track | Delivers | Go-live? | Lane · agent | Size* |
 |---|---|---|---|---|---|
-| [T0](docs/plans/T0_REPO_HYGIENE.md) | Repo & process hygiene | PR/branch triage, doc truth, tests never use live settings, one gate command, CI off | Yes (week 1) | A · Codex-1 + Babin | 2 (+ Babin's triage; 6 built) |
+| [T0](docs/plans/T0_REPO_HYGIENE.md) | Repo & process hygiene | PR/branch triage, doc truth, tests never use live settings, one gate command, CI on as merge gate | Yes (week 1) | A · Codex-1 + Babin | 2 (+ Babin's triage; 6 built) |
 | [T1](docs/plans/T1_RELEASE.md) | Release & infrastructure | Backup, staging, migrations live, hosting, email DNS, monitoring, switch user by PIN, Settings that tell the truth, two-step sign-in for money roles, sign-in history | Yes | A · Codex-1 + Babin | 38 (≈ 8 slips first) |
 | [T2](docs/plans/T2_FLOOR.md) | Floor loop completion | Camera evidence fixes (T2-18), saving a unit's details, collectors, repair clearance, self-QC, printing and the pick list, scanner, scan → item card, offline, devices; **stock tools:** planned downtime, time between rentals, overbooking per product, temporary stock; Return signature on damage; consumables at the floor | Yes | A · Codex-1 | 28 (≈ 15 slips first; 13 built) |
 | [T3](docs/plans/T3_BOOKING_MONEY.md) | Booking & money rules | Re-book, paste a list, fully booked options, deposits, cancellation tiers, non-VAT bills, draft invoice at Confirm, change/extend, share, who owes, find/availability, balances, accountant pack, expenses; tags, project name and shoot location, pro forma, rental day start setting, extension clash, consumables, counter sale | Yes | C · Codex-2 | 64 (≈ 16 slips first; 1 built) |
