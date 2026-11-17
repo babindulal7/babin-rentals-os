@@ -11,11 +11,13 @@
  * - Strictly hidden from money-blind roles (Warehouse, Technician, Driver, Client).
  */
 
+import { useState } from 'react'
 import { Modal } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Button'
 import { formatBookingNo } from '../../../lib/format'
 import { formatMoney } from '../../../lib/money'
 import type { Paisa } from '../../../lib/money'
+import { DocumentShareModal } from '../modals/DocumentShareModal'
 import type { SelectedRentalBookingFacts } from '../../../lib/rentalMoreActionsRegistry'
 
 export interface InvoiceActionsMenuProps {
@@ -33,70 +35,89 @@ export function InvoicePaymentStatusModal({
   onClose: () => void
   booking: SelectedRentalBookingFacts
 }) {
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={`Payment Status · ${formatBookingNo(booking.bookingNo)}`}
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md, 16px)' }}>
-        <div
-          style={{
-            padding: 14,
-            borderRadius: 'var(--r-card, 8px)',
-            background: 'var(--card2, #f9fafb)',
-            border: '1px solid var(--border, #e5e7eb)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 10,
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontWeight: 700, fontSize: 'var(--t-ui, 14px)' }}>
-              Commercial Settlement
-            </span>
-            <span style={{ fontSize: 'var(--t-caption, 11px)', color: 'var(--muted)' }}>
-              {booking.invoiceNo ? `Invoice: ${booking.invoiceNo}` : 'No invoice issued'}
-            </span>
-          </div>
+  const [shareModalOpen, setShareModalOpen] = useState(false)
 
+  return (
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={`Payment Status · ${formatBookingNo(booking.bookingNo)}`}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md, 16px)' }}>
           <div
             style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
+              padding: 14,
+              borderRadius: 'var(--r-card, 8px)',
+              background: 'var(--card2, #f9fafb)',
+              border: '1px solid var(--border, #e5e7eb)',
+              display: 'flex',
+              flexDirection: 'column',
               gap: 10,
-              fontSize: 'var(--t-meta, 13px)',
             }}
           >
-            <div>
-              <span style={{ color: 'var(--muted)' }}>Total Billed:</span>{' '}
-              <strong>{typeof booking.totalAmount === 'number' ? formatMoney(booking.totalAmount as Paisa) : '—'}</strong>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontWeight: 700, fontSize: 'var(--t-ui, 14px)' }}>
+                Commercial Settlement
+              </span>
+              <span style={{ fontSize: 'var(--t-caption, 11px)', color: 'var(--muted)' }}>
+                {booking.invoiceNo ? `Invoice: ${booking.invoiceNo}` : 'No invoice issued'}
+              </span>
             </div>
-            <div>
-              <span style={{ color: 'var(--muted)' }}>Total Received:</span>{' '}
-              <strong style={{ color: 'var(--success, #16a34a)' }}>
-                {typeof booking.paidAmount === 'number' ? formatMoney(booking.paidAmount as Paisa) : '—'}
-              </strong>
-            </div>
-            <div>
-              <span style={{ color: 'var(--muted)' }}>Outstanding Balance:</span>{' '}
-              <strong style={{ color: typeof booking.outstandingAmount === 'number' && booking.outstandingAmount > 0 ? 'var(--danger, #dc2626)' : 'inherit' }}>
-                {typeof booking.outstandingAmount === 'number' ? formatMoney(booking.outstandingAmount as Paisa) : '—'}
-              </strong>
-            </div>
-            <div>
-              <span style={{ color: 'var(--muted)' }}>Security Deposit:</span>{' '}
-              <strong>{typeof booking.depositRequired === 'number' ? formatMoney(booking.depositRequired as Paisa) : '—'}</strong>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 10,
+                fontSize: 'var(--t-meta, 13px)',
+              }}
+            >
+              <div>
+                <span style={{ color: 'var(--muted)' }}>Total Billed:</span>{' '}
+                <strong>{typeof booking.totalAmount === 'number' ? formatMoney(booking.totalAmount as Paisa) : '—'}</strong>
+              </div>
+              <div>
+                <span style={{ color: 'var(--muted)' }}>Total Received:</span>{' '}
+                <strong style={{ color: 'var(--success, #16a34a)' }}>
+                  {typeof booking.paidAmount === 'number' ? formatMoney(booking.paidAmount as Paisa) : '—'}
+                </strong>
+              </div>
+              <div>
+                <span style={{ color: 'var(--muted)' }}>Outstanding Balance:</span>{' '}
+                <strong style={{ color: typeof booking.outstandingAmount === 'number' && booking.outstandingAmount > 0 ? 'var(--danger, #dc2626)' : 'inherit' }}>
+                  {typeof booking.outstandingAmount === 'number' ? formatMoney(booking.outstandingAmount as Paisa) : '—'}
+                </strong>
+              </div>
+              <div>
+                <span style={{ color: 'var(--muted)' }}>Security Deposit:</span>{' '}
+                <strong>{typeof booking.depositRequired === 'number' ? formatMoney(booking.depositRequired as Paisa) : '—'}</strong>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-          <Button variant="secondary" onClick={onClose}>
-            Close
-          </Button>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+            <Button variant="secondary" onClick={onClose}>
+              Close
+            </Button>
+            <Button
+              variant="primary"
+              icon="send"
+              onClick={() => setShareModalOpen(true)}
+            >
+              Share Invoice
+            </Button>
+          </div>
         </div>
-      </div>
-    </Modal>
+      </Modal>
+
+      <DocumentShareModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        docType="invoice"
+        booking={booking}
+        userRole="Coordinator"
+      />
+    </>
   )
 }

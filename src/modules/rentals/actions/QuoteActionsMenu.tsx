@@ -19,7 +19,7 @@ import { exportDocumentPdf } from '../../../lib/pdf/exportPdf'
 import { formatBookingNo } from '../../../lib/format'
 import { formatMoney } from '../../../lib/money'
 import type { Paisa } from '../../../lib/money'
-import { buildWaLink, openWaLink } from '../../../lib/whatsapp'
+import { DocumentShareModal } from '../modals/DocumentShareModal'
 import type { SelectedRentalBookingFacts } from '../../../lib/rentalMoreActionsRegistry'
 
 export interface QuoteActionsMenuProps {
@@ -41,6 +41,7 @@ export function QuotePreviewModal({
 }) {
   const { showSuccessToast } = useToast()
   const [downloading, setDownloading] = useState(false)
+  const [shareModalOpen, setShareModalOpen] = useState(false)
 
   const handleDownloadPdf = async () => {
     setDownloading(true)
@@ -65,84 +66,92 @@ export function QuotePreviewModal({
     }
   }
 
-  const handleSendQuote = () => {
-    const text = `Namaste! Here is the quotation for rental ${formatBookingNo(booking.bookingNo)} from Babin Rentals.`
-    const link = buildWaLink('9800000000', text)
-    if (link) openWaLink(link)
+  const handleOpenShare = () => {
+    setShareModalOpen(true)
   }
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={`Quotation Preview · ${formatBookingNo(booking.bookingNo)}`}
-    >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md, 16px)' }}>
-        <div
-          style={{
-            padding: 14,
-            borderRadius: 'var(--r-card, 8px)',
-            background: 'var(--card2, #f9fafb)',
-            border: '1px solid var(--border, #e5e7eb)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 10,
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontWeight: 700, fontSize: 'var(--t-ui, 14px)' }}>
-              Commercial Quotation
-            </span>
-            <span style={{ fontSize: 'var(--t-caption, 11px)', color: 'var(--muted)' }}>
-              Revision 1 (Draft)
-            </span>
-          </div>
-
-          <div style={{ fontSize: 'var(--t-meta, 13px)', color: 'var(--text2)' }}>
-            <div>Client: <strong>{booking.clientName || 'Standard Client'}</strong></div>
-            <div>Booking Ref: <strong>{formatBookingNo(booking.bookingNo)}</strong></div>
-            <div>Duration: {booking.pickupDate} → {booking.returnDate}</div>
-            <div>Equipment Units: {booking.itemCount ?? 0} item(s)</div>
-          </div>
-
-          {/* Law 6: Figures only shown if permitted */}
-          {canViewMoney && typeof booking.totalAmount === 'number' && (
-            <div
-              style={{
-                marginTop: 6,
-                paddingTop: 8,
-                borderTop: '1px solid var(--border, #e5e7eb)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                fontWeight: 700,
-                fontSize: 'var(--t-ui, 14px)',
-              }}
-            >
-              <span>Estimated Total (incl. 13% VAT):</span>
-              <span className="figure">{formatMoney(booking.totalAmount as Paisa)}</span>
-            </div>
-          )}
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
-          <Button variant="secondary" onClick={onClose}>
-            Close
-          </Button>
-
-          <Button
-            variant="secondary"
-            icon="download"
-            disabled={downloading}
-            onClick={handleDownloadPdf}
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={`Quotation Preview · ${formatBookingNo(booking.bookingNo)}`}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md, 16px)' }}>
+          <div
+            style={{
+              padding: 14,
+              borderRadius: 'var(--r-card, 8px)',
+              background: 'var(--card2, #f9fafb)',
+              border: '1px solid var(--border, #e5e7eb)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+            }}
           >
-            {downloading ? 'Generating PDF…' : 'Download PDF'}
-          </Button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontWeight: 700, fontSize: 'var(--t-ui, 14px)' }}>
+                Commercial Quotation
+              </span>
+              <span style={{ fontSize: 'var(--t-caption, 11px)', color: 'var(--muted)' }}>
+                Revision 1 (Draft)
+              </span>
+            </div>
 
-          <Button variant="primary" icon="external_link" onClick={handleSendQuote}>
-            Send Quote
-          </Button>
+            <div style={{ fontSize: 'var(--t-meta, 13px)', color: 'var(--text2)' }}>
+              <div>Client: <strong>{booking.clientName || 'Standard Client'}</strong></div>
+              <div>Booking Ref: <strong>{formatBookingNo(booking.bookingNo)}</strong></div>
+              <div>Duration: {booking.pickupDate} → {booking.returnDate}</div>
+              <div>Equipment Units: {booking.itemCount ?? 0} item(s)</div>
+            </div>
+
+            {/* Law 6: Figures only shown if permitted */}
+            {canViewMoney && typeof booking.totalAmount === 'number' && (
+              <div
+                style={{
+                  marginTop: 6,
+                  paddingTop: 8,
+                  borderTop: '1px solid var(--border, #e5e7eb)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontWeight: 700,
+                  fontSize: 'var(--t-ui, 14px)',
+                }}
+              >
+                <span>Estimated Total (incl. 13% VAT):</span>
+                <span className="figure">{formatMoney(booking.totalAmount as Paisa)}</span>
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+            <Button variant="secondary" onClick={onClose}>
+              Close
+            </Button>
+
+            <Button
+              variant="secondary"
+              icon="download"
+              disabled={downloading}
+              onClick={handleDownloadPdf}
+            >
+              {downloading ? 'Generating PDF…' : 'Download PDF'}
+            </Button>
+
+            <Button variant="primary" icon="send" onClick={handleOpenShare}>
+              Share Quote
+            </Button>
+          </div>
         </div>
-      </div>
-    </Modal>
+      </Modal>
+
+      <DocumentShareModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        docType="quote"
+        booking={booking}
+        userRole={canViewMoney ? 'Coordinator' : 'Warehouse'}
+      />
+    </>
   )
 }
