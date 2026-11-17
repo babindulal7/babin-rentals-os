@@ -65,7 +65,8 @@ jobs:
           # Intl in the Asia/Kathmandu zone and so depends on the runtime's ICU
           # data being complete.
           node-version: '24'
-          cache: npm
+          # Intentionally no setup-node npm cache here. The self-hosted Mac can
+          # stall at cache initialization; npm ci below remains the lockfile gate.
 
       # `ci`, not `install`: the lockfile is the contract, and a CI run that
       # silently resolves a newer transitive dependency is not reproducing what
@@ -255,7 +256,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: npm
+          # Main full verification uses the same cache-free Node setup as the
+          # passing Mac main smoke job, then runs the complete 17-gate suite.
 
       - name: Confirm runner identity and Apple Silicon specs
         shell: bash
