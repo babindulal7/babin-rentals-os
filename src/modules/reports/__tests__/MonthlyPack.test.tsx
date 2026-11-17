@@ -273,7 +273,7 @@ describe('MonthlyPack generator & verification (T3-23)', () => {
       const csv = execSync(`unzip -p "${tmpPath}" purchase_register_ad_2026_07.csv`, { encoding: 'utf-8' })
       expect(csv).toContain('EXP-2026-0001')
       expect(csv).toContain('EXP-2026-0401')
-      expect(csv.split('\\r\\n').length).toBe(402)
+      expect(csv.split(String.fromCharCode(13, 10)).length).toBe(402)
     } finally {
       if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath)
     }
