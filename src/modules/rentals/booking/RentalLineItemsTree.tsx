@@ -46,7 +46,7 @@ export interface Line {
 
 export function lineAmountPaisa(l: Line): Paisa {
   const isConsumable = l.trackingMode === 'Consumable' || l.isConsumable
-  const effectiveDays = isConsumable ? 1 : l.days
+  const effectiveDays = isConsumable || l.serviceBasis === 'Flat' ? 1 : l.days
   return roundHalfUp(l.qty * effectiveDays * l.ratePaisa * (1 - l.discountPct / 100)) as Paisa
 }
 

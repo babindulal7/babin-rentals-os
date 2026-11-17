@@ -1,5 +1,63 @@
 # Progress Log
 
+## 2026-11-17 — T3-10: After-hours handover service line (Mac Antigravity)
+
+**Did**
+- Implemented **T3-10 · After-hours handover service line** (`mac/T3-10-after-hours-line`):
+  - In `src/modules/rentals/booking/BookingEquipmentSection.tsx`:
+    - Added "Add after-hours" button under "Services & other charges" for money roles (`canBookingMoney`).
+    - Added after-hours handover form enabling desk staff to enter the voluntary handover fee in at most two taps (Tap 1 opens form with amount focused, Tap 2 adds line).
+    - Enforced duplicate prevention: disabled button with "After-hours added" when line is already added; callback guards against duplicate rows.
+    - Truthful input validation: Rs 0 handled truthfully; negative or invalid amounts display inline error without adding lines; cancellation leaves booking unchanged.
+    - Added line with `lineType: 'Service'`, `name: 'After-hours handover'`, `category: 'Service'`, `serviceBasis: 'Flat'`, `days: 1`, `qty: 1`, `daysOverridden: true`, `ratePaisa: rupees(rate)`.
+  - In `src/modules/rentals/booking/RentalLineItemsTree.tsx`:
+    - Updated `lineAmountPaisa` to treat `serviceBasis === 'Flat'` as 1 effective day (`l.qty * 1 * l.ratePaisa`), ensuring multi-day rentals do not multiply flat handover fees.
+  - In `src/modules/rentals/NewRental.tsx`:
+    - Protected `serviceBasis === 'Flat'` lines in duration change effect, preserving `days: 1` as required by Postgres constraint and `bookingQuery.ts`.
+  - In `src/modules/rentals/booking/useNewRentalSubmit.ts`:
+    - Passed `serviceBasis: l.serviceBasis` to `createRental` and ensured `days: 1` for Flat lines.
+  - In `src/lib/rentalDraftPricing.ts`:
+    - Updated `calculateDraftTotal` to honor `serviceBasis === 'Flat'` with 1 effective day.
+  - In `docs/plans/T3_BOOKING_MONEY.md`:
+    - Updated T3-10 status to `ready — awaiting merge (mac/T3-10-after-hours-line)`.
+  - Created test suite `src/modules/rentals/booking/__tests__/afterHoursHandoverServiceLine.test.tsx` (6/6 tests passing).
+
+**Ruled**
+- After-hours handover is a voluntary service fee with no hardcoded price and no automatic surcharge; desk staff enter the amount (D7).
+- Service basis is `Flat` with `days = 1`, ensuring the fee appears exactly once at the entered price on booking and invoice regardless of rental duration.
+- Law 6 money blindness strictly observed: money-blind roles (Warehouse, Technician, Driver, Client) see neither the line rate, nor amount, nor the add button in the DOM or payloads.
+
+**Verified**
+- `npm test src/modules/rentals/booking/__tests__/afterHoursHandoverServiceLine.test.tsx`: 6/6 tests passing.
+- `npm test src/modules/rentals/booking/__tests__/BookingEquipmentSection.test.tsx`: 3/3 tests passing.
+- `npm test src/modules/rentals/booking/__tests__/useNewRentalSubmit.test.tsx`: 12/12 tests passing.
+- `npm run typecheck`: clean pass (0 errors).
+- `npm run lint`: clean pass (0 warnings, 0 errors).
+- `npm run check:pglite`: 237/237 migrations applied cleanly, 0 failed.
+- `npm run check:lifecycle`: 76/76 steps green.
+- `npm run check:security`: 18 Phase 0 SQL regressions passed, 14 Reset branch groups passed, all 9 roles verified.
+- `npm run build`: built in 5.24s without error.
+- `npm run gates`: full 17 verification gates PASS green.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 106 / 106 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 85 / 85 (100%) | +0 |
+| Lifecycle | steps green / total | 76 / 76 (100%) | +2 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 237 files · check:pglite 237/237 applied, 0 failed (recorded 2026-11-17T06:45:09.533Z). Suite: PASS — 7273/7273 passed, 0 failed (recorded 2026-11-17T06:47:17.408Z); source fingerprint matches.
+Coverage suite: PASS — 7273/7273 passed, 0 failed (recorded 2026-11-17T06:47:17.408Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-17T06:45:34.574Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Await PR merge and staging acceptance for T3-10.
+- Proceed to MAC-02 (T2-20: Add consumables during Pack/Handover).
+
 ## 2026-11-17 — T3-30: Consumables: unit price, add at desk, restock, low stock (Lane C)
 
 **Did**

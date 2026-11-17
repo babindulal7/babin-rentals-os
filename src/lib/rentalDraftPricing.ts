@@ -15,7 +15,8 @@ export function calculateDraftTotal(data: RentalDraftData): Paisa {
   const days = rentalDaysBetween(pickup, draftInstant(data.returnDate, data.returnTime)) ?? 1
   const sum = (types: readonly string[], excludeIncluded = false) => data.lines.reduce((total, line) => {
     const isConsumable = (line as { trackingMode?: string }).trackingMode === 'Consumable' || (line as { isConsumable?: boolean }).isConsumable
-    const effectiveDays = isConsumable ? 1 : line.days
+    const isFlat = (line as { serviceBasis?: string }).serviceBasis === 'Flat'
+    const effectiveDays = isConsumable || isFlat ? 1 : line.days
     return total + (types.includes(line.lineType ?? 'Equipment') && (!excludeIncluded || !line.isIncluded)
       ? roundHalfUp(line.qty * effectiveDays * line.ratePaisa * (1 - line.discountPct / 100)) : 0)
   }, 0) as Paisa
