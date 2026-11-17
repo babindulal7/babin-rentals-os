@@ -81,7 +81,7 @@ older receipt.
 | Actions implemented (`npm run completion`) | **55 / 58** — the 3 missing are inspection stubs nothing calls |
 | Routed screens on the database | **50 / 60** — 0 on seed data; the other 10 are sign-in, 404, onboarding and three static pages |
 | Capabilities mapped | **48 / 48** |
-| GitHub CI | **Historical, 26 Oct:** off — no run had passed since 15 Oct 19:23 UTC and the run on PR #29 (25 Oct) showed GitHub refusing to start the job for a billing reason; Babin ruled CI stays off (W75). **Today, 4 Nov:** `ci.yml` runs on the owner's self-hosted Windows runner (see [`docs/audits/RULE_CONFLICT_AUDIT_2026-11-04.md`](docs/audits/RULE_CONFLICT_AUDIT_2026-11-04.md) for the run evidence). The local gates (§6.4) stay the pre-push check; the wording of the CI policy is a **proposal awaiting owner approval** — [`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md) §6. |
+| GitHub CI | **Historical (26 Oct 2026):** GitHub-hosted jobs were blocked; W75 temporarily required local verification. **Current policy (owner ruling of 9 Nov 2026, R-9.9):** GitHub CI is ON and an exact-head merge gate, running on self-hosted Mac and Windows runners. Local gates (§6.4) remain mandatory before push. Do not merge from historical green runs or bypass required checks. |
 
 What stops go-live today:
 
