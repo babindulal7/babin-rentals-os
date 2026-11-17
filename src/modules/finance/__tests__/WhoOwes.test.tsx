@@ -5,7 +5,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter } from 'react-router-dom'
 
 ;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
-import { buildWhoOwesRows, daysSinceAd } from '../../../lib/queries/whoOwes'
+import { buildWhoOwesRows, daysSinceAd, fetchWhoOwes, fetchClientStatementData } from '../../../lib/queries/whoOwes'
 import { generateClientStatementPdf } from '../../../lib/pdf/generatePdf'
 import { rupees, type Paisa } from '../../../lib/money'
 import type { InvoiceListRow } from '../../../lib/queries/finance'
@@ -161,6 +161,32 @@ describe('WhoOwes engine & PDF (T3-20)', () => {
     // Exact paisa total: 25000.25 + 15000.50 = 40000.75
     expect(result.totalOutstandingPaisa).toBe(rupees(40000) + 75)
     expect(result.pausedCount).toBe(1)
+  })
+
+  it('preserves issued-invoice and received-payment status chips together with client scoping', async () => {
+    mockListInvoices.mockResolvedValue({ rows: [], total: 0 })
+    mockListPayments.mockResolvedValue({ rows: [], total: 0 })
+    await fetchClientStatementData('c-old', true)
+    expect(mockListInvoices).toHaveBeenCalledWith(expect.objectContaining({
+      chips: expect.objectContaining({ client_id: ['c-old'], status: ['Sent', 'Partially Paid'] }),
+    }))
+    expect(mockListPayments).toHaveBeenCalledWith(expect.objectContaining({
+      chips: expect.objectContaining({ client_id: ['c-old'], status: ['Received'] }),
+    }))
+  })
+
+  it('reads every invoice page rather than understating receivables after the first 400', async () => {
+    const firstPage = Array.from({ length: 400 }, (_, idx) =>
+      makeInvoice({ id: `page-1-${idx}`, clientId: 'c-old', clientName: 'Older Studio', outstandingAmount: rupees(100) }))
+    const lastPage = [makeInvoice({ id: 'page-2-1', clientId: 'c-old', clientName: 'Older Studio', outstandingAmount: rupees(100) })]
+    mockListInvoices.mockImplementation(async (opts: { range: { from: number } }) => ({
+      rows: opts.range.from === 0 ? firstPage : lastPage,
+      total: 401,
+    }))
+    const results = await fetchWhoOwes(true, '2026-11-17')
+    expect(mockListInvoices).toHaveBeenCalledTimes(2)
+    expect(results.rows[0]?.invoiceCount).toBe(401)
+    expect(results.totalOutstandingPaisa).toBe(rupees(40100))
   })
 
   it('generates a valid PDF 1.4 Client Statement', () => {
