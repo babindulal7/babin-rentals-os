@@ -1,5 +1,54 @@
 # Progress Log
 
+## 2026-11-18 — T2-19: Signature at Return when damage is found (Lane A)
+
+**Did**
+- Implemented **T2-19 · Signature at Return when damage is found** (`lane-a/T2-19-signature-at-return-when-damage-is-found`):
+  - Created migration `supabase/migrations/0242_return_damage_signature_and_refusal.sql`:
+    - Added `signature_refused boolean not null default false` and `signature_refusal_reason text` to `public.operation_sessions` with check constraint enforcing reasons >= 10 chars when refused.
+    - Added trigger function `public.require_return_damage_signature()` with pinned `search_path = public, pg_temp` and `SECURITY DEFINER`.
+    - Bound `trg_return_damage_signature` on `operation_sessions` update to 'Completed' and `aab_return_damage_signature` on `booking_stage_transitions` insert to 'Returned'.
+  - Updated `docs/PERMISSIONS.md` §6.1 with `gate.return.damage_unsigned`.
+  - Claimed migration `0242` in `docs/plans/MIGRATION_LEDGER.md`.
+  - Registered gate `gate.return.damage_unsigned` in `src/lib/gates.ts`.
+  - Updated actions in `src/actions/rentals/returnRental.ts` and `src/actions/rentals/floorVerb.ts`:
+    - Support `'Returning person'` signature writing linked to return session.
+    - Support refusal tracking and informational audit event logging.
+    - Enforced refusal reason length check (>= 10 chars).
+  - Updated `src/modules/rentals/ReturnWorkspace.tsx`:
+    - Enforced conditional signature requirement when `hasFlaggedItems` (`damagedRows.length > 0 || missingRows.length > 0`). Clean returns require no signature (R-39).
+    - Flagged item attestation quote, signature capture modal integration, and client refusal checkbox + textarea.
+    - Forwarded signatures and refusal details into `completeSession`.
+  - Updated `src/lib/pdf/generatePdf.ts`: added returning person signature / refusal details to Return Report PDF.
+  - Added unit test suite `src/modules/rentals/__tests__/ReturnWorkspace.damageSignature.test.tsx` (3/3 pass) and floor verbs tests in `src/actions/rentals/__tests__/floorVerbs.test.ts` (104/104 pass).
+  - Added lifecycle steps `L78` and `L79` in `scripts/e2e-lifecycle.mjs` (80/80 pass).
+  - Updated `docs/plans/T2_FLOOR.md`: marked T2-19 as `ready — awaiting merge (lane-a/T2-19-signature-at-return-when-damage-is-found)`.
+
+**Ruled**
+- Clean returns (0 damaged, 0 missing units) require NO signature and complete cleanly (R-39).
+- Flagged returns require returning person signature under flagged items or audited refusal reason >= 10 characters (B19).
+- Floor roles remain strictly money-blind under Law 6.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 107 / 107 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 68 | 57 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 86 / 86 (100%) | +0 |
+| Lifecycle | steps green / total | 80 / 80 (100%) | +2 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 239 files · check:pglite 239/239 applied, 0 failed (recorded 2026-11-17T20:47:22.182Z). Suite: PASS — 7341/7341 passed, 0 failed (recorded 2026-11-17T20:47:19.629Z); source fingerprint matches.
+Coverage suite: Historical suite: 7335/7335 passed, 0 failed (recorded 2026-11-17T20:11:51.371Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-17T20:47:47.406Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T3-11: Late fee — acceptance only (Batch 6 Card 3 · Size: S · Priority: [go-live])
+- T3-28: Rental day start as a setting (Batch 6 Card 4 · Size: L · Priority: [go-live · slips first])
+- T3-18: Change a confirmed booking (Batch 6 Card 5 · Size: L · Priority: [go-live])
+
 ## 2026-11-18 — T3-29: Extension clash: the Manager decides (Lane C)
 
 **Did**
