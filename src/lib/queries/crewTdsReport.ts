@@ -64,9 +64,36 @@ export interface CrewTdsReportData {
   payouts: CrewTdsItem[]
 }
 
-export async function getCrewTdsReport(options?: ReportFilterOptions): Promise<CrewTdsReportData> {
+export async function getCrewTdsReport(
+  options?: ReportFilterOptions & { requireComplete?: boolean },
+): Promise<CrewTdsReportData> {
   const configuredRate = getCrewPayoutTdsPercent()
-  const { rows: allAssignments } = await listCrewAssignments()
+  // Ordinary dashboard reads remain unchanged. For an accountant archive,
+  // every page must be read and validated before constructing tax totals.
+  const allAssignments = options?.requireComplete
+    ? [] as Awaited<ReturnType<typeof listCrewAssignments>>['rows']
+    : (await listCrewAssignments()).rows
+  if (options?.requireComplete) {
+    const pageSize = 400
+    const maxPages = 125
+    const seenIds = new Set<string>()
+    for (let page = 0; page < maxPages; page++) {
+      const { rows } = await listCrewAssignments({
+        range: { from: page * pageSize, to: (page + 1) * pageSize - 1 },
+      })
+      for (const assignment of rows) {
+        if (!assignment.id || seenIds.has(assignment.id)) {
+          throw new Error('Crew assignment ledger changed during pagination; accountant export refused.')
+        }
+        seenIds.add(assignment.id)
+        allAssignments.push(assignment)
+      }
+      if (rows.length < pageSize) break
+      if (page === maxPages - 1) {
+        throw new Error('Crew assignment ledger exceeds verified export limit.')
+      }
+    }
+  }
 
   // Filter cancelled rows (they owe nobody anything per Law 3)
   let live = allAssignments.filter((a) => !a.cancelled)
