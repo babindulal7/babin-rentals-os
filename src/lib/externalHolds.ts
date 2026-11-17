@@ -53,6 +53,10 @@ export function checkExternalHoldConflicts(
   activeHolds: ExternalHoldRecord[],
   isSyncHealthy = true,
 ): HoldConflictResult {
+  // An unavailable or stale external feed cannot certify that the gear is free.
+  // Keep the detailed list empty rather than inventing an external order.
+  if (!isSyncHealthy) return { hasConflict: true, conflictingHolds: [] }
+
   const reqStart = new Date(candidate.startDateUtc)
   const reqEnd = new Date(candidate.endDateUtc)
 
