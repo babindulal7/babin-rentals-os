@@ -278,7 +278,7 @@ Ruled 26 Oct afternoon (W74–W78, W90, L5).
 3. **One card = one branch.** Branch name `lane-<a|b|c>/<card-id>-<slug>`, e.g.
    `lane-a/T2-01-camera-evidence`. Each card has a ready prompt in
    [`docs/plans/prompts/`](docs/plans/prompts/README.md) — paste it into the lane's agent.
-4. **Run these local checks before you push** (W75 turned CI off on 26 Oct for billing; it now runs on
+4. **Run these local checks before you push** (CI is a merge gate since Babin's 9 Nov ruling R-9.9; it runs on
    the owner's runner — [`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md) §6). Before an agent says a card
    is done, and again before Babin merges it, run **every step `.github/workflows/ci.yml` runs, in its
    order** — the list is in [`docs/plans/README.md`](docs/plans/README.md), and `npm run gates` is the same
