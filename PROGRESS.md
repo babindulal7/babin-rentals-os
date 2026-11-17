@@ -1,5 +1,55 @@
 # Progress Log
 
+# Progress Log
+
+## 2026-11-17 — T3-13: Fully booked → similar item or sub-rent (Lane C)
+
+**Did**
+- Implemented Card **T3-13 · Fully booked → similar item or sub-rent** (`lane-c/T3-13-fully-booked-to-similar-item-or`) per `docs/plans/T3_BOOKING_MONEY.md:184-196`:
+  - When equipment has no free unit for requested dates (`freeCount === 0` or bulk unavailable), `AddItemPanel` displays the dedicated `Fully Booked Alternatives` region directly on the equipment line offering two clear 1-tap paths:
+    1. **"1. Similar we own — free"**: Dynamically evaluated via `findSimilarFreeEquipment(group, allCandidateGroups)` matching same category with free units for the exact date range. Renders 1-tap buttons `+ Similar free: [Name] ([X] free)` adding the unit immediately.
+    2. **"2. Sub-rent from a partner"**: Renders 1-tap quick sub-rent button `+ Sub-rent (GearHouse KTM)` recording vendor and client rate immediately, plus `Choose partner / rate…` button.
+    3. Booked item itself remains blocked (`27 Jul hard block`) with error icons and disabled chips, preventing dishonest direct booking.
+  - Authored `SubRentalPartnerModal.tsx` allowing partner selection across `SUBRENTAL_PARTNERS` (`GearHouse KTM`, `Kathmandu Cinema Works`, `Everest Cine Rentals`, `Pokhara Film Gear`, `Shine Pictures`, or custom) with client rate and supplier cost gated behind `showPrices` (Law 6: Money Blindness).
+  - Enhanced `OverbookingOverrideModal.tsx` to integrate partner chooser and rate input when sub-rent is chosen, with backward compatibility for single-argument callers.
+  - Authored test suites:
+    - `src/lib/__tests__/similarEquipment.test.ts` (6/6 pass)
+    - `src/modules/rentals/booking/__tests__/SubRentalPartnerModal.test.tsx` (2/2 pass)
+    - `src/modules/rentals/booking/__tests__/AddItemPanel.similarSubrent.test.tsx` (5/5 pass)
+  - Authored verification document: `docs/verification/T3-13_VERIFICATION.md`.
+
+**Ruled**
+- Zero live Supabase mutations, zero remote migrations or pushes (Law N-5).
+- Pure availability matching algorithms in `src/lib/availability.ts` (Law 1).
+- Money blindness strictly enforced across UI: client rate & supplier cost omitted from DOM for non-money roles (Law 6).
+- 27 Jul hard block on fully booked units maintained.
+
+**Verified**
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (0 warnings across `src/`).
+- `npm test`: 7220/7220 tests passed across 628 test suites.
+- `npm run gates`: ALL 17 GATES PASSED (Exit 0).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 104 / 104 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | 73 / 73 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 235 files · check:pglite 235/235 applied, 0 failed (recorded 2026-11-16T22:27:20.472Z). Suite: PASS — 7220/7220 passed, 0 failed (recorded 2026-11-16T22:29:26.031Z); source fingerprint matches.
+Coverage suite: PASS — 7220/7220 passed, 0 failed (recorded 2026-11-16T22:29:26.031Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-16T22:27:45.354Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Card 3 (`T3-02` — Deposits per product, entered before go-live).
+- Card 4 (`T2-22` — Time between rentals: account-wide or per product).
+- Card 5 (`T3-30` — Consumables: unit price, add at desk, restock, low stock).
+
 ## 2026-11-17 — T3-16: Share documents in one tap (Lane C)
 
 **Did**
