@@ -1362,6 +1362,11 @@ export interface ClientStatementPdfData {
  * Generates a PDF 1.4 Client Statement listing all open invoices, balances, and payments so far (T3-20).
  */
 export function generateClientStatementPdf(data: ClientStatementPdfData): Uint8Array {
+  // Until multi-page statement rendering is implemented, refuse an incomplete
+  // accounting document rather than silently omitting invoices or payments.
+  if (data.invoices.length > 10 || data.payments.length > 8) {
+    throw new Error('Statement has more entries than the single-page PDF can safely display. Full multi-page export is required.')
+  }
   const builder = new PdfDocumentBuilder()
 
   const darkSlate = '0.09 0.13 0.24'
