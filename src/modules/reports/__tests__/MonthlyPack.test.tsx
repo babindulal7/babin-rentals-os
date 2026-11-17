@@ -18,6 +18,7 @@ const accountLedgerFixture = vi.hoisted(() => ({
   reversals: [] as Array<Record<string, unknown>>,
   refunds: [] as Array<Record<string, unknown>>,
   expenses: [] as Array<Record<string, unknown>>,
+  crew: [] as Array<Record<string, unknown>>,
 }))
 
 vi.mock('../../../lib/supabase', () => ({
@@ -139,7 +140,7 @@ vi.mock('../../../lib/queries/crewTdsReport', () => ({
       pendingCount: 0,
     },
     monthlySchedule: [],
-    payouts: [
+    payouts: accountLedgerFixture.crew.length > 0 ? accountLedgerFixture.crew : [
       {
         id: 'crew-1',
         crewBookingNo: 'CRW-2083-001',
@@ -155,6 +156,7 @@ vi.mock('../../../lib/queries/crewTdsReport', () => ({
         grossPayout: rupees(10000),
         tdsRatePercent: 15,
         tdsAmount: rupees(1500),
+        tdsIsRecorded: true,
         netPayout: rupees(8500),
         payoutStatus: 'Paid',
         paidAt: '2026-07-23',
@@ -197,6 +199,7 @@ describe('MonthlyPack generator & verification (T3-23)', () => {
     accountLedgerFixture.reversals = []
     accountLedgerFixture.refunds = []
     accountLedgerFixture.expenses = []
+    accountLedgerFixture.crew = []
   })
 
   it('correctly resolves period dates for BS and AD months', () => {
@@ -308,6 +311,57 @@ describe('MonthlyPack generator & verification (T3-23)', () => {
     } finally {
       if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath)
     }
+  })
+
+  it('separates saved paid withholding from unpaid crew TDS estimates', async () => {
+    accountLedgerFixture.crew = [
+      {
+        id: 'crew-recorded', crewBookingNo: 'CRW-PAID', crewMemberName: 'Paid Grip',
+        position: 'Grip', phone: '', panNumber: 'N/A',
+        startDateBs: '2083-04-05', startDateAd: '2026-07-20',
+        endDateBs: '2083-04-05', endDateAd: '2026-07-20',
+        days: 1, grossPayout: rupees(10000), tdsRatePercent: 15,
+        tdsAmount: rupees(1500), tdsIsRecorded: true, netPayout: rupees(8500),
+        payoutStatus: 'Paid', paidAt: '2026-07-21T10:00:00Z',
+      },
+      {
+        id: 'crew-estimate', crewBookingNo: 'CRW-OPEN', crewMemberName: 'Pending Grip',
+        position: 'Grip', phone: '', panNumber: 'N/A',
+        startDateBs: '2083-04-05', startDateAd: '2026-07-20',
+        endDateBs: '2083-04-05', endDateAd: '2026-07-20',
+        days: 1, grossPayout: rupees(20000), tdsRatePercent: 15,
+        tdsAmount: rupees(3000), tdsIsRecorded: false, netPayout: rupees(17000),
+        payoutStatus: 'Due', paidAt: null,
+      },
+    ]
+    const pack = await generateMonthlyPack({ calendar: 'AD', year: 2026, month: 7 })
+    expect(pack.summaryText).toContain('Saved Paid TDS Withheld:')
+    expect(pack.summaryText).toContain('Estimated / Unverified TDS:')
+    const tmpPath = path.join(os.tmpdir(), `test-tds-evidence-${Date.now()}.zip`)
+    try {
+      fs.writeFileSync(tmpPath, Buffer.from(pack.zipBytes))
+      const csv = execSync(`unzip -p "${tmpPath}" tds_withheld_ad_2026_07.csv`, { encoding: 'utf-8' })
+      expect(csv).toContain('Saved paid withholding snapshot')
+      expect(csv).toContain('No confirmed withholding snapshot')
+      expect(csv).toContain('1500.00')
+      expect(csv).toContain('3000.00')
+      const pending = csv.split(String.fromCharCode(13, 10)).find((line) => line.includes('CRW-OPEN'))
+      expect(pending).toContain('Not recorded')
+    } finally {
+      if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath)
+    }
+  })
+
+  it('rejects unlabelled crew TDS amounts rather than reporting forecasts as fact', async () => {
+    accountLedgerFixture.crew = [{
+      id: 'crew-unknown', crewBookingNo: 'CRW-UNKNOWN', crewMemberName: 'Unknown',
+      position: 'Grip', startDateBs: '2083-04-05', startDateAd: '2026-07-20',
+      days: 1, grossPayout: rupees(10000), tdsRatePercent: 15,
+      tdsAmount: rupees(1500), payoutStatus: 'Paid', paidAt: '2026-07-21T10:00:00Z',
+    }]
+    await expect(generateMonthlyPack({
+      calendar: 'AD', year: 2026, month: 7,
+    })).rejects.toThrow('Crew TDS source provenance missing')
   })
 
   it('refuses branch-specific packs without verified reversal and receipt scoping', async () => {
