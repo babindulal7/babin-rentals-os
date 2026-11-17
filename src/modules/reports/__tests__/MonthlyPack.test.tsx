@@ -249,6 +249,37 @@ describe('MonthlyPack generator & verification (T3-23)', () => {
     expect(pack.summaryText).toContain('STATUTORY TAX POSITION (FILING RECONCILIATION)')
   })
 
+  it('exports signed cash movements for receipts, refunds and immutable reversals', async () => {
+    accountLedgerFixture.refunds = [{
+      id: 'refund-1', paymentNo: 'PAY-REF-1',
+      bookingId: 'bk-1', bookingNo: 'BK-2083-001',
+      invoiceId: 'inv-1', invoiceNo: 'INV-2083-001',
+      clientId: 'cl-1', clientName: 'Production House A',
+      amount: rupees(500), paymentType: 'Refund', status: 'Received',
+      paymentDateAd: '2026-07-21T10:00:00Z', channelGroup: 'Bank',
+    }]
+    accountLedgerFixture.reversals = [{
+      id: 'rev-1', reversal_no: 'REV-2083-001', original_payment_id: 'pay-1',
+      amount: '400.00', reversed_at: '2026-07-22T10:00:00Z',
+    }]
+    const pack = await generateMonthlyPack({ calendar: 'BS', year: 2083, month: 4 })
+    expect(pack.counts.payments).toBe(3)
+    expect(pack.summaryText).toContain('Refund Movements:              1')
+    expect(pack.summaryText).toContain('Reversal Movements:            1')
+    const tmpPath = path.join(os.tmpdir(), `test-monthly-refunds-${Date.now()}.zip`)
+    try {
+      fs.writeFileSync(tmpPath, Buffer.from(pack.zipBytes))
+      const csv = execSync(`unzip -p "${tmpPath}" payments_received_bs_2083_04.csv`, { encoding: 'utf-8' })
+      expect(csv).toContain('REV-2083-001')
+      expect(csv).toContain('pay-1')
+      expect(csv).toContain('-400.00')
+      expect(csv).toContain('PAY-REF-1')
+      expect(csv).toContain('-500.00')
+    } finally {
+      if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath)
+    }
+  })
+
   it('refuses tax invoice copies without verified issuer and invoice-line data', async () => {
     await expect(generateMonthlyPack({
       calendar: 'BS', year: 2083, month: 4, includeInvoicePdfs: true,
