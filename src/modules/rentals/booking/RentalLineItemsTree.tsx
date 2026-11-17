@@ -342,12 +342,12 @@ export function RentalLineItemsTree({
           />
         </td>
         <td role="cell" data-label="Days" style={{ ...td, textAlign: 'right' }}>
-          {l.trackingMode === 'Consumable' || l.isConsumable ? (
+          {l.trackingMode === 'Consumable' || l.isConsumable || l.serviceBasis === 'Flat' ? (
             <span
-              title="Consumables are charged per unit sale, not per rental day."
+              title={l.serviceBasis === 'Flat' ? 'Flat services are charged once, never per rental day.' : 'Consumables are charged per unit sale, not per rental day.'}
               style={{ color: 'var(--muted)', fontSize: 'var(--t-meta)', fontWeight: 600 }}
             >
-              1 (sale)
+              {l.serviceBasis === 'Flat' ? '1 (flat)' : '1 (sale)'}
             </span>
           ) : (
             <NumberStepper
