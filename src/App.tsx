@@ -59,6 +59,7 @@ const CasesReport       = lazy(() => import('./modules/reports/CasesReport'))
 const CustomReport      = lazy(() => import('./modules/reports/CustomReport'))
 
 const SalesVatReports   = lazy(() => import('./modules/reports/SalesVatReports'))
+const MonthlyPack       = lazy(() => import('./modules/reports/MonthlyPack'))
 const CrewTdsReport    = lazy(() => import('./modules/reports/CrewTdsReport'))
 const ActivityReports   = lazy(() => import('./modules/reports/ActivityReports'))
 const BackupRestore     = lazy(() => import('./modules/admin/BackupRestore'))
@@ -740,6 +741,15 @@ export default function App() {
           element={
             <Shell crumbs={[{ label: 'Finance', to: '/finance' }, { label: 'Reports', to: '/finance?tab=reports' }, { label: 'VAT / Tax Reports' }]}>
               <SalesVatReports />
+            </Shell>
+          }
+        />
+
+        <Route
+          path="/reports/monthly-pack"
+          element={
+            <Shell crumbs={[{ label: 'Finance', to: '/finance' }, { label: 'Reports', to: '/finance?tab=reports' }, { label: 'Monthly Pack' }]} search="Search reports…">
+              <MonthlyPack />
             </Shell>
           }
         />

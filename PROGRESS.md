@@ -1,5 +1,57 @@
 # Progress Log
 
+## 2026-11-17 — T3-23: Monthly accountant export pack (Lane C)
+
+**Did**
+- Implemented **T3-23 · Monthly pack for the accountant** (`mac/T3-23-accountant-monthly-pack`):
+  - Created `src/lib/zip.ts`: zero-dependency standard PKZIP 2.0 uncompressed (STORE) stream generator with CRC-32 integrity calculation, tested and verifiable with system `unzip -t`.
+  - Created `src/lib/monthlyPack.ts`: monthly archive generator producing 5 core files + optional tax invoice PDFs:
+    1. `sales_register_<month>.csv` (matching Nepal IRD Annex 5 / बिक्री खाता format with VAT & taxable sales breakdown).
+    2. `purchase_register_<month>.csv` (operating expenses, vendor name, category, payment method, amount).
+    3. `payments_received_<month>.csv` (receipts, settlements, advances, and collections ledger).
+    4. `tds_withheld_<month>.csv` (crew compensation, withholding tax %, TDS amount, and PAN).
+    5. `summary.txt` (statutory filing reconciliation, output VAT, TDS obligations, and receivables movement).
+    6. Optional `invoices/<invoice_no>.pdf` individual tax invoice copies.
+  - Implemented UI component `src/modules/reports/MonthlyPack.tsx`:
+    - Full BS (Bikram Sambat) and AD month selectors.
+    - Role-based access gating: strictly restricted to Owner, Admin, Manager, and Accounts under Law 6.
+    - Summary card with live KPI previews before downloading.
+    - One-click ZIP download with browser Blob/URL download handler.
+  - Added route `/reports/monthly-pack` in `src/App.tsx` and linked "Monthly Pack (ZIP)" action in `src/modules/reports/ReportCatalog.tsx`.
+  - Added unit test suites `src/lib/__tests__/zip.test.ts` (2/2 pass) and `src/modules/reports/__tests__/MonthlyPack.test.tsx` (5/5 pass).
+
+**Ruled**
+- Law 6 money blindness enforced: non-money floor roles (Warehouse, Technician, Driver, Client, Coordinator) are blocked via `RestrictedState` and cannot access accountant pack generation or endpoints.
+- Dates follow Law 7: queries run in UTC / AD ranges, with BS dates formatted for display in Nepal IRD reporting columns.
+- ZIP file generation is client-side, zero-dependency, and verified with `unzip -t`.
+
+**Verified**
+- `npm run check:pglite`: 237/237 applied cleanly, 0 failed, 203 definers pinned.
+- `npm run check:lifecycle`: 76/76 green.
+- `npm run check:security`: 18 SQL regressions + 14 branch reset regressions passed.
+- `npm test src/lib/__tests__/zip.test.ts src/modules/reports/__tests__/MonthlyPack.test.tsx`: 7/7 tests pass.
+- `npm run gates`: Full 17 gates PASS green.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 106 / 106 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 68 | 56 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 85 / 85 (100%) | +0 |
+| Lifecycle | steps green / total | 76 / 76 (100%) | +2 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 237 files · check:pglite 237/237 applied, 0 failed (recorded 2026-11-17T07:48:39.912Z). Suite: PASS — 7274/7274 passed, 0 failed (recorded 2026-11-17T07:50:53.694Z); source fingerprint matches.
+Coverage suite: PASS — 7274/7274 passed, 0 failed (recorded 2026-11-17T07:50:53.694Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-17T07:49:05.304Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Staged accountant verification of exported ZIP files on staging deployment.
+- Card 05 (T3-29) in priority queue: Manager decision for clashing extensions (Design First).
+
+
 ## 2026-11-17 — T3-30: Consumables: unit price, add at desk, restock, low stock (Lane C)
 
 **Did**
