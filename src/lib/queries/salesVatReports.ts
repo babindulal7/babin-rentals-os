@@ -47,6 +47,9 @@ export interface SalesInvoiceItem {
   issueDate: string
   dueDate: string
   subtotal: Paisa
+  /** Persisted post-discount tax base; never derive this from pre-discount subtotal. */
+  taxableAmount?: Paisa
+  discountAmount?: Paisa
   taxAmount: Paisa
   grandTotal: Paisa
   paidAmount: Paisa
@@ -256,6 +259,8 @@ export async function getSalesVatReport(options?: ReportFilterOptions): Promise<
       issueDate: r.issue_date ?? '',
       dueDate: r.due_date ?? '',
       subtotal: sub,
+      taxableAmount: taxableAmt,
+      discountAmount: discount,
       taxAmount: vat,
       grandTotal: total,
       paidAmount: paid,

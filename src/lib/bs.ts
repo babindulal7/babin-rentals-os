@@ -109,7 +109,7 @@ export interface BsDate {
  * beats a wrong date. Extending it is data entry against a published calendar,
  * not a product decision. `TODO(decision)`: who reloads it, and how often.
  */
-const BS_MONTH_DAYS: Readonly<Record<number, readonly number[]>> = {
+export const BS_MONTH_DAYS: Readonly<Record<number, readonly number[]>> = {
   2078: [31, 31, 31, 32, 31, 31, 30, 29, 30, 29, 30, 30],
   2079: [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
   2080: [31, 32, 31, 32, 31, 30, 30, 30, 29, 29, 30, 30],
