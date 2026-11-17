@@ -248,6 +248,11 @@ async function fetchExpensesForPeriod(
 export async function generateMonthlyPack(
   options: MonthlyPackOptions,
 ): Promise<MonthlyPackResult> {
+  // Payments are branch-scoped, but payment reversals do not store branch_id.
+  // Do not return cross-branch money under a branch-specific report label.
+  if (options.branchId) {
+    throw new Error('Branch-scoped accountant packs require verified receipt and reversal branch filtering; export refused.')
+  }
   // Tax invoices must include persisted issuer details and exact invoice lines.
   // Until a verified invoice record source is connected, never fabricate copies.
   if (options.includeInvoicePdfs) {
