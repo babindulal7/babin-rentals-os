@@ -176,6 +176,7 @@ describe('WhoOwes engine & PDF (T3-20)', () => {
   })
 
   it('reads every invoice page rather than understating receivables after the first 400', async () => {
+    mockListInvoices.mockClear()
     const firstPage = Array.from({ length: 400 }, (_, idx) =>
       makeInvoice({ id: `page-1-${idx}`, clientId: 'c-old', clientName: 'Older Studio', outstandingAmount: rupees(100) }))
     const lastPage = [makeInvoice({ id: 'page-2-1', clientId: 'c-old', clientName: 'Older Studio', outstandingAmount: rupees(100) })]
