@@ -7972,6 +7972,131 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L82',
+  title: 'Client TDS on a rental invoice: 1.5% before VAT, invoice settles at gross, cash stays net, append-only ledger, reversal by Manager, money-blind refused (R-17.1, R-17.3, migration 0240)',
+  expect: 'green',
+  run: async () => {
+    const makeInvoice = async (suffix, pickup, ret) => {
+      let bookingId
+      await as('Coordinator', async () => {
+        const res = await q('select public.create_booking($1::jsonb) as res', [JSON.stringify({
+          client_uuid: `00000000-0000-4000-8000-0000000082${suffix}`,
+          created_by: U.Coordinator,
+          branch_id: BRANCH,
+          client_id: CLIENT,
+          pickup_at: pickup,
+          return_at: ret,
+          delivery_type: 'Client Pickup',
+          deposit_required: 0,
+          lines: [{
+            client_uuid: `00000000-0000-4000-8000-0000000083${suffix}`,
+            line_type: 'Equipment', product_id: SERIAL_PRODUCT, item_name: 'Lifecycle FX3 Camera',
+            qty: 1, days: 2, rate: 5000,
+          }],
+        })])
+        bookingId = res.rows[0].res.booking_id
+      })
+      let invoiceId
+      await as('Accounts', async () => {
+        const res = await q('select public.create_invoice($1::jsonb) as res', [JSON.stringify({
+          client_uuid: `00000000-0000-4000-8000-0000000084${suffix}`, created_by: U.Accounts, booking_id: bookingId,
+        })])
+        invoiceId = res.rows[0].res.invoice_id
+      })
+      return { bookingId, invoiceId }
+    }
+    const pay = async (bookingId, invoiceId, amount) => {
+      await as('Accounts', async () => {
+        await q(
+          `insert into payments (client_uuid, payment_no, booking_id, invoice_id, client_id, branch_id, amount, payment_type, payment_date, received_by)
+           values (gen_random_uuid(), next_document_number('payment'), $1, $2, $3, $4, $5, 'Advance Payment', now(), $6)`,
+          [bookingId, invoiceId, CLIENT, BRANCH, amount, U.Accounts])
+      })
+    }
+    const inv = async (id) => (await q('select taxable_amount, total_amount, paid_amount, outstanding_amount, status from invoices where id = $1', [id])).rows[0]
+    const tds = async (invoiceId, key, extra = {}) => {
+      const r = await q('select public.record_client_tds($1::jsonb) as res', [JSON.stringify({ invoice_id: invoiceId, client_uuid: key, ...extra })])
+      return r.rows[0].res
+    }
+
+    const A = await makeInvoice('01', '2099-10-01T04:00:00Z', '2099-10-03T04:00:00Z')
+    const a0 = await inv(A.invoiceId)
+    const taxable = Number(a0.taxable_amount)
+    const total = Number(a0.total_amount)
+    const expectedTds = Math.round(taxable * 1.5) / 100
+    assert(taxable > 0 && total > taxable, 'the invoice has a taxable base and VAT on top')
+    assertEq(Number(a0.outstanding_amount), total, 'nothing is paid yet')
+
+    // 1. Money-blind and non-payment roles are refused.
+    await as('Warehouse', async () => {
+      await refuses('Warehouse records client TDS', 'select public.record_client_tds($1::jsonb)',
+        [JSON.stringify({ invoice_id: A.invoiceId, client_uuid: '00000000-0000-4000-8000-000000008201' })], /42501|Only Owner/i)
+    })
+
+    // 2. Client pays NET cash, then records the TDS they deducted: the invoice settles at gross.
+    await pay(A.bookingId, A.invoiceId, total - expectedTds)
+    assertEq(Number((await inv(A.invoiceId)).outstanding_amount), expectedTds, 'only the TDS is left outstanding after the net payment')
+
+    const key1 = '00000000-0000-4000-8000-000000008202'
+    let rec
+    await as('Accounts', async () => { rec = await tds(A.invoiceId, key1, { certificate_number: 'TDS-CERT-0001' }) })
+    assertEq(Number(rec.amount), expectedTds, 'TDS is 1.5% of the taxable value (before VAT)')
+    assertEq(Number(rec.rate_percent), 1.5, 'the rate is fixed at 1.5%')
+    assertEq(Number(rec.base_amount), taxable, 'the base is the taxable amount, not the VAT-inclusive total')
+    assertEq(Number(rec.outstanding_amount), 0, 'invoice outstanding is zero: settled at gross')
+    assertEq(Number(rec.paid_amount), total, 'paid_amount equals the gross total (cash + TDS credit)')
+
+    // 3. Cash takings stay NET: the payments table is untouched by the TDS.
+    assertEq(Number(await one('select coalesce(sum(amount),0) from payments where invoice_id = $1', [A.invoiceId])), total - expectedTds, 'cash received is the net amount')
+
+    // 4. Replay with the same key is a no-op (Law 8); a second deduction under a new key is refused.
+    await as('Accounts', async () => {
+      const again = await tds(A.invoiceId, key1)
+      assertEq(again.replayed, true, 'same key replays')
+      await refuses('a second active deduction on one invoice', 'select public.record_client_tds($1::jsonb)',
+        [JSON.stringify({ invoice_id: A.invoiceId, client_uuid: '00000000-0000-4000-8000-000000008203' })], /GATE:tds\.already_recorded/i)
+    })
+    assertEq(Number(await one('select count(*) from tds_ledger where invoice_id = $1', [A.invoiceId])), 1, 'one ledger row')
+
+    // 5. The ledger is append-only: no update, no delete, even for the database owner.
+    await asOwnerOfTheDatabase(async () => {
+      await refuses('updating a ledger row', 'update tds_ledger set amount = 1 where invoice_id = $1', [A.invoiceId])
+      await refuses('deleting a ledger row', 'delete from tds_ledger where invoice_id = $1', [A.invoiceId])
+    })
+
+    // 6. Reversal: Coordinator refused, a short reason refused, Manager succeeds and re-opens the TDS amount.
+    const ledgerId = await one("select id from tds_ledger where invoice_id = $1 and entry_type = 'Deduction'", [A.invoiceId])
+    await as('Coordinator', async () => {
+      await refuses('Coordinator reverses client TDS', 'select public.reverse_client_tds($1::jsonb)',
+        [JSON.stringify({ ledger_id: ledgerId, client_uuid: '00000000-0000-4000-8000-000000008204', reason: 'Entered on the wrong invoice' })], /42501|Only Owner/i)
+    })
+    await as('Manager', async () => {
+      await refuses('a reversal with a short reason', 'select public.reverse_client_tds($1::jsonb)',
+        [JSON.stringify({ ledger_id: ledgerId, client_uuid: '00000000-0000-4000-8000-000000008205', reason: 'oops' })], /10 characters/i)
+      const r = (await q('select public.reverse_client_tds($1::jsonb) as res',
+        [JSON.stringify({ ledger_id: ledgerId, client_uuid: '00000000-0000-4000-8000-000000008206', reason: 'Entered on the wrong invoice' })])).rows[0].res
+      assertEq(Number(r.outstanding_amount), expectedTds, 'reversing the TDS re-opens that amount')
+      await refuses('reversing the same deduction twice', 'select public.reverse_client_tds($1::jsonb)',
+        [JSON.stringify({ ledger_id: ledgerId, client_uuid: '00000000-0000-4000-8000-000000008207', reason: 'Entered on the wrong invoice' })], /GATE:tds\.already_reversed/i)
+    })
+    assertEq((await inv(A.invoiceId)).status === 'Paid', false, 'a reversed TDS means the invoice is no longer Paid')
+
+    // 7. After a reversal the TDS can be recorded again (a new, correct deduction).
+    await as('Accounts', async () => { await tds(A.invoiceId, '00000000-0000-4000-8000-000000008208') })
+    assertEq(Number((await inv(A.invoiceId)).outstanding_amount), 0, 're-recorded TDS settles the invoice again')
+
+    // 8. TDS can never exceed what is outstanding: an invoice already paid in full cash refuses it.
+    const B = await makeInvoice('02', '2099-09-01T04:00:00Z', '2099-09-03T04:00:00Z')
+    const b0 = await inv(B.invoiceId)
+    await pay(B.bookingId, B.invoiceId, Number(b0.total_amount))
+    await as('Accounts', async () => {
+      await refuses('TDS on an invoice already settled in cash', 'select public.record_client_tds($1::jsonb)',
+        [JSON.stringify({ invoice_id: B.invoiceId, client_uuid: '00000000-0000-4000-8000-000000008209' })], /GATE:tds\.exceeds_outstanding/i)
+    })
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break
