@@ -37,7 +37,7 @@ import { fetchReturnQuantityFacts } from '../../lib/queries/returnQuantityFacts'
 /* Law 1 — the engine owns the rule, this screen only renders it. `0003:399`'s
    "unresolved Not Returned" is answered in `floorVerb.ts`; re-listing the three
    decisions here would be a second copy to drift (RT-03). */
-import { notReturnedDecisionEndsLine, type FloorLineInput } from '../../actions/rentals/floorVerb'
+import { notReturnedDecisionEndsLine, type FloorLineInput, type SignatureInput } from '../../actions/rentals/floorVerb'
 import type { CompleteReturnInput } from '../../actions/rentals/returnRental'
 import type { ItemCondition, NotReturnedDecision } from '../../types/database'
 import { CompactButton } from '../../components/ui/TouchTarget'
@@ -502,6 +502,7 @@ interface Sig {
   role?: string | undefined
   dataUrl?: string | undefined
   mode?: string | undefined
+  evidenceFileId?: string | null | undefined
 }
 
 
@@ -587,6 +588,8 @@ export default function ReturnWorkspace({
     returningName: string
     sigReturning: Sig | null
     sigWarehouse: Sig | null
+    refusedToSign?: boolean
+    refusalReason?: string
     completionKey?: string
     completionAttempt?: ReturnCompletionAttempt | null
   }
@@ -609,6 +612,9 @@ export default function ReturnWorkspace({
   const [returningName, setReturningName] = useState('')
   const [sigReturning, setSigReturning] = useState<Sig | null>(null)
   const [sigWarehouse, setSigWarehouse] = useState<Sig | null>(null)
+  /** T2-19 (B19) — returning person refusal when damage or missing gear is found */
+  const [refusedToSign, setRefusedToSign] = useState(false)
+  const [refusalReason, setRefusalReason] = useState('')
   /**
    * Law 12 — a dispatch failure is inline and persistent, and navigation
    * happens only on a resolved promise. A blocked gate is never a toast.
@@ -625,7 +631,7 @@ export default function ReturnWorkspace({
   const completionAttemptRef = useRef<ReturnCompletionAttempt | null>(null)
   const submitLock = useRef(false)
   const [hydratedDraftFor, setHydratedDraftFor] = useState<string | null>(null)
-  const draftFingerprint = JSON.stringify({ marks, sessionNotes, returningName, sigReturning, sigWarehouse })
+  const draftFingerprint = JSON.stringify({ marks, sessionNotes, returningName, sigReturning, sigWarehouse, refusedToSign, refusalReason })
   const retryingSavedAttempt = completionAttempt !== null && completionAttempt.draftFingerprint === draftFingerprint
   const [returnQuantities, setReturnQuantities] = useState<{ bookingId: string; received: Map<string, number> } | null>(null)
   const [quantityError, setQuantityError] = useState<string | null>(null)
@@ -687,6 +693,8 @@ export default function ReturnWorkspace({
         setReturningName(persisted.payload.returningName || '')
         setSigReturning(persisted.payload.sigReturning ?? null)
         setSigWarehouse(persisted.payload.sigWarehouse ?? null)
+        setRefusedToSign(Boolean(persisted.payload.refusedToSign))
+        setRefusalReason(persisted.payload.refusalReason ?? '')
         const attempt = persisted.payload.completionAttempt ?? null
         setCompletionKey(attempt?.input.clientUuid ?? persisted.payload.completionKey ?? newClientUuid())
         setCompletionAttempt(attempt)
@@ -704,6 +712,8 @@ export default function ReturnWorkspace({
     setReturningName('')
     setSigReturning(null)
     setSigWarehouse(null)
+    setRefusedToSign(false)
+    setRefusalReason('')
     setCompletionKey(newClientUuid())
     setCompletionAttempt(null)
     completionAttemptRef.current = null
@@ -719,7 +729,9 @@ export default function ReturnWorkspace({
       sessionNotes.trim().length > 0 ||
       returningName.trim().length > 0 ||
       sigReturning !== null ||
-      sigWarehouse !== null
+      sigWarehouse !== null ||
+      refusedToSign ||
+      refusalReason.trim().length > 0
     if (hasContent) {
       saveFloorScan<PersistedReturnScan>('return', floorId, {
         marks,
@@ -728,13 +740,15 @@ export default function ReturnWorkspace({
         returningName,
         sigReturning,
         sigWarehouse,
+        refusedToSign,
+        refusalReason,
         completionKey,
         completionAttempt,
       })
     } else {
       clearFloorScan('return', floorId)
     }
-  }, [floorId, hydratedDraftFor, marks, scanLog, sessionNotes, returningName, sigReturning, sigWarehouse, completionKey, completionAttempt])
+  }, [floorId, hydratedDraftFor, marks, scanLog, sessionNotes, returningName, sigReturning, sigWarehouse, refusedToSign, refusalReason, completionKey, completionAttempt])
 
   const discardRestoredScan = () => {
     if (floorId) clearFloorScan('return', floorId)
@@ -743,6 +757,9 @@ export default function ReturnWorkspace({
     setSessionNotes('')
     setReturningName('')
     setSigReturning(null)
+    setSigWarehouse(null)
+    setRefusedToSign(false)
+    setRefusalReason('')
     setSigWarehouse(null)
     setRestoredFromStorage(false)
     setQcStatusMap({})
@@ -818,6 +835,11 @@ export default function ReturnWorkspace({
         photosCount: savedEvidence.evidence?.files ?? 0,
         flags,
         lines: reportLines,
+        returningPersonSignature: sigReturning
+          ? { signerName: sigReturning.name, signedAt: sigReturning.atIso, refused: false }
+          : refusedToSign
+            ? { signerName: returningName || floor.clientName || 'Client', refused: true }
+            : null,
       })
 
       openPdfForPrint(result.blob, `Return_Report_${floor.bookingNo}`)
@@ -919,9 +941,7 @@ export default function ReturnWorkspace({
     decisionsByLine.set(r.lineId, set)
   }
   const mixedDecisionLines = [...decisionsByLine.entries()].filter(([, set]) => set.size > 1).map(([lineId]) => lineId)
-  const sigMissing: string[] = []
-  if (!sigReturning) sigMissing.push('Returning person')
-  if (!sigWarehouse) sigMissing.push('Warehouse staff')
+  const hasFlaggedItems = damagedRows.length > 0 || missingRows.length > 0
 
   const gates: Array<{ label: string; pass: boolean; detail: string | null }> = [
     {
@@ -981,11 +1001,22 @@ export default function ReturnWorkspace({
             ? `${mixedDecisionLines.length} line${mixedDecisionLines.length > 1 ? 's carry' : ' carries'} conflicting decisions — the engine records ONE decision per booking line, so its units must agree`
             : null,
     },
-    {
-      label: 'Returning person and warehouse staff signatures captured',
-      pass: sigMissing.length === 0,
-      detail: sigMissing.length === 0 ? null : `Missing: ${sigMissing.join(', ')}`,
-    },
+    ...(hasFlaggedItems
+      ? [
+          {
+            label: 'Returning person signature or recorded refusal under flagged items (B19)',
+            pass: sigReturning !== null || (refusedToSign && refusalReason.trim().length >= MIN_REASON),
+            detail:
+              sigReturning !== null
+                ? null
+                : refusedToSign
+                  ? refusalReason.trim().length >= MIN_REASON
+                    ? null
+                    : `Refusal reason must be at least ${MIN_REASON} characters (currently ${refusalReason.trim().length})`
+                  : 'At least one item is flagged damaged or missing — the returning person must sign under the flagged items list, or staff must record a refusal reason (≥10 chars)',
+          },
+        ]
+      : []),
   ]
   const firstBlockedGate = gates.find((g) => !g.pass) ?? null
   const canComplete = firstBlockedGate === null && !dispatching
@@ -1363,8 +1394,28 @@ export default function ReturnWorkspace({
     setDispatching(true)
 
     const { payload, extraNotes } = buildReturnLines(floor.lines, rows, verifiedMarks)
+    const signaturesInput: SignatureInput[] = []
+    if (sigReturning) {
+      signaturesInput.push({
+        role: 'Returning person',
+        signerName: sigReturning.name,
+        signedAt: sigReturning.atIso,
+        isRequired: true,
+        evidenceFileId: sigReturning.evidenceFileId ?? null,
+      })
+    }
+    if (sigWarehouse) {
+      signaturesInput.push({
+        role: 'Warehouse staff',
+        signerName: sigWarehouse.name,
+        signedAt: sigWarehouse.atIso,
+        isRequired: false,
+        evidenceFileId: sigWarehouse.evidenceFileId ?? null,
+      })
+    }
     const sigNotes = [
       sigReturning ? `Returning person signature: ${sigReturning.name} at ${formatAdDateTime(sigReturning.atIso)}` : null,
+      refusedToSign ? `Returning person signature REFUSED: "${refusalReason.trim()}"` : null,
       sigWarehouse ? `Warehouse staff signature: ${sigWarehouse.name} at ${formatAdDateTime(sigWarehouse.atIso)}` : null,
     ].filter((n): n is string => n !== null)
     const notes = [sessionNotes.trim(), ...sigNotes, ...extraNotes].filter((n) => n !== '').join('\n')
@@ -1376,6 +1427,8 @@ export default function ReturnWorkspace({
         clientUuid: completionKey,
         occurredAt: new Date().toISOString(),
         ...(notes === '' ? {} : { notes }),
+        ...(signaturesInput.length > 0 ? { signatures: signaturesInput } : {}),
+        ...(refusedToSign ? { signatureRefused: true, signatureRefusalReason: refusalReason.trim() } : {}),
       },
     }
     completionAttemptRef.current = attempt
@@ -1384,6 +1437,7 @@ export default function ReturnWorkspace({
     // this exact request identity and payload, including its original timestamp.
     saveFloorScan<PersistedReturnScan>('return', floor.id, {
       marks, scanLog, sessionNotes, returningName, sigReturning, sigWarehouse,
+      refusedToSign, refusalReason,
       completionKey, completionAttempt: attempt,
     })
 
@@ -1421,7 +1475,7 @@ export default function ReturnWorkspace({
 
   const completeRef = useRef(completeSession)
   completeRef.current = completeSession
-  const isDirty = Object.keys(marks).length > 0 || sessionNotes.trim().length > 0 || sigReturning !== null || sigWarehouse !== null
+  const isDirty = Object.keys(marks).length > 0 || sessionNotes.trim().length > 0 || sigReturning !== null || sigWarehouse !== null || refusedToSign || refusalReason.trim().length > 0
   const blockedReason = nextRequirement(gates.filter((g) => !g.pass).map((g) => g.label))
   const blockerTarget = !quantitiesVerified ? '#return-quantity-verification'
     : !anythingResolved ? '.floor-scanner-input'
@@ -1430,7 +1484,9 @@ export default function ReturnWorkspace({
       : damageIncomplete.length > 0 ? '[data-operation-target="return-damage"]'
         : shortReasons.length > 0 ? '[data-operation-target="return-reason"]'
           : noDecision.length > 0 || mixedDecisionLines.length > 0 ? '[data-operation-target="return-decision"]'
-            : `[data-operation-signature="${!sigReturning ? 'Returning person (Client / Courier)' : 'Warehouse staff'}"]`
+            : hasFlaggedItems && !sigReturning && (!refusedToSign || refusalReason.trim().length < MIN_REASON)
+              ? (refusedToSign ? '[aria-label="Refusal reason"]' : '[data-operation-signature="Returning person (Client / Courier)"]')
+              : '#return-complete-actions'
   const focusBlocker = (scope: HTMLElement) => {
     setFilter('All')
     setQuery('')
@@ -2386,27 +2442,119 @@ export default function ReturnWorkspace({
                 </Card>
                 )}
 
-                <Card title="Signatures">
-                  {/* §9 — captured before completion (gate 6); written into the
-                      session notes with the dispatch. */}
-                  <SigRow
-                    label="Returning person (Client / Courier)"
-                    sig={sigReturning}
-                    required
-                    onCapture={captureReturning}
-                  />
+                <Card title="Signatures & Attestation (B19, R-39)">
+                  {hasFlaggedItems ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      <div
+                        style={{
+                          padding: '12px 14px',
+                          borderRadius: 'var(--r-card)',
+                          background: 'rgba(239, 68, 68, 0.08)',
+                          border: '1px solid var(--danger-border, #fca5a5)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--danger, #dc2626)', fontWeight: 600, fontSize: 'var(--t-body)' }}>
+                          <Icon name="alert_triangle" size={16} />
+                          <span>Flagged Items Detected ({damagedRows.length + missingRows.length})</span>
+                        </div>
+                        <p style={{ margin: '6px 0 0', fontSize: 'var(--t-meta)', color: 'var(--text2)', lineHeight: 1.45 }}>
+                          At least one unit is flagged damaged or missing. The returning person must sign once under the list of flagged items before Return can complete (B19).
+                        </p>
+                        <div style={{ margin: '8px 0 0', padding: '8px 10px', background: 'var(--card, #ffffff)', borderRadius: 'var(--r-subtle)', border: '1px solid var(--border)' }}>
+                          <div style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>
+                            Flagged items summary:
+                          </div>
+                          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+                            {damagedRows.map((r) => (
+                              <li key={r.key}>
+                                <strong>{r.name}</strong> {r.serial ? `(${r.serial})` : ''} — Damaged: {marks[r.key]?.damageDescription || 'Pending description'}
+                              </li>
+                            ))}
+                            {missingRows.map((r) => (
+                              <li key={r.key}>
+                                <strong>{r.name}</strong> {r.serial ? `(${r.serial})` : ''} — Not Returned ({marks[r.key]?.decision || 'Pending decision'}): {marks[r.key]?.reason || 'Pending reason'}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        <p style={{ margin: '8px 0 0', fontSize: 'var(--t-meta)', fontStyle: 'italic', color: 'var(--text)' }}>
+                          “returned by {sigReturning?.name || returningName || floor?.clientName || 'the returning person'} for {floor?.clientName || 'the client'}; the flagged items are as shown”
+                        </p>
+                      </div>
 
-                  <SigRow
-                    label="Warehouse staff"
-                    sig={sigWarehouse}
-                    required
-                    {...(user && user.name.trim() !== ''
-                      ? { onCapture: captureWarehouse }
-                      : {
-                          unavailable:
-                            'The signed-in account carries no name, so a warehouse signature cannot be attested. The identity is the signed-in operator or there is no signature.',
-                        })}
-                  />
+                      <SigRow
+                        label="Returning person (Client / Courier)"
+                        sig={sigReturning}
+                        required={!refusedToSign}
+                        onCapture={captureReturning}
+                      />
+
+                      {/* Refused to sign option */}
+                      <div
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: 'var(--r-subtle)',
+                          background: 'var(--bg-subtle, #f8fafc)',
+                          border: '1px solid var(--border)',
+                        }}
+                      >
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 'var(--t-body)', fontWeight: 500, color: 'var(--text)' }}>
+                          <input
+                            type="checkbox"
+                            checked={refusedToSign}
+                            onChange={(e) => setRefusedToSign(e.target.checked)}
+                            aria-label="Client refused to sign"
+                          />
+                          <span>Client refused to sign (record refusal)</span>
+                        </label>
+                        {refusedToSign && (
+                          <div style={{ marginTop: 8 }}>
+                            <textarea
+                              value={refusalReason}
+                              onChange={(e) => setRefusalReason(e.target.value)}
+                              placeholder="Reason client refused to sign (minimum 10 characters required)…"
+                              aria-label="Refusal reason"
+                              rows={2}
+                              style={{
+                                width: '100%',
+                                minHeight: 48,
+                                padding: '6px 8px',
+                                borderRadius: 'var(--r-input)',
+                                border: `1px solid ${refusalReason.trim().length >= MIN_REASON ? 'var(--input-border)' : 'var(--danger, #dc2626)'}`,
+                                background: 'var(--input-bg)',
+                                color: 'var(--text)',
+                                fontSize: 'var(--t-meta)',
+                                fontFamily: 'inherit',
+                              }}
+                            />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 'var(--t-caption)', color: refusalReason.trim().length >= MIN_REASON ? 'var(--text-muted)' : 'var(--danger)' }}>
+                              <span>Audited refusal allows Return to complete without stalling the floor.</span>
+                              <span>{refusalReason.trim().length}/{MIN_REASON} chars min</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ padding: '8px 12px', borderRadius: 'var(--r-subtle)', background: 'rgba(34, 197, 94, 0.08)', border: '1px solid rgba(34, 197, 94, 0.25)', color: 'var(--success-text, #166534)', fontSize: 'var(--t-meta)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Icon name="check_circle" size={16} />
+                      <span>Clean return — 0 flagged items. No signature is required (R-39).</span>
+                    </div>
+                  )}
+
+                  <div style={{ marginTop: 12 }}>
+                    <SigRow
+                      label="Warehouse staff"
+                      sig={sigWarehouse}
+                      required={false}
+                      {...(user && user.name.trim() !== ''
+                        ? { onCapture: captureWarehouse }
+                        : {
+                            unavailable:
+                              'The signed-in account carries no name, so a warehouse signature cannot be attested. The identity is the signed-in operator or there is no signature.',
+                          })}
+                    />
+                  </div>
                   {/* §9 — optional, and uncapturable: no witness identity exists on this screen to sign as. */}
                   <SigRow label="Witness" sig={null} required={false} unavailable={WITNESS_UNAVAILABLE} />
                 </Card>

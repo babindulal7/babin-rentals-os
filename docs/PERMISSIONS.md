@@ -522,6 +522,7 @@ Known hole to keep closed: **`security_deposits` was readable by money-blind ses
 | `gate.handover.agreement_unsigned` | Agreement unsigned at handover | nobody | — | yes | Stage 1 (0115) |
 | `gate.return.session_missing` | On Rent → Returned with no return session | nobody | — | yes | Stage 1 (0115) |
 | `gate.return.units_unaccounted` | On-rent unit with no return line | nobody | — | yes | Stage 1 (0115; non-physical exempt 0139, Consumable exempt 0141) |
+| `gate.return.damage_unsigned` | Return with a flagged unit needs a signature or a recorded refusal | Any staff allowed to perform Return (Warehouse · Technician · Manager · Admin · Owner) | ≥10 chars (if refused) | yes | T2-19 (0242) |
 | `gate.handover.consumable_product_missing` | Consumable line whose product row is missing at Handover | nobody | — | no (movement refused, handover held) | 0142 |
 | `gate.stock_adjust.role` | Bulk stock adjustment by lower role | Owner · Admin · Manager | ≥10 chars | append-only `stock_adjustments` row | 0140; RULINGS-2026-09-29 |
 | `gate.stock_adjust.negative_result` | Adjustment would make product quantity negative | nobody | — | refused | 0140 |

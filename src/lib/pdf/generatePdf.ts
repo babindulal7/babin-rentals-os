@@ -1117,6 +1117,11 @@ export interface ReturnReportPdfData {
   lines: ReturnReportPdfLine[]
   company?: InvoicePdfCompany
   notes?: string | null
+  returningPersonSignature?: {
+    signerName: string
+    signedAt?: string
+    refused?: boolean
+  } | null
 }
 
 /**
@@ -1275,6 +1280,14 @@ export function generateReturnReportPdf(data: ReturnReportPdfData): Uint8Array {
   streamOps.push(`BT /F1 8 Tf 40 ${footerY - 45} Td (Inspected By / Warehouse Staff) Tj ET`)
 
   streamOps.push(`405 ${footerY - 35} 150 0.5 re S`)
+  if (data.returningPersonSignature) {
+    const sigLabel = data.returningPersonSignature.refused
+      ? `(Refused to sign: ${data.returningPersonSignature.signerName})`
+      : `Signed: ${data.returningPersonSignature.signerName}`
+    streamOps.push(`${darkSlate} rg`)
+    streamOps.push(`BT /F2 8 Tf 405 ${footerY - 28} Td (${escapePdfText(sigLabel)}) Tj ET`)
+    streamOps.push(`${mutedText} rg`)
+  }
   streamOps.push(`BT /F1 8 Tf 405 ${footerY - 45} Td (Returned By / Client Representative) Tj ET`)
 
   streamOps.push(`BT /F1 7.5 Tf 40 25 Td (${escapePdfText(`Babin Rentals OS Return Report · Verified for booking ${bookingNo}. Money-blind floor document.`)} ) Tj ET`)
