@@ -1,5 +1,62 @@
 # Progress Log
 
+## 2026-11-17 — T2-20: Consumables at Pack and Handover (Mac Antigravity)
+
+**Did**
+- Implemented **T2-20 · Floor adds consumables at Pack and Handover** (`mac/T2-20-floor-consumables`):
+  - Updated `src/modules/rentals/PackingWorkspace.tsx`: added "Add Consumables" button in Packing Checklist card actions (mobile and desktop), rendering `AddConsumableModal` with floor context note `Added by ${user.name || 'floor staff'} at Pack`.
+  - Updated `src/modules/rentals/HandoverWorkspace.tsx`: added "Add Consumables" button in Equipment card actions (mobile and desktop), rendering `AddConsumableModal` with floor context note `Added by ${user.name || 'floor staff'} at Handover`.
+  - Updated `src/modules/rentals/booking/AddConsumableModal.tsx`:
+    - Added `defaultNote?: string` support.
+    - Added search filtering input (`#consumable-search-input`) allowing floor staff to quickly search and filter consumable SKUs by name or asset code.
+    - Preserved quantity stepper and manual integer input.
+    - Protected Law 6 role-based money blindness: all pricing information, unit sale rates, and line totals are strictly masked and hidden from non-money floor roles (Warehouse, Technician, Driver).
+    - Preserved Law 8 idempotency via `clientUuid` passed to `addConsumableLine`.
+  - Added test suite `src/modules/rentals/__tests__/FloorConsumables.test.tsx` (6/6 tests pass):
+    - PackingWorkspace renders "Add Consumables" button.
+    - HandoverWorkspace renders "Add Consumables" button.
+    - AddConsumableModal strictly hides all pricing from Warehouse role (Law 6 money blindness).
+    - AddConsumableModal reveals pricing to Owner / money roles.
+    - Submitting modal invokes `addConsumableLine` with correct parameters, quantity, and floor note.
+    - Search input correctly filters consumable items.
+  - Updated `docs/plans/T2_FLOOR.md`: marked T2-20 status as `ready — awaiting merge (mac/T2-20-floor-consumables)`.
+
+**Ruled**
+- Consumable additions on the floor are priced via server-side RPC `add_consumable_line` (T3-30); floor roles never see or write financial amounts (Law 6).
+- Stock is deducted strictly at Handover, never at Pack (enforced in database custody rules).
+- Retries with the same `client_uuid` remain idempotent (Law 8).
+
+**Verified**
+- `npm test src/modules/rentals/__tests__/FloorConsumables.test.tsx`: 6/6 tests pass.
+- `npm run typecheck`: clean, 0 errors.
+- `npm run lint`: clean, 0 warnings.
+- `npm run check:pglite`: 237/237 migrations applied cleanly, 0 failed, 203 definers pinned.
+- `npm run check:lifecycle`: 76/76 lifecycle steps pass.
+- `npm run check:security`: all 18 Phase 0, 14 Reset branch, operations grants, and glossary regressions pass.
+- `npm run build`: built production bundle cleanly.
+- `npm run gates`: Full 17 gates PASS green.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 106 / 106 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 85 / 85 (100%) | +0 |
+| Lifecycle | steps green / total | 76 / 76 (100%) | +2 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 237 files · check:pglite 237/237 applied, 0 failed (recorded 2026-11-17T07:01:23.759Z). Suite: PASS — 7273/7273 passed, 0 failed (recorded 2026-11-17T07:03:38.527Z); source fingerprint matches.
+Coverage suite: PASS — 7273/7273 passed, 0 failed (recorded 2026-11-17T07:03:38.527Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-17T07:01:48.836Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- MAC-03 (T3-20: Who Owes receivables view + shareable statement)
+- MAC-04 (T3-23: Monthly accountant export pack)
+- MAC-05 to MAC-07 (T3-29, T2-23, T2-24: Design first)
+- MAC-08 to MAC-10 (T3-31, T2-19, T3-18: Dependency hold / design-only)
+
 ## 2026-11-17 — T3-30: Consumables: unit price, add at desk, restock, low stock (Lane C)
 
 **Did**

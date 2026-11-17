@@ -50,6 +50,8 @@ import { getCinemaKitDependencies, evaluateKitCompleteness } from '../../lib/kit
 import { exportPackingListPdf, openPdfForPrint } from '../../lib/pdf/exportPdf'
 import { buildPackingListPdfItems } from '../../lib/pdf/generatePdf'
 import { FloorOfflineStatus } from '../../components/ui/FloorOfflineStatus'
+import { AddConsumableModal } from './booking/AddConsumableModal'
+import type { SystemRole } from '../../types/database'
 import './rentals.css'
 
 
@@ -549,6 +551,7 @@ export default function PackingWorkspace({
   const [verifiedKitDeps, setVerifiedKitDeps] = useState<Record<string, string[]>>({})
   const [restoredFromStorage, setRestoredFromStorage] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
+  const [showAddConsumable, setShowAddConsumable] = useState(false)
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('Pending')
   const [queryInput, setQueryInput] = useState('')
   const [query, setQuery] = useState('')
@@ -1530,12 +1533,14 @@ export default function PackingWorkspace({
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         <Button icon="zap" onClick={quickPackAll}>Quick Pack</Button>
                         <Button icon="checklist" onClick={markPendingPacked}>Pending</Button>
+                        <Button icon="package" onClick={() => setShowAddConsumable(true)}>Add Consumables</Button>
                       </div>
                     ) : (
                       <>
                         <Button icon="zap" onClick={quickPackAll}>Quick Pack All</Button>
                         <Button icon="checklist" onClick={markPendingPacked}>Mark Pending Packed</Button>
                         <Button icon="camera" onClick={() => setShowScanner(true)}>Scan / Camera</Button>
+                        <Button icon="package" onClick={() => setShowAddConsumable(true)}>Add Consumables</Button>
                       </>
                     )
                   }
@@ -2362,6 +2367,21 @@ export default function PackingWorkspace({
                  rail behind it recorded. */
               onItemScanned={(item) => pack(item.id, 'scan')}
             />
+
+            {showAddConsumable && floor && user && (
+              <AddConsumableModal
+                isOpen={showAddConsumable}
+                onClose={() => setShowAddConsumable(false)}
+                bookingId={floor.id}
+                userId={user.id}
+                userRole={user.role as SystemRole}
+                onAdded={() => {
+                  setShowAddConsumable(false)
+                  setReload((r) => r + 1)
+                }}
+                defaultNote={`Added by ${user.name || 'floor staff'} at Pack`}
+              />
+            )}
           </div>
         )}
       </PageBody>
