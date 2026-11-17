@@ -40,7 +40,7 @@ export function quoteUpdatePayload(data:RentalDraftData,snapshot:QuoteSnapshot,d
       const original=snapshot.lines.find(row=>row.id===l.bookingLineId)
       const basis=l.serviceBasis??original?.service_basis??(l.lineType==='Service'?'Per day':null)
       // Flat service lines must always persist a single billable day, including quote edits.
-      const billableDays=basis==='Flat'||l.trackingMode==='Consumable'||l.isConsumable?1:l.days
+      const billableDays=basis==='Flat'?1:l.days
       return {id:l.bookingLineId??null,client_uuid:l.clientUuid,parent_client_uuid:l.parentClientUuid??null,line_type:l.lineType??'Equipment',product_id:l.productId??null,bundle_id:l.bundleId??null,description:l.name,qty:l.qty,days:billableDays,rate:toRupees(l.ratePaisa as Paisa),discount_amount:toRupees(roundHalfUp(l.ratePaisa*l.qty*billableDays*l.discountPct/100) as Paisa),is_included:l.isIncluded??false,service_basis:basis,line_note:l.lineNote??original?.line_note??(l.lineType==='Manual item'?l.name:null),sort_order:index}
     }),
     crew:data.crew.map(c=>{const original=snapshot.crew.find(row=>row.id===(c.bookingCrewLineId??c.crewId));return {id:original?.id??null,crew_member_id:original?(original.crew_member_id??null):(c.crewMemberId??(/^[0-9a-f-]{36}$/i.test(c.crewId)?c.crewId:null)),name:c.name,crew_role:c.role,phone:c.phone||null,day_rate:toRupees(c.dayRatePaisa as Paisa),days:c.days??original?.days??rentalDaysBetween(pickup.toISOString(),ret.toISOString())??1,overtime:Number(c.overtimeDays??0),overtimeDays:Number(c.overtimeDays??0),accommodation:toRupees(c.accommodationPaisa as Paisa),meals:toRupees(c.mealsPaisa as Paisa)}}),
