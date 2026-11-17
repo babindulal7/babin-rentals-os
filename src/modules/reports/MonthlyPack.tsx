@@ -38,8 +38,6 @@ export default function MonthlyPack() {
   const [adYear, setAdYear] = useState<number>(now.getFullYear())
   const [adMonth, setAdMonth] = useState<number>(now.getMonth() + 1)
 
-  const [includePdfs, setIncludePdfs] = useState<boolean>(false)
-
   const [generating, setGenerating] = useState<boolean>(false)
   const [result, setResult] = useState<MonthlyPackResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -64,7 +62,7 @@ export default function MonthlyPack() {
         calendar,
         year: selectedYear,
         month: selectedMonth,
-        includeInvoicePdfs: includePdfs,
+        includeInvoicePdfs: false,
       })
 
       setResult(pack)
@@ -90,7 +88,7 @@ export default function MonthlyPack() {
     } finally {
       setGenerating(false)
     }
-  }, [calendar, selectedYear, selectedMonth, includePdfs, isAllowed, showSuccessToast])
+  }, [calendar, selectedYear, selectedMonth, isAllowed, showSuccessToast])
 
   if (!isAllowed) {
     return (
@@ -111,7 +109,7 @@ export default function MonthlyPack() {
             Accountant Monthly Export Pack
           </h2>
           <p style={{ margin: 0, color: 'var(--text2)', fontSize: 'var(--t-body)' }}>
-            Statutory accounting bundle for Nepal Inland Revenue Department (IRD) filing and audit reconciliation.
+            Draft reconciliation archive for accountant review. VAT credits, refund treatment and filing readiness require separate verification.
           </p>
         </div>
 
@@ -299,14 +297,17 @@ export default function MonthlyPack() {
               <input
                 id="include-pdfs-checkbox"
                 type="checkbox"
-                checked={includePdfs}
-                onChange={(e) => setIncludePdfs(e.target.checked)}
-                disabled={generating}
-                style={{ width: 18, height: 18, cursor: 'pointer' }}
+                checked={false}
+                disabled
+                aria-describedby="invoice-copies-unavailable"
+                style={{ width: 18, height: 18, cursor: 'not-allowed' }}
               />
-              <label htmlFor="include-pdfs-checkbox" style={{ fontSize: 'var(--t-body)', cursor: 'pointer' }}>
-                Include individual invoice PDF copies under <code>invoices/</code> folder
+              <label htmlFor="include-pdfs-checkbox" style={{ fontSize: 'var(--t-body)', cursor: 'not-allowed' }}>
+                Invoice PDF copies (not yet available)
               </label>
+              <span id="invoice-copies-unavailable" style={{ color: 'var(--text2)', fontSize: 'var(--t-small)' }}>
+                Requires verified issuer information and saved invoice lines.
+              </span>
             </div>
 
             {/* Period Details Preview Box */}
@@ -381,17 +382,10 @@ export default function MonthlyPack() {
             <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
               <Icon name="check" size={16} />
               <div>
-                <strong>5. summary.txt:</strong> Executive statutory tax position, taxable turnover, Output VAT, TDS payable, and period receivables.
+                <strong>5. summary.txt:</strong> Provisional reconciliation summary; net tax due and closing receivables remain unverified.
               </div>
             </div>
-            {includePdfs && (
-              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', color: 'var(--primary)' }}>
-                <Icon name="file" size={16} />
-                <div>
-                  <strong>6. invoices/:</strong> Individual PDF copies of all non-draft tax invoices in the period.
-                </div>
-              </div>
-            )}
+
           </div>
         </Card>
 
