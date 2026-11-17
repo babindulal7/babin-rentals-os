@@ -32,7 +32,7 @@ permission or named-action gate — it removes *avoidable* steps only. Budgets:
 - **Claude in a cloud chat session is read-only on GitHub** (ruled 26 Oct 2026, W74): read,
   review and suggest; never push, open or close PRs, or comment. Deliver plans, prompts and
   patches as files for Babin. Codex and Gemini build locally; Babin merges.
-- **CI is a merge gate** (Babin, 9 Nov 2026, R-9.9 in `RULINGS-2026-11-09.md`; supersedes W75). It runs on the self-hosted Windows runner. The local gates in `PLAN.md` §6.4 still run before every push.
+- **CI is a merge gate** (Babin, 9 Nov 2026, R-9.9 in `RULINGS-2026-11-09.md`; supersedes W75). It runs on the configured self-hosted runners (Mac and Windows); verify the required checks on the exact PR head. The local gates in `PLAN.md` §6.4 still run before every push.
 
 ## The ones most easily broken
 
