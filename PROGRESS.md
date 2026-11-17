@@ -40,6 +40,27 @@
 - `npm test -- src/lib/__tests__/extensionClashes.test.ts src/modules/rentals/modals/__tests__/ExtendRentalModal.test.tsx`: 21/21 tests pass.
 - `CI=true VITE_DATA_SOURCE=mock npm run build`: built production bundle cleanly in 5.57s.
 
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 109 / 109 (100%) | +3 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 88 / 88 (100%) | +3 |
+| Lifecycle | steps green / total | 76 / 76 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 238 files · check:pglite 238/238 applied, 0 failed (recorded 2026-11-17T19:51:19.447Z). Suite: PASS — 7296/7296 passed, 0 failed (recorded 2026-11-17T19:52:27.477Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-17T19:51:22.787Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T3-29 PR #207 review and merge.
+- T3-31 (Counter sale)
+- T3-20 (Who Owes receivables view + shareable statement)
+- T3-23 (Monthly accountant export pack)
+
 ## 2026-11-17 — T2-20: Consumables at Pack and Handover (Mac Antigravity)
 
 **Did**
