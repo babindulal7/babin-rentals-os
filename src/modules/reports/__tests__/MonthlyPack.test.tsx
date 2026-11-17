@@ -20,6 +20,7 @@ vi.mock('../../../lib/supabase', () => ({
       select: () => {
         const queryChain: any = {
           eq: () => queryChain,
+          neq: () => queryChain,
           gte: () => queryChain,
           lte: () => queryChain,
           order: () => Promise.resolve({ data: [], error: null }),
