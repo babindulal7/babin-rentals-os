@@ -167,34 +167,34 @@ export default defineConfig({
     // Managed checkouts can share dependencies; allow their self-hosted fonts.
     fs: { allow: [__dirname, fs.realpathSync(path.resolve(__dirname, 'node_modules'))] },
     port: process.env['PORT'] ? Number(process.env['PORT']) : 3000,
-    host: true,
-    allowedHosts: [
-      '.ngrok-free.app', '.ngrok-free.dev', '.ngrok.app', '.ngrok.io',
-      /* Pinggy hands out a different suffix per tunnel type — a free tunnel
-         returns BOTH `*.free.pinggy.net` and `*.run.pinggy-free.link`, and paid
-         subdomains land on `*.pinggy.link`. Allow all of them; a missing suffix
-         fails as a bare 403 "Blocked request" that looks like a tunnel fault. */
-      '.pinggy.net', '.pinggy-free.link', '.pinggy.link', '.pinggy.io', '.pinggy.online',
-      '.trycloudflare.com',
-    ],
+    // GHSA-p4f5-76q4-ffq7 defense-in-depth: bind to localhost by default.
+    // Explicit opt-in via VITE_HOST or --host is required for external/LAN listeners.
+    host: process.env['VITE_HOST'] || 'localhost',
+    /* Review allowedHosts: Public dev tunnels (ngrok, Pinggy, Cloudflare) must NOT
+       expose an unauthenticated dev server by default. Localhost binding alone cannot
+       block a locally-installed tunnel client forwarding to loopback, so dev allowedHosts
+       defaults to loopback origins. Pass VITE_ALLOWED_HOSTS to explicitly allow authorized hosts. */
+    allowedHosts: process.env['VITE_ALLOWED_HOSTS']
+      ? process.env['VITE_ALLOWED_HOSTS'].split(',').map((h) => h.trim())
+      : ['.localhost', '127.0.0.1'],
     watch: {
       ignored: ['**/tmp/**', '**/__rar_*', '**/*.rartemp', '**/*.rar', '**/*.zip', '**/*.7z', '**/*.tar*', '**/.tmp-*', '**/.claude/**', '**/artifacts/**', '**/.system_generated/**', '**/.worktrees/**'],
     },
   },
   preview: {
-    /* `vite preview` carries its own host check (Vite >= 5.4.12), separate from
-       `server.allowedHosts` above. The tunnel hits preview, not dev, whenever the
-       offline layer is under test — the dev server registers no service worker at
-       all (`devOptions` is unset), so airplane-mode behaviour is only observable
-       against a built bundle. */
-    allowedHosts: [
-      '.ngrok-free.app', '.ngrok-free.dev', '.ngrok.app', '.ngrok.io',
-      /* Pinggy hands out a different suffix per tunnel type — a free tunnel
-         returns BOTH `*.free.pinggy.net` and `*.run.pinggy-free.link`, and paid
-         subdomains land on `*.pinggy.link`. Allow all of them; a missing suffix
-         fails as a bare 403 "Blocked request" that looks like a tunnel fault. */
-      '.pinggy.net', '.pinggy-free.link', '.pinggy.link', '.pinggy.io', '.pinggy.online',
-      '.trycloudflare.com',
-    ],
+    port: process.env['PORT'] ? Number(process.env['PORT']) : 4173,
+    host: process.env['VITE_PREVIEW_HOST'] || process.env['VITE_HOST'] || 'localhost',
+    /* `vite preview` serves the compiled, static production bundle (dist/) for
+       testing offline PWA/service worker behaviours on real devices (Mac, Windows,
+       tablets, phones). Keep allowedHosts controlled via env or allow authorized
+       tunnel testing only on patched Vite versions. */
+    allowedHosts: process.env['VITE_ALLOWED_HOSTS']
+      ? process.env['VITE_ALLOWED_HOSTS'].split(',').map((h) => h.trim())
+      : [
+          '.localhost', '127.0.0.1',
+          '.ngrok-free.app', '.ngrok-free.dev', '.ngrok.app', '.ngrok.io',
+          '.pinggy.net', '.pinggy-free.link', '.pinggy.link', '.pinggy.io', '.pinggy.online',
+          '.trycloudflare.com',
+        ],
   },
 })
