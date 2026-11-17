@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Modal } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Button'
 import Icon from '../../../components/ui/Icon'
@@ -24,6 +24,7 @@ export interface AddConsumableModalProps {
   userId: string
   userRole: SystemRole
   onAdded?: () => void
+  defaultNote?: string
 }
 
 export function AddConsumableModal({
@@ -33,22 +34,35 @@ export function AddConsumableModal({
   userId,
   userRole,
   onAdded,
+  defaultNote,
 }: AddConsumableModalProps) {
   const { showSuccessToast } = useToast()
   const isMoney = canViewMoney(userRole)
 
   const [products, setProducts] = useState<ConsumableProductOption[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
   const [loadingProducts, setLoadingProducts] = useState(false)
   const [selectedProductId, setSelectedProductId] = useState<string>('')
   const [qty, setQty] = useState<number>(1)
-  const [note, setNote] = useState<string>('')
+  const [note, setNote] = useState<string>(() => defaultNote ?? '')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // Law 8: Idempotency client UUID preserved across retry attempts for the same action
   const [clientUuid] = useState<string>(() => newClientUuid())
 
+  const filteredProducts = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return products
+    return products.filter(
+      (p) => p.name.toLowerCase().includes(q) || p.assetCode.toLowerCase().includes(q)
+    )
+  }, [products, searchQuery])
+
   useEffect(() => {
     if (!isOpen) return
+    if (defaultNote !== undefined) {
+      setNote(defaultNote)
+    }
     let active = true
     setLoadingProducts(true)
     setError(null)
@@ -88,7 +102,7 @@ export function AddConsumableModal({
     return () => {
       active = false
     }
-  }, [isOpen])
+  }, [isOpen, defaultNote])
 
   const selectedProduct = products.find((p) => p.id === selectedProductId)
 
@@ -180,10 +194,10 @@ export function AddConsumableModal({
           </div>
         )}
 
-        {/* Product selector */}
+        {/* Product selector & search */}
         <div>
           <label
-            htmlFor="consumable-product-select"
+            htmlFor="consumable-search-input"
             style={{ display: 'block', fontSize: 'var(--t-meta, 13px)', fontWeight: 600, marginBottom: 6 }}
           >
             Consumable Item
@@ -195,30 +209,65 @@ export function AddConsumableModal({
               No active consumable products found in inventory.
             </div>
           ) : (
-            <select
-              id="consumable-product-select"
-              aria-label="Select consumable item"
-              value={selectedProductId}
-              onChange={(e) => setSelectedProductId(e.target.value)}
-              disabled={submitting}
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                borderRadius: 'var(--r-btn, 6px)',
-                border: '1px solid var(--border)',
-                background: 'var(--card)',
-                color: 'var(--text)',
-                fontSize: 'var(--t-body, 14px)',
-                minHeight: 44,
-              }}
-            >
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} {p.assetCode ? `(${p.assetCode})` : ''} · In stock: {p.totalQuantity}
-                  {isMoney && p.unitSalePrice != null ? ` · ${formatMoney(p.unitSalePrice)} / unit` : ''}
-                </option>
-              ))}
-            </select>
+            <div style={{ display: 'grid', gap: 6 }}>
+              <input
+                id="consumable-search-input"
+                type="search"
+                placeholder="Search by name or code (e.g. tape, battery)…"
+                value={searchQuery}
+                onChange={(e) => {
+                  const q = e.target.value
+                  setSearchQuery(q)
+                  const filtered = products.filter(
+                    (p) =>
+                      p.name.toLowerCase().includes(q.toLowerCase()) ||
+                      p.assetCode.toLowerCase().includes(q.toLowerCase())
+                  )
+                  if (filtered.length > 0 && !filtered.some((p) => p.id === selectedProductId)) {
+                    setSelectedProductId(filtered[0]?.id ?? '')
+                  }
+                }}
+                disabled={submitting}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  borderRadius: 'var(--r-btn, 6px)',
+                  border: '1px solid var(--border)',
+                  background: 'var(--card)',
+                  color: 'var(--text)',
+                  fontSize: 'var(--t-body, 14px)',
+                  minHeight: 40,
+                }}
+              />
+              <select
+                id="consumable-product-select"
+                aria-label="Select consumable item"
+                value={selectedProductId}
+                onChange={(e) => setSelectedProductId(e.target.value)}
+                disabled={submitting || filteredProducts.length === 0}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  borderRadius: 'var(--r-btn, 6px)',
+                  border: '1px solid var(--border)',
+                  background: 'var(--card)',
+                  color: 'var(--text)',
+                  fontSize: 'var(--t-body, 14px)',
+                  minHeight: 44,
+                }}
+              >
+                {filteredProducts.length === 0 ? (
+                  <option value="">No matching consumables found</option>
+                ) : (
+                  filteredProducts.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} {p.assetCode ? `(${p.assetCode})` : ''} · In stock: {p.totalQuantity}
+                      {isMoney && p.unitSalePrice != null ? ` · ${formatMoney(p.unitSalePrice)} / unit` : ''}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
           )}
         </div>
 
