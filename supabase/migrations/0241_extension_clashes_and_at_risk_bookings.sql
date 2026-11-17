@@ -108,7 +108,8 @@ from public.extension_clashes ec
 left join public.bookings b on b.id = ec.booking_id
 left join public.bookings cb on cb.id = ec.conflicting_booking_id
 left join public.product_units a on a.id = ec.conflicting_asset_id
-left join public.products p on p.id = ec.conflicting_product_id;
+left join public.products p on p.id = ec.conflicting_product_id
+where public.auth_is_staff();
 
 create or replace view public.at_risk_bookings_v as
 select
@@ -139,7 +140,8 @@ left join public.bookings b on b.id = arb.booking_id
 left join public.clients c on c.id = b.client_id
 left join public.bookings sb on sb.id = arb.source_booking_id
 left join public.product_units a on a.id = arb.clashing_asset_id
-left join public.products p on p.id = arb.clashing_product_id;
+left join public.products p on p.id = arb.clashing_product_id
+where public.auth_is_staff();
 
 grant select on public.extension_clashes_v to authenticated;
 revoke select on public.extension_clashes_v from anon, public;
