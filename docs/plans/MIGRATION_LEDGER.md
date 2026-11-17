@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0240**
+**Next free number: 0241**
 
 > **Legacy exception:** `0188` exists as two distinct, locally verified migration files
 > (`0188_smart_reservation_holds.sql` and `0188_staff_renting_gear.sql`). Both are preserved because
@@ -84,5 +84,6 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0237 | T2-21 | planned-equipment-downtime | lane-a/T2-21-planned-downtime-with-a-reason | verified (check:pglite 236/236 + check:lifecycle 78/78 Step L73) |
 | 0238 | T3-28 | rental-day-start-setting | lane-c/T3-28-rental-day-start-as-a-setting | verified (check:pglite 235/235 + check:lifecycle 77/77) |
 | 0239 | T3-30 | consumables-pricing-restock-and-low-stock | lane-c/T3-30-consumables-unit-price-add-at-the | verified (check:pglite 235/235 + check:lifecycle 73/73 Step L72) |
+| 0240 | R-17 / T8-08 | tds-ledger-and-client-deduction | lane-b/tds-ledger-client-deduction | claimed |
 
 ## Expected migrations (not yet claimed)
