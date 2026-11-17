@@ -295,7 +295,8 @@ export async function generateMonthlyPack(
     if (page === 124) throw new Error('Payment ledger exceeds verified export limit.')
   }
 
-  // Refunds are outgoing cash. They are not positive collections.
+  // Refund entries are money-out movements. Corrections/reversals are recorded
+  // separately as ledger offsets, not necessarily cash transfers.
   const refundedPayments: PaymentListRow[] = []
   const seenRefundIds = new Set<string>()
   for (let page = 0; page < 125; page++) {
@@ -527,11 +528,14 @@ export async function generateMonthlyPack(
     paymentsCsvRows.push([
       reversal.reversal_no, reversal.original_payment_id, adDateStr, bsStr,
       'Refer to original receipt', 'Refer to original receipt',
-      'See original payment ID', 'Reversal (money out)', 'Compensating ledger',
+      'See original payment ID', 'Reversal (ledger correction)', 'Compensating ledger',
       (-amountPaisa / 100).toFixed(2), 'Recorded',
     ])
   }
 
+  // A reversal corrects an original recorded receipt; it does not by itself
+  // prove that funds left a bank account. This figure is a ledger movement,
+  // not a bank-reconciled cash flow.
   const netCollectionsPaisa = totalPaymentsPaisa - totalRefundsPaisa - totalReversalsPaisa
 
   // ── BUILD CSV 4: tds_withheld_<month>.csv ──────────────────────────────────
@@ -607,13 +611,13 @@ export async function generateMonthlyPack(
     `Gross Expenses:               ${formatMoney(totalExpensesPaisa as Paisa)}`,
     'Reclaimable Input VAT:        NOT VERIFIED - source expenses do not store VAT breakdown',
     '',
-    '3. COLLECTIONS & CASH RECEIVED',
+    '3. RECEIPTS, REFUNDS & LEDGER CORRECTIONS',
     '--------------------------------------------------------------------------------',
     `Gross Receipts:               ${receivedPayments.length}`,
     `Gross Collections:            ${formatMoney(totalPaymentsPaisa as Paisa)}`,
     `Refund Movements:              ${refundedPayments.length}`,
     `Reversal Movements:            ${reversalRows.length}`,
-    `Net Period Collections:       ${formatMoney(netCollectionsPaisa as Paisa)}`,
+    `Net Recorded Receipt Movement: ${formatMoney(netCollectionsPaisa as Paisa)}`,
     '',
     '4. WITHHOLDING TAX (CREW TDS)',
     '--------------------------------------------------------------------------------',
@@ -629,10 +633,10 @@ export async function generateMonthlyPack(
     `TDS Withholding (provisional): ${formatMoney(totalTdsPaisa as Paisa)}`,
     'Filing-ready Total:           NOT DETERMINED - accountant review required',
     '',
-    '6. PERIOD RECEIVABLES & CASH SUMMARY',
+    '6. PERIOD SALES & RECEIPT MOVEMENT (NOT CLOSING BALANCE)',
     '--------------------------------------------------------------------------------',
     `Invoiced in Period:           ${formatMoney(totalSalesPaisa as Paisa)}`,
-    `Net Cash Movement in Period:  ${formatMoney(netCollectionsPaisa as Paisa)}`,
+    `Net Receipt Ledger Movement:  ${formatMoney(netCollectionsPaisa as Paisa)}`,
     `Gross Period Movement:        ${formatMoney(periodMovementPaisa as Paisa)}`,
     'Not Closing Receivables:      Opening balances, cross-period payments and reversals not reconciled',
     '',
