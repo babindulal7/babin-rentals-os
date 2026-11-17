@@ -1,7 +1,7 @@
 # Babin Rentals OS — Free Staging Bootstrap, verified preflight
 
 **Date:** 16 November 2026  
-**Baseline:** `main` `3658f2faf91001d3f76e48bc21a51c803db83051`  
+**Baseline:** `main` `4ba3cde372b5a690468aff370572a9e8500c9685` (refreshed 17 Nov 2026)  
 **Status:** Existing free staging project VERIFIED, **app schema NOT INSTALLED**. This is a preparation and acceptance contract, not a production release clearance.
 
 ## 1. Owner cost decision fulfilled
@@ -13,19 +13,19 @@ The user authorized a **free** staging environment and requested proceeding with
 | Existing production (**READ ONLY**) | `sxguwvgoserhdolewibb` | ~48 MB Postgres, 135 public tables |
 | Existing free staging (**approved target only**) | `klhmsrunqrdxjudyhnkm` | ~12 MB Postgres; 0 app tables, 0 `auth.users`, 0 storage buckets, 0 storage objects, 0 migration ledger records |
 
-**Observed by read-only connected queries on 16 Nov 2026**. Staging security/performance advisor returned no current findings, but an empty app schema does **not** prove business permissions secure.
+**Observed by read-only connected queries on 16 Nov 2026 and rechecked after hosted rollback-only tests on 17 Nov 2026**. Staging security/performance advisor returned no current findings, but an empty app schema does **not** prove business permissions secure.
 
 Supabase Free plan has two active free projects: [official billing documentation](https://supabase.com/docs/guides/platform/billing-on-supabase).
 
 ## 2. Source migration inventory and blockers
 
-Current GitHub main has **235** `.sql` migration files, each pinned in [the immutable Git-blob inventory](STAGING_SQL_INVENTORY_2026-11-16.json). The inventory's `review_state` is a **required review task**, not an approval to execute the file. The earlier [hosted rollback-only rehearsal](../live/STAGING_HOSTED_REHEARSAL_2026-11-12.md) established compatibility of `0001`–`0003` but left no durable app schema.
+Current GitHub main has **237** `.sql` migration files, each pinned in [the immutable Git-blob inventory](STAGING_SQL_INVENTORY_2026-11-16.json). The inventory's `review_state` is a **required review task**, not an approval to execute the file. Earlier hosted rollback-only rehearsal validated `0001`–`0003`; [the November 17 follow-up](STAGING_HOSTED_REHEARSAL_2026-11-17.md) validated `0001`–`0011` on a current-main source, still leaving no durable schema.
 
 **Mandatory decisions before a durable staged apply:**
 
 1. Audit `0012_seed_data.sql`, `0047_seed_reference_corpus.sql` (~1.87 MB) and `0082_seed_operational_stage_corpus.sql` for one-time data, real identities and test-data dependencies. Do not silently seed original client/staff information.
 2. Preserve both `0188_smart_reservation_holds.sql` and `0188_staff_renting_gear.sql` with explicit order and dependency evidence. Do not renumber the original files or invent a new migration history.
-3. Reconcile historical renamed migration names and production-only ledger names described in [the Nov 12 reconciliation](../live/STAGING_RECONCILIATION_2026-11-12.md). Changes in the SQL source since that snapshot (now 235, previously 233) need review.
+3. Reconcile historical renamed migration names and production-only ledger names described in [the Nov 12 reconciliation](../live/STAGING_RECONCILIATION_2026-11-12.md). Changes in the SQL source since that snapshot (now 237, previously 233) need review; newest are 0239 consumables and 0240 turnaround.
 4. Verify actual DDL order, dependent RLS policies, `SECURITY DEFINER` authorizations, Storage schema, and whether a **synthetic-only schema build** is possible without loading the large demo seed.
 5. Produce a staged **exact-content SHA-256 apply manifest**, dependencies, seed exclusions, per-file rollback/recovery strategy, and an explicit list of untouched production objects. Git blob hashes in the inventory are source identity, **not** SHA-256 and not proof that the migration can be applied.
 
@@ -39,7 +39,7 @@ npm run check:lifecycle
 npm run gates
 ```
 
-The new script reads local SQL files, calculates a SHA-256 inventory fingerprint, reports suspicious seed/large files and duplicate numeric prefixes. **It connects to no database and executes no SQL.** It was syntax-tested and exercised on a synthetic three-file fixture including the expected duplicate 0188 prefix. Run it again in the full repository and keep its real output in the internal verification evidence.
+The new script reads local SQL files, calculates a SHA-256 inventory fingerprint, reports suspicious seed/large files and duplicate numeric prefixes. **It connects to no database and executes no SQL.** The original script was added earlier; rerun its syntax and fixture tests on latest main and update it to verify source identity against the refreshed 237-file inventory. Run it again in the full repository and keep its real output in the internal verification evidence.
 
 ## 3. Work split: existing two-computer setup
 
@@ -85,8 +85,15 @@ Before T1-02 may become `done`:
 
 - **Verified** the existing Free organization and project; avoided duplicate paid provisioning.
 - **Verified** staging empty and healthy by read-only SQL and project metadata, including zero Auth users / Storage objects.
-- **Pinned** all 235 Git migration blobs/sizes in a structured manifest, identifying 0188 prefix collision and seed-file review gates.
+- **Pinned** all 237 Git migration blobs/sizes in a structured manifest, identifying 0188 prefix collision and seed-file review gates.
 - **Added** a local read-only SHA-256 migration manifest script and syntactic/synthetic-fixture smoke test.
 - **Did not** write any hosted application schema, create staging identities, restore client records, or change live database.
 
 Next smallest safe action: Windows agent generates and reviews the real source hash/dependency + synthetic-seed manifest. Only then begin durable **staging-only** schema installation and actual Auth/Storage acceptance. Keep PRs #174 and #178 linked until the gates pass.
+
+
+## 7. November 17 hosted staging compatibility update
+
+At source `main` `4ba3cde372b5a690468aff370572a9e8500c9685`, all 11 foundational files `0001`–`0011` were run in source order against the **existing hosted staging project**, inside a single enclosing SQL transaction. Their top-level `BEGIN;`/`COMMIT;` lines were suppressed **in the temporary rehearsal query only**. The SQL call returned success, and the outer transaction ended with `ROLLBACK;`. The staging query afterward confirmed **0 app tables, 0 public enum types, 0 auth users, 0 storage buckets**. No original migration file was edited or installed. See [complete evidence](STAGING_HOSTED_REHEARSAL_2026-11-17.md).
+
+The production read-only migration ledger comparison at the same source main shows **157** recorded entries, **148** exact-name matches, **89** source names absent from the ledger and **9** live-only names. Exact-name absence does **not** mean a missing schema object; this is an investigation queue, not an apply set. See [source↔live audit](STAGING_SOURCE_VS_LIVE_2026-11-17.md). **No permanent staging DDL is authorized from this rehearsal alone.**
