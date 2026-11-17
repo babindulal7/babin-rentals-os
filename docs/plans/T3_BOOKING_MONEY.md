@@ -33,7 +33,7 @@ discounts copied only when ticked; 3) retired or deactivated products are listed
 available any more" and left out; 4) tap count recorded against R-39.
 **Needs** — none.
 
-### T3-02 · Deposits per product, entered before go-live            status: ready — awaiting merge (lane-c/T3-02-deposits-per-product-entered-before-go) · size: M · lane C + staff
+### T3-02 · Deposits per product, entered before go-live            status: acceptance_pending — PR #183 merged 17 Nov; staged role/CSV checks and staff deposit data-entry coverage pending · size: M · lane C + staff
 **What** — A bulk editor for `products.deposit_fixed` / `deposit_percent` (and `replacement_value`
 where missing): an Inventory view "Deposit setup" listing every active product with its rule, inline
 edit, filter "no deposit set", and CSV round-trip through the products import (dry run first).
@@ -91,7 +91,7 @@ spec card set (certification, sync, offline invoices, invoice cancellation rules
 **Done when** — written answer recorded by 30 Nov 2026 (14 Mangsir 2083).
 **Needs** — accountant.
 
-### T3-06 · Invoice and agreement documents            status: review — PR #169, accountant + staging acceptance pending · size: M · lane C + accountant
+### T3-06 · Invoice and agreement documents            status: acceptance_pending — PR #169 merged 16 Nov; accountant PDF sign-off and staged signed-agreement storage pending · size: M · lane C + accountant
 **What** — 1) The accountant checks the invoice PDF (`src/lib/pdf/generatePdf.ts`) against what an
 invoice in Nepal must show (business PAN, invoice number, date — add the BS date beside AD, buyer
 PAN when given, VAT lines); fix what they mark. 2) Rental Agreement PDF from the booking with
@@ -245,7 +245,7 @@ phone's share sheet, or wa.me with a text summary when sharing a file is not pos
 PC in ≤ 2 taps; Warehouse cannot share a priced document.
 **Needs** — T5-03 for email; T3-06 for the document contents.
 
-### T3-17 · Extend in two taps            status: ready — awaiting merge (lane-c/T3-17-extend-in-two-taps) · size: S · lane C · [go-live]
+### T3-17 · Extend in two taps            status: acceptance_pending — PRs #162 and #172 merged; staged authoritative extension/clash and pricing tests pending · size: S · lane C · [go-live]
 **What** — "Extend" on Booking Detail and on a late return: pick the new return (chips +1 day,
 +2 days, custom); availability is checked; a clash offers similar/sub-rent (T3-13). Price of the
 extra days: **two one-tap choices every time** — "Same rate and discount as the booking" or
@@ -319,7 +319,7 @@ failed — retry" look different. Never apply "latest wins" to a write.
 shown to floor roles.
 **Needs** — none.
 
-### T3-22 · Availability in two taps            status: ready — awaiting merge (lane-c/T3-22-availability-in-two-taps) · size: S · lane C · [go-live]
+### T3-22 · Availability in two taps            status: acceptance_pending — PR #161 merged; real-date stock query, mobile two-tap and owner acceptance pending · size: S · lane C · [go-live]
 **What** — From anywhere: tap **Availability** (header) → type or scan an item → see free units for
 any dates, the next free date, and **who has it now** (from T2-14). Reuses `CheckAvailabilityModal`.
 **Why** — W91 "checking what's available".
@@ -338,7 +338,7 @@ with bill photos**, **crew payouts with TDS** (T8-08), as CSV + PDF, BS and AD d
 **Done when** — the accountant opens a sample pack without asking for anything else (Babin confirms).
 **Needs** — T3-04, T3-24, T8-08.
 
-### T3-24 · Quick expense with a bill photo            status: review — PR #166, CI + secure storage verification pending · size: M · lane C · [soon]
+### T3-24 · Quick expense with a bill photo            status: acceptance_pending — PR #166 merged 16 Nov; staging bill-photo storage permissions and receipt verification pending · size: M · lane C · [soon]
 **What** — "Add expense" from a phone in ≤ 4 taps: amount, category, photo of the bill (T2-01
 upload, ≤ 3 MB), paid by. Accounts can also enter a week's bills in a batch (W89 "mix"). Approval
 rules unchanged (`gate.expense.approve`). Replaces "Receipt upload is not built yet" in
@@ -449,7 +449,7 @@ steps are offered; 4) a refund is a reversal row and "keep as credit" adds accou
 audited; 5) no double booking at any point.
 **Needs** — T3-17, T3-13; T5-10 for the inbox (until then the Today card).
 
-### T3-30 · Consumables: unit price, add at the desk, restock, low stock            status: ready — awaiting merge (lane-c/T3-30-consumables-unit-price-add-at-the) · size: M · lane C · [go-live] · slips first
+### T3-30 · Consumables: unit price, add at the desk, restock, low stock            status: acceptance_pending — PR #185 merged 17 Nov; staged pricing/RLS, restock and low-stock acceptance pending · size: M · lane C · [go-live] · slips first
 **What** — Consumables (tracking mode `Consumable`: tape, gels, batteries) are already deducted at
 Handover (0142) and need no return (0141). Finish them (B14, B35): 1) a **sale price per unit** — the
 line is quantity × unit price, never × days (pricing pipeline); 2) the desk adds them in New Rental and
