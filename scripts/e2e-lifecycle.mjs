@@ -8721,6 +8721,120 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L80',
+  title: "an existing booking's days and total are unchanged after the setting moves (T3-28, B24, B25, B26, K3)",
+  expect: 'green',
+  run: async () => {
+    let bookingId
+    const clientCode = await one("select next_document_number('client')")
+    const clientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+      values (gen_random_uuid(), '${clientCode}', 'L80 Setting Client', '+9779800009980', 'Active', '${U.Owner}')
+      returning id`)).rows[0].id
+
+    // 1. Create booking with default 06:00 day start
+    // Window: 2099-10-20T02:15:00Z (08:00 NPT) to 2099-10-21T02:15:00Z (08:00 NPT next day)
+    // Under 06:00 day start, 08:00 to next day 08:00 crosses the 06:00 boundary = 2 days billed
+    await as('Coordinator', async () => {
+      const res = await createBooking({
+        key: 'l80_booking',
+        window: ['2099-10-20T02:15:00Z', '2099-10-21T02:15:00Z'],
+        actor: 'Coordinator',
+        clientId,
+        lines: [{
+          productId: QTY_PRODUCT,
+          description: 'L80 Camera Package',
+          qty: 1,
+          days: 2,
+          rate: 200000,
+        }],
+      })
+      bookingId = res.booking_id
+      assertEq(res.rental_day_start, 360, 'created booking has default rental_day_start = 360 (06:00)')
+    })
+
+    // Assert database column rental_day_start
+    const rowBefore = (await q(`select id, rental_day_start from bookings where id = '${bookingId}'`)).rows[0]
+    assertEq(rowBefore.rental_day_start, 360, 'bookings.rental_day_start stored as 360')
+
+    // 2. Manager cannot change the rental day start setting (B26)
+    await as('Manager', async () => {
+      await refuses(
+        'Manager cannot change operationalDayStart',
+        "select set_setting(gen_random_uuid(), 'operationalDayStart', '\"08:00\"'::jsonb)",
+        [],
+        /GATE:gate\.settings\.role/i,
+      )
+    })
+
+    // 3. Admin updates the operational day start setting to 08:00 (B26)
+    await as('Admin', async () => {
+      await one("select set_setting(gen_random_uuid(), 'operationalDayStart', '\"08:00\"'::jsonb)")
+    })
+
+    // 4. Assert existing booking's rental_day_start, line days, and line totals are unchanged
+    const rowAfter = (await q(`select id, rental_day_start from bookings where id = '${bookingId}'`)).rows[0]
+    assertEq(rowAfter.rental_day_start, 360, 'existing booking retains its original rental_day_start (360) after setting moved')
+
+    const lineRow = (await q(`select days, rate, line_total from booking_lines where booking_id = '${bookingId}' and voided_at is null`)).rows[0]
+    assertEq(lineRow.days, 2, 'existing booking line days unchanged at 2')
+    assertEq(Number(lineRow.line_total), 400000, 'existing booking line total unchanged at 400000')
+
+    // read_booking_for_change snapshot also reports original rental_day_start (360)
+    await as('Coordinator', async () => {
+      const snapshot = await one('select read_booking_for_change($1)', [bookingId])
+      assertEq(snapshot.rental_day_start, 360, 'read_booking_for_change reports original rental_day_start (360)')
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L81',
+  title: 'a new booking uses the new start (T3-28, B24, B25, K3)',
+  expect: 'green',
+  run: async () => {
+    let newBookingId
+    const clientCode = await one("select next_document_number('client')")
+    const clientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+      values (gen_random_uuid(), '${clientCode}', 'L81 Setting Client', '+9779800009981', 'Active', '${U.Owner}')
+      returning id`)).rows[0].id
+
+    // Setting is currently 08:00 from L80.
+    // Create new booking with window 08:00 NPT to 08:00 NPT next day:
+    // 2099-11-20T02:15:00Z to 2099-11-21T02:15:00Z.
+    // Under 08:00 day start, 08:00 to 08:00 next day is exactly 1 rental day!
+    await as('Coordinator', async () => {
+      const res = await createBooking({
+        key: 'l81_booking',
+        window: ['2099-11-20T02:15:00Z', '2099-11-21T02:15:00Z'],
+        actor: 'Coordinator',
+        clientId,
+        lines: [{
+          productId: QTY_PRODUCT,
+          description: 'L81 New Shift Gear',
+          qty: 1,
+          days: 1,
+          rate: 200000,
+        }],
+      })
+      newBookingId = res.booking_id
+      assertEq(res.rental_day_start, 480, 'new booking resolves new rental_day_start = 480 (08:00) from settings')
+    })
+
+    const row = (await q(`select id, rental_day_start from bookings where id = '${newBookingId}'`)).rows[0]
+    assertEq(row.rental_day_start, 480, 'bookings.rental_day_start stored as 480 for new booking')
+
+    const lineRow = (await q(`select days, rate, line_total from booking_lines where booking_id = '${newBookingId}' and voided_at is null`)).rows[0]
+    assertEq(lineRow.days, 1, 'new booking line days is 1 under 08:00 start')
+    assertEq(Number(lineRow.line_total), 200000, 'new booking line total is 200000')
+
+    // Reset setting back to 06:00 as Owner for test cleanliness
+    await as('Owner', async () => {
+      await one("select set_setting(gen_random_uuid(), 'operationalDayStart', '\"06:00\"'::jsonb)")
+    })
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break

@@ -615,6 +615,9 @@ describe('every declared capability resolves to a rule', () => {
       'comms.templates',
       // Shared offer-campaign permission rule (PERMISSIONS.md §4.8); create/send are action capabilities.
       'offer_campaign.manage',
+      // Operations rules & rental day start settings rules (Ruling B26, PERMISSIONS.md §4.10)
+      'settings.operations_rules',
+      'settings.rental_day_start',
     ]
     const orphaned = handled().filter((c) => !declared().includes(c) && !APP_LEVEL.includes(c))
     expect(orphaned).toEqual([])

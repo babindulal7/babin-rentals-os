@@ -61,6 +61,15 @@ describe('rentalDaysBetween — 06:00 -> 06:00 rental-day rule (Task 6)', () => 
     expect(inUtc).toBe(inNpt)
     expect(inUtc).toBe(1)
   })
+
+  it('honours configurable rentalDayStartMinutes (B24, B25, T3-28)', () => {
+    // Under default 06:00 start (360 min): Sep 20 08:00 to Sep 21 08:00 crosses 06:00 boundary = 2 days
+    expect(rentalDaysBetween(npt('2026-09-20', '08:00'), npt('2026-09-21', '08:00'), 360)).toBe(2)
+    // Under configured 08:00 start (480 min): Sep 20 08:00 to Sep 21 08:00 is exactly 1 rental day
+    expect(rentalDaysBetween(npt('2026-09-20', '08:00'), npt('2026-09-21', '08:00'), 480)).toBe(1)
+    // Under 08:00 start: Sep 20 08:00 to Sep 21 08:01 enters the next rental day = 2 days
+    expect(rentalDaysBetween(npt('2026-09-20', '08:00'), npt('2026-09-21', '08:01'), 480)).toBe(2)
+  })
 })
 
 describe('rentalDaysBetween — what it refuses to guess', () => {

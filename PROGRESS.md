@@ -1,5 +1,50 @@
 # Progress Log
 
+## 2026-11-18 — T3-28: Rental day start as a setting (Lane C)
+
+**Did**
+- Implemented **T3-28 · Rental day start as a setting** (`lane-c/T3-28-rental-day-start-as-a-setting`):
+  - Authored migration `supabase/migrations/0238_rental_day_start_setting.sql`:
+    - Added `rental_day_start integer not null default 360` column to `public.bookings` with 15-minute increment check constraint (`rental_day_start >= 0 and rental_day_start < 1440 and (rental_day_start % 15) = 0`).
+    - Explicitly granted `select (rental_day_start) on public.bookings to authenticated` under Law 6 column grants.
+    - Updated `set_setting` RPC: allows Owner and Admin (B26); validates `operationalDayStart` in quarter-hour format `^([01][0-9]|2[0-3]):(00|15|30|45)$`; refuses other roles with `GATE:gate.settings.role`.
+    - Updated `create_booking` RPC: resolves `rental_day_start` from payload or setting `operationalDayStart`, defaults to 360, stamps it on booking, and includes it in return JSON.
+    - Updated `read_booking_for_change` RPC to snapshot `rental_day_start`.
+  - Updated `supabase/migrations/0239_consumables_pricing_restock_and_low_stock.sql` to preserve `rental_day_start` handling across subsequent `create_booking` updates.
+  - Updated `src/lib/rentalDays.ts`: exported `DEFAULT_RENTAL_DAY_START_MINUTES = 360` and `rentalDayShiftOffsetMs`, and extended `rentalDaysBetween` to accept per-booking `rentalDayStartMinutes`.
+  - Added RBAC helper `canManageOperationsRules` in `src/lib/rbac.ts` admitting Owner and Admin (B26).
+  - Wired `settings.operations_rules` and `settings.rental_day_start` capabilities in `src/actions/core.ts`.
+  - Added `OPERATIONAL_DAY_START_CHOICES` (96 quarter-hour slots) and configured `operationalDayStart` setting specification in `src/lib/settingsStore.ts`.
+  - Exposed "Rental day starts at" select under `Settings ▸ Operations rules` in `src/modules/settings/sections/System.tsx`.
+  - Updated `src/actions/rentals/createRental.ts`, `newRentalUtils.ts`, `useNewRentalPricing.ts`, and `BookingDetail.tsx` to respect stored `rentalDayStart`.
+  - Updated `src/lib/queries/bookings.ts` with graceful fallback handling for `rental_day_start`.
+  - Added lifecycle steps `L80` ("an existing booking's days and total are unchanged after the setting moves") and `L81` ("a new booking uses the new start") in `scripts/e2e-lifecycle.mjs` (82/82 green).
+  - Updated `docs/plans/T3_BOOKING_MONEY.md`: marked T3-28 as `ready — awaiting merge (lane-c/T3-28-rental-day-start-as-a-setting)`.
+  - Authored verification document `docs/verification/T3-28_VERIFICATION.md`.
+
+**Ruled**
+- Each booking permanently records its creation-time day start (`bookings.rental_day_start`); existing bookings never re-price retrospectively (B25, K3).
+- Day start changes are gated to Owner and Admin only (`GATE:gate.settings.role`, B26).
+- Rental day start is operational metadata, readable by authenticated users without exposing monetary figures (Law 6).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 107 / 108 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 86 / 86 (100%) | +0 |
+| Lifecycle | steps green / total | 82 / 82 (100%) | +2 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 240 files · check:pglite 240/240 applied, 0 failed (recorded 2026-11-17T21:29:18.535Z). Suite: PASS — 7374/7374 passed, 0 failed (recorded 2026-11-17T21:31:28.282Z); source fingerprint matches.
+Coverage suite: PASS — 7374/7374 passed, 0 failed (recorded 2026-11-17T21:31:28.282Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-17T21:29:43.817Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T3-18: Change a confirmed booking (Batch 6 Card 5 · Size: L · Priority: [go-live])
+
 ## 2026-11-18 — T3-11: Late fee — acceptance only (Lane C)
 
 **Did**
