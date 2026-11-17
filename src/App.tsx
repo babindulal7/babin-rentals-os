@@ -7,7 +7,8 @@ import Sidebar from './components/shell/Sidebar'
 import BottomBar, { BAR_BOX } from './components/shell/BottomBar'
 import HeaderBar from './components/shell/Header'
 import type { Crumb } from './components/shell/Header'
-import ScannerFab from './components/shell/ScannerFab'
+// ScannerFab is code-split to reduce critical-path main chunk payload; it loads concurrently
+const ScannerFab = lazy(() => import('./components/shell/ScannerFab'))
 import { ErrorBoundary } from './components/shell/ErrorBoundary'
 import { LoadingSkeleton, RestrictedState } from './components/ui/StateViews'
 import { Button } from './components/ui/Page'
@@ -1273,7 +1274,9 @@ function Shell({
       </div>
 
       {phone && <BottomBar active={pathname + query} />}
-      <ScannerFab />
+      <Suspense fallback={null}>
+        <ScannerFab />
+      </Suspense>
 
       {/* Screen Lock Overlay — fail closed: the curtain covers the session while
           the chunk loads, and stays up if the chunk never arrives. */}

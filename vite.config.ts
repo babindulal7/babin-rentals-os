@@ -134,7 +134,10 @@ export default defineConfig({
             if (id.includes('@tabler/icons-react')) {
               return 'vendor-icons'
             }
-            if (id.includes('@zxing')) {
+            if (id.includes('@zxing/library')) {
+              return 'vendor-qrcode'
+            }
+            if (id.includes('@zxing/browser')) {
               return 'vendor-scanner'
             }
             if (id.includes('dexie')) {
