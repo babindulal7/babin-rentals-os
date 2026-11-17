@@ -54,6 +54,7 @@ import Documents from '../documents/Documents'
 import Payments from './Payments'
 import Expenses from './Expenses'
 import DailyClosing from './DailyClosing'
+import WhoOwes from './WhoOwes'
 import { ReportCatalog } from '../reports/ReportCatalog'
 import { DateField } from '../../components/ui/DateField'
 import { exportInvoicePdf } from '../../lib/pdf/exportPdf'
@@ -258,7 +259,7 @@ const OUTSTANDING_INVOICES: ListFilters = outstandingInvoices()
  * ruling.
  */
 const FINANCE_TABS = SPEC_TABS['/finance'] ?? []
-type FinanceTab = 'Dashboard' | 'Invoices' | 'Payments' | 'Expenses' | 'Closing' | 'Documents' | 'Reports'
+type FinanceTab = 'Dashboard' | 'Who owes' | 'Invoices' | 'Payments' | 'Expenses' | 'Closing' | 'Documents' | 'Reports'
 
 /**
  * §9.2's chip row — `(All)(Draft)(Sent)(Partially Paid)(Paid)(Overdue)(Void)`.
@@ -577,7 +578,9 @@ export default function Finance() {
   const tabParam = params.get('tab')?.toLowerCase()
   const tab: FinanceTab = useMemo(() => {
     if (!tabParam) return 'Dashboard'
-    const found = (FINANCE_TABS as readonly string[]).find((t) => t.toLowerCase() === tabParam)
+    const found = (FINANCE_TABS as readonly string[]).find(
+      (t) => t.toLowerCase() === tabParam || t.toLowerCase().replace(/\s+/g, '-') === tabParam,
+    )
     return (found as FinanceTab) ?? 'Dashboard'
   }, [tabParam])
 
@@ -587,7 +590,7 @@ export default function Finance() {
         (prev) => {
           const p = new URLSearchParams(prev)
           if (next === 'Dashboard') p.delete('tab')
-          else p.set('tab', next.toLowerCase())
+          else p.set('tab', next.toLowerCase().replace(/\s+/g, '-'))
           return p
         },
         { replace: true },
@@ -1381,6 +1384,7 @@ export default function Finance() {
         applies `financeRestriction` itself: nesting them would render the
         restricted state twice, once from this page and once from theirs.
       */}
+      {tab === 'Who owes' && <WhoOwes embedded />}
       {tab === 'Payments' && <Payments embedded />}
       {tab === 'Expenses' && (
         <Expenses

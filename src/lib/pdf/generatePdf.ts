@@ -1326,3 +1326,204 @@ export function generateReturnReportPdf(data: ReturnReportPdfData): Uint8Array {
     `<<\n  /Title (Return Report - ${escapePdfText(bookingNo)})\n  /Author (${escapePdfText(companyName)})\n  /Creator (Babin Rentals OS PDF Engine)\n  /CreationDate (D:${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)}Z)\n>>`,
   )
 }
+
+export interface ClientStatementPdfInvoice {
+  invoiceNo: string
+  bookingNo?: string | null
+  issueDateAd: string
+  dueDateAd: string
+  totalPaisa: Paisa | number
+  paidPaisa: Paisa | number
+  outstandingPaisa: Paisa | number
+}
+
+export interface ClientStatementPdfPayment {
+  paymentNo: string
+  dateAd: string
+  method: string
+  amountPaisa: Paisa | number
+}
+
+export interface ClientStatementPdfData {
+  asOfDateAd: string
+  client: {
+    name: string
+    phone?: string | null
+    email?: string | null
+    panVat?: string | null
+  }
+  company?: InvoicePdfCompany
+  totalOutstandingPaisa: Paisa | number
+  invoices: ClientStatementPdfInvoice[]
+  payments: ClientStatementPdfPayment[]
+}
+
+/**
+ * Generates a PDF 1.4 Client Statement listing all open invoices, balances, and payments so far (T3-20).
+ */
+
+export function generateClientStatementPdf(data: ClientStatementPdfData): Uint8Array {
+  const builder = new PdfDocumentBuilder()
+  const pages: string[][] = []
+  let ops: string[] = []
+  let y = 0
+
+  const dark = '0.09 0.13 0.24'
+  const muted = '0.38 0.44 0.52'
+  const border = '0.80 0.84 0.88'
+  const bg = '0.96 0.97 0.98'
+  const company = data.company?.name?.trim() || 'Babin Rentals'
+  const asOf = formatAd(data.asOfDateAd ? new Date(data.asOfDateAd) : new Date())
+
+  function write(content: string, x: number, atY: number, font = 'F1', size = 8): void {
+    ops.push(dark + ' rg')
+    ops.push('BT /' + font + ' ' + size + ' Tf ' + x + ' ' + atY + ' Td (' + escapePdfText(content) + ') Tj ET')
+  }
+
+  function addPage(continued: boolean): void {
+    ops = []
+    pages.push(ops)
+    ops.push(dark + ' rg')
+    ops.push('40 802 515 5 re f')
+    write(company, 40, 777, 'F2', 14)
+    write(continued ? 'CLIENT STATEMENT - CONTINUED' : 'CLIENT STATEMENT', 340, 777, 'F2', 12)
+    write('As of: ' + asOf, 340, 758, 'F1', 9)
+    if (continued) {
+      write('For: ' + data.client.name, 40, 747, 'F2', 10)
+      y = 718
+    } else {
+      const companyInfo = [
+        data.company?.panVat ? 'PAN/VAT: ' + data.company.panVat : '',
+        data.company?.address ?? '',
+        data.company?.phone ?? '',
+      ].filter(Boolean).join(' | ')
+      if (companyInfo) write(companyInfo, 40, 752, 'F1', 8)
+      write('Balance Due: ' + formatMoney(data.totalOutstandingPaisa as Paisa), 340, 739, 'F2', 9)
+      ops.push(bg + ' rg')
+      ops.push('40 663 515 60 re f')
+      write('STATEMENT FOR: ' + data.client.name, 50, 704, 'F2', 11)
+      const clientContact = [
+        data.client.phone ? 'Phone: ' + data.client.phone : '',
+        data.client.email ? 'Email: ' + data.client.email : '',
+        data.client.panVat ? 'PAN/VAT: ' + data.client.panVat : '',
+      ].filter(Boolean).join(' | ')
+      if (clientContact) write(clientContact, 50, 687, 'F1', 8)
+      write(data.invoices.length + ' open invoices | ' + data.payments.length + ' payments', 50, 673, 'F1', 8)
+      y = 636
+    }
+  }
+
+  function section(heading: string): void {
+    if (y < 120) addPage(true)
+    write(heading, 40, y, 'F2', 10)
+    y -= 22
+  }
+
+  function invoiceHeader(): void {
+    ops.push(dark + ' rg')
+    ops.push('40 ' + (y - 4) + ' 515 20 re f')
+    ops.push('1 1 1 rg')
+    const header = (s: string, x: number) => {
+      ops.push('BT /F2 8 Tf ' + x + ' ' + (y + 3) + ' Td (' + escapePdfText(s) + ') Tj ET')
+    }
+    header('Invoice #', 46)
+    header('Booking', 144)
+    header('Due', 242)
+    header('Total', 314)
+    header('Paid', 403)
+    header('Balance', 482)
+    y -= 24
+  }
+
+  function paymentHeader(): void {
+    ops.push(dark + ' rg')
+    ops.push('40 ' + (y - 4) + ' 515 20 re f')
+    ops.push('1 1 1 rg')
+    const header = (s: string, x: number) => {
+      ops.push('BT /F2 8 Tf ' + x + ' ' + (y + 3) + ' Td (' + escapePdfText(s) + ') Tj ET')
+    }
+    header('Receipt #', 46)
+    header('Date', 166)
+    header('Method', 268)
+    header('Amount', 465)
+    y -= 24
+  }
+
+  addPage(false)
+  section('OPEN INVOICES & BALANCES')
+  invoiceHeader()
+  if (data.invoices.length === 0) {
+    write('No open invoices.', 46, y)
+    y -= 19
+  }
+  for (const inv of data.invoices) {
+    if (y < 92) {
+      addPage(true)
+      section('OPEN INVOICES & BALANCES (CONTINUED)')
+      invoiceHeader()
+    }
+    ops.push(border + ' RG 0.35 w')
+    ops.push('40 ' + (y - 5) + ' m 555 ' + (y - 5) + ' l S')
+    write(inv.invoiceNo, 46, y, 'F3', 8)
+    write(inv.bookingNo || '-', 144, y, 'F1', 8)
+    write(inv.dueDateAd, 242, y, 'F1', 8)
+    write(formatMoney(inv.totalPaisa as Paisa), 314, y, 'F3', 8)
+    write(formatMoney(inv.paidPaisa as Paisa), 403, y, 'F3', 8)
+    write(formatMoney(inv.outstandingPaisa as Paisa), 482, y, 'F2', 8)
+    y -= 19
+  }
+
+  y -= 14
+  section('PAYMENTS RECORDED SO FAR')
+  paymentHeader()
+  if (data.payments.length === 0) {
+    write('No payments recorded yet.', 46, y)
+    y -= 19
+  }
+  for (const payment of data.payments) {
+    if (y < 92) {
+      addPage(true)
+      section('PAYMENTS RECORDED (CONTINUED)')
+      paymentHeader()
+    }
+    ops.push(border + ' RG 0.35 w')
+    ops.push('40 ' + (y - 5) + ' m 555 ' + (y - 5) + ' l S')
+    write(payment.paymentNo, 46, y, 'F3', 8)
+    write(payment.dateAd, 166, y, 'F1', 8)
+    write(payment.method, 268, y, 'F1', 8)
+    write(formatMoney(payment.amountPaisa as Paisa), 465, y, 'F3', 8)
+    y -= 19
+  }
+
+  // Add footer to every page, including continuation pages.
+  for (let i = 0; i < pages.length; i++) {
+    const page = pages[i]!
+    page.push(border + ' RG 0.5 w')
+    page.push('40 45 515 0.5 re S')
+    page.push(muted + ' rg')
+    page.push('BT /F1 7.5 Tf 40 30 Td (' +
+      escapePdfText(company + ' - Client Statement - Page ' + (i + 1) + '/' + pages.length) + ') Tj ET')
+  }
+
+  const n = pages.length
+  const font1 = 3 + n * 2
+  const font2 = font1 + 1
+  const font3 = font1 + 2
+  const kids = pages.map((_, i) => (3 + 2 * i) + ' 0 R').join(' ')
+  builder.addObject('<< /Type /Catalog /Pages 2 0 R >>')
+  builder.addObject('<< /Type /Pages /Kids [' + kids + '] /Count ' + n + ' >>')
+  for (let i = 0; i < n; i++) {
+    const contentId = 4 + i * 2
+    const stream = pages[i]!.join('\n')
+    builder.addObject('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] ' +
+      '/Contents ' + contentId + ' 0 R /Resources << /Font << /F1 ' + font1 +
+      ' 0 R /F2 ' + font2 + ' 0 R /F3 ' + font3 + ' 0 R >> >> >>')
+    builder.addObject('<< /Length ' + stream.length + ' >>\nstream\n' + stream + '\nendstream')
+  }
+  builder.addObject('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>')
+  builder.addObject('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>')
+  builder.addObject('<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>')
+  builder.addObject('<< /Title (Client Statement - ' + escapePdfText(data.client.name) + ') /Author (' +
+    escapePdfText(company) + ') /Creator (Babin Rentals OS PDF Engine) >>')
+  return builder.build()
+}

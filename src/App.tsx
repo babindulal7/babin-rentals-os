@@ -579,6 +579,7 @@ export default function App() {
             money surface by the `/finance` prefix. Revert = restore the Shell +
             <DailyClosing /> route. */}
         <Route path="/finance/closing" element={<FinanceTabRedirect tab="closing" />} />
+        <Route path="/finance/who-owes" element={<FinanceTabRedirect tab="who-owes" />} />
         <Route path="/finance/invoices" element={<FinanceTabRedirect tab="invoices" />} />
         <Route path="/finance/payments" element={<FinanceTabRedirect tab="payments" />} />
         <Route path="/finance/expenses" element={<FinanceTabRedirect tab="expenses" />} />

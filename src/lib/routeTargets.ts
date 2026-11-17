@@ -3,7 +3,7 @@ export const PRODUCTIONS_HUB_PATH = '/rentals/productions'
 export const AUDIT_LOG_PATH = '/admin/audit-log'
 export const PROBLEM_REPORTS_PATH = '/admin/problem-reports'
 
-export type FinanceTabSlug = 'closing' | 'invoices' | 'payments' | 'expenses' | 'documents' | 'reports'
+export type FinanceTabSlug = 'closing' | 'invoices' | 'payments' | 'expenses' | 'documents' | 'reports' | 'who-owes'
 
 /** A record ID belongs to the registered audit trail, not the old /audit route. */
 export function rentalAuditLogPath(recordId: string): string {
