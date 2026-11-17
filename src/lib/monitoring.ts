@@ -148,11 +148,12 @@ export function formatStaffErrorMessage(err: unknown, suppliedRefCode?: string):
     }
   }
 
-  const cleanLine = sanitizeTelemetryString(rawMsg).slice(0, 160)
+  // Never show arbitrary thrown text. Regex redaction cannot prove that a
+  // client name, shooting address or unprefixed amount was scrubbed.
   return {
     title: 'This screen hit a problem',
-    line: cleanLine || 'An unexpected error stopped this page from rendering.',
-    action: 'Clicking "Retry" will attempt to recover the screen inline without losing offline state.',
+    line: 'An unexpected error stopped this screen. No changes were confirmed.',
+    action: 'Click Retry. If it keeps happening, quote the local reference code to support.',
     referenceCode: refCode,
   }
 }
@@ -256,10 +257,13 @@ function describe(err: unknown): Described {
   }
 }
 
-/** Path only — never `search` or `hash`. See the header note on privacy. */
+/** Allowlisted top-level module only; URL path parameters may contain client PII. */
 function pagePath(): string {
   try {
-    return typeof location !== 'undefined' ? location.pathname : ''
+    if (typeof location === 'undefined') return ''
+    const topLevel = location.pathname.split('/').filter(Boolean)[0] ?? ''
+    const safeModules = ['today', 'rentals', 'inventory', 'clients', 'operations', 'finance', 'reports', 'calendar', 'settings', 'login']
+    return safeModules.includes(topLevel) ? `/${topLevel}` : '/other'
   } catch {
     return ''
   }
@@ -323,13 +327,21 @@ export function captureError(err: unknown, context?: ErrorContext): CapturedErro
   if (sentCount >= MAX_EVENTS_PER_SESSION) return { eventId, referenceCode }
 
   try {
-    const { type, value, stack } = describe(err)
-    const safeType = sanitizeTelemetryString(type)
-    const safeValue = sanitizeTelemetryString(value)
-    const safeStack = sanitizeTelemetryString(stack)
-    const safeContext = sanitizeContext(context)
+    const { type } = describe(err)
+    // Raw thrown messages, stack paths and context can contain arbitrary client
+    // names/addresses. Regexes cannot prove absence of such PII; send only a
+    // narrow, fixed diagnostic category until an approved telemetry schema exists.
+    const safeType = /^(?:Error|TypeError|ReferenceError|SyntaxError|RangeError|URIError)$/.test(type) ? type : 'Error'
+    const safeValue = 'Application error; details withheld for client privacy'
+    const safeStack = ''
+    const safeContext: ErrorContext = {
+      ...(context?.boundary === 'app-root' ? { boundary: 'app-root' } : {}),
+      ...(context?.handler === 'window.error' || context?.handler === 'unhandledrejection'
+        ? { handler: context.handler } : {}),
+      ...(context?.isSyntheticTest === true ? { isSyntheticTest: true } : {}),
+    }
 
-    const fingerprint = `${safeType}:${safeValue}`
+    const fingerprint = `${safeType}:${safeValue}:${safeContext.boundary ?? ''}:${safeContext.handler ?? ''}`
     const now = Date.now()
     const previous = lastSeen.get(fingerprint)
     if (previous !== undefined && now - previous < DEDUPE_WINDOW_MS) {
