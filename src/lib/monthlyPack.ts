@@ -550,20 +550,35 @@ export async function generateMonthlyPack(
       'Start Date (AD)',
       'Days',
       'Gross Payout (NPR)',
-      'TDS %',
-      'TDS Withheld (NPR)',
-      'Net Payout (NPR)',
+      'TDS % (recorded or estimate)',
+      'TDS Withheld (recorded NPR)',
+      'Estimated / unverified TDS (NPR)',
+      'Net Payout / Estimate (NPR)',
       'Status',
       'Paid At',
+      'TDS Evidence',
     ],
   ]
 
   let totalGrossPayoutsPaisa = 0
   let totalTdsPaisa = 0
+  let totalEstimatedTdsPaisa = 0
 
   for (const p of crewPayouts) {
+    // A configured-rate estimate is NOT tax withheld. Refuse source rows
+    // that lack a provenance flag rather than treating the estimate as fact.
+    if (typeof p.tdsIsRecorded !== 'boolean') {
+      throw new Error('Crew TDS source provenance missing; accountant export refused.')
+    }
+    const recorded = p.payoutStatus === 'Paid' && p.tdsIsRecorded
+    if (recorded && p.tdsAmount === null) {
+      throw new Error('Recorded crew withholding has no saved amount; accountant export refused.')
+    }
     totalGrossPayoutsPaisa += p.grossPayout
-    if (p.tdsAmount !== null) totalTdsPaisa += p.tdsAmount
+    if (p.tdsAmount !== null) {
+      if (recorded) totalTdsPaisa += p.tdsAmount
+      else totalEstimatedTdsPaisa += p.tdsAmount
+    }
 
     tdsCsvRows.push([
       p.crewBookingNo,
@@ -574,11 +589,13 @@ export async function generateMonthlyPack(
       p.startDateAd,
       p.days,
       (p.grossPayout / 100).toFixed(2),
-      p.tdsRatePercent !== null ? `${p.tdsRatePercent}%` : '0%',
-      p.tdsAmount !== null ? (p.tdsAmount / 100).toFixed(2) : '0.00',
-      p.netPayout !== null ? (p.netPayout / 100).toFixed(2) : (p.grossPayout / 100).toFixed(2),
+      p.tdsRatePercent !== null ? `${p.tdsRatePercent}%` : 'Not determined',
+      recorded ? (p.tdsAmount! / 100).toFixed(2) : 'Not recorded',
+      !recorded && p.tdsAmount !== null ? (p.tdsAmount / 100).toFixed(2) : 'Not determined',
+      p.netPayout !== null ? (p.netPayout / 100).toFixed(2) : 'Not determined',
       p.payoutStatus,
       p.paidAt ? p.paidAt.slice(0, 10) : 'Pending',
+      recorded ? 'Saved paid withholding snapshot' : 'No confirmed withholding snapshot',
     ])
   }
 
@@ -623,15 +640,16 @@ export async function generateMonthlyPack(
     '4. WITHHOLDING TAX (CREW TDS)',
     '--------------------------------------------------------------------------------',
     `Crew Assignments:             ${crewPayouts.length}`,
-    `Gross Crew Compensation:      ${formatMoney(totalGrossPayoutsPaisa as Paisa)}`,
-    `Total TDS Withheld:           ${formatMoney(totalTdsPaisa as Paisa)}`,
-    `Net Crew Paid:                ${formatMoney((totalGrossPayoutsPaisa - totalTdsPaisa) as Paisa)}`,
+    `Gross Crew Assignments:       ${formatMoney(totalGrossPayoutsPaisa as Paisa)}`,
+    `Saved Paid TDS Withheld:       ${formatMoney(totalTdsPaisa as Paisa)}`,
+    `Estimated / Unverified TDS:    ${formatMoney(totalEstimatedTdsPaisa as Paisa)}`,
+    'Net Crew Paid:                NOT DETERMINED - reconcile paid payout snapshots',
     '',
     '5. STATUTORY TAX POSITION (FILING RECONCILIATION)',
     '--------------------------------------------------------------------------------',
     `Output VAT Before Credits:    ${formatMoney(totalOutputVatPaisa as Paisa)}`,
     'Net VAT Payable:              NOT DETERMINED - reconcile input credits',
-    `TDS Withholding (provisional): ${formatMoney(totalTdsPaisa as Paisa)}`,
+    `Recorded Paid TDS (provisional): ${formatMoney(totalTdsPaisa as Paisa)}`,
     'Filing-ready Total:           NOT DETERMINED - accountant review required',
     '',
     '6. PERIOD SALES & RECEIPT MOVEMENT (NOT CLOSING BALANCE)',
