@@ -10,7 +10,7 @@ describe('T1-18 Server-Derived Sign-In Audit & Alert Engine', () => {
     expect(canViewSignInHistory('Admin')).toBe(true)
     expect(canViewSignInHistory('Manager')).toBe(false)
     expect(canViewSignInHistory('Coordinator')).toBe(false)
-    expect(canViewSignInHistory('Accountant')).toBe(false)
+    expect(canViewSignInHistory('Accounts')).toBe(false)
     expect(canViewSignInHistory('Warehouse')).toBe(false)
     expect(canViewSignInHistory('Technician')).toBe(false)
     expect(canViewSignInHistory('Driver')).toBe(false)
