@@ -88,9 +88,7 @@ export function AddConsumableModal({
         }))
 
         setProducts(rows)
-        if (rows.length > 0) {
-          setSelectedProductId((prev) => (prev ? prev : (rows[0]?.id ?? '')))
-        }
+        setSelectedProductId((prev) => rows.some((p) => p.id === prev) ? prev : (rows[0]?.id ?? ''))
       } catch (e: unknown) {
         if (!active) return
         setError(e instanceof Error ? e.message : 'Could not load consumable products.')
@@ -104,7 +102,8 @@ export function AddConsumableModal({
     }
   }, [isOpen, defaultNote])
 
-  const selectedProduct = products.find((p) => p.id === selectedProductId)
+  // The selected item must still be visible under the current filter.
+  const selectedProduct = filteredProducts.find((p) => p.id === selectedProductId)
 
   const handleQtyChange = (val: number) => {
     if (val < 1) return
@@ -112,8 +111,8 @@ export function AddConsumableModal({
   }
 
   const handleSubmit = async () => {
-    if (!selectedProductId) {
-      setError('Select a consumable product to add.')
+    if (!selectedProduct) {
+      setError('Select a consumable product from the visible search results.')
       return
     }
     if (qty < 1) {
@@ -128,7 +127,7 @@ export function AddConsumableModal({
       const result = await addConsumableLine(
         {
           bookingId,
-          productId: selectedProductId,
+          productId: selectedProduct.id,
           qty,
           lineNote: note.trim() || null,
           clientUuid,
@@ -167,7 +166,7 @@ export function AddConsumableModal({
           <Button
             variant="primary"
             onClick={handleSubmit}
-            disabled={submitting || loadingProducts || !selectedProductId || qty < 1}
+            disabled={submitting || loadingProducts || !selectedProduct || qty < 1}
           >
             {submitting ? 'Adding…' : 'Add Consumable'}
           </Button>
@@ -223,7 +222,8 @@ export function AddConsumableModal({
                       p.name.toLowerCase().includes(q.toLowerCase()) ||
                       p.assetCode.toLowerCase().includes(q.toLowerCase())
                   )
-                  if (filtered.length > 0 && !filtered.some((p) => p.id === selectedProductId)) {
+                  // A stale selection must never survive a no-match search.
+                  if (!filtered.some((p) => p.id === selectedProductId)) {
                     setSelectedProductId(filtered[0]?.id ?? '')
                   }
                 }}
@@ -242,7 +242,7 @@ export function AddConsumableModal({
               <select
                 id="consumable-product-select"
                 aria-label="Select consumable item"
-                value={selectedProductId}
+                value={selectedProduct?.id ?? ''}
                 onChange={(e) => setSelectedProductId(e.target.value)}
                 disabled={submitting || filteredProducts.length === 0}
                 style={{
