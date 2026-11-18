@@ -427,4 +427,8 @@ quotation allowed.
 - **Car / pickup — leave unset.** Not set means no fee is filled and staff type the charge.
 - **Outsourced vehicle — manual quote with an approval note.** Staff type the quoted charge and mark the vehicle outsourced; the booking records who approved it, in the audit log. Not built.
 
-Still open: nothing from this proposal. The "not built" items above are settled product rules that need a build card each.
+**Built since (19 Nov 2026):** two trips (collection fee fills from the grid), late-night flat charge (0249), outsourced vehicle quote (0250), waiting charge (0251, below).
+
+**Waiting charge, answered 19 Nov (Babin):** who may add it: Owner, Admin, Manager, Coordinator. If the invoice is already issued: "separate invoice for the extra charge".
+
+**TODO(decision): separate invoice for a waiting charge after issue. NOT BUILT; it conflicts with R-03.** What 0251 does: adds the flat Service line to the booking and appends it to the booking's DRAFT invoice (SPEC-P0-1 R-02/R-03: extra charges append to the one Draft), and when the invoice is already issued it REFUSES in words ("corrections after issue are Void + Credit Note"). Why the separate invoice is not built: R-03 is one invoice per rental (`create_invoice` refuses a second one), and the close gates read ONE invoice's outstanding amount, so an extra invoice could let a rental close with the extra charge unpaid. Re-invoicing is already an open ruling (MONEY-07 in `create_invoice`). Babin to confirm one of: (a) keep the refusal (void and reissue, as R-03 says); (b) amend R-03 and the close gates to sum every invoice on the booking, then build a separate extra-charge invoice. Reverting 0251 is independent of this.

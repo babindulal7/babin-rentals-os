@@ -66,6 +66,8 @@ import { BookingCrewList } from './BookingCrewList'
 import { canAssignPricedCrew } from '../../lib/crewAssignment'
 import { CreateSubRentalModal } from './modals/CreateSubRentalModal'
 import { AddConsumableModal } from './booking/AddConsumableModal'
+import { AddWaitingChargeModal } from './booking/AddWaitingChargeModal'
+import { canAddWaitingCharge } from '../../lib/queries/waitingCharge'
 import { RecordPaymentModal } from '../finance/modals/RecordPaymentModal'
 import { CreateInvoiceModal } from '../finance/modals/CreateInvoiceModal'
 import { CreateDocumentModal } from '../documents/CreateDocumentModal'
@@ -1218,6 +1220,7 @@ function BookingDetailView() {
    */
   const canReleaseUnits = user ? canWriteBookingDesk(user.role) : false
   const [showAddConsumableModal, setShowAddConsumableModal] = useState(false)
+  const [showWaitingChargeModal, setShowWaitingChargeModal] = useState(false)
   const [releasingUnitId, setReleasingUnitId] = useState<string | null>(null)
   const [releaseError, setReleaseError] = useState<string | null>(null)
   const [confirmRelease, setConfirmRelease] = useState<{ unitRowId: string; label: string } | null>(null)
@@ -1949,6 +1952,8 @@ function BookingDetailView() {
   const stage = (booking?.stage ?? 'Draft') as BookingStatus
   const isTerminalStage = stage === 'Returned' || stage === 'Closed' || !!booking?.isCancelled
   const canAddConsumables = !isTerminalStage && !!user && (canWriteBookingDesk(user.role) || canWriteFloor(user.role))
+  // S2 row 6: waiting charge after the trip. Owner, Admin, Manager, Coordinator; add_waiting_charge_line enforces it.
+  const canAddWaiting = !isTerminalStage && canAddWaitingCharge(user?.role)
   const lines: FloorLine[] = floor?.lines ?? []
   const printPickList = async () => {
     if (!floor || floor.linesPresence !== 'present' || floor.lines.length === 0) return
@@ -2907,14 +2912,27 @@ function BookingDetailView() {
               no="2"
               title="Equipment, Bundles & Services"
               action={
-                canAddConsumables ? (
-                  <Button
-                    variant="secondary"
-                    onClick={() => setShowAddConsumableModal(true)}
-                    style={{ minHeight: 36, padding: '0 12px', fontSize: 'var(--t-meta, 13px)' }}
-                  >
-                    + Add Consumable
-                  </Button>
+                canAddConsumables || canAddWaiting ? (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {canAddWaiting && (
+                      <Button
+                        variant="secondary"
+                        onClick={() => setShowWaitingChargeModal(true)}
+                        style={{ minHeight: 36, padding: '0 12px', fontSize: 'var(--t-meta, 13px)' }}
+                      >
+                        + Add Waiting Charge
+                      </Button>
+                    )}
+                    {canAddConsumables && (
+                      <Button
+                        variant="secondary"
+                        onClick={() => setShowAddConsumableModal(true)}
+                        style={{ minHeight: 36, padding: '0 12px', fontSize: 'var(--t-meta, 13px)' }}
+                      >
+                        + Add Consumable
+                      </Button>
+                    )}
+                  </div>
                 ) : undefined
               }
             >
@@ -3709,6 +3727,18 @@ function BookingDetailView() {
           showSuccessToast('Sub-Rental Created', `${subR.itemName} — ${subR.vendor}`)
         }}
       />
+
+      {showWaitingChargeModal && (
+        <AddWaitingChargeModal
+          isOpen={showWaitingChargeModal}
+          onClose={() => setShowWaitingChargeModal(false)}
+          bookingId={id}
+          onAdded={() => {
+            setFloorVersion((v) => v + 1)
+            refreshBookingData()
+          }}
+        />
+      )}
 
       {showAddConsumableModal && user && (
         <AddConsumableModal
