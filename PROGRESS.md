@@ -1,5 +1,38 @@
 # Progress Log
 
+## 2026-11-18 — O-28 dispatch wiring: fee read from the grid by booking zone and job vehicle (O-30)
+
+**Did**
+- `supabase/migrations/0246_dispatch_zone_fee_from_grid.sql` (not applied, N-5): `bookings.delivery_zone_id` (nullable) with `set_booking_delivery_zone()`; `delivery_jobs.vehicle_class` (nullable, the three grid classes) with `set_delivery_job_vehicle_class()`; `get_day_route()` now returns the grid fee by the booking's zone and the job's vehicle class, plus `zone_fee_status` saying why a fee is missing. Fee and status are money-visible roles only (Law 6).
+- `src/lib/deliveryFeeGrid.ts`: `ZONE_FEE_STATUSES` and `zoneFeeStatusLabel()`. A `set` status with no amount fails closed to "not set"; a null status (money-blind) renders no fee text.
+- `src/actions/delivery/getDayRoute.ts`: rows are mapped explicitly from snake_case. The old code cast the rows straight to camelCase fields, so every field came back undefined. Unknown statuses from the server become null.
+- Ledger: 0246 claimed; next free set to 0247 (0245 is R-9.8 on its own branch).
+
+**Ruled**
+- O-28 (18 Nov 2026): the grid replaces the per-zone fee. Dispatch now reads only the grid; `delivery_zones.fee_paisa` is not yet dropped.
+- O-30 (18 Nov 2026): staff choose the zone at booking; jobs inherit it through their booking (no copy onto the job).
+
+**Verified**
+- `npm run check:pglite`: 239/239 applied, 0 failed; view-leak, function-leak and definer-hygiene gates pass.
+- `npm run check:lifecycle`: 76/76 green.
+- `npx tsc --noEmit`: exit 0. `npx eslint --max-warnings 0` on the four changed TS files: exit 0.
+- `npx vitest run` on `deliveryFeeGrid.test.ts` (14), `toDayRouteStop.test.ts` (5) and `DeliveryFeeGridCard.test.tsx` (3): 22 pass.
+- Not verified: the new function branches under a real signed-in role (PGlite has no JWT, so `auth_user_role()` and `auth_can_view_money()` are not exercised per role). Not verified on live Supabase.
+
+**Blocked**
+- No UI calls `set_booking_delivery_zone()` or `set_delivery_job_vehicle_class()` yet. Until the pickers exist, every dispatch row shows "Zone not chosen" or "Vehicle class not chosen". This is correct, not a bug.
+- The mock fixture at `src/actions/delivery/createDeliveryJob.ts:57` (Rs 1,500) is left as is. It is not a fee source in the real path, and `deliveryFeeNpr` on the job is the booking's own delivery charge, which is a different figure.
+- Applying 0244 and 0246 to the live project needs Babin's go-ahead and a confirmed backup (N-5).
+
+### Completion (from `npm run completion`)
+- Backend 106/106 · Real data 56 DB-only of 67 · DB enforcement 9/9 · Permissions 85/85 · Lifecycle 76/76 · Overall ≈ 97%.
+
+### Remaining
+- Features to build: 3 (booking-form zone picker in New Rental; job vehicle-class picker on the delivery card; retire `delivery_zones.fee_paisa` once the grid is in use).
+- Bugs to fix: 0 new.
+- Rulings open: 0 for this item.
+- Next session starts with: the New Rental zone picker, which calls `set_booking_delivery_zone()` beside the delivery type.
+
 ## 2026-11-18 — Settings delivery fee grid screen (O-29, R-9.18)
 
 **Did**
