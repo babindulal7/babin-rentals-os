@@ -1,5 +1,34 @@
 # Progress Log
 
+## 2026-11-18 — O-29 answered: Owner and Manager type grid amounts
+
+**Did**
+- `supabase/migrations/0244_delivery_zone_vehicle_fee_grid.sql`: `set_delivery_zone_vehicle_fee()` now allows Owner and Manager (O-29). The quoted-zone setter stays Owner-only. Still unapplied (N-5).
+- Scratch check of the 0244 RPCs updated: Manager sets an amount; Coordinator still refused.
+- `docs/OPEN_DECISIONS.md` and `PLAN.md` §4.2: O-28 (grid replaces the per-zone fee) and O-29 (Owner and Manager) recorded as answered. Dispatch wiring for O-28 is not built yet.
+
+**Ruled**
+- O-29 (Babin, 18 Nov 2026): Manager and Owner may type grid amounts.
+- O-28 (Babin, 18 Nov 2026): the grid replaces the per-zone fee. Recorded; build pending.
+
+**Verified**
+- Scratch check of the 0244 RPCs on local PGlite: 8/8 pass.
+- `npm run check:pglite`: 238/238 applied, 0 failed. `npm run check:lifecycle`: 76/76 green.
+
+**Blocked**
+- Dispatch wiring for O-28 (replacing the per-zone fee in `getDayRoute` and the mock Rs 1,500) needs a route-to-vehicle source. Not built.
+- The Settings screen for the grid is not built.
+- Applying 0244 to the live project needs Babin's go-ahead and a confirmed backup (N-5).
+
+### Completion (from `npm run completion`)
+- Backend 106/106 · Real data 56 DB-only of 67 · DB enforcement 9/9 · Permissions 85/85 · Lifecycle 76/76 · Overall ≈ 97%.
+
+### Remaining
+- Features to build: 3 (O-28 dispatch wiring; Settings grid screen; R-9.8 driver handover, blocked on O-32).
+- Bugs to fix: 0 new.
+- Rulings open: 3 (O-30 zone source; O-31 cancellation rule and O-32 driver link are on the cancellation and driver branches).
+- Next session starts with: O-28 dispatch wiring from the grid, then the Settings grid screen.
+
 ## 2026-11-18 — R-9.18 / R-9.20: Delivery fee grid (zone × vehicle), quoted zones
 
 **Did**

@@ -11,7 +11,8 @@
 -- Written and tested locally only. NOT APPLIED to the live project (N-5).
 --
 -- Decisions taken here (B-1 stricter; flagged for Babin in OPEN_DECISIONS):
---   · Only the Owner may set a grid amount or a quoted flag (Settings value; §4.10).
+--   · Owner and Manager may set a grid amount (O-29, answered by Babin 18 Nov 2026).
+--     The quoted flag stays Owner-only (R-9.20 is an owner ruling).
 --   · Money-visible roles may read the grid (Law 6). Warehouse, Technician, Driver
 --     and Client may not.
 --   · delivery_zones (0189) is NOT altered. Its list_delivery_zones() returns the
@@ -108,9 +109,9 @@ security definer
 set search_path = public, pg_temp
 as $$
 begin
-  -- Owner only. Settings amounts are Owner-scoped (PERMISSIONS §4.10; B-1 stricter wins).
-  if auth_user_role() is distinct from 'Owner' then
-    raise insufficient_privilege using message = 'Only the Owner can set delivery fee amounts (R-9.18)';
+  -- Owner and Manager (O-29, answered 18 Nov 2026).
+  if auth_user_role() not in ('Owner', 'Manager') then
+    raise insufficient_privilege using message = 'Only the Owner or Manager can set delivery fee amounts (R-9.18, O-29)';
   end if;
   if not exists (select 1 from public.delivery_zones where id = p_zone_id) then
     raise exception 'Unknown delivery zone' using errcode = 'foreign_key_violation';
