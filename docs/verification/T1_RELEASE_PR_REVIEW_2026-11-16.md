@@ -1,8 +1,8 @@
 # T1-06, T1-07, T1-08, T1-14 — PR readiness and acceptance audit
 
-**Reviewed:** 16 Nov 2026 (Asia/Kathmandu)  
-**GitHub main baseline:** `3658f2faf91001d3f76e48bc21a51c803db83051`  
-**Scope:** Open PRs #174–#177; proposed task-state reconciliation only.  
+**Reviewed:** 16 Nov 2026 (Asia/Kathmandu)
+**GitHub main baseline:** `3658f2faf91001d3f76e48bc21a51c803db83051`
+**Scope:** Open PRs #174–#177; proposed task-state reconciliation only.
 **Boundary:** No PR merge, production deployment, remote branch deletion, DNS changes, live database writes, payment changes, or host activation.
 
 > **Historical snapshot — 16 November 2026.** The open/dirty PR statuses below were recorded before the 17 November merges. **Do not use this old table for a current merge or release decision.** The verified repository update is recorded below.
