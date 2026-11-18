@@ -1,5 +1,23 @@
 # Progress Log
 
+## 2026-11-19 — T3-31 counter-sale design (Lane C)
+
+**Did**
+- Prepared `docs/verification/T3-31_DESIGN.md` for review; no implementation or migration.
+
+**Ruled**
+- Applied existing B46 and B51; the design is a proposal, not an approval.
+
+**Verified**
+- `git diff --check` passed. Application and database checks not run.
+
+### Completion
+Not measured: completion command did not finish during this session.
+
+### Remaining
+- Review design before implementation; T3-14 and staged T3-30 acceptance remain dependencies.
+
+
 ## 2026-11-18 — T3-18: Change a confirmed booking (Lane C)
 
 **Did**
