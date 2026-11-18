@@ -1,5 +1,36 @@
 # Progress Log
 
+## 2026-11-18 — Settings zone context fix; component tests re-run for all three checks; browser pass still open
+
+**Did**
+- `DeliveryZonesControl.tsx` (commit 8fef0ec4): the list, create, update and deactivate calls now pass the signed-in user's id and role. Before, all four were refused by the action core ("called without a session context").
+- `DeliveryZonesControl.test.tsx`: the auth mock carries a user id, as the real user does.
+
+**Verified**
+- `VITE_DATA_SOURCE=mock npx vitest run` on the three browser-check areas: `DeliverySection.zonePicker` 4/4, `DeliveryAssignVehicleClass` 4/4, `DeliveryZonesControl` 7/7, `deliveryFeeGrid` and `deliveryFeeGridRead` pass (38 tests across 5 files).
+- r-9-6 worktree (`feat/r-9-6-cancellation-policy`): `CancellationFeeTiersCard.bands` 8/8 and `CancelRentalModal.tiers` 3/3 pass (11 tests).
+- `npx tsc --noEmit`: exit 0. `npx eslint` on the changed Settings files: exit 0.
+- `npm run check:pglite`: exit 0 (view-leak, function-leak and definer-hygiene gates clean).
+- `npm run check:lifecycle`: 76/76 green.
+- `npm run lint:progress`: passes.
+
+**Not verified**
+- Browser pass of the New Rental zone picker, the assign sheet and the cancellation band UI. The preview tool's `babin-mock` config serves the main checkout, so the worktree code could not be driven in a browser from this session. The component tests above use mocked actions and mocked Supabase only.
+- Under real signed-in roles: the database branches (PGlite has no JWT).
+
+**Blocked on Babin (not startable without him)**
+- Dropping `delivery_zones.fee_paisa`: deletes data, and the rule is that nothing is deleted. Kept for now.
+- Whether the booking charge should fill from the grid (the interpretation used here).
+
+### Completion (from `npm run completion`)
+- Backend 106/106 · Real data 56 DB-only of 67 · DB enforcement 9/9 · Permissions 85/85 · Lifecycle 76/76 · Overall ≈ 97%.
+
+### Remaining
+- Features to build: 0.
+- Bugs to fix: 0 new.
+- Rulings open: 2 (drop the per-zone fee column; booking charge from the grid). Both wait on Babin.
+- Next session starts with: a browser pass of the worktree on port 3100 (r-9-18) and port 3101 (r-9-6), once the preview config points at the worktree.
+
 ## 2026-11-18 — Browser attempt on the zone picker found a broken zone list; fixed; component tests added
 
 **Did**
