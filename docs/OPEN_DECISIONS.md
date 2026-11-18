@@ -1,5 +1,18 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 19 November 2026 — IRD Electronic Billing & CBMS Determination Request (T3-05 / O-6)
+
+**Accountant Decision Request:**
+Does Babin Rentals require IRD-certified electronic billing or real-time Central Billing Monitoring System (CBMS) integration for its actual business operations and VAT invoices under current Nepal Inland Revenue Department regulations?
+If yes:
+1. What software certification procedure and approved vendor requirements apply?
+2. What real-time API synchronization and offline queuing/tamper-evident logging rules apply during Internet disruptions?
+3. What statutory rules govern invoice cancellation, credit notes, and 6-year fiscal ledger retention?
+If no:
+What specific conditions (annual turnover under NPR 50 Million / 5 Crore, sector exemptions) permit continuing with standard sequential computerized tax invoicing (`create_invoice` / `INV-YYYY-XXXXX`) without real-time CBMS transmission?
+
+**Status:** Awaiting written, dated, and attributable accountant sign-off with statutory sources. Draft brief in `docs/compliance/IRD_EBILLING_COMPLIANCE_BRIEF.md` (PR #219) outlines technical requirements but remains a proposal until formally approved. T3-05 remains `acceptance_pending` (held from `done`).
+
 ## 5 November 2026 — Glossary editing in Settings (O-22)
 
 Babin requested glossary changes from Settings during the conflict repair. **Answered 5 Nov 2026:** editing is **Owner only** and **approved term changes apply throughout the app immediately**. The glossary's existing 1 Nov approval remains recorded; automatic OK statuses from the faulty wave exporter are not review evidence. T0-12 implements an explicit Owner approval action, append-only shared revisions and immediate text refresh. Whole-app Nepali activation remains gated independently. No hosted write path is enabled until Babin applies the locally verified migration (N-5).

@@ -1,5 +1,38 @@
 # Progress Log
 
+## 2026-11-19 — Windows Antigravity: Reconciliation of 7 T3 Cards
+
+**Did**
+- Audited and reconciled 7 T3 cards against `main` (commit `44300a17e01705676cd0c21b9518edf23a9a0fda`):
+  - **T3-13 (Fully booked → similar item or sub-rent):** Verified merged implementation from PR #182 (`f9520bdc`). Confirmed `findSimilarFreeEquipment`, `SubRentalPartnerModal`, out-of-stock hard block, and Law 6 money blindness (`similarEquipment.test.ts`, `SubRentalPartnerModal.test.tsx`, `AddItemPanel.similarSubrent.test.tsx` - 13/13 tests green). Marked `acceptance_pending` pending owner review of supplier fixtures and staging persistence.
+  - **T3-16 (One-tap document share):** Verified merged implementation from PR #181 (`d604a098`). Confirmed WhatsApp, Email, Print, and Copy across commercial/operational documents with Law 6 role gating (`documentShare.test.ts`, `DocumentShareModal.test.tsx` - 17/17 tests green). Marked `acceptance_pending` pending physical mobile/desktop device tap verification and accountant T3-06 sign-off.
+  - **T3-19 (Scan gear into New Rental):** Verified merged implementation from PR #163 (`037e175a`). Confirmed trimmed case-insensitive scan lookup, 1.5s burst suppression, availability checking, and duplicate line prevention (`scanToAddEquipment.test.ts`, `AddItemPanel.scan.test.tsx` - 6/6 tests green). Marked `acceptance_pending` pending physical camera/Bluetooth scanner iPad testing and Mac T2-14 coordination.
+  - **T3-20 (Who owes & statements):** Verified merged implementation from PR #190 (`8c8d7cb2`). Confirmed exact paisa receivables aggregation, multipage statement PDF export, reminder pause/resume audits, and Law 6 role gating (`WhoOwes.test.tsx` - 7/7 tests green). Marked `acceptance_pending` pending overdue age definition reconciliation and accountant review.
+  - **T3-23 (Monthly accountant pack):** Verified merged implementation from PR #191 (`578ccda9`). Confirmed ZIP generation with Sales/VAT register, payments, expenses, and crew TDS in BS/AD dates with complete pagination (`zip.test.ts`, `crewTdsPagination.test.ts`, `crewCompleteRead.test.ts`, `MonthlyPack.test.tsx` - 20/20 tests green). Marked `acceptance_pending` pending external accountant inspection of sample pack.
+  - **T3-05 (IRD e-billing check):** Formulated formal accountant decision request in `docs/OPEN_DECISIONS.md`. Reviewed draft PR #219 (`docs/compliance/IRD_EBILLING_COMPLIANCE_BRIEF.md`). Kept as `acceptance_pending` awaiting attributable written accountant determination with statutory citations.
+  - **T3-31 (Counter sale):** Authored comprehensive design note in `docs/verification/T3-31_DESIGN.md` evaluating Option A (`booking.kind = 'counter_sale'`) vs Option B (independent sales table). Selected Option A as smallest safe path preserving canonical invoices, payments, daily closing, and Law 6 money blindness. Claimed migration `0249` in `docs/plans/MIGRATION_LEDGER.md`. Marked `blocked` on T3-30 acceptance, T3-14 draft invoice completion, and O-14/O-17 tax rulings.
+- Updated roadmap status in `docs/plans/T3_BOOKING_MONEY.md` for all 7 cards.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 108 / 109 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | +0 |
+| Lifecycle | steps green / total | 85 / 85 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 241 files · check:pglite not run this session (pass --migrations to run). Suite: NOT VERIFIED — focused or unspecified run: 20/20 passed, 0 failed (recorded 2026-11-18T19:51:22.891Z).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-18T20:03:26.614Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Awaiting accountant determinations for T3-05 (IRD e-billing), T3-06 (invoice legal format for T3-16/T3-20), and sample pack inspection for T3-23.
+- Physical device testing on mobile and Bluetooth/camera scanner for T3-16 and T3-19.
+- Upstream unblocking for T3-31 (T3-30 acceptance, T3-14 invoice draft completion, and O-14/O-17 tax decisions).
+
 ## 2026-11-18 — T3-18: Change a confirmed booking (Lane C)
 
 **Did**

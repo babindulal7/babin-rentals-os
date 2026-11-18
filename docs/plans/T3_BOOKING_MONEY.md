@@ -81,7 +81,7 @@ invoice PDF footer.
 layout (O-7).
 **Needs** — accountant answer O-7 for the report wording.
 
-### T3-05 · IRD e-billing check            status: todo · size: S · Babin + accountant
+### T3-05 · IRD e-billing check            status: acceptance_pending — draft brief PR #219 open; statutory accountant determination pending in docs/OPEN_DECISIONS.md · size: S · Babin + accountant
 **What** — Babin asks the accountant whether Babin Rentals must use IRD-certified electronic billing
 with real-time invoice sync. If **no**, close the card with the answer and date. If **yes**, write a
 spec card set (certification, sync, offline invoices, invoice cancellation rules) and re-plan.
@@ -181,7 +181,7 @@ Nepali digits, emoji bullets); 80%+ of lines in the samples auto-match; nothing 
 confirm tap; Warehouse sees no prices in the preview.
 **Needs** — none.
 
-### T3-13 · Fully booked → similar item or sub-rent            status: todo · size: M · lane C · [go-live]
+### T3-13 · Fully booked → similar item or sub-rent            status: acceptance_pending — PR #182 merged 17 Nov; supplier persistence and staging acceptance pending · size: M · lane C · [go-live]
 **What** — When a product has no free unit for the dates, New Rental shows **both** (W10): "Similar
 we own — free" (same category and type, e.g. another 24-70 lens) and "Sub-rent from a partner"
 (opens the sub-rental line flow with the partner list). Staff choose. The booked item itself stays
@@ -232,7 +232,7 @@ Keep the bank account default for Bank transfer (R-39 D3).
 tap count ≤ 4 from Booking Detail.
 **Needs** — none.
 
-### T3-16 · Share documents in one tap            status: todo · size: M · lane C · [go-live]
+### T3-16 · Share documents in one tap            status: acceptance_pending — PR #181 merged 17 Nov; physical mobile 2-tap share and accountant T3-06 sign-off pending · size: M · lane C · [go-live]
 **What** — On every quote, invoice, receipt and agreement: **Share** → WhatsApp (PDF through the
 phone's share sheet, or wa.me with a text summary when sharing a file is not possible), **Email**
 (through T5-03, from `@babinrentals.com`), **Print** (A4), **Copy text**. The booking confirmation is
@@ -279,7 +279,7 @@ instead of overwriting it.
 **Done when** — the three cases work on staging with two devices; no double booking; audit rows exist.
 **Needs** — T3-14.
 
-### T3-19 · Add gear by scanning in New Rental            status: todo · size: S · lane C · [soon]
+### T3-19 · Add gear by scanning in New Rental            status: acceptance_pending — PR #163 merged 15 Nov; physical scanner/iPad testing and Mac T2-14 acceptance pending · size: S · lane C · [soon]
 **What** — In New Rental, scanning an item's QR/asset code (camera or Bluetooth) adds that product —
 and reserves that exact unit if it is free — in one action (W8).
 **Why** — W8.
@@ -290,7 +290,7 @@ the same code within ⭐ 1.5 s, server check per code.
 **Done when** — scan → line added with that unit; a booked unit says who has it and offers T3-13.
 **Needs** — T2-14 (shared scan lookup).
 
-### T3-20 · Who owes            status: todo · size: M · lane C · [go-live]
+### T3-20 · Who owes            status: acceptance_pending — PR #190 merged 18 Nov; overdue age definition reconciliation and accountant review pending · size: M · lane C · [go-live]
 **What** — Finance ▸ **Who owes**: one list of clients with unpaid balances, oldest first, with age
 (days since completion), amount, last reminder sent, "Paused" flag; tap → the client's **statement**
 (PDF: every open invoice and booking balance, payments so far) to share (T3-16). Many production
@@ -328,7 +328,7 @@ any dates, the next free date, and **who has it now** (from T2-14). Reuses `Chec
 **Done when** — ≤ 2 taps to an answer from any screen; matches New Rental's availability exactly.
 **Needs** — T2-14.
 
-### T3-23 · Monthly pack for the accountant            status: todo · size: M · lane C · [soon]
+### T3-23 · Monthly pack for the accountant            status: acceptance_pending — PR #191 merged 18 Nov; accountant representative sample pack sign-off pending · size: M · lane C · [soon]
 **What** — Finance ▸ Reports ▸ **Monthly pack**: pick a Nepali month (or AD month) → one zip with the
 **Sales/VAT register** (standard and non-VAT sections, T3-04), **payments and refunds**, **expenses
 with bill photos**, **crew payouts with TDS** (T8-08), as CSV + PDF, BS and AD dates. Money roles only.
@@ -469,7 +469,7 @@ with a movement row; 3) dropping below the reorder level shows on Today; 4) Ware
 never prices; 5) screen check.
 **Needs** — none.
 
-### T3-31 · Counter sale            status: todo · size: M · lane C · [go-live] · slips first
+### T3-31 · Counter sale            status: blocked — design note in docs/verification/T3-31_DESIGN.md; migration 0249 claimed; blocked on T3-30 acceptance, T3-14 invoice completion, and O-14/O-17 tax rulings · size: M · lane C · [go-live] · slips first
 **What** — A walk-in buys consumables without renting (B46). Anyone can start it (B51): **floor roles**
 pick the items and quantities (no prices shown, Law 6) and hand them over; **the desk** takes payment.
 "Counter sale" on Today and in New Rental. One atomic server action creates the sale, deducts stock and
