@@ -188,9 +188,61 @@ async function auditSecurityDefinerSearchPath(db) {
   return { unpinned: unpinned.map((r) => r.proname), checked: rows.length }
 }
 
+// ── staff-only booking-clash tables ──────────────────────────────────────────
+// Supabase's public-table defaults grant far more than SELECT to browser roles.
+// RLS prevents unauthorized row reads, but TRUNCATE is outside RLS altogether.
+// Assert BOTH explicit ACL minimization and role-scoped RLS on the real PGlite
+// migration chain. This is offline verification, NOT a hosted JWT/API test.
+async function auditClashTableIsolation(db) {
+  const required = [
+    ['extension_clash_decisions', 'extension_clash_decisions_select'],
+    ['booking_at_risk', 'booking_at_risk_select'],
+    ['client_account_credits', 'client_account_credits_select'],
+  ]
+  const { rows } = await db.query(`
+    select c.relname as table_name, c.relrowsecurity as rls_enabled,
+      has_table_privilege('anon', c.oid, 'SELECT') as anon_read,
+      has_table_privilege('authenticated', c.oid, 'SELECT') as signed_in_read,
+      has_table_privilege('authenticated', c.oid, 'INSERT') as signed_in_insert,
+      has_table_privilege('authenticated', c.oid, 'UPDATE') as signed_in_update,
+      has_table_privilege('authenticated', c.oid, 'DELETE') as signed_in_delete,
+      has_table_privilege('authenticated', c.oid, 'TRUNCATE') as signed_in_truncate,
+      has_table_privilege('authenticated', c.oid, 'REFERENCES') as signed_in_references,
+      has_table_privilege('authenticated', c.oid, 'TRIGGER') as signed_in_trigger
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname='public'
+      and c.relname in ('extension_clash_decisions','booking_at_risk','client_account_credits')
+      and c.relkind in ('r','p')
+  `)
+  const predicates = (await db.query(`
+    select tablename, policyname, qual
+    from pg_policies
+    where schemaname='public'
+      and policyname in ('extension_clash_decisions_select','booking_at_risk_select','client_account_credits_select')
+  `)).rows
+  const violations = []
+  for (const [table, name] of required) {
+    const row = rows.find((r) => r.table_name === table)
+    const predicate = predicates.find((p) => p.tablename === table && p.policyname === name)
+    if (!row) { violations.push(table + ': missing table'); continue }
+    if (!row.rls_enabled) violations.push(table + ': RLS disabled')
+    if (row.anon_read) violations.push(table + ': anon SELECT granted')
+    if (!row.signed_in_read) violations.push(table + ': staff SELECT grant missing')
+    for (const privilege of ['insert','update','delete','truncate','references','trigger']) {
+      if (row['signed_in_' + privilege]) violations.push(table + ': authenticated ' + privilege.toUpperCase() + ' granted')
+    }
+    const qual = String(predicate?.qual ?? '')
+    if (!qual.includes('auth_user_role()') || /\btrue\b/i.test(qual) || /['"]Client['"]/i.test(qual)) {
+      violations.push(table + ': SELECT policy is not limited to approved staff roles')
+    }
+  }
+  return { checked: required.length, violations }
+}
+
 const viewAudit = await auditAnonViewReads(db)
 const funcAudit = await auditAnonFunctionExecution(db)
 const definerAudit = await auditSecurityDefinerSearchPath(db)
+const clashAudit = !from ? await auditClashTableIsolation(db) : { checked: 0, violations: [] }
 
 console.log(`\n${applied}/${files.length} applied, ${failures.length} failed`)
 
@@ -231,6 +283,11 @@ if (definerAudit.unpinned.length) {
   for (const fn of definerAudit.unpinned) console.log(`    ${fn}`)
 }
 
+console.log(
+  `clash/RLS gate: ${clashAudit.checked} staff-only table(s) checked, ${clashAudit.violations.length} violations`,
+)
+for (const violation of clashAudit.violations) console.log('  ' + violation)
+
 await db.close()
 
 if (failures.length) {
@@ -256,6 +313,10 @@ if (definerAudit.unpinned.length) {
   console.log('\nThe chain builds, and it still contains unpinned SECURITY DEFINER functions.')
   process.exit(1)
 }
+if (clashAudit.violations.length) {
+  console.log('\nStaff-only clash and credit tables violate RLS or least-privilege ACL requirements.')
+  process.exit(1)
+}
 const pgliteResult = {
   ...finishVerification(verificationStart, ROOT, !from),
   applied,
@@ -263,6 +324,8 @@ const pgliteResult = {
   failed: failures.length,
   views_checked: viewAudit.checked,
   views_leaked: viewAudit.leaked.length,
+  clash_tables_checked: clashAudit.checked,
+  clash_acl_rls_violations: clashAudit.violations.length,
   at: new Date().toISOString(),
 }
 writeFileSync(join(ROOT, '.pglite-result.json'), JSON.stringify(pgliteResult, null, 2))
