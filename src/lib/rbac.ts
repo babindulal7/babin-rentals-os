@@ -235,6 +235,15 @@ export function canChangeMembership(role: SystemRole): boolean {
 }
 
 /**
+ * Desk staff change confirmed booking (T3-18, W88).
+ * Admits Owner, Admin, Manager, Coordinator (C+).
+ * Warehouse and floor roles are excluded because changing prices, discounts, and line rates violates Law 6.
+ */
+export function canChangeBooking(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+}
+
+/**
  * Check if role can add, edit, or remove tags on bookings.
  * Owner, Admin, Manager, Coordinator (Booking desk roles). Floor roles and Client are read-only.
  *

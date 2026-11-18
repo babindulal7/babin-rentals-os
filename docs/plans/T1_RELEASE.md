@@ -82,7 +82,7 @@ real PostgREST, not only PGlite.
 tables; Client reads only its own rows; `anon` reads nothing internal.
 **Needs** — T1-02.
 
-### T1-06 · Storage scoping accepted on staging            status: todo · size: M · lane A
+### T1-06 · Storage scoping accepted on staging            status: doing — PR #174 merged; local 20-assertion privacy harness, but staging Storage API/RLS acceptance is not yet evidenced · size: M · lane A
 **What** — With 0170 applied on staging, test the `documents` and `evidence` buckets with staff
 roles and two Client seats: upload, signed URL, read, refusal. Count objects with no linked record
 and leave them **quarantined** (D33) — list them for Babin in `docs/live/`.
@@ -95,7 +95,7 @@ real photos into these buckets.
 quarantine count recorded.
 **Needs** — T1-05.
 
-### T1-07 · Hosting on Cloudflare Pages            status: todo · size: M · lane A + Babin
+### T1-07 · Hosting on Cloudflare Pages            status: doing — PR #175 merged configuration; hosted Pages, Access and DNS acceptance still owner-gated/unverified · size: M · lane A + Babin
 **What** — Two Pages projects from this repo: **staff app** → `app.babinrentals.com` (and
 `staging-app.babinrentals.com` for staging builds), **booking site** → `book.babinrentals.com`
 (its build target arrives with T7-02). Add `public/_headers` (`/sw.js` no-store; `/assets/*`
@@ -115,7 +115,7 @@ variables in the Pages project: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (a
 served `no-store`; 3) an unauthenticated visitor to `staging-app.` meets the Access login.
 **Needs** — Babin creates the Cloudflare account and adds DNS records (BABIN_ACTIONS week 1).
 
-### T1-08 · Error monitoring            status: todo · size: S · lane A
+### T1-08 · Error monitoring            status: doing — PR #176 merged privacy/monitoring code; real staging telemetry and negative-PII receipts not yet evidenced · size: S · lane A
 **What** — Create the Sentry project, set `VITE_SENTRY_DSN` per environment, tag releases with
 `VITE_APP_VERSION`. Confirm `src/lib/monitoring.ts` sends ids and counts only — no client PII, no
 rupee figures.
@@ -193,7 +193,7 @@ shared devices (T1-15).
 **Done when** — every staff member on the roster has signed in once; the role list matches the roster.
 **Needs** — Batch 1 applied; Babin supplies the roster.
 
-### T1-14 · Performance on real devices            status: todo · size: M · lane A
+### T1-14 · Performance on real devices            status: doing — PR #177 merged scanner split; phone/iPad 4G metrics and scanner first-click acceptance still not evidenced · size: M · lane A
 **What** — Measure first load and route changes on the iPhone 17 Pro and M4 iPad Pro over 4G
 against `app.` (main bundle measured 704 kB on 20 Oct; scanner vendor chunk 453 kB). Lazy-load the
 scanner and the Calendar (4,264 lines) if they sit on the first-load path. Budget ⭐: first usable

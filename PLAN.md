@@ -81,7 +81,7 @@ older receipt.
 | Actions implemented (`npm run completion`) | **55 / 58** — the 3 missing are inspection stubs nothing calls |
 | Routed screens on the database | **50 / 60** — 0 on seed data; the other 10 are sign-in, 404, onboarding and three static pages |
 | Capabilities mapped | **48 / 48** |
-| GitHub CI | **Historical, 26 Oct:** off — no run had passed since 15 Oct 19:23 UTC and the run on PR #29 (25 Oct) showed GitHub refusing to start the job for a billing reason; Babin ruled CI stays off (W75). **Today, 4 Nov:** `ci.yml` runs on the owner's self-hosted Windows runner (see [`docs/audits/RULE_CONFLICT_AUDIT_2026-11-04.md`](docs/audits/RULE_CONFLICT_AUDIT_2026-11-04.md) for the run evidence). The local gates (§6.4) stay the pre-push check; the wording of the CI policy is a **proposal awaiting owner approval** — [`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md) §6. |
+| GitHub CI | **Historical (26 Oct 2026):** GitHub-hosted jobs were blocked; W75 temporarily required local verification. **Current policy (owner ruling of 9 Nov 2026, R-9.9):** GitHub CI is ON and an exact-head merge gate, running on self-hosted Mac and Windows runners. Local gates (§6.4) remain mandatory before push. Do not merge from historical green runs or bypass required checks. |
 
 What stops go-live today:
 
@@ -110,7 +110,7 @@ What stops go-live today:
 
 | ID | Track | Delivers | Go-live? | Lane · agent | Size* |
 |---|---|---|---|---|---|
-| [T0](docs/plans/T0_REPO_HYGIENE.md) | Repo & process hygiene | PR/branch triage, doc truth, tests never use live settings, one gate command, CI off | Yes (week 1) | A · Codex-1 + Babin | 2 (+ Babin's triage; 6 built) |
+| [T0](docs/plans/T0_REPO_HYGIENE.md) | Repo & process hygiene | PR/branch triage, doc truth, tests never use live settings, one gate command, CI on as merge gate | Yes (week 1) | A · Codex-1 + Babin | 2 (+ Babin's triage; 6 built) |
 | [T1](docs/plans/T1_RELEASE.md) | Release & infrastructure | Backup, staging, migrations live, hosting, email DNS, monitoring, switch user by PIN, Settings that tell the truth, two-step sign-in for money roles, sign-in history | Yes | A · Codex-1 + Babin | 38 (≈ 8 slips first) |
 | [T2](docs/plans/T2_FLOOR.md) | Floor loop completion | Camera evidence fixes (T2-18), saving a unit's details, collectors, repair clearance, self-QC, printing and the pick list, scanner, scan → item card, offline, devices; **stock tools:** planned downtime, time between rentals, overbooking per product, temporary stock; Return signature on damage; consumables at the floor | Yes | A · Codex-1 | 28 (≈ 15 slips first; 13 built) |
 | [T3](docs/plans/T3_BOOKING_MONEY.md) | Booking & money rules | Re-book, paste a list, fully booked options, deposits, cancellation tiers, non-VAT bills, draft invoice at Confirm, change/extend, share, who owes, find/availability, balances, accountant pack, expenses; tags, project name and shoot location, pro forma, rental day start setting, extension clash, consumables, counter sale | Yes | C · Codex-2 | 64 (≈ 16 slips first; 1 built) |
@@ -278,7 +278,7 @@ Ruled 26 Oct afternoon (W74–W78, W90, L5).
 3. **One card = one branch.** Branch name `lane-<a|b|c>/<card-id>-<slug>`, e.g.
    `lane-a/T2-01-camera-evidence`. Each card has a ready prompt in
    [`docs/plans/prompts/`](docs/plans/prompts/README.md) — paste it into the lane's agent.
-4. **Run these local checks before you push** (W75 turned CI off on 26 Oct for billing; it now runs on
+4. **Run these local checks before you push** (CI is a merge gate since Babin's 9 Nov ruling R-9.9; it runs on
    the owner's runner — [`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md) §6). Before an agent says a card
    is done, and again before Babin merges it, run **every step `.github/workflows/ci.yml` runs, in its
    order** — the list is in [`docs/plans/README.md`](docs/plans/README.md), and `npm run gates` is the same

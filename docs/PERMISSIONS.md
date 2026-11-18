@@ -18,7 +18,7 @@ Location: `docs/PERMISSIONS.md` (beside Foundation v3.0 and UI_UX.md)
 > | D30 | §7 client writes: add "pay online" (advance or invoice balance) | T7-05 |
 > | W49 | §3/§7 new access path: a one-time, job-scoped delivery link for a hired rider — no login, no money, expires | T4-08 |
 > | W53 | Sign-in: switch user on a shared device by name + PIN (4 or 6 digits — O-18), restoring that person's own session (not the screen-lock curtain) | T1-15 |
-> | W88 | §4 new capability `rental.change`: booking-desk roles change items and dates after Confirm (today quote-only edits + extend) | T3-18 |
+> | W88 | §4 new capability `rental.change`: booking-desk roles change items and dates after Confirm (today quote-only edits + extend) | T3-18 (in code, lane-c/T3-18-change-confirmed-booking) |
 > | W68 | §6.1 note: a Staff client's 20% discount is an ordinary discount line (Law 10, ungated) | T8-09 |
 > | B19 | §6.1 new row `gate.return.damage_unsigned`: a Return with a flagged unit needs a signature or a recorded refusal (reason ≥ 10 chars), by any staff allowed to do Return | T2-19 |
 > | B21, B40 | §5 mechanics: once Owner arms it, money rows and money writes need the second sign-in step (`aal2`) for Owner · Admin · Manager · Coordinator · Accounts; asked again every 30 days per device; Warehouse · Technician · Driver unchanged | T1-17 |
@@ -240,6 +240,7 @@ Ladder shorthand: `M+` = Owner · Admin · Manager. `C+` = M+ · Coordinator. `F
 | `rental.confirm` | C+ · Warehouse | `booking_stage_transitions_insert` — and, since R-26, that same INSERT writes the booking's `inventory_reservations` rows (`0100`, trigger, SECURITY INVOKER). The five roles this policy admits are exactly the five `inventory_reservations_all` admits, so confirming and holding are one permission and one transaction. | ✓ |
 | `rental.discount` | C+ (Coordinator included) | `booking_discounts_money_blind` refuses Floor. **Ungated in amount** (31 Aug): no cap, no reason, no approver. | ○ split from `rental.create` |
 | `rental.extend` | C+ | invoice update in place; blocked on collision with next booking (system, not role) | ✓ |
+| `rental.change` | C+ | change_booking RPC (0243, W88); revision-locked, atomic line/date/crew/transport/discount changes; GiST-checked for reservations; packed units guard; resyncs Draft invoice | ✓ |
 | `rental.update_project` | C+ · Warehouse (UI offers edit to C+; floor views) | narrow `project_type`/`project_type_other` text edit via `updateBookingProject`; audited old→new; 0102 money trigger untouched | ○ |
 | `rental.tag` | C+ | `set_booking_tags` RPC (0228, T3-25, B16, B55); adds and removes tags; floor roles read-only | ✓ |
 | `rental.cancel` (before Packed) | C+ | stage-transition policy; cancellation fee tiers from Settings | ✓ |
@@ -516,6 +517,8 @@ Known hole to keep closed: **`security_deposits` was readable by money-blind ses
 | `gate.revert.pre_handover` | Booked/Packed → earlier Quote/Booked only; no handover or terminal booking | M+; Manager own branch; online | ≥10 chars | atomic audit + reversal; reservations released at Quote or refreshed at Booked | O16-3; 0167 |
 | `gate.archive.terminal` | Archive a Closed or Cancelled booking; keep searchable history | M+; Manager own branch; online | ≥10 chars | atomic audit + terminal archive timestamp | O16-3; 0167 |
 | `gate.pack.session_missing` | Booked → Packed with no pack session | nobody | — | yes | Stage 1 (0115) |
+| `gate.booking.concurrent_change` | Concurrent booking change detected | nobody | — | Reload latest record | T3-18 (0243) |
+| `gate.booking.packed_line_removed` | Removing or reducing packed line items | nobody | Unpack on floor first | refused | T3-18 (0243) |
 | `gate.pack.units_unassigned` | Serial line with unassigned units at pack | nobody | — | yes | Stage 1 (0115) |
 | `gate.pack.units_unpacked` | Unit unpacked in pack session | nobody | — | yes | Stage 1 (0115) |
 | `gate.handover.session_missing` | Packed → On Rent with no handover session | nobody | — | yes | Stage 1 (0115) |

@@ -1,5 +1,48 @@
 # Progress Log
 
+## 2026-11-18 — T3-18: Change a confirmed booking (Lane C)
+
+**Did**
+- Implemented **T3-18 · Change a confirmed booking** (`lane-c/T3-18-change-confirmed-booking`):
+  - Authored migration `supabase/migrations/0243_change_confirmed_booking.sql`:
+    - Added `parent_booking_id uuid references public.bookings(id) on delete set null` to `public.bookings` with B-tree index and Law 6 column grant.
+    - Updated `create_booking` RPC: accepts `parent_booking_id`, persists to `bookings`, returns `parent_booking_id`, and safely logs `price.server_applied` for money-blind callers (Law 6).
+    - Authored `read_booking_for_change(p_id text)` RPC: returns complete editable snapshot of confirmed bookings with lines, crew, transport, discounts, header values, and cryptographic MD5 `revision` hash.
+    - Authored `change_booking(uuid, text, uuid, jsonb)` RPC: atomic, revision-locked (`GATE:gate.booking.concurrent_change|40001`), idempotent mutation applying header changes, lines, crew, transport, and discounts.
+    - Implemented `GATE:gate.booking.packed_line_removed|Packed items cannot be silently removed. Unpack them on the floor first.` guard against removing or reducing packed/assigned units in `Packed` or `On Rent` bookings.
+    - Re-evaluates and updates active reservations under non-deferrable GiST exclusion constraint (`inventory_reservations_no_double_booking`).
+    - Automatically resyncs Draft invoices via `resync_draft_invoice(p_id)`.
+  - Added RBAC capability `rental.change` for `C+` roles (`Owner`, `Admin`, `Manager`, `Coordinator`) in `docs/PERMISSIONS.md` and `src/lib/rbac.ts`.
+  - Authored `src/actions/rentals/changeBooking.ts` action with full schema validation.
+  - Extended `src/actions/rentals/createRental.ts`, `src/lib/queries/quoteEditor.ts`, and `src/lib/queries/bookings.ts` with `parentBookingId`.
+  - Updated `src/modules/rentals/BookingDetail.tsx`:
+    - Enabled Edit button for `['Quote', 'Booked', 'Packed', 'On Rent']` for authorized desk staff.
+    - Added "+ Add gear" button in Block 2 for `On Rent` bookings.
+    - Added `AddGearMidRentalModal` implementing W87 ("Add to this booking" vs "Start a new linked booking").
+    - Added "Linked to Parent booking" in SummaryRows.
+  - Updated `src/modules/rentals/booking/useNewRentalDraft.ts`, `useNewRentalSubmit.ts`, and `NewRental.tsx` to handle confirmed booking changes and linked booking parent IDs.
+  - Added lifecycle steps `L82` ("a change can never double-book"), `L83` ("a packed unit cannot be silently removed"), and `L84` ("linked booking carries the parent id") in `scripts/e2e-lifecycle.mjs` (85/85 green).
+  - Authored verification document `docs/verification/T3-18_VERIFICATION.md`.
+  - Updated `docs/plans/T3_BOOKING_MONEY.md` and `docs/plans/MIGRATION_LEDGER.md`.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 108 / 109 (99%) | +1 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | +1 |
+| Lifecycle | steps green / total | 85 / 85 (100%) | +3 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 241 files · check:pglite 241/241 applied, 0 failed (recorded 2026-11-18T07:12:50.228Z). Suite: PASS — 7380/7380 passed, 0 failed (recorded 2026-11-18T07:12:47.627Z); source fingerprint matches.
+Coverage suite: PASS — 7380/7380 passed, 0 failed (recorded 2026-11-18T07:12:47.627Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-18T07:13:15.700Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Batch 6 Card 5 (T3-18) verified green. Next cards in priority order from roadmap/triage.
+
 ## 2026-11-18 — T3-28: Rental day start as a setting (Lane C)
 
 **Did**
