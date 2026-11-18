@@ -1,10 +1,10 @@
 # Hosted staging rollback-only compatibility: migrations 0001–0011
 
-**Observed:** 17 November 2026 (NPT)  
-**Immutable source baseline:** [`main` `4ba3cde372b5a690468aff370572a9e8500c9685`](https://github.com/babindulal7/babin-rentals-os/tree/4ba3cde372b5a690468aff370572a9e8500c9685)  
-**Isolated hosted target:** existing free `babin-staging` (`klhmsrunqrdxjudyhnkm`), Singapore region  
-**Protected production:** `sxguwvgoserhdolewibb` — NO SQL writes; read-only migration metadata comparison separately  
-**Outcome:** PASS for compatibility test on the first 11 source SQL files; persistent staging state unchanged  
+**Observed:** 17 November 2026 (NPT)
+**Immutable source baseline:** [`main` `4ba3cde372b5a690468aff370572a9e8500c9685`](https://github.com/babindulal7/babin-rentals-os/tree/4ba3cde372b5a690468aff370572a9e8500c9685)
+**Isolated hosted target:** existing free `babin-staging` (`klhmsrunqrdxjudyhnkm`), Singapore region
+**Protected production:** `sxguwvgoserhdolewibb` — NO SQL writes; read-only migration metadata comparison separately
+**Outcome:** PASS for compatibility test on the first 11 source SQL files; persistent staging state unchanged
 **Limit:** NOT a durable schema install, backup/restore drill, JWT/RLS/Storage acceptance, or production release clearance.
 
 ## Source identities
