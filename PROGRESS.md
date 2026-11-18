@@ -9,6 +9,7 @@
 - New Rental (`DeliverySection.tsx`): the chosen zone's band shows as a hint under the zone field. The dropdown stays names only.
 - `DeliveryFeeGridCard.tsx`: `load()` now catches a rejected read and shows it in the card's error alert. Before, a client not yet ready left an unhandled rejection that failed `financialCreditPolicy.test.tsx` under load.
 - Two trips (ruled 19 Nov, S2 row 2): the form already offers one trip ("Client Returns to Warehouse") or two ("Babin Rentals Pickup from Location"). The two-trip block now has its own Collection zone and Collection vehicle class; the Return Pickup Fee fills from the same grid cell and stays editable; a quoted or not-set cell says so and leaves the fee. Form-only: the fee is what is stored (in the booking instructions, as before). The road-distance hint shows for the collection zone too. `DeliverySection.tsx`; 3 new tests in `DeliverySection.zonePicker.test.tsx`.
+- Late-night or emergency delivery (ruled 19 Nov, S2 row 5): new Settings ▸ Financial row "Late-night delivery charge" (`lateNightDeliveryRupees`, Rs, 0 = not set, no figure invented) and migration `0249_late_night_delivery_is_money_setting.sql` (not applied, N-5) registering it as a money key so Warehouse, Technician and Driver cannot read it (Law 6). New Rental ▸ Services & other charges has "Add late-night delivery": one tap adds a flat Service line "Late-night / emergency delivery" at the Settings amount, visible in the booking before confirming; with no amount set it asks for one and refuses blank, 0 or negative. `LateNightDeliveryCharge.tsx` (own file), wired into `BookingEquipmentSection.tsx`.
 - New `scripts/test-delivery-distance-band.mjs` (`npm run test:delivery-distance-band`), ledger row 0248, next free number 0249.
 
 **Ruled**
@@ -16,7 +17,7 @@
 
 **Verified**
 - `test:delivery-distance-band`: 8/8 on PGlite under Manager, Admin, Owner, Coordinator, Warehouse and Client identities (setter allowed or refused, bad shapes refused, unknown zone refused, clear keeps the row, staff read, Client reads none, direct writes refused).
-- `npm run check:pglite`: 241/241 applied, 0 failed; view-leak, function-leak and definer-hygiene gates clean. `npm run check:lifecycle`: 76/76 green, same run, so 0248 is Verified under R-35.
+- `npm run check:pglite`: 242/242 applied, 0 failed (0249 included); view-leak, function-leak and definer-hygiene gates clean. `npm run check:lifecycle`: 76/76 green, same run, so 0248 and 0249 are Verified under R-35 (0249 also by `npm run test:settings`: Warehouse never reads the key).
 - `VITE_DATA_SOURCE=mock` vitest: `deliveryDistanceBand` 16/16, `DeliveryZonesControl` 9/9, `DeliverySection.zonePicker` 5/5, `DeliveryFeeGridCard` 3/3, `financialCreditPolicy` 1/1 with no unhandled error. A broader run over rentals booking, settings, operations, lib and delivery actions passed 310 of 311 files before the grid card fix; the one failure was the unhandled rejection fixed above.
 - `tsc --noEmit`: exit 0. `eslint --max-warnings 0` on the changed files: exit 0.
 
@@ -37,7 +38,7 @@
 - Backend 106/106 · Real data 56 DB-only of 67 · DB enforcement 9/9 · Permissions 85/85 · Lifecycle 76/76 · Overall ≈ 97%.
 
 ### Remaining
-- Features to build: 3, all ruled and unbuilt: late-night flat charge (Settings amount plus a tick on the booking); waiting charge added after the trip; outsourced-vehicle quote with an approval note. The one-or-two-trip choice is built (collection fee fills from the grid), not yet seen in a browser: mock mode has no `list_delivery_zones`, so the collection pickers do not render there. Proposing a zone from the delivery address is not ruled.
+- Features to build: 2, both ruled and unbuilt: waiting charge added after the trip; outsourced-vehicle quote with an approval note. Built this session: the one-or-two-trip choice (collection fee fills from the grid) and the late-night flat charge. The two-trip pickers do not render in mock mode (no `list_delivery_zones`), so they are not browser-seen; the late-night button is covered by component tests and the settings key by `test:settings`. Proposing a zone from the delivery address is not ruled.
 - Bugs to fix: 0 known.
 - Rulings open: 0 from the delivery proposal.
 - Next session starts with: a pass against a real Supabase project (zone list, band save, grid fill, vehicle class save), then the open rulings.

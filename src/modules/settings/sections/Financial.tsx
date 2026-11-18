@@ -82,6 +82,12 @@ export const FINANCIAL_SECTIONS: Section[] = [
         readBy: 'Crew Assist’s payout ledger',
       },
       {
+        label: 'Late-night delivery charge',
+        note: 'Flat extra charge for a late-night or emergency delivery, Rs, VAT exclusive. 0 means not set: New Rental then asks staff for an amount.',
+        settingKey: 'lateNightDeliveryRupees',
+        readBy: 'New Rental ▸ Services & other charges ▸ Add late-night delivery',
+      },
+      {
         label: 'TDS on crew payouts',
         note: 'Withheld on crew payouts per accountant instructions (O-5 / D25). Blank when not configured.',
         settingKey: 'crewPayoutTdsPercent',
