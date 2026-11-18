@@ -57,6 +57,8 @@ import {
 } from '../../lib/queries/clients'
 import { AddClientIdModal } from '../clients/modals/AddClientIdModal'
 import { AddCollectorModal } from '../clients/modals/AddCollectorModal'
+import { AddConsumableModal } from './booking/AddConsumableModal'
+import type { SystemRole } from '../../types/database'
 import './rentals.css'
 
 
@@ -538,6 +540,7 @@ export default function HandoverWorkspace({
    * on the resolved promise. */
   const [marks, setMarks] = useState<Record<string, Mark>>({})
   const [showScanner, setShowScanner] = useState(false)
+  const [showAddConsumable, setShowAddConsumable] = useState(false)
   const [showDriverModal, setShowDriverModal] = useState(false)
   const presence = useFloorPresence(floor?.bookingNo, user?.name || 'Warehouse staff', user?.role)
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('Ready')
@@ -1906,12 +1909,14 @@ export default function HandoverWorkspace({
                     phone ? (
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         <Button icon="checklist" onClick={markReadyPickedUp}>Mark Ready Picked Up</Button>
+                        <Button icon="package" onClick={() => setShowAddConsumable(true)}>Add Consumables</Button>
                       </div>
                     ) : (
                       <>
                         <Button icon="checklist" onClick={markReadyPickedUp}>Mark Ready Picked Up</Button>
                         <Button icon="camera" onClick={() => setShowScanner(true)}>Scan Barcode</Button>
                         <Button icon="truck" onClick={() => setShowDriverModal(true)}>Field Delivery</Button>
+                        <Button icon="package" onClick={() => setShowAddConsumable(true)}>Add Consumables</Button>
                       </>
                     )
                   }
@@ -2632,6 +2637,21 @@ export default function HandoverWorkspace({
                   setDepositReceived(true)
                   showSuccessToast('Collateral Recorded', `ID card held as deposit (${col.documentNumber})`)
                 }}
+              />
+            )}
+
+            {showAddConsumable && floor && user && (
+              <AddConsumableModal
+                isOpen={showAddConsumable}
+                onClose={() => setShowAddConsumable(false)}
+                bookingId={floor.id}
+                userId={user.id}
+                userRole={user.role as SystemRole}
+                onAdded={() => {
+                  setShowAddConsumable(false)
+                  setReload((r) => r + 1)
+                }}
+                defaultNote={`Added by ${user.name || 'floor staff'} at Handover`}
               />
             )}
 

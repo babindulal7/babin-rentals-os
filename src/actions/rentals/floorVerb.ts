@@ -393,31 +393,28 @@ export interface FloorVerbInput {
   /** AD/UTC (Law 7). Defaults to now. */
   occurredAt?: string
   /**
-   * Handover only — signatures captured at session close (gate 5).
-   *
-   * The DB stage-gate (`0115:320-326`, `0116:221-227`) refuses to advance the
-   * booking to On Rent unless at least one `signatures` row exists for the
-   * handover session. `captureSignature` in `HandoverWorkspace` only set local
-   * UI state; nothing wrote to the table. This field carries the captured
-   * signatures through `handoverRental` → `runFloorVerb` → `writeSignatures`,
-   * which inserts the rows AFTER the session is opened and BEFORE the stage
-   * transition trigger fires.
+   * Handover and Return signatures captured at session close.
+   * - Handover: gate.handover.agreement_unsigned
+   * - Return: gate.return.damage_unsigned (T2-19, B19, R-39)
    */
   signatures?: readonly SignatureInput[]
+  /** Return only (T2-19, B19) — staff ticks "Refused to sign" if person refuses to sign under flagged items. */
+  signatureRefused?: boolean
+  /** Mandatory reason when signatureRefused is true (≥10 chars). */
+  signatureRefusalReason?: string
 }
 
 /**
- * One signature captured at the handover session close.
+ * One signature captured at the handover or return session close.
  *
  * The `signatures` table (`0003:518`) requires a row for at least one signatory
  * before the DB stage-gate (`0115:325`, `0116:226`) will let the booking move to
- * On Rent. `captureSignature` in `HandoverWorkspace` previously only set local
- * UI state; this type carries the data through to `writeSignatures` in
- * `runFloorVerb`, which inserts the rows before the stage transition fires.
+ * On Rent. For Return with flagged damage/missing items (`0242`), a 'Returning person'
+ * signature is required before completing Return (or recorded refusal).
  */
 export interface SignatureInput {
-  /** `'Receiver'`, `'Warehouse staff'`, or `'Driver'` for handovers. */
-  role: 'Receiver' | 'Warehouse staff' | 'Driver'
+  /** `'Receiver'`, `'Warehouse staff'`, `'Driver'`, or `'Returning person'`. */
+  role: 'Receiver' | 'Warehouse staff' | 'Driver' | 'Returning person'
   /** Signer's display name from real records (client name or operator name). */
   signerName: string
   /** ISO-8601 UTC — the instant the operator tapped "Sign". Law 7. */
@@ -1032,6 +1029,12 @@ export function validateFloorVerb(job: JobName, input: FloorVerbInput): void {
       }
     }
   }
+
+  if (job === 'Return') {
+    if (input.signatureRefused && (input.signatureRefusalReason ?? '').trim().length < 10) {
+      throw new Error('Return: signature refusal requires a reason of at least 10 characters.')
+    }
+  }
 }
 
 /* ── Per-line derivation ────────────────────────────────────────────────── */
@@ -1370,24 +1373,79 @@ export async function runFloorVerb(
    *     in the queue, so Return is where the row belongs. */
   const queued = await enqueueReturnedUnits(booking, queueCandidates, ctx, occurredAt)
 
-  /* 5c — signatures for Handover, written BEFORE the stage advance.
+  /* 5c — signatures for Handover (gate.handover.agreement_unsigned) and Return
+   *     (gate.return.damage_unsigned, T2-19, B19), written BEFORE the stage advance.
    *
-   *     The DB gate at `0115:320-326` and `0116:221-227` refuses the transition
-   *     to On Rent unless at least one row exists in `signatures` for the
-   *     handover session. `captureSignature` in `HandoverWorkspace` only set
-   *     local UI state; nothing wrote to the table (HO-03 / TODO(decision) at
-   *     HandoverWorkspace.tsx:927). The stage transition at step 7 is what fires
-   *     the trigger, so signatures must land here — after the session is open
-   *     (so we have a valid `sessionId`) and before the transition is attempted.
+   *     The DB gates refuse the transition unless at least one row exists in `signatures`
+   *     for the session. The stage transition at step 7 is what fires the trigger, so
+   *     signatures must land here — after the session is open (so we have a valid
+   *     `sessionId`) and before the transition is attempted.
    *
    *     idempotent: `signatures_one_per_role_per_session` (`0003:545`) is a
    *     unique index on `(session_id, signature_role)` WHERE role <> 'Witness',
    *     so a double-submit does nothing rather than double-inserting. */
-  if (job === 'Handover' && input.signatures && input.signatures.length > 0) {
+  if ((job === 'Handover' || job === 'Return') && input.signatures && input.signatures.length > 0) {
     await writeSignatures(sessionId, input.signatures, ctx, occurredAt)
+
+    if (job === 'Return') {
+      const returningSig = input.signatures.find((s) => s.role === 'Returning person')
+      if (returningSig && returningSig.signerName.trim() !== '') {
+        await safeUpdate(
+          'operation_sessions',
+          sessionId,
+          {
+            returning_person_name: returningSig.signerName.trim(),
+            updated_at: occurredAt,
+          },
+          actionUuid,
+          { queueOnFailure: false },
+        )
+      }
+    }
   }
 
-  /* 5d — Gate 1 override when receiver ID/authorization cannot be verified (T2-04, D2).
+  /* 5d — Return signature refusal (T2-19, B19).
+   *     If the returning person will not sign under flagged items, staff records
+   *     "Refused to sign" with a reason of >=10 characters.
+   *     Written before stage advance so gate.return.damage_unsigned admits the transition. */
+  if (job === 'Return' && input.signatureRefused) {
+    const reason = (input.signatureRefusalReason ?? '').trim()
+    if (reason.length < 10) {
+      throw new Error('Return: signature refusal requires a reason of at least 10 characters.')
+    }
+    await safeUpdate(
+      'operation_sessions',
+      sessionId,
+      {
+        signature_refused: true,
+        signature_refusal_reason: reason,
+        updated_at: occurredAt,
+      },
+      actionUuid,
+      { queueOnFailure: false },
+    )
+
+    await logAuditEvent({
+      eventClass: 'session',
+      category: 'Rentals',
+      module: 'Operations',
+      action: 'Update',
+      severity: 'Informational',
+      tableName: 'operation_sessions',
+      recordId: sessionId,
+      actorId: ctx.userId,
+      actorRole: ctx.role,
+      branchId: booking.branch_id,
+      reason,
+      newValues: {
+        gate: 'gate.return.damage_unsigned',
+        override_type: 'Signature refusal',
+        signature_refused: true,
+      },
+    })
+  }
+
+  /* 5e — Gate 1 override when receiver ID/authorization cannot be verified (T2-04, D2).
    *     Written before stage advance so apply_booking_stage_transition admits the transition. */
   if (job === 'Handover' && input.gate1OverrideReason && input.gate1OverrideReason.trim().length >= 10) {
     await writeGate1Override(sessionId, input.gate1OverrideReason.trim(), ctx, booking.branch_id)

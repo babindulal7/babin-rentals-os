@@ -150,6 +150,9 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
       return rbac.canOverrideCreditLimit(ctx.role, online);
     case 'settings.manage':
       return rbac.canManageSettings(ctx.role);
+    case 'settings.operations_rules':
+    case 'settings.rental_day_start':
+      return rbac.canManageOperationsRules(ctx.role);
     case 'glossary.manage':
       return rbac.canManageGlossary(ctx.role, online);
     case 'operations.perform':
@@ -271,6 +274,11 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'inventory.edit_product_aliases':
       return rbac.canWriteBookingDesk(ctx.role);
 
+    // T3-30: Consumable restock and booking line addition. Admitted to booking desk and floor staff.
+    case 'rental.add_consumable':
+    case 'inventory.restock_consumable':
+      return rbac.canWriteBookingDesk(ctx.role) || rbac.canWriteFloor(ctx.role);
+
     /* `closing.approve` (1 Sep, §5.4) mirrors `daily_closings_finance_insert`
        (0078) — `auth_is_finance_or_admin()`, read off the live project the day
        it applied. It is its OWN rule rather than one of the sets below because
@@ -329,6 +337,9 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'collateral.receive':
     case 'collateral.return':
       return rbac.canManageCollateral(ctx.role);
+    // T3-29: Resolve at-risk booking (0241) — Owner · Admin · Manager · Coordinator
+    case 'rental.resolve_at_risk':
+      return rbac.canResolveAtRisk(ctx.role);
 
     case 'rental.pickup':
     case 'rental.return':

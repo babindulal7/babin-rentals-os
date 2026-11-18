@@ -40,10 +40,14 @@ export interface Line {
   location: string
   status?: InvStatus | undefined
   committedTo: string
+  trackingMode?: 'Serialised' | 'Quantity' | 'Consumable' | undefined
+  isConsumable?: boolean | undefined
 }
 
 export function lineAmountPaisa(l: Line): Paisa {
-  return roundHalfUp(l.qty * l.days * l.ratePaisa * (1 - l.discountPct / 100)) as Paisa
+  const isConsumable = l.trackingMode === 'Consumable' || l.isConsumable
+  const effectiveDays = isConsumable || l.serviceBasis === 'Flat' ? 1 : l.days
+  return roundHalfUp(l.qty * effectiveDays * l.ratePaisa * (1 - l.discountPct / 100)) as Paisa
 }
 
 export interface LineGroup {
@@ -338,14 +342,23 @@ export function RentalLineItemsTree({
           />
         </td>
         <td role="cell" data-label="Days" style={{ ...td, textAlign: 'right' }}>
-          <NumberStepper
-            value={l.days}
-            disabled={readOnly}
-            label={`days for ${l.name}`}
-            onChange={(n) =>
-              setLines((p) => p.map((x) => (x.id === l.id ? { ...x, days: n, daysOverridden: true } : x)))
-            }
-          />
+          {l.trackingMode === 'Consumable' || l.isConsumable || l.serviceBasis === 'Flat' ? (
+            <span
+              title={l.serviceBasis === 'Flat' ? 'Flat services are charged once, never per rental day.' : 'Consumables are charged per unit sale, not per rental day.'}
+              style={{ color: 'var(--muted)', fontSize: 'var(--t-meta)', fontWeight: 600 }}
+            >
+              {l.serviceBasis === 'Flat' ? '1 (flat)' : '1 (sale)'}
+            </span>
+          ) : (
+            <NumberStepper
+              value={l.days}
+              disabled={readOnly}
+              label={`days for ${l.name}`}
+              onChange={(n) =>
+                setLines((p) => p.map((x) => (x.id === l.id ? { ...x, days: n, daysOverridden: true } : x)))
+              }
+            />
+          )}
         </td>
         {canBookingMoney && (
           <>

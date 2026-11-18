@@ -43,9 +43,11 @@ import {
   canPerformOperations,
   canPerformOp,
   canWriteBookingDesk,
+  canWriteFloor,
   canCloseRental,
   canManageCollateral,
   canSetBookingTags,
+  canResolveAtRisk,
 } from '../../lib/rbac'
 import { BookingTagsBar } from './BookingTagsBar'
 import { IntelCard } from '../../components/ui/IntelCard'
@@ -62,8 +64,11 @@ import { ExtendRentalModal } from './modals/ExtendRentalModal'
 import { ReturnCollateralModal } from './modals/ReturnCollateralModal'
 import { AssignCrewModal } from './modals/AssignCrewModal'
 import { BookingCrewList } from './BookingCrewList'
+import { fetchBookingAtRisk, type BookingAtRiskRow } from '../../lib/queries/atRisk'
+import { ResolveAtRiskModal } from './modals/ResolveAtRiskModal'
 import { canAssignPricedCrew } from '../../lib/crewAssignment'
 import { CreateSubRentalModal } from './modals/CreateSubRentalModal'
+import { AddConsumableModal } from './booking/AddConsumableModal'
 import { RecordPaymentModal } from '../finance/modals/RecordPaymentModal'
 import { CreateInvoiceModal } from '../finance/modals/CreateInvoiceModal'
 import { CreateDocumentModal } from '../documents/CreateDocumentModal'
@@ -897,7 +902,7 @@ type ClientContact =
   | { kind: 'absent' }
   | { kind: 'loading' }
   /** Read completed. `phone` is `null` when the client genuinely has none. */
-  | { kind: 'ready'; phone: string | null }
+  | { kind: 'ready'; phone: string | null; email?: string | null }
   /** `getClient` threw — network, RLS refusal, anything. The reason is kept to be shown. */
   | { kind: 'failed'; message: string }
 
@@ -1145,6 +1150,23 @@ function BookingDetailView() {
 
   const activeCollateral = collaterals.find((c) => c.returned_at === null) ?? null
   const userCanManageCollateral = user ? canManageCollateral(user.role) : false
+  const userCanResolveAtRisk = user ? canResolveAtRisk(user.role) : false
+
+  const [atRiskRecords, setAtRiskRecords] = useState<BookingAtRiskRow[]>([])
+  const [showResolveAtRiskModal, setShowResolveAtRiskModal] = useState(false)
+
+  const fetchAtRisk = useCallback(async () => {
+    if (!bookingId) {
+      setAtRiskRecords([])
+      return
+    }
+    const rows = await fetchBookingAtRisk(bookingId)
+    setAtRiskRecords(rows)
+  }, [bookingId])
+
+  useEffect(() => {
+    void fetchAtRisk()
+  }, [fetchAtRisk])
 
   /* ── lines + units — `fetchFloorBooking`, the per-booking read ────────────
    * Not a list, so it does not go through `useList`; same cancellation rule.
@@ -1215,6 +1237,7 @@ function BookingDetailView() {
    * write rather than minting a second action.
    */
   const canReleaseUnits = user ? canWriteBookingDesk(user.role) : false
+  const [showAddConsumableModal, setShowAddConsumableModal] = useState(false)
   const [releasingUnitId, setReleasingUnitId] = useState<string | null>(null)
   const [releaseError, setReleaseError] = useState<string | null>(null)
   const [confirmRelease, setConfirmRelease] = useState<{ unitRowId: string; label: string } | null>(null)
@@ -1423,7 +1446,7 @@ function BookingDetailView() {
     if (!actualReturn) return null
     const due = new Date(booking.returnAtAd)
     if (actualReturn.getTime() <= due.getTime()) return null
-    const rentalDaysCount = rentalDaysBetween(booking.pickupAtAd, booking.returnAtAd) ?? 1
+    const rentalDaysCount = rentalDaysBetween(booking.pickupAtAd, booking.returnAtAd, booking.rentalDayStart ?? 360) ?? 1
     const dailyRatePaisa = Math.max(1, Math.round(totals.total / rentalDaysCount)) as Paisa
     const result = lateFee({
       scheduledReturnAt: due,
@@ -1878,7 +1901,7 @@ function BookingDetailView() {
     setContact({ kind: 'loading' })
     getClient(cid)
       .then((c) => {
-        if (!cancelled) setContact({ kind: 'ready', phone: c?.phone ?? null })
+        if (!cancelled) setContact({ kind: 'ready', phone: c?.phone ?? null, email: c?.email ?? null })
       })
       .catch((err: unknown) => {
         if (!cancelled) setContact({ kind: 'failed', message: err instanceof Error ? err.message : String(err) })
@@ -1892,6 +1915,7 @@ function BookingDetailView() {
      and `whatsappActionsFor` is told so by the menu below rather than by a
      null it would translate into NO_PHONE_REASON. */
   const clientPhone = contact.kind === 'ready' ? contact.phone : null
+  const clientEmail = contact.kind === 'ready' ? (contact.email ?? null) : null
 
   const waActions = useMemo(() => {
     if (!booking || !user) return []
@@ -1943,6 +1967,8 @@ function BookingDetailView() {
   }, [booking, user, clientPhone, floor, canBookingMoney, hasInvoice, totals])
 
   const stage = (booking?.stage ?? 'Draft') as BookingStatus
+  const isTerminalStage = stage === 'Returned' || stage === 'Closed' || !!booking?.isCancelled
+  const canAddConsumables = !isTerminalStage && !!user && (canWriteBookingDesk(user.role) || canWriteFloor(user.role))
   const lines: FloorLine[] = floor?.lines ?? []
   const printPickList = async () => {
     if (!floor || floor.linesPresence !== 'present' || floor.lines.length === 0) return
@@ -2166,7 +2192,7 @@ function BookingDetailView() {
                 })),
               }
 
-  const days = rentalDaysBetween(booking.pickupAtAd, booking.returnAtAd)
+  const days = rentalDaysBetween(booking.pickupAtAd, booking.returnAtAd, booking.rentalDayStart ?? 360)
   const allUnits = lines.flatMap((l) => l.units)
   const subRental = isSubRentalBooking(lines.map((l) => ({ lineType: l.lineType })))
 
@@ -2488,6 +2514,7 @@ function BookingDetailView() {
               {/* The stage is named by the stepper below ("Closed — current stage"), so no badge here. */}
               {booking.isCancelled && <Badge flag="Cancelled" />}
               {subRental && <SubRentedMark label="Sub-rental" />}
+              {atRiskRecords.length > 0 && <Badge tone="danger" label="⚠️ At Risk — Clash" />}
               {stage === 'Quote' && availabilityEvaluation && !availabilityEvaluation.isAllAvailable && (
                 <Badge tone="danger" label="Needs attention / Availability changed" />
               )}
@@ -2545,6 +2572,8 @@ function BookingDetailView() {
                   paidAmount: totals.paid,
                   outstandingAmount: totals.outstanding,
                   depositRequired: booking.depositRequired,
+                  clientPhone,
+                  clientEmail,
                 }}
                 selectedCount={1}
                 ariaLabel="More booking actions"
@@ -2722,6 +2751,43 @@ function BookingDetailView() {
         </div>
       )}
 
+      {atRiskRecords.length > 0 && (
+        <div
+          role="alert"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 'var(--sp-md)',
+            padding: '12px 16px',
+            borderRadius: 'var(--r-sm)',
+            border: '1px solid var(--danger)',
+            background: 'var(--st-danger-bg)',
+            fontSize: 'var(--t-meta)',
+            color: 'var(--danger-text)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)' }}>
+            <Icon name="alert_triangle" size={16} style={{ flexShrink: 0 }} />
+            <div>
+              <strong>Booking is At-Risk (Equipment Clash / Overdue Return)</strong>
+              <div style={{ fontSize: 'var(--t-caption)', color: 'var(--text2)', marginTop: 2 }}>
+                Pack stage is blocked until this clash is resolved. Choose a resolution (similar item, sub-rental, credit, or refund).
+              </div>
+            </div>
+          </div>
+          {userCanResolveAtRisk && (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => setShowResolveAtRiskModal(true)}
+            >
+              Resolve At-Risk
+            </Button>
+          )}
+        </div>
+      )}
+
       {availabilityError && (
         <div
           role="alert"
@@ -2895,7 +2961,21 @@ function BookingDetailView() {
           )}
 
           {showSegment('Items') && (
-            <Block no="2" title="Equipment, Bundles & Services">
+            <Block
+              no="2"
+              title="Equipment, Bundles & Services"
+              action={
+                canAddConsumables ? (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowAddConsumableModal(true)}
+                    style={{ minHeight: 36, padding: '0 12px', fontSize: 'var(--t-meta, 13px)' }}
+                  >
+                    + Add Consumable
+                  </Button>
+                ) : undefined
+              }
+            >
               {/* §12 — a failed release is inline and persistent, above the
                   table whose chip refused to clear. Success is a toast. */}
               {releaseError && (
@@ -3661,8 +3741,21 @@ function BookingDetailView() {
           showSuccessToast('Rental Extended', `${ext.days} day${ext.days === 1 ? '' : 's'} added — new return ${ext.newReturnDate}`)
           refetchHead()
           setFloorVersion((v) => v + 1)
+          void fetchAtRisk()
         }}
       />
+
+      {atRiskRecords.length > 0 && atRiskRecords[0] && (
+        <ResolveAtRiskModal
+          isOpen={showResolveAtRiskModal}
+          onClose={() => setShowResolveAtRiskModal(false)}
+          atRisk={atRiskRecords[0]}
+          onResolved={() => {
+            void fetchAtRisk()
+            refreshBookingData()
+          }}
+        />
+      )}
 
       <AssignCrewModal
         key={`${booking.id}:${user?.id}`}
@@ -3687,6 +3780,20 @@ function BookingDetailView() {
           showSuccessToast('Sub-Rental Created', `${subR.itemName} — ${subR.vendor}`)
         }}
       />
+
+      {showAddConsumableModal && user && (
+        <AddConsumableModal
+          isOpen={showAddConsumableModal}
+          onClose={() => setShowAddConsumableModal(false)}
+          bookingId={id}
+          userId={user.id}
+          userRole={user.role}
+          onAdded={() => {
+            setFloorVersion((v) => v + 1)
+            refreshBookingData()
+          }}
+        />
+      )}
 
       <Modal
         isOpen={depositSkipOpen}
@@ -3841,7 +3948,7 @@ function BookingDetailView() {
           actualReturnIso={booking.actualReturnAtAd ?? new Date().toISOString()}
           dayRatePaisa={
             totals.total > 0
-              ? (Math.max(1, Math.round(totals.total / (rentalDaysBetween(booking.pickupAtAd, booking.returnAtAd) ?? 1))) as Paisa)
+              ? (Math.max(1, Math.round(totals.total / (rentalDaysBetween(booking.pickupAtAd, booking.returnAtAd, booking.rentalDayStart ?? 360) ?? 1))) as Paisa)
               : null
           }
           dayRateBasis={lateFeeData?.basis ?? 'Derived from rental total'}

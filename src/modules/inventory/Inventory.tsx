@@ -694,7 +694,26 @@ function ParentRowView({
         </td>
         <td style={{ ...td, color: 'var(--text2)' }}>{category}</td>
         <td className="figure" style={td}>
-          {stockLabel(row)}
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            {stockLabel(row)}
+            {row.trackingMode === 'Consumable' && row.reorderLevel != null && row.totalQuantity <= row.reorderLevel && (
+              <span
+                className="badge"
+                title={`Low stock: ${row.totalQuantity} remaining (reorder level: ${row.reorderLevel})`}
+                style={{
+                  padding: '2px 6px',
+                  borderRadius: 'var(--r-badge, 999px)',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  background: 'var(--warning-surface, rgba(245, 158, 11, 0.15))',
+                  color: 'var(--warn-text, #d97706)',
+                  border: '1px solid var(--warn-border, rgba(245, 158, 11, 0.3))',
+                }}
+              >
+                Low Stock
+              </span>
+            )}
+          </span>
         </td>
         {showUnitColumns && <>
         {/* §3.1 — the parent never carries a single status badge. */}
@@ -846,6 +865,23 @@ function ParentCardView({
         <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <Icon name="box" size={12} style={{ color: 'var(--muted)' }} />
           Stock <span className="figure" style={{ fontWeight: 600, color: 'var(--text)' }}>{stockLabel(row)}</span>
+          {row.trackingMode === 'Consumable' && row.reorderLevel != null && row.totalQuantity <= row.reorderLevel && (
+            <span
+              className="badge"
+              title={`Low stock: ${row.totalQuantity} remaining (reorder level: ${row.reorderLevel})`}
+              style={{
+                padding: '1px 5px',
+                borderRadius: 'var(--r-badge, 999px)',
+                fontSize: '10px',
+                fontWeight: 600,
+                background: 'var(--warning-surface, rgba(245, 158, 11, 0.15))',
+                color: 'var(--warn-text, #d97706)',
+                border: '1px solid var(--warn-border, rgba(245, 158, 11, 0.3))',
+              }}
+            >
+              Low Stock
+            </span>
+          )}
         </span>
         {/* §8.3 — the rate is omitted for Warehouse, not masked. `dailyRate` is
             null when the query did not ask, which is the money-blind case. */}
@@ -1833,7 +1869,7 @@ export default function Inventory() {
           ariaLabel="Inventory sections"
           size={phone ? 'sm' : 'md'}
           options={[
-            ...TABS.map((t) => ({ id: t, label: t })),
+            ...TABS.filter((t) => t !== 'Deposit Setup' || money).map((t) => ({ id: t, label: t })),
             ...(isNew ? [{ id: 'new', label: 'Add Equipment' }] : []),
             ...(isImport ? [{ id: 'import', label: 'Import CSV' }] : []),
           ]}
@@ -1895,7 +1931,7 @@ export default function Inventory() {
          * above it; nothing else differs.
          */
         <StockCheck embedded />
-      ) : tab === 'Deposit Setup' ? (
+      ) : tab === 'Deposit Setup' && money ? (
         <DepositSetup embedded />
       ) : (
         <ListWorkspace className="inventory-v2">

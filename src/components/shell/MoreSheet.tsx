@@ -4,7 +4,7 @@ import Icon from '../ui/Icon'
 import { moreNav } from '../../data/nav'
 import { useAuth } from '../../lib/auth'
 import { usePwaInstall } from '../../lib/usePwaInstall'
-import { toggleScanner } from './ScannerFab'
+import { toggleScanner } from '../../lib/scannerEvents'
 
 // Matches --dur in theme.css (the app's generic transition-duration token),
 // the same constant and the same reason as `components/ui/Modal.tsx`: the

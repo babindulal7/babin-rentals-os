@@ -244,7 +244,7 @@ describe('ExtendRentalModal (T3-17)', () => {
     )
   })
 
-  it('detects upcoming reservation clashes and prevents double booking', async () => {
+  it('detects upcoming reservation clashes and prevents double booking for non-managers', async () => {
     mockCheckExtensionClash.mockResolvedValueOnce({
       hasClash: true,
       clashes: [
@@ -279,11 +279,96 @@ describe('ExtendRentalModal (T3-17)', () => {
     expect(container.textContent).toContain('Sony FX3 Cinema Camera')
     expect(container.textContent).toContain('BK-2002')
 
-    // Submit button must be disabled
-    const submitBtn = Array.from(container.querySelectorAll('button')).find((b) =>
+    // Non-manager sees "Send to Manager for Decision"
+    const sendToManagerBtn = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Send to Manager for Decision')
+    )
+    expect(sendToManagerBtn).toBeDefined()
+
+    // Confirm button is not available
+    const confirmBtn = Array.from(container.querySelectorAll('button')).find((b) =>
       b.textContent?.includes('Confirm Extension')
     )
-    expect(submitBtn?.disabled).toBe(true)
+    expect(confirmBtn).toBeUndefined()
+  })
+
+  it('allows Manager to decide on clash with 3 one-tap choices and reason (T3-29)', async () => {
+    mockUserRole = 'Manager'
+    mockCheckExtensionClash.mockResolvedValueOnce({
+      hasClash: true,
+      clashes: [
+        {
+          reservationId: 'res-99',
+          bookingId: 'bk-2',
+          bookingNo: 'BK-2002',
+          clientName: 'Other Studio',
+          equipmentId: 'prod-1',
+          itemName: 'Sony FX3 Cinema Camera',
+          reservedFrom: '2026-11-11T09:00:00Z',
+          reservedTo: '2026-11-12T18:00:00Z',
+          detail: 'Sony FX3 Cinema Camera is reserved by BK-2002',
+        },
+      ],
+    })
+
+    await mountModal({
+      isOpen: true,
+      onClose: vi.fn(),
+      bookingId: 'bk-1',
+      bookingNo: 'BK-1001',
+      client: 'Avishek Shrestha',
+      currentReturnDate: '2026-11-10T18:00:00Z',
+      lines: sampleLines,
+    })
+
+    await flush(6)
+
+    expect(container.textContent).toContain('Manager Decision on Clash (B41):')
+    expect(container.textContent).toContain('a) Extend, and move next booking to similar unit')
+    expect(container.textContent).toContain('b) Extend, and mark next booking At risk')
+    expect(container.textContent).toContain('c) Refuse extension')
+
+    // Auth check
+    const authCheckbox = container.querySelector('#extend-auth-check') as HTMLInputElement
+    setNativeChecked(authCheckbox, true)
+
+    // Reason preset
+    const shootChip = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Shoot extension')
+    )
+    shootChip?.click()
+    await flush()
+
+    // Manager decision reason input
+    const managerReasonInput = container.querySelector('#manager-clash-reason') as HTMLInputElement
+    expect(managerReasonInput).not.toBeNull()
+    const valueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+    valueSetter?.call(managerReasonInput, 'Approved as we have alternate body available in warehouse')
+    managerReasonInput.dispatchEvent(new Event('input', { bubbles: true }))
+    managerReasonInput.dispatchEvent(new Event('change', { bubbles: true }))
+    await flush()
+
+    const submitBtn = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Confirm Extension with Manager Decision')
+    )
+    expect(submitBtn).toBeDefined()
+    expect(submitBtn?.disabled).toBe(false)
+
+    await act(async () => {
+      submitBtn?.click()
+    })
+    await flush()
+
+    expect(mockExtendRental).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'bk-1',
+        clashDecision: expect.objectContaining({
+          decision: 'move_next_booking',
+          reason: 'Approved as we have alternate body available in warehouse',
+        }),
+      }),
+      expect.anything(),
+    )
   })
 
   it('enforces Law 6 money blindness for floor roles (Warehouse)', async () => {

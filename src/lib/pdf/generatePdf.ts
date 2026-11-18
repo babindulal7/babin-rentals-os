@@ -1,5 +1,5 @@
 import { BarcodeFormat, QRCodeWriter } from '@zxing/library'
-import { formatAd, formatAdDateTime } from '../bs'
+import { formatAd, formatAdDateTime, toBs, formatBs } from '../bs'
 import { isNonPackableLineType } from '../bookingLineTypes'
 /**
  * # Pure-TypeScript PDF 1.4 Binary Generator
@@ -16,6 +16,16 @@ import { isNonPackableLineType } from '../bookingLineTypes'
  */
 
 import { formatMoney, type Paisa } from '../money.ts'
+
+/**
+ * Formats a calendar date in Nepal standard convention: AD date with BS date beside it.
+ * E.g., `18/9/2026 (2 Ashwin 2083 BS)`.
+ */
+export function formatAdWithBs(ad: Date): string {
+  const adStr = formatAd(ad)
+  const bs = toBs(ad)
+  return bs ? `${adStr} (${formatBs(bs)} ${bs.year} BS)` : adStr
+}
 
 export interface InvoicePdfLine {
   description: string
@@ -77,7 +87,50 @@ export interface DocumentPdfData {
   dateAd?: string | null
   contentParagraphs?: string[]
   notes?: string | null
+  company?: InvoicePdfCompany
 }
+
+export interface RentalAgreementEquipmentItem {
+  description: string
+  serialNo?: string | null
+  assetCode?: string | null
+  quantity: number
+  rentalDays?: number | null
+  ratePaisa?: Paisa | number | null
+}
+
+export interface RentalAgreementPdfData {
+  agreementNo: string
+  bookingNo: string
+  project?: string | null
+  issueDateAd?: string | null
+  rentalStartAd?: string | null
+  rentalEndAd?: string | null
+  client: {
+    name: string
+    phone?: string | null
+    email?: string | null
+    address?: string | null
+    panVat?: string | null
+    idNumber?: string | null
+  }
+  company?: InvoicePdfCompany
+  equipment: RentalAgreementEquipmentItem[]
+  depositPaisa?: Paisa | number | null
+  totalRentalPaisa?: Paisa | number | null
+  terms?: string[]
+  handoverNotes?: string | null
+}
+
+export const DEFAULT_RENTAL_AGREEMENT_TERMS: readonly string[] = [
+  '1. Equipment Ownership: All equipment listed in this agreement remains the exclusive property of Babin Rentals Kathmandu. The Hirer acquires no property interest or lien.',
+  '2. Inspection & Handover Condition: The Hirer verifies that all rented equipment has been inspected, tested, and accepted in clean, sound, and fully operational condition at Handover (T2-02).',
+  '3. Safe Custody & Standard of Care: The Hirer agrees to maintain equipment with professional care, store it securely, and shield it from moisture, weather, voltage surges, and theft.',
+  '4. Loss, Theft & Damage: The Hirer accepts full financial liability for any damage, loss, theft, or component missing while in their custody. Repairs and replacements are billed per official catalog/service rates.',
+  '5. Rental Period & Return: Equipment must be returned to the rental desk by the agreed scheduled return date and time. Extensions require prior written approval from desk staff.',
+  '6. Authorized Operation: Equipment shall only be operated by qualified crew/technicians. Subletting, loaning, or transferring custody to third parties is strictly prohibited.',
+  '7. Governing Law & Dispute Resolution: This agreement is governed by the laws of Nepal. Any dispute shall be settled in the courts of Kathmandu jurisdiction.',
+]
 
 /**
  * Escapes characters for PDF literal string syntax: ( ... ).
@@ -236,10 +289,10 @@ export function generateInvoicePdf(data: InvoicePdfData): Uint8Array {
     ? (data.bookingNo && data.bookingNo !== '—' ? `BOOKING: ${data.bookingNo}` : 'PRO FORMA')
     : (data.invoiceNo || 'DRAFT (NO NUMBER)')
   const bookingNo = data.bookingNo || '—'
-  const issueDate = formatAd(data.issueDateAd ? new Date(data.issueDateAd) : new Date())
+  const issueDate = formatAdWithBs(data.issueDateAd ? new Date(data.issueDateAd) : new Date())
   const dueDate = isProForma
     ? 'Valid for 7 days'
-    : (data.dueDateAd ? formatAd(new Date(data.dueDateAd)) : 'Due on Receipt')
+    : (data.dueDateAd ? formatAdWithBs(new Date(data.dueDateAd)) : 'Due on Receipt')
 
   const companyName = data.company?.name.trim()
   if (!companyName) throw new Error('Save the organisation name in Settings before exporting an invoice.')
@@ -312,7 +365,7 @@ export function generateInvoicePdf(data: InvoicePdfData): Uint8Array {
     streamOps.push(`BT /F1 8.5 Tf 50 673 Td (Email: ${escapePdfText(data.client.email)}) Tj ET`)
   }
   if (data.client.panVat) {
-    streamOps.push(`BT /F1 8.5 Tf 50 662 Td (PAN/VAT: ${escapePdfText(data.client.panVat)}) Tj ET`)
+    streamOps.push(`BT /F1 8.5 Tf 50 662 Td (Buyer PAN: ${escapePdfText(data.client.panVat)}) Tj ET`)
   }
 
   // Invoice Details content
@@ -524,16 +577,28 @@ export function generateDocumentPdf(data: DocumentPdfData): Uint8Array {
   const mutedText = '0.38 0.44 0.52'
   const borderGray = '0.80 0.84 0.88'
 
+  const companyName = data.company?.name.trim() || 'BABIN RENTALS KATHMANDU'
+  const companyVat = data.company?.panVat?.trim()
+  const companyContact = [
+    companyVat ? `PAN/VAT: ${companyVat}` : '',
+    data.company?.address?.trim(),
+    data.company?.phone?.trim(),
+  ].filter(Boolean).join(' · ')
+
   const streamOps: string[] = []
 
   // Top header accent
   streamOps.push(`${darkSlate} rg`)
   streamOps.push(`40 802 515 6 re f`)
 
-  // Header Title & Doc No
-  streamOps.push(`BT /F2 16 Tf 40 776 Td (BABIN RENTALS KATHMANDU) Tj ET`)
+  // Header Title & Doc No (Standard company header matching Invoice)
+  streamOps.push(`BT /F2 16 Tf 40 776 Td (${escapePdfText(companyName.toUpperCase())}) Tj ET`)
   streamOps.push(`${mutedText} rg`)
-  streamOps.push(`BT /F1 9 Tf 40 762 Td (Document Registry · Commercial & Operations) Tj ET`)
+  if (companyContact) {
+    streamOps.push(`BT /F1 8.5 Tf 40 762 Td (${escapePdfText(companyContact)}) Tj ET`)
+  } else {
+    streamOps.push(`BT /F1 9 Tf 40 762 Td (Document Registry · Commercial & Operations) Tj ET`)
+  }
 
   streamOps.push(`${darkSlate} rg`)
   streamOps.push(`BT /F2 16 Tf 380 776 Td (${escapePdfText(data.docType.toUpperCase())}) Tj ET`)
@@ -548,10 +613,12 @@ export function generateDocumentPdf(data: DocumentPdfData): Uint8Array {
   streamOps.push(`${darkSlate} rg`)
   streamOps.push(`BT /F2 14 Tf 40 710 Td (${escapePdfText(data.title)}) Tj ET`)
 
-  // Metadata line
+  // Metadata line with AD and BS date
   streamOps.push(`${mutedText} rg`)
-  const metaLine = `Client: ${data.clientName || 'General'} | Booking: ${data.bookingNo || '—'}${data.project ? ` | Project: ${data.project}` : ''} | Date: ${formatAd(data.dateAd ? new Date(data.dateAd) : new Date())}`
-  streamOps.push(`BT /F1 9 Tf 40 690 Td (${escapePdfText(metaLine)}) Tj ET`)
+  const dateObj = data.dateAd ? new Date(data.dateAd) : new Date()
+  const dateFormatted = formatAdWithBs(dateObj)
+  const metaLine = `Client: ${data.clientName || 'General'} | Booking: ${data.bookingNo || '—'}${data.project ? ` | Project: ${data.project}` : ''} | Date: ${dateFormatted}`
+  streamOps.push(`BT /F1 8.5 Tf 40 690 Td (${escapePdfText(metaLine)}) Tj ET`)
 
   // Content Paragraphs
   let curY = 660
@@ -596,6 +663,205 @@ export function generateDocumentPdf(data: DocumentPdfData): Uint8Array {
   )
 
   return builder.build()
+}
+
+/**
+ * Generates an A4 Equipment Rental Agreement PDF (Ruling O-11) signed at Handover (T2-02).
+ */
+export function generateRentalAgreementPdf(data: RentalAgreementPdfData): Uint8Array {
+  const builder = new PdfDocumentBuilder()
+
+  const darkSlate = '0.09 0.13 0.24'
+  const mutedText = '0.38 0.44 0.52'
+  const borderGray = '0.80 0.84 0.88'
+  const bgLight = '0.96 0.97 0.98'
+
+  const companyName = data.company?.name.trim() || 'Babin Rentals Kathmandu'
+  const companyVat = data.company?.panVat?.trim()
+  const companyContact = [
+    companyVat ? `PAN/VAT: ${companyVat}` : '',
+    data.company?.address?.trim(),
+    data.company?.phone?.trim(),
+  ].filter(Boolean).join(' · ')
+
+  const issueDate = formatAdWithBs(data.issueDateAd ? new Date(data.issueDateAd) : new Date())
+  const startDate = data.rentalStartAd ? formatAdWithBs(new Date(data.rentalStartAd)) : '—'
+  const endDate = data.rentalEndAd ? formatAdWithBs(new Date(data.rentalEndAd)) : '—'
+
+  const streamOps: string[] = []
+
+  // Top header accent band
+  streamOps.push(`${darkSlate} rg`)
+  streamOps.push(`40 802 515 6 re f`)
+
+  // Header Company & Doc Title
+  streamOps.push(`BT /F2 16 Tf 40 776 Td (${escapePdfText(companyName.toUpperCase())}) Tj ET`)
+  streamOps.push(`${mutedText} rg`)
+  if (companyContact) {
+    streamOps.push(`BT /F1 8.5 Tf 40 762 Td (${escapePdfText(companyContact)}) Tj ET`)
+  } else {
+    streamOps.push(`BT /F1 8.5 Tf 40 762 Td (Professional Camera & Lighting Rentals · Kathmandu, Nepal) Tj ET`)
+  }
+
+  // Document Title (Right)
+  streamOps.push(`${darkSlate} rg`)
+  streamOps.push(`BT /F2 16 Tf 340 776 Td (RENTAL AGREEMENT) Tj ET`)
+  streamOps.push(`${mutedText} rg`)
+  streamOps.push(`BT /F3 11 Tf 340 760 Td (${escapePdfText(data.agreementNo)}) Tj ET`)
+  streamOps.push(`BT /F2 8 Tf 340 746 Td (SIGNED AT HANDOVER · T2-02 · ${escapePdfText(issueDate)}) Tj ET`)
+
+  // Divider
+  streamOps.push(`${borderGray} RG 0.75 w`)
+  streamOps.push(`40 735 m 555 735 l S`)
+
+  // Hirer & Rental Details Box
+  streamOps.push(`${bgLight} rg`)
+  streamOps.push(`40 655 245 70 re f`)
+  streamOps.push(`310 655 245 70 re f`)
+  streamOps.push(`${borderGray} RG 0.5 w`)
+  streamOps.push(`40 655 245 70 re S`)
+  streamOps.push(`310 655 245 70 re S`)
+
+  // Hirer content
+  streamOps.push(`${darkSlate} rg`)
+  streamOps.push(`BT /F2 9 Tf 50 710 Td (HIRER / CLIENT:) Tj ET`)
+  streamOps.push(`BT /F2 10 Tf 50 696 Td (${escapePdfText(data.client.name)}) Tj ET`)
+  streamOps.push(`${mutedText} rg`)
+  if (data.client.phone) {
+    streamOps.push(`BT /F1 8.5 Tf 50 684 Td (Phone: ${escapePdfText(data.client.phone)}) Tj ET`)
+  }
+  if (data.client.address) {
+    streamOps.push(`BT /F1 8.5 Tf 50 673 Td (Address: ${escapePdfText(data.client.address)}) Tj ET`)
+  }
+  const clientIdPan = [
+    data.client.panVat ? `PAN: ${data.client.panVat}` : '',
+    data.client.idNumber ? `ID: ${data.client.idNumber}` : '',
+  ].filter(Boolean).join(' · ')
+  if (clientIdPan) {
+    streamOps.push(`BT /F1 8.5 Tf 50 662 Td (${escapePdfText(clientIdPan)}) Tj ET`)
+  }
+
+  // Rental details content
+  streamOps.push(`${darkSlate} rg`)
+  streamOps.push(`BT /F2 9 Tf 320 710 Td (RENTAL REFERENCE & DATES:) Tj ET`)
+  streamOps.push(`${mutedText} rg`)
+  streamOps.push(`BT /F1 8.5 Tf 320 696 Td (Booking Ref: ) Tj /F3 8.5 Tf (${escapePdfText(data.bookingNo)}) Tj ET`)
+  if (data.project) {
+    streamOps.push(`BT /F1 8.5 Tf 320 684 Td (Project: ) Tj /F2 8.5 Tf (${escapePdfText(data.project)}) Tj ET`)
+  }
+  streamOps.push(`BT /F1 8.5 Tf 320 673 Td (Start Date: ${escapePdfText(startDate)}) Tj ET`)
+  streamOps.push(`BT /F1 8.5 Tf 320 662 Td (Return Date: ${escapePdfText(endDate)}) Tj ET`)
+
+  // Equipment table header
+  let curY = 635
+  streamOps.push(`${darkSlate} rg`)
+  streamOps.push(`40 ${curY - 18} 515 18 re f`)
+  streamOps.push(`1 1 1 rg`)
+  streamOps.push(`BT /F2 8.5 Tf 48 ${curY - 13} Td (#) Tj ET`)
+  streamOps.push(`BT /F2 8.5 Tf 75 ${curY - 13} Td (EQUIPMENT SCHEDULE / ASSET) Tj ET`)
+  streamOps.push(`BT /F2 8.5 Tf 360 ${curY - 13} Td (SERIAL / CODE) Tj ET`)
+  streamOps.push(`BT /F2 8.5 Tf 505 ${curY - 13} Td (QTY) Tj ET`)
+
+  curY -= 18
+
+  // Equipment rows (max 6 on page 1)
+  const maxEquipRows = Math.min(data.equipment.length, 6)
+  for (let i = 0; i < maxEquipRows; i++) {
+    const item = data.equipment[i]
+    if (!item) continue
+    curY -= 18
+    const rowBg = i % 2 === 1 ? bgLight : '1 1 1'
+    streamOps.push(`${rowBg} rg`)
+    streamOps.push(`40 ${curY} 515 18 re f`)
+    streamOps.push(`${borderGray} RG 0.5 w`)
+    streamOps.push(`40 ${curY} 515 18 re S`)
+
+    streamOps.push(`${darkSlate} rg`)
+    streamOps.push(`BT /F1 8 Tf 48 ${curY + 5} Td (${i + 1}) Tj ET`)
+    const desc = item.description.length > 45 ? item.description.slice(0, 42) + '…' : item.description
+    streamOps.push(`BT /F2 8 Tf 75 ${curY + 5} Td (${escapePdfText(desc)}) Tj ET`)
+    const code = item.serialNo || item.assetCode || '—'
+    streamOps.push(`BT /F3 7.5 Tf 360 ${curY + 5} Td (${escapePdfText(code)}) Tj ET`)
+    streamOps.push(`BT /F1 8 Tf 510 ${curY + 5} Td (${item.quantity}) Tj ET`)
+  }
+
+  if (data.equipment.length > maxEquipRows) {
+    curY -= 16
+    streamOps.push(`${mutedText} rg`)
+    streamOps.push(`BT /F1 7.5 Tf 50 ${curY + 4} Td (+ ${data.equipment.length - maxEquipRows} additional items detailed on attached packing schedule) Tj ET`)
+  }
+
+  // Financial / Deposit notation
+  if (data.depositPaisa !== undefined && data.depositPaisa !== null) {
+    curY -= 20
+    streamOps.push(`${bgLight} rg`)
+    streamOps.push(`40 ${curY} 515 18 re f`)
+    streamOps.push(`${borderGray} RG 0.5 w`)
+    streamOps.push(`40 ${curY} 515 18 re S`)
+    streamOps.push(`${darkSlate} rg`)
+    const depStr = `Security Deposit: ${formatMoney(data.depositPaisa as Paisa)} (Refundable subject to clean check-in inspection per Law 5)`
+    streamOps.push(`BT /F2 8 Tf 48 ${curY + 5} Td (${escapePdfText(depStr)}) Tj ET`)
+  }
+
+  // Terms and conditions header
+  curY -= 22
+  streamOps.push(`${darkSlate} rg`)
+  streamOps.push(`BT /F2 9.5 Tf 40 ${curY} Td (${escapePdfText('TERMS & CONDITIONS OF HIRE (RULING O-11):')}) Tj ET`)
+  streamOps.push(`${borderGray} RG 0.5 w`)
+  streamOps.push(`40 ${curY - 4} 515 0.5 re S`)
+
+  curY -= 14
+  const termsList = data.terms && data.terms.length > 0 ? data.terms : DEFAULT_RENTAL_AGREEMENT_TERMS
+  for (const term of termsList) {
+    streamOps.push(`${darkSlate} rg`)
+    const words = term.split(' ')
+    const lines: string[] = []
+    let line = ''
+    for (const w of words) {
+      if ((line + (line ? ' ' : '') + w).length > 105) {
+        if (line) lines.push(line)
+        line = w
+      } else {
+        line = line ? line + ' ' + w : w
+      }
+    }
+    if (line) lines.push(line)
+
+    for (let lIdx = 0; lIdx < lines.length; lIdx++) {
+      const prefix = lIdx > 0 ? '   ' : ''
+      streamOps.push(`BT /F1 7.2 Tf 40 ${curY} Td (${escapePdfText(prefix + lines[lIdx])}) Tj ET`)
+      curY -= 10
+    }
+    curY -= 2
+  }
+
+  // Signatures block at the bottom
+  const sigY = 95
+  streamOps.push(`${borderGray} RG 0.75 w`)
+  streamOps.push(`40 ${sigY} 515 0.5 re S`)
+
+  // Left signature: Babin Rentals
+  streamOps.push(`40 ${sigY - 35} 180 0.5 re S`)
+  streamOps.push(`${darkSlate} rg`)
+  streamOps.push(`BT /F2 8 Tf 40 ${sigY - 46} Td (Authorized Signatory) Tj ET`)
+  streamOps.push(`${mutedText} rg`)
+  streamOps.push(`BT /F1 7.5 Tf 40 ${sigY - 56} Td (Babin Rentals Kathmandu · Date: __________________) Tj ET`)
+
+  // Right signature: Hirer Representative
+  streamOps.push(`350 ${sigY - 35} 180 0.5 re S`)
+  streamOps.push(`${darkSlate} rg`)
+  streamOps.push(`BT /F2 8 Tf 350 ${sigY - 46} Td (Hirer / Client Representative) Tj ET`)
+  streamOps.push(`${mutedText} rg`)
+  streamOps.push(`BT /F1 7.5 Tf 350 ${sigY - 56} Td (Sign-off at Handover · Date: __________________) Tj ET`)
+
+  // Bottom caption
+  streamOps.push(`BT /F1 7 Tf 145 18 Td (Official Rental Agreement produced by Babin Rentals OS · Handover execution per T2-02.) Tj ET`)
+
+  return buildPagedPdf(
+    builder,
+    [streamOps.join('\n')],
+    `<<\n  /Title (Rental Agreement - ${escapePdfText(data.agreementNo)})\n  /Author (${escapePdfText(companyName)})\n  /Creator (Babin Rentals OS PDF Engine)\n  /CreationDate (D:${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)}Z)\n>>`,
+  )
 }
 
 export interface PackingListPdfItem {
@@ -851,6 +1117,11 @@ export interface ReturnReportPdfData {
   lines: ReturnReportPdfLine[]
   company?: InvoicePdfCompany
   notes?: string | null
+  returningPersonSignature?: {
+    signerName: string
+    signedAt?: string
+    refused?: boolean
+  } | null
 }
 
 /**
@@ -1009,6 +1280,14 @@ export function generateReturnReportPdf(data: ReturnReportPdfData): Uint8Array {
   streamOps.push(`BT /F1 8 Tf 40 ${footerY - 45} Td (Inspected By / Warehouse Staff) Tj ET`)
 
   streamOps.push(`405 ${footerY - 35} 150 0.5 re S`)
+  if (data.returningPersonSignature) {
+    const sigLabel = data.returningPersonSignature.refused
+      ? `(Refused to sign: ${data.returningPersonSignature.signerName})`
+      : `Signed: ${data.returningPersonSignature.signerName}`
+    streamOps.push(`${darkSlate} rg`)
+    streamOps.push(`BT /F2 8 Tf 405 ${footerY - 28} Td (${escapePdfText(sigLabel)}) Tj ET`)
+    streamOps.push(`${mutedText} rg`)
+  }
   streamOps.push(`BT /F1 8 Tf 405 ${footerY - 45} Td (Returned By / Client Representative) Tj ET`)
 
   streamOps.push(`BT /F1 7.5 Tf 40 25 Td (${escapePdfText(`Babin Rentals OS Return Report · Verified for booking ${bookingNo}. Money-blind floor document.`)} ) Tj ET`)
@@ -1059,4 +1338,205 @@ export function generateReturnReportPdf(data: ReturnReportPdfData): Uint8Array {
     [streamOps.join('\n'), ...continuationStreams],
     `<<\n  /Title (Return Report - ${escapePdfText(bookingNo)})\n  /Author (${escapePdfText(companyName)})\n  /Creator (Babin Rentals OS PDF Engine)\n  /CreationDate (D:${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)}Z)\n>>`,
   )
+}
+
+export interface ClientStatementPdfInvoice {
+  invoiceNo: string
+  bookingNo?: string | null
+  issueDateAd: string
+  dueDateAd: string
+  totalPaisa: Paisa | number
+  paidPaisa: Paisa | number
+  outstandingPaisa: Paisa | number
+}
+
+export interface ClientStatementPdfPayment {
+  paymentNo: string
+  dateAd: string
+  method: string
+  amountPaisa: Paisa | number
+}
+
+export interface ClientStatementPdfData {
+  asOfDateAd: string
+  client: {
+    name: string
+    phone?: string | null
+    email?: string | null
+    panVat?: string | null
+  }
+  company?: InvoicePdfCompany
+  totalOutstandingPaisa: Paisa | number
+  invoices: ClientStatementPdfInvoice[]
+  payments: ClientStatementPdfPayment[]
+}
+
+/**
+ * Generates a PDF 1.4 Client Statement listing all open invoices, balances, and payments so far (T3-20).
+ */
+
+export function generateClientStatementPdf(data: ClientStatementPdfData): Uint8Array {
+  const builder = new PdfDocumentBuilder()
+  const pages: string[][] = []
+  let ops: string[] = []
+  let y = 0
+
+  const dark = '0.09 0.13 0.24'
+  const muted = '0.38 0.44 0.52'
+  const border = '0.80 0.84 0.88'
+  const bg = '0.96 0.97 0.98'
+  const company = data.company?.name?.trim() || 'Babin Rentals'
+  const asOf = formatAd(data.asOfDateAd ? new Date(data.asOfDateAd) : new Date())
+
+  function write(content: string, x: number, atY: number, font = 'F1', size = 8): void {
+    ops.push(dark + ' rg')
+    ops.push('BT /' + font + ' ' + size + ' Tf ' + x + ' ' + atY + ' Td (' + escapePdfText(content) + ') Tj ET')
+  }
+
+  function addPage(continued: boolean): void {
+    ops = []
+    pages.push(ops)
+    ops.push(dark + ' rg')
+    ops.push('40 802 515 5 re f')
+    write(company, 40, 777, 'F2', 14)
+    write(continued ? 'CLIENT STATEMENT - CONTINUED' : 'CLIENT STATEMENT', 340, 777, 'F2', 12)
+    write('As of: ' + asOf, 340, 758, 'F1', 9)
+    if (continued) {
+      write('For: ' + data.client.name, 40, 747, 'F2', 10)
+      y = 718
+    } else {
+      const companyInfo = [
+        data.company?.panVat ? 'PAN/VAT: ' + data.company.panVat : '',
+        data.company?.address ?? '',
+        data.company?.phone ?? '',
+      ].filter(Boolean).join(' | ')
+      if (companyInfo) write(companyInfo, 40, 752, 'F1', 8)
+      write('Balance Due: ' + formatMoney(data.totalOutstandingPaisa as Paisa), 340, 739, 'F2', 9)
+      ops.push(bg + ' rg')
+      ops.push('40 663 515 60 re f')
+      write('STATEMENT FOR: ' + data.client.name, 50, 704, 'F2', 11)
+      const clientContact = [
+        data.client.phone ? 'Phone: ' + data.client.phone : '',
+        data.client.email ? 'Email: ' + data.client.email : '',
+        data.client.panVat ? 'PAN/VAT: ' + data.client.panVat : '',
+      ].filter(Boolean).join(' | ')
+      if (clientContact) write(clientContact, 50, 687, 'F1', 8)
+      write(data.invoices.length + ' open invoices | ' + data.payments.length + ' payments', 50, 673, 'F1', 8)
+      y = 636
+    }
+  }
+
+  function section(heading: string): void {
+    if (y < 120) addPage(true)
+    write(heading, 40, y, 'F2', 10)
+    y -= 22
+  }
+
+  function invoiceHeader(): void {
+    ops.push(dark + ' rg')
+    ops.push('40 ' + (y - 4) + ' 515 20 re f')
+    ops.push('1 1 1 rg')
+    const header = (s: string, x: number) => {
+      ops.push('BT /F2 8 Tf ' + x + ' ' + (y + 3) + ' Td (' + escapePdfText(s) + ') Tj ET')
+    }
+    header('Invoice #', 46)
+    header('Booking', 144)
+    header('Due', 242)
+    header('Total', 314)
+    header('Paid', 403)
+    header('Balance', 482)
+    y -= 24
+  }
+
+  function paymentHeader(): void {
+    ops.push(dark + ' rg')
+    ops.push('40 ' + (y - 4) + ' 515 20 re f')
+    ops.push('1 1 1 rg')
+    const header = (s: string, x: number) => {
+      ops.push('BT /F2 8 Tf ' + x + ' ' + (y + 3) + ' Td (' + escapePdfText(s) + ') Tj ET')
+    }
+    header('Receipt #', 46)
+    header('Date', 166)
+    header('Method', 268)
+    header('Amount', 465)
+    y -= 24
+  }
+
+  addPage(false)
+  section('OPEN INVOICES & BALANCES')
+  invoiceHeader()
+  if (data.invoices.length === 0) {
+    write('No open invoices.', 46, y)
+    y -= 19
+  }
+  for (const inv of data.invoices) {
+    if (y < 92) {
+      addPage(true)
+      section('OPEN INVOICES & BALANCES (CONTINUED)')
+      invoiceHeader()
+    }
+    ops.push(border + ' RG 0.35 w')
+    ops.push('40 ' + (y - 5) + ' m 555 ' + (y - 5) + ' l S')
+    write(inv.invoiceNo, 46, y, 'F3', 8)
+    write(inv.bookingNo || '-', 144, y, 'F1', 8)
+    write(inv.dueDateAd, 242, y, 'F1', 8)
+    write(formatMoney(inv.totalPaisa as Paisa), 314, y, 'F3', 8)
+    write(formatMoney(inv.paidPaisa as Paisa), 403, y, 'F3', 8)
+    write(formatMoney(inv.outstandingPaisa as Paisa), 482, y, 'F2', 8)
+    y -= 19
+  }
+
+  y -= 14
+  section('PAYMENTS RECORDED SO FAR')
+  paymentHeader()
+  if (data.payments.length === 0) {
+    write('No payments recorded yet.', 46, y)
+    y -= 19
+  }
+  for (const payment of data.payments) {
+    if (y < 92) {
+      addPage(true)
+      section('PAYMENTS RECORDED (CONTINUED)')
+      paymentHeader()
+    }
+    ops.push(border + ' RG 0.35 w')
+    ops.push('40 ' + (y - 5) + ' m 555 ' + (y - 5) + ' l S')
+    write(payment.paymentNo, 46, y, 'F3', 8)
+    write(payment.dateAd, 166, y, 'F1', 8)
+    write(payment.method, 268, y, 'F1', 8)
+    write(formatMoney(payment.amountPaisa as Paisa), 465, y, 'F3', 8)
+    y -= 19
+  }
+
+  // Add footer to every page, including continuation pages.
+  for (let i = 0; i < pages.length; i++) {
+    const page = pages[i]!
+    page.push(border + ' RG 0.5 w')
+    page.push('40 45 515 0.5 re S')
+    page.push(muted + ' rg')
+    page.push('BT /F1 7.5 Tf 40 30 Td (' +
+      escapePdfText(company + ' - Client Statement - Page ' + (i + 1) + '/' + pages.length) + ') Tj ET')
+  }
+
+  const n = pages.length
+  const font1 = 3 + n * 2
+  const font2 = font1 + 1
+  const font3 = font1 + 2
+  const kids = pages.map((_, i) => (3 + 2 * i) + ' 0 R').join(' ')
+  builder.addObject('<< /Type /Catalog /Pages 2 0 R >>')
+  builder.addObject('<< /Type /Pages /Kids [' + kids + '] /Count ' + n + ' >>')
+  for (let i = 0; i < n; i++) {
+    const contentId = 4 + i * 2
+    const stream = pages[i]!.join('\n')
+    builder.addObject('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] ' +
+      '/Contents ' + contentId + ' 0 R /Resources << /Font << /F1 ' + font1 +
+      ' 0 R /F2 ' + font2 + ' 0 R /F3 ' + font3 + ' 0 R >> >> >>')
+    builder.addObject('<< /Length ' + stream.length + ' >>\nstream\n' + stream + '\nendstream')
+  }
+  builder.addObject('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>')
+  builder.addObject('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>')
+  builder.addObject('<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>')
+  builder.addObject('<< /Title (Client Statement - ' + escapePdfText(data.client.name) + ') /Author (' +
+    escapePdfText(company) + ') /Creator (Babin Rentals OS PDF Engine) >>')
+  return builder.build()
 }

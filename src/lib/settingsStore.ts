@@ -61,6 +61,7 @@ export type SettingKey =
    * developer. See the doc comment on each spec for which ruling it carries. */
   | 'unitAvailabilityRule'
   | 'rentalTurnaround'
+  | 'timeBetweenRentals'
   | 'packingTreeGrouping'
   | 'packingPhotosRequired'
   | 'evidenceRetentionDays'
@@ -99,6 +100,12 @@ function percent(v: SettingValue, label: string): string | null {
   if (n > 100) return `${label} cannot exceed 100%.`
   return null
 }
+
+export const OPERATIONAL_DAY_START_CHOICES: readonly string[] = Array.from({ length: 96 }, (_, i) => {
+  const h = String(Math.floor(i / 4)).padStart(2, '0')
+  const m = String((i % 4) * 15).padStart(2, '0')
+  return `${h}:${m}`
+})
 
 export const SETTING_SPECS: Record<SettingKey, SettingSpec> = {
   organisationName: {
@@ -286,12 +293,13 @@ export const SETTING_SPECS: Record<SettingKey, SettingSpec> = {
    */
   operationalDayStart: {
     default: '06:00',
-    kind: 'text',
+    kind: 'select',
+    options: OPERATIONAL_DAY_START_CHOICES,
     suffix: ' (HH:mm)',
     validate: (v) => {
-      return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(v).trim())
+      return /^([01]\d|2[0-3]):(00|15|30|45)$/.test(String(v).trim())
         ? null
-        : 'The operational day starts at a clock time, written HH:mm — e.g. 06:00. Use 00:00 for plain calendar days.'
+        : 'The operational day starts at a quarter-hour clock time (HH:mm) — e.g. 06:00. Use 00:00 for midnight.'
     },
   },
 
@@ -345,6 +353,18 @@ export const SETTING_SPECS: Record<SettingKey, SettingSpec> = {
     default: 'Same-instant handover allowed',
     kind: 'select',
     options: ['Same-instant handover allowed', 'Turnaround required'],
+  },
+
+  /**
+   * **B11 · Time between rentals: Account-wide · Per product**.
+   *
+   * Account-wide uses `rentalTurnaround` setting ('Same-instant handover allowed' vs 'Turnaround required').
+   * Per product uses each product's prep_time_minutes and cleaning_time_minutes.
+   */
+  timeBetweenRentals: {
+    default: 'Account-wide',
+    kind: 'select',
+    options: ['Account-wide', 'Per product'],
   },
 
   /** **PLAN.md §4.31(2)** — how the packing tree is grouped on the bench. */

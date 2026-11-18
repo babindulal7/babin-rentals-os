@@ -208,7 +208,8 @@ describe('Floor Workspaces State Persistence (AUD-018)', () => {
       const text = document.body.textContent ?? ''
       expect(text).toContain('Sensor QC')
       expect(text).not.toContain('Sensor Clean')
-      expect(text).toContain('Missing: Returning person, Warehouse staff')
+      // T2-19 / R-39: Clean return has 0 flags and requires no signature
+      expect(text).toContain('Clean return — 0 flagged items. No signature is required (R-39).')
       const complete = [...document.body.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Complete Return')
       expect(complete).toBeTruthy()
       expect(complete?.disabled).toBe(true)

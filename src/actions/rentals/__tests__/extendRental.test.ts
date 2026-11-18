@@ -215,4 +215,67 @@ describe('EXTEND_RENTAL action', () => {
       })
     ).rejects.toThrow(/Failed to extend booking: extend_booking: conflicting key value violates exclusion constraint/)
   })
+
+  it('records manager decision and refuses extension when decision is refuse (T3-29, B41)', async () => {
+    db.state.bookingRow = {
+      id: '11111111-1111-4111-8111-111111111111',
+      booking_no: 'BK-2026-0001',
+    }
+
+    const input: ExtendRentalInput = {
+      id: '11111111-1111-4111-8111-111111111111',
+      days: 1,
+      reason: 'Client requested extension but gear needed tomorrow',
+      clashDecision: {
+        decision: 'refuse',
+        reason: 'Client must return on time because another commercial shoot starts tomorrow',
+      },
+    }
+
+    const res = await extendRentalConfig.execute(input, {
+      userId: 'user-mgr-1',
+      role: 'Manager',
+    })
+
+    expect(res.result.success).toBe(true)
+    expect(res.result.refused).toBe(true)
+    expect(res.result.decision).toBe('refuse')
+    expect(res.result.daysAdded).toBe(0)
+
+    expect(db.state.rpcCalls.some((c) => c.fn === 'record_extension_clash_decision')).toBe(true)
+    const decisionCall = db.state.rpcCalls.find((c) => c.fn === 'record_extension_clash_decision')
+    expect(decisionCall?.args.p_payload).toMatchObject({
+      booking_id: '11111111-1111-4111-8111-111111111111',
+      decision: 'refuse',
+      reason: 'Client must return on time because another commercial shoot starts tomorrow',
+    })
+  })
+
+  it('passes manager decision to extend_booking RPC when decision is mark_at_risk (T3-29, B42)', async () => {
+    const input: ExtendRentalInput = {
+      id: '11111111-1111-4111-8111-111111111111',
+      days: 2,
+      reason: 'Extra days approved with next booking marked at risk',
+      clashDecision: {
+        decision: 'mark_at_risk',
+        reason: 'Will cover upcoming booking from partner or substitute gear',
+      },
+    }
+
+    const res = await extendRentalConfig.execute(input, {
+      userId: 'user-mgr-1',
+      role: 'Manager',
+    })
+
+    expect(res.result.success).toBe(true)
+    expect(res.result.daysAdded).toBe(2)
+
+    expect(db.state.rpcCalls.some((c) => c.fn === 'record_extension_clash_decision')).toBe(true)
+    expect(db.state.rpcCalls.some((c) => c.fn === 'extend_booking')).toBe(true)
+    const extendCall = db.state.rpcCalls.find((c) => c.fn === 'extend_booking')
+    expect(extendCall?.args.p_payload).toMatchObject({
+      clash_decision: 'mark_at_risk',
+      clash_decision_reason: 'Will cover upcoming booking from partner or substitute gear',
+    })
+  })
 })

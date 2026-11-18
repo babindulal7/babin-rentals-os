@@ -5,6 +5,31 @@
 **Scope:** Open PRs #174–#177; proposed task-state reconciliation only.  
 **Boundary:** No PR merge, production deployment, remote branch deletion, DNS changes, live database writes, payment changes, or host activation.
 
+> **Historical snapshot — 16 November 2026.** The open/dirty PR statuses below were recorded before the 17 November merges. **Do not use this old table for a current merge or release decision.** The verified repository update is recorded below.
+
+## Current repository reconciliation — 18 November 2026
+
+**Source checked:** GitHub merged PR records and main `e3504d5f431b`, with current `docs/plans/T1_RELEASE.md`.
+**Scope limit:** The GitHub merge/CI records show code reached main, **not** a real staging Storage API, Cloudflare Access, Sentry or physical-device acceptance result. No hosted account inspection, payments or live Supabase changes were performed.
+
+| Card | PR | GitHub status | Local code evidence | Remaining acceptance (not verified here) | Card status |
+|---|---|---|---|---|---|
+| T1-06 Storage isolation | #174 | **Merged** 17 Nov | 20 local PGlite privacy assertions reported in merged PR | Staging-authenticated Storage API upload/read/refusal; signed URL scope/expiry; two Client seats; quarantine inventory | **doing** |
+| T1-07 Cloudflare hosting | #175 | **Merged** 17 Nov | SPA routing, headers and cache config landed | Owner-approved Pages project/Access; real staging DNS, deep links, SW cache behavior and public/staff separation | **doing** |
+| T1-08 Error monitoring | #176 | **Merged** 17 Nov | Sanitization and error-boundary code landed | Received staging synthetic event, reference-code match, sensitive-data denial checks and owner/Sentry authorization | **doing** |
+| T1-14 Mobile performance | #177 | **Merged** 17 Nov | Scanner and QR bundle splitting landed | Actual iPhone/iPad 4G timings, scanner first-click latency, keyboard/viewport regressions, owner-approved hosted target | **doing** |
+
+**Interpretation:** Implementation has progressed beyond `todo`. None is `done` or `ready` for the **staging/physical-device acceptance** named by its card solely because code merged. Changing the headings to `doing` records progress without inventing acceptance.
+
+### Safe next steps
+
+1. Without hosted provisioning: review isolated test evidence and identify missing staging artifacts. Keep PII, DNS credentials, and secrets outside Git.
+2. Obtain explicit owner approval before provisioning paid staging, Cloudflare/Sentry projects, access controls or DNS.
+3. Verify role-scoped Storage APIs, live Sentry event receipt/privacy, Pages/Access and real-device timings only within approved test environments.
+4. Promote each card to `ready` or `done` only after dated acceptance evidence, not on code CI alone.
+
+---
+
 ## Executive decision
 
 The four cards have started and their code PRs have passing **PR-head** source gates. They **are not done**: staging, owner/hosted/device checks are missing, and three PRs currently have merge conflicts. This report changes only the roadmap's stale TODO labels via a docs-only proposed PR.

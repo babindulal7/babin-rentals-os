@@ -3,6 +3,8 @@ import { EVENT_TYPES } from '../../events/eventBus'
 import { supabase } from '../../lib/supabase'
 import { newClientUuid } from '../../lib/supabase'
 import { validateProjectType } from '../../lib/projectTypes'
+import { dayStartMinutesFrom } from '../../lib/operationalDay'
+import { getSetting } from '../../lib/settingsStore'
 import type { CrewRoleDb } from '../../types/database'
 
 /**
@@ -261,6 +263,8 @@ export type CreateRentalInput = {
   depositRequired?: number
   /** VAT rate as a decimal fraction (0 for no VAT, 0.13 for 13%). Pinned at booking creation. */
   vatRate?: number
+  /** Rental day start (minutes after midnight NPT, default 360 = 06:00, B24, B25, T3-28). */
+  rentalDayStart?: number
   lines: CreateRentalLine[]
   discounts?: CreateRentalDiscount[]
   /**
@@ -532,6 +536,7 @@ export const createRentalConfig: ActionConfig<CreateRentalInput, CreateRentalRes
       return_location: input.returnLocation ?? null,
       quote_expires_at: input.quoteExpiresAt ?? null,
       deposit_required: input.depositRequired ?? 0,
+      rental_day_start: input.rentalDayStart ?? dayStartMinutesFrom(getSetting('operationalDayStart')),
       ...(input.vatRate !== undefined ? { vat_rate: input.vatRate } : {}),
       lines: input.lines.map((line, i) => {
         const isManual = line.lineType === 'Manual item'

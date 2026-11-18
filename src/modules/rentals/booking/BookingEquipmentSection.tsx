@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '../../../components/ui/Button'
 import { Input, Select } from '../../../components/ui'
 import Icon, { type IconName } from '../../../components/ui/Icon'
@@ -111,6 +111,23 @@ export function BookingEquipmentSection({
   const [customLineError, setCustomLineError] = useState<string | null>(null)
   const customLineFormRef = useRef<HTMLDivElement>(null)
 
+  const [afterHoursOpen, setAfterHoursOpen] = useState(false)
+  const [afterHoursRate, setAfterHoursRate] = useState('')
+  const [afterHoursError, setAfterHoursError] = useState<string | null>(null)
+  const afterHoursFormRef = useRef<HTMLDivElement>(null)
+
+  const hasAfterHoursLine = useMemo(
+    () => lines.some((l) => l.name.toLowerCase().includes('after-hours handover') && l.lineType === 'Service'),
+    [lines],
+  )
+
+  useEffect(() => {
+    if (!afterHoursOpen) return
+    const form = afterHoursFormRef.current
+    form?.scrollIntoView?.({ block: 'start', behavior: 'auto' })
+    form?.querySelector<HTMLInputElement>('input')?.focus({ preventScroll: true })
+  }, [afterHoursOpen])
+
   useEffect(() => {
     if (!customLineOpen) return
     const form = customLineFormRef.current
@@ -175,6 +192,44 @@ export function BookingEquipmentSection({
     setCustomLineQty(1)
     setCustomLineOpen(false)
   }, [customLineName, customLineRate, customLineQty, customLineType, customLineVendor, days, setLines])
+
+  const addAfterHoursLine = useCallback(() => {
+    if (lines.some((l) => l.name.toLowerCase().includes('after-hours handover') && l.lineType === 'Service')) {
+      setAfterHoursError('After-hours handover is already added.')
+      return
+    }
+    const trimmed = afterHoursRate.trim()
+    if (!trimmed) {
+      setAfterHoursError('Enter an amount of Rs 0 or more.')
+      return
+    }
+    const rate = Number(trimmed)
+    if (!Number.isFinite(rate) || rate < 0) {
+      setAfterHoursError('Enter a valid amount of Rs 0 or more.')
+      return
+    }
+    setLines((prev) => [
+      ...prev,
+      {
+        id: newClientUuid(),
+        lineType: 'Service',
+        name: 'After-hours handover',
+        serial: '—',
+        category: 'Service',
+        ratePaisa: rupees(rate) as Paisa,
+        days: 1,
+        daysOverridden: true,
+        qty: 1,
+        discountPct: 0,
+        serviceBasis: 'Flat',
+        location: 'Not inventory-tracked',
+        committedTo: '—',
+      },
+    ])
+    setAfterHoursError(null)
+    setAfterHoursRate('')
+    setAfterHoursOpen(false)
+  }, [afterHoursRate, lines, setLines])
 
   const addScannedEquipment = useCallback(
     async (rawCode: string): Promise<string | null> => {
@@ -394,9 +449,25 @@ export function BookingEquipmentSection({
                 onClick={() => {
                   setCustomLineType('Sub-rental')
                   setCustomLineOpen(true)
+                  setAfterHoursOpen(false)
                 }}
               >
                 Add sub-rental
+              </Button>
+              <Button
+                icon="clock"
+                variant="outline"
+                size="sm"
+                aria-controls="new-rental-after-hours-form"
+                aria-expanded={afterHoursOpen}
+                disabled={hasAfterHoursLine}
+                onClick={() => {
+                  setAfterHoursOpen((prev) => !prev)
+                  setCustomLineOpen(false)
+                  setAfterHoursError(null)
+                }}
+              >
+                {hasAfterHoursLine ? 'After-hours added' : 'Add after-hours'}
               </Button>
               <Button
                 icon={customLineOpen ? 'close' : 'plus'}
@@ -404,12 +475,84 @@ export function BookingEquipmentSection({
                 size="sm"
                 aria-controls="new-rental-custom-line"
                 aria-expanded={customLineOpen}
-                onClick={() => setCustomLineOpen((prev) => !prev)}
+                onClick={() => {
+                  setCustomLineOpen((prev) => !prev)
+                  setAfterHoursOpen(false)
+                }}
               >
                 {customLineOpen ? 'Close line form' : 'Add custom line'}
               </Button>
             </div>
           </div>
+
+          {afterHoursOpen && !hasAfterHoursLine && (
+            <div
+              ref={afterHoursFormRef}
+              id="new-rental-after-hours-form"
+              className="new-rental-equipment-line-form"
+              role="region"
+              aria-label="Add after-hours handover charge"
+            >
+              <div style={{ marginBottom: 12 }}>
+                <strong style={{ fontSize: 'var(--t-body)', display: 'block', color: 'var(--text)' }}>
+                  After-hours handover charge
+                </strong>
+                <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+                  Voluntary service fee for handover outside normal hours. Billed as a flat service line at the entered amount.
+                </span>
+              </div>
+              <div className="new-rental-equipment-line-fields" style={{ gridTemplateColumns: 'minmax(0, 1fr)' }}>
+                <div style={{ maxWidth: 280 }}>
+                  <Field label="Amount (Rs)">
+                    <Input
+                      type="number"
+                      min={0}
+                      autoFocus
+                      placeholder="e.g. 1500"
+                      aria-label="After-hours handover fee in Rupees"
+                      value={afterHoursRate}
+                      onChange={(e) => {
+                        setAfterHoursRate(e.target.value)
+                        if (afterHoursError) setAfterHoursError(null)
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          addAfterHoursLine()
+                        } else if (e.key === 'Escape') {
+                          e.preventDefault()
+                          setAfterHoursOpen(false)
+                          setAfterHoursRate('')
+                          setAfterHoursError(null)
+                        }
+                      }}
+                      style={inputStyle}
+                    />
+                  </Field>
+                </div>
+              </div>
+              {afterHoursError && (
+                <p role="alert" style={{ margin: '8px 0 0', fontSize: 'var(--t-meta)', color: 'var(--st-danger-fg)' }}>
+                  {afterHoursError}
+                </p>
+              )}
+              <div className="new-rental-equipment-line-actions" style={{ marginTop: 12 }}>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setAfterHoursOpen(false)
+                    setAfterHoursRate('')
+                    setAfterHoursError(null)
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button icon="plus" onClick={addAfterHoursLine}>
+                  Add after-hours charge
+                </Button>
+              </div>
+            </div>
+          )}
 
           {customLineOpen && (
             <div ref={customLineFormRef} id="new-rental-custom-line" className="new-rental-equipment-line-form">

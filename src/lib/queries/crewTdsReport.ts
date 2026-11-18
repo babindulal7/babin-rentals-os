@@ -11,7 +11,7 @@
  */
 
 import { type Paisa } from '../money'
-import { toBs, BS_MONTHS, formatAdMonth } from '../bs'
+import { toBs, kathmanduCivil, BS_MONTHS, formatAdMonth } from '../bs'
 import { getCrewPayoutTdsPercent } from '../settingsStore'
 import { listCrewAssignments } from './crew'
 import type { ReportFilterOptions } from './reportSupport'
@@ -42,6 +42,9 @@ export interface CrewTdsItem {
   grossPayout: Paisa
   tdsRatePercent: number | null
   tdsAmount: Paisa | null
+  // Only true for a paid assignment whose TDS amount was saved in the ledger.
+  // A configured-rate calculation is a forecast, never evidence of withholding.
+  tdsIsRecorded?: boolean
   netPayout: Paisa | null
   payoutStatus: string
   paidAt: string | null
@@ -64,19 +67,62 @@ export interface CrewTdsReportData {
   payouts: CrewTdsItem[]
 }
 
-export async function getCrewTdsReport(options?: ReportFilterOptions): Promise<CrewTdsReportData> {
+export async function getCrewTdsReport(
+  options?: ReportFilterOptions & { requireComplete?: boolean },
+): Promise<CrewTdsReportData> {
   const configuredRate = getCrewPayoutTdsPercent()
-  const { rows: allAssignments } = await listCrewAssignments()
+  // Ordinary dashboard reads remain unchanged. For an accountant archive,
+  // every page must be read and validated before constructing tax totals.
+  const allAssignments = options?.requireComplete
+    ? [] as Awaited<ReturnType<typeof listCrewAssignments>>['rows']
+    : (await listCrewAssignments()).rows
+  if (options?.requireComplete) {
+    const pageSize = 400
+    const maxPages = 125
+    const seenIds = new Set<string>()
+    for (let page = 0; page < maxPages; page++) {
+      const { rows } = await listCrewAssignments({
+        range: { from: page * pageSize, to: (page + 1) * pageSize - 1 },
+      })
+      for (const assignment of rows) {
+        if (!assignment.id || seenIds.has(assignment.id)) {
+          throw new Error('Crew assignment ledger changed during pagination; accountant export refused.')
+        }
+        seenIds.add(assignment.id)
+        allAssignments.push(assignment)
+      }
+      if (rows.length < pageSize) break
+      if (page === maxPages - 1) {
+        throw new Error('Crew assignment ledger exceeds verified export limit.')
+      }
+    }
+  }
 
   // Filter cancelled rows (they owe nobody anything per Law 3)
   let live = allAssignments.filter((a) => !a.cancelled)
 
-  // Apply date range filters if supplied
-  if (options?.from) {
-    live = live.filter((a) => a.startDateAd >= options.from!)
-  }
-  if (options?.to) {
-    live = live.filter((a) => a.startDateAd <= options.to!)
+  // Monthly accountant packs recognise actually paid crew in the Nepal day
+  // of the recorded payout; the shoot start day is only an estimate period for
+  // unpaid work. Otherwise a July shoot paid in August would be falsely shown
+  // as July withholding. Preserve original start-date filters for UI reports.
+  if (options?.requireComplete) {
+    live = live.filter((a) => {
+      let day = a.startDateAd
+      if (a.payoutStatus === 'Paid') {
+        if (!a.paidAt) {
+          throw new Error('Paid crew assignment has no payout timestamp; accountant export refused.')
+        }
+        const date = new Date(a.paidAt)
+        if (Number.isNaN(date.getTime())) {
+          throw new Error('Invalid paid crew timestamp; accountant export refused.')
+        }
+        day = new Date(kathmanduCivil(date)).toISOString().slice(0, 10)
+      }
+      return (!options.from || day >= options.from) && (!options.to || day <= options.to)
+    })
+  } else {
+    if (options?.from) live = live.filter((a) => a.startDateAd >= options.from!)
+    if (options?.to) live = live.filter((a) => a.startDateAd <= options.to!)
   }
 
   const monthlyMap = new Map<string, {
@@ -171,6 +217,7 @@ export async function getCrewTdsReport(options?: ReportFilterOptions): Promise<C
       grossPayout: a.totalCostPaisa,
       tdsRatePercent: itemTdsRate,
       tdsAmount: itemTdsAmount,
+      tdsIsRecorded: a.payoutStatus === 'Paid' && a.tdsAmountPaisa != null,
       netPayout: itemNetPayout,
       payoutStatus: a.payoutStatus,
       paidAt: a.paidAt ?? null,

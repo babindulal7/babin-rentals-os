@@ -23,7 +23,7 @@ Location: `docs/PERMISSIONS.md` (beside Foundation v3.0 and UI_UX.md)
 > | B19 | §6.1 new row `gate.return.damage_unsigned`: a Return with a flagged unit needs a signature or a recorded refusal (reason ≥ 10 chars), by any staff allowed to do Return | T2-19 |
 > | B21, B40 | §5 mechanics: once Owner arms it, money rows and money writes need the second sign-in step (`aal2`) for Owner · Admin · Manager · Coordinator · Accounts; asked again every 30 days per device; Warehouse · Technician · Driver unchanged | T1-17 |
 > | B22, B23 | §4.10 new capability: read sign-in history — Owner · Admin; new-device email for Owner and Admin accounts only | T1-18 |
-> | B26 | §4.10 new capability: change the rental day start — Owner · Admin | T3-28 |
+> | B26 | §4.10 new capability: change the rental day start — Owner · Admin | T3-28 (in code, lane-c/T3-28-rental-day-start-as-a-setting) |
 > | B20 | §4.10 new capability: edit email and document texts — Owner · Admin | T5-13 |
 > | B32 | §4.4 / §6.1: change rates by a percentage in bulk — **Owner only**; every other bulk field follows the existing section-save cells (0173) | T4-12 |
 > | B12 (K4) | §4.4: "Allow overbooking" per product — the product-edit roles; a short line confirms with no extra approval, audited | T2-23 |
@@ -424,6 +424,7 @@ model**. Nothing is stored: `product_units_service_v` derives it at read time.
 |---|---|---|---|
 | `settings.view` | M+ · Coordinator · Accounts (money-gated tab follows §5) | | ○ |
 | `settings.manage` (General, Financial, Branches) | ⛔ **Code is `Owner` only** (`canManageSettings`), not Owner · Admin. **Since 0158 (7 Oct 2026, written, not yet applied to live) the `settings` table exists:** read = staff, money keys (`settings_is_money_key`) need `auth_can_view_money()`; write = `set_setting()` RPC, Owner only; `settings_history` append-only. Until 0158 is applied on live, settings are still `localStorage` there and D-9 is untestable on live (it runs under PGlite: `npm run test:settings`). | `settings`, `settings_history`, `set_setting()` — 0158 | ✓ string · ⛔ roles |
+| `settings.rental_day_start` | Owner · Admin | Change rental day start in quarter-hour increments (06:00 default) (Ruling B24, B25, B26, T3-28). Refuses other roles with `GATE:gate.settings.role`. PGlite lifecycle L75, L76. | `set_setting()` — 0237, `rbac.canManageOperationsRules` | ✓ (T3-28) |
 | `delivery_zone.read` | all staff (zone name, description, active flag) — `fee_paisa` only when `auth_can_view_money()` | `list_delivery_zones()` returns `fee_paisa = null` for Warehouse · Technician · Driver; `get_delivery_zone_fee()` raises `insufficient_privilege` for them (Law 6, T4-07 build note 1). Clients are denied by RLS. | `delivery_zones_read_staff`, `list_delivery_zones()`, `get_delivery_zone_fee()` — 0189 (amended 3 Nov 2026) | ✓ (T4-07) |
 | `delivery_zone.create` | M+ | INSERT only; the Settings ▸ System ▸ Delivery zones control gates on this capability, not `settings.manage` (T4-07 build note 3) | `delivery_zones_insert_manager_plus`, `create_delivery_zone()` | ✓ (T4-07) |
 | `delivery_zone.manage` | M+ | UPDATE + `deactivate_delivery_zone()`; **no DELETE policy** — deactivate is terminal (Law 3, N-4, T4-07 build note 2) | `delivery_zones_update_manager_plus`, `update_delivery_zone()`, `deactivate_delivery_zone()` | ✓ (T4-07) |
@@ -489,6 +490,8 @@ Known hole to keep closed: **`security_deposits` was readable by money-blind ses
 | `gate.reset.qc_self_check` | Pass QC on an item cleaned by same person when alone on shift | Warehouse · Technician · Manager+ | "I am alone on shift" mandatory tick (`qc_self_checked = true`) | yes, `qc_self_checked` recorded in row and audited | W43, L7 (27 Oct 2026, 0183, T2-13) |
 | `gate.handover.receiver_unverified` | Receiver not verified at handover | **Any staff allowed to hand over** | ≥10 chars | yes, per session | D2 (26 Oct 2026, 0179) |
 | `gate.conflict.overbooking` | Overbooking (GiST conflict) | M+ | mandatory | yes; losing reservation deactivated | 21 Jul |
+| `gate.extend.clash` | Extension into another booking's dates | Owner · Admin · Manager | mandatory (≥10 chars) | yes, recorded in extension_clash_decisions and audited | B41, B42 (27 Oct 2026, 0241, T3-29) |
+| `gate.pack.at_risk` | At-risk booking cannot reach Pack until covered or resolved | None (hard block) | N/A | yes, booking_at_risk resolution required | B39, B42 (27 Oct 2026, 0241, T3-29) |
 | `gate.conflict.crew` | Crew double-booking | M+ | mandatory | yes | Crew v3.1 |
 | `gate.discount.general` | Discount — any % | C+ | **none** | line audited like any booking write | 31 Aug: ungated |
 | `gate.case.charge_tier1` | Damage / case charge **< Rs 25,000** | Owner · Admin · Manager | yes | yes | 21 Jul |
@@ -520,6 +523,7 @@ Known hole to keep closed: **`security_deposits` was readable by money-blind ses
 | `gate.handover.agreement_unsigned` | Agreement unsigned at handover | nobody | — | yes | Stage 1 (0115) |
 | `gate.return.session_missing` | On Rent → Returned with no return session | nobody | — | yes | Stage 1 (0115) |
 | `gate.return.units_unaccounted` | On-rent unit with no return line | nobody | — | yes | Stage 1 (0115; non-physical exempt 0139, Consumable exempt 0141) |
+| `gate.return.damage_unsigned` | Return with a flagged unit needs a signature or a recorded refusal | Any staff allowed to perform Return (Warehouse · Technician · Manager · Admin · Owner) | ≥10 chars (if refused) | yes | T2-19 (0242) |
 | `gate.handover.consumable_product_missing` | Consumable line whose product row is missing at Handover | nobody | — | no (movement refused, handover held) | 0142 |
 | `gate.stock_adjust.role` | Bulk stock adjustment by lower role | Owner · Admin · Manager | ≥10 chars | append-only `stock_adjustments` row | 0140; RULINGS-2026-09-29 |
 | `gate.stock_adjust.negative_result` | Adjustment would make product quantity negative | nobody | — | refused | 0140 |

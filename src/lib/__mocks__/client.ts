@@ -534,6 +534,7 @@ function createBooking(payload: Record<string, unknown>): { data: Row | null; er
         booking_id: existing['id'],
         booking_no: existing['booking_no'],
         stage: existing['stage'],
+        rental_day_start: existing['rental_day_start'] ?? 360,
         project_name: existing['project_name'] ?? existing['project'] ?? null,
         shoot_location: existing['shoot_location'] ?? null,
         replayed: true,
@@ -568,6 +569,7 @@ function createBooking(payload: Record<string, unknown>): { data: Row | null; er
     return_location: payload['return_location'] ?? null,
     quote_expires_at: payload['quote_expires_at'] ?? null,
     deposit_required: payload['deposit_required'] ?? 0,
+    rental_day_start: typeof payload['rental_day_start'] === 'number' ? payload['rental_day_start'] : 360,
     version: 1,
     created_at: now,
     created_by: actor,
@@ -861,6 +863,7 @@ function createBooking(payload: Record<string, unknown>): { data: Row | null; er
       unit_count: builtUnits.length,
       crew_lines: builtCrew.length,
       transport_written: builtTransport !== null,
+      rental_day_start: header['rental_day_start'],
       project_name: projectName,
       shoot_location: shootLocation,
       replayed: false,
@@ -1593,6 +1596,174 @@ export const mockSupabase = {
         }
         store.stock_adjustments = [...(store.stock_adjustments ?? []), adjustmentRecord]
         return Promise.resolve({ data: [{ product_id: productId, quantity_before: before, quantity_after: after }], error: null })
+      } catch (error) {
+        return Promise.resolve({ data: null, error: { code: 'P0001', message: error instanceof Error ? error.message : String(error), details: '', hint: '' } as PgError })
+      }
+    }
+
+    if (name === 'restock_consumable') {
+      try {
+        const actor = readSession()?.user.id
+        const role = store['users']?.find(row => row['id'] === actor)?.['primary_role'] as string | undefined
+        if (!actor || !role) {
+          throw new Error('GATE:gate.restock.auth_required|Staff authentication is required to restock inventory.')
+        }
+        const productId = String(args?.['p_product_id'])
+        const qty = Number(args?.['p_qty'])
+        const supplier = typeof args?.['p_supplier'] === 'string' ? args['p_supplier'].trim() : null
+        const cost = typeof args?.['p_cost'] === 'number' ? args['p_cost'] : null
+        const receivedDate = typeof args?.['p_received_date'] === 'string' ? args['p_received_date'] : new Date().toISOString().slice(0, 10)
+        const clientUuid = String(args?.['p_client_uuid'] ?? crypto.randomUUID())
+
+        if (!qty || qty <= 0 || !Number.isSafeInteger(qty)) {
+          throw new Error('GATE:gate.restock.invalid_qty|Restock quantity must be a positive integer.')
+        }
+        const prod = store['products']?.find(p => p['id'] === productId)
+        if (!prod) throw new Error('GATE:gate.restock.product_not_found|Product not found.')
+        if (prod['tracking_mode'] === 'Serialised') {
+          throw new Error('GATE:gate.restock.wrong_tracking_mode|Serialised products must be restocked by adding individual units with serial numbers.')
+        }
+
+        const canMoney = !['Warehouse', 'Technician', 'Driver', 'Client'].includes(role)
+        const effectiveCost = canMoney ? cost : null
+
+        const existing = (store['consumable_restock_movements'] ?? []).find(m => m['client_uuid'] === clientUuid)
+        if (existing) {
+          return Promise.resolve({
+            data: [{
+              id: existing['id'],
+              product_id: existing['product_id'],
+              qty: existing['qty'],
+              quantity_before: existing['quantity_before'],
+              quantity_after: existing['quantity_after'],
+              supplier: existing['supplier'],
+              cost: canMoney ? existing['cost'] : null,
+              received_date: existing['received_date'],
+            }],
+            error: null,
+          })
+        }
+
+        const before = Number(prod['total_quantity'] ?? 0)
+        const after = before + qty
+        prod['total_quantity'] = after
+        prod['updated_at'] = new Date().toISOString()
+
+        const movementId = crypto.randomUUID()
+        const movementRecord: Row = {
+          id: movementId,
+          client_uuid: clientUuid,
+          product_id: productId,
+          qty,
+          supplier,
+          cost: effectiveCost,
+          received_date: receivedDate,
+          quantity_before: before,
+          quantity_after: after,
+          created_at: new Date().toISOString(),
+          created_by: actor,
+        }
+        store['consumable_restock_movements'] = [...(store['consumable_restock_movements'] ?? []), movementRecord]
+
+        return Promise.resolve({
+          data: [{
+            id: movementId,
+            product_id: productId,
+            qty,
+            quantity_before: before,
+            quantity_after: after,
+            supplier,
+            cost: effectiveCost,
+            received_date: receivedDate,
+          }],
+          error: null,
+        })
+      } catch (error) {
+        return Promise.resolve({ data: null, error: { code: 'P0001', message: error instanceof Error ? error.message : String(error), details: '', hint: '' } as PgError })
+      }
+    }
+
+    if (name === 'add_consumable_line') {
+      try {
+        const actor = readSession()?.user.id
+        const role = store['users']?.find(row => row['id'] === actor)?.['primary_role'] as string | undefined
+        if (!actor || !role) {
+          throw new Error('GATE:gate.consumable.auth_required|Staff authentication is required to add consumables.')
+        }
+        const bookingId = String(args?.['p_booking_id'])
+        const productId = String(args?.['p_product_id'])
+        const qty = Number(args?.['p_qty'])
+        const clientUuid = String(args?.['p_client_uuid'] ?? crypto.randomUUID())
+        const lineNote = typeof args?.['p_line_note'] === 'string' ? args['p_line_note'].trim() : null
+
+        if (!qty || qty <= 0 || !Number.isSafeInteger(qty)) {
+          throw new Error('GATE:gate.consumable.invalid_quantity|Quantity must be a positive integer.')
+        }
+
+        const booking = store['bookings']?.find(b => b['id'] === bookingId)
+        if (!booking) throw new Error('GATE:gate.consumable.booking_not_found|Booking not found.')
+        if (booking['stage'] === 'Returned' || booking['stage'] === 'Closed' || booking['cancelled_at']) {
+          throw new Error('GATE:gate.consumable.booking_terminal|Cannot add consumables to a cancelled, returned or closed booking.')
+        }
+
+        const prod = store['products']?.find(p => p['id'] === productId)
+        if (!prod) throw new Error('GATE:gate.consumable.product_not_found|Product not found.')
+        if (prod['tracking_mode'] !== 'Consumable') {
+          throw new Error(`GATE:gate.consumable.not_consumable|Product "${prod['name']}" is not tracked as a consumable.`)
+        }
+
+        const canMoney = !['Warehouse', 'Technician', 'Driver', 'Client'].includes(role)
+        const unitPrice = Number(prod['unit_sale_price'] ?? prod['daily_rate'] ?? 0)
+
+        const existing = (store['booking_lines'] ?? []).find(l => l['client_uuid'] === clientUuid)
+        if (existing) {
+          return Promise.resolve({
+            data: [{
+              line_id: existing['id'],
+              booking_id: bookingId,
+              product_id: productId,
+              product_name: String(prod['name']),
+              qty: existing['qty'],
+              unit_price: canMoney ? existing['rate'] : null,
+              line_total: canMoney ? existing['line_total'] : null,
+            }],
+            error: null,
+          })
+        }
+
+        const lineId = crypto.randomUUID()
+        const lineRecord: Row = {
+          id: lineId,
+          client_uuid: clientUuid,
+          booking_id: bookingId,
+          line_type: 'Equipment',
+          product_id: productId,
+          description: String(prod['name']),
+          qty,
+          days: 1,
+          rate: unitPrice,
+          rate_overridden: false,
+          discount_amount: 0,
+          line_total: qty * unitPrice,
+          price_breakdown: { unit_sale_price: unitPrice, qty, is_consumable: true },
+          line_note: lineNote,
+          created_at: new Date().toISOString(),
+          created_by: actor,
+        }
+        store['booking_lines'] = [...(store['booking_lines'] ?? []), lineRecord]
+
+        return Promise.resolve({
+          data: [{
+            line_id: lineId,
+            booking_id: bookingId,
+            product_id: productId,
+            product_name: String(prod['name']),
+            qty,
+            unit_price: canMoney ? unitPrice : null,
+            line_total: canMoney ? qty * unitPrice : null,
+          }],
+          error: null,
+        })
       } catch (error) {
         return Promise.resolve({ data: null, error: { code: 'P0001', message: error instanceof Error ? error.message : String(error), details: '', hint: '' } as PgError })
       }

@@ -6,7 +6,7 @@ import Icon from '../../../components/ui/Icon'
 import { rupees, formatMoney, type Paisa } from '../../../lib/money'
 import { extendRental } from '../../../actions/rentals/extendRental'
 import { useAuth } from '../../../lib/auth'
-import { canViewMoney } from '../../../lib/rbac'
+import { canViewMoney, canDecideExtensionClash } from '../../../lib/rbac'
 import { checkExtensionClash, type ExtensionClashDetail } from '../../../lib/queries/extensionClash'
 import { supabase } from '../../../lib/supabase'
 
@@ -58,6 +58,7 @@ export function ExtendRentalModal({
   const { user } = useAuth()
   const userRole = user?.role
   const canSeeMoney = userRole ? canViewMoney(userRole) : false
+  const isManager = userRole ? canDecideExtensionClash(userRole) : false
   const radioGroupId = useId()
 
   // 1. Day selection: +1 day default (1-tap budget), +2 days, or custom
@@ -72,6 +73,11 @@ export function ExtendRentalModal({
 
   // 4. Authorization confirm checkbox
   const [confirmed, setConfirmed] = useState(true)
+
+  // T3-29: Manager clash decisions
+  const [managerDecision, setManagerDecision] = useState<'move_next_booking' | 'mark_at_risk' | 'refuse'>('move_next_booking')
+  const [managerReason, setManagerReason] = useState('Approved extension with alternative arrangement for upcoming booking.')
+  const [sentToManager, setSentToManager] = useState(false)
 
   // 5. Booking lines for rate calculation
   const [lines, setLines] = useState<
@@ -95,6 +101,7 @@ export function ExtendRentalModal({
   // 6. Availability clash state
   const [isCheckingClash, setIsCheckingClash] = useState(false)
   const [clashes, setClashes] = useState<ExtensionClashDetail[]>([])
+  const [clashError, setClashError] = useState<string | null>(null)
 
   // 7. Form submission state
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -187,15 +194,23 @@ export function ExtendRentalModal({
     target.setDate(target.getDate() + days)
 
     setIsCheckingClash(true)
+    setClashError(null)
     try {
       const res = await checkExtensionClash(
         bookingId,
         base.toISOString(),
         target.toISOString(),
       )
-      setClashes(res.clashes ?? [])
-    } catch {
-      setClashes([])
+      setClashes(res.clashes)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Availability verification failed.'
+      setClashError(msg)
+      setClashes([
+        {
+          lineDescription: 'Availability check failed',
+          detail: `${msg} Extension cannot proceed until availability is confirmed.`,
+        },
+      ])
     } finally {
       setIsCheckingClash(false)
     }
@@ -229,24 +244,49 @@ export function ExtendRentalModal({
       setError('You are not signed in, so this extension cannot be recorded. Please sign in.')
       return
     }
-    if (clashes.length > 0) {
-      setError('Cannot extend booking: availability clash detected with an upcoming reservation on one or more items.')
+    if (isCheckingClash) {
+      setError('Availability check is currently running. Please wait for confirmation.')
       return
+    }
+    if (clashError) {
+      setError(`Cannot extend booking: availability verification failed (${clashError}).`)
+      return
+    }
+    if (clashes.length > 0) {
+      if (!isManager) {
+        setError('Cannot extend booking alone: an availability clash requires an Owner, Admin, or Manager decision (B41).')
+        return
+      }
+      if (managerReason.trim().length < 10) {
+        setError('Manager decision reason must be at least 10 characters.')
+        return
+      }
     }
 
     setIsSubmitting(true)
     setError(null)
 
     try {
-      await extendRental(
+      const res = await extendRental(
         {
           id: bookingId,
           days,
           reason: reason.trim(),
           pricingOption,
+          clashDecision: clashes.length > 0 ? {
+            decision: managerDecision,
+            reason: managerReason.trim(),
+            conflictingBookingId: clashes[0]?.conflictingBookingNo ?? undefined,
+          } : undefined,
         },
         { userId: user.id, role: user.role },
       )
+
+      if (res.refused) {
+        alert('Extension refused by Manager. Equipment must be returned on time.')
+        onClose()
+        return
+      }
 
       onSuccess?.({
         days,
@@ -291,14 +331,35 @@ export function ExtendRentalModal({
           <Button variant="secondary" onClick={onClose} disabled={isSubmitting} style={{ minHeight: 44 }}>
             Cancel
           </Button>
-          <Button
-            variant="primary"
-            onClick={() => handleSubmit()}
-            disabled={isSubmitting || (clashes ?? []).length > 0}
-            style={{ minHeight: 44, fontWeight: 700 }}
-          >
-            {isSubmitting ? 'Extending...' : `Confirm Extension (+${days} day${days === 1 ? '' : 's'})`}
-          </Button>
+          {(clashes ?? []).length > 0 && !isManager ? (
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => {
+                setSentToManager(true)
+                alert('Extension request sent to Manager for decision (B41).')
+                onClose()
+              }}
+              style={{ minHeight: 44, fontWeight: 700 }}
+            >
+              {sentToManager ? 'Sent to Manager' : 'Send to Manager for Decision'}
+            </Button>
+          ) : (
+            <Button
+              variant={clashes.length > 0 && managerDecision === 'refuse' ? 'danger' : 'primary'}
+              onClick={() => handleSubmit()}
+              disabled={isSubmitting || isCheckingClash || Boolean(clashError) || (clashes.length > 0 && !isManager)}
+              style={{ minHeight: 44, fontWeight: 700 }}
+            >
+              {isSubmitting
+                ? 'Processing...'
+                : clashes.length > 0 && isManager
+                ? managerDecision === 'refuse'
+                  ? 'Refuse Extension (On-Time Return)'
+                  : `Confirm Extension with Manager Decision (+${days}d)`
+                : `Confirm Extension (+${days} day${days === 1 ? '' : 's'})`}
+            </Button>
+          )}
         </>
       }
     >
@@ -437,6 +498,32 @@ export function ExtendRentalModal({
           <div style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
             <Icon name="refresh" size={14} className="animate-spin" /> Checking availability for extended dates...
           </div>
+        ) : clashError ? (
+          <div
+            role="alert"
+            style={{
+              padding: '12px 14px',
+              borderRadius: 'var(--r-btn)',
+              background: 'var(--st-danger-bg, rgba(220, 38, 38, 0.08))',
+              border: '1px solid var(--danger, #dc2626)',
+              color: 'var(--st-danger-fg, #b91c1c)',
+              fontSize: 'var(--t-meta)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 6,
+            }}
+          >
+            <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Icon name="alert_triangle" size={16} />
+              Availability Verification Failed (Extension Blocked)
+            </div>
+            <div>{clashError}</div>
+            <div>
+              <Button type="button" variant="outline" size="sm" onClick={() => void runClashCheck()} style={{ minHeight: 44, marginTop: 4 }}>
+                Retry Availability Check
+              </Button>
+            </div>
+          </div>
         ) : (clashes ?? []).length > 0 ? (
           <div
             role="alert"
@@ -447,17 +534,106 @@ export function ExtendRentalModal({
               border: '1px solid var(--danger, #dc2626)',
               color: 'var(--st-danger-fg, #b91c1c)',
               fontSize: 'var(--t-meta)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
             }}
           >
-            <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+            <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
               <Icon name="alert_triangle" size={16} />
-              Reservation Clash Detected
+              Reservation Clash Detected (B41)
             </div>
             {clashes.map((c, idx) => (
               <div key={idx} style={{ marginTop: 2 }}>
                 • {c.detail}
               </div>
             ))}
+
+            {isManager ? (
+              <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: 'var(--t-meta)' }}>
+                  Manager Decision on Clash (B41):
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <button
+                    type="button"
+                    onClick={() => setManagerDecision('move_next_booking')}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: 'var(--r-btn)',
+                      border: managerDecision === 'move_next_booking' ? '2px solid var(--primary)' : '1px solid var(--border)',
+                      background: managerDecision === 'move_next_booking' ? 'var(--card2)' : 'var(--card)',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <div style={{ fontWeight: 700, fontSize: 'var(--t-fine, 12px)', color: 'var(--text)' }}>
+                      a) Extend, and move next booking to similar unit or sub-rent (T3-13)
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setManagerDecision('mark_at_risk')}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: 'var(--r-btn)',
+                      border: managerDecision === 'mark_at_risk' ? '2px solid var(--primary)' : '1px solid var(--border)',
+                      background: managerDecision === 'mark_at_risk' ? 'var(--card2)' : 'var(--card)',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <div style={{ fontWeight: 700, fontSize: 'var(--t-fine, 12px)', color: 'var(--text)' }}>
+                      b) Extend, and mark next booking At risk (B42)
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setManagerDecision('refuse')}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: 'var(--r-btn)',
+                      border: managerDecision === 'refuse' ? '2px solid var(--primary)' : '1px solid var(--border)',
+                      background: managerDecision === 'refuse' ? 'var(--card2)' : 'var(--card)',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <div style={{ fontWeight: 700, fontSize: 'var(--t-fine, 12px)', color: 'var(--text)' }}>
+                      c) Refuse extension — client returns on time
+                    </div>
+                  </button>
+                </div>
+
+                <div style={{ marginTop: 4 }}>
+                  <label htmlFor="manager-clash-reason" style={{ fontSize: 'var(--t-fine, 12px)', fontWeight: 600, color: 'var(--text)' }}>
+                    Manager Decision Reason (≥10 chars) *
+                  </label>
+                  <input
+                    id="manager-clash-reason"
+                    type="text"
+                    value={managerReason}
+                    onChange={(e) => setManagerReason(e.target.value)}
+                    style={{
+                      width: '100%',
+                      marginTop: 4,
+                      padding: '6px 10px',
+                      borderRadius: 'var(--r-btn)',
+                      border: '1px solid var(--border)',
+                      background: 'var(--card)',
+                      color: 'var(--text)',
+                      fontSize: 'var(--t-meta)',
+                    }}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div style={{ marginTop: 6, fontSize: 'var(--t-meta)', color: 'var(--muted)', background: 'var(--card)', padding: 10, borderRadius: 'var(--r-btn)' }}>
+                This clash requires an Owner, Admin, or Manager decision. Coordinators cannot override alone (B41). Use &quot;Send to Manager&quot; below.
+              </div>
+            )}
           </div>
         ) : (
           <div style={{ fontSize: 'var(--t-meta)', color: 'var(--success, #16a34a)', display: 'flex', alignItems: 'center', gap: 6 }}>

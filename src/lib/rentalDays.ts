@@ -92,15 +92,31 @@ const DAY_MS = 86_400_000
  */
 export const RENTAL_DAYS_MIN = 1
 
+/** Ruled default rental day start: 06:00 (360 minutes after midnight NPT, B24, B25, T3-28). */
+export const DEFAULT_RENTAL_DAY_START_MINUTES = 360
+
 /**
  * Kathmandu (+05:45) shift offset: 06:00 local time minus +05:45 offset = 15 minutes (900,000 ms).
  * A timestamp minus 900,000 ms aligns exact 06:00 Kathmandu time to UTC midnight.
  */
-const KATHMANDU_SHIFT_OFFSET_MS = 900_000
+export const KATHMANDU_SHIFT_OFFSET_MS = 900_000
+
+/** Kathmandu is UTC +05:45 (345 minutes). */
+const KATHMANDU_TZ_OFFSET_MINUTES = 345
+
+/**
+ * Milliseconds offset to align local rental day start in Kathmandu to UTC midnight.
+ * e.g. for 06:00 (360 min): (360 - 345) * 60_000 = 900_000 ms.
+ * for 08:00 (480 min): (480 - 345) * 60_000 = 8_100_000 ms.
+ */
+export function rentalDayShiftOffsetMs(rentalDayStartMinutes: number = DEFAULT_RENTAL_DAY_START_MINUTES): number {
+  return (rentalDayStartMinutes - KATHMANDU_TZ_OFFSET_MINUTES) * 60_000
+}
 
 export function rentalDaysBetween(
   pickupIso: string | null | undefined,
   returnIso: string | null | undefined,
+  rentalDayStartMinutes: number = DEFAULT_RENTAL_DAY_START_MINUTES,
 ): number | null {
   if (!pickupIso || !returnIso) return null
   const p = Date.parse(pickupIso)
@@ -108,8 +124,9 @@ export function rentalDaysBetween(
   if (!Number.isFinite(p) || !Number.isFinite(r)) return null
   if (r <= p) return null
 
-  const pickupShift = Math.floor((p - KATHMANDU_SHIFT_OFFSET_MS) / DAY_MS)
-  const returnShift = Math.floor((r - 1 - KATHMANDU_SHIFT_OFFSET_MS) / DAY_MS)
+  const shiftOffsetMs = rentalDayShiftOffsetMs(rentalDayStartMinutes)
+  const pickupShift = Math.floor((p - shiftOffsetMs) / DAY_MS)
+  const returnShift = Math.floor((r - 1 - shiftOffsetMs) / DAY_MS)
   return Math.max(RENTAL_DAYS_MIN, returnShift - pickupShift + 1)
 }
 

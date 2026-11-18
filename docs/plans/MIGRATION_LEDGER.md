@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0240**
+**Next free number: 0242**
 
 > **Legacy exception:** `0188` exists as two distinct, locally verified migration files
 > (`0188_smart_reservation_holds.sql` and `0188_staff_renting_gear.sql`). Both are preserved because
@@ -20,6 +20,8 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
+| 0238 | T3-30 | consumables-pricing-restock-and-low-stock | lane-c/T3-30-consumables-unit-price-add-at-the | verified |
+| 0237 | T3-28 | rental-day-start-setting | lane-c/T3-28-rental-day-start-as-a-setting | verified |
 | 0225 | T0-12 / T6 glossary | owner-approved-glossary-revisions | lane-a/T0-12-main-integration | APPLIED live 7 Nov 2026 as 20261107105159 after validated backup; 17 local gates and live DB/RLS/RPC post-checks PASS; hosted/device acceptance pending |
 | 0224 | T5-12 | offer-campaigns-and-recipients | lane-b/T5-12-offer-emails-to-clients | verified |
 | 0178 | T2-reset | quantity-only-reset | lane-a/T2-quantity-reset | verified |
@@ -83,6 +85,9 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0236 | T3-07 | opening-balances-append-only | lane-c/T3-07-opening-balances | written |
 | 0237 | T2-21 | planned-equipment-downtime | lane-a/T2-21-planned-downtime-with-a-reason | verified (check:pglite 236/236 + check:lifecycle 78/78 Step L73) |
 | 0238 | T3-28 | rental-day-start-setting | lane-c/T3-28-rental-day-start-as-a-setting | verified (check:pglite 235/235 + check:lifecycle 77/77) |
-| 0239 | T3-30 | consumables-pricing-restock-and-low-stock | lane-c/T3-30-consumables-unit-price-add-at-the | verified (check:pglite 235/235 + check:lifecycle 73/73 Step L72) |
+| 0239 | T3-30 | consumables-pricing-restock-and-low-stock | lane-c/T3-30-consumables-unit-price-add-at-the | verified (check:pglite 236/236 + check:lifecycle 76/76 Step L73) |
+| 0240 | T2-22 | time-between-rentals-account-wide-or-per-product | lane-a/T2-22-time-between-rentals-account-wide-or | verified (check:pglite 236/236 + check:lifecycle 76/76 Step L74-L75) |
+| 0241 | T3-29 | extension-clash-manager-decides-and-at-risk | lane-c/T3-29-extension-clash-the-manager-decides | verified (PR #208) |
+| 0242 | T2-19 | return-damage-signature-and-refusal | lane-a/T2-19-signature-at-return-when-damage-is-found | verified (check:pglite 239/239 + check:lifecycle 80/80 Step L78-L79) |
 
 ## Expected migrations (not yet claimed)

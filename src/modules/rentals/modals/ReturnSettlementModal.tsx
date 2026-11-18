@@ -202,6 +202,14 @@ export function ReturnSettlementModal({
 
   const handleConfirm = async () => {
     if (lateDecision === 'Waive' && lateResult.feePaisa > 0) {
+      if (!user) {
+        setWaiverError('You are not signed in, so this waiver cannot be recorded against anyone. Nothing was waived.')
+        return
+      }
+      if (!mayApprove) {
+        setWaiverError(`A waiver is approved by a Manager or Owner. Your role (${user.role}) may raise one, but not approve it.`)
+        return
+      }
       const check = validateWaiver({
         staffName,
         reason: waiverReason,

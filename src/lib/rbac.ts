@@ -201,6 +201,23 @@ export function canBlockClient(role: SystemRole): boolean {
 }
 
 /**
+ * Check if role may decide an extension clash (Owner · Admin · Manager only).
+ * Mirrors gate.extend.clash (0241, T3-29, B41, B42). Coordinator and floor roles
+ * cannot decide or override alone.
+ */
+export function canDecideExtensionClash(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin' || role === 'Manager'
+}
+
+/**
+ * Check if role may resolve an at-risk booking (Owner · Admin · Manager · Coordinator).
+ * Mirrors gate.pack.at_risk resolution (0241, T3-29).
+ */
+export function canResolveAtRisk(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin' || role === 'Manager' || role === 'Coordinator'
+}
+
+/**
  * Check if role can put a client on a membership plan, or move them to another.
  *
  * RULING 2026-10-22, by mirroring the database like the two rules above.
@@ -767,6 +784,14 @@ export function canApproveLateFeeWaiver(role: SystemRole): boolean {
 /** Check if role can manage users and system configuration */
 export function canManageSettings(role: SystemRole): boolean {
   return role === 'Owner'
+}
+
+/**
+ * Check if role can manage operations rules (T3-28, B26: operationalDayStart setting).
+ * Owner and Admin only. Enforced in Postgres (0237 `set_setting` with GATE:gate.settings.role).
+ */
+export function canManageOperationsRules(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin'
 }
 
 /** RULING 2026-11-05 C-6: only Owner approves glossary wording; DB 0225 enforces it. */

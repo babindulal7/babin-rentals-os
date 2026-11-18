@@ -352,6 +352,36 @@ export function windowsOverlap(a: RentalWindow, b: RentalWindow, bounds: BoundCo
 }
 
 /**
+ * T2-22 / B11: Computes the effective reservation window widened by prep and cleaning minutes.
+ * In 'Per product' mode:
+ * - prep minutes widen before pickup: `from - prepMinutes`
+ * - cleaning minutes widen after return: `to + cleaningMinutes`
+ * In 'Account-wide' mode, returns the window unchanged.
+ */
+export function effectiveRentalWindow(
+  window: RentalWindow,
+  prepMinutes: number = 0,
+  cleaningMinutes: number = 0,
+  mode: string = 'Account-wide',
+): RentalWindow {
+  assertWindow(window, 'Rental window')
+  if (mode !== 'Per product') return window
+
+  const prepMs = Math.max(0, prepMinutes) * 60 * 1000
+  const cleanMs = Math.max(0, cleaningMinutes) * 60 * 1000
+
+  if (prepMs === 0 && cleanMs === 0) return window
+
+  const fromMs = instant(window.fromAd) - prepMs
+  const toMs = instant(window.toAd) + cleanMs
+
+  return {
+    fromAd: new Date(fromMs).toISOString(),
+    toAd: new Date(toMs).toISOString(),
+  }
+}
+
+/**
  * `product_units.retired_at` is the terminal fact, and it is a column rather
  * than an enum member, so it needs no §4.14 ruling to act on:
  * `product_units_retirement_requires_reason` makes retirement a deliberate,

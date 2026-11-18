@@ -325,6 +325,10 @@ time; a Warehouse seat sees no money.
 **Needs** — none.
 
 ### T2-15 · Damage found during reset            status: ready — awaiting merge (lane-a/T2-15-damage-found-during-reset) · size: S · lane A · [soon]
+**30 Oct triage** — Existing [PR #30](https://github.com/babindulal7/babin-rentals-os/pull/30)
+contains the implementation; its `0185` collides with Team Notes on main. Preserve
+it, claim a free number through the ledger, and rerun both database gates after
+reconciliation. [Evidence](../verification/PR_TRIAGE_2026-10-30.md).
 **What** — When Reset marks an item Damaged after the client has left (W44), the app opens a damage
 case **linked to the booking it last came back from**, defaulting to **claim from the client**; the
 client gets the "damage found — under review" email without an amount (W23, T5-07); the amount
@@ -370,7 +374,7 @@ Booking Detail and from Pack on the iPad; scanning its QR opens that booking; Wa
 in either PDF; screen check.
 **Needs** — none (T3-26 adds the project line when it lands).
 
-### T2-19 · Signature at Return when damage is found            status: todo · size: S · lane A · [go-live] · slips first
+### T2-19 · Signature at Return when damage is found            status: ready — awaiting merge (lane-a/T2-19-signature-at-return-when-damage-is-found) · size: S · lane A · [go-live] · slips first
 **What** — At Return, when at least one unit is flagged damaged or missing, the person returning the
 gear signs once under the list of flagged items ("returned by <name> for <client>; the flagged items
 are as shown") before Return can complete (B19). With no flags, no signature is asked (R-39). Reuse the
@@ -390,7 +394,7 @@ cannot complete until signed or the refusal is recorded; 3) the signature is on 
 4) Warehouse and Technician can do it; 5) screen check.
 **Needs** — T2-02 (done), T2-18 (damage photo per flagged unit).
 
-### T2-20 · Floor adds consumables at Pack and Handover            status: todo · size: S · lane A · [go-live] · slips first
+### T2-20 · Floor adds consumables at Pack and Handover            status: ready — awaiting merge (mac/T2-20-floor-consumables) · size: S · lane A · [go-live] · slips first
 **What** — On Pack and Handover, "**Add consumables**" lists the consumable products (tape, gels,
 batteries) with a quantity stepper (B35). Adding writes a consumable line to the booking through
 T3-30's action: the price comes from the server and floor roles never receive it (Law 6). Stock goes
@@ -429,7 +433,7 @@ those days only; 2) a downtime over an existing booking is refused with the book
 frees the dates at once; 4) the calendar bar shows the reason to every staff role; 5) screen check.
 **Needs** — T3-22 merged first if it is open (both change `src/lib/queries/availability.ts`).
 
-### T2-22 · Time between rentals: account-wide or per product            status: todo · size: M · lane A · [go-live] · slips first
+### T2-22 · Time between rentals: account-wide or per product            status: ready — awaiting merge (lane-a/T2-22-time-between-rentals-account-wide-or) · size: M · lane A · [go-live] · slips first
 **What** — Settings ▸ Operations rules gets "**Time between rentals: Account-wide · Per product**"
 (B11, reading). *Account-wide* is today's `rentalTurnaround` setting. *Per product* uses each product's
 **prep minutes before pickup** and **cleaning minutes after return** — `products.prep_time_minutes` and

@@ -1129,6 +1129,77 @@ describe('Return', () => {
     expect(opsOn('operation_sessions')).toEqual([expect.objectContaining({ id: 'original-open', kind: 'update' })])
   })
 
+  it('writes signatures with role Returning person and updates returning_person_name on Return session (T2-19, B19)', async () => {
+    db.state.responses['return_lines'] = [[], [{ id: 'rl-1', booking_line_id: LINE_A, state: 'Returned' }]]
+    const evidenceId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'
+    const result = await completeReturn(
+      {
+        rentalId: 'B-715',
+        lines: [{ bookingLineId: LINE_A, unitIds: ['u1'], condition: 'Damaged' as const }],
+        signatures: [
+          {
+            role: 'Returning person',
+            signerName: 'Ram Shrestha',
+            signedAt: '2026-10-25T10:00:00Z',
+            isRequired: true,
+            evidenceFileId: evidenceId,
+          },
+        ],
+      },
+      OWNER,
+    )
+
+    expect(result.success).toBe(true)
+    const sigWrites = insertsOn('signatures')
+    expect(sigWrites).toHaveLength(1)
+    expect(sigWrites[0]?.payload['signature_role']).toBe('Returning person')
+    expect(sigWrites[0]?.payload['signer_name']).toBe('Ram Shrestha')
+    expect(sigWrites[0]?.payload['signature_evidence_file_id']).toBe(evidenceId)
+
+    // Verify returning_person_name updated on operation_sessions
+    const sessionUpdates = opsOn('operation_sessions').filter((o) => o.kind === 'update')
+    expect(sessionUpdates.some((u) => u.payload['returning_person_name'] === 'Ram Shrestha')).toBe(true)
+  })
+
+  it('records signature refusal and audits it on Return session (T2-19, B19)', async () => {
+    db.state.responses['return_lines'] = [[], [{ id: 'rl-1', booking_line_id: LINE_A, state: 'Returned' }]]
+    const result = await completeReturn(
+      {
+        rentalId: 'B-715',
+        lines: [{ bookingLineId: LINE_A, unitIds: ['u1'], condition: 'Damaged' as const }],
+        signatureRefused: true,
+        signatureRefusalReason: 'Client refused to sign damage assessment',
+      },
+      OWNER,
+    )
+
+    expect(result.success).toBe(true)
+    const sessionUpdates = opsOn('operation_sessions').filter((o) => o.kind === 'update')
+    const refusalUpdate = sessionUpdates.find((u) => u.payload['signature_refused'] === true)
+    expect(refusalUpdate).toBeDefined()
+    expect(refusalUpdate?.payload['signature_refusal_reason']).toBe('Client refused to sign damage assessment')
+
+    // Audited in audit_events
+    const audits = insertsOn('audit_events')
+    const refusalAudit = audits.find((a) => (a.payload['new_values'] as Record<string, unknown>)?.['gate'] === 'gate.return.damage_unsigned')
+    expect(refusalAudit).toBeDefined()
+    expect(refusalAudit?.payload['reason']).toBe('Client refused to sign damage assessment')
+  })
+
+  it('refuses signature refusal with reason shorter than 10 characters', async () => {
+    await expect(
+      completeReturn(
+        {
+          rentalId: 'B-715',
+          lines: [{ bookingLineId: LINE_A, unitIds: ['u1'], condition: 'Damaged' as const }],
+          signatureRefused: true,
+          signatureRefusalReason: 'No reason',
+        },
+        OWNER,
+      ),
+    ).rejects.toThrow(/at least 10 characters/)
+  })
+
   it('refuses an unreadable completion key before choosing a new sequence or writing', async () => {
     db.state.returnKeyError = { message: 'Failed to fetch' }
     await expect(completeReturn({ rentalId: 'B-715', clientUuid: 'retry-key', lines: [{ bookingLineId: LINE_A, qty: 1 }] }, OWNER))

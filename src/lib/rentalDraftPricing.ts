@@ -13,9 +13,13 @@ export function draftInstant(day: string, time: string): string | null {
 export function calculateDraftTotal(data: RentalDraftData): Paisa {
   const pickup = draftInstant(data.pickup, data.pickupTime)
   const days = rentalDaysBetween(pickup, draftInstant(data.returnDate, data.returnTime)) ?? 1
-  const sum = (types: readonly string[], excludeIncluded = false) => data.lines.reduce((total, line) =>
-    total + (types.includes(line.lineType ?? 'Equipment') && (!excludeIncluded || !line.isIncluded)
-      ? roundHalfUp(line.qty * line.days * line.ratePaisa * (1 - line.discountPct / 100)) : 0), 0) as Paisa
+  const sum = (types: readonly string[], excludeIncluded = false) => data.lines.reduce((total, line) => {
+    const isConsumable = (line as { trackingMode?: string }).trackingMode === 'Consumable' || (line as { isConsumable?: boolean }).isConsumable
+    const isFlat = (line as { serviceBasis?: string }).serviceBasis === 'Flat'
+    const effectiveDays = isConsumable || isFlat ? 1 : line.days
+    return total + (types.includes(line.lineType ?? 'Equipment') && (!excludeIncluded || !line.isIncluded)
+      ? roundHalfUp(line.qty * effectiveDays * line.ratePaisa * (1 - line.discountPct / 100)) : 0)
+  }, 0) as Paisa
   return calculatePricingPipeline({
     equipmentSubtotalPaisa: sum(['Equipment', 'Accessory'], true),
     bundleSubtotalPaisa: sum(['Bundle']),

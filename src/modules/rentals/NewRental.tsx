@@ -441,7 +441,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     setLines((prev) => {
       let changed = false
       const next = prev.map((l) => {
-        if (l.daysOverridden === true || l.days === days) return l
+        if (l.serviceBasis === 'Flat' || l.daysOverridden === true || l.days === days) return l
         changed = true
         return { ...l, days }
       })

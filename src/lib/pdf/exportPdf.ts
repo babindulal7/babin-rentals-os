@@ -13,12 +13,16 @@ import { supabase } from '../supabase'
 import {
   generateInvoicePdf,
   generateDocumentPdf,
+  generateRentalAgreementPdf,
   generatePackingListPdf,
   generateReturnReportPdf,
+  generateClientStatementPdf,
   type InvoicePdfData,
   type DocumentPdfData,
+  type RentalAgreementPdfData,
   type PackingListPdfData,
   type ReturnReportPdfData,
+  type ClientStatementPdfData,
 } from './generatePdf'
 
 export interface ExportPdfOptions {
@@ -263,6 +267,70 @@ export async function exportDocumentPdf(
 }
 
 /**
+ * Exports an Equipment Rental Agreement as a PDF, uploads to Supabase Storage bucket 'documents',
+ * retrieves a signed URL, and updates `document_registry.file_url`.
+ */
+export async function exportRentalAgreementPdf(
+  agreementData: RentalAgreementPdfData,
+  options: ExportPdfOptions = {},
+): Promise<ExportPdfResult> {
+  const {
+    uploadToStorage = true,
+    expiresInSeconds = 86400,
+    download = false,
+    documentId,
+  } = options
+
+  const safeName = sanitizePathSegment(agreementData.agreementNo || documentId || 'AGREEMENT')
+  const filename = options.filename || `${safeName}.pdf`
+
+  const bytes = generateRentalAgreementPdf(agreementData)
+  const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
+
+  let storagePath: string | undefined
+  let signedUrl: string | undefined
+
+  if (uploadToStorage) {
+    try {
+      const stored = await uploadPrivatePdf(blob, safeName, expiresInSeconds)
+      storagePath = stored.storagePath
+      signedUrl = stored.signedUrl
+      const reference = documentId || agreementData.agreementNo
+      if (reference) {
+        await supabase
+          .from('document_registry')
+          .update({ file_url: storagePath, file_size_bytes: bytes.byteLength })
+          .eq(documentId ? 'id' : 'document_no', reference)
+      }
+    } catch {
+      // Storage upload failure in floor/offline mode does not block printing or local download
+    }
+  }
+
+  if (download && typeof window !== 'undefined' && typeof document !== 'undefined') {
+    const downloadUrl = signedUrl || URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = downloadUrl
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    if (!signedUrl) {
+      setTimeout(() => URL.revokeObjectURL(downloadUrl), 5000)
+    }
+  }
+
+  return {
+    blob,
+    bytes,
+    storagePath,
+    signedUrl,
+    filename,
+    fileSizeBytes: bytes.byteLength,
+  }
+}
+
+/**
  * Exports a warehouse packing list as a PDF document.
  * Follows the 27 Jul hierarchy rule (parent-first, children nested) and is strictly money-blind.
  */
@@ -407,5 +475,36 @@ export function openPdfForPrint(blob: Blob, _title?: string): void {
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
+  }
+}
+
+/**
+ * Exports a Client Statement PDF (T3-20) and optionally triggers browser download.
+ */
+export async function exportClientStatementPdf(
+  statementData: ClientStatementPdfData,
+  options: Pick<ExportPdfOptions, 'download' | 'filename'> = {},
+): Promise<ExportPdfResult> {
+  const safeName = sanitizePathSegment(`Statement_${statementData.client.name}`)
+  const filename = options.filename || `${safeName}.pdf`
+  const bytes = generateClientStatementPdf(statementData)
+  const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
+
+  if (options.download && typeof window !== 'undefined' && typeof document !== 'undefined') {
+    const downloadUrl = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = downloadUrl
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(downloadUrl), 5000)
+  }
+
+  return {
+    blob,
+    bytes,
+    filename,
+    fileSizeBytes: bytes.byteLength,
   }
 }
