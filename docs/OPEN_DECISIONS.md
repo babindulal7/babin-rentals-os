@@ -4,9 +4,9 @@
 
 Babin ruled the grid (9 Nov 2026): zone × vehicle, twelve Settings values, outside valley quoted per trip. Built as migration 0244 and the 'not set' helper. Three product questions are not answered and are NOT decided by the build:
 
-- **O-28 (Q-1), ANSWERED 18 Nov 2026: the grid replaces the per-zone fee.** Dispatch moves to the grid; the per-zone fee on delivery_zones is retired. Build pending (dispatch wiring). Does the grid replace the existing per-zone fee on delivery_zones (migration 0189, fee_paisa default 0), or do both stay? Until answered, dispatch still uses the old zone fee and the hard-coded Rs 1,500 at src/actions/delivery/createDeliveryJob.ts:57 (mock path) remains.
+- **O-28 (Q-1), ANSWERED 18 Nov 2026: the grid replaces the per-zone fee.** Dispatch moves to the grid; the per-zone fee on delivery_zones is retired. Dispatch wiring built in migration 0246 (`get_day_route` reads the grid by booking zone and job vehicle class; the per-zone fee on delivery_zones is no longer read by dispatch, but the column is not yet dropped). Local gates only; not applied (N-5). The mock fixture at src/actions/delivery/createDeliveryJob.ts:57 is not a fee source in the real path and was left as is.
 - **O-29 (Q-2), ANSWERED 18 Nov 2026: Manager and Owner may type grid amounts.** Built in migration 0244 (set RPC allows Owner and Manager). The quoted flag stays Owner-only. Who may type grid amounts: Owner only (built, stricter under B-1) or Manager and up (the 0189 zone-fee rule)?
-- **O-30 (Q-3), ANSWERED 18 Nov 2026: staff pick the zone at booking; delivery jobs inherit it.** Build pending: a zone field on the booking (migration and booking form), then O-28 dispatch wiring reads the grid by that zone and the job's vehicle.
+- **O-30 (Q-3), ANSWERED 18 Nov 2026: staff pick the zone at booking; delivery jobs inherit it.** Built in migration 0246: `bookings.delivery_zone_id` and `set_booking_delivery_zone()`; jobs inherit it through their booking. The booking form picker is NOT built yet (no UI calls the setter).
 - **O-30 (original question):** How does a delivery job get its zone (Inside Ring Road, Outside Ring Road, Far valley, Outside valley)? Set at booking, at dispatch, or from the address? Not ruled.
 
 ## 5 November 2026 — Glossary editing in Settings (O-22)

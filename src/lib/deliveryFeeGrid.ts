@@ -60,3 +60,37 @@ export function deliveryFeeLabel(state: DeliveryFeeState): string {
       return 'Quoted per trip'
   }
 }
+
+/**
+ * The `zone_fee_status` that get_day_route returns (migration 0246, O-28). It says why a
+ * dispatch fee is or is not shown. NULL means the caller may not see money (Law 6).
+ */
+export const ZONE_FEE_STATUSES = [
+  'zone-not-chosen',
+  'quoted-per-trip',
+  'vehicle-not-chosen',
+  'fee-not-set',
+  'set',
+] as const
+
+export type ZoneFeeStatus = (typeof ZONE_FEE_STATUSES)[number]
+
+/**
+ * The words for a dispatch fee. Returns null for a money-blind caller, so no fee text is
+ * rendered at all. A `set` status with no amount fails closed to "not set".
+ */
+export function zoneFeeStatusLabel(status: ZoneFeeStatus | null, feePaisa: number | null): string | null {
+  if (status === null) return null
+  switch (status) {
+    case 'zone-not-chosen':
+      return 'Zone not chosen'
+    case 'quoted-per-trip':
+      return 'Quoted per trip'
+    case 'vehicle-not-chosen':
+      return 'Vehicle class not chosen'
+    case 'fee-not-set':
+      return 'Delivery fee not set'
+    case 'set':
+      return feePaisa === null ? 'Delivery fee not set' : deliveryFeeLabel({ status: 'set', feePaisa })
+  }
+}

@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0245**  (0241 R-9.10, 0242 R-9.12, 0243 R-9.13 unmerged; 0244 R-9.18 here)
+**Next free number: 0247**  (0241 R-9.10, 0242 R-9.12, 0243 R-9.13 unmerged; 0245 R-9.8 on its own branch; 0244 and 0246 R-9.18 here)
 
 > **Legacy exception:** `0188` exists as two distinct, locally verified migration files
 > (`0188_smart_reservation_holds.sql` and `0188_staff_renting_gear.sql`). Both are preserved because
@@ -88,5 +88,6 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0239 | T3-30 | consumables-pricing-restock-and-low-stock | lane-c/T3-30-consumables-unit-price-add-at-the | verified (check:pglite 236/236 + check:lifecycle 76/76 Step L73) |
 | 0240 | T2-22 | time-between-rentals-account-wide-or-per-product | lane-a/T2-22-time-between-rentals-account-wide-or | verified (check:pglite 236/236 + check:lifecycle 76/76 Step L74-L75) |
 | 0244 | R-9.18 / R-9.20 | delivery-zone-vehicle-fee-grid | feat/r-9-18-delivery-fee-grid | written, not applied (N-5); 0241 R-9.10, 0242 R-9.12, 0243 R-9.13 are on unmerged branches |
+| 0246 | O-28 / O-30 | dispatch-zone-fee-from-grid | feat/r-9-18-delivery-fee-grid | written, not applied (N-5); needs 0244 first; 0245 is R-9.8 on its own branch |
 
 ## Expected migrations (not yet claimed)
