@@ -1,5 +1,37 @@
 # Progress Log
 
+## 2026-11-18 — O-28 finish: booking zone picker, job vehicle class, per-zone fee retired at entry
+
+**Did**
+- New Rental (`DeliverySection.tsx`): the zone dropdown shows the zone name only (no per-zone fee). A vehicle class select (form only) picks the grid cell that fills the delivery charge. A quoted or unset cell says so in words and leaves the charge for typing. The zone is saved on the booking right after creation (`useNewRentalSubmit.ts`, via `set_booking_delivery_zone`, idempotent).
+- Delivery assign sheet (`DeliveryWorkspace.tsx`): vehicle class select saved with `set_delivery_job_vehicle_class` when changed. A failed class save is reported after the driver is assigned, and the sheet stays open.
+- Migration `0247_retire_per_zone_fee_on_create.sql` (not applied, N-5): `delivery_zones.fee_paisa` becomes nullable with no default; `create_delivery_zone` takes an optional fee. The column is kept.
+- Settings zone form (`DeliveryZonesControl.tsx`): no fee input; the row and delete text point to Delivery fees. `createDeliveryZone` action: fee optional.
+- New read/write helpers: `src/lib/queries/deliveryFeeGridRead.ts`, `src/lib/queries/bookingDeliveryZone.ts`.
+
+**Ruled**
+- O-28 and O-30 (18 Nov 2026): as recorded in OPEN_DECISIONS. Interpretation to confirm with Babin: the booking charge fills from the grid, since it used to fill from the per-zone fee.
+
+**Verified**
+- `VITE_DATA_SOURCE=mock npx vitest run` on the rentals booking, operations, settings, lib and deliveryZones folders: 149 files pass before the last edits; then the zone settings tests (6 files) and the new read/write tests (9 cases) pass.
+- `npx tsc --noEmit`: exit 0. `npx eslint --max-warnings 0` on every changed file: exit 0.
+- `npm run check:pglite`: 240/240 applied, 0 failed (0247 included); view-leak, function-leak and definer-hygiene gates pass.
+- `npm run check:lifecycle`: 76/76 green.
+- Not verified: the New Rental picker and the assign sheet in a browser against a real login; the new function branches under real roles (PGlite has no JWT).
+
+**Blocked**
+- The `delivery_zones.fee_paisa` column is not dropped. It is kept on purpose (nothing is deleted). Dropping it needs a later migration once no reader remains.
+- Applying 0244, 0246 and 0247 to the live project needs Babin's go-ahead and a confirmed backup (N-5).
+
+### Completion (from `npm run completion`)
+- Backend 106/106 · Real data 56 DB-only of 67 · DB enforcement 9/9 · Permissions 85/85 · Lifecycle 76/76 · Overall ≈ 97%.
+
+### Remaining
+- Features to build: 0 for the picker work. Browser check of the New Rental picker and the assign sheet is still to do.
+- Bugs to fix: 0 new.
+- Rulings open: 1 (confirm the booking charge fills from the grid, as O-28's replacement).
+- Next session starts with: a browser pass on the New Rental zone picker and the assign sheet, then the column-drop decision.
+
 ## 2026-11-18 — O-28 dispatch wiring: fee read from the grid by booking zone and job vehicle (O-30)
 
 **Did**
