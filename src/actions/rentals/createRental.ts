@@ -265,6 +265,8 @@ export type CreateRentalInput = {
   vatRate?: number
   /** Rental day start (minutes after midnight NPT, default 360 = 06:00, B24, B25, T3-28). */
   rentalDayStart?: number
+  /** Parent booking ID if this is a linked booking created mid-rental (T3-18 / W87). */
+  parentBookingId?: string | null
   lines: CreateRentalLine[]
   discounts?: CreateRentalDiscount[]
   /**
@@ -537,6 +539,7 @@ export const createRentalConfig: ActionConfig<CreateRentalInput, CreateRentalRes
       quote_expires_at: input.quoteExpiresAt ?? null,
       deposit_required: input.depositRequired ?? 0,
       rental_day_start: input.rentalDayStart ?? dayStartMinutesFrom(getSetting('operationalDayStart')),
+      parent_booking_id: input.parentBookingId ?? null,
       ...(input.vatRate !== undefined ? { vat_rate: input.vatRate } : {}),
       lines: input.lines.map((line, i) => {
         const isManual = line.lineType === 'Manual item'
