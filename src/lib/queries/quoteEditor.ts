@@ -5,11 +5,30 @@ import { readTransportForm, transportInstructions } from '../bookingTransportFor
 import { rentalDaysBetween } from '../rentalDays'
 import type { RentalDraftData } from '../../actions/rentals/saveDraft'
 
-export interface QuoteSnapshot { id:string; code:string; revision:string; values:RecordValues; lines:RecordValues[]; crew:RecordValues[]; transport:RecordValues|null; discounts:RecordValues[] }
+export interface QuoteSnapshot {
+  id: string
+  code: string
+  stage?: string
+  parent_booking_id?: string | null
+  rental_day_start?: number
+  revision: string
+  values: RecordValues
+  lines: RecordValues[]
+  crew: RecordValues[]
+  transport: RecordValues | null
+  discounts: RecordValues[]
+}
 const text=(v:unknown)=>typeof v==='string'?v:''
 const number=(v:unknown)=>Number(v??0)
 function wallClock(value:unknown){const date=new Date(text(value));if(!Number.isFinite(date.getTime()))throw new Error('This booking has an invalid date.');const local=new Date(date.getTime()+345*60000).toISOString();return [local.slice(0,10),local.slice(11,16)] as const}
 export async function readQuoteEditor(id:string):Promise<QuoteSnapshot>{const {data,error}=await supabase.rpc('read_quote_editor',{p_id:id});if(error)throw new Error(error.message);if(!data || typeof data!=='object' || !('revision' in data))throw new Error('Quote could not be loaded.');return data as QuoteSnapshot}
+
+export async function readBookingForChange(id: string): Promise<QuoteSnapshot> {
+  const { data, error } = await supabase.rpc('read_booking_for_change', { p_id: id })
+  if (error) throw new Error(error.message)
+  if (!data || typeof data !== 'object' || !('revision' in data)) throw new Error('Booking could not be loaded.')
+  return data as QuoteSnapshot
+}
 
 export function quoteToDraft(snapshot:QuoteSnapshot):RentalDraftData {
   const v=snapshot.values,t=snapshot.transport??{},[pickup,pickupTime]=wallClock(v.pickup_at),[returnDate,returnTime]=wallClock(v.return_at)
