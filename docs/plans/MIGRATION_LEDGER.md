@@ -89,5 +89,6 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0240 | T2-22 | time-between-rentals-account-wide-or-per-product | lane-a/T2-22-time-between-rentals-account-wide-or | verified (check:pglite 236/236 + check:lifecycle 76/76 Step L74-L75) |
 | 0241 | T3-29 | extension-clash-manager-decides-and-at-risk | lane-c/T3-29-extension-clash-the-manager-decides | verified (PR #208) |
 | 0242 | T2-19 | return-damage-signature-and-refusal | lane-a/T2-19-signature-at-return-when-damage-is-found | verified (check:pglite 239/239 + check:lifecycle 80/80 Step L78-L79) |
+| 0243 | T3-18 | change-confirmed-booking | lane-c/T3-18-change-confirmed-booking | verified (check:pglite 241/241 + check:lifecycle 85/85 Step L82-L84) |
 
 ## Expected migrations (not yet claimed)
