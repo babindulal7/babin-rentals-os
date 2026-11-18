@@ -22,9 +22,9 @@
 | Permissions | capabilities mapped / declared | 87 / 87 (100%) | +0 |
 | Lifecycle | steps green / total | 85 / 85 (100%) | +0 |
 | Overall | structural mean of five | ≈ 96% | — |
-Migrations 241 files · check:pglite not run this session (pass --migrations to run). Suite: NOT VERIFIED — focused or unspecified run: 20/20 passed, 0 failed (recorded 2026-11-18T19:51:22.891Z).
-Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written 2026-11-18T20:03:26.614Z.
+Migrations 241 files · check:pglite 241/241 applied, 0 failed (recorded 2026-11-18T20:23:09.529Z). Suite: PASS — 7388/7388 passed, 0 failed (recorded 2026-11-18T20:51:04.657Z); source fingerprint matches.
+Coverage suite: PASS — 7388/7388 passed, 0 failed (recorded 2026-11-18T20:51:04.657Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-18T20:24:12.807Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
