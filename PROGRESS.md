@@ -1,5 +1,32 @@
 # Progress Log
 
+## 2026-11-18 — Settings delivery fee grid screen (O-29, R-9.18)
+
+**Did**
+- `src/modules/settings/sections/DeliveryFeeGridCard.tsx`: Settings ▸ Financial ▸ "Delivery fees". One fieldset per active zone, with the three vehicle inputs. Blank saves as not set (NULL), never zero. Quoted zones show "Quoted per trip" and no inputs. Saves each zone through `set_delivery_zone_vehicle_fee`; a refused save shows the database message inline. Mounted in `Financial.tsx` beside the cancellation card.
+- `src/lib/deliveryFeeGrid.ts`: `parseFeeInput()` turns a typed amount into paisa, refusing negatives, letters, currency symbols and more than two decimals, with a reason.
+
+**Ruled**
+- R-9.18 and R-9.20 (9 Nov 2026): the grid and quoted zones. O-29 (18 Nov 2026): Owner and Manager type amounts. The card follows both; the database enforces them.
+
+**Verified**
+- `npx tsc --noEmit`: exit 0. `npx eslint` on the new and changed files, `--max-warnings 0`: exit 0.
+- `VITE_DATA_SOURCE=mock npx vitest run`: `deliveryFeeGrid.test.ts` (including the new parser cases) and `DeliveryFeeGridCard.test.tsx` (read-error message, quoted zone with no inputs, unset cell as "not set" and never "Rs 0") pass.
+- Not verified: the card on a live Supabase with a real Owner or Manager login; the save path against the database (the RPC is verified separately by the 0244 scratch check).
+
+**Blocked**
+- O-28 dispatch wiring (the grid replaces the per-zone fee in `getDayRoute` and the mock Rs 1,500) waits on O-30 (how a delivery job gets its zone).
+- Applying 0244 to the live project needs Babin's go-ahead and a confirmed backup (N-5).
+
+### Completion (from `npm run completion`)
+- Measured on this branch before this commit; see the earlier 0244 entry for the counts. The Settings card adds no actions.
+
+### Remaining
+- Features to build: 1 (O-28 dispatch wiring, blocked on O-30).
+- Bugs to fix: 0 new.
+- Rulings open: 1 (O-30, how a delivery job gets its zone).
+- Next session starts with: answer O-30, then O-28 dispatch wiring from the grid.
+
 ## 2026-11-18 — O-29 answered: Owner and Manager type grid amounts
 
 **Did**

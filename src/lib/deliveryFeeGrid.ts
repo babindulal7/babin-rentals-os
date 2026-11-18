@@ -33,6 +33,22 @@ export function resolveDeliveryFee(cell: DeliveryFeeCell): DeliveryFeeState {
   return { status: 'set', feePaisa: Math.round(fee) }
 }
 
+/**
+ * Parse one typed amount in rupees into paisa for the set RPC.
+ * Blank means "not set" (NULL), never zero. Whole or fractional rupees are accepted
+ * up to two decimals. Anything else is refused with a reason, shown inline.
+ */
+export function parseFeeInput(
+  text: string,
+): { ok: true; feePaisa: number | null } | { ok: false; error: string } {
+  const trimmed = text.trim()
+  if (trimmed === '') return { ok: true, feePaisa: null }
+  if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) {
+    return { ok: false, error: 'Enter an amount in rupees, for example 1500 or 1500.50. Leave blank for not set.' }
+  }
+  return { ok: true, feePaisa: Math.round(Number(trimmed) * 100) }
+}
+
 /** The label a screen shows for a grid state. Stated in words, never by colour alone. */
 export function deliveryFeeLabel(state: DeliveryFeeState): string {
   switch (state.status) {

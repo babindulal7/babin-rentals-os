@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   DELIVERY_VEHICLE_CLASSES,
   deliveryFeeLabel,
+  parseFeeInput,
   resolveDeliveryFee,
 } from '../deliveryFeeGrid'
 
@@ -38,5 +39,26 @@ describe('delivery fee grid', () => {
     expect(deliveryFeeLabel({ status: 'not-set' })).toBe('Delivery fee not set')
     expect(deliveryFeeLabel({ status: 'quoted-per-trip' })).toBe('Quoted per trip')
     expect(deliveryFeeLabel({ status: 'set', feePaisa: 300000 })).toBe('Rs 3,000')
+  })
+})
+
+describe('parseFeeInput (O-29 entry)', () => {
+  it('treats a blank entry as not set (NULL), never zero', () => {
+    expect(parseFeeInput('')).toEqual({ ok: true, feePaisa: null })
+    expect(parseFeeInput('   ')).toEqual({ ok: true, feePaisa: null })
+  })
+
+  it('converts whole and two-decimal rupees to paisa', () => {
+    expect(parseFeeInput('1500')).toEqual({ ok: true, feePaisa: 150000 })
+    expect(parseFeeInput('1500.50')).toEqual({ ok: true, feePaisa: 150050 })
+    expect(parseFeeInput('0')).toEqual({ ok: true, feePaisa: 0 })
+  })
+
+  it('refuses negatives, letters, currency symbols and more than two decimals, with a reason', () => {
+    for (const bad of ['-1', 'abc', 'Rs 500', '1.234']) {
+      const result = parseFeeInput(bad)
+      expect(result.ok).toBe(false)
+      if (!result.ok) expect(result.error).toContain('Enter an amount in rupees')
+    }
   })
 })
