@@ -1,9 +1,9 @@
 # Synthetic staging seed + first 13 hosted SQL files — verification
 
-**Checked:** 17 November 2026 (NPT)  
-**Source commit:** `1e87dd1d3d74bf74520401b0b192cee2a2ccaae6`  
-**Target project:** Existing Free `babin-staging` (`klhmsrunqrdxjudyhnkm`)  
-**Protected:** Production `sxguwvgoserhdolewibb` (not an execution target)  
+**Checked:** 17 November 2026 (NPT)
+**Source commit:** `1e87dd1d3d74bf74520401b0b192cee2a2ccaae6`
+**Target project:** Existing Free `babin-staging` (`klhmsrunqrdxjudyhnkm`)
+**Protected:** Production `sxguwvgoserhdolewibb` (not an execution target)
 **Result:** Rollback-only hosted execution PASS for files `0001`–`0013`, with **temporary synthetic value substitutions in `0012`**.
 
 ## What was actually verified
