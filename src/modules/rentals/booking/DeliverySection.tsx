@@ -5,6 +5,8 @@ import { Field, Section, MoneyRow, inputStyle } from './BookingFormWidgets'
 import { formatMoney, rupees, type Paisa } from '../../../lib/money'
 import { listDeliveryZones, type DeliveryZoneRow } from '../../../actions/deliveryZones/listDeliveryZones'
 import { fetchGridFeeState } from '../../../lib/queries/deliveryFeeGridRead'
+import { fetchDistanceBands } from '../../../lib/queries/deliveryDistanceBands'
+import { formatDistanceBand, type DistanceBand } from '../../../lib/deliveryDistanceBand'
 import { useAuth } from '../../../lib/auth'
 import {
   DELIVERY_VEHICLE_CLASSES,
@@ -114,6 +116,26 @@ export function DeliverySection({
   // booking; the charge is stored, and the job's class is chosen again at dispatch.
   const [vehicleClass, setVehicleClass] = useState<DeliveryVehicleClass | ''>('')
   const [gridNote, setGridNote] = useState<string | null>(null)
+  // O-28b: the zone's road-distance band is a hint for staff only; it never changes the charge.
+  const [bands, setBands] = useState<Map<string, DistanceBand>>(new Map())
+  const [bandsUnavailable, setBandsUnavailable] = useState(false)
+
+  useEffect(() => {
+    if (!sessionUserId) return
+    let mounted = true
+    fetchDistanceBands()
+      .then((result) => {
+        if (!mounted) return
+        setBands(result)
+        setBandsUnavailable(false)
+      })
+      .catch(() => {
+        if (!mounted) return
+        setBands(new Map())
+        setBandsUnavailable(true)
+      })
+    return () => { mounted = false }
+  }, [sessionUserId])
 
   // Load active delivery zones once the signed-in user is known. The action refuses a call with
   // no session context, so without this the zone list never loads.
@@ -245,6 +267,13 @@ export function DeliverySection({
                   </Select>
                 )}
               </Field>
+              {deliveryZone ? (
+                <div style={{ fontSize: 'var(--t-th)', color: 'var(--text2)' }}>
+                  {bandsUnavailable
+                    ? 'Road distance unavailable'
+                    : `Road distance from Boudha: ${formatDistanceBand(bands.get(deliveryZone))}`}
+                </div>
+              ) : null}
 
               <Field label="Vehicle class">
                 <Select

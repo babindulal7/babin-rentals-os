@@ -1,5 +1,41 @@
 # Progress Log
 
+## 2026-11-19 — O-28b: delivery zone road-distance band (migration 0248, Settings, New Rental hint)
+
+**Did**
+- Migration `0248_delivery_zone_distance_band.sql` (not applied, N-5): own table `delivery_zone_distance_bands` (zone, `min_km`, `max_km`; NULL max = open-ended, NULL min = not set), `set_delivery_zone_distance_band()` for Owner, Admin and Manager (same set as zone management, 0189), read by the staff roles, Client refused. Clearing stores NULL, nothing is deleted. `delivery_zones` is not altered. No price depends on the band.
+- `src/lib/deliveryDistanceBand.ts` (parse, validate, word the band) and `src/lib/queries/deliveryDistanceBands.ts` (read all, set one).
+- Settings ▸ Delivery zones (`DeliveryZonesControl.tsx`): each zone row shows "Road distance from Boudha: …"; create and edit forms take the lower and upper km. A failed band read is reported beside the list and does not hide the zones; a failed band save after the zone saved is reported, not swallowed.
+- New Rental (`DeliverySection.tsx`): the chosen zone's band shows as a hint under the zone field. The dropdown stays names only.
+- `DeliveryFeeGridCard.tsx`: `load()` now catches a rejected read and shows it in the card's error alert. Before, a client not yet ready left an unhandled rejection that failed `financialCreditPolicy.test.tsx` under load.
+- New `scripts/test-delivery-distance-band.mjs` (`npm run test:delivery-distance-band`), ledger row 0248, next free number 0249.
+
+**Ruled**
+- O-28b (19 Nov 2026) is already logged in the previous commit. Decisions taken here (B-1 stricter; routine engineering): writers are Owner, Admin and Manager to match zone management and the Settings gate (N-3); bands across zones are not forced to be non-overlapping (that would be a new rule). Revert = drop the table and function, delete the two UI lines.
+
+**Verified**
+- `test:delivery-distance-band`: 8/8 on PGlite under Manager, Admin, Owner, Coordinator, Warehouse and Client identities (setter allowed or refused, bad shapes refused, unknown zone refused, clear keeps the row, staff read, Client reads none, direct writes refused).
+- `npm run check:pglite`: 241/241 applied, 0 failed; view-leak, function-leak and definer-hygiene gates clean. `npm run check:lifecycle`: 76/76 green, same run, so 0248 is Verified under R-35.
+- `VITE_DATA_SOURCE=mock` vitest: `deliveryDistanceBand` 16/16, `DeliveryZonesControl` 9/9, `DeliverySection.zonePicker` 5/5, `DeliveryFeeGridCard` 3/3, `financialCreditPolicy` 1/1 with no unhandled error. A broader run over rentals booking, settings, operations, lib and delivery actions passed 310 of 311 files before the grid card fix; the one failure was the unhandled rejection fixed above.
+- `tsc --noEmit`: exit 0. `eslint --max-warnings 0` on the changed files: exit 0.
+
+**Not verified**
+- The band UI in a browser. Mock mode has no `delivery_zone_distance_bands` table, so the band read fails there and shows the note; the edit and save path ran only in component tests and PGlite.
+- Under real signed-in roles: the database branches (PGlite has no JWT).
+
+**Blocked on Babin**
+- Zone names (Z1–Z6 or area names), the two-trip rule, late-night and waiting amounts, a Car / pickup price: all `TODO(decision)` in `docs/OPEN_DECISIONS.md` §23.
+- Dropping `delivery_zones.fee_paisa`, and whether the booking charge fills from the grid.
+
+### Completion (from `npm run completion`)
+- Backend 106/106 · Real data 56 DB-only of 67 · DB enforcement 9/9 · Permissions 85/85 · Lifecycle 76/76 · Overall ≈ 97%.
+
+### Remaining
+- Features to build: 0 that are unblocked. Needs a decision first: proposing a zone from the delivery address, the two-trip rule, late-night and waiting charges.
+- Bugs to fix: 0 known.
+- Rulings open: 6 (zone names; two-trip rule; late-night and waiting amounts; Car / pickup price; drop the per-zone fee column; booking charge from the grid).
+- Next session starts with: a pass against a real Supabase project (zone list, band save, grid fill, vehicle class save), then the open rulings.
+
 ## 2026-11-18 — Settings zone context fix; component tests re-run; browser pass on the worktrees (mock mode)
 
 **Did**

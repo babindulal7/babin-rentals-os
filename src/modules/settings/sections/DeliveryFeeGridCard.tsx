@@ -32,11 +32,18 @@ export function DeliveryFeeGridCard() {
 
   const load = useCallback(async () => {
     setLoadError(null)
-    const [zoneRes, feeRes, quotedRes] = await Promise.all([
-      supabase.from('delivery_zones').select('id, name').eq('is_active', true).order('name'),
-      supabase.from('delivery_zone_vehicle_fees').select('zone_id, vehicle_class, fee_paisa'),
-      supabase.from('delivery_zone_quoted').select('zone_id, quoted'),
-    ])
+    let zoneRes, feeRes, quotedRes
+    try {
+      ;[zoneRes, feeRes, quotedRes] = await Promise.all([
+        supabase.from('delivery_zones').select('id, name').eq('is_active', true).order('name'),
+        supabase.from('delivery_zone_vehicle_fees').select('zone_id, vehicle_class, fee_paisa'),
+        supabase.from('delivery_zone_quoted').select('zone_id, quoted'),
+      ])
+    } catch (err) {
+      // A client that is not ready, or a network failure, must be shown, not left as an unhandled rejection.
+      setLoadError(err instanceof Error ? err.message : 'Unknown read error')
+      return
+    }
     if (zoneRes.error || feeRes.error || quotedRes.error) {
       setLoadError((zoneRes.error ?? feeRes.error ?? quotedRes.error)?.message ?? 'Unknown read error')
       return

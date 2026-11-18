@@ -22,6 +22,10 @@ vi.mock('../../../../lib/queries/deliveryFeeGridRead', () => ({
   fetchGridFeeState: vi.fn(async () => ({ status: 'set', feePaisa: 150000 })),
 }))
 
+vi.mock('../../../../lib/queries/deliveryDistanceBands', () => ({
+  fetchDistanceBands: vi.fn(async () => new Map([['z-in', { minKm: 3, maxKm: 7 }]])),
+}))
+
 /* O-28 and O-30: the New Rental zone picker. A zone shows its name only; the grid cell for
    the chosen zone and vehicle class fills the charge; a quoted or unset cell says so and leaves it. */
 
@@ -136,6 +140,19 @@ describe('DeliverySection zone picker (O-28, O-30)', () => {
     await settle()
     expect(fetchGridFeeState).toHaveBeenCalledWith('z-in', 'Motorbike')
     expect(setDeliveryChargePaisa).toHaveBeenCalledWith(150000)
+  })
+
+  it('shows the chosen zone road-distance band as a hint, and none before a zone is chosen (O-28b)', async () => {
+    await act(async () => {
+      root.render(<DeliverySection {...props()} />)
+    })
+    await settle()
+    expect(container.textContent).not.toContain('Road distance from Boudha')
+    await act(async () => {
+      root.render(<DeliverySection {...props({ deliveryZone: 'z-in' })} />)
+    })
+    await settle()
+    expect(container.textContent).toContain('Road distance from Boudha: over 3–7 km')
   })
 
   it('says a quoted zone is quoted per trip and leaves the charge for typing', async () => {
