@@ -8,6 +8,7 @@
 - Settings ▸ Delivery zones (`DeliveryZonesControl.tsx`): each zone row shows "Road distance from Boudha: …"; create and edit forms take the lower and upper km. A failed band read is reported beside the list and does not hide the zones; a failed band save after the zone saved is reported, not swallowed.
 - New Rental (`DeliverySection.tsx`): the chosen zone's band shows as a hint under the zone field. The dropdown stays names only.
 - `DeliveryFeeGridCard.tsx`: `load()` now catches a rejected read and shows it in the card's error alert. Before, a client not yet ready left an unhandled rejection that failed `financialCreditPolicy.test.tsx` under load.
+- Two trips (ruled 19 Nov, S2 row 2): the form already offers one trip ("Client Returns to Warehouse") or two ("Babin Rentals Pickup from Location"). The two-trip block now has its own Collection zone and Collection vehicle class; the Return Pickup Fee fills from the same grid cell and stays editable; a quoted or not-set cell says so and leaves the fee. Form-only: the fee is what is stored (in the booking instructions, as before). The road-distance hint shows for the collection zone too. `DeliverySection.tsx`; 3 new tests in `DeliverySection.zonePicker.test.tsx`.
 - New `scripts/test-delivery-distance-band.mjs` (`npm run test:delivery-distance-band`), ledger row 0248, next free number 0249.
 
 **Ruled**
@@ -36,7 +37,7 @@
 - Backend 106/106 · Real data 56 DB-only of 67 · DB enforcement 9/9 · Permissions 85/85 · Lifecycle 76/76 · Overall ≈ 97%.
 
 ### Remaining
-- Features to build: 4, all ruled and unbuilt: one-or-two-trip choice on the booking; late-night flat charge (Settings amount plus a tick on the booking); waiting charge added after the trip; outsourced-vehicle quote with an approval note. Proposing a zone from the delivery address is not ruled.
+- Features to build: 3, all ruled and unbuilt: late-night flat charge (Settings amount plus a tick on the booking); waiting charge added after the trip; outsourced-vehicle quote with an approval note. The one-or-two-trip choice is built (collection fee fills from the grid), not yet seen in a browser: mock mode has no `list_delivery_zones`, so the collection pickers do not render there. Proposing a zone from the delivery address is not ruled.
 - Bugs to fix: 0 known.
 - Rulings open: 0 from the delivery proposal.
 - Next session starts with: a pass against a real Supabase project (zone list, band save, grid fill, vehicle class save), then the open rulings.

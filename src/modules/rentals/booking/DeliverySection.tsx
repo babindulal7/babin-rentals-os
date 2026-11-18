@@ -117,6 +117,11 @@ export function DeliverySection({
   const [vehicleClass, setVehicleClass] = useState<DeliveryVehicleClass | ''>('')
   const [gridNote, setGridNote] = useState<string | null>(null)
   // O-28b: the zone's road-distance band is a hint for staff only; it never changes the charge.
+  // Two trips (Babin collects the equipment later): the collection trip is priced from its own zone
+  // and vehicle class, the same grid as the delivery. Form-only: the fee is what is stored.
+  const [returnZone, setReturnZone] = useState('')
+  const [returnVehicleClass, setReturnVehicleClass] = useState<DeliveryVehicleClass | ''>('')
+  const [returnGridNote, setReturnGridNote] = useState<string | null>(null)
   const [bands, setBands] = useState<Map<string, DistanceBand>>(new Map())
   const [bandsUnavailable, setBandsUnavailable] = useState(false)
 
@@ -182,6 +187,27 @@ export function DeliverySection({
       })
     return () => { mounted = false }
   }, [deliveryZone, vehicleClass, clientPickup, canBookingMoney, setDeliveryChargePaisa])
+
+  // The collection trip fills its own fee from the grid, the same way. A quoted or unset cell says so
+  // and leaves the fee for staff to type.
+  useEffect(() => {
+    setReturnGridNote(null)
+    if (returnPickupType !== 'Babin Pickup' || !returnZone || !returnVehicleClass || !canBookingMoney) return
+    let mounted = true
+    fetchGridFeeState(returnZone, returnVehicleClass)
+      .then((state) => {
+        if (!mounted) return
+        if (state.status === 'set') {
+          setReturnPickupChargePaisa(state.feePaisa)
+        } else {
+          setReturnGridNote(`${deliveryFeeLabel(state)} — type the fee`)
+        }
+      })
+      .catch((err: unknown) => {
+        if (mounted) setReturnGridNote(err instanceof Error ? err.message : 'Could not read the fee grid')
+      })
+    return () => { mounted = false }
+  }, [returnPickupType, returnZone, returnVehicleClass, canBookingMoney, setReturnPickupChargePaisa])
 
   const zoneName = zones.find((zone) => zone.id === deliveryZone)?.name ?? ''
 
@@ -375,6 +401,45 @@ export function DeliverySection({
                         style={inputStyle}
                       />
                     </Field>
+                    {canBookingMoney && zones.length > 0 && (
+                      <>
+                        <Field label="Collection zone">
+                          <Select
+                            value={returnZone}
+                            onChange={(e) => setReturnZone(e.target.value)}
+                            style={inputStyle}
+                          >
+                            <option value="">Select zone</option>
+                            {zones.map((zone) => (
+                              <option key={zone.id} value={zone.id}>
+                                {zone.name}
+                              </option>
+                            ))}
+                          </Select>
+                        </Field>
+                        <Field label="Collection vehicle class">
+                          <Select
+                            value={returnVehicleClass}
+                            onChange={(e) => setReturnVehicleClass(e.target.value as DeliveryVehicleClass | '')}
+                            style={inputStyle}
+                          >
+                            <option value="">Select vehicle class</option>
+                            {DELIVERY_VEHICLE_CLASSES.map((vehicleOption) => (
+                              <option key={vehicleOption} value={vehicleOption}>
+                                {vehicleOption}
+                              </option>
+                            ))}
+                          </Select>
+                        </Field>
+                        {returnZone ? (
+                          <div style={{ fontSize: 'var(--t-th)', color: 'var(--text2)', gridColumn: '1 / -1' }}>
+                            {bandsUnavailable
+                              ? 'Road distance unavailable'
+                              : `Road distance from Boudha: ${formatDistanceBand(bands.get(returnZone))}`}
+                          </div>
+                        ) : null}
+                      </>
+                    )}
                     <Field label="Return Pickup Fee (Rs)">
                       <Input
                         type="number"
@@ -384,6 +449,11 @@ export function DeliverySection({
                         placeholder="Fee"
                         style={inputStyle}
                       />
+                      {returnGridNote && (
+                        <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)', marginTop: 4 }}>
+                          {returnGridNote}
+                        </span>
+                      )}
                     </Field>
                   </div>
                 )}

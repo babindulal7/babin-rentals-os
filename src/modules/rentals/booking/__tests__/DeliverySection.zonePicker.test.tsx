@@ -155,6 +155,63 @@ describe('DeliverySection zone picker (O-28, O-30)', () => {
     expect(container.textContent).toContain('Road distance from Boudha: over 3–7 km')
   })
 
+  const allSelectsWithOption = (optionText: string): HTMLSelectElement[] =>
+    Array.from(container.querySelectorAll('select')).filter((s) =>
+      Array.from(s.options).some((o) => o.textContent?.trim() === optionText),
+    ) as HTMLSelectElement[]
+
+  it('fills the collection fee from the grid for its own zone and vehicle class (two trips)', async () => {
+    const setReturnPickupChargePaisa = vi.fn()
+    await act(async () => {
+      root.render(<DeliverySection {...props({ returnPickupType: 'Babin Pickup', setReturnPickupChargePaisa })} />)
+    })
+    await settle()
+    // The collection pickers are the second zone and vehicle selects; the first pair is the delivery.
+    const [, collectionZone] = allSelectsWithOption('Inside Ring Road')
+    const [, collectionVehicle] = allSelectsWithOption('Motorbike')
+    expect(collectionZone).toBeDefined()
+    expect(collectionVehicle).toBeDefined()
+    await act(async () => {
+      choose(collectionZone!, 'z-in')
+    })
+    await act(async () => {
+      choose(collectionVehicle!, 'Van / larger vehicle')
+    })
+    await settle()
+    expect(fetchGridFeeState).toHaveBeenCalledWith('z-in', 'Van / larger vehicle')
+    expect(setReturnPickupChargePaisa).toHaveBeenCalledWith(150000)
+  })
+
+  it('says so and leaves the collection fee for typing when its cell is quoted or not set', async () => {
+    vi.mocked(fetchGridFeeState).mockResolvedValue({ status: 'not-set' })
+    const setReturnPickupChargePaisa = vi.fn()
+    await act(async () => {
+      root.render(<DeliverySection {...props({ returnPickupType: 'Babin Pickup', setReturnPickupChargePaisa })} />)
+    })
+    await settle()
+    const [, collectionZone] = allSelectsWithOption('Inside Ring Road')
+    const [, collectionVehicle] = allSelectsWithOption('Motorbike')
+    await act(async () => {
+      choose(collectionZone!, 'z-in')
+    })
+    await act(async () => {
+      choose(collectionVehicle!, 'Motorbike')
+    })
+    await settle()
+    expect(container.textContent).toContain('Delivery fee not set — type the fee')
+    expect(setReturnPickupChargePaisa).not.toHaveBeenCalled()
+    vi.mocked(fetchGridFeeState).mockResolvedValue({ status: 'set', feePaisa: 150000 })
+  })
+
+  it('shows no collection pickers when the client returns the equipment (one trip)', async () => {
+    await act(async () => {
+      root.render(<DeliverySection {...props({ returnPickupType: 'Client Return' })} />)
+    })
+    await settle()
+    expect(container.textContent).not.toContain('Collection zone')
+    expect(container.textContent).not.toContain('Return Pickup Fee')
+  })
+
   it('says a quoted zone is quoted per trip and leaves the charge for typing', async () => {
     vi.mocked(fetchGridFeeState).mockResolvedValueOnce({ status: 'quoted-per-trip' })
     const setDeliveryChargePaisa = vi.fn()
