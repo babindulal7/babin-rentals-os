@@ -212,6 +212,70 @@ describe('DeliverySection zone picker (O-28, O-30)', () => {
     expect(container.textContent).not.toContain('Return Pickup Fee')
   })
 
+  it('offers the outsourced-vehicle quote only to money-visible callers that wire it (S2 row 8)', async () => {
+    const wired = { setOutsourced: vi.fn(), setOutsourcedVendor: vi.fn(), setOutsourcedNote: vi.fn() }
+    await act(async () => {
+      root.render(<DeliverySection {...props()} />)
+    })
+    await settle()
+    expect(container.textContent).not.toContain('Outsourced vehicle')
+
+    await act(async () => {
+      root.render(<DeliverySection {...props({ ...wired, canBookingMoney: false })} />)
+    })
+    await settle()
+    expect(container.textContent).not.toContain('Outsourced vehicle')
+
+    await act(async () => {
+      root.render(<DeliverySection {...props(wired)} />)
+    })
+    await settle()
+    expect(container.textContent).toContain('Outsourced vehicle (manual quote)')
+    expect(container.textContent).not.toContain('Quote approval note')
+  })
+
+  it('ticking the box reveals the vendor and approval note, and sends what is typed', async () => {
+    const setOutsourced = vi.fn()
+    const setOutsourcedVendor = vi.fn()
+    const setOutsourcedNote = vi.fn()
+    await act(async () => {
+      root.render(
+        <DeliverySection
+          {...props({ outsourced: false, setOutsourced, setOutsourcedVendor, setOutsourcedNote })}
+        />,
+      )
+    })
+    await settle()
+    const box = container.querySelector('input[type="checkbox"]') as HTMLInputElement
+    await act(async () => {
+      box.click()
+    })
+    expect(setOutsourced).toHaveBeenCalledWith(true)
+
+    await act(async () => {
+      root.render(
+        <DeliverySection
+          {...props({ outsourced: true, setOutsourced, setOutsourcedVendor, setOutsourcedNote })}
+        />,
+      )
+    })
+    await settle()
+    expect(container.textContent).toContain('Quote approval note')
+    const vendor = container.querySelector('input[placeholder="Who is providing the vehicle"]') as HTMLInputElement
+    const note = container.querySelector('input[placeholder="e.g. Quote confirmed by phone"]') as HTMLInputElement
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+    await act(async () => {
+      setter?.call(vendor, 'Test Cargo')
+      vendor.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    await act(async () => {
+      setter?.call(note, 'Confirmed by phone')
+      note.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    expect(setOutsourcedVendor).toHaveBeenCalledWith('Test Cargo')
+    expect(setOutsourcedNote).toHaveBeenCalledWith('Confirmed by phone')
+  })
+
   it('says a quoted zone is quoted per trip and leaves the charge for typing', async () => {
     vi.mocked(fetchGridFeeState).mockResolvedValueOnce({ status: 'quoted-per-trip' })
     const setDeliveryChargePaisa = vi.fn()

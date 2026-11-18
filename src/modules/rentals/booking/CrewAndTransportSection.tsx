@@ -21,6 +21,10 @@ export interface TransportDetails {
   deliveryChargePaisa: Paisa
   fuelChargePaisa: Paisa
   transportPaisa: Paisa
+  /** S2 row 8: the delivery vehicle is outsourced; the typed delivery charge is the manual quote. */
+  outsourcedVehicle?: boolean | undefined
+  outsourcedVendor?: string | undefined
+  outsourcedNote?: string | undefined
 }
 
 export interface CrewAndTransportSectionProps {
@@ -165,6 +169,12 @@ export function CrewAndTransportSection({
         fuelChargePaisa={transport.fuelChargePaisa}
         setFuelChargePaisa={(val) => onUpdateTransport({ fuelChargePaisa: val })}
         transportPaisa={transport.transportPaisa}
+        outsourced={transport.outsourcedVehicle ?? false}
+        setOutsourced={(val) => onUpdateTransport({ outsourcedVehicle: val })}
+        outsourcedVendor={transport.outsourcedVendor ?? ''}
+        setOutsourcedVendor={(val) => onUpdateTransport({ outsourcedVendor: val })}
+        outsourcedNote={transport.outsourcedNote ?? ''}
+        setOutsourcedNote={(val) => onUpdateTransport({ outsourcedNote: val })}
         canBookingMoney={canBookingMoney}
         {...(deliveryTitle ? { title: deliveryTitle } : {})}
       />

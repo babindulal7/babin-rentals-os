@@ -4,6 +4,7 @@ import { createRental, deliveryTypeFromLabel, type BookingLineType } from '../..
 import { convertDraft, saveDraft as persistRentalDraft, type RentalDraftData } from '../../../actions/rentals/saveDraft'
 import { transportInstructions } from '../../../lib/bookingTransportForm'
 import { setBookingDeliveryZone } from '../../../lib/queries/bookingDeliveryZone'
+import { checkOutsourcedVehicleQuote, recordOutsourcedVehicleQuote } from '../../../lib/queries/outsourcedVehicleQuote'
 import { bookingDiscountRows } from '../../../lib/bookingDiscountRows'
 import type { ClientActiveMembership } from '../../../lib/queries/membership'
 import { toRupees, type Paisa } from '../../../lib/money'
@@ -42,6 +43,8 @@ export interface UseNewRentalSubmitOptions {
   deliveryType: 'Client Pickup' | 'Babin Delivery'
   /** Zone id chosen at booking (O-30). Empty when none chosen or the booking is a client pickup. */
   deliveryZone?: string
+  /** S2 row 8: the delivery vehicle is outsourced. The typed delivery charge is the manual quote; this is the vendor and the approval note. */
+  outsourcedVehicle?: { vendor: string; note: string } | null
   pricing: PricingPipelineResult
   manualDiscountReason: string
   manualDiscountAuthorizedBy: string
@@ -139,6 +142,7 @@ export function useNewRentalSubmit({
   returnAt,
   deliveryType,
   deliveryZone = '',
+  outsourcedVehicle = null,
   pricing,
   manualDiscountReason,
   manualDiscountAuthorizedBy,
@@ -172,6 +176,7 @@ export function useNewRentalSubmit({
   const discountKeys = useRef<string[]>([])
   const crewKeys = useRef<string[]>([])
   const transportKey = useRef<string | null>(null)
+  const outsourcedKey = useRef<string | null>(null)
   const confirming = useRef(false)
   const quoteSaving = useRef(false)
   const quoteCreated = useRef<{ id: string; no: string; stage?: string } | null>(null)
@@ -191,6 +196,13 @@ export function useNewRentalSubmit({
       if (!clientDbId || !pickupAt || !returnAt) {
         throw new Error('this booking has no client record or no usable dates')
       }
+      // S2 row 8: an outsourced vehicle needs a vendor, a typed quote and an approval note BEFORE the
+      // booking exists, so nothing is half-created when one is missing.
+      const outsourcedCheck =
+        !clientPickup && outsourcedVehicle
+          ? checkOutsourcedVehicleQuote(outsourcedVehicle.vendor, deliveryChargePaisa, outsourcedVehicle.note)
+          : null
+      if (outsourcedCheck && !outsourcedCheck.ok) throw new Error(outsourcedCheck.error)
 
       const { data: userRow, error: userErr } = await supabase
         .from('users')
@@ -363,6 +375,15 @@ export function useNewRentalSubmit({
       if (!clientPickup && deliveryZone) {
         await setBookingDeliveryZone(created.bookingId, deliveryZone)
       }
+      // S2 row 8: record the manual quote and the approver's note on the booking (audit-logged by the
+      // database). Idempotent on (booking, key), so a retry repeats safely.
+      if (outsourcedCheck && outsourcedCheck.ok) {
+        await recordOutsourcedVehicleQuote(
+          created.bookingId,
+          outsourcedKey.current ?? (outsourcedKey.current = newClientUuid()),
+          outsourcedCheck.quote,
+        )
+      }
       return { id: created.bookingId, no: created.bookingNo, stage: created.stage }
     },
     [
@@ -380,6 +401,7 @@ export function useNewRentalSubmit({
       draftBookingNo,
       deliveryType,
       deliveryZone,
+      outsourcedVehicle,
       pricing,
       manualDiscountReason,
       manualDiscountAuthorizedBy,
@@ -456,6 +478,7 @@ export function useNewRentalSubmit({
         discountKeys.current = []
         crewKeys.current = []
         transportKey.current = null
+        outsourcedKey.current = null
         setSaveState('saved')
         const label = bookedNo.startsWith('BK-') || bookedNo.startsWith('Rental ') ? bookedNo : `Rental ${bookedNo}`
         showSuccessToast?.('Booking Confirmed', `${label} is now Booked`)
@@ -546,6 +569,7 @@ export function useNewRentalSubmit({
         discountKeys.current = []
         crewKeys.current = []
         transportKey.current = null
+        outsourcedKey.current = null
         setSaveState('saved')
         const label = quote.no.startsWith('BK-') || quote.no.startsWith('Rental ') ? quote.no : `Rental ${quote.no}`
         showSuccessToast?.('Quote saved', `${label} is saved as a Quote`)

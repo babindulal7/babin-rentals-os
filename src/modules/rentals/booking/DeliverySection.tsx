@@ -64,6 +64,14 @@ export interface DeliverySectionProps {
   fuelChargePaisa: Paisa
   setFuelChargePaisa: (val: Paisa) => void
   transportPaisa: Paisa
+  /* S2 row 8: an outsourced vehicle is a manual quote with an approval note. All optional: a caller that
+     does not pass the setters (edit screens, older tests) simply gets no outsourced-vehicle block. */
+  outsourced?: boolean | undefined
+  setOutsourced?: ((val: boolean) => void) | undefined
+  outsourcedVendor?: string | undefined
+  setOutsourcedVendor?: ((val: string) => void) | undefined
+  outsourcedNote?: string | undefined
+  setOutsourcedNote?: ((val: string) => void) | undefined
   canBookingMoney: boolean
   title?: string | undefined
 }
@@ -102,6 +110,12 @@ export function DeliverySection({
   fuelChargePaisa,
   setFuelChargePaisa,
   transportPaisa,
+  outsourced = false,
+  setOutsourced,
+  outsourcedVendor = '',
+  setOutsourcedVendor,
+  outsourcedNote = '',
+  setOutsourcedNote,
   canBookingMoney,
   title = 'Delivery & Transport',
 }: DeliverySectionProps) {
@@ -370,6 +384,47 @@ export function DeliverySection({
                   style={{ ...inputStyle, minHeight: 76, padding: '9px 11px', resize: 'vertical', lineHeight: 1.45 }}
                 />
               </Field>
+
+              {/* Outsourced vehicle (S2 row 8): the typed delivery charge is the manual quote. */}
+              {canBookingMoney && setOutsourced && setOutsourcedVendor && setOutsourcedNote && (
+                <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--t-meta)', fontWeight: 500 }}>
+                    <input
+                      type="checkbox"
+                      checked={outsourced}
+                      onChange={(e) => setOutsourced(e.target.checked)}
+                      style={{ width: 18, height: 18 }}
+                    />
+                    <span>Outsourced vehicle (manual quote)</span>
+                  </label>
+                  {outsourced && (
+                    <div style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : '1fr 1fr', gap: 9, marginTop: 9 }}>
+                      <Field label="Vendor">
+                        <Input
+                          value={outsourcedVendor}
+                          onChange={(e) => setOutsourcedVendor(e.target.value)}
+                          placeholder="Who is providing the vehicle"
+                          maxLength={120}
+                          style={inputStyle}
+                        />
+                      </Field>
+                      <Field label="Quote approval note">
+                        <Input
+                          value={outsourcedNote}
+                          onChange={(e) => setOutsourcedNote(e.target.value)}
+                          placeholder="e.g. Quote confirmed by phone"
+                          maxLength={500}
+                          style={inputStyle}
+                        />
+                      </Field>
+                      <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)', gridColumn: '1 / -1' }}>
+                        Type the quoted amount in Delivery Charge. Your name and this note are saved with the booking and the
+                        audit log.
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Return Pickup Logistics */}
               <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
