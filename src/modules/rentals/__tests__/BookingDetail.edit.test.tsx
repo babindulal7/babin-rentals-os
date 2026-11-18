@@ -300,11 +300,11 @@ describe('Law 1 — the money on screen is the invoice’s, not the screen’s',
 })
 
 describe('Law 16 — no fake affordances over missing reads', () => {
-  it('offers Edit only as Unavailable-with-reason — inline edit went with the seed', async () => {
+  it('offers Edit booking for confirmed bookings (T3-18) — inline edit went with the seed', async () => {
     await mount('B-715')
-    const edit = buttons('Edit')[0]
+    const edit = buttons('Edit booking')[0]
     expect(edit).toBeDefined()
-    expect(edit?.disabled).toBe(true)
+    expect(edit?.disabled).toBe(false)
     // No inline-edit field is mounted anywhere.
     expect(container.querySelector('[id^="edit-"]')).toBeNull()
   })
