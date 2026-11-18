@@ -6,7 +6,8 @@ Babin ruled the grid (9 Nov 2026): zone × vehicle, twelve Settings values, outs
 
 - **O-28 (Q-1), ANSWERED 18 Nov 2026: the grid replaces the per-zone fee.** Dispatch moves to the grid; the per-zone fee on delivery_zones is retired. Build pending (dispatch wiring). Does the grid replace the existing per-zone fee on delivery_zones (migration 0189, fee_paisa default 0), or do both stay? Until answered, dispatch still uses the old zone fee and the hard-coded Rs 1,500 at src/actions/delivery/createDeliveryJob.ts:57 (mock path) remains.
 - **O-29 (Q-2), ANSWERED 18 Nov 2026: Manager and Owner may type grid amounts.** Built in migration 0244 (set RPC allows Owner and Manager). The quoted flag stays Owner-only. Who may type grid amounts: Owner only (built, stricter under B-1) or Manager and up (the 0189 zone-fee rule)?
-- **O-30 (Q-3, TODO(decision)):** How does a delivery job get its zone (Inside Ring Road, Outside Ring Road, Far valley, Outside valley)? Set at booking, at dispatch, or from the address? Not ruled.
+- **O-30 (Q-3), ANSWERED 18 Nov 2026: staff pick the zone at booking; delivery jobs inherit it.** Build pending: a zone field on the booking (migration and booking form), then O-28 dispatch wiring reads the grid by that zone and the job's vehicle.
+- **O-30 (original question):** How does a delivery job get its zone (Inside Ring Road, Outside Ring Road, Far valley, Outside valley)? Set at booking, at dispatch, or from the address? Not ruled.
 
 ## 5 November 2026 — Glossary editing in Settings (O-22)
 
