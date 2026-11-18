@@ -1,6 +1,6 @@
 # Progress Log
 
-## 2026-11-18 — Settings zone context fix; component tests re-run for all three checks; browser pass still open
+## 2026-11-18 — Settings zone context fix; component tests re-run; browser pass on the worktrees (mock mode)
 
 **Did**
 - `DeliveryZonesControl.tsx` (commit 8fef0ec4): the list, create, update and deactivate calls now pass the signed-in user's id and role. Before, all four were refused by the action core ("called without a session context").
@@ -13,9 +13,13 @@
 - `npm run check:pglite`: exit 0 (view-leak, function-leak and definer-hygiene gates clean).
 - `npm run check:lifecycle`: 76/76 green.
 - `npm run lint:progress`: passes.
+- Browser, mock mode, signed in as the mock Owner, worktree code served by `npm run dev:mock` (r-9-18 on port 3000, r-9-6 on port 3101):
+  - New Rental ▸ Crew & delivery ▸ Delivery Type "Babin Delivery": the old "called without a session context" error is gone, and the new "Vehicle class" select (Motorbike, Car / pickup, Van / larger vehicle) shows. The zone list itself shows "[mock] rpc("list_delivery_zones") is not implemented in the local store".
+  - Operations ▸ Delivery ▸ Assign (DEL-2604): the sheet shows "Vehicle class (sets the fee from the grid)", default "Not chosen". With a driver name and "Van / larger vehicle", Save & Assign assigned the driver (the row shows it) and showed inline "Driver assigned, but the vehicle class was not saved: … set_delivery_job_vehicle_class is not implemented in the local store"; the sheet stayed open. This is the designed failure path.
+  - Settings ▸ Cancellation fees (r-9-6): empty state "No bands entered"; adding 48 h / 50 % showed "48h notice — 50% fee" with a "Retire 48h band" button; retiring it returned to the empty state. No console errors.
 
 **Not verified**
-- Browser pass of the New Rental zone picker, the assign sheet and the cancellation band UI. The preview tool's `babin-mock` config serves the main checkout, so the worktree code could not be driven in a browser from this session. The component tests above use mocked actions and mocked Supabase only.
+- Picking a zone and a vehicle class to fill the delivery charge from the grid, and saving a vehicle class successfully: mock mode has no `list_delivery_zones` or `set_delivery_job_vehicle_class`, so those success paths ran only in component tests (mocked actions).
 - Under real signed-in roles: the database branches (PGlite has no JWT).
 
 **Blocked on Babin (not startable without him)**
@@ -29,7 +33,7 @@
 - Features to build: 0.
 - Bugs to fix: 0 new.
 - Rulings open: 2 (drop the per-zone fee column; booking charge from the grid). Both wait on Babin.
-- Next session starts with: a browser pass of the worktree on port 3100 (r-9-18) and port 3101 (r-9-6), once the preview config points at the worktree.
+- Next session starts with: the two rulings, then a pass against a real Supabase project (zone list, grid fill, vehicle class save), which mock mode cannot show.
 
 ## 2026-11-18 — Browser attempt on the zone picker found a broken zone list; fixed; component tests added
 
