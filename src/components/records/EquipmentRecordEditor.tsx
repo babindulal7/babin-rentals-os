@@ -1025,6 +1025,17 @@ export function EquipmentRecordEditor({
           />
           <span>Available for rental (item can be picked and booked in rental quotes)</span>
         </label>
+
+        <label className="record-field record-field--inline equipment-form-span-full" htmlFor="record-allow_overbooking">
+          <input
+            id="record-allow_overbooking"
+            type="checkbox"
+            disabled={busy}
+            checked={Boolean(values.allow_overbooking ?? false)}
+            onChange={(e) => set('allow_overbooking', e.target.checked)}
+          />
+          <span>Allow overbooking (accept demand past free stock as a shortage; unreserves short qty, blocks pack until covered)</span>
+        </label>
       </div>
       {sectionSaveBar('Pricing & Rental')}
     </RecordSection>

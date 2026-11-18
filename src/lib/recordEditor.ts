@@ -34,14 +34,14 @@ export const recordFields: Record<RecordKind, RecordField[]> = {
     field('tracking_mode','Tracking mode','Stock & Units',{type:'select',options:['Serialised','Quantity','Consumable'],createOnly:true}),field('total_quantity','Initial quantity','Stock & Units',{type:'number',createOnly:true}),field('quantity_unit','Quantity unit','Stock & Units',{type:'select',options:['piece','metre','roll','pack']}),field('reorder_level','Reorder level','Stock & Units',{type:'number'}),
     field('purchase_date','Purchase date','Purchase',{type:'date'}),field('purchase_price','Purchase price','Purchase',{type:'money'}),field('replacement_value','Replacement value','Purchase',{type:'money'}),
     ...['daily','weekly','monthly','hourly','weekend'].map(period=>field(`${period}_rate`,`${period[0]?.toUpperCase()}${period.slice(1)} rate`,'Pricing & Rental',{type:'money'})),
-    field('deposit_percent','Deposit percent','Pricing & Rental',{type:'number'}),field('deposit_fixed','Fixed deposit','Pricing & Rental',{type:'money'}),field('min_rental_days','Minimum rental days','Pricing & Rental',{type:'number'}),field('rental_enabled','Available for rental','Pricing & Rental',{type:'checkbox'}),
+    field('deposit_percent','Deposit percent','Pricing & Rental',{type:'number'}),field('deposit_fixed','Fixed deposit','Pricing & Rental',{type:'money'}),field('min_rental_days','Minimum rental days','Pricing & Rental',{type:'number'}),field('rental_enabled','Available for rental','Pricing & Rental',{type:'checkbox'}),field('allow_overbooking','Allow overbooking','Pricing & Rental',{type:'checkbox'}),
     field('prep_time_minutes','Preparation minutes','Maintenance & Documents',{type:'number'}),field('cleaning_time_minutes','Cleaning minutes','Maintenance & Documents',{type:'number'}),field('inspection_required','Inspection required','Maintenance & Documents',{type:'checkbox'}),field('packing_required','Packing required','Maintenance & Documents',{type:'checkbox'}),field('notes_internal','Internal notes','Maintenance & Documents',{type:'textarea'}),field('notes_warehouse','Warehouse notes','Maintenance & Documents',{type:'textarea'}),
   ],
   bundle: [field('name','Bundle name','Identity',{required:true}),field('description','Description','Identity',{type:'textarea'}),field('category_id','Category','Identity',{type:'select',source:'categories'}),field('daily_rate','Daily rate','Rates',{type:'money'}),field('weekly_rate','Weekly rate','Rates',{type:'money'})],
 }
 export const recordDefaults: Record<RecordKind, RecordValues> = {
   client:{type_parent:'Organisation',org_subtype:'Production House',country:'Nepal',name:'',phone:''},
-  equipment:{name:'',brand:'',tracking_mode:'Serialised',total_quantity:0,quantity_unit:'piece',min_rental_days:1,rental_enabled:true,inspection_required:true,packing_required:true,prep_time_minutes:0,cleaning_time_minutes:0},
+  equipment:{name:'',brand:'',tracking_mode:'Serialised',total_quantity:0,quantity_unit:'piece',min_rental_days:1,rental_enabled:true,allow_overbooking:false,inspection_required:true,packing_required:true,prep_time_minutes:0,cleaning_time_minutes:0},
   bundle:{name:''},
 }
 export function validateRecord(kind: RecordKind, values: RecordValues): Record<string,string> {

@@ -1410,7 +1410,7 @@ export function AddItemPanel({
       <OverbookingOverrideModal
         isOpen={overrideUnit !== null}
         unit={overrideUnit}
-        allowOverbooking={allowOverbooking}
+        allowOverbooking={overrideUnit?.allowOverbooking ?? allowOverbooking}
         showPrices={showPrices}
         onClose={() => setOverrideUnit(null)}
         onOverbook={(unit) => addEquipment(unit)}
@@ -1882,7 +1882,8 @@ function EquipmentGroupRow({
    * clicking does nothing at all. When the valve is on, the click opens the
    * override dialog on the first unit not already booked instead.
    */
-  const canFallback = allowOverbooking || Boolean(onSubRent)
+  const rowAllowsOverbooking = group.allowOverbooking ?? allowOverbooking
+  const canFallback = rowAllowsOverbooking || Boolean(onSubRent)
   const overrideCandidate =
     !group.autoPick && canFallback ? (group.units.find((u) => !existing.has(u.id)) ?? null) : null
 
@@ -1909,9 +1910,9 @@ function EquipmentGroupRow({
           : group.autoPick
             ? 'Press Enter to add the least-used free unit.'
             : overrideCandidate
-              ? allowOverbooking && onSubRent
+              ? rowAllowsOverbooking && onSubRent
                 ? 'Nothing free for these dates. Opens the sub-rent and overbooking options.'
-                : allowOverbooking
+                : rowAllowsOverbooking
                   ? 'Nothing free for these dates. Opens the overbooking options.'
                   : 'Nothing free for these dates. Opens the sub-rent options.'
               : 'Nothing free for these dates.'
@@ -2114,7 +2115,8 @@ function EquipmentGroupRow({
                 u.status !== 'Maintenance'
               const onBooking = existing.has(u.id)
               const why = `${u.status ?? u.availability.detail}${u.committedTo !== '—' ? ` · ${u.committedTo}` : ''}`
-              const canFallbackUnit = allowOverbooking || Boolean(onSubRent)
+              const unitAllowsOverbooking = u.allowOverbooking ?? group.allowOverbooking ?? allowOverbooking
+              const canFallbackUnit = unitAllowsOverbooking || Boolean(onSubRent)
               const opensOverride = !free && !onBooking && canFallbackUnit
               const tappable = (free && !onBooking) || opensOverride || isSubRentalMode
               return (
@@ -2131,9 +2133,9 @@ function EquipmentGroupRow({
                         : free
                           ? `Add unit ${u.serial} (Free)`
                           : opensOverride
-                            ? allowOverbooking && onSubRent
+                            ? unitAllowsOverbooking && onSubRent
                               ? `${u.serial} · ${why} (Click to sub-rent or override)`
-                              : allowOverbooking
+                              : unitAllowsOverbooking
                                 ? `${u.serial} · ${why} (Click to override)`
                                 : `${u.serial} · ${why} (Click to sub-rent)`
                             : `${u.serial} · ${why}`
@@ -2146,9 +2148,9 @@ function EquipmentGroupRow({
                         : free
                           ? `Add unit with serial ${u.serial}`
                           : opensOverride
-                            ? allowOverbooking && onSubRent
+                            ? unitAllowsOverbooking && onSubRent
                               ? `${u.serial} — booked. ${why}. Opens sub-rent and overbooking options.`
-                              : allowOverbooking
+                              : unitAllowsOverbooking
                                 ? `${u.serial} — booked. ${why}. Opens overbooking options.`
                                 : `${u.serial} — booked. ${why}. Opens sub-rent options.`
                             : `${u.serial} — booked, not tappable. ${why}`

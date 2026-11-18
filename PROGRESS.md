@@ -1,5 +1,65 @@
 # Progress Log
 
+## 2026-11-18 — T2-23: Allow overbooking on chosen products (Lane A / Windows Batch 02)
+
+**Did**
+- Implemented **T2-23 · Allow overbooking on chosen products (safe shortage handling)** (`feat/windows-t2-23-product-overbooking`):
+  - Authored migration `supabase/migrations/0244_allow_overbooking_on_chosen_products.sql`:
+    - Added `products.allow_overbooking boolean not null default false` with column grant to `authenticated`.
+    - Added `booking_lines.short_quantity integer not null default 0` with column grant to `authenticated`.
+    - Extended `booking_at_risk.cause` check constraint to include `'overbooking_shortage'`.
+    - Added `'allow_overbooking'` to `record_editor_private.fields('equipment')` and `section_fields('equipment', 'pricing')`.
+    - Extended `public.products_v` view exposing `allow_overbooking` at the end of the SELECT list.
+    - Added `public.get_available_product_capacity(p_product_id, p_period, p_ignore_booking_id)` helper function.
+    - Added trigger `trg_a_enforce_pack_shortage_gate` on `booking_stage_transitions` refusing `Packed` or `On Rent` when `short_quantity > 0` or unresolved `overbooking_shortage` exists (`GATE:gate.pack.shortage`).
+    - Updated `public.resolve_booking_at_risk` to clear `booking_lines.short_quantity = 0` when resolving an `overbooking_shortage`.
+    - Updated `public.reservations_follow_stage_transition` (preserving turnaround window from 0240) to account for `short_quantity` so uncovered short demand never requests excess quantity holds and passes coverage check.
+    - Updated `public.confirm_booking_atomic` to evaluate free capacity atomically, allocate up to free capacity, record excess as `short_quantity`, log in `booking_at_risk`, and prune colliding/excess pre-assigned units.
+    - Strictly preserved non-deferrable GiST exclusion constraint (`inventory_reservations_no_double_booking`).
+  - Frontend Types & Storage:
+    - Updated `src/types/database.ts` and `src/types/supabase.ts` with `allow_overbooking` and `short_quantity`.
+    - Updated `src/lib/recordEditor.ts` and `src/components/records/EquipmentRecordEditor.tsx`: accessible toggle in Equipment edit form for Owner, Admin, Manager.
+    - Updated `src/modules/inventory/modals/BulkEditProductsModal.tsx` to support bulk updating `allow_overbooking`.
+    - Removed legacy localStorage switch in `src/modules/settings/sections/shared.tsx` (`br.bookingRules.allowOverbooking`), replacing with `<NotBuilt>` pointing to per-product setting on Equipment form (T2-23).
+  - Catalogue, Availability, and Shortage UI:
+    - Extended `src/lib/queries/inventory.ts`, `src/modules/rentals/booking/itemCatalogue.ts`, `AddItemPanel.tsx`, and `OverbookingOverrideModal.tsx` to read per-product `allowOverbooking`.
+    - Updated `src/lib/queries/availability.ts` (`readProductModes`, `planAssignment`): handles lines allowing overbooking by calculating available quantity and `shortQty` without failing assignment.
+    - Updated `src/lib/queries/bookings.ts` (`FloorLine.shortQty`) and `src/lib/queries/atRisk.ts` (`'overbooking_shortage'`).
+    - Updated `src/modules/rentals/BookingDetail.tsx` with shortage alert banner, status badge, and link to `ResolveAtRiskModal`.
+    - Updated `src/modules/rentals/LineItemTree.tsx` to display durable shortage badges (`1 short — sub-rent or swap` / `1 short`) on packages, child items, and loose lines.
+  - Verification & Regressions:
+    - Added lifecycle steps `L85` ("past stock without the switch is refused"), `L86` ("with the switch: confirmed with a short line and no reservation"), and `L87` ("Pack refuses a short line; resolving clears shortage and allows Pack") in `scripts/e2e-lifecycle.mjs` (88/88 green).
+    - `npm run check:pglite`: 242/242 migrations applied from scratch, 0 leaks, 0 failures.
+    - `npm run check:lifecycle`: 88/88 steps green.
+    - `npm run check:security`: 18/18 SQL regressions + 14/14 Reset branch boundary + operations grants PASS.
+    - `npm run check:contrast`: 97/97 WCAG AA checks PASS.
+    - `npm run lint:shell`: 912 files checked, PASS.
+    - `npm run lint:ui-copy`: 0 developer-text violations, all i18n tests PASS.
+    - `npm run test:server-contracts`: 68/68 assertions PASS.
+    - `npm run test:partial-return`: 58/58 assertions PASS.
+    - `npm run build`: `tsc --noEmit && vite build` built in 1m 8s with 0 errors.
+    - `npm test`: 657 test files, 7,388 tests passed, 0 failed.
+    - Authored design decision `docs/decisions/T2-23-product-overbooking.md`.
+    - Updated `docs/plans/T2_FLOOR.md` and `docs/plans/MIGRATION_LEDGER.md`.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 108 / 109 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | +0 |
+| Lifecycle | steps green / total | 88 / 88 (100%) | +3 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 242 files · check:pglite 242/242 applied, 0 failed (recorded 2026-11-18T11:11:36.922Z). Suite: PASS — 7388/7388 passed, 0 failed (recorded 2026-11-18T12:15:28.929Z); source fingerprint matches.
+Coverage suite: PASS — 7380/7380 passed, 0 failed (recorded 2026-11-18T07:12:47.627Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-18T11:14:12.333Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Windows Batch 02: T2-23 completed and verified green. Next card in sequence.
+
 ## 2026-11-18 — T3-18: Change a confirmed booking (Lane C)
 
 **Did**

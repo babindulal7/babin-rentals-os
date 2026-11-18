@@ -4,7 +4,7 @@ export interface BookingAtRiskRow {
   id: string
   booking_id: string
   booking_no: string
-  cause: 'extension_clash' | 'late_return' | 'marked_will_be_late'
+  cause: 'extension_clash' | 'late_return' | 'marked_will_be_late' | 'overbooking_shortage'
   clashing_booking_id?: string | null
   clashing_booking_no?: string | null
   product_id?: string | null
