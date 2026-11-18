@@ -91,4 +91,6 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0242 | T2-19 | return-damage-signature-and-refusal | lane-a/T2-19-signature-at-return-when-damage-is-found | verified (check:pglite 239/239 + check:lifecycle 80/80 Step L78-L79) |
 | 0243 | T3-18 | change-confirmed-booking | lane-c/T3-18-change-confirmed-booking | verified (check:pglite 241/241 + check:lifecycle 85/85 Step L82-L84) |
 
+| 0244 | T3-14 | draft-invoice-source-guard | lane-c/T3-14-draft-resync-integrity | claimed |
+
 ## Expected migrations (not yet claimed)
