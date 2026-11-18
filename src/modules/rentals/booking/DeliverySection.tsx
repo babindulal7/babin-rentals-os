@@ -5,6 +5,7 @@ import { Field, Section, MoneyRow, inputStyle } from './BookingFormWidgets'
 import { formatMoney, rupees, type Paisa } from '../../../lib/money'
 import { listDeliveryZones, type DeliveryZoneRow } from '../../../actions/deliveryZones/listDeliveryZones'
 import { fetchGridFeeState } from '../../../lib/queries/deliveryFeeGridRead'
+import { useAuth } from '../../../lib/auth'
 import {
   DELIVERY_VEHICLE_CLASSES,
   deliveryFeeLabel,
@@ -102,6 +103,10 @@ export function DeliverySection({
   canBookingMoney,
   title = 'Delivery & Transport',
 }: DeliverySectionProps) {
+  const { user } = useAuth()
+  // Primitives, not the user object: the effect below must not rerun on every render.
+  const sessionUserId = user?.id ?? null
+  const sessionRole = user?.role ?? null
   const [zones, setZones] = useState<DeliveryZoneRow[]>([])
   const [zonesLoading, setZonesLoading] = useState(true)
   const [zoneError, setZoneError] = useState<string | null>(null)
@@ -110,11 +115,13 @@ export function DeliverySection({
   const [vehicleClass, setVehicleClass] = useState<DeliveryVehicleClass | ''>('')
   const [gridNote, setGridNote] = useState<string | null>(null)
 
-  // Load active delivery zones on mount
+  // Load active delivery zones once the signed-in user is known. The action refuses a call with
+  // no session context, so without this the zone list never loads.
   useEffect(() => {
+    if (!sessionUserId || !sessionRole) return
     let mounted = true
     setZonesLoading(true)
-    listDeliveryZones({ activeOnly: true, limit: 100 })
+    listDeliveryZones({ activeOnly: true, limit: 100 }, { userId: sessionUserId, role: sessionRole })
       .then((result) => {
         if (mounted) {
           setZones(result.zones ?? [])
@@ -131,7 +138,7 @@ export function DeliverySection({
         if (mounted) setZonesLoading(false)
       })
     return () => { mounted = false }
-  }, [])
+  }, [sessionUserId, sessionRole])
 
   // O-28: the charge fills from the grid cell for this zone and vehicle class. A quoted or unset
   // cell leaves the charge for staff to type, and says so in words.
