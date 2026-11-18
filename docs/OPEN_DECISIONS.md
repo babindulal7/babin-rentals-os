@@ -388,3 +388,35 @@ section is an approved product policy. Each is `TODO(decision)` until he does.
   resets, and quick-shelve eligibility. Blocks UX-P26. ⭐ No templates; current Reset checklist.
 - **O-27 (D-UX-05)** — Whether the future-availability policy should remain as ruled (24 October).
   Blocks UX-P26. ⭐ **Do not change.**
+
+
+## 23. Delivery charging method and draft rates (19 November 2026) — method ruled, rates draft
+
+**O-28b — answered 19 Nov 2026 (Babin): Hybrid.** Named delivery zones stay the unit staff pick. Each
+zone also carries a road-distance band as a check (shortest practical driving route from Boudha, not
+straight-line). Prices come from the zone × vehicle grid (0244), unchanged. Revert = treat the band as
+a label only; no price depends on it.
+
+**Draft rates, NOT entered and NOT approved** — proposed by Babin on 19 Nov 2026, per one-way delivery,
+NPR, VAT exclusive. Babin said to test them on 10–20 real trips (vehicle return time, fuel, staff time,
+outside van cost) before adopting. He enters the real amounts in Settings ▸ Financial ▸ Delivery fees.
+
+| Zone | Road distance from Boudha | Bike / scooter (grid: Motorbike) | Small cargo van (grid: Van / larger vehicle) |
+|---|---|---|---|
+| Z1 Nearby | 0–3 km | 150 | 1,200 |
+| Z2 Local | over 3–7 km | 250 | 1,500 |
+| Z3 Central | over 7–12 km | 400 | 2,000 |
+| Z4 Extended | over 12–18 km | 550 | 2,500 |
+| Z5 Outer Valley | over 18–25 km | 750 | 3,200 |
+| Z6 Special | over 25 km | custom | custom (quoted per trip) |
+
+Draft rules from the same proposal (not built; each needs its own ruling before it is): delivery plus a
+later collection is two trips, each priced on its own route; one vehicle charge when everything fits in
+one trip; scooter only for small securely packed items; up to 10 minutes of handover waiting included,
+longer waits charged; late-night or emergency delivery carries an extra charge shown before
+confirmation; an outsourced vehicle needs its cost confirmed before booking, with an approved manual
+quotation allowed.
+
+Open and not invented here: the "Car / pickup" column has no draft price; the late-night and waiting
+charges have no amounts; whether zone names follow the Z1–Z6 labels or the area names (Boudha,
+Chabahil, Baneshwor, Thamel, Patan, Bhaktapur) in the zone list. All `TODO(decision)`.

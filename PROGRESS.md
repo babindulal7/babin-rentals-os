@@ -5,6 +5,10 @@
 **Did**
 - `DeliveryZonesControl.tsx` (commit 8fef0ec4): the list, create, update and deactivate calls now pass the signed-in user's id and role. Before, all four were refused by the action core ("called without a session context").
 - `DeliveryZonesControl.test.tsx`: the auth mock carries a user id, as the real user does.
+- Docs only: O-28b ruling and the draft rate table recorded (`docs/OPEN_DECISIONS.md` §23, `PLAN.md` §4.2, `RULINGS-2026-11-19.md`). No code, no migration, no rates entered.
+
+**Ruled**
+- O-28b (19 Nov 2026, Babin): hybrid delivery charging. Named zones plus a road-distance band as a check, priced from the zone × vehicle grid. Draft Z1–Z6 rates (bike 150–750, van 1,200–3,200, Z6 custom) are a draft only and are not entered; Babin enters real amounts after testing on 10–20 trips. Revert = remove the O-28b row and §23.
 
 **Verified**
 - `VITE_DATA_SOURCE=mock npx vitest run` on the three browser-check areas: `DeliverySection.zonePicker` 4/4, `DeliveryAssignVehicleClass` 4/4, `DeliveryZonesControl` 7/7, `deliveryFeeGrid` and `deliveryFeeGridRead` pass (38 tests across 5 files).
