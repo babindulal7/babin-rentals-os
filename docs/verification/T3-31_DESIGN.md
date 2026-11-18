@@ -1,6 +1,6 @@
 # T3-31 counter sale — design for review
 
-**Status: proposed; not implemented.** Review before code, per the card prompt. Invoice numbering remains subject to accountant confirmation of VAT timing. T3-14 invoice integrity and T3-30 staging acceptance remain dependencies.
+**Status: owner approved in conversation; not implemented.** The card's requested design review remains outstanding before code. Invoice numbering remains subject to accountant confirmation of VAT timing. T3-14 invoice integrity and T3-30 staging acceptance remain dependencies.
 
 ## Choice and boundaries
 

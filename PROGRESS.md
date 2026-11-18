@@ -1,5 +1,23 @@
 # Progress Log
 
+## 2026-11-19 — T3-31 owner design approval (Lane C)
+
+**Did**
+- Recorded owner approval of the counter-sale proposal in the design note.
+
+**Ruled**
+- Owner approved proceeding; the card's design review remains outstanding.
+
+**Verified**
+- Documentation-only update; no implementation or database checks.
+
+### Completion
+Not measured: no fresh completion result available.
+
+### Remaining
+- Complete required design review, then implement against T3-14 and T3-30 dependencies.
+
+
 ## 2026-11-19 — T3-31 counter-sale design (Lane C)
 
 **Did**
