@@ -181,7 +181,7 @@ Nepali digits, emoji bullets); 80%+ of lines in the samples auto-match; nothing 
 confirm tap; Warehouse sees no prices in the preview.
 **Needs** — none.
 
-### T3-13 · Fully booked → similar item or sub-rent            status: todo · size: M · lane C · [go-live]
+### T3-13 · Fully booked → similar item or sub-rent            status: acceptance_pending — PR #182 merged; physical multi-device staging & partner roster confirmation pending · size: M · lane C · [go-live]
 **What** — When a product has no free unit for the dates, New Rental shows **both** (W10): "Similar
 we own — free" (same category and type, e.g. another 24-70 lens) and "Sub-rent from a partner"
 (opens the sub-rental line flow with the partner list). Staff choose. The booked item itself stays
@@ -232,7 +232,7 @@ Keep the bank account default for Bank transfer (R-39 D3).
 tap count ≤ 4 from Booking Detail.
 **Needs** — none.
 
-### T3-16 · Share documents in one tap            status: todo · size: M · lane C · [go-live]
+### T3-16 · Share documents in one tap            status: acceptance_pending — PR #181 merged; physical counter printer, share sheet & live email pending · size: M · lane C · [go-live]
 **What** — On every quote, invoice, receipt and agreement: **Share** → WhatsApp (PDF through the
 phone's share sheet, or wa.me with a text summary when sharing a file is not possible), **Email**
 (through T5-03, from `@babinrentals.com`), **Print** (A4), **Copy text**. The booking confirmation is
@@ -279,7 +279,7 @@ instead of overwriting it.
 **Done when** — the three cases work on staging with two devices; no double booking; audit rows exist.
 **Needs** — T3-14.
 
-### T3-19 · Add gear by scanning in New Rental            status: todo · size: S · lane C · [soon]
+### T3-19 · Add gear by scanning in New Rental            status: acceptance_pending — PR #163 merged; physical barcode hardware & iPad camera scanning in New Rental pending · size: S · lane C · [soon]
 **What** — In New Rental, scanning an item's QR/asset code (camera or Bluetooth) adds that product —
 and reserves that exact unit if it is free — in one action (W8).
 **Why** — W8.
@@ -290,7 +290,7 @@ the same code within ⭐ 1.5 s, server check per code.
 **Done when** — scan → line added with that unit; a booked unit says who has it and offers T3-13.
 **Needs** — T2-14 (shared scan lookup).
 
-### T3-20 · Who owes            status: todo · size: M · lane C · [go-live]
+### T3-20 · Who owes            status: acceptance_pending — PR #190 merged; ledger reconciliation to the paisa with accountant & mobile share walkthrough pending · size: M · lane C · [go-live]
 **What** — Finance ▸ **Who owes**: one list of clients with unpaid balances, oldest first, with age
 (days since completion), amount, last reminder sent, "Paused" flag; tap → the client's **statement**
 (PDF: every open invoice and booking balance, payments so far) to share (T3-16). Many production
@@ -328,7 +328,7 @@ any dates, the next free date, and **who has it now** (from T2-14). Reuses `Chec
 **Done when** — ≤ 2 taps to an answer from any screen; matches New Rental's availability exactly.
 **Needs** — T2-14.
 
-### T3-23 · Monthly pack for the accountant            status: todo · size: M · lane C · [soon]
+### T3-23 · Monthly pack for the accountant            status: acceptance_pending — PR #191 merged; accountant sample pack review & upstream staging dependencies pending · size: M · lane C · [soon]
 **What** — Finance ▸ Reports ▸ **Monthly pack**: pick a Nepali month (or AD month) → one zip with the
 **Sales/VAT register** (standard and non-VAT sections, T3-04), **payments and refunds**, **expenses
 with bill photos**, **crew payouts with TDS** (T8-08), as CSV + PDF, BS and AD dates. Money roles only.
