@@ -157,4 +157,26 @@ describe('SubRentalPartnerModal (T3-13)', () => {
 
     expect(onConfirm).toHaveBeenCalledWith(sampleUnit, 'CineLab Kathmandu', rupees(6000), 4500)
   })
+
+  it('enforces touch targets >= 44px on partner select and rate inputs', async () => {
+    const onConfirm = vi.fn()
+    await act(async () => {
+      root.render(
+        <SubRentalPartnerModal
+          isOpen={true}
+          onClose={vi.fn()}
+          unit={sampleUnit}
+          days={2}
+          showPrices={true}
+          onConfirm={onConfirm}
+        />,
+      )
+    })
+
+    const select = document.querySelector<HTMLSelectElement>('#subrent-partner-select')!
+    expect(select.style.minHeight).toBe('44px')
+
+    const rateInput = document.querySelector<HTMLInputElement>('#subrent-client-rate')!
+    expect(rateInput.style.minHeight).toBe('44px')
+  })
 })
