@@ -19,9 +19,12 @@
 - `VITE_DATA_SOURCE=mock` vitest: `deliveryDistanceBand` 16/16, `DeliveryZonesControl` 9/9, `DeliverySection.zonePicker` 5/5, `DeliveryFeeGridCard` 3/3, `financialCreditPolicy` 1/1 with no unhandled error. A broader run over rentals booking, settings, operations, lib and delivery actions passed 310 of 311 files before the grid card fix; the one failure was the unhandled rejection fixed above.
 - `tsc --noEmit`: exit 0. `eslint --max-warnings 0` on the changed files: exit 0.
 
+- Browser, mock mode, mock Owner, fresh `npm run dev:mock` on port 3000 (Settings ▸ System ▸ Delivery zones ▸ Add zone): the form shows "Road distance over (km)" and "Up to (km)" with the explanatory note. Lower 7 and upper 3 gave the inline error "The upper distance must be greater than the lower distance" and no zone was created. Found and fixed in the browser: the "Up to (km)" input was clipped at the dialog edge (a horizontal scrollbar); both inputs now fit.
+
 **Not verified**
-- The band UI in a browser. Mock mode has no `delivery_zone_distance_bands` table, so the band read fails there and shows the note; the edit and save path ran only in component tests and PGlite.
+- Zone rows showing "Road distance from Boudha: …", the edit form prefilled from a stored band, a band save, and the New Rental hint with a real band. Mock mode has no `list_delivery_zones` and no `delivery_zone_distance_bands` table, so the zone list shows the mock-not-implemented error there; those paths ran only in component tests and PGlite.
 - Under real signed-in roles: the database branches (PGlite has no JWT).
+- Seen, not changed: the inline form-error banner on this dialog (existing styling) reads low-contrast in light theme. It is not part of this change.
 
 **Blocked on Babin**
 - Zone names (Z1–Z6 or area names), the two-trip rule, late-night and waiting amounts, a Car / pickup price: all `TODO(decision)` in `docs/OPEN_DECISIONS.md` §23.

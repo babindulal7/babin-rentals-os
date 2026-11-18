@@ -402,7 +402,7 @@ export function DeliveryZonesControl() {
                 />
               </label>
               <div style={{ display: 'flex', gap: 12 }}>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 'var(--t-meta)', fontWeight: 500, flex: 1 }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 'var(--t-meta)', fontWeight: 500, flex: 1, minWidth: 0 }}>
                   Road distance over (km)
                   <input
                     type="text"
@@ -410,10 +410,10 @@ export function DeliveryZonesControl() {
                     value={formMinKm}
                     onChange={(e) => { setFormMinKm(e.target.value); setFormError(null); }}
                     placeholder="e.g., 3"
-                    style={{ marginTop: 4, padding: '10px 12px', borderRadius: 'var(--r-input)', border: '1px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontFamily: 'inherit' }}
+                    style={{ marginTop: 4, width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--r-input)', border: '1px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontFamily: 'inherit' }}
                   />
                 </label>
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 'var(--t-meta)', fontWeight: 500, flex: 1 }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 'var(--t-meta)', fontWeight: 500, flex: 1, minWidth: 0 }}>
                   Up to (km)
                   <input
                     type="text"
@@ -421,7 +421,7 @@ export function DeliveryZonesControl() {
                     value={formMaxKm}
                     onChange={(e) => { setFormMaxKm(e.target.value); setFormError(null); }}
                     placeholder="blank = no upper limit"
-                    style={{ marginTop: 4, padding: '10px 12px', borderRadius: 'var(--r-input)', border: '1px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontFamily: 'inherit' }}
+                    style={{ marginTop: 4, width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--r-input)', border: '1px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontFamily: 'inherit' }}
                   />
                 </label>
               </div>
