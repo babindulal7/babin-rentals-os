@@ -271,11 +271,11 @@ product's old store slug beside it. Claim a number only if a new column or entit
 path lands on the catalogue home; screen check.
 **Needs** — T7-02, T9-01.
 
-### T7-10 · Security review — the N-7 gate            status: todo · size: M · lane C
+### T7-10 · Security review — the N-7 gate            status: done · size: M · lane C
 **What** — Before any client write path is on in live: D-5 green on staging; amount tampering,
 callback replay and forged-session tests green; secrets only in Edge Function secrets; no PII or
 amounts in logs; the anon allow-list contains exactly the two public objects; PERMISSIONS §5/§7
-match the code; the public pay page of T7-15 and the analytics of T7-16 are covered (a slips-first card that lands after this review gets its own short review before it goes live). Written up in `docs/verification/ONLINE_BOOKING_REVIEW_<date>.md`.
+match the code; the public pay page of T7-15 and the analytics of T7-16 are covered (a slips-first card that lands after this review gets its own short review before it goes live). Written up in `docs/verification/ONLINE_BOOKING_REVIEW_2026-11-19.md`.
 **Why** — N-7; P8.
 **Database** — none.
 **Done when** — Babin reads the one-page summary and says go.

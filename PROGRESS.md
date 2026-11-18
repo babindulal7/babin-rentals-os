@@ -1,5 +1,38 @@
 # Progress Log
 
+## 2026-11-19 — T7-10: Online Booking N-7 Security Review (Lane B / Windows)
+
+**Did**
+- Executed the mandatory **T7-10 · Security review — the N-7 gate** for online client booking and portal access (`security/win-t7-10-online-booking-n7-review`):
+  - Authored automated security regression test harness `scripts/test-online-booking-n7-review.mjs` running against an isolated PGlite database:
+    - **D-5 / D-10 Cross-Client Data Isolation:** Client A cannot read Client B's bookings, lines, or client records under Postgres RLS. Direct foreign ID queries return 0 rows. Attempting an update on a foreign booking affects 0 rows under RLS.
+    - **Anonymous Access & Staff Mutator Boundaries:** Anonymous visitor sees 0 rows from `bookings` and `clients`. Mutators `create_booking(jsonb)`, `confirm_booking_atomic(...)`, `cancel_booking(jsonb)`, `issue_invoice(...)`, and `void_invoice(...)` strictly deny `anon` execution.
+    - **Public Function Allowlist:** All `anon`-executable functions verified against `ALLOWED_ANON_FUNCTIONS` (exactly 19 public objects/utilities; zero unauthorized leaks).
+    - **Server-Authoritative Pricing & Anti-Tampering:** Direct line inserts by client roles with forged rates are denied by RLS and rejected by the database trigger gate `guard_booking_lines_money_blind()`.
+    - **Abuse Protection & Rate Limiting (`src/lib/abuseProtection.ts`):** Verified Turnstile token verification (missing token refusal `MISSING_TOKEN`, forged token refusal `INVALID_TOKEN`, single-use replay prevention `TOKEN_REUSED`, burst rate limiting `IP_RATE_LIMITED` >10/min from same IP).
+    - **Secrets Hygiene & Law 6 Money Blindness:** No service keys in client source; passwords and tokens scrubbed from logs; money blindness preserved.
+  - Registered `test:online-booking-n7-review` script in `package.json`.
+  - Authored formal N-7 security review sign-off document `docs/verification/ONLINE_BOOKING_REVIEW_2026-11-19.md`.
+  - Updated card `T7-10` in `docs/plans/T7_ONLINE_BOOKING.md` to `done`.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 108 / 109 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | +0 |
+| Lifecycle | steps green / total | 85 / 85 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 241 files · check:pglite 241/241 applied, 0 failed (recorded 2026-11-18T07:12:50.228Z). Suite: PASS — 7380/7380 passed, 0 failed (recorded 2026-11-18T07:12:47.627Z); source fingerprint matches.
+Coverage suite: PASS — 7380/7380 passed, 0 failed (recorded 2026-11-18T07:12:47.627Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-18T07:13:15.700Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Card T7-10 complete and verified. Next unblocked card in goal sequence: Unified Launch Settings UI (Settings -> Website & Client Portal for the 5 owner-approved launch settings from `docs/plans/UNIFIED_LAUNCH_2027-02-18.md` §3).
+
 ## 2026-11-18 — T3-18: Change a confirmed booking (Lane C)
 
 **Did**
