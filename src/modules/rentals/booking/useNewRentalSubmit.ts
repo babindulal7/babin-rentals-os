@@ -3,6 +3,7 @@ import type { ActionContext } from '../../../actions/core'
 import { createRental, deliveryTypeFromLabel, type BookingLineType } from '../../../actions/rentals/createRental'
 import { convertDraft, saveDraft as persistRentalDraft, type RentalDraftData } from '../../../actions/rentals/saveDraft'
 import { transportInstructions } from '../../../lib/bookingTransportForm'
+import { setBookingDeliveryZone } from '../../../lib/queries/bookingDeliveryZone'
 import { bookingDiscountRows } from '../../../lib/bookingDiscountRows'
 import type { ClientActiveMembership } from '../../../lib/queries/membership'
 import { toRupees, type Paisa } from '../../../lib/money'
@@ -39,6 +40,8 @@ export interface UseNewRentalSubmitOptions {
   pickupAt: Date | null
   returnAt: Date | null
   deliveryType: 'Client Pickup' | 'Babin Delivery'
+  /** Zone id chosen at booking (O-30). Empty when none chosen or the booking is a client pickup. */
+  deliveryZone?: string
   pricing: PricingPipelineResult
   manualDiscountReason: string
   manualDiscountAuthorizedBy: string
@@ -135,6 +138,7 @@ export function useNewRentalSubmit({
   pickupAt,
   returnAt,
   deliveryType,
+  deliveryZone = '',
   pricing,
   manualDiscountReason,
   manualDiscountAuthorizedBy,
@@ -354,6 +358,11 @@ export function useNewRentalSubmit({
         },
         ctx,
       )
+      // O-30: the zone is saved on the booking right after it exists. The write is idempotent,
+      // so a retry with the same key repeats it safely.
+      if (!clientPickup && deliveryZone) {
+        await setBookingDeliveryZone(created.bookingId, deliveryZone)
+      }
       return { id: created.bookingId, no: created.bookingNo, stage: created.stage }
     },
     [
@@ -370,6 +379,7 @@ export function useNewRentalSubmit({
       kindOther,
       draftBookingNo,
       deliveryType,
+      deliveryZone,
       pricing,
       manualDiscountReason,
       manualDiscountAuthorizedBy,

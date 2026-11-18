@@ -5,7 +5,6 @@ import { EmptyState, LoadingSkeleton, ErrorBanner } from '../../../components/ui
 import { useToast } from '../../../components/ui/Toast'
 import { useAuth } from '../../../lib/auth'
 import { canManageDeliveryZones } from '../../../lib/rbac'
-import { formatMoney, parseMoney, toRupees, type Paisa } from '../../../lib/money'
 import {
   listDeliveryZones,
   type DeliveryZoneRow,
@@ -38,11 +37,9 @@ export function DeliveryZonesControl() {
   const [editingZone, setEditingZone] = useState<DeliveryZoneRow | null>(null)
   const [deletingZone, setDeletingZone] = useState<DeliveryZoneRow | null>(null)
 
-  // Form state — the fee is typed in rupees and stored as integer paisa (T4-07 build note 4).
+  // Form state. The per-zone fee is retired (O-28, 18 Nov 2026): amounts are set in Delivery fees.
   const [formName, setFormName] = useState('')
   const [formDescription, setFormDescription] = useState('')
-  // R-9.4 (RULINGS-2026-11-09): the fee is a Settings value with no starting figure.
-  const [formFeeRupees, setFormFeeRupees] = useState('')
   const [formIsActive, setFormIsActive] = useState(true)
   const [formSubmitting, setFormSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
@@ -67,7 +64,6 @@ export function DeliveryZonesControl() {
   const openCreateModal = () => {
     setFormName('')
     setFormDescription('')
-    setFormFeeRupees('')
     setFormIsActive(true)
     setEditingZone(null)
     setFormError(null)
@@ -77,25 +73,10 @@ export function DeliveryZonesControl() {
   const openEditModal = (zone: DeliveryZoneRow) => {
     setFormName(zone.name)
     setFormDescription(zone.description || '')
-    setFormFeeRupees(zone.fee_paisa === null ? '' : String(toRupees(zone.fee_paisa as Paisa)))
     setFormIsActive(zone.is_active)
     setEditingZone(zone)
     setFormError(null)
     setShowCreateModal(false)
-  }
-
-  /** Rupees in, integer paisa out — `parseMoney` handles "3,500", "Rs 3,500" and ".50". */
-  const parseFeeInput = (): Paisa | null => {
-    const parsed = parseMoney(formFeeRupees)
-    if (parsed === null) {
-      setFormError('Enter the fee in rupees, for example 3,500')
-      return null
-    }
-    if (parsed < 0) {
-      setFormError('Fee cannot be negative')
-      return null
-    }
-    return parsed
   }
 
   const handleCreate = async () => {
@@ -103,8 +84,6 @@ export function DeliveryZonesControl() {
       setFormError('Zone name is required')
       return
     }
-    const feePaisa = parseFeeInput()
-    if (feePaisa === null) return
 
     try {
       setFormSubmitting(true)
@@ -112,7 +91,6 @@ export function DeliveryZonesControl() {
       await createDeliveryZone({
         name: formName.trim(),
         description: formDescription.trim(),
-        feePaisa,
       })
       showSuccessToast('Zone created', `Delivery zone "${formName.trim()}" created successfully`)
       setShowCreateModal(false)
@@ -131,8 +109,6 @@ export function DeliveryZonesControl() {
       setFormError('Zone name is required')
       return
     }
-    const feePaisa = parseFeeInput()
-    if (feePaisa === null) return
 
     try {
       setFormSubmitting(true)
@@ -141,7 +117,6 @@ export function DeliveryZonesControl() {
         zoneId: editingZone.id,
         name: formName.trim(),
         description: formDescription.trim(),
-        feePaisa,
         isActive: formIsActive,
       })
       showSuccessToast('Zone updated', `Delivery zone "${formName.trim()}" updated successfully`)
@@ -170,7 +145,6 @@ export function DeliveryZonesControl() {
   const resetForm = () => {
     setFormName('')
     setFormDescription('')
-    setFormFeeRupees('')
     setFormIsActive(true)
     setEditingZone(null)
     setFormError(null)
@@ -241,7 +215,7 @@ export function DeliveryZonesControl() {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', flexShrink: 0 }}>
               <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, fontFamily: 'var(--mono)', color: 'var(--text)' }}>
-                {zone.fee_paisa === null ? '—' : formatMoney(zone.fee_paisa as Paisa)}
+                Amounts in Delivery fees
               </span>
               {canManage && (
                 <>
@@ -353,29 +327,10 @@ export function DeliveryZonesControl() {
                   }}
                 />
               </label>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 'var(--t-meta)', fontWeight: 500 }}>
-                Fee (Rs) <span style={{ color: 'var(--danger)' }}>*</span>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={formFeeRupees}
-                  onChange={(e) => { setFormFeeRupees(e.target.value); setFormError(null); }}
-                  placeholder="3,500"
-                  style={{
-                    marginTop: 4,
-                    padding: '10px 12px',
-                    borderRadius: 'var(--r-input)',
-                    border: '1px solid var(--input-border)',
-                    background: 'var(--input-bg)',
-                    color: 'var(--text)',
-                    fontSize: 'var(--t-meta)',
-                    fontFamily: 'var(--mono)',
-                  }}
-                />
-                <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-                  Typed in rupees, stored in paisa. There is no default fee: enter each zone's fee. "Outside the valley" = 0 (quoted per job).
-                </span>
-              </label>
+              <p style={{ margin: 0, fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
+                Amounts are set per zone and vehicle class in Settings ▸ Financial ▸ Delivery fees. A zone is quoted per trip
+                from that grid, not from this form (O-28, 18 Nov 2026).
+              </p>
               {editingZone && (
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--t-meta)' }}>
                   <input
@@ -408,7 +363,7 @@ export function DeliveryZonesControl() {
                 Existing deliveries using this zone are not affected.
               </p>
               <p style={{ margin: 0, fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-                Fee: <strong>{deletingZone.fee_paisa === null ? '—' : formatMoney(deletingZone.fee_paisa as Paisa)}</strong>
+                Amounts for this zone are held in Delivery fees; deactivating the zone does not change them.
               </p>
             </div>
           ) : undefined

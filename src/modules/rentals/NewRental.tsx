@@ -821,6 +821,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     pickupAt,
     returnAt,
     deliveryType,
+    deliveryZone: transportDetails.deliveryZone,
     pricing,
     manualDiscountReason,
     manualDiscountAuthorizedBy,

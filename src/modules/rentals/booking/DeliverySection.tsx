@@ -4,7 +4,12 @@ import { Input, Select } from '../../../components/ui'
 import { Field, Section, MoneyRow, inputStyle } from './BookingFormWidgets'
 import { formatMoney, rupees, type Paisa } from '../../../lib/money'
 import { listDeliveryZones, type DeliveryZoneRow } from '../../../actions/deliveryZones/listDeliveryZones'
-import { getDeliveryZoneFee } from '../../../actions/deliveryZones/getDeliveryZoneFee'
+import { fetchGridFeeState } from '../../../lib/queries/deliveryFeeGridRead'
+import {
+  DELIVERY_VEHICLE_CLASSES,
+  deliveryFeeLabel,
+  type DeliveryVehicleClass,
+} from '../../../lib/deliveryFeeGrid'
 
 const sub = {
   margin: '0 0 8px',
@@ -100,6 +105,10 @@ export function DeliverySection({
   const [zones, setZones] = useState<DeliveryZoneRow[]>([])
   const [zonesLoading, setZonesLoading] = useState(true)
   const [zoneError, setZoneError] = useState<string | null>(null)
+  // Form-only: the vehicle class picks the grid cell that fills the charge. It is not stored on the
+  // booking; the charge is stored, and the job's class is chosen again at dispatch.
+  const [vehicleClass, setVehicleClass] = useState<DeliveryVehicleClass | ''>('')
+  const [gridNote, setGridNote] = useState<string | null>(null)
 
   // Load active delivery zones on mount
   useEffect(() => {
@@ -124,21 +133,28 @@ export function DeliverySection({
     return () => { mounted = false }
   }, [])
 
-  // Auto-fill delivery charge when zone changes
+  // O-28: the charge fills from the grid cell for this zone and vehicle class. A quoted or unset
+  // cell leaves the charge for staff to type, and says so in words.
   useEffect(() => {
-    if (!deliveryZone || clientPickup) return
+    setGridNote(null)
+    if (!deliveryZone || !vehicleClass || clientPickup || !canBookingMoney) return
     let mounted = true
-    getDeliveryZoneFee({ zoneName: deliveryZone })
-      .then((result) => {
-        if (mounted && canBookingMoney) {
-          setDeliveryChargePaisa(result.feePaisa as unknown as Paisa)
+    fetchGridFeeState(deliveryZone, vehicleClass)
+      .then((state) => {
+        if (!mounted) return
+        if (state.status === 'set') {
+          setDeliveryChargePaisa(state.feePaisa as Paisa)
+        } else {
+          setGridNote(`${deliveryFeeLabel(state)} — type the charge`)
         }
       })
-      .catch(() => {
-        // Silently fail - user can manually enter fee
+      .catch((err: unknown) => {
+        if (mounted) setGridNote(err instanceof Error ? err.message : 'Could not read the fee grid')
       })
     return () => { mounted = false }
-  }, [deliveryZone, clientPickup, canBookingMoney, setDeliveryChargePaisa])
+  }, [deliveryZone, vehicleClass, clientPickup, canBookingMoney, setDeliveryChargePaisa])
+
+  const zoneName = zones.find((zone) => zone.id === deliveryZone)?.name ?? ''
 
   return (
     <Section
@@ -146,7 +162,7 @@ export function DeliverySection({
       title={title}
       open={open}
       onToggle={onToggle}
-      summary={clientPickup ? 'Client Pickup · Rs 0' : `Babin Delivery · ${deliveryZone || 'Select zone'} · ${canBookingMoney ? formatMoney(transportPaisa) : 'charged'}`}
+      summary={clientPickup ? 'Client Pickup · Rs 0' : `Babin Delivery · ${zoneName || 'Select zone'} · ${canBookingMoney ? formatMoney(transportPaisa) : 'charged'}`}
     >
       <div style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : 'repeat(2, minmax(0,1fr))', gap: 'var(--sp-md)' }}>
         {/* Left Column: Delivery Type & Dispatch Details */}
@@ -215,14 +231,28 @@ export function DeliverySection({
                   >
                     <option value="">Select zone</option>
                     {zones.map((zone) => (
-                      <option key={zone.id} value={zone.name}>
-                        {zone.fee_paisa === null
-                          ? zone.name
-                          : `${zone.name} — ${formatMoney(zone.fee_paisa as Paisa)}`}
+                      <option key={zone.id} value={zone.id}>
+                        {zone.name}
                       </option>
                     ))}
                   </Select>
                 )}
+              </Field>
+
+              <Field label="Vehicle class">
+                <Select
+                  value={vehicleClass}
+                  onChange={(e) => setVehicleClass(e.target.value as DeliveryVehicleClass | '')}
+                  style={inputStyle}
+                  disabled={!canBookingMoney || clientPickup}
+                >
+                  <option value="">Select vehicle class</option>
+                  {DELIVERY_VEHICLE_CLASSES.map((vehicleOption) => (
+                    <option key={vehicleOption} value={vehicleOption}>
+                      {vehicleOption}
+                    </option>
+                  ))}
+                </Select>
               </Field>
 
               <Field label="Vehicle">
@@ -345,6 +375,16 @@ export function DeliverySection({
                   {!deliveryZone && !clientPickup && (
                     <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)', marginTop: 4 }}>
                       Select a zone to auto-fill the fee
+                    </span>
+                  )}
+                  {deliveryZone && !vehicleClass && !clientPickup && (
+                    <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)', marginTop: 4 }}>
+                      Choose a vehicle class to fill the fee from the grid
+                    </span>
+                  )}
+                  {gridNote && (
+                    <span role="status" style={{ fontSize: 'var(--t-th)', color: 'var(--text2)', marginTop: 4 }}>
+                      {gridNote}
                     </span>
                   )}
                 </Field>

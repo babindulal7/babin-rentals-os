@@ -98,7 +98,9 @@ describe('DeliveryZonesControl', () => {
     })
     expect(container?.textContent).toContain('Ring Road')
     expect(container?.textContent).toContain('Outside Valley')
-    expect(container?.textContent).toContain('Rs 3,500')
+    // O-28: the per-zone fee is retired; the row points to the delivery fee grid instead.
+    expect(container?.textContent).not.toContain('Rs 3,500')
+    expect(container?.textContent).toContain('Amounts in Delivery fees')
   })
 
   it('hides Add zone from Coordinator — Owner · Admin · Manager only (T4-07 build note 3)', async () => {
@@ -116,7 +118,7 @@ describe('DeliveryZonesControl', () => {
     expect(container?.textContent).toContain('Create first zone')
   })
 
-  it('shows no fee figure when the row arrives with a null fee (Law 6)', async () => {
+  it('shows no fee figure to a money-blind role (Law 6)', async () => {
     authState.role = 'Warehouse'
     mockListDeliveryZones.mockResolvedValue({
       zones: [{ id: 'zone-1', name: 'Ring Road', description: null, fee_paisa: null, is_active: true, created_at: '', updated_at: '' }],
@@ -124,6 +126,6 @@ describe('DeliveryZonesControl', () => {
     await remount()
     expect(container?.textContent).toContain('Ring Road')
     expect(container?.textContent).not.toContain('Rs')
-    expect(container?.textContent).toContain('—')
+    expect(container?.textContent).toContain('Amounts in Delivery fees')
   })
 })
