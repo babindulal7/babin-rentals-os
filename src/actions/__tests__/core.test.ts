@@ -234,6 +234,15 @@ describe('createAction — fails closed', () => {
       }
     })
 
+    it('rental.change admits C+ (Owner, Admin, Manager, Coordinator) and denies floor and client roles (T3-18, W88)', async () => {
+      for (const role of ['Owner', 'Admin', 'Manager', 'Coordinator'] as const) {
+        await expect(probe('rental.change', role, true).run()).resolves.toEqual({ ok: true })
+      }
+      for (const role of ['Warehouse', 'Technician', 'Driver', 'Accounts', 'Client'] as const) {
+        await expect(probe('rental.change', role, true).run()).rejects.toBeInstanceOf(ActionPermissionError)
+      }
+    })
+
     it.each(['Owner', 'Admin', 'Manager'] as const)('allows %s to adjust bulk stock', async (role) => {
       await expect(probe('inventory.stock_adjust', role, true).run()).resolves.toEqual({ ok: true })
     })

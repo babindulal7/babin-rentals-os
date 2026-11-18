@@ -804,6 +804,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
 
   const { confirmBooking, saveAsQuote, quoteSaved, setQuoteSaved } = useNewRentalSubmit({
     editBookingId,
+    parentBookingId: searchParams.get('parentBookingId') || undefined,
     confirmBlocked,
     saveState,
     setSaveState,

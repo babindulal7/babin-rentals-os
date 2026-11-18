@@ -199,6 +199,9 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     // RULING (T3-25, B16, B55): booking tags write capability — Owner, Admin, Manager, Coordinator.
     case 'rental.tag':
       return rbac.canSetBookingTags(ctx.role);
+    // T3-18 (W88): change confirmed booking — Owner, Admin, Manager, Coordinator.
+    case 'rental.change':
+      return rbac.canChangeBooking(ctx.role);
     case 'inventory.create':
       return rbac.canCreateBundle(ctx.role);
     /*
