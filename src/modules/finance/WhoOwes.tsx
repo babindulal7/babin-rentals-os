@@ -359,7 +359,7 @@ export default function WhoOwes({ embedded: _embedded }: WhoOwesProps) {
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
                     <th style={{ padding: '10px 12px', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>Client</th>
-                    <th style={{ padding: '10px 12px', fontSize: 'var(--t-th)', color: 'var(--muted)' }} title="Days since invoice due date (oldest open invoice)">Age (due date)</th>
+                    <th style={{ padding: '10px 12px', fontSize: 'var(--t-th)', color: 'var(--muted)' }} title="Days since completion / invoice issue date (oldest open invoice)">Age</th>
                     <th style={{ padding: '10px 12px', fontSize: 'var(--t-th)', color: 'var(--muted)', textAlign: 'right' }}>Amount</th>
                     <th style={{ padding: '10px 12px', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>Last Reminder</th>
                     <th style={{ padding: '10px 12px', fontSize: 'var(--t-th)', color: 'var(--muted)' }}>Reminders</th>
@@ -445,7 +445,7 @@ export default function WhoOwes({ embedded: _embedded }: WhoOwesProps) {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 'var(--t-th)', color: 'var(--text2)', fontFamily: 'var(--font-mono)' }}>
-                      Age: {row.ageDays}d (due date) · Last reminder: {formatReminderDate(row.lastReminderSentAt)}
+                      Age: {row.ageDays}d · Last reminder: {formatReminderDate(row.lastReminderSentAt)}
                     </span>
                     {row.remindersPaused ? (
                       <StatusPill tone="amber" icon="clock" label="Paused" />
