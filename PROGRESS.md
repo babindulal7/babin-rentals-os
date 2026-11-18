@@ -1,5 +1,44 @@
 # Progress Log
 
+## 2026-11-19 — Printer, document-text editors and issued-text rule ruled (Lane B)
+
+**Did**
+- Added R-18.8 to R-18.10 to `RULINGS-2026-11-18.md`. Updated `PLAN.md` §4.2 rows O-11 and O-16, `docs/OPEN_DECISIONS.md`, and the Settings document texts card.
+- Docs only. No code, migration or database change.
+
+**Ruled**
+- **R-18.8 (O-16):** no printer-selection screen; documents print from the PDF directly. Label-printer and scanner models stay open.
+- **R-18.9:** Owner and Admin may paste or change agreement terms and contracts in Settings. New capability: `PERMISSIONS.md` §3/§4 and the T-1 fixture change in the same commit as the code (B-3).
+- **R-18.10:** an issued document keeps the text it was issued with.
+- The `// RULING` code-site comments land with the card's build, since no code changed here (B-2).
+
+**Verified**
+- `npm run completion` and `npm run lint:progress` re-run. No code changed, so no gates were re-run.
+- Not verified: that Admin editing document texts can stay inside the permission rules; that is checked when the card is built.
+
+### Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 105 / 105 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 | |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | 74 / 74 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Counted by `npm run completion` on 18 Nov, not typed. Receipts are from 17 Nov; suite current source NOT VERIFIED by the counter. Structural coverage only.
+
+### Remaining
+
+*Features to build — 5.* Three TDS slices (S3, S4, S5); payment buttons four plus More (O-21); Settings document texts (3 slices).
+
+*Bugs to fix — 0 counted.*
+
+*Rulings open — Babin only: 2.* O-9 plan table (Babin will paste it in chat); label-printer and scanner models. *Accountant first: 4.* O-6, O-7, O-14, O-17.
+
+*Next session starts with:* supplier TDS (S3) from `docs/plans/TDS_GEMINI_HANDOFF.md`, or O-9 if Babin has pasted the plan table.
+
 ## 2026-11-18 (b) — Open decisions answered: fees, payment buttons, document texts (Lane B)
 
 **Did**

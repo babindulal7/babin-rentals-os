@@ -7,7 +7,9 @@ Babin answered in chat. Full wording: [`RULINGS-2026-11-18.md`](../RULINGS-2026-
 - **O-20:** Elite fee is **negotiated per client**; supersedes the 2 Nov "fixed fee" wording.
 - **O-21:** payment buttons are **four plus More**.
 - **O-11:** agreement terms and other texts will be **pasted or uploaded in Settings** (new card; its open questions are listed in the card).
-- **O-16:** Babin says a printer is already in Settings; none found in `src/`. Still open until he shows where.
+- **O-16 (19 Nov, R-18.8):** no printer screen; documents **print from the PDF directly**. Label-printer and scanner models are still open.
+- **Document texts (19 Nov, R-18.9, R-18.10):** **Owner and Admin** may edit; issued documents **keep the text they were issued with**.
+- **O-9:** Babin will paste the membership plan table in chat. Not received yet.
 
 ## 17 November 2026: TDS deducted by clients from rental invoices — answered (R-17.1)
 
