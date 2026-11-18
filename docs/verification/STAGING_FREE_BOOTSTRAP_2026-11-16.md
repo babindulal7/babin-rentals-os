@@ -1,7 +1,10 @@
 # Babin Rentals OS — Free Staging Bootstrap, verified preflight
 
-**Date:** 16 November 2026  
-**Baseline:** `main` `4ba3cde372b5a690468aff370572a9e8500c9685` (refreshed 17 Nov 2026)  
+> **18 November 2026 source update:** This 16–17 Nov preflight record's **237-file** inventory is historical. Pinned current main `68c190842688` has **240** migration SQL files, including three added and one modified. See [source drift audit](STAGING_SOURCE_DRIFT_2026-11-18.md) and refreshed inventory. The live production comparison remains a **17 Nov read-only snapshot**, not a fresh query or authorization to apply SQL.
+
+
+**Date:** 16 November 2026
+**Baseline:** `main` `4ba3cde372b5a690468aff370572a9e8500c9685` (refreshed 17 Nov 2026)
 **Status:** Existing free staging project VERIFIED, **app schema NOT INSTALLED**. This is a preparation and acceptance contract, not a production release clearance.
 
 ## 1. Owner cost decision fulfilled
