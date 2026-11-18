@@ -417,6 +417,14 @@ longer waits charged; late-night or emergency delivery carries an extra charge s
 confirmation; an outsourced vehicle needs its cost confirmed before booking, with an approved manual
 quotation allowed.
 
-Open and not invented here: the "Car / pickup" column has no draft price; the late-night and waiting
-charges have no amounts; whether zone names follow the Z1–Z6 labels or the area names (Boudha,
-Chabahil, Baneshwor, Thamel, Patan, Bhaktapur) in the zone list. All `TODO(decision)`.
+**Answered by Babin, 19 Nov 2026 (interview):**
+- **Zone names — both.** A zone reads like "Z3 Central (Baneshwor, Thamel)": the zone label plus the main areas it covers. This is data Babin enters in Settings, not code.
+- **Delivery plus collection — staff choose.** One trip or two trips, chosen per booking. If two, each trip is priced from its own zone and vehicle. Not built.
+- **Booking charge fills from the grid — yes.** As built (O-28). Staff can still type over it.
+- **`delivery_zones.fee_paisa` — keep, unused.** Nothing is deleted. No drop migration.
+- **Late-night or emergency delivery — flat amount set in Settings.** Staff tick it on the booking; it is added and shown before confirming. Babin types the amount in Settings; no number is invented. Not built.
+- **Waiting beyond the included 10 minutes — staff add it after the trip** as its own line on the booking. Not priced at booking. Not built.
+- **Car / pickup — leave unset.** Not set means no fee is filled and staff type the charge.
+- **Outsourced vehicle — manual quote with an approval note.** Staff type the quoted charge and mark the vehicle outsourced; the booking records who approved it, in the audit log. Not built.
+
+Still open: nothing from this proposal. The "not built" items above are settled product rules that need a build card each.

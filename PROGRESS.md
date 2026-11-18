@@ -26,17 +26,19 @@
 - Under real signed-in roles: the database branches (PGlite has no JWT).
 - Seen, not changed: the inline form-error banner on this dialog (existing styling) reads low-contrast in light theme. It is not part of this change.
 
+**Ruled (later the same day, interview)**
+- Eight follow-ups answered by Babin (`RULINGS-2026-11-19.md` S2, `docs/OPEN_DECISIONS.md` §23): zone names both; one or two trips chosen per booking; booking charge fills from the grid; `delivery_zones.fee_paisa` kept, unused; late-night flat amount in Settings; waiting added after the trip; Car / pickup left unset; outsourced vehicle by manual quote with approval note. Docs only; nothing built from them yet.
+
 **Blocked on Babin**
-- Zone names (Z1–Z6 or area names), the two-trip rule, late-night and waiting amounts, a Car / pickup price: all `TODO(decision)` in `docs/OPEN_DECISIONS.md` §23.
-- Dropping `delivery_zones.fee_paisa`, and whether the booking charge fills from the grid.
+- Nothing from the delivery proposal. Entering the real zone names and amounts in Settings is his data entry, after testing on real trips.
 
 ### Completion (from `npm run completion`)
 - Backend 106/106 · Real data 56 DB-only of 67 · DB enforcement 9/9 · Permissions 85/85 · Lifecycle 76/76 · Overall ≈ 97%.
 
 ### Remaining
-- Features to build: 0 that are unblocked. Needs a decision first: proposing a zone from the delivery address, the two-trip rule, late-night and waiting charges.
+- Features to build: 4, all ruled and unbuilt: one-or-two-trip choice on the booking; late-night flat charge (Settings amount plus a tick on the booking); waiting charge added after the trip; outsourced-vehicle quote with an approval note. Proposing a zone from the delivery address is not ruled.
 - Bugs to fix: 0 known.
-- Rulings open: 6 (zone names; two-trip rule; late-night and waiting amounts; Car / pickup price; drop the per-zone fee column; booking charge from the grid).
+- Rulings open: 0 from the delivery proposal.
 - Next session starts with: a pass against a real Supabase project (zone list, band save, grid fill, vehicle class save), then the open rulings.
 
 ## 2026-11-18 — Settings zone context fix; component tests re-run; browser pass on the worktrees (mock mode)
