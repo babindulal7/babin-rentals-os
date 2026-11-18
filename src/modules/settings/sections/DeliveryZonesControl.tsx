@@ -44,18 +44,27 @@ export function DeliveryZonesControl() {
   const [formSubmitting, setFormSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
+  // The delivery-zone actions refuse a call without the signed-in identity (no default user).
+  // Primitives keep the callback identity stable across renders.
+  const sessionUserId = user?.id ?? null
+  const sessionRole = user?.role ?? null
+  const actorContext = useCallback(() => {
+    if (!sessionUserId || !sessionRole) throw new Error('Sign in to manage delivery zones')
+    return { userId: sessionUserId, role: sessionRole }
+  }, [sessionUserId, sessionRole])
+
   const loadZones = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
-      const res = await listDeliveryZones({ activeOnly: false, limit: 100 })
+      const res = await listDeliveryZones({ activeOnly: false, limit: 100 }, actorContext())
       setZones(res.zones)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load delivery zones')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [actorContext])
 
   useEffect(() => {
     void loadZones()
@@ -88,10 +97,13 @@ export function DeliveryZonesControl() {
     try {
       setFormSubmitting(true)
       setFormError(null)
-      await createDeliveryZone({
-        name: formName.trim(),
-        description: formDescription.trim(),
-      })
+      await createDeliveryZone(
+        {
+          name: formName.trim(),
+          description: formDescription.trim(),
+        },
+        actorContext(),
+      )
       showSuccessToast('Zone created', `Delivery zone "${formName.trim()}" created successfully`)
       setShowCreateModal(false)
       resetForm()
@@ -113,12 +125,15 @@ export function DeliveryZonesControl() {
     try {
       setFormSubmitting(true)
       setFormError(null)
-      await updateDeliveryZone({
-        zoneId: editingZone.id,
-        name: formName.trim(),
-        description: formDescription.trim(),
-        isActive: formIsActive,
-      })
+      await updateDeliveryZone(
+        {
+          zoneId: editingZone.id,
+          name: formName.trim(),
+          description: formDescription.trim(),
+          isActive: formIsActive,
+        },
+        actorContext(),
+      )
       showSuccessToast('Zone updated', `Delivery zone "${formName.trim()}" updated successfully`)
       setEditingZone(null)
       resetForm()
@@ -133,7 +148,7 @@ export function DeliveryZonesControl() {
   const confirmDeactivate = async () => {
     if (!deletingZone) return
     try {
-      await deactivateDeliveryZone({ zoneId: deletingZone.id })
+      await deactivateDeliveryZone({ zoneId: deletingZone.id }, actorContext())
       showSuccessToast('Zone deactivated', `Delivery zone "${deletingZone.name}" deactivated`)
       setDeletingZone(null)
       await loadZones()

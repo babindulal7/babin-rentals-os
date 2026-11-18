@@ -16,7 +16,7 @@ const { authState } = vi.hoisted(() => ({
 }))
 
 vi.mock('../../../../lib/auth', () => ({
-  useAuth: () => ({ user: { role: authState.role } }),
+  useAuth: () => ({ user: { id: 'usr-test-1', role: authState.role } }),
 }))
 
 vi.mock('../../../../actions/deliveryZones/listDeliveryZones', () => ({
