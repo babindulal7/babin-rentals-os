@@ -54,6 +54,7 @@ export interface MonthlyPackExpenseItem {
   amountPaisa: Paisa
   paymentMethod: string
   status: string
+  receiptUrl?: string | null
 }
 
 export interface MonthlyPackResult {
@@ -162,6 +163,7 @@ interface ExpenseDbRow {
   description?: string | null
   amount?: number | string | null
   status?: string | null
+  receipt_url?: string | null
 }
 
 /**
@@ -181,7 +183,7 @@ async function fetchExpensesForPeriod(
   for (let page = 0; page < maxPages; page++) {
     let query = supabase
       .from('expenses')
-      .select('id, expense_no, expense_date, amount, vendor_name, description, status, expense_categories(name)')
+      .select('id, expense_no, expense_date, amount, vendor_name, description, status, receipt_url, expense_categories(name)')
       .gte('expense_date', startAd)
       .lte('expense_date', endAd)
       .neq('status', 'Cancelled')
@@ -238,6 +240,7 @@ async function fetchExpensesForPeriod(
         // The expenses table has no recorded settlement method; never invent Cash.
         paymentMethod: 'Not recorded',
         status: row.status || 'Approved',
+        receiptUrl: row.receipt_url ?? null,
       }
     })
 }
@@ -429,6 +432,7 @@ export async function generateMonthlyPack(
       'VAT Amount (NPR)',
       'Payment Method',
       'Status',
+      'Receipt / Bill Photo URL',
     ],
   ]
 
@@ -448,6 +452,7 @@ export async function generateMonthlyPack(
       'Not recorded',
       exp.paymentMethod,
       exp.status,
+      exp.receiptUrl || 'None',
     ])
   }
 

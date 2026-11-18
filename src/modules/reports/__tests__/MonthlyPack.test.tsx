@@ -459,4 +459,39 @@ describe('MonthlyPack UI Component (T3-23)', () => {
     expect(container.textContent).toContain('Only Owner, Admin, Manager, and Accounts')
     expect(container.textContent).not.toContain('Download Monthly Pack (ZIP)')
   })
+
+  it('exports bill photo receipt URL column in purchase register for accountant inspection', async () => {
+    accountLedgerFixture.expenses = [
+      {
+        id: 'exp-receipt-1',
+        expense_no: 'EXP-2026-9001',
+        expense_date: '2026-07-15',
+        amount: '2500.00',
+        vendor_name: 'Bhotahity Stationery',
+        description: 'Gaffer tape rolls',
+        status: 'Approved',
+        receipt_url: 'https://storage.babinrentals.com/receipts/exp-9001.jpg',
+        expense_categories: { name: 'Expendables' },
+      },
+    ]
+
+    const pack = await generateMonthlyPack({
+      year: 2026,
+      month: 7,
+      calendar: 'AD',
+    })
+    expect(pack.counts.expenses).toBe(1)
+    const summary = pack.summaryText
+    expect(summary).toContain('Expenses Recorded:')
+
+    const tmpPath = path.join(os.tmpdir(), `test-expense-receipt-${Date.now()}.zip`)
+    try {
+      fs.writeFileSync(tmpPath, Buffer.from(pack.zipBytes))
+      const csv = execSync(`unzip -p "${tmpPath}" purchase_register_ad_2026_07.csv`, { encoding: 'utf-8' })
+      expect(csv).toContain('Receipt / Bill Photo URL')
+      expect(csv).toContain('https://storage.babinrentals.com/receipts/exp-9001.jpg')
+    } finally {
+      if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath)
+    }
+  })
 })
