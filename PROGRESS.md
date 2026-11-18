@@ -1,5 +1,36 @@
 # Progress Log
 
+## 2026-11-18 — Browser attempt on the zone picker found a broken zone list; fixed; component tests added
+
+**Did**
+- `DeliverySection.tsx`: the zone list was called without the signed-in user's context, so it always refused to load. Found in the browser: the Delivery Zone field showed the action's "called without a session context" error. The effect now depends on the user's id and role (not the user object) and passes that context. This bug was already in the base commit.
+- New `DeliverySection.zonePicker.test.tsx` (4 cases): zone context is passed, zones show names only, the grid fills the charge, a quoted cell says so and leaves the charge.
+- New `DeliveryAssignVehicleClass.test.tsx` (4 cases): the class picker shows on the assign sheet; a changed class is saved after the driver is assigned; an unchanged class is not written again; a failed class save is reported and the sheet stays open.
+
+**Verified**
+- `VITE_DATA_SOURCE=mock npx vitest run` on rentals booking, operations, lib, deliveryZones, delivery actions and settings sections: 304 files pass.
+- `npx tsc --noEmit`: exit 0. `npx eslint --max-warnings 0` on the changed and new files: exit 0.
+- `npm run check:pglite`: 240/240 applied, 0 failed. `npm run check:lifecycle`: 76/76.
+- Browser: signed in as the mock Owner and opened New Rental. The zone error above was seen there. The preview tool serves the main checkout (`test/t3-track-integration`), not this worktree, so the fixed code could not be driven in a browser from here.
+
+**Not verified**
+- A browser pass of the New Rental picker and the assign sheet on this branch's code. Needs the worktree served (`npm run dev:mock` in this folder) or the branch merged into the checkout first.
+- The band entry UI on `feat/r-9-6-cancellation-policy` against a browser. Covered by 8 component tests with mocked Supabase only.
+- Under real signed-in roles: the database branches (PGlite has no JWT).
+
+**Blocked on Babin (not startable without him)**
+- Dropping `delivery_zones.fee_paisa`: deletes data, and the rule is that nothing is deleted. Kept for now.
+- Whether the booking charge should fill from the grid (the interpretation used here, replacing the per-zone fee's prefill).
+
+### Completion (from `npm run completion`)
+- Backend 106/106 · Real data 56 DB-only of 67 · DB enforcement 9/9 · Permissions 85/85 · Lifecycle 76/76 · Overall ≈ 97%.
+
+### Remaining
+- Features to build: 0.
+- Bugs to fix: 0 new.
+- Rulings open: 2 (drop the per-zone fee column; booking charge from the grid). Both wait on Babin.
+- Next session starts with: a browser pass of this branch (serve the worktree), then the two rulings.
+
 ## 2026-11-18 — O-28 finish: booking zone picker, job vehicle class, per-zone fee retired at entry
 
 **Did**
