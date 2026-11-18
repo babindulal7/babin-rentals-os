@@ -236,6 +236,75 @@ async function auditClashTableIsolation(db) {
       violations.push(table + ': SELECT policy is not limited to approved staff roles')
     }
   }
+
+  // Effective RLS behavioral test: verify that anon, Client and Driver cannot read rows,
+  // and Coordinator is barred from unauthorized monetary credit creation.
+  const checkSession = async (roleName, userId, sqlFn) => {
+    await db.exec(`begin;`)
+    try {
+      if (roleName === 'anon') {
+        await db.exec(`set local role anon;`)
+      } else {
+        await db.exec(`
+          set local role authenticated;
+          select set_config('request.jwt.claim.role', 'authenticated', true);
+          select set_config('app.current_user_id', '${userId || ''}', true);
+        `)
+      }
+      return await sqlFn()
+    } finally {
+      await db.exec(`rollback;`)
+    }
+  }
+
+  // 1. Anon SELECT should throw permission denied
+  for (const table of ['extension_clash_decisions', 'booking_at_risk', 'client_account_credits']) {
+    try {
+      await checkSession('anon', null, async () => {
+        await db.query(`select 1 from public.${table} limit 1`)
+      })
+      violations.push(`effective RLS: anon was able to query ${table}`)
+    } catch {
+      // Expected permission denied
+    }
+  }
+
+  // 2. Client and Driver should read 0 rows due to RLS
+  for (const [rName, uId] of [['Client', '00000000-0000-4000-8000-00000000e009'], ['Driver', '00000000-0000-4000-8000-00000000e008']]) {
+    for (const table of ['extension_clash_decisions', 'booking_at_risk', 'client_account_credits']) {
+      try {
+        await checkSession(rName, uId, async () => {
+          const res = await db.query(`select count(*)::int as n from public.${table}`)
+          if (res.rows[0].n > 0) violations.push(`effective RLS: ${rName} saw rows in ${table}`)
+        })
+      } catch {
+        // Table permission or RLS rejection
+      }
+    }
+  }
+
+  // 3. Coordinator cannot create monetary credit via resolve_booking_at_risk
+  try {
+    await checkSession('Coordinator', '00000000-0000-4000-8000-00000000e004', async () => {
+      let denied = false
+      try {
+        await db.query(`select public.resolve_booking_at_risk($1::jsonb)`, [
+          JSON.stringify({
+            at_risk_id: '00000000-0000-0000-0000-000000000001',
+            resolution: 'credit',
+            credit_amount: 100,
+            notes: 'Coordinator credit attempt'
+          })
+        ])
+      } catch (err) {
+        denied = err.code === '42501' || String(err.message).includes('authorization') || String(err.message).includes('Owner')
+      }
+      if (!denied) violations.push('effective RLS: Coordinator was not barred from monetary credit creation')
+    })
+  } catch (err) {
+    violations.push('effective Coordinator test error: ' + err.message)
+  }
+
   return { checked: required.length, violations }
 }
 
