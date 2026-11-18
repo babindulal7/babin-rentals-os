@@ -1,7 +1,7 @@
 # Mandatory synthetic-only seed decision — 0012
 
-**Observed:** 17 Nov 2026  
-**Source main:** `2207c5f0ce5de9ed0b689836cd0224c3154a5a4b` (seed source blob `3e69f9cabf9df71f5a7ef2e371dfa6f89846d6f0`)  
+**Observed:** 17 Nov 2026
+**Source main:** `2207c5f0ce5de9ed0b689836cd0224c3154a5a4b` (seed source blob `3e69f9cabf9df71f5a7ef2e371dfa6f89846d6f0`)
 **Scope:** Safety classification, not SQL execution or a production-data authorization.
 
 ## What is in `0012_seed_data.sql`
