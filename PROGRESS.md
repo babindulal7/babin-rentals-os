@@ -1,5 +1,34 @@
 # Progress Log
 
+## 2026-11-18 — T2-22 design draft (Lane A)
+
+**Did**
+- Prepared `docs/verification/T2-22_DESIGN.md` for review before implementation; marked T2-22 doing.
+
+**Ruled**
+- T2-21 remains awaiting merge. The current account-wide setting controls endpoint inclusivity, not a duration. No SQL or live changes were made.
+
+**Verified**
+- Read the current settings, availability bounds, migration history and card prompt. No implementation tests are claimed for this design-only draft.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 104 / 104 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | -1 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 235 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin/Claude review the design at check-in; merge T2-21, reconcile this draft with its final implementation, then build and run the card gates and screen checks.
+
 ## 2026-11-16 — Master Frontend Engineering Audit & Top 10 Remediations (Lane B)
 
 **Did**
