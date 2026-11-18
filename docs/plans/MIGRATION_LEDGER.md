@@ -92,4 +92,3 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0243 | T3-18 | change-confirmed-booking | lane-c/T3-18-change-confirmed-booking | verified (check:pglite 241/241 + check:lifecycle 85/85 Step L82-L84) |
 
 ## Expected migrations (not yet claimed)
-| 0244 | T3-14 | draft-invoice-resync-integrity | lane-c/T3-14-draft-resync-integrity | claimed |

@@ -1,5 +1,32 @@
 # Progress Log
 
+## 2026-11-19 — T3-14 draft invoice integrity investigation (Lane C)
+
+**Did**
+- Investigated draft invoice resynchronization and documented source-identity, charge-reference, consumable and header risks in `docs/verification/T3-14_RESYNC_INTEGRITY_INVESTIGATION.md`. No code repair or migration was written.
+
+**Ruled**
+- No new product ruling. The accountant's O-17 VAT-timing answer is still required before changing invoice numbering.
+
+**Verified**
+- Static inspection of migrations 0200, 0239, 0241 and 0243; no database or application gates were run for this investigation. No hosted changes.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 108 / 109 (99%) | — |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 | — |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | — |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 241 files · check:pglite not run this session. Suite: not run this session (static inspection).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed. Structural coverage only; functional, hosted, integration and device acceptance not verified.
+
+### Remaining- Design and test source-aware invoice line reconciliation with a safe policy for ambiguous legacy rows; preserve independent charges and refresh authoritative invoice headers. Do not use a blanket guard that blocks ordinary booking changes. Accountant and staging acceptance remain open.
+
 ## 2026-11-18 — T3-18: Change a confirmed booking (Lane C)
 
 **Did**
