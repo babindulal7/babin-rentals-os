@@ -1,141 +1,108 @@
 /**
- * Payment Links Generator & Security Contract (T7-15)
+ * T7-15 payment-link cryptographic model.
  *
- * Implements tokenized payment link generation:
- * - Can be created by money roles (Owner, Admin, Manager, Coordinator, Accounts).
- * - Warehouse, Technician, Driver are strictly forbidden from generating links.
- * - Links expire automatically after 48 hours.
- * - Server validates link token, booking balance, and expiry.
- * - Security deposits are NEVER taken online (O-3, B38).
- * - Paid links cannot be paid twice (idempotent, fail-closed).
+ * This module is NOT a payment processor and does not write any database row.
+ * A trusted server/RPC must derive user authorization, write the token hash,
+ * check real booking balance, and atomically consume intent at settlement.
+ * Never use this module as the only authorization/settlement check.
  */
-
 import type { SystemRole } from '../types/database'
 import { isMoneyRole } from './mfaBoundary'
 
 export interface PaymentLinkIntent {
   linkId: string
   bookingId: string
-  amountPaisa: number // In integer paisa
+  amountPaisa: number
+  /** SHA-256 digest only; do not store or log the raw bearer token. */
   tokenHash: string
   status: 'pending' | 'paid' | 'cancelled' | 'expired'
   expiresAtUtc: string
   createdBy: string
   createdAtUtc: string
 }
-
 export interface GenerateLinkParams {
   bookingId: string
   balanceDuePaisa: number
   creatorRole: SystemRole
   creatorUserId: string
-  customDurationHours?: number // Default 48
+  customDurationHours?: number
   currentTime?: Date
 }
-
 export interface VerifyPaymentLinkResult {
   valid: boolean
-  code?: 'EXPIRED' | 'ALREADY_PAID' | 'INVALID_TOKEN' | 'ZERO_BALANCE'
+  code?: 'EXPIRED' | 'ALREADY_PAID' | 'INVALID_TOKEN' | 'ZERO_BALANCE' | 'NOT_PENDING' | 'BACKEND_REQUIRED'
   message?: string
   paymentIntent?: PaymentLinkIntent
 }
 
-/** Check if user role is authorized to create customer payment links */
-export function canGeneratePaymentLink(role: SystemRole): boolean {
-  return isMoneyRole(role)
+/** UI visibility only. Must be repeated on backend using authenticated claims. */
+export function canGeneratePaymentLink(role: SystemRole): boolean { return isMoneyRole(role) }
+const toHex = (data: Uint8Array): string => Array.from(data, b => b.toString(16).padStart(2, '0')).join('')
+async function digest(token: string): Promise<string> {
+  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token))
+  return toHex(new Uint8Array(hash))
 }
 
 /**
- * Generates a signed payment link payload.
+ * Generate an opaque high-entropy bearer token and hash on the trusted server.
+ * Intentionally fails in browsers and without explicit server-authorized context.
+ * Do not interpret a returned draft as a persisted, payable payment link.
  */
-export function generatePaymentLink(params: GenerateLinkParams): {
-  success: boolean
-  error?: string
-  linkIntent?: PaymentLinkIntent
-  publicUrl?: string
-} {
-  const {
-    bookingId,
-    balanceDuePaisa,
-    creatorRole,
-    creatorUserId,
-    customDurationHours = 48,
-    currentTime = new Date(),
-  } = params
-
-  if (!canGeneratePaymentLink(creatorRole)) {
-    return {
-      success: false,
-      error: 'Permission denied: Floor roles cannot generate payment links.',
-    }
+export async function generatePaymentLink(
+  params: GenerateLinkParams,
+  trustedServerContext = false,
+): Promise<{ success: boolean; error?: string; linkIntent?: PaymentLinkIntent; publicUrl?: string }> {
+  if (!trustedServerContext || typeof window !== 'undefined') {
+    return { success: false, error: 'BACKEND_REQUIRED: payment links must be issued by an authenticated server.' }
   }
-
-  if (balanceDuePaisa <= 0) {
-    return {
-      success: false,
-      error: 'Cannot generate payment link for zero or negative balance.',
-    }
+  if (!canGeneratePaymentLink(params.creatorRole) || !params.creatorUserId) {
+    return { success: false, error: 'Financial role and authenticated server actor required.' }
   }
-
-  const durationMs = customDurationHours * 60 * 60 * 1000
-  const expiresAt = new Date(currentTime.getTime() + durationMs).toISOString()
-  const randomSuffix = Math.random().toString(36).substring(2, 10)
-  const linkId = `pl_${bookingId}_${randomSuffix}`
-  const tokenHash = `th_${Math.abs(bookingId.split('').reduce((a, b) => ((a << 5) - a + b.charCodeAt(0)) | 0, 0)).toString(16)}_${randomSuffix}`
-
-  const linkIntent: PaymentLinkIntent = {
-    linkId,
-    bookingId,
-    amountPaisa: balanceDuePaisa,
-    tokenHash,
-    status: 'pending',
-    expiresAtUtc: expiresAt,
-    createdBy: creatorUserId,
-    createdAtUtc: currentTime.toISOString(),
+  if (!params.bookingId || !Number.isSafeInteger(params.balanceDuePaisa) || params.balanceDuePaisa <= 0) {
+    return { success: false, error: 'Positive, current booking balance required.' }
   }
-
+  const hours = params.customDurationHours ?? 48
+  if (!Number.isFinite(hours) || hours <= 0 || hours > 48) {
+    return { success: false, error: 'Payment link lifetime must be between 0 and 48 hours.' }
+  }
+  if (!globalThis.crypto?.subtle || !globalThis.crypto?.getRandomValues) {
+    return { success: false, error: 'Secure random generator unavailable; refusing to issue a token.' }
+  }
+  const rawToken = toHex(crypto.getRandomValues(new Uint8Array(32)))
+  const tokenHash = await digest(rawToken)
+  const now = params.currentTime ?? new Date()
+  if (!Number.isFinite(now.getTime())) return { success: false, error: 'Invalid timestamp.' }
+  const linkId = crypto.randomUUID()
+  const intent: PaymentLinkIntent = {
+    linkId, bookingId: params.bookingId, amountPaisa: params.balanceDuePaisa,
+    tokenHash, status: 'pending', createdBy: params.creatorUserId,
+    createdAtUtc: now.toISOString(),
+    expiresAtUtc: new Date(now.getTime() + hours * 3600000).toISOString(),
+  }
   return {
-    success: true,
-    linkIntent,
-    publicUrl: `https://book.babinrentals.com/pay/${linkId}?token=${tokenHash}`,
+    success: true, linkIntent: intent,
+    // Token must be transferred securely to the intended client only, never logged.
+    publicUrl: 'https://book.babinrentals.com/pay/' + encodeURIComponent(linkId) + '?token=' + rawToken,
   }
 }
 
 /**
- * Validates a payment link prior to accepting checkout.
+ * Verifies high-entropy token digest and state at a point in time.
+ * Server must additionally re-check the current balance and atomically settle
+ * pending -> paid with a UNIQUE provider event/idempotency key.
  */
-export function verifyPaymentLink(
-  linkIntent: PaymentLinkIntent,
-  presentedToken: string,
-  currentTime = new Date(),
-): VerifyPaymentLinkResult {
-  if (linkIntent.tokenHash !== presentedToken) {
-    return {
-      valid: false,
-      code: 'INVALID_TOKEN',
-      message: 'Payment link security token mismatch.',
-    }
+export async function verifyPaymentLink(
+  intent: PaymentLinkIntent, presentedToken: string,
+  currentTime = new Date(), trustedServerContext = false,
+): Promise<VerifyPaymentLinkResult> {
+  if (!trustedServerContext || typeof window !== 'undefined') return { valid: false, code: 'BACKEND_REQUIRED' }
+  if (!globalThis.crypto?.subtle) return { valid: false, code: 'BACKEND_REQUIRED' }
+  if (!presentedToken || await digest(presentedToken) !== intent.tokenHash) return { valid: false, code: 'INVALID_TOKEN' }
+  if (intent.status === 'paid') return { valid: false, code: 'ALREADY_PAID' }
+  if (intent.status !== 'pending') return { valid: false, code: 'NOT_PENDING' }
+  if (!Number.isSafeInteger(intent.amountPaisa) || intent.amountPaisa <= 0) return { valid: false, code: 'ZERO_BALANCE' }
+  if (!Number.isFinite(currentTime.getTime()) || !Number.isFinite(Date.parse(intent.expiresAtUtc)) || currentTime.getTime() >= Date.parse(intent.expiresAtUtc)) {
+    return { valid: false, code: 'EXPIRED' }
   }
-
-  if (linkIntent.status === 'paid') {
-    return {
-      valid: false,
-      code: 'ALREADY_PAID',
-      message: 'This payment link has already been settled.',
-    }
-  }
-
-  const expiry = new Date(linkIntent.expiresAtUtc)
-  if (isNaN(expiry.getTime()) || currentTime > expiry) {
-    return {
-      valid: false,
-      code: 'EXPIRED',
-      message: 'This payment link expired after 48 hours. Please request a new link.',
-    }
-  }
-
-  return {
-    valid: true,
-    paymentIntent: linkIntent,
-  }
+  return { valid: true, paymentIntent: intent }
 }
