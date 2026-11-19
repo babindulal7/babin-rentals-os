@@ -41,7 +41,7 @@ export function SubRentalPartnerModal({
   if (!unit) return null
 
   const effectivePartner = partner === 'Custom' ? customPartner.trim() : partner
-  const isValid = Boolean(effectivePartner)
+  const isValid = Boolean(effectivePartner && (partner !== 'Custom' || effectivePartner.length >= 2))
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -84,7 +84,7 @@ export function SubRentalPartnerModal({
             onChange={(e) => setPartner(e.target.value)}
             style={{
               width: '100%',
-              minHeight: 40,
+              minHeight: 44,
               padding: '0 10px',
               borderRadius: 'var(--r-input, 6px)',
               border: '1px solid var(--border, #d1d5db)',
@@ -119,7 +119,7 @@ export function SubRentalPartnerModal({
               placeholder="e.g. CineLab Nepal"
               style={{
                 width: '100%',
-                minHeight: 40,
+                minHeight: 44,
                 padding: '0 10px',
                 borderRadius: 'var(--r-input, 6px)',
                 border: '1px solid var(--border, #d1d5db)',
@@ -151,7 +151,7 @@ export function SubRentalPartnerModal({
                 placeholder="Client rate"
                 style={{
                   width: '100%',
-                  minHeight: 40,
+                  minHeight: 44,
                   padding: '0 10px',
                   borderRadius: 'var(--r-input, 6px)',
                   border: '1px solid var(--border, #d1d5db)',
@@ -178,7 +178,7 @@ export function SubRentalPartnerModal({
                 placeholder="Supplier cost"
                 style={{
                   width: '100%',
-                  minHeight: 40,
+                  minHeight: 44,
                   padding: '0 10px',
                   borderRadius: 'var(--r-input, 6px)',
                   border: '1px solid var(--border, #d1d5db)',
