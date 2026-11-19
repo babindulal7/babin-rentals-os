@@ -1,13 +1,13 @@
 {
   "title": "Babin Rentals OS staged SQL preflight inventory: review required, never auto-apply",
-  "observed_date": "2026-11-17",
-  "source_main_commit": "4ba3cde372b5a690468aff370572a9e8500c9685",
+  "observed_date": "2026-11-19",
+  "source_main_commit": "44300a17e01705676cd0c21b9518edf23a9a0fda",
   "target_staging_project_ref": "klhmsrunqrdxjudyhnkm",
   "protected_production_project_ref": "sxguwvgoserhdolewibb",
-  "migration_files": 237,
+  "migration_files": 241,
   "live_recorded_history_count": 157,
   "exact_name_matches": 148,
-  "source_without_exact_live_name": 89,
+  "source_without_exact_live_name": 93,
   "live_without_exact_source_name": 9,
   "policy": "Exact filename matches alone do not prove content identity or safe apply. Git blob hashes verify source bytes, NOT applied SQL equivalence. This inventory is not a staged migration execution authorization.",
   "must_not_run_automatically": [
@@ -1666,11 +1666,21 @@
       "review_state": "UNMATCHED_OR_NEW_MIGRATION_REVIEW_REQUIRED"
     },
     {
-      "filename": "0239_consumables_pricing_restock_and_low_stock.sql",
-      "git_blob_sha": "c9c987542adf578f7e5e854da2247493da778e9c",
-      "bytes": 49576,
+      "filename": "0238_rental_day_start_setting.sql",
+      "git_blob_sha": "ea808888469fbcde8f7b83aa757b82e13c55e926",
+      "bytes": 29593,
       "live_exact_name_found": false,
-      "review_state": "UNMATCHED_OR_NEW_MIGRATION_REVIEW_REQUIRED"
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED",
+      "first_seen_source_commit": "68c190842688da42536f224e3dfa6de5a36cc279"
+    },
+    {
+      "filename": "0239_consumables_pricing_restock_and_low_stock.sql",
+      "git_blob_sha": "f0e3c25b9b11d67280c40e16ddc05629a52ce79b",
+      "bytes": 50940,
+      "live_exact_name_found": false,
+      "review_state": "SOURCE_CONTENT_CHANGED_REVIEW_REQUIRED",
+      "previous_git_blob_sha": "c9c987542adf578f7e5e854da2247493da778e9c",
+      "previous_bytes": 49576
     },
     {
       "filename": "0240_time_between_rentals.sql",
@@ -1678,6 +1688,52 @@
       "bytes": 17079,
       "live_exact_name_found": false,
       "review_state": "UNMATCHED_OR_NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0241_extension_clash_manager_decision_and_at_risk.sql",
+      "git_blob_sha": "ee37c1fb84d09c5d211cfeb394033941d626731a",
+      "bytes": 22677,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED",
+      "first_seen_source_commit": "68c190842688da42536f224e3dfa6de5a36cc279"
+    },
+    {
+      "filename": "0242_return_damage_signature_and_refusal.sql",
+      "git_blob_sha": "d977e39bb265f57516cf219db9a999578864aab1",
+      "bytes": 4711,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED",
+      "first_seen_source_commit": "68c190842688da42536f224e3dfa6de5a36cc279"
+    },
+    {
+      "filename": "0243_change_confirmed_booking.sql",
+      "git_blob_sha": "0081d0b95717919a4aa678efe0f5f99c19aaf54d",
+      "bytes": 43826,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED",
+      "first_seen_source_commit": "44300a17e01705676cd0c21b9518edf23a9a0fda"
     }
-  ]
+  ],
+  "historical_live_comparison_observed_date": "2026-11-17",
+  "historical_live_comparison_source_commit": "4ba3cde372b5a690468aff370572a9e8500c9685",
+  "current_live_ledger_rechecked": false,
+  "historical_comparison_note": "Counts compare source filenames against a frozen 17 Nov production ledger snapshot. No live ledger re-read, SQL equivalence, dependency validation, or hosted apply authorization.",
+  "source_drift_since_prior_snapshot": {
+    "added_files": [
+      "0238_rental_day_start_setting.sql",
+      "0241_extension_clash_manager_decision_and_at_risk.sql",
+      "0242_return_damage_signature_and_refusal.sql",
+      "0243_change_confirmed_booking.sql"
+    ],
+    "changed_files": [
+      {
+        "file": "0239_consumables_pricing_restock_and_low_stock.sql",
+        "oldSha": "c9c987542adf578f7e5e854da2247493da778e9c",
+        "newSha": "f0e3c25b9b11d67280c40e16ddc05629a52ce79b",
+        "oldBytes": 49576,
+        "newBytes": 50940
+      }
+    ],
+    "removed_files": []
+  }
 }
