@@ -271,7 +271,7 @@ product's old store slug beside it. Claim a number only if a new column or entit
 path lands on the catalogue home; screen check.
 **Needs** — T7-02, T9-01.
 
-### T7-10 · Security review — the N-7 gate            status: todo · size: M · lane C
+### T7-10 · Security review — the N-7 gate            status: ready — awaiting merge (lane-c/T7-10-security-review-the-n-7-gate) · size: M · lane C
 **What** — Before any client write path is on in live: D-5 green on staging; amount tampering,
 callback replay and forged-session tests green; secrets only in Edge Function secrets; no PII or
 amounts in logs; the anon allow-list contains exactly the two public objects; PERMISSIONS §5/§7

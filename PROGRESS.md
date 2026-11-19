@@ -1,5 +1,38 @@
 # Progress Log
 
+## 2026-11-19 — T7-10: Security review — the N-7 gate (Lane C / Windows)
+
+**Did**
+- Completed **T7-10 · Security review — the N-7 gate** (`lane-c/T7-10-security-review-the-n-7-gate`):
+  - Performed complete pre-live audit of online booking write paths, tenant isolation (D-5), public catalogue view (`public_catalogue_v`), bot protections (T7-09), away mode enforcement (T7-14), product variants (T7-13), legacy URL traversal protection (T7-17), and store analytics (T7-16).
+  - Authored comprehensive verification report: `docs/verification/ONLINE_BOOKING_REVIEW_2026-11-19.md`.
+  - Validated zero PII and zero unauthorized definer/business RPC exposure on anonymous surfaces (`ALLOWED_ANON_FUNCTIONS` verified, 0 leaks, 247/247 migrations verified).
+  - Confirmed strict compliance with `docs/PERMISSIONS.md` §5 (money visibility) and §7 (client portal / request queue).
+  - Updated `docs/plans/T7_ONLINE_BOOKING.md` status to `ready — awaiting merge (lane-c/T7-10-security-review-the-n-7-gate)`.
+
+**Ruled**
+- No client-facing write path may alter inventory reservations, booking stage, or ledger balances directly; all public submissions route to the staff request queue (T7-04).
+- Online booking rates are strictly integer paisa derived server-side.
+- Third-party store analytics must scrub all client PII prior to dispatch.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 111 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | +0 |
+| Lifecycle | steps green / total | 91 / 91 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 247 files · check:pglite 247/247 applied, 0 failed (recorded 2026-11-19T14:01:07.149Z). Suite: Historical suite: 7434/7434 passed, 0 failed (recorded 2026-11-19T13:28:02.395Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 7398/7398 passed, 0 failed (recorded 2026-11-19T01:10:17.481Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-19T14:01:16.641Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T7-10 complete and verified across all gates. Next roadmap cards in order.
+
 ## 2026-11-19 — T7-13: Products with options on one page (Lane C / Windows)
 
 **Did**
