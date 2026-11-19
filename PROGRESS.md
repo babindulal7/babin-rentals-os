@@ -1,5 +1,48 @@
 # Progress Log
 
+## 2026-11-20 — T3-31: Counter sale completion & device testing deferral ruling (Lane C)
+
+**Did**
+- Completed and merged **T3-31 · Counter sale** acceptance checks (PR #234 core merged, PR #240 merged as commit `72620bd0`):
+  - Fixed daily closing cash classification in lifecycle step `L85`: ensured Cash Drawer bank account (`channel_group = 'Cash'`), linked payment to it via `bank_account_id`, and asserted daily closing collection shows `cash_collected = 1356.00` and `unclassified_collected = 0.00`.
+  - Authored full-payment-to-numbering integration test in `src/actions/sales/__tests__/counterSaleWorkflow.integration.test.ts` covering `create_counter_sale` -> `recordPayment` -> `issue_invoice` -> `closing`.
+  - Added session identity verification in `create_counter_sale` and `cancel_counter_sale` RPCs (`supabase/migrations/0244_counter_sale.sql`) rejecting actor spoofing when `auth_user_id()` is distinct (`42501` exception). Added negative tests in `scripts/e2e-lifecycle.mjs` and `src/actions/sales/__tests__/counterSale.test.ts`.
+  - Updated `docs/plans/T3_BOOKING_MONEY.md`, `docs/plans/MIGRATION_LEDGER.md`, and `src/lib/__tests__/roadmapStatusTruth.test.ts` to record T3-31 as `done`.
+
+**Ruled**
+- Babin explicitly ruled on 20 Nov 2026: **Physical device testing is deferred until after go-live; device functions will be used in live operation and do not block go-live.**
+- With all automated verification gates passing (PGlite 87/87, Vitest 13/13, Build, GitHub CI), T3-31 is marked `done`.
+
+**Verified**
+- `npm run check:pglite`: 242/242 applied cleanly from scratch, 0 leaks.
+- `npm run check:lifecycle`: 87/87 green (including updated L85 and L86).
+- `npx vitest run src/actions/sales/__tests__/`: 10/10 passed (9 unit, 1 integration).
+- `npx vitest run src/modules/sales/__tests__/CounterSaleModal.test.tsx`: 3/3 passed.
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: 6/6 passed.
+- `npm run typecheck`: clean, 0 errors.
+- `npm run lint`: clean, 0 warnings.
+- `npm run build`: successful production build.
+- GitHub Actions CI: `typecheck · test · build` PASSED (7m3s) on PR #240.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 111 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 87 / 87 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 242 files · check:pglite 242/242 applied, 0 failed (recorded 2026-11-19T22:35:39.728Z).
+Gates read from .lifecycle-result.json, written 2026-11-19T22:36:39.551Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T3-14 (Draft invoice at Confirm, number on full payment): continue lane C progress.
+- T3-02 (Deposits per product, entered before go-live): staged role checks and deposit data-entry.
+- Phase 2 physical device checks deferred post-live per Babin 20 Nov ruling.
+
 ## 2026-11-20 — Cross-track roadmap reconciliation to acceptance_pending (Lane B / Windows)
 
 **Did**
