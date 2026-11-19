@@ -13,6 +13,9 @@ back before Close; a repaired unit returns to stock only when its repair job clo
 scanning queues and flushes; a repeat client's collector is picked in one tap; one person alone on
 the night shift can finish Reset; scanning any label shows who has the item.
 
+**Owner release-scope override · 20 Nov 2026:** The physical iPad/scanner/printer portion of G2 is **Phase 2 after live**, not a pre-live gate. For Phase 1, use a counter PC/desktop and manual item lookup/ticks for a complete staging booking → Pack → Handover → Return → Reset (with real role isolation, server-side custody gates, required photos/signatures where applicable, stock/availability checks and audit evidence). No Bluetooth scanner purchase, iPad device-day, camera barcode verification or physical printing acceptance is required before Phase 1. Keep the hardware-specific acceptance work pending for post-launch; security, money masking and correct accounting remain mandatory.
+
+
 **Priority inside this track:** every card without a tag, and cards marked **[go-live]**, must be done
 by day X; **[soon]** cards go in if time allows, otherwise in the first two weeks after X.
 
@@ -240,7 +243,7 @@ Replace the two `<Unavailable reason="Printing … is not built">` blocks.
 **Where** — `PackingWorkspace.tsx` (~line 1380), `ReturnWorkspace.tsx` (~line 1571),
 `src/lib/pdf/generatePdf.ts` (`generateDocumentPdf`), `src/lib/labelPrinter.ts`, `QrLabels`.
 **Database** — none (document records via `createDocument` where they exist).
-**Done when** — PDFs open on iPad and print on the shop printer; Warehouse versions carry no prices.
+**Phase 1 done when** — generated Packing/Return PDFs open on a supported desktop browser, are complete and Warehouse versions carry no prices; existing paper workflows remain available. **Phase 2 after live:** physical iPad PDF opening, shop printer and label-printer tests.
 **Needs** — none.
 
 ### T2-09 · Bluetooth scanner at the packing bench            status: done · merged (`f3dcf0c3`) · verified on iPad by Babin · size: S · lane A + Babin
@@ -308,7 +311,7 @@ the "ruled, not yet in code" box in the same commit (B-3).
 **Done when** — both paths work in mock mode and on staging; the audit shows self-checked rows.
 **Needs** — none.
 
-### T2-14 · Scan a label → item card            status: acceptance_pending — merged 27 Oct (1188d2b4); physical Bluetooth scanner and iPad timing receipt pending · size: M · lane A · [go-live]
+### T2-14 · Scan a label → item card            status: acceptance_pending — merged 27 Oct (1188d2b4); physical Bluetooth scanner/iPad timing acceptance deferred to Phase 2 after live · size: M · lane A · [soon]
 **What** — Scanning (camera or Bluetooth) or searching an item's QR/asset code **anywhere outside a
 floor workspace** opens its item card: status, **who has it now** (client, booking, due back, with a
 countdown), location if in the shop, next booking, last reset, open damage. Inside a workspace,
@@ -320,8 +323,7 @@ scanning keeps its current meaning (mark the item). Money hidden for floor roles
 **Build notes** — a Bluetooth scanner types the code and presses Enter. Never
 debounce scans — that drops items. Ignore the same code a second time within ⭐ 1.5 s; trim spaces and
 match case-insensitively; every code is checked by the server, and an unknown code says so inline.
-**Done when** — scan → card in ≤ 1 second on the iPad; an item on rent shows the client and due-back
-time; a Warehouse seat sees no money.
+**Phase 1 verification** — search/manual code entry opens the correct item card and an on-rent item shows holder/due-back; a Warehouse seat sees no money, all on staging. **Phase 2 after live done when** — real scanner → card in ≤ 1 second on the iPad with documented physical evidence.
 **Needs** — none.
 
 ### T2-15 · Damage found during reset            status: acceptance_pending — PR #30 merged 2 Nov; staged email sandbox and damage notice checks pending · size: S · lane A · [soon]
@@ -501,7 +503,7 @@ partner unit", "the end task appears and closes the stock".
 5) nothing is deleted; 6) screen check.
 **Needs** — T2-21, T2-08 (labels), T3-13 (the partner list in the sub-rent flow).
 
-### T2-11 · Device day            status: todo · size: M · lane A + Babin + staff
+### T2-11 · Device day            status: todo — owner deferred physical iPad/scanner/printer acceptance to Phase 2 after live (20 Nov 2026) · size: M · lane A + Babin + staff
 **What** — One supervised session on the **iPhone 17 Pro, M4 iPad Pro and the Bluetooth scanner**
 (and one staff Android phone if any staff use Android): run five real-shaped bookings through all
 four verbs on staging, in both orientations, light and dark, at 125% text; airplane-mode test
@@ -512,4 +514,5 @@ four verbs on staging, in both orientations, light and dark, at 125% text; airpl
 **Done when** — checklist complete; zero P0 defects open; P1 defects have cards with owners. Also
 drive the counter desktop PC and a laptop (W52), the name + PIN switch on the shared iPad (T1-15),
 and one night-shift return before 6 AM (W31, W32).
-**Needs** — T2-01 … T2-10, T2-12 … T2-15, T1-15; Babin books the session (target 10 Jan 2027, 26 Poush).
+**Timing** — **Phase 2 after live**, no pre-live device-day or scanner purchase requirement. Keep this card `todo`; schedule only after launch, not the previously suggested 10 Jan 2027 date. **Phase 1 instead:** rehearse core floor operations with manual lookup on counter PC/desktop in hosted staging, including signed-in role and audit tests.
+**Needs** — T2-01 … T2-10, T2-12 … T2-15, T1-15; availability of physical equipment after launch.
