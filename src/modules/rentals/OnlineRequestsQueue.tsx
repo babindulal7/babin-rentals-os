@@ -227,10 +227,23 @@ export const OnlineRequestsQueue: React.FC = () => {
                             View Booking
                           </Button>
                         )}
-                        {r.status === 'declined' && r.decline_reason && (
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }} title={r.decline_reason}>
-                            Declined: {r.decline_reason.slice(0, 20)}...
-                          </span>
+                        {r.status === 'declined' && (
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'flex-end' }}>
+                            {canMoney && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => navigate('/finance?tab=reconciliation')}
+                              >
+                                Refund / Reconcile
+                              </Button>
+                            )}
+                            {r.decline_reason && (
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }} title={r.decline_reason}>
+                                Declined: {r.decline_reason.slice(0, 20)}...
+                              </span>
+                            )}
+                          </div>
                         )}
                       </td>
                     )}
@@ -273,6 +286,7 @@ export const OnlineRequestsQueue: React.FC = () => {
             </h3>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 14 }}>
               State the reason for declining. This reason is sent to {selectedDeclineReq.client_name}.
+              If client already paid an online advance, head to Finance ▸ Online Reconciliation to issue a wallet refund or store account credit.
             </p>
             <form onSubmit={handleDeclineSubmit}>
               <textarea

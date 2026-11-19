@@ -1,5 +1,79 @@
 # Progress Log
 
+## 2026-11-20 — T7-07: Refunds and reconciliation (Lane C / Windows)
+
+**Did**
+- Completed **T7-07 · Refunds and reconciliation** (`lane-c/T7-07-refunds-and-reconciliation`):
+  - Authored Migration `supabase/migrations/0253_online_payment_refunds_and_reconciliation.sql` (claimed migration 0253 in ledger):
+    - Added status `'refunded'` and refund audit columns (`refunded_at`, `refund_ref`, `refund_reason`, `refund_type`, `refunded_by`) to `public.payment_intents`.
+    - Authored `public.record_online_payment_refund(p_intent_id, p_refund_type, p_refund_ref, p_reason)`:
+      - Strictly role-gated to money roles (`Owner`, `Admin`, `Manager`, `Accounts`) via `auth_can_view_money()`.
+      - Idempotent: returns existing refund metadata if already marked refunded.
+      - Enforces **Law 4 (Immutability)**: If the payment was already allocated (`status = 'allocated'`), mints an immutable `public.payment_reversals` row linking `original_payment_id` with exact reversal amount, never mutating or deleting the original `payments` row.
+      - Enforces **Client Choice (B39, O-2)**: If `refund_type = 'account_credit'`, records store credit in `public.client_account_credits` and increments `clients.account_credit_paisa` by exact integer paisa.
+      - Enforces **Source Refund**: If `refund_type = 'wallet_refund'`, stamps provider refund reference and records audit trail.
+    - Authored `public.get_online_payment_reconciliation(p_start_date, p_end_date)`:
+      - Aggregates online transaction totals by provider (Fonepay, eSewa, Khalti) and day.
+      - Flags stale unreconciled intents (`flagged_unreconciled_intents`): paid intents that remain unallocated and unrefunded after 3 days (`created_at < now() - interval '3 days'`).
+      - Masked under **Law 6 (Money Blindness)**: returns 0 rows for non-money roles (`Warehouse`, `Technician`, `Driver`, `Client`).
+  - Lifecycle Step L93 (`scripts/e2e-lifecycle.mjs`):
+    - Added Step L93: verifies unallocated intent wallet refund, idempotency, allocated intent payment reversal row creation (Law 4), client account credit increment (B39), 3-day unallocated reconciliation flag, and money blindness (Law 6).
+    - Verified via `npm run check:lifecycle`: 94/94 green, 0 known-red, 0 failed.
+    - Verified via `npm run check:pglite`: 250/250 applied, 0 failed.
+  - TypeScript & Actions:
+    - Authored `src/actions/finance/refundPaymentIntent.ts`: typed action calling `record_online_payment_refund`.
+    - Authored `src/lib/queries/reconciliation.ts`: queries for `fetchOnlineReconciliation` and `fetchPaymentIntents`.
+  - Finance UI & Workflows:
+    - Authored `src/modules/finance/OnlineReconciliationWorkspace.tsx`:
+      - KPI summary strip: Total Collected Online, Allocated to Bookings, Refunded / Credited, and Unreconciled (>3 Days).
+      - Provider summary cards for Fonepay, eSewa, and Khalti.
+      - Actionable Alert Banner displayed whenever unallocated payments older than 3 days exist.
+      - Online payment intents table with filter by status (`All`, `Paid`, `Allocated`, `Refunded`).
+      - Action modal for "Process Online Payment Refund": toggles between Wallet Refund (with provider reference) and Store Account Credit (B39), enforcing integer paisa.
+    - Integrated into `src/modules/finance/Finance.tsx`:
+      - Supported `tab === 'Reconciliation'` (accessible via `?tab=reconciliation` and header actions overflow).
+    - Integrated into `src/modules/finance/Payments.tsx`:
+      - Added "Online Reconciliation" button in header secondary actions.
+    - Integrated into `src/modules/rentals/OnlineRequestsQueue.tsx`:
+      - When an online booking request is declined, surfaces "Refund / Reconcile" button linking directly to Online Reconciliation workspace.
+      - Added decline dialog note alerting staff to issue wallet refund or account credit if an advance was paid.
+  - Tests & Verification:
+    - Authored unit test suite `src/modules/finance/__tests__/onlineReconciliation.test.tsx`: all 5 tests passing (KPI cards, stale alert banner, wallet refund submission, account credit submission, and Law 6 money blindness).
+    - `npm run typecheck`: clean (0 errors).
+    - `npm run lint`: clean (0 errors, 0 warnings).
+    - `npm run lint:ui-copy`: 0 developer-text violations.
+    - `npm run check:contrast`: 97/97 passing WCAG AA.
+    - `npm run check:pglite`: 250/250 applied, 0 failed.
+    - `npm run check:lifecycle`: 94/94 steps green.
+    - `npm run build`: clean production build in 5.37s.
+  - Updated `docs/plans/T7_ONLINE_BOOKING.md` status to `ready — awaiting merge (lane-c/T7-07-refunds-and-reconciliation)`.
+
+**Ruled**
+- When staff decline a request that was paid online, the decline workflow prompts staff to reconcile the payment via wallet refund or account credit (B39, O-2).
+- When a paid booking cannot proceed, client chooses between full wallet refund and account credit (B39).
+- Allocated payments are immutable: refunding an allocated payment inserts an append-only row in `payment_reversals` and never edits or deletes the `payments` row (Law 4).
+- Online payment intents unallocated and unrefunded after 3 days are flagged in the reconciliation dashboard as an unreconciled risk.
+- Non-money roles receive 0 rows from reconciliation queries and are refused by refund RPCs (Law 6).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 112 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | +0 |
+| Lifecycle | steps green / total | 94 / 94 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 250 files · check:pglite 250/250 applied, 0 failed (recorded 2026-11-19T22:44:03.498Z). Suite: Historical suite: 7441/7441 passed, 0 failed (recorded 2026-11-19T18:07:13.731Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 7398/7398 passed, 0 failed (recorded 2026-11-19T01:10:17.481Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-19T22:44:56.592Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Waiting on Babin: Babin to enter live `FONEPAY_MERCHANT_CODE` and `FONEPAY_SECRET_KEY` in Supabase Edge Function secrets and record one live Rs 10 test payment to reconcile with Fonepay statement.
+- Next roadmap cards in order: T7-06 (eSewa & Khalti).
+
 ## 2026-11-20 — T7-12: Recommended items (Lane C / Windows)
 
 **Did**
