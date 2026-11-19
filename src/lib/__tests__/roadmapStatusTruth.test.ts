@@ -61,7 +61,6 @@ describe('Roadmap status truth across merged tracks', () => {
       'T3-19': 'PR #163 merged',
       'T3-20': 'PR #190 merged',
       'T3-23': 'PR #191 merged',
-      'T3-31': 'PR #234 merged',
     }
     for (const [key, prRef] of Object.entries(cards)) {
       const heading = t3.split('\n').find((l) => l.startsWith(`### ${key} ·`))
@@ -70,6 +69,13 @@ describe('Roadmap status truth across merged tracks', () => {
       expect(heading).toContain(prRef)
       expect(heading).not.toContain('status: todo')
     }
+
+    // T3-31 was verified green across PR #234 and PR #240, and physical device testing was explicitly deferred post-live by Babin ruling (20 Nov)
+    const t331Heading = t3.split('\n').find((l) => l.startsWith('### T3-31 ·'))
+    expect(t331Heading).toBeDefined()
+    expect(t331Heading).toContain('status: done')
+    expect(t331Heading).toContain('PR #234')
+    expect(t331Heading).toContain('PR #240')
   })
 
   it('T7 online booking track reflects merged PRs as acceptance_pending', () => {
