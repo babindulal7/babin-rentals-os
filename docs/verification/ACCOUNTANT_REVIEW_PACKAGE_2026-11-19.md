@@ -1,9 +1,12 @@
-# Accountant Review Package & Tax Compliance Matrix
+# Accountant Review Package & Tax Compliance Matrix (Synthetic Test Pack)
 **Date:** 19 November 2026 (NPT)  
-**Entity:** Babin Rentals Pvt. Ltd. (Kathmandu, Nepal)  
-**PAN:** `609654321`  
+**Entity:** Babin Rentals (Synthetic Sample Environment — Not For Issuance)  
+**PAN:** `000000000` (Synthetic Placeholder)  
 **Auditor / Accountant Review Subject:** T3-06 (Invoices & Rental Agreements) & T8-08 (Crew Payout Withholding / TDS)  
 **Status:** **Ready for Owner / Accountant Review**  
+
+> **DISCLAIMER: SYNTHETIC SAMPLE DATA ONLY — FOR TECHNICAL REVIEW & SYSTEM VERIFICATION. NOT AN OFFICIAL TAX INVOICE. NOT FOR ISSUANCE.**  
+> Babin Rentals operates with pre-printed paper VAT invoices (D1, D2). This document and the associated sample PDFs are internal technical review artifacts and do not constitute an IRD CBMS electronic billing certification. All business names, PANs, registration numbers, and phone numbers in this package are unambiguous synthetic placeholders.
 
 ---
 
@@ -12,10 +15,10 @@
 ### 1. Overview of Generated Sample Documents
 Four synthetic sample documents have been generated using the application's production PDF generation engine (`src/lib/pdf/generatePdf.ts`) and saved in `artifacts/accountant-review/`:
 
-1. **`01_Sample_Tax_Invoice_INV-2083-0042.pdf`** ([File link](file:///Users/babindulal/Documents/GitHub/babin-rentals-os/artifacts/accountant-review/01_Sample_Tax_Invoice_INV-2083-0042.pdf)):
-   - **Document Type:** Tax Invoice (VAT Invoice under Inland Revenue Department rules).
-   - **Seller Info:** Babin Rentals Pvt. Ltd., PAN: `609654321`, Baluwatar, Kathmandu.
-   - **Buyer Info:** Astra Productions Pvt. Ltd., PAN: `601234567`, Jhamsikhel, Lalitpur.
+1. **`01_Sample_Tax_Invoice_INV-2083-0042.pdf`** ([File link](artifacts/accountant-review/01_Sample_Tax_Invoice_INV-2083-0042.pdf)):
+   - **Document Type:** Tax Invoice Layout (Pre-printed paper VAT invoice alignment, D1/D2 — Synthetic Sample).
+   - **Seller Info:** Babin Rentals (Synthetic Sample - Not For Issuance), PAN: `000000000`, Kathmandu.
+   - **Buyer Info:** Synthetic Client Corp (Sample Not For Issuance), PAN: `999999999`, Lalitpur.
    - **Dates:** Issue Date in dual format (AD: `2026-11-19` · BS: `2083-08-04`). Due Date: Net 7 days.
    - **Line Items:** Serialized gear (days × daily rate), consumables (sold per unit, ignoring duration per T3-30).
    - **Tax Computation:** 
@@ -26,19 +29,19 @@ Four synthetic sample documents have been generated using the application's prod
      - Grand Total: NPR 51,867.00
      - Advance Payment Credited: NPR 20,000.00
      - Outstanding Due: NPR 31,867.00
-   - **Payment Routing:** Bank details (Nabil Bank A/C) and Fonepay QR merchant details printed.
+   - **Payment Routing:** Synthetic test bank details and placeholder QR merchant details printed.
 
-2. **`02_Sample_Pro_Forma_Invoice_PRO-0109.pdf`** ([File link](file:///Users/babindulal/Documents/GitHub/babin-rentals-os/artifacts/accountant-review/02_Sample_Pro_Forma_Invoice_PRO-0109.pdf)):
-   - **Document Type:** Pro Forma Invoice (Quotation / Estimate).
+2. **`02_Sample_Pro_Forma_Invoice_PRO-0109.pdf`** ([File link](artifacts/accountant-review/02_Sample_Pro_Forma_Invoice_PRO-0109.pdf)):
+   - **Document Type:** Pro Forma Invoice (Quotation / Estimate — Synthetic Sample).
    - **Compliance Rule (Law 7 / B18 / T3-27):** Pro Forma invoices **take no tax invoice number** and **never enter the VAT register**. Explicitly labelled *"PRO FORMA INVOICE — not a tax invoice"*.
 
-3. **`03_Sample_Rental_Agreement_AGR-2083-0108.pdf`** ([File link](file:///Users/babindulal/Documents/GitHub/babin-rentals-os/artifacts/accountant-review/03_Sample_Rental_Agreement_AGR-2083-0108.pdf)):
-   - **Document Type:** Handover Rental Agreement (T2-02 / T3-06).
-   - **Details:** Client identity (Citizenship ID / PAN), verified equipment serial numbers, rental start/end dates, agreed terms & conditions.
+3. **`03_Sample_Rental_Agreement_AGR-2083-0108.pdf`** ([File link](artifacts/accountant-review/03_Sample_Rental_Agreement_AGR-2083-0108.pdf)):
+   - **Document Type:** Handover Rental Agreement (T2-02 / T3-06 — Synthetic Sample).
+   - **Details:** Client identity (Citizenship ID / PAN placeholders), verified equipment serial numbers, rental start/end dates, agreed terms & conditions.
    - **Security Deposits (Law 5):** Refundable security deposit (NPR 50,000) recorded as an operational liability — strictly excluded from rental revenue and not subjected to VAT.
 
-4. **`04_Sample_Credit_Note_CRN-2083-0005.pdf`** ([File link](file:///Users/babindulal/Documents/GitHub/babin-rentals-os/artifacts/accountant-review/04_Sample_Credit_Note_CRN-2083-0005.pdf)):
-   - **Document Type:** Credit Note (Invoice Correction & Voiding per Law 4 / R-15).
+4. **`04_Sample_Credit_Note_CRN-2083-0005.pdf`** ([File link](artifacts/accountant-review/04_Sample_Credit_Note_CRN-2083-0005.pdf)):
+   - **Document Type:** Credit Note (Invoice Correction & Voiding per Law 4 / R-15 — Synthetic Sample).
    - **Compliance Rule:** Issued tax invoices are strictly **immutable**. Any adjustment, cancellation, or rate correction requires voiding the original invoice and issuing a linked Credit Note (`CRN-`), with negative VAT adjustment.
 
 ---
@@ -97,7 +100,7 @@ Under Section 88 of the Nepal Income Tax Act (2058 / 2002), withholding tax must
 ---
 
 ### Deliverable Artifacts Ready for Hand-off:
-- [01_Sample_Tax_Invoice_INV-2083-0042.pdf](file:///Users/babindulal/Documents/GitHub/babin-rentals-os/artifacts/accountant-review/01_Sample_Tax_Invoice_INV-2083-0042.pdf)
-- [02_Sample_Pro_Forma_Invoice_PRO-0109.pdf](file:///Users/babindulal/Documents/GitHub/babin-rentals-os/artifacts/accountant-review/02_Sample_Pro_Forma_Invoice_PRO-0109.pdf)
-- [03_Sample_Rental_Agreement_AGR-2083-0108.pdf](file:///Users/babindulal/Documents/GitHub/babin-rentals-os/artifacts/accountant-review/03_Sample_Rental_Agreement_AGR-2083-0108.pdf)
-- [04_Sample_Credit_Note_CRN-2083-0005.pdf](file:///Users/babindulal/Documents/GitHub/babin-rentals-os/artifacts/accountant-review/04_Sample_Credit_Note_CRN-2083-0005.pdf)
+- [01_Sample_Tax_Invoice_INV-2083-0042.pdf](artifacts/accountant-review/01_Sample_Tax_Invoice_INV-2083-0042.pdf)
+- [02_Sample_Pro_Forma_Invoice_PRO-0109.pdf](artifacts/accountant-review/02_Sample_Pro_Forma_Invoice_PRO-0109.pdf)
+- [03_Sample_Rental_Agreement_AGR-2083-0108.pdf](artifacts/accountant-review/03_Sample_Rental_Agreement_AGR-2083-0108.pdf)
+- [04_Sample_Credit_Note_CRN-2083-0005.pdf](artifacts/accountant-review/04_Sample_Credit_Note_CRN-2083-0005.pdf)

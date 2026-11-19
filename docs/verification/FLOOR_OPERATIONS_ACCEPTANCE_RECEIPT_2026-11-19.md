@@ -1,15 +1,17 @@
 # Floor Operations Simulated Multi-User Walkthrough Receipt
 
 **Date:** 19 November 2026, 22:30 NPT  
-**Environment:** Isolated PGlite 0.5.8 (241/241 migrations applied)  
-**Total Duration:** 2362ms  
-**Status:** ALL 6 ADVANCED WALKTHROUGHS PASSED
+**Environment:** Local in-process PGlite 0.5.8 (242 migration files through 0244_counter_sale.sql applied from scratch)  
+**Total Duration:** 2197ms  
+**Status:** ALL 6 SIMULATED WALKTHROUGHS PASSED (PGlite)
+
+> **NOTE:** This receipt certifies automated in-process PostgreSQL RLS, triggers, and constraint logic via PGlite simulation. It does **NOT** constitute physical iPad hardware, Bluetooth barcode scanner, or hosted Supabase staging acceptance, which remain pending under `acceptance_pending`.
 
 ---
 
 ## 1. Executive Summary
 
-This receipt documents simulated multi-user walkthroughs across live PostgreSQL RLS boundaries, triggers, and exclusion constraints for the six staging-dependent floor operations cards. All checks executed against realistic authenticated roles (`Owner`, `Manager`, `Technician`, `Warehouse`, `Coordinator`) without mock shortcuts.
+This receipt documents simulated multi-user walkthroughs across PostgreSQL RLS boundaries, triggers, and exclusion constraints for the six staging-dependent floor operations cards. All checks executed against authenticated roles (`Owner`, `Manager`, `Technician`, `Warehouse`, `Coordinator`) inside an isolated in-process PGlite test harness. Physical devices and hosted staging remain separate acceptance gates.
 
 | Card | Operation Walkthrough | Role Boundary & Security Checks | Execution Result |
 |---|---|---|---|
@@ -26,11 +28,11 @@ This receipt documents simulated multi-user walkthroughs across live PostgreSQL 
 
 ### [T2-13] Self-QC alone on shift
 - **Status:** PASS
-- **Timestamp:** `2026-11-19T17:03:28.732Z`
+- **Timestamp:** `2026-11-19T19:14:28.375Z`
 - **Audit Details:**
 ```json
 {
-  "queueEntryId": "cb745773-d580-4a94-8b0c-18b1d905b157",
+  "queueEntryId": "d666a7c6-d969-4d51-abbc-dafb8b3e983a",
   "unflaggedRefused": true,
   "auditLogged": true
 }
@@ -38,13 +40,13 @@ This receipt documents simulated multi-user walkthroughs across live PostgreSQL 
 
 ### [T2-15] Reset damage opens linked unpriced case
 - **Status:** PASS
-- **Timestamp:** `2026-11-19T17:03:28.738Z`
+- **Timestamp:** `2026-11-19T19:14:28.380Z`
 - **Audit Details:**
 ```json
 {
-  "caseId": "da708138-3d7f-475b-b390-a96bb8d2baca",
+  "caseId": "cd681390-2b12-4b94-925d-e1af44160aef",
   "caseNo": "CASE-2026-0001",
-  "linkedBookingId": "43e51e5f-c9b4-445f-81e9-b28993c0569f",
+  "linkedBookingId": "91bbc7ea-51c8-4579-b494-b743a8b90fbf",
   "unpricedAtCreation": true,
   "warehouseMasked": true
 }
@@ -52,12 +54,12 @@ This receipt documents simulated multi-user walkthroughs across live PostgreSQL 
 
 ### [T2-06] Repair job closes damage & restores unit
 - **Status:** PASS
-- **Timestamp:** `2026-11-19T17:03:28.749Z`
+- **Timestamp:** `2026-11-19T19:14:28.388Z`
 - **Audit Details:**
 ```json
 {
-  "maintenanceId": "f5d8b12e-f5c4-42d0-9e82-617d4706c2d0",
-  "repairedAt": "2026-11-19T17:03:28.744Z",
+  "maintenanceId": "b6413cdb-95ca-4fe9-b1b2-10f2fcc374e7",
+  "repairedAt": "2026-11-19T19:14:28.384Z",
   "restoredCondition": "Good",
   "restoredStatus": "In Stock"
 }
@@ -65,11 +67,11 @@ This receipt documents simulated multi-user walkthroughs across live PostgreSQL 
 
 ### [T2-20] Floor adds consumables with Law 6 masking
 - **Status:** PASS
-- **Timestamp:** `2026-11-19T17:03:28.752Z`
+- **Timestamp:** `2026-11-19T19:14:28.391Z`
 - **Audit Details:**
 ```json
 {
-  "lineId": "523c4c3c-6a6b-43b0-8b1a-04829edb65b9",
+  "lineId": "b8d65418-a405-48cb-9ea5-5a6f5ca63e34",
   "floorMasked": true,
   "deskPriced": true
 }
@@ -77,11 +79,11 @@ This receipt documents simulated multi-user walkthroughs across live PostgreSQL 
 
 ### [T2-21] Planned downtime collision safety & early release
 - **Status:** PASS
-- **Timestamp:** `2026-11-19T17:03:28.759Z`
+- **Timestamp:** `2026-11-19T19:14:28.395Z`
 - **Audit Details:**
 ```json
 {
-  "downtimeId": "c01dfa3a-dc5d-472b-aa45-d166c4ef8555",
+  "downtimeId": "939fcea5-a84b-4e55-b449-b2e54a1299ec",
   "downtimeCollisionBlocked": true,
   "releasedEarly": true
 }
@@ -89,7 +91,7 @@ This receipt documents simulated multi-user walkthroughs across live PostgreSQL 
 
 ### [T2-22] Per-product cleaning turnaround buffer exclusion
 - **Status:** PASS
-- **Timestamp:** `2026-11-19T17:03:28.764Z`
+- **Timestamp:** `2026-11-19T19:14:28.399Z`
 - **Audit Details:**
 ```json
 {

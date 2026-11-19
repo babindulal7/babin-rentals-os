@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Floor Operations Multi-User Mock Walkthrough & Acceptance Receipt Runner
+ * Floor Operations Multi-User Simulated Walkthrough & Acceptance Receipt Runner
  * 
  * Executes local multi-user role simulated walkthroughs for:
  * - T2-13: Self-QC when alone on shift (Warehouse alone vs second inspector)
@@ -10,7 +10,8 @@
  * - T2-21: Planned downtime with reason (booking collision refusal, early termination)
  * - T2-22: Turnaround buffer (per-product prep/cleaning window collision refusal)
  *
- * Runs in isolated in-memory PGlite with all 241 migrations applied.
+ * Runs in isolated in-memory PGlite with all 242 migration files applied (through 0244_counter_sale.sql).
+ * NOTE: In-process database simulation only. Physical iPad/scanner and hosted staging remain pending.
  */
 
 import { PGlite } from '@electric-sql/pglite'
@@ -512,15 +513,17 @@ const receiptPath = join(ROOT, 'docs/verification/FLOOR_OPERATIONS_ACCEPTANCE_RE
 const markdown = `# Floor Operations Simulated Multi-User Walkthrough Receipt
 
 **Date:** 19 November 2026, 22:30 NPT  
-**Environment:** Isolated PGlite 0.5.8 (241/241 migrations applied)  
+**Environment:** Local in-process PGlite 0.5.8 (${migrationFiles.length} migration files through 0244_counter_sale.sql applied from scratch)  
 **Total Duration:** ${durationMs}ms  
-**Status:** ALL 6 ADVANCED WALKTHROUGHS PASSED
+**Status:** ALL 6 SIMULATED WALKTHROUGHS PASSED (PGlite)
+
+> **NOTE:** This receipt certifies automated in-process PostgreSQL RLS, triggers, and constraint logic via PGlite simulation. It does **NOT** constitute physical iPad hardware, Bluetooth barcode scanner, or hosted Supabase staging acceptance, which remain pending under \`acceptance_pending\`.
 
 ---
 
 ## 1. Executive Summary
 
-This receipt documents simulated multi-user walkthroughs across live PostgreSQL RLS boundaries, triggers, and exclusion constraints for the six staging-dependent floor operations cards. All checks executed against realistic authenticated roles (\`Owner\`, \`Manager\`, \`Technician\`, \`Warehouse\`, \`Coordinator\`) without mock shortcuts.
+This receipt documents simulated multi-user walkthroughs across PostgreSQL RLS boundaries, triggers, and exclusion constraints for the six staging-dependent floor operations cards. All checks executed against authenticated roles (\`Owner\`, \`Manager\`, \`Technician\`, \`Warehouse\`, \`Coordinator\`) inside an isolated in-process PGlite test harness. Physical devices and hosted staging remain separate acceptance gates.
 
 | Card | Operation Walkthrough | Role Boundary & Security Checks | Execution Result |
 |---|---|---|---|

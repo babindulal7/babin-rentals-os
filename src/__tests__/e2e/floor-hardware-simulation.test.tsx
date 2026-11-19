@@ -1,4 +1,10 @@
 // @vitest-environment jsdom
+/**
+ * Automated Jest-DOM / Vitest Hardware Simulation for T2-14 and T2-19.
+ * Simulates HID wedge scanner keystroke burst, camera modal triggering, and touchscreen signature refusal events.
+ * 
+ * NOTE: This automated test runs in JSDOM simulation and does NOT replace physical iPad / Bluetooth scanner acceptance.
+ */
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter } from 'react-router-dom'
