@@ -13,8 +13,7 @@ editing this file or telling Claude at a check-in.
 - [x] The 26 Oct v3 package — on `main` since 31 Oct (`a8611ca`, merged in `02191a5`).
 - [ ] Apply the **31 Oct package** (the zip from Claude: the Booqable round of 27 Oct on `main` `9e219db`)
       and commit it.
-- [ ] **Disable the GitHub CI workflow** — Actions → CI → ⋯ → Disable workflow (T0-09). CI stays off;
-      local checks are the gate.
+- [x] **CI stays on as a merge gate** — Babin ruled 9 Nov 2026 (R-9.9). Do not disable the workflow. Local checks still run before every push.
 - [x] Set up the three agent worktrees: **Codex-1 (lane A), Gemini (lane B), Codex-2 (lane C)**
       (PLAN.md §6) — the lanes are building (26–31 Oct). Next prompts: the 31 Oct APPLY note and
       `docs/plans/prompts/README.md`.
@@ -25,8 +24,7 @@ editing this file or telling Claude at a check-in.
       database rule from 6 to 4).
 - [x] Answer **O-19** — answered 1 Nov: **every staff member** may write team notes (the
       red test is fixed).
-- [ ] From now on, run the **full check list** (`docs/plans/README.md`) before every push — CI no longer
-      catches anything (T0-11 makes it one command).
+- [ ] Run the **full check list** (`docs/plans/README.md`) before every push, as well as CI (T0-11 makes it one command).
 - [x] Take a production backup — `scripts/backup-db.ps1`, ~30 min (T1-01). *Reported done by Babin 1 Nov 2026; T1-01 is `done` only once `npm run check:dump` passes and the SHA-256 is recorded.*
 - [ ] Approve the cost of a second Supabase project for staging (T1-02).
 - [ ] Create a Cloudflare account; later add three DNS records when asked: `app.`, `book.`, `staging-app.` (T1-07).

@@ -11,10 +11,11 @@ const release = { approvedBy: 'Babin', approvedAt: '2026-11-05', modules: {
 } }
 
 describe('whole-app language readiness', () => {
-  it('keeps the current incomplete staff app in English', () => {
+  it('enables Nepali when full review and layout checks are recorded', () => {
     expect(canEnable('en')).toBe(true)
-    expect(canEnable('ne')).toBe(false)
-    expect(canEnable('ne', 'tools')).toBe(false)
+    expect(canEnable('ne')).toBe(true)
+    expect(canEnable('ne', 'tools')).toBe(true)
+    expect(canEnable('ne', 'nonExistentModule')).toBe(false)
   })
 
   it('requires conversion, exact reviewed text, layout checks and final approval', () => {

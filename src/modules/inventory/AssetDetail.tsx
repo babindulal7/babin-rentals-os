@@ -45,7 +45,7 @@ import { RetireUnitModal } from './modals/RetireUnitModal'
 import { recordEditorOptions } from '../../lib/queries/recordEditor'
 import { readServiceDue } from '../../lib/queries/serviceDue'
 import type { ServiceRow } from '../../lib/serviceDue'
-import { openItemCard } from '../../components/shell/ScannerFab'
+import { openItemCard } from '../../lib/scannerEvents'
 import './inventory.css'
 
 /**

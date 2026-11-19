@@ -7,7 +7,8 @@ import Sidebar from './components/shell/Sidebar'
 import BottomBar, { BAR_BOX } from './components/shell/BottomBar'
 import HeaderBar from './components/shell/Header'
 import type { Crumb } from './components/shell/Header'
-import ScannerFab from './components/shell/ScannerFab'
+// ScannerFab is code-split to reduce critical-path main chunk payload; it loads concurrently
+const ScannerFab = lazy(() => import('./components/shell/ScannerFab'))
 import { ErrorBoundary } from './components/shell/ErrorBoundary'
 import { LoadingSkeleton, RestrictedState } from './components/ui/StateViews'
 import { Button } from './components/ui/Page'
@@ -59,6 +60,7 @@ const CasesReport       = lazy(() => import('./modules/reports/CasesReport'))
 const CustomReport      = lazy(() => import('./modules/reports/CustomReport'))
 
 const SalesVatReports   = lazy(() => import('./modules/reports/SalesVatReports'))
+const MonthlyPack       = lazy(() => import('./modules/reports/MonthlyPack'))
 const CrewTdsReport    = lazy(() => import('./modules/reports/CrewTdsReport'))
 const ActivityReports   = lazy(() => import('./modules/reports/ActivityReports'))
 const BackupRestore     = lazy(() => import('./modules/admin/BackupRestore'))
@@ -578,6 +580,7 @@ export default function App() {
             money surface by the `/finance` prefix. Revert = restore the Shell +
             <DailyClosing /> route. */}
         <Route path="/finance/closing" element={<FinanceTabRedirect tab="closing" />} />
+        <Route path="/finance/who-owes" element={<FinanceTabRedirect tab="who-owes" />} />
         <Route path="/finance/invoices" element={<FinanceTabRedirect tab="invoices" />} />
         <Route path="/finance/payments" element={<FinanceTabRedirect tab="payments" />} />
         <Route path="/finance/expenses" element={<FinanceTabRedirect tab="expenses" />} />
@@ -740,6 +743,15 @@ export default function App() {
           element={
             <Shell crumbs={[{ label: 'Finance', to: '/finance' }, { label: 'Reports', to: '/finance?tab=reports' }, { label: 'VAT / Tax Reports' }]}>
               <SalesVatReports />
+            </Shell>
+          }
+        />
+
+        <Route
+          path="/reports/monthly-pack"
+          element={
+            <Shell crumbs={[{ label: 'Finance', to: '/finance' }, { label: 'Reports', to: '/finance?tab=reports' }, { label: 'Monthly Pack' }]} search="Search reports…">
+              <MonthlyPack />
             </Shell>
           }
         />
@@ -1273,7 +1285,9 @@ function Shell({
       </div>
 
       {phone && <BottomBar active={pathname + query} />}
-      <ScannerFab />
+      <Suspense fallback={null}>
+        <ScannerFab />
+      </Suspense>
 
       {/* Screen Lock Overlay — fail closed: the curtain covers the session while
           the chunk loads, and stays up if the chunk never arrives. */}

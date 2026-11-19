@@ -102,6 +102,12 @@ function percent(v: SettingValue, label: string): string | null {
   return null
 }
 
+export const OPERATIONAL_DAY_START_CHOICES: readonly string[] = Array.from({ length: 96 }, (_, i) => {
+  const h = String(Math.floor(i / 4)).padStart(2, '0')
+  const m = String((i % 4) * 15).padStart(2, '0')
+  return `${h}:${m}`
+})
+
 export const SETTING_SPECS: Record<SettingKey, SettingSpec> = {
   organisationName: {
     default: 'Babin Rentals',
@@ -304,12 +310,13 @@ export const SETTING_SPECS: Record<SettingKey, SettingSpec> = {
    */
   operationalDayStart: {
     default: '06:00',
-    kind: 'text',
+    kind: 'select',
+    options: OPERATIONAL_DAY_START_CHOICES,
     suffix: ' (HH:mm)',
     validate: (v) => {
-      return /^([01]\d|2[0-3]):[0-5]\d$/.test(String(v).trim())
+      return /^([01]\d|2[0-3]):(00|15|30|45)$/.test(String(v).trim())
         ? null
-        : 'The operational day starts at a clock time, written HH:mm — e.g. 06:00. Use 00:00 for plain calendar days.'
+        : 'The operational day starts at a quarter-hour clock time (HH:mm) — e.g. 06:00. Use 00:00 for midnight.'
     },
   },
 

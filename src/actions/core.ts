@@ -150,6 +150,9 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
       return rbac.canOverrideCreditLimit(ctx.role, online);
     case 'settings.manage':
       return rbac.canManageSettings(ctx.role);
+    case 'settings.operations_rules':
+    case 'settings.rental_day_start':
+      return rbac.canManageOperationsRules(ctx.role);
     case 'glossary.manage':
       return rbac.canManageGlossary(ctx.role, online);
     case 'operations.perform':
@@ -196,6 +199,9 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     // RULING (T3-25, B16, B55): booking tags write capability — Owner, Admin, Manager, Coordinator.
     case 'rental.tag':
       return rbac.canSetBookingTags(ctx.role);
+    // T3-18 (W88): change confirmed booking — Owner, Admin, Manager, Coordinator.
+    case 'rental.change':
+      return rbac.canChangeBooking(ctx.role);
     case 'inventory.create':
       return rbac.canCreateBundle(ctx.role);
     /*
@@ -334,6 +340,9 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
     case 'collateral.receive':
     case 'collateral.return':
       return rbac.canManageCollateral(ctx.role);
+    // T3-29: Resolve at-risk booking (0241) — Owner · Admin · Manager · Coordinator
+    case 'rental.resolve_at_risk':
+      return rbac.canResolveAtRisk(ctx.role);
 
     case 'rental.pickup':
     case 'rental.return':

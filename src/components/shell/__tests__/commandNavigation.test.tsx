@@ -10,6 +10,7 @@ const user = { role: 'Owner' as SystemRole }
 vi.mock('../../../lib/auth', () => ({ useAuth: () => ({ user }) }))
 vi.mock('../../../lib/theme', () => ({ useTheme: () => ({ theme: 'light', toggle: vi.fn() }) }))
 vi.mock('../ScannerFab', () => ({ toggleScanner: vi.fn() }))
+vi.mock('../../../lib/scannerEvents', () => ({ toggleScanner: vi.fn() }))
 vi.mock('../../../lib/queries/globalSearch', () => ({ searchRecords: vi.fn().mockResolvedValue([]) }))
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 let host: HTMLDivElement

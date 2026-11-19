@@ -12,6 +12,7 @@ vi.mock('../../../lib/auth', () => ({ useAuth: () => ({ user: mocks.user }) }))
 vi.mock('../../../lib/theme', () => ({ useTheme: () => ({ theme: 'light', toggle: vi.fn() }) }))
 vi.mock('../../../lib/queries/globalSearch', () => ({ searchRecords: mocks.search }))
 vi.mock('../ScannerFab', () => ({ toggleScanner: mocks.scan }))
+vi.mock('../../../lib/scannerEvents', () => ({ toggleScanner: mocks.scan }))
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 
 let host: HTMLDivElement

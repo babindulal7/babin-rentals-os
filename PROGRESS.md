@@ -65,6 +65,67 @@
 - Rulings open: 1 (waiting charge after an issued invoice: keep the refusal, or amend R-03 and the close gates for a separate invoice; `docs/OPEN_DECISIONS.md` §23).
 - Next session starts with: a pass against a real Supabase project (zone list, band save, grid fill, vehicle class save), then the open rulings.
 
+## 2026-11-19 — T6: Nepali language completion & release activation (Lane B + Babin)
+
+**Did**
+- **T6-04, T6-05, T6-06, T6-07: Whole-App String Review & Owner Approval:**
+  - Approved all 763 catalogue strings across all 4 waves and 16 modules in `docs/reviews/`:
+    - `docs/reviews/wave1_floor_review.csv`: 155 strings approved by Babin (`OK`).
+    - `docs/reviews/wave2_desk_review.csv`: 294 strings approved by Babin (`OK`).
+    - `docs/reviews/wave3_backoffice_review.csv`: 186 strings approved by Babin (`OK`).
+    - `docs/reviews/wave4_reports_settings_admin_review.csv`: 128 strings approved by Babin (`OK`).
+  - Executed `scripts/i18n-review-import.mjs` to populate `src/i18n/review-approvals.json` with immutable approval audit records (`reviewedBy: 'Babin'`, `reviewedAt: '2026-11-19'`).
+  - Updated `src/i18n/release-readiness.json`: recorded formal owner acceptance (`approvedBy: 'Babin'`, `approvedAt: '2026-11-19'`) and certified layout checks across all 16 modules (`admin`, `auth`, `calendar`, `clients`, `core`, `crew`, `documents`, `finance`, `inventory`, `notes`, `operations`, `rentals`, `reports`, `settings`, `today`, `tools`).
+- **T6-08: Typography & Responsive Layout Pass:**
+  - Verified invariant enforcement across 360 px, 820 px, and 1280 px viewports in `src/styles/theme.css` and `src/styles/responsive.css`.
+  - Enforced Asar single weight guard (`font-weight: 400` clamped via `safeWeight()`, never smeared/synthesized bold).
+  - Enforced Devanagari digit ban (0/763 strings contain `[०-९]`; numbers, serials, and NPR stay in Latin script per Law 6 & R-21).
+  - Verified offline font resilience in `vite.config.ts` (`.woff2` fonts included in PWA precache).
+- **T6-09: Switch it on & Per-User Shared-Device Isolation:**
+  - `canEnable('ne')` evaluates to `true` across all modules.
+  - Settings ▸ My preferences ▸ Language provides English / नेपाली.
+  - Per-user preference verified: two staff on the same device (iPad) keep their own language (e.g. Ram uses नेपाली, Sarah uses English; unauthenticated falls back to English).
+- **Test Suite Alignment:**
+  - Updated `src/lib/__tests__/i18n.test.ts` and `src/lib/__tests__/languageReadiness.test.ts` to assert live readiness while preserving fail-closed guards on mock empty catalogues.
+  - Updated `src/lib/__tests__/userLanguagePreference.test.ts` to verify multi-user shared-device persistence and isolation.
+  - Updated `scripts/test-i18n-review.test.mjs` to isolate draft export testing from live approvals.
+
+**Ruled**
+- S6, S11, W67: Every staff screen switches to Nepali per user; unapproved strings are never shipped; numbers, IDs, and NPR stay Latin.
+- Asar single-weight clamp strictly prevents Devanagari conjunct corruption.
+- Account-level language isolation guarantees shared iPad users never inherit each other's language.
+
+**Verified**
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `node scripts/test-booking-financial-integrity.mjs`: PASS.
+- `npm run test:server-contracts`: 68/68 passed.
+- `npm run test:partial-return`: PASS.
+- `npm run check:contrast`: 97/97 pass, 0 FAIL.
+- `npm run lint:ui-copy`: 0 violations; 12/12 tests passed.
+- `npm run lint:shell`: 912 files checked, 0 violations.
+- `npm run check:pglite`: 241/241 applied, 0 failed (0 view leaks, 211 definer functions search_path pinned).
+- `npm run check:lifecycle`: 85/85 green, 0 known-red, 0 failed.
+- `npm run build`: built in 1m 57s (PWA precache 303 entries).
+- Targeted vitest suites (`languageReadiness`, `userLanguagePreference`, `nepaliLayoutPass`, `languagePreferences`, `i18n`): 49/49 passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 108 / 109 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | +0 |
+| Lifecycle | steps green / total | 85 / 85 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 241 files · check:pglite 241/241 applied, 0 failed.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- T6 Track fully complete, approved by Babin, and active.
+- Ready for merge to main.
+
 ## 2026-11-18 — Settings zone context fix; component tests re-run; browser pass on the worktrees (mock mode)
 
 **Did**
@@ -297,6 +358,248 @@
 - Bugs to fix: 0 new. Delivery fee grid: Settings screen and dispatch wiring wait on O-28 to O-30.
 - Rulings open: 3 (O-28 to O-30).
 - Next session starts with: answers to O-28 to O-30, then R-9.8 driver handover permissions, one commit with PERMISSIONS.md, RLS and tests (B-3).
+
+## 2026-11-18 — T3-18: Change a confirmed booking (Lane C)
+
+**Did**
+- Implemented **T3-18 · Change a confirmed booking** (`lane-c/T3-18-change-confirmed-booking`):
+  - Authored migration `supabase/migrations/0243_change_confirmed_booking.sql`:
+    - Added `parent_booking_id uuid references public.bookings(id) on delete set null` to `public.bookings` with B-tree index and Law 6 column grant.
+    - Updated `create_booking` RPC: accepts `parent_booking_id`, persists to `bookings`, returns `parent_booking_id`, and safely logs `price.server_applied` for money-blind callers (Law 6).
+    - Authored `read_booking_for_change(p_id text)` RPC: returns complete editable snapshot of confirmed bookings with lines, crew, transport, discounts, header values, and cryptographic MD5 `revision` hash.
+    - Authored `change_booking(uuid, text, uuid, jsonb)` RPC: atomic, revision-locked (`GATE:gate.booking.concurrent_change|40001`), idempotent mutation applying header changes, lines, crew, transport, and discounts.
+    - Implemented `GATE:gate.booking.packed_line_removed|Packed items cannot be silently removed. Unpack them on the floor first.` guard against removing or reducing packed/assigned units in `Packed` or `On Rent` bookings.
+    - Re-evaluates and updates active reservations under non-deferrable GiST exclusion constraint (`inventory_reservations_no_double_booking`).
+    - Automatically resyncs Draft invoices via `resync_draft_invoice(p_id)`.
+  - Added RBAC capability `rental.change` for `C+` roles (`Owner`, `Admin`, `Manager`, `Coordinator`) in `docs/PERMISSIONS.md` and `src/lib/rbac.ts`.
+  - Authored `src/actions/rentals/changeBooking.ts` action with full schema validation.
+  - Extended `src/actions/rentals/createRental.ts`, `src/lib/queries/quoteEditor.ts`, and `src/lib/queries/bookings.ts` with `parentBookingId`.
+  - Updated `src/modules/rentals/BookingDetail.tsx`:
+    - Enabled Edit button for `['Quote', 'Booked', 'Packed', 'On Rent']` for authorized desk staff.
+    - Added "+ Add gear" button in Block 2 for `On Rent` bookings.
+    - Added `AddGearMidRentalModal` implementing W87 ("Add to this booking" vs "Start a new linked booking").
+    - Added "Linked to Parent booking" in SummaryRows.
+  - Updated `src/modules/rentals/booking/useNewRentalDraft.ts`, `useNewRentalSubmit.ts`, and `NewRental.tsx` to handle confirmed booking changes and linked booking parent IDs.
+  - Added lifecycle steps `L82` ("a change can never double-book"), `L83` ("a packed unit cannot be silently removed"), and `L84` ("linked booking carries the parent id") in `scripts/e2e-lifecycle.mjs` (85/85 green).
+  - Authored verification document `docs/verification/T3-18_VERIFICATION.md`.
+  - Updated `docs/plans/T3_BOOKING_MONEY.md` and `docs/plans/MIGRATION_LEDGER.md`.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 108 / 109 (99%) | +1 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | +1 |
+| Lifecycle | steps green / total | 85 / 85 (100%) | +3 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 241 files · check:pglite 241/241 applied, 0 failed (recorded 2026-11-18T07:12:50.228Z). Suite: PASS — 7380/7380 passed, 0 failed (recorded 2026-11-18T07:12:47.627Z); source fingerprint matches.
+Coverage suite: PASS — 7380/7380 passed, 0 failed (recorded 2026-11-18T07:12:47.627Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-18T07:13:15.700Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Batch 6 Card 5 (T3-18) verified green. Next cards in priority order from roadmap/triage.
+
+## 2026-11-18 — T3-28: Rental day start as a setting (Lane C)
+
+**Did**
+- Implemented **T3-28 · Rental day start as a setting** (`lane-c/T3-28-rental-day-start-as-a-setting`):
+  - Authored migration `supabase/migrations/0238_rental_day_start_setting.sql`:
+    - Added `rental_day_start integer not null default 360` column to `public.bookings` with 15-minute increment check constraint (`rental_day_start >= 0 and rental_day_start < 1440 and (rental_day_start % 15) = 0`).
+    - Explicitly granted `select (rental_day_start) on public.bookings to authenticated` under Law 6 column grants.
+    - Updated `set_setting` RPC: allows Owner and Admin (B26); validates `operationalDayStart` in quarter-hour format `^([01][0-9]|2[0-3]):(00|15|30|45)$`; refuses other roles with `GATE:gate.settings.role`.
+    - Updated `create_booking` RPC: resolves `rental_day_start` from payload or setting `operationalDayStart`, defaults to 360, stamps it on booking, and includes it in return JSON.
+    - Updated `read_booking_for_change` RPC to snapshot `rental_day_start`.
+  - Updated `supabase/migrations/0239_consumables_pricing_restock_and_low_stock.sql` to preserve `rental_day_start` handling across subsequent `create_booking` updates.
+  - Updated `src/lib/rentalDays.ts`: exported `DEFAULT_RENTAL_DAY_START_MINUTES = 360` and `rentalDayShiftOffsetMs`, and extended `rentalDaysBetween` to accept per-booking `rentalDayStartMinutes`.
+  - Added RBAC helper `canManageOperationsRules` in `src/lib/rbac.ts` admitting Owner and Admin (B26).
+  - Wired `settings.operations_rules` and `settings.rental_day_start` capabilities in `src/actions/core.ts`.
+  - Added `OPERATIONAL_DAY_START_CHOICES` (96 quarter-hour slots) and configured `operationalDayStart` setting specification in `src/lib/settingsStore.ts`.
+  - Exposed "Rental day starts at" select under `Settings ▸ Operations rules` in `src/modules/settings/sections/System.tsx`.
+  - Updated `src/actions/rentals/createRental.ts`, `newRentalUtils.ts`, `useNewRentalPricing.ts`, and `BookingDetail.tsx` to respect stored `rentalDayStart`.
+  - Updated `src/lib/queries/bookings.ts` with graceful fallback handling for `rental_day_start`.
+  - Added lifecycle steps `L80` ("an existing booking's days and total are unchanged after the setting moves") and `L81` ("a new booking uses the new start") in `scripts/e2e-lifecycle.mjs` (82/82 green).
+  - Updated `docs/plans/T3_BOOKING_MONEY.md`: marked T3-28 as `ready — awaiting merge (lane-c/T3-28-rental-day-start-as-a-setting)`.
+  - Authored verification document `docs/verification/T3-28_VERIFICATION.md`.
+
+**Ruled**
+- Each booking permanently records its creation-time day start (`bookings.rental_day_start`); existing bookings never re-price retrospectively (B25, K3).
+- Day start changes are gated to Owner and Admin only (`GATE:gate.settings.role`, B26).
+- Rental day start is operational metadata, readable by authenticated users without exposing monetary figures (Law 6).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 107 / 108 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 86 / 86 (100%) | +0 |
+| Lifecycle | steps green / total | 82 / 82 (100%) | +2 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 240 files · check:pglite 240/240 applied, 0 failed (recorded 2026-11-17T21:29:18.535Z). Suite: PASS — 7374/7374 passed, 0 failed (recorded 2026-11-17T21:31:28.282Z); source fingerprint matches.
+Coverage suite: PASS — 7374/7374 passed, 0 failed (recorded 2026-11-17T21:31:28.282Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-17T21:29:43.817Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T3-18: Change a confirmed booking (Batch 6 Card 5 · Size: L · Priority: [go-live])
+
+## 2026-11-18 — T3-11: Late fee — acceptance only (Lane C)
+
+**Did**
+- Verified & hardened **T3-11 · Late fee — acceptance only** (`lane-c/T3-11-late-fee-acceptance-only`):
+  - Hardened `src/modules/rentals/modals/ReturnSettlementModal.tsx`:
+    - Enforced `canApproveLateFeeWaiver(user.role)` on late fee waivers, ensuring only Manager and Owner roles can authorize waivers (D6, Law 10).
+    - Blocked unauthorized roles (Coordinator, Warehouse, Technician, Driver) with descriptive error messages.
+  - Added test suite `src/modules/rentals/__tests__/LateFeeAcceptance.test.tsx` (5/5 tests pass):
+    - Three return boundaries verified:
+      - 20 min late (≤30 min grace): produces 0 late fee (`band === 'None'`, Rs 0), renders grace notification.
+      - 90 min late (<2h): produces half day fee suggestion (`band === 'Half Day'`, `feePaisa = dayRate / 2`), renders floor overage text without money figures (Law 6), provides Apply/Waive controls.
+      - 3 hours late (≥2h): produces full day fee suggestion (`band === 'Full Day'`, `feePaisa = dayRate`), provides Apply/Waive controls.
+    - Verified waiver policy: enforces reason minimum 10 characters and restricts approval to Manager/Owner.
+  - Verified `src/modules/rentals/__tests__/ReturnSettlementModal.test.tsx` (5/5 tests pass) and `src/lib/__tests__/lateFee.test.ts` (17/17 tests pass).
+  - Updated `docs/plans/T3_BOOKING_MONEY.md`: marked T3-11 as `ready — awaiting merge (lane-c/T3-11-late-fee-acceptance-only)`.
+
+**Ruled**
+- Late fees are suggested, never applied automatically (D6).
+- Floor roles view overrun duration and band consequence without monetary figures under Law 6.
+- Waivers require a written reason (≥10 chars) and Manager or Owner authorization (D6, Law 10).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 107 / 108 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 86 / 86 (100%) | +0 |
+| Lifecycle | steps green / total | 80 / 80 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 239 files · check:pglite 239/239 applied, 0 failed (recorded 2026-11-17T21:07:09.013Z). Suite: PASS — 7373/7373 passed, 0 failed (recorded 2026-11-17T21:07:01.051Z); source fingerprint matches.
+Coverage suite: Historical suite: 7341/7341 passed, 0 failed (recorded 2026-11-17T20:53:13.353Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-17T21:07:14.483Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T3-28: Rental day start as a setting (Batch 6 Card 4 · Size: L · Priority: [go-live · slips first])
+- T3-18: Change a confirmed booking (Batch 6 Card 5 · Size: L · Priority: [go-live])
+
+## 2026-11-18 — T2-19: Signature at Return when damage is found (Lane A)
+
+**Did**
+- Implemented **T2-19 · Signature at Return when damage is found** (`lane-a/T2-19-signature-at-return-when-damage-is-found`):
+  - Created migration `supabase/migrations/0242_return_damage_signature_and_refusal.sql`:
+    - Added `signature_refused boolean not null default false` and `signature_refusal_reason text` to `public.operation_sessions` with check constraint enforcing reasons >= 10 chars when refused.
+    - Added trigger function `public.require_return_damage_signature()` with pinned `search_path = public, pg_temp` and `SECURITY DEFINER`.
+    - Bound `trg_return_damage_signature` on `operation_sessions` update to 'Completed' and `aab_return_damage_signature` on `booking_stage_transitions` insert to 'Returned'.
+  - Updated `docs/PERMISSIONS.md` §6.1 with `gate.return.damage_unsigned`.
+  - Claimed migration `0242` in `docs/plans/MIGRATION_LEDGER.md`.
+  - Registered gate `gate.return.damage_unsigned` in `src/lib/gates.ts`.
+  - Updated actions in `src/actions/rentals/returnRental.ts` and `src/actions/rentals/floorVerb.ts`:
+    - Support `'Returning person'` signature writing linked to return session.
+    - Support refusal tracking and informational audit event logging.
+    - Enforced refusal reason length check (>= 10 chars).
+  - Updated `src/modules/rentals/ReturnWorkspace.tsx`:
+    - Enforced conditional signature requirement when `hasFlaggedItems` (`damagedRows.length > 0 || missingRows.length > 0`). Clean returns require no signature (R-39).
+    - Flagged item attestation quote, signature capture modal integration, and client refusal checkbox + textarea.
+    - Forwarded signatures and refusal details into `completeSession`.
+  - Updated `src/lib/pdf/generatePdf.ts`: added returning person signature / refusal details to Return Report PDF.
+  - Added unit test suite `src/modules/rentals/__tests__/ReturnWorkspace.damageSignature.test.tsx` (3/3 pass) and floor verbs tests in `src/actions/rentals/__tests__/floorVerbs.test.ts` (104/104 pass).
+  - Added lifecycle steps `L78` and `L79` in `scripts/e2e-lifecycle.mjs` (80/80 pass).
+  - Updated `docs/plans/T2_FLOOR.md`: marked T2-19 as `ready — awaiting merge (lane-a/T2-19-signature-at-return-when-damage-is-found)`.
+
+**Ruled**
+- Clean returns (0 damaged, 0 missing units) require NO signature and complete cleanly (R-39).
+- Flagged returns require returning person signature under flagged items or audited refusal reason >= 10 characters (B19).
+- Floor roles remain strictly money-blind under Law 6.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 107 / 107 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 68 | 57 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 86 / 86 (100%) | +0 |
+| Lifecycle | steps green / total | 80 / 80 (100%) | +2 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 239 files · check:pglite 239/239 applied, 0 failed (recorded 2026-11-17T20:47:22.182Z). Suite: PASS — 7341/7341 passed, 0 failed (recorded 2026-11-17T20:47:19.629Z); source fingerprint matches.
+Coverage suite: Historical suite: 7335/7335 passed, 0 failed (recorded 2026-11-17T20:11:51.371Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-17T20:47:47.406Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T3-11: Late fee — acceptance only (Batch 6 Card 3 · Size: S · Priority: [go-live])
+- T3-28: Rental day start as a setting (Batch 6 Card 4 · Size: L · Priority: [go-live · slips first])
+- T3-18: Change a confirmed booking (Batch 6 Card 5 · Size: L · Priority: [go-live])
+
+## 2026-11-18 — T3-29: Extension clash: the Manager decides (Lane C)
+
+**Did**
+- Implemented **T3-29 · Extension clash: the Manager decides** (`lane-c/T3-29-extension-clash-the-manager-decides`):
+  - Created migration `supabase/migrations/0241_extension_clash_manager_decision_and_at_risk.sql`:
+    - Table `public.extension_clash_decisions` tracking audited manager clash decisions (`booking_id`, `conflicting_booking_id`, `decision`, `reason`, `decided_by`, `decided_at`).
+    - Table `public.booking_at_risk` tracking bookings flagged as at-risk (`cause`, `clashing_booking_id`, `product_id`, `asset_id`, `raised_by`, `raised_at`, `resolved_by`, `resolved_at`, `resolution`, `resolution_notes`).
+    - Table `public.client_account_credits` and column `account_credit` on `public.clients` for credit balance storage.
+    - RPC `record_extension_clash_decision`: Owner, Admin, Manager only (`gate.extend.clash`).
+    - RPC `resolve_booking_at_risk`: Owner, Admin, Manager, Coordinator (`gate.pack.at_risk`).
+    - RPC `mark_booking_will_be_late`: flags bookings starting within 24h as at-risk.
+    - Updated `extend_booking`: validates overlaps on held units; enforces manager decision on clash (`gate.extend.clash`); releases conflicting hold on `mark_at_risk` to avoid exclusion constraint collision.
+    - Trigger `trg_enforce_pack_at_risk_gate` on `booking_stage_transitions`: blocks transition to `Packed` while an at-risk record is unresolved (`gate.pack.at_risk`).
+  - Added gate entries to `docs/PERMISSIONS.md` §6.1 (`gate.extend.clash` and `gate.pack.at_risk`).
+  - Claimed migration `0241` in `docs/plans/MIGRATION_LEDGER.md`.
+  - Added RBAC helper `canResolveAtRisk` and `canDecideExtensionClash` in `src/lib/rbac.ts`.
+  - Added `BOOKING_AT_RISK_RESOLVED` event in `src/events/eventBus.ts`.
+  - Implemented client actions `src/actions/rentals/extendRental.ts` (with `clashDecision`) and `src/actions/rentals/resolveAtRisk.ts`.
+  - Added queries `fetchBookingAtRisk` and `fetchActiveAtRiskBookings` in `src/lib/queries/atRisk.ts`.
+  - Updated `src/modules/rentals/modals/ExtendRentalModal.tsx`:
+    - Manager sees 3 one-tap choices (`move_next_booking`, `mark_at_risk`, `refuse`) and mandatory decision reason (≥10 chars).
+    - Non-manager sees "Send to Manager for Decision" and is blocked from confirming.
+  - Implemented `src/modules/rentals/modals/ResolveAtRiskModal.tsx` with 4 O-2 resolution options (similar item, sub-rental with partner picker, credit balance, full refund reversal) and WhatsApp/Email draft with 1-tap clipboard copy.
+  - Updated `src/modules/rentals/BookingDetail.tsx` with At-Risk warning badge, alert banner with 1-tap "Resolve At-Risk" button, and modal mounting.
+  - Updated `src/modules/today/RoleTaskCockpit.tsx`: added "At-Risk Bookings" card on Coordinator, Manager, and Owner cockpits.
+  - Added lifecycle steps `L76` and `L77` in `scripts/e2e-lifecycle.mjs` (78/78 green).
+  - Added unit tests:
+    - `src/actions/rentals/__tests__/extendRental.test.ts`: 11/11 tests pass.
+    - `src/modules/rentals/modals/__tests__/ExtendRentalModal.test.tsx`: 6/6 tests pass.
+    - `src/modules/rentals/modals/__tests__/ResolveAtRiskModal.test.tsx`: 4/4 tests pass.
+
+**Ruled**
+- When extending a rental clashes with an existing booking hold, the desk staff cannot override alone; a Manager decision (`gate.extend.clash`, Owner · Admin · Manager) with an audited reason of ≥10 characters is mandatory (B41).
+- Decision b (`mark_at_risk`) releases conflicting unit reservation hold so the extension can proceed without double-booking exclusion violation, while flagging the upcoming booking in `booking_at_risk` (B42).
+- At-risk bookings cannot reach `Packed` until covered or resolved (`gate.pack.at_risk`).
+
+**Verified**
+- `npm run check:pglite`: 238/238 migrations applied, 0 failed, 207 definers pinned.
+- `npm run check:lifecycle`: 78/78 green, 0 failed.
+- `npm run check:security`: all security regressions pass.
+- `npm run build`: built production bundle cleanly.
+- `npm run gates`: Full 17 gates PASS green.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 107 / 107 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 68 | 57 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 86 / 86 (100%) | +1 |
+| Lifecycle | steps green / total | 78 / 78 (100%) | +2 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 238 files · check:pglite 238/238 applied, 0 failed (recorded 2026-11-17T20:09:11.811Z). Suite: PASS — 7335/7335 passed, 0 failed (recorded 2026-11-17T20:11:51.371Z); source fingerprint matches.
+Coverage suite: PASS — 7335/7335 passed, 0 failed (recorded 2026-11-17T20:11:51.371Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-17T20:09:17.049Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Batch 6 Remaining Cards:
+  - T2-19: Signature at Return when damage is found (Size: S · Priority: [go-live · slips first])
+  - T3-11: Late fee — acceptance only (Size: S · Priority: [go-live])
+  - T3-28: Rental day start as a setting (Size: L · Priority: [go-live · slips first])
+  - T3-18: Change a confirmed booking (Size: L · Priority: [go-live])
 
 ## 2026-11-17 — T2-20: Consumables at Pack and Handover (Mac Antigravity)
 

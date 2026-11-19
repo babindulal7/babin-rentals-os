@@ -10,6 +10,7 @@ vi.mock('react-router-dom', () => ({ useNavigate: () => navigate }))
 vi.mock('../../lib/auth', () => ({ useAuth: () => ({ user }) }))
 vi.mock('../../lib/theme', () => ({ useTheme: () => ({ theme: 'light', toggle: vi.fn() }) }))
 vi.mock('./ScannerFab', () => ({ toggleScanner: vi.fn() }))
+vi.mock('../../lib/scannerEvents', () => ({ toggleScanner: vi.fn() }))
 vi.mock('../../data/nav', () => ({ permittedNav: () => [
   { label: 'Dashboard', to: '/dashboard', icon: 'home' },
   { label: 'Rentals', to: '/rentals', icon: 'home' },

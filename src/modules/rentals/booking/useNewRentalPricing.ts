@@ -6,6 +6,8 @@ import {
 } from '../../../lib/pricingPipeline'
 import { parseMoney, rupees, type Paisa } from '../../../lib/money'
 import { rentalDaysBetween } from '../../../lib/rentalDays'
+import { dayStartMinutesFrom } from '../../../lib/operationalDay'
+import { getSetting } from '../../../lib/settingsStore'
 import {
   productDepositPaisa,
   recommendedDepositWithProducts,
@@ -281,7 +283,8 @@ export function useNewRentalPricing({
 
   const pricingHints = useMemo(() => {
     const hints: Record<number, Paisa> = {}
-    const rentalDays = rentalDaysBetween(pickup, ret) ?? 1
+    const startMin = dayStartMinutesFrom(getSetting('operationalDayStart'))
+    const rentalDays = rentalDaysBetween(pickup, ret, startMin) ?? 1
     if (rentalDays > 0 && pricing.rentalTotalPaisa > 0) {
       const dailyRate = Math.round(pricing.rentalTotalPaisa / rentalDays)
       for (const d of [1, 3, 7]) {

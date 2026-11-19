@@ -10,18 +10,22 @@ describe('T6-09 shared-device language boundary', () => {
     setLanguagePreference(null, 'en')
   })
 
-  it('ignores old account/device caches and keeps unapproved Nepali disabled across switches', async () => {
-    window.localStorage.setItem('br.settings.language', 'नेपाली')
-    window.localStorage.setItem('br.settings.user.ram.language', 'नेपाली')
+  it('persists per-user language preference and isolates two staff on one iPad (T6-09)', async () => {
+    // Ram prefers Nepali
     setLanguagePreference('ram', 'ne')
+    expect(getLanguagePreference()).toEqual({ userId: 'ram', language: 'ne' })
+    expect(readSettings().language).toBe('नेपाली')
+    await applyLanguage(languageCodeOf(readSettings().language))
+    expect(getCurrentLanguage()).toBe('ne')
+
+    // Sarah signs in on the same iPad and keeps English
+    setLanguagePreference('sarah', 'en')
+    expect(getLanguagePreference()).toEqual({ userId: 'sarah', language: 'en' })
     expect(readSettings().language).toBe('English')
     await applyLanguage(languageCodeOf(readSettings().language))
     expect(getCurrentLanguage()).toBe('en')
 
-    setLanguagePreference('sarah', 'en')
-    expect(getLanguagePreference()).toEqual({ userId: 'sarah', language: 'en' })
-    expect(readSettings().language).toBe('English')
-
+    // Unauthenticated fallback defaults to English
     setLanguagePreference(null, 'ne')
     expect(getLanguagePreference()).toEqual({ userId: null, language: 'en' })
     expect(readSettings().language).toBe('English')

@@ -451,6 +451,18 @@ export function RoleTaskCockpit() {
               badge={metrics.coordinator.lateReturnsCount > 0 ? 'Overdue' : undefined}
               badgeTone="danger"
             />
+            {metrics.coordinator.atRiskCount !== undefined && metrics.coordinator.atRiskCount > 0 && (
+              <TaskCard
+                title="At-Risk Bookings"
+                count={metrics.coordinator.atRiskCount}
+                subtitle="Bookings blocked from packing due to clashes"
+                actionLabel="Resolve At-Risk"
+                actionPath="/rentals"
+                icon="alert_triangle"
+                badge="At Risk"
+                badgeTone="danger"
+              />
+            )}
           </div>
         </div>
       )}
@@ -553,6 +565,18 @@ export function RoleTaskCockpit() {
               actionPath="/operations"
               icon="truck"
             />
+            {metrics.manager.atRiskCount !== undefined && metrics.manager.atRiskCount > 0 && (
+              <TaskCard
+                title="At-Risk Bookings"
+                count={metrics.manager.atRiskCount}
+                subtitle="Bookings blocked from packing due to clashes"
+                actionLabel="Resolve At-Risk"
+                actionPath="/rentals"
+                icon="alert_triangle"
+                badge="At Risk"
+                badgeTone="danger"
+              />
+            )}
             {metrics.manager.lowStockCount !== undefined && metrics.manager.lowStockCount > 0 && (
               <TaskCard
                 title="Low Stock Consumables"
@@ -635,6 +659,19 @@ export function RoleTaskCockpit() {
               badge={`${metrics.owner.businessPulse.fleetUtilizationPct}% Util`}
               badgeTone="info"
             />
+
+            {metrics.owner.atRiskCount !== undefined && metrics.owner.atRiskCount > 0 && (
+              <TaskCard
+                title="At-Risk Bookings"
+                count={metrics.owner.atRiskCount}
+                subtitle="Bookings blocked from packing due to clashes"
+                actionLabel="Resolve At-Risk"
+                actionPath="/rentals"
+                icon="alert_triangle"
+                badge="At Risk"
+                badgeTone="danger"
+              />
+            )}
 
             {metrics.owner.lowStockCount !== undefined && metrics.owner.lowStockCount > 0 && (
               <TaskCard

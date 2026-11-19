@@ -43,6 +43,7 @@ import AssetRoiReport from './AssetRoiReport'
 import RevenueReport from './RevenueReport'
 import CasesReport from './CasesReport'
 import CustomReport from './CustomReport'
+import MonthlyPack from './MonthlyPack'
 import './reports.css'
 
 const DEDICATED_REPORTS: Record<string, React.ComponentType> = {
@@ -64,6 +65,7 @@ const DEDICATED_REPORTS: Record<string, React.ComponentType> = {
   '/reports/cases': CasesReport,
   '/reports/sales': SalesVatReports,
   '/reports/vat-tax': SalesVatReports,
+  '/reports/monthly-pack': MonthlyPack,
   '/reports/activity': ActivityReports,
   '/reports/asset-roi': AssetRoiReport,
   '/reports/custom': CustomReport,
@@ -316,6 +318,27 @@ export function ReportCatalog({
             ))}
           </select>
         </label>
+
+        <Link
+          to="/reports/monthly-pack"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            minHeight: 'var(--tap, 44px)',
+            padding: '6px 14px',
+            borderRadius: 'var(--r-btn)',
+            border: '1px solid var(--border)',
+            background: 'var(--card)',
+            color: 'var(--text)',
+            fontSize: 'var(--t-meta)',
+            fontWeight: 600,
+            textDecoration: 'none',
+          }}
+        >
+          <Icon name="package" size={15} />
+          Monthly Pack (ZIP)
+        </Link>
       </div>
 
       {/* Law 6 — the whole catalog is money. `restricted` outranks every other

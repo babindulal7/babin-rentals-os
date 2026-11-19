@@ -904,6 +904,9 @@ const STEPS = [
           }
         })
         await savePhoto(UNITS[1])
+        // With T2-19, flagged return also requires signature or refusal
+        await q(`insert into signatures (client_uuid, session_id, signature_role, signer_name, signed_at, device, is_required, created_by)
+          values (gen_random_uuid(), $1, 'Returning person', 'Returning Courier', now(), 'Web', true, $2)`, [session, actor])
         await as('Warehouse', () => q(complete, [session]))
         assertEq(await one('select state from operation_sessions where id = $1', [session]), 'Completed', 'both unit photos allow completion')
       } finally {
@@ -8317,6 +8320,744 @@ STEPS.push({
       // Touching endpoints in Same-instant handover allowed succeeds
       await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
         values (gen_random_uuid(), '${bookingEId}', '${BRANCH}', 'Quote', 'Booked', '${U.Owner}', 'Owner', now(), 'Confirm Booking E')`)
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L76',
+  title: 'clashing extension without manager decision is refused (T3-29, B41)',
+  expect: 'green',
+  run: async () => {
+    const unitId = UNITS[2]
+    const productId = SERIAL_PRODUCT
+    let bookingFId
+    let bookingGId
+
+    await as('Owner', async () => {
+      const clientCode = await one("select next_document_number('client')")
+      const clientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+        values (gen_random_uuid(), '${clientCode}', 'L76 Client', '+9779800009977', 'Active', '${U.Owner}')
+        returning id`)).rows[0].id
+
+      // Booking F: 2099-12-01 10:00 to 2099-12-02 10:00
+      const bookingNoF = await one("select next_document_number('booking')")
+      bookingFId = (await q(`insert into bookings (client_uuid, booking_no, client_id, branch_id, stage, delivery_type, pickup_at, return_at, created_by, updated_by, project_name, project_type)
+        values (gen_random_uuid(), '${bookingNoF}', '${clientId}', '${BRANCH}', 'Quote', 'Client Pickup', '2099-12-01 10:00:00+05:45', '2099-12-02 10:00:00+05:45', '${U.Owner}', '${U.Owner}', 'Booking F', 'Feature Film')
+        returning id`)).rows[0].id
+
+      const lineFId = (await q(`insert into booking_lines (client_uuid, booking_id, line_type, product_id, description, qty, days, rate, created_by)
+        values (gen_random_uuid(), '${bookingFId}', 'Equipment', '${productId}', 'Clash Test Camera', 1, 1, 3500, '${U.Owner}')
+        returning id`)).rows[0].id
+
+      await q(`insert into booking_line_units (client_uuid, booking_line_id, asset_id, created_by)
+        values (gen_random_uuid(), '${lineFId}', '${unitId}', '${U.Owner}')`)
+
+      await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
+        values (gen_random_uuid(), '${bookingFId}', '${BRANCH}', 'Quote', 'Booked', '${U.Owner}', 'Owner', now(), 'Confirm Booking F')`)
+
+      // Booking G: 2099-12-02 11:00 to 2099-12-03 10:00 on the same unit
+      const bookingNoG = await one("select next_document_number('booking')")
+      bookingGId = (await q(`insert into bookings (client_uuid, booking_no, client_id, branch_id, stage, delivery_type, pickup_at, return_at, created_by, updated_by, project_name, project_type)
+        values (gen_random_uuid(), '${bookingNoG}', '${clientId}', '${BRANCH}', 'Quote', 'Client Pickup', '2099-12-02 11:00:00+05:45', '2099-12-03 10:00:00+05:45', '${U.Owner}', '${U.Owner}', 'Booking G', 'Feature Film')
+        returning id`)).rows[0].id
+
+      const lineGId = (await q(`insert into booking_lines (client_uuid, booking_id, line_type, product_id, description, qty, days, rate, created_by)
+        values (gen_random_uuid(), '${bookingGId}', 'Equipment', '${productId}', 'Clash Test Camera', 1, 1, 3500, '${U.Owner}')
+        returning id`)).rows[0].id
+
+      await q(`insert into booking_line_units (client_uuid, booking_line_id, asset_id, created_by)
+        values (gen_random_uuid(), '${lineGId}', '${unitId}', '${U.Owner}')`)
+
+      await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
+        values (gen_random_uuid(), '${bookingGId}', '${BRANCH}', 'Quote', 'Booked', '${U.Owner}', 'Owner', now(), 'Confirm Booking G')`)
+
+      // Attempt to extend Booking F by 1 day: new return is 2099-12-03 10:00, which overlaps with Booking G [12-02 11:00, 12-03 10:00)
+      let refused = false
+      try {
+        await q(`select public.extend_booking(jsonb_build_object(
+          'booking_id', '${bookingFId}',
+          'days', 1,
+          'reason', 'Client requested shoot extension for an additional day',
+          'actor_id', '${U.Owner}'
+        ))`)
+      } catch (err) {
+        if (err.message && err.message.includes('gate.extend.clash')) {
+          refused = true
+        } else {
+          throw err
+        }
+      }
+      if (!refused) throw new Error('Expected extend_booking to be refused with gate.extend.clash')
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L77',
+  title: 'decision b) marks next booking at risk, blocking Pack until resolved (T3-29, B42)',
+  expect: 'green',
+  run: async () => {
+    await as('Owner', async () => {
+      const bF = (await q(`select id from bookings where project_name = 'Booking F' limit 1`)).rows[0].id
+      const bG = (await q(`select id from bookings where project_name = 'Booking G' limit 1`)).rows[0].id
+
+      // 1. Manager records decision 'mark_at_risk'
+      await q(`select public.record_extension_clash_decision(jsonb_build_object(
+        'booking_id', '${bF}',
+        'conflicting_booking_id', '${bG}',
+        'days', 1,
+        'decision', 'mark_at_risk',
+        'reason', 'Approved shoot extension; mark following booking at risk for alternative gear'
+      ))`)
+
+      // 2. Extension now succeeds!
+      await q(`select public.extend_booking(jsonb_build_object(
+        'booking_id', '${bF}',
+        'days', 1,
+        'reason', 'Client requested shoot extension for an additional day',
+        'actor_id', '${U.Owner}'
+      ))`)
+
+      // 3. Booking G is now flagged At Risk in booking_at_risk
+      const atRiskRows = (await q(`select * from public.booking_at_risk where booking_id = '${bG}' and resolved_at is null`)).rows
+      if (atRiskRows.length === 0) throw new Error('Expected Booking G to have an active booking_at_risk row')
+      const atRiskId = atRiskRows[0].id
+
+      // 4. Booking G cannot reach Pack while At Risk
+      let packRefused = false
+      try {
+        await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
+          values (gen_random_uuid(), '${bG}', '${BRANCH}', 'Booked', 'Packed', '${U.Owner}', 'Owner', now(), 'Attempt Pack')`)
+      } catch (err) {
+        if (err.message && err.message.includes('gate.pack.at_risk')) {
+          packRefused = true
+        } else {
+          throw err
+        }
+      }
+      if (!packRefused) throw new Error('Expected transition to Packed to be refused with gate.pack.at_risk')
+
+      // 5. Resolve At Risk via similar item
+      await q(`select public.resolve_booking_at_risk(jsonb_build_object(
+        'at_risk_id', '${atRiskId}',
+        'resolution', 'similar_item',
+        'notes', 'Assigned alternative camera package for shoot'
+      ))`)
+
+      // Verify resolved
+      const resolved = (await q(`select resolved_at from public.booking_at_risk where id = '${atRiskId}'`)).rows[0].resolved_at
+      if (!resolved) throw new Error('Expected at_risk row to have resolved_at timestamp')
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L78',
+  title: 'a flagged return without signature or refusal is refused (gate.return.damage_unsigned, B19)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      let bookingId
+      const actor = 'Warehouse'
+      await as('Coordinator', async () => {
+        const clientCode = await one("select next_document_number('client')")
+        const clientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+          values (gen_random_uuid(), '${clientCode}', 'L78 Client', '+9779800009978', 'Active', '${U.Coordinator}')
+          returning id`)).rows[0].id
+
+        const bookingNo = await one("select next_document_number('booking')")
+        bookingId = (await q(`insert into bookings (client_uuid, booking_no, client_id, branch_id, stage, delivery_type, pickup_at, return_at, created_by, updated_by)
+          values (gen_random_uuid(), '${bookingNo}', '${clientId}', '${BRANCH}', 'Quote', 'Client Pickup', now(), now() + interval '1 day', '${U.Coordinator}', '${U.Coordinator}')
+          returning id`)).rows[0].id
+
+        const lineId = (await q(`insert into booking_lines (client_uuid, booking_id, line_type, product_id, description, qty, days, rate, created_by)
+          values (gen_random_uuid(), '${bookingId}', 'Equipment', '${SERIAL_PRODUCT}', 'Test Camera', 1, 1, 3500, '${U.Coordinator}')
+          returning id`)).rows[0].id
+
+        await q(`insert into booking_line_units (client_uuid, booking_line_id, asset_id, created_by)
+          values (gen_random_uuid(), '${lineId}', '${UNITS[0]}', '${U.Coordinator}')`)
+
+        await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role)
+          values (gen_random_uuid(), '${bookingId}', '${BRANCH}', 'Quote', 'Booked', '${U.Coordinator}', 'Coordinator')`)
+      })
+
+      // Advance Booked -> Packed -> On Rent
+      bookingIds['l78'] = bookingId
+      await as('Warehouse', async () => {
+        await actionPackRental({ key: 'l78', actor: 'Warehouse', units: [{ id: UNITS[0], serial: 'SN-A1' }] })
+        await actionHandoverRental({ key: 'l78', actor: 'Warehouse' })
+      })
+
+      // Start Return with a damaged item
+      await as('Warehouse', async () => {
+        const returnSessionId = crypto.randomUUID()
+        await q(`insert into operation_sessions (id, client_uuid, booking_id, operation, session_no, state, warehouse_staff_id, created_by)
+          values ('${returnSessionId}', gen_random_uuid(), '${bookingId}', 'Return', 1, 'In Progress', '${U.Warehouse}', '${U.Warehouse}')`)
+        const returnLine = await one(`insert into return_lines (client_uuid, booking_line_id, session_id, state, condition, qty_expected, returned_at, inspected_by, inspected_at, created_by)
+          values (gen_random_uuid(), (select id from booking_lines where booking_id = '${bookingId}' limit 1), '${returnSessionId}', 'Returned', 'Damaged', 1, now(), '${U.Warehouse}', now(), '${U.Warehouse}') returning id`)
+
+        // Add photo for the damaged unit (so gate.return.damage_photo_per_unit passes)
+        const fileId = await one(`insert into evidence_files (client_uuid, content_hash, storage_path, original_filename, media_type, format, size_bytes, category, created_by)
+          values (gen_random_uuid(), gen_random_uuid()::text, 'damage-l78.jpg', 'damage.jpg', 'Image', 'jpeg', 1024, 'Damage', '${U.Warehouse}') returning id`)
+        await q(`insert into evidence_references (client_uuid, evidence_file_id, operation_stage, booking_id, item_id, created_by)
+          values (gen_random_uuid(), '${fileId}', 'Damage', '${bookingId}', '${UNITS[0]}', '${U.Warehouse}')`)
+
+        await q(`insert into damage_findings (client_uuid, source, return_line_id, unit_id, damage_type, description, severity, created_by)
+          values (gen_random_uuid(), 'Return inspection', '${returnLine}', '${UNITS[0]}', 'Damaged', 'Cracked glass', 'Not assessed', '${U.Warehouse}')`)
+
+        // Attempting stage advance without signature or refusal is refused (B19)
+        await db.exec('savepoint l78_stage')
+        try {
+          await refuses(
+            'flagged return without signature or refusal is refused at stage transition',
+            `insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role)
+             values (gen_random_uuid(), '${bookingId}', '${BRANCH}', 'On Rent', 'Returned', '${U.Warehouse}', 'Warehouse')`,
+            [],
+            /gate\.return\.damage_unsigned/,
+          )
+        } finally {
+          await db.exec('rollback to savepoint l78_stage')
+        }
+
+        // Attempting to complete the return session directly without signature or refusal is also refused
+        await db.exec('savepoint l78_session')
+        try {
+          await refuses(
+            'flagged return without signature or refusal is refused at session completion',
+            `update operation_sessions set state = 'Completed' where id = '${returnSessionId}'`,
+            [],
+            /gate\.return\.damage_unsigned/,
+          )
+        } finally {
+          await db.exec('rollback to savepoint l78_session')
+        }
+      })
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L79',
+  title: 'a flagged return with returning person signature or refusal reason completes; clean return needs none (R-39)',
+  expect: 'green',
+  run: async () => {
+    await undone(async () => {
+      let bookingId
+      await as('Coordinator', async () => {
+        const clientCode = await one("select next_document_number('client')")
+        const clientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+          values (gen_random_uuid(), '${clientCode}', 'L79 Client', '+9779800009979', 'Active', '${U.Coordinator}')
+          returning id`)).rows[0].id
+
+        const bookingNo = await one("select next_document_number('booking')")
+        bookingId = (await q(`insert into bookings (client_uuid, booking_no, client_id, branch_id, stage, delivery_type, pickup_at, return_at, created_by, updated_by)
+          values (gen_random_uuid(), '${bookingNo}', '${clientId}', '${BRANCH}', 'Quote', 'Client Pickup', now(), now() + interval '1 day', '${U.Coordinator}', '${U.Coordinator}')
+          returning id`)).rows[0].id
+
+        const lineId = (await q(`insert into booking_lines (client_uuid, booking_id, line_type, product_id, description, qty, days, rate, created_by)
+          values (gen_random_uuid(), '${bookingId}', 'Equipment', '${SERIAL_PRODUCT}', 'Test Camera', 1, 1, 3500, '${U.Coordinator}')
+          returning id`)).rows[0].id
+
+        await q(`insert into booking_line_units (client_uuid, booking_line_id, asset_id, created_by)
+          values (gen_random_uuid(), '${lineId}', '${UNITS[0]}', '${U.Coordinator}')`)
+
+        await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role)
+          values (gen_random_uuid(), '${bookingId}', '${BRANCH}', 'Quote', 'Booked', '${U.Coordinator}', 'Coordinator')`)
+      })
+
+      // Advance Booked -> Packed -> On Rent
+      bookingIds['l79a'] = bookingId
+      await as('Warehouse', async () => {
+        await actionPackRental({ key: 'l79a', actor: 'Warehouse', units: [{ id: UNITS[0], serial: 'SN-A1' }] })
+        await actionHandoverRental({ key: 'l79a', actor: 'Warehouse' })
+      })
+
+      // Case 1: Flagged return with Returning person signature succeeds
+      await as('Warehouse', async () => {
+        const returnSessionId = crypto.randomUUID()
+        await q(`insert into operation_sessions (id, client_uuid, booking_id, operation, session_no, state, warehouse_staff_id, created_by)
+          values ('${returnSessionId}', gen_random_uuid(), '${bookingId}', 'Return', 1, 'In Progress', '${U.Warehouse}', '${U.Warehouse}')`)
+        const returnLine = await one(`insert into return_lines (client_uuid, booking_line_id, session_id, state, condition, qty_expected, returned_at, inspected_by, inspected_at, created_by)
+          values (gen_random_uuid(), (select id from booking_lines where booking_id = '${bookingId}' limit 1), '${returnSessionId}', 'Returned', 'Damaged', 1, now(), '${U.Warehouse}', now(), '${U.Warehouse}') returning id`)
+
+        const fileId = await one(`insert into evidence_files (client_uuid, content_hash, storage_path, original_filename, media_type, format, size_bytes, category, created_by)
+          values (gen_random_uuid(), gen_random_uuid()::text, 'damage-l79.jpg', 'damage.jpg', 'Image', 'jpeg', 1024, 'Damage', '${U.Warehouse}') returning id`)
+        await q(`insert into evidence_references (client_uuid, evidence_file_id, operation_stage, booking_id, item_id, created_by)
+          values (gen_random_uuid(), '${fileId}', 'Damage', '${bookingId}', '${UNITS[0]}', '${U.Warehouse}')`)
+        await q(`insert into damage_findings (client_uuid, source, return_line_id, unit_id, damage_type, description, severity, created_by)
+          values (gen_random_uuid(), 'Return inspection', '${returnLine}', '${UNITS[0]}', 'Damaged', 'Scratched lens', 'Not assessed', '${U.Warehouse}')`)
+
+        // Add returning person signature
+        await q(`insert into signatures (client_uuid, session_id, signature_role, signer_name, signed_at, device, is_required, created_by)
+          values (gen_random_uuid(), '${returnSessionId}', 'Returning person', 'Prakash Client', now(), 'Web', true, '${U.Warehouse}')`)
+
+        // Stage transition and session completion succeed
+        await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role)
+          values (gen_random_uuid(), '${bookingId}', '${BRANCH}', 'On Rent', 'Returned', '${U.Warehouse}', 'Warehouse')`)
+        await q(`update operation_sessions set state = 'Completed' where id = '${returnSessionId}'`)
+        assertEq(await stageOf('l79a'), 'Returned', 'booking transitioned to Returned with signature')
+      })
+    })
+
+    // Case 2: Flagged return with refusal reason (≥10 chars) succeeds without stalling floor
+    await undone(async () => {
+      let bookingId
+      await as('Coordinator', async () => {
+        const clientCode = await one("select next_document_number('client')")
+        const clientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+          values (gen_random_uuid(), '${clientCode}', 'L79b Client', '+9779800009980', 'Active', '${U.Coordinator}')
+          returning id`)).rows[0].id
+
+        const bookingNo = await one("select next_document_number('booking')")
+        bookingId = (await q(`insert into bookings (client_uuid, booking_no, client_id, branch_id, stage, delivery_type, pickup_at, return_at, created_by, updated_by)
+          values (gen_random_uuid(), '${bookingNo}', '${clientId}', '${BRANCH}', 'Quote', 'Client Pickup', now(), now() + interval '1 day', '${U.Coordinator}', '${U.Coordinator}')
+          returning id`)).rows[0].id
+
+        const lineId = (await q(`insert into booking_lines (client_uuid, booking_id, line_type, product_id, description, qty, days, rate, created_by)
+          values (gen_random_uuid(), '${bookingId}', 'Equipment', '${SERIAL_PRODUCT}', 'Test Camera', 1, 1, 3500, '${U.Coordinator}')
+          returning id`)).rows[0].id
+
+        await q(`insert into booking_line_units (client_uuid, booking_line_id, asset_id, created_by)
+          values (gen_random_uuid(), '${lineId}', '${UNITS[0]}', '${U.Coordinator}')`)
+
+        await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role)
+          values (gen_random_uuid(), '${bookingId}', '${BRANCH}', 'Quote', 'Booked', '${U.Coordinator}', 'Coordinator')`)
+      })
+
+      // Advance to On Rent
+      bookingIds['l79b'] = bookingId
+      await as('Warehouse', async () => {
+        await actionPackRental({ key: 'l79b', actor: 'Warehouse', units: [{ id: UNITS[0], serial: 'SN-A1' }] })
+        await actionHandoverRental({ key: 'l79b', actor: 'Warehouse' })
+      })
+
+      // Flagged return with refusal reason
+      await as('Warehouse', async () => {
+        const returnSessionId = crypto.randomUUID()
+        await q(`insert into operation_sessions (id, client_uuid, booking_id, operation, session_no, state, warehouse_staff_id, created_by)
+          values ('${returnSessionId}', gen_random_uuid(), '${bookingId}', 'Return', 1, 'In Progress', '${U.Warehouse}', '${U.Warehouse}')`)
+        const returnLine = await one(`insert into return_lines (client_uuid, booking_line_id, session_id, state, condition, qty_expected, returned_at, inspected_by, inspected_at, created_by)
+          values (gen_random_uuid(), (select id from booking_lines where booking_id = '${bookingId}' limit 1), '${returnSessionId}', 'Returned', 'Damaged', 1, now(), '${U.Warehouse}', now(), '${U.Warehouse}') returning id`)
+
+        const fileId = await one(`insert into evidence_files (client_uuid, content_hash, storage_path, original_filename, media_type, format, size_bytes, category, created_by)
+          values (gen_random_uuid(), gen_random_uuid()::text, 'damage-l79b.jpg', 'damage.jpg', 'Image', 'jpeg', 1024, 'Damage', '${U.Warehouse}') returning id`)
+        await q(`insert into evidence_references (client_uuid, evidence_file_id, operation_stage, booking_id, item_id, created_by)
+          values (gen_random_uuid(), '${fileId}', 'Damage', '${bookingId}', '${UNITS[0]}', '${U.Warehouse}')`)
+        await q(`insert into damage_findings (client_uuid, source, return_line_id, unit_id, damage_type, description, severity, created_by)
+          values (gen_random_uuid(), 'Return inspection', '${returnLine}', '${UNITS[0]}', 'Damaged', 'Dent on body', 'Not assessed', '${U.Warehouse}')`)
+
+        // Check constraint enforces reason >= 10 chars
+        await db.exec('savepoint l79b_refusal')
+        try {
+          await refuses(
+            'refusal with reason < 10 chars fails DB check',
+            `update operation_sessions set signature_refused = true, signature_refusal_reason = 'Too short' where id = '${returnSessionId}'`,
+            [],
+            /operation_sessions_signature_refusal_check/,
+          )
+        } finally {
+          await db.exec('rollback to savepoint l79b_refusal')
+        }
+
+        // Valid refusal reason >= 10 chars succeeds
+        await q(`update operation_sessions set signature_refused = true, signature_refusal_reason = 'Client courier refused to sign and left counter' where id = '${returnSessionId}'`)
+
+        // Stage transition and session completion succeed
+        await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role)
+          values (gen_random_uuid(), '${bookingId}', '${BRANCH}', 'On Rent', 'Returned', '${U.Warehouse}', 'Warehouse')`)
+        await q(`update operation_sessions set state = 'Completed' where id = '${returnSessionId}'`)
+        assertEq(await stageOf('l79b'), 'Returned', 'booking transitioned to Returned with recorded refusal')
+      })
+    })
+
+    // Case 3: Clean return (0 flags) requires NO signature and NO refusal (R-39)
+    await undone(async () => {
+      let bookingId
+      await as('Coordinator', async () => {
+        const clientCode = await one("select next_document_number('client')")
+        const clientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+          values (gen_random_uuid(), '${clientCode}', 'L79c Client', '+9779800009981', 'Active', '${U.Coordinator}')
+          returning id`)).rows[0].id
+
+        const bookingNo = await one("select next_document_number('booking')")
+        bookingId = (await q(`insert into bookings (client_uuid, booking_no, client_id, branch_id, stage, delivery_type, pickup_at, return_at, created_by, updated_by)
+          values (gen_random_uuid(), '${bookingNo}', '${clientId}', '${BRANCH}', 'Quote', 'Client Pickup', now(), now() + interval '1 day', '${U.Coordinator}', '${U.Coordinator}')
+          returning id`)).rows[0].id
+
+        const lineId = (await q(`insert into booking_lines (client_uuid, booking_id, line_type, product_id, description, qty, days, rate, created_by)
+          values (gen_random_uuid(), '${bookingId}', 'Equipment', '${SERIAL_PRODUCT}', 'Test Camera', 1, 1, 3500, '${U.Coordinator}')
+          returning id`)).rows[0].id
+
+        await q(`insert into booking_line_units (client_uuid, booking_line_id, asset_id, created_by)
+          values (gen_random_uuid(), '${lineId}', '${UNITS[0]}', '${U.Coordinator}')`)
+
+        await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role)
+          values (gen_random_uuid(), '${bookingId}', '${BRANCH}', 'Quote', 'Booked', '${U.Coordinator}', 'Coordinator')`)
+      })
+
+      // Advance to On Rent
+      bookingIds['l79c'] = bookingId
+      await as('Warehouse', async () => {
+        await actionPackRental({ key: 'l79c', actor: 'Warehouse', units: [{ id: UNITS[0], serial: 'SN-A1' }] })
+        await actionHandoverRental({ key: 'l79c', actor: 'Warehouse' })
+      })
+
+      // Clean return: condition = 'Good', state = 'Returned', 0 damage findings
+      await as('Warehouse', async () => {
+        const returnSessionId = crypto.randomUUID()
+        await q(`insert into operation_sessions (id, client_uuid, booking_id, operation, session_no, state, warehouse_staff_id, created_by)
+          values ('${returnSessionId}', gen_random_uuid(), '${bookingId}', 'Return', 1, 'In Progress', '${U.Warehouse}', '${U.Warehouse}')`)
+        await q(`insert into return_lines (client_uuid, booking_line_id, session_id, state, condition, qty_expected, returned_at, inspected_by, inspected_at, created_by)
+          values (gen_random_uuid(), (select id from booking_lines where booking_id = '${bookingId}' limit 1), '${returnSessionId}', 'Returned', 'Good', 1, now(), '${U.Warehouse}', now(), '${U.Warehouse}')`)
+
+        // Clean return completes with NO signature and NO refusal (R-39)
+        await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role)
+          values (gen_random_uuid(), '${bookingId}', '${BRANCH}', 'On Rent', 'Returned', '${U.Warehouse}', 'Warehouse')`)
+        await q(`update operation_sessions set state = 'Completed' where id = '${returnSessionId}'`)
+        assertEq(await stageOf('l79c'), 'Returned', 'clean return completes with no signature (R-39)')
+      })
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L80',
+  title: "an existing booking's days and total are unchanged after the setting moves (T3-28, B24, B25, B26, K3)",
+  expect: 'green',
+  run: async () => {
+    let bookingId
+    const clientCode = await one("select next_document_number('client')")
+    const clientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+      values (gen_random_uuid(), '${clientCode}', 'L80 Setting Client', '+9779800009980', 'Active', '${U.Owner}')
+      returning id`)).rows[0].id
+
+    // 1. Create booking with default 06:00 day start
+    // Window: 2099-10-20T02:15:00Z (08:00 NPT) to 2099-10-21T02:15:00Z (08:00 NPT next day)
+    // Under 06:00 day start, 08:00 to next day 08:00 crosses the 06:00 boundary = 2 days billed
+    await as('Coordinator', async () => {
+      const res = await createBooking({
+        key: 'l80_booking',
+        window: ['2099-10-20T02:15:00Z', '2099-10-21T02:15:00Z'],
+        actor: 'Coordinator',
+        clientId,
+        lines: [{
+          productId: QTY_PRODUCT,
+          description: 'L80 Camera Package',
+          qty: 1,
+          days: 2,
+          rate: 200000,
+        }],
+      })
+      bookingId = res.booking_id
+      assertEq(res.rental_day_start, 360, 'created booking has default rental_day_start = 360 (06:00)')
+    })
+
+    // Assert database column rental_day_start
+    const rowBefore = (await q(`select id, rental_day_start from bookings where id = '${bookingId}'`)).rows[0]
+    assertEq(rowBefore.rental_day_start, 360, 'bookings.rental_day_start stored as 360')
+
+    // 2. Manager cannot change the rental day start setting (B26)
+    await as('Manager', async () => {
+      await refuses(
+        'Manager cannot change operationalDayStart',
+        "select set_setting(gen_random_uuid(), 'operationalDayStart', '\"08:00\"'::jsonb)",
+        [],
+        /GATE:gate\.settings\.role/i,
+      )
+    })
+
+    // 3. Admin updates the operational day start setting to 08:00 (B26)
+    await as('Admin', async () => {
+      await one("select set_setting(gen_random_uuid(), 'operationalDayStart', '\"08:00\"'::jsonb)")
+    })
+
+    // 4. Assert existing booking's rental_day_start, line days, and line totals are unchanged
+    const rowAfter = (await q(`select id, rental_day_start from bookings where id = '${bookingId}'`)).rows[0]
+    assertEq(rowAfter.rental_day_start, 360, 'existing booking retains its original rental_day_start (360) after setting moved')
+
+    const lineRow = (await q(`select days, rate, line_total from booking_lines where booking_id = '${bookingId}' and voided_at is null`)).rows[0]
+    assertEq(lineRow.days, 2, 'existing booking line days unchanged at 2')
+    assertEq(Number(lineRow.line_total), 400000, 'existing booking line total unchanged at 400000')
+
+    // read_booking_for_change snapshot also reports original rental_day_start (360)
+    await as('Coordinator', async () => {
+      const snapshot = await one('select read_booking_for_change($1)', [bookingId])
+      assertEq(snapshot.rental_day_start, 360, 'read_booking_for_change reports original rental_day_start (360)')
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L81',
+  title: 'a new booking uses the new start (T3-28, B24, B25, K3)',
+  expect: 'green',
+  run: async () => {
+    let newBookingId
+    const clientCode = await one("select next_document_number('client')")
+    const clientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+      values (gen_random_uuid(), '${clientCode}', 'L81 Setting Client', '+9779800009981', 'Active', '${U.Owner}')
+      returning id`)).rows[0].id
+
+    // Setting is currently 08:00 from L80.
+    // Create new booking with window 08:00 NPT to 08:00 NPT next day:
+    // 2099-11-20T02:15:00Z to 2099-11-21T02:15:00Z.
+    // Under 08:00 day start, 08:00 to 08:00 next day is exactly 1 rental day!
+    await as('Coordinator', async () => {
+      const res = await createBooking({
+        key: 'l81_booking',
+        window: ['2099-11-20T02:15:00Z', '2099-11-21T02:15:00Z'],
+        actor: 'Coordinator',
+        clientId,
+        lines: [{
+          productId: QTY_PRODUCT,
+          description: 'L81 New Shift Gear',
+          qty: 1,
+          days: 1,
+          rate: 200000,
+        }],
+      })
+      newBookingId = res.booking_id
+      assertEq(res.rental_day_start, 480, 'new booking resolves new rental_day_start = 480 (08:00) from settings')
+    })
+
+    const row = (await q(`select id, rental_day_start from bookings where id = '${newBookingId}'`)).rows[0]
+    assertEq(row.rental_day_start, 480, 'bookings.rental_day_start stored as 480 for new booking')
+
+    const lineRow = (await q(`select days, rate, line_total from booking_lines where booking_id = '${newBookingId}' and voided_at is null`)).rows[0]
+    assertEq(lineRow.days, 1, 'new booking line days is 1 under 08:00 start')
+    assertEq(Number(lineRow.line_total), 200000, 'new booking line total is 200000')
+
+    // Reset setting back to 06:00 as Owner for test cleanliness
+    await as('Owner', async () => {
+      await one("select set_setting(gen_random_uuid(), 'operationalDayStart', '\"06:00\"'::jsonb)")
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L82',
+  title: 'a change can never double-book (T3-18, W88, GiST exclusion)',
+  expect: 'green',
+  run: async () => {
+    let bookingAId
+    let bookingBId
+    const clientCodeA = await one("select next_document_number('client')")
+    const clientA = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+      values (gen_random_uuid(), '${clientCodeA}', 'L82 Client A', '+9779800009982', 'Active', '${U.Owner}')
+      returning id`)).rows[0].id
+
+    const clientCodeB = await one("select next_document_number('client')")
+    const clientB = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+      values (gen_random_uuid(), '${clientCodeB}', 'L82 Client B', '+9779800009983', 'Active', '${U.Owner}')
+      returning id`)).rows[0].id
+
+    const testAssetId = UNITS[0]
+
+    // 1. Create and confirm Booking A: window 2099-05-10 to 2099-05-15, reserving testAssetId
+    await as('Coordinator', async () => {
+      const resA = await createBooking({
+        key: 'l82_booking_a',
+        window: ['2099-05-10T00:00:00Z', '2099-05-15T00:00:00Z'],
+        actor: 'Coordinator',
+        clientId: clientA,
+        lines: [{
+          productId: SERIAL_PRODUCT,
+          description: 'L82 Reserved Camera A',
+          qty: 1,
+          days: 5,
+          rate: 3500,
+          units: [testAssetId],
+        }],
+      })
+      bookingAId = resA.booking_id
+    })
+    await transition('l82_booking_a', 'Quote', 'Booked', 'Coordinator')
+
+    // Confirm Booking A holds testAssetId
+    const holdsA = await one(`select count(*) from inventory_reservations where booking_id = '${bookingAId}' and asset_id = '${testAssetId}' and released_at is null`)
+    assertEq(Number(holdsA), 1, 'booking A holds the unit')
+
+    // 2. Create and confirm Booking B for a separate non-overlapping window: 2099-05-20 to 2099-05-25
+    await as('Coordinator', async () => {
+      const resB = await createBooking({
+        key: 'l82_booking_b',
+        window: ['2099-05-20T00:00:00Z', '2099-05-25T00:00:00Z'],
+        actor: 'Coordinator',
+        clientId: clientB,
+        lines: [{
+          productId: SERIAL_PRODUCT,
+          description: 'L82 Reserved Camera B',
+          qty: 1,
+          days: 5,
+          rate: 3500,
+          units: [testAssetId],
+        }],
+      })
+      bookingBId = resB.booking_id
+    })
+    await transition('l82_booking_b', 'Quote', 'Booked', 'Coordinator')
+
+    // 3. Attempt change_booking on Booking B to move its dates to 2099-05-12 to 2099-05-18 (clashing with Booking A)
+    await as('Coordinator', async () => {
+      const snapB = await one('select read_booking_for_change($1)', [bookingBId])
+      const clashingPayload = {
+        values: {
+          ...snapB.values,
+          pickup_at: '2099-05-12T00:00:00Z',
+          return_at: '2099-05-18T00:00:00Z',
+        },
+        lines: snapB.lines.map((l) => ({ ...l, days: 6 })),
+        crew: snapB.crew || [],
+        transport: snapB.transport || {},
+        discount_percent: 0,
+      }
+
+      await refuses(
+        'change_booking clashing dates with another booking is refused by GiST exclusion',
+        'select change_booking($1, $2, $3, $4::jsonb)',
+        [bookingBId, snapB.revision, crypto.randomUUID(), JSON.stringify(clashingPayload)],
+        /inventory_reservations_no_double_booking|conflicting key value/i,
+      )
+    })
+
+    // Assert that Booking B's window and reservation are intact and never double-booked
+    const rowB = (await q(`select pickup_at, return_at from bookings where id = '${bookingBId}'`)).rows[0]
+    assertEq(new Date(rowB.pickup_at).toISOString(), '2099-05-20T00:00:00.000Z', 'booking B pickup remains 2099-05-20')
+  },
+})
+
+STEPS.push({
+  id: 'L83',
+  title: 'a packed unit cannot be silently removed (T3-18, W88, gate.booking.packed_line_removed)',
+  expect: 'green',
+  run: async () => {
+    let bookingCId
+    const clientCodeC = await one("select next_document_number('client')")
+    const clientC = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+      values (gen_random_uuid(), '${clientCodeC}', 'L83 Client C', '+9779800009984', 'Active', '${U.Owner}')
+      returning id`)).rows[0].id
+
+    // 1. Create and confirm Booking C
+    await as('Coordinator', async () => {
+      const resC = await createBooking({
+        key: 'l83_booking_c',
+        window: ['2099-06-10T00:00:00Z', '2099-06-15T00:00:00Z'],
+        actor: 'Coordinator',
+        clientId: clientC,
+        lines: [{
+          productId: SERIAL_PRODUCT,
+          description: 'L83 Camera Line',
+          qty: 1,
+          days: 5,
+          rate: 3500,
+          units: [UNITS[1]],
+        }],
+      })
+      bookingCId = resC.booking_id
+    })
+    await transition('l83_booking_c', 'Quote', 'Booked', 'Coordinator')
+
+    // 2. Pack the booking
+    await as('Warehouse', async () => {
+      await actionPackRental({ key: 'l83_booking_c', actor: 'Warehouse', units: [{ id: UNITS[1], serial: 'SN-L83' }] })
+    })
+    assertEq(await stageOf('l83_booking_c'), 'Packed', 'booking C is Packed')
+
+    // 3. Desk staff attempts to change_booking while silently removing the packed line (empty lines array)
+    await as('Coordinator', async () => {
+      const snapC = await one('select read_booking_for_change($1)', [bookingCId])
+      const silentRemovalPayload = {
+        values: snapC.values,
+        lines: [], // Removing the packed line!
+        crew: snapC.crew || [],
+        transport: snapC.transport || {},
+        discount_percent: 0,
+      }
+
+      await refuses(
+        'silent removal of packed line is refused by gate.booking.packed_line_removed',
+        'select change_booking($1, $2, $3, $4::jsonb)',
+        [bookingCId, snapC.revision, crypto.randomUUID(), JSON.stringify(silentRemovalPayload)],
+        /GATE:gate\.booking\.packed_line_removed/i,
+      )
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L84',
+  title: 'linked booking carries the parent id (T3-18, W87)',
+  expect: 'green',
+  run: async () => {
+    let parentBookingId
+    let linkedBookingId
+    const clientCodeD = await one("select next_document_number('client')")
+    const clientD = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+      values (gen_random_uuid(), '${clientCodeD}', 'L84 Client D', '+9779800009985', 'Active', '${U.Owner}')
+      returning id`)).rows[0].id
+
+    // 1. Create and progress parent booking D to On Rent
+    await as('Coordinator', async () => {
+      const resD = await createBooking({
+        key: 'l84_parent',
+        window: ['2099-07-01T00:00:00Z', '2099-07-05T00:00:00Z'],
+        actor: 'Coordinator',
+        clientId: clientD,
+        lines: [{
+          productId: SERIAL_PRODUCT,
+          description: 'L84 Parent Camera',
+          qty: 1,
+          days: 4,
+          rate: 3500,
+          units: [UNITS[2]],
+        }],
+      })
+      parentBookingId = resD.booking_id
+    })
+    await transition('l84_parent', 'Quote', 'Booked', 'Coordinator')
+    await as('Warehouse', async () => {
+      await actionPackRental({ key: 'l84_parent', actor: 'Warehouse', units: [{ id: UNITS[2], serial: 'SN-L84' }] })
+      await actionHandoverRental({ key: 'l84_parent', actor: 'Warehouse' })
+    })
+    assertEq(await stageOf('l84_parent'), 'On Rent', 'parent booking is On Rent')
+
+    // 2. Mid-rental, client requests additional gear -> Staff chooses "Start a new linked booking"
+    const linkedClientUuid = crypto.randomUUID()
+    await as('Coordinator', async () => {
+      const linkedPayload = {
+        client_uuid: linkedClientUuid,
+        created_by: U.Coordinator,
+        branch_id: BRANCH,
+        client_id: clientD,
+        parent_booking_id: parentBookingId,
+        project: 'L84 Additional Gear',
+        pickup_at: '2099-07-02T00:00:00Z',
+        return_at: '2099-07-05T00:00:00Z',
+        delivery_type: 'Client Pickup',
+        lines: [{
+          client_uuid: crypto.randomUUID(),
+          line_type: 'Equipment',
+          product_id: QTY_PRODUCT,
+          description: 'L84 Extra Lens',
+          qty: 1,
+          days: 3,
+          rate: 1500,
+        }],
+      }
+      const resLinked = await one('select create_booking($1::jsonb)', [JSON.stringify(linkedPayload)])
+      linkedBookingId = resLinked.booking_id
+      assertEq(resLinked.parent_booking_id, parentBookingId, 'create_booking returns parent_booking_id')
+    })
+
+    // 3. Assert database row and read_booking_for_change carry parent_booking_id
+    const dbRow = (await q(`select parent_booking_id from bookings where id = '${linkedBookingId}'`)).rows[0]
+    assertEq(dbRow.parent_booking_id, parentBookingId, 'bookings.parent_booking_id is persisted')
+
+    await as('Coordinator', async () => {
+      const snapLinked = await one('select read_booking_for_change($1)', [linkedBookingId])
+      assertEq(snapLinked.parent_booking_id, parentBookingId, 'read_booking_for_change returns parent_booking_id')
+      assertEq(snapLinked.values.parent_booking_id, parentBookingId, 'values.parent_booking_id matches')
     })
   },
 })

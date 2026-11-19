@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0252**  (0241 R-9.10, 0242 R-9.12, 0243 R-9.13 unmerged; 0245 R-9.8 on its own branch; 0244, 0246, 0247, 0248, 0249, 0250 and 0251 R-9.18 here)
+**Next free number: 0252**  (0241, 0242, 0243 are T3-29, T2-19 and T3-18 on `main`; 0245 R-9.8 on its own branch; 0244, 0246, 0247, 0248, 0249, 0250 and 0251 R-9.18 here)
 
 > **Legacy exception:** `0188` exists as two distinct, locally verified migration files
 > (`0188_smart_reservation_holds.sql` and `0188_staff_renting_gear.sql`). Both are preserved because
@@ -87,7 +87,10 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0238 | T3-28 | rental-day-start-setting | lane-c/T3-28-rental-day-start-as-a-setting | verified (check:pglite 235/235 + check:lifecycle 77/77) |
 | 0239 | T3-30 | consumables-pricing-restock-and-low-stock | lane-c/T3-30-consumables-unit-price-add-at-the | verified (check:pglite 236/236 + check:lifecycle 76/76 Step L73) |
 | 0240 | T2-22 | time-between-rentals-account-wide-or-per-product | lane-a/T2-22-time-between-rentals-account-wide-or | verified (check:pglite 236/236 + check:lifecycle 76/76 Step L74-L75) |
-| 0244 | R-9.18 / R-9.20 | delivery-zone-vehicle-fee-grid | feat/r-9-18-delivery-fee-grid | written, not applied (N-5); 0241 R-9.10, 0242 R-9.12, 0243 R-9.13 are on unmerged branches |
+| 0241 | T3-29 | extension-clash-manager-decides-and-at-risk | lane-c/T3-29-extension-clash-the-manager-decides | verified (PR #208) |
+| 0242 | T2-19 | return-damage-signature-and-refusal | lane-a/T2-19-signature-at-return-when-damage-is-found | verified (check:pglite 239/239 + check:lifecycle 80/80 Step L78-L79) |
+| 0243 | T3-18 | change-confirmed-booking | lane-c/T3-18-change-confirmed-booking | verified (check:pglite 241/241 + check:lifecycle 85/85 Step L82-L84) |
+| 0244 | R-9.18 / R-9.20 | delivery-zone-vehicle-fee-grid | feat/r-9-18-delivery-fee-grid | written, not applied (N-5) |
 | 0246 | O-28 / O-30 | dispatch-zone-fee-from-grid | feat/r-9-18-delivery-fee-grid | written, not applied (N-5); needs 0244 first; 0245 is R-9.8 on its own branch |
 | 0247 | O-28 | retire-per-zone-fee-on-create | feat/r-9-18-delivery-fee-grid | written, not applied (N-5); column kept, fee optional on create; needs 0244 and 0246 |
 | 0251 | O-28b S2 | waiting-charge-line | feat/r-9-18-delivery-fee-grid | written, not applied (N-5); add_waiting_charge_line() adds a flat Service line, appends to a Draft invoice, refuses an issued one (R-03); conditional audit trigger; needs 0010 and 0168 |

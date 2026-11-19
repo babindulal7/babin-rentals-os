@@ -147,6 +147,12 @@ export const SYSTEM_SECTIONS: Section[] = [
     icon: 'box',
     fields: [
       {
+        label: 'Rental day starts at',
+        note: 'Start of the 24-hour rental day (default 06:00, quarter hours). Decides billed days for new bookings and the operational day boundary.',
+        settingKey: 'operationalDayStart',
+        readBy: 'lib/rentalDays.ts, lib/operationalDay.ts, NewRental.tsx, Today',
+      },
+      {
         label: 'Unit availability',
         note: 'Which units Auto Assign Serials will not pick. Gear already booked for the dates is excluded either way — this is about condition.',
         settingKey: 'unitAvailabilityRule',

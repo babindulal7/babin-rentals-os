@@ -23,6 +23,7 @@ import type { Line } from './RentalLineItemsTree'
 
 export interface UseNewRentalSubmitOptions {
   editBookingId?: string | undefined
+  parentBookingId?: string | null | undefined
   confirmBlocked: boolean
   saveState: 'saved' | 'saving' | 'error'
   setSaveState: (state: 'saved' | 'saving' | 'error') => void
@@ -124,6 +125,7 @@ function quoteFieldsForLine(
 
 export function useNewRentalSubmit({
   editBookingId,
+  parentBookingId,
   confirmBlocked,
   saveState,
   setSaveState,
@@ -274,6 +276,7 @@ export function useNewRentalSubmit({
           clientUuid: pressKey,
           clientId: clientDbId,
           branchId,
+          parentBookingId: parentBookingId ?? null,
           project: finalProject,
           projectName: (projectName?.trim() || finalProject) ?? null,
           shootLocation: shootLocation?.trim() || null,
@@ -421,6 +424,7 @@ export function useNewRentalSubmit({
       pickupLocation,
       returnLocation,
       specialInstructions,
+      parentBookingId,
     ],
   )
 

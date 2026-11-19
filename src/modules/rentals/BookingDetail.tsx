@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router-dom'
 import { useCallback, useEffect, useMemo, useState, useRef, Suspense, lazy } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import type { IconName } from '../../components/ui/Icon'
 import { Card, PageHeader, Button, Rail, SummaryRows, cardStyle } from '../../components/ui/Page'
@@ -47,6 +47,7 @@ import {
   canCloseRental,
   canManageCollateral,
   canSetBookingTags,
+  canResolveAtRisk,
 } from '../../lib/rbac'
 import { BookingTagsBar } from './BookingTagsBar'
 import { IntelCard } from '../../components/ui/IntelCard'
@@ -63,6 +64,8 @@ import { ExtendRentalModal } from './modals/ExtendRentalModal'
 import { ReturnCollateralModal } from './modals/ReturnCollateralModal'
 import { AssignCrewModal } from './modals/AssignCrewModal'
 import { BookingCrewList } from './BookingCrewList'
+import { fetchBookingAtRisk, type BookingAtRiskRow } from '../../lib/queries/atRisk'
+import { ResolveAtRiskModal } from './modals/ResolveAtRiskModal'
 import { canAssignPricedCrew } from '../../lib/crewAssignment'
 import { CreateSubRentalModal } from './modals/CreateSubRentalModal'
 import { AddConsumableModal } from './booking/AddConsumableModal'
@@ -1020,6 +1023,7 @@ function BookingDetailView() {
   const { showSuccessToast } = useToast()
   const { openOperations } = useOperationsWorkspace()
   const viewport = useViewport()
+  const navigate = useNavigate()
 
   /*
    * Law 6 / HIS v2.1 §4.1. `canBookingMoney` covers booking/invoice/payment
@@ -1149,6 +1153,23 @@ function BookingDetailView() {
 
   const activeCollateral = collaterals.find((c) => c.returned_at === null) ?? null
   const userCanManageCollateral = user ? canManageCollateral(user.role) : false
+  const userCanResolveAtRisk = user ? canResolveAtRisk(user.role) : false
+
+  const [atRiskRecords, setAtRiskRecords] = useState<BookingAtRiskRow[]>([])
+  const [showResolveAtRiskModal, setShowResolveAtRiskModal] = useState(false)
+
+  const fetchAtRisk = useCallback(async () => {
+    if (!bookingId) {
+      setAtRiskRecords([])
+      return
+    }
+    const rows = await fetchBookingAtRisk(bookingId)
+    setAtRiskRecords(rows)
+  }, [bookingId])
+
+  useEffect(() => {
+    void fetchAtRisk()
+  }, [fetchAtRisk])
 
   /* ── lines + units — `fetchFloorBooking`, the per-booking read ────────────
    * Not a list, so it does not go through `useList`; same cancellation rule.
@@ -1221,6 +1242,10 @@ function BookingDetailView() {
   const canReleaseUnits = user ? canWriteBookingDesk(user.role) : false
   const [showAddConsumableModal, setShowAddConsumableModal] = useState(false)
   const [showWaitingChargeModal, setShowWaitingChargeModal] = useState(false)
+  const [showAddGearModal, setShowAddGearModal] = useState(false)
+  const canChangeBookingPermission = Boolean(
+    user?.role && ['Owner', 'Admin', 'Manager', 'Coordinator'].includes(user.role),
+  )
   const [releasingUnitId, setReleasingUnitId] = useState<string | null>(null)
   const [releaseError, setReleaseError] = useState<string | null>(null)
   const [confirmRelease, setConfirmRelease] = useState<{ unitRowId: string; label: string } | null>(null)
@@ -1429,7 +1454,7 @@ function BookingDetailView() {
     if (!actualReturn) return null
     const due = new Date(booking.returnAtAd)
     if (actualReturn.getTime() <= due.getTime()) return null
-    const rentalDaysCount = rentalDaysBetween(booking.pickupAtAd, booking.returnAtAd) ?? 1
+    const rentalDaysCount = rentalDaysBetween(booking.pickupAtAd, booking.returnAtAd, booking.rentalDayStart ?? 360) ?? 1
     const dailyRatePaisa = Math.max(1, Math.round(totals.total / rentalDaysCount)) as Paisa
     const result = lateFee({
       scheduledReturnAt: due,
@@ -1954,6 +1979,11 @@ function BookingDetailView() {
   const canAddConsumables = !isTerminalStage && !!user && (canWriteBookingDesk(user.role) || canWriteFloor(user.role))
   // S2 row 6: waiting charge after the trip. Owner, Admin, Manager, Coordinator; add_waiting_charge_line enforces it.
   const canAddWaiting = !isTerminalStage && canAddWaitingCharge(user?.role)
+  const canAddGear =
+    canChangeBookingPermission &&
+    ['Quote', 'Booked', 'Packed', 'On Rent'].includes(stage) &&
+    !booking?.isCancelled &&
+    !booking?.isClosed
   const lines: FloorLine[] = floor?.lines ?? []
   const printPickList = async () => {
     if (!floor || floor.linesPresence !== 'present' || floor.lines.length === 0) return
@@ -2177,7 +2207,7 @@ function BookingDetailView() {
                 })),
               }
 
-  const days = rentalDaysBetween(booking.pickupAtAd, booking.returnAtAd)
+  const days = rentalDaysBetween(booking.pickupAtAd, booking.returnAtAd, booking.rentalDayStart ?? 360)
   const allUnits = lines.flatMap((l) => l.units)
   const subRental = isSubRentalBooking(lines.map((l) => ({ lineType: l.lineType })))
 
@@ -2499,6 +2529,7 @@ function BookingDetailView() {
               {/* The stage is named by the stepper below ("Closed — current stage"), so no badge here. */}
               {booking.isCancelled && <Badge flag="Cancelled" />}
               {subRental && <SubRentedMark label="Sub-rental" />}
+              {atRiskRecords.length > 0 && <Badge tone="danger" label="⚠️ At Risk — Clash" />}
               {stage === 'Quote' && availabilityEvaluation && !availabilityEvaluation.isAllAvailable && (
                 <Badge tone="danger" label="Needs attention / Availability changed" />
               )}
@@ -2735,6 +2766,43 @@ function BookingDetailView() {
         </div>
       )}
 
+      {atRiskRecords.length > 0 && (
+        <div
+          role="alert"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 'var(--sp-md)',
+            padding: '12px 16px',
+            borderRadius: 'var(--r-sm)',
+            border: '1px solid var(--danger)',
+            background: 'var(--st-danger-bg)',
+            fontSize: 'var(--t-meta)',
+            color: 'var(--danger-text)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)' }}>
+            <Icon name="alert_triangle" size={16} style={{ flexShrink: 0 }} />
+            <div>
+              <strong>Booking is At-Risk (Equipment Clash / Overdue Return)</strong>
+              <div style={{ fontSize: 'var(--t-caption)', color: 'var(--text2)', marginTop: 2 }}>
+                Pack stage is blocked until this clash is resolved. Choose a resolution (similar item, sub-rental, credit, or refund).
+              </div>
+            </div>
+          </div>
+          {userCanResolveAtRisk && (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => setShowResolveAtRiskModal(true)}
+            >
+              Resolve At-Risk
+            </Button>
+          )}
+        </div>
+      )}
+
       {availabilityError && (
         <div
           role="alert"
@@ -2841,13 +2909,44 @@ function BookingDetailView() {
                   { label: 'Project Type', value: displayProjectType(booking.projectType, booking.projectTypeOther) },
                   { label: 'Pickup Location', value: booking.pickupLocation ?? 'Not recorded' },
                   { label: 'Return Location', value: booking.returnLocation ?? 'Not recorded' },
+                  ...(booking.parentBookingId
+                    ? [
+                        {
+                          label: 'Linked to',
+                          value: (
+                            <Link
+                              to={`/rentals/${booking.parentBookingId}`}
+                              style={{ color: 'var(--link)', textDecoration: 'none', fontWeight: 600 }}
+                            >
+                              Parent booking
+                            </Link>
+                          ),
+                        },
+                      ]
+                    : []),
                 ]}
               />
-              {/* Law 16 — Edit exists but is Unavailable-with-reason. A missing
-                  button reads as "read-only by design"; a disabled one with a
-                  reason states the truth: the write path is not yet wired. */}
               <div style={{ marginTop: 'var(--sp-sm)' }}>
-                {booking.stage === 'Quote' && !booking.isCancelled && Boolean(user?.role && ['Owner','Admin','Manager','Coordinator'].includes(user.role)) ? <Link to="?action=edit"><Button>Edit booking</Button></Link> : <Unavailable reason="General editing is available before confirmation. Use this booking's operational actions."><Button disabled>Edit</Button></Unavailable>}
+                {['Quote', 'Booked', 'Packed', 'On Rent'].includes(booking.stage) &&
+                !booking.isCancelled &&
+                !booking.isClosed &&
+                canChangeBookingPermission ? (
+                  <Link to="?action=edit">
+                    <Button>Edit booking</Button>
+                  </Link>
+                ) : (
+                  <Unavailable
+                    reason={
+                      booking.isCancelled
+                        ? 'Cancelled bookings cannot be edited.'
+                        : ['Returned', 'Closed'].includes(booking.stage) || booking.isClosed
+                          ? 'Returned or closed bookings cannot be edited. Use operational corrections.'
+                          : 'Changing a booking requires Owner, Admin, Manager, or Coordinator.'
+                    }
+                  >
+                    <Button disabled>Edit</Button>
+                  </Unavailable>
+                )}
               </div>
               {/* Focused project edit — header fields with a real write path
                   (`updateBookingProject`). Coordinator+ only; floor roles keep
@@ -2912,8 +3011,23 @@ function BookingDetailView() {
               no="2"
               title="Equipment, Bundles & Services"
               action={
-                canAddConsumables || canAddWaiting ? (
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                canAddGear || canAddWaiting || canAddConsumables ? (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    {canAddGear && (
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          if (stage === 'On Rent') {
+                            setShowAddGearModal(true)
+                          } else {
+                            navigate('?action=edit')
+                          }
+                        }}
+                        style={{ minHeight: 36, padding: '0 12px', fontSize: 'var(--t-meta, 13px)' }}
+                      >
+                        + Add gear
+                      </Button>
+                    )}
                     {canAddWaiting && (
                       <Button
                         variant="secondary"
@@ -3701,8 +3815,21 @@ function BookingDetailView() {
           showSuccessToast('Rental Extended', `${ext.days} day${ext.days === 1 ? '' : 's'} added — new return ${ext.newReturnDate}`)
           refetchHead()
           setFloorVersion((v) => v + 1)
+          void fetchAtRisk()
         }}
       />
+
+      {atRiskRecords.length > 0 && atRiskRecords[0] && (
+        <ResolveAtRiskModal
+          isOpen={showResolveAtRiskModal}
+          onClose={() => setShowResolveAtRiskModal(false)}
+          atRisk={atRiskRecords[0]}
+          onResolved={() => {
+            void fetchAtRisk()
+            refreshBookingData()
+          }}
+        />
+      )}
 
       <AssignCrewModal
         key={`${booking.id}:${user?.id}`}
@@ -3754,6 +3881,75 @@ function BookingDetailView() {
           }}
         />
       )}
+
+      <Modal
+        isOpen={showAddGearModal}
+        onClose={() => setShowAddGearModal(false)}
+        title="Add gear mid-rental"
+        subtitle={`Booking #${booking.bookingNo}`}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <p style={{ margin: 0, fontSize: 'var(--t-meta, 13px)', color: 'var(--text-muted)' }}>
+            This booking is currently on rent. How would you like to add additional gear or services (W87)?
+          </p>
+
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              padding: 16,
+              background: 'var(--card-bg, #fff)',
+            }}
+          >
+            <strong style={{ fontSize: 'var(--t-body, 14px)' }}>Add to this booking</strong>
+            <span style={{ fontSize: 'var(--t-meta, 13px)', color: 'var(--text-muted)' }}>
+              Adds equipment or service lines directly to #{booking.bookingNo}. Extends equipment holds and updates the draft invoice.
+            </span>
+            <div style={{ marginTop: 8 }}>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowAddGearModal(false)
+                  navigate('?action=edit')
+                }}
+              >
+                Add to this booking
+              </Button>
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              padding: 16,
+              background: 'var(--card-bg, #fff)',
+            }}
+          >
+            <strong style={{ fontSize: 'var(--t-body, 14px)' }}>Start a new linked booking</strong>
+            <span style={{ fontSize: 'var(--t-meta, 13px)', color: 'var(--text-muted)' }}>
+              Creates a separate rental record linked to #{booking.bookingNo}. Gear and paperwork are tracked independently.
+            </span>
+            <div style={{ marginTop: 8 }}>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setShowAddGearModal(false)
+                  navigate(`/rentals/new?clientId=${booking.clientId}&parentBookingId=${booking.id}`)
+                }}
+              >
+                Start linked booking
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         isOpen={depositSkipOpen}
@@ -3908,7 +4104,7 @@ function BookingDetailView() {
           actualReturnIso={booking.actualReturnAtAd ?? new Date().toISOString()}
           dayRatePaisa={
             totals.total > 0
-              ? (Math.max(1, Math.round(totals.total / (rentalDaysBetween(booking.pickupAtAd, booking.returnAtAd) ?? 1))) as Paisa)
+              ? (Math.max(1, Math.round(totals.total / (rentalDaysBetween(booking.pickupAtAd, booking.returnAtAd, booking.rentalDayStart ?? 360) ?? 1))) as Paisa)
               : null
           }
           dayRateBasis={lateFeeData?.basis ?? 'Derived from rental total'}

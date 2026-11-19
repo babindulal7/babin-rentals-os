@@ -7,7 +7,7 @@
  */
 
 import { rentalDaysBetween } from '../../../lib/rentalDays'
-import { NPT_OFFSET_STRING } from '../../../lib/operationalDay'
+import { NPT_OFFSET_STRING, dayStartMinutesFrom } from '../../../lib/operationalDay'
 import { getSetting } from '../../../lib/settingsStore'
 import { roundHalfUp } from '../../../lib/money'
 import type { Paisa } from '../../../lib/money'
@@ -100,9 +100,14 @@ export function bookingInstant(date: string, time: string): Date | null {
  * `0` cannot be a stored length: Law 9 and six `days >= 1` CHECKs, and Confirm
  * is blocked while this is 0.
  */
-export function bookingDays(pickupAt: Date | null, returnAt: Date | null): number {
+export function bookingDays(
+  pickupAt: Date | null,
+  returnAt: Date | null,
+  rentalDayStartMinutes?: number,
+): number {
   if (!pickupAt || !returnAt || returnAt.getTime() <= pickupAt.getTime()) return 0
-  return rentalDaysBetween(pickupAt.toISOString(), returnAt.toISOString()) ?? 0
+  const start = rentalDayStartMinutes ?? dayStartMinutesFrom(getSetting('operationalDayStart'))
+  return rentalDaysBetween(pickupAt.toISOString(), returnAt.toISOString(), start) ?? 0
 }
 
 /** Regex matching a UUID v4 (products.id). */

@@ -58,12 +58,15 @@ export interface BookingListRow {
   id: string
   bookingNo: string
   clientId: string
+  parentBookingId?: string | null
   clientName: string
   project: string | null
   /** Project / production name (up to 120 chars, B8, B52, T3-26). */
   projectName?: string | null
   /** Shoot location (up to 120 chars, B8, T3-26). */
   shootLocation?: string | null
+  /** Rental day start (minutes after midnight NPT, default 360 = 06:00, B24, B25, T3-28). */
+  rentalDayStart?: number
   /**
    * `bookings.project_type` — the controlled production kind (0144,
    * `src/lib/projectTypes.ts`). NULL for legacy rows and Drafts; renders as
@@ -281,7 +284,7 @@ export interface BookingListRow {
  * the `withDeposit` treatment below.
  */
 const BASE_COLUMNS =
-  'id, booking_no, client_id, project, project_name, shoot_location, project_type, project_type_other, stage, tags, pickup_at, return_at, actual_return_at, ' +
+  'id, booking_no, client_id, parent_booking_id, project, project_name, shoot_location, project_type, project_type_other, stage, tags, rental_day_start, pickup_at, return_at, actual_return_at, ' +
   'delivery_type, pickup_location, return_location, quote_expires_at, ' +
   'cancelled_at, closed_at, created_at, ' +
   'clients ( name ), booking_lines ( id, qty )'
@@ -302,6 +305,7 @@ interface RawBookingRow {
   id: string
   booking_no: string
   client_id: string
+  parent_booking_id?: string | null
   project: string | null
   project_name?: string | null
   shoot_location?: string | null
@@ -309,6 +313,7 @@ interface RawBookingRow {
   project_type_other?: string | null
   stage: BookingStageDb
   tags?: string[] | null
+  rental_day_start?: number | null
   pickup_at: string
   return_at: string
   actual_return_at: string | null
@@ -363,6 +368,7 @@ function toRow(r: RawBookingRow): BookingListRow {
     id: r.id,
     bookingNo: r.booking_no,
     clientId: r.client_id,
+    parentBookingId: r.parent_booking_id ?? null,
     // A booking always has a client (NOT NULL + FK), so a missing join is a
     // query bug, not a data state. Say so rather than printing a friendly dash
     // that hides it.
@@ -370,6 +376,7 @@ function toRow(r: RawBookingRow): BookingListRow {
     project: r.project_name ?? r.project,
     projectName: r.project_name ?? r.project ?? null,
     shootLocation: r.shoot_location ?? null,
+    rentalDayStart: typeof r.rental_day_start === 'number' ? r.rental_day_start : 360,
     projectType: r.project_type ?? null,
     projectTypeOther: r.project_type_other ?? null,
     stage: r.stage,
@@ -425,6 +432,29 @@ interface BookingQueryError {
   code?: string
 }
 
+function missingProjectNameOrLocationColumn(error: BookingQueryError | null): boolean {
+  if (!error) return false
+  const msg = (error.message || '').toLowerCase()
+  return msg.includes('project_name') || msg.includes('shoot_location')
+}
+
+function missingRentalDayStartColumn(error: BookingQueryError | null): boolean {
+  if (!error) return false
+  const msg = (error.message || '').toLowerCase()
+  return msg.includes('rental_day_start')
+}
+
+function missingParentBookingIdColumn(error: BookingQueryError | null): boolean {
+  if (!error) return false
+  const msg = (error.message || '').toLowerCase()
+  return msg.includes('parent_booking_id')
+}
+
+function missingTagsColumn(error: BookingQueryError | null): boolean {
+  if (!error) return false
+  const msg = (error.message || '').toLowerCase()
+  return msg.includes('tags')
+}
 function missingProjectTypeColumn(error: BookingQueryError | null): boolean {
   if (!error) return false
   const msg = (error.message || '').toLowerCase()
@@ -599,14 +629,25 @@ export async function listBookings(opts: BookingListOptions = {}): Promise<ListQ
    * future postgrest-js renames an argument shape, `tsc` says so HERE, once,
    * instead of on the floor.
    */
-  const fetchBookings = async (legacy: boolean): Promise<{
+  const fetchBookings = async (
+    legacy: boolean,
+    omitProjectDetails = false,
+    omitTags = false,
+    omitRentalDayStart = false,
+    omitParentBookingId = false,
+  ): Promise<{
     data: RawBookingRow[] | null
     error: BookingQueryError | null
     count: number | null
   }> => {
+    let cols = legacy ? PRE_0144_COLUMNS : BASE_COLUMNS
+    if (omitProjectDetails) cols = cols.replace('project_name, shoot_location, ', '')
+    if (omitTags) cols = cols.replace('tags, ', '')
+    if (omitRentalDayStart) cols = cols.replace('rental_day_start, ', '')
+    if (omitParentBookingId) cols = cols.replace('parent_booking_id, ', '')
     const base = supabase
       .from('bookings')
-      .select(legacy ? PRE_0144_COLUMNS : BASE_COLUMNS, withCount ? { count: 'exact' } : undefined)
+      .select(cols, withCount ? { count: 'exact' } : undefined)
       // Law 3: a removed line is voided, never deleted, so it must not be counted.
       .is('booking_lines.voided_at', null)
     if (useArchiveFilter) base.is('archived_at', null)
@@ -638,13 +679,21 @@ export async function listBookings(opts: BookingListOptions = {}): Promise<ListQ
     }
   }
 
-  let { data, error, count } = await fetchBookings(false)
   let legacy = false
-  for (let retry = 0; error && retry < 2; retry++) {
+  let omitProjectDetails = false
+  let omitTags = false
+  let omitRentalDayStart = false
+  let omitParentBookingId = false
+  let { data, error, count } = await fetchBookings(legacy, omitProjectDetails, omitTags, omitRentalDayStart, omitParentBookingId)
+  for (let retry = 0; error && retry < 8; retry++) {
     if (useArchiveFilter && missingArchiveColumn(error)) useArchiveFilter = false
+    else if (!omitRentalDayStart && missingRentalDayStartColumn(error)) omitRentalDayStart = true
+    else if (!omitParentBookingId && missingParentBookingIdColumn(error)) omitParentBookingId = true
+    else if (!omitProjectDetails && missingProjectNameOrLocationColumn(error)) omitProjectDetails = true
+    else if (!omitTags && missingTagsColumn(error)) omitTags = true
     else if (!legacy && missingProjectTypeColumn(error) && canUsePre0144Columns(filters)) legacy = true
     else break
-    ;({ data, error, count } = await fetchBookings(legacy))
+    ;({ data, error, count } = await fetchBookings(legacy, omitProjectDetails, omitTags, omitRentalDayStart, omitParentBookingId))
   }
   if (error) throw new Error(`listBookings failed: ${error.message}`)
 
@@ -1182,6 +1231,7 @@ export interface FloorBooking {
   id: string
   bookingNo: string
   clientId?: string | null | undefined
+  parentBookingId?: string | null
   stage: string
   clientName: string | null
   project: string | null
@@ -1189,6 +1239,8 @@ export interface FloorBooking {
   projectName?: string | null
   /** Shoot location (T3-26, B8). */
   shootLocation?: string | null
+  /** Rental day start (minutes after midnight NPT, default 360 = 06:00, B24, B25, T3-28). */
+  rentalDayStart?: number
   pickupAtAd: string | null
   returnAtAd: string | null
   actualReturnAtAd: string | null
@@ -1237,10 +1289,12 @@ interface RawFloorBooking {
   id: string
   booking_no: string
   client_id?: string | null | undefined
+  parent_booking_id?: string | null
   stage: string
   project: string | null
   project_name?: string | null
   shoot_location?: string | null
+  rental_day_start?: number | null
   pickup_at: string | null
   return_at: string | null
   actual_return_at: string | null
@@ -1275,7 +1329,7 @@ interface RawFloorBooking {
  * that existed to straddle them is gone.
  */
 const FLOOR_COLUMNS =
-  'id, booking_no, client_id, stage, project, project_name, shoot_location, pickup_at, return_at, actual_return_at, delivery_type, cancelled_at, closed_at, ' +
+  'id, booking_no, client_id, parent_booking_id, stage, project, project_name, shoot_location, rental_day_start, pickup_at, return_at, actual_return_at, delivery_type, cancelled_at, closed_at, ' +
   'clients ( name ), ' +
   'booking_lines ( id, qty, line_type, description, product_id, parent_line_id, sort_order, ' +
   'products ( name, tracking_mode ), ' +
@@ -1303,14 +1357,26 @@ export async function fetchFloorBooking(bookingRef: string): Promise<FloorBookin
   const column = isUuid ? 'id' : 'booking_no'
   const target = isUuid ? bookingRef : parseBookingNoSearch(bookingRef)
 
-  const { data, error } = await supabase
-    .from('bookings')
-    .select(FLOOR_COLUMNS)
-    // Law 3 — a removed line is voided, never deleted. PostgREST prunes the
-    // embed in place and leaves the parent row, which is what the floor wants.
-    .is('booking_lines.voided_at', null)
-    .eq(column, target)
-    .maybeSingle()
+  const runFloorSelect = async (cols: string) => {
+    return await supabase
+      .from('bookings')
+      .select(cols)
+      // Law 3 — a removed line is voided, never deleted. PostgREST prunes the
+      // embed in place and leaves the parent row, which is what the floor wants.
+      .is('booking_lines.voided_at', null)
+      .eq(column, target)
+      .maybeSingle()
+  }
+
+  let cols = FLOOR_COLUMNS
+  let { data, error } = await runFloorSelect(cols)
+  for (let retry = 0; error && retry < 4; retry++) {
+    if (missingParentBookingIdColumn(error)) cols = cols.replace('parent_booking_id, ', '')
+    else if (missingRentalDayStartColumn(error)) cols = cols.replace('rental_day_start, ', '')
+    else if (missingProjectNameOrLocationColumn(error)) cols = cols.replace('project_name, shoot_location, ', '')
+    else break
+    ;({ data, error } = await runFloorSelect(cols))
+  }
 
   if (error) throw new Error(`fetchFloorBooking(${bookingRef}) failed: ${error.message}`)
   if (!data) return null
@@ -1322,11 +1388,13 @@ export async function fetchFloorBooking(bookingRef: string): Promise<FloorBookin
     id: raw.id,
     bookingNo: raw.booking_no,
     clientId: raw.client_id ?? null,
+    parentBookingId: raw.parent_booking_id ?? null,
     stage: raw.stage,
     clientName: raw.clients?.name ?? null,
     project: raw.project_name ?? raw.project,
     projectName: raw.project_name ?? raw.project ?? null,
     shootLocation: raw.shoot_location ?? null,
+    rentalDayStart: typeof raw.rental_day_start === 'number' ? raw.rental_day_start : 360,
     pickupAtAd: raw.pickup_at,
     returnAtAd: raw.return_at,
     actualReturnAtAd: raw.actual_return_at,

@@ -234,6 +234,15 @@ describe('createAction — fails closed', () => {
       }
     })
 
+    it('rental.change admits C+ (Owner, Admin, Manager, Coordinator) and denies floor and client roles (T3-18, W88)', async () => {
+      for (const role of ['Owner', 'Admin', 'Manager', 'Coordinator'] as const) {
+        await expect(probe('rental.change', role, true).run()).resolves.toEqual({ ok: true })
+      }
+      for (const role of ['Warehouse', 'Technician', 'Driver', 'Accounts', 'Client'] as const) {
+        await expect(probe('rental.change', role, true).run()).rejects.toBeInstanceOf(ActionPermissionError)
+      }
+    })
+
     it.each(['Owner', 'Admin', 'Manager'] as const)('allows %s to adjust bulk stock', async (role) => {
       await expect(probe('inventory.stock_adjust', role, true).run()).resolves.toEqual({ ok: true })
     })
@@ -615,6 +624,9 @@ describe('every declared capability resolves to a rule', () => {
       'comms.templates',
       // Shared offer-campaign permission rule (PERMISSIONS.md §4.8); create/send are action capabilities.
       'offer_campaign.manage',
+      // Operations rules & rental day start settings rules (Ruling B26, PERMISSIONS.md §4.10)
+      'settings.operations_rules',
+      'settings.rental_day_start',
     ]
     const orphaned = handled().filter((c) => !declared().includes(c) && !APP_LEVEL.includes(c))
     expect(orphaned).toEqual([])

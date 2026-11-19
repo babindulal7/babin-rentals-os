@@ -41,6 +41,7 @@ export interface CoordinatorTasks {
   todayPickupsCount: number
   todayReturnsCount: number
   lateReturnsCount: number
+  atRiskCount?: number
 }
 
 export interface AccountsTasks {
@@ -57,6 +58,7 @@ export interface ManagerTasks {
   blockedGearCount: number
   todayMovementsCount: number
   lowStockCount?: number
+  atRiskCount?: number
 }
 
 export interface OwnerTasks {
@@ -70,6 +72,7 @@ export interface OwnerTasks {
   blockedCount: number
   damagedCount: number
   lowStockCount?: number
+  atRiskCount?: number
   businessPulse: {
     revenueTodayPaisa: Paisa
     fleetUtilizationPct: number
@@ -197,6 +200,19 @@ export async function fetchRoleTaskMetrics(role: SystemRole, _userId?: string): 
     }
   }
 
+  let atRiskCount = 0
+  if (!isMock) {
+    try {
+      const { count } = await supabase
+        .from('booking_at_risk')
+        .select('id', { count: 'exact', head: true })
+        .is('resolved_at', null)
+      atRiskCount = count ?? 0
+    } catch {
+      atRiskCount = 0
+    }
+  }
+
   // 2. Coordinator tasks
   if (role === 'Coordinator') {
     metrics.coordinator = {
@@ -205,6 +221,7 @@ export async function fetchRoleTaskMetrics(role: SystemRole, _userId?: string): 
       todayPickupsCount: 14,
       todayReturnsCount: 7,
       lateReturnsCount: 2,
+      atRiskCount,
     }
   }
 
@@ -237,6 +254,7 @@ export async function fetchRoleTaskMetrics(role: SystemRole, _userId?: string): 
       blockedGearCount: 4,
       todayMovementsCount: 21,
       lowStockCount,
+      atRiskCount,
     }
   }
 
@@ -263,6 +281,7 @@ export async function fetchRoleTaskMetrics(role: SystemRole, _userId?: string): 
       blockedCount: 3,
       damagedCount: 1,
       lowStockCount,
+      atRiskCount,
       businessPulse: {
         revenueTodayPaisa: rupees(185000),
         fleetUtilizationPct: 84,
