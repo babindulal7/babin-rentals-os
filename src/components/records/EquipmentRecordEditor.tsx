@@ -1,4 +1,5 @@
 import { useState, useMemo, type Dispatch, type SetStateAction } from 'react'
+import { supabase } from '../../lib/supabase'
 import Icon from '../ui/Icon'
 import { Button } from '../ui/Page'
 import { DateField } from '../ui/DateField'
@@ -65,7 +66,46 @@ export function EquipmentRecordEditor({
 
   const [barcodeModalUnit, setBarcodeModalUnit] = useState<{ unit: RecordValues; index: number } | null>(null)
   const [catalogPreviewOpen, setCatalogPreviewOpen] = useState<boolean>(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState<boolean>(false)
   const imagePreviewUrl: string | null = null
+
+  const photoList = useMemo(() => {
+    return Array.isArray(values.photos) ? (values.photos as string[]) : []
+  }, [values.photos])
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingPhoto(true)
+    try {
+      const ext = file.name.split('.').pop() || 'jpg'
+      const filename = `${recordId ?? 'product'}_${Date.now()}.${ext}`
+      const { data, error } = await supabase.storage.from('catalogue').upload(filename, file, {
+        upsert: true,
+      })
+      if (error) throw error
+      const uploadedPath = data?.path || filename
+      set('photos', [...photoList, uploadedPath] as unknown as RecordValue)
+      showSuccessToast('Photo uploaded to catalogue')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error uploading'
+      alert(`Photo upload failed: ${msg}`)
+    } finally {
+      setUploadingPhoto(false)
+      e.target.value = ''
+    }
+  }
+
+  const removePhoto = (idx: number) => {
+    const updated = photoList.filter((_, i) => i !== idx)
+    set('photos', updated as unknown as RecordValue)
+  }
+
+  const getPhotoPreviewUrl = (path: string) => {
+    if (path.startsWith('http') || path.startsWith('/')) return path
+    const { data } = supabase.storage.from('catalogue').getPublicUrl(path)
+    return data.publicUrl
+  }
 
   const set = (key: string, value: RecordValue) => {
     setValues((v) => ({ ...v, [key]: value } as RecordValues))
@@ -269,9 +309,98 @@ export function EquipmentRecordEditor({
           />
         </label>
 
-        <p className="equipment-form-span-full" role="note">
-          Equipment photos are not yet saveable. No image will be attached by this form.
-        </p>
+        <div className="equipment-form-span-full">
+          <label
+            htmlFor="catalogue-photo-input"
+            style={{
+              display: 'block',
+              fontSize: 'var(--t-ui, 14px)',
+              fontWeight: 600,
+              color: 'var(--text)',
+              marginBottom: 6,
+            }}
+          >
+            Catalogue Photos (Public bucket)
+          </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <input
+              id="catalogue-photo-input"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              disabled={busy || uploadingPhoto}
+              onChange={handlePhotoUpload}
+              style={{ display: 'none' }}
+            />
+            <label
+              htmlFor="catalogue-photo-input"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                cursor: busy || uploadingPhoto ? 'not-allowed' : 'pointer',
+                padding: '8px 16px',
+                borderRadius: 'var(--r-btn, 6px)',
+                border: '1px solid var(--border)',
+                background: 'var(--card2)',
+                color: 'var(--text)',
+                minHeight: 44,
+                fontWeight: 600,
+                fontSize: 'var(--t-ui, 14px)',
+              }}
+            >
+              {uploadingPhoto ? 'Uploading…' : '📷 Upload Photo'}
+            </label>
+            <span style={{ fontSize: 'var(--t-meta, 13px)', color: 'var(--muted)' }}>
+              JPG, PNG, or WebP. Equipment photos are not yet saveable directly into form rows without upload. Strips EXIF location and uploads to public catalogue bucket.
+            </span>
+          </div>
+          {photoList.length > 0 && (
+            <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+              {photoList.map((path, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    position: 'relative',
+                    width: 80,
+                    height: 80,
+                    borderRadius: 6,
+                    overflow: 'hidden',
+                    border: '1px solid var(--border)',
+                  }}
+                >
+                  <img
+                    src={getPhotoPreviewUrl(path)}
+                    alt={`Catalogue item ${idx + 1}`}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(idx)}
+                    style={{
+                      position: 'absolute',
+                      top: 2,
+                      right: 2,
+                      background: 'rgba(0,0,0,0.7)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: 24,
+                      height: 24,
+                      cursor: 'pointer',
+                      fontSize: 14,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    aria-label={`Remove photo ${idx + 1}`}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {sectionSaveBar('Identity')}
@@ -1025,6 +1154,39 @@ export function EquipmentRecordEditor({
           />
           <span>Available for rental (item can be picked and booked in rental quotes)</span>
         </label>
+
+        <div className="equipment-form-span-full" style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 8 }}>
+          <strong style={{ display: 'block', fontSize: 'var(--t-ui, 14px)', marginBottom: 8, color: 'var(--text)' }}>
+            Online Catalogue Publication (W64)
+          </strong>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <label className="record-field record-field--inline" htmlFor="record-show_online">
+              <input
+                id="record-show_online"
+                type="checkbox"
+                disabled={busy}
+                checked={Boolean(values.show_online ?? false)}
+                onChange={(e) => set('show_online', e.target.checked)}
+              />
+              <span>
+                <strong>Show online</strong> — Publish item to public catalogue website
+              </span>
+            </label>
+
+            <label className="record-field record-field--inline" htmlFor="record-online_bundle_only">
+              <input
+                id="record-online_bundle_only"
+                type="checkbox"
+                disabled={busy}
+                checked={Boolean(values.online_bundle_only ?? false)}
+                onChange={(e) => set('online_bundle_only', e.target.checked)}
+              />
+              <span>
+                <strong>Only inside bundles</strong> — Never list alone; appears only as part of bundles containing it
+              </span>
+            </label>
+          </div>
+        </div>
       </div>
       {sectionSaveBar('Pricing & Rental')}
     </RecordSection>

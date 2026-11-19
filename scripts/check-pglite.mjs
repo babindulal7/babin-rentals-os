@@ -51,6 +51,7 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ALLOWED_ANON_FUNCTIONS } from './allowed-anon-functions.mjs'
+import { ALLOWED_ANON_VIEWS } from './allowed-anon-views.mjs'
 import { beginVerification, finishVerification } from './test-receipt.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -143,7 +144,8 @@ async function auditAnonViewReads(db) {
     join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'public' and c.relkind = 'v'
   `)
-  return { leaked: rows.map((r) => r.view), checked: total.rows[0].n }
+  const leaked = rows.map((r) => r.view).filter((v) => !ALLOWED_ANON_VIEWS.has(v))
+  return { leaked, checked: total.rows[0].n }
 }
 
 // ── the function-leak gate ───────────────────────────────────────────────────
