@@ -146,6 +146,18 @@ export function useEquipmentFormState() {
   const [requires, setRequires] = useState<string[]>([])
   const [requiresPick, setRequiresPick] = useState('')
 
+  /* Product Families & Options (T7-13, B2) */
+  const [familyId, setFamilyId] = useState('')
+  const [familyName, setFamilyName] = useState('')
+  const [optionDimension, setOptionDimension] = useState('Mount')
+  const [optionLabel, setOptionLabel] = useState('')
+
+  const ungroupFamily = () => {
+    setFamilyId('')
+    setFamilyName('')
+    setOptionLabel('')
+  }
+
   /* §11 — Location */
   const [warehouseId, setWarehouseId] = useState('')
   const [locationId, setLocationId] = useState('')
@@ -1047,6 +1059,15 @@ export function useEquipmentFormState() {
     setRequires,
     requiresPick,
     setRequiresPick,
+    familyId,
+    setFamilyId,
+    familyName,
+    setFamilyName,
+    optionDimension,
+    setOptionDimension,
+    optionLabel,
+    setOptionLabel,
+    ungroupFamily,
     warehouseId,
     setWarehouseId,
     locationId,

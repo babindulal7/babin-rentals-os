@@ -27,6 +27,10 @@ export interface CatalogueItem {
   readonly weekly_rate_paisa: number | null
   readonly monthly_rate_paisa: number | null
   readonly bundle_contents: BundleComponent[]
+  readonly family_id?: string | null
+  readonly option_label?: string | null
+  readonly family_name?: string | null
+  readonly option_dimension?: string | null
 }
 
 export interface AvailabilityResult {
@@ -120,6 +124,40 @@ const MOCK_CATALOGUE: CatalogueItem[] = [
       { name: 'Sennheiser MKH 416 Shotgun Microphone', qty: 1 },
     ],
   },
+  {
+    id: '77777777-7777-4777-8777-777777777771',
+    kind: 'product',
+    slug: 'dzofilm-vespid-35mm-pl',
+    name: 'DZOFilm Vespid 35mm Prime Lens (PL Mount)',
+    category_name: 'Lenses',
+    description: 'Compact cine prime lens with consistent T2.1 aperture, 16-blade iris for organic bokeh, and standard 0.8 MOD gears.',
+    photo_paths: [],
+    daily_rate_paisa: 350000, // Rs. 3,500
+    weekly_rate_paisa: 2100000,
+    monthly_rate_paisa: 7000000,
+    bundle_contents: [],
+    family_id: 'fam-vespid-35',
+    family_name: 'DZOFilm Vespid 35mm Prime Lens',
+    option_label: 'PL Mount',
+    option_dimension: 'Mount',
+  },
+  {
+    id: '77777777-7777-4777-8777-777777777772',
+    kind: 'product',
+    slug: 'dzofilm-vespid-35mm-ef',
+    name: 'DZOFilm Vespid 35mm Prime Lens (EF Mount)',
+    category_name: 'Lenses',
+    description: 'Compact cine prime lens with consistent T2.1 aperture, 16-blade iris for organic bokeh, and standard 0.8 MOD gears.',
+    photo_paths: [],
+    daily_rate_paisa: 350000, // Rs. 3,500
+    weekly_rate_paisa: 2100000,
+    monthly_rate_paisa: 7000000,
+    bundle_contents: [],
+    family_id: 'fam-vespid-35',
+    family_name: 'DZOFilm Vespid 35mm Prime Lens',
+    option_label: 'EF Mount',
+    option_dimension: 'Mount',
+  },
 ]
 
 export async function fetchPublicCatalogue(): Promise<CatalogueItem[]> {
@@ -150,6 +188,10 @@ export async function fetchPublicCatalogue(): Promise<CatalogueItem[]> {
       weekly_rate_paisa?: number | null | undefined
       monthly_rate_paisa?: number | null | undefined
       bundle_contents?: BundleComponent[] | undefined
+      family_id?: string | null | undefined
+      option_label?: string | null | undefined
+      family_name?: string | null | undefined
+      option_dimension?: string | null | undefined
     }
 
     return (data as RawCatalogueRow[]).map((row) => ({
@@ -164,6 +206,10 @@ export async function fetchPublicCatalogue(): Promise<CatalogueItem[]> {
       weekly_rate_paisa: row.weekly_rate_paisa ? Number(row.weekly_rate_paisa) : null,
       monthly_rate_paisa: row.monthly_rate_paisa ? Number(row.monthly_rate_paisa) : null,
       bundle_contents: Array.isArray(row.bundle_contents) ? row.bundle_contents : [],
+      family_id: row.family_id ?? null,
+      option_label: row.option_label ?? null,
+      family_name: row.family_name ?? null,
+      option_dimension: row.option_dimension ?? null,
     }))
   } catch {
     return MOCK_CATALOGUE

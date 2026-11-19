@@ -258,6 +258,8 @@ export interface EquipmentResult {
   /** From `INVENTORY_MODELS` where the name matches; absent otherwise. */
   sku?: string
   brand?: string
+  familyId?: string | null
+  optionLabel?: string | null
   /** Bundles this model appears inside, via `addEquipment.bundlesUsing`. */
   inBundles: readonly string[]
   availability: AvailabilityVerdict
@@ -1447,6 +1449,8 @@ export interface EquipmentModelGroup {
   ratePaisa: Paisa
   sku?: string
   brand?: string
+  familyId?: string | null
+  optionLabel?: string | null
   inBundles: readonly string[]
   /** Every unit sharing this name, in the order the query already ranked them. */
   units: readonly EquipmentResult[]
@@ -1515,6 +1519,8 @@ export function groupEquipmentResults(results: readonly EquipmentResult[]): Equi
       ratePaisa: first.ratePaisa,
       ...(first.sku ? { sku: first.sku } : {}),
       ...(first.brand ? { brand: first.brand } : {}),
+      ...(first.familyId ? { familyId: first.familyId } : {}),
+      ...(first.optionLabel ? { optionLabel: first.optionLabel } : {}),
       inBundles: first.inBundles,
       units,
       freeCount: free.length,

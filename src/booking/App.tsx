@@ -224,6 +224,23 @@ export default function BookingApp() {
     })
   }, [items, activeCategory, searchQuery])
 
+  // Collapse products belonging to the same family into a single card representation (T7-13)
+  const displayItems = useMemo(() => {
+    const seenFamilies = new Set<string>()
+    return filteredItems.filter((item) => {
+      if (!item.family_id) return true
+      if (seenFamilies.has(item.family_id)) return false
+      seenFamilies.add(item.family_id)
+      return true
+    })
+  }, [filteredItems])
+
+  // Get sibling options when an item in a family is selected
+  const siblingOptions = useMemo(() => {
+    if (!selectedItem || !selectedItem.family_id) return []
+    return items.filter((i) => i.family_id === selectedItem.family_id)
+  }, [selectedItem, items])
+
   // Cart operations
   const handleAddToCart = (item: CatalogueItem) => {
     setCart((prev) => {
@@ -429,7 +446,7 @@ export default function BookingApp() {
         )}
 
         {/* Screen State 3: Empty */}
-        {!loading && !error && filteredItems.length === 0 && (
+        {!loading && !error && displayItems.length === 0 && (
           <div className="empty-state">
             <h3 style={{ fontSize: '1.2rem', marginBottom: 8, color: 'var(--text-main)' }}>Nothing listed yet</h3>
             <p style={{ fontSize: '0.9rem' }}>
@@ -441,18 +458,22 @@ export default function BookingApp() {
         )}
 
         {/* Screen State 4: Products Grid */}
-        {!loading && !error && filteredItems.length > 0 && (
+        {!loading && !error && displayItems.length > 0 && (
           <div className="product-grid">
-            {filteredItems.map((item) => (
-              <ProductCard
-                key={item.id}
-                item={item}
-                hasDates={Boolean(startDate && endDate)}
-                isAvailable={availability.get(item.id)}
-                onViewDetails={setSelectedItem}
-                onAddToCart={handleAddToCart}
-              />
-            ))}
+            {displayItems.map((item) => {
+              const familySiblings = item.family_id ? items.filter((i) => i.family_id === item.family_id) : []
+              return (
+                <ProductCard
+                  key={item.id}
+                  item={item}
+                  hasDates={Boolean(startDate && endDate)}
+                  isAvailable={availability.get(item.id)}
+                  optionCount={familySiblings.length > 1 ? familySiblings.length : undefined}
+                  onViewDetails={setSelectedItem}
+                  onAddToCart={handleAddToCart}
+                />
+              )
+            })}
           </div>
         )}
       </main>
@@ -462,6 +483,8 @@ export default function BookingApp() {
         item={selectedItem}
         hasDates={Boolean(startDate && endDate)}
         isAvailable={selectedItem ? availability.get(selectedItem.id) : undefined}
+        siblingOptions={siblingOptions}
+        availabilityMap={availability}
         onClose={() => setSelectedItem(null)}
         onAddToCart={handleAddToCart}
       />

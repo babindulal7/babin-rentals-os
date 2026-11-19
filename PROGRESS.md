@@ -1,5 +1,60 @@
 # Progress Log
 
+## 2026-11-19 — T7-13: Products with options on one page (Lane C / Windows)
+
+**Did**
+- Implemented **T7-13 · Products with options on one page** (`lane-c/T7-13-products-with-options-on-one-page`):
+  - Database Migration `supabase/migrations/0250_products_with_options_and_families.sql` (claimed migration 0250 in ledger):
+    - Created `public.product_families` (`id`, `name`, `description`, `category_id`, `option_dimension`, `created_at`, `updated_at`).
+    - Configured strict RLS policies on `product_families`: SELECT permitted to anon & authenticated; INSERT/UPDATE/DELETE restricted to `Owner`, `Admin`, `Manager`.
+    - Added `family_id` (FK to `product_families`) and `option_label` text columns to `public.products` with index on `family_id`.
+    - Updated `public.public_catalogue_v` to expose `family_id`, `option_label`, `family_name`, and `option_dimension`.
+    - Added security-definer RPCs `group_products_into_family` and `ungroup_product_family` with pinned `search_path = public, pg_temp` and role gate `auth_user_role() in ('Owner', 'Admin', 'Manager')` (throwing `GATE:ONLY_MANAGEMENT_CAN_MANAGE_FAMILIES`). Ungrouping disassociates products and removes the family row without deleting any products.
+  - Lifecycle Step L90 (`scripts/e2e-lifecycle.mjs`):
+    - Added step L90 `products with options and families (T7-13) — booking an option reserves that option's units only`.
+    - Verified: non-management (Warehouse) is refused when attempting to manage families; Manager successfully groups two products (PL and EF mount) under a family; booking Option A (PL Mount) writes an inventory reservation for Option A's units only while Option B remains with 0 reservations; un-grouping family safely unlinks products while preserving product records intact.
+    - Verified via `npm run check:lifecycle`: 91/91 green, 0 known-red, 0 failed.
+  - Public Catalogue API & UI (`src/booking/`):
+    - Extended `CatalogueItem` and `RawCatalogueRow` in `src/booking/lib/catalogueApi.ts` with `family_id`, `option_label`, `family_name`, and `option_dimension`.
+    - Added variant products to `MOCK_CATALOGUE` for mock mode testing.
+    - `ProductCard.tsx`: Added `optionCount` badge (e.g. "2 Mount") and action routing ("Choose Option").
+    - `ProductDetailModal.tsx`: Added option picker chips (e.g. `[PL Mount] [EF Mount]`) showing live availability tags per option for chosen dates (B2, B7); dynamically switches displayed rates, description, and target product ID when switching options; disables Request button if active option is unavailable.
+    - `src/booking/App.tsx`: Collapsed products in the same family into a single representative card in the product grid, passing sibling options and availability map to `ProductDetailModal`.
+  - Inventory & Equipment Management Form:
+    - Updated `createEquipment.ts` action to accept `familyId` and `optionLabel`.
+    - Updated `AddEquipmentContext.tsx` and `AddEquipment.tsx` to manage family grouping state.
+    - `SectionRelationships.tsx`: Added Product Family & Options section allowing staff to group products into families, specify option dimensions and labels, and ungroup from family with touch-target compliant (>=44px) controls.
+  - New Rental `AddItemPanel.tsx` & `itemCatalogue.ts`:
+    - Updated `EquipmentResult` and `EquipmentModelGroup` to track `familyId` and `optionLabel`.
+    - Displayed distinct option badge in search results when an item has an `optionLabel`.
+  - Tests:
+    - Added unit test suite `src/booking/__tests__/productOptions.test.tsx` (3 tests) verifying catalogue metadata exposure, option badges on cards, and option picker chip switching in detail modal.
+    - All tests passed.
+
+**Ruled**
+- Products differing only in an option (lens mount, cable length, size) show as one product page with an option picker (B2, B7), online and in New Rental.
+- Each option remains its own distinct product underneath (own stock, units, rate, availability) grouped under `product_families`, so stock, pricing, and reservations do not change.
+- Booking an option reserves that option's units only; GiST exclusion is preserved.
+- Grouping/ungrouping is restricted to management roles (Owner, Admin, Manager). Ungrouping never deletes products.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 111 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | +0 |
+| Lifecycle | steps green / total | 91 / 91 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 247 files · check:pglite 247/247 applied, 0 failed (recorded 2026-11-19T14:01:07.149Z). Suite: Historical suite: 7434/7434 passed, 0 failed (recorded 2026-11-19T13:28:02.395Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 7398/7398 passed, 0 failed (recorded 2026-11-19T01:10:17.481Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-19T14:01:16.641Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T7-13 complete and verified across all gates. Next roadmap cards in order.
+
 ## 2026-11-19 — T7-17: Old store links open the same item (Lane C / Windows)
 
 **Did**

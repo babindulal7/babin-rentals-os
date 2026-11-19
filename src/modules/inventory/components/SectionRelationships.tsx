@@ -22,6 +22,14 @@ export function SectionRelationships() {
     setRequires,
     requiresPick,
     setRequiresPick,
+    familyId,
+    familyName,
+    setFamilyName,
+    optionDimension,
+    setOptionDimension,
+    optionLabel,
+    setOptionLabel,
+    ungroupFamily,
     suggestions,
     usedInBundles,
     addContained,
@@ -256,6 +264,63 @@ export function SectionRelationships() {
                       ))}
                     </div>
                   )}
+                </div>
+              )}
+            </div>
+
+            {/* Product Family & Options (T7-13, B2) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <strong style={{ fontSize: 'var(--t-meta)', color: 'var(--text)' }}>
+                  Product Family & Options (Option Picker)
+                </strong>
+                {(familyId || familyName) && (
+                  <Button variant="secondary" onClick={ungroupFamily} style={{ minHeight: 44 }}>
+                    Ungroup from Family
+                  </Button>
+                )}
+              </div>
+              <p style={{ margin: 0, fontSize: 'var(--t-th)', color: 'var(--text2)', lineHeight: 1.4 }}>
+                Products differing only by an option (mount, length, size) show as one item on the online store and catalogue with an option picker, while retaining individual stock and reservations (B2, T7-13).
+              </p>
+
+              <div style={fieldRow}>
+                <Field label="Family Name">
+                  <input
+                    value={familyName}
+                    onChange={(e) => setFamilyName(e.target.value)}
+                    placeholder="e.g. DZOFilm Vespid Prime Lenses"
+                    style={inputStyle()}
+                  />
+                </Field>
+                <Field label="Option Dimension">
+                  <select
+                    value={optionDimension}
+                    onChange={(e) => setOptionDimension(e.target.value)}
+                    style={inputStyle()}
+                  >
+                    <option value="Mount">Mount (EF / PL / E)</option>
+                    <option value="Length">Length (Cable / Track)</option>
+                    <option value="Size">Size (S / M / L)</option>
+                    <option value="Color">Color</option>
+                  </select>
+                </Field>
+                <Field label="Option Label for this Equipment">
+                  <input
+                    value={optionLabel}
+                    onChange={(e) => setOptionLabel(e.target.value)}
+                    placeholder="e.g. PL Mount, 15m, Large"
+                    style={inputStyle()}
+                  />
+                </Field>
+              </div>
+
+              {(familyId || familyName) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 'var(--r-btn)', background: 'var(--card2)', border: '1px solid var(--border)' }}>
+                  <Icon name="tag" size={14} style={{ color: 'var(--accent-gold, #facc15)' }} />
+                  <span style={{ fontSize: 'var(--t-meta)', color: 'var(--text)' }}>
+                    Grouped in family: <strong>{familyName || 'Linked Family'}</strong> · Option: <strong>{optionLabel || 'Default'}</strong> ({optionDimension})
+                  </span>
                 </div>
               )}
             </div>

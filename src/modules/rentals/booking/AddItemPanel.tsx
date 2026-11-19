@@ -1968,6 +1968,22 @@ function EquipmentGroupRow({
         >
           {group.name}
         </span>
+        {group.optionLabel && (
+          <span
+            style={{
+              flexShrink: 0,
+              fontSize: 'var(--t-meta)',
+              color: 'var(--accent-gold, #facc15)',
+              fontWeight: 600,
+              background: 'rgba(250, 204, 21, 0.12)',
+              padding: '1px 6px',
+              borderRadius: 'var(--r-badge)',
+              border: '1px solid rgba(250, 204, 21, 0.3)',
+            }}
+          >
+            {group.optionLabel}
+          </span>
+        )}
         {!bulk && group.units.length > 1 && (
           <span
             style={{

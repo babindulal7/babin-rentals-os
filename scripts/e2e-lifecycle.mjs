@@ -9564,6 +9564,141 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L90',
+  title: "products with options and families (T7-13) — booking an option reserves that option's units only",
+  expect: 'green',
+  async run() {
+    // 1. Setup two distinct products representing options of a family
+    const prodOptionA = '00000000-0000-4000-8000-000000000081'
+    const prodOptionB = '00000000-0000-4000-8000-000000000082'
+
+    await as('Owner', async () => {
+      await q(`
+        insert into public.products (id, client_uuid, asset_code, name, brand, category_id, daily_rate, is_active, show_online, online_bundle_only)
+        values
+          ('${prodOptionA}', gen_random_uuid(), 'EQ818181', 'DZOFilm Vespid 35mm PL', 'DZOFilm', (select id from public.inventory_categories limit 1), 3500, true, true, false),
+          ('${prodOptionB}', gen_random_uuid(), 'EQ828282', 'DZOFilm Vespid 35mm EF', 'DZOFilm', (select id from public.inventory_categories limit 1), 3500, true, true, false)
+        on conflict (id) do nothing
+      `)
+      await q(`
+        insert into public.product_units (id, client_uuid, product_id, serial_no, asset_tag, status, warehouse_id, branch_id)
+        values
+          (gen_random_uuid(), gen_random_uuid(), '${prodOptionA}', 'SN-DZ-PL-01', 'TAG-PL-01', 'In Stock', (select id from public.warehouses limit 1), '${BRANCH}'),
+          (gen_random_uuid(), gen_random_uuid(), '${prodOptionB}', 'SN-DZ-EF-01', 'TAG-EF-01', 'In Stock', (select id from public.warehouses limit 1), '${BRANCH}')
+      `)
+    })
+
+    // 2. Warehouse is refused when trying to group into family
+    await as('Warehouse', async () => {
+      let failed = false
+      try {
+        await q(
+          `select public.group_products_into_family('Lens Family', null, 'Mount', $1::jsonb) as res`,
+          [JSON.stringify([{ product_id: prodOptionA, option_label: 'PL Mount' }])]
+        )
+      } catch (err) {
+        failed = true
+        assert(/ONLY_MANAGEMENT_CAN_MANAGE_FAMILIES/i.test(err.message), 'expected role refusal')
+      }
+      assert(failed, 'Warehouse cannot group products into family')
+    })
+
+    // 3. Manager groups products into family
+    let familyId
+    await as('Manager', async () => {
+      const res = (await q(
+        `select public.group_products_into_family('DZOFilm Vespid 35mm', null, 'Mount', $1::jsonb) as res`,
+        [JSON.stringify([
+          { product_id: prodOptionA, option_label: 'PL Mount' },
+          { product_id: prodOptionB, option_label: 'EF Mount' },
+        ])]
+      )).rows[0].res
+      familyId = res
+      assert(Boolean(familyId), 'family created successfully')
+    })
+
+    // 4. Verify products carry family_id and option_label and public_catalogue_v reflects them
+    const pRows = (await q(
+      `select id, family_id, option_label from public.products where id in ('${prodOptionA}', '${prodOptionB}') order by option_label desc`
+    )).rows
+    assertEq(pRows[0].family_id, familyId, 'prodOptionA has family_id')
+    assertEq(pRows[0].option_label, 'PL Mount', 'prodOptionA has option_label PL Mount')
+    assertEq(pRows[1].family_id, familyId, 'prodOptionB has family_id')
+    assertEq(pRows[1].option_label, 'EF Mount', 'prodOptionB has option_label EF Mount')
+
+    // 5. Booking option A (PL Mount)
+    const bookingUuid = crypto.randomUUID()
+    const lineUuid = crypto.randomUUID()
+    let bookingId
+    await as('Coordinator', async () => {
+      const payload = {
+        client_uuid: bookingUuid,
+        created_by: U.Coordinator,
+        branch_id: BRANCH,
+        client_id: CLIENT,
+        pickup_at: '2026-12-01T06:00:00Z',
+        return_at: '2026-12-03T06:00:00Z',
+        delivery_type: 'Client Pickup',
+        lines: [
+          {
+            client_uuid: lineUuid,
+            product_id: prodOptionA,
+            qty: 1,
+            days: 2,
+            rate: 3500,
+          },
+        ],
+      }
+      const res = await q('select public.create_booking($1::jsonb) as res', [JSON.stringify(payload)])
+      bookingId = res.rows[0].res.booking_id
+      assert(Boolean(bookingId), 'booking created for option A')
+
+      // Transition to Booked (runs 0155 trigger and mints reservations)
+      await q(
+        `insert into booking_stage_transitions
+           (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
+         values (gen_random_uuid(), $1, $2, 'Quote', 'Booked', $3, 'Coordinator', now(), 'Client confirmed shoot dates')`,
+        [bookingId, BRANCH, U.Coordinator]
+      )
+    })
+
+    // 6. Verify Option A is reserved; Option B remains completely unreserved
+    const resA = (await q(
+      `select count(*) from public.inventory_reservations r
+       where r.product_id = '${prodOptionA}' and r.booking_id = '${bookingId}'`
+    )).rows[0].count
+    const resB = (await q(
+      `select count(*) from public.inventory_reservations r
+       where r.product_id = '${prodOptionB}' and r.booking_id = '${bookingId}'`
+    )).rows[0].count
+
+    assertEq(Number(resA), 1, 'Option A has 1 reservation')
+    assertEq(Number(resB), 0, 'Option B has ZERO reservations from booking Option A')
+
+    // 7. Manager ungroups the family
+    await as('Manager', async () => {
+      const unRes = (await q(
+        `select public.ungroup_product_family('${familyId}'::uuid) as res`
+      )).rows[0].res
+      assertEq(unRes, true, 'ungroup returns true')
+    })
+
+    // 8. Family row deleted; both products remain completely intact with family_id set to null
+    const famCount = (await q(`select count(*) from public.product_families where id = '${familyId}'`)).rows[0].count
+    assertEq(Number(famCount), 0, 'product_family deleted')
+
+    const prodsAfter = (await q(
+      `select id, family_id, option_label from public.products where id in ('${prodOptionA}', '${prodOptionB}')`
+    )).rows
+    assertEq(prodsAfter.length, 2, 'both products still exist (never deleted)')
+    assertEq(prodsAfter[0].family_id, null, 'family_id reset to null')
+    assertEq(prodsAfter[0].option_label, null, 'option_label reset to null')
+    assertEq(prodsAfter[1].family_id, null, 'family_id reset to null')
+    assertEq(prodsAfter[1].option_label, null, 'option_label reset to null')
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break
