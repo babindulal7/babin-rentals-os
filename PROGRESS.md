@@ -1,5 +1,61 @@
 # Progress Log
 
+## 2026-11-19 — T7-02: Booking site and public catalogue (Lane C / Windows)
+
+**Did**
+- Implemented **T7-02 · Booking site and public catalogue** (`feat/win-t7-02-booking-site-and-public-catalogue`):
+  - Authored migration `supabase/migrations/0245_booking_site_and_public_catalogue.sql`:
+    - Added columns `show_online boolean not null default false`, `online_bundle_only boolean not null default false`, `photos text[] not null default '{}'`, and `slug text unique` to `public.products` and `public.bundles`.
+    - Added storage bucket `catalogue` with public read access and write/update/delete policies restricted to authenticated staff with `Owner`, `Admin`, or `Manager` roles.
+    - Authored security view `public.public_catalogue_v` exposing `id`, `kind`, `slug`, `name`, `category`, `description`, `photos`, `daily_rate_paisa`, `weekly_rate_paisa`, `monthly_rate_paisa`, `bundle_items`, `show_online`, and `online_bundle_only`. Strictly redacts all internal rates, costs, replacement values, serials, stock counts, supplier details, and internal notes.
+    - Granted `select` on `public.public_catalogue_v` to `anon` and `authenticated`.
+    - Authored security-definer public function `public_availability(p_product_ids uuid[], p_from date, p_to date)` returning `(product_id uuid, day date, available boolean)` based on active conflict checks against reservations/rentals, without revealing booking counts or customer identities.
+    - Granted `execute` on `public.public_availability` to `anon` and `authenticated`.
+  - Updated allow-lists and exposure guards:
+    - Added `public_availability` to `scripts/allowed-anon-functions.mjs`.
+    - Created `scripts/allowed-anon-views.mjs` exporting canonical `ALLOWED_ANON_VIEWS` containing `public_catalogue_v`.
+    - Updated `scripts/check-pglite.mjs` and `scripts/check-anon-exposure.mjs` to import and verify `ALLOWED_ANON_VIEWS`.
+    - Added step `L85` ("anon reads catalogue and availability, nothing else (T7-02)") to `scripts/e2e-lifecycle.mjs` asserting anon can query `public_catalogue_v` and call `public_availability`, but cannot write or access internal tables/views.
+  - Configured Vite for third entrypoint:
+    - Added `booking: path.resolve(__dirname, 'booking.html')` to `rollupOptions.input` in `vite.config.ts`.
+    - Authored `booking.html` linking to `src/booking/main.tsx`.
+    - Authored `src/booking/` SPA:
+      - `src/booking/App.tsx` with date-range picker, category selector, product grid, product modal, and cart drawer with checkout intent.
+      - `src/booking/booking.css` implementing accessible, dark cinema theme with >= 44px touch targets.
+      - `src/booking/lib/catalogueApi.ts` client with Supabase query and fallback mock data for testing/offline.
+      - Components: `BookingHeader`, `CategoryNav`, `ProductCard`, `ProductDetailModal`, `CartDrawer`.
+  - Updated staff Equipment form:
+    - Extended `src/lib/recordEditor.ts` to support `string[]` values and defaults for `show_online` and `online_bundle_only`.
+    - Updated `src/components/records/EquipmentRecordEditor.tsx`:
+      - Added "Online Storefront" section with "Show in online catalogue" and "Only available inside bundles" toggles.
+      - Added "Catalogue Photos" uploader that uploads directly to the `catalogue` bucket, provides preview thumbnails, and allows deletion.
+  - Authored unit test suite `src/booking/__tests__/catalogue.test.ts` (5/5 passing) verifying public exposure and availability behavior.
+  - Verified full verification gates: `check:pglite` (242/242), `check-anon-exposure` (14/14), `check:security`, `check:lifecycle` (86/86), `test:server-contracts`, `test:partial-return`, `lint:shell`, `lint:ui-copy`, `check:contrast`, `typecheck`, `lint`, and `npm run build`.
+
+**Ruled**
+- Public catalogue strictly hides all operational and financial secrets (purchase costs, serials, replacement values, supplier details, stock counts).
+- Availability is exposed only as a boolean `available` per day, preventing competitor scraping of inventory depth.
+- Custodial equipment operations remain strictly internal; booking site collects quote requests or online bookings without bypassing inventory gates.
+- Photos in `catalogue` bucket are public for storefront display; uploads require staff management authorization.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 108 / 109 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | +0 |
+| Lifecycle | steps green / total | 86 / 86 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 242 files · check:pglite 242/242 applied, 0 failed (recorded 2026-11-19T00:59:06.774Z). Suite: PASS — 7398/7398 passed, 0 failed (recorded 2026-11-19T01:10:17.481Z); source fingerprint matches.
+Coverage suite: PASS — 7398/7398 passed, 0 failed (recorded 2026-11-19T01:10:17.481Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-19T01:01:01.610Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T7-02 complete and verified across all gates. Next roadmap cards in order.
+
 ## 2026-11-18 — T3-18: Change a confirmed booking (Lane C)
 
 **Did**

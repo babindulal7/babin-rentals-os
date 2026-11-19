@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0242**
+**Next free number: 0246**
 
 > **Legacy exception:** `0188` exists as two distinct, locally verified migration files
 > (`0188_smart_reservation_holds.sql` and `0188_staff_renting_gear.sql`). Both are preserved because
@@ -20,6 +20,13 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
+| 0245 | T7-02 | booking-site-and-public-catalogue | feat/win-t7-02-booking-site-and-public-catalogue | verified |
+| 0244 | T2-23 | allow-overbooking-on-chosen-products | feat/windows-t2-23-product-overbooking | verified |
+| 0243 | T3-18 | change-confirmed-booking | lane-c/T3-18-change-confirmed-booking | verified |
+| 0242 | T2-19 | return-damage-signature-and-refusal | lane-a/T2-19-return-damage-signature-and-refusal | verified |
+| 0241 | T3-29 | extension-clash-manager-decision-and-at-risk | lane-c/T3-29-clashing-extensions | verified |
+| 0240 | T2-22 | time-between-rentals | lane-a/T2-22-turnaround | verified |
+| 0239 | T3-30 | consumables-pricing-restock-and-low-stock | lane-c/T3-30-consumables | verified |
 | 0238 | T3-30 | consumables-pricing-restock-and-low-stock | lane-c/T3-30-consumables-unit-price-add-at-the | verified |
 | 0237 | T3-28 | rental-day-start-setting | lane-c/T3-28-rental-day-start-as-a-setting | verified |
 | 0225 | T0-12 / T6 glossary | owner-approved-glossary-revisions | lane-a/T0-12-main-integration | APPLIED live 7 Nov 2026 as 20261107105159 after validated backup; 17 local gates and live DB/RLS/RPC post-checks PASS; hosted/device acceptance pending |

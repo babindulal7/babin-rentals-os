@@ -121,6 +121,7 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, 'index.html'),
         marketing: path.resolve(__dirname, 'marketing.html'),
+        booking: path.resolve(__dirname, 'booking.html'),
       },
       output: {
         manualChunks(id) {

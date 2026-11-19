@@ -168,6 +168,25 @@ async function asService(fn) {
   }
 }
 
+async function asAnon(fn) {
+  await db.exec(`set role anon;
+    select set_config('app.current_user_id', '', false);
+    select set_config('request.jwt.claim.sub', '', false);
+    select set_config('request.jwt.claim.role', 'anon', false);`)
+  try {
+    return await fn()
+  } finally {
+    try {
+      await db.exec(`reset role; select set_config('app.current_user_id', '', false);
+        select set_config('request.jwt.claim.sub', '', false); select set_config('request.jwt.claim.role', '', false);`)
+    } catch {
+      await db.exec('rollback;')
+      await db.exec(`reset role; select set_config('app.current_user_id', '', false);
+        select set_config('request.jwt.claim.sub', '', false); select set_config('request.jwt.claim.role', '', false);`)
+    }
+  }
+}
+
 /**
  * Run a block and UNDO it, whatever it did.
  *
@@ -9058,6 +9077,107 @@ STEPS.push({
       const snapLinked = await one('select read_booking_for_change($1)', [linkedBookingId])
       assertEq(snapLinked.parent_booking_id, parentBookingId, 'read_booking_for_change returns parent_booking_id')
       assertEq(snapLinked.values.parent_booking_id, parentBookingId, 'values.parent_booking_id matches')
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L85',
+  title: 'anon reads catalogue and availability, nothing else (T7-02)',
+  expect: 'green',
+  async run() {
+    await undone(async () => {
+      const pOnline = crypto.randomUUID()
+      const pOffline = crypto.randomUUID()
+      const pBundleOnly = crypto.randomUUID()
+      const bOnline = crypto.randomUUID()
+
+      await asOwnerOfTheDatabase(async () => {
+        const cat = await one('select id from inventory_categories order by name limit 1')
+        await q(
+          `insert into products (id, client_uuid, asset_code, name, category_id, brand, tracking_mode, total_quantity, daily_rate, show_online, online_bundle_only, is_active, created_by)
+           values
+             ($1, gen_random_uuid(), 'EQ999001', 'Online Alpha Camera', $4, 'Sony', 'Quantity', 5, 5000, true, false, true, $3),
+             ($2, gen_random_uuid(), 'EQ999002', 'Secret Beta Camera', $4, 'Sony', 'Quantity', 5, 6000, false, false, true, $3),
+             ($5, gen_random_uuid(), 'EQ999003', 'Component Lens', $4, 'Sony', 'Quantity', 5, 2000, true, true, true, $3)`,
+          [pOnline, pOffline, U.Owner, cat, pBundleOnly]
+        )
+
+        await q(
+          `insert into bundles (id, client_uuid, bundle_code, name, category_id, daily_rate, show_online, is_active, created_by)
+           values ($1, gen_random_uuid(), 'BDL-999001', 'Indie Creator Kit', $2, 6500, true, true, $3)`,
+          [bOnline, cat, U.Owner]
+        )
+
+        await q(
+          `insert into bundle_items (id, client_uuid, bundle_id, product_id, quantity, created_by)
+           values (gen_random_uuid(), gen_random_uuid(), $1, $2, 1, $3)`,
+          [bOnline, pBundleOnly, U.Owner]
+        )
+      })
+
+      // Query as anon
+      await asAnon(async () => {
+        const reject = async (what, sql, params, matcher) => {
+          await q('savepoint probe')
+          try {
+            await refuses(what, sql, params, matcher)
+          } finally {
+            await q('rollback to savepoint probe')
+          }
+        }
+
+        const rows = (await q('select * from public_catalogue_v')).rows
+
+        const hasOnline = rows.find((r) => r.id === pOnline)
+        assert(Boolean(hasOnline), 'pOnline must be listed in public_catalogue_v')
+        assertEq(hasOnline.daily_rate_paisa, 500000n, 'pOnline daily rate converted to paisa')
+
+        const hasOffline = rows.find((r) => r.id === pOffline)
+        assert(!hasOffline, 'pOffline (show_online=false) must NOT be listed')
+
+        const hasBundleOnly = rows.find((r) => r.id === pBundleOnly)
+        assert(!hasBundleOnly, 'pBundleOnly must NOT be listed as its own row')
+
+        const hasBundle = rows.find((r) => r.id === bOnline)
+        assert(Boolean(hasBundle), 'bOnline bundle must be listed in public_catalogue_v')
+        assert(Array.isArray(hasBundle.bundle_contents), 'bundle_contents must be json array')
+        assert(hasBundle.bundle_contents.some((c) => c.name === 'Component Lens'), 'bundle includes component item')
+
+        const forbiddenCols = ['purchase_price', 'replacement_value', 'serial_number', 'supplier_id', 'notes_internal']
+        const keys = Object.keys(rows[0] || {})
+        for (const col of forbiddenCols) {
+          assert(!keys.includes(col), `public_catalogue_v must NEVER contain ${col}`)
+        }
+
+        await reject(
+          'anon cannot insert into public_catalogue_v',
+          `insert into public_catalogue_v (id, name) values ('${pOnline}', 'Hacked')`,
+          [],
+          /permission denied|cannot insert into view/i
+        )
+
+        const today = new Date().toISOString().slice(0, 10)
+        const avail = (await q(`select * from public_availability(array['${pOnline}']::uuid[], '${today}'::date, '${today}'::date)`)).rows
+        assertEq(avail.length, 1, 'public_availability returns one day row for queried product')
+        assertEq(avail[0].available, true, 'stock of 5 with no reservations is available')
+
+        const bkCount = Number((await q('select count(*) from bookings')).rows[0].count)
+        assertEq(bkCount, 0, 'anon sees 0 bookings under RLS')
+
+        const invCount = Number((await q('select count(*) from invoices')).rows[0].count)
+        assertEq(invCount, 0, 'anon sees 0 invoices under RLS')
+
+        const clientCount = Number((await q('select count(*) from clients')).rows[0].count)
+        assertEq(clientCount, 0, 'anon sees 0 clients under RLS')
+
+        await reject(
+          'anon cannot read audit_logs',
+          'select count(*) from audit_logs',
+          [],
+          /permission denied/i
+        )
+      })
     })
   },
 })
