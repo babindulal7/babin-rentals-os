@@ -9699,6 +9699,153 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L91',
+  title: 'online payment intent and Fonepay allocation (T7-05) — tampered amount refused, replayed callback changes nothing, intent allocates once',
+  expect: 'green',
+  async run() {
+    // 1. Setup a booking request
+    const requestClientUuid = crypto.randomUUID()
+    const reqPayload = {
+      client_uuid: requestClientUuid,
+      client_name: 'Online Payment Tester',
+      client_email: 'payment_tester_' + Date.now() + '@example.com',
+      client_phone: '+977-9841001122',
+      start_date: new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10),
+      end_date: new Date(Date.now() + 4 * 86400000).toISOString().slice(0, 10),
+      fulfillment_type: 'pickup',
+      lines: [{ product_id: SERIAL_PRODUCT, quantity: 1 }],
+    }
+
+    let requestId
+    let calculatedAdvancePaisa
+    await as('Coordinator', async () => {
+      const res = (await q(
+        `select public.submit_booking_request($1::jsonb) as res`,
+        [JSON.stringify(reqPayload)]
+      )).rows[0].res
+      requestId = res.request_id
+      calculatedAdvancePaisa = res.advance_due_paisa
+      assert(Boolean(requestId), 'booking request submitted')
+      assert(calculatedAdvancePaisa > 0, 'advance calculated server-side')
+    })
+
+    // 2. Client intent creation via create_payment_intent: amount is computed on server
+    const intentUuid = crypto.randomUUID()
+    let intentId
+    await as('Coordinator', async () => {
+      const intentRes = (await q(
+        `select public.create_payment_intent($1, null, $2, 'fonepay') as res`,
+        [intentUuid, requestId]
+      )).rows[0].res
+      assertEq(intentRes.success, true, 'intent created successfully')
+      assertEq(intentRes.amount_paisa, calculatedAdvancePaisa, 'amount is derived server-side, matching advance required')
+      intentId = intentRes.intent_id
+    })
+
+    // 3. Direct client insert or update to tamper with amount is refused by RLS
+    await as('Client', async () => {
+      let updateFailed = false
+      try {
+        await q(`update public.payment_intents set amount_paisa = 100 where id = '${intentId}'`)
+      } catch {
+        updateFailed = true
+      }
+      assert(updateFailed, 'client cannot tamper with payment_intents amount directly')
+    })
+
+    // 4. Floor roles (Warehouse, Technician, Driver) cannot view payment intents (Law 6)
+    await as('Warehouse', async () => {
+      const rows = (await q(`select * from public.payment_intents where id = '${intentId}'`)).rows
+      assertEq(rows.length, 0, 'Warehouse receives 0 payment intent rows (Law 6)')
+    })
+
+    // 5. Unconfirmed request: callback marks intent as 'paid', but not allocated (no booking yet)
+    const providerRef1 = 'FP-TXN-' + Date.now()
+    await as('Owner', async () => {
+      const allocRes = (await q(
+        `select public.allocate_payment_intent($1::uuid, $2, $3::jsonb) as res`,
+        [intentId, providerRef1, JSON.stringify({ fonepay_status: 'SUCCESS' })]
+      )).rows[0].res
+      assertEq(allocRes.success, true, 'allocate_payment_intent succeeded')
+      assertEq(allocRes.status, 'paid', 'unconfirmed request intent status is paid')
+      assertEq(allocRes.payment_id, null, 'no payment row yet before staff confirmation')
+    })
+
+    // 6. Callback replay: replayed callback changes nothing (idempotent)
+    await as('Owner', async () => {
+      const replayRes = (await q(
+        `select public.allocate_payment_intent($1::uuid, $2, $3::jsonb) as res`,
+        [intentId, providerRef1, JSON.stringify({ fonepay_status: 'SUCCESS' })]
+      )).rows[0].res
+      assertEq(replayRes.success, true, 'replayed callback returns success')
+      assertEq(replayRes.already_paid, true, 'marked already_paid')
+    })
+
+    // 7. Confirmed booking creation and request confirmation allocates the payment intent once
+    const bookingUuid = crypto.randomUUID()
+    const lineUuid = crypto.randomUUID()
+    let bookingId
+    await as('Coordinator', async () => {
+      const payload = {
+        client_uuid: bookingUuid,
+        created_by: U.Coordinator,
+        branch_id: BRANCH,
+        client_id: CLIENT,
+        pickup_at: '2026-12-10T06:00:00Z',
+        return_at: '2026-12-12T06:00:00Z',
+        delivery_type: 'Client Pickup',
+        lines: [
+          {
+            client_uuid: lineUuid,
+            product_id: SERIAL_PRODUCT,
+            qty: 1,
+            days: 2,
+            rate: 3500,
+          },
+        ],
+      }
+      const res = await q('select public.create_booking($1::jsonb) as res', [JSON.stringify(payload)])
+      bookingId = res.rows[0].res.booking_id
+      assert(Boolean(bookingId), 'booking created for request')
+
+      // Confirm the request, which triggers allocation of the paid intent
+      const confRes = (await q(
+        `select public.confirm_booking_request($1::uuid, $2::uuid) as res`,
+        [requestId, bookingId]
+      )).rows[0].res
+      assertEq(confRes.success, true, 'confirm_booking_request succeeded')
+      assertEq(confRes.allocated_payments, 1, 'allocated 1 paid payment intent')
+    })
+
+    // 8. Verify the intent is now 'allocated' and linked to an immutable payment row
+    const intentAfter = (await q(`select * from public.payment_intents where id = '${intentId}'`)).rows[0]
+    assertEq(intentAfter.status, 'allocated', 'intent is now allocated')
+    assert(Boolean(intentAfter.allocated_at), 'allocated_at is set')
+    assert(Boolean(intentAfter.payment_id), 'payment_id is populated')
+
+    const payRow = (await q(`select * from public.payments where id = '${intentAfter.payment_id}'`)).rows[0]
+    assertEq(payRow.booking_id, bookingId, 'payment belongs to booking')
+    assertEq(payRow.status, 'Received', 'payment status is Received')
+    assertEq(payRow.payment_type, 'Advance Payment', 'payment_type is Advance Payment')
+    assertEq(payRow.transaction_ref, providerRef1, 'transaction_ref matches Fonepay provider ref')
+
+    // 9. Second confirmation attempt or re-allocation attempt changes nothing (idempotent)
+    await as('Owner', async () => {
+      const secondAlloc = (await q(
+        `select public.allocate_payment_intent($1::uuid, $2, $3::jsonb) as res`,
+        [intentId, providerRef1, JSON.stringify({ fonepay_status: 'SUCCESS' })]
+      )).rows[0].res
+      assertEq(secondAlloc.success, true, 'idempotent call returns success')
+      assertEq(secondAlloc.already_allocated, true, 'intent is marked already_allocated')
+      assertEq(secondAlloc.payment_id, intentAfter.payment_id, 'returns exact same payment_id')
+    })
+
+    const payCount = (await q(`select count(*) from public.payments where booking_id = '${bookingId}'`)).rows[0].count
+    assertEq(Number(payCount), 1, 'exactly ONE immutable payment row was minted, never duplicated')
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break

@@ -1,5 +1,59 @@
 # Progress Log
 
+## 2026-11-20 — T7-05: Online payment — Fonepay first (Lane C / Windows)
+
+**Did**
+- Completed **T7-05 · Online payment — Fonepay first** (`lane-c/T7-05-online-payment-fonepay-first`):
+  - Authored security design note `docs/verification/T7-05_DESIGN.md` establishing fail-closed server-computed amounts, provider verification requirements, and Law 4 immutability.
+  - Authored Database Migration `supabase/migrations/0251_payment_intents_and_fonepay.sql` (claimed migration 0251 in ledger):
+    - Created `public.payment_intents` table with strict RLS (client sees own rows; money roles read; floor roles denied under Law 6).
+    - Created `calculate_advance_required(bigint)` SQL mirror of `calculateAdvanceRequired()`.
+    - Created `create_payment_intent(client_uuid, booking_id, booking_request_id, provider)` strictly computing amount on the server (D30).
+    - Created `allocate_payment_intent(intent_id, provider_ref, provider_response)` atomically recording immutable `payments` row when linked to booking, or keeping unallocated when unconfirmed request.
+    - Updated `confirm_booking_request` to atomically allocate any paid payment intents upon staff confirmation.
+  - Lifecycle Step L91 (`scripts/e2e-lifecycle.mjs`):
+    - Added step L91: "online payment intent and Fonepay allocation (T7-05) — tampered amount refused, replayed callback changes nothing, intent allocates once".
+    - Verified via `npm run check:lifecycle`: 92/92 green, 0 known-red, 0 failed.
+  - Supabase Edge Functions:
+    - Authored `supabase/functions/pay-init/index.ts` with HMAC-SHA512 calculation and server-computed advance.
+    - Authored `supabase/functions/pay-verify/index.ts` with server-to-server Fonepay verification and atomic allocation.
+  - Public Client & Operations UI (`src/booking/` & `src/actions/`):
+    - Created `src/booking/pay/payApi.ts`, `OnlinePaymentModal.tsx`, and exported via `src/booking/pay/index.ts`.
+    - Integrated online payment modal into public booking drawer upon request creation.
+    - Exported `allocatePaymentIntent` in `src/actions/finance/recordPayment.ts` and wired into closing daily summary `src/lib/queries/closing.ts`.
+    - Authored unit test suite `src/booking/pay/__tests__/onlinePayment.test.tsx` (all 25 booking tests passing).
+  - Passed all verification gates: `typecheck`, `lint`, `test`, `check:pglite` (248/248), `check:lifecycle` (92/92), `test:booking-financial-integrity`, `check:security`, `test:server-contracts`, `test:partial-return`, `test:receipt`, `lint:shell`, `lint:ui-copy`, `check:contrast` (97/97), and `build`.
+  - Updated `docs/plans/T7_ONLINE_BOOKING.md` status to `ready — awaiting merge (lane-c/T7-05-online-payment-fonepay-first)`.
+
+**Ruled**
+- Online payments cover the rental advance or invoice balance only — security deposits are strictly excluded and taken at handover (O-3, B38).
+- The payment amount is strictly computed on the server (D30); client-submitted amounts are completely ignored.
+- A browser redirect alone never allocates payment; allocation requires server-to-server verification with provider response recording.
+- Replays change nothing; payment allocation is idempotent on `provider_ref` and `client_uuid`.
+- Payment rows are immutable once created (Law 4).
+- Warehouse, Technician, and Driver never view payment amounts or intent details (Law 6).
+
+### Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 111 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | +0 |
+| Lifecycle | steps green / total | 92 / 92 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 248 files · check:pglite 248/248 applied, 0 failed (recorded 2026-11-19T18:43:04.376Z). Suite: Historical suite: 7441/7441 passed, 0 failed (recorded 2026-11-19T18:07:13.731Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 7398/7398 passed, 0 failed (recorded 2026-11-19T01:10:17.481Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-19T18:44:21.407Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Waiting on Babin: Babin to enter live `FONEPAY_MERCHANT_CODE` and `FONEPAY_SECRET_KEY` in Supabase Edge Function secrets and record one live Rs 10 test payment to reconcile with Fonepay statement.
+- Next roadmap cards in order: T7-06 (eSewa & Khalti), T7-07 (Refunds and reconciliation), T7-08 (My bookings).
+
 ## 2026-11-19 — T7-10: Security review — the N-7 gate (Lane C / Windows)
 
 **Did**

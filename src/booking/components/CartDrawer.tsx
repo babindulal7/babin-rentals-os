@@ -7,6 +7,7 @@ import {
 import type { ClientUser, OnlineProfile } from '../lib/clientAuthApi'
 import type { OnlineBookingAwayStatus } from '@/lib/awayMode'
 import { TurnstileWidget } from './TurnstileWidget'
+import { OnlinePaymentModal } from '../pay/OnlinePaymentModal'
 import { formatMoney, type Paisa } from '@/lib/money'
 
 export interface CartLine {
@@ -56,6 +57,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [confirmedResult, setConfirmedResult] = useState<BookingRequestResult | null>(null)
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
+  const [paidAdvance, setPaidAdvance] = useState(false)
+  const [paymentClientUuid, setPaymentClientUuid] = useState('')
 
   // Prefill contact details from signed-in client account
   useEffect(() => {
@@ -142,6 +146,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         })),
       }, turnstileToken)
       setConfirmedResult(res)
+      setPaymentClientUuid(crypto.randomUUID())
+      setPaidAdvance(false)
       setStep('success')
       onClearCart()
     } catch (err: unknown) {
@@ -156,6 +162,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     setStep('cart')
     setConfirmedResult(null)
     setErrorMessage(null)
+    setPaidAdvance(false)
+    setIsPaymentModalOpen(false)
     onClose()
   }
 
@@ -220,6 +228,42 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             <div style={{ background: 'rgba(234, 179, 8, 0.1)', border: '1px solid rgba(234, 179, 8, 0.3)', padding: 14, borderRadius: 'var(--radius-md)', fontSize: '0.85rem' }}>
               <strong>1-Hour Response Guarantee:</strong> Our rental coordinators will check physical unit readiness and contact you via phone or email within 1 hour with confirmation and payment options.
             </div>
+
+            {confirmedResult.advance_due_paisa > 0 && (
+              paidAdvance ? (
+                <div
+                  style={{
+                    background: 'rgba(34, 197, 94, 0.1)',
+                    border: '1px solid rgba(34, 197, 94, 0.3)',
+                    padding: 12,
+                    borderRadius: 'var(--radius-md)',
+                    color: 'var(--green-text)',
+                    fontSize: '0.88rem',
+                    fontWeight: 600,
+                    textAlign: 'center',
+                    marginTop: 12,
+                  }}
+                >
+                  ✓ Advance Paid via Fonepay (Verified Server-to-Server)
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="btn-primary"
+                  style={{
+                    width: '100%',
+                    minHeight: 48,
+                    marginTop: 12,
+                    background: 'var(--accent-gold, #eab308)',
+                    color: '#000',
+                    fontWeight: 700,
+                  }}
+                  onClick={() => setIsPaymentModalOpen(true)}
+                >
+                  Pay Advance Now via Fonepay (QR) 💳
+                </button>
+              )
+            )}
 
             <button
               type="button"
@@ -608,6 +652,18 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           </>
         )}
       </div>
+
+      {isPaymentModalOpen && confirmedResult && (
+        <OnlinePaymentModal
+          isOpen={isPaymentModalOpen}
+          onClose={() => setIsPaymentModalOpen(false)}
+          bookingRequestId={confirmedResult.request_id}
+          clientUuid={paymentClientUuid || crypto.randomUUID()}
+          onPaymentSuccess={() => {
+            setPaidAdvance(true)
+          }}
+        />
+      )}
     </div>
   )
 }

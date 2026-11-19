@@ -106,7 +106,7 @@ request holds nothing until staff confirm; staff confirm through `confirm_bookin
 **Done when** — end-to-end on staging with two clients; a double-tap on Confirm creates one booking.
 **Needs** — T7-02, T7-03.
 
-### T7-05 · Online payment — Fonepay first            status: todo · size: L · lane C + Babin
+### T7-05 · Online payment — Fonepay first            status: ready — awaiting merge (lane-c/T7-05-online-payment-fonepay-first) · size: L · lane C (Windows) + Babin
 **What** — Edge Functions `pay-init` and `pay-verify` (+ the provider's callback URL). `pay-init`
 computes the amount **on the server** (advance from the request or the balance of an invoice —
 SQL mirror of `calculateAdvanceRequired()`, tested equal to the TypeScript), creates a

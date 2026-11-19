@@ -488,3 +488,52 @@ export const recordPayment = createAction<RecordPaymentInput, RecordPaymentResul
     }
   },
 })
+
+/**
+ * Allocate an online payment intent via database RPC allocate_payment_intent (T7-05).
+ * Idempotent, server-verified, creates immutable payment row when linked to booking.
+ */
+export async function allocatePaymentIntent(
+  intentId: string,
+  providerRef: string,
+  providerResponse: Record<string, unknown> = {},
+): Promise<{
+  success: boolean
+  intentId: string
+  paymentId: string | null
+  paymentNo?: string | undefined
+  amountPaisa?: number | undefined
+  status: string
+  alreadyAllocated?: boolean | undefined
+}> {
+  const { data, error } = await supabase.rpc('allocate_payment_intent', {
+    p_intent_id: intentId,
+    p_provider_ref: providerRef,
+    p_provider_response: providerResponse,
+  })
+
+  if (error || !data) {
+    throw new Error(`Failed to allocate payment intent: ${error?.message || 'Unknown database error'}`)
+  }
+
+  const res = data as {
+    success: boolean
+    intent_id: string
+    payment_id: string | null
+    payment_no?: string | undefined
+    amount_paisa?: number | undefined
+    status: string
+    already_allocated?: boolean | undefined
+  }
+
+  return {
+    success: res.success,
+    intentId: res.intent_id,
+    paymentId: res.payment_id,
+    paymentNo: res.payment_no,
+    amountPaisa: res.amount_paisa,
+    status: res.status,
+    alreadyAllocated: res.already_allocated,
+  }
+}
+

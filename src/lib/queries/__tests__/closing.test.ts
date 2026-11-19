@@ -40,10 +40,12 @@ vi.mock('../finance', () => ({
   paymentsInPeriod: () => ({}),
 }))
 vi.mock('../clients', () => ({ sumDepositsHeld: vi.fn() }))
+vi.mock('../paymentIntents', () => ({ listUnallocatedPaidIntents: vi.fn(async () => []) }))
 
 const { listBookings } = await import('../bookings')
 const { listPayments, listInvoices } = await import('../finance')
 const { sumDepositsHeld } = await import('../clients')
+const { listUnallocatedPaidIntents } = await import('../paymentIntents')
 const { fetchDailyClosing, varianceLine, bookingsCreatedOn } = await import('../closing')
 
 const asMock = (f: unknown) => f as ReturnType<typeof vi.fn>
@@ -171,6 +173,15 @@ describe('fetchDailyClosing — five channel groups into four buckets', () => {
   it('counts a payment with no channel rather than guessing one', async () => {
     const c = (await fetchDailyClosing(DAY)).collected
     expect(c.unclassified).toBe(rs(25))
+  })
+
+  it('includes unallocated paid online payment intents in digital wallets and total (T7-05)', async () => {
+    asMock(listUnallocatedPaidIntents).mockResolvedValueOnce([
+      { amountPaisa: rs(500), provider: 'fonepay' },
+    ])
+    const c = (await fetchDailyClosing(DAY)).collected
+    expect(c.digitalWallets).toBe(rs(1200)) // 700 from payments + 500 online
+    expect(c.total).toBe(rs(4575))
   })
 })
 

@@ -33,6 +33,7 @@
 import { listBookings, operationalDayRange, todaysIncoming, todaysOutgoing } from './bookings'
 import { listInvoices, listPayments, outstandingInvoices, paymentsInPeriod } from './finance'
 import { sumDepositsHeld } from './clients'
+import { listUnallocatedPaidIntents } from './paymentIntents'
 import type { ListFilters } from './listQuery'
 import type { ListQueryResult } from './useList'
 import type { Paisa } from '../money'
@@ -139,13 +140,14 @@ async function readEvery<T>(
  * pages every client — deactivated ones included — and count-checks itself.
  */
 export async function fetchDailyClosing(dayAd: string): Promise<DailyClosing> {
-  const [outgoing, incoming, created, payments, invoices, deposits] = await Promise.all([
+  const [outgoing, incoming, created, payments, invoices, deposits, unallocatedIntents] = await Promise.all([
     listBookings({ ...todaysOutgoing(dayAd), withCount: true }),
     listBookings({ ...todaysIncoming(dayAd), withCount: true }),
     listBookings({ ...bookingsCreatedOn(dayAd), withCount: true }),
     readEvery('payments today', listPayments, paymentsInPeriod(dayAd, dayAd)),
     readEvery('outstanding invoices', listInvoices, outstandingInvoices()),
     sumDepositsHeld(),
+    listUnallocatedPaidIntents(dayAd),
   ])
 
   let cash = 0
@@ -177,6 +179,11 @@ export async function fetchDailyClosing(dayAd: string): Promise<DailyClosing> {
            closing that does not add up says why. */
         unclassified += p.amount
     }
+  }
+
+  // Include unallocated online advance payments received today (T7-05)
+  for (const intent of unallocatedIntents) {
+    wallets += intent.amountPaisa
   }
 
   return {
