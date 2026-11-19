@@ -12,6 +12,7 @@ import { useDomainEvent } from '../../events/useDomainEvent'
 import { EVENT_TYPES } from '../../events/eventBus'
 import { formatAd } from '../../lib/bs'
 import { operationalTodayAd, businessNowAd, overDays, pickupsQuery, toMovementRow, type MovementRow } from '../../lib/queries/today'
+import { fetchBookingRequests } from '../../lib/queries/bookingRequests'
 import { listBookings, operationQueue, todaysOutgoing } from '../../lib/queries/bookings'
 import type { ListFilters } from '../../lib/queries/listQuery'
 import { useList, type ListQueryResult, type ListResult } from '../../lib/queries/useList'
@@ -382,6 +383,23 @@ export default function Today() {
   const { openOperations } = useOperationsWorkspace()
   const [globalSearch, setGlobalSearch] = useState('')
   const counterInputRef = useRef<HTMLInputElement>(null)
+  const [pendingReqCount, setPendingReqCount] = useState<number | null>(null)
+  const [overdueReqCount, setOverdueReqCount] = useState<number>(0)
+
+  useEffect(() => {
+    let cancelled = false
+    fetchBookingRequests()
+      .then((reqs) => {
+        if (cancelled) return
+        const pending = reqs.filter((r) => r.status === 'pending')
+        setPendingReqCount(pending.length)
+        setOverdueReqCount(pending.filter((r) => r.isOverdue45Min).length)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const [pickupDateFilter, setPickupDateFilter] = useState<DateFilter>(() => readStoredFilter(STORAGE_PICKUPS))
   const [returnDateFilter, setReturnDateFilter] = useState<DateFilter>(() => readStoredFilter(STORAGE_RETURNS))
@@ -650,6 +668,29 @@ export default function Today() {
           </div>
         )}
       </section>
+
+      {pendingReqCount !== null && pendingReqCount > 0 && (
+        <section className="br-reference-inspector__card" aria-label="Online booking requests queue">
+          <span className="br-reference-inspector__eyebrow">Online requests queue</span>
+          <div className="br-reference-inspector__row">
+            <span>Pending requests</span>
+            <strong style={{ color: overdueReqCount > 0 ? '#b45309' : undefined }}>
+              {pendingReqCount} {overdueReqCount > 0 ? `(${overdueReqCount} urgent)` : ''}
+            </strong>
+          </div>
+          <div className="br-reference-inspector__gate">
+            <strong>Staff response promise: within 1 hour</strong>
+            <small>Review catalogue requests and confirm availability.</small>
+            <button
+              type="button"
+              className="br-reference-inspector__cta"
+              onClick={() => navigate('/rentals?requests=on')}
+            >
+              Open Online Requests Queue
+            </button>
+          </div>
+        </section>
+      )}
     </div>
   )
 

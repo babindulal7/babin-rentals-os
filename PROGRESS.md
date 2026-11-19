@@ -1,5 +1,56 @@
 # Progress Log
 
+## 2026-11-19 — T7-04: Requests and the staff queue (Lane C / Windows)
+
+**Did**
+- Implemented **T7-04 · Requests and the staff queue** (`feat/win-t7-04-requests-and-staff-queue`):
+  - Database & Security Migration `supabase/migrations/0246_booking_requests_and_staff_queue.sql`:
+    - Sequence `booking_request_seq` and tables `public.booking_requests` and `public.booking_request_lines`.
+    - RLS policies ensuring clients view their own requests and staff with `Coordinator+` roles manage requests.
+    - View `public.booking_requests_v` enforcing Law 6 money blindness (`auth_can_view_money()`) so money-blind roles (Warehouse, Technician, Driver) receive honest `null`s for line rates, subtotal, discount, VAT, delivery fee, total, and advance paisa.
+    - Public RPC `submit_booking_request` (granted to `anon` and `authenticated`) allowing clients to submit online booking requests without placing holds or reservations (D31). Added to `scripts/allowed-anon-functions.mjs`.
+    - Mutating RPCs `confirm_booking_request` and `decline_booking_request` restricted to authenticated `Coordinator+` staff (revoked from public/anon). Confirming links the generated `booking_id` and is strictly idempotent.
+  - Lifecycle verification:
+    - Added Step `L86` to `scripts/e2e-lifecycle.mjs` asserting that an anon user can submit a request (verifying zero inventory holds/reservations are created), Warehouse can view metadata via `booking_requests_v` with money columns masked to null (Law 6) while confirm is denied, Coordinator can decline with required reason, Coordinator can confirm linking booking ID, and confirm is idempotent on replay.
+  - Operations & UI Implementation:
+    - Extended `src/booking/lib/catalogueApi.ts` with `submitBookingRequest()`.
+    - Implemented multi-step checkout in `src/booking/components/CartDrawer.tsx` covering date range validation, minimum 12-hour advance notice (W63, W66, W85), delivery zone selection and fee calculation, required project name and shoot location fields (B8), 13% VAT calculation and advance due (D34), and success screen promising 1-hour response guarantee with request number.
+    - Created actions `src/actions/rentals/confirmBookingRequest.ts` and `src/actions/rentals/declineBookingRequest.ts`, exported in `src/actions/rentals/index.ts`.
+    - Created `src/lib/queries/bookingRequests.ts` for reactive retrieval of queue requests.
+    - Authored `src/modules/rentals/OnlineRequestsQueue.tsx` with request list, 45-minute response urgency indicator, one-click prefilled navigation into `NewRental`, and decline modal requiring rejection reason.
+    - Updated `src/modules/rentals/RentalsList.tsx` adding "Online Requests" filter chip and view switcher.
+    - Updated `src/modules/today/Today.tsx` adding "Online requests queue" summary card displaying pending count and oldest waiting time.
+    - Linked `bookingRequestId` in `src/modules/rentals/NewRental.tsx` and `src/modules/rentals/booking/useNewRentalSubmit.ts` so confirming creates a booking carrying `booking_request_id` and transition status.
+  - Test suites:
+    - Authored unit test suites `src/actions/rentals/__tests__/bookingRequests.test.ts` (8 tests) and `src/booking/__tests__/cartCheckout.test.ts` (1 test).
+    - Passed all 15 gates: `check:pglite` (243/243), `check-anon-exposure` (14/14), `check:security`, `check:lifecycle` (87/87), `test:server-contracts` (68/68), `test:partial-return` (58/58), `test-receipt`, `lint:shell`, `lint:ui-copy`, `check:contrast` (97/97), `typecheck` (0 errors), `lint` (0 errors), `npm test` (7402/7402 passed), and `npm run build`.
+
+**Ruled**
+- Online requests never reserve equipment or place inventory holds (D31) until staff confirm.
+- Staff promise an answer within 1 hour; requests awaiting response for >= 45 minutes are highlighted with urgency warning.
+- Staff confirmations open `NewRental` prefilled with request details and execute atomic booking creation; confirmations are idempotent on `request_id`.
+- Declines require an explicit reason recorded in the database.
+- Floor roles remain strictly money-blind on online request views (Law 6).
+- Minimum 12-hour advance notice is enforced for pickup (W63, W66, W85).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 111 (99%) | +2 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | +0 |
+| Lifecycle | steps green / total | 87 / 87 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 243 files · check:pglite 243/243 applied, 0 failed (recorded 2026-11-19T02:37:10.893Z). Suite: PASS — 7402/7402 passed, 0 failed (recorded 2026-11-19T02:35:14.636Z); source fingerprint matches.
+Coverage suite: Historical suite: 7398/7398 passed, 0 failed (recorded 2026-11-19T01:10:17.481Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-19T02:37:26.106Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T7-04 complete and verified across all gates. Next roadmap cards in order.
+
 ## 2026-11-19 — T7-02: Booking site and public catalogue (Lane C / Windows)
 
 **Did**

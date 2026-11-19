@@ -95,6 +95,7 @@ import { captureError } from '../../lib/monitoring'
 import { TouchTarget } from '../../components/ui/TouchTarget'
 import BookingOperationsMenu from './BookingOperationsMenu'
 import { useToast } from '../../components/ui/Toast'
+import { OnlineRequestsQueue } from './OnlineRequestsQueue'
 import './rentals.css'
 import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext'
 /**
@@ -1038,6 +1039,7 @@ export default function RentalsList() {
 
   /** §11.1's chip. `?sub=on` or nothing — no third state to validate. */
   const subOn = f.extras['sub'] === 'on'
+  const requestsOn = f.extras['requests'] === 'on'
 
   /**
    * ## Which bookings are sub-rental — asked once, read by both surfaces
@@ -2236,6 +2238,22 @@ export default function RentalsList() {
               Sub-Rental
             </button>
           )}
+
+          <button
+            type="button"
+            onClick={() => f.setExtra('requests', requestsOn ? undefined : 'on')}
+            aria-pressed={requestsOn}
+            title="Online booking requests from public catalogue"
+            style={stageChipStyle(requestsOn)}
+          >
+            <TouchTarget axis="y" />
+            <Icon
+              name="box"
+              size={13}
+              style={{ color: requestsOn ? 'var(--nav-active-accent)' : undefined }}
+            />
+            Online Requests
+          </button>
         </div>
 
         {total !== null && (
@@ -2256,7 +2274,10 @@ export default function RentalsList() {
         )}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0, flex: 1 }}>
+      {requestsOn ? (
+        <OnlineRequestsQueue />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0, flex: 1 }}>
         <div style={{ background: 'var(--card)', borderRadius: 'var(--r-card)', border: '1.5px solid var(--border)', overflow: 'hidden' }}>
             <PageBody
               loading={list.loading || (subOn && subPending)}
@@ -2943,7 +2964,8 @@ export default function RentalsList() {
               </div>
             )}
           </div>
-      </div>
+        </div>
+      )}
 
       <ContextDrawer
         id="rental-quick-view"

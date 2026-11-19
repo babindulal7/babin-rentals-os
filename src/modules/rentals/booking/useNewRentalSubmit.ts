@@ -22,6 +22,7 @@ import type { Line } from './RentalLineItemsTree'
 export interface UseNewRentalSubmitOptions {
   editBookingId?: string | undefined
   parentBookingId?: string | null | undefined
+  bookingRequestId?: string | null | undefined
   confirmBlocked: boolean
   saveState: 'saved' | 'saving' | 'error'
   setSaveState: (state: 'saved' | 'saving' | 'error') => void
@@ -120,6 +121,7 @@ function quoteFieldsForLine(
 export function useNewRentalSubmit({
   editBookingId,
   parentBookingId,
+  bookingRequestId,
   confirmBlocked,
   saveState,
   setSaveState,
@@ -445,6 +447,15 @@ export function useNewRentalSubmit({
         const bookedId = createdQuote.current.id
         const bookedNo = createdQuote.current.no
 
+        if (bookingRequestId) {
+          try {
+            const reqMod = await import('../../../actions/rentals/confirmBookingRequest')
+            await reqMod.confirmBookingRequest({ requestId: bookingRequestId, bookingId: bookedId }, ctx)
+          } catch {
+            // Non-fatal if request linking fails
+          }
+        }
+
         confirmKey.current = null
         createdQuote.current = null
         discountKeys.current = []
@@ -488,6 +499,7 @@ export function useNewRentalSubmit({
     editBookingId,
     confirmKey,
     draftBookingKey,
+    bookingRequestId,
     setActionError,
     setSaveState,
     setSavedDraftFingerprint,

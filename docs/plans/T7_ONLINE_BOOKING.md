@@ -82,7 +82,7 @@ Client B = 0 across bookings, invoices, payments, cases, documents, requests, pa
 N-7 respected (no write path enabled before D-5 green).
 **Needs** — T1-05 (two Client seats), T1-09, T7-01.
 
-### T7-04 · Requests and the staff queue            status: todo · size: L · lane C
+### T7-04 · Requests and the staff queue            status: ready — awaiting merge (feat/win-t7-04-requests-and-staff-queue) · size: L · lane C (Windows)
 **What** — Client side: cart → dates (availability shown, D31: **nothing held**) → request with the
 full price **with VAT** and the advance due (D34, computed server-side). Staff side: an "Online
 requests" queue (chip on Rentals and a Today card; paid requests on top, D31); **Confirm** opens New

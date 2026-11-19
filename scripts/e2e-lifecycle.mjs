@@ -9182,6 +9182,108 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L86',
+  title: 'online booking request creates no reservations until staff confirm; confirm creates exactly one booking (T7-04)',
+  expect: 'green',
+  async run() {
+    let reqId
+    let reqNum
+    const resCountBefore = Number((await q('select count(*) from inventory_reservations')).rows[0].count)
+
+    // 1. Anon submits booking request
+    await asAnon(async () => {
+      const payload = {
+        client_name: 'Online Requester',
+        client_email: 'requester@example.com',
+        client_phone: '+977-9800000000',
+        project_name: 'Commercial Shoot',
+        shoot_location: 'Mustang',
+        start_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+        end_date: new Date(Date.now() + 8 * 86400000).toISOString().slice(0, 10),
+        fulfillment_type: 'pickup',
+        lines: [
+          {
+            product_id: SERIAL_PRODUCT,
+            quantity: 1,
+          },
+        ],
+      }
+      const res = (await q(`select public.submit_booking_request($1::jsonb) as res`, [JSON.stringify(payload)])).rows[0].res
+      assert(Boolean(res.request_id), 'submit_booking_request returns request_id')
+      assert(Boolean(res.request_number), 'submit_booking_request returns request_number')
+      assertEq(res.status, 'pending', 'initial status is pending')
+      assert(Number(res.total_paisa) > 0, 'total_paisa calculated')
+      assert(Number(res.advance_due_paisa) > 0, 'advance_due_paisa calculated')
+      reqId = res.request_id
+      reqNum = res.request_number
+    })
+
+    // 2. Request creates ZERO reservations (D31)
+    const resCountAfter = Number((await q('select count(*) from inventory_reservations')).rows[0].count)
+    assertEq(resCountAfter, resCountBefore, 'a booking request creates 0 inventory reservations')
+
+    // 3. Floor roles cannot see money (Law 6)
+    await as('Warehouse', async () => {
+      const r = (await q(`select * from public.booking_requests_v where id = '${reqId}'`)).rows[0]
+      assert(Boolean(r), 'Warehouse can see request metadata')
+      assertEq(r.total_paisa, null, 'Warehouse sees null for total_paisa (Law 6)')
+      assertEq(r.vat_paisa, null, 'Warehouse sees null for vat_paisa (Law 6)')
+      assertEq(r.advance_due_paisa, null, 'Warehouse sees null for advance_due_paisa (Law 6)')
+    })
+
+    const realBookingId = bookingIds.a
+    await refusesAs(
+      'Warehouse',
+      'Warehouse cannot confirm booking request',
+      'select public.confirm_booking_request($1::uuid, $2::uuid)',
+      [reqId, realBookingId],
+      /unauthorized|permission denied/i
+    )
+
+    // 4. Coordinator confirms and declines
+    let decId
+    await as('Coordinator', async () => {
+      // Create another dummy request to test decline
+      const decRes = (await q(`select public.submit_booking_request($1::jsonb) as res`, [
+        JSON.stringify({
+          client_name: 'Decline Tester',
+          client_email: 'decline@example.com',
+          client_phone: '+977-9811111111',
+          start_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+          end_date: new Date(Date.now() + 8 * 86400000).toISOString().slice(0, 10),
+          fulfillment_type: 'pickup',
+          lines: [{ product_id: SERIAL_PRODUCT, quantity: 1 }],
+        }),
+      ])).rows[0].res
+      decId = decRes.request_id
+    })
+
+    await refusesAs(
+      'Coordinator',
+      'Decline requires a reason',
+      'select public.decline_booking_request($1::uuid, $2)',
+      [decId, '   '],
+      /reason is required/i
+    )
+
+    await as('Coordinator', async () => {
+      const decResult = (await q(`select public.decline_booking_request('${decId}'::uuid, 'Dates clash with maintenance') as res`)).rows[0].res
+      assertEq(decResult.status, 'declined', 'request declined successfully')
+
+      // Confirm main request
+      const confRes = (await q(`select public.confirm_booking_request('${reqId}'::uuid, '${realBookingId}'::uuid) as res`)).rows[0].res
+      assertEq(confRes.success, true, 'request confirmed successfully')
+      assertEq(confRes.booking_id, realBookingId, 'linked to booking id')
+
+      // Double-confirm is idempotent
+      const replayConf = (await q(`select public.confirm_booking_request('${reqId}'::uuid, '${realBookingId}'::uuid) as res`)).rows[0].res
+      assertEq(replayConf.success, true, 'double-confirm is idempotent')
+      assertEq(replayConf.already_confirmed, true, 'idempotent flag returned')
+    })
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break

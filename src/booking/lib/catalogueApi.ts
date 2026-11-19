@@ -228,3 +228,60 @@ export function getPublicPhotoUrl(path: string | undefined): string | null {
     return `/storage/catalogue/${path}`
   }
 }
+
+export interface BookingRequestLinePayload {
+  readonly product_id?: string | undefined
+  readonly bundle_id?: string | undefined
+  readonly quantity: number
+}
+
+export interface BookingRequestPayload {
+  readonly client_name: string
+  readonly client_email: string
+  readonly client_phone: string
+  readonly project_name?: string | undefined
+  readonly shoot_location?: string | undefined
+  readonly start_date: string
+  readonly end_date: string
+  readonly fulfillment_type: 'pickup' | 'delivery'
+  readonly delivery_zone_id?: string | undefined
+  readonly delivery_address?: string | undefined
+  readonly lines: BookingRequestLinePayload[]
+}
+
+export interface BookingRequestResult {
+  readonly request_id: string
+  readonly request_number: string
+  readonly total_paisa: number
+  readonly vat_paisa: number
+  readonly advance_due_paisa: number
+  readonly status: string
+}
+
+export async function submitBookingRequest(payload: BookingRequestPayload): Promise<BookingRequestResult> {
+  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock' || !supabase
+
+  if (isMock) {
+    // Generate simulated response for local/offline mock
+    const fakeId = 'req-' + Math.random().toString(36).substring(2, 9)
+    const fakeNum = 'REQ-' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + Math.floor(1000 + Math.random() * 9000)
+    return {
+      request_id: fakeId,
+      request_number: fakeNum,
+      total_paisa: 1500000,
+      vat_paisa: 195000,
+      advance_due_paisa: 847500,
+      status: 'pending',
+    }
+  }
+
+  const { data, error } = await supabase.rpc('submit_booking_request', {
+    p_payload: payload,
+  })
+
+  if (error || !data) {
+    throw new Error(error?.message || 'Failed to submit booking request.')
+  }
+
+  return data as BookingRequestResult
+}
