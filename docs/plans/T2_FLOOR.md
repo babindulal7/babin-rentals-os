@@ -454,7 +454,7 @@ on screen and in the database; 2) account-wide mode is unchanged; 3) the equipme
 minutes are used only in per-product mode; 4) screen check.
 **Needs** — T2-21 (same availability change).
 
-### T2-23 · Allow overbooking on chosen products            status: todo · size: M · lane A · [go-live] · slips first
+### T2-23 · Allow overbooking on chosen products            status: ready — awaiting merge (lane-a/T2-23-allow-overbooking-safe-shortages) · size: M · lane A · [go-live] · slips first
 **What** — Each product gets an **"Allow overbooking"** switch, **off by default** (B12), on the
 equipment form (product edit: Owner · Admin · Manager) and in bulk edit (T4-12). When it is on and a
 booking asks for more than is free, Confirm still succeeds: the extra quantity becomes a **short**

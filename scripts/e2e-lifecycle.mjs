@@ -408,7 +408,7 @@ async function seed() {
 
 let bookingIds = {}
 
-function createPayload({ key, window, actor, lines, discountPercent, clientId }) {
+function createPayload({ key, window, actor, lines, discountPercent, clientId, projectType }) {
   const payload = {
     client_uuid: crypto.randomUUID(),
     created_by: U[actor],
@@ -417,6 +417,7 @@ function createPayload({ key, window, actor, lines, discountPercent, clientId })
     pickup_at: window[0],
     return_at: window[1],
     delivery_type: 'Client Pickup',
+    ...(projectType !== undefined ? { project_type: projectType } : {}),
     lines: lines.map((line) => ({
       client_uuid: crypto.randomUUID(),
       line_type: 'Equipment',
@@ -9355,6 +9356,227 @@ STEPS.push({
     })
   },
 })
+
+STEPS.push({
+  id: 'L87',
+  title: 'past stock without the switch is refused (T2-23, B12, K4)',
+  expect: 'green',
+  run: async () => {
+    let bookingId
+    const clientCode = await one("select next_document_number('client')")
+    const clientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+      values (gen_random_uuid(), '${clientCode}', 'L87 Client', '+9779800009986', 'Active', '${U.Owner}')
+      returning id`)).rows[0].id
+
+    // Create a product with total_quantity = 2, allow_overbooking = false
+    const catId = await one('select id from inventory_categories order by name limit 1')
+    const prodCode = await one("select next_document_number('equipment')")
+    const prodId = (await q(`insert into products (client_uuid, asset_code, name, brand, category_id, tracking_mode, total_quantity, allow_overbooking, created_by)
+      values (gen_random_uuid(), '${prodCode}', 'L87 Limited Stock Lens', 'Sony', '${catId}', 'Quantity', 2, false, '${U.Owner}')
+      returning id`)).rows[0].id
+
+    // Create a booking requesting qty = 3 (more than stock on hand 2)
+    await as('Coordinator', async () => {
+      const res = await createBooking({
+        key: 'l87_booking',
+        window: ['2099-08-01T00:00:00Z', '2099-08-05T00:00:00Z'],
+        actor: 'Coordinator',
+        clientId,
+        projectType: 'Music Video',
+        lines: [{
+          productId: prodId,
+          description: 'L87 Limited Stock Lens',
+          qty: 3,
+          days: 4,
+          rate: 1000,
+        }],
+      })
+      bookingId = res.booking_id
+    })
+
+    // Confirm must be refused by capacity ceiling because allow_overbooking is false
+    let refused = false
+    try {
+      await as('Coordinator', async () => {
+        await one('select confirm_booking_atomic($1::uuid, $2::uuid, $3::uuid, now(), $4)', [
+          bookingId,
+          U.Coordinator,
+          crypto.randomUUID(),
+          'Attempt confirm past stock',
+        ])
+      })
+    } catch (err) {
+      refused = true
+      assert(err.message.includes('Reservation rejected') || err.message.includes('stock on hand is 2'), 'refused with capacity error')
+    }
+    assert(refused, 'past stock without the switch is refused (as today)')
+
+    const stage = await stageOf('l87_booking')
+    assertEq(stage, 'Quote', 'booking remains Quote')
+    const holds = await liveHolds('l87_booking')
+    assertEq(holds, 0, 'zero reservations placed')
+  },
+})
+
+STEPS.push({
+  id: 'L88',
+  title: 'with the switch: confirmed with a short line and no reservation (T2-23, B12, K4)',
+  expect: 'green',
+  run: async () => {
+    let bookingId
+    const clientCode = await one("select next_document_number('client')")
+    const clientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+      values (gen_random_uuid(), '${clientCode}', 'L88 Client', '+9779800009987', 'Active', '${U.Owner}')
+      returning id`)).rows[0].id
+
+    // Create a product with total_quantity = 2, allow_overbooking = true
+    const catId = await one('select id from inventory_categories order by name limit 1')
+    const prodCode = await one("select next_document_number('equipment')")
+    const prodId = (await q(`insert into products (client_uuid, asset_code, name, brand, category_id, tracking_mode, total_quantity, allow_overbooking, created_by)
+      values (gen_random_uuid(), '${prodCode}', 'L88 High Demand Light', 'Aputure', '${catId}', 'Quantity', 2, true, '${U.Owner}')
+      returning id`)).rows[0].id
+
+    // Create booking requesting qty = 3 (stock on hand is 2)
+    await as('Coordinator', async () => {
+      const res = await createBooking({
+        key: 'l88_booking',
+        window: ['2099-08-10T00:00:00Z', '2099-08-14T00:00:00Z'],
+        actor: 'Coordinator',
+        clientId,
+        projectType: 'Music Video',
+        lines: [{
+          productId: prodId,
+          description: 'L88 High Demand Light',
+          qty: 3,
+          days: 4,
+          rate: 2000,
+        }],
+      })
+      bookingId = res.booking_id
+    })
+
+    // Confirm succeeds with switch on
+    await as('Coordinator', async () => {
+      const res = await one('select confirm_booking_atomic($1::uuid, $2::uuid, $3::uuid, now(), $4)', [
+        bookingId,
+        U.Coordinator,
+        crypto.randomUUID(),
+        'Confirmed with overbooking allowed',
+      ])
+      assertEq(res.success, true, 'confirmation succeeded')
+      assertEq(res.stage, 'Booked', 'stage moved to Booked')
+    })
+
+    // Check line short_quantity is exactly 1 (3 requested - 2 free)
+    const lineRow = (await q(`select qty, short_quantity from booking_lines where booking_id = '${bookingId}' and voided_at is null`)).rows[0]
+    assertEq(lineRow.qty, 3, 'requested qty is 3')
+    assertEq(lineRow.short_quantity, 1, 'short_quantity is 1')
+
+    // Check inventory_reservations reserved exactly 2 (never 3)
+    const resQty = await one(`select coalesce(sum(qty), 0) from inventory_reservations where booking_id = '${bookingId}' and released_at is null`)
+    assertEq(Number(resQty), 2, 'inventory_reservations holds exactly 2 (free stock)')
+
+    // Check booking_at_risk logged shortage
+    const atRiskRow = (await q(`select cause, product_name, resolution_notes, resolved_at from booking_at_risk where booking_id = '${bookingId}' and cause = 'overbooking_shortage'`)).rows[0]
+    assert(Boolean(atRiskRow), 'booking_at_risk has overbooking_shortage row')
+    assertEq(atRiskRow.resolution_notes, '1 short — sub-rent or swap', 'notes state 1 short — sub-rent or swap')
+    assertEq(atRiskRow.resolved_at, null, 'shortage is initially unresolved')
+  },
+})
+
+STEPS.push({
+  id: 'L89',
+  title: 'Pack refuses a short line; resolving clears shortage and allows Pack (T2-23, K4)',
+  expect: 'green',
+  run: async () => {
+    const bookingId = bookingIds.l88_booking
+    assert(Boolean(bookingId), 'booking from L88 exists')
+
+    // 1. Attempt Pack transition while shortage remains unresolved -> must be refused
+    let packRefused = false
+    try {
+      await as('Warehouse', async () => {
+        await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
+          values (gen_random_uuid(), '${bookingId}', '${BRANCH}', 'Booked', 'Packed', '${U.Warehouse}', 'Warehouse', now(), 'Attempt Pack with shortage')`)
+      })
+    } catch (err) {
+      packRefused = true
+      assert(err.message.includes('gate.pack.shortage') || err.message.includes('unresolved short item'), 'refused by gate.pack.shortage')
+    }
+    assert(packRefused, 'Pack refuses an unresolved short line')
+
+    // 2. Handover attempt must also be refused
+    let handoverRefused = false
+    try {
+      await as('Warehouse', async () => {
+        await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
+          values (gen_random_uuid(), '${bookingId}', '${BRANCH}', 'Booked', 'On Rent', '${U.Warehouse}', 'Warehouse', now(), 'Attempt Handover with shortage')`)
+      })
+    } catch (err) {
+      handoverRefused = true
+      assert(err.message.includes('gate.pack.shortage'), 'Handover cannot bypass shortage stop')
+    }
+    assert(handoverRefused, 'Handover refuses an unresolved short line')
+
+    // 3a. Attempting resolution with notes only without coverage does NOT clear shortage
+    const atRiskId = (await q(`select id from booking_at_risk where booking_id = '${bookingId}' and cause = 'overbooking_shortage' and resolved_at is null`)).rows[0].id
+    await as('Coordinator', async () => {
+      const res = await one('select resolve_booking_at_risk($1::jsonb)', [JSON.stringify({
+        at_risk_id: atRiskId,
+        resolution: 'sub_rent',
+        notes: 'Promised to call Studio 9 later',
+      })])
+      assertEq(res.resolved, false, 'notes alone without coverage leaves at-risk unresolved')
+      assertEq(res.remaining_short_quantity, 1, 'remaining shortage is still 1')
+    })
+    const lineStillShort = (await q(`select short_quantity from booking_lines where booking_id = '${bookingId}' and voided_at is null`)).rows[0]
+    assertEq(lineStillShort.short_quantity, 1, 'short_quantity remains 1 without coverage')
+
+    // 3b. Pack is STILL refused because shortage is not covered
+    let packStillRefused = false
+    try {
+      await as('Warehouse', async () => {
+        await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
+          values (gen_random_uuid(), '${bookingId}', '${BRANCH}', 'Booked', 'Packed', '${U.Warehouse}', 'Warehouse', now(), 'Attempt Pack with uncovered note')`)
+      })
+    } catch (err) {
+      packStillRefused = true
+    }
+    assert(packStillRefused, 'Pack remains refused when resolution lacks actual coverage')
+
+    // 3c. Provide durable sub-rent coverage (covering_qty: 1)
+    await as('Coordinator', async () => {
+      const res = await one('select resolve_booking_at_risk($1::jsonb)', [JSON.stringify({
+        at_risk_id: atRiskId,
+        resolution: 'sub_rent',
+        covering_qty: 1,
+        notes: 'Sub-rent confirmed with partner Studio 9',
+      })])
+      assertEq(res.success, true, 'resolve_booking_at_risk succeeds with coverage')
+    })
+
+    // 4. Assert short_quantity is cleared to 0 and at_risk is resolved
+    const lineAfter = (await q(`select short_quantity from booking_lines where booking_id = '${bookingId}' and voided_at is null`)).rows[0]
+    assertEq(lineAfter.short_quantity, 0, 'short_quantity cleared to 0 upon resolution')
+
+    const atRiskAfter = (await q(`select resolved_at, resolution from booking_at_risk where id = '${atRiskId}'`)).rows[0]
+    assert(Boolean(atRiskAfter.resolved_at), 'booking_at_risk is resolved')
+    assertEq(atRiskAfter.resolution, 'sub_rent', 'resolution is sub_rent')
+
+    // 5. Pack now succeeds once packing session exists
+    await as('Warehouse', async () => {
+      const sessionId = crypto.randomUUID()
+      await q(`insert into operation_sessions (id, client_uuid, booking_id, operation, session_no, state, warehouse_staff_id, created_by)
+        values ('${sessionId}', gen_random_uuid(), '${bookingId}', 'Packing', 1, 'In Progress', '${U.Warehouse}', '${U.Warehouse}')`)
+
+      await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
+        values (gen_random_uuid(), '${bookingId}', '${BRANCH}', 'Booked', 'Packed', '${U.Warehouse}', 'Warehouse', now(), 'Pack completed')`)
+    })
+    const finalStage = await stageOf('l88_booking')
+    assertEq(finalStage, 'Packed', 'booking reached Packed after shortage resolved')
+  },
+})
+
 
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {

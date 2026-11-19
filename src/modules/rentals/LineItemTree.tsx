@@ -35,6 +35,27 @@ function renderAvailabilityPill(
   line: FloorLine,
   lineAvailability?: ReadonlyMap<string, LineEvaluationResult>,
 ) {
+  if (line.shortQty && line.shortQty > 0) {
+    return (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+          fontSize: '0.725rem',
+          fontWeight: 600,
+          padding: '1px 6px',
+          borderRadius: 999,
+          background: 'var(--st-danger-bg, rgba(239, 68, 68, 0.15))',
+          color: 'var(--danger-text, #dc2626)',
+        }}
+      >
+        <Icon name="alert_triangle" size={12} />
+        <span>{line.shortQty} short — sub-rent or swap</span>
+      </span>
+    )
+  }
+
   const evalResult =
     lineAvailability?.get(line.id) ??
     (line.productId ? lineAvailability?.get(line.productId) : undefined)
@@ -591,7 +612,13 @@ export function LineItemTree({
                                   onRelease={onReleaseUnit}
                                 />
                               ))
-                            ) : (
+                            ) : null}
+                            {(parent.shortQty ?? 0) > 0 ? (
+                              <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '0.725rem', fontWeight: 600, background: 'var(--st-danger-bg, rgba(239, 68, 68, 0.15))', color: 'var(--danger-text, #dc2626)', border: '1px solid var(--danger, #ef4444)' }}>
+                                {parent.shortQty} short
+                              </span>
+                            ) : null}
+                            {parent.units.length === 0 && !parent.shortQty && (
                               <span style={{ color: 'var(--muted)', fontSize: '0.75rem' }}>{assignmentLabel(parent, bookingStage)}</span>
                             )}
                           </div>
@@ -695,7 +722,13 @@ export function LineItemTree({
                                       onRelease={onReleaseUnit}
                                     />
                                   ))
-                                ) : (
+                                ) : null}
+                                {(child.shortQty ?? 0) > 0 ? (
+                                  <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '0.725rem', fontWeight: 600, background: 'var(--st-danger-bg, rgba(239, 68, 68, 0.15))', color: 'var(--danger-text, #dc2626)', border: '1px solid var(--danger, #ef4444)' }}>
+                                    {child.shortQty} short
+                                  </span>
+                                ) : null}
+                                {child.units.length === 0 && !child.shortQty && (
                                   <span style={{ color: 'var(--muted)', fontSize: '0.75rem' }}>{assignmentLabel(child, bookingStage)}</span>
                                 )}
                               </div>
@@ -822,7 +855,13 @@ export function LineItemTree({
                                 onRelease={onReleaseUnit}
                               />
                             ))
-                          ) : (
+                          ) : null}
+                          {(line.shortQty ?? 0) > 0 ? (
+                            <span style={{ padding: '2px 6px', borderRadius: '4px', fontSize: '0.725rem', fontWeight: 600, background: 'var(--st-danger-bg, rgba(239, 68, 68, 0.15))', color: 'var(--danger-text, #dc2626)', border: '1px solid var(--danger, #ef4444)' }}>
+                              {line.shortQty} short
+                            </span>
+                          ) : null}
+                          {line.units.length === 0 && !line.shortQty && (
                             <span style={{ color: 'var(--muted)', fontSize: '0.75rem' }}>{assignmentLabel(line, bookingStage)}</span>
                           )}
                         </div>
