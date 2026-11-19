@@ -1,5 +1,64 @@
 # Progress Log
 
+## 2026-11-20 — T7-08: My bookings (Lane C / Windows)
+
+**Did**
+- Completed **T7-08 · My bookings** (`lane-c/T7-08-my-bookings`):
+  - Created `src/booking/account/accountApi.ts`:
+    - Implemented `mapStageToTimeline`: maps booking/request lifecycle into the canonical 6-step client timeline (1: Request Submitted, 2: Confirmed, 3: Packed, 4: On Rent, 5: Returned, 6: Closed) per PERMISSIONS §7 P2.
+    - Implemented `fetchMyBookings(user)`: queries client's booking requests, confirmed bookings, lines, invoices, and payment intents. Enforces strict D-5 tenant isolation (client only reads rows linked to their own verified auth UUID). Includes robust offline/test fallback.
+    - Implemented `viewClientDocument(doc)`: provides preview and download triggers for verified client documents (Quote, Agreement, Invoice, Receipt per PERMISSIONS §7 P5).
+  - Authored `src/booking/account/MyBookingsModal.tsx`:
+    - Full client portal modal with tabs: All Bookings, Active & Upcoming, Completed.
+    - Displays 6-step visual progress bar, rental dates, line items, and financial summary (Total, Paid, Outstanding Balance).
+    - Integrated "Pay balance" trigger connecting directly to T7-05's `OnlinePaymentModal`.
+    - Handles all 5 standard screen states: loading, empty, error, restricted (signed out with OTP prompt), and offline notice.
+  - Authored `src/booking/account/index.ts` re-exporting modal and APIs.
+  - Integrated into `src/booking/components/BookingHeader.tsx` and `ClientProfileModal.tsx`:
+    - Added "My Bookings" button next to client profile when signed in.
+    - Wired state `isMyBookingsOpen` in `src/booking/App.tsx`.
+  - Authored comprehensive test suite `src/booking/account/__tests__/myBookings.test.tsx` verifying:
+    - Restricted signed-out state when user is null.
+    - Authenticated view with bookings list, 6-step timeline, documents, and balance.
+    - Tab filtering between All Bookings, Active & Upcoming, and Completed.
+    - Document downloading/viewing.
+    - Pay balance action trigger.
+    - All 31 tests in `src/booking/` passing.
+  - Passed all verification gates:
+    - `npm run typecheck`: clean (0 errors).
+    - `npm run lint`: clean (0 errors, 0 warnings).
+    - `npm run lint:ui-copy`: 0 developer-text violations.
+    - `npm run check:contrast`: 97/97 passing WCAG AA.
+    - `npm run check:pglite`: 248/248 migrations applied, 0 failed.
+    - `npm run check:lifecycle`: 92/92 steps green, 0 failed.
+    - `npm run build`: built in 3m 7s (ops app + marketing public site).
+  - Updated `docs/plans/T7_ONLINE_BOOKING.md` status to `ready — awaiting merge (lane-c/T7-08-my-bookings)`.
+
+**Ruled**
+- Client timeline strictly shows 6 client-friendly operational milestones (Request Submitted → Confirmed → Packed → On Rent → Returned → Closed) hiding internal custody/inspection nuances.
+- Strict D-5 tenant isolation: clients can only ever query and view bookings, invoices, and documents tied to their authenticated UUID.
+- Client documents are read-only and restricted to Quote, Agreement, Invoice, and Receipt (PERMISSIONS §7 P2–P5).
+- Balance payment via "Pay balance" uses the server-computed outstanding balance and delegates securely to `OnlinePaymentModal`.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 111 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | +0 |
+| Lifecycle | steps green / total | 92 / 92 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 248 files · check:pglite 248/248 applied, 0 failed (recorded 2026-11-19T19:54:43.634Z). Suite: Historical suite: 7441/7441 passed, 0 failed (recorded 2026-11-19T18:07:13.731Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 7398/7398 passed, 0 failed (recorded 2026-11-19T01:10:17.481Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-19T19:55:27.002Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Waiting on Babin: Babin to enter live `FONEPAY_MERCHANT_CODE` and `FONEPAY_SECRET_KEY` in Supabase Edge Function secrets and record one live Rs 10 test payment to reconcile with Fonepay statement.
+- Next roadmap cards in order: T7-12 (Recommended items), T7-07 (Refunds and reconciliation), T7-06 (eSewa & Khalti).
+
 ## 2026-11-20 — T7-05: Online payment — Fonepay first (Lane C / Windows)
 
 **Did**

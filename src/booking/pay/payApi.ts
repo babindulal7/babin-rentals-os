@@ -38,13 +38,14 @@ export interface PayVerifyResponse {
  * Computes amount server-side; client amount is never passed.
  */
 export async function initOnlinePayment(params: {
-  clientUuid: string
+  clientUuid?: string | undefined
   bookingRequestId?: string | undefined
   bookingId?: string | undefined
   provider?: 'fonepay' | 'esewa' | 'khalti' | undefined
   returnUrl?: string | undefined
 }): Promise<PayInitResponse> {
-  const { clientUuid, bookingRequestId, bookingId, provider = 'fonepay', returnUrl } = params
+  const clientUuid = params.clientUuid || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'client-intent-uuid')
+  const { bookingRequestId, bookingId, provider = 'fonepay', returnUrl } = params
 
   try {
     const { data, error } = await supabase.functions.invoke<PayInitResponse>('pay-init', {

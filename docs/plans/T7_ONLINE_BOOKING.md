@@ -154,7 +154,7 @@ is T3-29. A reconciliation report lists online payments by provider and day agai
 the report reconciles a sandbox day.
 **Needs** — T7-05.
 
-### T7-08 · My bookings            status: todo · size: M · lane C
+### T7-08 · My bookings            status: ready — awaiting merge (lane-c/T7-08-my-bookings) · size: M · lane C (Windows)
 **What** — For a signed-in client: their bookings (the six-step client timeline), invoices with
 balance, receipts, documents (quote, agreement, invoice — PERMISSIONS §7 P2–P5) and **Pay balance**
 (T7-05). Read-only otherwise. Extension requests, payment-proof upload and remote agreement signing

@@ -7,7 +7,7 @@ export interface OnlinePaymentModalProps {
   onClose: () => void
   bookingRequestId?: string | undefined
   bookingId?: string | undefined
-  clientUuid: string
+  clientUuid?: string | undefined
   onPaymentSuccess?: ((result: { intentId: string; paymentNo?: string | undefined; amountPaisa: number }) => void) | undefined
 }
 

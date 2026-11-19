@@ -21,6 +21,7 @@ interface ClientProfileModalProps {
   user: ClientUser | null
   onSignOut: () => void
   onProfileUpdated?: ((profile: OnlineProfile) => void) | undefined
+  onOpenMyBookings?: (() => void) | undefined
 }
 
 export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
@@ -29,6 +30,7 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
   user,
   onSignOut,
   onProfileUpdated,
+  onOpenMyBookings,
 }) => {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -191,21 +193,46 @@ export const ClientProfileModal: React.FC<ClientProfileModalProps> = ({
               {user.email}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={handleSignOut}
-            style={{
-              background: 'none',
-              border: '1px solid var(--border-subtle)',
-              color: 'var(--rose-text)',
-              padding: '6px 12px',
-              borderRadius: 'var(--radius-md)',
-              fontSize: '0.82rem',
-              cursor: 'pointer',
-            }}
-          >
-            Sign Out
-          </button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {onOpenMyBookings && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose()
+                  onOpenMyBookings()
+                }}
+                style={{
+                  background: 'rgba(234, 179, 8, 0.12)',
+                  border: '1px solid rgba(234, 179, 8, 0.3)',
+                  color: 'var(--accent-gold, #eab308)',
+                  padding: '6px 12px',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  minHeight: 36,
+                }}
+              >
+                📋 My Bookings
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleSignOut}
+              style={{
+                background: 'none',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--rose-text)',
+                padding: '6px 12px',
+                borderRadius: 'var(--radius-md)',
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                minHeight: 36,
+              }}
+            >
+              Sign Out
+            </button>
+          </div>
         </div>
 
         {error && (

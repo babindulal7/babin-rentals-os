@@ -12,6 +12,7 @@ interface BookingHeaderProps {
   profileName?: string | null | undefined
   onOpenAuth?: (() => void) | undefined
   onOpenProfile?: (() => void) | undefined
+  onOpenMyBookings?: (() => void) | undefined
 }
 
 export const BookingHeader: React.FC<BookingHeaderProps> = ({
@@ -25,6 +26,7 @@ export const BookingHeader: React.FC<BookingHeaderProps> = ({
   profileName,
   onOpenAuth,
   onOpenProfile,
+  onOpenMyBookings,
 }) => {
   return (
     <header className="booking-header" role="banner">
@@ -72,18 +74,30 @@ export const BookingHeader: React.FC<BookingHeaderProps> = ({
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {user ? (
-              <button
-                type="button"
-                className="cart-button"
-                onClick={onOpenProfile}
-                style={{ background: 'var(--bg-surface)' }}
-                aria-label={`Open client account profile for ${profileName || user.email}`}
-              >
-                <span aria-hidden="true">👤</span>
-                <span style={{ maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {profileName || user.email.split('@')[0]}
-                </span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="cart-button"
+                  onClick={onOpenMyBookings}
+                  style={{ background: 'var(--bg-surface)' }}
+                  aria-label="View my rental bookings and invoices"
+                >
+                  <span aria-hidden="true">📋</span>
+                  <span>My Bookings</span>
+                </button>
+                <button
+                  type="button"
+                  className="cart-button"
+                  onClick={onOpenProfile}
+                  style={{ background: 'var(--bg-surface)' }}
+                  aria-label={`Open client account profile for ${profileName || user.email}`}
+                >
+                  <span aria-hidden="true">👤</span>
+                  <span style={{ maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {profileName || user.email.split('@')[0]}
+                  </span>
+                </button>
+              </>
             ) : (
               <button
                 type="button"

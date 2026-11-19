@@ -24,6 +24,7 @@ import { ProductDetailModal } from './components/ProductDetailModal'
 import { CartDrawer, type CartLine } from './components/CartDrawer'
 import { ClientAuthModal } from './components/ClientAuthModal'
 import { ClientProfileModal } from './components/ClientProfileModal'
+import { MyBookingsModal } from './account/MyBookingsModal'
 
 export default function BookingApp() {
   const getTomorrowString = () => {
@@ -54,6 +55,7 @@ export default function BookingApp() {
   const [clientProfile, setClientProfile] = useState<OnlineProfile | null>(null)
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false)
   const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false)
+  const [isMyBookingsOpen, setIsMyBookingsOpen] = useState<boolean>(false)
   const [awayStatus, setAwayStatus] = useState<OnlineBookingAwayStatus | null>(null)
   const [legacyMappings, setLegacyMappings] = useState<LegacyMappingEntry[]>([])
   const [legacyNotice, setLegacyNotice] = useState<string | null>(null)
@@ -294,6 +296,7 @@ export default function BookingApp() {
         profileName={clientProfile?.name}
         onOpenAuth={() => setIsAuthOpen(true)}
         onOpenProfile={() => setIsProfileOpen(true)}
+        onOpenMyBookings={() => setIsMyBookingsOpen(true)}
       />
 
       <main className="booking-container">
@@ -531,6 +534,15 @@ export default function BookingApp() {
           setClientProfile(null)
         }}
         onProfileUpdated={(updated) => setClientProfile(updated)}
+        onOpenMyBookings={() => setIsMyBookingsOpen(true)}
+      />
+
+      {/* My Bookings & Invoices Modal (T7-08) */}
+      <MyBookingsModal
+        isOpen={isMyBookingsOpen}
+        onClose={() => setIsMyBookingsOpen(false)}
+        user={clientUser}
+        onOpenAuth={() => setIsAuthOpen(true)}
       />
     </div>
   )
