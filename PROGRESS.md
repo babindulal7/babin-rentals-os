@@ -1,5 +1,41 @@
 # Progress Log
 
+## 2026-11-19 — T3-31 counter sale implementation and verification (Lane C)
+
+**Did**
+- Implemented T3-31 counter sale with forward-only migration `0252_counter_sale_rpc.sql` adding `create_counter_sale` and `cancel_counter_sale` RPCs, `is_counter_sale` column on bookings, and `counter_sale_movements` tracking table.
+- Added server actions `createCounterSale` and `cancelCounterSale`, and integrated `CounterSaleModal` in RentalsList and CreationActionRegistry.
+- Added lifecycle step `L85` asserting floor-role initiation, instant stock deduction, money-blind responses (Law 6), pre-payment cancellation role gating and stock restoration, and paid-sale cancellation prevention.
+- Added unit tests in `src/actions/rentals/__tests__/counterSale.test.ts` (9/9 pass).
+
+**Ruled**
+- B46, B51: Walk-in consumable sales skip rental custody stages (booking stage = Returned); floor roles initiate with money-blind responses; desk takes payment. Cancellation before payment restores stock and voids draft invoice.
+
+**Verified**
+- `npm run check:pglite`: 249/249 applied, 0 failed, 0 view leaks, 0 unauthorized anon RPCs.
+- `npm run check:lifecycle`: 86/86 green, 0 known-red, 0 failed.
+- `npm run check:contrast`: 97/97 pass.
+- `npm run test:server-contracts`: 68/68 pass.
+- `npm run test:partial-return`: 58/58 pass.
+- `npm run typecheck`: clean, 0 errors.
+- `npm run lint`: clean, 0 warnings.
+- `npx vitest run src/actions/rentals/__tests__/counterSale.test.ts`: 9/9 passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 111 (99%) | — |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | — |
+| Lifecycle | steps green / total | 86 / 86 (100%) | — |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 249 files · check:pglite 249/249 applied, 0 failed (recorded 2026-11-19T17:42:10.360Z).
+Gates read from .lifecycle-result.json, written 2026-11-19T17:42:36.195Z.
+
+### Remaining
+- Awaiting local merge by Babin onto main and final Mac CI verification.
+
 ## 2026-11-19 — T3-31 owner design approval (Lane C)
 
 **Did**
