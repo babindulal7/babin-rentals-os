@@ -21,6 +21,7 @@ import type { BookingStatus } from '../../lib/workflow'
 import RawDashboardMovementPanel, { dashboardAction } from './DashboardMovementPanel'
 import LegacyExportCard from './LegacyExportCard'
 import RoleTaskCockpit from './RoleTaskCockpit'
+import { CounterSaleModal } from '../sales/CounterSaleModal'
 import './dashboard.css'
 
 const DashboardMovementPanel = RawDashboardMovementPanel as React.ComponentType<
@@ -381,6 +382,7 @@ export default function Today() {
   const mobileTabChosenRef = useRef(false)
   const { openOperations } = useOperationsWorkspace()
   const [globalSearch, setGlobalSearch] = useState('')
+  const [showCounterSale, setShowCounterSale] = useState(false)
   const counterInputRef = useRef<HTMLInputElement>(null)
 
   const [pickupDateFilter, setPickupDateFilter] = useState<DateFilter>(() => readStoredFilter(STORAGE_PICKUPS))
@@ -673,6 +675,7 @@ export default function Today() {
             <PageActions
               primary={<GlobalAddMenu module="today" />}
               overflow={[
+                { label: 'Counter Sale', icon: 'package', onClick: () => setShowCounterSale(true) },
                 { label: 'Operations', icon: 'queues', onClick: () => navigate('/operations') },
                 { label: 'Refresh movements', icon: 'refresh', onClick: refetchMovement,
                   ...(pickups.loading || returns.loading ? { unavailable: 'Movements are refreshing' } : {}) },
@@ -891,6 +894,17 @@ export default function Today() {
         <summary className="dashboard-other-tasks__summary">Other tasks and shortcuts</summary>
         <RoleTaskCockpit />
       </details>
+
+      {showCounterSale && (
+        <CounterSaleModal
+          isOpen={showCounterSale}
+          onClose={() => setShowCounterSale(false)}
+          onSuccess={() => {
+            setShowCounterSale(false)
+            refetchMovement()
+          }}
+        />
+      )}
 
     </PageShell>
   )
