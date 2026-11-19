@@ -8,6 +8,7 @@
 
 import { supabase } from '@/lib/supabase'
 import { verifyPublicRequestAbuse } from '@/lib/abuseProtection'
+import { fetchOnlineBookingAwayStatus } from '@/lib/awayMode'
 
 export interface BundleComponent {
   readonly name: string
@@ -266,6 +267,12 @@ export async function submitBookingRequest(
   const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock' || !supabase
 
   if (isMock) {
+    // Check away mode status first (fail-closed, matching server contract)
+    const awayStatus = await fetchOnlineBookingAwayStatus()
+    if (awayStatus.is_away) {
+      throw new Error(`Online booking requests are temporarily disabled: ${awayStatus.message}`)
+    }
+
     // Abuse / bot protection check for mock/test runs
     const abuse = verifyPublicRequestAbuse({
       ip: '127.0.0.1',

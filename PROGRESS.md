@@ -1,5 +1,51 @@
 # Progress Log
 
+## 2026-11-19 — T7-14: "Away" switch for online booking (Lane C / Windows)
+
+**Did**
+- Implemented **T7-14 · "Away" switch for online booking** (`lane-c/T7-14-away-switch-for-online-booking`):
+  - Database & Server Security Migration `supabase/migrations/0249_away_switch_for_online_booking.sql` (claiming ledger number 0249):
+    - Added public read RPC `public.get_online_booking_away_status()` returning `{ is_away, configured_away, can_accept_requests, message, resume_date }` with pinned `search_path`, callable by anon and authenticated callers.
+    - Added administrative configuration RPC `public.set_online_booking_away(p_is_away boolean, p_message text, p_resume_date timestamptz)` gated to `auth_user_role() in ('Owner', 'Admin', 'Manager')` (throws `GATE:ONLY_MANAGEMENT_CAN_CONFIGURE_AWAY_MODE` for unauthorized callers), with automatic audit logging to `public.audit_log`.
+    - Updated `public.submit_booking_request` to check `public.get_online_booking_away_status()` and reject incoming requests with fail-closed denial `GATE:ONLINE_BOOKING_AWAY` when away mode is active.
+    - Registered `get_online_booking_away_status` in `scripts/allowed-anon-functions.mjs`.
+  - Lifecycle verification:
+    - Added Step `L89` to `scripts/e2e-lifecycle.mjs` verifying role gate refusal for non-management (Warehouse), active away status evaluation, anon booking request refusal while away, and request success after turning off.
+  - Away mode engine & UI controls:
+    - Extended `src/lib/awayMode.ts` with `fetchOnlineBookingAwayStatus()`, `saveOnlineBookingAwayStatus()`, and mock store synchronization.
+    - Created `src/modules/settings/sections/OnlineBookingAwayControl.tsx` with toggle switch "Away — not taking online requests", customizable notice message (default: "Back on 15 Feb — call or WhatsApp us"), optional resume date, role permission gating (Owner/Admin/Manager), and offline indicators.
+    - Added `online_booking` section to `SYSTEM_SECTIONS` in `src/modules/settings/sections/System.tsx`.
+    - Integrated away mode notices and request disabling into `src/booking/App.tsx` and `src/booking/components/CartDrawer.tsx` (catalogue and pricing remain fully viewable per B6; request buttons show notice and prevent submissions).
+  - Tests & Verification:
+    - Added unit test suite `src/modules/settings/sections/__tests__/OnlineBookingAwayControl.test.tsx` (4 tests) verifying status pills, Owner editing, role denial for non-management, and offline state.
+    - Added away mode request rejection test in `src/booking/__tests__/cartCheckout.test.ts`.
+    - All 663 test files and 7,416 unit tests passed (0 failed).
+    - All CI gates passed: check:pglite (246/246), check:security, check:lifecycle (90/90), test:server-contracts (68/68), test:partial-return (58/58), test-receipt (11/11), lint:shell, lint:ui-copy, check:contrast (97/97), build (PWA generated).
+
+**Ruled**
+- Online booking requests can be paused during holidays or stocktaking without hiding the catalogue, base rates, or search capabilities (B6).
+- Only Owner, Admin, and Manager can toggle or edit Away mode settings; other roles see read-only status.
+- When an optional resume date is configured and Kathmandu operational time passes that date, Away mode automatically disengages.
+- Server-side RPC `submit_booking_request` fail-closes with `GATE:ONLINE_BOOKING_AWAY` when away mode is active, preventing bypasses.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 111 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | +0 |
+| Lifecycle | steps green / total | 90 / 90 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 246 files · check:pglite 246/246 applied, 0 failed (recorded 2026-11-19T12:52:38.907Z). Suite: PASS — 7416/7416 passed, 0 failed (recorded 2026-11-19T13:03:49.141Z); source fingerprint matches.
+Coverage suite: Historical suite: 7398/7398 passed, 0 failed (recorded 2026-11-19T01:10:17.481Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-19T12:53:55.103Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T7-14 complete and verified across all gates. Next roadmap cards in order.
+
 ## 2026-11-19 — T7-09: Bot and abuse protection (Lane C / Windows)
 
 **Did**
