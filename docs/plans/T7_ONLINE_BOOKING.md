@@ -255,7 +255,7 @@ the staff app loads neither script; no personal data in any event (test); the pr
 performance score drops by ⭐ 5 points at most.
 **Needs** — T7-02; the two IDs from Babin (BABIN_ACTIONS).
 
-### T7-17 · Old store links open the same item            status: todo · size: S · lane C · [go-live] · slips first
+### T7-17 · Old store links open the same item            status: doing · size: S · lane C (Windows) · [go-live] · slips first
 **What** — Old Booqable store addresses (product and category pages) live on in Google results,
 Instagram bios and WhatsApp chats. From day X each one opens **the same item** on
 `book.babinrentals.com` (B4): T9-01 records each product's Booqable slug; the booking site maps an old
