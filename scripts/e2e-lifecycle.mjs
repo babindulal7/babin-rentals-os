@@ -9062,6 +9062,185 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L85',
+  title: 'Counter sale: floor roles initiate with stock deduction, money-blind responses, desk settlement and pre-payment cancellation (T3-31, B46, B51)',
+  expect: 'green',
+  run: async () => {
+    let consumableId
+    await asOwnerOfTheDatabase(async () => {
+      const catId = await one('select id from inventory_categories order by name limit 1')
+      const assetCode = await one("select next_document_number('equipment')")
+      const pRes = await q(`
+        insert into products (
+          client_uuid, asset_code, name, brand, category_id, tracking_mode, status,
+          total_quantity, reorder_level, quantity_unit, unit_sale_price, daily_rate, created_by
+        ) values (
+          gen_random_uuid(), '${assetCode}', 'L85 Gaffer Tape 2in', 'ProTapes', '${catId}', 'Consumable', 'Active',
+          10, 2, 'roll', 400.00, 400.00, '${U.Owner}'
+        ) returning id
+      `)
+      consumableId = pRes.rows[0].id
+    })
+
+    // 1. Floor role (Warehouse) initiates counter sale for 3 rolls (B51)
+    let sale1BookingId
+    let sale1InvoiceId
+    await as('Warehouse', async () => {
+      const payload = {
+        client_uuid: crypto.randomUUID(),
+        notes: 'Walk-in buyer for stage tape',
+        lines: [{
+          product_id: consumableId,
+          qty: 3,
+        }],
+      }
+      const res = await one('select create_counter_sale($1::jsonb)', [JSON.stringify(payload)])
+      assertEq(res.success, true, 'Warehouse starts counter sale successfully')
+      assertEq(res.is_counter_sale, true, 'is_counter_sale flag is true')
+      assertEq(res.total_amount, null, 'Warehouse response is money-blind (Law 6, null total_amount)')
+      sale1BookingId = res.booking_id
+      sale1InvoiceId = res.invoice_id
+    })
+
+    // Verify stock decremented from 10 to 7
+    const stockAfterSale1 = Number(await one('select total_quantity from products where id = $1', [consumableId]))
+    assertEq(stockAfterSale1, 7, 'Product stock immediately decremented from 10 to 7')
+
+    // Verify movements table recorded sale
+    const movements1 = (await q(`select movement_type, qty, quantity_before, quantity_after from counter_sale_movements where booking_id = '${sale1BookingId}'`)).rows
+    assertEq(movements1.length, 1, 'One counter sale movement recorded')
+    assertEq(movements1[0].movement_type, 'sale', 'Movement is sale')
+    assertEq(movements1[0].qty, 3, 'Movement qty is 3')
+    assertEq(movements1[0].quantity_before, 10, 'quantity_before was 10')
+    assertEq(movements1[0].quantity_after, 7, 'quantity_after is 7')
+
+    // Verify booking is stage Returned and has Draft invoice
+    const booking1 = (await q(`select stage, is_counter_sale from bookings where id = '${sale1BookingId}'`)).rows[0]
+    assertEq(booking1.stage, 'Returned', 'Counter sale booking stage is immediately Returned (no floor checkin/checkout)')
+    assertEq(booking1.is_counter_sale, true, 'bookings.is_counter_sale is true')
+
+    const inv1 = (await q(`select status from invoices where id = '${sale1InvoiceId}'`)).rows[0]
+    assertEq(inv1.status, 'Draft', 'Draft invoice created for desk settlement')
+
+    // 2. Pre-payment cancellation role gate: Warehouse and Coordinator barred from cancellation
+    await as('Warehouse', async () => {
+      let threw = false
+      try {
+        await one('select cancel_counter_sale($1::jsonb)', [JSON.stringify({
+          booking_id: sale1BookingId,
+          reason: 'Customer changed mind and walked out',
+        })])
+      } catch (e) {
+        threw = true
+        assert(e.message.includes('gate.counter_sale.cancel_role') || e.message.includes('permission denied'), 'Warehouse denied cancel')
+      }
+      assert(threw, 'Warehouse cannot cancel counter sale')
+    })
+
+    await as('Coordinator', async () => {
+      let threw = false
+      try {
+        await one('select cancel_counter_sale($1::jsonb)', [JSON.stringify({
+          booking_id: sale1BookingId,
+          reason: 'Customer changed mind and walked out',
+        })])
+      } catch (e) {
+        threw = true
+        assert(e.message.includes('gate.counter_sale.cancel_role') || e.message.includes('permission denied'), 'Coordinator denied cancel')
+      }
+      assert(threw, 'Coordinator cannot cancel counter sale')
+    })
+
+    // 3. Desk role (Manager) cancels before payment: restores stock to 10 and voids draft invoice
+    await as('Manager', async () => {
+      let threwShort = false
+      try {
+        await one('select cancel_counter_sale($1::jsonb)', [JSON.stringify({
+          booking_id: sale1BookingId,
+          reason: 'short',
+        })])
+      } catch (e) {
+        threwShort = true
+      }
+      assert(threwShort, 'Reason < 10 characters is rejected')
+
+      const cancelRes = await one('select cancel_counter_sale($1::jsonb)', [JSON.stringify({
+        booking_id: sale1BookingId,
+        reason: 'Customer left without payment before taking items',
+      })])
+      assertEq(cancelRes.success, true, 'Manager cancels counter sale successfully')
+      assertEq(cancelRes.restored, true, 'Stock restored flag is true')
+    })
+
+    const stockAfterCancel = Number(await one('select total_quantity from products where id = $1', [consumableId]))
+    assertEq(stockAfterCancel, 10, 'Product stock restored back to 10')
+
+    const movementsAfterCancel = (await q(`select movement_type, qty, quantity_before, quantity_after from counter_sale_movements where booking_id = '${sale1BookingId}' and movement_type = 'reversal'`)).rows
+    assertEq(movementsAfterCancel.length, 1, 'Reversal movement recorded')
+    assertEq(movementsAfterCancel[0].qty, 3, 'Reversal qty is 3')
+    assertEq(movementsAfterCancel[0].quantity_before, 7, 'Reversal before was 7')
+    assertEq(movementsAfterCancel[0].quantity_after, 10, 'Reversal after is 10')
+
+    const inv1AfterCancel = (await q(`select status from invoices where id = '${sale1InvoiceId}'`)).rows[0]
+    assertEq(inv1AfterCancel.status, 'Void', 'Draft invoice is voided')
+
+    const booking1AfterCancel = (await q(`select cancelled_at from bookings where id = '${sale1BookingId}'`)).rows[0]
+    assert(booking1AfterCancel.cancelled_at !== null, 'Booking is cancelled')
+
+    // 4. Manager creates another counter sale (2 rolls) -> sees money, desk takes payment, cancellation blocked
+    let sale2BookingId
+    let sale2InvoiceId
+    await as('Manager', async () => {
+      const payload = {
+        client_uuid: crypto.randomUUID(),
+        client_id: CLIENT,
+        notes: 'Walk-in completed counter sale',
+        lines: [{
+          product_id: consumableId,
+          qty: 2,
+        }],
+      }
+      const res = await one('select create_counter_sale($1::jsonb)', [JSON.stringify(payload)])
+      assertEq(res.success, true, 'Manager creates counter sale')
+      assertEq(Number(res.total_amount), 800, 'Manager sees total_amount (2 * 400 = 800)')
+      sale2BookingId = res.booking_id
+      sale2InvoiceId = res.invoice_id
+    })
+
+    const stockAfterSale2 = Number(await one('select total_quantity from products where id = $1', [consumableId]))
+    assertEq(stockAfterSale2, 8, 'Product stock decremented from 10 to 8')
+
+    // Desk records payment
+    await as('Accounts', async () => {
+      await q(`
+        insert into payments (
+          client_uuid, payment_no, booking_id, invoice_id, client_id, branch_id,
+          amount, payment_type, payment_date, received_by, status
+        ) values (
+          gen_random_uuid(), next_document_number('payment'), '${sale2BookingId}', '${sale2InvoiceId}',
+          '${CLIENT}', '${BRANCH}', 800.00, 'Advance Payment', now(), '${U.Accounts}', 'Received'
+        )
+      `)
+    })
+
+    // Now cancellation MUST be blocked because payment is recorded
+    await as('Manager', async () => {
+      let threwPaid = false
+      try {
+        await one('select cancel_counter_sale($1::jsonb)', [JSON.stringify({
+          booking_id: sale2BookingId,
+          reason: 'Attempting to cancel already settled counter sale',
+        })])
+      } catch (e) {
+        threwPaid = true
+        assert(e.message.includes('gate.counter_sale.has_payment'), 'Cannot cancel counter sale with recorded payment')
+      }
+      assert(threwPaid, 'cancel_counter_sale blocked on paid sale')
+    })
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break

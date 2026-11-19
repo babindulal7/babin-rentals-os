@@ -469,7 +469,7 @@ with a movement row; 3) dropping below the reorder level shows on Today; 4) Ware
 never prices; 5) screen check.
 **Needs** — none.
 
-### T3-31 · Counter sale            status: doing — design note · size: M · lane C · [go-live] · slips first
+### T3-31 · Counter sale            status: ready — awaiting merge (lane-c/T3-31-counter-sale) · size: M · lane C · [go-live] · slips first
 **What** — A walk-in buys consumables without renting (B46). Anyone can start it (B51): **floor roles**
 pick the items and quantities (no prices shown, Law 6) and hand them over; **the desk** takes payment.
 "Counter sale" on Today and in New Rental. One atomic server action creates the sale, deducts stock and

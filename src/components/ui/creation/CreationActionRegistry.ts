@@ -13,6 +13,7 @@ import type { Role as SystemRole } from '../../../lib/rbac'
 import {
   canViewMoney,
   canWriteBookingDesk,
+  canWriteFloor,
   canCreateClient,
   canCreateBundle,
   canPerformOperations,
@@ -141,6 +142,17 @@ export const CREATION_ACTIONS: CreationActionDefinition[] = [
       clientName: facts.clientName,
       dateRange: facts.dateRange,
     }),
+  },
+  {
+    id: 'counter_sale.new',
+    label: 'Counter Sale',
+    description: 'Instant consumable sale without rental booking',
+    icon: 'box',
+    module: 'rentals',
+    group: 'rentals',
+    displayPriority: 2,
+    openingMode: 'dialog',
+    isPermitted: (role) => canWriteBookingDesk(role) || canWriteFloor(role),
   },
   {
     id: 'quote.new',

@@ -97,5 +97,6 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0250 | O-28b S2 | outsourced-vehicle-quote | feat/r-9-18-delivery-fee-grid | written, not applied (N-5); append-only quote table, RPC records the approver, audit trigger, Law 3 immutability; money-visible read only; needs 0010 and 0246 |
 | 0249 | O-28b S2 | late-night-delivery-is-money-setting | feat/r-9-18-delivery-fee-grid | written, not applied (N-5); adds lateNightDeliveryRupees to settings_is_money_key() (same shape as 0202); needs 0158 |
 | 0248 | O-28b | delivery-zone-distance-band | feat/r-9-18-delivery-fee-grid | written, not applied (N-5); own table, read by staff roles, written by Owner/Admin/Manager; check only, no price depends on it; needs 0189 |
+| 0252 | T3-31 | counter-sale-rpc | lane-c/T3-31-counter-sale | written, not applied (N-5) |
 
 ## Expected migrations (not yet claimed)
