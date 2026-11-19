@@ -10187,6 +10187,128 @@ STEPS.push({
   },
 })
 
+// -----------------------------------------------------------------------------
+// STEP L94: Online payment providers eSewa and Khalti (T7-06, D30)
+//
+// Authority:
+//   - T7-06 · eSewa and Khalti payment providers
+//   - Ruling D30: Server-to-server confirmation only. Browser redirect alone never counts.
+//   - Provider switch invariant: Providers stay off until merchant credentials exist.
+//   - Law 1: Authoritative amount calculated on server.
+//   - Law 4: Payment rows immutable.
+//   - Law 6: Non-management and money-blind roles cannot alter provider status.
+// -----------------------------------------------------------------------------
+STEPS.push({
+  id: 'L94',
+  title: 'online payment providers eSewa and Khalti (T7-06, D30) — activation switch, disabled refused, enabled creates intent and allocates',
+  expect: 'green',
+  run: async () => {
+    let reqId
+    await asOwnerOfTheDatabase(async () => {
+      const res = await q(`
+        insert into public.booking_requests (
+          request_number, client_name, client_email, client_phone, start_date, end_date,
+          fulfillment_type, total_paisa, vat_paisa, advance_due_paisa, status
+        ) values (
+          'REQ-L94-01', 'L94 Requester', 'l94@example.com', '+977-9841000094', '2026-12-15', '2026-12-17',
+          'pickup', 1500000, 195000, 750000, 'pending'
+        )
+        returning id;
+      `)
+      reqId = res.rows[0].id
+    })
+
+    // 1. Initial provider status: Fonepay enabled, eSewa and Khalti disabled by default
+    await as('Owner', async () => {
+      const providersJson = (await q('select public.get_online_payment_providers() as prov')).rows[0].prov
+      const providers = typeof providersJson === 'string' ? JSON.parse(providersJson) : providersJson
+      assert(Array.isArray(providers), 'get_online_payment_providers returns array')
+
+      const fonepay = providers.find((p) => p.provider === 'fonepay')
+      const esewa = providers.find((p) => p.provider === 'esewa')
+      const khalti = providers.find((p) => p.provider === 'khalti')
+
+      assert(fonepay && fonepay.enabled === true, 'Fonepay enabled by default')
+      assert(esewa && esewa.enabled === false, 'eSewa disabled by default')
+      assert(khalti && khalti.enabled === false, 'Khalti disabled by default')
+    })
+
+    // 2. Disabled provider (eSewa) is refused when creating intent
+    await as('Owner', async () => {
+      let threw = false
+      let errMsg = ''
+      try {
+        await q(`select public.create_payment_intent(gen_random_uuid()::text, null, '${reqId}'::uuid, 'esewa')`)
+      } catch (err) {
+        threw = true
+        errMsg = err.message
+      }
+      assert(threw, 'create_payment_intent with disabled eSewa threw error')
+      assert(errMsg.includes('PAYMENT_PROVIDER_DISABLED'), 'Error mentions PAYMENT_PROVIDER_DISABLED')
+    })
+
+    // 3. Role isolation: Warehouse cannot modify provider switch (Law 6)
+    await as('Warehouse', async () => {
+      let blocked = false
+      try {
+        await q("select public.set_online_payment_provider_status('esewa', true, 'sandbox')")
+      } catch {
+        blocked = true
+      }
+      assert(blocked, 'Warehouse role refused set_online_payment_provider_status')
+    })
+
+    // 4. Staff (Manager / Admin / Owner) activates eSewa switch
+    await as('Manager', async () => {
+      const setRes = (await q("select public.set_online_payment_provider_status('esewa', true, 'sandbox') as res")).rows[0].res
+      const parsed = typeof setRes === 'string' ? JSON.parse(setRes) : setRes
+      assertEq(parsed.enabled, true, 'eSewa enabled updated to true')
+      assertEq(parsed.provider, 'esewa', 'provider confirmed as esewa')
+    })
+
+    // 5. eSewa intent can now be created and allocated
+    let esewaIntentId
+    await as('Owner', async () => {
+      const intentRes = (await q(`select public.create_payment_intent(gen_random_uuid()::text, null, '${reqId}'::uuid, 'esewa') as res`)).rows[0].res
+      const parsed = typeof intentRes === 'string' ? JSON.parse(intentRes) : intentRes
+      assert(parsed.intent_id, 'eSewa intent created')
+      assertEq(parsed.provider, 'esewa', 'intent provider is esewa')
+      esewaIntentId = parsed.intent_id
+
+      // Server-to-server allocation (D30)
+      const allocRes = (await q(`
+        select public.allocate_payment_intent(
+          '${esewaIntentId}'::uuid,
+          'ESEWA-TEST-REF-94',
+          '{"mock_verified": true, "status": "COMPLETE"}'::jsonb
+        ) as res
+      `)).rows[0].res
+      const allocParsed = typeof allocRes === 'string' ? JSON.parse(allocRes) : allocRes
+      assertEq(allocParsed.success, true, 'eSewa intent successfully allocated')
+      assertEq(allocParsed.status, 'paid', 'status is paid on booking request target')
+    })
+
+    // 6. Staff activates Khalti switch, creates and allocates Khalti intent
+    await as('Admin', async () => {
+      await q("select public.set_online_payment_provider_status('khalti', true, 'sandbox')")
+      const intentRes = (await q(`select public.create_payment_intent(gen_random_uuid()::text, null, '${reqId}'::uuid, 'khalti') as res`)).rows[0].res
+      const parsed = typeof intentRes === 'string' ? JSON.parse(intentRes) : intentRes
+      assert(parsed.intent_id, 'Khalti intent created')
+      assertEq(parsed.provider, 'khalti', 'intent provider is khalti')
+
+      const allocRes = (await q(`
+        select public.allocate_payment_intent(
+          '${parsed.intent_id}'::uuid,
+          'KHALTI-TEST-PIDX-94',
+          '{"mock_verified": true, "status": "Completed"}'::jsonb
+        ) as res
+      `)).rows[0].res
+      const allocParsed = typeof allocRes === 'string' ? JSON.parse(allocRes) : allocRes
+      assertEq(allocParsed.success, true, 'Khalti intent allocated')
+    })
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break

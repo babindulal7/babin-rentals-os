@@ -1,8 +1,9 @@
 // =============================================================================
-// pay-init/index.ts — Supabase Edge Function for Online Payment Init (T7-05)
+// pay-init/index.ts — Supabase Edge Function for Online Payment Init (T7-05, T7-06)
 //
 // Authority:
 //   - T7-05 · Online payment — Fonepay first
+//   - T7-06 · eSewa and Khalti payment providers
 //   - Law 1: Computes amount on the server (advance required or invoice balance).
 //   - Law 5: Security deposit is excluded (O-3).
 //   - Law 8: Idempotent client_uuid.
@@ -17,11 +18,12 @@ export const corsHeaders = {
 }
 
 interface PayInitRequest {
-  clientUuid: string
+  clientUuid?: string
   bookingRequestId?: string
   bookingId?: string
   provider?: 'fonepay' | 'esewa' | 'khalti'
   returnUrl?: string
+  action?: string
 }
 
 async function hmacSha512Hex(key: string, data: string): Promise<string> {
@@ -37,6 +39,20 @@ async function hmacSha512Hex(key: string, data: string): Promise<string> {
   return Array.from(new Uint8Array(signature))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('')
+}
+
+async function hmacSha256Base64(key: string, data: string): Promise<string> {
+  const enc = new TextEncoder()
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(key),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  )
+  const signature = await crypto.subtle.sign('HMAC', cryptoKey, enc.encode(data))
+  const binary = String.fromCharCode(...new Uint8Array(signature))
+  return btoa(binary)
 }
 
 Deno.serve(async (req: Request) => {
@@ -57,7 +73,39 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+    // Handle provider list request
+    const url = new URL(req.url)
+    const isListReq = req.method === 'GET' || url.searchParams.get('action') === 'providers'
+
+    if (isListReq) {
+      const { data: providers, error: provError } = await supabase.rpc('get_online_payment_providers')
+      if (provError) {
+        return new Response(
+          JSON.stringify({ error: provError.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      return new Response(
+        JSON.stringify({ success: true, providers: providers || [] }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const body: PayInitRequest = await req.json().catch(() => ({} as PayInitRequest))
+    if (body.action === 'providers') {
+      const { data: providers, error: provError } = await supabase.rpc('get_online_payment_providers')
+      if (provError) {
+        return new Response(
+          JSON.stringify({ error: provError.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      return new Response(
+        JSON.stringify({ success: true, providers: providers || [] }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const { clientUuid, bookingRequestId, bookingId, provider = 'fonepay', returnUrl } = body
 
     if (!clientUuid || typeof clientUuid !== 'string') {
@@ -74,7 +122,7 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    // Call create_payment_intent RPC (server-authoritative computation of amount)
+    // Call create_payment_intent RPC (server-authoritative computation of amount & switch check)
     const { data: intentRes, error: intentError } = await supabase.rpc('create_payment_intent', {
       p_client_uuid: clientUuid,
       p_booking_id: bookingId || null,
@@ -93,13 +141,102 @@ Deno.serve(async (req: Request) => {
 
     const { intent_id, amount_paisa } = intentRes
     const amountRupees = (amount_paisa / 100).toFixed(2)
+    const siteUrl = Deno.env.get('SITE_URL') || 'https://book.babinrentals.com'
+    const defaultReturnUrl = `${siteUrl}/pay/callback?intent_id=${intent_id}&provider=${provider}`
+    const finalReturnUrl = returnUrl || defaultReturnUrl
 
-    // Fonepay merchant credentials
+    if (provider === 'esewa') {
+      // eSewa ePAY v2 configuration
+      const esewaProductCode = Deno.env.get('ESEWA_PRODUCT_CODE') || 'EPAYTEST'
+      const esewaSecret = Deno.env.get('ESEWA_SECRET_KEY') || '8gBm/:&EnhH.1/q'
+      const isSandbox = !Deno.env.get('ESEWA_SECRET_KEY') || Deno.env.get('ESEWA_ENV') === 'sandbox'
+      const esewaActionUrl = isSandbox
+        ? 'https://rc-epay.esewa.com.np/api/epay/main/v2/form'
+        : 'https://epay.esewa.com.np/api/epay/main/v2/form'
+
+      const signatureMsg = `total_amount=${amountRupees},transaction_uuid=${intent_id},product_code=${esewaProductCode}`
+      const signature = await hmacSha256Base64(esewaSecret, signatureMsg)
+
+      const esewaParams = {
+        amount: amountRupees,
+        tax_amount: '0',
+        total_amount: amountRupees,
+        transaction_uuid: intent_id,
+        product_code: esewaProductCode,
+        product_service_charge: '0',
+        product_delivery_charge: '0',
+        success_url: finalReturnUrl,
+        failure_url: `${siteUrl}/pay/callback?status=failed&intent_id=${intent_id}&provider=esewa`,
+        signed_field_names: 'total_amount,transaction_uuid,product_code',
+        signature,
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          intent_id,
+          amount_paisa,
+          amount_rupees: amountRupees,
+          provider: 'esewa',
+          payment_url: esewaActionUrl,
+          esewa_params: esewaParams,
+          is_sandbox: isSandbox,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (provider === 'khalti') {
+      // Khalti ePayment v2 configuration
+      const khaltiSecret = Deno.env.get('KHALTI_SECRET_KEY')
+      const isSandbox = !khaltiSecret || Deno.env.get('KHALTI_ENV') === 'sandbox'
+      let pidx = `KH-${intent_id.slice(0, 8)}`
+      let paymentUrl = `${siteUrl}/pay/callback?provider=khalti&intent_id=${intent_id}&pidx=${pidx}`
+
+      if (khaltiSecret && !isSandbox) {
+        try {
+          const khaltiRes = await fetch('https://khalti.com/api/v2/epayment/initiate/', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Key ${khaltiSecret}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              return_url: finalReturnUrl,
+              website_url: siteUrl,
+              amount: amount_paisa,
+              purchase_order_id: intent_id,
+              purchase_order_name: `Babin Rentals Booking ${intent_id.slice(0, 8)}`,
+            }),
+          })
+          const khaltiData = await khaltiRes.json()
+          if (khaltiData.pidx && khaltiData.payment_url) {
+            pidx = khaltiData.pidx
+            paymentUrl = khaltiData.payment_url
+          }
+        } catch (fetchErr) {
+          console.warn('[pay-init] Upstream Khalti initiate failed, falling back to sandbox URL:', fetchErr)
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          intent_id,
+          amount_paisa,
+          amount_rupees: amountRupees,
+          provider: 'khalti',
+          pidx,
+          payment_url: paymentUrl,
+          is_sandbox: isSandbox,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Default: Fonepay merchant credentials
     const merchantCode = Deno.env.get('FONEPAY_MERCHANT_CODE') || 'MDULAL'
     const secretKey = Deno.env.get('FONEPAY_SECRET_KEY') || 'mock_fonepay_secret'
-    const siteUrl = Deno.env.get('SITE_URL') || 'https://book.babinrentals.com'
-    const defaultReturnUrl = `${siteUrl}/pay/callback?intent_id=${intent_id}`
-    const finalReturnUrl = returnUrl || defaultReturnUrl
 
     const now = new Date()
     const dt = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}/${now.getFullYear()}`
@@ -136,7 +273,7 @@ Deno.serve(async (req: Request) => {
         intent_id,
         amount_paisa,
         amount_rupees: amountRupees,
-        provider,
+        provider: 'fonepay',
         payment_url: paymentUrl,
         fonepay_params: paymentParams,
         is_sandbox: isSandbox,

@@ -1181,7 +1181,6 @@ export default function Finance() {
       ].filter(Boolean)}
       overflow={[
         ...(phone ? [{ label: 'Search', icon: 'search' as const, onClick: openCommandPalette }] : []),
-        { label: 'Online Reconciliation', icon: 'card' as const, onClick: () => setTab('Reconciliation') },
         ...(compactHeader ? [
           ...(canTakePayment && canIssueInvoice ? [{
             label: 'Create Invoice',

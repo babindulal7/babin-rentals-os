@@ -1,5 +1,91 @@
 # Progress Log
 
+## 2026-11-20 — T7-06: eSewa and Khalti payment providers (Lane C / Windows)
+
+**Did**
+- Completed **T7-06 · eSewa and Khalti** (`lane-c/T7-06-esewa-and-khalti`):
+  - Authored Migration `supabase/migrations/0254_esewa_and_khalti_payment_providers.sql` (claimed migration 0254 in ledger):
+    - Initialized provider switch entries in `public.settings`:
+      - `paymentProviderFonepayEnabled` = `true` (sandbox)
+      - `paymentProviderEsewaEnabled` = `false` (stays OFF until credentials exist)
+      - `paymentProviderKhaltiEnabled` = `false` (stays OFF until credentials exist)
+    - Authored `public.get_online_payment_providers()` RPC:
+      - Returns active payment providers with enabled status and environment.
+      - Pinned `search_path = public, pg_temp`, revoked from public/anon, granted to authenticated.
+    - Authored `public.set_online_payment_provider_status(p_provider, p_enabled, p_env)`:
+      - Strictly role-gated to `Owner`, `Admin`, `Manager` via `auth_user_role()`.
+      - Updates provider enabled status and sandbox/production environment in `public.settings`.
+      - Masked and inaccessible to money-blind roles (Warehouse, Technician, Driver, Client).
+    - Re-declared `public.create_payment_intent`:
+      - Inspects provider activation switch in `public.settings`.
+      - Fail-closed: Rejects creation of intents for disabled providers with `PAYMENT_PROVIDER_DISABLED`.
+      - Enforces **Law 1**: Authoritative amount calculated on the server from rental lines.
+      - Enforces **Law 8**: Idempotent on client_uuid.
+  - Lifecycle Step L94 (`scripts/e2e-lifecycle.mjs`):
+    - Added Step L94 verifying:
+      - Default state: Fonepay enabled, eSewa and Khalti disabled.
+      - Intent creation with disabled eSewa rejected with `PAYMENT_PROVIDER_DISABLED`.
+      - Role isolation: Warehouse denied `set_online_payment_provider_status`.
+      - Staff enables eSewa; eSewa intent created and allocated atomically (D30).
+      - Staff enables Khalti; Khalti intent created and allocated atomically (D30).
+    - Verified via `npm run check:lifecycle`: 95/95 green, 0 known-red, 0 failed.
+    - Verified via `npm run check:pglite`: 251/251 applied, 0 failed.
+  - Edge Functions & Provider Adapters (`supabase/functions/`):
+    - `pay-init`:
+      - Handles `action=providers` request to serve enabled providers list.
+      - Generates eSewa ePAY v2 payload: HMAC-SHA256 signature over `"total_amount=...,transaction_uuid=...,product_code=..."`, form action URL, and return URLs.
+      - Generates Khalti ePayment v2 payload: calls initiate API (or test mock fallback), returning `pidx` and `payment_url`.
+      - Enforces **N-8**: Secrets kept exclusively in Edge Function environment variables, never leaked to client bundle.
+    - `pay-verify`:
+      - Handles eSewa server-to-server callback verification (signature verification and status API check).
+      - Handles Khalti lookup callback verification (`POST /api/v2/epayment/lookup/` with `pidx`).
+      - Enforces **Ruling D30**: Server-to-server confirmation only. Browser redirect alone never counts.
+      - Calls `allocate_payment_intent` atomically.
+  - Client Checkout UI (`src/booking/pay/`):
+    - Authored `fetchOnlinePaymentProviders` in `src/booking/pay/payApi.ts`.
+    - Updated `src/booking/pay/OnlinePaymentModal.tsx`:
+      - Dynamically fetches available providers and filters for `enabled === true`.
+      - Renders provider tab selector showing ONLY switched-on payment methods.
+      - Branded payment representations for Fonepay (QR), eSewa (mobile wallet banner & form action), and Khalti (digital wallet banner).
+      - Minimum touch targets ≥ 44px on all tabs and buttons.
+      - Clear security deposit notice: online payment covers rental advance only; security deposit taken at physical gear handover.
+  - Tests & Verification:
+    - Authored unit test suite in `src/booking/pay/__tests__/onlinePayment.test.tsx` (all 4 tests passing).
+    - `npm run typecheck`: clean (0 errors).
+    - `npm run lint`: clean (0 errors, 0 warnings).
+    - `npm run lint:ui-copy`: 0 developer-text violations.
+    - `npm run check:contrast`: 97/97 WCAG AA passing.
+    - `npm run check:pglite`: 251/251 applied, 0 failed.
+    - `npm run check:lifecycle`: 95/95 steps green.
+    - `npm run build`: clean production build.
+  - Updated `docs/plans/T7_ONLINE_BOOKING.md` card T7-06 status to `ready — awaiting merge (lane-c/T7-06-esewa-and-khalti)`.
+
+**Ruled**
+- Online payment methods eSewa and Khalti stay switched OFF by default until merchant credentials exist.
+- The online payment screen shows only switched-on methods.
+- A browser redirect alone never confirms a payment; server-to-server signature validation or lookup is mandatory (Ruling D30).
+- Only Owner, Admin, and Manager can configure payment providers; non-money roles cannot alter provider switches (Law 6).
+- Merchant API credentials must reside strictly in Edge Function secrets, never in client bundles (N-8).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 112 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | +0 |
+| Lifecycle | steps green / total | 95 / 95 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 251 files · check:pglite 251/251 applied, 0 failed (recorded 2026-11-19T23:28:13.880Z). Suite: NOT VERIFIED — focused or unspecified run: 3/3 passed, 0 failed (recorded 2026-11-19T23:27:41.761Z).
+Coverage suite: Historical suite: 7398/7398 passed, 0 failed (recorded 2026-11-19T01:10:17.481Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-19T23:28:31.420Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Waiting on Babin: Babin to provide merchant credentials for eSewa (`ESEWA_PRODUCT_CODE`, `ESEWA_SECRET_KEY`) and Khalti (`KHALTI_SECRET_KEY`) when accounts are opened. System operates cleanly in sandbox mode with switches off until then.
+- Track 7 cards completed by Windows: T7-02, T7-03, T7-04, T7-05, T7-07, T7-08, T7-09, T7-12, T7-13, T7-14, and now T7-06.
+
 ## 2026-11-20 — T7-07: Refunds and reconciliation (Lane C / Windows)
 
 **Did**

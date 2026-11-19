@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { initOnlinePayment, verifyOnlinePayment, type PayInitResponse } from './payApi'
+import {
+  initOnlinePayment,
+  verifyOnlinePayment,
+  fetchOnlinePaymentProviders,
+  type PayInitResponse,
+  type PaymentProvider,
+  type OnlinePaymentProviderInfo,
+} from './payApi'
 import { formatMoney, type Paisa } from '../../lib/money'
 
 export interface OnlinePaymentModalProps {
@@ -19,6 +26,8 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
   clientUuid,
   onPaymentSuccess,
 }) => {
+  const [providers, setProviders] = useState<OnlinePaymentProviderInfo[]>([])
+  const [selectedProvider, setSelectedProvider] = useState<PaymentProvider>('fonepay')
   const [loading, setLoading] = useState(false)
   const [verifying, setVerifying] = useState(false)
   const [initData, setInitData] = useState<PayInitResponse | null>(null)
@@ -29,6 +38,7 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
     amountPaisa: number
   } | null>(null)
 
+  // 1. Fetch enabled providers on open
   useEffect(() => {
     if (!isOpen) {
       setInitData(null)
@@ -42,14 +52,30 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
     setLoading(true)
     setError(null)
 
-    initOnlinePayment({
-      clientUuid,
-      bookingRequestId,
-      bookingId,
-      provider: 'fonepay',
-    })
+    fetchOnlinePaymentProviders()
+      .then((allProviders) => {
+        if (!isMounted) return
+        const active = allProviders.filter((p) => p.enabled)
+        setProviders(active)
+
+        if (active.length === 0) {
+          setError('Online payment methods are currently disabled or undergoing maintenance.')
+          setLoading(false)
+          return
+        }
+
+        const initial = active[0]?.provider || 'fonepay'
+        setSelectedProvider(initial)
+
+        return initOnlinePayment({
+          clientUuid,
+          bookingRequestId,
+          bookingId,
+          provider: initial,
+        })
+      })
       .then((data) => {
-        if (isMounted) {
+        if (isMounted && data) {
           setInitData(data)
           setLoading(false)
         }
@@ -66,17 +92,42 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
     }
   }, [isOpen, clientUuid, bookingRequestId, bookingId])
 
+  // Handle provider switch by user
+  const handleSelectProvider = async (provider: PaymentProvider) => {
+    if (provider === selectedProvider || loading || verifying) return
+    setSelectedProvider(provider)
+    setLoading(true)
+    setError(null)
+
+    try {
+      const data = await initOnlinePayment({
+        clientUuid,
+        bookingRequestId,
+        bookingId,
+        provider,
+      })
+      setInitData(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to switch payment provider.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleSimulatePayment = async () => {
     if (!initData) return
     setVerifying(true)
     setError(null)
 
     try {
-      const mockTxnRef = `FP-${Date.now().toString().slice(-6)}`
+      const prefix = selectedProvider === 'esewa' ? 'ESEWA' : selectedProvider === 'khalti' ? 'KH' : 'FP'
+      const mockTxnRef = `${prefix}-${Date.now().toString().slice(-6)}`
       const verifyRes = await verifyOnlinePayment({
         intentId: initData.intent_id,
+        provider: selectedProvider,
         providerRef: mockTxnRef,
         uid: mockTxnRef,
+        pidx: selectedProvider === 'khalti' ? mockTxnRef : undefined,
         responseCode: 'successful',
       })
 
@@ -122,7 +173,7 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
           border: '1px solid var(--border-subtle, #333)',
           borderRadius: 'var(--radius-lg, 12px)',
           width: '100%',
-          maxWidth: 440,
+          maxWidth: 460,
           color: 'var(--text-main, #f3f4f6)',
           overflow: 'hidden',
           display: 'flex',
@@ -142,7 +193,7 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: '1.2rem' }}>💳</span>
-            <strong style={{ fontSize: '1.1rem' }}>Online Payment — Fonepay</strong>
+            <strong style={{ fontSize: '1.1rem' }}>Online Payment</strong>
           </div>
           <button
             type="button"
@@ -167,6 +218,50 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
 
         {/* Content */}
         <div style={{ padding: 20 }}>
+          {/* Provider Selection Tabs (only shown if at least 1 provider available) */}
+          {providers.length > 1 && !successResult && (
+            <div
+              style={{
+                display: 'flex',
+                gap: 8,
+                marginBottom: 16,
+                background: 'var(--bg-elevated, #2a2a32)',
+                padding: 4,
+                borderRadius: 8,
+              }}
+            >
+              {providers.map((p) => {
+                const isSelected = p.provider === selectedProvider
+                return (
+                  <button
+                    key={p.provider}
+                    type="button"
+                    onClick={() => handleSelectProvider(p.provider)}
+                    disabled={loading || verifying}
+                    style={{
+                      flex: 1,
+                      minHeight: 44,
+                      border: 'none',
+                      borderRadius: 6,
+                      background: isSelected ? 'var(--accent-gold, #eab308)' : 'transparent',
+                      color: isSelected ? '#000' : 'var(--text-main, #f3f4f6)',
+                      fontWeight: isSelected ? 700 : 500,
+                      cursor: loading || verifying ? 'not-allowed' : 'pointer',
+                      fontSize: '0.88rem',
+                      transition: 'all 0.15s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    <span>{p.name}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
           {loading ? (
             <div style={{ textAlign: 'center', padding: '32px 0' }}>
               <div style={{ fontSize: '2rem', marginBottom: 12 }}>⏳</div>
@@ -261,7 +356,7 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
                 </div>
               </div>
 
-              {/* O-3 Notice */}
+              {/* Deposit Policy Notice */}
               <div
                 style={{
                   background: 'rgba(59, 130, 246, 0.08)',
@@ -272,53 +367,133 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
                   color: 'var(--blue-text, #93c5fd)',
                 }}
               >
-                ℹ <strong>Security Deposit Policy (O-3):</strong> Online payments strictly cover rental advance only.
+                ℹ <strong>Security Deposit Policy:</strong> Online payments strictly cover rental advance only.
                 Any required security deposit is taken at physical gear handover.
               </div>
 
-              {/* QR Code Simulation Area */}
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  padding: 16,
-                  background: '#fff',
-                  borderRadius: 8,
-                  color: '#111',
-                }}
-              >
-                <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: 8, color: '#b91c1c' }}>
-                  Fonepay Merchant QR
+              {/* Provider-Specific Visual Display */}
+              {selectedProvider === 'fonepay' && (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: 16,
+                    background: '#fff',
+                    borderRadius: 8,
+                    color: '#111',
+                  }}
+                >
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: 8, color: '#b91c1c' }}>
+                    Fonepay Merchant QR
+                  </div>
+                  {/* SVG QR Code */}
+                  <svg width="140" height="140" viewBox="0 0 100 100" style={{ margin: '8px 0' }}>
+                    <rect width="100" height="100" fill="#ffffff" />
+                    <rect x="10" y="10" width="24" height="24" fill="#111" />
+                    <rect x="14" y="14" width="16" height="16" fill="#fff" />
+                    <rect x="18" y="18" width="8" height="8" fill="#111" />
+
+                    <rect x="66" y="10" width="24" height="24" fill="#111" />
+                    <rect x="70" y="14" width="16" height="16" fill="#fff" />
+                    <rect x="74" y="18" width="8" height="8" fill="#111" />
+
+                    <rect x="10" y="66" width="24" height="24" fill="#111" />
+                    <rect x="14" y="70" width="16" height="16" fill="#fff" />
+                    <rect x="18" y="74" width="8" height="8" fill="#111" />
+
+                    <rect x="42" y="10" width="8" height="16" fill="#111" />
+                    <rect x="54" y="18" width="8" height="16" fill="#111" />
+                    <rect x="42" y="42" width="16" height="16" fill="#b91c1c" />
+                    <rect x="66" y="42" width="16" height="8" fill="#111" />
+                    <rect x="10" y="42" width="8" height="16" fill="#111" />
+                    <rect x="42" y="66" width="8" height="24" fill="#111" />
+                    <rect x="66" y="66" width="24" height="8" fill="#111" />
+                    <rect x="74" y="82" width="16" height="8" fill="#111" />
+                  </svg>
+                  <div style={{ fontSize: '0.78rem', color: '#666', textAlign: 'center' }}>
+                    Merchant: <strong>MDULAL (Babin Rentals)</strong>
+                  </div>
                 </div>
-                {/* SVG QR Code Placeholder */}
-                <svg width="140" height="140" viewBox="0 0 100 100" style={{ margin: '8px 0' }}>
-                  <rect width="100" height="100" fill="#ffffff" />
-                  <rect x="10" y="10" width="24" height="24" fill="#111" />
-                  <rect x="14" y="14" width="16" height="16" fill="#fff" />
-                  <rect x="18" y="18" width="8" height="8" fill="#111" />
+              )}
 
-                  <rect x="66" y="10" width="24" height="24" fill="#111" />
-                  <rect x="70" y="14" width="16" height="16" fill="#fff" />
-                  <rect x="74" y="18" width="8" height="8" fill="#111" />
-
-                  <rect x="10" y="66" width="24" height="24" fill="#111" />
-                  <rect x="14" y="70" width="16" height="16" fill="#fff" />
-                  <rect x="18" y="74" width="8" height="8" fill="#111" />
-
-                  <rect x="42" y="10" width="8" height="16" fill="#111" />
-                  <rect x="54" y="18" width="8" height="16" fill="#111" />
-                  <rect x="42" y="42" width="16" height="16" fill="#b91c1c" />
-                  <rect x="66" y="42" width="16" height="8" fill="#111" />
-                  <rect x="10" y="42" width="8" height="16" fill="#111" />
-                  <rect x="42" y="66" width="8" height="24" fill="#111" />
-                  <rect x="66" y="66" width="24" height="8" fill="#111" />
-                  <rect x="74" y="82" width="16" height="8" fill="#111" />
-                </svg>
-                <div style={{ fontSize: '0.78rem', color: '#666', textAlign: 'center' }}>
-                  Merchant: <strong>MDULAL (Babin Rentals)</strong>
+              {selectedProvider === 'esewa' && (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: 20,
+                    background: 'rgba(65, 161, 36, 0.08)',
+                    border: '1px solid rgba(65, 161, 36, 0.3)',
+                    borderRadius: 8,
+                    textAlign: 'center',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 52,
+                      height: 52,
+                      borderRadius: '50%',
+                      background: '#41a124',
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '1.4rem',
+                      fontWeight: 800,
+                      marginBottom: 10,
+                    }}
+                  >
+                    e
+                  </div>
+                  <strong style={{ fontSize: '1.05rem', color: 'var(--text-main, #f3f4f6)', marginBottom: 4 }}>
+                    eSewa Mobile Wallet
+                  </strong>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--text-muted, #9ca3af)', margin: 0 }}>
+                    Fast checkout via eSewa ePAY v2. Complete your payment securely with your wallet.
+                  </p>
                 </div>
-              </div>
+              )}
+
+              {selectedProvider === 'khalti' && (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: 20,
+                    background: 'rgba(92, 45, 145, 0.08)',
+                    border: '1px solid rgba(92, 45, 145, 0.3)',
+                    borderRadius: 8,
+                    textAlign: 'center',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 52,
+                      height: 52,
+                      borderRadius: '50%',
+                      background: '#5c2d91',
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '1.4rem',
+                      fontWeight: 800,
+                      marginBottom: 10,
+                    }}
+                  >
+                    K
+                  </div>
+                  <strong style={{ fontSize: '1.05rem', color: 'var(--text-main, #f3f4f6)', marginBottom: 4 }}>
+                    Khalti Digital Wallet
+                  </strong>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--text-muted, #9ca3af)', margin: 0 }}>
+                    Direct checkout via Khalti ePayment v2. Pay using Khalti balance or mobile banking.
+                  </p>
+                </div>
+              )}
 
               {/* Action Buttons */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -330,8 +505,13 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: 'var(--accent-gold, #eab308)',
-                    color: '#000',
+                    background:
+                      selectedProvider === 'esewa'
+                        ? '#41a124'
+                        : selectedProvider === 'khalti'
+                        ? '#5c2d91'
+                        : 'var(--accent-gold, #eab308)',
+                    color: selectedProvider === 'khalti' || selectedProvider === 'esewa' ? '#fff' : '#000',
                     fontWeight: 600,
                     borderRadius: 6,
                     textDecoration: 'none',
@@ -339,7 +519,11 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
                     fontSize: '0.9rem',
                   }}
                 >
-                  Pay via Fonepay Hosted Page ↗
+                  {selectedProvider === 'esewa'
+                    ? 'Pay via eSewa ↗'
+                    : selectedProvider === 'khalti'
+                    ? 'Pay via Khalti ↗'
+                    : 'Pay via Fonepay Hosted Page ↗'}
                 </a>
 
                 <button
@@ -356,7 +540,9 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
                     fontSize: '0.85rem',
                   }}
                 >
-                  {verifying ? 'Verifying with bank server-to-server...' : 'Simulate Successful Payment (Sandbox)'}
+                  {verifying
+                    ? 'Verifying with payment server...'
+                    : `Simulate Successful ${selectedProvider.toUpperCase()} Payment`}
                 </button>
               </div>
             </div>

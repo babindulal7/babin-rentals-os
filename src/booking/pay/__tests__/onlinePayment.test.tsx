@@ -10,9 +10,10 @@ import * as payApi from '../payApi'
 vi.mock('../payApi', () => ({
   initOnlinePayment: vi.fn(),
   verifyOnlinePayment: vi.fn(),
+  fetchOnlinePaymentProviders: vi.fn(),
 }))
 
-describe('OnlinePaymentModal (T7-05)', () => {
+describe('OnlinePaymentModal (T7-05, T7-06)', () => {
   let container: HTMLDivElement
   let root: Root
 
@@ -29,6 +30,12 @@ describe('OnlinePaymentModal (T7-05)', () => {
     container = document.createElement('div')
     document.body.appendChild(container)
     root = createRoot(container)
+
+    vi.mocked(payApi.fetchOnlinePaymentProviders).mockResolvedValue([
+      { provider: 'fonepay', name: 'Fonepay', enabled: true, env: 'sandbox' },
+      { provider: 'esewa', name: 'eSewa', enabled: true, env: 'sandbox' },
+      { provider: 'khalti', name: 'Khalti', enabled: false, env: 'sandbox' },
+    ])
 
     vi.mocked(payApi.initOnlinePayment).mockResolvedValue({
       success: true,
@@ -70,20 +77,60 @@ describe('OnlinePaymentModal (T7-05)', () => {
     container?.remove()
   })
 
-  it('renders Fonepay modal with server-calculated amount and O-3 deposit notice', async () => {
+  it('renders modal with server-calculated amount, deposit policy, and switched-on provider options', async () => {
     await act(async () => {
       root.render(<OnlinePaymentModal {...defaultProps} />)
     })
 
-    // Allow promise resolution
     await act(async () => {
       await new Promise((r) => setTimeout(r, 20))
     })
 
-    expect(container.textContent).toContain('Online Payment — Fonepay')
-    expect(container.textContent).toContain('Security Deposit Policy (O-3)')
-    expect(container.textContent).toContain('MDULAL')
+    expect(container.textContent).toContain('Online Payment')
+    expect(container.textContent).toContain('Security Deposit Policy')
+    expect(container.textContent).toContain('Fonepay')
+    expect(container.textContent).toContain('eSewa')
+    // Khalti was disabled in mock, should not be listed as tab option
+    expect(container.textContent).not.toContain('Khalti')
     expect(container.textContent).toContain('5,000')
+  })
+
+  it('switches payment provider tab to eSewa when clicked', async () => {
+    vi.mocked(payApi.initOnlinePayment).mockResolvedValueOnce({
+      success: true,
+      intent_id: 'intent-esewa-1',
+      amount_paisa: 500000,
+      amount_rupees: '5000.00',
+      provider: 'esewa',
+      payment_url: 'https://rc-epay.esewa.com.np/api/epay/main/v2/form',
+      is_sandbox: true,
+    })
+
+    await act(async () => {
+      root.render(<OnlinePaymentModal {...defaultProps} />)
+    })
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20))
+    })
+
+    const esewaBtn = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.textContent?.trim() === 'eSewa'
+    )
+    expect(esewaBtn).toBeTruthy()
+
+    await act(async () => {
+      esewaBtn?.click()
+    })
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20))
+    })
+
+    expect(payApi.initOnlinePayment).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: 'esewa' })
+    )
+    expect(container.textContent).toContain('eSewa Mobile Wallet')
   })
 
   it('simulates payment verification and triggers onPaymentSuccess', async () => {
@@ -96,7 +143,7 @@ describe('OnlinePaymentModal (T7-05)', () => {
     })
 
     const buttons = Array.from(container.querySelectorAll('button'))
-    const simulateBtn = buttons.find((b) => b.textContent?.includes('Simulate Successful Payment'))
+    const simulateBtn = buttons.find((b) => b.textContent?.includes('Simulate Successful'))
     expect(simulateBtn).toBeTruthy()
 
     await act(async () => {
