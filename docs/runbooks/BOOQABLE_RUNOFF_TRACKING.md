@@ -1,18 +1,18 @@
 # Booqable Run-Off Tracking Protocol & Countdown Checklist (T9-06)
 
 **Card:** T9-06 · Run-off  
-**Period:** 1 February 2027 to 1 March 2027 (Target Zero Date)  
+**Period:** Begin only after signed-off Day X cutover (target 18 February 2027, not a hard switch); end when all remaining rental obligations are settled. Booqable renewal is reported due 18 February 2027 and must be verified separately.  
 **Status:** Run-off Operational Protocol  
 **Auditor / Staff Lead:** Babin + Rental Staff  
 
 ---
 
 ## 1. Principles of Run-Off
-- **No new bookings in Booqable:** Every order in Booqable during this period was created before 1 Feb 2027.
+- **No new bookings in Booqable:** Only after an explicitly approved Day X should new Booqable bookings stop; until then, Booqable remains the fallback source of truth.
 - **Custody in Booqable:** Returning gear for these older bookings is scanned, inspected, and closed **in Booqable**.
 - **External holds automatically release:** As each Booqable booking closes, its OS calendar hold (T9-02) expires or is cleared, returning units to the OS available pool.
 - **Money recorded in Booqable:** Outstanding balances for legacy bookings are settled in Booqable.
-- **Target Zero (N = 0):** By 1 March 2027 (17 Falgun 2083), all active Booqable rentals must be closed.
+- **Target Zero (N = 0):** Track until N = 0 with no artificial date. Do not force-close live rentals or release equipment holds before verified return.
 
 ---
 
@@ -25,12 +25,12 @@ A short status banner on the Today screen displays:
 2. Count open rentals (Status: `Started` / `Picked Up`).
 3. Update countdown counter:
    - When `N > 0`: Staff monitor expected return dates. If a client is late, contact via WhatsApp.
-   - When `N = 0`: Trigger T9-08 (Data archive and subscription cancellation).
+   - When `N = 0`: Complete T9-08 archive verification and seek separate owner approval for any cancellation; do not auto-cancel.
 
 ---
 
 ## 3. Escalation for Overdue Legacy Bookings
-If an open Booqable rental remains unreturned past 15 February:
+If an open Booqable rental becomes overdue after the approved Day X:
 1. Contact client for immediate return.
 2. Flag unit in OS inventory as "Legacy Overdue" to prevent false availability.
 3. If unit is lost, file a lost equipment case in OS and bill replacement value.
