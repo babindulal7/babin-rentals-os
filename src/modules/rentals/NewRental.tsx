@@ -1140,6 +1140,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
           type="button"
           className={activeSection === 'client-dates' ? 'is-active' : ''}
           data-active={activeSection === 'client-dates'}
+          aria-current={activeSection === 'client-dates' ? 'step' : undefined}
           onClick={() => jumpToSection('section-0')}
         >
           <Icon name="user" size={17} />Client &amp; dates
@@ -1148,6 +1149,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
           type="button"
           className={activeSection === 'equipment' ? 'is-active' : ''}
           data-active={activeSection === 'equipment'}
+          aria-current={activeSection === 'equipment' ? 'step' : undefined}
           onClick={() => jumpToSection('section-2')}
         >
           <Icon name="box" size={17} />Equipment
@@ -1156,6 +1158,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
           type="button"
           className={activeSection === 'crew-delivery' ? 'is-active' : ''}
           data-active={activeSection === 'crew-delivery'}
+          aria-current={activeSection === 'crew-delivery' ? 'step' : undefined}
           onClick={() => { setOpen((prev) => prev.map((v, i) => i === 3 || i === 4 || v)); jumpToSection('section-3') }}
         >
           <Icon name="truck" size={17} />Crew &amp; delivery
@@ -1165,6 +1168,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
             type="button"
             className={activeSection === 'pricing' ? 'is-active' : ''}
             data-active={activeSection === 'pricing'}
+            aria-current={activeSection === 'pricing' ? 'step' : undefined}
             onClick={() => jumpToSection('section-5')}
           >
             <Icon name="receipt" size={17} />Pricing
@@ -1174,6 +1178,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
           type="button"
           className={activeSection === 'review' ? 'is-active' : ''}
           data-active={activeSection === 'review'}
+          aria-current={activeSection === 'review' ? 'step' : undefined}
           onClick={() => jumpToSection('rail-booking-summary')}
           aria-label={`Review booking${blockingNotices.length ? `, ${blockingNotices.length} outstanding checks` : ''}`}
         >

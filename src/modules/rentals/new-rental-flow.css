@@ -47,9 +47,11 @@
 }
 .new-rental-jumpbar button.is-active,
 .new-rental-jumpbar button[data-active='true'] {
-  color: var(--st-primary-fg, #2563eb) !important;
+  /* The accent token, not --st-primary-fg: that one is white for filled buttons, so
+     the active step was white on a near-white strip in the light theme (1.05:1). */
+  color: var(--nav-active-accent, #2456d6) !important;
   font-weight: 600 !important;
-  border-bottom: 2px solid var(--st-primary-fg, #2563eb) !important;
+  border-bottom: 2px solid var(--nav-active-accent, #2456d6) !important;
   border-radius: 4px 4px 0 0 !important;
   background: var(--card2) !important;
 }
