@@ -44,8 +44,11 @@
 - Under real signed-in roles: the database branches (PGlite has no JWT).
 - Seen, not changed: the inline form-error banner on this dialog (existing styling) reads low-contrast in light theme. It is not part of this change.
 
-**Conflict found while building (not decided by me)**
-- Babin answered "separate invoice for the extra charge" when the invoice is already issued (RULINGS-2026-11-19 S3 row 10). That conflicts with R-03 (one invoice per rental; `create_invoice` refuses a second) and with the close gates, which read one invoice's outstanding amount, so a second invoice could let a rental close with the extra charge unpaid. It is NOT built. 0251 refuses an issued invoice in words (stricter, B-1) and the choice is recorded as `TODO(decision)` in `docs/OPEN_DECISIONS.md` §23: (a) keep the refusal, or (b) amend R-03 and the close gates to sum every invoice, then build the separate invoice. Usually moot: the one Draft stays open for the whole rental and the waiting charge appends to it.
+**Conflict found while building (resolved by Babin the same day)**
+- Babin answered "separate invoice for the extra charge" when the invoice is already issued (RULINGS-2026-11-19 S3 row 10), which conflicts with R-03 and the close gates. Asked, he ruled to **keep the refusal** (S4 row 11): no second invoice, 0251 refuses an issued invoice in words and points to Void + Credit Note. Nothing to build.
+
+**Ruled (later the same day, in the session)**
+- `RULINGS-2026-11-19.md` S4: (11) keep the refusal for a charge after an issued invoice; (12) after-hours quantity stays editable; (13) a flat service line's amount reads "Flat amount" instead of "Rate / day" (built on `lane-c/T3-10-screen-check-fixes`); (14) merge the delivery branch into `main` locally only, not pushed.
 
 **Ruled (later the same day, interview)**
 - Eight follow-ups answered by Babin (`RULINGS-2026-11-19.md` S2, `docs/OPEN_DECISIONS.md` §23): zone names both; one or two trips chosen per booking; booking charge fills from the grid; `delivery_zones.fee_paisa` kept, unused; late-night flat amount in Settings; waiting added after the trip; Car / pickup left unset; outsourced vehicle by manual quote with approval note. Docs only; nothing built from them yet.
