@@ -9577,6 +9577,225 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L90',
+  title: 'Temporary partner stock: available inside agreement window only; outside window capacity is 0 (T2-24, B13)',
+  expect: 'green',
+  run: async () => {
+    // 1. Setup supplier & product with 0 owned stock
+    let supplierId
+    let productId
+    await asOwnerOfTheDatabase(async () => {
+      const catId = await one('select id from inventory_categories order by name limit 1')
+      const supCode = 'SUP-L90-' + crypto.randomUUID().slice(0, 6)
+      const supRes = await q(`insert into suppliers (client_uuid, supplier_code, name, created_by)
+        values (gen_random_uuid(), '${supCode}', 'Cine Partner Nepal', '${U.Owner}')
+        returning id`)
+      supplierId = supRes.rows[0].id
+
+      const prodCode = await one("select next_document_number('equipment')")
+      const prodRes = await q(`insert into products (client_uuid, asset_code, name, brand, category_id, model, tracking_mode, total_quantity, allow_overbooking, created_by)
+        values (gen_random_uuid(), '${prodCode}', 'Partner Cinema Prime 50mm', 'CineGear', '${catId}', 'LENS-50', 'Serialised', 0, false, '${U.Owner}')
+        returning id`)
+      productId = prodRes.rows[0].id
+    })
+
+    // 2. Add temporary stock for 2 lenses for 5 days (2090-05-10 to 2090-05-15 UTC)
+    let tempStockId
+    await as('Coordinator', async () => {
+      const res = await one('select record_temporary_stock($1::jsonb)', [JSON.stringify({
+        supplier_id: supplierId,
+        product_id: productId,
+        quantity: 2,
+        available_from: '2090-05-10 00:15:00+00',
+        available_until: '2090-05-15 00:15:00+00',
+        cost_kind: 'daily',
+        cost_paisa: 500000,
+        asset_codes: ['P-L90-01', 'P-L90-02'],
+      })])
+      tempStockId = res.id
+      assert(Boolean(tempStockId), 'record_temporary_stock returns agreement id')
+      assertEq(res.quantity, 2, 'quantity recorded')
+    })
+
+    // 3. Verify units created with is_partner_unit = true
+    const units = (await q(`select id, serial_no, asset_tag, is_partner_unit, temporary_stock_id from product_units where temporary_stock_id = '${tempStockId}'`)).rows
+    assertEq(units.length, 2, '2 partner units created')
+    assert(units.every((u) => u.is_partner_unit === true), 'all units flagged is_partner_unit')
+
+    // 4. Booking inside window: 2090-05-11 to 2090-05-14 (3 days) -> Capacity is 2
+    const capInside = Number(await one(`select get_available_product_capacity('${productId}', tstzrange('2090-05-11 00:15:00+00', '2090-05-14 00:15:00+00', '[)'))`))
+    assertEq(capInside, 2, 'partner gear contributes to capacity inside window')
+
+    // 5. Booking extending past window: 2090-05-14 to 2090-05-16 -> Capacity is 0
+    const capOutside = Number(await one(`select get_available_product_capacity('${productId}', tstzrange('2090-05-14 00:15:00+00', '2090-05-16 00:15:00+00', '[)'))`))
+    assertEq(capOutside, 0, 'partner gear contributes 0 capacity when booking extends outside window')
+
+    // 6. Confirm booking inside window succeeds
+    let bookingInsideId
+    await as('Coordinator', async () => {
+      const bNo1 = await one("select next_document_number('booking')")
+      const bRes = await q(`insert into bookings (client_uuid, booking_no, branch_id, client_id, stage, project_type, delivery_type, pickup_at, return_at, created_by, updated_by)
+        values (gen_random_uuid(), '${bNo1}', '${BRANCH}', '${CLIENT}', 'Quote', 'Music Video', 'Client Pickup', '2090-05-11 00:15:00+00', '2090-05-14 00:15:00+00', '${U.Coordinator}', '${U.Coordinator}')
+        returning id`)
+      bookingInsideId = bRes.rows[0].id
+
+      await q(`insert into booking_lines (client_uuid, booking_id, line_type, product_id, qty, days, rate, created_by)
+        values (gen_random_uuid(), '${bookingInsideId}', 'Equipment', '${productId}', 2, 3, 5000, '${U.Coordinator}')`)
+
+      const conf = await one('select confirm_booking_atomic($1::uuid, $2::uuid, $3::uuid, now(), $4)', [
+        bookingInsideId,
+        U.Coordinator,
+        crypto.randomUUID(),
+        'Confirmed inside partner window',
+      ])
+      assertEq(conf.success, true, 'confirming inside window succeeds')
+    })
+
+    // 7. Attempt booking extending outside window fails capacity check
+    await as('Coordinator', async () => {
+      const bNo2 = await one("select next_document_number('booking')")
+      const bRes = await q(`insert into bookings (client_uuid, booking_no, branch_id, client_id, stage, project_type, delivery_type, pickup_at, return_at, created_by, updated_by)
+        values (gen_random_uuid(), '${bNo2}', '${BRANCH}', '${CLIENT}', 'Quote', 'Music Video', 'Client Pickup', '2090-05-14 00:15:00+00', '2090-05-16 00:15:00+00', '${U.Coordinator}', '${U.Coordinator}')
+        returning id`)
+      const bookingOutsideId = bRes.rows[0].id
+
+      await q(`insert into booking_lines (client_uuid, booking_id, line_type, product_id, qty, days, rate, created_by)
+        values (gen_random_uuid(), '${bookingOutsideId}', 'Equipment', '${productId}', 1, 2, 5000, '${U.Coordinator}')`)
+
+      let confRefused = false
+      try {
+        await one('select confirm_booking_atomic($1::uuid, $2::uuid, $3::uuid, now(), $4)', [
+          bookingOutsideId,
+          U.Coordinator,
+          crypto.randomUUID(),
+          'Attempt confirm outside partner window',
+        ])
+      } catch (err) {
+        confRefused = true
+        assert(err.message.includes('Reservation rejected') || err.message.includes('capacity') || err.message.includes('stock on hand'), 'refused by capacity check')
+      }
+      assert(confRefused, 'booking extending outside window cannot confirm')
+    })
+
+    // 8. Direct reservation outside window is refused by trigger validate_unit_reservability
+    await asOwnerOfTheDatabase(async () => {
+      let resRefused = false
+      try {
+        await q(`insert into inventory_reservations (client_uuid, booking_id, booking_line_id, asset_id, period, created_by, hold_state)
+          values (gen_random_uuid(), '${bookingInsideId}', (select id from booking_lines where booking_id = '${bookingInsideId}' limit 1),
+                  '${units[0].id}', tstzrange('2090-05-14 00:15:00+00', '2090-05-17 00:15:00+00', '[)'), '${U.Owner}', 'confirmed')`)
+      } catch (err) {
+        resRefused = true
+        assert(err.message.includes('outside_window'), 'refused by gate.partner_stock.outside_window')
+      }
+      assert(resRefused, 'direct reservation outside agreement window is refused by database trigger')
+    })
+
+    // Save for L91
+    bookingIds.l90_temp_stock = tempStockId
+    bookingIds.l90_product = productId
+    bookingIds.l90_booking = bookingInsideId
+  },
+})
+
+STEPS.push({
+  id: 'L91',
+  title: 'Return partner stock: Warehouse completes return, units retired, Law 6 money blindness verified (T2-24, B36, Law 6)',
+  expect: 'green',
+  run: async () => {
+    const tempStockId = bookingIds.l90_temp_stock
+    const bookingId = bookingIds.l90_booking
+    const productId = bookingIds.l90_product
+    assert(Boolean(tempStockId), 'tempStockId from L90 exists')
+
+    // 1. Law 6: Warehouse queries temporary_stock_v -> cost_kind and cost_paisa are null
+    await as('Warehouse', async () => {
+      const row = (await q(`select * from temporary_stock_v where id = '${tempStockId}'`)).rows[0]
+      assert(Boolean(row), 'Warehouse can read temporary_stock_v')
+      assertEq(row.cost_kind, null, 'Warehouse reads NULL for cost_kind (Law 6)')
+      assertEq(row.cost_paisa, null, 'Warehouse reads NULL for cost_paisa (Law 6)')
+      assertEq(row.status, 'Active', 'status is Active')
+    })
+
+    // 2. Law 6: Owner queries temporary_stock_v -> sees cost_kind and cost_paisa
+    await as('Owner', async () => {
+      const row = (await q(`select * from temporary_stock_v where id = '${tempStockId}'`)).rows[0]
+      assert(Boolean(row), 'Owner can read temporary_stock_v')
+      assertEq(row.cost_kind, 'daily', 'Owner reads daily cost_kind')
+      assertEq(Number(row.cost_paisa), 500000, 'Owner reads 500000 cost_paisa')
+    })
+
+    // 3. Attempting to return partner stock while units are active on open booking is blocked if on rent
+    // Assign both units to booking line before transitioning to Packed
+    const unitRows = (await q(`select id from product_units where temporary_stock_id = '${tempStockId}'`)).rows
+    const lineId = (await q(`select id from booking_lines where booking_id = '${bookingId}' limit 1`)).rows[0].id
+    await asOwnerOfTheDatabase(async () => {
+      for (const u of unitRows) {
+        await q(`insert into booking_line_units (client_uuid, booking_line_id, asset_id, created_by)
+          values (gen_random_uuid(), '${lineId}', '${u.id}', '${U.Owner}')`)
+      }
+    })
+
+    // Transition our booking to Packed
+    await as('Warehouse', async () => {
+      const sessionId = crypto.randomUUID()
+      await q(`insert into operation_sessions (id, client_uuid, booking_id, operation, session_no, state, warehouse_staff_id, created_by)
+        values ('${sessionId}', gen_random_uuid(), '${bookingId}', 'Packing', 1, 'In Progress', '${U.Warehouse}', '${U.Warehouse}')`)
+
+      for (const u of unitRows) {
+        await q(`insert into session_line_movements (client_uuid, session_id, booking_line_id, unit_id, serial, qty, moved_at, created_by)
+          values (gen_random_uuid(), '${sessionId}', '${lineId}', '${u.id}', 'SN-L91', 1, now(), '${U.Warehouse}')`)
+      }
+
+      await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
+        values (gen_random_uuid(), '${bookingId}', '${BRANCH}', 'Booked', 'Packed', '${U.Warehouse}', 'Warehouse', now(), 'Packed for shoot')`)
+    })
+
+    let returnBlocked = false
+    try {
+      await as('Warehouse', async () => {
+        await one('select return_temporary_stock($1::jsonb)', [JSON.stringify({
+          temporary_stock_id: tempStockId,
+          notes: 'Attempting return while packed',
+        })])
+      })
+    } catch (err) {
+      returnBlocked = true
+      assert(err.message.includes('currently_on_rent'), 'blocked while units packed/on rent')
+    }
+    assert(returnBlocked, 'return refused while partner units are packed/on rent')
+
+    // 4. Release booking / return booking gear
+    await asOwnerOfTheDatabase(async () => {
+      for (const u of unitRows) {
+        await q(`update booking_line_units set released_at = now(), released_by = '${U.Owner}' where asset_id = '${u.id}'`)
+      }
+      await q(`update bookings set stage = 'Returned' where id = '${bookingId}'`)
+    })
+
+    // 5. Warehouse completes partner return (B36, Law 3)
+    await as('Warehouse', async () => {
+      const res = await one('select return_temporary_stock($1::jsonb)', [JSON.stringify({
+        temporary_stock_id: tempStockId,
+        notes: 'Both lenses checked and returned in original pelican case.',
+      })])
+      assertEq(res.status, 'Returned to partner', 'agreement status is Returned to partner')
+    })
+
+    // 6. Verify database state: agreement is Returned to partner, units are retired, capacity is 0
+    const stockAfter = (await q(`select status, returned_at from temporary_stock where id = '${tempStockId}'`)).rows[0]
+    assertEq(stockAfter.status, 'Returned to partner', 'temporary_stock status updated')
+    assert(Boolean(stockAfter.returned_at), 'returned_at timestamp recorded')
+
+    const unitsAfter = (await q(`select status, retired_at from product_units where temporary_stock_id = '${tempStockId}'`)).rows
+    assert(unitsAfter.every((u) => u.status === 'Retired' && u.retired_at !== null), 'all partner units are now Retired')
+
+    const capAfter = Number(await one(`select get_available_product_capacity('${productId}', tstzrange('2090-05-11 00:15:00+00', '2090-05-14 00:15:00+00', '[)'))`))
+    assertEq(capAfter, 0, 'capacity is now 0 after partner stock returned')
+  },
+})
+
 
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
