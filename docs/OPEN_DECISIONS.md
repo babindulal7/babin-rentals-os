@@ -379,3 +379,15 @@ section is an approved product policy. Each is `TODO(decision)` until he does.
   resets, and quick-shelve eligibility. Blocks UX-P26. ⭐ No templates; current Reset checklist.
 - **O-27 (D-UX-05)** — Whether the future-availability policy should remain as ruled (24 October).
   Blocks UX-P26. ⭐ **Do not change.**
+
+## 23. Temporary stock from partners cost attribution (registered 20 November 2026) — open (O-33)
+
+Card: T2-24 (`docs/plans/T2_FLOOR.md`). Design note: `docs/verification/T2-24_DESIGN.md`.
+
+When partner equipment is brought in for a window under a fixed lump-sum charge (e.g. Rs 10,000 for 5 days) and utilized across multiple separate customer bookings:
+- **TODO(decision):** How should the lump-sum partner cost be allocated to individual booking profitability calculations?
+  - Option 1: Pro-rated across bookings based on rental days.
+  - Option 2: Attributed solely to the primary booking that triggered the partner request.
+  - Option 3: Reported at the aggregate partner/sub-rent statement level without modifying individual booking profit margins.
+
+Until ruled by Babin, Option 3 is adopted (Law 1, Law 6). No artificial or arbitrary cost split will be invented. Floor operations and availability enforcement remain unblocked.

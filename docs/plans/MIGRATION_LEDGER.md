@@ -106,5 +106,6 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0244 | T3-31 | counter-sale-atomic | feat/t3-31-counter-sale-atomic | written |
 | 0245 | T7-02 | booking-site-and-public-catalogue | lane-c/T7-02-booking-site-and-public-catalogue | verified |
 | 0246 | T2-23 | allow-overbooking-on-chosen-products | lane-a/T2-23-allow-overbooking-safe-shortages | written |
+| 0247 | T2-24 | temporary-stock-from-partners | lane-a/T2-24-temporary-stock-from-partners | written |
 
 ## Expected migrations (not yet claimed)
