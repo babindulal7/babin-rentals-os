@@ -1,5 +1,50 @@
 # Progress Log
 
+## 2026-11-19 — T7-17: Old store links open the same item (Lane C / Windows)
+
+**Did**
+- Implemented **T7-17 · Old store links open the same item** (`lane-c/T7-17-old-store-links-open-the-same`):
+  - Legacy URL resolver engine (`src/lib/legacyUrlResolver.ts`):
+    - Created `DEFAULT_LEGACY_MAPPINGS` covering all known Booqable store item and category URL slugs (Sony FX3, Canon C70, Sony A7 IV, RED Komodo, BMPCC 6K, lenses, Aputure lighting, DJI stabilizers, Sennheiser audio, grip, bundles).
+    - Added `fetchLegacyMappings()` dynamically querying `public.external_refs` (`system = 'booqable'`) to load and merge runtime product slug mappings with defaults.
+    - Added robust path resolution with normalization (stripping leading/trailing slashes, case-insensitivity, percent-decoding, and query param sanitization against `javascript:` or dangerous schemes).
+    - Old Booqable item paths (`/products/:slug`, `/items/:slug`) resolve to `/catalogue/:targetSlug`.
+    - Old category paths (`/categories/:slug`, `/collections/:slug`) resolve to `/catalogue?category=:targetCategory`.
+    - Store root and cart paths (`/`, `/store`, `/cart`) resolve to `/catalogue`.
+    - Fallback: Any unknown, deleted, or arbitrary legacy path gracefully resolves to `/catalogue` with `isFallback: true` and an informative message — never a blank screen, 404, or crash (B4, B5, O-1).
+  - Online Booking Client integration (`src/booking/App.tsx`):
+    - Added dynamic mapping loader effect and route resolution hook on mount / catalogue load.
+    - When a legacy path is detected, updates the browser URL to the canonical catalogue route cleanly using `window.history.replaceState`.
+    - Automatically opens the product detail modal (`setSelectedItem`) for legacy item links, or filters by category tab (`setActiveCategory`) for category links.
+    - Displays a dismissible transfer banner informing the user that they have been transferred from an old store link.
+  - Tests & Verification:
+    - Added comprehensive unit test suite `src/lib/__tests__/legacyStorePaths.test.ts` (15 tests) testing products, categories, query parameters, unknown paths, and database mapping queries.
+    - Added frontend integration test suite `src/booking/__tests__/legacyUrlNavigation.test.tsx` (3 tests) verifying auto-opening product details, category switching, and graceful fallback.
+    - All 665 test files and 7,434 tests passed cleanly in Vitest (0 failed).
+    - All CI gates passed: check:pglite (246/246), check:security, check:lifecycle (90/90), test:server-contracts (68/68), test:partial-return (58/58), test-receipt (11/11), lint:shell, lint:ui-copy, check:contrast (97/97), build (PWA precache generated).
+
+**Ruled**
+- Old Booqable store addresses from search engines, WhatsApp, and social media must never hit a dead page or blank screen; they must resolve to the identical item, category, or catalogue home (B4, B5, O-1).
+- Unrecognized or corrupted legacy paths fail-safe to `/catalogue` with user feedback.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 111 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | +0 |
+| Lifecycle | steps green / total | 90 / 90 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 246 files · check:pglite 246/246 applied, 0 failed (recorded 2026-11-19T13:16:29.201Z). Suite: PASS — 7434/7434 passed, 0 failed (recorded 2026-11-19T13:28:02.395Z); source fingerprint matches.
+Coverage suite: Historical suite: 7398/7398 passed, 0 failed (recorded 2026-11-19T01:10:17.481Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-19T13:17:35.752Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T7-17 complete and verified across all gates. Next roadmap cards in order.
+
 ## 2026-11-19 — T7-14: "Away" switch for online booking (Lane C / Windows)
 
 **Did**

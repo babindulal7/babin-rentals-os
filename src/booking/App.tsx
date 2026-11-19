@@ -7,6 +7,11 @@ import {
   fetchOnlineBookingAwayStatus,
 } from '@/lib/awayMode'
 import {
+  type LegacyMappingEntry,
+  fetchLegacyMappings,
+  resolveLegacyBooqableUrl,
+} from '@/lib/legacyUrlResolver'
+import {
   type ClientUser,
   type OnlineProfile,
   getCurrentClientUser,
@@ -50,12 +55,17 @@ export default function BookingApp() {
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false)
   const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false)
   const [awayStatus, setAwayStatus] = useState<OnlineBookingAwayStatus | null>(null)
+  const [legacyMappings, setLegacyMappings] = useState<LegacyMappingEntry[]>([])
+  const [legacyNotice, setLegacyNotice] = useState<string | null>(null)
 
-  // Load online booking away mode status
+  // Load online booking away mode status and legacy URL mappings
   useEffect(() => {
     let active = true
     fetchOnlineBookingAwayStatus().then((status) => {
       if (active) setAwayStatus(status)
+    })
+    fetchLegacyMappings().then((maps) => {
+      if (active) setLegacyMappings(maps)
     })
     return () => {
       active = false
@@ -142,6 +152,61 @@ export default function BookingApp() {
     }
     return list
   }, [items])
+
+  // T7-17: Resolve legacy Booqable URLs to canonical items or categories
+  useEffect(() => {
+    if (typeof window === 'undefined' || items.length === 0) return
+
+    const pathname = window.location.pathname
+    // Only resolve if visiting a non-default path or legacy path
+    if (
+      pathname.startsWith('/products/') ||
+      pathname.startsWith('/items/') ||
+      pathname.startsWith('/categories/') ||
+      pathname.startsWith('/collections/') ||
+      pathname.startsWith('/store') ||
+      (pathname !== '/' && pathname !== '/catalogue' && pathname !== '/index.html' && pathname !== '/booking.html')
+    ) {
+      const resolution = resolveLegacyBooqableUrl(
+        pathname + window.location.search,
+        legacyMappings.length > 0 ? legacyMappings : undefined,
+      )
+
+      if (resolution.entityType === 'product' && resolution.resolvedSlug) {
+        const slugLower = resolution.resolvedSlug.toLowerCase()
+        const matched = items.find(
+          (i) =>
+            i.slug.toLowerCase() === slugLower ||
+            i.id === resolution.resolvedSlug ||
+            i.name.toLowerCase().includes(slugLower),
+        )
+        if (matched) {
+          setSelectedItem(matched)
+          setLegacyNotice(`Showing ${matched.name} (transferred from old store link)`)
+        } else {
+          setLegacyNotice('The requested item from the previous store is unavailable or updated. Showing all available gear below.')
+        }
+      } else if (resolution.entityType === 'category' && resolution.categoryName) {
+        const catLower = resolution.categoryName.toLowerCase()
+        const matchedCat = categories.find((c) => c.toLowerCase() === catLower)
+        if (matchedCat) {
+          setActiveCategory(matchedCat)
+          setLegacyNotice(`Showing ${matchedCat} category (transferred from old store link)`)
+        } else {
+          setLegacyNotice('Showing all available gear below.')
+        }
+      } else if (resolution.isFallback) {
+        setLegacyNotice('Welcome to the new Babin Rentals store. Redirected to complete catalogue.')
+      }
+
+      // Update browser URL safely without reload
+      try {
+        window.history.replaceState({}, '', resolution.targetPath + (resolution.sanitizedQuery || ''))
+      } catch {
+        // Safe fallback in restricted environments
+      }
+    }
+  }, [items, legacyMappings, categories])
 
   // Filter items
   const filteredItems = useMemo(() => {
@@ -258,6 +323,44 @@ export default function BookingApp() {
             }}
           >
             📡 You are currently offline. Showing cached catalogue rates. Live reservation sync will resume when connection is restored.
+          </div>
+        )}
+
+        {legacyNotice && (
+          <div
+            role="status"
+            aria-live="polite"
+            style={{
+              background: 'rgba(56, 106, 247, 0.12)',
+              color: 'var(--primary-text, #93c5fd)',
+              padding: '10px 16px',
+              borderRadius: 'var(--radius-md)',
+              margin: '12px 0',
+              fontSize: '0.85rem',
+              border: '1px solid rgba(56, 106, 247, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+            }}
+          >
+            <span>🔗 {legacyNotice}</span>
+            <button
+              type="button"
+              onClick={() => setLegacyNotice(null)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--primary-text, #93c5fd)',
+                cursor: 'pointer',
+                fontSize: '1.1rem',
+                padding: '0 4px',
+                lineHeight: 1,
+              }}
+              aria-label="Dismiss old link notice"
+            >
+              ×
+            </button>
           </div>
         )}
 
