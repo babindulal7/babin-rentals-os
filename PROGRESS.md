@@ -1,5 +1,46 @@
 # Progress Log
 
+## 2026-11-20 — Cross-track roadmap reconciliation to acceptance_pending (Lane B / Windows)
+
+**Did**
+- Reconciled canonical card status headings in `docs/plans/` across all tracks (T0, T1, T2, T7, T9) to `acceptance_pending` to truthfully reflect merged implementations while recording pending physical-device, hosted-staging, and accountant acceptance:
+  - T0: `T0-03` (PR #165 merged; physical PR triage verification pending)
+  - T1: `T1-05` (PR #173 merged; role seat staging test pending), `T1-17` (PR #203 merged; production MFA setup pending), `T1-18` (PR #204 merged; staging email dispatch verification pending)
+  - T2: `T2-06`, `T2-13`, `T2-14`, `T2-15`, `T2-18`, `T2-19`, `T2-20`, `T2-21`, `T2-22` aligned with PR #235 and main's merged lifecycle implementations
+  - T7: `T7-09` (PR #201 merged; production Turnstile domain configuration pending), `T7-12` (PR #196 merged; client portal recommendations visual check pending), `T7-13` (PR #197 merged; public catalogue option selector verification pending), `T7-14` (PR #200 merged; public portal request denial verification pending), `T7-17` (PR #198 merged; Cloudflare redirect mapping verification pending)
+  - T9: `T9-01` (PR #195 merged; Booqable export reconciliation with live staging pending), `T9-02` (PR #202 merged; external hold synchronization test run pending), `T9-07` (PR #199 merged; physical device staff session scheduling pending)
+- Authored automated documentation regression test in `src/lib/__tests__/roadmapStatusTruth.test.ts` (6/6 pass) asserting that all reconciled cards across T0, T1, T2, T3, T7, T9 are strictly `status: acceptance_pending` (or `done` where acceptance is evidenced).
+
+**Ruled**
+- Implemented and merged cards awaiting physical device, staging, or external accountant validation are labelled `acceptance_pending`, never premature `done` or stale `todo`.
+- The reported 96% is a structural implementation score, not the percentage of tasks accepted or the percentage of production-launch readiness.
+
+**Verified**
+- `npm run typecheck`: clean, 0 errors.
+- `npm run check:pglite`: 242/242 applied, 0 failed.
+- `npm run check:lifecycle`: 86/86 green, 0 failed.
+- `node ./node_modules/vitest/vitest.mjs run src/lib/__tests__/roadmapStatusTruth.test.ts`: 6/6 pass.
+- `node ./node_modules/vitest/vitest.mjs run src/lib/__tests__/t3RoadmapDocumentation.test.ts`: 2/2 pass.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 111 (99%) | +2 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +2 |
+| Lifecycle | steps green / total | 86 / 86 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 242 files · check:pglite 242/242 applied, 0 failed (recorded 2026-11-19T19:54:38.435Z).
+Gates read from .lifecycle-result.json, written 2026-11-19T19:55:22.022Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T2-23 (Allow overbooking on chosen products): implementation ready on branch `feat/windows-t2-23-product-overbooking`.
+- T2-24 (Temporary stock from partners): next stock tool card to pick up.
+- T7 online booking core flow (T7-02, T7-03, T7-04, T7-05).
+
 ## 2026-11-18 — T3-18: Change a confirmed booking (Lane C)
 
 **Did**
