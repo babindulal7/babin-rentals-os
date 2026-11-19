@@ -8,7 +8,6 @@ import ReturnWorkspace from '../../modules/rentals/ReturnWorkspace'
 import { ToastProvider } from '../../components/ui/Toast'
 import { loadMockClient } from '../../lib/supabase'
 import { fetchOperationEvidence } from '../../lib/queries/operationEvidence'
-import { fetchReturnQuantityFacts } from '../../lib/queries/returnQuantityFacts'
 import { completeReturn } from '../../actions/rentals'
 import { saveFloorScan } from '../../lib/floorScanStorage'
 import type { ItemCardData } from '../../lib/queries/inventory'
@@ -355,7 +354,7 @@ describe('Floor Hardware Simulation E2E (iPad & Scanner Behaviors)', () => {
         root.render(
           <MemoryRouter>
             <ToastProvider>
-              <ReturnWorkspace bookingId={bookingId} />
+              <ReturnWorkspace bookingNo="BK-T2-HW-SIM" />
             </ToastProvider>
           </MemoryRouter>
         )
@@ -413,7 +412,7 @@ describe('Floor Hardware Simulation E2E (iPad & Scanner Behaviors)', () => {
         root.render(
           <MemoryRouter>
             <ToastProvider>
-              <ReturnWorkspace bookingId={bookingId} />
+              <ReturnWorkspace bookingNo="BK-T2-HW-SIM" />
             </ToastProvider>
           </MemoryRouter>
         )
