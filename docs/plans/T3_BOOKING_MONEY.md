@@ -144,7 +144,7 @@ invoice creation.
 **Done when** — three structure-priced bookings invoice to the paisa of their quote.
 **Needs** — Batch 1 on staging.
 
-### T3-10 · After-hours line            status: ready — awaiting merge (mac/T3-10-after-hours-line) · size: S · lane C
+### T3-10 · After-hours line            status: acceptance_pending — PR #188 merged 17 Nov; staged manual fee, invoicing and Warehouse price-masking acceptance pending · size: S · lane C
 **What** — Add a service product "After-hours handover" (no fixed price; staff type the amount) so
 staff can add the charge in two taps when they decide to (D7). No automatic surcharge.
 **Why** — D7 (§4.64d).
@@ -153,7 +153,7 @@ staff can add the charge in two taps when they decide to (D7). No automatic surc
 **Done when** — the line can be added, priced and invoiced; Warehouse cannot see its price.
 **Needs** — none.
 
-### T3-11 · Late fee — acceptance only            status: ready — awaiting merge (lane-c/T3-11-late-fee-acceptance-only) · size: S · lane C
+### T3-11 · Late fee — acceptance only            status: acceptance_pending — PR #210 merged 17 Nov; staged late-fee timing, staff application and waiver authority checks pending · size: S · lane C
 **What** — Confirm on staging: Return suggests the fee (≤ 30 min free · < 2 h half day · ≥ 2 h full
 day); staff apply; a waiver needs Manager or Owner approval (D6 — unchanged).
 **Why** — D6.
@@ -469,7 +469,7 @@ with a movement row; 3) dropping below the reorder level shows on Today; 4) Ware
 never prices; 5) screen check.
 **Needs** — none.
 
-### T3-31 · Counter sale            status: ready · size: M · lane C · [go-live] · slips first
+### T3-31 · Counter sale            status: acceptance_pending — PR #234 merged 20 Nov NPT; hosted staging atomic stock/invoice/payment, role and cancellation acceptance pending · size: M · lane C · [go-live] · slips first
 **What** — A walk-in buys consumables without renting (B46). Anyone can start it (B51): **floor roles**
 pick the items and quantities (no prices shown, Law 6) and hand them over; **the desk** takes payment.
 "Counter sale" on Today and in New Rental. One atomic server action creates the sale, deducts stock and
