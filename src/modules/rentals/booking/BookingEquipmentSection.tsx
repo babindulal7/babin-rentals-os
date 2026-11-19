@@ -12,14 +12,13 @@ import {
   type BookingWindow,
   type BookingLineDraft,
   type BundleResult,
-  equipmentLineDraft,
   defaultTransportOptions,
 } from './itemCatalogue'
 import { crewPool, type CrewMember } from '../../../lib/queries/crew'
 import type { PricingPipelineResult } from '../../../lib/pricingPipeline'
 import type { GateContext } from '../../../lib/fieldGating'
 import type { AuthUser } from '../../../lib/auth'
-import { supabase, newClientUuid } from '../../../lib/supabase'
+import { newClientUuid } from '../../../lib/supabase'
 import { rupees, type Paisa } from '../../../lib/money'
 import { processScanToAddEquipment } from '../../../lib/scanToAddEquipment'
 import './booking-equipment-section.css'
@@ -237,11 +236,26 @@ export function BookingEquipmentSection({
       const code = rawCode.trim()
       if (!code) return null
 
+      const existingDrafts: BookingLineDraft[] = lines.map((l) => ({
+        id: l.id,
+        name: l.name,
+        lineType: l.lineType || 'Equipment',
+        category: l.category,
+        qty: l.qty,
+        ratePaisa: l.ratePaisa,
+        days: l.days,
+        discountPct: l.discountPct,
+        serial: l.serial,
+        location: l.location,
+        committedTo: l.committedTo,
+        ...(l.clientUuid ? { clientUuid: l.clientUuid } : {}),
+      }))
+
       const res = await processScanToAddEquipment(code, {
         days: days || 1,
-        existingLines: lines,
+        existingLines: existingDrafts,
         onAddLine: (line) => {
-          addDrafts([line], { kind: line.kind || 'equipment', id: line.id, name: line.name })
+          addDrafts([line], { kind: 'equipment', id: line.id, name: line.name })
         },
       })
 
