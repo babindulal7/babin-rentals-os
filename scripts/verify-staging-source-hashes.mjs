@@ -84,6 +84,7 @@ const result = {
   blockers: [
     '002: current source hashes must be pinned to the exact intended staging installer commit',
     '0012: replace fixed branch/user/bank records with reviewed synthetic fixtures',
+    '0013/0014: commit new system_role enum members before dependent policy use in a separate transaction',
     '0047: classify generated reference corpus and prove safe omission or replacement',
     '0082: prohibit replay of historical dynamic bookings and use synthetic workflow fixtures',
     '0188: review duplicate filename prefixes and all dependencies/transactions',
