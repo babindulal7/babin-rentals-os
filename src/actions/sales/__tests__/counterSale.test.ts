@@ -80,6 +80,18 @@ describe('CREATE_COUNTER_SALE action', () => {
     expect(res.result.bookingNo).toBe('B-101')
     expect(res.result.bookingKind).toBe('counter_sale')
   })
+
+  it('rejects execution when RPC rejects actor spoofing', async () => {
+    db.state.rpcError = {
+      message: 'GATE:gate.counter_sale.actor_mismatch|Permission denied: actor must match the signed-in staff session.',
+    }
+    const input: CreateCounterSaleInput = {
+      lines: [{ productId: '44444444-4444-4444-8444-444444444444', qty: 1 }],
+    }
+    await expect(createCounterSaleConfig.execute(input, CTX)).rejects.toThrow(
+      /actor must match the signed-in staff session/
+    )
+  })
 })
 
 describe('CANCEL_COUNTER_SALE action', () => {
@@ -124,5 +136,18 @@ describe('CANCEL_COUNTER_SALE action', () => {
     expect(db.state.rpcCalls).toHaveLength(1)
     expect(db.state.rpcCalls[0]?.fn).toBe('cancel_counter_sale')
     expect(res.result.status).toBe('cancelled')
+  })
+
+  it('rejects execution when cancel RPC rejects actor spoofing', async () => {
+    db.state.rpcError = {
+      message: 'GATE:gate.counter_sale.actor_mismatch|Permission denied: actor must match the signed-in staff session.',
+    }
+    const input: CancelCounterSaleInput = {
+      bookingId: '22222222-2222-4222-8222-222222222222',
+      reason: 'Spoofed cancel attempt',
+    }
+    await expect(cancelCounterSaleConfig.execute(input, CTX)).rejects.toThrow(
+      /actor must match the signed-in staff session/
+    )
   })
 })

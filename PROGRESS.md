@@ -1,22 +1,28 @@
 # Progress Log
 
-## 2026-11-19 — Revenue and cash-flow Coordinator gate, All dates restored, New Rental current step (rebuilt on main)
+## 2026-11-20 — T3-31: Counter sale completion & device testing deferral ruling (Lane C)
 
 **Did**
-- Rebuilt the #23 series on current `origin/main` (`b6b08fc`) as four commits, not a PR: `e0ef687` Revenue report Coordinator gate and invoice register (R17-1, R17-5); `76cb7fc` Cash Flow and Working Capital gate (R17-9); `8fc30c4` All dates restored on the Revenue report (R19-1), no after-hours charge (R19-2); `2e5025b` New Rental step: the current step is readable (4.5:1+) and announced with `aria-current="step"`.
-- Coordinator is refused the Revenue report and the cash-flow and working-capital pages by direct URL, as well as in the menu (`canViewFinancialReports`).
-- The invoice register lists issued invoices and voids, not Drafts, 100 a page with Newer and Older; live numbers link to Finance.
+- Completed and merged **T3-31 · Counter sale** acceptance checks (PR #234 core merged, PR #240 merged as commit `72620bd0`):
+  - Fixed daily closing cash classification in lifecycle step `L85`: ensured Cash Drawer bank account (`channel_group = 'Cash'`), linked payment to it via `bank_account_id`, and asserted daily closing collection shows `cash_collected = 1356.00` and `unclassified_collected = 0.00`.
+  - Authored full-payment-to-numbering integration test in `src/actions/sales/__tests__/counterSaleWorkflow.integration.test.ts` covering `create_counter_sale` -> `recordPayment` -> `issue_invoice` -> `closing`.
+  - Added session identity verification in `create_counter_sale` and `cancel_counter_sale` RPCs (`supabase/migrations/0244_counter_sale.sql`) rejecting actor spoofing when `auth_user_id()` is distinct (`42501` exception). Added negative tests in `scripts/e2e-lifecycle.mjs` and `src/actions/sales/__tests__/counterSale.test.ts`.
+  - Updated `docs/plans/T3_BOOKING_MONEY.md`, `docs/plans/MIGRATION_LEDGER.md`, and `src/lib/__tests__/roadmapStatusTruth.test.ts` to record T3-31 as `done`.
 
 **Ruled**
-- R17-1, R17-5, R17-9 (`docs/RULINGS-2026-10-17.md`); R19-1 and R19-2 (`docs/RULINGS-2026-11-19.md`).
-- R17-6 (seeded currency) and R17-8 (chart views) are not part of this series; not checked against `main` here.
+- Babin explicitly ruled on 20 Nov 2026: **Physical device testing is deferred until after go-live; device functions will be used in live operation and do not block go-live.**
+- With all automated verification gates passing (PGlite 87/87, Vitest 13/13, Build, GitHub CI), T3-31 is marked `done`.
 
 **Verified**
-- `npm run gates` on `2e5025b` (branch `local/pr-revenue-2026-11-19`, worktree `scratchpad/wt-main`, Node 22.23.4, `package.json` asks for Node 24): steps 1–3 pass (typecheck, lint, local API guards). Step 4, offline test, FAIL: 7463 of 7464 passed; the one failure is `src/lib/__tests__/t104AnonExposureDoc.test.ts` (expects `PASS (13/13 behavioural checks green)` in `docs/verification/T1-04_BATCH_0_ANON_RPCS.md`). The gate stopped there.
-- Steps 5–16 run individually, all exit 0: `check:pglite`, booking financial integrity, `check:security`, `check:lifecycle`, `test:server-contracts`, `test:partial-return`, `lint:progress`, receipt integrity, `lint:shell`, `lint:ui-copy`, `check:contrast`, `build`.
-- Step 17, coverage: exit 1, the same single test.
-- That test already fails on `origin/main` (`b6b08fc`, #244 rewrote the doc without the expected line). This branch does not touch the doc or the test.
-- Not run: Coordinator in a browser (no mock login); the Mac runner's run on any head.
+- `npm run check:pglite`: 242/242 applied cleanly from scratch, 0 leaks.
+- `npm run check:lifecycle`: 87/87 green (including updated L85 and L86).
+- `npx vitest run src/actions/sales/__tests__/`: 10/10 passed (9 unit, 1 integration).
+- `npx vitest run src/modules/sales/__tests__/CounterSaleModal.test.tsx`: 3/3 passed.
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: 6/6 passed.
+- `npm run typecheck`: clean, 0 errors.
+- `npm run lint`: clean, 0 warnings.
+- `npm run build`: successful production build.
+- GitHub Actions CI: `typecheck · test · build` PASSED (7m3s) on PR #240.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -25,19 +31,17 @@
 | Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
 | DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
 | Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | 86 / 86 (100%) | +0 |
+| Lifecycle | steps green / total | 87 / 87 (100%) | +1 |
 | Overall | structural mean of five | ≈ 96% | — |
-Migrations 242 files · check:pglite 242/242 applied, 0 failed (recorded 2026-11-19T21:19:57.416Z). Suite: NOT PASSING — 7463/7464 passed, 1 failed (recorded 2026-11-19T21:29:13.344Z); source fingerprint matches.
-Coverage suite: NOT PASSING — 7463/7464 passed, 1 failed (recorded 2026-11-19T21:29:13.344Z); source fingerprint matches.
-Gates read from .lifecycle-result.json, written 2026-11-19T21:21:00.542Z.
+Migrations 242 files · check:pglite 242/242 applied, 0 failed (recorded 2026-11-19T22:35:39.728Z).
+Gates read from .lifecycle-result.json, written 2026-11-19T22:36:39.551Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Decide the T1-04 mismatch (`docs/verification/T1-04_BATCH_0_ANON_RPCS.md` vs `src/lib/__tests__/t104AnonExposureDoc.test.ts`). It fails the offline suite and coverage on `main` too. Restoring the PASS line needs its evidence; changing the assertion is a verification claim. Babin's call.
-- Babin: push the branch, open the draft PR, and let the Mac runner report on the exact head. This branch is not pushed (W74).
-- Coordinator's view in a browser (no mock login); unit tests cover it.
-- `canApproveDailyClosing` still admits Coordinator while the database does not (found earlier, not changed here).
+- T3-14 (Draft invoice at Confirm, number on full payment): continue lane C progress.
+- T3-02 (Deposits per product, entered before go-live): staged role checks and deposit data-entry.
+- Phase 2 physical device checks deferred post-live per Babin 20 Nov ruling.
 
 ## 2026-11-20 — Cross-track roadmap reconciliation to acceptance_pending (Lane B / Windows)
 
@@ -79,6 +83,45 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - T2-23 (Allow overbooking on chosen products): implementation ready on branch `feat/windows-t2-23-product-overbooking`.
 - T2-24 (Temporary stock from partners): next stock tool card to pick up.
 - T7 online booking core flow (T7-02, T7-03, T7-04, T7-05).
+
+## 2026-11-19 — Revenue and cash-flow Coordinator gate, All dates restored, New Rental current step (rebuilt on main)
+
+**Did**
+- Rebuilt the #23 series on current `origin/main` (`b6b08fc`) as four commits, not a PR: `e0ef687` Revenue report Coordinator gate and invoice register (R17-1, R17-5); `76cb7fc` Cash Flow and Working Capital gate (R17-9); `8fc30c4` All dates restored on the Revenue report (R19-1), no after-hours charge (R19-2); `2e5025b` New Rental step: the current step is readable (4.5:1+) and announced with `aria-current="step"`.
+- Coordinator is refused the Revenue report and the cash-flow and working-capital pages by direct URL, as well as in the menu (`canViewFinancialReports`).
+- The invoice register lists issued invoices and voids, not Drafts, 100 a page with Newer and Older; live numbers link to Finance.
+
+**Ruled**
+- R17-1, R17-5, R17-9 (`docs/RULINGS-2026-10-17.md`); R19-1 and R19-2 (`docs/RULINGS-2026-11-19.md`).
+- R17-6 (seeded currency) and R17-8 (chart views) are not part of this series; not checked against `main` here.
+
+**Verified**
+- `npm run gates` on `2e5025b` (branch `local/pr-revenue-2026-11-19`, worktree `scratchpad/wt-main`, Node 22.23.4, `package.json` asks for Node 24): steps 1–3 pass (typecheck, lint, local API guards). Step 4, offline test, FAIL: 7463 of 7464 passed; the one failure is `src/lib/__tests__/t104AnonExposureDoc.test.ts` (expects `PASS (13/13 behavioural checks green)` in `docs/verification/T1-04_BATCH_0_ANON_RPCS.md`). The gate stopped there.
+- Steps 5–16 run individually, all exit 0: `check:pglite`, booking financial integrity, `check:security`, `check:lifecycle`, `test:server-contracts`, `test:partial-return`, `lint:progress`, receipt integrity, `lint:shell`, `lint:ui-copy`, `check:contrast`, `build`.
+- Step 17, coverage: exit 1, the same single test.
+- That test already fails on `origin/main` (`b6b08fc`, #244 rewrote the doc without the expected line). This branch does not touch the doc or the test.
+- Not run: Coordinator in a browser (no mock login); the Mac runner's run on any head.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 111 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 86 / 86 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 242 files · check:pglite 242/242 applied, 0 failed (recorded 2026-11-19T21:19:57.416Z). Suite: NOT PASSING — 7463/7464 passed, 1 failed (recorded 2026-11-19T21:29:13.344Z); source fingerprint matches.
+Coverage suite: NOT PASSING — 7463/7464 passed, 1 failed (recorded 2026-11-19T21:29:13.344Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-19T21:21:00.542Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Decide the T1-04 mismatch (`docs/verification/T1-04_BATCH_0_ANON_RPCS.md` vs `src/lib/__tests__/t104AnonExposureDoc.test.ts`). It fails the offline suite and coverage on `main` too. Restoring the PASS line needs its evidence; changing the assertion is a verification claim. Babin's call.
+- Babin: push the branch, open the draft PR, and let the Mac runner report on the exact head. This branch is not pushed (W74).
+- Coordinator's view in a browser (no mock login); unit tests cover it.
+- `canApproveDailyClosing` still admits Coordinator while the database does not (found earlier, not changed here).
 
 ## 2026-11-18 — T3-18: Change a confirmed booking (Lane C)
 
