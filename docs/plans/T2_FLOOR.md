@@ -53,7 +53,7 @@ compressed on the device (1600 px, JPEG 0.8, EXIF stripped), retry with the same
 **Not built yet → T2-18:** several photos per pick, a damage photo per flagged unit at Return, the
 10 MB damage-photo size and an honest offline message. The staging checks (Done when 1–3) wait for T1-06.
 
-### T2-18 · Finish evidence capture (what T2-16 left)            status: doing — H2 fail-closed evidence reads in draft · size: L · lane A · [go-live]
+### T2-18 · Finish evidence capture (what T2-16 left)            status: acceptance_pending — PR #80 merged 4 Nov; hosted storage/staging acceptance pending · size: L · lane A · [go-live]
 **What** — Finish what T2-01 left (Claude's review of `3fca220`, 26 Oct). **Items 3 and 4 below were built by T2-16 (several photos, size caps) — check them, do not rebuild;** items 1, 2, 5, 6 and 7 are still open:
 1) **Honest offline message.** Offline, the screens say the photo "was saved / kept on device and will
    upload when connectivity is restored", but nothing keeps or uploads it (`OperationEvidenceStatus.tsx`
@@ -201,7 +201,7 @@ handover; lifecycle step "Technician completes a handover".
 **Done when** — a Technician seat on staging completes all four verbs; sees no money.
 **Needs** — T1-05 (Technician seat).
 
-### T2-06 · Repair job closes the damage            status: ready — awaiting merge (lane-a/T2-06-repair-job-closes-the-damage) · size: L · lane A
+### T2-06 · Repair job closes the damage            status: acceptance_pending — merged 27 Oct (a9f760ae); staged repair-job close and unblocking checks pending · size: L · lane A
 **What** — Build the Maintenance job detail screen (today "not built yet", `Maintenance.tsx` ~lines
 454 and 1139): findings, actions taken, cost (money roles only), photos, and **Close job (note
 required)** for Technician or Manager+. Closing marks the linked `damage_findings` row repaired and
@@ -292,7 +292,7 @@ message + "Add ID" in place); a repeat client's collector is picked in one tap; 
 an ID number.
 **Needs** — T2-01. Also wires the collector picker into `SignOnGlassModal.tsx` as the receiver name (T2-02 left free text).
 
-### T2-13 · Self-QC when alone            status: ready — awaiting merge (lane-a/T2-13-self-qc-when-alone) · size: S · lane A · [go-live]
+### T2-13 · Self-QC when alone            status: acceptance_pending — merged 27 Oct (800b2729); staged self-QC audit and device checks pending · size: S · lane A · [go-live]
 **What** — Allow the person who cleaned an item to pass its QC **when alone on shift** (W43, L7):
 the QC step shows "I am alone on shift" as a tick; with it ticked, `qc_by = cleaned_by` is accepted
 and recorded as self-checked (audit row says so). Without it, a second person is still asked for.
@@ -308,7 +308,7 @@ the "ruled, not yet in code" box in the same commit (B-3).
 **Done when** — both paths work in mock mode and on staging; the audit shows self-checked rows.
 **Needs** — none.
 
-### T2-14 · Scan a label → item card            status: ready — awaiting merge (lane-a/T2-14-scan-a-label-to-item-card) · size: M · lane A · [go-live]
+### T2-14 · Scan a label → item card            status: acceptance_pending — merged 27 Oct (1188d2b4); physical Bluetooth scanner and iPad timing receipt pending · size: M · lane A · [go-live]
 **What** — Scanning (camera or Bluetooth) or searching an item's QR/asset code **anywhere outside a
 floor workspace** opens its item card: status, **who has it now** (client, booking, due back, with a
 countdown), location if in the shop, next booking, last reset, open damage. Inside a workspace,
@@ -324,7 +324,7 @@ match case-insensitively; every code is checked by the server, and an unknown co
 time; a Warehouse seat sees no money.
 **Needs** — none.
 
-### T2-15 · Damage found during reset            status: ready — awaiting merge (lane-a/T2-15-damage-found-during-reset) · size: S · lane A · [soon]
+### T2-15 · Damage found during reset            status: acceptance_pending — PR #30 merged 2 Nov; staged email sandbox and damage notice checks pending · size: S · lane A · [soon]
 **30 Oct triage** — Existing [PR #30](https://github.com/babindulal7/babin-rentals-os/pull/30)
 contains the implementation; its `0185` collides with Team Notes on main. Preserve
 it, claim a free number through the ledger, and rerun both database gates after
@@ -374,7 +374,7 @@ Booking Detail and from Pack on the iPad; scanning its QR opens that booking; Wa
 in either PDF; screen check.
 **Needs** — none (T3-26 adds the project line when it lands).
 
-### T2-19 · Signature at Return when damage is found            status: ready — awaiting merge (lane-a/T2-19-signature-at-return-when-damage-is-found) · size: S · lane A · [go-live] · slips first
+### T2-19 · Signature at Return when damage is found            status: acceptance_pending — PR #209 merged 18 Nov; staged signature and refusal iPad checks pending · size: S · lane A · [go-live] · slips first
 **What** — At Return, when at least one unit is flagged damaged or missing, the person returning the
 gear signs once under the list of flagged items ("returned by <name> for <client>; the flagged items
 are as shown") before Return can complete (B19). With no flags, no signature is asked (R-39). Reuse the
@@ -394,7 +394,7 @@ cannot complete until signed or the refusal is recorded; 3) the signature is on 
 4) Warehouse and Technician can do it; 5) screen check.
 **Needs** — T2-02 (done), T2-18 (damage photo per flagged unit).
 
-### T2-20 · Floor adds consumables at Pack and Handover            status: ready — awaiting merge (mac/T2-20-floor-consumables) · size: S · lane A · [go-live] · slips first
+### T2-20 · Floor adds consumables at Pack and Handover            status: acceptance_pending — PR #189 merged 17 Nov; staged money-blind payload inspection pending · size: S · lane A · [go-live] · slips first
 **What** — On Pack and Handover, "**Add consumables**" lists the consumable products (tape, gels,
 batteries) with a quantity stepper (B35). Adding writes a consumable line to the booking through
 T3-30's action: the price comes from the server and floor roles never receive it (Law 6). Stock goes
@@ -409,7 +409,7 @@ price; Warehouse has no price in the DOM or the payload; 2) Handover deducts the
 same `client_uuid` twice adds one line; 4) screen check.
 **Needs** — T3-30.
 
-### T2-21 · Planned downtime with a reason            status: ready — awaiting merge (lane-a/T2-21-planned-downtime-with-a-reason) · size: M · lane A · [go-live] · slips first
+### T2-21 · Planned downtime with a reason            status: acceptance_pending — PR #170 merged 15 Nov; staged calendar and public blackout checks pending · size: M · lane A · [go-live] · slips first
 **What** — Block a unit (or part of a quantity-tracked product) for **dates you know in advance**, with
 a **reason from a list** (B10): ⭐ **Repair · Service or calibration · Our own shoot · Lent to a
 partner · Marketing shoot · Other (type it)**. In that range the unit cannot be booked — New Rental,
@@ -433,7 +433,7 @@ those days only; 2) a downtime over an existing booking is refused with the book
 frees the dates at once; 4) the calendar bar shows the reason to every staff role; 5) screen check.
 **Needs** — T3-22 merged first if it is open (both change `src/lib/queries/availability.ts`).
 
-### T2-22 · Time between rentals: account-wide or per product            status: ready — awaiting merge (lane-a/T2-22-time-between-rentals-account-wide-or) · size: M · lane A · [go-live] · slips first
+### T2-22 · Time between rentals: account-wide or per product            status: acceptance_pending — PR #184 merged 17 Nov; staged per-product setting toggle checks pending · size: M · lane A · [go-live] · slips first
 **What** — Settings ▸ Operations rules gets "**Time between rentals: Account-wide · Per product**"
 (B11, reading). *Account-wide* is today's `rentalTurnaround` setting. *Per product* uses each product's
 **prep minutes before pickup** and **cleaning minutes after return** — `products.prep_time_minutes` and

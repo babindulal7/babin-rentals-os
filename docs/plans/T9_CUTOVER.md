@@ -22,7 +22,7 @@ archived; by 10 Mar Booqable is cancelled.
 
 ---
 
-### T9-01 · Bring the catalogue and clients across            status: todo · size: M · lane A
+### T9-01 · Bring the catalogue and clients across            status: acceptance_pending — PR #195 merged; Booqable export reconciliation with live staging pending · size: M · lane A
 **What** — From Booqable exports (CSV/API, read-only): clients created or changed since the earlier
 import, products, bundles (and the kit-style products that are bundles — 18 Aug), **pricing
 structures** ("Babin Daily", "Days wise discount", "Rental Rate Card", … — 0160) and the **four
@@ -42,7 +42,7 @@ per batch; rejected rows are listed with the reason; a failed batch leaves nothi
 20 products prices the same 3-day quote in both systems (allowing the known rounding difference).
 **Needs** — Batch 1 live; T3-09.
 
-### T9-02 · Booqable rentals block the OS calendar            status: todo · size: M · lane A
+### T9-02 · Booqable rentals block the OS calendar            status: acceptance_pending — PR #202 merged; external hold synchronization test run pending · size: M · lane A
 **What** — Import every **open and upcoming** Booqable booking (reserved or started) as a read-only
 **external hold** in the OS: product (and serial where Booqable has one), from/to, Booqable number.
 Holds block availability exactly like a reservation, show a neutral "Held in Booqable #831" chip
@@ -92,7 +92,7 @@ expire as they end. Payments for those rentals are recorded in Booqable. A short
 **Done when** — N = 0, target 1 Mar 2027 (17 Falgun).
 **Needs** — T9-05.
 
-### T9-07 · Staff training            status: todo · size: S · Babin + lane A
+### T9-07 · Staff training            status: acceptance_pending — PR #199 merged; physical device staff session scheduling pending · size: S · Babin + lane A
 **What** — Three short sessions before the trial — **floor** (pack, hand over, return, reset,
 scanner, photos, signatures), **desk** (new rental, re-book, online requests, payments, deposits,
 ID cards), **accounts** (payments, refunds, daily closing, VAT register, TDS) — each with a
