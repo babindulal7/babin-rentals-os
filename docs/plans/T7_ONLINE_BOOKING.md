@@ -193,7 +193,7 @@ online never appears on the public page".
 next refresh; New Rental offers them after the camera is added; screen check.
 **Needs** — T7-02.
 
-### T7-13 · Products with options on one page            status: todo · size: M · lane C · [go-live] · slips first
+### T7-13 · Products with options on one page            status: doing · size: M · lane C (Windows) · [go-live] · slips first
 **What** — Products that differ only in an option — lens **mount** (EF / PL / E), cable **length**,
 size — show as **one product page with an option picker** (B2), online and in New Rental. Each option
 stays its own product underneath (own stock, units, rate and availability), grouped under a parent
