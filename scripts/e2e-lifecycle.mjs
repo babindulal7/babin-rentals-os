@@ -9062,6 +9062,180 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L85',
+  title: 'a counter sale deducts stock once, invoices once and appears in daily closing (T3-31, B46, B51)',
+  expect: 'green',
+  run: async () => {
+    let batteryProductId
+    let tapeProductId
+    let saleBookingId
+    let draftInvoiceId
+    let saleBookingNo
+    const saleClientUuid = crypto.randomUUID()
+
+    // 1. Setup consumable products: AA Batteries (qty: 10, rate: 400), Hazard Tape (qty: 8, rate: 600)
+    await asOwnerOfTheDatabase(async () => {
+      const catId = await one('select id from inventory_categories order by name limit 1')
+      const assetCode1 = await one("select next_document_number('equipment')")
+      const p1 = await q(`
+        insert into products (
+          client_uuid, asset_code, name, brand, category_id, tracking_mode, status,
+          total_quantity, reorder_level, quantity_unit, unit_sale_price, daily_rate, created_by
+        ) values (
+          gen_random_uuid(), '${assetCode1}', 'AA Rechargeable Batteries 4-Pack', 'Eneloop', '${catId}', 'Consumable', 'Active',
+          10, 5, 'pack', 400.00, 400.00, '${U.Owner}'
+        ) returning id
+      `)
+      batteryProductId = p1.rows[0].id
+
+      const assetCode2 = await one("select next_document_number('equipment')")
+      const p2 = await q(`
+        insert into products (
+          client_uuid, asset_code, name, brand, category_id, tracking_mode, status,
+          total_quantity, reorder_level, quantity_unit, unit_sale_price, daily_rate, created_by
+        ) values (
+          gen_random_uuid(), '${assetCode2}', 'Hazard Floor Tape Yellow', 'ProTapes', '${catId}', 'Consumable', 'Active',
+          8, 3, 'roll', 600.00, 600.00, '${U.Owner}'
+        ) returning id
+      `)
+      tapeProductId = p2.rows[0].id
+    })
+
+    // 2. Floor role (Warehouse) creates a counter sale for 3 packs of batteries (B51, Law 6)
+    // Floor receives confirmation WITHOUT any money fields (Law 6)
+    await as('Warehouse', async () => {
+      const salePayload = {
+        client_uuid: saleClientUuid,
+        actor_id: U.Warehouse,
+        branch_id: BRANCH,
+        lines: [
+          {
+            product_id: batteryProductId,
+            qty: 3,
+          },
+        ],
+      }
+      const res = await one('select create_counter_sale($1::jsonb)', [JSON.stringify(salePayload)])
+      saleBookingId = res.booking_id
+      saleBookingNo = res.booking_no
+      assertEq(res.booking_kind, 'counter_sale', 'Booking kind is counter_sale')
+      assertEq(res.stage, 'Booked', 'Stage is Booked without custody sessions')
+      assertEq(res.status, 'created', 'Sale status is created')
+      assertEq(res.total_amount_paisa, undefined, 'Warehouse receives NO total_amount_paisa (Law 6)')
+      assertEq(res.invoice_id, undefined, 'Warehouse receives NO invoice_id (Law 6)')
+    })
+
+    // 3. Verify stock dropped by 3 (from 10 to 7) and a Deduction movement was recorded
+    const stockAfter = await one(`select total_quantity from products where id = '${batteryProductId}'`)
+    assertEq(Number(stockAfter), 7, 'Stock drops from 10 to 7 after sale of 3 units')
+
+    const movementCount = await one(`
+      select count(*) from consumable_stock_movements
+       where booking_id = '${saleBookingId}'
+         and product_id = '${batteryProductId}'
+         and movement_type = 'Deduction'
+         and qty = 3
+    `)
+    assertEq(Number(movementCount), 1, 'Exactly one deduction movement recorded')
+
+    // 4. Idempotency test (Law 8): retrying with the same client_uuid does NOT deduct stock again
+    await as('Warehouse', async () => {
+      const retryPayload = {
+        client_uuid: saleClientUuid,
+        actor_id: U.Warehouse,
+        branch_id: BRANCH,
+        lines: [
+          {
+            product_id: batteryProductId,
+            qty: 3,
+          },
+        ],
+      }
+      const retryRes = await one('select create_counter_sale($1::jsonb)', [JSON.stringify(retryPayload)])
+      assertEq(retryRes.status, 'existing', 'Retry returns existing sale')
+      assertEq(retryRes.booking_id, saleBookingId, 'Retry returns same booking_id')
+    })
+    const stockAfterRetry = await one(`select total_quantity from products where id = '${batteryProductId}'`)
+    assertEq(Number(stockAfterRetry), 7, 'Stock remains 7 after retry (no double deduction)')
+
+    // 5. Desk role (Coordinator) inspects the draft invoice
+    await as('Coordinator', async () => {
+      const invRow = (await q(`select id, invoice_no, status, total_amount, paid_amount, outstanding_amount from invoices where booking_id = '${saleBookingId}'`)).rows[0]
+      draftInvoiceId = invRow.id
+      assertEq(invRow.status, 'Draft', 'Invoice is in Draft status')
+      assertEq(invRow.invoice_no, null, 'Draft invoice has no invoice number yet (W16, Law 7)')
+      assertEq(Number(invRow.total_amount), 1356, 'Draft invoice total is 3 * 400 * 1.13 VAT = 1356.00')
+    })
+
+    // 6. Desk records payment in full: invoice receives monotonic number and status becomes Paid
+    await as('Accounts', async () => {
+      const payNo = await one("select next_document_number('payment')")
+      const clientId = await one(`select client_id from bookings where id = '${saleBookingId}'`)
+      await q(`
+        insert into payments (
+          client_uuid, payment_no, booking_id, invoice_id, client_id, branch_id,
+          amount, payment_type, notes, status, payment_date, received_by
+        ) values (
+          gen_random_uuid(), '${payNo}', '${saleBookingId}', '${draftInvoiceId}', '${clientId}', '${BRANCH}',
+          1356.00, 'Advance Payment', 'Method: Cash', 'Received', current_date, '${U.Accounts}'
+        )
+      `)
+
+      // Issue invoice once paid
+      const issueRes = await one('select issue_invoice($1::uuid)', [draftInvoiceId])
+      assertEq(issueRes.status, 'Paid', 'Invoice status is Paid after full payment')
+      assert(issueRes.invoice_no && issueRes.invoice_no.startsWith('INV-'), 'Invoice receives monotonic number on payment')
+    })
+
+    // 7. Cancellation before payment test:
+    // Create second counter sale for 2 rolls of tape -> stock drops from 8 to 6
+    const cancelClientUuid = crypto.randomUUID()
+    let cancelBookingId
+    await as('Coordinator', async () => {
+      const res = await one('select create_counter_sale($1::jsonb)', [JSON.stringify({
+        client_uuid: cancelClientUuid,
+        actor_id: U.Coordinator,
+        branch_id: BRANCH,
+        lines: [{ product_id: tapeProductId, qty: 2 }],
+      })])
+      cancelBookingId = res.booking_id
+    })
+    const tapeStockDuring = await one(`select total_quantity from products where id = '${tapeProductId}'`)
+    assertEq(Number(tapeStockDuring), 6, 'Tape stock drops from 8 to 6')
+
+    // Cancel before payment: restores stock to 8 and voids draft invoice
+    await as('Coordinator', async () => {
+      const cancelRes = await one('select cancel_counter_sale($1::uuid, $2::text)', [
+        cancelBookingId,
+        'Client walked out before paying',
+      ])
+      assertEq(cancelRes.status, 'cancelled', 'Counter sale cancelled')
+    })
+
+    const tapeStockRestored = await one(`select total_quantity from products where id = '${tapeProductId}'`)
+    assertEq(Number(tapeStockRestored), 8, 'Tape stock restored to 8 after cancellation')
+
+    const voidInvoiceStatus = await one(`select status from invoices where booking_id = '${cancelBookingId}'`)
+    assertEq(voidInvoiceStatus, 'Void', 'Draft invoice status is Void after cancellation')
+
+    // 8. Cancellation safety: cannot cancel the paid sale (saleBookingId)
+    await as('Coordinator', async () => {
+      let threw = false
+      try {
+        await one('select cancel_counter_sale($1::uuid, $2::text)', [
+          saleBookingId,
+          'Attempt to cancel after payment',
+        ])
+      } catch (err) {
+        threw = true
+        assert(err.message.includes('has_payments') || err.message.includes('payments have been recorded'), 'Refuses cancellation when payments exist')
+      }
+      assert(threw, 'cancel_counter_sale threw on paid booking')
+    })
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break

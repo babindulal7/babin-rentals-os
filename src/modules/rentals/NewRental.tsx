@@ -59,6 +59,7 @@ import { buildRebookPrefill, formatRebookCopyOptions, type RebookPrefill } from 
 import { RebookDialog } from './actions/RebookDialog'
 import { Modal } from '../../components/ui/Modal'
 import { BookingConflictModal } from './booking/BookingConflictModal'
+import { CounterSaleModal } from '../sales/CounterSaleModal'
 import type { LineEvaluationResult, FreeDateWindow } from '../../lib/availabilityEvaluation'
 import { newClientUuid } from '../../lib/supabase'
 import { useNewRentalProductDeposits } from './booking/useNewRentalProductDeposits'
@@ -314,6 +315,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
      demo literals — a named project, a kind, and a July 2026 window — which
      made every fresh draft look priced and dated before anyone touched it. */
   const [project, setProject] = useState('')
+  const [showCounterSale, setShowCounterSale] = useState(false)
   const [shootLocation, setShootLocation] = useState('')
   const [recentProjects, setRecentProjects] = useState<{ projectNames: string[]; shootLocations: string[] }>({
     projectNames: [],
@@ -1047,6 +1049,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
       ...(actionBusy ? { unavailable: 'Saving is in progress' } : {}),
     }] : []),
     { label: 'Review booking', icon: 'checklist', onClick: () => jumpToSection('rail-booking-summary') },
+    { label: 'Counter Sale', icon: 'package' as const, onClick: () => setShowCounterSale(true) },
     { label: editBookingId ? 'Cancel editing' : 'Back to Rentals', icon: 'chevron_left', onClick: handleCancelAction, ...(actionBusy ? { unavailable: 'Wait until saving finishes' } : {}) },
   ]
 
@@ -1578,6 +1581,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
             {isPhone && <Button variant="ghost" aria-label="Review rental summary" onClick={() => document.getElementById('rail-booking-summary')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>Summary</Button>}
             {!editBookingId && <Button variant="outline" onClick={() => void saveDraft()} disabled={actionBusy}>Save draft</Button>}
             {!editBookingId && <Button variant="outline" onClick={handleSaveAsQuote} disabled={actionBusy}>Save as quote</Button>}
+            {!editBookingId && <Button variant="outline" onClick={() => setShowCounterSale(true)}>Counter sale</Button>}
           </>}
         />
       )}
@@ -1758,6 +1762,13 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
           setConflictModalOpen(false)
         }}
       />
+      {showCounterSale && (
+        <CounterSaleModal
+          isOpen={showCounterSale}
+          onClose={() => setShowCounterSale(false)}
+          onSuccess={() => setShowCounterSale(false)}
+        />
+      )}
     </PageShell>
   )
 }

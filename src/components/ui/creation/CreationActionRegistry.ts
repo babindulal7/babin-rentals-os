@@ -175,6 +175,17 @@ export const CREATION_ACTIONS: CreationActionDefinition[] = [
       dateRange: facts.dateRange,
     }),
   },
+  {
+    id: 'counter_sale.new',
+    label: 'Counter Sale',
+    description: 'Sell consumables over the counter without a rental',
+    icon: 'package',
+    module: 'sales',
+    group: 'rentals',
+    displayPriority: 4,
+    openingMode: 'modal',
+    isPermitted: (role) => isStaff(role),
+  },
 
   // ── 2. Clients & Contacts ──
   {

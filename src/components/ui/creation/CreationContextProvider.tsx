@@ -17,6 +17,7 @@ import {
 const QuickCreateDialog = lazy(() => import('./QuickCreateDialog').then(m => ({ default: m.QuickCreateDialog })))
 const CreationDrawer = lazy(() => import('./CreationDrawer').then(m => ({ default: m.CreationDrawer })))
 const CreationWizard = lazy(() => import('./CreationWizard').then(m => ({ default: m.CreationWizard })))
+const CounterSaleModal = lazy(() => import('../../../modules/sales/CounterSaleModal').then(m => ({ default: m.CounterSaleModal })))
 
 export interface CreationContextValue {
   activeModule: string
@@ -129,7 +130,15 @@ export function CreationContextProvider({ children }: { children: ReactNode }) {
           />
         )}
 
-        {activeAction && (activeAction.openingMode === 'dialog' || activeAction.openingMode === 'modal') && (
+        {activeAction && activeAction.id === 'counter_sale.new' && (
+          <CounterSaleModal
+            isOpen={true}
+            onClose={closeCreationAction}
+            onSuccess={() => closeCreationAction()}
+          />
+        )}
+
+        {activeAction && activeAction.id !== 'counter_sale.new' && (activeAction.openingMode === 'dialog' || activeAction.openingMode === 'modal') && (
           <QuickCreateDialog
             isOpen={true}
             actionId={activeAction.id}
