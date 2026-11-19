@@ -35,19 +35,13 @@ business RPCs are still executable by `anon` on live (`adjust_stock`,
 3) PROGRESS.md records date, size, hash — not the credentials (N-8).
 **Needs** — Babin, week 1.
 
-### T1-02 · Staging project            status: todo · size: M · lane A + Babin
-**What** — Create a second Supabase project ("babin-staging", same region as live), restore the
-T1-01 dump into it, and record its URL and anon key as `BABIN_STAGING_*` secrets (never committed).
-Claude may create the project through the Supabase connector **after Babin approves the cost**
-(S10).
-**Why** — S10. Every migration and every track is accepted here before live.
-**Where** — Supabase dashboard / connector; `.env.staging.local` (git-ignored).
-**Database** — staging only.
-**Done when** — 1) staging row counts match the dump for bookings, clients, products, invoices,
-payments; 2) the restore took < 1 hour and the steps are written in [`../archive/BACKUP_PROTOCOL.md`](../archive/BACKUP_PROTOCOL.md) §2 (this
-is the restore drill); 3) staging holds real client data, so **only test seats and Babin** can sign
-in (Cloudflare Access on the staging site, T1-07).
-**Needs** — T1-01; Babin approves the project.
+### T1-02 · Staging project            status: todo — existing project verified 20 Nov; schema and safe synthetic-data acceptance outstanding · size: M · lane A + Babin
+**What** — Use the **existing** Free Supabase project `babin-staging` (`klhmsrunqrdxjudyhnkm`, Singapore). **Never create a duplicate project.** Its public schema has 0 application tables and 0 migration-history tables (read-only verified 20 Nov 2026). Prepare an exact-head, reviewed migration/dependency/checksum manifest and strictly synthetic fixtures; preserve `0012`/`0047`/`0082` one-shot-seed decisions and duplicate `0188` review. PR #179's offline inventory/preflight work is a starting point, NOT an apply-ready manifest.
+**Why** — Staging is the only safe destination for hosted rehearsal before any production change. An empty project is not acceptance-ready.
+**Where** — Supabase `babin-staging` project; `docs/verification/STAGING_PHASE1_PREFLIGHT_2026-11-20.md`; existing `scripts/staging-schema-preflight.mjs` in PR #179; `.env.staging.local` (ignored).
+**Database** — Read-only catalog and Git source preflight now. Later **staging-only writes** require a separately reviewed manifest, explicit owner authorization for the exact staging target and privacy controls; never use a production credential or run generic `db push`/remote reset.
+**Phase 1 done when** — 1) reviewed migration manifest and restore/recovery procedure are recorded with exact SQL fingerprints; 2) the staging schema is safely installed **after owner approval** with synthetic, non-personal fixtures and outbound email/SMS/payments/webhooks disabled; 3) nine staff/portal role contexts and Client A/B row/storage isolation pass hosted tests; 4) desk/manual floor booking → Pack → Handover → Return → Reset, availability/no double booking, payments/deposits/daily closing, and paper invoice references are reconciled on hosted staging; 5) all P0 security blockers and evidence receipts are resolved. **Physical iPad/scanner/printer testing is Phase 2 after live**, not a Phase 1 blocker.
+**Needs** — T1-01 backup/recovery plan, T1-03 ledger reconciliation, current P0 security PR #242 and staging-only owner write approval before any hosted schema/fixture mutation.
 
 ### T1-03 · Settle the ledger before anything is applied            status: todo · size: M · lane A
 **What** — Refresh the live ledger read-only (`npm run db:plan -- --sql`, run in the SQL editor,
