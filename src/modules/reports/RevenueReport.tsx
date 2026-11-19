@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom'
 import { PageHeader, Button } from '../../components/ui/Page'
 import { ReportFamiliesNav } from '../../components/ui/ReportFamiliesNav'
 import { ReportToolbar, reportDateRange } from '../../components/ui/ReportToolbar'
+import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import type { ReportCompare, ReportCsvRow, ReportFilters } from '../../components/ui/ReportToolbar'
 import { PageBody } from '../../components/ui/PageBody'
 import { useLoad } from '../../lib/queries/useLoad'
 import { formatMoney, rupees } from '../../lib/money'
 import { businessDayAd } from '../../lib/bs'
-import { useAuth } from '../../lib/auth'
+import { useCanViewFinancialReports } from '../../lib/moneyVisibility'
 import { getIssuedRevenueTrend, type IssuedRevenueReport } from '../../lib/queries/reportRevenueTrend'
 import { coverageNotes } from '../../lib/intel/revenueTrend'
 import { averageReportAmount, hasRevenueActivity, precedingReportWindow, reportMoneyChange } from '../../lib/intel/reportPresentation'
@@ -20,7 +21,10 @@ import {
   ReportDataTable,
   type ReportChartPoint,
 } from '../../components/ui/reports'
+import { RevenueInvoiceRegister } from './RevenueInvoiceRegister'
 import '../../styles/reportChartTokens.css'
+
+type RevenueTab = 'trend' | 'register'
 
 /**
  * This report displays ONLY successfully fetched taxable issued-invoice values.
@@ -28,7 +32,6 @@ import '../../styles/reportChartTokens.css'
  * split represents the full ledger. Credit adjustments require a separate
  * reconciled ledger definition and are intentionally not claimed here.
  */
-const EXECUTIVE_ROLES = new Set(['Owner', 'Admin', 'Manager', 'Accounts'])
 
 function daysAgo(day: string, count: number): string {
   const d = new Date(day + 'T00:00:00Z')
@@ -42,11 +45,12 @@ function readReportDate(value: string | undefined, fallback: string): string {
 }
 
 export default function RevenueReport() {
-  const { user } = useAuth()
-  const permitted = Boolean(user && EXECUTIVE_ROLES.has(user.role))
+  // RULING 2026-10-17 (R17-1): the gate lives in rbac.ts, shared with the report menu.
+  const permitted = useCanViewFinancialReports()
   const today = businessDayAd()
   const [filters, setFilters] = useState<ReportFilters>({})
   const [compare, setCompare] = useState<ReportCompare>('off')
+  const [tab, setTab] = useState<RevenueTab>('trend')
 
   const from = readReportDate(filters.dateRange?.fromAd, daysAgo(today, 89))
   const to = readReportDate(filters.dateRange?.toAd, today)
@@ -152,15 +156,29 @@ export default function RevenueReport() {
             allowAllDates={false}
             compare={compare}
             onCompareChange={setCompare}
-            {...(!load.loading && !load.error && report && (compare === 'off' || (prior && !priorLoad.loading && !priorLoad.error)) ? { csv: { filename: 'revenue-issued-monthly', build: () => rows } } : {})}
+            {...(tab === 'trend' && !load.loading && !load.error && report && (compare === 'off' || (prior && !priorLoad.loading && !priorLoad.error)) ? { csv: { filename: 'revenue-issued-monthly', build: () => rows } } : {})}
           />
-          {compare === 'previous' && previousWindow && <div style={{ color: 'var(--text2)' }}>
+          {windowIsValid && (
+            <SegmentedControl<RevenueTab>
+              ariaLabel="Revenue report views"
+              size="sm"
+              value={tab}
+              onChange={setTab}
+              options={[
+                { id: 'trend', label: 'Revenue trend' },
+                { id: 'register', label: 'Invoice register' },
+              ]}
+            />
+          )}
+          {tab === 'trend' && compare === 'previous' && previousWindow && <div style={{ color: 'var(--text2)' }}>
             Previous period: {previousWindow.fromAd} to {previousWindow.toAd} · same number of days, immediately before the selected period.
             {priorLoad.loading && <p role="status">Loading previous period…</p>}
             {priorLoad.error && <p role="alert">Previous period unavailable: {priorLoad.error} <Button variant="secondary" onClick={priorLoad.reload}>Retry comparison</Button></p>}
           </div>}
 
-          {!windowIsValid ? (
+          {tab === 'register' && windowIsValid ? (
+            <RevenueInvoiceRegister key={`${from}|${to}`} fromAd={from} toAd={to} />
+          ) : !windowIsValid ? (
             <div
               role="alert"
               style={{

@@ -29,6 +29,7 @@ const state = vi.hoisted(() => ({
 
 vi.mock('../../../lib/moneyVisibility', () => ({
   useCanViewMoney: () => state.canSeeMoney,
+  useCanViewFinancialReports: () => state.canSeeMoney,
 }))
 
 // One real-shaped unit. The report used to fall back to five invented seed
