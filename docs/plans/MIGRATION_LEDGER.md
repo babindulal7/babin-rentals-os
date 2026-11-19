@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0255**
+**Next free number: 0256**
 
 > **Legacy exception:** `0188` exists as two distinct, locally verified migration files
 > (`0188_smart_reservation_holds.sql` and `0188_staff_renting_gear.sql`). Both are preserved because
@@ -20,6 +20,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
+| 0255 | T7-15 | payment-link-from-any-booking | lane-c/T7-15-payment-link-from-any-booking | claimed |
 | 0254 | T7-06 | esewa-and-khalti-payment-providers | lane-c/T7-06-esewa-and-khalti | verified (check:pglite 251/251 + check:lifecycle 95/95 Step L94) |
 | 0253 | T7-07 | online-payment-refunds-and-reconciliation | lane-c/T7-07-refunds-and-reconciliation | verified (check:pglite 250/250 + check:lifecycle 94/94 Step L93) |
 | 0252 | T7-12 | product-recommendations-and-co-rented-items | lane-c/T7-12-recommended-items | verified (check:pglite 249/249 + check:lifecycle 93/93 Step L92) |
