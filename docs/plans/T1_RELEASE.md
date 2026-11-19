@@ -22,6 +22,9 @@ business RPCs are still executable by `anon` on live (`adjust_stock`,
 
 **12 Nov 2026 hosted checkpoint (supersedes the old project-creation task wording):** Independent `babin-staging` already exists in the same region; do **not** create another project. It currently has **0 app tables and 0 migration-history entries**. Transaction-scoped hosted rehearsal of `0001`–`0003` succeeded and rolled back, preserving the blank schema. Security/role acceptance and production deployment remain HOLD. Evidence: [hosted staging rehearsal](../live/STAGING_HOSTED_REHEARSAL_2026-11-12.md), [migration reconciliation](../live/STAGING_RECONCILIATION_2026-11-12.md). The remaining T1-02 work is a reviewed schema install/test dataset and backup/recovery proof, not project creation.
 
+**20 Nov 2026 owner launch-scope decision (supersedes physical-device gating where inconsistent below):** Phase 1 launch uses counter-PC/desktop browser and manual item search/selection/ticking. Physical M4 iPad, Bluetooth/HID scanner, camera barcode scanning, label printer, shop printer, and native print/share-sheet hardware acceptance move to **Phase 2, after live launch**; do not require purchase or physical device-day receipts to approve Phase 1. Keep these cards `acceptance_pending` until their later device receipts exist—do not falsely mark them `done`. Phase 1 still requires genuine hosted staging, authorized role sessions, secure access, storage evidence where required for custody, no double booking, inventory/financial integrity, paper VAT invoice reference capture, backup/restore and a usable manual fallback. This decision does not permit a production deployment or waive security/accounting gates.
+
+
 ### T1-01 · Fresh production backup + restore drill            status: todo · size: S · lane A + Babin
 **What** — Babin runs `scripts/backup-db.ps1` per [`../archive/BACKUP_PROTOCOL.md`](../archive/BACKUP_PROTOCOL.md) §1; the dump is checked with
 `npm run check:dump`; its SHA-256 is recorded. The restore drill is T1-02 (restoring it into staging).
@@ -193,7 +196,7 @@ shared devices (T1-15).
 **Done when** — every staff member on the roster has signed in once; the role list matches the roster.
 **Needs** — Batch 1 applied; Babin supplies the roster.
 
-### T1-14 · Performance on real devices            status: doing — PR #177 merged scanner split; phone/iPad 4G metrics and scanner first-click acceptance still not evidenced · size: M · lane A
+### T1-14 · Performance on real devices            status: doing — PR #177 merged; desktop first-load performance remains pre-launch, physical iPad/scanner measurements deferred to Phase 2 · size: M · lane A
 **What** — Measure first load and route changes on the iPhone 17 Pro and M4 iPad Pro over 4G
 against `app.` (main bundle measured 704 kB on 20 Oct; scanner vendor chunk 453 kB). Lazy-load the
 scanner and the Calendar (4,264 lines) if they sit on the first-load path. Budget ⭐: first usable
@@ -201,7 +204,7 @@ screen < 3 s on 4G.
 **Why** — Floor staff wait on the slowest screen.
 **Where** — `vite.config.ts` chunking, route `lazy()` imports.
 **Database** — none.
-**Done when** — the budget holds on both devices; numbers recorded.
+**Phase 1 done when** — counter-PC/desktop supported browser loads the core booking and floor routes within the agreed performance budget on staging; numbers recorded, no scanner dependency for core operations. **Phase 2 after live:** record iPhone/iPad 4G and scanner first-click measurements; do not treat absent hardware evidence as a Phase 1 block.
 **Needs** — T1-07.
 
 
