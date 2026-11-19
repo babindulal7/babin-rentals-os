@@ -100,6 +100,10 @@ begin
   end if;
 
   v_actor := nullif(p_payload ->> 'actor_id', '')::uuid;
+  if auth_user_id() is not null and v_actor is not null and v_actor is distinct from auth_user_id() then
+    raise exception 'GATE:gate.counter_sale.actor_mismatch|Permission denied: actor must match the signed-in staff session.'
+      using errcode = '42501';
+  end if;
   if v_actor is null then
     v_actor := auth_user_id();
   end if;
@@ -444,6 +448,11 @@ begin
   v_role := auth_user_role();
   if v_role is null or v_role in ('Driver', 'Client') then
     raise exception 'GATE:gate.counter_sale.unauthorized_cancel|Your role is not authorized to cancel counter sales.'
+      using errcode = '42501';
+  end if;
+
+  if auth_user_id() is not null and p_actor_id is not null and p_actor_id is distinct from auth_user_id() then
+    raise exception 'GATE:gate.counter_sale.actor_mismatch|Permission denied: actor must match the signed-in staff session.'
       using errcode = '42501';
   end if;
 
