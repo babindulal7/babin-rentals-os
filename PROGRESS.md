@@ -1,5 +1,44 @@
 # Progress Log
 
+## 2026-11-19 — Revenue and cash-flow Coordinator gate, All dates restored, New Rental current step (rebuilt on main)
+
+**Did**
+- Rebuilt the #23 series on current `origin/main` (`b6b08fc`) as four commits, not a PR: `e0ef687` Revenue report Coordinator gate and invoice register (R17-1, R17-5); `76cb7fc` Cash Flow and Working Capital gate (R17-9); `8fc30c4` All dates restored on the Revenue report (R19-1), no after-hours charge (R19-2); `2e5025b` New Rental step: the current step is readable (4.5:1+) and announced with `aria-current="step"`.
+- Coordinator is refused the Revenue report and the cash-flow and working-capital pages by direct URL, as well as in the menu (`canViewFinancialReports`).
+- The invoice register lists issued invoices and voids, not Drafts, 100 a page with Newer and Older; live numbers link to Finance.
+
+**Ruled**
+- R17-1, R17-5, R17-9 (`docs/RULINGS-2026-10-17.md`); R19-1 and R19-2 (`docs/RULINGS-2026-11-19.md`).
+- R17-6 (seeded currency) and R17-8 (chart views) are not part of this series; not checked against `main` here.
+
+**Verified**
+- `npm run gates` on `2e5025b` (branch `local/pr-revenue-2026-11-19`, worktree `scratchpad/wt-main`, Node 22.23.4, `package.json` asks for Node 24): steps 1–3 pass (typecheck, lint, local API guards). Step 4, offline test, FAIL: 7463 of 7464 passed; the one failure is `src/lib/__tests__/t104AnonExposureDoc.test.ts` (expects `PASS (13/13 behavioural checks green)` in `docs/verification/T1-04_BATCH_0_ANON_RPCS.md`). The gate stopped there.
+- Steps 5–16 run individually, all exit 0: `check:pglite`, booking financial integrity, `check:security`, `check:lifecycle`, `test:server-contracts`, `test:partial-return`, `lint:progress`, receipt integrity, `lint:shell`, `lint:ui-copy`, `check:contrast`, `build`.
+- Step 17, coverage: exit 1, the same single test.
+- That test already fails on `origin/main` (`b6b08fc`, #244 rewrote the doc without the expected line). This branch does not touch the doc or the test.
+- Not run: Coordinator in a browser (no mock login); the Mac runner's run on any head.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 111 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 86 / 86 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 242 files · check:pglite 242/242 applied, 0 failed (recorded 2026-11-19T21:19:57.416Z). Suite: NOT PASSING — 7463/7464 passed, 1 failed (recorded 2026-11-19T21:29:13.344Z); source fingerprint matches.
+Coverage suite: NOT PASSING — 7463/7464 passed, 1 failed (recorded 2026-11-19T21:29:13.344Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-19T21:21:00.542Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Decide the T1-04 mismatch (`docs/verification/T1-04_BATCH_0_ANON_RPCS.md` vs `src/lib/__tests__/t104AnonExposureDoc.test.ts`). It fails the offline suite and coverage on `main` too. Restoring the PASS line needs its evidence; changing the assertion is a verification claim. Babin's call.
+- Babin: push the branch, open the draft PR, and let the Mac runner report on the exact head. This branch is not pushed (W74).
+- Coordinator's view in a browser (no mock login); unit tests cover it.
+- `canApproveDailyClosing` still admits Coordinator while the database does not (found earlier, not changed here).
+
 ## 2026-11-20 — Cross-track roadmap reconciliation to acceptance_pending (Lane B / Windows)
 
 **Did**
