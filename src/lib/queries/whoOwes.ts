@@ -124,7 +124,8 @@ export function buildWhoOwesRows(
     if (bal <= 0) continue
 
     totalOutstanding += bal
-    const refDate = inv.dueDateAd || inv.issueDateAd || todayAd
+    // Age basis per T3-20: days since completion / invoice issue date, falling back to due date or today
+    const refDate = inv.issueDateAd || inv.dueDateAd || todayAd
 
     const existing = byClient.get(inv.clientId)
     if (!existing) {
