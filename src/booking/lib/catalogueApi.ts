@@ -353,3 +353,78 @@ export async function submitBookingRequest(
 
   return data as BookingRequestResult
 }
+
+export interface RecommendedItem {
+  readonly id: string
+  readonly name: string
+  readonly daily_rate_paisa: number
+  readonly photo_paths: string[]
+  readonly category_name: string
+  readonly position: number
+  readonly source: 'auto' | 'staff'
+}
+
+interface RecommendationRow {
+  readonly position: number
+  readonly source: 'auto' | 'staff'
+  readonly recommended_product: {
+    readonly id: string
+    readonly name: string
+    readonly daily_rate?: number | null
+    readonly photos?: string[] | null
+    readonly category?: { readonly name: string } | null
+  } | null
+}
+
+export async function fetchProductRecommendations(productId: string): Promise<RecommendedItem[]> {
+  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock' || !supabase
+
+  if (isMock) {
+    // Return smart mock recommendations from MOCK_CATALOGUE (excluding current product)
+    const otherItems = MOCK_CATALOGUE.filter((item) => item.id !== productId && item.kind === 'product')
+    return otherItems.slice(0, 6).map((item, idx) => ({
+      id: item.id,
+      name: item.name,
+      daily_rate_paisa: item.daily_rate_paisa,
+      photo_paths: item.photo_paths,
+      category_name: item.category_name,
+      position: idx + 1,
+      source: 'auto' as const,
+    }))
+  }
+
+  const { data, error } = await supabase
+    .from('product_recommendations')
+    .select(`
+      position,
+      source,
+      recommended_product:products!recommended_product_id(
+        id,
+        name,
+        daily_rate,
+        photos,
+        category:inventory_categories(name)
+      )
+    `)
+    .eq('product_id', productId)
+    .order('position', { ascending: true })
+    .limit(6)
+
+  if (error || !data) {
+    return []
+  }
+
+  const rows = data as unknown as RecommendationRow[]
+  return rows
+    .filter((row): row is RecommendationRow & { recommended_product: NonNullable<RecommendationRow['recommended_product']> } => Boolean(row.recommended_product))
+    .map((row) => ({
+      id: row.recommended_product.id,
+      name: row.recommended_product.name,
+      daily_rate_paisa: Math.round(Number(row.recommended_product.daily_rate || 0) * 100),
+      photo_paths: row.recommended_product.photos || [],
+      category_name: row.recommended_product.category?.name || 'Equipment',
+      position: row.position,
+      source: row.source,
+    }))
+}
+

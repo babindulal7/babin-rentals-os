@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import type { CatalogueItem } from '../lib/catalogueApi'
-import { getPublicPhotoUrl } from '../lib/catalogueApi'
+import type { CatalogueItem, RecommendedItem } from '../lib/catalogueApi'
+import { getPublicPhotoUrl, fetchProductRecommendations } from '../lib/catalogueApi'
 import { formatMoney, type Paisa } from '@/lib/money'
 
 interface ProductDetailModalProps {
@@ -23,10 +23,25 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   onAddToCart,
 }) => {
   const [activeItem, setActiveItem] = useState<CatalogueItem | null>(item)
+  const [recommendations, setRecommendations] = useState<RecommendedItem[]>([])
 
   useEffect(() => {
     setActiveItem(item)
   }, [item])
+
+  useEffect(() => {
+    let active = true
+    if (activeItem?.id) {
+      fetchProductRecommendations(activeItem.id).then((recs) => {
+        if (active) setRecommendations(recs)
+      })
+    } else {
+      setRecommendations([])
+    }
+    return () => {
+      active = false
+    }
+  }, [activeItem?.id])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -194,6 +209,73 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             )}
           </div>
         </div>
+
+        {/* Often rented with (T7-12, B1) */}
+        {recommendations.length > 0 && (
+          <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border-subtle)' }}>
+            <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span>Often Rented With</span>
+              <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--text-muted)' }}>(up to 6 items)</span>
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+              {recommendations.map((rec) => {
+                const recDailyRate = formatMoney(rec.daily_rate_paisa as Paisa)
+                return (
+                  <div
+                    key={rec.id}
+                    style={{
+                      background: 'var(--bg-main)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: '10px 12px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: 8,
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-main)', lineHeight: 1.3 }}>
+                        {rec.name}
+                      </div>
+                      <div style={{ fontSize: '0.8rem', fontFamily: 'var(--font-mono)', color: 'var(--accent-gold)', marginTop: 4 }}>
+                        {recDailyRate} / day
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      style={{
+                        padding: '4px 10px',
+                        fontSize: '0.8rem',
+                        alignSelf: 'flex-start',
+                        borderRadius: 4,
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => {
+                        onAddToCart({
+                          id: rec.id,
+                          kind: 'product',
+                          slug: rec.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+                          name: rec.name,
+                          category_name: rec.category_name,
+                          description: '',
+                          photo_paths: rec.photo_paths,
+                          daily_rate_paisa: rec.daily_rate_paisa,
+                          weekly_rate_paisa: null,
+                          monthly_rate_paisa: null,
+                          bundle_contents: [],
+                        })
+                      }}
+                    >
+                      + Add to Request
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 24 }}>
           <button type="button" className="btn-secondary" onClick={onClose} style={{ maxWidth: 140 }}>

@@ -1,4 +1,4 @@
-import { useState, useMemo, type Dispatch, type SetStateAction } from 'react'
+import { useState, useMemo, useEffect, type Dispatch, type SetStateAction } from 'react'
 import { supabase } from '../../lib/supabase'
 import Icon from '../ui/Icon'
 import { Button } from '../ui/Page'
@@ -15,6 +15,7 @@ import {
 import { recordFields, recordPayload, recordSectionKey, validateRecord, type RecordSnapshot, type RecordValues, type RecordValue } from '../../lib/recordEditor'
 import { useToast } from '../ui/Toast'
 import { rupees, formatMoney } from '../../lib/money'
+import { fetchProductRecommendationsAdmin, saveStaffRecommendations, type ProductRecommendationAdmin } from '../../lib/queries/recommendations'
 import {
   SectionSaveStatusBadge,
   SectionSaveBar,
@@ -105,6 +106,74 @@ export function EquipmentRecordEditor({
     if (path.startsWith('http') || path.startsWith('/')) return path
     const { data } = supabase.storage.from('catalogue').getPublicUrl(path)
     return data.publicUrl
+  }
+
+  const [adminRecs, setAdminRecs] = useState<ProductRecommendationAdmin[]>([])
+  const [savingRecs, setSavingRecs] = useState(false)
+  const [selectedPinProdId, setSelectedPinProdId] = useState('')
+
+  useEffect(() => {
+    if (recordId) {
+      fetchProductRecommendationsAdmin(recordId).then(setAdminRecs)
+    }
+  }, [recordId])
+
+  const handlePinProduct = async () => {
+    if (!recordId || !selectedPinProdId) return
+    const prod = options.products?.find((p) => p.id === selectedPinProdId)
+    const nextPos = Math.min(6, adminRecs.length + 1)
+    const newRecs = [
+      ...adminRecs.filter((r) => r.recommended_product_id !== selectedPinProdId),
+      {
+        id: `staff-${Date.now()}`,
+        product_id: recordId,
+        recommended_product_id: selectedPinProdId,
+        recommended_name: prod?.name || 'Pinned Item',
+        position: nextPos,
+        source: 'staff' as const,
+      },
+    ].slice(0, 6)
+
+    setAdminRecs(newRecs)
+    setSelectedPinProdId('')
+    setSavingRecs(true)
+    try {
+      await saveStaffRecommendations(
+        recordId,
+        newRecs.map((r, idx) => ({ recommended_product_id: r.recommended_product_id, position: idx + 1 })),
+      )
+      showSuccessToast('Product pinned to recommendations')
+      const refreshed = await fetchProductRecommendationsAdmin(recordId)
+      setAdminRecs(refreshed)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error saving'
+      alert(`Failed to save recommendation: ${msg}`)
+    } finally {
+      setSavingRecs(false)
+    }
+  }
+
+  const handleUnpinOrRemoveRec = async (targetRecId: string) => {
+    if (!recordId) return
+    const newRecs = adminRecs.filter((r) => r.recommended_product_id !== targetRecId)
+    setAdminRecs(newRecs)
+    setSavingRecs(true)
+    try {
+      await saveStaffRecommendations(
+        recordId,
+        newRecs
+          .filter((r) => r.source === 'staff')
+          .map((r, idx) => ({ recommended_product_id: r.recommended_product_id, position: idx + 1 })),
+      )
+      showSuccessToast('Recommendation updated')
+      const refreshed = await fetchProductRecommendationsAdmin(recordId)
+      setAdminRecs(refreshed)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error updating'
+      alert(`Failed to update recommendations: ${msg}`)
+    } finally {
+      setSavingRecs(false)
+    }
   }
 
   const set = (key: string, value: RecordValue) => {
@@ -1187,6 +1256,121 @@ export function EquipmentRecordEditor({
             </label>
           </div>
         </div>
+
+        {editing && recordId && (
+          <div className="equipment-form-span-full" style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 12 }}>
+            <strong style={{ display: 'block', fontSize: 'var(--t-ui, 14px)', marginBottom: 4, color: 'var(--text)' }}>
+              Recommended Items ("Often rented with", up to 6) (B1)
+            </strong>
+            <p style={{ fontSize: 'var(--t-meta, 12px)', color: 'var(--muted)', margin: '0 0 12px', lineHeight: 1.4 }}>
+              Automatically fills from past 12-month co-rented bookings. Staff can pin, replace, or reorder items. Pinned items are never overwritten by auto-fill.
+            </p>
+
+            {adminRecs.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+                {adminRecs.map((rec, index) => (
+                  <div
+                    key={rec.id || index}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '6px 12px',
+                      background: 'var(--surface-2)',
+                      border: '1px solid var(--border-subtle)',
+                      borderRadius: 'var(--r-btn, 6px)',
+                      fontSize: 'var(--t-meta, 13px)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontWeight: 700, color: 'var(--primary)', fontFamily: 'var(--font-mono)' }}>
+                        #{rec.position}
+                      </span>
+                      <span style={{ fontWeight: 600, color: 'var(--text)' }}>{rec.recommended_name}</span>
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          padding: '1px 6px',
+                          borderRadius: 4,
+                          background: rec.source === 'staff' ? 'rgba(56, 106, 247, 0.15)' : 'rgba(161, 161, 170, 0.15)',
+                          color: rec.source === 'staff' ? 'var(--primary)' : 'var(--muted)',
+                          fontWeight: 500,
+                        }}
+                      >
+                        {rec.source === 'staff' ? 'Pinned by staff' : 'Auto (12m bookings)'}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <button
+                        type="button"
+                        disabled={busy || savingRecs}
+                        onClick={() => handleUnpinOrRemoveRec(rec.recommended_product_id)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--st-danger-fg)',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          padding: '2px 6px',
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ fontSize: 'var(--t-meta, 13px)', color: 'var(--muted)', fontStyle: 'italic', marginBottom: 12 }}>
+                No recommendations yet. The scheduled auto-refresh analyzes past 12-month bookings.
+              </div>
+            )}
+
+            {/* Affordance to pin an item */}
+            {adminRecs.length < 6 && (
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <select
+                  disabled={busy || savingRecs}
+                  value={selectedPinProdId}
+                  onChange={(e) => setSelectedPinProdId(e.target.value)}
+                  style={{
+                    padding: '6px 10px',
+                    fontSize: 'var(--t-meta, 13px)',
+                    borderRadius: 'var(--r-btn, 6px)',
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg)',
+                    color: 'var(--text)',
+                    flex: 1,
+                  }}
+                >
+                  <option value="">Select product to pin as recommendation…</option>
+                  {(options.products || [])
+                    .filter((p) => p.id !== recordId && !adminRecs.some((r) => r.recommended_product_id === p.id))
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                </select>
+                <button
+                  type="button"
+                  disabled={!selectedPinProdId || busy || savingRecs}
+                  onClick={handlePinProduct}
+                  className="btn-secondary"
+                  style={{
+                    padding: '6px 14px',
+                    fontSize: 'var(--t-meta, 13px)',
+                    borderRadius: 'var(--r-btn, 6px)',
+                    cursor: selectedPinProdId ? 'pointer' : 'default',
+                  }}
+                >
+                  Pin Item
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
       {sectionSaveBar('Pricing & Rental')}
     </RecordSection>

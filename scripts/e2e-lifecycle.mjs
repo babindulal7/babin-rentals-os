@@ -9846,6 +9846,160 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L92',
+  title: 'product recommendations and co-rented items (T7-12) — auto-fills from 12-month bookings, staff pins persist across refresh, items not shown online never leak to public',
+  expect: 'green',
+  async run() {
+    // 1. Create 4 active test products: Target Camera, Co-rented Lens, Co-rented Mic, Staff Pinned Tripod
+    let targetProdId
+    let lensProdId
+    let micProdId
+    let tripodProdId
+    await as('Owner', async () => {
+      const catId = (await q('select id from public.inventory_categories limit 1')).rows[0].id
+
+      targetProdId = (await q(`
+        insert into public.products (client_uuid, asset_code, name, category_id, brand, tracking_mode, daily_rate, total_quantity, show_online, is_active)
+        values (gen_random_uuid(), 'EQ991001', 'Recommendation Test Camera', $1, 'Sony', 'Quantity', 3000, 5, true, true)
+        returning id
+      `, [catId])).rows[0].id
+
+      lensProdId = (await q(`
+        insert into public.products (client_uuid, asset_code, name, category_id, brand, tracking_mode, daily_rate, total_quantity, show_online, is_active)
+        values (gen_random_uuid(), 'EQ991002', 'Recommendation Test Lens 24-70mm', $1, 'Sony', 'Quantity', 1500, 5, true, true)
+        returning id
+      `, [catId])).rows[0].id
+
+      micProdId = (await q(`
+        insert into public.products (client_uuid, asset_code, name, category_id, brand, tracking_mode, daily_rate, total_quantity, show_online, is_active)
+        values (gen_random_uuid(), 'EQ991003', 'Recommendation Wireless Mic', $1, 'Rode', 'Quantity', 800, 5, true, true)
+        returning id
+      `, [catId])).rows[0].id
+
+      tripodProdId = (await q(`
+        insert into public.products (client_uuid, asset_code, name, category_id, brand, tracking_mode, daily_rate, total_quantity, show_online, is_active)
+        values (gen_random_uuid(), 'EQ991004', 'Recommendation Carbon Tripod', $1, 'Manfrotto', 'Quantity', 1000, 5, true, true)
+        returning id
+      `, [catId])).rows[0].id
+    })
+
+    // 2. Create a confirmed past booking within the last 365 days containing Camera + Lens + Mic
+    const pastBookingUuid = crypto.randomUUID()
+    let pastBookingId
+    await as('Coordinator', async () => {
+      const payload = {
+        client_uuid: pastBookingUuid,
+        created_by: U.Coordinator,
+        branch_id: BRANCH,
+        client_id: CLIENT,
+        pickup_at: new Date(Date.now() - 30 * 86400000).toISOString(),
+        return_at: new Date(Date.now() - 28 * 86400000).toISOString(),
+        delivery_type: 'Client Pickup',
+        lines: [
+          { client_uuid: crypto.randomUUID(), product_id: targetProdId, qty: 1, days: 2, rate: 3000 },
+          { client_uuid: crypto.randomUUID(), product_id: lensProdId, qty: 1, days: 2, rate: 1500 },
+          { client_uuid: crypto.randomUUID(), product_id: micProdId, qty: 1, days: 2, rate: 800 },
+        ],
+      }
+      const bRes = await q('select public.create_booking($1::jsonb) as res', [JSON.stringify(payload)])
+      pastBookingId = bRes.rows[0].res.booking_id
+      assert(Boolean(pastBookingId), 'past booking created')
+      bookingIds.l92 = pastBookingId
+      await transition('l92', 'Quote', 'Booked', 'Coordinator')
+    })
+
+    // 3. Trigger refresh_product_recommendations(targetProdId)
+    await as('Owner', async () => {
+      const refreshedCount = (await q('select public.refresh_product_recommendations($1::uuid) as cnt', [targetProdId])).rows[0].cnt
+      assert(refreshedCount > 0, 'refreshed recommendations for target product')
+    })
+
+    // 4. Verify auto-fill populated Lens and Mic at position 1 and 2 with source = 'auto'
+    const autoRecs = (await q(`
+      select recommended_product_id, "position", source
+      from public.product_recommendations
+      where product_id = '${targetProdId}'
+      order by "position" asc
+    `)).rows
+    assertEq(autoRecs.length, 2, 'found 2 auto recommendations')
+    assertEq(autoRecs[0].source, 'auto', 'first recommendation is auto')
+    assertEq(autoRecs[1].source, 'auto', 'second recommendation is auto')
+    const recIds = autoRecs.map(r => r.recommended_product_id)
+    assert(recIds.includes(lensProdId), 'Lens is recommended')
+    assert(recIds.includes(micProdId), 'Mic is recommended')
+
+    // 5. Staff pins Tripod at position 1 via set_staff_product_recommendations
+    await as('Manager', async () => {
+      const staffPayload = [
+        { recommended_product_id: tripodProdId, position: 1 },
+      ]
+      const setRes = (await q(
+        'select public.set_staff_product_recommendations($1::uuid, $2::jsonb) as res',
+        [targetProdId, JSON.stringify(staffPayload)]
+      )).rows[0].res
+      assertEq(setRes, true, 'staff pinned recommendation successfully')
+    })
+
+    // 6. Verify Tripod is pinned at position 1 with source = 'staff', while Lens & Mic fill remaining positions
+    const recsAfterPin = (await q(`
+      select recommended_product_id, "position", source
+      from public.product_recommendations
+      where product_id = '${targetProdId}'
+      order by "position" asc
+    `)).rows
+    assertEq(recsAfterPin[0].recommended_product_id, tripodProdId, 'position 1 is staff-pinned Tripod')
+    assertEq(recsAfterPin[0].source, 'staff', 'position 1 source is staff')
+    assertEq(recsAfterPin.length, 3, 'total 3 recommendations (1 staff + 2 auto)')
+
+    // 7. Re-running refresh_product_recommendations() NEVER touches staff rows
+    await as('Owner', async () => {
+      await q('select public.refresh_product_recommendations($1::uuid)', [targetProdId])
+    })
+    const recsAfterRefresh = (await q(`
+      select recommended_product_id, "position", source
+      from public.product_recommendations
+      where product_id = '${targetProdId}'
+      order by "position" asc
+    `)).rows
+    assertEq(recsAfterRefresh[0].recommended_product_id, tripodProdId, 'position 1 is still Tripod after refresh')
+    assertEq(recsAfterRefresh[0].source, 'staff', 'staff pin preserved across refresh')
+
+    // 8. Public visibility gate: an item not shown online never leaks to public
+    // Take Mic offline (show_online = false)
+    await as('Owner', async () => {
+      await q(`update public.products set show_online = false where id = '${micProdId}'`)
+    })
+
+    // Calling get_public_product_recommendations as authenticated or checking public policy:
+    // Mic MUST NOT be returned!
+    await as('Coordinator', async () => {
+      const publicRecs = (await q(
+        'select id, name from public.get_public_product_recommendations($1::uuid)',
+        [targetProdId]
+      )).rows
+      const publicIds = publicRecs.map(r => r.id)
+      assert(publicIds.includes(tripodProdId), 'public sees Tripod')
+      assert(publicIds.includes(lensProdId), 'public sees Lens')
+      assert(!publicIds.includes(micProdId), 'item with show_online=false NEVER appears in public recommendations')
+    })
+
+    // Non-management role (e.g. Warehouse or Coordinator) is REFUSED by set_staff_product_recommendations
+    let denied = false
+    try {
+      await as('Warehouse', async () => {
+        await q(
+          'select public.set_staff_product_recommendations($1::uuid, $2::jsonb)',
+          [targetProdId, JSON.stringify([{ recommended_product_id: lensProdId, position: 1 }])]
+        )
+      })
+    } catch {
+      denied = true
+    }
+    assert(denied, 'Warehouse is refused by set_staff_product_recommendations')
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break

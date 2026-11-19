@@ -1,5 +1,63 @@
 # Progress Log
 
+## 2026-11-20 — T7-12: Recommended items (Lane C / Windows)
+
+**Did**
+- Completed **T7-12 · Recommended items** (`lane-c/T7-12-recommended-items`):
+  - Authored Migration `supabase/migrations/0252_product_recommendations_and_co_rented_items.sql` (claimed migration 0252 in ledger):
+    - Created `public.product_recommendations` table storing up to 6 recommendations per product with unique positions 1..6 and `source in ('auto', 'staff')`.
+    - Configured RLS: public/anon can read recommendations only where both target product and recommended item are active and have `show_online = true`. Staff write requires `Owner`, `Admin`, or `Manager`.
+    - Created `refresh_product_recommendations(uuid)`: analyzes past 12-month (365 days) confirmed booking co-occurrences (`booking_lines` pairs) across own products only. Fills open positions (1..6) with top co-rented products without ever touching or overwriting staff-pinned items.
+    - Created `set_staff_product_recommendations(uuid, jsonb)`: allows management to pin and customize recommendations. Re-runs auto-fill on any remaining open slots.
+    - Created `get_public_product_recommendations(uuid)`: helper RPC strictly enforcing that items without `show_online = true` are omitted from public visibility.
+  - Lifecycle Step L92 (`scripts/e2e-lifecycle.mjs`):
+    - Added step L92: "product recommendations and co-rented items (T7-12) — auto-fills from 12-month bookings, staff pins persist across refresh, items not shown online never leak to public".
+    - Verified via `npm run check:lifecycle`: 93/93 green, 0 known-red, 0 failed.
+    - Verified via `npm run check:pglite`: 249/249 migrations applied, 0 failed.
+  - Public Booking Web App (`src/booking/`):
+    - In `src/booking/lib/catalogueApi.ts`: Added `fetchProductRecommendations(productId)` with clean typing and mock fallback.
+    - In `src/booking/components/ProductDetailModal.tsx`: Rendered "Often Rented With" section (up to 6 items) with 1-tap "+ Add to Request" button.
+  - Operations App & Booking Flow (`src/`):
+    - In `src/lib/queries/recommendations.ts`: Authored admin query and save RPC helpers `fetchProductRecommendationsAdmin` and `saveStaffRecommendations`.
+    - In `src/modules/rentals/booking/BookingEquipmentSection.tsx`: Rendered 1-tap "Often added with [Item Name]: + [Recommended Item] (Rs)" recommendation pill bar upon adding an item in New Rental.
+    - In `src/components/records/EquipmentRecordEditor.tsx`: Added staff management section under Pricing & Rental showing current recommendations (with `[Auto]` vs `[Pinned by staff]` badges), affordance to pin products, and unpin/remove controls.
+  - Tests & Verification:
+    - Authored unit test suite `src/booking/__tests__/recommendedItems.test.tsx`: all 3 tests passing. All 9 test files (34 tests) in `src/booking/` passing.
+    - `npm run typecheck`: clean (0 errors).
+    - `npm run lint`: clean (0 errors, 0 warnings).
+    - `npm run lint:ui-copy`: 0 developer-text violations.
+    - `npm run check:contrast`: 97/97 passing WCAG AA.
+    - `npm run check:pglite`: 249/249 applied, 0 failed.
+    - `npm run check:lifecycle`: 93/93 steps green.
+    - `npm run build`: clean production build in 45s.
+  - Updated `docs/plans/T7_ONLINE_BOOKING.md` status to `ready — awaiting merge (lane-c/T7-12-recommended-items)`.
+
+**Ruled**
+- Up to 6 recommended items per product ("often rented with", B1).
+- Past 12-month booking history on confirmed stages (`Booked`, `Packed`, `On Rent`, `Returned`, `Closed`) auto-populates recommendations across own products only.
+- Staff choices (`source = 'staff'`) are immutable to scheduled auto-refresh; auto-fill populates remaining unfilled positions.
+- An item with `show_online = false` or `online_bundle_only = true` never appears on the public page or to anonymous callers.
+- Adding a recommended item in New Rental is 1-tap directly from the recommendation pill bar.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 111 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | +0 |
+| Lifecycle | steps green / total | 93 / 93 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 249 files · check:pglite 249/249 applied, 0 failed (recorded 2026-11-19T20:28:06.254Z). Suite: Historical suite: 7441/7441 passed, 0 failed (recorded 2026-11-19T18:07:13.731Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 7398/7398 passed, 0 failed (recorded 2026-11-19T01:10:17.481Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-19T20:28:39.021Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Waiting on Babin: Babin to enter live `FONEPAY_MERCHANT_CODE` and `FONEPAY_SECRET_KEY` in Supabase Edge Function secrets and record one live Rs 10 test payment to reconcile with Fonepay statement.
+- Next roadmap cards in order: T7-07 (Refunds and reconciliation), T7-06 (eSewa & Khalti).
+
 ## 2026-11-20 — T7-08: My bookings (Lane C / Windows)
 
 **Did**

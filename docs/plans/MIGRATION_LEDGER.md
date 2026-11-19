@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0252**
+**Next free number: 0253**
 
 > **Legacy exception:** `0188` exists as two distinct, locally verified migration files
 > (`0188_smart_reservation_holds.sql` and `0188_staff_renting_gear.sql`). Both are preserved because
@@ -20,7 +20,8 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
-| 0251 | T7-05 | payment-intents-and-fonepay | lane-c/T7-05-online-payment-fonepay-first | claimed |
+| 0252 | T7-12 | product-recommendations-and-co-rented-items | lane-c/T7-12-recommended-items | verified (check:pglite 249/249 + check:lifecycle 93/93 Step L92) |
+| 0251 | T7-05 | payment-intents-and-fonepay | lane-c/T7-05-online-payment-fonepay-first | verified (check:pglite 248/248 + check:lifecycle 92/92 Step L91) |
 | 0250 | T7-13 | products-with-options-and-families | lane-c/T7-13-products-with-options-on-one-page | verified (check:pglite 247/247 + check:lifecycle 91/91 Step L90) |
 | 0249 | T7-14 | away-switch-for-online-booking | lane-c/T7-14-away-switch-for-online-booking | verified (check:pglite 246/246 + check:lifecycle 90/90 Step L89) |
 | 0248 | T7-09 | bot-and-abuse-rate-limits | lane-c/T7-09-bot-and-abuse-protection | verified (check:pglite 245/245 + check:lifecycle 89/89 Step L88) |

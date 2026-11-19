@@ -175,7 +175,7 @@ requests and requests.
 **Done when** — a scripted burst is refused; a normal user never sees a puzzle in normal use.
 **Needs** — T7-03.
 
-### T7-12 · Recommended items            status: todo · size: M · lane C · [go-live] · slips first
+### T7-12 · Recommended items            status: ready — awaiting merge (lane-c/T7-12-recommended-items) · size: M · lane C (Windows) · [go-live] · slips first
 **What** — Each product gets a short list of **recommended items** ("often rented with", ⭐ up to 6)
 (B1). The list **fills itself** from past bookings — items most often on the same booking in the last ⭐
 12 months, own products only — and **staff can change it** on the product (replace, reorder, pin); a
