@@ -5,6 +5,7 @@ import Icon, { type IconName } from '../../../components/ui/Icon'
 import { Section, Field, inputStyle } from './BookingFormWidgets'
 import { AddItemPanel, type AddItemSource } from './AddItemPanel'
 import { RentalLineItemsTree, type Line } from './RentalLineItemsTree'
+import { LateNightDeliveryCharge } from './LateNightDeliveryCharge'
 import {
   type EquipmentResult,
   type EquipmentAvailabilitySource,
@@ -476,6 +477,7 @@ export function BookingEquipmentSection({
               >
                 {hasAfterHoursLine ? 'After-hours added' : 'Add after-hours'}
               </Button>
+              <LateNightDeliveryCharge lines={lines} setLines={setLines} />
               <Button
                 icon={customLineOpen ? 'close' : 'plus'}
                 variant="outline"

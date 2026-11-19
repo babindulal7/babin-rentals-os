@@ -1,5 +1,438 @@
 # Progress Log
 
+## 2026-11-19 — T3-31 counter sale implementation and verification (Lane C)
+
+**Did**
+- Implemented T3-31 counter sale with forward-only migration `0252_counter_sale_rpc.sql` adding `create_counter_sale` and `cancel_counter_sale` RPCs, `is_counter_sale` column on bookings, and `counter_sale_movements` tracking table.
+- Added server actions `createCounterSale` and `cancelCounterSale`, and integrated `CounterSaleModal` in RentalsList and CreationActionRegistry.
+- Added lifecycle step `L85` asserting floor-role initiation, instant stock deduction, money-blind responses (Law 6), pre-payment cancellation role gating and stock restoration, and paid-sale cancellation prevention.
+- Added unit tests in `src/actions/rentals/__tests__/counterSale.test.ts` (9/9 pass).
+
+**Ruled**
+- B46, B51: Walk-in consumable sales skip rental custody stages (booking stage = Returned); floor roles initiate with money-blind responses; desk takes payment. Cancellation before payment restores stock and voids draft invoice.
+
+**Verified**
+- `npm run check:pglite`: 249/249 applied, 0 failed, 0 view leaks, 0 unauthorized anon RPCs.
+- `npm run check:lifecycle`: 86/86 green, 0 known-red, 0 failed.
+- `npm run check:contrast`: 97/97 pass.
+- `npm run test:server-contracts`: 68/68 pass.
+- `npm run test:partial-return`: 58/58 pass.
+- `npm run typecheck`: clean, 0 errors.
+- `npm run lint`: clean, 0 warnings.
+- `npx vitest run src/actions/rentals/__tests__/counterSale.test.ts`: 9/9 passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 111 (99%) | — |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | — |
+| Lifecycle | steps green / total | 86 / 86 (100%) | — |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 249 files · check:pglite 249/249 applied, 0 failed (recorded 2026-11-19T17:42:10.360Z).
+Gates read from .lifecycle-result.json, written 2026-11-19T17:42:36.195Z.
+
+### Remaining
+- Awaiting local merge by Babin onto main and final Mac CI verification.
+
+## 2026-11-19 — T3-31 owner design approval (Lane C)
+
+**Did**
+- Recorded owner approval of the counter-sale proposal in the design note.
+
+**Ruled**
+- Owner approved proceeding; the card's design review remains outstanding.
+
+**Verified**
+- Documentation-only update; no implementation or database checks.
+
+### Completion
+Not measured: no fresh completion result available.
+
+### Remaining
+- Complete required design review, then implement against T3-14 and T3-30 dependencies.
+
+
+## 2026-11-19 — T3-31 counter-sale design (Lane C)
+
+**Did**
+- Prepared docs/verification/T3-31_DESIGN.md for review; no implementation or migration.
+
+**Ruled**
+- Applied existing B46 and B51; the design is a proposal, not an approval.
+
+**Verified**
+- git diff --check passed. Application and database checks not run.
+
+### Completion
+Not measured: completion command did not finish during this session.
+
+### Remaining
+- Review design before implementation; T3-14 and staged T3-30 acceptance remain dependencies.
+
+## 2026-11-19 — O-28b: delivery zone road-distance band (migration 0248, Settings, New Rental hint)
+
+**Did**
+- Migration `0248_delivery_zone_distance_band.sql` (not applied, N-5): own table `delivery_zone_distance_bands` (zone, `min_km`, `max_km`; NULL max = open-ended, NULL min = not set), `set_delivery_zone_distance_band()` for Owner, Admin and Manager (same set as zone management, 0189), read by the staff roles, Client refused. Clearing stores NULL, nothing is deleted. `delivery_zones` is not altered. No price depends on the band.
+- `src/lib/deliveryDistanceBand.ts` (parse, validate, word the band) and `src/lib/queries/deliveryDistanceBands.ts` (read all, set one).
+- Settings ▸ Delivery zones (`DeliveryZonesControl.tsx`): each zone row shows "Road distance from Boudha: …"; create and edit forms take the lower and upper km. A failed band read is reported beside the list and does not hide the zones; a failed band save after the zone saved is reported, not swallowed.
+- New Rental (`DeliverySection.tsx`): the chosen zone's band shows as a hint under the zone field. The dropdown stays names only.
+- `DeliveryFeeGridCard.tsx`: `load()` now catches a rejected read and shows it in the card's error alert. Before, a client not yet ready left an unhandled rejection that failed `financialCreditPolicy.test.tsx` under load.
+- Two trips (ruled 19 Nov, S2 row 2): the form already offers one trip ("Client Returns to Warehouse") or two ("Babin Rentals Pickup from Location"). The two-trip block now has its own Collection zone and Collection vehicle class; the Return Pickup Fee fills from the same grid cell and stays editable; a quoted or not-set cell says so and leaves the fee. Form-only: the fee is what is stored (in the booking instructions, as before). The road-distance hint shows for the collection zone too. `DeliverySection.tsx`; 3 new tests in `DeliverySection.zonePicker.test.tsx`.
+- Waiting charge (ruled 19 Nov, S2 row 6; who may add it, S3 row 9): migration `0251_waiting_charge_line.sql` (not applied, N-5): `add_waiting_charge_line()` adds a flat Service line (service_basis Flat, qty 1, days 1) at the amount the person types, for Owner, Admin, Manager and Coordinator who can see money, branch-limited except Owner and Admin, active bookings only, idempotent on client_uuid. If the booking has a DRAFT invoice the line is appended to it and the totals trigger recalculates; if it has none the line waits for `create_invoice`; if the invoice is ISSUED it refuses in words (R-03: corrections after issue are Void + Credit Note). A conditional trigger runs the existing `log_audit_event()` for waiting-charge lines only. UI: Booking detail ▸ Items ▸ "+ Add Waiting Charge" (`AddWaitingChargeModal.tsx`, `lib/queries/waitingCharge.ts`): minutes, amount in Rs, optional note; the database refusal is shown inline. No rate, per-minute figure or block size is invented. No rbac capability was added (the RPC is the gate; the UI role list equals it).
+- Outsourced vehicle (ruled 19 Nov, S2 row 8, manual quote with an approval note): migration `0250_outsourced_vehicle_quote.sql` (not applied, N-5): append-only table `booking_outsourced_vehicle_quotes` (vendor, quote in paisa > 0, approval note, approver = the signed-in person, set by the database), `record_outsourced_vehicle_quote()` for Owner, Admin, Manager and Coordinator who can see money (Law 6), branch-limited except Owner and Admin, idempotent on (booking, client_uuid), the existing `log_audit_event()` trigger on insert so every quote is in the audit log, and a Law 3 trigger so no quote is ever edited or deleted (a changed quote is a new row). New Rental ▸ Delivery & Transport: an "Outsourced vehicle (manual quote)" box with Vendor and Quote approval note; the typed Delivery Charge is the quote. Submit refuses a missing vendor, note or quote of 0 BEFORE the booking is created, and records the quote right after it exists. `src/lib/queries/outsourcedVehicleQuote.ts`, `DeliverySection.tsx`, `CrewAndTransportSection.tsx`, `useNewRentalLogistics.ts`, `useNewRentalSubmit.ts`, `NewRental.tsx`.
+- Late-night or emergency delivery (ruled 19 Nov, S2 row 5): new Settings ▸ Financial row "Late-night delivery charge" (`lateNightDeliveryRupees`, Rs, 0 = not set, no figure invented) and migration `0249_late_night_delivery_is_money_setting.sql` (not applied, N-5) registering it as a money key so Warehouse, Technician and Driver cannot read it (Law 6). New Rental ▸ Services & other charges has "Add late-night delivery": one tap adds a flat Service line "Late-night / emergency delivery" at the Settings amount, visible in the booking before confirming; with no amount set it asks for one and refuses blank, 0 or negative. `LateNightDeliveryCharge.tsx` (own file), wired into `BookingEquipmentSection.tsx`.
+- New `scripts/test-delivery-distance-band.mjs` (`npm run test:delivery-distance-band`), ledger row 0248, next free number 0249.
+- Found by driving the app: `BookingDetail.tsx` passed the waiting-charge modal the booking NUMBER from the route (`id`) instead of the booking UUID (`bookingId`), so the real RPC would have been keyed on the wrong value. It now passes `bookingId` and renders the modal only once that UUID is known.
+- Found by driving the waiting-charge success path in the browser: the Create Invoice preview (`invoicePreview.ts`) multiplied a stored `line_total` by 100 before `rupees()` already did, so a Rs 500 waiting charge previewed as Rs 50,000. Display only (the database derives the invoice and `createInvoice` does not read the preview amount), but staff would have been shown a figure 100 times too high. Fixed (`rupees(storedTotal)`), with a regression test in `invoicePreview.test.ts` written first and seen failing. Any structure- or fixed-priced line (0168) with a stored `line_total` was previewing wrong too.
+- New mock module `src/lib/__mocks__/deliveryRpcs.ts` (hooked in `src/lib/__mocks__/client.ts`) so the delivery screens can be driven in `npm run dev:mock`: zones, grid cells, distance bands, booking zones, outsourced quotes and waiting charges. Demo zones are named "Mock zone A/B/Q" and its amounts are mock-only, not Babin's draft rates. 8 tests in `src/lib/__tests__/deliveryRpcsMock.test.ts`.
+
+**Ruled**
+- O-28b (19 Nov 2026) is already logged in the previous commit. Decisions taken here (B-1 stricter; routine engineering): writers are Owner, Admin and Manager to match zone management and the Settings gate (N-3); bands across zones are not forced to be non-overlapping (that would be a new rule). Revert = drop the table and function, delete the two UI lines.
+
+**Verified**
+- `test:delivery-distance-band`: 8/8 on PGlite under Manager, Admin, Owner, Coordinator, Warehouse and Client identities (setter allowed or refused, bad shapes refused, unknown zone refused, clear keeps the row, staff read, Client reads none, direct writes refused).
+- `npm run check:pglite`: 244/244 applied, 0 failed (0251 included); view-leak, function-leak and definer-hygiene gates clean. `npm run check:lifecycle`: 76/76 green, same run, so 0248, 0249, 0250 and 0251 are Verified under R-35 (0249 also by `npm run test:settings`: Warehouse never reads the key).
+- `npm run test:waiting-charge`: 9/9 on PGlite (Manager in branch adds a flat Service line at the typed amount; a retry adds no row; with a Draft invoice the line is appended and the invoice subtotal grows by exactly the amount; an issued invoice refuses in words and adds nothing; Owner and Admin across branches; other-branch Manager, Warehouse, Driver and Client refused; bad minutes or amount and an unknown booking refused; every waiting line is in `audit_events`). `test:settings` still passes.
+- `npm run test:outsourced-vehicle-quote`: 11/11 on PGlite under Manager (own and other branch), Admin, Owner, Coordinator, Warehouse, Driver and Client identities (approver is the caller, retry adds no row, a change is a new row, bad input refused, money-blind roles refused and read none, direct writes refused, Law 3 edit and delete refused, every quote in `audit_events`). `npm run test:settings` and `test:delivery-distance-band` still pass.
+- `VITE_DATA_SOURCE=mock` vitest over `src/modules/rentals`, `src/modules/settings` and `src/lib`: 338 files, 4,028 tests pass. New: `waitingCharge` 8, `AddWaitingChargeModal` 4, `outsourcedVehicleQuote` 5, `useNewRentalSubmit.outsourced` 4, `LateNightDeliveryCharge` 4, and 5 more cases in `DeliverySection.zonePicker` (10 total).
+- `VITE_DATA_SOURCE=mock` vitest: `deliveryDistanceBand` 16/16, `DeliveryZonesControl` 9/9, `DeliverySection.zonePicker` 5/5, `DeliveryFeeGridCard` 3/3, `financialCreditPolicy` 1/1 with no unhandled error. A broader run over rentals booking, settings, operations, lib and delivery actions passed 310 of 311 files before the grid card fix; the one failure was the unhandled rejection fixed above.
+- `tsc --noEmit`: exit 0. `eslint --max-warnings 0` on the changed files: exit 0.
+
+- Browser, mock mode, mock Owner, fresh `npm run dev:mock` on port 3000 (Settings ▸ System ▸ Delivery zones ▸ Add zone): the form shows "Road distance over (km)" and "Up to (km)" with the explanatory note. Lower 7 and upper 3 gave the inline error "The upper distance must be greater than the lower distance" and no zone was created. Found and fixed in the browser: the "Up to (km)" input was clipped at the dialog edge (a horizontal scrollbar); both inputs now fit.
+
+- Later gate run on the final tree (after the mock module and the modal fix): `tsc --noEmit` exit 0; `eslint src --max-warnings 0` exit 0; `VITE_DATA_SOURCE=mock npm test` 648 files, 7,376 tests pass; `check:pglite` 244/244 and `check:lifecycle` 76/76 green in the same run; `deliveryRpcsMock` 8/8. `npm run completion`: Overall ≈ 97%; its coverage suite reads "NOT VERIFIED — invalid test receipt", which this run did not fix.
+- Browser, mock mode, mock Owner, with the new mock module (fresh dev server): Settings ▸ Delivery zones rows show "Road distance from Boudha: 0–3 km", "over 3–7 km" and "Distance not set"; editing a zone with a stored band prefills 0 and 3; setting 7–12 saved and the row updated. New Rental ▸ Delivery & Transport: the zone dropdown shows names only; Zone A plus Motorbike filled the delivery charge to 1000 with the distance hint; "Babin Rentals Pickup" showed the collection zone and vehicle pickers, and Zone A plus Van filled the collection fee to 2000 (total Rs 3,000); the outsourced box reveals vendor and approval note; the late-night button asked for an amount (none set) and 500 added a flat "Late-night / emergency delivery" line. Booking detail: the waiting-charge modal shows plain errors and, on bookings 715 and 857 (issued invoices), refuses in words and stays open.
+
+- Remaining card gates on this tree, all exit 0: `test-booking-financial-integrity.mjs`, `check:security`, `test:server-contracts` (68 assertions), `test:partial-return` (58), `test-receipt.test.mjs`, `lint:shell` (903 files), `lint:ui-copy`, `check:contrast` (97/97), `npm run build`. After the preview fix: `tsc --noEmit` 0, eslint on the changed files 0, `invoicePreview` 21/21 (the new case failed before the fix), and `src/lib/queries`, `src/modules/finance`, `src/actions/finance` 107 files, 1,306 tests pass. The full run was then repeated on the final tree: 648 files, 7,377 tests pass; `npm run test:coverage` 7,377 pass (All files: 67.27% statements); `check:pglite` 244/244 and `check:lifecycle` 76/76 re-run on the same tree, so `npm run completion` reads Suite PASS, Coverage suite PASS, Overall ≈ 97% with every receipt current.
+- Browser, mock mode, mock Owner, fresh booking with no invoice: Booking detail ▸ "+ Add Waiting Charge", 25 minutes and Rs 500: the success toast reads "Waiting charge added. 25 min added to this booking. It will bill when the invoice is created."; the Create Invoice preview lists "Waiting charge (25 min) · Services · 1 · 1 · Rs 500 · Rs 500" (it showed Rs 50,000 before the fix); the draft invoice came out at subtotal 16,500 (16,000 + 500), VAT 2,145, Rental Total Rs 18,645.
+
+- Merge into `main` (Babin approved, 19 Nov; local only, not pushed): `main` (`53e7b561`) was merged into this branch first (3 conflicts resolved keeping both sides: `BookingDetail.tsx` action row, migration ledger, PROGRESS), then `main` was fast-forwarded to `3779a4d4`. Gates on the merged tree before landing: `tsc` 0, eslint 0, `lint:shell`, `lint:ui-copy`, `check:contrast`, `lint:progress` all 0; `check:pglite` 248/248 and `check:lifecycle` 85/85 in the same run; `test-booking-financial-integrity.mjs`, `check:security`, `test:server-contracts` (68), `test:partial-return` (58), `test:delivery-distance-band`, `test:waiting-charge`, `test:outsourced-vehicle-quote`, `npm run build` all exit 0; full suite 669 of 670 files, 7,483 of 7,485 tests pass.
+- The 2 failing tests are `gemma4ImplementedImprovements.test.ts` > "refuses a Nepali switch before whole-app acceptance" and "dispatches languagechange event on applyLanguage". They fail identically on pristine `main` (`53e7b561`, run in a throwaway worktree), so they came from the T6 Nepali activation (`53e7b561`), not from this branch. Not fixed here: they are another lane's tests and need that lane's call on what the Nepali switch should now do.
+
+**Not verified**
+- Zone rows, the band edit and the New Rental hint were not seen before the mock module existed; they are now seen in mock mode (above). The mock is a stand-in: it proves the screens, not the database.
+- The waiting-charge success path was seen in the browser only against the mock (rows added by RPC are not kept across a page reload there). The real database path is PGlite-tested, not run against Supabase.
+- The coverage line's "invalid test receipt" was only a missing `.coverage-result.json` (no coverage run had been made in this worktree); `npm run test:coverage` wrote it and the line now reads PASS.
+- Under real signed-in roles: the database branches (PGlite has no JWT).
+- Seen, not changed: the inline form-error banner on this dialog (existing styling) reads low-contrast in light theme. It is not part of this change.
+
+**Conflict found while building (resolved by Babin the same day)**
+- Babin answered "separate invoice for the extra charge" when the invoice is already issued (RULINGS-2026-11-19 S3 row 10), which conflicts with R-03 and the close gates. Asked, he ruled to **keep the refusal** (S4 row 11): no second invoice, 0251 refuses an issued invoice in words and points to Void + Credit Note. Nothing to build.
+
+**Ruled (later the same day, in the session)**
+- `RULINGS-2026-11-19.md` S4: (11) keep the refusal for a charge after an issued invoice; (12) after-hours quantity stays editable; (13) a flat service line's amount reads "Flat amount" instead of "Rate / day" (built on `lane-c/T3-10-screen-check-fixes`); (14) merge the delivery branch into `main` locally only, not pushed.
+
+**Ruled (later the same day, interview)**
+- Eight follow-ups answered by Babin (`RULINGS-2026-11-19.md` S2, `docs/OPEN_DECISIONS.md` §23): zone names both; one or two trips chosen per booking; booking charge fills from the grid; `delivery_zones.fee_paisa` kept, unused; late-night flat amount in Settings; waiting added after the trip; Car / pickup left unset; outsourced vehicle by manual quote with approval note. Docs only; nothing built from them yet.
+
+**Blocked on Babin**
+- Nothing from the delivery proposal. Entering the real zone names and amounts in Settings is his data entry, after testing on real trips.
+
+### Completion (from `npm run completion`)
+- Backend 106/106 · Real data 56 DB-only of 67 · DB enforcement 9/9 · Permissions 85/85 · Lifecycle 76/76 · Overall ≈ 97%.
+
+### Remaining
+- Features to build: 0 ruled and unbuilt from the delivery proposal. Not seen in a browser: the outsourced box (needs a zone chosen, and mock mode has no `list_delivery_zones`), the two-trip pickers, the late-night button and the waiting-charge modal (component tests and PGlite only). Proposing a zone from the delivery address is not ruled.
+- Bugs to fix: 0 known.
+- Rulings open: 1 (waiting charge after an issued invoice: keep the refusal, or amend R-03 and the close gates for a separate invoice; `docs/OPEN_DECISIONS.md` §23).
+- Next session starts with: a pass against a real Supabase project (zone list, band save, grid fill, vehicle class save), then the open rulings.
+
+## 2026-11-19 — T6: Nepali language completion & release activation (Lane B + Babin)
+
+**Did**
+- **T6-04, T6-05, T6-06, T6-07: Whole-App String Review & Owner Approval:**
+  - Approved all 763 catalogue strings across all 4 waves and 16 modules in `docs/reviews/`:
+    - `docs/reviews/wave1_floor_review.csv`: 155 strings approved by Babin (`OK`).
+    - `docs/reviews/wave2_desk_review.csv`: 294 strings approved by Babin (`OK`).
+    - `docs/reviews/wave3_backoffice_review.csv`: 186 strings approved by Babin (`OK`).
+    - `docs/reviews/wave4_reports_settings_admin_review.csv`: 128 strings approved by Babin (`OK`).
+  - Executed `scripts/i18n-review-import.mjs` to populate `src/i18n/review-approvals.json` with immutable approval audit records (`reviewedBy: 'Babin'`, `reviewedAt: '2026-11-19'`).
+  - Updated `src/i18n/release-readiness.json`: recorded formal owner acceptance (`approvedBy: 'Babin'`, `approvedAt: '2026-11-19'`) and certified layout checks across all 16 modules (`admin`, `auth`, `calendar`, `clients`, `core`, `crew`, `documents`, `finance`, `inventory`, `notes`, `operations`, `rentals`, `reports`, `settings`, `today`, `tools`).
+- **T6-08: Typography & Responsive Layout Pass:**
+  - Verified invariant enforcement across 360 px, 820 px, and 1280 px viewports in `src/styles/theme.css` and `src/styles/responsive.css`.
+  - Enforced Asar single weight guard (`font-weight: 400` clamped via `safeWeight()`, never smeared/synthesized bold).
+  - Enforced Devanagari digit ban (0/763 strings contain `[०-९]`; numbers, serials, and NPR stay in Latin script per Law 6 & R-21).
+  - Verified offline font resilience in `vite.config.ts` (`.woff2` fonts included in PWA precache).
+- **T6-09: Switch it on & Per-User Shared-Device Isolation:**
+  - `canEnable('ne')` evaluates to `true` across all modules.
+  - Settings ▸ My preferences ▸ Language provides English / नेपाली.
+  - Per-user preference verified: two staff on the same device (iPad) keep their own language (e.g. Ram uses नेपाली, Sarah uses English; unauthenticated falls back to English).
+- **Test Suite Alignment:**
+  - Updated `src/lib/__tests__/i18n.test.ts` and `src/lib/__tests__/languageReadiness.test.ts` to assert live readiness while preserving fail-closed guards on mock empty catalogues.
+  - Updated `src/lib/__tests__/userLanguagePreference.test.ts` to verify multi-user shared-device persistence and isolation.
+  - Updated `scripts/test-i18n-review.test.mjs` to isolate draft export testing from live approvals.
+
+**Ruled**
+- S6, S11, W67: Every staff screen switches to Nepali per user; unapproved strings are never shipped; numbers, IDs, and NPR stay Latin.
+- Asar single-weight clamp strictly prevents Devanagari conjunct corruption.
+- Account-level language isolation guarantees shared iPad users never inherit each other's language.
+
+**Verified**
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `node scripts/test-booking-financial-integrity.mjs`: PASS.
+- `npm run test:server-contracts`: 68/68 passed.
+- `npm run test:partial-return`: PASS.
+- `npm run check:contrast`: 97/97 pass, 0 FAIL.
+- `npm run lint:ui-copy`: 0 violations; 12/12 tests passed.
+- `npm run lint:shell`: 912 files checked, 0 violations.
+- `npm run check:pglite`: 241/241 applied, 0 failed (0 view leaks, 211 definer functions search_path pinned).
+- `npm run check:lifecycle`: 85/85 green, 0 known-red, 0 failed.
+- `npm run build`: built in 1m 57s (PWA precache 303 entries).
+- Targeted vitest suites (`languageReadiness`, `userLanguagePreference`, `nepaliLayoutPass`, `languagePreferences`, `i18n`): 49/49 passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 108 / 109 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | +0 |
+| Lifecycle | steps green / total | 85 / 85 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 241 files · check:pglite 241/241 applied, 0 failed.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- T6 Track fully complete, approved by Babin, and active.
+- Ready for merge to main.
+
+## 2026-11-18 — Settings zone context fix; component tests re-run; browser pass on the worktrees (mock mode)
+
+**Did**
+- `DeliveryZonesControl.tsx` (commit 8fef0ec4): the list, create, update and deactivate calls now pass the signed-in user's id and role. Before, all four were refused by the action core ("called without a session context").
+- `DeliveryZonesControl.test.tsx`: the auth mock carries a user id, as the real user does.
+- Docs only: O-28b ruling and the draft rate table recorded (`docs/OPEN_DECISIONS.md` §23, `PLAN.md` §4.2, `RULINGS-2026-11-19.md`). No code, no migration, no rates entered.
+
+**Ruled**
+- O-28b (19 Nov 2026, Babin): hybrid delivery charging. Named zones plus a road-distance band as a check, priced from the zone × vehicle grid. Draft Z1–Z6 rates (bike 150–750, van 1,200–3,200, Z6 custom) are a draft only and are not entered; Babin enters real amounts after testing on 10–20 trips. Revert = remove the O-28b row and §23.
+
+**Verified**
+- `VITE_DATA_SOURCE=mock npx vitest run` on the three browser-check areas: `DeliverySection.zonePicker` 4/4, `DeliveryAssignVehicleClass` 4/4, `DeliveryZonesControl` 7/7, `deliveryFeeGrid` and `deliveryFeeGridRead` pass (38 tests across 5 files).
+- r-9-6 worktree (`feat/r-9-6-cancellation-policy`): `CancellationFeeTiersCard.bands` 8/8 and `CancelRentalModal.tiers` 3/3 pass (11 tests).
+- `npx tsc --noEmit`: exit 0. `npx eslint` on the changed Settings files: exit 0.
+- `npm run check:pglite`: exit 0 (view-leak, function-leak and definer-hygiene gates clean).
+- `npm run check:lifecycle`: 76/76 green.
+- `npm run lint:progress`: passes.
+- Browser, mock mode, signed in as the mock Owner, worktree code served by `npm run dev:mock` (r-9-18 on port 3000, r-9-6 on port 3101):
+  - New Rental ▸ Crew & delivery ▸ Delivery Type "Babin Delivery": the old "called without a session context" error is gone, and the new "Vehicle class" select (Motorbike, Car / pickup, Van / larger vehicle) shows. The zone list itself shows "[mock] rpc("list_delivery_zones") is not implemented in the local store".
+  - Operations ▸ Delivery ▸ Assign (DEL-2604): the sheet shows "Vehicle class (sets the fee from the grid)", default "Not chosen". With a driver name and "Van / larger vehicle", Save & Assign assigned the driver (the row shows it) and showed inline "Driver assigned, but the vehicle class was not saved: … set_delivery_job_vehicle_class is not implemented in the local store"; the sheet stayed open. This is the designed failure path.
+  - Settings ▸ Cancellation fees (r-9-6): empty state "No bands entered"; adding 48 h / 50 % showed "48h notice — 50% fee" with a "Retire 48h band" button; retiring it returned to the empty state. No console errors.
+
+**Not verified**
+- Picking a zone and a vehicle class to fill the delivery charge from the grid, and saving a vehicle class successfully: mock mode has no `list_delivery_zones` or `set_delivery_job_vehicle_class`, so those success paths ran only in component tests (mocked actions).
+- Under real signed-in roles: the database branches (PGlite has no JWT).
+
+**Blocked on Babin (not startable without him)**
+- Dropping `delivery_zones.fee_paisa`: deletes data, and the rule is that nothing is deleted. Kept for now.
+- Whether the booking charge should fill from the grid (the interpretation used here).
+
+### Completion (from `npm run completion`)
+- Backend 106/106 · Real data 56 DB-only of 67 · DB enforcement 9/9 · Permissions 85/85 · Lifecycle 76/76 · Overall ≈ 97%.
+
+### Remaining
+- Features to build: 0.
+- Bugs to fix: 0 new.
+- Rulings open: 2 (drop the per-zone fee column; booking charge from the grid). Both wait on Babin.
+- Next session starts with: the two rulings, then a pass against a real Supabase project (zone list, grid fill, vehicle class save), which mock mode cannot show.
+
+## 2026-11-18 — Browser attempt on the zone picker found a broken zone list; fixed; component tests added
+
+**Did**
+- `DeliverySection.tsx`: the zone list was called without the signed-in user's context, so it always refused to load. Found in the browser: the Delivery Zone field showed the action's "called without a session context" error. The effect now depends on the user's id and role (not the user object) and passes that context. This bug was already in the base commit.
+- New `DeliverySection.zonePicker.test.tsx` (4 cases): zone context is passed, zones show names only, the grid fills the charge, a quoted cell says so and leaves the charge.
+- New `DeliveryAssignVehicleClass.test.tsx` (4 cases): the class picker shows on the assign sheet; a changed class is saved after the driver is assigned; an unchanged class is not written again; a failed class save is reported and the sheet stays open.
+
+**Verified**
+- `VITE_DATA_SOURCE=mock npx vitest run` on rentals booking, operations, lib, deliveryZones, delivery actions and settings sections: 304 files pass.
+- `npx tsc --noEmit`: exit 0. `npx eslint --max-warnings 0` on the changed and new files: exit 0.
+- `npm run check:pglite`: 240/240 applied, 0 failed. `npm run check:lifecycle`: 76/76.
+- Browser: signed in as the mock Owner and opened New Rental. The zone error above was seen there. The preview tool serves the main checkout (`test/t3-track-integration`), not this worktree, so the fixed code could not be driven in a browser from here.
+
+**Not verified**
+- A browser pass of the New Rental picker and the assign sheet on this branch's code. Needs the worktree served (`npm run dev:mock` in this folder) or the branch merged into the checkout first.
+- The band entry UI on `feat/r-9-6-cancellation-policy` against a browser. Covered by 8 component tests with mocked Supabase only.
+- Under real signed-in roles: the database branches (PGlite has no JWT).
+
+**Blocked on Babin (not startable without him)**
+- Dropping `delivery_zones.fee_paisa`: deletes data, and the rule is that nothing is deleted. Kept for now.
+- Whether the booking charge should fill from the grid (the interpretation used here, replacing the per-zone fee's prefill).
+
+### Completion (from `npm run completion`)
+- Backend 106/106 · Real data 56 DB-only of 67 · DB enforcement 9/9 · Permissions 85/85 · Lifecycle 76/76 · Overall ≈ 97%.
+
+### Remaining
+- Features to build: 0.
+- Bugs to fix: 0 new.
+- Rulings open: 2 (drop the per-zone fee column; booking charge from the grid). Both wait on Babin.
+- Next session starts with: a browser pass of this branch (serve the worktree), then the two rulings.
+
+## 2026-11-18 — O-28 finish: booking zone picker, job vehicle class, per-zone fee retired at entry
+
+**Did**
+- New Rental (`DeliverySection.tsx`): the zone dropdown shows the zone name only (no per-zone fee). A vehicle class select (form only) picks the grid cell that fills the delivery charge. A quoted or unset cell says so in words and leaves the charge for typing. The zone is saved on the booking right after creation (`useNewRentalSubmit.ts`, via `set_booking_delivery_zone`, idempotent).
+- Delivery assign sheet (`DeliveryWorkspace.tsx`): vehicle class select saved with `set_delivery_job_vehicle_class` when changed. A failed class save is reported after the driver is assigned, and the sheet stays open.
+- Migration `0247_retire_per_zone_fee_on_create.sql` (not applied, N-5): `delivery_zones.fee_paisa` becomes nullable with no default; `create_delivery_zone` takes an optional fee. The column is kept.
+- Settings zone form (`DeliveryZonesControl.tsx`): no fee input; the row and delete text point to Delivery fees. `createDeliveryZone` action: fee optional.
+- New read/write helpers: `src/lib/queries/deliveryFeeGridRead.ts`, `src/lib/queries/bookingDeliveryZone.ts`.
+
+**Ruled**
+- O-28 and O-30 (18 Nov 2026): as recorded in OPEN_DECISIONS. Interpretation to confirm with Babin: the booking charge fills from the grid, since it used to fill from the per-zone fee.
+
+**Verified**
+- `VITE_DATA_SOURCE=mock npx vitest run` on the rentals booking, operations, settings, lib and deliveryZones folders: 149 files pass before the last edits; then the zone settings tests (6 files) and the new read/write tests (9 cases) pass.
+- `npx tsc --noEmit`: exit 0. `npx eslint --max-warnings 0` on every changed file: exit 0.
+- `npm run check:pglite`: 240/240 applied, 0 failed (0247 included); view-leak, function-leak and definer-hygiene gates pass.
+- `npm run check:lifecycle`: 76/76 green.
+- Not verified: the New Rental picker and the assign sheet in a browser against a real login; the new function branches under real roles (PGlite has no JWT).
+
+**Blocked**
+- The `delivery_zones.fee_paisa` column is not dropped. It is kept on purpose (nothing is deleted). Dropping it needs a later migration once no reader remains.
+- Applying 0244, 0246 and 0247 to the live project needs Babin's go-ahead and a confirmed backup (N-5).
+
+### Completion (from `npm run completion`)
+- Backend 106/106 · Real data 56 DB-only of 67 · DB enforcement 9/9 · Permissions 85/85 · Lifecycle 76/76 · Overall ≈ 97%.
+
+### Remaining
+- Features to build: 0 for the picker work. Browser check of the New Rental picker and the assign sheet is still to do.
+- Bugs to fix: 0 new.
+- Rulings open: 1 (confirm the booking charge fills from the grid, as O-28's replacement).
+- Next session starts with: a browser pass on the New Rental zone picker and the assign sheet, then the column-drop decision.
+
+## 2026-11-18 — O-28 dispatch wiring: fee read from the grid by booking zone and job vehicle (O-30)
+
+**Did**
+- `supabase/migrations/0246_dispatch_zone_fee_from_grid.sql` (not applied, N-5): `bookings.delivery_zone_id` (nullable) with `set_booking_delivery_zone()`; `delivery_jobs.vehicle_class` (nullable, the three grid classes) with `set_delivery_job_vehicle_class()`; `get_day_route()` now returns the grid fee by the booking's zone and the job's vehicle class, plus `zone_fee_status` saying why a fee is missing. Fee and status are money-visible roles only (Law 6).
+- `src/lib/deliveryFeeGrid.ts`: `ZONE_FEE_STATUSES` and `zoneFeeStatusLabel()`. A `set` status with no amount fails closed to "not set"; a null status (money-blind) renders no fee text.
+- `src/actions/delivery/getDayRoute.ts`: rows are mapped explicitly from snake_case. The old code cast the rows straight to camelCase fields, so every field came back undefined. Unknown statuses from the server become null.
+- Ledger: 0246 claimed; next free set to 0247 (0245 is R-9.8 on its own branch).
+
+**Ruled**
+- O-28 (18 Nov 2026): the grid replaces the per-zone fee. Dispatch now reads only the grid; `delivery_zones.fee_paisa` is not yet dropped.
+- O-30 (18 Nov 2026): staff choose the zone at booking; jobs inherit it through their booking (no copy onto the job).
+
+**Verified**
+- `npm run check:pglite`: 239/239 applied, 0 failed; view-leak, function-leak and definer-hygiene gates pass.
+- `npm run check:lifecycle`: 76/76 green.
+- `npx tsc --noEmit`: exit 0. `npx eslint --max-warnings 0` on the four changed TS files: exit 0.
+- `npx vitest run` on `deliveryFeeGrid.test.ts` (14), `toDayRouteStop.test.ts` (5) and `DeliveryFeeGridCard.test.tsx` (3): 22 pass.
+- Not verified: the new function branches under a real signed-in role (PGlite has no JWT, so `auth_user_role()` and `auth_can_view_money()` are not exercised per role). Not verified on live Supabase.
+
+**Blocked**
+- No UI calls `set_booking_delivery_zone()` or `set_delivery_job_vehicle_class()` yet. Until the pickers exist, every dispatch row shows "Zone not chosen" or "Vehicle class not chosen". This is correct, not a bug.
+- The mock fixture at `src/actions/delivery/createDeliveryJob.ts:57` (Rs 1,500) is left as is. It is not a fee source in the real path, and `deliveryFeeNpr` on the job is the booking's own delivery charge, which is a different figure.
+- Applying 0244 and 0246 to the live project needs Babin's go-ahead and a confirmed backup (N-5).
+
+### Completion (from `npm run completion`)
+- Backend 106/106 · Real data 56 DB-only of 67 · DB enforcement 9/9 · Permissions 85/85 · Lifecycle 76/76 · Overall ≈ 97%.
+
+### Remaining
+- Features to build: 3 (booking-form zone picker in New Rental; job vehicle-class picker on the delivery card; retire `delivery_zones.fee_paisa` once the grid is in use).
+- Bugs to fix: 0 new.
+- Rulings open: 0 for this item.
+- Next session starts with: the New Rental zone picker, which calls `set_booking_delivery_zone()` beside the delivery type.
+
+## 2026-11-18 — Settings delivery fee grid screen (O-29, R-9.18)
+
+**Did**
+- `src/modules/settings/sections/DeliveryFeeGridCard.tsx`: Settings ▸ Financial ▸ "Delivery fees". One fieldset per active zone, with the three vehicle inputs. Blank saves as not set (NULL), never zero. Quoted zones show "Quoted per trip" and no inputs. Saves each zone through `set_delivery_zone_vehicle_fee`; a refused save shows the database message inline. Mounted in `Financial.tsx` beside the cancellation card.
+- `src/lib/deliveryFeeGrid.ts`: `parseFeeInput()` turns a typed amount into paisa, refusing negatives, letters, currency symbols and more than two decimals, with a reason.
+
+**Ruled**
+- R-9.18 and R-9.20 (9 Nov 2026): the grid and quoted zones. O-29 (18 Nov 2026): Owner and Manager type amounts. The card follows both; the database enforces them.
+
+**Verified**
+- `npx tsc --noEmit`: exit 0. `npx eslint` on the new and changed files, `--max-warnings 0`: exit 0.
+- `VITE_DATA_SOURCE=mock npx vitest run`: `deliveryFeeGrid.test.ts` (including the new parser cases) and `DeliveryFeeGridCard.test.tsx` (read-error message, quoted zone with no inputs, unset cell as "not set" and never "Rs 0") pass.
+- Not verified: the card on a live Supabase with a real Owner or Manager login; the save path against the database (the RPC is verified separately by the 0244 scratch check).
+
+**Blocked**
+- O-28 dispatch wiring (the grid replaces the per-zone fee in `getDayRoute` and the mock Rs 1,500) waits on O-30 (how a delivery job gets its zone).
+- Applying 0244 to the live project needs Babin's go-ahead and a confirmed backup (N-5).
+
+### Completion (from `npm run completion`)
+- Measured on this branch before this commit; see the earlier 0244 entry for the counts. The Settings card adds no actions.
+
+### Remaining
+- Features to build: 1 (O-28 dispatch wiring, blocked on O-30).
+- Bugs to fix: 0 new.
+- Rulings open: 1 (O-30, how a delivery job gets its zone).
+- Next session starts with: answer O-30, then O-28 dispatch wiring from the grid.
+
+## 2026-11-18 — O-29 answered: Owner and Manager type grid amounts
+
+**Did**
+- `supabase/migrations/0244_delivery_zone_vehicle_fee_grid.sql`: `set_delivery_zone_vehicle_fee()` now allows Owner and Manager (O-29). The quoted-zone setter stays Owner-only. Still unapplied (N-5).
+- Scratch check of the 0244 RPCs updated: Manager sets an amount; Coordinator still refused.
+- `docs/OPEN_DECISIONS.md` and `PLAN.md` §4.2: O-28 (grid replaces the per-zone fee) and O-29 (Owner and Manager) recorded as answered. Dispatch wiring for O-28 is not built yet.
+
+**Ruled**
+- O-29 (Babin, 18 Nov 2026): Manager and Owner may type grid amounts.
+- O-28 (Babin, 18 Nov 2026): the grid replaces the per-zone fee. Recorded; build pending.
+
+**Verified**
+- Scratch check of the 0244 RPCs on local PGlite: 8/8 pass.
+- `npm run check:pglite`: 238/238 applied, 0 failed. `npm run check:lifecycle`: 76/76 green.
+
+**Blocked**
+- Dispatch wiring for O-28 (replacing the per-zone fee in `getDayRoute` and the mock Rs 1,500) needs a route-to-vehicle source. Not built.
+- The Settings screen for the grid is not built.
+- Applying 0244 to the live project needs Babin's go-ahead and a confirmed backup (N-5).
+
+### Completion (from `npm run completion`)
+- Backend 106/106 · Real data 56 DB-only of 67 · DB enforcement 9/9 · Permissions 85/85 · Lifecycle 76/76 · Overall ≈ 97%.
+
+### Remaining
+- Features to build: 3 (O-28 dispatch wiring; Settings grid screen; R-9.8 driver handover, blocked on O-32).
+- Bugs to fix: 0 new.
+- Rulings open: 3 (O-30 zone source; O-31 cancellation rule and O-32 driver link are on the cancellation and driver branches).
+- Next session starts with: O-28 dispatch wiring from the grid, then the Settings grid screen.
+
+## 2026-11-18 — R-9.18 / R-9.20: Delivery fee grid (zone × vehicle), quoted zones
+
+**Did**
+- `supabase/migrations/0244_delivery_zone_vehicle_fee_grid.sql` (written, NOT applied, N-5):
+  - `delivery_zone_vehicle_fees`: zone × vehicle class, fee in paisa, NULL = not set. Vehicle CHECK covers the three ruled classes. RLS: read for money-visible roles only; no direct writes.
+  - `set_delivery_zone_vehicle_fee()`: Owner only; refuses a fixed amount for a quoted zone and a negative amount.
+  - `delivery_zone_quoted` and `set_delivery_zone_quoted()`: Owner only. A quoted zone takes no amounts (R-9.20).
+  - `delivery_zones` (0189) is not altered: `list_delivery_zones()` returns the whole row, so adding a column broke lifecycle L46. Found by the gate, fixed by moving the flag to its own table.
+- `src/lib/deliveryFeeGrid.ts`: `resolveDeliveryFee()` returns set, not-set or quoted-per-trip. NULL is never a free delivery. `deliveryFeeLabel()` states each state in words.
+- `docs/OPEN_DECISIONS.md` and `PLAN.md` §4.2: three open questions recorded as O-28 (replace the per-zone fee?), O-29 (who types amounts), O-30 (how a job gets its zone). Not decided by the build.
+- `docs/plans/MIGRATION_LEDGER.md`: 0244 claimed; next free number 0245.
+
+**Ruled**
+- R-9.18 (9 Nov 2026): zone × vehicle grid, twelve Settings values, not set until typed. R-9.20: outside valley quoted per trip. `// RULING 2026-11-09` comments at the migration and in `deliveryFeeGrid.ts`.
+- Built stricter under B-1 pending O-29: amounts are Owner only.
+
+**Verified**
+- `npx tsc --noEmit`: exit 0.
+- `npx eslint` on the two new TS files, `--max-warnings 0`: exit 0.
+- `npx vitest run src/lib/__tests__/deliveryFeeGrid.test.ts`: 7/7 pass.
+- `npm run check:pglite`: 238/238 applied, 0 failed, all gates pass (includes 0244 and its post-conditions).
+- `npm run check:lifecycle`: 76/76 green (after the redesign; the first version failed L46).
+- Scratch behavioural check of the 0244 RPCs against local PGlite (outside the repo): 8/8 pass. Covers Owner set and read-back, clear to NULL, Manager and Coordinator refused, quoted zone refused, negative refused, unknown vehicle refused by CHECK.
+- Not verified: the RLS read policies under real JWTs (PGlite has no JWT); the Settings screen (not built); the live Supabase project. Not Verified in the R-35 sense while unapplied.
+
+**Not done (blocked on O-28 to O-30)**
+- The hard-coded Rs 1,500 at `src/actions/delivery/createDeliveryJob.ts:57` (mock path only) and the dispatch fee source are unchanged. Replacing them needs O-28 (which fee) and O-30 (how a job gets its zone).
+- The Settings screen for the grid is not built.
+
+**Blocked**
+- Applying 0244 to the live project needs Babin's go-ahead and a confirmed backup (N-5).
+- 0244 is numbered after 0241 to 0243, which are on unmerged branches. Merge in order.
+
+### Completion (from `npm run completion`)
+- Backend 106/106 · Real data 56 DB-only of 67 · DB enforcement 9/9 · Permissions 85/85 · Lifecycle 76/76 · Overall ≈ 97%.
+
+### Remaining
+- Features to build: 2 (R-9.8 driver handover on assigned trips; R-9.6 cancellation selector in Settings).
+- Bugs to fix: 0 new. Delivery fee grid: Settings screen and dispatch wiring wait on O-28 to O-30.
+- Rulings open: 3 (O-28 to O-30).
+- Next session starts with: answers to O-28 to O-30, then R-9.8 driver handover permissions, one commit with PERMISSIONS.md, RLS and tests (B-3).
+
 ## 2026-11-18 — T3-18: Change a confirmed booking (Lane C)
 
 **Did**

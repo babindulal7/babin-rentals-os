@@ -69,6 +69,8 @@ import { ResolveAtRiskModal } from './modals/ResolveAtRiskModal'
 import { canAssignPricedCrew } from '../../lib/crewAssignment'
 import { CreateSubRentalModal } from './modals/CreateSubRentalModal'
 import { AddConsumableModal } from './booking/AddConsumableModal'
+import { AddWaitingChargeModal } from './booking/AddWaitingChargeModal'
+import { canAddWaitingCharge } from '../../lib/queries/waitingCharge'
 import { RecordPaymentModal } from '../finance/modals/RecordPaymentModal'
 import { CreateInvoiceModal } from '../finance/modals/CreateInvoiceModal'
 import { CreateDocumentModal } from '../documents/CreateDocumentModal'
@@ -1239,6 +1241,7 @@ function BookingDetailView() {
    */
   const canReleaseUnits = user ? canWriteBookingDesk(user.role) : false
   const [showAddConsumableModal, setShowAddConsumableModal] = useState(false)
+  const [showWaitingChargeModal, setShowWaitingChargeModal] = useState(false)
   const [showAddGearModal, setShowAddGearModal] = useState(false)
   const canChangeBookingPermission = Boolean(
     user?.role && ['Owner', 'Admin', 'Manager', 'Coordinator'].includes(user.role),
@@ -1974,6 +1977,8 @@ function BookingDetailView() {
   const stage = (booking?.stage ?? 'Draft') as BookingStatus
   const isTerminalStage = stage === 'Returned' || stage === 'Closed' || !!booking?.isCancelled
   const canAddConsumables = !isTerminalStage && !!user && (canWriteBookingDesk(user.role) || canWriteFloor(user.role))
+  // S2 row 6: waiting charge after the trip. Owner, Admin, Manager, Coordinator; add_waiting_charge_line enforces it.
+  const canAddWaiting = !isTerminalStage && canAddWaitingCharge(user?.role)
   const canAddGear =
     canChangeBookingPermission &&
     ['Quote', 'Booked', 'Packed', 'On Rent'].includes(stage) &&
@@ -3006,32 +3011,43 @@ function BookingDetailView() {
               no="2"
               title="Equipment, Bundles & Services"
               action={
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  {canAddGear && (
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        if (stage === 'On Rent') {
-                          setShowAddGearModal(true)
-                        } else {
-                          navigate('?action=edit')
-                        }
-                      }}
-                      style={{ minHeight: 36, padding: '0 12px', fontSize: 'var(--t-meta, 13px)' }}
-                    >
-                      + Add gear
-                    </Button>
-                  )}
-                  {canAddConsumables && (
-                    <Button
-                      variant="secondary"
-                      onClick={() => setShowAddConsumableModal(true)}
-                      style={{ minHeight: 36, padding: '0 12px', fontSize: 'var(--t-meta, 13px)' }}
-                    >
-                      + Add Consumable
-                    </Button>
-                  )}
-                </div>
+                canAddGear || canAddWaiting || canAddConsumables ? (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    {canAddGear && (
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          if (stage === 'On Rent') {
+                            setShowAddGearModal(true)
+                          } else {
+                            navigate('?action=edit')
+                          }
+                        }}
+                        style={{ minHeight: 36, padding: '0 12px', fontSize: 'var(--t-meta, 13px)' }}
+                      >
+                        + Add gear
+                      </Button>
+                    )}
+                    {canAddWaiting && (
+                      <Button
+                        variant="secondary"
+                        onClick={() => setShowWaitingChargeModal(true)}
+                        style={{ minHeight: 36, padding: '0 12px', fontSize: 'var(--t-meta, 13px)' }}
+                      >
+                        + Add Waiting Charge
+                      </Button>
+                    )}
+                    {canAddConsumables && (
+                      <Button
+                        variant="secondary"
+                        onClick={() => setShowAddConsumableModal(true)}
+                        style={{ minHeight: 36, padding: '0 12px', fontSize: 'var(--t-meta, 13px)' }}
+                      >
+                        + Add Consumable
+                      </Button>
+                    )}
+                  </div>
+                ) : undefined
               }
             >
               {/* §12 — a failed release is inline and persistent, above the
@@ -3838,6 +3854,19 @@ function BookingDetailView() {
           showSuccessToast('Sub-Rental Created', `${subR.itemName} — ${subR.vendor}`)
         }}
       />
+
+      {showWaitingChargeModal && bookingId && (
+        <AddWaitingChargeModal
+          isOpen={showWaitingChargeModal}
+          onClose={() => setShowWaitingChargeModal(false)}
+          // The booking UUID, not `id` (the booking number from the route): the database keys on the UUID.
+          bookingId={bookingId}
+          onAdded={() => {
+            setFloorVersion((v) => v + 1)
+            refreshBookingData()
+          }}
+        />
+      )}
 
       {showAddConsumableModal && user && (
         <AddConsumableModal

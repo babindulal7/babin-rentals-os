@@ -53,6 +53,8 @@ import { EVENT_TYPES } from '../../events/eventBus'
 import { useToast } from '../../components/ui/Toast'
 import { businessDayAd } from '../../lib/bs'
 import { uploadEvidencePhoto } from '../../lib/evidenceStorage'
+import { DELIVERY_VEHICLE_CLASSES, type DeliveryVehicleClass } from '../../lib/deliveryFeeGrid'
+import { setDeliveryJobVehicleClass } from '../../lib/queries/bookingDeliveryZone'
 import './delivery.css'
 
 const STATUS_BADGE_STYLE: Record<DeliveryStatus, { bg: string; color: string; border: string; icon: IconName }> = {
@@ -130,6 +132,7 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
   const [driverName, setDriverName] = useState('')
   const [driverPhone, setDriverPhone] = useState('')
   const [vehiclePlate, setVehiclePlate] = useState('')
+  const [vehicleClass, setVehicleClass] = useState<DeliveryVehicleClass | ''>('')
 
   const [deliverTarget, setDeliverTarget] = useState<DeliveryRecord | null>(null)
   const [recipientName, setRecipientName] = useState('')
@@ -345,6 +348,7 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
     setDriverName(rec.driverName ?? '')
     setDriverPhone(rec.driverPhone ?? '')
     setVehiclePlate(rec.vehiclePlate ?? '')
+    setVehicleClass(rec.vehicleClass ?? '')
   }
 
   const handleSaveAssign = async () => {
@@ -368,12 +372,26 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
         },
         { userId: user.id, role: user.role },
       )
-      showSuccessToast(`Driver / Rider assigned to ${assignTarget.id}`)
-      setAssignTarget(null)
-      loadData()
     } catch (err) {
       setMutationError(err instanceof Error ? err.message : 'Failed to assign driver')
+      return
     }
+    // O-28: the class is saved only when it changed. The driver is already assigned at this point,
+    // so a failed class save keeps the sheet open and says so, rather than hiding a partial save.
+    if (vehicleClass !== (assignTarget.vehicleClass ?? '')) {
+      try {
+        await setDeliveryJobVehicleClass(assignTarget.id, vehicleClass || null)
+      } catch (err) {
+        setMutationError(
+          `Driver assigned, but the vehicle class was not saved: ${err instanceof Error ? err.message : 'unknown error'}`,
+        )
+        loadData()
+        return
+      }
+    }
+    showSuccessToast(`Driver / Rider assigned to ${assignTarget.id}`)
+    setAssignTarget(null)
+    loadData()
   }
 
   const handleOpenReschedule = (rec: DeliveryRecord) => {
@@ -1596,6 +1614,34 @@ function ActiveDeliveryWorkspace({ onSwitchToTransport }: { onSwitchToTransport:
                       fontSize: '13.5px',
                     }}
                   />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: '6px' }}>
+                    Vehicle class (sets the fee from the grid)
+                    <select
+                      value={vehicleClass}
+                      onChange={(e) => setVehicleClass(e.target.value as DeliveryVehicleClass | '')}
+                      style={{
+                        width: '100%',
+                        minHeight: '44px',
+                        padding: '8px 12px',
+                        borderRadius: 'var(--r-btn)',
+                        background: 'var(--card)',
+                        border: '1px solid var(--border)',
+                        color: 'var(--text)',
+                        fontSize: '13.5px',
+                        marginTop: '6px',
+                      }}
+                    >
+                      <option value="">Not chosen</option>
+                      {DELIVERY_VEHICLE_CLASSES.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
 
                 <div>

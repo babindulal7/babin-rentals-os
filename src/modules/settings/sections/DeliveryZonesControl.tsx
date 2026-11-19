@@ -5,7 +5,6 @@ import { EmptyState, LoadingSkeleton, ErrorBanner } from '../../../components/ui
 import { useToast } from '../../../components/ui/Toast'
 import { useAuth } from '../../../lib/auth'
 import { canManageDeliveryZones } from '../../../lib/rbac'
-import { formatMoney, parseMoney, toRupees, type Paisa } from '../../../lib/money'
 import {
   listDeliveryZones,
   type DeliveryZoneRow,
@@ -20,6 +19,11 @@ import {
   deactivateDeliveryZone,
 } from '../../../actions/deliveryZones/deactivateDeliveryZone'
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog'
+import { formatDistanceBand, parseBandInput, type DistanceBand } from '../../../lib/deliveryDistanceBand'
+import { fetchDistanceBands, setDistanceBand } from '../../../lib/queries/deliveryDistanceBands'
+
+const sameBand = (a: DistanceBand | null, b: DistanceBand | null): boolean =>
+  a === null || b === null ? a === b : a.minKm === b.minKm && a.maxKm === b.maxKm
 
 /**
  * Settings ▸ System ▸ Operations ▸ Delivery Zones control (T4-07, migration 0189).
@@ -38,27 +42,47 @@ export function DeliveryZonesControl() {
   const [editingZone, setEditingZone] = useState<DeliveryZoneRow | null>(null)
   const [deletingZone, setDeletingZone] = useState<DeliveryZoneRow | null>(null)
 
-  // Form state — the fee is typed in rupees and stored as integer paisa (T4-07 build note 4).
+  // Form state. The per-zone fee is retired (O-28, 18 Nov 2026): amounts are set in Delivery fees.
   const [formName, setFormName] = useState('')
   const [formDescription, setFormDescription] = useState('')
-  // R-9.4 (RULINGS-2026-11-09): the fee is a Settings value with no starting figure.
-  const [formFeeRupees, setFormFeeRupees] = useState('')
   const [formIsActive, setFormIsActive] = useState(true)
   const [formSubmitting, setFormSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  // O-28b: road-distance band from Boudha, a check only (no price depends on it).
+  const [bands, setBands] = useState<Map<string, DistanceBand>>(new Map())
+  const [bandNote, setBandNote] = useState<string | null>(null)
+  const [formMinKm, setFormMinKm] = useState('')
+  const [formMaxKm, setFormMaxKm] = useState('')
+
+  // The delivery-zone actions refuse a call without the signed-in identity (no default user).
+  // Primitives keep the callback identity stable across renders.
+  const sessionUserId = user?.id ?? null
+  const sessionRole = user?.role ?? null
+  const actorContext = useCallback(() => {
+    if (!sessionUserId || !sessionRole) throw new Error('Sign in to manage delivery zones')
+    return { userId: sessionUserId, role: sessionRole }
+  }, [sessionUserId, sessionRole])
 
   const loadZones = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
-      const res = await listDeliveryZones({ activeOnly: false, limit: 100 })
+      const res = await listDeliveryZones({ activeOnly: false, limit: 100 }, actorContext())
       setZones(res.zones)
+      // A failed band read must not hide the zones; it is reported beside the list instead.
+      try {
+        setBands(await fetchDistanceBands())
+        setBandNote(null)
+      } catch (bandErr) {
+        setBands(new Map())
+        setBandNote(bandErr instanceof Error ? bandErr.message : 'Could not read the zone distance bands')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load delivery zones')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [actorContext])
 
   useEffect(() => {
     void loadZones()
@@ -67,8 +91,9 @@ export function DeliveryZonesControl() {
   const openCreateModal = () => {
     setFormName('')
     setFormDescription('')
-    setFormFeeRupees('')
     setFormIsActive(true)
+    setFormMinKm('')
+    setFormMaxKm('')
     setEditingZone(null)
     setFormError(null)
     setShowCreateModal(true)
@@ -77,25 +102,13 @@ export function DeliveryZonesControl() {
   const openEditModal = (zone: DeliveryZoneRow) => {
     setFormName(zone.name)
     setFormDescription(zone.description || '')
-    setFormFeeRupees(zone.fee_paisa === null ? '' : String(toRupees(zone.fee_paisa as Paisa)))
     setFormIsActive(zone.is_active)
+    const band = bands.get(zone.id)
+    setFormMinKm(band ? String(band.minKm) : '')
+    setFormMaxKm(band && band.maxKm !== null ? String(band.maxKm) : '')
     setEditingZone(zone)
     setFormError(null)
     setShowCreateModal(false)
-  }
-
-  /** Rupees in, integer paisa out — `parseMoney` handles "3,500", "Rs 3,500" and ".50". */
-  const parseFeeInput = (): Paisa | null => {
-    const parsed = parseMoney(formFeeRupees)
-    if (parsed === null) {
-      setFormError('Enter the fee in rupees, for example 3,500')
-      return null
-    }
-    if (parsed < 0) {
-      setFormError('Fee cannot be negative')
-      return null
-    }
-    return parsed
   }
 
   const handleCreate = async () => {
@@ -103,21 +116,35 @@ export function DeliveryZonesControl() {
       setFormError('Zone name is required')
       return
     }
-    const feePaisa = parseFeeInput()
-    if (feePaisa === null) return
+    const parsedBand = parseBandInput(formMinKm, formMaxKm)
+    if (!parsedBand.ok) {
+      setFormError(parsedBand.error)
+      return
+    }
 
     try {
       setFormSubmitting(true)
       setFormError(null)
-      await createDeliveryZone({
-        name: formName.trim(),
-        description: formDescription.trim(),
-        feePaisa,
-      })
+      const created = await createDeliveryZone(
+        {
+          name: formName.trim(),
+          description: formDescription.trim(),
+        },
+        actorContext(),
+      )
       showSuccessToast('Zone created', `Delivery zone "${formName.trim()}" created successfully`)
       setShowCreateModal(false)
       resetForm()
+      let bandFailure: string | null = null
+      if (parsedBand.band) {
+        try {
+          await setDistanceBand(created.zoneId, parsedBand.band)
+        } catch (bandErr) {
+          bandFailure = `Zone created, but ${bandErr instanceof Error ? bandErr.message : 'the distance band was not saved'}`
+        }
+      }
       await loadZones()
+      if (bandFailure) setBandNote(bandFailure)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to create zone')
     } finally {
@@ -131,23 +158,38 @@ export function DeliveryZonesControl() {
       setFormError('Zone name is required')
       return
     }
-    const feePaisa = parseFeeInput()
-    if (feePaisa === null) return
+    const parsedBand = parseBandInput(formMinKm, formMaxKm)
+    if (!parsedBand.ok) {
+      setFormError(parsedBand.error)
+      return
+    }
 
     try {
       setFormSubmitting(true)
       setFormError(null)
-      await updateDeliveryZone({
-        zoneId: editingZone.id,
-        name: formName.trim(),
-        description: formDescription.trim(),
-        feePaisa,
-        isActive: formIsActive,
-      })
+      await updateDeliveryZone(
+        {
+          zoneId: editingZone.id,
+          name: formName.trim(),
+          description: formDescription.trim(),
+          isActive: formIsActive,
+        },
+        actorContext(),
+      )
       showSuccessToast('Zone updated', `Delivery zone "${formName.trim()}" updated successfully`)
+      const zoneId = editingZone.id
       setEditingZone(null)
       resetForm()
+      let bandFailure: string | null = null
+      if (!sameBand(parsedBand.band, bands.get(zoneId) ?? null)) {
+        try {
+          await setDistanceBand(zoneId, parsedBand.band)
+        } catch (bandErr) {
+          bandFailure = `Zone updated, but ${bandErr instanceof Error ? bandErr.message : 'the distance band was not saved'}`
+        }
+      }
       await loadZones()
+      if (bandFailure) setBandNote(bandFailure)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to update zone')
     } finally {
@@ -158,7 +200,7 @@ export function DeliveryZonesControl() {
   const confirmDeactivate = async () => {
     if (!deletingZone) return
     try {
-      await deactivateDeliveryZone({ zoneId: deletingZone.id })
+      await deactivateDeliveryZone({ zoneId: deletingZone.id }, actorContext())
       showSuccessToast('Zone deactivated', `Delivery zone "${deletingZone.name}" deactivated`)
       setDeletingZone(null)
       await loadZones()
@@ -170,8 +212,9 @@ export function DeliveryZonesControl() {
   const resetForm = () => {
     setFormName('')
     setFormDescription('')
-    setFormFeeRupees('')
     setFormIsActive(true)
+    setFormMinKm('')
+    setFormMaxKm('')
     setEditingZone(null)
     setFormError(null)
   }
@@ -238,10 +281,13 @@ export function DeliveryZonesControl() {
                   {zone.description}
                 </span>
               )}
+              <span style={{ fontSize: 'var(--t-th)', color: 'var(--text2)' }}>
+                Road distance from Boudha: {formatDistanceBand(bands.get(zone.id))}
+              </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', flexShrink: 0 }}>
               <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, fontFamily: 'var(--mono)', color: 'var(--text)' }}>
-                {zone.fee_paisa === null ? '—' : formatMoney(zone.fee_paisa as Paisa)}
+                Amounts in Delivery fees
               </span>
               {canManage && (
                 <>
@@ -296,6 +342,8 @@ export function DeliveryZonesControl() {
             Flat delivery fees per geographic zone across Kathmandu Valley and surrounding areas.
             Applied when dispatching rentals with Babin Delivery.
           </p>
+
+          {bandNote ? <ErrorBanner message={bandNote} /> : null}
 
           {renderZoneTable()}
         </div>
@@ -353,29 +401,38 @@ export function DeliveryZonesControl() {
                   }}
                 />
               </label>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 'var(--t-meta)', fontWeight: 500 }}>
-                Fee (Rs) <span style={{ color: 'var(--danger)' }}>*</span>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={formFeeRupees}
-                  onChange={(e) => { setFormFeeRupees(e.target.value); setFormError(null); }}
-                  placeholder="3,500"
-                  style={{
-                    marginTop: 4,
-                    padding: '10px 12px',
-                    borderRadius: 'var(--r-input)',
-                    border: '1px solid var(--input-border)',
-                    background: 'var(--input-bg)',
-                    color: 'var(--text)',
-                    fontSize: 'var(--t-meta)',
-                    fontFamily: 'var(--mono)',
-                  }}
-                />
-                <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-                  Typed in rupees, stored in paisa. There is no default fee: enter each zone's fee. "Outside the valley" = 0 (quoted per job).
-                </span>
-              </label>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 'var(--t-meta)', fontWeight: 500, flex: 1, minWidth: 0 }}>
+                  Road distance over (km)
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={formMinKm}
+                    onChange={(e) => { setFormMinKm(e.target.value); setFormError(null); }}
+                    placeholder="e.g., 3"
+                    style={{ marginTop: 4, width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--r-input)', border: '1px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontFamily: 'inherit' }}
+                  />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 'var(--t-meta)', fontWeight: 500, flex: 1, minWidth: 0 }}>
+                  Up to (km)
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={formMaxKm}
+                    onChange={(e) => { setFormMaxKm(e.target.value); setFormError(null); }}
+                    placeholder="blank = no upper limit"
+                    style={{ marginTop: 4, width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--r-input)', border: '1px solid var(--input-border)', background: 'var(--input-bg)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontFamily: 'inherit' }}
+                  />
+                </label>
+              </div>
+              <p style={{ margin: 0, fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
+                Shortest practical driving route from Boudha, not straight-line. A check for staff only: it does not change any
+                price (O-28b). Use 0 as the lower distance for the nearest zone. Leave both blank for not set.
+              </p>
+              <p style={{ margin: 0, fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
+                Amounts are set per zone and vehicle class in Settings ▸ Financial ▸ Delivery fees. A zone is quoted per trip
+                from that grid, not from this form (O-28, 18 Nov 2026).
+              </p>
               {editingZone && (
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--t-meta)' }}>
                   <input
@@ -408,7 +465,7 @@ export function DeliveryZonesControl() {
                 Existing deliveries using this zone are not affected.
               </p>
               <p style={{ margin: 0, fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-                Fee: <strong>{deletingZone.fee_paisa === null ? '—' : formatMoney(deletingZone.fee_paisa as Paisa)}</strong>
+                Amounts for this zone are held in Delivery fees; deactivating the zone does not change them.
               </p>
             </div>
           ) : undefined

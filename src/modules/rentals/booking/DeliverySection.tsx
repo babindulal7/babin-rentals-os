@@ -4,7 +4,15 @@ import { Input, Select } from '../../../components/ui'
 import { Field, Section, MoneyRow, inputStyle } from './BookingFormWidgets'
 import { formatMoney, rupees, type Paisa } from '../../../lib/money'
 import { listDeliveryZones, type DeliveryZoneRow } from '../../../actions/deliveryZones/listDeliveryZones'
-import { getDeliveryZoneFee } from '../../../actions/deliveryZones/getDeliveryZoneFee'
+import { fetchGridFeeState } from '../../../lib/queries/deliveryFeeGridRead'
+import { fetchDistanceBands } from '../../../lib/queries/deliveryDistanceBands'
+import { formatDistanceBand, type DistanceBand } from '../../../lib/deliveryDistanceBand'
+import { useAuth } from '../../../lib/auth'
+import {
+  DELIVERY_VEHICLE_CLASSES,
+  deliveryFeeLabel,
+  type DeliveryVehicleClass,
+} from '../../../lib/deliveryFeeGrid'
 
 const sub = {
   margin: '0 0 8px',
@@ -56,6 +64,14 @@ export interface DeliverySectionProps {
   fuelChargePaisa: Paisa
   setFuelChargePaisa: (val: Paisa) => void
   transportPaisa: Paisa
+  /* S2 row 8: an outsourced vehicle is a manual quote with an approval note. All optional: a caller that
+     does not pass the setters (edit screens, older tests) simply gets no outsourced-vehicle block. */
+  outsourced?: boolean | undefined
+  setOutsourced?: ((val: boolean) => void) | undefined
+  outsourcedVendor?: string | undefined
+  setOutsourcedVendor?: ((val: string) => void) | undefined
+  outsourcedNote?: string | undefined
+  setOutsourcedNote?: ((val: string) => void) | undefined
   canBookingMoney: boolean
   title?: string | undefined
 }
@@ -94,18 +110,59 @@ export function DeliverySection({
   fuelChargePaisa,
   setFuelChargePaisa,
   transportPaisa,
+  outsourced = false,
+  setOutsourced,
+  outsourcedVendor = '',
+  setOutsourcedVendor,
+  outsourcedNote = '',
+  setOutsourcedNote,
   canBookingMoney,
   title = 'Delivery & Transport',
 }: DeliverySectionProps) {
+  const { user } = useAuth()
+  // Primitives, not the user object: the effect below must not rerun on every render.
+  const sessionUserId = user?.id ?? null
+  const sessionRole = user?.role ?? null
   const [zones, setZones] = useState<DeliveryZoneRow[]>([])
   const [zonesLoading, setZonesLoading] = useState(true)
   const [zoneError, setZoneError] = useState<string | null>(null)
+  // Form-only: the vehicle class picks the grid cell that fills the charge. It is not stored on the
+  // booking; the charge is stored, and the job's class is chosen again at dispatch.
+  const [vehicleClass, setVehicleClass] = useState<DeliveryVehicleClass | ''>('')
+  const [gridNote, setGridNote] = useState<string | null>(null)
+  // O-28b: the zone's road-distance band is a hint for staff only; it never changes the charge.
+  // Two trips (Babin collects the equipment later): the collection trip is priced from its own zone
+  // and vehicle class, the same grid as the delivery. Form-only: the fee is what is stored.
+  const [returnZone, setReturnZone] = useState('')
+  const [returnVehicleClass, setReturnVehicleClass] = useState<DeliveryVehicleClass | ''>('')
+  const [returnGridNote, setReturnGridNote] = useState<string | null>(null)
+  const [bands, setBands] = useState<Map<string, DistanceBand>>(new Map())
+  const [bandsUnavailable, setBandsUnavailable] = useState(false)
 
-  // Load active delivery zones on mount
   useEffect(() => {
+    if (!sessionUserId) return
+    let mounted = true
+    fetchDistanceBands()
+      .then((result) => {
+        if (!mounted) return
+        setBands(result)
+        setBandsUnavailable(false)
+      })
+      .catch(() => {
+        if (!mounted) return
+        setBands(new Map())
+        setBandsUnavailable(true)
+      })
+    return () => { mounted = false }
+  }, [sessionUserId])
+
+  // Load active delivery zones once the signed-in user is known. The action refuses a call with
+  // no session context, so without this the zone list never loads.
+  useEffect(() => {
+    if (!sessionUserId || !sessionRole) return
     let mounted = true
     setZonesLoading(true)
-    listDeliveryZones({ activeOnly: true, limit: 100 })
+    listDeliveryZones({ activeOnly: true, limit: 100 }, { userId: sessionUserId, role: sessionRole })
       .then((result) => {
         if (mounted) {
           setZones(result.zones ?? [])
@@ -122,23 +179,51 @@ export function DeliverySection({
         if (mounted) setZonesLoading(false)
       })
     return () => { mounted = false }
-  }, [])
+  }, [sessionUserId, sessionRole])
 
-  // Auto-fill delivery charge when zone changes
+  // O-28: the charge fills from the grid cell for this zone and vehicle class. A quoted or unset
+  // cell leaves the charge for staff to type, and says so in words.
   useEffect(() => {
-    if (!deliveryZone || clientPickup) return
+    setGridNote(null)
+    if (!deliveryZone || !vehicleClass || clientPickup || !canBookingMoney) return
     let mounted = true
-    getDeliveryZoneFee({ zoneName: deliveryZone })
-      .then((result) => {
-        if (mounted && canBookingMoney) {
-          setDeliveryChargePaisa(result.feePaisa as unknown as Paisa)
+    fetchGridFeeState(deliveryZone, vehicleClass)
+      .then((state) => {
+        if (!mounted) return
+        if (state.status === 'set') {
+          setDeliveryChargePaisa(state.feePaisa as Paisa)
+        } else {
+          setGridNote(`${deliveryFeeLabel(state)} — type the charge`)
         }
       })
-      .catch(() => {
-        // Silently fail - user can manually enter fee
+      .catch((err: unknown) => {
+        if (mounted) setGridNote(err instanceof Error ? err.message : 'Could not read the fee grid')
       })
     return () => { mounted = false }
-  }, [deliveryZone, clientPickup, canBookingMoney, setDeliveryChargePaisa])
+  }, [deliveryZone, vehicleClass, clientPickup, canBookingMoney, setDeliveryChargePaisa])
+
+  // The collection trip fills its own fee from the grid, the same way. A quoted or unset cell says so
+  // and leaves the fee for staff to type.
+  useEffect(() => {
+    setReturnGridNote(null)
+    if (returnPickupType !== 'Babin Pickup' || !returnZone || !returnVehicleClass || !canBookingMoney) return
+    let mounted = true
+    fetchGridFeeState(returnZone, returnVehicleClass)
+      .then((state) => {
+        if (!mounted) return
+        if (state.status === 'set') {
+          setReturnPickupChargePaisa(state.feePaisa)
+        } else {
+          setReturnGridNote(`${deliveryFeeLabel(state)} — type the fee`)
+        }
+      })
+      .catch((err: unknown) => {
+        if (mounted) setReturnGridNote(err instanceof Error ? err.message : 'Could not read the fee grid')
+      })
+    return () => { mounted = false }
+  }, [returnPickupType, returnZone, returnVehicleClass, canBookingMoney, setReturnPickupChargePaisa])
+
+  const zoneName = zones.find((zone) => zone.id === deliveryZone)?.name ?? ''
 
   return (
     <Section
@@ -146,7 +231,7 @@ export function DeliverySection({
       title={title}
       open={open}
       onToggle={onToggle}
-      summary={clientPickup ? 'Client Pickup · Rs 0' : `Babin Delivery · ${deliveryZone || 'Select zone'} · ${canBookingMoney ? formatMoney(transportPaisa) : 'charged'}`}
+      summary={clientPickup ? 'Client Pickup · Rs 0' : `Babin Delivery · ${zoneName || 'Select zone'} · ${canBookingMoney ? formatMoney(transportPaisa) : 'charged'}`}
     >
       <div style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : 'repeat(2, minmax(0,1fr))', gap: 'var(--sp-md)' }}>
         {/* Left Column: Delivery Type & Dispatch Details */}
@@ -215,14 +300,35 @@ export function DeliverySection({
                   >
                     <option value="">Select zone</option>
                     {zones.map((zone) => (
-                      <option key={zone.id} value={zone.name}>
-                        {zone.fee_paisa === null
-                          ? zone.name
-                          : `${zone.name} — ${formatMoney(zone.fee_paisa as Paisa)}`}
+                      <option key={zone.id} value={zone.id}>
+                        {zone.name}
                       </option>
                     ))}
                   </Select>
                 )}
+              </Field>
+              {deliveryZone ? (
+                <div style={{ fontSize: 'var(--t-th)', color: 'var(--text2)' }}>
+                  {bandsUnavailable
+                    ? 'Road distance unavailable'
+                    : `Road distance from Boudha: ${formatDistanceBand(bands.get(deliveryZone))}`}
+                </div>
+              ) : null}
+
+              <Field label="Vehicle class">
+                <Select
+                  value={vehicleClass}
+                  onChange={(e) => setVehicleClass(e.target.value as DeliveryVehicleClass | '')}
+                  style={inputStyle}
+                  disabled={!canBookingMoney || clientPickup}
+                >
+                  <option value="">Select vehicle class</option>
+                  {DELIVERY_VEHICLE_CLASSES.map((vehicleOption) => (
+                    <option key={vehicleOption} value={vehicleOption}>
+                      {vehicleOption}
+                    </option>
+                  ))}
+                </Select>
               </Field>
 
               <Field label="Vehicle">
@@ -279,6 +385,47 @@ export function DeliverySection({
                 />
               </Field>
 
+              {/* Outsourced vehicle (S2 row 8): the typed delivery charge is the manual quote. */}
+              {canBookingMoney && setOutsourced && setOutsourcedVendor && setOutsourcedNote && (
+                <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--t-meta)', fontWeight: 500 }}>
+                    <input
+                      type="checkbox"
+                      checked={outsourced}
+                      onChange={(e) => setOutsourced(e.target.checked)}
+                      style={{ width: 18, height: 18 }}
+                    />
+                    <span>Outsourced vehicle (manual quote)</span>
+                  </label>
+                  {outsourced && (
+                    <div style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : '1fr 1fr', gap: 9, marginTop: 9 }}>
+                      <Field label="Vendor">
+                        <Input
+                          value={outsourcedVendor}
+                          onChange={(e) => setOutsourcedVendor(e.target.value)}
+                          placeholder="Who is providing the vehicle"
+                          maxLength={120}
+                          style={inputStyle}
+                        />
+                      </Field>
+                      <Field label="Quote approval note">
+                        <Input
+                          value={outsourcedNote}
+                          onChange={(e) => setOutsourcedNote(e.target.value)}
+                          placeholder="e.g. Quote confirmed by phone"
+                          maxLength={500}
+                          style={inputStyle}
+                        />
+                      </Field>
+                      <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)', gridColumn: '1 / -1' }}>
+                        Type the quoted amount in Delivery Charge. Your name and this note are saved with the booking and the
+                        audit log.
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Return Pickup Logistics */}
               <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
                 <Field label="Return Pickup Option">
@@ -309,6 +456,45 @@ export function DeliverySection({
                         style={inputStyle}
                       />
                     </Field>
+                    {canBookingMoney && zones.length > 0 && (
+                      <>
+                        <Field label="Collection zone">
+                          <Select
+                            value={returnZone}
+                            onChange={(e) => setReturnZone(e.target.value)}
+                            style={inputStyle}
+                          >
+                            <option value="">Select zone</option>
+                            {zones.map((zone) => (
+                              <option key={zone.id} value={zone.id}>
+                                {zone.name}
+                              </option>
+                            ))}
+                          </Select>
+                        </Field>
+                        <Field label="Collection vehicle class">
+                          <Select
+                            value={returnVehicleClass}
+                            onChange={(e) => setReturnVehicleClass(e.target.value as DeliveryVehicleClass | '')}
+                            style={inputStyle}
+                          >
+                            <option value="">Select vehicle class</option>
+                            {DELIVERY_VEHICLE_CLASSES.map((vehicleOption) => (
+                              <option key={vehicleOption} value={vehicleOption}>
+                                {vehicleOption}
+                              </option>
+                            ))}
+                          </Select>
+                        </Field>
+                        {returnZone ? (
+                          <div style={{ fontSize: 'var(--t-th)', color: 'var(--text2)', gridColumn: '1 / -1' }}>
+                            {bandsUnavailable
+                              ? 'Road distance unavailable'
+                              : `Road distance from Boudha: ${formatDistanceBand(bands.get(returnZone))}`}
+                          </div>
+                        ) : null}
+                      </>
+                    )}
                     <Field label="Return Pickup Fee (Rs)">
                       <Input
                         type="number"
@@ -318,6 +504,11 @@ export function DeliverySection({
                         placeholder="Fee"
                         style={inputStyle}
                       />
+                      {returnGridNote && (
+                        <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)', marginTop: 4 }}>
+                          {returnGridNote}
+                        </span>
+                      )}
                     </Field>
                   </div>
                 )}
@@ -345,6 +536,16 @@ export function DeliverySection({
                   {!deliveryZone && !clientPickup && (
                     <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)', marginTop: 4 }}>
                       Select a zone to auto-fill the fee
+                    </span>
+                  )}
+                  {deliveryZone && !vehicleClass && !clientPickup && (
+                    <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)', marginTop: 4 }}>
+                      Choose a vehicle class to fill the fee from the grid
+                    </span>
+                  )}
+                  {gridNote && (
+                    <span role="status" style={{ fontSize: 'var(--t-th)', color: 'var(--text2)', marginTop: 4 }}>
+                      {gridNote}
                     </span>
                   )}
                 </Field>

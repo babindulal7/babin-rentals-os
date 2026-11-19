@@ -16,11 +16,23 @@ const { authState } = vi.hoisted(() => ({
 }))
 
 vi.mock('../../../../lib/auth', () => ({
-  useAuth: () => ({ user: { role: authState.role } }),
+  useAuth: () => ({ user: { id: 'usr-test-1', role: authState.role } }),
 }))
 
 vi.mock('../../../../actions/deliveryZones/listDeliveryZones', () => ({
   listDeliveryZones: vi.fn(),
+}))
+
+const { bandState } = vi.hoisted(() => ({
+  bandState: { bands: new Map<string, { minKm: number; maxKm: number | null }>(), failWith: null as string | null },
+}))
+
+vi.mock('../../../../lib/queries/deliveryDistanceBands', () => ({
+  fetchDistanceBands: vi.fn(async () => {
+    if (bandState.failWith) throw new Error(bandState.failWith)
+    return bandState.bands
+  }),
+  setDistanceBand: vi.fn(async () => undefined),
 }))
 
 vi.mock('../../../../components/ui/Toast', () => ({
@@ -38,6 +50,8 @@ describe('DeliveryZonesControl', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     authState.role = 'Coordinator'
+    bandState.bands = new Map()
+    bandState.failWith = null
     mockListDeliveryZones.mockResolvedValue({ zones: [] } as any)
     container = document.createElement('div')
     document.body.appendChild(container)
@@ -98,7 +112,32 @@ describe('DeliveryZonesControl', () => {
     })
     expect(container?.textContent).toContain('Ring Road')
     expect(container?.textContent).toContain('Outside Valley')
-    expect(container?.textContent).toContain('Rs 3,500')
+    // O-28: the per-zone fee is retired; the row points to the delivery fee grid instead.
+    expect(container?.textContent).not.toContain('Rs 3,500')
+    expect(container?.textContent).toContain('Amounts in Delivery fees')
+  })
+
+  it('shows each zone road-distance band, and says so when none is set (O-28b)', async () => {
+    bandState.bands = new Map([['zone-1', { minKm: 3, maxKm: 7 }]])
+    mockListDeliveryZones.mockResolvedValue({
+      zones: [
+        { id: 'zone-1', name: 'Ring Road', description: null, fee_paisa: null, is_active: true, created_at: '', updated_at: '' },
+        { id: 'zone-2', name: 'Far valley', description: null, fee_paisa: null, is_active: true, created_at: '', updated_at: '' },
+      ],
+    } as any)
+    await remount()
+    expect(container?.textContent).toContain('Road distance from Boudha: over 3–7 km')
+    expect(container?.textContent).toContain('Road distance from Boudha: Distance not set')
+  })
+
+  it('keeps the zones visible and reports it when the band read fails (O-28b)', async () => {
+    bandState.failWith = 'permission denied'
+    mockListDeliveryZones.mockResolvedValue({
+      zones: [{ id: 'zone-1', name: 'Ring Road', description: null, fee_paisa: null, is_active: true, created_at: '', updated_at: '' }],
+    } as any)
+    await remount()
+    expect(container?.textContent).toContain('Ring Road')
+    expect(container?.textContent).toContain('permission denied')
   })
 
   it('hides Add zone from Coordinator — Owner · Admin · Manager only (T4-07 build note 3)', async () => {
@@ -116,7 +155,7 @@ describe('DeliveryZonesControl', () => {
     expect(container?.textContent).toContain('Create first zone')
   })
 
-  it('shows no fee figure when the row arrives with a null fee (Law 6)', async () => {
+  it('shows no fee figure to a money-blind role (Law 6)', async () => {
     authState.role = 'Warehouse'
     mockListDeliveryZones.mockResolvedValue({
       zones: [{ id: 'zone-1', name: 'Ring Road', description: null, fee_paisa: null, is_active: true, created_at: '', updated_at: '' }],
@@ -124,6 +163,6 @@ describe('DeliveryZonesControl', () => {
     await remount()
     expect(container?.textContent).toContain('Ring Road')
     expect(container?.textContent).not.toContain('Rs')
-    expect(container?.textContent).toContain('—')
+    expect(container?.textContent).toContain('Amounts in Delivery fees')
   })
 })

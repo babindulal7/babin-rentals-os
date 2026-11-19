@@ -17,10 +17,17 @@ import {
 } from './i18n-review-import.mjs'
 
 test('exporting drafts never manufactures approval', () => {
-  const rows = exportReviewRows({ wave: 2 })
-  assert.ok(rows.length > 0)
-  assert.ok(rows.every(row => row.status === 'PENDING'))
-  assert.ok(rows.every(row => row.reviewed_by === '' && row.reviewed_at === ''))
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'i18n-draft-validation-'))
+  try {
+    fs.mkdirSync(path.join(tempDir, 'en'))
+    fs.writeFileSync(path.join(tempDir, 'en', 'rentals.json'), JSON.stringify({ 'rentals.test': 'Rental' }))
+    const rows = exportReviewRows({ wave: 2, i18nDir: tempDir })
+    assert.ok(rows.length > 0)
+    assert.ok(rows.every(row => row.status === 'PENDING'))
+    assert.ok(rows.every(row => row.reviewed_by === '' && row.reviewed_at === ''))
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true })
+  }
 })
 
 test('import refuses approval without reviewer/date and blocks stale or foreign catalogue keys', () => {
