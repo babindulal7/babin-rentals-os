@@ -34,4 +34,25 @@ describe('Online Booking Request Submission (T7-04)', () => {
     expect(res.vat_paisa).toBeGreaterThan(0)
     expect(res.advance_due_paisa).toBeGreaterThan(0)
   })
+
+  it('rejects booking request with invalid turnstile bot token (T7-09)', async () => {
+    const payload: BookingRequestPayload = {
+      client_name: 'Spam Bot',
+      client_email: 'spambot@example.com',
+      client_phone: '+977-9841000000',
+      start_date: '2026-11-25',
+      end_date: '2026-11-27',
+      fulfillment_type: 'pickup',
+      lines: [
+        {
+          product_id: '11111111-1111-4111-8111-111111111111',
+          quantity: 1,
+        },
+      ],
+    }
+
+    await expect(
+      submitBookingRequest(payload, 'bad_token_123')
+    ).rejects.toThrow(/Verification token could not be validated/i)
+  })
 })

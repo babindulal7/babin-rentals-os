@@ -7,6 +7,7 @@
  */
 
 import { supabase } from '@/lib/supabase'
+import { verifyPublicRequestAbuse } from '@/lib/abuseProtection'
 
 export interface ClientUser {
   id: string
@@ -132,27 +133,66 @@ export async function getCurrentClientUser(): Promise<ClientUser | null> {
 }
 
 /**
- * Request OTP via email.
+ * Request OTP via email with abuse & bot protection (T7-09).
  */
-export async function requestClientOtp(email: string): Promise<{ success: boolean; message: string }> {
+export async function requestClientOtp(
+  email: string,
+  turnstileToken?: string
+): Promise<{ success: boolean; message: string }> {
   const trimmed = email.trim().toLowerCase()
   if (!trimmed || !trimmed.includes('@')) {
     throw new Error('Please enter a valid email address.')
   }
 
   if (isMockMode()) {
-    // In mock mode, pretend OTP sent
+    // In mock/test mode, check abuse protection rules
+    const abuse = verifyPublicRequestAbuse({
+      ip: '127.0.0.1',
+      action: 'email_otp',
+      identifier: trimmed,
+      turnstileToken: turnstileToken || 'cf_valid_mock_token',
+    })
+    if (!abuse.allowed) {
+      throw new Error(abuse.message || 'Verification attempt rate-limited. Please wait.')
+    }
+
     return {
       success: true,
       message: `A 6-digit login code has been sent to ${trimmed}. (In local mock mode, use code: 123456)`,
     }
   }
 
+  // Rate limit and bot challenge check via RPC
+  interface RateLimitResult {
+    allowed: boolean
+    code: string
+    message: string
+  }
+
+  const { data: limitCheck, error: rpcError } = await supabase.rpc(
+    'verify_public_rate_limit' as never,
+    {
+      p_action: 'email_otp',
+      p_identifier: trimmed,
+      p_turnstile_token: turnstileToken ?? null,
+    } as never
+  )
+  const typedCheck = limitCheck as RateLimitResult | null
+
+  if (!rpcError && typedCheck && !typedCheck.allowed) {
+    throw new Error(typedCheck.message || 'Too many verification attempts. Please wait before retrying.')
+  }
+
+  const options: { shouldCreateUser: boolean; captchaToken?: string } = {
+    shouldCreateUser: true,
+  }
+  if (turnstileToken) {
+    options.captchaToken = turnstileToken
+  }
+
   const { error } = await supabase.auth.signInWithOtp({
     email: trimmed,
-    options: {
-      shouldCreateUser: true,
-    },
+    options,
   })
 
   if (error) {

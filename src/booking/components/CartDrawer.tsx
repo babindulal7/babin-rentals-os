@@ -5,6 +5,7 @@ import {
   submitBookingRequest,
 } from '../lib/catalogueApi'
 import type { ClientUser, OnlineProfile } from '../lib/clientAuthApi'
+import { TurnstileWidget } from './TurnstileWidget'
 import { formatMoney, type Paisa } from '@/lib/money'
 
 export interface CartLine {
@@ -48,6 +49,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const [fulfillmentType, setFulfillmentType] = useState<'pickup' | 'delivery'>('pickup')
   const [deliveryZone, setDeliveryZone] = useState('ring_road')
   const [deliveryAddress, setDeliveryAddress] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState<string>('')
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [confirmedResult, setConfirmedResult] = useState<BookingRequestResult | null>(null)
@@ -130,7 +132,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           bundle_id: line.item.kind === 'bundle' ? line.item.id : undefined,
           quantity: line.quantity,
         })),
-      })
+      }, turnstileToken)
       setConfirmedResult(res)
       setStep('success')
       onClearCart()
@@ -416,6 +418,12 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 )}
               </div>
             </div>
+
+            <TurnstileWidget
+              action="booking_request"
+              onVerify={(token) => setTurnstileToken(token)}
+              onError={(err) => setErrorMessage(err)}
+            />
 
             <div style={{ paddingTop: 16, borderTop: '1px solid var(--border-subtle)', display: 'flex', gap: 10 }}>
               <button

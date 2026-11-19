@@ -7,6 +7,7 @@
  */
 
 import { supabase } from '@/lib/supabase'
+import { verifyPublicRequestAbuse } from '@/lib/abuseProtection'
 
 export interface BundleComponent {
   readonly name: string
@@ -258,10 +259,24 @@ export interface BookingRequestResult {
   readonly status: string
 }
 
-export async function submitBookingRequest(payload: BookingRequestPayload): Promise<BookingRequestResult> {
+export async function submitBookingRequest(
+  payload: BookingRequestPayload,
+  turnstileToken?: string
+): Promise<BookingRequestResult> {
   const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock' || !supabase
 
   if (isMock) {
+    // Abuse / bot protection check for mock/test runs
+    const abuse = verifyPublicRequestAbuse({
+      ip: '127.0.0.1',
+      action: 'guest_booking',
+      identifier: payload.client_email,
+      turnstileToken: turnstileToken || 'cf_valid_mock_token',
+    })
+    if (!abuse.allowed) {
+      throw new Error(abuse.message || 'Booking request blocked by abuse protection.')
+    }
+
     // Generate simulated response for local/offline mock
     const fakeId = 'req-' + Math.random().toString(36).substring(2, 9)
     const fakeNum = 'REQ-' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + Math.floor(1000 + Math.random() * 9000)

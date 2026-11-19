@@ -31,4 +31,5 @@ export const ALLOWED_ANON_FUNCTIONS = new Set([
   'retired_stage_to_canonical',
   'set_request_context',
   'submit_booking_request',
+  'verify_public_rate_limit',
 ]);

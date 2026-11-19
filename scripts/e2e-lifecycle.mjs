@@ -9401,6 +9401,75 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L88',
+  title: 'bot and abuse protection rate limits on public booking requests and OTP (T7-09)',
+  expect: 'green',
+  async run() {
+    // 1. Direct access to public_rate_limits is blocked
+    await asAnon(async () => {
+      const rows = (await q('select * from public.public_rate_limits')).rows
+      assertEq(rows.length, 0, 'anon sees 0 rows in public_rate_limits (RLS denied)')
+    })
+
+    // 2. Public rate limit verification RPC checks target limits
+    await asAnon(async () => {
+      const target = 'abuse_test_' + Date.now() + '@example.com'
+      for (let i = 0; i < 5; i++) {
+        const check = (await q(
+          `select public.verify_public_rate_limit('email_otp', $1) as res`,
+          [target]
+        )).rows[0].res
+        assertEq(check.allowed, true, `attempt ${i + 1} allowed`)
+      }
+
+      // 6th attempt within window is rate limited
+      const blocked = (await q(
+        `select public.verify_public_rate_limit('email_otp', $1) as res`,
+        [target]
+      )).rows[0].res
+      assertEq(blocked.allowed, false, '6th attempt is rate limited')
+      assertEq(blocked.code, 'RATE_LIMITED', 'returns RATE_LIMITED code')
+    })
+
+    // 3. submit_booking_request trips rate limit on spam burst
+    await asAnon(async () => {
+      const spamEmail = 'spammer_' + Date.now() + '@burst.test'
+      const payload = {
+        client_name: 'Spam Burst Tester',
+        client_email: spamEmail,
+        client_phone: '+977-9811112233',
+        start_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+        end_date: new Date(Date.now() + 8 * 86400000).toISOString().slice(0, 10),
+        fulfillment_type: 'pickup',
+        lines: [{ product_id: SERIAL_PRODUCT, quantity: 1 }],
+      }
+
+      // First 10 requests allowed
+      for (let i = 0; i < 10; i++) {
+        const res = (await q(
+          `select public.submit_booking_request($1::jsonb) as res`,
+          [JSON.stringify(payload)]
+        )).rows[0].res
+        assert(Boolean(res.request_id), `request ${i + 1} accepted`)
+      }
+
+      // 11th request trips rate limit gate
+      let failed = false
+      try {
+        await q(
+          `select public.submit_booking_request($1::jsonb) as res`,
+          [JSON.stringify(payload)]
+        )
+      } catch (err) {
+        failed = true
+        assert(/rate_limited|Too many booking requests/i.test(err.message), 'expected rate_limited gate')
+      }
+      assert(failed, '11th burst request is rejected by rate limit gate')
+    })
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break

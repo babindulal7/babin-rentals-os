@@ -10,6 +10,7 @@ import {
   requestClientOtp,
   verifyClientOtp,
 } from '../lib/clientAuthApi'
+import { TurnstileWidget } from './TurnstileWidget'
 
 interface ClientAuthModalProps {
   isOpen: boolean
@@ -25,6 +26,7 @@ export const ClientAuthModal: React.FC<ClientAuthModalProps> = ({
   const [step, setStep] = useState<'email' | 'otp'>('email')
   const [email, setEmail] = useState('')
   const [otp, setOtp] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [infoMessage, setInfoMessage] = useState<string | null>(null)
@@ -37,7 +39,7 @@ export const ClientAuthModal: React.FC<ClientAuthModalProps> = ({
     setLoading(true)
 
     try {
-      const res = await requestClientOtp(email)
+      const res = await requestClientOtp(email, turnstileToken)
       setInfoMessage(res.message)
       setStep('otp')
     } catch (err: unknown) {
@@ -178,6 +180,12 @@ export const ClientAuthModal: React.FC<ClientAuthModalProps> = ({
                 autoFocus
               />
             </div>
+
+            <TurnstileWidget
+              action="email_otp"
+              onVerify={(token) => setTurnstileToken(token)}
+              onError={(err) => setError(err)}
+            />
 
             <button
               type="submit"

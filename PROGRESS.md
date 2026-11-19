@@ -1,5 +1,52 @@
 # Progress Log
 
+## 2026-11-19 — T7-09: Bot and abuse protection (Lane C / Windows)
+
+**Did**
+- Implemented **T7-09 · Bot and abuse protection** (`lane-c/T7-09-bot-and-abuse-protection`):
+  - Database & Security Migration `supabase/migrations/0248_bot_and_abuse_rate_limits.sql` (claiming ledger number 0248):
+    - Created table `public.public_rate_limits` with RLS (deny all direct access; access exclusively through security definer helpers).
+    - Created internal helper `public.check_rate_limit(p_key text, p_max_attempts integer, p_window_seconds integer)` with pinned `search_path`, revoked from anon/public and granted to authenticated/service_role.
+    - Created public security-definer RPC `public.verify_public_rate_limit(p_action text, p_identifier text, p_turnstile_token text)` to safely verify rate limits without leaking target email PII (using md5 hash identifiers).
+    - Registered `verify_public_rate_limit` in `scripts/allowed-anon-functions.mjs`.
+    - Updated `public.submit_booking_request` to enforce sliding window rate limiting (10 requests per 10 minutes per client email) before creating booking requests.
+  - Lifecycle verification:
+    - Added Step `L88` to `scripts/e2e-lifecycle.mjs` verifying anon cannot directly query rate limits, target OTP rate limits are enforced, and request flood triggers fail-closed error.
+  - Frontend Turnstile & Abuse Prevention:
+    - Created `src/booking/components/TurnstileWidget.tsx` supporting Cloudflare Turnstile managed challenges, error/expiration handling, and seamless mock/dev test tokens (`cf_valid_*`).
+    - Integrated bot protection into `src/booking/components/ClientAuthModal.tsx` for email OTP verification requests.
+    - Integrated bot protection into `src/booking/components/CartDrawer.tsx` for online booking requests.
+    - Updated `src/booking/lib/clientAuthApi.ts` (`requestClientOtp`) and `src/booking/lib/catalogueApi.ts` (`submitBookingRequest`) to enforce Turnstile token verification and rate limits.
+  - Tests & Verification:
+    - Authored `src/booking/__tests__/turnstileWidget.test.tsx` verifying container rendering and token emission.
+    - Updated `src/booking/__tests__/clientAuth.test.ts` asserting token validation and target OTP rate limit enforcement.
+    - Updated `src/booking/__tests__/cartCheckout.test.ts` asserting bot challenge rejection on invalid tokens.
+    - Full test suite passed: 662 test files passed, 7411 passed (0 failed).
+
+**Ruled**
+- Public form submissions (OTP requests, online booking requests, payment attempts) require valid bot verification tokens (Cloudflare Turnstile) and are bound by sliding window rate limits.
+- Rate limit buckets are keyed by action and MD5-hashed identifiers to prevent PII exposure in logs or query keys.
+- Direct table access to `public.public_rate_limits` is denied to all roles; verification occurs exclusively via server-side security definer functions.
+- In automated test and mock environments, simulated Turnstile tokens (`cf_valid_*`) permit deterministic validation without live network external dependencies.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 111 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | +0 |
+| Lifecycle | steps green / total | 89 / 89 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 245 files · check:pglite 245/245 applied, 0 failed (recorded 2026-11-19T03:41:42.566Z). Suite: PASS — 7411/7411 passed, 0 failed (recorded 2026-11-19T03:52:03.136Z); source fingerprint matches.
+Coverage suite: Historical suite: 7398/7398 passed, 0 failed (recorded 2026-11-19T01:10:17.481Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-19T03:52:21.303Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T7-09 complete and verified across all gates. Next roadmap cards in order.
+
 ## 2026-11-19 — T7-03: Client accounts by verified email (Lane C / Windows)
 
 **Did**

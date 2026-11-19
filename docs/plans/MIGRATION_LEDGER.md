@@ -20,7 +20,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
-| 0248 | T7-09 | bot-and-abuse-rate-limits | lane-c/T7-09-bot-and-abuse-protection | claimed |
+| 0248 | T7-09 | bot-and-abuse-rate-limits | lane-c/T7-09-bot-and-abuse-protection | verified (check:pglite 245/245 + check:lifecycle 89/89 Step L88) |
 | 0247 | T7-03 | client-accounts-by-verified-email | feat/win-t7-03-client-accounts-by-verified-email | verified (check:pglite 244/244 + check:lifecycle 88/88 Step L87) |
 | 0246 | T7-04 | booking-requests-and-staff-queue | feat/win-t7-04-requests-and-staff-queue | verified (check:pglite 243/243 + check:lifecycle 87/87 Step L86) |
 | 0245 | T7-02 | booking-site-and-public-catalogue | feat/win-t7-02-booking-site-and-public-catalogue | verified |

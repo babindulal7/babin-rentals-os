@@ -106,4 +106,24 @@ describe('Client Portal Authentication & Profile API (T7-03)', () => {
     expect(await getCurrentClientUser()).toBeNull()
     expect(await fetchOnlineProfile()).toBeNull()
   })
+
+  it('enforces bot challenge verification and rate limits on OTP requests (T7-09)', async () => {
+    // 1. Invalid Turnstile token is rejected
+    await expect(
+      requestClientOtp('bot@cinema.np', 'invalid_turnstile_token')
+    ).rejects.toThrow(/Verification token could not be validated/i)
+
+    // 2. Valid token succeeds
+    const ok = await requestClientOtp('realuser@cinema.np', 'cf_valid_token_1')
+    expect(ok.success).toBe(true)
+
+    // 3. Repeated attempts trigger target rate limiting
+    await requestClientOtp('realuser@cinema.np', 'cf_valid_token_2')
+    await requestClientOtp('realuser@cinema.np', 'cf_valid_token_3')
+
+    // 4th attempt in same hour hits rate limit
+    await expect(
+      requestClientOtp('realuser@cinema.np', 'cf_valid_token_4')
+    ).rejects.toThrow(/Too many verification attempts/i)
+  })
 })

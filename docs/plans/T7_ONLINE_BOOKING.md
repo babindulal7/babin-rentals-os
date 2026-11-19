@@ -165,7 +165,7 @@ go to T10 unless time allows.
 **Done when** — D-5 still green; a client sees their own invoice balance update after paying.
 **Needs** — T7-03, T7-05.
 
-### T7-09 · Bot and abuse protection            status: doing · size: S · lane C (Windows)
+### T7-09 · Bot and abuse protection            status: ready — awaiting merge (lane-c/T7-09-bot-and-abuse-protection) · size: S · lane C (Windows)
 **What** — Cloudflare Turnstile on "send me a code", "send request" and "pay"; the token is verified
 in the Edge Function / RPC, not just in the browser. Per-IP and per-email rate limits on code
 requests and requests.
