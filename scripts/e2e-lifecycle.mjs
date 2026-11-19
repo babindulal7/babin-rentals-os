@@ -9284,6 +9284,123 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L87',
+  title: 'client self-registration profile, KYC upload, and D-5 tenant isolation (T7-03)',
+  expect: 'green',
+  async run() {
+    const clientBUid = '00000000-0000-0000-0000-000000000099'
+    await q(`insert into auth.users (id, email, email_confirmed_at)
+      values ('${clientBUid}', 'clientb@lifecycle.test', now())
+      on conflict (id) do nothing`)
+
+    // 1. Anon cannot execute online_profile_save or read online_profiles_v
+    await asAnon(async () => {
+      await refuses(
+        'anon cannot save profile',
+        `select public.online_profile_save('Anon User', '+977-9800000000')`,
+        [],
+        /permission denied/i
+      )
+      await refuses(
+        'anon cannot read online_profiles_v',
+        `select * from public.online_profiles_v`,
+        [],
+        /permission denied/i
+      )
+    })
+
+    // 2. Client A saves profile with PAN and ID document
+    await as('Client', async () => {
+      const res = (await q(
+        `select * from public.online_profile_save(
+          'Client A Production',
+          '+977-9801234567',
+          'Company A Pvt Ltd',
+          '102030405',
+          'citizenship',
+          '12-34-56-7890',
+          '00000000-0000-0000-0000-000000000005/citizenship.jpg'
+        )`
+      )).rows[0]
+      assertEq(res.name, 'Client A Production', 'Client A profile saved name')
+      assertEq(res.pan, '102030405', 'Client A saved PAN')
+      assertEq(res.id_doc_number, '12-34-56-7890', 'Client A saved ID number')
+
+      // Reads own profile through online_profiles_v with unmasked PAN and ID
+      const v = (await q(`select * from public.online_profiles_v where auth_uid = '${U.Client}'`)).rows[0]
+      assert(Boolean(v), 'Client A sees own profile in view')
+      assertEq(v.pan, '102030405', 'Client A sees own PAN unmasked')
+      assertEq(v.id_doc_number, '12-34-56-7890', 'Client A sees own ID number unmasked')
+    })
+
+    // 3. Client B saves profile
+    await db.exec(`set role authenticated;
+      select set_config('app.current_user_id', '${clientBUid}', false);
+      select set_config('request.jwt.claim.sub', '${clientBUid}', false);
+      select set_config('request.jwt.claim.role', 'authenticated', false);`)
+    try {
+      await q(
+        `select public.online_profile_save(
+          'Client B Studios',
+          '+977-9841234567',
+          'Studio B',
+          '998877665',
+          'passport',
+          'PP-99881122',
+          '${clientBUid}/passport.jpg'
+        )`
+      )
+
+      // D-5: Client B CANNOT see Client A's profile row in online_profiles_v
+      const clientARows = (await q(`select * from public.online_profiles_v where auth_uid = '${U.Client}'`)).rows
+      assertEq(clientARows.length, 0, 'D-5: Client B cannot see Client A profile row')
+
+      // Client B sees only their own profile
+      const ownRows = (await q('select * from public.online_profiles_v')).rows
+      assertEq(ownRows.length, 1, 'Client B sees only own profile')
+      assertEq(ownRows[0].auth_uid, clientBUid, 'Client B sees own auth_uid')
+    } finally {
+      await db.exec(`reset role; select set_config('app.current_user_id', '', false);
+        select set_config('request.jwt.claim.sub', '', false); select set_config('request.jwt.claim.role', '', false);`)
+    }
+
+    // 4. Warehouse sees masked data (Law 6)
+    await as('Warehouse', async () => {
+      const rows = (await q(`select * from public.online_profiles_v where auth_uid = '${U.Client}'`)).rows
+      assertEq(rows.length, 1, 'Warehouse can see profile metadata')
+      assertEq(rows[0].pan, null, 'Warehouse sees NULL for PAN (Law 6)')
+      assert(rows[0].id_doc_number.startsWith('••••-••••-'), 'Warehouse sees masked ID number')
+      assertEq(rows[0].id_doc_path, null, 'Warehouse sees NULL for id_doc_path')
+    })
+
+    // 5. Coordinator binds client account
+    await as('Coordinator', async () => {
+      const bindRes = (await q(
+        `select public.bind_online_account_to_client(
+          '${clientBUid}'::uuid,
+          '${CLIENT}'::uuid,
+          'Verified business registration document'
+        ) as res`
+      )).rows[0].res
+      assertEq(bindRes.success, true, 'Coordinator bound account to client')
+    })
+
+    // Warehouse cannot bind
+    await refusesAs(
+      'Warehouse',
+      'Warehouse cannot bind online accounts',
+      `select public.bind_online_account_to_client(
+        '${clientBUid}'::uuid,
+        '${CLIENT}'::uuid,
+        'Unauthorized binding attempt'
+      )`,
+      [],
+      /access denied|permission denied/i
+    )
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break

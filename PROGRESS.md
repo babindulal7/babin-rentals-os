@@ -1,5 +1,58 @@
 # Progress Log
 
+## 2026-11-19 — T7-03: Client accounts by verified email (Lane C / Windows)
+
+**Did**
+- Implemented **T7-03 · Client accounts by verified email** (`feat/win-t7-03-client-accounts-by-verified-email`):
+  - Design & Threat Model Documentation:
+    - Authored `docs/verification/T7-03_DESIGN.md` addressing email OTP authentication, magic links, cross-client tenant isolation (D2, D-5), ID document theft prevention, and fail-closed RLS rules.
+  - Database & Security Migration `supabase/migrations/0247_client_accounts_and_portal_binding.sql` (claiming ledger number 0247):
+    - Created table `public.online_profiles` for client self-registration metadata with phone validation, timestamps, and RLS (`online_profiles_self` authenticated self-access, `online_profiles_staff_select` staff-only access).
+    - Created view `public.online_profiles_v` with Law 6 money and PII masking (`pan` masked unless staff has `auth_can_view_money()` or self-access; `id_doc_number` masked as `••••-••••-XXXX` for non-management/floor roles).
+    - Created private storage bucket `request-ids` for KYC government identity documents (Citizenship, License, Passport, PAN Certificate) with strict RLS folder isolation enforcing `(string_to_array(name, '/'))[1] = auth.uid()::text`.
+    - Created RPC `public.online_profile_save` with pinned `search_path`, authenticated-only execution, and input validation.
+    - Added `requester_auth_uid`, `client_id`, and `portal_user_id` to `public.booking_requests` with self-read policies on `booking_requests` and `booking_request_lines`.
+    - Updated `public.booking_requests_v` to expose client request status and permitted quoted figures to `requester_auth_uid`.
+    - Enhanced `public.submit_booking_request` to automatically associate authenticated client requests with their auth identity and portal user binding.
+    - Created RPC `public.bind_online_account_to_client` for `Coordinator+` staff to link unassigned online accounts and pending requests to clients, recording audit events in `public.audit_events`.
+  - Lifecycle verification:
+    - Added Step `L87` to `scripts/e2e-lifecycle.mjs` verifying anon refusal, Client A profile creation, Client B profile creation, strict D-5 tenant isolation (Client B cannot read Client A's profile), Warehouse role PII/money masking, and Coordinator account binding.
+  - Client Portal & Online Booking SPA UI:
+    - Authored `src/booking/lib/clientAuthApi.ts` for passwordless OTP sign-in, profile management, and KYC upload with seamless offline/mock fallbacks.
+    - Created `src/booking/components/ClientAuthModal.tsx` for email entry, 6-digit OTP code verification, and resend workflows.
+    - Created `src/booking/components/ClientProfileModal.tsx` for viewing/editing contact details, uploading government KYC document with type selection and number masking, and signing out.
+    - Updated `src/booking/components/BookingHeader.tsx` to display sign-in status and open profile modal.
+    - Updated `src/booking/components/CartDrawer.tsx` to prefill contact details from the authenticated client profile and display signed-in KYC status.
+    - Integrated client account flows into `src/booking/App.tsx`.
+  - Unit tests:
+    - Authored `src/booking/__tests__/clientAuth.test.ts` (6 tests) verifying OTP request/verify flows, profile saving validations, KYC document upload restrictions (MIME whitelist, size ceiling), and sign-out cleanup.
+    - Verified full test suite (`npm test`): 661 test files passed, 7408 tests passed.
+
+**Ruled**
+- Client portal accounts authenticate exclusively via verified email OTP without passwords (PERMISSIONS §7).
+- Strict D-5 tenant isolation is enforced at the database layer: Client A can never read or write Client B's profile, requests, or documents.
+- Government identity documents are stored in private bucket `request-ids` with strict RLS folder partitioning by auth UID.
+- Floor roles remain money-blind (Law 6) and receive masked document numbers (`••••-••••-XXXX`).
+- Staff confirmations and manual client bindings require Coordinator+ rank and write immutable audit records.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 111 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | +0 |
+| Lifecycle | steps green / total | 88 / 88 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 244 files · check:pglite 244/244 applied, 0 failed (recorded 2026-11-19T03:18:40.244Z). Suite: PASS — 7408/7408 passed, 0 failed (recorded 2026-11-19T03:27:02.498Z); source fingerprint matches.
+Coverage suite: Historical suite: 7398/7398 passed, 0 failed (recorded 2026-11-19T01:10:17.481Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-19T03:27:32.676Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T7-03 complete and verified across all gates. Next roadmap cards in order.
+
 ## 2026-11-19 — T7-04: Requests and the staff queue (Lane C / Windows)
 
 **Did**

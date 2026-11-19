@@ -2,11 +2,19 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import './booking.css'
 import type { CatalogueItem } from './lib/catalogueApi'
 import { fetchPublicCatalogue, checkPublicAvailability } from './lib/catalogueApi'
+import {
+  type ClientUser,
+  type OnlineProfile,
+  getCurrentClientUser,
+  fetchOnlineProfile,
+} from './lib/clientAuthApi'
 import { BookingHeader } from './components/BookingHeader'
 import { CategoryNav } from './components/CategoryNav'
 import { ProductCard } from './components/ProductCard'
 import { ProductDetailModal } from './components/ProductDetailModal'
 import { CartDrawer, type CartLine } from './components/CartDrawer'
+import { ClientAuthModal } from './components/ClientAuthModal'
+import { ClientProfileModal } from './components/ClientProfileModal'
 
 export default function BookingApp() {
   const getTomorrowString = () => {
@@ -33,6 +41,27 @@ export default function BookingApp() {
   const [cart, setCart] = useState<CartLine[]>([])
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false)
   const [isOffline, setIsOffline] = useState<boolean>(() => typeof navigator !== 'undefined' && !navigator.onLine)
+  const [clientUser, setClientUser] = useState<ClientUser | null>(null)
+  const [clientProfile, setClientProfile] = useState<OnlineProfile | null>(null)
+  const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false)
+  const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false)
+
+  // Load client auth session and profile
+  useEffect(() => {
+    let active = true
+    getCurrentClientUser().then((u) => {
+      if (!active) return
+      setClientUser(u)
+      if (u) {
+        fetchOnlineProfile().then((p) => {
+          if (active) setClientProfile(p)
+        })
+      }
+    })
+    return () => {
+      active = false
+    }
+  }, [])
 
   // Track online/offline status
   useEffect(() => {
@@ -163,6 +192,10 @@ export default function BookingApp() {
         onEndDateChange={setEndDate}
         cartCount={totalCartCount}
         onOpenCart={() => setIsCartOpen(true)}
+        user={clientUser}
+        profileName={clientProfile?.name}
+        onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenProfile={() => setIsProfileOpen(true)}
       />
 
       <main className="booking-container">
@@ -295,6 +328,37 @@ export default function BookingApp() {
         onUpdateQty={handleUpdateQty}
         onRemoveItem={handleRemoveFromCart}
         onClearCart={handleClearCart}
+        user={clientUser}
+        profile={clientProfile}
+        onOpenAuth={() => setIsAuthOpen(true)}
+      />
+
+      {/* Client Auth Modal */}
+      <ClientAuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        onSuccess={(user) => {
+          setClientUser(user)
+          fetchOnlineProfile().then((p) => {
+            setClientProfile(p)
+            if (!p) {
+              // Open profile setup if profile doesn't exist yet
+              setIsProfileOpen(true)
+            }
+          })
+        }}
+      />
+
+      {/* Client Profile & KYC Modal */}
+      <ClientProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        user={clientUser}
+        onSignOut={() => {
+          setClientUser(null)
+          setClientProfile(null)
+        }}
+        onProfileUpdated={(updated) => setClientProfile(updated)}
       />
     </div>
   )

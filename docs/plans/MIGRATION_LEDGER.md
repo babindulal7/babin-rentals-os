@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0247**
+**Next free number: 0248**
 
 > **Legacy exception:** `0188` exists as two distinct, locally verified migration files
 > (`0188_smart_reservation_holds.sql` and `0188_staff_renting_gear.sql`). Both are preserved because
@@ -20,6 +20,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
+| 0247 | T7-03 | client-accounts-by-verified-email | feat/win-t7-03-client-accounts-by-verified-email | verified (check:pglite 244/244 + check:lifecycle 88/88 Step L87) |
 | 0246 | T7-04 | booking-requests-and-staff-queue | feat/win-t7-04-requests-and-staff-queue | verified (check:pglite 243/243 + check:lifecycle 87/87 Step L86) |
 | 0245 | T7-02 | booking-site-and-public-catalogue | feat/win-t7-02-booking-site-and-public-catalogue | verified |
 | 0244 | T2-23 | allow-overbooking-on-chosen-products | feat/windows-t2-23-product-overbooking | verified |

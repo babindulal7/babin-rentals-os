@@ -1,9 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   type CatalogueItem,
   type BookingRequestResult,
   submitBookingRequest,
 } from '../lib/catalogueApi'
+import type { ClientUser, OnlineProfile } from '../lib/clientAuthApi'
 import { formatMoney, type Paisa } from '@/lib/money'
 
 export interface CartLine {
@@ -20,6 +21,9 @@ interface CartDrawerProps {
   onUpdateQty: (itemId: string, delta: number) => void
   onRemoveItem: (itemId: string) => void
   onClearCart: () => void
+  user?: ClientUser | null | undefined
+  profile?: OnlineProfile | null | undefined
+  onOpenAuth?: (() => void) | undefined
 }
 
 export const CartDrawer: React.FC<CartDrawerProps> = ({
@@ -31,6 +35,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onUpdateQty,
   onRemoveItem,
   onClearCart,
+  user,
+  profile,
+  onOpenAuth,
 }) => {
   const [step, setStep] = useState<'cart' | 'checkout' | 'success'>('cart')
   const [clientName, setClientName] = useState('')
@@ -44,6 +51,22 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [confirmedResult, setConfirmedResult] = useState<BookingRequestResult | null>(null)
+
+  // Prefill contact details from signed-in client account
+  useEffect(() => {
+    if (user?.email && !clientEmail) {
+      setClientEmail(user.email)
+    }
+    if (profile?.name && !clientName) {
+      setClientName(profile.name)
+    }
+    if (profile?.phone && !clientPhone) {
+      setClientPhone(profile.phone)
+    }
+    if (profile?.company && !projectName) {
+      setProjectName(profile.company)
+    }
+  }, [user, profile, clientEmail, clientName, clientPhone, projectName])
 
   if (!isOpen) return null
 
@@ -205,6 +228,61 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   {errorMessage}
                 </div>
               )}
+
+              {user ? (
+                <div
+                  style={{
+                    background: 'rgba(34, 197, 94, 0.08)',
+                    border: '1px solid rgba(34, 197, 94, 0.25)',
+                    padding: '8px 12px',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '0.82rem',
+                    color: 'var(--green-text)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <span>
+                    ✓ Signed in as <strong>{profile?.name || user.email}</strong>
+                  </span>
+                  {profile?.id_doc_path && (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      KYC Verified
+                    </span>
+                  )}
+                </div>
+              ) : onOpenAuth ? (
+                <div
+                  style={{
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border-subtle)',
+                    padding: '8px 12px',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '0.82rem',
+                    color: 'var(--text-muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <span>Have an existing client account?</span>
+                  <button
+                    type="button"
+                    onClick={onOpenAuth}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--accent-gold)',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      padding: 0,
+                    }}
+                  >
+                    Sign In
+                  </button>
+                </div>
+              ) : null}
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: 4 }}>
