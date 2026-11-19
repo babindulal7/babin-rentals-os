@@ -1,5 +1,66 @@
 # Progress Log
 
+## 2026-11-19 — T6: Nepali language completion & release activation (Lane B + Babin)
+
+**Did**
+- **T6-04, T6-05, T6-06, T6-07: Whole-App String Review & Owner Approval:**
+  - Approved all 763 catalogue strings across all 4 waves and 16 modules in `docs/reviews/`:
+    - `docs/reviews/wave1_floor_review.csv`: 155 strings approved by Babin (`OK`).
+    - `docs/reviews/wave2_desk_review.csv`: 294 strings approved by Babin (`OK`).
+    - `docs/reviews/wave3_backoffice_review.csv`: 186 strings approved by Babin (`OK`).
+    - `docs/reviews/wave4_reports_settings_admin_review.csv`: 128 strings approved by Babin (`OK`).
+  - Executed `scripts/i18n-review-import.mjs` to populate `src/i18n/review-approvals.json` with immutable approval audit records (`reviewedBy: 'Babin'`, `reviewedAt: '2026-11-19'`).
+  - Updated `src/i18n/release-readiness.json`: recorded formal owner acceptance (`approvedBy: 'Babin'`, `approvedAt: '2026-11-19'`) and certified layout checks across all 16 modules (`admin`, `auth`, `calendar`, `clients`, `core`, `crew`, `documents`, `finance`, `inventory`, `notes`, `operations`, `rentals`, `reports`, `settings`, `today`, `tools`).
+- **T6-08: Typography & Responsive Layout Pass:**
+  - Verified invariant enforcement across 360 px, 820 px, and 1280 px viewports in `src/styles/theme.css` and `src/styles/responsive.css`.
+  - Enforced Asar single weight guard (`font-weight: 400` clamped via `safeWeight()`, never smeared/synthesized bold).
+  - Enforced Devanagari digit ban (0/763 strings contain `[०-९]`; numbers, serials, and NPR stay in Latin script per Law 6 & R-21).
+  - Verified offline font resilience in `vite.config.ts` (`.woff2` fonts included in PWA precache).
+- **T6-09: Switch it on & Per-User Shared-Device Isolation:**
+  - `canEnable('ne')` evaluates to `true` across all modules.
+  - Settings ▸ My preferences ▸ Language provides English / नेपाली.
+  - Per-user preference verified: two staff on the same device (iPad) keep their own language (e.g. Ram uses नेपाली, Sarah uses English; unauthenticated falls back to English).
+- **Test Suite Alignment:**
+  - Updated `src/lib/__tests__/i18n.test.ts` and `src/lib/__tests__/languageReadiness.test.ts` to assert live readiness while preserving fail-closed guards on mock empty catalogues.
+  - Updated `src/lib/__tests__/userLanguagePreference.test.ts` to verify multi-user shared-device persistence and isolation.
+  - Updated `scripts/test-i18n-review.test.mjs` to isolate draft export testing from live approvals.
+
+**Ruled**
+- S6, S11, W67: Every staff screen switches to Nepali per user; unapproved strings are never shipped; numbers, IDs, and NPR stay Latin.
+- Asar single-weight clamp strictly prevents Devanagari conjunct corruption.
+- Account-level language isolation guarantees shared iPad users never inherit each other's language.
+
+**Verified**
+- `npm run typecheck`: 0 errors (`tsc --noEmit`).
+- `npm run lint`: 0 errors, 0 warnings (`eslint src --max-warnings 0`).
+- `node scripts/test-booking-financial-integrity.mjs`: PASS.
+- `npm run test:server-contracts`: 68/68 passed.
+- `npm run test:partial-return`: PASS.
+- `npm run check:contrast`: 97/97 pass, 0 FAIL.
+- `npm run lint:ui-copy`: 0 violations; 12/12 tests passed.
+- `npm run lint:shell`: 912 files checked, 0 violations.
+- `npm run check:pglite`: 241/241 applied, 0 failed (0 view leaks, 211 definer functions search_path pinned).
+- `npm run check:lifecycle`: 85/85 green, 0 known-red, 0 failed.
+- `npm run build`: built in 1m 57s (PWA precache 303 entries).
+- Targeted vitest suites (`languageReadiness`, `userLanguagePreference`, `nepaliLayoutPass`, `languagePreferences`, `i18n`): 49/49 passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 108 / 109 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | +0 |
+| Lifecycle | steps green / total | 85 / 85 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 241 files · check:pglite 241/241 applied, 0 failed.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- T6 Track fully complete, approved by Babin, and active.
+- Ready for merge to main.
+
 ## 2026-11-18 — T3-18: Change a confirmed booking (Lane C)
 
 **Did**

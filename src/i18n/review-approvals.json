@@ -1,4 +1,4583 @@
 {
   "schemaVersion": 1,
-  "entries": {}
+  "entries": {
+    "auth.brandMonogram": {
+      "english": "BR",
+      "nepali": "BR",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.emailLabel": {
+      "english": "Work Email",
+      "nepali": "कार्य ईमेल",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.emailPlaceholder": {
+      "english": "name@babinrentals.com",
+      "nepali": "name@babinrentals.com",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.encryptedBadge": {
+      "english": "Encrypted Session · Babin Rentals OS",
+      "nepali": "इन्क्रिप्टेड सत्र · बबिन रेन्टल्स ओएस",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.forgotPassword": {
+      "english": "Forgot password?",
+      "nepali": "पासवर्ड बिर्सनुभयो?",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.lockoutMessage": {
+      "english": "Too many sign-in attempts. Please wait {seconds}s before retrying.",
+      "nepali": "धेरै पटक साइन इन प्रयास भयो। कृपया फेरि प्रयास गर्नुअघि {seconds}s पर्खनुहोस्।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.missingFields": {
+      "english": "Enter your work email and password.",
+      "nepali": "आफ्नो कार्य ईमेल र पासवर्ड प्रविष्ट गर्नुहोस्।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.passwordLabel": {
+      "english": "Password",
+      "nepali": "पासवर्ड",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.passwordPlaceholder": {
+      "english": "••••••••",
+      "nepali": "••••••••",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.quickSignIn": {
+      "english": "Quick Sign-In (Demo / Offline Mode):",
+      "nepali": "द्रुत साइन इन (डेमो / अफलाइन मोड):",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.rememberEmail": {
+      "english": "Remember work email on this device",
+      "nepali": "यस उपकरणमा कार्य ईमेल सम्झनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.screenLock.accountInactive": {
+      "english": "This staff account is no longer active. Sign out to continue.",
+      "nepali": "यो कर्मचारी खाता अब सक्रिय छैन। जारी राख्न साइन आउट गर्नुहोस्।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.screenLock.activeSession": {
+      "english": "Active session",
+      "nepali": "सक्रिय सत्र",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.screenLock.attemptLeft": {
+      "english": "attempt left",
+      "nepali": "प्रयास बाँकी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.screenLock.attemptsLeft": {
+      "english": "Incorrect PIN. {attempts} attempts remaining.",
+      "nepali": "गलत PIN। {attempts} प्रयास बाँकी छन्।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.screenLock.attemptsLeftPlural": {
+      "english": "attempts left",
+      "nepali": "प्रयास बाँकी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.screenLock.backToStaff": {
+      "english": "Back to staff list",
+      "nepali": "कर्मचारी सूचीमा फर्कनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.screenLock.cancel": {
+      "english": "Cancel",
+      "nepali": "रद्द गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.screenLock.deviceLocked": {
+      "english": "Account locked for 15 minutes due to too many failed attempts.",
+      "nepali": "धेरै पटक असफल प्रयासका कारण खाता 15 मिनेटको लागि बन्द गरिएको छ।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.screenLock.enterPin": {
+      "english": "Enter your 4-digit PIN to unlock",
+      "nepali": "अनलक गर्न आफ्नो 4-अङ्कको PIN प्रविष्ट गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.screenLock.forgetConfirm": {
+      "english": "Forget this device",
+      "nepali": "यो उपकरण हटाउनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.screenLock.forgetDevice": {
+      "english": "Forget this device",
+      "nepali": "यो उपकरण हटाउनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.screenLock.forgetPrompt": {
+      "english": "Forget every stored session and the roster on this device? Everyone will have to sign in again.",
+      "nepali": "यस उपकरणमा भण्डारण गरिएका सबै सत्रहरू र रोस्टर हटाउने? सबैले फेरि साइन इन गर्नुपर्नेछ।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.screenLock.incorrectPinPrefix": {
+      "english": "Incorrect PIN —",
+      "nepali": "गलत PIN —",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.screenLock.lockedUntil": {
+      "english": "Locked until {time}",
+      "nepali": "{time} सम्म लक गरिएको",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.screenLock.pinLockedUntilPrefix": {
+      "english": "PIN locked until",
+      "nepali": "PIN लक गरिएको छ:",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.screenLock.signInWithPassword": {
+      "english": "Sign in with your password.",
+      "nepali": "आफ्नो पासवर्डबाट साइन इन गर्नुहोस्।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.screenLock.signOutInstead": {
+      "english": "Sign out instead",
+      "nepali": "साइन आउट गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.screenLock.switchAccount": {
+      "english": "Sign in with another account",
+      "nepali": "अर्को खाताबाट साइन इन गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.screenLock.tapYourName": {
+      "english": "Tap your name to unlock your session",
+      "nepali": "आफ्नो सत्र अनलक गर्न आफ्नो नाममा ट्याप गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.screenLock.title": {
+      "english": "Session Locked",
+      "nepali": "सत्र बन्द गरिएको छ",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.screenLock.whoIsWorking": {
+      "english": "Who is working?",
+      "nepali": "को काम गर्दै हुनुहुन्छ?",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.signInError": {
+      "english": "Could not sign in",
+      "nepali": "साइन इन गर्न सकिएन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.submit": {
+      "english": "Sign In",
+      "nepali": "साइन इन गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.submitting": {
+      "english": "Signing in...",
+      "nepali": "साइन इन हुँदैछ...",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.title": {
+      "english": "Sign In",
+      "nepali": "साइन इन गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.welcomeSubtitle": {
+      "english": "Sign in with your work email to continue.",
+      "nepali": "जारी राख्न आफ्नो कार्य ईमेलबाट साइन इन गर्नुहोस्।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "auth.welcomeTitle": {
+      "english": "Welcome to Babin Rentals",
+      "nepali": "बबिन रेन्टल्समा स्वागत छ",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "action.apply": {
+      "english": "Apply",
+      "nepali": "लागू गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "action.back": {
+      "english": "Back",
+      "nepali": "पछाडि",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "action.cancel": {
+      "english": "Cancel",
+      "nepali": "रद्द गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "action.close": {
+      "english": "Close",
+      "nepali": "बन्द गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "action.confirm": {
+      "english": "Confirm",
+      "nepali": "पुष्टि गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "action.delete": {
+      "english": "Delete",
+      "nepali": "मेटाउनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "action.edit": {
+      "english": "Edit",
+      "nepali": "सम्पादन गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "action.filter": {
+      "english": "Filter",
+      "nepali": "फिल्टर",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "action.reset": {
+      "english": "Reset",
+      "nepali": "रिसेट गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "action.retry": {
+      "english": "Retry",
+      "nepali": "पुनः प्रयास गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "action.save": {
+      "english": "Save",
+      "nepali": "सुरक्षित गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "action.search": {
+      "english": "Search",
+      "nepali": "खोज्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "nav.calendar": {
+      "english": "Calendar",
+      "nepali": "पात्रो",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "nav.clients": {
+      "english": "Clients",
+      "nepali": "ग्राहक",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "nav.crewAssist": {
+      "english": "Crew Assist",
+      "nepali": "क्रु सहायता",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "nav.finance": {
+      "english": "Finance",
+      "nepali": "वित्त",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "nav.inventory": {
+      "english": "Inventory",
+      "nepali": "मौज्दात",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "nav.more": {
+      "english": "More",
+      "nepali": "थप",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "nav.newRental": {
+      "english": "New Rental",
+      "nepali": "नयाँ भाडा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "nav.operations": {
+      "english": "Operations",
+      "nepali": "सञ्चालन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "nav.rentals": {
+      "english": "Rentals",
+      "nepali": "भाडा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "nav.scan": {
+      "english": "Scan",
+      "nepali": "स्क्यान",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "nav.scanAria": {
+      "english": "Scan equipment",
+      "nepali": "उपकरण स्क्यान गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "nav.settings": {
+      "english": "Settings",
+      "nepali": "सेटिङ",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "nav.today": {
+      "english": "Today",
+      "nepali": "आज",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "nav.tools": {
+      "english": "Tools",
+      "nepali": "औजार",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "scanner.cameraStart": {
+      "english": "Start Camera",
+      "nepali": "क्यामेरा सुरु गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "scanner.cameraStop": {
+      "english": "Stop Camera",
+      "nepali": "क्यामेरा बन्द गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "scanner.close": {
+      "english": "Close",
+      "nepali": "बन्द गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "scanner.context.handover": {
+      "english": "Handover",
+      "nepali": "हस्तान्तरण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "scanner.context.handoverHint": {
+      "english": "Confirm what physically leaves",
+      "nepali": "भौतिक रूपमा के बाहिर जान्छ पुष्टि गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "scanner.context.lookup": {
+      "english": "Lookup",
+      "nepali": "खोज",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "scanner.context.lookupHint": {
+      "english": "Find any item by code",
+      "nepali": "कोडद्वारा कुनै पनि सामान खोज्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "scanner.context.pack": {
+      "english": "Packing",
+      "nepali": "प्याकिङ",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "scanner.context.packHint": {
+      "english": "Tick items against the packing list",
+      "nepali": "प्याकिङ सूचीअनुसार सामान चिन्ह लगाउनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "scanner.context.reset": {
+      "english": "Reset",
+      "nepali": "पुनः तयार",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "scanner.context.resetHint": {
+      "english": "Clear items back to Available",
+      "nepali": "सामानहरू पुनः उपलब्ध स्थितिमा ल्याउनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "scanner.context.return": {
+      "english": "Return",
+      "nepali": "फिर्ता",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "scanner.context.returnHint": {
+      "english": "Receive and count items back",
+      "nepali": "सामान फिर्ता लिई गणना गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "scanner.context.stock": {
+      "english": "Stock Check",
+      "nepali": "मौज्दात जाँच",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "scanner.context.stockHint": {
+      "english": "Verify shelf against record",
+      "nepali": "रेकर्डअनुसार सामान प्रमाणित गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "scanner.continuous": {
+      "english": "Continuous",
+      "nepali": "निरन्तर",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "scanner.scanEquipment": {
+      "english": "Scan equipment",
+      "nepali": "उपकरण स्क्यान गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "scanner.scanOrType": {
+      "english": "Scan barcode or enter code",
+      "nepali": "बारकोड स्क्यान वा कोड प्रविष्ट गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "scanner.title": {
+      "english": "Scanner",
+      "nepali": "स्क्यानर",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "status.booked": {
+      "english": "Booked",
+      "nepali": "बुक भएको",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "status.cancelled": {
+      "english": "Cancelled",
+      "nepali": "रद्द",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "status.completed": {
+      "english": "Completed",
+      "nepali": "सम्पन्न",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "status.confirmed": {
+      "english": "Confirmed",
+      "nepali": "पक्का भयो",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "status.draft": {
+      "english": "Draft",
+      "nepali": "मस्यौदा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "status.onRent": {
+      "english": "On Rent",
+      "nepali": "भाडामा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "status.overdue": {
+      "english": "Overdue",
+      "nepali": "म्याद नाघेको",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "status.quote": {
+      "english": "Quote",
+      "nepali": "कोटेसन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "status.returned": {
+      "english": "Returned",
+      "nepali": "फिर्ता भयो",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.action.back": {
+      "english": "Back to Queue",
+      "nepali": "पङ्क्तिमा फर्कनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.action.completePacking": {
+      "english": "Mark Packed",
+      "nepali": "प्याक भएको जनाउनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.action.completeReset": {
+      "english": "Complete Reset",
+      "nepali": "पुनः तयार सम्पन्न गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.action.handOver": {
+      "english": "Hand Over Gear",
+      "nepali": "सामान हस्तान्तरण गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.action.receiveReturn": {
+      "english": "Receive Return",
+      "nepali": "फिर्ता लिनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.action.scan": {
+      "english": "Scan Item",
+      "nepali": "उपकरण स्क्यान गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.action.startPacking": {
+      "english": "Start Packing",
+      "nepali": "प्याकिङ सुरु गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.blocker.held": {
+      "english": "Held Booking",
+      "nepali": "रोकिएको बुकिङ",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.blocker.payment": {
+      "english": "Deposit or payment pending",
+      "nepali": "धरौटी वा भुक्तानी बाँकी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.col.action": {
+      "english": "Action",
+      "nepali": "कार्य",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.col.booking": {
+      "english": "Booking",
+      "nepali": "बुकिङ",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.col.client": {
+      "english": "Client",
+      "nepali": "ग्राहक",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.col.due": {
+      "english": "Due Time",
+      "nepali": "तोकिएको समय",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.col.items": {
+      "english": "Items",
+      "nepali": "सामानहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.col.project": {
+      "english": "Project",
+      "nepali": "परियोजना",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.col.status": {
+      "english": "Stage",
+      "nepali": "चरण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.col.time": {
+      "english": "Time",
+      "nepali": "समय",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.driver.babinDelivery": {
+      "english": "Babin Delivery",
+      "nepali": "बबिनबाट ढुवानी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.driver.clientPickup": {
+      "english": "Client Pickup",
+      "nepali": "ग्राहक आफैं लिने",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.driver.courier": {
+      "english": "Courier",
+      "nepali": "कुरियर",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.driver.thirdParty": {
+      "english": "Third Party",
+      "nepali": "तेस्रो पक्ष",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.driver.title": {
+      "english": "Delivery & Dispatch",
+      "nepali": "ढुवानी र पठाइएको",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.emptyQueue": {
+      "english": "No bookings currently in this queue",
+      "nepali": "यस पङ्क्तिमा हाल कुनै बुकिङ छैन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.job.handoverTitle": {
+      "english": "Equipment Handover",
+      "nepali": "उपकरण हस्तान्तरण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.job.packTitle": {
+      "english": "Packing Checklist",
+      "nepali": "प्याकिङ जाँचसूची",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.job.resetTitle": {
+      "english": "Cleaning & Reset",
+      "nepali": "सफाइ र पुनः तयार",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.job.returnTitle": {
+      "english": "Return & Inspection",
+      "nepali": "फिर्ता र जाँच",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.jobsCount": {
+      "english": "{count} jobs",
+      "nepali": "{count} कामहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.queue.cases": {
+      "english": "Cases",
+      "nepali": "केसहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.queue.handover": {
+      "english": "Handover",
+      "nepali": "हस्तान्तरण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.queue.pack": {
+      "english": "Packing",
+      "nepali": "प्याकिङ",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.queue.reset": {
+      "english": "Reset",
+      "nepali": "पुनः तयार",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.queue.return": {
+      "english": "Returns",
+      "nepali": "फिर्ता",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.sticky.allScanned": {
+      "english": "All items verified",
+      "nepali": "सबै सामान प्रमाणित भयो",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.sticky.itemsRemaining": {
+      "english": "{count} items remaining",
+      "nepali": "{count} सामान बाँकी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.sticky.packed": {
+      "english": "Packed",
+      "nepali": "प्याक भयो",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.subtitle": {
+      "english": "Daily turnaround workflows: packing, inspection, dispatch, and check-in.",
+      "nepali": "दैनिक कार्यप्रवाह: प्याकिङ, जाँच, ढुवानी र फिर्ता जाँच।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "operations.title": {
+      "english": "Operations",
+      "nepali": "सञ्चालन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "today.action.handover": {
+      "english": "Handover",
+      "nepali": "हस्तान्तरण गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "today.action.pack": {
+      "english": "Pack",
+      "nepali": "प्याक गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "today.action.receive": {
+      "english": "Receive Return",
+      "nepali": "फिर्ता लिनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "today.action.scan": {
+      "english": "Scan",
+      "nepali": "स्क्यान गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "today.action.viewAll": {
+      "english": "View All",
+      "nepali": "सबै हेर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "today.alerts.title": {
+      "english": "Alerts & Discrepancies",
+      "nepali": "सचेतना र कैफियत",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "today.cockpit.attentionRequired": {
+      "english": "Attention Required",
+      "nepali": "ध्यान दिनुपर्ने",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "today.cockpit.attentionSubtitle": {
+      "english": "Overdue returns or discrepancies",
+      "nepali": "म्याद नाघेको फिर्ता वा कैफियत",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "today.cockpit.dueReturns": {
+      "english": "Due Returns",
+      "nepali": "फिर्ता हुनुपर्ने",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "today.cockpit.dueReturnsSubtitle": {
+      "english": "Equipment expected back",
+      "nepali": "फिर्ता आउने अपेक्षित उपकरण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "today.cockpit.outToday": {
+      "english": "Out Today",
+      "nepali": "आज जाने",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "today.cockpit.outTodaySubtitle": {
+      "english": "Equipment leaving warehouse",
+      "nepali": "गोदामबाट निस्कने उपकरण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "today.cockpit.quotesWaiting": {
+      "english": "Quotes Waiting",
+      "nepali": "प्रतीक्षारत कोटेसनहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "today.cockpit.quotesWaitingSubtitle": {
+      "english": "Pending client approval or advance",
+      "nepali": "ग्राहक स्वीकृति वा पेश्की बाँकी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "today.period.next7Days": {
+      "english": "Next 7 Days",
+      "nepali": "आगामी 7 दिन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "today.period.today": {
+      "english": "Today",
+      "nepali": "आज",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "today.period.tomorrow": {
+      "english": "Tomorrow",
+      "nepali": "भोलि",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "today.pickups.empty": {
+      "english": "No pickups scheduled for this period",
+      "nepali": "यस अवधिको लागि कुनै सामान लिने तालिका छैन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "today.pickups.title": {
+      "english": "Pickups & Dispatches",
+      "nepali": "सामान लिने र ढुवानी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "today.returns.empty": {
+      "english": "No returns scheduled for this period",
+      "nepali": "यस अवधिको लागि कुनै फिर्ता तालिका छैन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "today.returns.title": {
+      "english": "Returns & Inbounds",
+      "nepali": "फिर्ता र आगमन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "today.shiftHandover.title": {
+      "english": "Shift Handover",
+      "nepali": "सिफ्ट हस्तान्तरण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "today.subtitle": {
+      "english": "Prepare pickups, receive returns, and keep equipment moving.",
+      "nepali": "सामान लिने तयारी गर्नुहोस्, फिर्ता लिनुहोस् र उपकरण चालु राख्नुहोस्।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "today.timeline.title": {
+      "english": "Daily Movement Timeline",
+      "nepali": "दैनिक चलखेल समयतालिका",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "today.title": {
+      "english": "Today",
+      "nepali": "आज",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.title": {
+      "english": "Calendar",
+      "nepali": "पात्रो",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.subtitle": {
+      "english": "Schedule, operational timelines, pickups, and equipment availability",
+      "nepali": "कार्यतालिका, उपकरण उपलब्धता, बुकिङ तथा फिर्ता विवरण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.views.month": {
+      "english": "Month",
+      "nepali": "महिना",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.views.week": {
+      "english": "Week",
+      "nepali": "हप्ता",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.views.threeDay": {
+      "english": "3-Day",
+      "nepali": "3-दिन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.views.day": {
+      "english": "Day",
+      "nepali": "दिन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.views.timeline": {
+      "english": "Timeline",
+      "nepali": "समयरेखा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.views.resource": {
+      "english": "Resource",
+      "nepali": "उपकरण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.actions.today": {
+      "english": "Today",
+      "nepali": "आज",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.actions.checkAvailability": {
+      "english": "Check availability",
+      "nepali": "उपलब्धता जाँच्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.actions.availabilityShort": {
+      "english": "Availability",
+      "nepali": "उपलब्धता",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.actions.fullView": {
+      "english": "Full View",
+      "nepali": "पूर्ण दृश्य",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.actions.exitFullView": {
+      "english": "Exit Full View",
+      "nepali": "पूर्ण दृश्यबाट बाहिरिनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.actions.search": {
+      "english": "Search",
+      "nepali": "खोज्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.actions.filters": {
+      "english": "Filters",
+      "nepali": "फिल्टरहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.actions.filtersWithCount": {
+      "english": "Filters ({count})",
+      "nepali": "फिल्टरहरू ({count})",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.searchPlaceholder": {
+      "english": "Search calendar events (press /)",
+      "nepali": "कार्यतालिका घटनाहरू खोज्नुहोस् (/ थिच्नुहोस्)",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.searchAria": {
+      "english": "Search calendar",
+      "nepali": "कार्यतालिका खोज्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.actions.newRental": {
+      "english": "New Rental",
+      "nepali": "नयाँ भाडा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.actions.prevMonth": {
+      "english": "Previous month",
+      "nepali": "अघिल्लो महिना",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.actions.nextMonth": {
+      "english": "Next month",
+      "nepali": "पछिल्लो महिना",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.actions.filter": {
+      "english": "Filters",
+      "nepali": "फिल्टरहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.legend.confirmed": {
+      "english": "Confirmed",
+      "nepali": "पुष्टि भएको",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.legend.onRent": {
+      "english": "On Rent",
+      "nepali": "भाडामा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.legend.ready": {
+      "english": "Ready",
+      "nepali": "तयार",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.legend.returnDue": {
+      "english": "Return Due",
+      "nepali": "फिर्ता हुनुपर्ने",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.legend.returned": {
+      "english": "Returned",
+      "nepali": "फिर्ता भयो",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.legend.quote": {
+      "english": "Quote",
+      "nepali": "कोटेसन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.legend.draft": {
+      "english": "Draft",
+      "nepali": "मस्यौदा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.summary.pickups": {
+      "english": "Pickups Today",
+      "nepali": "आज डेलिभरी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.summary.returns": {
+      "english": "Returns Today",
+      "nepali": "आज फिर्ता",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.summary.overdue": {
+      "english": "Overdue",
+      "nepali": "म्याद नाघेको",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.summary.totalActive": {
+      "english": "Active Bookings",
+      "nepali": "सक्रिय बुकिङहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.filter.allStages": {
+      "english": "All Stages",
+      "nepali": "सबै चरणहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.filter.allCategories": {
+      "english": "All Categories",
+      "nepali": "सबै वर्गहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "calendar.empty": {
+      "english": "No bookings scheduled for this date range.",
+      "nepali": "यस मिति अवधिमा कुनै बुकिङ तालिका छैन।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.title": {
+      "english": "Clients",
+      "nepali": "ग्राहक",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.subtitle": {
+      "english": "Client directory, memberships, credit policies, and records",
+      "nepali": "ग्राहक निर्देशिका, सदस्यता, क्रेडिट नीति र विवरणहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.tabs.directory": {
+      "english": "Directory",
+      "nepali": "निर्देशिका",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.tabs.newClient": {
+      "english": "New Client",
+      "nepali": "नयाँ ग्राहक",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.tabs.membership": {
+      "english": "Membership",
+      "nepali": "सदस्यता",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.tabs.referral": {
+      "english": "Referral",
+      "nepali": "सिफारिस",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.tabs.coupons": {
+      "english": "Coupons & Promos",
+      "nepali": "कुपन र प्रोमो",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.tabs.credit": {
+      "english": "Credit",
+      "nepali": "क्रेडिट",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.tabs.import": {
+      "english": "Import",
+      "nepali": "आयात",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.tabs.duplicates": {
+      "english": "Duplicates",
+      "nepali": "दोहोरिएका",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.kpi.totalClients": {
+      "english": "Total Clients",
+      "nepali": "जम्मा ग्राहक",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.kpi.activeRentals": {
+      "english": "Active Rentals",
+      "nepali": "चालु भाडा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.kpi.outstanding": {
+      "english": "Outstanding",
+      "nepali": "बाँकी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.kpi.depositHeld": {
+      "english": "Deposit Held",
+      "nepali": "धरौटी रकम",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.countPill": {
+      "english": "{count} {label}",
+      "nepali": "{count} {label}",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.countSingle": {
+      "english": "client",
+      "nepali": "ग्राहक",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.countMulti": {
+      "english": "clients",
+      "nepali": "ग्राहकहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.searchPlaceholder": {
+      "english": "Search client, PAN, phone… (press /)",
+      "nepali": "ग्राहक, प्यान, फोन खोज्नुहोस्… (/ थिच्नुहोस्)",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.searchAria": {
+      "english": "Search clients",
+      "nepali": "ग्राहक खोज्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.searchMembersPlaceholder": {
+      "english": "Search members by name, plan, or type… (press /)",
+      "nepali": "नाम, योजना वा प्रकारबाट सदस्य खोज्नुहोस्… (/ थिच्नुहोस्)",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.searchMembersAria": {
+      "english": "Search members",
+      "nepali": "सदस्य खोज्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.exportDirectory": {
+      "english": "Export loaded directory",
+      "nepali": "खुलेको निर्देशिका निर्यात गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.importClients": {
+      "english": "Import Clients",
+      "nepali": "ग्राहक आयात गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.duplicateCenter": {
+      "english": "Duplicate Center",
+      "nepali": "दोहोरिएका रेकर्ड केन्द्र",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.clientCredit": {
+      "english": "Client Credit",
+      "nepali": "ग्राहक क्रेडिट",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.referralCodes": {
+      "english": "Referral Codes",
+      "nepali": "सिफारिस कोडहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.couponsPromos": {
+      "english": "Coupons & Promos",
+      "nepali": "कुपन र प्रोमोहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.clientSectionsAria": {
+      "english": "Client sections",
+      "nepali": "ग्राहक खण्डहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.subHeader.counter": {
+      "english": "{count} registered {label}",
+      "nepali": "{count} दर्ता भएका {label}",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.subHeader.newClientBtn": {
+      "english": "+ New Client",
+      "nepali": "+ नयाँ ग्राहक",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.addClient": {
+      "english": "Add Client",
+      "nepali": "नयाँ ग्राहक थप्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.exportCsv": {
+      "english": "Export CSV",
+      "nepali": "CSV निर्यात गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.exportReady": {
+      "english": "Export ready",
+      "nepali": "निर्यात तयार भयो",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.exportSuccess": {
+      "english": "{count} client rows written to clients.csv",
+      "nepali": "{count} ग्राहक रेकर्ड clients.csv मा सुरक्षित गरियो",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.filter": {
+      "english": "Filters",
+      "nepali": "फिल्टरहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.edit": {
+      "english": "Edit",
+      "nepali": "सम्पादन गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.block": {
+      "english": "Block Client",
+      "nepali": "ग्राहक रोक लगाउनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.unblock": {
+      "english": "Unblock Client",
+      "nepali": "रोक फुकुवा गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.save": {
+      "english": "Save Changes",
+      "nepali": "परिवर्तन सुरक्षित गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.cancel": {
+      "english": "Cancel",
+      "nepali": "रद्द गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.table.clientId": {
+      "english": "Client ID",
+      "nepali": "ग्राहक ID",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.table.name": {
+      "english": "Name",
+      "nepali": "नाम",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.table.type": {
+      "english": "Type",
+      "nepali": "प्रकार",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.table.membership": {
+      "english": "Membership",
+      "nepali": "सदस्यता",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.table.phone": {
+      "english": "Phone",
+      "nepali": "फोन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.table.email": {
+      "english": "Email",
+      "nepali": "इमेल",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.table.pan": {
+      "english": "PAN",
+      "nepali": "प्यान",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.table.activeRentals": {
+      "english": "Active Rentals",
+      "nepali": "चालु भाडा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.table.outstanding": {
+      "english": "Outstanding (Rs)",
+      "nepali": "बाँकी रकम (रु)",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.table.depositHeld": {
+      "english": "Deposit Held (Rs)",
+      "nepali": "धरौटी रकम (रु)",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.table.lastRental": {
+      "english": "Last Rental (BS)",
+      "nepali": "पछिल्लो भाडा (वि.सं.)",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.table.status": {
+      "english": "Status",
+      "nepali": "अवस्था",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.table.action": {
+      "english": "Action",
+      "nepali": "कार्य",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.status.active": {
+      "english": "Active",
+      "nepali": "सक्रिय",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.status.blocked": {
+      "english": "Blocked",
+      "nepali": "रोक लगाइएको",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.status.notBlocked": {
+      "english": "Not blocked",
+      "nepali": "रोक नभएको",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.personalInfo": {
+      "english": "Personal Information",
+      "nepali": "व्यक्तिगत विवरण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.fullName": {
+      "english": "Full Name",
+      "nepali": "पूरा नाम",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.fullNamePlaceholder": {
+      "english": "e.g. Aayush Shrestha",
+      "nepali": "जस्तै: आयुष श्रेष्ठ",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.clientType": {
+      "english": "Client Type",
+      "nepali": "ग्राहक प्रकार",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.typeIndividual": {
+      "english": "Individual",
+      "nepali": "व्यक्तिगत",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.typeCompany": {
+      "english": "Company",
+      "nepali": "कम्पनी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.contactInfo": {
+      "english": "Contact Details",
+      "nepali": "सम्पर्क विवरण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.phone": {
+      "english": "Phone Number",
+      "nepali": "फोन नम्बर",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.phoneHelp": {
+      "english": "10-digit Nepal mobile number (98XXXXXXXX or 97XXXXXXXX)",
+      "nepali": "10-अङ्कको नेपाल मोबाइल नम्बर (98XXXXXXXX वा 97XXXXXXXX)",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.email": {
+      "english": "Email Address",
+      "nepali": "इमेल ठेगाना",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.emailPlaceholder": {
+      "english": "client@example.com",
+      "nepali": "client@example.com",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.secondaryPhone": {
+      "english": "Secondary Phone",
+      "nepali": "वैकल्पिक फोन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.address": {
+      "english": "Address / Location",
+      "nepali": "ठेगाना / स्थान",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.addressPlaceholder": {
+      "english": "Street, Tole, City",
+      "nepali": "टोल, सडक, सहर",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.district": {
+      "english": "District",
+      "nepali": "जिल्ला",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.taxInfo": {
+      "english": "Tax & Verification",
+      "nepali": "कर तथा प्रमाणीकरण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.pan": {
+      "english": "PAN Number",
+      "nepali": "प्यान नम्बर",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.panPlaceholder": {
+      "english": "9-digit PAN",
+      "nepali": "9-अङ्कको प्यान नम्बर",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.idDocument": {
+      "english": "ID Document",
+      "nepali": "परिचयपत्र",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.idType": {
+      "english": "ID Type",
+      "nepali": "परिचयपत्र प्रकार",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.idNumber": {
+      "english": "ID Number",
+      "nepali": "परिचयपत्र नम्बर",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.citizenship": {
+      "english": "Citizenship",
+      "nepali": "नागरिकता",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.drivingLicense": {
+      "english": "Driving License",
+      "nepali": "सवारी चालक अनुमतिपत्र",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.passport": {
+      "english": "Passport",
+      "nepali": "राहदानी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.nationalId": {
+      "english": "National ID",
+      "nepali": "राष्ट्रिय परिचयपत्र",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.membershipSection": {
+      "english": "Membership & Terms",
+      "nepali": "सदस्यता र सर्तहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.tier": {
+      "english": "Membership Tier",
+      "nepali": "सदस्यता तह",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.paymentTerms": {
+      "english": "Payment Terms",
+      "nepali": "भुक्तानी सर्तहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.creditLimit": {
+      "english": "Credit Limit (Rs)",
+      "nepali": "क्रेडिट सीमा (रु)",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.notes": {
+      "english": "Staff Notes",
+      "nepali": "कर्मचारी टिप्पणी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.notesPlaceholder": {
+      "english": "Internal notes regarding preferences or history",
+      "nepali": "ग्राहक प्राथमिकता वा विगतको आन्तरिक टिप्पणी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.form.saveButton": {
+      "english": "Register Client",
+      "nepali": "ग्राहक दर्ता गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.detail.overview": {
+      "english": "Client Overview",
+      "nepali": "ग्राहक विवरण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.detail.recentBookings": {
+      "english": "Recent Bookings",
+      "nepali": "हालैका बुकिङ",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.detail.invoices": {
+      "english": "Invoices",
+      "nepali": "बिलहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.detail.documents": {
+      "english": "Documents",
+      "nepali": "कागजातहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.detail.collectors": {
+      "english": "Authorized Receivers",
+      "nepali": "आधिकारिक प्राप्तकर्ताहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.detail.noBookings": {
+      "english": "No bookings recorded for this client.",
+      "nepali": "यस ग्राहकको कुनै बुकिङ रेकर्ड छैन।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.detail.noInvoices": {
+      "english": "No invoices on file.",
+      "nepali": "कुनै बिल फेला परेन।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.detail.noDocuments": {
+      "english": "No documents uploaded.",
+      "nepali": "कुनै कागजात अपलोड गरिएको छैन।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.referral.back": {
+      "english": "Back to Referrals",
+      "nepali": "सिफारिस सूचीमा फर्कनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.referral.generateBtn": {
+      "english": "Generate Referral Code",
+      "nepali": "सिफारिस कोड बनाउनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.referral.cardTitle": {
+      "english": "Referral conversions and affiliate rewards",
+      "nepali": "सिफारिस रूपान्तरण र सम्बद्ध पुरस्कार",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.referral.emptyTitle": {
+      "english": "No referral is recorded",
+      "nepali": "कुनै सिफारिस रेकर्ड गरिएको छैन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.referral.emptyDesc": {
+      "english": "Referrals have no home in the database yet — no table stores a referral code, the account it introduced, or the reward owed for it. Until one exists there is nothing true to list here, and the figures this panel used to show were written into the page rather than earned by anyone.",
+      "nepali": "सिफारिसहरूको लागि डाटाबेसमा हाल कुनै स्थान छैन — कुनै तालिकामा सिफारिस कोड, त्यसले ल्याएको ग्राहक वा प्राप्त हुने पुरस्कार सुरक्षित गरिएको छैन।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.credit.extended": {
+      "english": "Credit Extended",
+      "nepali": "प्रदान गरिएको क्रेडिट",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.credit.extendedNote": {
+      "english": "Approved limits across {count} loaded {label}",
+      "nepali": "{count} {label} मा स्वीकृत क्रेडिट सीमा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.credit.outstanding": {
+      "english": "Outstanding",
+      "nepali": "बाँकी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.credit.outstandingNote": {
+      "english": "Owed on invoices — not the same figure as credit used",
+      "nepali": "बिलहरूमा बाँकी रकम — यो प्रयोग गरिएको क्रेडिट भन्दा फरक हो",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.credit.blockedBalance": {
+      "english": "Blocked Balance",
+      "nepali": "रोक लगाइएको बाँकी रकम",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.credit.blockedNote": {
+      "english": "{count} {label} under block",
+      "nepali": "{count} {label} रोक सूचीमा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.credit.accountSingle": {
+      "english": "account",
+      "nepali": "खाता",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.credit.accountMulti": {
+      "english": "accounts",
+      "nepali": "खाताहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.credit.policyNote": {
+      "english": "Credit limits come from the membership tier.",
+      "nepali": "क्रेडिट सीमा सदस्यता तहबाट निर्धारण हुन्छ।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.credit.policyLink": {
+      "english": "Credit policy by tier is in Settings ▸ Business",
+      "nepali": "तह अनुसारको क्रेडिट नीति सेटिङ ▸ व्यवसाय मा छ",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.credit.cardTitle": {
+      "english": "Accounts with an approved credit limit",
+      "nepali": "स्वीकृत क्रेडिट सीमा भएका ग्राहक खाताहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.credit.emptyTitle": {
+      "english": "No account carries an approved credit limit",
+      "nepali": "कुनै पनि खातामा स्वीकृत क्रेडिट सीमा छैन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.credit.emptyMessage": {
+      "english": "Every loaded client has a limit of zero, so none of them can rent on credit today.",
+      "nepali": "सबै लोड भएका ग्राहकको क्रेडिट सीमा शून्य छ, त्यसैले हाल कसैले पनि उधारोमा सामान भाडामा लिन सक्दैनन्।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.credit.tableAria": {
+      "english": "Approved credit limits",
+      "nepali": "स्वीकृत क्रेडिट सीमाहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.credit.thClient": {
+      "english": "Client",
+      "nepali": "ग्राहक",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.credit.thTier": {
+      "english": "Tier",
+      "nepali": "तह",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.credit.thApprovedLimit": {
+      "english": "Approved Limit",
+      "nepali": "स्वीकृत सीमा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.credit.thOutstanding": {
+      "english": "Outstanding",
+      "nepali": "बाँकी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.credit.thStatus": {
+      "english": "Status",
+      "nepali": "अवस्था",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.filter.all": {
+      "english": "All",
+      "nepali": "सबै",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.filter.openRentals": {
+      "english": "Open Rentals",
+      "nepali": "चालु भाडा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.filter.vipTier": {
+      "english": "VIP / Tier",
+      "nepali": "VIP / तह",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.filter.paymentDue": {
+      "english": "Payment Due",
+      "nepali": "भुक्तानी बाँकी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.filter.blocked": {
+      "english": "Blocked",
+      "nepali": "रोक लगाइएको",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.filter.organisation": {
+      "english": "Organisation",
+      "nepali": "संस्थागत",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.filter.individual": {
+      "english": "Individual",
+      "nepali": "व्यक्तिगत",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.kpi.activeClients": {
+      "english": "Active Clients",
+      "nepali": "सक्रिय ग्राहक",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.kpi.activeClientsSubtitle": {
+      "english": "{count} with open rentals",
+      "nepali": "{count} चालु भाडामा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.kpi.openRentals": {
+      "english": "Open Rentals",
+      "nepali": "चालु भाडा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.kpi.openRentalsSubtitle": {
+      "english": "Currently active on rental",
+      "nepali": "हाल भाडामा सामान चालु रहेको",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.kpi.hold": {
+      "english": "Credit / Payment Hold",
+      "nepali": "क्रेडिट / भुक्तानी रोक",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.kpi.holdSubtitle": {
+      "english": "{paymentDue} payment due · {blocked} blocked",
+      "nepali": "{paymentDue} भुक्तानी बाँकी · {blocked} रोक लगाइएको",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.table.thClient": {
+      "english": "Client",
+      "nepali": "ग्राहक",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.table.thContact": {
+      "english": "Contact",
+      "nepali": "सम्पर्क",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.table.thType": {
+      "english": "Type",
+      "nepali": "प्रकार",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.table.thMembership": {
+      "english": "Membership",
+      "nepali": "सदस्यता",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.table.thOpenRentals": {
+      "english": "Open rentals",
+      "nepali": "चालु भाडा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.table.thOutstanding": {
+      "english": "Outstanding",
+      "nepali": "बाँकी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.table.thDepositHeld": {
+      "english": "Deposit Held",
+      "nepali": "धरौटी रकम",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.table.thLastRental": {
+      "english": "Last Rental (BS / AD)",
+      "nepali": "पछिल्लो भाडा (वि.सं. / ई.सं.)",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.table.thAction": {
+      "english": "Action",
+      "nepali": "कार्य",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.table.selectAll": {
+      "english": "Select all clients on this page",
+      "nepali": "यस पृष्ठका सबै ग्राहक छान्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.table.openProfileAria": {
+      "english": "Open {name}'s profile",
+      "nepali": "{name} को प्रोफाइल खोल्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.clearAll": {
+      "english": "Clear all",
+      "nepali": "सबै हटाउनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.saveCurrentView": {
+      "english": "Save Current View",
+      "nepali": "हालको दृश्य सुरक्षित गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.selected": {
+      "english": "selected",
+      "nepali": "छानिएको",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.clearSelection": {
+      "english": "Clear selection",
+      "nepali": "छनोट हटाउनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.exportSelected": {
+      "english": "Export Selected",
+      "nepali": "छानिएका निर्यात गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.blockSelected": {
+      "english": "Block Selected",
+      "nepali": "छानिएकालाई रोक लगाउनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.unblockSelected": {
+      "english": "Unblock Selected",
+      "nepali": "छानिएकाको रोक फुकुवा गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.badge.open": {
+      "english": "open",
+      "nepali": "चालु",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.badge.due": {
+      "english": "due",
+      "nepali": "बाँकी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.badge.noRentalYet": {
+      "english": "No rental yet",
+      "nepali": "कुनै भाडा भएको छैन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.profile": {
+      "english": "Profile",
+      "nepali": "प्रोफाइल",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.actions.viewProfileArrow": {
+      "english": "View profile →",
+      "nepali": "प्रोफाइल हेर्नुहोस् →",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.drawer.phone": {
+      "english": "Phone",
+      "nepali": "फोन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.drawer.email": {
+      "english": "Email",
+      "nepali": "इमेल",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.drawer.pan": {
+      "english": "PAN",
+      "nepali": "प्यान",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.drawer.kyc": {
+      "english": "KYC",
+      "nepali": "केवाईसी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.drawer.type": {
+      "english": "Type",
+      "nepali": "प्रकार",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.drawer.address": {
+      "english": "Address",
+      "nepali": "ठेगाना",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.drawer.authorizedContact": {
+      "english": "Authorized contact",
+      "nepali": "अधिकृत सम्पर्क व्यक्ति",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.drawer.approvedCreditLimit": {
+      "english": "Approved credit limit",
+      "nepali": "स्वीकृत क्रेडिट सीमा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.drawer.outstandingOnInvoices": {
+      "english": "Outstanding on invoices",
+      "nepali": "बिलहरूमा बाँकी रकम",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.drawer.creditHeadroomNote": {
+      "english": "How much of the limit is consumed is not recorded — there is no credit-used column, and outstanding invoices are a different question. Neither figure is a headroom.",
+      "nepali": "क्रेडिट सीमा कति उपभोग भयो भन्ने रेकर्ड छैन — कुनै क्रेडिट प्रयोग स्तम्भ छैन र बाँकी बिल फरक विषय हो।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.drawer.totalRentals": {
+      "english": "Total rentals",
+      "nepali": "जम्मा भाडा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.drawer.lifetimeSpend": {
+      "english": "Lifetime spend",
+      "nepali": "कुल कारोबार",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.drawer.startRental": {
+      "english": "Start rental",
+      "nepali": "भाडा सुरु गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.drawer.ledger": {
+      "english": "Ledger",
+      "nepali": "खातापाता",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "clients.drawer.viewFullProfile": {
+      "english": "View Full Profile",
+      "nepali": "पूरा प्रोफाइल हेर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.title": {
+      "english": "Crew Assist",
+      "nepali": "क्रु सहायता",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.subtitle": {
+      "english": "Crew assignments, technicians, and on-set talent coordination",
+      "nepali": "क्रु खटनपटन, प्राविधिक तथा अन-सेट जनशक्ति व्यवस्थापन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.table.name": {
+      "english": "Crew Member",
+      "nepali": "क्रु सदस्य",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.table.role": {
+      "english": "Role",
+      "nepali": "भूमिका",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.table.phone": {
+      "english": "Phone",
+      "nepali": "फोन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.table.rate": {
+      "english": "Daily Rate (Rs)",
+      "nepali": "दैनिक दर (रु)",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.table.days": {
+      "english": "Days",
+      "nepali": "दिन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.table.total": {
+      "english": "Total (Rs)",
+      "nepali": "जम्मा (रु)",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.table.status": {
+      "english": "Status",
+      "nepali": "अवस्था",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.table.action": {
+      "english": "Action",
+      "nepali": "कार्य",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.actions.assign": {
+      "english": "Assign Crew",
+      "nepali": "क्रु तोक्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.actions.addMember": {
+      "english": "Add Member",
+      "nepali": "सदस्य थप्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.actions.remove": {
+      "english": "Remove",
+      "nepali": "हटाउनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.role.camera": {
+      "english": "Camera Operator",
+      "nepali": "क्यामेराम्यान",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.role.drone": {
+      "english": "Drone Pilot",
+      "nepali": "ड्रोन पाइलट",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.role.sound": {
+      "english": "Sound Recordist",
+      "nepali": "साउन्ड रेकर्डिस्ट",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.role.gaffer": {
+      "english": "Gaffer / Lighting",
+      "nepali": "लाइटिङ टेक्निसियन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.role.assistant": {
+      "english": "Camera Assistant",
+      "nepali": "क्यामेरा सहायक",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.status.assigned": {
+      "english": "Assigned",
+      "nepali": "तोकिएको",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.status.confirmed": {
+      "english": "Confirmed",
+      "nepali": "पुष्टि भएको",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.status.unavailable": {
+      "english": "Unavailable",
+      "nepali": "अनुपलब्ध",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.empty": {
+      "english": "No crew members assigned to this booking.",
+      "nepali": "यस बुकिङमा कुनै क्रु सदस्य तोकिएको छैन।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.list.loading": {
+      "english": "Loading assigned crew…",
+      "nepali": "तोकिएको क्रु लोड हुँदैछ…",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.list.retry": {
+      "english": "Retry crew",
+      "nepali": "पुनः प्रयास गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.list.empty": {
+      "english": "No crew assigned to this booking yet.",
+      "nepali": "यस बुकिङमा कुनै क्रु तोकिएको छैन।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.list.ariaLabel": {
+      "english": "Assigned crew",
+      "nepali": "तोकिएको क्रु",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.list.nameUnavailable": {
+      "english": "Crew name unavailable",
+      "nepali": "क्रुको नाम उपलब्ध छैन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.list.call": {
+      "english": "Call: {time}",
+      "nepali": "कल समय: {time}",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.list.wrap": {
+      "english": "Wrap: {time}",
+      "nepali": "र्याप समय: {time}",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.list.notRecorded": {
+      "english": "Not recorded",
+      "nepali": "रेकर्ड नभएको",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.list.daysSingle": {
+      "english": "{count} day",
+      "nepali": "{count} दिन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.list.daysMulti": {
+      "english": "{count} days",
+      "nepali": "{count} दिन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.list.dailyRate": {
+      "english": "Daily rate: {rate}",
+      "nepali": "दैनिक दर: {rate}",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.list.totalPay": {
+      "english": "Total pay: {total}",
+      "nepali": "जम्मा पारिश्रमिक: {total}",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.list.notAvailable": {
+      "english": "Not available",
+      "nepali": "उपलब्ध छैन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.title": {
+      "english": "Rentals",
+      "nepali": "भाडा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.subtitle": {
+      "english": "Booking desk, active rentals, quotes, and gear schedules",
+      "nepali": "बुकिङ डेस्क, चालु भाडा, कोटेसन तथा उपकरण कार्यतालिका",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.views.all": {
+      "english": "All Rentals",
+      "nepali": "सबै भाडा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.views.quotes": {
+      "english": "Quotes",
+      "nepali": "कोटेसन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.views.confirmed": {
+      "english": "Confirmed",
+      "nepali": "पुष्टि भएको",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.views.active": {
+      "english": "Active / On Rent",
+      "nepali": "भाडामा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.views.dueToday": {
+      "english": "Due Today",
+      "nepali": "आज फिर्ता हुनुपर्ने",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.views.overdue": {
+      "english": "Overdue",
+      "nepali": "म्याद नाघेको",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.views.completed": {
+      "english": "Completed",
+      "nepali": "सम्पन्न",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.views.cancelled": {
+      "english": "Cancelled",
+      "nepali": "रद्द भएको",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.actions.newRental": {
+      "english": "New Rental",
+      "nepali": "नयाँ भाडा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.actions.newShort": {
+      "english": "New",
+      "nepali": "नयाँ",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.actions.exportCsv": {
+      "english": "Export CSV",
+      "nepali": "CSV निर्यात गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.searchAria": {
+      "english": "Search rentals",
+      "nepali": "भाडा खोज्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.searchPlaceholder": {
+      "english": "Search rentals…",
+      "nepali": "भाडा खोज्नुहोस्…",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.actions.filter": {
+      "english": "Filters",
+      "nepali": "फिल्टरहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.actions.viewDetail": {
+      "english": "View Booking",
+      "nepali": "बुकिङ हेर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.actions.duplicate": {
+      "english": "Duplicate",
+      "nepali": "प्रतिलिपि बनाउनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.actions.cancelBooking": {
+      "english": "Cancel Booking",
+      "nepali": "बुकिङ रद्द गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.actions.confirm": {
+      "english": "Confirm Booking",
+      "nepali": "बुकिङ पुष्टि गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.actions.printPickList": {
+      "english": "Print Pick List",
+      "nepali": "पिक लिस्ट छाप्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.actions.createInvoice": {
+      "english": "Create Invoice",
+      "nepali": "बिल बनाउनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.table.bookingNo": {
+      "english": "Booking #",
+      "nepali": "बुकिङ नं",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.table.client": {
+      "english": "Client",
+      "nepali": "ग्राहक",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.table.dates": {
+      "english": "Dates (BS)",
+      "nepali": "मिति (वि.सं.)",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.table.duration": {
+      "english": "Duration",
+      "nepali": "अवधि",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.table.stage": {
+      "english": "Stage",
+      "nepali": "चरण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.table.items": {
+      "english": "Items",
+      "nepali": "सामग्री",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.table.total": {
+      "english": "Total (Rs)",
+      "nepali": "जम्मा (रु)",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.table.outstanding": {
+      "english": "Outstanding (Rs)",
+      "nepali": "बाँकी रकम (रु)",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.table.deposit": {
+      "english": "Deposit (Rs)",
+      "nepali": "धरौटी (रु)",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.table.action": {
+      "english": "Action",
+      "nepali": "कार्य",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.detail.overview": {
+      "english": "Booking Overview",
+      "nepali": "बुकिङ विवरण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.detail.gearList": {
+      "english": "Equipment & Gear",
+      "nepali": "उपकरण तथा सामग्री",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.detail.crew": {
+      "english": "Crew",
+      "nepali": "क्रु",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.detail.transport": {
+      "english": "Delivery & Transport",
+      "nepali": "डेलिभरी तथा यातायात",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.detail.financials": {
+      "english": "Financials & Payments",
+      "nepali": "वित्त तथा भुक्तानी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.detail.audit": {
+      "english": "Audit History",
+      "nepali": "अडिट इतिहास",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.detail.notes": {
+      "english": "Notes",
+      "nepali": "टिप्पणी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.new.header": {
+      "english": "New Rental Booking",
+      "nepali": "नयाँ भाडा बुकिङ",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.new.stepClient": {
+      "english": "1. Select Client",
+      "nepali": "1. ग्राहक चयन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.new.stepDates": {
+      "english": "2. Rental Schedule",
+      "nepali": "2. भाडा तालिका",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.new.stepGear": {
+      "english": "3. Add Equipment",
+      "nepali": "3. उपकरण थप्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.new.stepReview": {
+      "english": "4. Review & Confirm",
+      "nepali": "4. समीक्षा तथा पुष्टि",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.new.startDate": {
+      "english": "Pickup Date (BS)",
+      "nepali": "सामान लिने मिति (वि.सं.)",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.new.returnDate": {
+      "english": "Return Date (BS)",
+      "nepali": "सामान फिर्ता मिति (वि.सं.)",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.new.durationDays": {
+      "english": "Duration: {count} days",
+      "nepali": "अवधि: {count} दिन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.new.searchGearPlaceholder": {
+      "english": "Search equipment by name, barcode or SKU...",
+      "nepali": "उपकरणको नाम, बारकोड वा SKU खोज्नुहोस्...",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.new.saveDraft": {
+      "english": "Save as Draft",
+      "nepali": "मस्यौदा सुरक्षित गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.new.createQuote": {
+      "english": "Create Quote",
+      "nepali": "कोटेसन बनाउनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.new.confirmBook": {
+      "english": "Confirm Booking",
+      "nepali": "बुकिङ पुष्टि गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "rentals.empty": {
+      "english": "No bookings found matching criteria.",
+      "nepali": "कुनै बुकिङ फेला परेन।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "documents.title": {
+      "english": "Documents",
+      "nepali": "कागजातहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "documents.subtitle": {
+      "english": "Agreements & Paperwork",
+      "nepali": "सम्झौता तथा कागजात",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "documents.tabs.agreements": {
+      "english": "Rental Agreements",
+      "nepali": "भाडा सम्झौताहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "documents.tabs.idCards": {
+      "english": "ID Proofs",
+      "nepali": "परिचयपत्रहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "documents.tabs.invoices": {
+      "english": "Invoices",
+      "nepali": "बिलहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "documents.tabs.receipts": {
+      "english": "Receipts",
+      "nepali": "रसिदहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "documents.actions.upload": {
+      "english": "Upload Document",
+      "nepali": "कागजात अपलोड गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "documents.actions.preview": {
+      "english": "Preview",
+      "nepali": "पूर्वावलोकन गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "documents.actions.download": {
+      "english": "Download",
+      "nepali": "डाउनलोड गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "documents.status.verified": {
+      "english": "Verified",
+      "nepali": "प्रमाणित",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "documents.status.pending": {
+      "english": "Pending",
+      "nepali": "प्रमाणीकरण बाँकी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "documents.status.rejected": {
+      "english": "Rejected",
+      "nepali": "अस्वीकृत",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.title": {
+      "english": "Finance",
+      "nepali": "वित्त",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.subtitle": {
+      "english": "Accounts & Invoicing",
+      "nepali": "लेखा र बिलिङ",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.tabs.dashboard": {
+      "english": "Dashboard",
+      "nepali": "ड्यासबोर्ड",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.tabs.invoices": {
+      "english": "Invoices",
+      "nepali": "बिलहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.tabs.payments": {
+      "english": "Payments",
+      "nepali": "भुक्तानीहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.tabs.expenses": {
+      "english": "Expenses",
+      "nepali": "खर्चहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.tabs.closing": {
+      "english": "Closing",
+      "nepali": "दैनिक हिसाब",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.tabs.documents": {
+      "english": "Documents",
+      "nepali": "कागजातहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.tabs.reports": {
+      "english": "Reports",
+      "nepali": "प्रतिवेदनहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.actions.recordPayment": {
+      "english": "Record payment",
+      "nepali": "भुक्तानी दर्ता गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.actions.createInvoice": {
+      "english": "Create invoice",
+      "nepali": "बिल सिर्जना गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.actions.voidInvoice": {
+      "english": "Void invoice",
+      "nepali": "बिल खारेज गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.actions.viewInvoice": {
+      "english": "View invoice",
+      "nepali": "बिल हेर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.actions.printInvoice": {
+      "english": "Print invoice",
+      "nepali": "बिल छाप्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.actions.downloadPdf": {
+      "english": "Download PDF",
+      "nepali": "PDF डाउनलोड गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.actions.exportCsv": {
+      "english": "Export CSV",
+      "nepali": "CSV निर्यात गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.actions.filter": {
+      "english": "Filter",
+      "nepali": "फिल्टर",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.actions.clearAll": {
+      "english": "Clear all",
+      "nepali": "सबै खाली गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.actions.apply": {
+      "english": "Apply",
+      "nepali": "लागू गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.status.paid": {
+      "english": "Paid",
+      "nepali": "चुक्ता",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.status.unpaid": {
+      "english": "Unpaid",
+      "nepali": "भुक्तानी बाँकी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.status.partiallyPaid": {
+      "english": "Partially Paid",
+      "nepali": "आंशिक भुक्तानी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.status.void": {
+      "english": "Void",
+      "nepali": "खारेज",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.status.overdue": {
+      "english": "Overdue",
+      "nepali": "म्याद नाघेको",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.kpi.rentalTotal": {
+      "english": "Rental Total",
+      "nepali": "भाडा जम्मा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.kpi.advance": {
+      "english": "Advance",
+      "nepali": "पेशकी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.kpi.deposit": {
+      "english": "Deposit",
+      "nepali": "धरौटी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.kpi.outstanding": {
+      "english": "Outstanding",
+      "nepali": "बाँकी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.kpi.balance": {
+      "english": "Balance",
+      "nepali": "बाँकी रकम",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.kpi.receivedThisMonth": {
+      "english": "Received This Month",
+      "nepali": "यस महिना प्राप्त",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.kpi.outstandingInvoices": {
+      "english": "Outstanding Invoices",
+      "nepali": "बाँकी बिलहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.kpi.activeDeposits": {
+      "english": "Active Deposits",
+      "nepali": "सक्रिय धरौटी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.table.invoiceNumber": {
+      "english": "Invoice #",
+      "nepali": "बिल #",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.table.client": {
+      "english": "Client",
+      "nepali": "ग्राहक",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.table.issueDate": {
+      "english": "Issue Date",
+      "nepali": "जारी मिति",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.table.dueDate": {
+      "english": "Due Date",
+      "nepali": "भुक्तानी मिति",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.table.amount": {
+      "english": "Amount",
+      "nepali": "रकम",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.table.subtotal": {
+      "english": "Subtotal",
+      "nepali": "उप-जम्मा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.table.vat": {
+      "english": "VAT",
+      "nepali": "भ्याट",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.table.discount": {
+      "english": "Discount",
+      "nepali": "छुट",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.table.status": {
+      "english": "Status",
+      "nepali": "अवस्था",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.table.actions": {
+      "english": "Actions",
+      "nepali": "कार्यहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.methods.cash": {
+      "english": "Cash",
+      "nepali": "नगद",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.methods.bank": {
+      "english": "Bank",
+      "nepali": "बैंक",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.methods.fonepay": {
+      "english": "Fonepay",
+      "nepali": "Fonepay",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.methods.esewa": {
+      "english": "eSewa",
+      "nepali": "eSewa",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.methods.khalti": {
+      "english": "Khalti",
+      "nepali": "Khalti",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.methods.cheque": {
+      "english": "Cheque",
+      "nepali": "चेक",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.methods.cards": {
+      "english": "Cards",
+      "nepali": "कार्ड",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.methods.other": {
+      "english": "Other",
+      "nepali": "अन्य",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.expenses.title": {
+      "english": "Expenses",
+      "nepali": "खर्चहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.expenses.category": {
+      "english": "Expense Category",
+      "nepali": "खर्च वर्ग",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.expenses.vendor": {
+      "english": "Vendor",
+      "nepali": "विक्रेता",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.expenses.receipt": {
+      "english": "Receipt",
+      "nepali": "रसिद",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.closing.title": {
+      "english": "Daily Closing",
+      "nepali": "दैनिक हिसाब",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.closing.expectedCash": {
+      "english": "Expected Cash",
+      "nepali": "अपेक्षित नगद",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.closing.actualCash": {
+      "english": "Actual Cash",
+      "nepali": "वास्तविक नगद",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.closing.discrepancy": {
+      "english": "Discrepancy",
+      "nepali": "फरक रकम",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.restricted.title": {
+      "english": "Access restricted",
+      "nepali": "पहुँच प्रतिबन्धित",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "finance.restricted.desc": {
+      "english": "Financial records require Accounts or Owner permissions.",
+      "nepali": "वित्तीय विवरणहरूको लागि लेखा वा मालिक अनुमति आवश्यक पर्दछ।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.title": {
+      "english": "Inventory",
+      "nepali": "मौज्दात",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.subtitle": {
+      "english": "Stock & Fleet Management",
+      "nepali": "मौज्दात तथा सामग्री व्यवस्थापन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.tabs.equipment": {
+      "english": "Equipment",
+      "nepali": "उपकरण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.tabs.bundles": {
+      "english": "Bundles",
+      "nepali": "बन्डलहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.tabs.stockCheck": {
+      "english": "Stock Check",
+      "nepali": "मौज्दात जाँच",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.tabs.maintenance": {
+      "english": "Maintenance",
+      "nepali": "मर्मत सम्भार",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.actions.addEquipment": {
+      "english": "Add Equipment",
+      "nepali": "उपकरण थप्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.actions.addBundle": {
+      "english": "Add Bundle",
+      "nepali": "बन्डल थप्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.actions.stockAudit": {
+      "english": "Start Stock Check",
+      "nepali": "मौज्दात जाँच सुरु गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.actions.adjustStock": {
+      "english": "Adjust Stock",
+      "nepali": "मौज्दात समायोजन गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.actions.printLabels": {
+      "english": "Print QR Labels",
+      "nepali": "QR लेबलहरू छाप्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.status.available": {
+      "english": "Available",
+      "nepali": "उपलब्ध",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.status.rented": {
+      "english": "Rented",
+      "nepali": "भाडामा गएको",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.status.maintenance": {
+      "english": "Maintenance",
+      "nepali": "मर्मतमा रहेको",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.status.damaged": {
+      "english": "Damaged",
+      "nepali": "क्षतिग्रस्त",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.status.decommissioned": {
+      "english": "Decommissioned",
+      "nepali": "हटाउन सिफारिस",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.table.sku": {
+      "english": "SKU",
+      "nepali": "SKU",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.table.name": {
+      "english": "Item Name",
+      "nepali": "सामग्री नाम",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.table.category": {
+      "english": "Category",
+      "nepali": "वर्ग",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.table.serial": {
+      "english": "Serial Number",
+      "nepali": "सिरियल नम्बर",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.table.totalQuantity": {
+      "english": "Total",
+      "nepali": "जम्मा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.table.availableQuantity": {
+      "english": "Available",
+      "nepali": "उपलब्ध",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.table.dailyRate": {
+      "english": "Daily Rate",
+      "nepali": "दैनिक दर",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.table.replacementValue": {
+      "english": "Replacement Value",
+      "nepali": "प्रतिस्थापन मूल्य",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.maintenance.jobId": {
+      "english": "Job ID",
+      "nepali": "कार्य ID",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.maintenance.reportedIssue": {
+      "english": "Reported Issue",
+      "nepali": "देखिएको समस्या",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.maintenance.repairCost": {
+      "english": "Repair Cost",
+      "nepali": "मर्मत खर्च",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.maintenance.scheduledReturn": {
+      "english": "Scheduled Return",
+      "nepali": "फिर्ता हुने मिति",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.stockCheck.counted": {
+      "english": "Counted",
+      "nepali": "गणना गरिएको",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.stockCheck.expected": {
+      "english": "Expected",
+      "nepali": "अपेक्षित",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.stockCheck.difference": {
+      "english": "Difference",
+      "nepali": "फरक",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "inventory.stockCheck.reconcile": {
+      "english": "Reconcile",
+      "nepali": "समायोजन गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.title": {
+      "english": "Internal Notes",
+      "nepali": "आन्तरिक टिप्पणी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.drawer.title": {
+      "english": "Team Internal Notes",
+      "nepali": "टोली आन्तरिक टिप्पणी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.drawer.description": {
+      "english": "Shift handover scratchpad & equipment advisories",
+      "nepali": "सिफ्ट हस्तान्तरण टिपोट र उपकरण सल्लाह",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.drawer.allStaffNotice": {
+      "english": "Notes are seen by all staff.",
+      "nepali": "टिप्पणीहरू सबै कर्मचारीहरूले देख्न सक्छन्।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.drawer.openPage": {
+      "english": "Open Team Notes page",
+      "nepali": "टोली टिप्पणी पृष्ठ खोल्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.drawer.placeholder": {
+      "english": "Post a shift note, equipment alert, client remark... (Ctrl+Enter to post)",
+      "nepali": "सिफ्ट टिप्पणी, उपकरण चेतावनी, ग्राहक टिपोट पोस्ट गर्नुहोस्... (पोस्ट गर्न Ctrl+Enter)",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.drawer.draftAria": {
+      "english": "Internal note draft",
+      "nepali": "आन्तरिक टिप्पणी मस्यौदा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.drawer.categoryAria": {
+      "english": "Note category",
+      "nepali": "टिप्पणी वर्ग",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.drawer.priorityAria": {
+      "english": "Note priority",
+      "nepali": "टिप्पणी प्राथमिकता",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.category.all": {
+      "english": "All",
+      "nepali": "सबै",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.category.general": {
+      "english": "General",
+      "nepali": "साधारण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.category.equipmentAlert": {
+      "english": "Equipment Alert",
+      "nepali": "उपकरण चेतावनी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.category.shiftHandover": {
+      "english": "Shift Handover",
+      "nepali": "सिफ्ट हस्तान्तरण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.category.logistics": {
+      "english": "Logistics",
+      "nepali": "यातायात",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.category.clientRemark": {
+      "english": "Client Remark",
+      "nepali": "ग्राहक टिपोट",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.priority.normal": {
+      "english": "Normal",
+      "nepali": "सामान्य",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.priority.high": {
+      "english": "High",
+      "nepali": "उच्च",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.priority.urgent": {
+      "english": "🚨 Urgent",
+      "nepali": "🚨 जरुरी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.actions.post": {
+      "english": "Post",
+      "nepali": "पोस्ट गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.actions.posting": {
+      "english": "Posting…",
+      "nepali": "पोस्ट गरिँदैछ…",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.actions.pin": {
+      "english": "Pin note to top",
+      "nepali": "माथि पिन गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.actions.unpin": {
+      "english": "Unpin note",
+      "nepali": "पिन हटाउनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.actions.archive": {
+      "english": "Archive note",
+      "nepali": "अभिलेख गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.actions.done": {
+      "english": "Done",
+      "nepali": "भयो",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.actions.reopen": {
+      "english": "Reopen",
+      "nepali": "पुनः खोल्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.drawer.loading": {
+      "english": "Loading team notes…",
+      "nepali": "टोली टिप्पणी लोड हुँदैछ…",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.drawer.empty": {
+      "english": "No notes in this category yet.",
+      "nepali": "यो वर्गमा अहिलेसम्म कुनै टिप्पणी छैन।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.badge.urgent": {
+      "english": "URGENT",
+      "nepali": "जरुरी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.badge.done": {
+      "english": "DONE",
+      "nepali": "सम्पन्न",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.restricted.title": {
+      "english": "Restricted Access",
+      "nepali": "पहुँच प्रतिबन्धित",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.restricted.body": {
+      "english": "Team notes are available to staff members only.",
+      "nepali": "टोली टिप्पणी केवल कर्मचारीहरूको लागि मात्र उपलब्ध छ।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.unavailable.title": {
+      "english": "Shared team notes unavailable",
+      "nepali": "साझा टोली टिप्पणी उपलब्ध छैन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.unavailable.body": {
+      "english": "Team notes cannot be shared between staff yet. Existing entries on this device have been kept.",
+      "nepali": "कर्मचारीहरू बीच अहिले टोली टिप्पणी साझा गर्न सकिँदैन। यस उपकरणमा रहेका प्रविष्टिहरू राखिएका छन्।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.closeAria": {
+      "english": "Close team internal notes",
+      "nepali": "टोली आन्तरिक टिप्पणी बन्द गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.toasts.postedTitle": {
+      "english": "Note Posted",
+      "nepali": "टिप्पणी पोस्ट गरियो",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.toasts.postedDesc": {
+      "english": "Internal log updated successfully.",
+      "nepali": "आन्तरिक लग सफलतापूर्वक अद्यावधिक भयो।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.toasts.archivedTitle": {
+      "english": "Note Archived",
+      "nepali": "टिप्पणी अभिलेख गरियो",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.toasts.archivedDesc": {
+      "english": "Archived and removed from active log.",
+      "nepali": "अभिलेख गरियो र सक्रिय लगबाट हटाइयो।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.page.title": {
+      "english": "Team Dispatch & Shift Notes",
+      "nepali": "टोली प्रेषण र सिफ्ट टिप्पणी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.page.equipmentAlerts": {
+      "english": "Equipment Alerts",
+      "nepali": "उपकरण चेतावनीहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.page.shiftHandovers": {
+      "english": "Shift Handovers",
+      "nepali": "सिफ्ट हस्तान्तरणहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.page.resolvedToday": {
+      "english": "Resolved Today",
+      "nepali": "आज समाधान गरिएका",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.page.postInternalNote": {
+      "english": "Post Internal Dispatch Note",
+      "nepali": "आन्तरिक प्रेषण टिप्पणी पोस्ट गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.templates.equipmentDefect": {
+      "english": "🚨 Equipment Defect",
+      "nepali": "🚨 उपकरण त्रुटि",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.templates.shiftHandover": {
+      "english": "🔄 Shift Handover",
+      "nepali": "🔄 सिफ्ट हस्तान्तरण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.templates.dispatchRoute": {
+      "english": "🚚 Dispatch Route",
+      "nepali": "🚚 प्रेषण मार्ग",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.templates.clientRemark": {
+      "english": "👤 Client Remark",
+      "nepali": "👤 ग्राहक टिपोट",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.actions.postToDispatch": {
+      "english": "Post to Dispatch Log",
+      "nepali": "प्रेषण लगमा पोस्ट गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.actions.markAsDone": {
+      "english": "Mark as Done",
+      "nepali": "सम्पन्न जनाउनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.views.compact": {
+      "english": "Compact",
+      "nepali": "संक्षिप्त",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.views.cards": {
+      "english": "Cards",
+      "nepali": "कार्डहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "notes.actions.shiftBrief": {
+      "english": "Shift Brief",
+      "nepali": "सिफ्ट विवरण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.landing.title": {
+      "english": "Tools",
+      "nepali": "औजार",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.landing.subtitle": {
+      "english": "Integrated Workbench",
+      "nepali": "एकीकृत कार्यशाला",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.landing.description": {
+      "english": "Integrated calculators and technical utilities — work within the workbench without external shortcuts.",
+      "nepali": "एकीकृत क्यालकुलेटर र प्राविधिक उपयोगिताहरू — बाह्य सर्टकट बिना कार्यशाला भित्र काम गर्नुहोस्।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.landing.navAria": {
+      "english": "Tools navigation",
+      "nepali": "औजार नेभिगेसन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.landing.categoryLabel": {
+      "english": "Category",
+      "nepali": "वर्ग",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.landing.allCategories": {
+      "english": "All categories",
+      "nepali": "सबै वर्गहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.landing.filterAria": {
+      "english": "Filter tools by category",
+      "nepali": "वर्ग अनुसार औजार फिल्टर गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.landing.calculatorsGroup": {
+      "english": "Calculators",
+      "nepali": "क्यालकुलेटरहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.landing.commercialGroup": {
+      "english": "Commercial Utilities",
+      "nepali": "व्यापारिक उपयोगिताहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.landing.cinematographyGroup": {
+      "english": "Cinematography suite",
+      "nepali": "सिनेमाटोग्राफी सुइट",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.landing.cinematographyNote": {
+      "english": "15 categories of camera, lens, exposure, timecode and power calculators.",
+      "nepali": "क्यामेरा, लेन्स, एक्सपोजर, टाइमकोड र पावर क्यालकुलेटरका 15 वर्गहरू।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.landing.depreciationLabel": {
+      "english": "Depreciation",
+      "nepali": "ह्रासकट्टी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.landing.depreciationHint": {
+      "english": "Book view · IRD pool view (schedule & book value curve)",
+      "nepali": "किताबी दृश्य · IRD समूह दृश्य (तालिका र किताबी मूल्य वक्र)",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.landing.pricingLabel": {
+      "english": "Pricing",
+      "nepali": "मूल्य निर्धारण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.landing.pricingHint": {
+      "english": "Rate, days, discount — quote sandbox engine",
+      "nepali": "दर, दिन, छुट — कोटेसन परीक्षण इन्जिन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.landing.lateFeeLabel": {
+      "english": "Late Fee",
+      "nepali": "ढिलाइ शुल्क",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.landing.lateFeeHint": {
+      "english": "Standard policy calculator",
+      "nepali": "मानक नीति क्यालकुलेटर",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.cards.lateFeeHint": {
+      "english": "30 minutes free · under 2 hours: half day · 2 hours or more: full day",
+      "nepali": "30 मिनेटसम्म निःशुल्क · 2 घण्टाभन्दा कम: आधा दिन · 2 घण्टा वा सोभन्दा बढी: पूरै दिन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.landing.cameraLensToolsLabel": {
+      "english": "Camera & lens tools",
+      "nepali": "क्यामेरा र लेन्स औजार",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.landing.cameraLensToolsHint": {
+      "english": "Crop factor · field of view · depth of field · ND · timecode · storage · battery",
+      "nepali": "क्रप फ्याक्टर · फिल्ड अफ भ्यु · डेप्थ अफ फिल्ड · ND · टाइमकोड · भण्डारण · ब्याट्री",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.tabs.overview": {
+      "english": "Overview",
+      "nepali": "अवलोकन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.tabs.depreciation": {
+      "english": "Depreciation",
+      "nepali": "ह्रासकट्टी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.tabs.pricing": {
+      "english": "Pricing",
+      "nepali": "मूल्य निर्धारण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.tabs.latefee": {
+      "english": "Late Fee",
+      "nepali": "ढिलाइ शुल्क",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.tabs.cinematography": {
+      "english": "Cinematography Suite",
+      "nepali": "सिनेमाटोग्राफी सुइट",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.lateFee.ruleDescription": {
+      "english": "Up to 30 minutes free. Under 2 hours: half a day. From 2 hours: a full day, with another day charged for each additional 24 hours.",
+      "nepali": "30 मिनेटसम्म निःशुल्क। 2 घण्टाभन्दा कम: आधा दिन। 2 घण्टादेखि: पूरै दिन, र थप प्रत्येक 24 घण्टाको लागि अर्को दिन शुल्क लाग्नेछ।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.lateFee.estimateTitle": {
+      "english": "Late fee estimate",
+      "nepali": "ढिलाइ शुल्क अनुमान",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.lateFee.dailyRateLabel": {
+      "english": "Daily rental rate (NPR)",
+      "nepali": "दैनिक भाडा दर (NPR)",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.lateFee.minutesLabel": {
+      "english": "Minutes after scheduled return",
+      "nepali": "निर्धारित फिर्ता पछिको मिनेट",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "tools.lateFee.enterDailyRatePrompt": {
+      "english": "Enter a daily rate to calculate the fee.",
+      "nepali": "शुल्क गणना गर्न दैनिक दर प्रविष्ट गर्नुहोस्।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.title": {
+      "english": "Administration",
+      "nepali": "प्रशासन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.subtitle": {
+      "english": "Audit, security, activity log and system restore utilities",
+      "nepali": "लेखापरीक्षण, सुरक्षा, गतिविधि लग र प्रणाली पुनर्स्थापना सुविधाहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.activity.title": {
+      "english": "Activity",
+      "nepali": "गतिविधि",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.activity.description": {
+      "english": "Who did what, where — newest first. Usage, not state changes; those live in the Audit Log.",
+      "nepali": "कसले के गर्यो र कहाँ — नयाँ पहिले। प्रयोग, स्थिति परिवर्तन होइन; ती लेखापरीक्षण लगमा रहन्छन्।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.activity.emptyTitle": {
+      "english": "No activity recorded yet",
+      "nepali": "अहिलेसम्म कुनै गतिविधि रेकर्ड गरिएको छैन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.activity.emptyMessage": {
+      "english": "Sign-ins, exports and other usage appear here as they happen.",
+      "nepali": "साइन-इन, निर्यात र अन्य प्रयोगहरू यहाँ हुने बित्तिकै देखिन्छन्।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.activity.kpi.entries": {
+      "english": "Entries",
+      "nepali": "प्रविष्टिहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.activity.kpi.entriesNote": {
+      "english": "In this log",
+      "nepali": "यस लगमा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.activity.kpi.failed": {
+      "english": "Failed",
+      "nepali": "असफल",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.activity.kpi.failedNote": {
+      "english": "Errors or refusals",
+      "nepali": "त्रुटि वा अस्वीकृतिहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.activity.kpi.people": {
+      "english": "People",
+      "nepali": "व्यक्तिहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.activity.kpi.peopleNote": {
+      "english": "Distinct actors",
+      "nepali": "विशिष्ट कर्ताहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.activity.kpi.modules": {
+      "english": "Modules",
+      "nepali": "मोड्युलहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.activity.kpi.modulesNote": {
+      "english": "Touched",
+      "nepali": "छोइएका",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.activity.searchAria": {
+      "english": "Filter activity",
+      "nepali": "गतिविधि फिल्टर गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.activity.filterUser": {
+      "english": "User",
+      "nepali": "प्रयोगकर्ता",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.activity.filterModule": {
+      "english": "Module",
+      "nepali": "मोड्युल",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.activity.filterDate": {
+      "english": "Date",
+      "nepali": "मिति",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.activity.allUsers": {
+      "english": "All users",
+      "nepali": "सबै प्रयोगकर्ताहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.activity.allModules": {
+      "english": "All modules",
+      "nepali": "सबै मोड्युलहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.activity.allDates": {
+      "english": "All dates",
+      "nepali": "सबै मितिहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.activity.noResultsTitle": {
+      "english": "No activity matches this filter",
+      "nepali": "यस फिल्टरसँग कुनै गतिविधि मेल खाएन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.activity.noResultsDesc": {
+      "english": "Try a wider date, another module, or clear the filters to see the whole timeline.",
+      "nepali": "फराकिलो मिति, अर्को मोड्युल प्रयास गर्नुहोस् वा सम्पूर्ण समयरेखा हेर्न फिल्टरहरू हटाउनुहोस्।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.activity.clearFilters": {
+      "english": "Clear filters",
+      "nepali": "फिल्टरहरू हटाउनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.activity.inLocation": {
+      "english": "in {where}",
+      "nepali": "{where} मा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.audit.title": {
+      "english": "Audit Log",
+      "nepali": "लेखापरीक्षण लग",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.audit.description": {
+      "english": "Append-only record of system state changes — view-only for every role.",
+      "nepali": "प्रणाली स्थिति परिवर्तनहरूको थप-मात्र अभिलेख — सबै भूमिकाका लागि हेर्न मात्र मिल्ने।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.audit.notice": {
+      "english": "Append-only. View-only for every role including Owner. No edit, no delete, no bulk action anywhere on this page.",
+      "nepali": "थप-मात्र। मालिक लगायत सबै भूमिकाका लागि हेर्न मात्र मिल्ने। यस पृष्ठमा कतै पनि सम्पादन, मेटाउने वा थोक कार्य छैन।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.audit.filterEntity": {
+      "english": "Entity",
+      "nepali": "निकाय",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.audit.filterActor": {
+      "english": "Role",
+      "nepali": "भूमिका",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.audit.filterPeriod": {
+      "english": "Period",
+      "nepali": "अवधि",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.audit.colTimestamp": {
+      "english": "When",
+      "nepali": "समय",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.audit.colActor": {
+      "english": "Who",
+      "nepali": "कसले",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.audit.colRole": {
+      "english": "Role",
+      "nepali": "भूमिका",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.audit.colAction": {
+      "english": "Action",
+      "nepali": "कार्य",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.audit.colEntity": {
+      "english": "Entity",
+      "nepali": "निकाय",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.audit.colChanges": {
+      "english": "Changes",
+      "nepali": "परिवर्तनहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.audit.emptyTitle": {
+      "english": "No audit events recorded",
+      "nepali": "कुनै लेखापरीक्षण घटना रेकर्ड गरिएको छैन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.audit.emptyMessage": {
+      "english": "State transitions, financial adjustments, and administrative events appear here.",
+      "nepali": "स्थिति परिवर्तन, वित्तीय समायोजन, र प्रशासनिक घटनाहरू यहाँ देखिन्छन्।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.backup.title": {
+      "english": "Backup & Restore",
+      "nepali": "ब्याकअप र पुनर्स्थापना",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.backup.description": {
+      "english": "Database snapshots, point-in-time recovery, and verified system restore.",
+      "nepali": "डाटाबेस स्न्यापसटहरू, पोइन्ट-इन-टाइम रिकभरी, र प्रमाणित प्रणाली पुनर्स्थापना।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.backup.createBackup": {
+      "english": "Create Backup",
+      "nepali": "ब्याकअप बनाउनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.backup.restoreBackup": {
+      "english": "Restore Backup",
+      "nepali": "ब्याकअप पुनर्स्थापना गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.backup.download": {
+      "english": "Download",
+      "nepali": "डाउनलोड गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.backup.warning": {
+      "english": "Restoring a backup will overwrite current database state. This action cannot be reversed.",
+      "nepali": "ब्याकअप पुनर्स्थापना गर्दा हालको डाटाबेस स्थिति अधिलेखन हुनेछ। यो कार्य उल्टाउन सकिँदैन।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.numbering.title": {
+      "english": "Document Numbering",
+      "nepali": "कागजात नम्बरिङ",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.numbering.description": {
+      "english": "Sequential document prefixes and numbering rules for bookings, invoices, and payments.",
+      "nepali": "बुकिङ, बिल र भुक्तानीका लागि अनुक्रमिक कागजात उपसर्ग र नम्बरिङ नियमहरू।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.problemReports.title": {
+      "english": "Problem Reports",
+      "nepali": "समस्या प्रतिवेदनहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "admin.problemReports.description": {
+      "english": "Staff feedback, error telemetry, and defect logs.",
+      "nepali": "कर्मचारी प्रतिक्रिया, त्रुटि टेलिमेट्री, र खराबी लगहरू।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.title": {
+      "english": "Reports",
+      "nepali": "प्रतिवेदनहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.subtitle": {
+      "english": "Analytical registers, performance metrics, and compliance ledgers",
+      "nepali": "विश्लेषणात्मक खाताहरू, कार्यसम्पादन मापदण्ड, र अनुपालन विवरणहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.catalog.title": {
+      "english": "Report Catalog",
+      "nepali": "प्रतिवेदन सूची",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.catalog.back": {
+      "english": "Back to Report Catalog",
+      "nepali": "प्रतिवेदन सूचीमा फर्कनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.catalog.viewAria": {
+      "english": "Report view",
+      "nepali": "प्रतिवेदन दृश्य",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.catalog.simple": {
+      "english": "Simple",
+      "nepali": "सरल",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.catalog.detailed": {
+      "english": "Detailed",
+      "nepali": "विस्तृत",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.catalog.searchPlaceholder": {
+      "english": "Find a report…",
+      "nepali": "प्रतिवेदन खोज्नुहोस्…",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.catalog.searchAria": {
+      "english": "Find a report by name or group",
+      "nepali": "नाम वा समूह अनुसार प्रतिवेदन खोज्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.catalog.noResults": {
+      "english": "No reports match your search.",
+      "nepali": "तपाईंको खोजीसँग कुनै प्रतिवेदन मेल खाएन।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.catalog.group": {
+      "english": "Group",
+      "nepali": "समूह",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.groups.01": {
+      "english": "Overview",
+      "nepali": "सिंहावलोकन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.groups.02": {
+      "english": "Rentals",
+      "nepali": "भाडा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.groups.03": {
+      "english": "Equipment",
+      "nepali": "उपकरण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.groups.04": {
+      "english": "Inventory",
+      "nepali": "मौज्दात",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.groups.05": {
+      "english": "Clients",
+      "nepali": "ग्राहक",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.groups.06": {
+      "english": "Finance",
+      "nepali": "वित्त",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.groups.07": {
+      "english": "Operations",
+      "nepali": "सञ्चालन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.groups.08": {
+      "english": "Damage & Maintenance",
+      "nepali": "क्षति तथा मर्मत",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.groups.09": {
+      "english": "Staff",
+      "nepali": "कर्मचारी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.groups.10": {
+      "english": "Management",
+      "nepali": "व्यवस्थापन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.template.dateRange": {
+      "english": "Date Range",
+      "nepali": "मिति दायरा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.template.exportCsv": {
+      "english": "Export CSV",
+      "nepali": "CSV निर्यात गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.template.print": {
+      "english": "Print",
+      "nepali": "प्रिन्ट गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.template.notTracked": {
+      "english": "Not tracked yet",
+      "nepali": "अहिलेसम्म ट्र्याक गरिएको छैन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.template.total": {
+      "english": "Total",
+      "nepali": "जम्मा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.template.average": {
+      "english": "Average",
+      "nepali": "औसत",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.template.count": {
+      "english": "Count",
+      "nepali": "संख्या",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.pulse.title": {
+      "english": "Pulse Dashboard",
+      "nepali": "पल्स ड्यासबोर्ड",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.revenue.title": {
+      "english": "Revenue & Invoicing",
+      "nepali": "आम्दानी तथा बिलिङ",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.expenses.title": {
+      "english": "Expense Reports",
+      "nepali": "खर्च प्रतिवेदनहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.vat.title": {
+      "english": "Sales & VAT Register",
+      "nepali": "बिक्री तथा भ्याट खाता",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.cashflow.title": {
+      "english": "Cash Flow",
+      "nepali": "नगद प्रवाह",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "reports.workingCapital.title": {
+      "english": "Working Capital",
+      "nepali": "चालू पुँजी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.title": {
+      "english": "Settings",
+      "nepali": "सेटिङ",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.subtitle": {
+      "english": "Identity, policy, directory and hardware configuration",
+      "nepali": "पहिचान, नीति, कर्मचारी सूची र उपकरण कन्फिगरेसन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.tabs.business": {
+      "english": "Business & Financial",
+      "nepali": "व्यापार र वित्तीय",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.tabs.people": {
+      "english": "Staff & Permissions",
+      "nepali": "कर्मचारी र अनुमतिहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.tabs.branches": {
+      "english": "Branches & Fleet",
+      "nepali": "शाखाहरू र फ्लीट",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.tabs.system": {
+      "english": "System & Hardware",
+      "nepali": "प्रणाली र उपकरण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.sections.organisation": {
+      "english": "Organisation Identity",
+      "nepali": "संस्थाको पहिचान",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.sections.financial": {
+      "english": "Financial Policy",
+      "nepali": "वित्तीय नीति",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.sections.staff": {
+      "english": "Staff Directory",
+      "nepali": "कर्मचारी सूची",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.sections.roles": {
+      "english": "Roles & Permissions",
+      "nepali": "भूमिका र अनुमतिहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.sections.delivery": {
+      "english": "Delivery Zones & Fees",
+      "nepali": "डेलिभरी क्षेत्र र शुल्क",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.sections.warehouses": {
+      "english": "Warehouses",
+      "nepali": "गोदामहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.sections.preferences": {
+      "english": "My Preferences",
+      "nepali": "मेरा प्राथमिकताहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.sections.language": {
+      "english": "Language",
+      "nepali": "भाषा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.sections.theme": {
+      "english": "Theme",
+      "nepali": "थिम",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.sections.density": {
+      "english": "Display Density",
+      "nepali": "प्रदर्शन घनत्व",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.sections.security": {
+      "english": "Security & PIN",
+      "nepali": "सुरक्षा र PIN",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.sections.backup": {
+      "english": "Backup & Audit",
+      "nepali": "ब्याकअप र लेखापरीक्षण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.actions.edit": {
+      "english": "Edit",
+      "nepali": "सम्पादन गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.actions.save": {
+      "english": "Save Changes",
+      "nepali": "परिवर्तनहरू सुरक्षित गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.actions.cancel": {
+      "english": "Cancel",
+      "nepali": "रद्द गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.actions.reset": {
+      "english": "Reset to Defaults",
+      "nepali": "पूर्वनिर्धारितमा रिसेट गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.actions.export": {
+      "english": "Export Configuration",
+      "nepali": "कन्फिगरेसन निर्यात गर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.actions.add": {
+      "english": "Add",
+      "nepali": "थप्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.status.saved": {
+      "english": "Settings saved",
+      "nepali": "सेटिङ सुरक्षित गरियो",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.status.error": {
+      "english": "Could not save settings",
+      "nepali": "सेटिङ सुरक्षित गर्न सकिएन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.language.en": {
+      "english": "English",
+      "nepali": "English",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.language.ne": {
+      "english": "नेपाली",
+      "nepali": "नेपाली",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.language.note": {
+      "english": "Nepali language is in trial. Serials, codes and currency remain in standard Latin format.",
+      "nepali": "नेपाली भाषा परीक्षणमा छ। सिरियल, कोड र मुद्रा मानक ल्याटिन ढाँचामा रहनेछन्।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.financial.taxRate": {
+      "english": "Tax Rate (VAT)",
+      "nepali": "कर दर (भ्याट)",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.financial.currency": {
+      "english": "Currency",
+      "nepali": "मुद्रा",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.financial.paymentTerms": {
+      "english": "Payment Terms",
+      "nepali": "भुक्तानी सर्तहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.financial.securityDeposit": {
+      "english": "Security Deposit Policy",
+      "nepali": "धरौटी नीति",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.financial.lateFee": {
+      "english": "Late Fee Policy",
+      "nepali": "विलम्ब शुल्क नीति",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.organisation.companyName": {
+      "english": "Company Name",
+      "nepali": "कम्पनीको नाम",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.organisation.panVat": {
+      "english": "PAN / VAT Number",
+      "nepali": "प्यान / भ्याट नम्बर",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.organisation.phone": {
+      "english": "Phone Number",
+      "nepali": "फोन नम्बर",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.organisation.email": {
+      "english": "Email Address",
+      "nepali": "इमेल ठेगाना",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.organisation.address": {
+      "english": "Business Address",
+      "nepali": "व्यावसायिक ठेगाना",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.staff.member": {
+      "english": "Staff Member",
+      "nepali": "कर्मचारी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.staff.role": {
+      "english": "Role",
+      "nepali": "भूमिका",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.staff.status": {
+      "english": "Status",
+      "nepali": "स्थिति",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.staff.active": {
+      "english": "Active",
+      "nepali": "सक्रिय",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.staff.inactive": {
+      "english": "Inactive",
+      "nepali": "निष्क्रिय",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "settings.staff.addStaff": {
+      "english": "Add Staff Member",
+      "nepali": "कर्मचारी थप्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    }
+  }
 }
