@@ -11,6 +11,7 @@ describe('T9-06 Booqable run-off tracking documentation', () => {
     expect(doc).toContain('Principles of Run-Off')
     expect(doc).toContain('Custody in Booqable')
     expect(doc).toContain('Target Zero (N = 0)')
-    expect(doc).toContain('1 March 2027')
+    expect(doc).toContain('18 February 2027')
+    expect(doc).toContain('Do not force-close')
   })
 })
