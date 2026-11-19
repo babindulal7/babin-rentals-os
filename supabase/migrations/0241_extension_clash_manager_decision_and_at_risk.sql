@@ -216,6 +216,16 @@ begin
       using errcode = '42501';
   end if;
 
+  -- SECURITY DEFINER bypasses RLS: a Coordinator may resolve operational risks,
+  -- but never create account credit or declare a refund on a client's behalf.
+  -- Check even when the amount is zero, and reject crafted positive credit_amount
+  -- with a non-money resolution before any data is read or written.
+  if (v_resolution in ('credit', 'refund') or v_credit_amount > 0)
+     and v_role not in ('Owner', 'Admin', 'Manager') then
+    raise exception 'resolve_booking_at_risk: monetary credit or refund resolution requires Owner, Admin or Manager.'
+      using errcode = '42501';
+  end if;
+
   select * into v_row from public.booking_at_risk where id = v_at_risk_id;
   if not found then
     raise exception 'resolve_booking_at_risk: at-risk record % not found.', v_at_risk_id;

@@ -42,4 +42,19 @@ describe('extension clash + booking at-risk role isolation (issue #223)', () => 
       expect(sql).not.toMatch(new RegExp(`grant (insert|update|delete|truncate|references|trigger) on (table )?public\\.${table}\\b`, 'i'))
     }
   })
+  it('denies Coordinator credit/refund resolutions inside the SECURITY DEFINER RPC (P0)', () => {
+    const start = sql.indexOf('create or replace function public.resolve_booking_at_risk(')
+    expect(start).toBeGreaterThanOrEqual(0)
+    const resolver = sql.slice(start)
+    expect(resolver).toMatch(/v_role not in \('Owner', 'Admin', 'Manager', 'Coordinator'\)/)
+    expect(resolver).toMatch(/v_resolution in \('credit', 'refund'\) or v_credit_amount > 0/)
+    expect(resolver).toMatch(/v_role not in \('Owner', 'Admin', 'Manager'\)/)
+    expect(resolver).toContain("using errcode = '42501'")
+    const monetaryGuard = resolver.indexOf("v_resolution in ('credit', 'refund')")
+    const firstRiskRead = resolver.indexOf('select * into v_row from public.booking_at_risk')
+    expect(monetaryGuard).toBeGreaterThan(0)
+    expect(firstRiskRead).toBeGreaterThan(monetaryGuard)
+    // This is a source guard; PGlite behavioral and hosted JWT checks are separate.
+  })
+
 })

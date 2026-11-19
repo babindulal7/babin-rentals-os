@@ -9236,6 +9236,63 @@ STEPS.push({
   },
 })
 
+
+STEPS.push({
+  id: 'L86',
+  title: 'at-risk monetary resolutions refuse Coordinator and allow Manager role gate (P0, Law 6)',
+  expect: 'green',
+  shortfall: 'PGlite role emulation only. Hosted Supabase JWT/PostgREST role acceptance remains outstanding.',
+  run: async () => {
+    // Deliberately nonexistent UUID: the permission check must execute BEFORE
+    // an at-risk row lookup. This tests negative access without money writes.
+    const nonexistentAtRiskId = '00000000-0000-4000-8000-00000000a986'
+    const payload = (resolution, creditAmount) => JSON.stringify({
+      at_risk_id: nonexistentAtRiskId,
+      resolution,
+      credit_amount: creditAmount,
+    })
+    const call = 'select resolve_booking_at_risk($1::jsonb)'
+    const permissionRefusal = /monetary credit or refund resolution requires Owner, Admin or Manager/i
+    const missingRecord = /at-risk record .* not found/i
+
+    await as('Coordinator', async () => {
+      // Monetary intent is prohibited even for a zero-value credit or refund;
+      // a crafted positive amount cannot be smuggled through similar_item.
+      await refuses('Coordinator credit 100 refused before row lookup', call,
+        [payload('credit', 100)], permissionRefusal)
+      await refuses('Coordinator credit zero refused before row lookup', call,
+        [payload('credit', 0)], permissionRefusal)
+      await refuses('Coordinator refund refused before row lookup', call,
+        [payload('refund', 100)], permissionRefusal)
+      await refuses('Coordinator refund zero refused before row lookup', call,
+        [payload('refund', 0)], permissionRefusal)
+      await refuses('Coordinator forged amount under operational resolution refused', call,
+        [payload('similar_item', 1)], permissionRefusal)
+      // Non-monetary operational decisions remain permitted at the role gate.
+      await refuses('Coordinator non-money choice reaches row lookup', call,
+        [payload('similar_item', 0)], missingRecord)
+    })
+
+    await as('Manager', async () => {
+      await refuses('Manager monetary credit reaches row lookup (not rejected by guard)', call,
+        [payload('credit', 100)], missingRecord)
+      await refuses('Manager refund reaches row lookup (not rejected by guard)', call,
+        [payload('refund', 0)], missingRecord)
+    })
+
+    await as('Warehouse', async () => {
+      await refuses('Warehouse cannot resolve at-risk monetarily', call,
+        [payload('credit', 100)], /booking desk roles only/i)
+    })
+
+    await as('Client', async () => {
+      await refuses('Client cannot resolve at-risk monetarily', call,
+        [payload('refund', 100)], /booking desk roles only/i)
+    })
+  },
+})
+
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break
