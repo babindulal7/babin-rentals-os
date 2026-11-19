@@ -1,7 +1,7 @@
 # Booqable Full Data Archival & Safe Cancellation Protocol (T9-08)
 
 **Card:** T9-08 · Archive Booqable, then cancel  
-**Target Cutoff:** Cancellation notice by 10 March 2027 (26 Falgun 2083) before 20 March renewal  
+**Renewal planning checkpoint:** 18 February 2027 is the owner's reported annual-plan deadline; verify exact billing, notice period, export access and contractual cancellation date in Booqable. No cancellation date is approved in this draft.  
 **Status:** Protocol & Archival Runbook  
 **Auditor / Owner:** Babin + Lane Lead  
 
@@ -31,9 +31,9 @@ Before cancelling the Booqable subscription, a complete, immutable snapshot of a
 
 ---
 
-## 4. Cancellation Steps (By 10 March 2027)
+## 4. Conditional Cancellation Checklist (owner approval required)
 1. Confirm all run-off Booqable rentals (T9-06) have been returned and closed (N = 0).
 2. Check Account & Billing in Booqable admin.
-3. Submit formal cancellation request before the 30-day notice window expires.
-4. Save official cancellation confirmation email PDF in archive directory.
-5. Verify `babinrentals.com` DNS permanently directs to `book.babinrentals.com`.
+3. Verify actual renewal/cancellation notice terms directly in Booqable billing; if the new system is not safe, approved and production-verified before the deadline, plan for continuity/renewal instead of a forced cutoff. Do not assume a 30-day notice applies.
+4. Obtain a separate owner decision to cancel; only then submit the cancellation with sufficient notice and save written confirmation in the archive directory.
+5. Verify all live bookings, documents, obligations, and public URLs remain reachable before/after migration; change DNS only under an approved cutover plan; do not redirect the entire company website by default.
