@@ -60,9 +60,9 @@ describe('Gemma 4 Implemented Improvements Suite', () => {
   })
 
   describe('Improvement 3: Bilingual Bikram Sambat & Nepali Language Switching', () => {
-    it('refuses a Nepali switch before whole-app acceptance', async () => {
+    it('refuses a Nepali switch when unauthenticated', async () => {
       expect(getCurrentLanguage()).toBe('en')
-      await expect(toggleLanguage()).rejects.toThrow('Nepali will be available')
+      await expect(toggleLanguage()).rejects.toThrow('Sign in to change your language.')
       expect(getCurrentLanguage()).toBe('en')
       expect(localStorage.getItem('br.settings.language')).toBeNull()
     })
@@ -73,7 +73,7 @@ describe('Gemma 4 Implemented Improvements Suite', () => {
 
       await applyLanguage('ne')
       expect(listener).toHaveBeenCalled()
-      expect(document.documentElement.getAttribute('lang')).toBe('en')
+      expect(document.documentElement.getAttribute('lang')).toBe('ne')
 
       window.removeEventListener('languagechange', listener)
     })
