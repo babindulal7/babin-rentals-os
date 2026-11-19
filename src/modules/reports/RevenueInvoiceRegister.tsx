@@ -45,7 +45,7 @@ const num = { ...td, textAlign: 'right' as const }
  * The invoice register for one civil-day window. Mount it with `key` set to the
  * window so a new window starts on page one.
  */
-export function RevenueInvoiceRegister({ fromAd, toAd }: { fromAd: string; toAd: string }) {
+export function RevenueInvoiceRegister({ fromAd, toAd }: { fromAd?: string; toAd: string }) {
   const [page, setPage] = useState(0)
   // Set just before a Newer / Older turn, so focus moves to the new range once it lands.
   const turning = useRef(false)
@@ -54,16 +54,17 @@ export function RevenueInvoiceRegister({ fromAd, toAd }: { fromAd: string; toAd:
   const load = useLoad<RegisterPage>(
     async () => {
       // `issue_date` is a DATE column: the bounds are the report's civil days, not instants.
+      // All dates has no lower bound: the register then lists from the first issued invoice.
       const res = await listInvoices({
         page: { index: page, size: REGISTER_PAGE },
-        dateRange: { column: 'issue_date', fromAd, toAd },
+        dateRange: { column: 'issue_date', toAd, ...(fromAd ? { fromAd } : {}) },
         chips: { status: REGISTER_STATUSES },
         presence: { issue_date: true },
         withCount: true,
       })
       return { rows: res.rows, total: res.total ?? null }
     },
-    { key: `${fromAd}|${toAd}|${page}` },
+    { key: `${fromAd ?? 'all'}|${toAd}|${page}` },
   )
 
   useEffect(() => {
