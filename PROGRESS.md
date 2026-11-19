@@ -1,5 +1,66 @@
 # Progress Log
 
+## 2026-11-20 — T2-23: Allow overbooking on chosen products with safe shortages (Lane A)
+
+**Did**
+- Implemented **T2-23 · Allow overbooking on chosen products** (`lane-a/T2-23-allow-overbooking-safe-shortages`):
+  - Authored migration `supabase/migrations/0246_allow_overbooking_on_chosen_products.sql`:
+    - Added `products.allow_overbooking boolean not null default false` (off by default, B12).
+    - Added `booking_lines.short_quantity integer not null default 0 check (short_quantity >= 0)`.
+    - Extended `booking_at_risk` causes to include `'overbooking_shortage'`.
+    - Exposed `allow_overbooking` on `products_v` and updated `record_editor_private` schemas.
+    - Updated `confirm_booking_atomic`:
+      - Evaluates genuine free capacity atomically under row locks (`FOR UPDATE` on `products`).
+      - If `allow_overbooking = true` and requested quantity exceeds free stock, reserves only genuine free units, records the excess as `short_quantity`, leaves physical units unreserved, logs `booking_at_risk` row with `overbooking_shortage`, and advances to `Booked`.
+      - If `allow_overbooking = false`, fails closed if capacity is exceeded.
+    - Added stage gate trigger `trg_a_enforce_pack_shortage_gate` on `booking_stage_transitions`:
+      - Strictly blocks moving to `Packed` or `On Rent` while `short_quantity > 0` or unresolved overbooking risk exists (`gate.pack.shortage`).
+    - Remediated `resolve_booking_at_risk` to require durable coverage:
+      - Checks active sub-rental lines (`line_type = 'Sub-rental'`) or explicit `covering_qty`.
+      - Notes alone without coverage leave `short_quantity` unchanged and Pack blocked.
+      - Partial coverage reduces only the covered amount, keeping Pack blocked until shortage is completely 0.
+  - Updated Frontend:
+    - Added "Allow overbooking" checkbox to `EquipmentRecordEditor.tsx` in Pricing & Rental section.
+    - Added overbooking switch to `BulkEditProductsModal.tsx` for bulk product updates.
+    - Removed legacy device-only setting in `src/lib/bookingRules.ts` and unconditional bypass in `AddItemPanel.tsx`.
+    - Rendered shortage badge ("1 short — sub-rent or swap") in `LineItemTree.tsx` and `BookingDetail.tsx`.
+  - Added lifecycle steps `L87`, `L88`, `L89` in `scripts/e2e-lifecycle.mjs`:
+    - `L87`: past stock without switch is refused.
+    - `L88`: with switch on, confirms with short line and 0 phantom reservations.
+    - `L89`: Pack refuses short line; notes alone fail to clear shortage; providing sub-rental coverage clears shortage and allows Pack.
+  - Authored design documentation in `docs/verification/T2-23_DESIGN.md` and decision record in `docs/decisions/T2-23-product-overbooking.md`.
+
+**Ruled**
+- B12, B53, K4: Overbooking is product-specific and off by default. Physical GiST exclusion constraint on units is never bypassed.
+- Shortage clearance requires durable coverage; notes or resolution labels alone never unblock Pack.
+- Warehouse views of shortages strictly mask all prices and supplier rates (Law 6).
+
+**Verified**
+- `npm run check:pglite`: 244/244 migrations applied cleanly, 0 leaks, 0 defects.
+- `npm run check:lifecycle`: 90/90 green (all steps including L87, L88, L89 passing).
+- `npm run typecheck`: exit 0.
+- `npm run lint`: exit 0.
+- `npm run build`: built in 2m 47s with exit code 0.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 111 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 90 / 90 (100%) | +3 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 244 files · check:pglite 244/244 applied, 0 failed.
+Gates read from .lifecycle-result.json, written 2026-11-20.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T2-23 completed and verified.
+- Next in sequence: T2-24 (Temporary stock from partners).
+
+
 ## 2026-11-19 — T7-02: Booking site and public catalogue (Lane C / Windows)
 
 **Did**
