@@ -23,6 +23,7 @@ import type { RecordKind } from '../recordEditor'
 
 import { createBuilder, type EngineHooks, type PgError, type Row, type Store } from './engine'
 import { buildStore, clientDirectory, VIEW_OF } from './corpus'
+import { mockDeliveryRpc, seedDeliveryMock } from './deliveryRpcs'
 import { TIME_DEFAULTS } from './columnDefaults'
 import { PROJECT_TYPES } from '../projectTypes'
 import { MOCK_LOGINS } from '../devQuickLogins'
@@ -122,6 +123,8 @@ function withColumnDefaults(table: string, row: Row, at: string): Row {
 const isWiped = typeof localStorage !== 'undefined' && localStorage.getItem('babin_data_wiped') === 'true'
 const store: Store = buildStore({ seeded: !isWiped && import.meta.env?.['VITE_MOCK_SEEDED'] === 'true' })
 const overlay = loadOverlay()
+// Delivery tables, so the fee-grid and distance-band reads (which are table selects, not RPCs) have rows.
+seedDeliveryMock(store)
 
 for (const { table, row } of overlay.inserts) {
   // A row stored before the defaults were filled gets them from its own
@@ -2305,6 +2308,13 @@ export const mockSupabase = {
      * success-fabrication class this repo has a register for, sitting in the
      * one place a missing RPC should be loudest. An unimplemented function is
      * now an ERROR, so a caller fails visibly instead of continuing on null. */
+    // Delivery zones, the fee grid, distance bands, booking zones, outsourced quotes and waiting charges
+    // (migrations 0189, 0244, 0246-0251) live in their own file so this one does not grow further.
+    const deliveryResult = mockDeliveryRpc(name, args ?? {}, {
+      store,
+      actorId: () => readSession()?.user?.id ?? null,
+    })
+    if (deliveryResult) return deliveryResult
     console.warn(`[mock] rpc("${name}") is not implemented`)
     return Promise.resolve({
       data: null,

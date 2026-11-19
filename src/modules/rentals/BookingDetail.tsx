@@ -3728,11 +3728,12 @@ function BookingDetailView() {
         }}
       />
 
-      {showWaitingChargeModal && (
+      {showWaitingChargeModal && bookingId && (
         <AddWaitingChargeModal
           isOpen={showWaitingChargeModal}
           onClose={() => setShowWaitingChargeModal(false)}
-          bookingId={id}
+          // The booking UUID, not `id` (the booking number from the route): the database keys on the UUID.
+          bookingId={bookingId}
           onAdded={() => {
             setFloorVersion((v) => v + 1)
             refreshBookingData()
