@@ -21,6 +21,8 @@ This change extends the **existing** `scripts/verify-staging-source-hashes.mjs` 
 | `0188_smart_reservation_holds.sql` | Adds inventory hold state, double-booking exclusion and atomic reservation RPCs | Separate dependency/transaction review; preserve constraints and ensure no overlap bugs |
 | `0188_staff_renting_gear.sql` | Adds staff-client fields, staff discount enum and client views/record editor fields | Independent dependency, enum transaction and role-visibility review; do not rename/delete either file to hide collision |
 
+**0013→0014 transaction barrier:** `0013_business_8_roles.sql` adds new `system_role` enum values, and `0014_business_8_policies.sql` uses them. The 17 Nov rollback-only hosted rehearsal confirmed only `0001`–`0013`; it did **not** test 0014. PostgreSQL requires the enum additions to be **committed before their use in a separate transaction**. A single enclosing transaction for the entire migration chain would be an invalid substitute for a reviewed staging install. Record this prerequisite in the manual dependency plan.
+
 **0188 ordering:** The local PGlite runner applies filenames in lexical order and has passed both files. This only establishes **that offline sequence's compatibility** on its fixture; it is **not** a reviewed hosted application order. No rename, migration-history repair, or re-numbering authorized.
 
 **P0 security:** PR #242 was merged into `main` and guards `resolve_booking_at_risk` from Coordinator credit/refund attempts in source `0241`. Real hosted authentication, JWT, RLS/ACL and security-definer checks remain required.
