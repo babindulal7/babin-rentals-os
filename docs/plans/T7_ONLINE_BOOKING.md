@@ -209,7 +209,7 @@ units only".
 ungroup products on the equipment form; screen check.
 **Needs** — T7-02.
 
-### T7-14 · "Away" switch for online booking            status: todo · size: S · lane C · [go-live] · slips first
+### T7-14 · "Away" switch for online booking            status: doing · size: S · lane C (Windows) · [go-live] · slips first
 **What** — One switch in Settings ▸ Online booking (⭐ Owner · Admin · Manager): **"Away — not taking
 online requests"**, with an optional message and an optional "back on" date (B6). While it is on, the
 site still shows the catalogue and rates, the request button shows the message ("Back on 15 Feb — call
