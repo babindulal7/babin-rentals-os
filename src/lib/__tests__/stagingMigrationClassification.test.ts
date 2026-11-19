@@ -25,7 +25,7 @@ describe('T1-02 staging source classification is read-only and fail-closed', () 
       ['0012_', 'SYNTHETIC_FIXTURE_ONLY_AFTER_INDEPENDENT_REVIEW'],
       ['0047_', 'QUARANTINE_GENERATED_DATA_SELECT_MINIMAL_SAFE_FIXTURES'],
       ['0082_', 'QUARANTINE_DYNAMIC_BOOKING_FIXTURES'],
-    ]) {
+    ] as const) {
       expect(manifest.files.find(x => x.filename.startsWith(prefix))?.staging_treatment).toBe(marker)
     }
     expect(manifest.files.filter(x => x.filename.startsWith('0188_'))).toHaveLength(2)
@@ -33,6 +33,7 @@ describe('T1-02 staging source classification is read-only and fail-closed', () 
       x.flags.includes('DUPLICATE_PREFIX_DEPENDENCY_ORDER_REVIEW')
     )).toBe(true)
     expect(manifest.files.find(x => x.filename.startsWith('0047_'))?.bytes).toBeGreaterThan(1_000_000)
+    expect(manifest.files.find(x => x.filename.startsWith('0013_'))?.flags).toContain('ENUM_CHANGE_DEPENDENCY_MANUAL_REVIEW')
     expect(manifest.filename_sorted_reference_only).toBe(true)
     expect(manifest.independently_reviewed_dependency_order).toBe(false)
     expect(manifest.authorized_staging_writes).toBe(false)
