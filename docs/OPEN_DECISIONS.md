@@ -432,3 +432,19 @@ quotation allowed.
 **Waiting charge, answered 19 Nov (Babin):** who may add it: Owner, Admin, Manager, Coordinator. If the invoice is already issued: "separate invoice for the extra charge".
 
 **ANSWERED 19 Nov (Babin, RULINGS-2026-11-19 S4 row 11): keep the refusal (option a); nothing to build.** *(Was: TODO(decision): separate invoice for a waiting charge after issue. NOT BUILT; it conflicts with R-03.)* What 0251 does: adds the flat Service line to the booking and appends it to the booking's DRAFT invoice (SPEC-P0-1 R-02/R-03: extra charges append to the one Draft), and when the invoice is already issued it REFUSES in words ("corrections after issue are Void + Credit Note"). Why the separate invoice is not built: R-03 is one invoice per rental (`create_invoice` refuses a second one), and the close gates read ONE invoice's outstanding amount, so an extra invoice could let a rental close with the extra charge unpaid. Re-invoicing is already an open ruling (MONEY-07 in `create_invoice`). Babin to confirm one of: (a) keep the refusal (void and reissue, as R-03 says); (b) amend R-03 and the close gates to sum every invoice on the booking, then build a separate extra-charge invoice. Reverting 0251 is independent of this.
+
+---
+
+## 24. Crew Payout TDS Withholding Rates (O-5) & Device Acceptance Certifications — ANSWERED 20 Nov 2026 (Babin)
+
+Card: T8-08 (`docs/plans/T8_MEMBERSHIP_CREW.md`). Ruling record: `RULINGS-2026-11-20.md` (S5, S6).
+
+**Ruled by Babin on 20 Nov 2026:**
+1. **O-5 Crew Payout TDS Rates:**
+   - **Internal Staff performing crew assignments:** **1.5%** TDS withholding rate.
+   - **Freelance / External Crew contractors:** **15%** TDS withholding rate.
+   - Payout figures (gross, TDS, net) snapshot immutably in `crew_bookings` via `record_crew_payout` RPC (Law 4). A subsequent rate change never alters past stored payout figures.
+2. **Owner Physical Device Walkthrough Certifications ("2 ALL DONE"):**
+   - **T3-17 (Extend booking in 2 taps):** Walkthrough on mobile/iPad approved.
+   - **T3-24 (Quick expense with bill photo):** Walkthrough on iPhone approved.
+   - **T6-04 – T6-09 (Nepali language waves 1–4, layout & user switch):** Whole-app review approved on physical iPad and phone. Language toggle readiness certified.

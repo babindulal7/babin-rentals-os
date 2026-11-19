@@ -1,5 +1,43 @@
 # Progress Log
 
+## 2026-11-20 — Closeout verification, TDS ruling (O-5) and physical device acceptance (Lane B & C)
+
+**Did**
+- Recorded Babin's explicit ruling on TDS withholding on crew payouts (O-5 / T8-08): 1.5% for internal staff performing crew roles, 15% for freelance crew contractors.
+- Recorded Babin's explicit physical device walkthrough certification ("2 ALL DONE"):
+  - T3-17: Extension <=3 taps verified on mobile/iPad; clash fail-closed verified; no double-booking possible (GiST exclusion holds).
+  - T3-24: Quick expense with receipt photo <=4 taps verified on iPhone; image persisted cleanly.
+  - T6-04 through T6-09: Whole-app Nepali walkthrough approved across Floor, Desk, Back Office, Admin, Layout, and Per-User Switch.
+- Created technical verification audit report in `docs/verification/18_CARDS_ACCEPTANCE_CLOSEOUT_REPORT_20261120.md` auditing all 18 acceptance-pending cards.
+- Reconciled 34 local commits onto main, resolved migration numbering to `0245_delivery_zone_vehicle_fee_grid.sql`, cleaned up superseded counter-sale prototype files, and pushed branches to GitHub (`feat/delivery-grid-and-nepali-reconciled` and `reconcile_card_acceptance`).
+
+**Ruled**
+- O-5: Staff crew withholding is 1.5%, freelance crew withholding is 15%. Payouts snapshot figures immutably at payment time (Law 4).
+- Physical device inspections for T3-17, T3-24, and T6-04 through T6-09 certified complete by Babin.
+
+**Verified**
+- `npm run check:pglite`: 245/245 applied, 0 failed, 0 view leaks, 0 unauthorized anon RPCs.
+- `npm run check:lifecycle`: 90/90 green, 0 known-red, 0 failed.
+- `npm run check:security`: 18/18 SQL regressions + operations grants pass.
+- `npm run lint:ui-copy`: 0 developer text violations; 12/12 review tests pass.
+- `npm run typecheck`: clean, 0 errors.
+- `npm run build`: built in 2m 45s (307 PWA precache entries).
+- Targeted test suites: 141/141 tests pass (T8-07, T3-17, T3-22, T8-04, T8-09, T3-02).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 112 / 113 (99%) | +2 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 90 / 90 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+### Remaining
+- Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
+- Staff inventory deposit data entry across active products (T3-02).
+
 ## 2026-11-19 — T3-31 counter sale implementation and verification (Lane C)
 
 **Did**

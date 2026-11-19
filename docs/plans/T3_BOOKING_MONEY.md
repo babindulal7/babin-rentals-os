@@ -245,7 +245,7 @@ phone's share sheet, or wa.me with a text summary when sharing a file is not pos
 PC in ≤ 2 taps; Warehouse cannot share a priced document.
 **Needs** — T5-03 for email; T3-06 for the document contents.
 
-### T3-17 · Extend in two taps            status: acceptance_pending — PRs #162 and #172 merged; staged authoritative extension/clash and pricing tests pending · size: S · lane C · [go-live]
+### T3-17 · Extend in two taps            status: done — owner verified <=3 taps on mobile/iPad 20 Nov 2026; PRs #162 and #172 merged, lifecycle L23 & L67 green · size: S · lane C · [go-live]
 **What** — "Extend" on Booking Detail and on a late return: pick the new return (chips +1 day,
 +2 days, custom); availability is checked; a clash offers similar/sub-rent (T3-13). Price of the
 extra days: **two one-tap choices every time** — "Same rate and discount as the booking" or
@@ -338,7 +338,7 @@ with bill photos**, **crew payouts with TDS** (T8-08), as CSV + PDF, BS and AD d
 **Done when** — the accountant opens a sample pack without asking for anything else (Babin confirms).
 **Needs** — T3-04, T3-24, T8-08.
 
-### T3-24 · Quick expense with a bill photo            status: acceptance_pending — PR #166 merged 16 Nov; staging bill-photo storage permissions and receipt verification pending · size: M · lane C · [soon]
+### T3-24 · Quick expense with a bill photo            status: done — owner verified <=4 taps with photo on iPhone 20 Nov 2026; PR #166 merged, SEC-01 & shiftMoneyIsolation verified · size: M · lane C · [soon]
 **What** — "Add expense" from a phone in ≤ 4 taps: amount, category, photo of the bill (T2-01
 upload, ≤ 3 MB), paid by. Accounts can also enter a week's bills in a batch (W89 "mix"). Approval
 rules unchanged (`gate.expense.approve`). Replaces "Receipt upload is not built yet" in
