@@ -278,12 +278,36 @@ Deno.serve(async (req: Request) => {
             }),
           })
           const khaltiData = await khaltiRes.json()
-          if (khaltiData.pidx && khaltiData.payment_url) {
-            pidx = khaltiData.pidx
-            paymentUrl = khaltiData.payment_url
+          if (!khaltiRes.ok || typeof khaltiData.pidx !== 'string'
+              || !khaltiData.pidx || typeof khaltiData.payment_url !== 'string'
+              || !khaltiData.payment_url.startsWith('https://')) {
+            throw new Error('Khalti did not issue a valid payment initiation.')
           }
+
+          // Persist the provider-issued identifier before returning the checkout URL.
+          // A callback is accepted only when lookup.pidx matches this trusted binding.
+          const { data: boundIntent, error: bindError } = await supabase
+            .from('payment_intents')
+            .update({
+              provider: 'khalti',
+              provider_response: { initiated_pidx: khaltiData.pidx },
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', intent_id)
+            .eq('status', 'pending')
+            .select('id')
+            .single()
+          if (bindError || !boundIntent) {
+            throw new Error('Unable to bind Khalti checkout to a pending payment intent.')
+          }
+          pidx = khaltiData.pidx
+          paymentUrl = khaltiData.payment_url
         } catch (fetchErr) {
-          console.warn('[pay-init] Upstream Khalti initiate failed, falling back to sandbox URL:', fetchErr)
+          console.error('[pay-init] Khalti initiation failed:', fetchErr)
+          return new Response(
+            JSON.stringify({ success: false, error: 'Khalti checkout could not be initialized. No payment has been recorded.' }),
+            { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
         }
       }
 
