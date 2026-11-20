@@ -29,6 +29,7 @@ describe('Roadmap status truth across merged tracks', () => {
 
     const doneCards: Record<string, string> = {
       'T1-03': 'PR #260 merged',
+      'T1-04': 'applied to production by Babin',
       'T1-15': 'PR #208 merged',
     }
     for (const [key, ref] of Object.entries(doneCards)) {
