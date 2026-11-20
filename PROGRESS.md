@@ -1,5 +1,50 @@
 # Progress Log
 
+## 2026-11-21 — T1-09: Transactional email configuration and domain verification protocol (Lane A)
+
+**Did**
+- Implemented and established the transactional email architecture, domain verification protocol, and operational runbook for card **T1-09 · Email from @babinrentals.com** on branch `lane-a/T1-09-email-from-babinrentals-com`:
+  - Modeled monthly transactional email capacity (~3,000 to 4,000 emails/month, W21) covering booking lifecycle notifications, staff morning digests, payment reminders, and client OTP/password recovery.
+  - Selected Resend as primary transactional provider (built on AWS SES infrastructure with dedicated IP pools and clean Deno/REST support; Postmark/Amazon SES documented as alternatives).
+  - Authored comprehensive operational runbook [`docs/runbooks/TRANSACTIONAL_EMAIL_SETUP.md`](docs/runbooks/TRANSACTIONAL_EMAIL_SETUP.md) detailing exact DNS records (SPF, DKIM, DMARC, MX) for `babinrentals.com` at Cloudflare, Custom SMTP configuration for Supabase Auth, and Edge Function secrets setup via `supabase secrets set RESEND_API_KEY`.
+  - Authored automated documentation and boundary verification suite in [`src/lib/__tests__/t109EmailConfigDoc.test.ts`](src/lib/__tests__/t109EmailConfigDoc.test.ts) (3/3 tests pass).
+  - Promoted card `T1-09` in [`docs/plans/T1_RELEASE.md`](docs/plans/T1_RELEASE.md) to `ready — awaiting merge (lane-a/T1-09-email-from-babinrentals-com)`.
+
+**Ruled**
+- Zero credentials committed to git or logs (Rule N-8, Law 6).
+- Email bodies are never persisted in the database; `email_logs` records only template, recipient, and status metadata (Rule S13, W21).
+- Client transactional notifications remain English-only (Rule W80).
+- DMARC rollout follows phased progression: `p=none` for 2 weeks monitoring, then advancing to `p=quarantine`.
+
+**Verified**
+- `npx vitest run src/lib/__tests__/t109EmailConfigDoc.test.ts`: PASS (3/3 tests).
+- `npm run check:pglite`: PASS (252/252 migrations applied, 0 leaks, 225 definer search paths pinned).
+- `npm run check:lifecycle`: PASS (93/93 steps green).
+- `npm run check:anon`: PASS (19 callable anon functions, 142 RLS tables, 0 owner-rights views, 6/6 Batch 0 denials).
+- `npm run typecheck`: clean AST check with 0 errors.
+- `npm run lint`: clean, 0 warnings.
+- `npm run lint:ui-copy`: PASS (0 developer text violations).
+- `npm run check:contrast`: PASS (97/97 WCAG AA).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 112 / 113 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 93 / 93 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+### Remaining
+- Babin applies Cloudflare DNS records (SPF/DKIM/DMARC) for `babinrentals.com` and sets `RESEND_API_KEY` on staging/production (T1-09 operator step).
+- Owner runs `scripts/backup-db.ps1` for fresh production dump (T1-01).
+- Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
+- Staff inventory deposit data entry across active products (T3-02).
+- T3-13, T3-20, T3-30: pending remaining accountant & staged receipts.
+- T0-12: hosted staging migration apply by Babin.
+- T7 online booking: Track T7 lane C integration.
+
 ## 2026-11-21 — T0-04: Read-only remote branch census and owner-gated cleanup (Docs audit)
 
 **Did**
@@ -32,8 +77,6 @@
 - Resolve Codex review feedback and get exact-head documentation/CI gate validation for PR #267.
 - Request specific owner authorization before any future remote archive tagging or deletion; no cleanup is preauthorized.
 - Continue release T1-02 staging provenance and safety acceptance under separate authorization, not via branch cleanup.
-
-
 
 ## 2026-11-21 — T1-04: Batch 0 anonymous business RPC lockdown rehearsal & production apply (Lane A + Babin)
 

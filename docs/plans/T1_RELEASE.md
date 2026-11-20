@@ -125,7 +125,7 @@ Raw database or gate text (`GATE:…`, Postgres messages) goes to the log, never
 **Done when** — a forced test error on staging appears in Sentry with path only, no query string.
 **Needs** — T1-07.
 
-### T1-09 · Email from @babinrentals.com            status: todo · size: M · lane A + Babin
+### T1-09 · Email from @babinrentals.com            status: ready — awaiting merge (lane-a/T1-09-email-from-babinrentals-com) · size: M · lane A + Babin
 **What** — Pick the transactional email service at setup time by checking live prices and daily
 limits (candidates: Resend, Postmark, Amazon SES, Brevo); Babin creates the account. Verify the
 domain: SPF, DKIM, DMARC (start `p=none`, move to `quarantine` after two clean weeks). Point
