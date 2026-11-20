@@ -263,6 +263,14 @@ begin
         raise exception 'GATE:gate.payment.confirmed_booking_missing|The request has no confirmed booking.';
       end if;
       v_linked_booking_id := v_req.booking_id;
+      -- Shared booking row lock serializes this client checkout with the
+      -- staff-issued payment-link path (migration 0255).
+      perform 1 from public.bookings
+       where id = v_linked_booking_id
+         for update;
+      if not found then
+        raise exception 'GATE:gate.payment.booking_not_found|Confirmed booking no longer exists.';
+      end if;
       select id, outstanding_amount, status
         into v_inv
         from public.invoices
@@ -297,7 +305,8 @@ begin
     select id, client_id, branch_id, stage
       into v_bk
       from public.bookings
-     where id = p_booking_id;
+     where id = p_booking_id
+       for update;
 
     if not found then
       raise exception 'GATE:gate.booking.not_found|Booking not found.';
@@ -335,6 +344,18 @@ begin
 
   else
     raise exception 'GATE:gate.payment.target_required|Either booking_id or booking_request_id must be provided.';
+  end if;
+
+  -- A booking balance can be paid through a client-request checkout OR
+  -- a staff-issued payment link.  Do not permit independent active intents.
+  -- In both paths the booking row is locked above before this shared guard.
+  if coalesce(v_linked_booking_id, p_booking_id) is not null and exists (
+    select 1 from public.payment_intents pi
+     where pi.booking_id = coalesce(v_linked_booking_id, p_booking_id)
+       and (pi.status = 'paid'
+         or (pi.status = 'pending' and pi.expires_at > now()))
+  ) then
+    raise exception 'GATE:gate.payment.attempt_in_progress|Another payment checkout is active for this booking.';
   end if;
 
   if v_amount_paisa <= 0 then
