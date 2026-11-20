@@ -9733,7 +9733,7 @@ STEPS.push({
     // 2. Client intent creation via create_payment_intent: amount is computed on server
     const intentUuid = crypto.randomUUID()
     let intentId
-    await as('Coordinator', async () => {
+    await asService(async () => {
       const intentRes = (await q(
         `select public.create_payment_intent($1, null, $2, 'fonepay') as res`,
         [intentUuid, requestId]
@@ -9762,7 +9762,7 @@ STEPS.push({
 
     // 5. Unconfirmed request: callback marks intent as 'paid', but not allocated (no booking yet)
     const providerRef1 = 'FP-TXN-' + Date.now()
-    await as('Owner', async () => {
+    await asService(async () => {
       const allocRes = (await q(
         `select public.allocate_payment_intent($1::uuid, $2, $3::jsonb) as res`,
         [intentId, providerRef1, JSON.stringify({ fonepay_status: 'SUCCESS' })]
@@ -9773,7 +9773,7 @@ STEPS.push({
     })
 
     // 6. Callback replay: replayed callback changes nothing (idempotent)
-    await as('Owner', async () => {
+    await asService(async () => {
       const replayRes = (await q(
         `select public.allocate_payment_intent($1::uuid, $2, $3::jsonb) as res`,
         [intentId, providerRef1, JSON.stringify({ fonepay_status: 'SUCCESS' })]
@@ -9831,7 +9831,7 @@ STEPS.push({
     assertEq(payRow.transaction_ref, providerRef1, 'transaction_ref matches Fonepay provider ref')
 
     // 9. Second confirmation attempt or re-allocation attempt changes nothing (idempotent)
-    await as('Owner', async () => {
+    await asService(async () => {
       const secondAlloc = (await q(
         `select public.allocate_payment_intent($1::uuid, $2, $3::jsonb) as res`,
         [intentId, providerRef1, JSON.stringify({ fonepay_status: 'SUCCESS' })]
@@ -10233,8 +10233,8 @@ STEPS.push({
       assert(khalti && khalti.enabled === false, 'Khalti disabled by default')
     })
 
-    // 2. Disabled provider (eSewa) is refused when creating intent
-    await as('Owner', async () => {
+    // 2. Disabled provider (eSewa) is refused by verifier service
+    await asService(async () => {
       let threw = false
       let errMsg = ''
       try {
@@ -10268,7 +10268,7 @@ STEPS.push({
 
     // 5. eSewa intent can now be created and allocated
     let esewaIntentId
-    await as('Owner', async () => {
+    await asService(async () => {
       const intentRes = (await q(`select public.create_payment_intent(gen_random_uuid()::text, null, '${reqId}'::uuid, 'esewa') as res`)).rows[0].res
       const parsed = typeof intentRes === 'string' ? JSON.parse(intentRes) : intentRes
       assert(parsed.intent_id, 'eSewa intent created')
@@ -10291,6 +10291,8 @@ STEPS.push({
     // 6. Staff activates Khalti switch, creates and allocates Khalti intent
     await as('Admin', async () => {
       await q("select public.set_online_payment_provider_status('khalti', true, 'sandbox')")
+    })
+    await asService(async () => {
       const intentRes = (await q(`select public.create_payment_intent(gen_random_uuid()::text, null, '${reqId}'::uuid, 'khalti') as res`)).rows[0].res
       const parsed = typeof intentRes === 'string' ? JSON.parse(intentRes) : intentRes
       assert(parsed.intent_id, 'Khalti intent created')
@@ -10407,7 +10409,7 @@ STEPS.push({
     })
 
     // 4. Public client inspects link 1 details
-    await as('Admin', async () => {
+    await asService(async () => {
       const detailsRes = (await q(
         `select public.get_payment_link_details($1) as res`,
         [link1.token]
@@ -10431,7 +10433,7 @@ STEPS.push({
     })
 
     // 6. Old link is now expired; get_payment_link_details reports expired
-    await as('Admin', async () => {
+    await asService(async () => {
       const oldDetailsRes = (await q(
         `select public.get_payment_link_details($1) as res`,
         [link1.token]
@@ -10442,7 +10444,7 @@ STEPS.push({
     })
 
     // 7. "An expired link refuses" — allocate_payment_intent on old intent throws
-    await as('Admin', async () => {
+    await asService(async () => {
       let threw = false
       try {
         await q(
@@ -10458,7 +10460,7 @@ STEPS.push({
 
     // 8. Client pays the new link (server-to-server confirmation via Fonepay)
     const providerRef = 'FP-LINK-' + Date.now()
-    await as('Admin', async () => {
+    await asService(async () => {
       const allocRes = (await q(
         `select public.allocate_payment_intent($1::uuid, $2, $3::jsonb) as res`,
         [link2.intent_id, providerRef, JSON.stringify({ fonepay_status: 'SUCCESS' })]
@@ -10470,7 +10472,7 @@ STEPS.push({
     })
 
     // 9. "A replayed callback changes nothing" (Law 4 & D30 idempotency)
-    await as('Admin', async () => {
+    await asService(async () => {
       const replayRes = (await q(
         `select public.allocate_payment_intent($1::uuid, $2, $3::jsonb) as res`,
         [link2.intent_id, providerRef, JSON.stringify({ fonepay_status: 'SUCCESS' })]
@@ -10486,7 +10488,7 @@ STEPS.push({
     assertEq(Number(payRows[0].amount), invoiceOutstandingRupees, 'payment amount matches invoice outstanding')
 
     // 11. "A paid link cannot be paid twice" — get_payment_link_details reports already_paid
-    await as('Admin', async () => {
+    await asService(async () => {
       const paidDetailsRes = (await q(
         `select public.get_payment_link_details($1) as res`,
         [link2.token]
