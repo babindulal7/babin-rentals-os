@@ -10789,6 +10789,26 @@ STEPS.push({
       staffLink = out
       assert(Boolean(staffLink.intent_id), 'staff-issued payment link exists')
     })
+    // A second staff link must NOT silently expire a still-payable first
+    // link: the customer may already be completing its provider checkout.
+    await as('Coordinator', async () => {
+      let refused = false
+      try {
+        await q('select public.create_booking_payment_link($1, $2::uuid)',
+          [crypto.randomUUID(), bookingId])
+      } catch (err) {
+        refused = true
+        assert(String(err.message).includes('attempt_in_progress'),
+          'second staff link refused rather than replacing first active checkout')
+      }
+      assert(refused, 'cannot replace an active staff payment link')
+    })
+    const originalStatus = (await q(
+      'select status from public.payment_intents where id = $1',
+      [staffLink.intent_id],
+    )).rows[0].status
+    assertEq(originalStatus, 'pending',
+      'the original link remains payable and its provider return remains valid')
     await asService(async () => {
       let refused = false
       try {
