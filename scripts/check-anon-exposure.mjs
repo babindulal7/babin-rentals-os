@@ -103,6 +103,20 @@ if (wh) { const w = await n('authenticated', wh); check(w === 0, `Warehouse read
 r = await as('anon', null, 'select count(*)::int c from staff_directory_v'); check(!r.ok, 'anon cannot read staff_directory_v')
 r = await as('anon', null, 'select count(*)::int c from product_units_service_v'); check(!r.ok, 'anon cannot read product_units_service_v')
 
+console.log('4. Batch 0 closed business RPCs (0163)')
+const closedFns = [
+  { name: 'adjust_stock', call: "select adjust_stock(gen_random_uuid(), 1, 'test', gen_random_uuid(), gen_random_uuid())" },
+  { name: 'portal_claim_by_verified_email', call: 'select portal_claim_by_verified_email()' },
+  { name: 'read_quote_editor', call: "select read_quote_editor('Q-0001')" },
+  { name: 'set_staff_active', call: 'select set_staff_active(gen_random_uuid(), true)' },
+  { name: 'set_staff_role', call: "select set_staff_role(gen_random_uuid(), 'Admin'::system_role)" },
+  { name: 'update_rental_quote', call: "select update_rental_quote(gen_random_uuid(), 'test', gen_random_uuid(), '{}'::jsonb)" },
+]
+for (const fn of closedFns) {
+  const res = await as('anon', null, fn.call)
+  check(!res.ok && res.err.includes('permission denied for function'), `anon cannot execute ${fn.name} (permission denied)`)
+}
+
 console.log(fail ? `\n${fail} check(s) FAILED` : '\nAll checks passed')
 await db.close()
 process.exit(fail ? 1 : 0)

@@ -1,5 +1,52 @@
 # Progress Log
 
+## 2026-11-21 — T1-04: Batch 0 anonymous business RPC lockdown rehearsal & verification harness (Lane A)
+
+**Did**
+- Rehearsed and established the offline verification harness for card **T1-04 · Batch 0 — close the six anonymous RPCs first** on branch `lane-a/T1-04-batch-0-close-the-six-anonymous`:
+  - Authored isolated rehearsal script [`scripts/rehearse-batch-0-anon-rpcs.mjs`](scripts/rehearse-batch-0-anon-rpcs.mjs) (`npm run check:batch-0`):
+    - Phase 1: Rebuilt database baseline through migration 0162 (160 migrations); mirrored production baseline grants with anon EXECUTE on all 6 target business RPCs.
+    - Phase 2: Applied `supabase/migrations/0163_close_six_anon_business_rpcs.sql`.
+    - Phase 3: Confirmed `has_function_privilege('anon', ...)` is false and `has_function_privilege('authenticated', ...)` is true for all 6 signatures.
+    - Phase 4: Probed behavioral execution under role `anon` and verified immediate rejection with `permission denied for function <fn>`.
+    - Phase 5: Executed emergency rollback grant drill, verified clean restoration of baseline grants, and re-applied 0163 cleanly.
+  - Enhanced [`scripts/check-anon-exposure.mjs`](scripts/check-anon-exposure.mjs) with Section 4 asserting immediate `permission denied` when `anon` invokes any of the 6 Batch 0 functions.
+  - Authored comprehensive operator runbook and rehearsal receipt [`docs/verification/T1-04_BATCH_0_EXECUTION_DOCK_2026-11-21.md`](docs/verification/T1-04_BATCH_0_EXECUTION_DOCK_2026-11-21.md) for Babin to apply Batch 0 alone in Supabase SQL Editor with zero ambiguity.
+  - Promoted card `T1-04` in [`docs/plans/T1_RELEASE.md`](docs/plans/T1_RELEASE.md) to `ready — awaiting merge (lane-a/T1-04-batch-0-close-the-six-anonymous)`.
+
+**Ruled**
+- Zero live schema or data writes executed (Rule N-5).
+- Confirmed that closing anon EXECUTE on the 6 business RPCs does not affect `authenticated` staff workflows.
+- Emergency rollback script tested and documented for Babin prior to live application.
+
+**Verified**
+- `npm run check:batch-0`: PASS (all 5 rehearsal phases and rollback drill pass in PGlite).
+- `npm run check:anon`: PASS (19 callable anon functions, 142 RLS tables, 0 owner-rights views, 6/6 Batch 0 RPC denials).
+- `npm run check:pglite`: PASS (252/252 migrations applied cleanly, 0 leaks, 224 definer search paths pinned).
+- `npm run check:lifecycle`: PASS (93/93 steps green).
+- `npm run typecheck`: clean AST check with 0 errors.
+- `npm run lint`: clean, 0 warnings.
+- `npm run lint:ui-copy`: PASS (0 text violations).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 112 / 113 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 93 / 93 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+### Remaining
+- Babin applies Batch 0 (`0163_close_six_anon_business_rpcs.sql`) alone to live after review (T1-04 operator step).
+- Staging-only dry run rehearsal of batch apply (T1-02 / T1-04) once approved by Babin.
+- Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
+- Staff inventory deposit data entry across active products (T3-02).
+- T3-13, T3-20, T3-30: pending remaining accountant & staged receipts.
+- T0-12: hosted staging migration apply by Babin.
+- T7 online booking: Track T7 lane C integration.
+
 ## 2026-11-21 — Roadmap Truth Reconciliation: T1-03, T1-15, T3-14, T3-18, T3-28, T3-29 (All Lanes)
 
 **Did**
@@ -24,24 +71,6 @@
 - `npm run typecheck`: clean (0 errors).
 - `npm run lint:ui-copy`: clean (0 errors).
 - `node scripts/lint-progress.mjs`: PASS.
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 112 / 113 (99%) | +0 |
-| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | 93 / 93 (100%) | +0 |
-| Overall | structural mean of five | ≈ 96% | — |
-
-### Remaining
-- Staging-only dry run rehearsal of batch apply (T1-02 / T1-04) once approved by Babin.
-- Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
-- Staff inventory deposit data entry across active products (T3-02).
-- T3-13, T3-20, T3-30: pending remaining accountant & staged receipts.
-- T0-12: hosted staging migration apply by Babin.
-- T7 online booking: Track T7 lane C integration.
 
 ## 2026-11-20 — T1-03: Settle the migration ledger, live apply plan and hazard quarantine (Lane A)
 
@@ -68,24 +97,6 @@
 - `npm run typecheck`: clean, 0 errors.
 - `npm run lint`: clean, 0 warnings.
 - `node scripts/test-booking-financial-integrity.mjs`: PASS (30/30 checks).
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 112 / 113 (99%) | +0 |
-| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | 93 / 93 (100%) | +0 |
-| Overall | structural mean of five | ≈ 96% | — |
-
-### Remaining
-- Staging-only dry run rehearsal of batch apply (T1-02 / T1-04) once approved by Babin.
-- Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
-- Staff inventory deposit data entry across active products (T3-02).
-- T3-13, T3-20, T3-30: pending remaining accountant & staged receipts.
-- T0-12: hosted staging migration apply by Babin.
-- T7 online booking: Track T7 lane C integration.
 
 ## 2026-11-20 — T3-14: Draft invoice at Confirm, number on full payment (Lane C)
 
@@ -123,6 +134,8 @@
 - T0-12: hosted staging migration apply by Babin.
 - T7 online booking: Track T7 lane C integration.
 
+=======
+>>>>>>> Stashed changes
 ## 2026-11-20 — T2-24: Temporary stock from partners (Lane A)
 
 **Did**
