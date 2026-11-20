@@ -15,7 +15,7 @@
     "db:stop": "supabase stop",
     "db:apply": "node scripts/apply-migrations-local.mjs",
     "db:list": "node scripts/apply-migrations-local.mjs --list",
-    "db:plan": "node scripts/plan-migrations.mjs --accept-rename",
+    "db:plan": "node scripts/plan-migrations.mjs",
     "db:plan:selftest": "node scripts/plan-migrations.mjs --selftest",
     "db:rebuild": "supabase db reset --no-seed && node scripts/apply-migrations-local.mjs",
     "build": "tsc --noEmit && vite build",
@@ -61,7 +61,9 @@
     "i18n:export": "node scripts/i18n-review-export.mjs",
     "i18n:import": "node scripts/i18n-review-import.mjs",
     "check:fixtures": "node scripts/check-no-fixtures.mjs",
-    "check:security": "node scripts/check-astra-phase0.mjs && npm run test:operations-grants && node scripts/test-reset-branch-boundary.mjs && node scripts/test-glossary-revisions.mjs"
+    "check:security": "node scripts/check-astra-phase0.mjs && npm run test:operations-grants && node scripts/test-reset-branch-boundary.mjs && node scripts/test-glossary-revisions.mjs",
+    "db:plan:reviewed": "node scripts/plan-migrations.mjs --accept-rename",
+    "test:db-plan-safety": "node --test scripts/plan-migrations-safety.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
