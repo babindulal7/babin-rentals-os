@@ -1,5 +1,16 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 20 November 2026 — Phase 1 launch scope + accountant owner decisions (ANSWERED)
+
+**Physical peripherals are post-launch:** Babin explicitly deferred all physical iPad, Bluetooth/barcode scanner, camera barcode, label/shop printer and native hardware share-sheet verification/purchases to **Phase 2 after live**. Do not treat these as pre-live launch blockers; preserve software/emulation tests and keep physical acceptance statuses pending. For Phase 1, use counter PC/desktop and manual item lookup with working staged Pack/Handover/Return/Reset, security, payments, availability and audit. See `docs/plans/T1_RELEASE.md`, `T2_FLOOR.md`, `T3_BOOKING_MONEY.md`, `T9_CUTOVER.md`.
+- **T3-31 Counter sale device deferral confirmed (20 Nov 2026):** Babin ruled: *"WE DONT NEED DEVICE WE WILL USE DEFICE FUCTION AFTER LIVE SO NO NEED"*. Physical device/scanner testing for counter sales is formally deferred post-live. Software verification (PR #234 core, PR #240 daily closing, invoice numbering, actor spoofing guards) is fully merged to `main` with 86/86 PGlite lifecycle and CI green. T3-31 is closed as done.
+
+**Eight owner accounting rulings already finalized — do not ask again:** (1) official pre-printed paper VAT invoices, with OS documents as supporting/non-tax PDFs; (2) enter actual paper invoice numbers with duplicate checks and audit; (3) TDS suggestion requires manager/authorized confirmation and verified rate/legal basis; (4) issued corrections preserve the original with linked approval/credit note; (5) refundable deposits in a separate liability ledger; (6) daily reports plus monthly accountant package; (7) dedicated Accountant role with read/review/export but no destructive financial/settings edits; (8) isolated/staged implementation, external accountant sign-off, then separate owner approval before production activation. Product choices are final. **External statutory tax confirmation, sample accountant sign-off and hosted staging are NOT deemed completed** by this entry. No production changes approved.
+
+**Staging location (read-only verified 20 Nov 2026):** Supabase project `babin-staging` (`klhmsrunqrdxjudyhnkm`) is `ACTIVE_HEALTHY` in Singapore, but `public` currently contains **zero application tables**. T1-02 remains open for reviewed staging schema/fixtures and role tests. Do not create another Supabase project, run production writes, copy personal client data casually, or claim staging acceptance yet.
+
+---
+
 ## 18 November 2026 — Delivery fee grid follow-ups (R-9.18, R-9.20)
 
 Babin ruled the grid (9 Nov 2026): zone × vehicle, twelve Settings values, outside valley quoted per trip. Built as migration 0244 and the 'not set' helper. Three product questions are not answered and are NOT decided by the build:
@@ -8,6 +19,8 @@ Babin ruled the grid (9 Nov 2026): zone × vehicle, twelve Settings values, outs
 - **O-29 (Q-2), ANSWERED 18 Nov 2026: Manager and Owner may type grid amounts.** Built in migration 0244 (set RPC allows Owner and Manager). The quoted flag stays Owner-only. Who may type grid amounts: Owner only (built, stricter under B-1) or Manager and up (the 0189 zone-fee rule)?
 - **O-30 (Q-3), ANSWERED 18 Nov 2026: staff pick the zone at booking; delivery jobs inherit it.** Built: `bookings.delivery_zone_id` and `set_booking_delivery_zone()` (migration 0246); the New Rental form picks the zone and saves it on the booking; jobs inherit it through their booking. The job's vehicle class is chosen on the delivery assign sheet (`set_delivery_job_vehicle_class`). Interpretation to confirm with Babin: the booking's delivery charge now fills from the grid by zone and the vehicle class chosen on the form (the replacement for the per-zone fee that used to fill it); staff can still type over it.
 - **O-30 (original question):** How does a delivery job get its zone (Inside Ring Road, Outside Ring Road, Far valley, Outside valley)? Set at booking, at dispatch, or from the address? Not ruled.
+
+---
 
 ## 5 November 2026 — Glossary editing in Settings (O-22)
 

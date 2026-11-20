@@ -90,7 +90,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0241 | T3-29 | extension-clash-manager-decides-and-at-risk | lane-c/T3-29-extension-clash-the-manager-decides | verified (PR #208) |
 | 0242 | T2-19 | return-damage-signature-and-refusal | lane-a/T2-19-signature-at-return-when-damage-is-found | verified (check:pglite 239/239 + check:lifecycle 80/80 Step L78-L79) |
 | 0243 | T3-18 | change-confirmed-booking | lane-c/T3-18-change-confirmed-booking | verified (check:pglite 241/241 + check:lifecycle 85/85 Step L82-L84) |
-| 0244 | T3-31 | counter-sale-atomic | feat/t3-31-counter-sale-atomic | written |
+| 0244 | T3-31 | counter-sale-atomic | feat/t3-31-counter-sale-atomic | verified (check:pglite 242/242 + check:lifecycle 86/86 Step L85; PR #234 & #240 merged) |
 | 0245 | R-9.18 / R-9.20 | delivery-zone-vehicle-fee-grid | feat/r-9-18-delivery-fee-grid | written, not applied (N-5) |
 | 0246 | O-28 / O-30 | dispatch-zone-fee-from-grid | feat/r-9-18-delivery-fee-grid | written, not applied (N-5); needs 0245 first |
 | 0247 | O-28 | retire-per-zone-fee-on-create | feat/r-9-18-delivery-fee-grid | written, not applied (N-5); column kept, fee optional on create; needs 0245 and 0246 |

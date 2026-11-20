@@ -13,6 +13,9 @@ back before Close; a repaired unit returns to stock only when its repair job clo
 scanning queues and flushes; a repeat client's collector is picked in one tap; one person alone on
 the night shift can finish Reset; scanning any label shows who has the item.
 
+**Owner release-scope override · 20 Nov 2026:** The physical iPad/scanner/printer portion of G2 is **Phase 2 after live**, not a pre-live gate. For Phase 1, use a counter PC/desktop and manual item lookup/ticks for a complete staging booking → Pack → Handover → Return → Reset (with real role isolation, server-side custody gates, required photos/signatures where applicable, stock/availability checks and audit evidence). No Bluetooth scanner purchase, iPad device-day, camera barcode verification or physical printing acceptance is required before Phase 1. Keep the hardware-specific acceptance work pending for post-launch; security, money masking and correct accounting remain mandatory.
+
+
 **Priority inside this track:** every card without a tag, and cards marked **[go-live]**, must be done
 by day X; **[soon]** cards go in if time allows, otherwise in the first two weeks after X.
 
@@ -53,7 +56,7 @@ compressed on the device (1600 px, JPEG 0.8, EXIF stripped), retry with the same
 **Not built yet → T2-18:** several photos per pick, a damage photo per flagged unit at Return, the
 10 MB damage-photo size and an honest offline message. The staging checks (Done when 1–3) wait for T1-06.
 
-### T2-18 · Finish evidence capture (what T2-16 left)            status: doing — H2 fail-closed evidence reads in draft · size: L · lane A · [go-live]
+### T2-18 · Finish evidence capture (what T2-16 left)            status: acceptance_pending — PR #80 merged 4 Nov; hosted storage/staging acceptance pending · size: L · lane A · [go-live]
 **What** — Finish what T2-01 left (Claude's review of `3fca220`, 26 Oct). **Items 3 and 4 below were built by T2-16 (several photos, size caps) — check them, do not rebuild;** items 1, 2, 5, 6 and 7 are still open:
 1) **Honest offline message.** Offline, the screens say the photo "was saved / kept on device and will
    upload when connectivity is restored", but nothing keeps or uploads it (`OperationEvidenceStatus.tsx`
@@ -201,7 +204,7 @@ handover; lifecycle step "Technician completes a handover".
 **Done when** — a Technician seat on staging completes all four verbs; sees no money.
 **Needs** — T1-05 (Technician seat).
 
-### T2-06 · Repair job closes the damage            status: ready — awaiting merge (lane-a/T2-06-repair-job-closes-the-damage) · size: L · lane A
+### T2-06 · Repair job closes the damage            status: acceptance_pending — merged 27 Oct (a9f760ae); staged repair-job close and unblocking checks pending · size: L · lane A
 **What** — Build the Maintenance job detail screen (today "not built yet", `Maintenance.tsx` ~lines
 454 and 1139): findings, actions taken, cost (money roles only), photos, and **Close job (note
 required)** for Technician or Manager+. Closing marks the linked `damage_findings` row repaired and
@@ -240,7 +243,7 @@ Replace the two `<Unavailable reason="Printing … is not built">` blocks.
 **Where** — `PackingWorkspace.tsx` (~line 1380), `ReturnWorkspace.tsx` (~line 1571),
 `src/lib/pdf/generatePdf.ts` (`generateDocumentPdf`), `src/lib/labelPrinter.ts`, `QrLabels`.
 **Database** — none (document records via `createDocument` where they exist).
-**Done when** — PDFs open on iPad and print on the shop printer; Warehouse versions carry no prices.
+**Phase 1 done when** — generated Packing/Return PDFs open on a supported desktop browser, are complete and Warehouse versions carry no prices; existing paper workflows remain available. **Phase 2 after live:** physical iPad PDF opening, shop printer and label-printer tests.
 **Needs** — none.
 
 ### T2-09 · Bluetooth scanner at the packing bench            status: done · merged (`f3dcf0c3`) · verified on iPad by Babin · size: S · lane A + Babin
@@ -292,7 +295,7 @@ message + "Add ID" in place); a repeat client's collector is picked in one tap; 
 an ID number.
 **Needs** — T2-01. Also wires the collector picker into `SignOnGlassModal.tsx` as the receiver name (T2-02 left free text).
 
-### T2-13 · Self-QC when alone            status: ready — awaiting merge (lane-a/T2-13-self-qc-when-alone) · size: S · lane A · [go-live]
+### T2-13 · Self-QC when alone            status: acceptance_pending — merged 27 Oct (800b2729); staged self-QC audit and device checks pending · size: S · lane A · [go-live]
 **What** — Allow the person who cleaned an item to pass its QC **when alone on shift** (W43, L7):
 the QC step shows "I am alone on shift" as a tick; with it ticked, `qc_by = cleaned_by` is accepted
 and recorded as self-checked (audit row says so). Without it, a second person is still asked for.
@@ -308,7 +311,7 @@ the "ruled, not yet in code" box in the same commit (B-3).
 **Done when** — both paths work in mock mode and on staging; the audit shows self-checked rows.
 **Needs** — none.
 
-### T2-14 · Scan a label → item card            status: ready — awaiting merge (lane-a/T2-14-scan-a-label-to-item-card) · size: M · lane A · [go-live]
+### T2-14 · Scan a label → item card            status: acceptance_pending — merged 27 Oct (1188d2b4); physical Bluetooth scanner/iPad timing acceptance deferred to Phase 2 after live · size: M · lane A · [soon]
 **What** — Scanning (camera or Bluetooth) or searching an item's QR/asset code **anywhere outside a
 floor workspace** opens its item card: status, **who has it now** (client, booking, due back, with a
 countdown), location if in the shop, next booking, last reset, open damage. Inside a workspace,
@@ -320,11 +323,10 @@ scanning keeps its current meaning (mark the item). Money hidden for floor roles
 **Build notes** — a Bluetooth scanner types the code and presses Enter. Never
 debounce scans — that drops items. Ignore the same code a second time within ⭐ 1.5 s; trim spaces and
 match case-insensitively; every code is checked by the server, and an unknown code says so inline.
-**Done when** — scan → card in ≤ 1 second on the iPad; an item on rent shows the client and due-back
-time; a Warehouse seat sees no money.
+**Phase 1 verification** — search/manual code entry opens the correct item card and an on-rent item shows holder/due-back; a Warehouse seat sees no money, all on staging. **Phase 2 after live done when** — real scanner → card in ≤ 1 second on the iPad with documented physical evidence.
 **Needs** — none.
 
-### T2-15 · Damage found during reset            status: ready — awaiting merge (lane-a/T2-15-damage-found-during-reset) · size: S · lane A · [soon]
+### T2-15 · Damage found during reset            status: acceptance_pending — PR #30 merged 2 Nov; staged email sandbox and damage notice checks pending · size: S · lane A · [soon]
 **30 Oct triage** — Existing [PR #30](https://github.com/babindulal7/babin-rentals-os/pull/30)
 contains the implementation; its `0185` collides with Team Notes on main. Preserve
 it, claim a free number through the ledger, and rerun both database gates after
@@ -374,7 +376,7 @@ Booking Detail and from Pack on the iPad; scanning its QR opens that booking; Wa
 in either PDF; screen check.
 **Needs** — none (T3-26 adds the project line when it lands).
 
-### T2-19 · Signature at Return when damage is found            status: ready — awaiting merge (lane-a/T2-19-signature-at-return-when-damage-is-found) · size: S · lane A · [go-live] · slips first
+### T2-19 · Signature at Return when damage is found            status: acceptance_pending — PR #209 merged 18 Nov; staged signature and refusal iPad checks pending · size: S · lane A · [go-live] · slips first
 **What** — At Return, when at least one unit is flagged damaged or missing, the person returning the
 gear signs once under the list of flagged items ("returned by <name> for <client>; the flagged items
 are as shown") before Return can complete (B19). With no flags, no signature is asked (R-39). Reuse the
@@ -394,7 +396,7 @@ cannot complete until signed or the refusal is recorded; 3) the signature is on 
 4) Warehouse and Technician can do it; 5) screen check.
 **Needs** — T2-02 (done), T2-18 (damage photo per flagged unit).
 
-### T2-20 · Floor adds consumables at Pack and Handover            status: ready — awaiting merge (mac/T2-20-floor-consumables) · size: S · lane A · [go-live] · slips first
+### T2-20 · Floor adds consumables at Pack and Handover            status: acceptance_pending — PR #189 merged 17 Nov; staged money-blind payload inspection pending · size: S · lane A · [go-live] · slips first
 **What** — On Pack and Handover, "**Add consumables**" lists the consumable products (tape, gels,
 batteries) with a quantity stepper (B35). Adding writes a consumable line to the booking through
 T3-30's action: the price comes from the server and floor roles never receive it (Law 6). Stock goes
@@ -409,7 +411,7 @@ price; Warehouse has no price in the DOM or the payload; 2) Handover deducts the
 same `client_uuid` twice adds one line; 4) screen check.
 **Needs** — T3-30.
 
-### T2-21 · Planned downtime with a reason            status: ready — awaiting merge (lane-a/T2-21-planned-downtime-with-a-reason) · size: M · lane A · [go-live] · slips first
+### T2-21 · Planned downtime with a reason            status: acceptance_pending — PR #170 merged 15 Nov; staged calendar and public blackout checks pending · size: M · lane A · [go-live] · slips first
 **What** — Block a unit (or part of a quantity-tracked product) for **dates you know in advance**, with
 a **reason from a list** (B10): ⭐ **Repair · Service or calibration · Our own shoot · Lent to a
 partner · Marketing shoot · Other (type it)**. In that range the unit cannot be booked — New Rental,
@@ -433,7 +435,7 @@ those days only; 2) a downtime over an existing booking is refused with the book
 frees the dates at once; 4) the calendar bar shows the reason to every staff role; 5) screen check.
 **Needs** — T3-22 merged first if it is open (both change `src/lib/queries/availability.ts`).
 
-### T2-22 · Time between rentals: account-wide or per product            status: ready — awaiting merge (lane-a/T2-22-time-between-rentals-account-wide-or) · size: M · lane A · [go-live] · slips first
+### T2-22 · Time between rentals: account-wide or per product            status: acceptance_pending — PR #184 merged 17 Nov; staged per-product setting toggle checks pending · size: M · lane A · [go-live] · slips first
 **What** — Settings ▸ Operations rules gets "**Time between rentals: Account-wide · Per product**"
 (B11, reading). *Account-wide* is today's `rentalTurnaround` setting. *Per product* uses each product's
 **prep minutes before pickup** and **cleaning minutes after return** — `products.prep_time_minutes` and
@@ -501,7 +503,7 @@ partner unit", "the end task appears and closes the stock".
 5) nothing is deleted; 6) screen check.
 **Needs** — T2-21, T2-08 (labels), T3-13 (the partner list in the sub-rent flow).
 
-### T2-11 · Device day            status: todo · size: M · lane A + Babin + staff
+### T2-11 · Device day            status: todo — owner deferred physical iPad/scanner/printer acceptance to Phase 2 after live (20 Nov 2026) · size: M · lane A + Babin + staff
 **What** — One supervised session on the **iPhone 17 Pro, M4 iPad Pro and the Bluetooth scanner**
 (and one staff Android phone if any staff use Android): run five real-shaped bookings through all
 four verbs on staging, in both orientations, light and dark, at 125% text; airplane-mode test
@@ -512,4 +514,5 @@ four verbs on staging, in both orientations, light and dark, at 125% text; airpl
 **Done when** — checklist complete; zero P0 defects open; P1 defects have cards with owners. Also
 drive the counter desktop PC and a laptop (W52), the name + PIN switch on the shared iPad (T1-15),
 and one night-shift return before 6 AM (W31, W32).
-**Needs** — T2-01 … T2-10, T2-12 … T2-15, T1-15; Babin books the session (target 10 Jan 2027, 26 Poush).
+**Timing** — **Phase 2 after live**, no pre-live device-day or scanner purchase requirement. Keep this card `todo`; schedule only after launch, not the previously suggested 10 Jan 2027 date. **Phase 1 instead:** rehearse core floor operations with manual lookup on counter PC/desktop in hosted staging, including signed-in role and audit tests.
+**Needs** — T2-01 … T2-10, T2-12 … T2-15, T1-15; availability of physical equipment after launch.

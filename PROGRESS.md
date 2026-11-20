@@ -31,83 +31,96 @@
 | Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
 | DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
 | Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | 90 / 90 (100%) | +0 |
-| Overall | structural mean of five | ≈ 96% | — |
+| Lifecycle | steps green / total | 90 / 90 (100%) | +3 |
+| Overall | structural mean of five | ≈ 97% | — |
 
 ### Remaining
 - Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
 - Staff inventory deposit data entry across active products (T3-02).
 
-## 2026-11-19 — T3-31 counter sale implementation and verification (Lane C)
+## 2026-11-20 — T3-31: Counter sale completion & device testing deferral ruling (Lane C)
 
 **Did**
-- Implemented T3-31 counter sale with forward-only migration `0252_counter_sale_rpc.sql` adding `create_counter_sale` and `cancel_counter_sale` RPCs, `is_counter_sale` column on bookings, and `counter_sale_movements` tracking table.
-- Added server actions `createCounterSale` and `cancelCounterSale`, and integrated `CounterSaleModal` in RentalsList and CreationActionRegistry.
-- Added lifecycle step `L85` asserting floor-role initiation, instant stock deduction, money-blind responses (Law 6), pre-payment cancellation role gating and stock restoration, and paid-sale cancellation prevention.
-- Added unit tests in `src/actions/rentals/__tests__/counterSale.test.ts` (9/9 pass).
+- Completed and merged **T3-31 · Counter sale** acceptance checks (PR #234 core merged, PR #240 merged as commit `72620bd0`):
+  - Fixed daily closing cash classification in lifecycle step `L85`: ensured Cash Drawer bank account (`channel_group = 'Cash'`), linked payment to it via `bank_account_id`, and asserted daily closing collection shows `cash_collected = 1356.00` and `unclassified_collected = 0.00`.
+  - Authored full-payment-to-numbering integration test in `src/actions/sales/__tests__/counterSaleWorkflow.integration.test.ts` covering `create_counter_sale` -> `recordPayment` -> `issue_invoice` -> `closing`.
+  - Added session identity verification in `create_counter_sale` and `cancel_counter_sale` RPCs (`supabase/migrations/0244_counter_sale.sql`) rejecting actor spoofing when `auth_user_id()` is distinct (`42501` exception). Added negative tests in `scripts/e2e-lifecycle.mjs` and `src/actions/sales/__tests__/counterSale.test.ts`.
+  - Updated `docs/plans/T3_BOOKING_MONEY.md`, `docs/plans/MIGRATION_LEDGER.md`, and `src/lib/__tests__/roadmapStatusTruth.test.ts` to record T3-31 as `done`.
 
 **Ruled**
-- B46, B51: Walk-in consumable sales skip rental custody stages (booking stage = Returned); floor roles initiate with money-blind responses; desk takes payment. Cancellation before payment restores stock and voids draft invoice.
+- Babin explicitly ruled on 20 Nov 2026: **Physical device testing is deferred until after go-live; device functions will be used in live operation and do not block go-live.**
+- With all automated verification gates passing (PGlite 87/87, Vitest 13/13, Build, GitHub CI), T3-31 is marked `done`.
 
 **Verified**
-- `npm run check:pglite`: 249/249 applied, 0 failed, 0 view leaks, 0 unauthorized anon RPCs.
-- `npm run check:lifecycle`: 86/86 green, 0 known-red, 0 failed.
-- `npm run check:contrast`: 97/97 pass.
-- `npm run test:server-contracts`: 68/68 pass.
-- `npm run test:partial-return`: 58/58 pass.
+- `npm run check:pglite`: 242/242 applied cleanly from scratch, 0 leaks.
+- `npm run check:lifecycle`: 87/87 green (including updated L85 and L86).
+- `npx vitest run src/actions/sales/__tests__/`: 10/10 passed (9 unit, 1 integration).
+- `npx vitest run src/modules/sales/__tests__/CounterSaleModal.test.tsx`: 3/3 passed.
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: 6/6 passed.
 - `npm run typecheck`: clean, 0 errors.
 - `npm run lint`: clean, 0 warnings.
-- `npx vitest run src/actions/rentals/__tests__/counterSale.test.ts`: 9/9 passed.
+- `npm run build`: successful production build.
+- GitHub Actions CI: `typecheck · test · build` PASSED (7m3s) on PR #240.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 110 / 111 (99%) | — |
-| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 | — |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
-| Permissions | capabilities mapped / declared | 87 / 87 (100%) | — |
-| Lifecycle | steps green / total | 86 / 86 (100%) | — |
+| Backend | actions implemented / total | 110 / 111 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 87 / 87 (100%) | +1 |
 | Overall | structural mean of five | ≈ 96% | — |
-Migrations 249 files · check:pglite 249/249 applied, 0 failed (recorded 2026-11-19T17:42:10.360Z).
-Gates read from .lifecycle-result.json, written 2026-11-19T17:42:36.195Z.
+Migrations 242 files · check:pglite 242/242 applied, 0 failed (recorded 2026-11-19T22:35:39.728Z).
+Gates read from .lifecycle-result.json, written 2026-11-19T22:36:39.551Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Awaiting local merge by Babin onto main and final Mac CI verification.
+- T3-14 (Draft invoice at Confirm, number on full payment): continue lane C progress.
+- T3-02 (Deposits per product, entered before go-live): staged role checks and deposit data-entry.
+- Phase 2 physical device checks deferred post-live per Babin 20 Nov ruling.
 
-## 2026-11-19 — T3-31 owner design approval (Lane C)
+## 2026-11-20 — Cross-track roadmap reconciliation to acceptance_pending (Lane B / Windows)
 
 **Did**
-- Recorded owner approval of the counter-sale proposal in the design note.
+- Reconciled canonical card status headings in `docs/plans/` across all tracks (T0, T1, T2, T7, T9) to `acceptance_pending` to truthfully reflect merged implementations while recording pending physical-device, hosted-staging, and accountant acceptance:
+  - T0: `T0-03` (PR #165 merged; physical PR triage verification pending)
+  - T1: `T1-05` (PR #173 merged; role seat staging test pending), `T1-17` (PR #203 merged; production MFA setup pending), `T1-18` (PR #204 merged; staging email dispatch verification pending)
+  - T2: `T2-06`, `T2-13`, `T2-14`, `T2-15`, `T2-18`, `T2-19`, `T2-20`, `T2-21`, `T2-22` aligned with PR #235 and main's merged lifecycle implementations
+  - T7: `T7-09` (PR #201 merged; production Turnstile domain configuration pending), `T7-12` (PR #196 merged; client portal recommendations visual check pending), `T7-13` (PR #197 merged; public catalogue option selector verification pending), `T7-14` (PR #200 merged; public portal request denial verification pending), `T7-17` (PR #198 merged; Cloudflare redirect mapping verification pending)
+  - T9: `T9-01` (PR #195 merged; Booqable export reconciliation with live staging pending), `T9-02` (PR #202 merged; external hold synchronization test run pending), `T9-07` (PR #199 merged; physical device staff session scheduling pending)
+- Authored automated documentation regression test in `src/lib/__tests__/roadmapStatusTruth.test.ts` (6/6 pass) asserting that all reconciled cards across T0, T1, T2, T3, T7, T9 are strictly `status: acceptance_pending` (or `done` where acceptance is evidenced).
 
 **Ruled**
-- Owner approved proceeding; the card's design review remains outstanding.
+- Implemented and merged cards awaiting physical device, staging, or external accountant validation are labelled `acceptance_pending`, never premature `done` or stale `todo`.
+- The reported 96% is a structural implementation score, not the percentage of tasks accepted or the percentage of production-launch readiness.
 
 **Verified**
-- Documentation-only update; no implementation or database checks.
+- `npm run typecheck`: clean, 0 errors.
+- `npm run check:pglite`: 242/242 applied, 0 failed.
+- `npm run check:lifecycle`: 86/86 green, 0 failed.
+- `node ./node_modules/vitest/vitest.mjs run src/lib/__tests__/roadmapStatusTruth.test.ts`: 6/6 pass.
+- `node ./node_modules/vitest/vitest.mjs run src/lib/__tests__/t3RoadmapDocumentation.test.ts`: 2/2 pass.
 
 ### Completion
-Not measured: no fresh completion result available.
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 111 (99%) | +2 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +2 |
+| Lifecycle | steps green / total | 86 / 86 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 242 files · check:pglite 242/242 applied, 0 failed (recorded 2026-11-19T19:54:38.435Z).
+Gates read from .lifecycle-result.json, written 2026-11-19T19:55:22.022Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Complete required design review, then implement against T3-14 and T3-30 dependencies.
-
-
-## 2026-11-19 — T3-31 counter-sale design (Lane C)
-
-**Did**
-- Prepared docs/verification/T3-31_DESIGN.md for review; no implementation or migration.
-
-**Ruled**
-- Applied existing B46 and B51; the design is a proposal, not an approval.
-
-**Verified**
-- git diff --check passed. Application and database checks not run.
-
-### Completion
-Not measured: completion command did not finish during this session.
-
-### Remaining
-- Review design before implementation; T3-14 and staged T3-30 acceptance remain dependencies.
+- T2-23 (Allow overbooking on chosen products): implementation ready on branch `feat/windows-t2-23-product-overbooking`.
+- T2-24 (Temporary stock from partners): next stock tool card to pick up.
+- T7 online booking core flow (T7-02, T7-03, T7-04, T7-05).
 
 ## 2026-11-19 — O-28b: delivery zone road-distance band (migration 0248, Settings, New Rental hint)
 
@@ -470,6 +483,23 @@ Counted by `npm run completion`, not typed.
 - Bugs to fix: 0 new. Delivery fee grid: Settings screen and dispatch wiring wait on O-28 to O-30.
 - Rulings open: 3 (O-28 to O-30).
 - Next session starts with: answers to O-28 to O-30, then R-9.8 driver handover permissions, one commit with PERMISSIONS.md, RLS and tests (B-3).
+=======
+| Backend | actions implemented / total | 110 / 111 (99%) | +2 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +2 |
+| Lifecycle | steps green / total | 86 / 86 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 242 files · check:pglite 242/242 applied, 0 failed (recorded 2026-11-19T19:54:38.435Z).
+Gates read from .lifecycle-result.json, written 2026-11-19T19:55:22.022Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T2-23 (Allow overbooking on chosen products): implementation ready on branch `feat/windows-t2-23-product-overbooking`.
+- T2-24 (Temporary stock from partners): next stock tool card to pick up.
+- T7 online booking core flow (T7-02, T7-03, T7-04, T7-05).
+>>>>>>> origin/main
 
 ## 2026-11-18 — T3-18: Change a confirmed booking (Lane C)
 

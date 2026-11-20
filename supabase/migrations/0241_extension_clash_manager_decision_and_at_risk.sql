@@ -19,8 +19,11 @@ create table if not exists public.extension_clash_decisions (
 
 alter table public.extension_clash_decisions enable row level security;
 
+-- A Supabase authenticated session can be a Client. Manager decisions are staff-only.
 create policy extension_clash_decisions_select on public.extension_clash_decisions
-  for select to authenticated using (true);
+  for select to authenticated using (
+    auth_user_role() in ('Owner', 'Admin', 'Manager', 'Coordinator')
+  );
 
 create policy extension_clash_decisions_insert on public.extension_clash_decisions
   for insert to authenticated with check (
@@ -53,8 +56,12 @@ create table if not exists public.booking_at_risk (
 
 alter table public.booking_at_risk enable row level security;
 
+-- Client accounts must never read other clients' booking clashes.
+-- The floor team may see non-money operational risk, but Drivers/Clients may not.
 create policy booking_at_risk_select on public.booking_at_risk
-  for select to authenticated using (true);
+  for select to authenticated using (
+    auth_user_role() in ('Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician')
+  );
 
 create policy booking_at_risk_insert on public.booking_at_risk
   for insert to authenticated with check (
@@ -91,6 +98,23 @@ create policy client_account_credits_insert on public.client_account_credits
   for insert to authenticated with check (
     auth_user_role() in ('Owner', 'Admin', 'Manager', 'Accounts')
   );
+
+-- Supabase creates public tables with broad anon/authenticated default ACLs.
+-- RLS does not protect TRUNCATE, REFERENCES, or TRIGGER privileges. Never rely
+-- on the RLS predicate alone to stop a browser-authenticated user mutating a
+-- credit ledger or clash audit table. All writes here go through audited RPCs
+-- (record_extension_clash_decision, resolve_booking_at_risk,
+-- mark_booking_will_be_late, extend_booking), which check the actor's role.
+revoke all on table public.extension_clash_decisions from public, anon, authenticated;
+revoke all on table public.booking_at_risk from public, anon, authenticated;
+revoke all on table public.client_account_credits from public, anon, authenticated;
+
+-- SELECT remains guarded by role-specific RLS above. Client, anon and Driver
+-- sessions cannot read these staff workflow/finance tables.
+grant select on table public.extension_clash_decisions to authenticated;
+grant select on table public.booking_at_risk to authenticated;
+grant select on table public.client_account_credits to authenticated;
+
 
 -- Add account_credit columns to clients if not present
 do $$
@@ -189,6 +213,16 @@ begin
   v_role := auth_user_role();
   if v_role not in ('Owner', 'Admin', 'Manager', 'Coordinator') then
     raise exception 'resolve_booking_at_risk: booking desk roles only.'
+      using errcode = '42501';
+  end if;
+
+  -- SECURITY DEFINER bypasses RLS: a Coordinator may resolve operational risks,
+  -- but never create account credit or declare a refund on a client's behalf.
+  -- Check even when the amount is zero, and reject crafted positive credit_amount
+  -- with a non-money resolution before any data is read or written.
+  if (v_resolution in ('credit', 'refund') or v_credit_amount > 0)
+     and v_role not in ('Owner', 'Admin', 'Manager') then
+    raise exception 'resolve_booking_at_risk: monetary credit or refund resolution requires Owner, Admin or Manager.'
       using errcode = '42501';
   end if;
 
