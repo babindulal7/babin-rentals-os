@@ -62,13 +62,14 @@ check; lifecycle step "an external hold blocks a reservation on the same unit an
 the hold vanishes the day after its Booqable return.
 **Needs** — T9-01.
 
-### T9-03 · The trial            status: todo · size: M · Babin + staff + lane A support
+### T9-03 · The trial            status: doing — reconciliation sheet prepared, trial prerequisites pending · size: M · Babin + staff + lane A support
 **What** — **11–31 Jan 2027 (27 Poush–17 Magh 2083).** Every real job is entered in Booqable (still
 the master) **and** in the OS, by the person who would normally do it, on their own device and
 account (T1-13). Each evening: a reconcile sheet — bookings created, picked up, returned, money
 received — Booqable vs OS, with differences explained. Defects become cards the same day.
 **Why** — S7.
-**Where** — `docs/verification/TRIAL_<date>.md` (one row per day).
+**Where** — [Trial reconciliation sheet](../verification/TRIAL_2027-01-11.md)
+(one row per day, named for the first trial day).
 **Database** — live, through the app.
 **Done when** — the last 5 trial days reconcile with no unexplained difference.
 **Needs** — G1–G8 met on staging; T9-01, T9-02; staff trained (T9-07).

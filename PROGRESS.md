@@ -1,5 +1,35 @@
 # Progress Log
 
+## 2026-11-21 — T9-03 trial reconciliation sheet (Lane A)
+
+**Did**
+- Prepared [the daily trial reconciliation sheet](docs/verification/TRIAL_2027-01-11.md) for 11–31 January, with fields for bookings created, pickups, returns, money received, evidence and differences. Linked it from T9-03.
+
+**Ruled**
+- S7 and T9-03 keep Booqable as the master during the trial. Staff enter real jobs in both systems. The last five days must reconcile without unexplained differences.
+
+**Verified**
+- Checked that the card links to the sheet and that it contains 21 consecutive daily rows, all pending with empty evidence and totals. Generated the Completion block from this checkout. This documentation change has no fresh application test receipts.
+- The lockfile audit reported 13 moderate and two critical dependency findings, with critical findings in the Vitest and Tinypool dependency tree.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 112 / 113 (99%) | — |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | — |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 252 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Verify G1–G8 on staging, finish T9-01 import and T9-02 hold acceptance, complete T9-07 Phase 1 training, and enable the named T1-13 staff accounts. Babin and staff then run and reconcile the trial.
+
 ## 2026-11-21 — T0-04: Read-only remote branch census and owner-gated cleanup (Docs audit)
 
 **Did**
