@@ -1,5 +1,55 @@
 # Progress Log
 
+## 2026-11-20 — T3-14: Draft invoice at Confirm, number on full payment (Lane C)
+
+**Did**
+- Claimed and implemented migration `0254_draft_invoice_resync_integrity_and_settlement_numbering.sql`:
+  - Part 1 & 2 (Confirm creates numberless Draft, follows booking changes): Fixed draft invoice synchronization engine (`resync_draft_invoice`). Proactively nullified `charges.invoice_line_id` and added `ON DELETE SET NULL` to `charges_invoice_line_id_fkey`, preventing foreign key constraint violations while cleanly removing old draft lines and rebuilding current lines from `booking_lines`, `booking_crew_lines`, and `booking_transport` without line duplication. Synchronized header discount percentage from `booking_discounts` and VAT rate from `bookings.vat_rate`. Fixed `guard_invoice_lines_parent_status` BEFORE DELETE trigger to return `OLD` instead of null.
+  - Part 3 (Number on full payment, W16, Law 7, Law 8): Enhanced `recompute_invoice_payment_state` to atomically mint monotonic invoice number (`next_document_number('invoice')`) and advance invoice status from `Draft` to `Paid` upon full settlement in the same transaction when `outstanding_amount = 0` and `total_amount > 0`.
+  - Updated `issue_invoice(jsonb)` and `issue_invoice(uuid)` to be idempotent (Law 8), returning existing invoice when already numbered without error.
+  - Part 4 (F5 Immutable Guard): Direct modifications to numbered invoices refuse silent edits and require lawful credit note.
+- Added comprehensive lifecycle step `L92` to `scripts/e2e-lifecycle.mjs` testing:
+  1. Draft invoice auto-creation at Confirm with NULL `invoice_no` and initial totals.
+  2. Booking discounts and VAT rate header propagation into Draft invoice.
+  3. Charges added to booking with draft invoice line linking; subsequent booking modifications cleanly resync without line duplication or FK violations.
+  4. Partial payment reduces balance, keeping status `Draft` and `invoice_no` NULL.
+  5. Full settlement atomically mints monotonic `INV-...` number, transitions status to `Paid`, and writes audit record.
+  6. Idempotent retry of `issue_invoice` succeeds without consuming additional numbers.
+  7. F5 guard rejects direct line edits on numbered invoice with actionable credit note message.
+- Updated `docs/plans/MIGRATION_LEDGER.md` (marked 0254 verified) and `docs/plans/T3_BOOKING_MONEY.md` (marked T3-14 complete).
+
+**Ruled**
+- Confirmed W15 and W16: Confirm creates numberless Draft; Draft follows booking changes; number is minted on full settlement in the same transaction.
+- Law 7 and Law 8: Monotonic numbering without gaps; idempotent settlement retry without consuming numbers.
+- Law 1: Arithmetic runs in database/engine only.
+- Law 4 & Law 5: Immutable money; deposits are liabilities and never reduce Outstanding.
+
+**Verified**
+- `npm run check:pglite`: 252/252 applied cleanly, 0 failed, 0 leaks, 224 definer search_paths pinned.
+- `npm run check:lifecycle`: 93/93 green, 0 known-red, 0 failed (including Step L92).
+- `npm test`: all test suites pass.
+- `npm run typecheck`: clean, 0 errors.
+- `npm run lint`: clean, 0 warnings.
+- `npm run check:contrast`: 97/97 pass, 0 failed.
+- `npm run build`: successful production build.
+- CI gate scripts (`test:local-api-guards`, financial integrity, `check:security`, `test:operations-grants`, `test:partial-return`, receipt integrity, `lint:shell`, `lint:ui-copy`): all passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 112 / 113 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 93 / 93 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+### Remaining
+- T3-02 (Deposits per product, entered before go-live): staged role checks and deposit data-entry.
+- T3-13, T3-20, T3-23: pending remaining accountant & staged receipts.
+- T0-12: hosted staging migration apply by Babin.
+- T7 online booking: Track T7 lane C integration.
+
 ## 2026-11-20 — T2-24: Temporary stock from partners (Lane A)
 
 **Did**
@@ -69,7 +119,6 @@
 - `npm run check:security`: 18/18 SQL regressions + operations grants pass.
 - `npm run typecheck`: clean, 0 errors.
 - Unit & integration suites: 171/171 tests pass (`roadmapStatusTruth.test.ts`, `t3RoadmapDocumentation.test.ts`, `availability.test.ts`, `CheckAvailabilityModal.availability.test.tsx`, `closeRental.test.ts`, `pricingPipeline.test.ts`, `membership.test.ts`, `RentalPricingSection.test.tsx`, `PlansAdmin.test.tsx`, `timesheet.test.ts`).
-
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|

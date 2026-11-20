@@ -100,5 +100,6 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0251 | O-28b S2 | waiting-charge-line | feat/r-9-18-delivery-fee-grid | written, not applied (N-5); add_waiting_charge_line() adds a flat Service line, appends to a Draft invoice, refuses an issued one (R-03); conditional audit trigger; needs 0010 and 0168 |
 | 0252 | T2-23 | allow-overbooking-on-chosen-products | feat/t2-23-product-overbooking-0245 | verified |
 | 0253 | T2-24 | temporary-stock-from-partners | lane-a/T2-24-partner-stock-0253 | verified |
+| 0254 | T3-14 | draft-invoice-resync-integrity-and-settlement-numbering | lane-c/T3-14-draft-invoice-full-settlement | verified (check:pglite 252/252 + check:lifecycle 93/93 Step L92) |
 
 ## Expected migrations (not yet claimed)

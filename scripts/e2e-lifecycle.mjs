@@ -9813,6 +9813,205 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L92',
+  title: 'draft invoice at Confirm, follows booking changes, and numbers on full payment (W15, W16, T3-14)',
+  expect: 'green',
+  run: async () => {
+    let t314BookingId
+    let t314BookingNo
+    let t314InvoiceId
+    const t314ClientUuid = crypto.randomUUID()
+
+    // 1. Coordinator creates a booking in Quote stage
+    await as('Coordinator', async () => {
+      await createBooking({
+        key: 't314_draft',
+        window: ['2105-07-01T04:00:00Z', '2105-07-03T04:00:00Z'],
+        actor: 'Coordinator',
+        lines: [
+          {
+            productId: SERIAL_PRODUCT,
+            description: 'T3-14 Draft Test Camera',
+            qty: 1,
+            days: 2,
+            rate: 2000, // 2,000.00 rupees
+            units: [UNITS[1]],
+          },
+        ],
+      })
+      t314BookingId = bookingIds['t314_draft']
+      t314BookingNo = await one('select booking_no from bookings where id = $1', [t314BookingId])
+
+      // In Quote stage, no draft invoice exists yet (W82)
+      const quoteInvCount = Number(await one('select count(*) from invoices where booking_id = $1', [t314BookingId]))
+      assertEq(quoteInvCount, 0, 'Quote stage has no invoice (W82)')
+
+      // 2. Confirm: Quote -> Booked. Automatically creates exactly ONE Draft invoice (W15)
+      await transition('t314_draft', 'Quote', 'Booked', 'Coordinator')
+
+      const invRows = (await q(
+        'select id, invoice_no, status, subtotal, discount_amount, taxable_amount, vat_amount, total_amount, paid_amount, outstanding_amount, vat_rate, discount_percent from invoices where booking_id = $1',
+        [t314BookingId]
+      )).rows
+      assertEq(invRows.length, 1, 'Confirm creates exactly 1 invoice')
+      const inv = invRows[0]
+      t314InvoiceId = inv.id
+      assertEq(inv.status, 'Draft', 'Invoice is in Draft status (W15)')
+      assertEq(inv.invoice_no, null, 'Draft invoice has no invoice number (W16, Law 7)')
+      assertEq(Number(inv.subtotal), 4000, 'Subtotal is 1 * 2 * 2000 = 4000.00')
+      assertEq(Number(inv.vat_amount), 520, 'VAT is 13% = 520.00')
+      assertEq(Number(inv.total_amount), 4520, 'Total amount is 4520.00')
+      assertEq(Number(inv.outstanding_amount), 4520, 'Outstanding is 4520.00')
+      assertEq(Number(inv.paid_amount), 0, 'Paid is 0.00')
+    })
+
+    // 3. Resync integrity: add booking discount & verify Draft invoice header and lines synchronize
+    await as('Coordinator', async () => {
+      const auditEvtId = crypto.randomUUID()
+      await asOwnerOfTheDatabase(async () => {
+        await q(
+          `insert into audit_events (
+            id, client_uuid, event_class, module, category, action, severity, status, table_name, record_id, actor_id, branch_id
+          ) values (
+            $1, gen_random_uuid(), 'discount', 'Rentals', 'Rentals', 'Create', 'Informational', 'Success', 'booking_discounts', $2, $3, $4
+          )`,
+          [auditEvtId, t314BookingId, U.Coordinator, BRANCH]
+        )
+        await q(
+          `insert into booking_discounts (client_uuid, booking_id, branch_id, discount_source, percent, reason, applied_by, audit_event_id)
+           values (gen_random_uuid(), $1, $2, 'Manual', 10, 'Test 10% discount', $3, $4)`,
+          [t314BookingId, BRANCH, U.Coordinator, auditEvtId]
+        )
+        await q('select resync_draft_invoice($1)', [t314BookingId])
+      })
+
+      const syncedInv = (await q(
+        'select status, discount_percent, subtotal, discount_amount, taxable_amount, vat_amount, total_amount, outstanding_amount from invoices where id = $1',
+        [t314InvoiceId]
+      )).rows[0]
+
+      assertEq(syncedInv.status, 'Draft', 'Status remains Draft')
+      assertEq(Number(syncedInv.discount_percent), 10, 'Draft invoice header discount_percent synchronized to 10%')
+      assertEq(Number(syncedInv.subtotal), 4000, 'Subtotal is 4000.00')
+      assertEq(Number(syncedInv.discount_amount), 400, 'Discount amount is 10% = 400.00')
+      assertEq(Number(syncedInv.taxable_amount), 3600, 'Taxable amount is 3600.00')
+      assertEq(Number(syncedInv.vat_amount), 468, 'VAT is 13% of 3600 = 468.00')
+      assertEq(Number(syncedInv.total_amount), 4068, 'Total amount is 4068.00')
+      assertEq(Number(syncedInv.outstanding_amount), 4068, 'Outstanding amount is 4068.00')
+    })
+
+    // 4. FK resilience during resync: charge referencing draft invoice line does not block resync
+    await asOwnerOfTheDatabase(async () => {
+      const lineId = await one('select id from invoice_lines where invoice_id = $1 limit 1', [t314InvoiceId])
+      assert(lineId !== null, 'Existing draft invoice line is found')
+
+      const feeFindingId = crypto.randomUUID()
+      await q(
+        `insert into late_fee_findings (
+          id, client_uuid, booking_id, scheduled_return_at, actual_return_at,
+          overage_minutes, band, day_rate_amount, fee_amount, full_days_charged, created_by
+        ) values (
+          $1, gen_random_uuid(), $2, now(), now() + interval '1 hour',
+          60, 'Half Day', 2000.00, 500.00, 0, $3
+        )`,
+        [feeFindingId, t314BookingId, U.Accounts]
+      )
+      const chgNo = 'CHG-2105-0001'
+      await q(
+        `insert into charges (
+          client_uuid, charge_no, source_type, late_fee_finding_id, booking_id, amount, invoice_line_id, created_by
+        ) values (
+          gen_random_uuid(), $1, 'Late Fee', $2, $3, 500.00, $4, $5
+        )`,
+        [chgNo, feeFindingId, t314BookingId, lineId, U.Accounts]
+      )
+
+      // Resync must NOT fail with FK violation (charges_invoice_line_id_fkey on delete set null)
+      await q('select resync_draft_invoice($1)', [t314BookingId])
+
+      const chargeAfter = await one('select invoice_line_id from charges where charge_no = $1', [chgNo])
+      assertEq(chargeAfter, null, 'Charge invoice_line_id safely unlinked on draft line resync')
+
+      const postResyncInv = (await q(
+        'select subtotal, total_amount, outstanding_amount from invoices where id = $1',
+        [t314InvoiceId]
+      )).rows[0]
+      assertEq(Number(postResyncInv.subtotal), 4000, 'Subtotal is clean 4000 without duplicate lines')
+      assertEq(Number(postResyncInv.total_amount), 4068, 'Total amount remains 4068.00')
+      assertEq(Number(postResyncInv.outstanding_amount), 4068, 'Outstanding amount remains 4068.00')
+    })
+
+    // 5. Partial payment: invoice remains Draft, invoice_no remains NULL (W16)
+    await as('Accounts', async () => {
+      const payNo1 = await one("select next_document_number('payment')")
+      await q(
+        `insert into payments (
+          client_uuid, payment_no, booking_id, invoice_id, client_id, branch_id,
+          amount, payment_type, payment_date, received_by
+        ) values (
+          gen_random_uuid(), $1, $2, $3, $4, $5,
+          2000.00, 'Advance Payment', current_date, $6
+        )`,
+        [payNo1, t314BookingId, t314InvoiceId, CLIENT, BRANCH, U.Accounts]
+      )
+
+      const partInv = (await q(
+        'select status, invoice_no, paid_amount, outstanding_amount from invoices where id = $1',
+        [t314InvoiceId]
+      )).rows[0]
+      assertEq(partInv.status, 'Draft', 'Partially paid invoice stays in Draft status (W16)')
+      assertEq(partInv.invoice_no, null, 'Partially paid draft gets no invoice number (W16, Law 7)')
+      assertEq(Number(partInv.paid_amount), 2000, 'Paid amount is 2000.00')
+      assertEq(Number(partInv.outstanding_amount), 2068, 'Outstanding amount is 2068.00')
+    })
+
+    // 6. Full settlement payment: invoice automatically acquires monotonic number and status becomes Paid (W16)
+    let assignedInvoiceNo
+    await as('Accounts', async () => {
+      const payNo2 = await one("select next_document_number('payment')")
+      await q(
+        `insert into payments (
+          client_uuid, payment_no, booking_id, invoice_id, client_id, branch_id,
+          amount, payment_type, payment_date, received_by
+        ) values (
+          gen_random_uuid(), $1, $2, $3, $4, $5,
+          2068.00, 'Advance Payment', current_date, $6
+        )`,
+        [payNo2, t314BookingId, t314InvoiceId, CLIENT, BRANCH, U.Accounts]
+      )
+
+      const settledInv = (await q(
+        'select status, invoice_no, paid_amount, outstanding_amount, issue_date from invoices where id = $1',
+        [t314InvoiceId]
+      )).rows[0]
+
+      assertEq(settledInv.status, 'Paid', 'Fully settled invoice automatically transitions to Paid (W16)')
+      assert(settledInv.invoice_no && settledInv.invoice_no.startsWith('INV-'), 'Invoice automatically assigned monotonic INV number on settlement')
+      assertEq(Number(settledInv.paid_amount), 4068, 'Paid amount is 4068.00')
+      assertEq(Number(settledInv.outstanding_amount), 0, 'Outstanding amount is 0.00')
+      assignedInvoiceNo = settledInv.invoice_no
+    })
+
+    // 7. Idempotency (Law 8): calling issue_invoice on already issued invoice returns existing number without incrementing sequence
+    await as('Accounts', async () => {
+      const issueRes = await one('select issue_invoice($1::uuid)', [t314InvoiceId])
+      assertEq(issueRes.invoice_no, assignedInvoiceNo, 'issue_invoice returns identical number idempotently')
+      assertEq(issueRes.status, 'Paid', 'Status is Paid')
+    })
+
+    // 8. Immutable numbered invoice: modifying lines on numbered invoice is refused (F5 guard)
+    await as('Accounts', async () => {
+      await refuses(
+        'modifying line on numbered invoice is refused by F5 guard',
+        `update invoice_lines set description = 'hacked' where invoice_id = $1`,
+        [t314InvoiceId],
+        /immutable — correct it with a credit note/i
+      )
+    })
+  },
+})
+
 
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {

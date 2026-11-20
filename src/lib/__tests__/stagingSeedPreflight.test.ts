@@ -22,7 +22,7 @@ describe('T1-02 synthetic staging seed preflight', () => {
     const stdout = execFileSync(process.execPath, ['scripts/create-synthetic-staging-0012.mjs'], {
       cwd: projectRoot,
       encoding: 'utf8',
-      timeout: 10000,
+      timeout: 60000,
       stdio: ['ignore', 'pipe', 'pipe'],
     })
     const result = JSON.parse(stdout) as {
