@@ -60,7 +60,8 @@
  * as applied" is a human act; the `--accept-rename` flag records that a human
  * did, in a log, and is refused while any *unexplained* mismatch remains.
  *
- * Exit 0 = a plan you can act on. Exit 2 = blockers; read them.
+ * Exit 0 = a read-only candidate plan for independent review, NOT permission to apply.
+ * Exit 2 = blockers; do not apply migrations.
  */
 
 import { readdirSync, readFileSync, existsSync } from 'node:fs'
@@ -465,34 +466,29 @@ if (dupPrefixes.length) {
 }
 
 if (renamed.length) {
-  if (acceptRename) {
-    console.log(`\n${'-'.repeat(72)}\nCONFIRMED RENAMES — ${renamed.length} file(s) accepted as already-applied per T1-03 (--accept-rename)`)
+  // A flag alone is not evidence. Accept ONLY the exact seven file-name
+  // mappings verified during T1-03; any new, ambiguous or changed candidate
+  // must stop the plan even when --accept-rename is explicitly supplied.
+  const unreviewedRenames = renamed.filter((r) => CONFIRMED_RENAMES.get(r.file) !== r.liveName)
+  if (acceptRename && unreviewedRenames.length === 0) {
+    console.log(`\n${'-'.repeat(72)}\nREVIEWED RENAMES — ${renamed.length} exact T1-03 mapping(s) (--accept-rename)`)
     for (const r of renamed) {
-      const isConfirmed = CONFIRMED_RENAMES.get(r.file) === r.liveName
-      console.log(`  ${r.file}`)
-      console.log(`      live has:   ${r.liveName}   (version ${r.liveVersion})`)
-      console.log(`      status:     ${isConfirmed ? 'CONFIRMED MATCH per T1-03 ledger reconciliation' : 'ACCEPTED VIA --accept-rename'}`)
+      console.log(`  ${r.file} → ${r.liveName} (${r.liveVersion}); exact reviewed match`)
     }
   } else {
     blockers += 1
-    console.log(`\n${'-'.repeat(72)}\n⛔ BLOCKER — ${renamed.length} file(s) whose name does not match live`)
-    console.log(
-      '  `schema_migrations` keys on NAME. A renamed file looks unapplied to the CLI and\n' +
-        '  will be re-run. For a policy or staff-row migration that means re-creating\n' +
-        '  live objects, not skipping work.\n',
-    )
-    for (const r of renamed) {
-      console.log(`  ${r.file}`)
-      console.log(`      live has: ${r.liveName}   (version ${r.liveVersion})`)
-      console.log(`      match:    ${r.confidence}${r.score < 1 ? ` ${r.score.toFixed(2)}` : ''}`)
-      console.log(`      → local is applied ONLY IF this rename is confirmed and intentional`)
+    console.log(`\n${'-'.repeat(72)}\n⛔ BLOCKER — ${renamed.length} rename candidate(s)`)
+    if (!acceptRename) {
+      console.log('  Rename acceptance is OFF by default. Review evidence first, then use --accept-rename explicitly.')
+    } else {
+      console.log(`  ${unreviewedRenames.length} rename(s) differ from the seven exact reviewed T1-03 mappings.`)
     }
-    console.log('\n  For each row above, decide one of:')
-    console.log('    (a) it is a rename — live already has it; skip the file, and record why')
-    console.log('    (b) it is genuinely new — the live row is a different migration')
-    console.log('  Then re-run with --accept-rename, which logs the decision to stderr.')
-    console.log('  Do not resolve this by renaming local files to match: the repo cites these')
-    console.log('  numbers in code comments, PLAN.md and check-db.sql.')
+    for (const r of renamed) {
+      const confirmed = CONFIRMED_RENAMES.get(r.file) === r.liveName
+      console.log(`  ${confirmed ? '[REVIEWED / FLAG REQUIRED]' : '[UNREVIEWED — MUST INVESTIGATE]'} ${r.file}`)
+      console.log(`    live row: ${r.liveName} (${r.liveVersion}); ${r.confidence}`)
+    }
+    console.log('  Never treat a new or ambiguous rename as already applied without a separately reviewed decision.')
   }
 }
 
@@ -506,28 +502,29 @@ for (const h of hazards) {
   }
 }
 
-if (quarantinedHazards.length && acceptRename) {
-  console.log(`\n${'-'.repeat(72)}\nQUARANTINED HAZARDS — ${quarantinedHazards.length} hazard(s) on files excluded from live apply per T1-02/T1-03`)
-  for (const h of quarantinedHazards) {
-    console.log(`  [QUARANTINED ${h.kind}]  ${h.file}`)
-    console.log(`      ${h.detail}`)
-    console.log('      → EXCLUDED from live apply list; one-shot reference corpus must not touch production.')
-    console.log()
+if (quarantinedHazards.length) {
+  if (acceptRename) {
+    console.log(`\n${'-'.repeat(72)}\nQUARANTINED HAZARDS — ${quarantinedHazards.length} known excluded hazard(s)`)
+    for (const h of quarantinedHazards) {
+      console.log(`  [QUARANTINED ${h.kind}] ${h.file}: ${h.detail}`)
+    }
+  } else {
+    blockers += 1
+    console.log(`\n${'-'.repeat(72)}\n⛔ BLOCKER — known seed quarantine needs explicit reviewed-plan mode`)
+    for (const h of quarantinedHazards) console.log(`  [${h.kind}] ${h.file}: ${h.detail}`)
   }
-} else if (hazards.length) {
+}
+
+// Independent of the quarantine, NEVER suppress any OTHER hazardous pending
+// migration. This branch used to skip this check whenever 0047 was excluded.
+if (activeHazards.length) {
   blockers += 1
-  console.log(`\n${'-'.repeat(72)}\n⛔ BLOCKER — ${hazards.length} pending file(s) that must not be batch-applied`)
-  console.log(
-    '  "Unapplied" and "safe to run against a database holding real data" are different\n' +
-      '  questions. Each of these answers the second one NO, in its own header:\n',
-  )
-  for (const h of hazards) {
-    console.log(`  [${h.kind}]  ${h.file}`)
+  console.log(`\n${'-'.repeat(72)}\n⛔ BLOCKER — ${activeHazards.length} unreviewed pending hazard(s)`)
+  for (const h of activeHazards) {
+    console.log(`  [${h.kind}] ${h.file}`)
     console.log(`      ${h.detail}`)
-    console.log()
   }
-  console.log('  These are decisions, not steps. Resolve each on its own merits, in a window')
-  console.log('  where you can undo it, before treating the rest of the list as mechanical.')
+  console.log('  Stop; reconcile each seed, numeric collision or one-shot change independently.')
 }
 
 if (orphans.length) {
@@ -542,7 +539,7 @@ if (orphans.length) {
   )
 }
 
-const applyPending = acceptRename ? pending.filter((f) => !QUARANTINED_SEEDS.has(f.file)) : pending
+const applyPending = acceptRename && blockers === 0 ? pending.filter((f) => !QUARANTINED_SEEDS.has(f.file)) : pending
 
 if (applyPending.length) {
   console.log(`\n${'-'.repeat(72)}\nPENDING — ${applyPending.length}, in apply order`)
@@ -553,9 +550,9 @@ if (applyPending.length) {
     console.log(`  ${String(i + 1).padStart(3)}. ${f.file.padEnd(widths)}${suffix}`)
   })
   console.log(
-    '\n  Apply in this order, one file per transaction, each with its own begin/commit.\n' +
-      '  Take the backup first (scripts/backup-db.ps1 / BACKUP_PROTOCOL.md). Stop at the\n' +
-      '  first failure and re-run from that file — the chain is not resumable on its own.',
+    '\n  This is a READ-ONLY candidate listing, not an apply authorization.\n' +
+      '  Independently review every SQL body, exact target SHA, recovery plan,\n' +
+      '  permission boundary, transaction order and owner approval before execution.',
   )
 }
 
@@ -577,7 +574,7 @@ if (blockers) {
   process.exit(2)
 }
 if (acceptRename) {
-  console.log('Renames above were accepted as already-applied (--accept-rename).')
+  console.log('Only exact T1-03-reviewed renames were accepted as already-applied (--accept-rename).')
   console.log(`Quarantined seeds excluded from apply plan: ${[...QUARANTINED_SEEDS].join(', ')}`)
   console.log(`Snapshot ${rel} verified; apply plan ready for review.`)
 }
