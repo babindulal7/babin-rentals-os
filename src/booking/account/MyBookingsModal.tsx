@@ -105,22 +105,11 @@ export const MyBookingsModal: React.FC<MyBookingsModalProps> = ({
     })
   }, [bookings, activeTab, searchQuery])
 
-  const handlePaymentSuccess = (bookingId: string, amountPaisa: number) => {
-    setBookings((prev) =>
-      prev.map((b) => {
-        if (b.id === bookingId || b.request_id === bookingId) {
-          const newPaid = b.paid_paisa + amountPaisa
-          const newBal = Math.max(0, b.total_paisa - newPaid)
-          return {
-            ...b,
-            paid_paisa: newPaid,
-            balance_paisa: newBal,
-          }
-        }
-        return b
-      }),
-    )
+  const handlePaymentSuccess = () => {
+    // Server-side confirmation is authoritative; never fabricate a local receipt
+    // or adjust invoice balances by a client-calculated figure.
     setPaymentBooking(null)
+    void loadBookings()
   }
 
   if (!isOpen) return null
@@ -473,8 +462,8 @@ export const MyBookingsModal: React.FC<MyBookingsModalProps> = ({
                         </div>
                       </div>
 
-                      {/* Pay Balance Button (T7-05) */}
-                      {bkg.balance_paisa > 0 && (
+                      {/* Pay Balance/Advance: backend re-checks the authoritative amount. */}
+                      {bkg.payment_available === true && bkg.balance_paisa > 0 && (
                         <button
                           type="button"
                           onClick={() => setPaymentBooking(bkg)}
@@ -494,7 +483,7 @@ export const MyBookingsModal: React.FC<MyBookingsModalProps> = ({
                           }}
                         >
                           <span>💳</span>
-                          <span>Pay Balance ({formatMoney(bkg.balance_paisa as Paisa)})</span>
+                          <span>{bkg.payment_kind === 'advance' ? 'Pay Advance' : 'Pay Balance'} ({formatMoney(bkg.balance_paisa as Paisa)})</span>
                         </button>
                       )}
                     </div>
@@ -686,9 +675,9 @@ export const MyBookingsModal: React.FC<MyBookingsModalProps> = ({
         <OnlinePaymentModal
           isOpen={true}
           onClose={() => setPaymentBooking(null)}
-          bookingId={paymentBooking.id}
+          bookingId={paymentBooking.payment_kind === 'balance' ? paymentBooking.id : undefined}
           bookingRequestId={paymentBooking.request_id}
-          onPaymentSuccess={(result) => handlePaymentSuccess(paymentBooking.id, result.amountPaisa)}
+          onPaymentSuccess={handlePaymentSuccess}
         />
       )}
     </div>
