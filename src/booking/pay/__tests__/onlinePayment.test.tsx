@@ -87,12 +87,27 @@ describe('OnlinePaymentModal (T7-05, T7-06)', () => {
     })
 
     expect(container.textContent).toContain('Online Payment')
-    expect(container.textContent).toContain('Security Deposit Policy')
     expect(container.textContent).toContain('Fonepay')
     expect(container.textContent).toContain('eSewa')
-    // Khalti was disabled in mock, should not be listed as tab option
+    // Choosing a provider must NOT create a payable intent yet.
     expect(container.textContent).not.toContain('Khalti')
+    expect(container.textContent).toContain('Continue with Fonepay')
+    expect(payApi.initOnlinePayment).not.toHaveBeenCalled()
+    expect(payApi.verifyOnlinePayment).not.toHaveBeenCalled()
+
+    const continueBtn = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.textContent?.trim() === 'Continue with Fonepay',
+    )
+    expect(continueBtn).toBeTruthy()
+    await act(async () => { continueBtn?.click() })
+
+    expect(payApi.initOnlinePayment).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: 'fonepay', bookingRequestId: 'req-123' }),
+    )
+    expect(container.textContent).toContain('Security Deposit Policy')
     expect(container.textContent).toContain('5,000')
+    expect(container.textContent).toContain('Only a server-verified')
+    expect(payApi.verifyOnlinePayment).not.toHaveBeenCalled()
   })
 
   it('switches payment provider tab to eSewa when clicked', async () => {
@@ -103,6 +118,19 @@ describe('OnlinePaymentModal (T7-05, T7-06)', () => {
       amount_rupees: '5000.00',
       provider: 'esewa',
       payment_url: 'https://rc-epay.esewa.com.np/api/epay/main/v2/form',
+      esewa_params: {
+        amount: '5000.00',
+        tax_amount: '0',
+        total_amount: '5000.00',
+        transaction_uuid: 'intent-esewa-1',
+        product_code: 'EPAYTEST',
+        product_service_charge: '0',
+        product_delivery_charge: '0',
+        success_url: 'https://example.invalid/success',
+        failure_url: 'https://example.invalid/failure',
+        signed_field_names: 'total_amount,transaction_uuid,product_code',
+        signature: 'synthetic-test-signature',
+      },
       is_sandbox: true,
     })
 
@@ -127,48 +155,49 @@ describe('OnlinePaymentModal (T7-05, T7-06)', () => {
       await new Promise((r) => setTimeout(r, 20))
     })
 
+    // Provider selection is local-only; an attempt starts only after Continue.
+    expect(payApi.initOnlinePayment).not.toHaveBeenCalled()
+    const continueBtn = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.textContent?.trim() === 'Continue with eSewa',
+    )
+    expect(continueBtn).toBeTruthy()
+    await act(async () => { continueBtn?.click() })
+
     expect(payApi.initOnlinePayment).toHaveBeenCalledWith(
-      expect.objectContaining({ provider: 'esewa' })
+      expect.objectContaining({ provider: 'esewa', bookingRequestId: 'req-123' }),
     )
     expect(container.textContent).toContain('eSewa Mobile Wallet')
+    const form = container.querySelector('form')
+    expect(form).toBeTruthy()
+    expect(form?.getAttribute('method')).toBe('POST')
+    expect(form?.getAttribute('action')).toBe('https://rc-epay.esewa.com.np/api/epay/main/v2/form')
+    expect(form?.querySelector('input[name="signature"]')?.getAttribute('value')).toBe('synthetic-test-signature')
+    expect(payApi.verifyOnlinePayment).not.toHaveBeenCalled()
   })
 
-  it('simulates payment verification and triggers onPaymentSuccess', async () => {
-    await act(async () => {
-      root.render(<OnlinePaymentModal {...defaultProps} />)
-    })
+  it('never simulates provider success or issues a receipt from the checkout screen', async () => {
+    await act(async () => { root.render(<OnlinePaymentModal {...defaultProps} />) })
 
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 20))
-    })
-
-    const buttons = Array.from(container.querySelectorAll('button'))
-    const simulateBtn = buttons.find((b) => b.textContent?.includes('Simulate Successful'))
-    expect(simulateBtn).toBeTruthy()
-
-    await act(async () => {
-      simulateBtn?.click()
-    })
-
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 20))
-    })
-
-    expect(payApi.verifyOnlinePayment).toHaveBeenCalledWith(
-      expect.objectContaining({
-        intentId: 'intent-789',
-        responseCode: 'successful',
-      })
+    expect(payApi.initOnlinePayment).not.toHaveBeenCalled()
+    expect(container.textContent).not.toContain('Simulate Successful')
+    const startBtn = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.textContent?.trim() === 'Continue with Fonepay',
     )
-    expect(container.textContent).toContain('Payment Received!')
-    expect(container.textContent).toContain('PAY-101')
-    expect(defaultProps.onPaymentSuccess).toHaveBeenCalledWith(
-      expect.objectContaining({
-        intentId: 'intent-789',
-        paymentNo: 'PAY-101',
-        amountPaisa: 500000,
-      })
+    expect(startBtn).toBeTruthy()
+    await act(async () => { startBtn?.click() })
+
+    const providerLink = Array.from(container.querySelectorAll('a')).find(
+      (a) => a.textContent?.includes('Open Fonepay Checkout'),
     )
+    expect(providerLink).toBeTruthy()
+    expect(providerLink?.getAttribute('href')).toBe(
+      'https://dev-clientapi.fonepay.com/api/merchantRequest?PRN=intent-789',
+    )
+    expect(container.textContent).toContain('server-verified')
+    expect(container.textContent).not.toContain('Payment Received!')
+    expect(container.textContent).not.toContain('PAY-101')
+    expect(payApi.verifyOnlinePayment).not.toHaveBeenCalled()
+    expect(defaultProps.onPaymentSuccess).not.toHaveBeenCalled()
   })
 
   it('handles server init failure with inline error and close button', async () => {
@@ -184,7 +213,16 @@ describe('OnlinePaymentModal (T7-05, T7-06)', () => {
       await new Promise((r) => setTimeout(r, 20))
     })
 
+    // The server is contacted only after explicit client checkout initiation.
+    const startBtn = Array.from(container.querySelectorAll('button')).find(
+      (b) => b.textContent?.trim() === 'Continue with Fonepay',
+    )
+    expect(startBtn).toBeTruthy()
+    await act(async () => { startBtn?.click() })
+
     expect(container.textContent).toContain('Booking request is cancelled.')
+    expect(container.textContent).not.toContain('Payment Received!')
+    expect(payApi.verifyOnlinePayment).not.toHaveBeenCalled()
     const closeBtn = Array.from(container.querySelectorAll('button')).find(
       (b) => b.textContent?.trim() === 'Close'
     )
