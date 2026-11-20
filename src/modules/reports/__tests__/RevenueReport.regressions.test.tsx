@@ -53,11 +53,11 @@ beforeEach(() => {
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 
 describe('Revenue financial and comparison regressions', () => {
-  it('labels its actual bounded default window instead of claiming All dates', async () => {
+  it('opens on the actual 90-day window, and offers All dates (R19-1)', async () => {
     await render()
     const range = host.querySelector<HTMLSelectElement>('select[aria-label="Date range"]')!
     expect(range.selectedOptions[0]?.textContent).toBe('Last 90 days')
-    expect([...range.options].some(option => option.textContent === 'All dates')).toBe(false)
+    expect([...range.options].some(option => option.textContent === 'All dates')).toBe(true)
     const [from, to] = vi.mocked(getIssuedRevenueTrend).mock.calls[0]!
     expect(new Date(`${to}T00:00:00Z`).getTime() - new Date(`${from}T00:00:00Z`).getTime()).toBe(89 * 86_400_000)
   })

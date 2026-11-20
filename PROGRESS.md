@@ -217,6 +217,20 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - T2-24 (Temporary stock from partners): next stock tool card to pick up.
 - T7 online booking core flow (T7-02, T7-03, T7-04, T7-05).
 
+## 2026-11-19 — Revenue and cash-flow Coordinator gate, All dates restored, New Rental current step (rebuilt on main)
+
+**Did**
+- Rebuilt the #23 series on current `origin/main` (`b6b08fc`) as four commits, not a PR: `e0ef687` Revenue report Coordinator gate and invoice register (R17-1, R17-5); `76cb7fc` Cash Flow and Working Capital gate (R17-9); `8fc30c4` All dates restored on the Revenue report (R19-1), no after-hours charge (R19-2); `2e5025b` New Rental step: the current step is readable (4.5:1+) and announced with `aria-current="step"`.
+- Coordinator is refused the Revenue report and the cash-flow and working-capital pages by direct URL, as well as in the menu (`canViewFinancialReports`).
+- The invoice register lists issued invoices and voids, not Drafts, 100 a page with Newer and Older; live numbers link to Finance.
+
+**Ruled**
+- R17-1, R17-5, R17-9 (`docs/RULINGS-2026-10-17.md`); R19-1 and R19-2 (`docs/RULINGS-2026-11-19.md`).
+- R17-6 (seeded currency) and R17-8 (chart views) are not part of this series; not checked against `main` here.
+
+**Verified**
+- Steps 1-16: `typecheck`, `lint`, `check:pglite`, `check:security`, `check:lifecycle`, `lint:ui-copy`, `build` all pass.
+
 ## 2026-11-19 — O-28b: delivery zone road-distance band (migration 0248, Settings, New Rental hint)
 
 **Did**

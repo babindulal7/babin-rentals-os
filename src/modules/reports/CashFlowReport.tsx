@@ -6,7 +6,7 @@ import { PageBody } from '../../components/ui/PageBody'
 import { ReportToolbar } from '../../components/ui/ReportToolbar'
 import type { ReportCsvRow, ReportFilters } from '../../components/ui/ReportToolbar'
 import { formatMoney, type Paisa } from '../../lib/money'
-import { useCanViewMoney } from '../../lib/moneyVisibility'
+import { useCanViewFinancialReports } from '../../lib/moneyVisibility'
 import { useViewport } from '../../lib/device'
 import { useLoad } from '../../lib/queries/useLoad'
 import { NOT_TRACKED } from '../../lib/queries/reportSupport'
@@ -63,7 +63,8 @@ function cashFlowCsv(s: CashFlowSummary | null): ReportCsvRow[] {
  * tracked yet". Deposits are shown apart from own cash (Law 4).
  */
 export default function CashFlowReport() {
-  const canSeeMoney = useCanViewMoney()
+  // RULING 2026-10-17 (R17-9): company cash and working-capital reports follow R17-1, not the money-visible set.
+  const canSeeMoney = useCanViewFinancialReports()
   const viewport = useViewport()
   const [filters, setFilters] = useState<ReportFilters>({})
   const filtered = hasReportFilters(filters)
@@ -81,7 +82,7 @@ export default function CashFlowReport() {
         <PageBody
           restricted
           restrictedReason="Cash reporting is money end to end — every line of the statement and every figure."
-          restrictedRequiredRole="Owner, Admin, Coordinator or Accounts"
+          restrictedRequiredRole="Owner, Admin, Manager or Accounts"
         >
           {null}
         </PageBody>

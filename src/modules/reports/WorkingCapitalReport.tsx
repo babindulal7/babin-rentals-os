@@ -6,7 +6,7 @@ import { PageBody } from '../../components/ui/PageBody'
 import { ReportToolbar } from '../../components/ui/ReportToolbar'
 import type { ReportCsvRow, ReportFilters } from '../../components/ui/ReportToolbar'
 import { formatMoney } from '../../lib/money'
-import { useCanViewMoney } from '../../lib/moneyVisibility'
+import { useCanViewFinancialReports } from '../../lib/moneyVisibility'
 import { useViewport } from '../../lib/device'
 import { useLoad } from '../../lib/queries/useLoad'
 import { NOT_TRACKED } from '../../lib/queries/reportSupport'
@@ -47,7 +47,8 @@ function workingCapitalCsv(s: WorkingCapitalSummary | null): ReportCsvRow[] {
  * is "now": a period would narrow nothing, so only the branch filter applies.
  */
 export default function WorkingCapitalReport() {
-  const canSeeMoney = useCanViewMoney()
+  // RULING 2026-10-17 (R17-9): company cash and working-capital reports follow R17-1, not the money-visible set.
+  const canSeeMoney = useCanViewFinancialReports()
   const viewport = useViewport()
   const [filters, setFilters] = useState<ReportFilters>({})
   const branchId = filters.chips?.['branch_id']?.[0]
@@ -65,7 +66,7 @@ export default function WorkingCapitalReport() {
         <PageBody
           restricted
           restrictedReason="Working capital is money end to end — receivables, deposits held and payables."
-          restrictedRequiredRole="Owner, Admin, Coordinator or Accounts"
+          restrictedRequiredRole="Owner, Admin, Manager or Accounts"
         >
           {null}
         </PageBody>

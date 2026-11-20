@@ -3,13 +3,14 @@ import { Link } from 'react-router-dom'
 import { PageHeader, Button } from '../../components/ui/Page'
 import { ReportFamiliesNav } from '../../components/ui/ReportFamiliesNav'
 import { ReportToolbar, reportDateRange } from '../../components/ui/ReportToolbar'
+import { SegmentedControl } from '../../components/ui/SegmentedControl'
 import type { ReportCompare, ReportCsvRow, ReportFilters } from '../../components/ui/ReportToolbar'
 import { PageBody } from '../../components/ui/PageBody'
 import { useLoad } from '../../lib/queries/useLoad'
 import { formatMoney, rupees } from '../../lib/money'
 import { businessDayAd } from '../../lib/bs'
-import { useAuth } from '../../lib/auth'
-import { getIssuedRevenueTrend, type IssuedRevenueReport } from '../../lib/queries/reportRevenueTrend'
+import { useCanViewFinancialReports } from '../../lib/moneyVisibility'
+import { getEarliestIssueDay, getIssuedRevenueTrend, type IssuedRevenueReport } from '../../lib/queries/reportRevenueTrend'
 import { coverageNotes } from '../../lib/intel/revenueTrend'
 import { averageReportAmount, hasRevenueActivity, precedingReportWindow, reportMoneyChange } from '../../lib/intel/reportPresentation'
 import {
@@ -20,7 +21,10 @@ import {
   ReportDataTable,
   type ReportChartPoint,
 } from '../../components/ui/reports'
+import { RevenueInvoiceRegister } from './RevenueInvoiceRegister'
 import '../../styles/reportChartTokens.css'
+
+type RevenueTab = 'trend' | 'register'
 
 /**
  * This report displays ONLY successfully fetched taxable issued-invoice values.
@@ -28,7 +32,6 @@ import '../../styles/reportChartTokens.css'
  * split represents the full ledger. Credit adjustments require a separate
  * reconciled ledger definition and are intentionally not claimed here.
  */
-const EXECUTIVE_ROLES = new Set(['Owner', 'Admin', 'Manager', 'Accounts'])
 
 function daysAgo(day: string, count: number): string {
   const d = new Date(day + 'T00:00:00Z')
@@ -41,16 +44,46 @@ function readReportDate(value: string | undefined, fallback: string): string {
   return value.slice(0, 10)
 }
 
-export default function RevenueReport() {
-  const { user } = useAuth()
-  const permitted = Boolean(user && EXECUTIVE_ROLES.has(user.role))
-  const today = businessDayAd()
-  const [filters, setFilters] = useState<ReportFilters>({})
-  const [compare, setCompare] = useState<ReportCompare>('off')
+/** Calendar months from `fromAd` to `toAd`, both inclusive. */
+function calendarMonths(fromAd: string, toAd: string): number {
+  return (Number(toAd.slice(0, 4)) - Number(fromAd.slice(0, 4))) * 12 + Number(toAd.slice(5, 7)) - Number(fromAd.slice(5, 7)) + 1
+}
 
-  const from = readReportDate(filters.dateRange?.fromAd, daysAgo(today, 89))
+/** The default window: the 90 days ending on `today`. */
+function defaultFilters(today: string): ReportFilters {
+  return { dateRange: reportDateRange('issue_date', daysAgo(today, 89), today) }
+}
+
+/**
+ * RULING 2026-11-19 (R19-1, restoring R17-7): All dates runs from the 1st of the
+ * first issued invoice's month to today. Nothing was issued earlier in that
+ * month, so the first month is complete and is never labelled a part month.
+ */
+async function loadAllDates(today: string): Promise<IssuedRevenueReport> {
+  const earliest = await getEarliestIssueDay()
+  const start = earliest ? `${earliest.slice(0, 8)}01` : today
+  const months = calendarMonths(start, today)
+  if (months > 24) {
+    throw new Error(`All dates covers ${months} calendar months; the trend reads up to 24 at a time. Choose a shorter period.`)
+  }
+  return getIssuedRevenueTrend(start, today, today)
+}
+
+export default function RevenueReport() {
+  // RULING 2026-10-17 (R17-1): the gate lives in rbac.ts, shared with the report menu.
+  const permitted = useCanViewFinancialReports()
+  const today = businessDayAd()
+  const [filters, setFilters] = useState<ReportFilters>(() => defaultFilters(businessDayAd()))
+  const [compare, setCompare] = useState<ReportCompare>('off')
+  const [tab, setTab] = useState<RevenueTab>('trend')
+
+  // All dates is the toolbar with no bounds. Its window is checked when it loads (loadAllDates).
+  const allDates = !filters.dateRange?.fromAd && !filters.dateRange?.toAd
+  const from = allDates ? today : readReportDate(filters.dateRange?.fromAd, daysAgo(today, 89))
   const to = readReportDate(filters.dateRange?.toAd, today)
-  const displayedFilters: ReportFilters = { ...filters, dateRange: reportDateRange('issue_date', from, to) }
+  const displayedFilters: ReportFilters = allDates ? filters : { ...filters, dateRange: reportDateRange('issue_date', from, to) }
+  // Compare needs a bounded period; All dates has no period before it.
+  const effectiveCompare: ReportCompare = allDates ? 'off' : compare
   const windowIsValid =
     from <= to &&
     (new Date(to + 'T00:00:00Z').getUTCFullYear() - new Date(from + 'T00:00:00Z').getUTCFullYear()) * 12 +
@@ -58,21 +91,22 @@ export default function RevenueReport() {
       new Date(from + 'T00:00:00Z').getUTCMonth() <
       24
 
-  const filtered = Boolean(filters.dateRange?.fromAd || filters.dateRange?.toAd)
-  const load = useLoad<IssuedRevenueReport>(() => getIssuedRevenueTrend(from, to, today), {
-    key: `${from}|${to}|${today}`,
+  const isDefaultWindow = !allDates && from === daysAgo(today, 89) && to === today
+  const filtered = !allDates && !isDefaultWindow
+  const load = useLoad<IssuedRevenueReport>(() => (allDates ? loadAllDates(today) : getIssuedRevenueTrend(from, to, today)), {
+    key: `${allDates ? 'all' : from}|${to}|${today}`,
     enabled: permitted && windowIsValid,
   })
 
   const report = load.data
   const displayedFrom = report?.fromAd ?? from
   const displayedTo = report?.toAd ?? to
-  const previousWindow = useMemo(() => windowIsValid ? precedingReportWindow(from, to) : null, [from, to, windowIsValid])
+  const previousWindow = useMemo(() => (windowIsValid && !allDates ? precedingReportWindow(from, to) : null), [from, to, windowIsValid, allDates])
   const priorLoad = useLoad<IssuedRevenueReport>(() => {
     if (!previousWindow) return Promise.reject(new Error('Invalid comparison window'))
     return getIssuedRevenueTrend(previousWindow.fromAd, previousWindow.toAd, today)
-  }, { key: previousWindow ? `${previousWindow.fromAd}|${previousWindow.toAd}|${today}` : 'invalid', enabled: permitted && windowIsValid && compare === 'previous' })
-  const prior = compare === 'previous' && previousWindow && !priorLoad.loading && !priorLoad.error && report?.fromAd === from && report.toAd === to && priorLoad.data?.fromAd === previousWindow.fromAd && priorLoad.data.toAd === previousWindow.toAd ? priorLoad.data : null
+  }, { key: previousWindow ? `${previousWindow.fromAd}|${previousWindow.toAd}|${today}` : 'invalid', enabled: permitted && windowIsValid && effectiveCompare === 'previous' })
+  const prior = effectiveCompare === 'previous' && previousWindow && !priorLoad.loading && !priorLoad.error && report?.fromAd === from && report.toAd === to && priorLoad.data?.fromAd === previousWindow.fromAd && priorLoad.data.toAd === previousWindow.toAd ? priorLoad.data : null
 
   const rows: ReportCsvRow[] = useMemo(() => {
     if (!report) return []
@@ -80,7 +114,7 @@ export default function RevenueReport() {
       ['Report', 'Issued invoice taxable revenue (monthly trend)'],
       ['Basis', 'Taxable invoice amounts before VAT for issued invoices grouped by AD issue date. Excludes drafts and voids. Credit notes are reconciled below on a cash-paid correction basis, not as taxable sales deductions.'],
       ['Date window', `${displayedFrom} to ${displayedTo}`],
-      ...(compare === 'previous' && previousWindow ? [
+      ...(effectiveCompare === 'previous' && previousWindow ? [
         ['Previous date window', `${previousWindow.fromAd} to ${previousWindow.toAd}`],
         ...(prior ? [['Previous taxable value', formatMoney(prior.totalPaisa)], ['Change from previous period', reportMoneyChange(report.totalPaisa, prior.totalPaisa).value]] : [['Previous period status', 'Not available']]),
       ] as ReportCsvRow[] : []),
@@ -97,7 +131,7 @@ export default function RevenueReport() {
       ['Total', formatMoney(report.totalPaisa), report.issuedCount],
       ...(prior ? [[], ['Previous period monthly detail'], ['Month', 'Taxable value', 'Issued invoices'], ...prior.months.map(month => [month.longLabel || month.label, formatMoney(month.amountPaisa), month.invoiceCount]), ['Total', formatMoney(prior.totalPaisa), prior.issuedCount]] as ReportCsvRow[] : []),
     ]
-  }, [report, displayedFrom, displayedTo, compare, previousWindow, prior])
+  }, [report, displayedFrom, displayedTo, effectiveCompare, previousWindow, prior])
 
   const chartData: ReportChartPoint[] = useMemo(() => {
     if (!report) return []
@@ -149,18 +183,30 @@ export default function RevenueReport() {
             value={displayedFilters}
             onChange={setFilters}
             dateColumn="issue_date"
-            allowAllDates={false}
-            compare={compare}
-            onCompareChange={setCompare}
-            {...(!load.loading && !load.error && report && (compare === 'off' || (prior && !priorLoad.loading && !priorLoad.error)) ? { csv: { filename: 'revenue-issued-monthly', build: () => rows } } : {})}
+            {...(allDates ? {} : { compare, onCompareChange: setCompare })}
+            {...(tab === 'trend' && !load.loading && !load.error && report && (effectiveCompare === 'off' || (prior && !priorLoad.loading && !priorLoad.error)) ? { csv: { filename: 'revenue-issued-monthly', build: () => rows } } : {})}
           />
-          {compare === 'previous' && previousWindow && <div style={{ color: 'var(--text2)' }}>
+          {windowIsValid && (
+            <SegmentedControl<RevenueTab>
+              ariaLabel="Revenue report views"
+              size="sm"
+              value={tab}
+              onChange={setTab}
+              options={[
+                { id: 'trend', label: 'Revenue trend' },
+                { id: 'register', label: 'Invoice register' },
+              ]}
+            />
+          )}
+          {tab === 'trend' && effectiveCompare === 'previous' && previousWindow && <div style={{ color: 'var(--text2)' }}>
             Previous period: {previousWindow.fromAd} to {previousWindow.toAd} · same number of days, immediately before the selected period.
             {priorLoad.loading && <p role="status">Loading previous period…</p>}
             {priorLoad.error && <p role="alert">Previous period unavailable: {priorLoad.error} <Button variant="secondary" onClick={priorLoad.reload}>Retry comparison</Button></p>}
           </div>}
 
-          {!windowIsValid ? (
+          {tab === 'register' && windowIsValid ? (
+            <RevenueInvoiceRegister key={`${allDates ? 'all' : from}|${to}`} {...(allDates ? {} : { fromAd: from })} toAd={to} />
+          ) : !windowIsValid ? (
             <div
               role="alert"
               style={{
@@ -183,8 +229,8 @@ export default function RevenueReport() {
               skeleton="table"
               empty={report !== null && !hasRevenueActivity(report) && (!prior || !hasRevenueActivity(prior))}
               emptyIsFiltered={filtered}
-              onClearFilters={() => setFilters({})}
-              emptyTitle={filtered ? 'No revenue recorded in this period' : 'No invoices issued in the last 90 days'}
+              onClearFilters={() => setFilters(defaultFilters(today))}
+              emptyTitle={filtered ? 'No revenue recorded in this period' : allDates ? 'No invoices issued yet' : 'No invoices issued in the last 90 days'}
               emptyMessage={
                 filtered
                   ? 'No taxable nonvoid invoices were issued in the selected date window. Clear the filters to see the default 90-day window.'

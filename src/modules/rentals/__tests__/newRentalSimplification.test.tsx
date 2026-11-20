@@ -172,4 +172,21 @@ describe('NewRental simplification (Part A - D)', () => {
     await act(async () => root.unmount())
     container.remove()
   })
+
+  it('marks exactly one step as the current step, for assistive technology', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<MemoryRouter><NewRental /></MemoryRouter>))
+      const steps = [...container.querySelectorAll('nav[aria-label="Rental sections"] button')]
+      expect(steps.length).toBeGreaterThan(1)
+      const current = steps.filter((step) => step.getAttribute('aria-current') === 'step')
+      expect(current).toHaveLength(1)
+      expect(current[0]!.getAttribute('data-active')).toBe('true')
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+    }
+  })
 })
