@@ -64,6 +64,41 @@ where relnamespace = 'public'::regnamespace and relname = 'booking_requests_v'`)
 check(requestViewSecurity.length === 1 && requestViewSecurity[0].invoker,
   'booking requests view evaluates caller RLS (security_invoker=true)')
 
+// Real PL/pgSQL pricing regression: verify a published NPR rate is stored as
+// integer paisa, and that the same request uses the approved advance policy.
+// This is a disposable PGlite transaction; no client or payment is persisted.
+const catalogueRateProbe = (await q(`select id, daily_rate from public.products
+  where daily_rate > 0 order by id limit 1`))[0]
+if (!catalogueRateProbe) {
+  bad('pricing regression fixture: no positive-rate product is available')
+} else {
+  const quote = await as('anon', null, `select public.submit_booking_request(
+    jsonb_build_object(
+      'client_name', 'Security Pricing Regression',
+      'client_email', 'pricing-security-fixture@example.invalid',
+      'client_phone', '+977-9800000000',
+      'start_date', '2099-01-01',
+      'end_date', '2099-01-01',
+      'fulfillment_type', 'pickup',
+      'lines', jsonb_build_array(
+        jsonb_build_object('product_id', '${catalogueRateProbe.id}', 'quantity', 1)
+      )
+    )
+  ) as quote`)
+  const out = typeof quote.rows?.[0]?.quote === 'string'
+    ? JSON.parse(quote.rows[0].quote) : quote.rows?.[0]?.quote
+  const subtotal = Math.round(Number(catalogueRateProbe.daily_rate) * 100)
+  const vat = Math.round(subtotal * 0.13)
+  const gross = subtotal + vat
+  const advance = gross <= 500000 ? gross
+    : gross <= 1000000 ? 500000
+    : Math.round((gross * 0.5) / 100) * 100
+  check(quote.ok && Number(out?.total_paisa) === subtotal
+    && Number(out?.vat_paisa) === vat
+    && Number(out?.advance_due_paisa) === advance,
+    `request pricing uses NPR-to-paisa conversion and approved advance thresholds (${subtotal} subtotal paisa)`)
+}
+
 console.log('2. Relations anon can read')
 // Supabase grants SELECT on public tables to anon and relies on RLS, so a table is fine if RLS is on.
 // A view that runs with owner rights skips that RLS, so anon must not read it at all.
