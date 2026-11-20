@@ -39,6 +39,16 @@ const extra = fns.filter((f) => !ALLOWED_FUNCTIONS.has(f.proname))
 check(extra.length === 0, `anon executes only allow-listed functions (${fns.length} callable)`)
 for (const f of extra) console.log('       not allow-listed:', f.sig)
 
+// Money allocation is a privileged service-only API: normal authenticated sessions
+// must not be able to mark a payment Received, even if they know its UUID.
+const paymentAllocationGrants = await q(`select
+  has_function_privilege('anon', 'public.allocate_payment_intent(uuid,text,jsonb)', 'EXECUTE') as anon_can_allocate,
+  has_function_privilege('authenticated', 'public.allocate_payment_intent(uuid,text,jsonb)', 'EXECUTE') as client_can_allocate,
+  has_function_privilege('service_role', 'public.allocate_payment_intent(uuid,text,jsonb)', 'EXECUTE') as verifier_can_allocate`)
+check(paymentAllocationGrants.length === 1 && !paymentAllocationGrants[0].anon_can_allocate
+  && !paymentAllocationGrants[0].client_can_allocate && paymentAllocationGrants[0].verifier_can_allocate,
+  'money-allocation RPC is service-role only (neither anon nor authenticated can execute)')
+
 console.log('2. Relations anon can read')
 // Supabase grants SELECT on public tables to anon and relies on RLS, so a table is fine if RLS is on.
 // A view that runs with owner rights skips that RLS, so anon must not read it at all.
