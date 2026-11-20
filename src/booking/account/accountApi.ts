@@ -92,6 +92,10 @@ export function getMockClientBookings(): ClientBooking[] {
       total_paisa: 3600000, // Rs 36,000
       paid_paisa: 1500000, // Rs 15,000 advance paid
       balance_paisa: 2100000, // Rs 21,000 due
+      // Explicit mock-only flag: the real portal must wait for a server-issued
+      // invoice/advance decision before showing a payment action.
+      payment_available: true,
+      payment_kind: 'balance',
       created_at: '2026-11-18T10:00:00Z',
       lines: [
         { id: 'line-1', product_name: 'Sony FX3 Cinema Line Camera', qty: 1, rate_paisa: 600000 },
