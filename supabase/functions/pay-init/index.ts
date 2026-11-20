@@ -206,8 +206,8 @@ Deno.serve(async (req: Request) => {
         return rejectPayment('This payment link is no longer payable.', 409)
       }
     } else {
-      if ((!bookingRequestId && !bookingId) || (bookingRequestId && bookingId)) {
-        return rejectPayment('Provide exactly one booking or request target.', 400)
+      if (!bookingRequestId && !bookingId) {
+        return rejectPayment('Provide a booking request or confirmed booking target.', 400)
       }
 
       // IMPORTANT: this Edge Function uses service_role. It MUST authorize the
@@ -233,12 +233,21 @@ Deno.serve(async (req: Request) => {
       if (bookingRequestId) {
         const { data: request, error: targetError } = await supabase
           .from('booking_requests')
-          .select('id, requester_auth_uid')
+          .select('id, requester_auth_uid, booking_id, status')
           .eq('id', bookingRequestId)
           .maybeSingle()
         if (targetError) return rejectPayment('Unable to verify booking request ownership.', 503)
         if (!request || (!moneyStaff && request.requester_auth_uid !== userId)) {
           return rejectPayment('Payment target is not available to this account.', 403)
+        }
+        if (request.status === 'confirmed') {
+          // Both IDs are required to prove the displayed booking belongs to
+          // the signed-in client's confirmed request; never trust either alone.
+          if (!bookingId || request.booking_id !== bookingId) {
+            return rejectPayment('Confirmed booking does not match this request.', 403)
+          }
+        } else if (bookingId) {
+          return rejectPayment('Only confirmed requests can pay a booking balance.', 403)
         }
       } else if (!moneyStaff) {
         // A client pays an existing booking through its issued high-entropy
@@ -261,9 +270,12 @@ Deno.serve(async (req: Request) => {
       }
 
       // The server RPC computes authoritative totals; the browser sends no amount.
+      // The booking+request pair is ownership proof only. When a confirmed
+      // request is provided, the DB resolves its invoice by the request link.
+      // Passing only p_booking_id would lose tenant context.
       const { data: intentRes, error: intentError } = await supabase.rpc('create_payment_intent', {
         p_client_uuid: clientUuid,
-        p_booking_id: bookingId || null,
+        p_booking_id: bookingRequestId ? null : (bookingId || null),
         p_booking_request_id: bookingRequestId || null,
         p_provider: provider,
       })
