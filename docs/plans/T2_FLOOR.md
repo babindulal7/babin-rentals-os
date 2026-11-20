@@ -479,7 +479,7 @@ confirms with "1 short"; 3) Today shows the short line to desk roles and to Ware
 4) a sub-rent line clears it; 5) the device-only setting is gone; 6) screen check.
 **Needs** — T3-13 (the similar / sub-rent choices); T2-21 (same availability files).
 
-### T2-24 · Temporary stock from partners            status: todo · size: L · lane A · [go-live] · slips first
+### T2-24 · Temporary stock from partners            status: doing — migration 0253, bounded availability, floor return and L90/L91 verification · size: L · lane A · [go-live] · slips first
 **What** — Add partner gear to our stock **for a period** (B13): the partner (a `suppliers` record, as
 for sub-rents), the product (an existing one, or a new "partner only" product), the units (asset codes;
 labels printed with "PARTNER" ⭐) or a quantity, **from – until**, and **what the partner charges: per

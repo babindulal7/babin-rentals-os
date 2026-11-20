@@ -236,6 +236,10 @@ export interface UnitCandidate {
    * reservation and genuine physical-condition restrictions checked below.
    */
   readonly openCleaning?: OpenCleaning | null
+  /** If this is temporary stock from a partner (T2-24, B13). */
+  readonly isPartner?: boolean | undefined
+  /** The agreement window [fromAd, toAd] in ISO string */
+  readonly partnerWindow?: { readonly fromAd: string; readonly toAd: string } | undefined
 }
 
 /** Pending cleanup/reset task metadata; this does not hold a usable unit. */
@@ -254,6 +258,7 @@ export type RejectionReason =
   | { readonly kind: 'state'; readonly state: string }
   | { readonly kind: 'condition'; readonly condition: string }
   | { readonly kind: 'held'; readonly by: UnitHold }
+  | { readonly kind: 'partner_window_exceeded'; readonly partnerWindow: { readonly fromAd: string; readonly toAd: string } }
 
 export interface RejectedCandidate {
   readonly unitId: string
@@ -525,6 +530,22 @@ export function selectUnitsForLine(input: SelectUnitsInput): AssignmentOutcome {
       continue
     }
 
+    // B13 / T2-24: partner units are bookable strictly inside their agreement window
+    if (unit.isPartner && unit.partnerWindow) {
+      const windowStart = new Date(window.fromAd).getTime()
+      const windowEnd = new Date(window.toAd).getTime()
+      const partnerStart = new Date(unit.partnerWindow.fromAd).getTime()
+      const partnerEnd = new Date(unit.partnerWindow.toAd).getTime()
+      if (windowStart < partnerStart || windowEnd > partnerEnd) {
+        rejected.push({
+          unitId: unit.unitId,
+          assetTag: unit.assetTag,
+          reason: { kind: 'partner_window_exceeded', partnerWindow: unit.partnerWindow },
+        })
+        continue
+      }
+    }
+
     const conflicts = conflictingHolds(unit.unitId, window, holds, bounds)
     const blocker = conflicts[0]
     if (blocker !== undefined) {
@@ -566,6 +587,7 @@ export function explainShortfall(outcome: AssignmentOutcome, productName: string
     if (rejection.reason.kind === 'retired') parts.push(`${rejection.assetTag} is retired.`)
     else if (rejection.reason.kind === 'state') parts.push(`${rejection.assetTag} is ${rejection.reason.state}.`)
     else if (rejection.reason.kind === 'condition') parts.push(`${rejection.assetTag} condition is ${rejection.reason.condition}.`)
+    else if (rejection.reason.kind === 'partner_window_exceeded') parts.push(`${rejection.assetTag} partner agreement window is exceeded.`)
   }
 
   return parts.join(' ')
