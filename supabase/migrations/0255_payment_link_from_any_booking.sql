@@ -310,9 +310,34 @@ declare
   v_payment_no text;
   v_received_by uuid;
   v_duplicate_ref record;
+  v_request_id uuid;
+  v_request_booking_id uuid;
+  v_request_status text;
 begin
   if p_intent_id is null then
     raise exception 'GATE:gate.payment.missing_intent_id|Payment intent ID is required.';
+  end if;
+
+  -- Lock ordering: booking_requests FIRST, then payment_intents.
+  -- Confirmation takes these locks in the same order, preventing allocation
+  -- races and deadlocks when a callback arrives during staff confirmation.
+  select booking_request_id into v_request_id
+    from public.payment_intents where id = p_intent_id;
+  if not found then
+    raise exception 'GATE:gate.payment.intent_not_found|Payment intent not found.';
+  end if;
+
+  if v_request_id is not null then
+    select booking_id, status::text into v_request_booking_id, v_request_status
+      from public.booking_requests
+     where id = v_request_id
+       for update;
+    if not found then
+      raise exception 'GATE:gate.payment.request_not_found|Payment request no longer exists.';
+    end if;
+    if v_request_status in ('declined', 'cancelled') then
+      raise exception 'GATE:gate.payment.request_inactive|Cannot allocate a cancelled or declined request.';
+    end if;
   end if;
 
   select * into v_intent
@@ -322,6 +347,21 @@ begin
 
   if not found then
     raise exception 'GATE:gate.payment.intent_not_found|Payment intent not found.';
+  end if;
+
+  -- A request confirmed while this callback was pending must be linked before
+  -- any ledger insertion. The row locks serialize with confirmation's paid
+  -- and pending-intent handling.
+  if v_request_id is not null and v_request_booking_id is not null then
+    if v_intent.booking_id is not null
+        and v_intent.booking_id <> v_request_booking_id then
+      raise exception 'GATE:gate.payment.booking_mismatch|Intent is linked to another booking.';
+    end if;
+    if v_intent.booking_id is null then
+      update public.payment_intents set booking_id = v_request_booking_id, updated_at = now()
+       where id = v_intent.id;
+      v_intent.booking_id := v_request_booking_id;
+    end if;
   end if;
 
   -- Replay guard 1: if already allocated, return idempotent success
@@ -346,8 +386,9 @@ begin
     );
   end if;
 
-  -- Expiry check
-  if now() > v_intent.expires_at then
+  -- Expiry limits NEW payments, not an already provider-verified paid
+  -- intent awaiting staff confirmation and ledger allocation.
+  if v_intent.status = 'pending' and now() > v_intent.expires_at then
     update public.payment_intents set status = 'expired', updated_at = now() where id = v_intent.id;
     raise exception 'GATE:gate.payment.intent_expired|Payment intent has expired.';
   end if;
@@ -478,7 +519,8 @@ revoke all on function public.get_payment_link_details(text) from public, anon;
 -- no direct public/anon RPC exposure is added here.
 grant execute on function public.get_payment_link_details(text) to authenticated, service_role;
 
-revoke all on function public.allocate_payment_intent(uuid, text, jsonb) from public, anon;
-grant execute on function public.allocate_payment_intent(uuid, text, jsonb) to authenticated;
+-- Final migration MUST NOT re-open the money-writing SECURITY DEFINER RPC.
+revoke all on function public.allocate_payment_intent(uuid, text, jsonb) from public, anon, authenticated;
+grant execute on function public.allocate_payment_intent(uuid, text, jsonb) to service_role;
 
 commit;
