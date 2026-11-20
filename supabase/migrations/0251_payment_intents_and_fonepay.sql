@@ -488,9 +488,28 @@ begin
     raise exception 'GATE:gate.booking_request.invalid_status|Cannot confirm a request that has been %.', v_req.status;
   end if;
 
-  select * into v_booking from public.bookings where id = p_booking_id;
+  -- Match the client and staff checkout lock ordering: request, booking,
+  -- then payment intents, to close the confirm-during-checkout race.
+  select * into v_booking from public.bookings where id = p_booking_id for update;
   if not found then
     raise exception 'GATE:gate.booking.not_found|Target booking % does not exist.', p_booking_id;
+  end if;
+
+  -- Do not attach a live client payment attempt to a booking which already
+  -- has another independently collectible staff payment link.
+  if exists (
+    select 1 from public.payment_intents pi
+     where pi.booking_request_id = p_request_id
+       and (pi.status = 'paid'
+         or (pi.status = 'pending' and pi.expires_at > now()))
+  ) and exists (
+    select 1 from public.payment_intents pi
+     where pi.booking_id = p_booking_id
+       and pi.booking_request_id is distinct from p_request_id
+       and (pi.status = 'paid'
+         or (pi.status = 'pending' and pi.expires_at > now()))
+  ) then
+    raise exception 'GATE:gate.payment.attempt_in_progress|Resolve another active payment checkout before confirming this request.';
   end if;
 
   update public.booking_requests set
