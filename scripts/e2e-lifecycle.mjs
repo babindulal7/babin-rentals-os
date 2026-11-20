@@ -189,25 +189,6 @@ async function asService(fn) {
   }
 }
 
-async function asAnon(fn) {
-  await db.exec(`set role anon;
-    select set_config('app.current_user_id', '', false);
-    select set_config('request.jwt.claim.sub', '', false);
-    select set_config('request.jwt.claim.role', 'anon', false);`)
-  try {
-    return await fn()
-  } finally {
-    try {
-      await db.exec(`reset role; select set_config('app.current_user_id', '', false);
-        select set_config('request.jwt.claim.sub', '', false); select set_config('request.jwt.claim.role', '', false);`)
-    } catch {
-      await db.exec('rollback;')
-      await db.exec(`reset role; select set_config('app.current_user_id', '', false);
-        select set_config('request.jwt.claim.sub', '', false); select set_config('request.jwt.claim.role', '', false);`)
-    }
-  }
-}
-
 /**
  * Run a block and UNDO it, whatever it did.
  *
