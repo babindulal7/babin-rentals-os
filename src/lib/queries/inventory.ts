@@ -389,6 +389,8 @@ export interface InventoryListRow {
    * place that throws it away.
    */
   unitConditions: UnitConditionDb[]
+  /** `products_v.allow_overbooking`. Safe shortage handling when permitted demand exceeds stock. */
+  allowOverbooking?: boolean | undefined
   /** `products_v.daily_rate`. **Money.** Null unless `withMoney` — see MONEY above. */
   dailyRate: Paisa | null
   /** `products_v.unit_sale_price`. **Money.** Consumable unit sale price. Null unless `withMoney`. */
@@ -539,7 +541,7 @@ export const RECORD_STATE_COLUMN = 'status'
  */
 const BASE_COLUMNS =
   'id, asset_code, name, short_name, brand, model, category_id, tracking_mode, status, ' +
-  'total_quantity, reorder_level, quantity_unit, is_active, created_at, ' +
+  'total_quantity, reorder_level, quantity_unit, is_active, allow_overbooking, created_at, ' +
   `${CATEGORY_ALIAS}:inventory_categories!inner ( code, name ), ` +
   'units:product_units_v ( status, condition )'
 
@@ -595,6 +597,7 @@ interface RawInventoryRow {
   reorder_level?: number | null
   quantity_unit: UnitOfMeasureDb | null
   is_active: boolean
+  allow_overbooking?: boolean | null
   created_at: string
   /** `numeric(14,2)` — RUPEES. Absent from the row unless `withMoney` was set; NULL when the view masked it. */
   daily_rate?: number | null
@@ -715,6 +718,7 @@ function toRow(r: RawInventoryRow): InventoryListRow {
     trackingMode: r.tracking_mode,
     recordState: r.status,
     isActive: r.is_active,
+    allowOverbooking: Boolean(r.allow_overbooking),
     totalQuantity: r.total_quantity,
     quantityUnit: r.quantity_unit,
     createdAtAd: r.created_at,

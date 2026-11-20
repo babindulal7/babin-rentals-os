@@ -87,6 +87,7 @@ export interface AssignableLine {
   readonly totalQuantity: number
   readonly prepMinutes?: number
   readonly cleaningMinutes?: number
+  readonly allowOverbooking?: boolean
 }
 
 /**
@@ -101,6 +102,7 @@ export interface SerialisedPlanLine {
   readonly outcome: AssignmentOutcome
   /** Law 12: the inline, specific sentence. `null` when the line is fully covered. */
   readonly problem: string | null
+  readonly shortQty?: number
 }
 
 /**
@@ -117,6 +119,7 @@ export interface QuantityPlanLine {
   readonly capacity: CapacityOutcome
   /** Law 12: the inline, specific sentence. `null` when the line is fully covered. */
   readonly problem: string | null
+  readonly shortQty?: number
 }
 
 export type AssignmentPlanLine = SerialisedPlanLine | QuantityPlanLine
@@ -234,6 +237,7 @@ interface ProductMode {
   readonly totalQuantity: number
   readonly prepMinutes: number
   readonly cleaningMinutes: number
+  readonly allowOverbooking: boolean
 }
 
 interface ProductModeRow {
@@ -242,6 +246,7 @@ interface ProductModeRow {
   total_quantity: number | null
   prep_time_minutes: number | null
   cleaning_time_minutes: number | null
+  allow_overbooking: boolean | null
 }
 
 /**
@@ -270,7 +275,7 @@ export async function readProductModes(productIds: readonly string[]): Promise<M
   const uniqueIds = [...new Set(productIds)]
   const rows = await readCompleteAvailability<ProductModeRow>((from, to) => supabase
     .from('products_v')
-    .select('id, tracking_mode, total_quantity, prep_time_minutes, cleaning_time_minutes')
+    .select('id, tracking_mode, total_quantity, prep_time_minutes, cleaning_time_minutes, allow_overbooking')
     .in('id', uniqueIds)
     .order('id', { ascending: true })
     .range(from, to), 'product tracking and stock')
@@ -286,6 +291,7 @@ export async function readProductModes(productIds: readonly string[]): Promise<M
       totalQuantity: typeof row.total_quantity === 'number' ? row.total_quantity : 0,
       prepMinutes: typeof row.prep_time_minutes === 'number' ? row.prep_time_minutes : 0,
       cleaningMinutes: typeof row.cleaning_time_minutes === 'number' ? row.cleaning_time_minutes : 0,
+      allowOverbooking: Boolean(row.allow_overbooking),
     })
   }
 
@@ -293,7 +299,7 @@ export async function readProductModes(productIds: readonly string[]): Promise<M
   if (missing.length > 0) {
     const baseRows = await readCompleteAvailability<ProductModeRow>((from, to) => supabase
       .from('products')
-      .select('id, tracking_mode, total_quantity, prep_time_minutes, cleaning_time_minutes')
+      .select('id, tracking_mode, total_quantity, prep_time_minutes, cleaning_time_minutes, allow_overbooking')
       .in('id', missing)
       .order('id', { ascending: true })
       .range(from, to), 'product tracking fallback')
@@ -304,6 +310,7 @@ export async function readProductModes(productIds: readonly string[]): Promise<M
         totalQuantity: typeof row.total_quantity === 'number' ? row.total_quantity : 0,
         prepMinutes: typeof row.prep_time_minutes === 'number' ? row.prep_time_minutes : 0,
         cleaningMinutes: typeof row.cleaning_time_minutes === 'number' ? row.cleaning_time_minutes : 0,
+        allowOverbooking: Boolean(row.allow_overbooking),
       })
     }
   }
@@ -385,6 +392,7 @@ async function readLines(bookingId: string): Promise<{
       totalQuantity: mode.totalQuantity,
       prepMinutes: mode.prepMinutes,
       cleaningMinutes: mode.cleaningMinutes,
+      allowOverbooking: mode.allowOverbooking,
     })
   }
 
@@ -817,7 +825,9 @@ export async function planAssignment(bookingRef: string): Promise<AssignmentPlan
         bounds: rules.bounds,
       })
       for (const unit of outcome.assigned) claimed.add(unit.unitId)
-      lines.push({ kind: 'serialised', line, outcome, problem: explainShortfall(outcome, line.label) })
+      const isShort = outcome.shortfall > 0
+      const problem = (isShort && !line.allowOverbooking) ? explainShortfall(outcome, line.label) : null
+      lines.push({ kind: 'serialised', line, outcome, problem, shortQty: outcome.shortfall })
       continue
     }
 
@@ -834,10 +844,12 @@ export async function planAssignment(bookingRef: string): Promise<AssignmentPlan
     })
     /* Only a covered line claims. An uncovered one already fails the plan, and
        claiming stock it did not get would make the NEXT line's sentence wrong. */
-    if (capacity.shortfall === 0) {
-      claimedQty.set(line.productId, (claimedQty.get(line.productId) ?? 0) + line.qty)
+    const isShort = capacity.shortfall > 0
+    if (capacity.shortfall === 0 || line.allowOverbooking) {
+      claimedQty.set(line.productId, (claimedQty.get(line.productId) ?? 0) + (line.qty - capacity.shortfall))
     }
-    lines.push({ kind: 'quantity', line, capacity, problem: explainCapacityShortfall(capacity, line.label) })
+    const problem = (isShort && !line.allowOverbooking) ? explainCapacityShortfall(capacity, line.label) : null
+    lines.push({ kind: 'quantity', line, capacity, problem, shortQty: capacity.shortfall })
   }
 
   return {
