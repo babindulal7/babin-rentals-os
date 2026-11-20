@@ -294,8 +294,8 @@ export async function initOnlinePayment(params: {
 }
 
 /**
- * Confirms payment server-to-server via pay-verify Edge Function or RPC fallback.
- * A browser redirect alone never counts (D30).
+ * Requests server-to-server payment verification.
+ * An Edge failure NEVER falls back to a browser-callable money RPC (D30).
  */
 export async function verifyOnlinePayment(params: {
   intentId: string
@@ -307,48 +307,17 @@ export async function verifyOnlinePayment(params: {
   data?: string | undefined
   responseCode?: string | undefined
 }): Promise<PayVerifyResponse> {
-  const { intentId, provider, providerRef, bid = '', uid = '', pidx = '', data = '', responseCode = 'successful' } = params
+  const { intentId, provider, providerRef, bid = '', uid = '', pidx = '', data = '', responseCode = '' } = params
 
-  try {
-    const { data: edgeData, error } = await supabase.functions.invoke<PayVerifyResponse>('pay-verify', {
-      body: { intentId, provider, providerRef, bid, uid, pidx, data, responseCode },
-    })
-
-    if (!error && edgeData && edgeData.success) {
-      return edgeData
-    }
-  } catch (err) {
-    console.warn('[payApi] Edge function pay-verify failed, trying direct RPC fallback:', err)
-  }
-
-  // Fallback: direct RPC invocation
-  const { data: rpcData, error: rpcError } = await supabase.rpc('allocate_payment_intent', {
-    p_intent_id: intentId,
-    p_provider_ref: providerRef,
-    p_provider_response: { mock_verified: true, responseCode, provider, pidx, client_call: true },
+  const { data: result, error } = await supabase.functions.invoke<PayVerifyResponse>('pay-verify', {
+    body: { intentId, provider, providerRef, bid, uid, pidx, data, responseCode },
   })
 
-  if (rpcError || !rpcData) {
-    throw new Error(rpcError?.message || 'Failed to verify and allocate payment intent.')
+  if (error) {
+    throw new Error(error.message || 'Payment verification could not be completed.')
   }
-
-  const res = rpcData as {
-    success: boolean
-    intent_id: string
-    payment_id: string | null
-    payment_no?: string | undefined
-    amount_paisa?: number | undefined
-    status: 'pending' | 'paid' | 'allocated' | 'failed' | 'expired'
-    already_allocated?: boolean | undefined
+  if (!result?.success) {
+    throw new Error(result?.error || 'Payment verification failed; no payment has been recorded.')
   }
-
-  return {
-    success: res.success,
-    intent_id: res.intent_id,
-    status: res.status,
-    payment_id: res.payment_id,
-    payment_no: res.payment_no,
-    amount_paisa: res.amount_paisa,
-    already_allocated: res.already_allocated,
-  }
+  return result
 }
