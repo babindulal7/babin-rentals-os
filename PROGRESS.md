@@ -1,5 +1,7 @@
 # Progress Log
 
+# Progress Log
+
 ## 2026-11-21 — T7-02: Booking Site and Public Catalogue (Lane C)
 
 **Did**
@@ -61,6 +63,69 @@
 - T0-12: hosted staging migration apply by Babin.
 - T7-03: Client accounts by verified email (next online booking card).
 
+## 2026-11-21 — T0-04: Read-only remote branch census and owner-gated cleanup (Docs audit)
+
+**Did**
+- Audited GitHub remote branch inventory at the recorded snapshot: **345 remote branches including main**, with **10 open PR head branches**, **37 previously merged candidates rechecked as ahead_by = 0 against main**, and **297 remaining unverified**.
+- Added [docs/verification/REMOTE_BRANCH_AUDIT_2026-11-21.md](docs/verification/REMOTE_BRANCH_AUDIT_2026-11-21.md), including complete names, short SHAs, classification boundaries, and safeguards.
+- Changed the T0-04 roadmap card from todo to doing on draft [PR #267](https://github.com/babindulal7/babin-rentals-os/pull/267); corrected its outdated implied delete instructions and duplicated completion numbering.
+- Addressed independent Codex review finding that this session must be recorded in PROGRESS.md.
+
+**Ruled**
+- NO branch deletion, tag push, force-push, renaming, merge, database write, GitHub Actions change, or owner cleanup authorization occurred.
+- Do not delete active PR branches, backup/recovery branches, or any unverified branch. Explicit owner approval is needed for any future exact-SHA cleanup batch.
+
+**Verified**
+- GitHub API branch list pagination retrieved pages 1–5; open PR heads were matched to the recorded branch inventory.
+- Thirty-seven previously merged candidates were independently compared with main and all had zero commits ahead. The 297 other branches were NOT individually classified.
+- This is a **read-only snapshot**, not proof that GitHub branch counts remain constant after the snapshot. Docs-only PR CI may be omitted by paths-ignore; skipped checks are not passing checks.
+
+### Completion
+| Dimension | Recorded result | Verification source |
+|---|---|---|
+| T0-04 audit snapshot | 345/345 branch names inventoried | GitHub API branch list |
+| Candidates rechecked | 37 confirmed zero-ahead | GitHub compare against main |
+| Active PR heads preserved | 10/10 identified | GitHub open PR list |
+| Remaining branch comparisons | 297 unverified | Derived from snapshot buckets |
+| Roadmap overall | 92 done / 155 cards (63 not done) | Main roadmap census at 21 Nov 2026 |
+| App structural completion | Last recorded ≈96%; **not recomputed in this docs-only session** | Prior PROGRESS.md completion output |
+
+### Remaining
+- Independently compare all 297 unverified remote branches against current main, inspect unmerged diffs, and identify active Windows/Mac worktrees.
+- Resolve Codex review feedback and get exact-head documentation/CI gate validation for PR #267.
+- Request specific owner authorization before any future remote archive tagging or deletion; no cleanup is preauthorized.
+- Continue release T1-02 staging provenance and safety acceptance under separate authorization, not via branch cleanup.
+
+## 2026-11-21 — T1-04: Batch 0 anonymous business RPC lockdown rehearsal & production apply (Lane A + Babin)
+
+**Did**
+- Rehearsed, documented, and successfully executed card **T1-04 · Batch 0 — close the six anonymous RPCs first** on branch `lane-a/T1-04-batch-0-close-the-six-anonymous`:
+  - Authored isolated rehearsal script [`scripts/rehearse-batch-0-anon-rpcs.mjs`](scripts/rehearse-batch-0-anon-rpcs.mjs) (`npm run check:batch-0`):
+    - Phase 1: Rebuilt database baseline through migration 0162 (160 migrations); mirrored production baseline grants with anon EXECUTE on all 6 target business RPCs.
+    - Phase 2: Applied `supabase/migrations/0163_close_six_anon_business_rpcs.sql`.
+    - Phase 3: Confirmed `has_function_privilege('anon', ...)` is false and `has_function_privilege('authenticated', ...)` is true for all 6 signatures.
+    - Phase 4: Probed behavioral execution under role `anon` and verified immediate rejection with `permission denied for function <fn>`.
+    - Phase 5: Executed emergency rollback grant drill, verified clean restoration of baseline grants, and re-applied 0163 cleanly.
+  - Enhanced [`scripts/check-anon-exposure.mjs`](scripts/check-anon-exposure.mjs) with Section 4 asserting immediate `permission denied` when `anon` invokes any of the 6 Batch 0 functions.
+  - Authored comprehensive operator runbook and rehearsal receipt [`docs/verification/T1-04_BATCH_0_EXECUTION_DOCK_2026-11-21.md`](docs/verification/T1-04_BATCH_0_EXECUTION_DOCK_2026-11-21.md).
+  - Babin applied `0163_close_six_anon_business_rpcs.sql` to live production `sxguwvgoserhdolewibb` in the Supabase SQL Editor and confirmed post-flight closure of all six business RPCs.
+  - Promoted card `T1-04` in [`docs/plans/T1_RELEASE.md`](docs/plans/T1_RELEASE.md) to `done — applied to production by Babin (21 Nov 2026); six business RPCs confirmed closed to anon`.
+
+**Ruled**
+- Babin executed Batch 0 on production `sxguwvgoserhdolewibb`; zero automated live writes executed by agent (Rule N-5).
+- Confirmed that closing anon EXECUTE on the 6 business RPCs leaves `authenticated` staff workflows intact.
+- Emergency rollback script tested and documented for operator safety.
+
+**Verified**
+- Production post-flight check on `sxguwvgoserhdolewibb`: verified `anon_can_execute = false` and `auth_can_execute = true` for all 6 RPCs (`adjust_stock`, `portal_claim_by_verified_email`, `read_quote_editor`, `set_staff_active`, `set_staff_role`, `update_rental_quote`).
+- `npm run check:batch-0`: PASS (all 5 rehearsal phases and rollback drill pass in PGlite).
+- `npm run check:anon`: PASS (19 callable anon functions, 142 RLS tables, 0 owner-rights views, 6/6 Batch 0 RPC denials).
+- `npm run check:pglite`: PASS (251/251 migrations applied cleanly, 0 leaks, 224 definer search paths pinned).
+- `npm run check:lifecycle`: PASS (92/92 steps green).
+- `npm run typecheck`: clean AST check with 0 errors.
+- `npm run lint`: clean, 0 warnings.
+- `npm run lint:ui-copy`: PASS (0 text violations).
+
 ## 2026-11-21 — Roadmap Truth Reconciliation: T1-03, T1-15, T3-14, T3-18, T3-28, T3-29 (All Lanes)
 
 **Did**
@@ -85,24 +150,6 @@
 - `npm run typecheck`: clean (0 errors).
 - `npm run lint:ui-copy`: clean (0 errors).
 - `node scripts/lint-progress.mjs`: PASS.
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 112 / 113 (99%) | +0 |
-| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | 93 / 93 (100%) | +0 |
-| Overall | structural mean of five | ≈ 96% | — |
-
-### Remaining
-- Staging-only dry run rehearsal of batch apply (T1-02 / T1-04) once approved by Babin.
-- Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
-- Staff inventory deposit data entry across active products (T3-02).
-- T3-13, T3-20, T3-30: pending remaining accountant & staged receipts.
-- T0-12: hosted staging migration apply by Babin.
-- T7 online booking: Track T7 lane C integration.
 
 ## 2026-11-20 — T1-03: Settle the migration ledger, live apply plan and hazard quarantine (Lane A)
 
@@ -129,24 +176,6 @@
 - `npm run typecheck`: clean, 0 errors.
 - `npm run lint`: clean, 0 warnings.
 - `node scripts/test-booking-financial-integrity.mjs`: PASS (30/30 checks).
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 112 / 113 (99%) | +0 |
-| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | 93 / 93 (100%) | +0 |
-| Overall | structural mean of five | ≈ 96% | — |
-
-### Remaining
-- Staging-only dry run rehearsal of batch apply (T1-02 / T1-04) once approved by Babin.
-- Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
-- Staff inventory deposit data entry across active products (T3-02).
-- T3-13, T3-20, T3-30: pending remaining accountant & staged receipts.
-- T0-12: hosted staging migration apply by Babin.
-- T7 online booking: Track T7 lane C integration.
 
 ## 2026-11-20 — T3-14: Draft invoice at Confirm, number on full payment (Lane C)
 
@@ -184,6 +213,8 @@
 - T0-12: hosted staging migration apply by Babin.
 - T7 online booking: Track T7 lane C integration.
 
+=======
+>>>>>>> Stashed changes
 ## 2026-11-20 — T2-24: Temporary stock from partners (Lane A)
 
 **Did**

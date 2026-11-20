@@ -47,15 +47,12 @@ mattered is shown to exist on `main` (file + line), not assumed. Claude does the
 the list (W74 — Claude never closes or pushes); Babin or a local agent closes the PRs.
 **Needs** — none.
 
-### T0-04 · Branch triage            status: todo · size: M · Babin + Codex-1 (local)
-**What** — For each of the ~90 remote branches: list commits not on `main`
-(`git log --oneline main..origin/<branch>`). Merged → delete the branch. Unmerged → tag it
-`archive/<branch>` then delete the branch, and list the tags in `docs/archive/BRANCHES_2026-10.md`.
+### T0-04 · Branch triage            status: doing — 345 remote branch snapshot, 37 zero-ahead candidates verified, owner approval for deletion pending · size: M · Babin + Codex-1 (local)
+**What** — An updated [read-only 21 Nov 2026 inventory](../verification/REMOTE_BRANCH_AUDIT_2026-11-21.md) found **345 remote branches including main**; 37 older candidates are verified as exactly zero ahead, and 10 branches head open PRs. Classification of all other branches is not yet complete. Never execute cleanup based on the outdated ~90-branch estimate. For each remote branch: inspect commits not on `main` (`git log --oneline main..origin/<branch>`). Classify as active PR, verified-merged, unmerged, protected/recovery, or unresolved. **Do not delete any branch or push archive tags** without a specific owner-approved cleanup list, independently verified SHA and safe retention plan. Proposed archival tags and deletions must be documented first; execution is a separate owner-gated action.
 **Why** — Branch sprawl hides unmerged work; tags keep it (Law 3 spirit) without the noise.
 **Where** — git remote; `docs/archive/BRANCHES_2026-10.md`.
 **Database** — none.
-**Done when** — 1) `git ls-remote --heads origin` lists only `main` and live lane branches;
-2) every deleted unmerged branch has an `archive/` tag.
+**Done when** — 1) complete inventory classifies all remote branches against a fresh `main` and open-PR list; 2) owner explicitly authorizes each proposed archival/deletion batch; 3) any unmerged branch to delete has a verified durable archive reference and independent reviewer receipt; 4) only after authorized cleanup, inspect `git ls-remote --heads origin` to confirm intended remaining branches. **This audit-only PR satisfies neither owner approval nor deletion completion.**
 **Needs** — Babin's OK to delete branches (GitHub settings may protect some).
 
 ### T0-05 · Documents tell the truth            status: done (26 Oct, `3fca220`) · size: S · lane A
@@ -112,18 +109,13 @@ to `AGENTS.md` so Codex and Gemini follow the same protocol.
 **Done when** — AGENTS.md has a "Parallel work" section that matches PLAN.md §6.
 **Needs** — T0-01.
 
-### T0-09 · CI off: local checks are the gate            status: todo · size: S · Babin
-**What** — GitHub CI has not passed since 15 Oct; the run on PR #29 (25 Oct) shows GitHub refusing to
-start the job for a billing reason. Babin ruled **keep CI off** (W75): 1) Babin disables the workflow
-(GitHub → Actions → CI → ⋯ → Disable workflow; re-enable any time); 2) every agent runs the full
-local list before saying a task is done (PLAN §6.4) and pastes the results into its PROGRESS entry;
-3) Babin runs the same list before merging locally; 4) Claude re-runs the fast checks on `main` at
-each check-in (7:38 AM / 7:38 PM) and reports anything red.
-**Why** — W75, W77.
-**Where** — GitHub settings (Babin); `AGENTS.md` "Commands" note (done in the 26 Oct package).
-**Database** — none.
-**Done when** — no new red X appears on pushes; the first check-in report shows the gates on `main`.
-**Needs** — none.
+### T0-09 · Active CI + independent local gates            status: acceptance_pending — current CI enabled and PR checks running; exact-head GREEN and owner acceptance pending · size: S · Babin + agents
+**What** — Reconcile superseded Oct 26 W75 `keep CI off` guidance with Babin's later Nov 9 R-9.9 ruling: **keep GitHub CI enabled**. Every same-repository PR runs required CI checks; push to `main` runs main checks, and manual dispatch is available. Self-hosted Mac/Windows runners are capacity constraints, **not** reasons to disable verification. Agents must run local gates (see `AGENTS.md` and `npm run gates`) and record results before proposing a merge; GitHub's required current-head CI must also pass. Never merge on stale-head or merely queued/running/skipped results, and never silently disable required checks or required main builds.
+**Why** — The historical CI-disabled/billing workaround is outdated. An actual PR-head CI run was observed in progress 21 Nov 2026; both local verification and independent GitHub checks are necessary for safe production work.
+**Where** — `.github/workflows/ci.yml`, `AGENTS.md` Verification order, GitHub Actions, and [`T0-09_CI_POLICY_RECONCILIATION_2026-11-21.md`](../verification/T0-09_CI_POLICY_RECONCILIATION_2026-11-21.md).
+**Database** — none; policy/documentation only, no workflow setting or remote mutation.
+**Done when** — 1) exact-head required CI runs on an eligible current code PR and returns green, not merely queued; 2) required `main` job(s) pass on the corresponding merged SHA; 3) local verification outputs are recorded without leaked credentials; 4) workflow state/runners verified with no disabled required checks; 5) Babin accepts the current enabled-CI policy and the old W75 card is recognized as superseded, not re-enabled.
+**Needs** — current CI run completion, owner confirmation on any GitHub billing/branch protection control outside this documentation PR.
 
 ### T0-10 · Tests never run with live settings            status: done — merged on `main` 2 Nov 2026 (#64, `673ef99a`); status corrected 4 Nov after the rule audit · size: S · lane A · [go-live]
 **What** — Since T0-02 (`3fca220`), `scripts/run-tests.mjs` picks mock data only when no

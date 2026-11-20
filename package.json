@@ -45,6 +45,7 @@
     "storage:local": "node scripts/local-storage.mjs",
     "data:wipe": "node scripts/wipe-user-data.mjs",
     "check:anon": "node scripts/check-anon-exposure.mjs",
+    "check:batch-0": "node scripts/rehearse-batch-0-anon-rpcs.mjs",
     "test:audit-coverage": "node scripts/test-audit-trigger-coverage.mjs",
     "test:settings": "node scripts/test-settings-table.mjs",
     "test:saved-views": "node scripts/test-saved-views.mjs",
