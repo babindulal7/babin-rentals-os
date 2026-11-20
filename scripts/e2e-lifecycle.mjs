@@ -10208,18 +10208,22 @@ STEPS.push({
   expect: 'green',
   run: async () => {
     let reqId
+    let khaltiReqId
     await asOwnerOfTheDatabase(async () => {
+      // Separate requests: once eSewa is verified as paid, the same request
+      // must not accept a second advance from Khalti.
       const res = await q(`
         insert into public.booking_requests (
           request_number, client_name, client_email, client_phone, start_date, end_date,
           fulfillment_type, total_paisa, vat_paisa, advance_due_paisa, status
-        ) values (
-          'REQ-L94-01', 'L94 Requester', 'l94@example.com', '+977-9841000094', '2026-12-15', '2026-12-17',
-          'pickup', 1500000, 195000, 750000, 'pending'
-        )
-        returning id;
+        ) values
+          ('REQ-L94-01', 'L94 eSewa Requester', 'l94-esewa@example.invalid', '+977-9841000094', '2099-12-15', '2099-12-17', 'pickup', 1500000, 195000, 750000, 'pending'),
+          ('REQ-L94-02', 'L94 Khalti Requester', 'l94-khalti@example.invalid', '+977-9841000095', '2099-12-18', '2099-12-20', 'pickup', 1500000, 195000, 750000, 'pending')
+        returning id, request_number;
       `)
-      reqId = res.rows[0].id
+      reqId = res.rows.find((r) => r.request_number === 'REQ-L94-01')?.id
+      khaltiReqId = res.rows.find((r) => r.request_number === 'REQ-L94-02')?.id
+      assert(Boolean(reqId && khaltiReqId), 'provider fixtures are independent requests')
     })
 
     // 1. Initial provider status: Fonepay enabled, eSewa and Khalti disabled by default
@@ -10292,12 +10296,27 @@ STEPS.push({
       assertEq(allocParsed.status, 'paid', 'status is paid on booking request target')
     })
 
-    // 6. Staff activates Khalti switch, creates and allocates Khalti intent
+    // 6. Staff activates Khalti switch. The already-paid eSewa request
+    // must reject a second advance; a DIFFERENT request may use Khalti.
     await as('Admin', async () => {
       await q("select public.set_online_payment_provider_status('khalti', true, 'sandbox')")
     })
     await asService(async () => {
-      const intentRes = (await q(`select public.create_payment_intent(gen_random_uuid()::text, null, '${reqId}'::uuid, 'khalti') as res`)).rows[0].res
+      let denied = false
+      try {
+        await q('select public.create_payment_intent($1, null, $2::uuid, $3)',
+          [crypto.randomUUID(), reqId, 'khalti'])
+      } catch (err) {
+        denied = true
+        assert(String(err.message).includes('attempt_in_progress'),
+          'already-paid eSewa advance cannot be collected a second time')
+      }
+      assert(denied, 'same request cannot be charged twice with different providers')
+
+      const intentRes = (await q(
+        'select public.create_payment_intent($1, null, $2::uuid, $3) as res',
+        [crypto.randomUUID(), khaltiReqId, 'khalti']
+      )).rows[0].res
       const parsed = typeof intentRes === 'string' ? JSON.parse(intentRes) : intentRes
       assert(parsed.intent_id, 'Khalti intent created')
       assertEq(parsed.provider, 'khalti', 'intent provider is khalti')
