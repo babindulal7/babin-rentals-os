@@ -474,7 +474,9 @@ revoke all on function public.create_booking_payment_link(text, uuid) from publi
 grant execute on function public.create_booking_payment_link(text, uuid) to authenticated;
 
 revoke all on function public.get_payment_link_details(text) from public, anon;
-grant execute on function public.get_payment_link_details(text) to authenticated;
+-- The pay-init Edge Function reads link details with its service role;
+-- no direct public/anon RPC exposure is added here.
+grant execute on function public.get_payment_link_details(text) to authenticated, service_role;
 
 revoke all on function public.allocate_payment_intent(uuid, text, jsonb) from public, anon;
 grant execute on function public.allocate_payment_intent(uuid, text, jsonb) to authenticated;
