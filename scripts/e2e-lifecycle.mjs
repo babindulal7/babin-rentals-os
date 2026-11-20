@@ -10317,14 +10317,14 @@ STEPS.push({
 // Authority:
 //   - T7-15 · Payment link from any booking
 //   - Ruling D30: Server-to-server confirmation only; server computes the figure.
-//   - Ruling B17, B55: Links expire after 48h; new link replaces the old.
+//   - Safety override: active links cannot be replaced while customer checkout is in flight.
 //   - Ruling O-3, B38: Security deposit strictly excluded from online links.
 //   - Law 4: Immutable payments; replayed callback changes nothing.
 //   - Law 6: Warehouse cannot make a link (money-blind).
 // -----------------------------------------------------------------------------
 STEPS.push({
   id: 'L95',
-  title: 'payment link from any booking (T7-15) — server-computed amount, 48h expiry, replaces old, expired refuses, replay idempotent, warehouse denied',
+  title: 'payment link from any booking (T7-15) — issued invoice, 48h expiry, active replacement refused, replay idempotent, warehouse denied',
   expect: 'green',
   run: async () => {
     let bookingId
@@ -10366,6 +10366,9 @@ STEPS.push({
       const invRes = await q('select public.create_invoice($1::jsonb) as res', [JSON.stringify(invPayload)])
       invoiceId = invRes.rows[0].res.invoice_id
       assert(Boolean(invoiceId), 'invoice created')
+      const issueRes = (await q('select public.issue_invoice($1::jsonb) as res',
+        [JSON.stringify({ invoice_id: invoiceId, issued_by: U.Accounts })])).rows[0].res
+      assert(issueRes && issueRes.status !== 'Draft', 'issued invoice used for full balance')
     })
 
     // Fetch invoice outstanding amount
@@ -10420,16 +10423,39 @@ STEPS.push({
       assert(details.client_name_masked.includes('***'), 'client name is masked for privacy')
     })
 
-    // 5. "A new link replaces the old" — Coordinator creates a second payment link
+    // 5. Active links are NOT replaceable: the client may already be paying
+    // at the provider. Do not revoke a live checkout or lose the receipt.
+    await as('Coordinator', async () => {
+      let refused = false
+      try {
+        await q('select public.create_booking_payment_link($1, $2::uuid)',
+          [crypto.randomUUID(), bookingId])
+      } catch (err) {
+        refused = true
+        assert(String(err.message).includes('attempt_in_progress'),
+          'second link rejected while first is active')
+      }
+      assert(refused, 'active link replacement is blocked')
+    })
+    await asService(async () => {
+      const d = (await q('select public.get_payment_link_details($1) as res',
+        [link1.token])).rows[0].res
+      assertEq(d.valid, true, 'original payment link remains payable')
+    })
+
+    // Explicitly expire the disposable test link. In production staff should
+    // only reissue after confirmed expiry or a separately approved reconciliation.
+    await asOwnerOfTheDatabase(async () => {
+      await q("update public.payment_intents set status = 'expired' where id = $1",
+        [link1.intent_id])
+    })
     let link2
     await as('Coordinator', async () => {
-      const res = (await q(
-        `select public.create_booking_payment_link($1, $2::uuid) as res`,
-        [crypto.randomUUID(), bookingId]
-      )).rows[0].res
-      link2 = typeof res === 'string' ? JSON.parse(res) : res
-      assertEq(link2.success, true, 'second payment link created')
-      assert(link2.token !== link1.token, 'new link has distinct token')
+      const result = (await q('select public.create_booking_payment_link($1, $2::uuid) as res',
+        [crypto.randomUUID(), bookingId])).rows[0].res
+      link2 = typeof result === 'string' ? JSON.parse(result) : result
+      assertEq(link2.success, true, 'new link succeeds after first is expired')
+      assert(link2.token !== link1.token, 'replacement has distinct token')
     })
 
     // 6. Old link is now expired; get_payment_link_details reports expired
