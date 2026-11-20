@@ -22,6 +22,9 @@ business RPCs are still executable by `anon` on live (`adjust_stock`,
 
 **12 Nov 2026 hosted checkpoint (supersedes the old project-creation task wording):** Independent `babin-staging` already exists in the same region; do **not** create another project. It currently has **0 app tables and 0 migration-history entries**. Transaction-scoped hosted rehearsal of `0001`–`0003` succeeded and rolled back, preserving the blank schema. Security/role acceptance and production deployment remain HOLD. Evidence: [hosted staging rehearsal](../live/STAGING_HOSTED_REHEARSAL_2026-11-12.md), [migration reconciliation](../live/STAGING_RECONCILIATION_2026-11-12.md). The remaining T1-02 work is a reviewed schema install/test dataset and backup/recovery proof, not project creation.
 
+**20 Nov 2026 owner launch-scope decision (supersedes physical-device gating where inconsistent below):** Phase 1 launch uses counter-PC/desktop browser and manual item search/selection/ticking. Physical M4 iPad, Bluetooth/HID scanner, camera barcode scanning, label printer, shop printer, and native print/share-sheet hardware acceptance move to **Phase 2, after live launch**; do not require purchase or physical device-day receipts to approve Phase 1. Keep these cards `acceptance_pending` until their later device receipts exist—do not falsely mark them `done`. Phase 1 still requires genuine hosted staging, authorized role sessions, secure access, storage evidence where required for custody, no double booking, inventory/financial integrity, paper VAT invoice reference capture, backup/restore and a usable manual fallback. This decision does not permit a production deployment or waive security/accounting gates.
+
+
 ### T1-01 · Fresh production backup + restore drill            status: todo · size: S · lane A + Babin
 **What** — Babin runs `scripts/backup-db.ps1` per [`../archive/BACKUP_PROTOCOL.md`](../archive/BACKUP_PROTOCOL.md) §1; the dump is checked with
 `npm run check:dump`; its SHA-256 is recorded. The restore drill is T1-02 (restoring it into staging).
@@ -32,19 +35,13 @@ business RPCs are still executable by `anon` on live (`adjust_stock`,
 3) PROGRESS.md records date, size, hash — not the credentials (N-8).
 **Needs** — Babin, week 1.
 
-### T1-02 · Staging project            status: todo · size: M · lane A + Babin
-**What** — Create a second Supabase project ("babin-staging", same region as live), restore the
-T1-01 dump into it, and record its URL and anon key as `BABIN_STAGING_*` secrets (never committed).
-Claude may create the project through the Supabase connector **after Babin approves the cost**
-(S10).
-**Why** — S10. Every migration and every track is accepted here before live.
-**Where** — Supabase dashboard / connector; `.env.staging.local` (git-ignored).
-**Database** — staging only.
-**Done when** — 1) staging row counts match the dump for bookings, clients, products, invoices,
-payments; 2) the restore took < 1 hour and the steps are written in [`../archive/BACKUP_PROTOCOL.md`](../archive/BACKUP_PROTOCOL.md) §2 (this
-is the restore drill); 3) staging holds real client data, so **only test seats and Babin** can sign
-in (Cloudflare Access on the staging site, T1-07).
-**Needs** — T1-01; Babin approves the project.
+### T1-02 · Staging project            status: todo — existing project verified 20 Nov; schema and safe synthetic-data acceptance outstanding · size: M · lane A + Babin
+**What** — Use the **existing** Free Supabase project `babin-staging` (`klhmsrunqrdxjudyhnkm`, Singapore). **Never create a duplicate project.** Its public schema has 0 application tables and 0 migration-history tables (read-only verified 20 Nov 2026). Prepare an exact-head, reviewed migration/dependency/checksum manifest and strictly synthetic fixtures; preserve `0012`/`0047`/`0082` one-shot-seed decisions and duplicate `0188` review. PR #179's offline inventory/preflight work is a starting point, NOT an apply-ready manifest.
+**Why** — Staging is the only safe destination for hosted rehearsal before any production change. An empty project is not acceptance-ready.
+**Where** — Supabase `babin-staging` project; `docs/verification/STAGING_PHASE1_PREFLIGHT_2026-11-20.md`; existing `scripts/staging-schema-preflight.mjs` in PR #179; `.env.staging.local` (ignored).
+**Database** — Read-only catalog and Git source preflight now. Later **staging-only writes** require a separately reviewed manifest, explicit owner authorization for the exact staging target and privacy controls; never use a production credential or run generic `db push`/remote reset.
+**Phase 1 done when** — 1) reviewed migration manifest and restore/recovery procedure are recorded with exact SQL fingerprints; 2) the staging schema is safely installed **after owner approval** with synthetic, non-personal fixtures and outbound email/SMS/payments/webhooks disabled; 3) nine staff/portal role contexts and Client A/B row/storage isolation pass hosted tests; 4) desk/manual floor booking → Pack → Handover → Return → Reset, availability/no double booking, payments/deposits/daily closing, and paper invoice references are reconciled on hosted staging; 5) all P0 security blockers and evidence receipts are resolved. **Physical iPad/scanner/printer testing is Phase 2 after live**, not a Phase 1 blocker.
+**Needs** — T1-01 backup/recovery plan, T1-03 ledger reconciliation, current P0 security PR #242 and staging-only owner write approval before any hosted schema/fixture mutation.
 
 ### T1-03 · Settle the ledger before anything is applied            status: todo · size: M · lane A
 **What** — Refresh the live ledger read-only (`npm run db:plan -- --sql`, run in the SQL editor,
@@ -69,7 +66,7 @@ against staging before/after), then Babin applies it alone to live.
 test as Owner still works.
 **Needs** — T1-01, T1-03.
 
-### T1-05 · Nine role seats + read-only role harness            status: todo · size: M · lane A + Babin
+### T1-05 · Nine role seats + read-only role harness            status: acceptance_pending — PR #173 merged; role seat staging test pending · size: M · lane A + Babin
 **What** — On staging create one test login per role (Owner, Admin, Manager, Coordinator,
 Warehouse, Technician, Accounts, Driver, Client) with matching `users` rows; Client seat linked to
 a test client. Give every staff seat the Boudha site grant automatically (D27). Run
@@ -193,7 +190,7 @@ shared devices (T1-15).
 **Done when** — every staff member on the roster has signed in once; the role list matches the roster.
 **Needs** — Batch 1 applied; Babin supplies the roster.
 
-### T1-14 · Performance on real devices            status: doing — PR #177 merged scanner split; phone/iPad 4G metrics and scanner first-click acceptance still not evidenced · size: M · lane A
+### T1-14 · Performance on real devices            status: doing — PR #177 merged; desktop first-load performance remains pre-launch, physical iPad/scanner measurements deferred to Phase 2 · size: M · lane A
 **What** — Measure first load and route changes on the iPhone 17 Pro and M4 iPad Pro over 4G
 against `app.` (main bundle measured 704 kB on 20 Oct; scanner vendor chunk 453 kB). Lazy-load the
 scanner and the Calendar (4,264 lines) if they sit on the first-load path. Budget ⭐: first usable
@@ -201,7 +198,7 @@ screen < 3 s on 4G.
 **Why** — Floor staff wait on the slowest screen.
 **Where** — `vite.config.ts` chunking, route `lazy()` imports.
 **Database** — none.
-**Done when** — the budget holds on both devices; numbers recorded.
+**Phase 1 done when** — counter-PC/desktop supported browser loads the core booking and floor routes within the agreed performance budget on staging; numbers recorded, no scanner dependency for core operations. **Phase 2 after live:** record iPhone/iPad 4G and scanner first-click measurements; do not treat absent hardware evidence as a Phase 1 block.
 **Needs** — T1-07.
 
 
@@ -247,7 +244,7 @@ says "this device only"; 3) a test fails if a `Switch` renders with neither a se
 save handler; 4) screen check at 375 / 820 / 1440.
 **Needs** — none.
 
-### T1-17 · Two-step sign-in for every money role            status: todo · size: L · lane A · [go-live] · slips first
+### T1-17 · Two-step sign-in for every money role            status: acceptance_pending — PR #203 merged; production MFA SMS/Authenticator setup pending · size: L · lane A · [go-live] · slips first
 **What** — Every role that sees money — **Owner, Admin, Manager, Coordinator, Accounts**
 (PERMISSIONS §5) — signs in with the password **plus a 6-digit code from an authenticator app**
 (Supabase Auth MFA, TOTP) (B21). On a device where that person has done this, the **PIN of T1-15**
@@ -277,7 +274,7 @@ the app says why; 3) the PIN switch on a trusted device works for 30 days, then 
 is never asked for a code and still sees no money; 7) the Settings row shows the real state.
 **Needs** — T1-15, T1-05 (role seats on staging), T1-16.
 
-### T1-18 · Sign-in history and new-device email            status: todo · size: M · lane A · [go-live] · slips first
+### T1-18 · Sign-in history and new-device email            status: acceptance_pending — PR #204 merged; staging email dispatch verification pending · size: M · lane A · [go-live] · slips first
 **What** — 1) **Sign-in history**, Owner and Admin only (B22), in Settings ▸ People & Access: time,
 person, device (browser and system), IP address, success or failed attempt, and the PIN switches of
 T1-15. Sign-ins come from records written on the server (Supabase Auth's own audit log, read through a

@@ -10,6 +10,9 @@ open Booqable rentals block availability in the OS until they end; the trial rec
 day X every new rental is in the OS; by 1 Mar the last Booqable rental is closed and its data
 archived; by 10 Mar Booqable is cancelled.
 
+**20 Nov 2026 owner launch-scope ruling:** Phase 1 go/no-go depends on staged desk/manual-entry and floor workflows, P0 security, financial integrity, backup/recovery and staff readiness. Physical iPad, Bluetooth/barcode scanner, camera-scanning, counter/label-printer integration and native share-sheet device acceptance are **Phase 2 after live**. Never claim those hardware features verified in Phase 1 or use their missing purchase/session as a production-launch blocker; retain `acceptance_pending`/`todo` until post-launch receipts. This does **not** waive hosted staging, user-auth, record accuracy, core custody evidence or paper-invoice handling requirements.
+
+
 **Order of days:**
 
 ```
@@ -22,7 +25,7 @@ archived; by 10 Mar Booqable is cancelled.
 
 ---
 
-### T9-01 · Bring the catalogue and clients across            status: todo · size: M · lane A
+### T9-01 · Bring the catalogue and clients across            status: acceptance_pending — PR #195 merged; Booqable export reconciliation with live staging pending · size: M · lane A
 **What** — From Booqable exports (CSV/API, read-only): clients created or changed since the earlier
 import, products, bundles (and the kit-style products that are bundles — 18 Aug), **pricing
 structures** ("Babin Daily", "Days wise discount", "Rental Rate Card", … — 0160) and the **four
@@ -42,7 +45,7 @@ per batch; rejected rows are listed with the reason; a failed batch leaves nothi
 20 products prices the same 3-day quote in both systems (allowing the known rounding difference).
 **Needs** — Batch 1 live; T3-09.
 
-### T9-02 · Booqable rentals block the OS calendar            status: todo · size: M · lane A
+### T9-02 · Booqable rentals block the OS calendar            status: acceptance_pending — PR #202 merged; external hold synchronization test run pending · size: M · lane A
 **What** — Import every **open and upcoming** Booqable booking (reserved or started) as a read-only
 **external hold** in the OS: product (and serial where Booqable has one), from/to, Booqable number.
 Holds block availability exactly like a reservation, show a neutral "Held in Booqable #831" chip
@@ -92,12 +95,9 @@ expire as they end. Payments for those rentals are recorded in Booqable. A short
 **Done when** — N = 0, target 1 Mar 2027 (17 Falgun).
 **Needs** — T9-05.
 
-### T9-07 · Staff training            status: todo · size: S · Babin + lane A
-**What** — Three short sessions before the trial — **floor** (pack, hand over, return, reset,
-scanner, photos, signatures), **desk** (new rental, re-book, online requests, payments, deposits,
-ID cards), **accounts** (payments, refunds, daily closing, VAT register, TDS) — each with a
-one-page cheat sheet in English and Nepali.
-**Done when** — every staff member has done their session and signed in on their device.
+### T9-07 · Staff training            status: acceptance_pending — PR #199 merged; Phase 1 desk/manual floor training pending, physical iPad/scanner session moved to Phase 2 after live · size: S · Babin + lane A
+**What** — Before the trial, train **floor** (manual lookup/ticks, Pack, Handover, Return, Reset, required photos/signatures and damage handling), **desk** (new rental, re-book, requests, payments, deposits, paper invoice references), **accounts** (payments, refunds, daily closing, VAT register, TDS), with English/Nepali cheat sheets. Real iPad/scanner/printer workflows have a separate **Phase 2 after-live** training session.
+**Phase 1 done when** — required staff have rehearsed core desktop/manual workflows and authenticated as their own staging roles; keep physical device acceptance tracked separately for Phase 2.
 **Needs** — T1-13; screens done on staging.
 
 ### T9-08 · Archive Booqable, then cancel            status: todo · size: S · Babin + lane A
@@ -115,8 +115,7 @@ confirmation saved; the root domain no longer shows the Booqable store.
 **What** — Watch three staff use the app on staging and fix what trips them, following
 `docs/USABILITY_TESTS.md` §2–§3: three people per round (floor, desk, someone new), about 45 minutes
 each, task cards U1–U12, a score sheet, and a same-day ranking of the ten worst problems. Rounds:
-**device day Sun 10 Jan 2027 (26 Poush)**, **during the trial Wed 20 Jan (6 Magh)** ⭐, then **the first
-Sunday of each month, 11:00–13:00** ⭐. Claude prepares the task cards with real staging booking
+**desktop/manual staging rehearsal before trial** (no physical scanner/iPad requirement), **during the trial Wed 20 Jan (6 Magh)** ⭐, then **the first Sunday of each month, 11:00–13:00** ⭐. Physical iPad/scanner device day is rescheduled to Phase 2 after live. Claude prepares the task cards with real staging booking
 numbers before each round and turns the ranked list into cards at the next check-in.
 **Why** — R-39 counts taps but cannot see hesitation, wrong units or false "saved"; L10.
 **Done when** — each round leaves `docs/verification/USABILITY_<date>.md` (problems ranked, decisions,

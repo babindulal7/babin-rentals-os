@@ -165,7 +165,7 @@ go to T10 unless time allows.
 **Done when** — D-5 still green; a client sees their own invoice balance update after paying.
 **Needs** — T7-03, T7-05.
 
-### T7-09 · Bot and abuse protection            status: todo · size: S · lane C
+### T7-09 · Bot and abuse protection            status: acceptance_pending — PR #201 merged; production Turnstile domain configuration pending · size: S · lane C
 **What** — Cloudflare Turnstile on "send me a code", "send request" and "pay"; the token is verified
 in the Edge Function / RPC, not just in the browser. Per-IP and per-email rate limits on code
 requests and requests.
@@ -175,7 +175,7 @@ requests and requests.
 **Done when** — a scripted burst is refused; a normal user never sees a puzzle in normal use.
 **Needs** — T7-03.
 
-### T7-12 · Recommended items            status: todo · size: M · lane C · [go-live] · slips first
+### T7-12 · Recommended items            status: acceptance_pending — PR #196 merged; client portal recommendations visual check pending · size: M · lane C · [go-live] · slips first
 **What** — Each product gets a short list of **recommended items** ("often rented with", ⭐ up to 6)
 (B1). The list **fills itself** from past bookings — items most often on the same booking in the last ⭐
 12 months, own products only — and **staff can change it** on the product (replace, reorder, pin); a
@@ -193,7 +193,7 @@ online never appears on the public page".
 next refresh; New Rental offers them after the camera is added; screen check.
 **Needs** — T7-02.
 
-### T7-13 · Products with options on one page            status: todo · size: M · lane C · [go-live] · slips first
+### T7-13 · Products with options on one page            status: acceptance_pending — PR #197 merged; public catalogue option selector verification pending · size: M · lane C · [go-live] · slips first
 **What** — Products that differ only in an option — lens **mount** (EF / PL / E), cable **length**,
 size — show as **one product page with an option picker** (B2), online and in New Rental. Each option
 stays its own product underneath (own stock, units, rate and availability), grouped under a parent
@@ -209,7 +209,7 @@ units only".
 ungroup products on the equipment form; screen check.
 **Needs** — T7-02.
 
-### T7-14 · "Away" switch for online booking            status: todo · size: S · lane C · [go-live] · slips first
+### T7-14 · "Away" switch for online booking            status: acceptance_pending — PR #200 merged; public portal request denial verification pending · size: S · lane C · [go-live] · slips first
 **What** — One switch in Settings ▸ Online booking (⭐ Owner · Admin · Manager): **"Away — not taking
 online requests"**, with an optional message and an optional "back on" date (B6). While it is on, the
 site still shows the catalogue and rates, the request button shows the message ("Back on 15 Feb — call
@@ -255,7 +255,7 @@ the staff app loads neither script; no personal data in any event (test); the pr
 performance score drops by ⭐ 5 points at most.
 **Needs** — T7-02; the two IDs from Babin (BABIN_ACTIONS).
 
-### T7-17 · Old store links open the same item            status: todo · size: S · lane C · [go-live] · slips first
+### T7-17 · Old store links open the same item            status: acceptance_pending — PR #198 merged; Cloudflare redirect mapping verification pending · size: S · lane C · [go-live] · slips first
 **What** — Old Booqable store addresses (product and category pages) live on in Google results,
 Instagram bios and WhatsApp chats. From day X each one opens **the same item** on
 `book.babinrentals.com` (B4): T9-01 records each product's Booqable slug; the booking site maps an old

@@ -30,7 +30,7 @@ suite that is really a missing variable wastes every new session's first hour.
 does **not** force mock; 3) receipt records the data source.
 **Needs** — none.
 
-### T0-03 · Open pull request triage            status: doing (lane-a/T0-03-open-pull-request-triage) · size: M · Babin + Codex-1 (local)
+### T0-03 · Open pull request triage            status: acceptance_pending — PR #165 merged; physical triage verification pending · size: M · Babin + Codex-1 (local)
 **30 Oct triage** — [Evidence and reconciliation queue](../verification/PR_TRIAGE_2026-10-30.md).
 Closed #24 (fix implemented independently on main) and #25 (history preserved by #26).
 Retained #7/#23/#26 for reconciliation under this card; #30 belongs to T2-15 and

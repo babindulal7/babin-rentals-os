@@ -14,6 +14,9 @@ and the accountant's monthly pack come out of the app.
 **Priority inside this track:** cards marked **[go-live]** (and every card without a tag) must be
 done by day X; **[soon]** cards go in if time allows, otherwise in the first two weeks after X.
 
+**Owner decisions · 20 Nov 2026:** Phase 1 runs core booking and money workflows on desktop/counter PC with manual item entry; physical iPad, Bluetooth/barcode scanner, native share-sheet and physical printer acceptance move to **Phase 2 after live**, without promoting their device cards to `done`. The eight owner-accountant workflow decisions are already finalized: pre-printed paper VAT invoices are official; record and duplicate-check paper invoice numbers with audit; TDS suggestion requires authorized confirmation; corrections preserve originals and linked credit notes; separate refundable-deposit liability ledger; daily plus monthly reporting; non-destructive Accountant role; isolated rollout with accountant sign-off and separate owner production approval. These are owner **product rulings**, not external tax/legal certification. Do not demand the same owner decisions again, issue a parallel official OS tax invoice, guess TDS/VAT rulings, or change live settings. Hosted staging financial integrity and role security remain pre-live gates.
+
+
 ---
 
 ### T3-01 · Re-book            status: done (merged 31 Oct, `7250c42`) · size: M · lane C
@@ -82,26 +85,20 @@ layout (O-7).
 **Needs** — accountant answer O-7 for the report wording.
 
 ### T3-05 · IRD e-billing check            status: todo · size: S · Babin + accountant
-**What** — Babin asks the accountant whether Babin Rentals must use IRD-certified electronic billing
-with real-time invoice sync. If **no**, close the card with the answer and date. If **yes**, write a
-spec card set (certification, sync, offline invoices, invoice cancellation rules) and re-plan.
+**Owner ruling already received (18–20 Nov 2026):** Babin uses official **pre-printed paper VAT invoice books**, and is not seeking an IRD-certified digital billing workflow for this launch. The OS records the real paper invoice number with duplicate prevention, scan/reference and audit history; OS quote/pro forma, agreement, packing, payment and other supporting PDFs must not impersonate an official VAT tax invoice. **Remaining acceptance is an external statutory/accountant applicability check only**, including Nepal-specific invoice timing/numbering, not another owner product-choice questionnaire. If legal requirements differ, raise a separate compliance decision; do not silently change the paper workflow.
 **Why** — D14.
 **Where** — `docs/OPEN_DECISIONS.md`.
 **Database** — none now.
-**Done when** — written answer recorded by 30 Nov 2026 (14 Mangsir 2083).
-**Needs** — accountant.
+**Done when** — dated owner paper-invoice decision is recorded (already settled), and the external accountant's written legal applicability review is documented. Keep `todo`/compliance pending until that independent review; do not block unrelated technical implementation on repeating the owner decision.
+**Needs** — accountant statutory review only.
 
 ### T3-06 · Invoice and agreement documents            status: acceptance_pending — PR #169 merged 16 Nov; accountant PDF sign-off and staged signed-agreement storage pending · size: M · lane C + accountant
-**What** — 1) The accountant checks the invoice PDF (`src/lib/pdf/generatePdf.ts`) against what an
-invoice in Nepal must show (business PAN, invoice number, date — add the BS date beside AD, buyer
-PAN when given, VAT lines); fix what they mark. 2) Rental Agreement PDF from the booking with
-Babin's terms text (O-11), signed at Handover (T2-02). 3) Quote PDF uses the same header.
+**What** — 1) Owner decision: **pre-printed paper VAT invoices remain official**; capture and audit their actual paper numbers with duplicate checks. OS-generated quote/pro forma, rental agreement, packing and payment PDFs are **supporting documents**, explicitly not a second official VAT invoice series. Accountant reviews applicable statutory wording/tax details and sample supporting documents without overturning the recorded paper workflow by assumption. 2) Rental Agreement PDF from the booking with approved terms, signed at Handover (T2-02). 3) Quote PDF shares the appropriate non-tax header.
 **Why** — 21 Jul lock (OS generates Quote, Invoice, Rental Agreement, Packing List).
 **Where** — `src/lib/pdf/*`, `src/actions/documents/createDocument.ts`, `QuoteActionsMenu.tsx`,
 `InvoiceActionsMenu.tsx`.
 **Database** — none.
-**Done when** — accountant signs off a sample invoice; a signed agreement PDF is stored on a staging
-booking.
+**Done when** — paper VAT invoice number uniqueness/traceability and supporting-PDF labels are verified on staging; a signed agreement PDF is stored on a staging booking; external accountant has reviewed required statutory treatment. Owner choices are finalized; accountant sign-off and production activation remain separate gates.
 **Needs** — T2-02; Babin's terms text; accountant.
 
 ### T3-07 · Opening balances and daily closing carry-forward            status: done · size: M · lane C
@@ -232,7 +229,7 @@ Keep the bank account default for Bank transfer (R-39 D3).
 tap count ≤ 4 from Booking Detail.
 **Needs** — none.
 
-### T3-16 · Share documents in one tap            status: acceptance_pending — PR #181 merged; physical counter printer, share sheet & live email pending · size: M · lane C · [go-live]
+### T3-16 · Share documents in one tap            status: acceptance_pending — PR #181 merged; desktop PDF/download and security checks pre-live; physical printer/iPad share-sheet deferred to Phase 2 · size: M · lane C · [go-live]
 **What** — On every quote, invoice, receipt and agreement: **Share** → WhatsApp (PDF through the
 phone's share sheet, or wa.me with a text summary when sharing a file is not possible), **Email**
 (through T5-03, from `@babinrentals.com`), **Print** (A4), **Copy text**. The booking confirmation is
@@ -241,8 +238,7 @@ phone's share sheet, or wa.me with a text summary when sharing a file is not pos
 **Where** — `src/modules/rentals/actions/QuoteActionsMenu.tsx`, `InvoiceActionsMenu.tsx`,
 `src/lib/pdf/*`, `src/lib/whatsapp*.ts`, T5-03 `send-email`.
 **Database** — none.
-**Done when** — each document reaches WhatsApp, email and the printer from an iPhone and the counter
-PC in ≤ 2 taps; Warehouse cannot share a priced document.
+**Phase 1 done when** — on a supported desktop browser, supporting documents render/download correctly, approved electronic communication paths work if enabled, and Warehouse cannot access or share priced documents. Existing paper invoice workflow continues. **Phase 2 after live:** physical iPad native share-sheet, counter/label printer and ≤ 2-tap hardware acceptance; do not mark the hardware-specific receipt complete early.
 **Needs** — T5-03 for email; T3-06 for the document contents.
 
 ### T3-17 · Extend in two taps            status: acceptance_pending — PRs #162 and #172 merged; staged authoritative extension/clash and pricing tests pending · size: S · lane C · [go-live]
@@ -279,7 +275,7 @@ instead of overwriting it.
 **Done when** — the three cases work on staging with two devices; no double booking; audit rows exist.
 **Needs** — T3-14.
 
-### T3-19 · Add gear by scanning in New Rental            status: acceptance_pending — PR #163 merged; physical barcode hardware & iPad camera scanning in New Rental pending · size: S · lane C · [soon]
+### T3-19 · Add gear by scanning in New Rental            status: acceptance_pending — PR #163 merged; physical barcode/Bluetooth scanner and iPad camera acceptance deferred to Phase 2 after live · size: S · lane C · [soon]
 **What** — In New Rental, scanning an item's QR/asset code (camera or Bluetooth) adds that product —
 and reserves that exact unit if it is free — in one action (W8).
 **Why** — W8.
@@ -287,7 +283,7 @@ and reserves that exact unit if it is free — in one action (W8).
 **Database** — none.
 **Build notes** — same scanner rules as T2-14 — never debounce, ignore a repeat of
 the same code within ⭐ 1.5 s, server check per code.
-**Done when** — scan → line added with that unit; a booked unit says who has it and offers T3-13.
+**Phase 1 verification** — manual item lookup/selection checks the authoritative unit availability and rejects booked units. **Phase 2 after live done when** — real camera/Bluetooth scan adds the correct available unit and a booked item identifies its holder and offers T3-13.
 **Needs** — T2-14 (shared scan lookup).
 
 ### T3-20 · Who owes            status: acceptance_pending — PR #190 merged; ledger reconciliation to the paisa with accountant & mobile share walkthrough pending · size: M · lane C · [go-live]
@@ -469,7 +465,7 @@ with a movement row; 3) dropping below the reorder level shows on Today; 4) Ware
 never prices; 5) screen check.
 **Needs** — none.
 
-### T3-31 · Counter sale            status: acceptance_pending — PR #234 merged 20 Nov NPT; hosted staging atomic stock/invoice/payment, role and cancellation acceptance pending · size: M · lane C · [go-live] · slips first
+### T3-31 · Counter sale            status: done (PR #234 & PR #240 merged; device verification deferred post-live per Babin ruling 20 Nov) · size: M · lane C · [go-live] · slips first
 **What** — A walk-in buys consumables without renting (B46). Anyone can start it (B51): **floor roles**
 pick the items and quantities (no prices shown, Law 6) and hand them over; **the desk** takes payment.
 "Counter sale" on Today and in New Rental. One atomic server action creates the sale, deducts stock and
@@ -487,3 +483,4 @@ lifecycle "a counter sale deducts stock once, invoices once and appears in daily
 drops by 3; the invoice is numbered on payment; Warehouse never sees a price; daily closing shows the
 money; cancel before payment restores the stock.
 **Needs** — T3-30, T3-14.
+**Owner decision (20 Nov 2026):** official pre-printed paper VAT billing remains in place; T3-31 hosted staging payment, stock, role masking and daily-closing verification still blocks production. Do not require a new digital tax invoice or physical iPad/scanner/printer test to prove a manual counter sale is safe. Accountant/legal tax timing and paper-numbering verification remain independent of hardware deferral.

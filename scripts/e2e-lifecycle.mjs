@@ -9092,9 +9092,11 @@ STEPS.push({
     let saleBookingId
     let draftInvoiceId
     let saleBookingNo
+    let cashAccountId
     const saleClientUuid = crypto.randomUUID()
 
     // 1. Setup consumable products: AA Batteries (qty: 10, rate: 400), Hazard Tape (qty: 8, rate: 600)
+    //    and ensure a Cash Drawer bank account exists for daily closing classification.
     await asOwnerOfTheDatabase(async () => {
       const catId = await one('select id from inventory_categories order by name limit 1')
       const assetCode1 = await one("select next_document_number('equipment')")
@@ -9120,6 +9122,40 @@ STEPS.push({
         ) returning id
       `)
       tapeProductId = p2.rows[0].id
+
+      const existingCash = (await q("select id from bank_accounts where channel_group = 'Cash' limit 1")).rows[0]
+      if (existingCash) {
+        cashAccountId = existingCash.id
+      } else {
+        const cashRow = await q(`
+          insert into bank_accounts (
+            client_uuid, account_name, bank_name, account_number, branch_name, channel_group, is_primary, is_active
+          ) values (
+            gen_random_uuid(), 'Main Branch Cash Drawer', 'Cash In Hand', 'CASH-DRAWER-KTM-01', 'Kathmandu', 'Cash', false, true
+          ) returning id
+        `)
+        cashAccountId = cashRow.rows[0].id
+      }
+    })
+
+    // 1b. Negative security check (audit identity): Warehouse caller cannot attribute sale to Owner
+    await as('Warehouse', async () => {
+      let threwSpoof = false
+      try {
+        await one('select create_counter_sale($1::jsonb)', [JSON.stringify({
+          client_uuid: crypto.randomUUID(),
+          actor_id: U.Owner,
+          branch_id: BRANCH,
+          lines: [{ product_id: batteryProductId, qty: 1 }],
+        })])
+      } catch (err) {
+        threwSpoof = true
+        assert(
+          err.message.includes('actor_mismatch') || err.message.includes('must match the signed-in staff session'),
+          'create_counter_sale rejects actor spoofing'
+        )
+      }
+      assert(threwSpoof, 'create_counter_sale threw on actor_id mismatch')
     })
 
     // 2. Floor role (Warehouse) creates a counter sale for 3 packs of batteries (B51, Law 6)
@@ -9195,17 +9231,44 @@ STEPS.push({
       await q(`
         insert into payments (
           client_uuid, payment_no, booking_id, invoice_id, client_id, branch_id,
-          amount, payment_type, notes, status, payment_date, received_by
+          bank_account_id, amount, payment_type, notes, status, payment_date, received_by
         ) values (
           gen_random_uuid(), '${payNo}', '${saleBookingId}', '${draftInvoiceId}', '${clientId}', '${BRANCH}',
-          1356.00, 'Advance Payment', 'Method: Cash', 'Received', current_date, '${U.Accounts}'
+          '${cashAccountId}', 1356.00, 'Advance Payment', 'Method: Cash', 'Received', current_date, '${U.Accounts}'
         )
       `)
+
+      // Verify daily closing reflects the cash collection under 'Cash' bucket and not 'unclassified'
+      const dailyClosingRows = (await q(`
+        select
+          coalesce(sum(case when b.channel_group = 'Cash' then p.amount else 0 end), 0) as cash_collected,
+          coalesce(sum(case when b.channel_group = 'Bank' then p.amount else 0 end), 0) as bank_collected,
+          coalesce(sum(case when b.channel_group = 'Digital wallets' then p.amount else 0 end), 0) as wallet_collected,
+          coalesce(sum(case when b.channel_group is null then p.amount else 0 end), 0) as unclassified_collected,
+          coalesce(sum(p.amount), 0) as total_collected
+        from payments p
+        left join bank_accounts b on b.id = p.bank_account_id
+        where p.payment_date = current_date
+          and p.status = 'Received'
+          and p.payment_type = 'Advance Payment'
+          and p.booking_id = '${saleBookingId}'
+      `)).rows[0]
+
+      assertEq(Number(dailyClosingRows.cash_collected), 1356, 'Counter sale cash payment appears in daily closing Cash total')
+      assertEq(Number(dailyClosingRows.unclassified_collected), 0, 'Counter sale cash payment with cash bank account is not unclassified')
+      assertEq(Number(dailyClosingRows.total_collected), 1356, 'Total collected includes counter sale payment')
 
       // Issue invoice once paid
       const issueRes = await one('select issue_invoice($1::uuid)', [draftInvoiceId])
       assertEq(issueRes.status, 'Paid', 'Invoice status is Paid after full payment')
       assert(issueRes.invoice_no && issueRes.invoice_no.startsWith('INV-'), 'Invoice receives monotonic number on payment')
+
+      // Confirm invoice row in database has monotonic number, status Paid, and zero outstanding
+      const invRow = (await q(`select invoice_no, status, total_amount, paid_amount, outstanding_amount from invoices where id = '${draftInvoiceId}'`)).rows[0]
+      assertEq(invRow.status, 'Paid', 'Database invoice status is Paid')
+      assertEq(invRow.invoice_no, issueRes.invoice_no, 'Database invoice_no matches issued number')
+      assertEq(Number(invRow.outstanding_amount), 0, 'Invoice has zero outstanding amount after full payment')
+      assertEq(Number(invRow.paid_amount), 1356, 'Invoice paid_amount is 1356.00')
     })
 
     // 7. Cancellation before payment test:
@@ -9223,6 +9286,25 @@ STEPS.push({
     })
     const tapeStockDuring = await one(`select total_quantity from products where id = '${tapeProductId}'`)
     assertEq(Number(tapeStockDuring), 6, 'Tape stock drops from 8 to 6')
+
+    // Negative security check: cannot cancel using a spoofed actor_id
+    await as('Coordinator', async () => {
+      let threwCancelSpoof = false
+      try {
+        await one('select cancel_counter_sale($1::uuid, $2::text, $3::uuid)', [
+          cancelBookingId,
+          'Unauthorized cancellation test',
+          U.Owner,
+        ])
+      } catch (err) {
+        threwCancelSpoof = true
+        assert(
+          err.message.includes('actor_mismatch') || err.message.includes('must match the signed-in staff session'),
+          'cancel_counter_sale rejects actor spoofing'
+        )
+      }
+      assert(threwCancelSpoof, 'cancel_counter_sale threw on actor_id mismatch')
+    })
 
     // Cancel before payment: restores stock to 8 and voids draft invoice
     await as('Coordinator', async () => {
@@ -9258,6 +9340,61 @@ STEPS.push({
 
 STEPS.push({
   id: 'L86',
+  title: 'at-risk monetary resolutions refuse Coordinator and allow Manager role gate (P0, Law 6)',
+  expect: 'green',
+  shortfall: 'PGlite role emulation only. Hosted Supabase JWT/PostgREST role acceptance remains outstanding.',
+  run: async () => {
+    // Deliberately nonexistent UUID: the permission check must execute BEFORE
+    // an at-risk row lookup. This tests negative access without money writes.
+    const nonexistentAtRiskId = '00000000-0000-4000-8000-00000000a986'
+    const payload = (resolution, creditAmount) => JSON.stringify({
+      at_risk_id: nonexistentAtRiskId,
+      resolution,
+      credit_amount: creditAmount,
+    })
+    const call = 'select resolve_booking_at_risk($1::jsonb)'
+    const permissionRefusal = /monetary credit or refund resolution requires Owner, Admin or Manager/i
+    const missingRecord = /at-risk record .* not found/i
+
+    await as('Coordinator', async () => {
+      // Monetary intent is prohibited even for a zero-value credit or refund;
+      // a crafted positive amount cannot be smuggled through similar_item.
+      await refuses('Coordinator credit 100 refused before row lookup', call,
+        [payload('credit', 100)], permissionRefusal)
+      await refuses('Coordinator credit zero refused before row lookup', call,
+        [payload('credit', 0)], permissionRefusal)
+      await refuses('Coordinator refund refused before row lookup', call,
+        [payload('refund', 100)], permissionRefusal)
+      await refuses('Coordinator refund zero refused before row lookup', call,
+        [payload('refund', 0)], permissionRefusal)
+      await refuses('Coordinator forged amount under operational resolution refused', call,
+        [payload('similar_item', 1)], permissionRefusal)
+      // Non-monetary operational decisions remain permitted at the role gate.
+      await refuses('Coordinator non-money choice reaches row lookup', call,
+        [payload('similar_item', 0)], missingRecord)
+    })
+
+    await as('Manager', async () => {
+      await refuses('Manager monetary credit reaches row lookup (not rejected by guard)', call,
+        [payload('credit', 100)], missingRecord)
+      await refuses('Manager refund reaches row lookup (not rejected by guard)', call,
+        [payload('refund', 0)], missingRecord)
+    })
+
+    await as('Warehouse', async () => {
+      await refuses('Warehouse cannot resolve at-risk monetarily', call,
+        [payload('credit', 100)], /booking desk roles only/i)
+    })
+
+    await as('Client', async () => {
+      await refuses('Client cannot resolve at-risk monetarily', call,
+        [payload('refund', 100)], /booking desk roles only/i)
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L87',
   title: 'anon reads catalogue and availability, nothing else (T7-02)',
   expect: 'green',
   async run() {
@@ -9358,7 +9495,7 @@ STEPS.push({
 })
 
 STEPS.push({
-  id: 'L87',
+  id: 'L88',
   title: 'past stock without the switch is refused (T2-23, B12, K4)',
   expect: 'green',
   run: async () => {
@@ -9419,7 +9556,7 @@ STEPS.push({
 })
 
 STEPS.push({
-  id: 'L88',
+  id: 'L89',
   title: 'with the switch: confirmed with a short line and no reservation (T2-23, B12, K4)',
   expect: 'green',
   run: async () => {
@@ -9485,7 +9622,7 @@ STEPS.push({
 })
 
 STEPS.push({
-  id: 'L89',
+  id: 'L90',
   title: 'Pack refuses a short line; resolving clears shortage and allows Pack (T2-23, K4)',
   expect: 'green',
   run: async () => {
@@ -9578,7 +9715,7 @@ STEPS.push({
 })
 
 STEPS.push({
-  id: 'L90',
+  id: 'L91',
   title: 'Temporary partner stock: available inside agreement window only; outside window capacity is 0 (T2-24, B13)',
   expect: 'green',
   run: async () => {
@@ -9700,7 +9837,7 @@ STEPS.push({
 })
 
 STEPS.push({
-  id: 'L91',
+  id: 'L92',
   title: 'Return partner stock: Warehouse completes return, units retired, Law 6 money blindness verified (T2-24, B36, Law 6)',
   expect: 'green',
   run: async () => {

@@ -103,9 +103,9 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0241 | T3-29 | extension-clash-manager-decides-and-at-risk | lane-c/T3-29-extension-clash-the-manager-decides | verified (PR #208) |
 | 0242 | T2-19 | return-damage-signature-and-refusal | lane-a/T2-19-signature-at-return-when-damage-is-found | verified (check:pglite 239/239 + check:lifecycle 80/80 Step L78-L79) |
 | 0243 | T3-18 | change-confirmed-booking | lane-c/T3-18-change-confirmed-booking | verified (check:pglite 241/241 + check:lifecycle 85/85 Step L82-L84) |
-| 0244 | T3-31 | counter-sale-atomic | feat/t3-31-counter-sale-atomic | written |
+| 0244 | T3-31 | counter-sale-atomic | feat/t3-31-counter-sale-atomic | verified (check:pglite 242/242 + check:lifecycle 86/86 Step L85; PR #234 & #240 merged) |
 | 0245 | T7-02 | booking-site-and-public-catalogue | lane-c/T7-02-booking-site-and-public-catalogue | verified |
-| 0246 | T2-23 | allow-overbooking-on-chosen-products | lane-a/T2-23-allow-overbooking-safe-shortages | written |
-| 0247 | T2-24 | temporary-stock-from-partners | lane-a/T2-24-temporary-stock-from-partners | written |
+| 0246 | T2-23 | allow-overbooking-on-chosen-products | lane-a/T2-23-allow-overbooking-safe-shortages | verified (check:pglite 244/244 + check:lifecycle 90/90 Step L87-L89) |
+| 0247 | T2-24 | temporary-stock-from-partners | lane-a/T2-24-temporary-stock-from-partners | verified (check:pglite 245/245 + check:lifecycle 92/92 Step L90-L91) |
 
 ## Expected migrations (not yet claimed)
