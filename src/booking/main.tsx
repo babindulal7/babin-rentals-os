@@ -10,12 +10,13 @@ import '@fontsource/outfit/latin-800.css'
 
 import './booking.css'
 import BookingApp from './App'
+import { PaymentCallbackPage } from './pay/PaymentCallbackPage'
 
 const el = document.getElementById('booking-root')
 if (!el) throw new Error('booking-root missing from booking.html')
 
 createRoot(el).render(
   <StrictMode>
-    <BookingApp />
+    {window.location.pathname === '/pay/callback' ? <PaymentCallbackPage /> : <BookingApp />}
   </StrictMode>,
 )
