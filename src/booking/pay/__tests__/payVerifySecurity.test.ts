@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { supabase } from '../../../lib/supabase'
-import { initOnlinePayment, verifyOnlinePayment } from '../payApi'
+import { fetchOnlinePaymentProviders, fetchPaymentLinkDetails, initOnlinePayment, verifyOnlinePayment } from '../payApi'
 
 vi.mock('../../../lib/supabase', () => ({
   supabase: {
@@ -40,6 +40,56 @@ describe('payment verification is fail-closed (D30)', () => {
       bookingRequestId: 'request-123',
       provider: 'esewa',
     })).rejects.toThrow('Network offline')
+    expect(supabase.rpc).not.toHaveBeenCalled()
+  })
+
+  it('preserves the confirmed booking plus owned request as separate authorization inputs', async () => {
+    vi.mocked(supabase.functions.invoke).mockResolvedValue({
+      data: {
+        success: true, intent_id: 'intent-33', amount_paisa: 450000,
+        amount_rupees: '4500.00', provider: 'fonepay', payment_url: 'https://example.invalid',
+      },
+      error: null,
+    } as never)
+    await initOnlinePayment({
+      clientUuid: 'balance-attempt-1',
+      bookingId: 'confirmed-booking-22',
+      bookingRequestId: 'owned-request-11',
+      provider: 'fonepay',
+    })
+    expect(supabase.functions.invoke).toHaveBeenCalledWith('pay-init', {
+      body: expect.objectContaining({
+        bookingId: 'confirmed-booking-22',
+        bookingRequestId: 'owned-request-11',
+        clientUuid: 'balance-attempt-1',
+      }),
+    })
+    expect(supabase.rpc).not.toHaveBeenCalled()
+  })
+
+  it('does not invent enabled providers on failure or expose a sandbox default', async () => {
+    vi.mocked(supabase.functions.invoke).mockRejectedValue(new Error('service offline'))
+    await expect(fetchOnlinePaymentProviders()).rejects.toThrow('service offline')
+    expect(supabase.rpc).not.toHaveBeenCalled()
+  })
+
+  it('fails closed when provider discovery returns malformed data', async () => {
+    vi.mocked(supabase.functions.invoke).mockResolvedValue({
+      data: { success: true, providers: null },
+      error: null,
+    } as never)
+    await expect(fetchOnlinePaymentProviders()).rejects.toThrow(/could not be verified/i)
+    expect(supabase.rpc).not.toHaveBeenCalled()
+  })
+
+  it('never resolves payment-link details through a browser RPC if Edge is down', async () => {
+    vi.mocked(supabase.functions.invoke).mockResolvedValue({
+      data: null,
+      error: { message: 'server offline' },
+    } as never)
+    await expect(fetchPaymentLinkDetails('redacted-token')).resolves.toEqual({
+      valid: false, reason: 'verification_unavailable',
+    })
     expect(supabase.rpc).not.toHaveBeenCalled()
   })
 
