@@ -50,6 +50,19 @@ describe('Roadmap status truth across merged tracks', () => {
       expect(heading).not.toContain('status: todo')
       expect(heading).not.toContain('status: ready — awaiting merge')
     }
+
+    const doneCards: Record<string, string> = {
+      'T2-17': 'PR #90 merged',
+      'T2-24': 'PR #257 merged',
+    }
+    for (const [key, ref] of Object.entries(doneCards)) {
+      const heading = t2.split('\n').find((l) => l.startsWith(`### ${key} ·`))
+      expect(heading).toBeDefined()
+      expect(heading).toContain('status: done')
+      expect(heading).toContain(ref)
+      expect(heading).not.toContain('status: doing')
+      expect(heading).not.toContain('status: todo')
+    }
   })
 
   it('T3 booking money track reflects all merged cards as acceptance_pending or done', () => {
