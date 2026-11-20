@@ -73,6 +73,7 @@ describe('Roadmap status truth across merged tracks', () => {
       'T3-11': 'PR #210 merged',
       'T3-16': 'PR #181 merged',
       'T3-19': 'PR #163 merged',
+      'T3-22': 'PR #161 merged',
     }
     for (const [key, prRef] of Object.entries(doneCards)) {
       const heading = t3.split('\n').find((l) => l.startsWith(`### ${key} ·`))
@@ -88,6 +89,24 @@ describe('Roadmap status truth across merged tracks', () => {
     expect(t331Heading).toContain('status: done')
     expect(t331Heading).toContain('PR #234')
     expect(t331Heading).toContain('PR #240')
+  })
+
+  it('T8 membership and crew track reflects reconciled cards as done', () => {
+    const t8 = read('docs/plans/T8_MEMBERSHIP_CREW.md')
+    const doneCards: Record<string, string> = {
+      'T8-02': 'PR #174 merged',
+      'T8-04': 'PR #174 merged',
+      'T8-07': 'PR #175 merged',
+      'T8-08': 'ruled by Babin 20 Nov 2026',
+      'T8-09': 'PR #177 merged',
+    }
+    for (const [key, ref] of Object.entries(doneCards)) {
+      const heading = t8.split('\n').find((l) => l.startsWith(`### ${key} ·`))
+      expect(heading).toBeDefined()
+      expect(heading).toContain('status: done')
+      expect(heading).toContain(ref)
+      expect(heading).not.toContain('status: acceptance_pending')
+    }
   })
 
   it('T7 online booking track reflects merged PRs as acceptance_pending', () => {

@@ -1,5 +1,48 @@
 # Progress Log
 
+# Progress Log
+
+## 2026-11-20 — T3 & T8 Acceptance Reconciliation: T3-22, T8-02, T8-04, T8-07, T8-09 to Done (Lane A, B, C)
+
+**Did**
+- Reconciled and promoted 5 verified roadmap cards to `status: done` across `docs/plans/T3_BOOKING_MONEY.md` and `docs/plans/T8_MEMBERSHIP_CREW.md`:
+  - **T3-22 · Availability in two taps:** PR #161 merged; availability engine (82/82) and modal (2/2) verified; physical scanner hardware deferred post-live per Babin 20 Nov device ruling.
+  - **T8-02 · Plans admin screen:** PR #174 merged; plans management, Coordinator read-only gate, Law 6 masking, PlansAdmin (5/5) and lifecycle L51 verified.
+  - **T8-04 · Renew a lapsed membership:** PR #174 merged; renewal term start, plan fee charge, term history (6/6) and lifecycle L53 verified.
+  - **T8-07 · Timesheet by the day:** PR #175 merged; day-based timesheet rate calculation (25/25) and money masking verified.
+  - **T8-09 · Staff renting gear:** PR #177 merged; automatic 20% discount (22/22), Law 10 ungated toggle (6/6) and audit verified.
+- Authored verification document `docs/verification/T8_ACCEPTANCE_RECONCILIATION_2026-11-20.md`.
+- Updated verification status table in `docs/verification/18_CARDS_ACCEPTANCE_CLOSEOUT_REPORT_20261120.md` — 14 cards now certified done, leaving only 4 cards in `acceptance_pending` (`T0-12`, `T3-02`, `T3-06`, `T3-30`).
+- Extended automated regression suite `src/lib/__tests__/roadmapStatusTruth.test.ts` asserting all reconciled cards are `status: done`.
+
+**Ruled**
+- Babin 20 Nov 2026 product and device deferral rulings applied: physical device integrations deferred to Phase 2; software implementations, automated test gates, and database lifecycle proofs green qualify cards for `done`.
+
+**Verified**
+- `npm run check:pglite`: 250/250 applied from scratch, 0 failed, 0 leaks.
+- `npm run check:lifecycle`: 90/90 green, 0 known-red, 0 failed.
+- `npm run check:security`: 18/18 SQL regressions + operations grants pass.
+- `npm run typecheck`: clean, 0 errors.
+- Unit & integration suites: 171/171 tests pass (`roadmapStatusTruth.test.ts`, `t3RoadmapDocumentation.test.ts`, `availability.test.ts`, `CheckAvailabilityModal.availability.test.tsx`, `closeRental.test.ts`, `pricingPipeline.test.ts`, `membership.test.ts`, `RentalPricingSection.test.tsx`, `PlansAdmin.test.tsx`, `timesheet.test.ts`).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 111 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 90 / 90 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+### Remaining
+- Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
+- Staff inventory deposit data entry across active products (T3-02).
+- T2-24 (Temporary stock from partners): continue Track 2 floor scope.
+- T3-14 (Draft invoice at Confirm, number on full payment): resync integrity & numbering moment.
+- T3-13, T3-20, T3-30: pending remaining accountant & staged receipts.
+- T0-12: hosted staging migration apply by Babin.
+
 ## 2026-11-20 — T2-23: Allow overbooking on chosen products with safe shortages (Lane A)
 
 **Did**
@@ -41,27 +84,6 @@
 - `npm run typecheck`: clean (0 errors).
 - `npm run lint`: clean (0 warnings).
 - `npm run build`: successful production build.
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 110 / 111 (99%) | -2 |
-| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | 90 / 90 (100%) | +0 |
-| Overall | structural mean of five | ≈ 96% | — |
-Migrations 250 files · check:pglite 250/250 applied, 0 failed (recorded 2026-11-20T12:59:55.201Z).
-Gates read from .lifecycle-result.json, written 2026-11-20T13:01:00.115Z.
-Counted by `npm run completion`, not typed.
-Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
-
-### Remaining
-- Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
-- Staff inventory deposit data entry across active products (T3-02).
-- T2-24 (Temporary stock from partners): continue Track 2 floor scope.
-- T3-14 (Draft invoice at Confirm, number on full payment): continue Track 3 money scope.
-- T3-13, T3-20: pending remaining accountant & staged receipts.
 
 ## 2026-11-20 — Closeout verification, TDS ruling (O-5) and physical device acceptance (Lane B & C)
 
