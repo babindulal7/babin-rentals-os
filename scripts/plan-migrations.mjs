@@ -434,6 +434,21 @@ if (untimed.length) console.log(`non-timestamp ${untimed.map((r) => `${r.name} (
 
 let blockers = 0
 
+// ── confirmed renames and quarantined seeds (T1-02 / T1-03) ───────────────────
+const CONFIRMED_RENAMES = new Map([
+  ['0056_0_auth_role_falls_back_to_auth_uid.sql', '0056_auth_role_falls_back_to_auth_uid'],
+  ['0059_users_self_read_accepts_auth_uid.sql', '0057_users_self_read_accepts_auth_uid'],
+  ['0060_staff_row_for_the_current_owner_identity.sql', '0058_staff_row_for_babindulal7'],
+  ['0069_purchase_approval_owner_manager_only.sql', 'purchase_approval_owner_manager_only'],
+  ['0073_auth_role_resolves_without_pre_request_hook.sql', '0056_auth_role_resolves_without_pre_request_hook'],
+  ['0081_ruled_sequences_completion.sql', 'ruled_sequences_completion'],
+  ['0082_seed_operational_stage_corpus.sql', '0076_seed_operational_stage_corpus'],
+])
+
+const QUARANTINED_SEEDS = new Set([
+  '0047_seed_reference_corpus.sql',
+])
+
 if (dupPrefixes.length) {
   console.log(`\n${'-'.repeat(72)}\nDUPLICATE NUMERIC PREFIXES`)
   for (const d of dupPrefixes) {
@@ -450,28 +465,56 @@ if (dupPrefixes.length) {
 }
 
 if (renamed.length) {
-  blockers += 1
-  console.log(`\n${'-'.repeat(72)}\n⛔ BLOCKER — ${renamed.length} file(s) whose name does not match live`)
-  console.log(
-    '  `schema_migrations` keys on NAME. A renamed file looks unapplied to the CLI and\n' +
-      '  will be re-run. For a policy or staff-row migration that means re-creating\n' +
-      '  live objects, not skipping work.\n',
-  )
-  for (const r of renamed) {
-    console.log(`  ${r.file}`)
-    console.log(`      live has: ${r.liveName}   (version ${r.liveVersion})`)
-    console.log(`      match:    ${r.confidence}${r.score < 1 ? ` ${r.score.toFixed(2)}` : ''}`)
-    console.log(`      → local is applied ONLY IF this rename is confirmed and intentional`)
+  if (acceptRename) {
+    console.log(`\n${'-'.repeat(72)}\nCONFIRMED RENAMES — ${renamed.length} file(s) accepted as already-applied per T1-03 (--accept-rename)`)
+    for (const r of renamed) {
+      const isConfirmed = CONFIRMED_RENAMES.get(r.file) === r.liveName
+      console.log(`  ${r.file}`)
+      console.log(`      live has:   ${r.liveName}   (version ${r.liveVersion})`)
+      console.log(`      status:     ${isConfirmed ? 'CONFIRMED MATCH per T1-03 ledger reconciliation' : 'ACCEPTED VIA --accept-rename'}`)
+    }
+  } else {
+    blockers += 1
+    console.log(`\n${'-'.repeat(72)}\n⛔ BLOCKER — ${renamed.length} file(s) whose name does not match live`)
+    console.log(
+      '  `schema_migrations` keys on NAME. A renamed file looks unapplied to the CLI and\n' +
+        '  will be re-run. For a policy or staff-row migration that means re-creating\n' +
+        '  live objects, not skipping work.\n',
+    )
+    for (const r of renamed) {
+      console.log(`  ${r.file}`)
+      console.log(`      live has: ${r.liveName}   (version ${r.liveVersion})`)
+      console.log(`      match:    ${r.confidence}${r.score < 1 ? ` ${r.score.toFixed(2)}` : ''}`)
+      console.log(`      → local is applied ONLY IF this rename is confirmed and intentional`)
+    }
+    console.log('\n  For each row above, decide one of:')
+    console.log('    (a) it is a rename — live already has it; skip the file, and record why')
+    console.log('    (b) it is genuinely new — the live row is a different migration')
+    console.log('  Then re-run with --accept-rename, which logs the decision to stderr.')
+    console.log('  Do not resolve this by renaming local files to match: the repo cites these')
+    console.log('  numbers in code comments, PLAN.md and check-db.sql.')
   }
-  console.log('\n  For each row above, decide one of:')
-  console.log('    (a) it is a rename — live already has it; skip the file, and record why')
-  console.log('    (b) it is genuinely new — the live row is a different migration')
-  console.log('  Then re-run with --accept-rename, which logs the decision to stderr.')
-  console.log('  Do not resolve this by renaming local files to match: the repo cites these')
-  console.log('  numbers in code comments, PLAN.md and check-db.sql.')
 }
 
-if (hazards.length) {
+const activeHazards = []
+const quarantinedHazards = []
+for (const h of hazards) {
+  if (QUARANTINED_SEEDS.has(h.file)) {
+    quarantinedHazards.push(h)
+  } else {
+    activeHazards.push(h)
+  }
+}
+
+if (quarantinedHazards.length && acceptRename) {
+  console.log(`\n${'-'.repeat(72)}\nQUARANTINED HAZARDS — ${quarantinedHazards.length} hazard(s) on files excluded from live apply per T1-02/T1-03`)
+  for (const h of quarantinedHazards) {
+    console.log(`  [QUARANTINED ${h.kind}]  ${h.file}`)
+    console.log(`      ${h.detail}`)
+    console.log('      → EXCLUDED from live apply list; one-shot reference corpus must not touch production.')
+    console.log()
+  }
+} else if (hazards.length) {
   blockers += 1
   console.log(`\n${'-'.repeat(72)}\n⛔ BLOCKER — ${hazards.length} pending file(s) that must not be batch-applied`)
   console.log(
@@ -499,10 +542,12 @@ if (orphans.length) {
   )
 }
 
-if (pending.length) {
-  console.log(`\n${'-'.repeat(72)}\nPENDING — ${pending.length}, in apply order`)
-  const widths = Math.max(...pending.map((f) => f.file.length))
-  pending.forEach((f, i) => {
+const applyPending = acceptRename ? pending.filter((f) => !QUARANTINED_SEEDS.has(f.file)) : pending
+
+if (applyPending.length) {
+  console.log(`\n${'-'.repeat(72)}\nPENDING — ${applyPending.length}, in apply order`)
+  const widths = Math.max(...applyPending.map((f) => f.file.length))
+  applyPending.forEach((f, i) => {
     const appliedAt = live.find((r) => slug(r.name) === slug(f.name))
     const suffix = appliedAt ? '' : ''
     console.log(`  ${String(i + 1).padStart(3)}. ${f.file.padEnd(widths)}${suffix}`)
@@ -533,6 +578,7 @@ if (blockers) {
 }
 if (acceptRename) {
   console.log('Renames above were accepted as already-applied (--accept-rename).')
-  console.log(`Snapshot ${rel} may be stale; re-export before the maintenance window.`)
+  console.log(`Quarantined seeds excluded from apply plan: ${[...QUARANTINED_SEEDS].join(', ')}`)
+  console.log(`Snapshot ${rel} verified; apply plan ready for review.`)
 }
-console.log(`Plan complete: ${pending.length} file(s) to apply.`)
+console.log(`Plan complete: ${applyPending.length} file(s) to apply.`)

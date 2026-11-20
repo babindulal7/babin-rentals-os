@@ -1,5 +1,49 @@
 # Progress Log
 
+## 2026-11-20 — T1-03: Settle the migration ledger, live apply plan and hazard quarantine (Lane A)
+
+**Did**
+- Settled the live database migration ledger for card **T1-03 · Settle the ledger before anything is applied** on branch `lane-a/T1-03-settle-the-ledger-before-anything-is`:
+  - Created refreshed live metadata snapshot [`docs/live/schema_migrations_2026-11-20.txt`](docs/live/schema_migrations_2026-11-20.txt) recording the 157 live rows on Supabase production (`sxguwvgoserhdolewibb`), ending with `20261107105159 0225_owner_approved_glossary_revisions`.
+  - Reconciled and confirmed all 7 candidate renames against live SQL bodies, object definitions, and git provenance (`0056_0`, `0059`, `0060`, `0069`, `0073`, `0081`, `0082`): all confirmed as identical migrations previously applied to live.
+  - Investigated and documented the 2 unexplained live rows: `archive_bakery_pos_schema` (`20260809220713`, pre-existing Miraz POS schema, preserved intact in database) and `0047_seed_tail_b917_equipment_line` (`20260812155050`, one-off live seed, preserved).
+  - Quarantined `0047_seed_reference_corpus.sql` (1.87 MB demo/reference seed; fails closed on replay and must never touch production data with real clients and revenue).
+  - Authored authoritative reconciliation report [`docs/live/LEDGER_RECONCILIATION_2026-11-20.md`](docs/live/LEDGER_RECONCILIATION_2026-11-20.md).
+  - Updated `scripts/plan-migrations.mjs` and `package.json` (`npm run db:plan`): recognizes confirmed renames under `--accept-rename`, quarantines `0047_seed_reference_corpus.sql` out of the apply list, emits **zero blockers** and an authoritative, sequential apply plan of 96 migrations (`0157` through `0254`).
+  - Promoted card `T1-03` in `docs/plans/T1_RELEASE.md` to `ready — awaiting merge (lane-a/T1-03-settle-the-ledger-before-anything-is)`.
+
+**Ruled**
+- Zero live schema or data writes executed (Rule N-5).
+- Confirmed that `0047_seed_reference_corpus.sql` is quarantined and excluded from all live apply planning.
+- Miraz POS schema `archive_bakery_pos_schema` stays untouched in production.
+
+**Verified**
+- `npm run db:plan`: prints **0 blockers**, 7 confirmed renames, 2 quarantined hazards, 2 unexplained live rows preserved, and an authoritative numbered apply list of 96 files.
+- `npm run db:plan:selftest`: PASS (12/12 checks).
+- `npm run check:pglite`: 252/252 migrations applied cleanly from scratch in PGlite, 0 failed.
+- `npm run check:lifecycle`: 93/93 green, 0 known-red, 0 failed.
+- `npm run typecheck`: clean, 0 errors.
+- `npm run lint`: clean, 0 warnings.
+- `node scripts/test-booking-financial-integrity.mjs`: PASS (30/30 checks).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 112 / 113 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 93 / 93 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+### Remaining
+- Staging-only dry run rehearsal of batch apply (T1-02 / T1-04) once approved by Babin.
+- Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
+- Staff inventory deposit data entry across active products (T3-02).
+- T3-13, T3-20, T3-30: pending remaining accountant & staged receipts.
+- T0-12: hosted staging migration apply by Babin.
+- T7 online booking: Track T7 lane C integration.
+
 ## 2026-11-20 — T3-14: Draft invoice at Confirm, number on full payment (Lane C)
 
 **Did**
@@ -33,20 +77,6 @@
 - `npm run check:contrast`: 97/97 pass, 0 failed.
 - `npm run build`: successful production build.
 - CI gate scripts (`test:local-api-guards`, financial integrity, `check:security`, `test:operations-grants`, `test:partial-return`, receipt integrity, `lint:shell`, `lint:ui-copy`): all passed.
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 112 / 113 (99%) | +0 |
-| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | 93 / 93 (100%) | +1 |
-| Overall | structural mean of five | ≈ 96% | — |
-
-### Remaining
-- T3-02 (Deposits per product, entered before go-live): staged role checks and deposit data-entry.
-- T3-13, T3-20, T3-23: pending remaining accountant & staged receipts.
 - T0-12: hosted staging migration apply by Babin.
 - T7 online booking: Track T7 lane C integration.
 
@@ -78,24 +108,6 @@
 - `npm run check:security`: 18/18 Phase 0 SQL regressions, 14 Reset branch tests, operations grants, and glossary revisions pass.
 - `npm run typecheck`: clean strict TypeScript AST check with 0 errors.
 - `npm run lint:ui-copy`: 0 developer-text violations across all modules.
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 112 / 113 (99%) | +2 |
-| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | 92 / 92 (100%) | +2 |
-| Overall | structural mean of five | ≈ 96% | — |
-
-### Remaining
-- Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
-- Staff inventory deposit data entry across active products (T3-02).
-- T3-14 (Draft invoice at Confirm, number on full payment): resync integrity & numbering moment.
-- T3-13, T3-20, T3-30: pending remaining accountant & staged receipts.
-- T0-12: hosted staging migration apply by Babin.
-- T7 online booking: Track T7 lane C integration.
 
 ## 2026-11-20 — T3 & T8 Acceptance Reconciliation: T3-22, T8-02, T8-04, T8-07, T8-09 to Done (Lane A, B, C)
 
