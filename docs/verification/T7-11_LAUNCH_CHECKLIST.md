@@ -125,16 +125,18 @@ All upstream Track 7 cards have been implemented, tested, and verified:
 - [ ] In Booqable admin settings:
   - Disable online checkout / set cart to "View Only" or disable storefront.
   - Insert storefront announcement banner:
-    `"We have upgraded our online booking platform! Please visit https://book.babinrentals.com to browse our live catalogue and request equipment."`
+    `"We have upgraded our online booking platform! Please visit https://babinrentals.com to browse our equipment catalogue and request rentals."`
   - Export final backup of Booqable customers, bookings, and inventory records.
 
 ### Step 3: Domain Switch (00:00 NPT or Agreed Cutover Window)
-- [ ] Point `book.babinrentals.com` DNS CNAME to production host.
-- [ ] Point apex domain redirect `babinrentals.com` → `book.babinrentals.com`.
-- [ ] Verify SSL certificate handshakes succeed globally via `curl -I https://book.babinrentals.com`.
+- [ ] **Owner-approved change only:** point the `babinrentals.com` apex to the public storefront host using supported A/ALIAS/CNAME-flattening records; use the actual host configuration.
+- [ ] Point `book.babinrentals.com` to a host that serves a **one-way HTTP 301 redirect** to `https://babinrentals.com` (a CNAME alone does not create an HTTP redirect). Ensure no rule redirects the apex back to `book`.
+- [ ] Keep `app.babinrentals.com` mapped to the separate authenticated staff application. Verify TLS certificates and correct origin/host bindings for all three names.
+- [ ] Inspect `curl -I https://babinrentals.com` for a successful public storefront response; inspect `curl -I https://book.babinrentals.com` for `301 Location: https://babinrentals.com/...`. Use `curl -IL --max-redirs 5 https://book.babinrentals.com` to prove it terminates on the apex without a loop.
+- [ ] Capture before/after DNS, origin and HTTP redirect evidence; do not make changes unless a separate owner-approved cutover window and rollback configuration are ready.
 
 ### Step 4: First Live Transaction Test (+15 Minutes)
-- [ ] Navigate to `https://book.babinrentals.com` from a clean browser / mobile device.
+- [ ] Navigate to `https://babinrentals.com` from a clean browser / mobile device; independently test that `https://book.babinrentals.com` redirects to the apex.
 - [ ] Search an item, select dates, add to cart.
 - [ ] Submit booking request as a test client.
 - [ ] Coordinator checks Today dashboard: confirms request appears in staff queue.
@@ -148,8 +150,7 @@ All upstream Track 7 cards have been implemented, tested, and verified:
 ## 6. Rollback Protocol
 
 If an unrecoverable failure occurs during DNS cutover or payment gateway handshake:
-1. Revert DNS CNAME for `babinrentals.com` back to Booqable storefront.
-2. In Babin Rentals OS Settings, switch "Away — not taking online requests" to ON with notice:
-   `"Online booking is currently undergoing maintenance. Please call or WhatsApp our rental desk at +977-9800000000."`
+1. Under a separately approved rollback decision, restore the **recorded previous apex DNS/origin and redirect configuration** using the correct supported record type. Do not assume an apex CNAME exists; revert `book` alias rules coherently to avoid a redirect loop.
+2. Once separately authorized, enable the existing "Away — not taking online requests" setting with an approved message that uses the **verified business contact details already configured** in Settings. Do not publish a fabricated contact number.
 3. Unconfirmed online requests remain safe in the database without phantom reservations.
 4. Investigate server logs / Edge Function logs without user disruption.
