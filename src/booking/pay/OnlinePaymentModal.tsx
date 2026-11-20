@@ -29,15 +29,15 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
   const [providers, setProviders] = useState<OnlinePaymentProviderInfo[]>([])
   const [selectedProvider, setSelectedProvider] = useState<PaymentProvider>('fonepay')
   const [loading, setLoading] = useState(false)
-    const [initData, setInitData] = useState<PayInitResponse | null>(null)
+  const [initData, setInitData] = useState<PayInitResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
-  
+
   // 1. Fetch enabled providers on open
   useEffect(() => {
     if (!isOpen) {
       setInitData(null)
       setError(null)
-        return
+      return
     }
 
     let isMounted = true
@@ -218,7 +218,7 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
             <div style={{ textAlign: 'center', padding: '32px 0' }}>
               <div style={{ fontSize: '2rem', marginBottom: 12 }}>⏳</div>
               <p style={{ color: 'var(--text-muted, #9ca3af)', fontSize: '0.9rem' }}>
-                Calculating authoritative advance and creating payment intent...
+                Checking available payment methods and calculating the server-authorized amount...
               </p>
             </div>
           ) : error ? (
@@ -291,48 +291,10 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
 
               {/* Provider-Specific Visual Display */}
               {selectedProvider === 'fonepay' && (
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    padding: 16,
-                    background: '#fff',
-                    borderRadius: 8,
-                    color: '#111',
-                  }}
-                >
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: 8, color: '#b91c1c' }}>
-                    Fonepay Merchant QR
-                  </div>
-                  {/* SVG QR Code */}
-                  <svg width="140" height="140" viewBox="0 0 100 100" style={{ margin: '8px 0' }}>
-                    <rect width="100" height="100" fill="#ffffff" />
-                    <rect x="10" y="10" width="24" height="24" fill="#111" />
-                    <rect x="14" y="14" width="16" height="16" fill="#fff" />
-                    <rect x="18" y="18" width="8" height="8" fill="#111" />
-
-                    <rect x="66" y="10" width="24" height="24" fill="#111" />
-                    <rect x="70" y="14" width="16" height="16" fill="#fff" />
-                    <rect x="74" y="18" width="8" height="8" fill="#111" />
-
-                    <rect x="10" y="66" width="24" height="24" fill="#111" />
-                    <rect x="14" y="70" width="16" height="16" fill="#fff" />
-                    <rect x="18" y="74" width="8" height="8" fill="#111" />
-
-                    <rect x="42" y="10" width="8" height="16" fill="#111" />
-                    <rect x="54" y="18" width="8" height="16" fill="#111" />
-                    <rect x="42" y="42" width="16" height="16" fill="#b91c1c" />
-                    <rect x="66" y="42" width="16" height="8" fill="#111" />
-                    <rect x="10" y="42" width="8" height="16" fill="#111" />
-                    <rect x="42" y="66" width="8" height="24" fill="#111" />
-                    <rect x="66" y="66" width="24" height="8" fill="#111" />
-                    <rect x="74" y="82" width="16" height="8" fill="#111" />
-                  </svg>
-                  <div style={{ fontSize: '0.78rem', color: '#666', textAlign: 'center' }}>
-                    Merchant: <strong>MDULAL (Babin Rentals)</strong>
-                  </div>
-                </div>
+                <p style={{ fontSize: '0.84rem', lineHeight: 1.6, color: 'var(--text-muted, #9ca3af)' }}>
+                  Fonepay checkout uses the provider-generated payment details.
+                  No decorative image or example QR is a payable merchant QR.
+                </p>
               )}
 
               {selectedProvider === 'esewa' && (
@@ -415,34 +377,54 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
 
               {/* Action Buttons */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <a
-                  href={initData.payment_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background:
-                      selectedProvider === 'esewa'
-                        ? '#41a124'
-                        : selectedProvider === 'khalti'
-                        ? '#5c2d91'
-                        : 'var(--accent-gold, #eab308)',
-                    color: selectedProvider === 'khalti' || selectedProvider === 'esewa' ? '#fff' : '#000',
-                    fontWeight: 600,
-                    borderRadius: 6,
-                    textDecoration: 'none',
-                    minHeight: 44,
-                    fontSize: '0.9rem',
-                  }}
-                >
-                  {selectedProvider === 'esewa'
-                    ? 'Pay via eSewa ↗'
-                    : selectedProvider === 'khalti'
-                    ? 'Pay via Khalti ↗'
-                    : 'Pay via Fonepay Hosted Page ↗'}
-                </a>
+                {selectedProvider === 'esewa' ? (
+                  initData.esewa_params ? (
+                    <form
+                      action={initData.payment_url}
+                      method="POST"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {Object.entries(initData.esewa_params).map(([name, value]) => (
+                        <input key={name} type="hidden" name={name} value={value} />
+                      ))}
+                      <button
+                        type="submit"
+                        style={{
+                          background: '#41a124',
+                          color: '#fff',
+                          border: 0,
+                          borderRadius: 6,
+                          width: '100%',
+                          minHeight: 44,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Pay via eSewa
+                      </button>
+                    </form>
+                  ) : <p role="alert">eSewa checkout details are missing. Payment cannot proceed.</p>
+                ) : (
+                  <a
+                    href={initData.payment_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: selectedProvider === 'khalti' ? '#5c2d91' : 'var(--accent-gold, #eab308)',
+                      color: selectedProvider === 'khalti' ? '#fff' : '#000',
+                      fontWeight: 600,
+                      borderRadius: 6,
+                      minHeight: 44,
+                      textDecoration: 'none',
+                    }}
+                  >
+                    {selectedProvider === 'khalti' ? 'Pay via Khalti' : 'Open Fonepay Checkout'}
+                  </a>
+                )}
 
                 <p style={{ color: 'var(--text-muted, #9ca3af)', fontSize: '0.82rem', margin: 0 }}>
                   Complete payment on the provider's official checkout. Only a server-verified
