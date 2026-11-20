@@ -16,7 +16,7 @@
     "db:apply": "node scripts/apply-migrations-local.mjs",
     "db:list": "node scripts/apply-migrations-local.mjs --list",
     "db:plan": "node scripts/plan-migrations.mjs",
-    "db:plan:selftest": "node scripts/plan-migrations.mjs --selftest",
+    "db:plan:selftest": "node scripts/plan-migrations.mjs --selftest && node --test scripts/plan-migrations-safety.test.mjs",
     "db:rebuild": "supabase db reset --no-seed && node scripts/apply-migrations-local.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
