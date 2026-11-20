@@ -62,7 +62,7 @@ catalogue and availability, nothing else".
 returns nothing; Warehouse-only fields never appear in the payload.
 **Needs** — T1-07.
 
-### T7-03 · Client accounts by verified email            status: todo · size: L · lane C
+### T7-03 · Client accounts by verified email            status: ready — awaiting merge (lane-c/T7-03-online-booking-requests-and-client-portal) · size: L · lane C
 **What** — Sign-in with an **emailed one-time code** (no passwords — PERMISSIONS §7), through
 Supabase Auth with the T1-09 SMTP. First sign-in asks for name, phone and optional company/PAN.
 **Binding (30 Aug D2):** if the verified email matches exactly one client record's stored email,

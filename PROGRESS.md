@@ -30,24 +30,33 @@
 - D-5: Strict tenant isolation; authenticated clients see 0 rows belonging to any other client.
 
 **Verified**
-- `npm run typecheck`: exit code 0 (0 errors).
-- `npx vitest run src/booking/`: 8 test files passed (40/40 tests).
-- `npm run check:pglite`: 257/257 applied, 0 failed.
-- `npm run check:anon`: all 14 checks passed (21 allowlisted functions, 0 leaked views, RLS enforced on 146 tables).
-- `npm run check:lifecycle`: 96/96 green, 0 failed (Steps L93, L94, L95 green).
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 warnings, 0 errors).
+- `npm test`: PASS (705 test files passed, 7,629/7,629 tests passed).
+- `npm run check:pglite`: PASS (257/257 applied, 0 failed, 235 definer search paths pinned).
+- `node scripts/test-booking-financial-integrity.mjs`: PASS (financial integrity verified in isolated PGlite).
+- `npm run check:security`: PASS (18 Phase 0 SQL regressions, operations branch grants, reset boundaries, and glossary revisions passed).
+- `npm run check:lifecycle`: PASS (96/96 steps green, 0 failed — steps L93, L94, L95 green).
+- `npm run test:server-contracts`: PASS (68/68 integration assertions passed).
+- `npm run test:partial-return`: PASS (58/58 partial return acceptance assertions passed).
+- `node --test scripts/test-receipt.test.mjs`: PASS (11/11 passed).
+- `npm run lint:shell`: PASS (958 files checked, 0 violations).
+- `npm run lint:ui-copy`: PASS (0 developer-text violations, all copy tests passed).
+- `npm run check:contrast`: PASS (97/97 WCAG AA checks passed).
+- `npm run build`: PASS (`tsc --noEmit && vite build` clean, 8,360 modules transformed).
 
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 114 / 115 (99%) | — |
+| Backend | actions implemented / total | 114 / 115 (99%) | +0 |
 | Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
-| Permissions | capabilities mapped / declared | 89 / 89 (100%) | — |
-| Lifecycle | steps green / total | 96 / 96 (100%) | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 96 / 96 (100%) | +0 |
 | Overall | structural mean of five | ≈ 96% | — |
-Migrations 257 files · check:pglite 257/257 applied, 0 failed. Suite: NOT VERIFIED — invalid test receipt.
+Migrations 257 files · check:pglite 257/257 applied, 0 failed (recorded 2026-11-20T21:15:21.579Z). Suite: PASS — 7629/7629 passed, 0 failed (recorded 2026-11-20T21:19:52.608Z); source fingerprint matches.
 Coverage suite: Historical suite: 6946/6946 passed, 0 failed (recorded 2026-11-12T14:54:27.393Z); current source NOT VERIFIED.
-Gates read from .lifecycle-result.json, written 2026-11-20T21:09:36.679Z.
+Gates read from .lifecycle-result.json, written 2026-11-20T21:16:13.455Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
