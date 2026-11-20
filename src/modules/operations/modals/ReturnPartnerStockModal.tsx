@@ -104,7 +104,7 @@ export function ReturnPartnerStockModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Return to Partner"
-      subtitle={`Scan and return ${productName} units back to ${partnerName} (B36, Law 3).`}
+      subtitle={`Scan and return ${productName} units back to ${partnerName}.`}
     >
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
         {errorMessage && (
@@ -191,7 +191,7 @@ export function ReturnPartnerStockModal({
                         borderRadius: '3px',
                       }}
                     >
-                      PARTNER ⭐
+                      PARTNER
                     </span>
                     <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{u.serialNumber ?? u.assetCode}</span>
                   </div>
@@ -238,7 +238,7 @@ export function ReturnPartnerStockModal({
             disabled={submitting || !allScanned}
             style={{ minHeight: '56px', fontWeight: 700 }}
           >
-            {submitting ? 'Returning…' : 'Complete Return to Partner (Law 3)'}
+            {submitting ? 'Returning…' : 'Complete Return to Partner'}
           </Button>
         </div>
       </form>

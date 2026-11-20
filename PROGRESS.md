@@ -1,5 +1,61 @@
 # Progress Log
 
+## 2026-11-20 — T7-16: Store analytics GA4 and Meta Pixel (Lane C)
+
+**Did**
+- Implemented **T7-16 · Store analytics: GA4 and Meta Pixel** (`lane-c/T7-16-store-analytics-ga4-and-meta-pixel`):
+  - Injected lazy script loading for Google Analytics 4 (`VITE_GA4_ID`) and Meta Pixel (`VITE_META_PIXEL_ID`) via `initStoreAnalyticsScripts` in `src/lib/storeAnalytics.ts`.
+  - Enforced strict refusal when executing within the staff app (`isStaffApp: true`), preventing any tracking scripts or event dispatch outside the public booking store (Law 6, B37).
+  - Implemented client-side PII scrubbing in `sanitizeAnalyticsEvent`: strictly removes search query parameters (tokens, emails, phone numbers) and hash fragments from URL paths; removes internal booking numbers, client IDs, and staff identifiers from event payloads.
+  - Wired analytics events into the public booking storefront:
+    - `page_view`: Dispatched on storefront mount with sanitized path.
+    - `view_item`: Dispatched on opening product details modal with product ID, name, category, and integer rupee value.
+    - `add_to_request`: Dispatched on adding items to booking cart with item metadata and integer rupee value.
+    - `request_sent`: Dispatched on booking request submission from `CartDrawer.tsx` with total rupee request value.
+  - Added privacy disclosure and footer in `src/booking/App.tsx` and `src/booking/booking.css`.
+  - Updated Content Security Policy (CSP) headers in `public/_headers` and `nginx.conf` allowing `googletagmanager.com`, `google-analytics.com`, `connect.facebook.net`, and `facebook.com`.
+  - Added unit test suite in `src/lib/__tests__/storeAnalytics.test.ts` (7/7 tests passing in jsdom environment) verifying event payload sanitization, zero PII transmission, staff app refusal, and deferred DOM injection.
+  - Fixed developer-copy violations across partner stock modals to satisfy `lint:ui-copy`.
+
+**Ruled**
+- B37: Analytics scripts load only on the public booking storefront (`booking.html` / `src/booking/*`); never in the internal staff operations app.
+- Zero PII: No names, email addresses, phone numbers, or booking IDs may ever be transmitted in analytics payloads.
+- B55 / Law 6: Non-financial and anonymous surfaces never expose internal pricing margins, internal fees, or internal costs.
+
+**Verified**
+- `npm run typecheck`: exit 0 (0 errors).
+- `npm run lint`: exit 0 (0 errors, 0 warnings).
+- `npm run check:pglite`: 245/245 migrations applied, 0 failed, 0 leaks.
+- `node scripts/test-booking-financial-integrity.mjs`: all assertions passed in isolated PGlite.
+- `npm run check:security`: 18 Phase 0 SQL regressions passed, 14 reset branch tests passed.
+- `npm run check:lifecycle`: 93/93 green, 0 known-red, 0 failed.
+- `npm run test:server-contracts`: 68/68 passed.
+- `npm run test:partial-return`: 58/58 passed.
+- `node --test scripts/test-receipt.test.mjs`: 11/11 passed.
+- `npm run lint:shell`: 931 files checked, 0 violations.
+- `npm run lint:ui-copy`: 0 developer-text violations.
+- `npm run check:contrast`: 97/97 passed.
+- `npx vitest run src/lib/__tests__/storeAnalytics.test.ts`: 7/7 passed.
+- `npm run build`: built in production mode, exit code 0.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 112 / 113 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 93 / 93 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 245 files · check:pglite 245/245 applied, 0 failed (recorded 2026-11-20T14:45:32.599Z).
+Gates read from .lifecycle-result.json, written 2026-11-20T14:45:57.149Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T7-16 completed and verified on `lane-c/T7-16-store-analytics-ga4-and-meta-pixel`.
+- T7-03 · Client accounts by verified email (Option 2) up next.
+
 ## 2026-11-20 — T2-24: Temporary stock from partners (Lane A)
 
 **Did**

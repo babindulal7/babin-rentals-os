@@ -219,7 +219,7 @@ export function TemporaryStockModal({
           {isSerialized && (
             <div>
               <label htmlFor={assetCodesInputId} style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
-                Asset Tags / Serials (comma-separated, PARTNER ⭐)
+                Asset Tags / Serials (comma-separated, Partner Item)
               </label>
               <input
                 id={assetCodesInputId}

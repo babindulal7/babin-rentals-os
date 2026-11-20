@@ -219,7 +219,7 @@ export function PartnerStockTable({
                               border: '1px solid rgba(234, 179, 8, 0.3)',
                               letterSpacing: '0.04em',
                             }}>
-                              PARTNER ⭐
+                              PARTNER
                             </span>
                             <span style={{ fontWeight: 600, fontSize: '12px' }}>
                               {r.trackingMode === 'Serialised' ? `${r.units.length} unit(s)` : `${r.quantity} qty`}

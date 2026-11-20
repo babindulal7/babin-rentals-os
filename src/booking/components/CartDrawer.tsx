@@ -1,6 +1,7 @@
 import React from 'react'
 import type { CatalogueItem } from '../lib/catalogueApi'
 import { formatMoney, type Paisa } from '@/lib/money'
+import { trackStoreEvent } from '@/lib/storeAnalytics'
 
 export interface CartLine {
   item: CatalogueItem
@@ -188,6 +189,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               className="btn-primary"
               style={{ width: '100%', minHeight: 48, fontSize: '1rem' }}
               onClick={() => {
+                trackStoreEvent({
+                  event: 'request_sent',
+                  valueNpr: Math.round(totalPaisa / 100),
+                })
                 alert('Request saved! Our rental team confirms availability and issues pro forma within 1 hour.')
                 onClearCart()
                 onClose()

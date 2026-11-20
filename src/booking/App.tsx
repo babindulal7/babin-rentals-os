@@ -7,6 +7,7 @@ import { CategoryNav } from './components/CategoryNav'
 import { ProductCard } from './components/ProductCard'
 import { ProductDetailModal } from './components/ProductDetailModal'
 import { CartDrawer, type CartLine } from './components/CartDrawer'
+import { initStoreAnalyticsScripts, trackStoreEvent } from '../lib/storeAnalytics'
 
 export default function BookingApp() {
   const getTomorrowString = () => {
@@ -44,6 +45,15 @@ export default function BookingApp() {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
     }
+  }, [])
+
+  // Initialize store analytics and dispatch initial page view (T7-16)
+  useEffect(() => {
+    initStoreAnalyticsScripts(false)
+    trackStoreEvent({
+      event: 'page_view',
+      pagePath: typeof window !== 'undefined' ? window.location.pathname : '/',
+    })
   }, [])
 
   // Load public catalogue
@@ -116,6 +126,15 @@ export default function BookingApp() {
 
   // Cart operations
   const handleAddToCart = (item: CatalogueItem) => {
+    trackStoreEvent({
+      event: 'add_to_request',
+      item: {
+        itemId: item.id,
+        itemName: item.name,
+        ...(item.category_name ? { category: item.category_name } : {}),
+        ...(item.daily_rate_paisa ? { valueNpr: Math.round(item.daily_rate_paisa / 100) } : {}),
+      },
+    })
     setCart((prev) => {
       const existing = prev.find((line) => line.item.id === item.id)
       if (existing) {
@@ -126,6 +145,19 @@ export default function BookingApp() {
       return [...prev, { item, quantity: 1 }]
     })
     setIsCartOpen(true)
+  }
+
+  const handleViewDetails = (item: CatalogueItem) => {
+    setSelectedItem(item)
+    trackStoreEvent({
+      event: 'view_item',
+      item: {
+        itemId: item.id,
+        itemName: item.name,
+        ...(item.category_name ? { category: item.category_name } : {}),
+        ...(item.daily_rate_paisa ? { valueNpr: Math.round(item.daily_rate_paisa / 100) } : {}),
+      },
+    })
   }
 
   const handleUpdateQty = (itemId: string, delta: number) => {
@@ -268,13 +300,25 @@ export default function BookingApp() {
                 item={item}
                 hasDates={Boolean(startDate && endDate)}
                 isAvailable={availability.get(item.id)}
-                onViewDetails={setSelectedItem}
+                onViewDetails={handleViewDetails}
                 onAddToCart={handleAddToCart}
               />
             ))}
           </div>
         )}
       </main>
+
+      {/* Footer with privacy disclosure */}
+      <footer className="booking-footer">
+        <div className="booking-container">
+          <p className="privacy-disclosure">
+            This booking site uses Google Analytics and Meta Pixel to improve user experience. No personal identifying information (names, emails, phone numbers) is tracked.
+          </p>
+          <div className="booking-copyright">
+            © {new Date().getFullYear()} Babin Rentals. All rights reserved.
+          </div>
+        </div>
+      </footer>
 
       {/* Product Detail Modal */}
       <ProductDetailModal
