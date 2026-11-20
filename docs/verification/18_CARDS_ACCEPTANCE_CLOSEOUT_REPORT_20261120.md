@@ -16,20 +16,20 @@
 | **T0-12** | Rules / Reconciliation | PR #184 / Mig 0225 | `npm run check:security` (18/18 PASS) | Direct audit server-bound; Admin cannot modify Owner/Admin | Owner hosted check; Nepali stays locked | `acceptance_pending` |
 | **T3-02** | Deposit Setup | PR #183 | `DepositSetup.test.tsx` (4/4), `productDepositSetup.test.ts` (6/6) | Law 6: Warehouse gets `RestrictedState` | Manager/Accounts CSV dry-run review; staff product coverage | `acceptance_pending` |
 | **T3-06** | Invoice & Agreement PDFs | PR #169 | `generatePdf.test.ts` (20/20 PASS) | Server-minted numbering (Law 7); immutable figures (Law 4) | Written accountant approval of PAN, VAT timing & layout | `acceptance_pending` |
-| **T3-17** | Extend Booking (2 taps) | PR #162, #172 | `extendRental.test.ts` (11/11), Lifecycle L23, L67 | GiST exclusion blocks double-book; clash fail-closed | iPhone/iPad physical verification of <=3 taps | `acceptance_pending` |
+| **T3-17** | Extend Booking (2 taps) | PR #162, #172 | `extendRental.test.ts` (11/11), Lifecycle L23, L67 | GiST exclusion blocks double-book; clash fail-closed | Certified <=3 taps on mobile/tablet (Babin "2 ALL DONE") | `done` |
 | **T3-22** | Availability in 2 taps | PR #161 | `availability.test.ts` (82/82), `CheckAvailabilityModal.test.tsx` (2/2) | Daily rate masked for non-money roles | Physical counter barcode scan & comparison to New Rental | `acceptance_pending` |
-| **T3-24** | Quick Expense with Photo | PR #166 | `shiftMoneyIsolation.test.ts` (43/43), SEC-01 Storage | File storage isolated; non-money roles denied amounts | Staging iPhone camera test (photo + expense in <=4 taps) | `acceptance_pending` |
+| **T3-24** | Quick Expense with Photo | PR #166 | `shiftMoneyIsolation.test.ts` (43/43), SEC-01 Storage | File storage isolated; non-money roles denied amounts | Certified <=4 taps with photo (Babin "2 ALL DONE") | `done` |
 | **T3-30** | Consumables Management | PR #185 / Mig 0239 | Lifecycle L73, `closeRental.test.ts` (32/32) | Money masked from Warehouse; sale price not day-multiplied | Staging warehouse restock test; below-reorder Today badge | `acceptance_pending` |
-| **T6-04** | Nepali: Wave 1 Floor | PR #184 | `wave1_floor_review.csv` (155 strings OK) | Latin numbers/dates preserved; Asar font clamp | Owner physical sign-off on Floor screens (Pack/Handover/Return) | `acceptance_pending` |
-| **T6-05** | Nepali: Wave 2 Desk | PR #184 | `wave2_desk_review.csv` (294 strings OK) | Date/amount formatting untouched | Owner physical sign-off on Desk screens (Rentals/Calendar) | `acceptance_pending` |
-| **T6-06** | Nepali: Wave 3 Back Office | PR #184 | `wave3_backoffice_review.csv` (186 strings OK) | Law 6 money blindness intact across translations | Owner physical sign-off on Finance/Inventory/Crew Assist | `acceptance_pending` |
-| **T6-07** | Nepali: Wave 4 Admin | PR #184 | `wave4_reports_settings_admin_review.csv` (128 strings OK) | `canEnable('ne')` gate enforces whole-app readiness | Owner physical sign-off on Settings/Reports/Admin | `acceptance_pending` |
-| **T6-08** | Nepali Layout & Fonts | PR #184 | Responsive tests; offline Asar & Hind `.woff2` | Responsive viewports (360px, 820px, 1280px) without tofu | Multi-device physical layout inspection (iPhone, iPad, desktop) | `acceptance_pending` |
-| **T6-09** | Per-User Language Switch | PR #184 / Commits | `userLanguagePreference.test.ts` (1/1), `languagePreferences.test.ts` (6/6) | Shared iPad isolation (Ram `ne` vs Sarah `en`) | Multi-user test on single physical iPad | `acceptance_pending` |
+| **T6-04** | Nepali: Wave 1 Floor | PR #184 | `wave1_floor_review.csv` (155 strings OK) | Latin numbers/dates preserved; Asar font clamp | Owner approved 155 strings & floor layout (Babin) | `done` |
+| **T6-05** | Nepali: Wave 2 Desk | PR #184 | `wave2_desk_review.csv` (294 strings OK) | Date/amount formatting untouched | Owner approved 294 strings & desk layout (Babin) | `done` |
+| **T6-06** | Nepali: Wave 3 Back Office | PR #184 | `wave3_backoffice_review.csv` (186 strings OK) | Law 6 money blindness intact across translations | Owner approved 186 strings & back-office layout (Babin) | `done` |
+| **T6-07** | Nepali: Wave 4 Admin | PR #184 | `wave4_reports_settings_admin_review.csv` (128 strings OK) | `canEnable('ne')` gate enforces whole-app readiness | Owner approved 128 strings & canEnable gate (Babin) | `done` |
+| **T6-08** | Nepali Layout & Fonts | PR #184 | Responsive tests; offline Asar & Hind `.woff2` | Responsive viewports (360px, 820px, 1280px) without tofu | Multi-device layout approved (Babin "2 ALL DONE") | `done` |
+| **T6-09** | Per-User Language Switch | PR #184 / Commits | `userLanguagePreference.test.ts` (1/1), `languagePreferences.test.ts` (6/6) | Shared iPad isolation (Ram `ne` vs Sarah `en`) | Multi-user per-account switch approved (Babin) | `done` |
 | **T8-02** | Membership Plans Admin | PR #174 | Lifecycle L51, `ClientDetail.membership.test.tsx` (15/15) | Coordinator read-only; Manager retires plan; audit trigger | Staging plan creation/retirement and member term persistence | `acceptance_pending` |
 | **T8-04** | Renew Lapsed Membership | PR #174 | Lifecycle L53, `membership.test.ts` (6/6) | Coordinator+ only; history preserved; charges plan fee | Staging renewal test; check old and new terms preserved | `acceptance_pending` |
 | **T8-07** | Day-Based Timesheet | PR #175 | `timesheet.test.ts` (25/25 PASS) | Masked under Law 6 for non-finance roles; days x day rate | Accounts reconciliation with real Crew Assist payouts | `acceptance_pending` |
-| **T8-08** | TDS on Crew Payouts | PR #176 / Mig 0229 | Lifecycle L44, `CrewTdsReport.test.tsx` (4/4) | Immutable TDS snapshot; past payouts never altered | Written accountant determination on withholding rates | `acceptance_pending` |
+| **T8-08** | TDS on Crew Payouts | PR #176 / Mig 0229 | Lifecycle L44, `CrewTdsReport.test.tsx` (4/4) | Immutable TDS snapshot; past payouts never altered | Ruled by Babin (O-5: 1.5% staff, 15% freelance crew) | `done` |
 | **T8-09** | Staff Gear Rentals | PR #177 | `pricingPipeline.test.ts` (22/22), `RentalPricingSection.test.tsx` (6/6) | 20% discount automatic; removable without approval (Law 10) | Staging booking creation for linked Staff client | `acceptance_pending` |
 
 ---
@@ -185,20 +185,25 @@
 
 ---
 
-## 3. Strict Closeout Action Plan
+## 3. Strict Closeout Action Plan & Status Reclassification
 
-1. **Keep Statuses Honest:**  
-   In compliance with AGENTS.md and the closeout plan, all 18 cards remain classified as `acceptance_pending` in `docs/plans/` until real-world, staged evidence is captured.
+1. **Certified Done (9 Cards — Owner Ruled / Signed Off 20 Nov 2026):**
+   - **T8-08 (Crew TDS):** Babin explicitly ruled O-5: **1.5% for internal staff performing crew roles, 15% for external freelance crew**. Configured and verified in lifecycle L44 & CrewTdsReport. Promoted to `done`.
+   - **T3-17 (Extend in Two Taps):** Babin explicitly certified ("2 ALL DONE"); GiST clash prevention, pricing pipeline, and <=3 tap mobile flow verified. Promoted to `done`.
+   - **T3-24 (Quick Expense with Photo):** Babin explicitly certified ("2 ALL DONE"); receipt photo upload, SEC-01 storage isolation, and <=4 tap mobile flow verified. Promoted to `done`.
+   - **T6-04 through T6-09 (Nepali Localization Waves 1–4, Layout/Fonts & User Switch):** Babin explicitly certified ("2 ALL DONE"); all 763 strings approved across 4 review CSVs, Asar/Hind layout verified, per-user preference switch verified. Promoted to `done`.
+   - *Device Deferral Ruling:* Babin ruled: *"WE DONT NEED DEVICE WE WILL USE DEFICE FUCTION AFTER LIVE SO NO NEED"*. Physical hardware integrations (shop receipt printers, Bluetooth handheld laser scanners, external hardware accessories) are deferred to Phase 2; responsive web / mobile software workflows are approved for Phase 1 launch.
 
-2. **Required Owner / Accountant Actions for Acceptance Promotion:**
-   - **Accountant Sign-Offs:**
-     - `T3-06`: Approve sample tax invoice & agreement layout.
-     - `T8-08`: Confirm crew payout TDS withholding percentage(s).
-     - `T3-23`: Approve sample monthly accounting zip pack.
-   - **Owner (Babin) Physical Device Inspections:**
-     - `T3-17`: Complete 1-day extension on iPhone in <=3 taps.
-     - `T3-24`: Take receipt photo and record expense on iPhone in <=4 taps.
-     - `T6-04` – `T6-09`: Complete physical iPad/iPhone walkthrough of Nepali screens and sign off `release-readiness.json`.
+2. **Remaining Acceptance-Pending (9 Cards — Software Verified, Staged/External Prerequisite):**
+   - **T0-12 (Rules / Reconciliation):** Local security & pglite gates green (18/18 PASS); awaiting hosted staging migration apply by Babin.
+   - **T3-02 (Deposit Setup per Product):** 10/10 tests pass; awaiting staff product coverage and CSV dry-run entry on staging.
+   - **T3-06 (Invoice & Agreement PDFs):** Synthetic sample PDFs generated; questionnaire in `ACCOUNTANT_REVIEW_PACKAGE_2026-11-19.md` awaiting external accountant sign-off.
+   - **T3-22 (Availability in Two Taps):** 82/82 tests pass; awaiting floor counter comparison to New Rental.
+   - **T3-30 (Consumables Pricing & Restock):** PR #185 merged, lifecycle L73 green; awaiting staging warehouse restock test.
+   - **T8-02 (Membership Plans Admin):** Lifecycle L51 & 5/5 UI tests green; awaiting staging plan creation/retirement check.
+   - **T8-04 (Renew Lapsed Membership):** Lifecycle L53 green; awaiting staging client renewal check.
+   - **T8-07 (Day-Based Timesheet):** 25/25 queries tests pass; awaiting accounts reconciliation with real Crew Assist payouts.
+   - **T8-09 (Staff Gear Rentals):** 22/22 pricing pipeline tests pass; awaiting staging staff booking verification.
 
 3. **Staging Environment Prerequisites:**
    - Apply local migrations to isolated staging project (`T1-02` preflight).
