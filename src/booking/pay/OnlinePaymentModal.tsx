@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import {
   initOnlinePayment,
-  verifyOnlinePayment,
   fetchOnlinePaymentProviders,
   type PayInitResponse,
   type PaymentProvider,
@@ -26,28 +25,19 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
   bookingId,
   clientUuid,
   token,
-  onPaymentSuccess,
 }) => {
   const [providers, setProviders] = useState<OnlinePaymentProviderInfo[]>([])
   const [selectedProvider, setSelectedProvider] = useState<PaymentProvider>('fonepay')
   const [loading, setLoading] = useState(false)
-  const [verifying, setVerifying] = useState(false)
-  const [initData, setInitData] = useState<PayInitResponse | null>(null)
+    const [initData, setInitData] = useState<PayInitResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [successResult, setSuccessResult] = useState<{
-    intentId: string
-    paymentNo?: string | undefined
-    amountPaisa: number
-  } | null>(null)
-
+  
   // 1. Fetch enabled providers on open
   useEffect(() => {
     if (!isOpen) {
       setInitData(null)
       setError(null)
-      setSuccessResult(null)
-      setVerifying(false)
-      return
+        return
     }
 
     let isMounted = true
@@ -69,19 +59,9 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
         const initial = active[0]?.provider || 'fonepay'
         setSelectedProvider(initial)
 
-        return initOnlinePayment({
-          clientUuid,
-          bookingRequestId,
-          bookingId,
-          token,
-          provider: initial,
-        })
-      })
-      .then((data) => {
-        if (isMounted && data) {
-          setInitData(data)
-          setLoading(false)
-        }
+        // Let the client choose a provider BEFORE an intent is created.
+        // Starting a default intent first can trap a different-provider checkout.
+        setLoading(false)
       })
       .catch((err) => {
         if (isMounted) {
@@ -95,61 +75,29 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
     }
   }, [isOpen, clientUuid, bookingRequestId, bookingId, token])
 
-  // Handle provider switch by user
-  const handleSelectProvider = async (provider: PaymentProvider) => {
-    if (provider === selectedProvider || loading || verifying) return
+  const handleSelectProvider = (provider: PaymentProvider) => {
+    if (initData || loading) return
     setSelectedProvider(provider)
+    setError(null)
+  }
+
+  const startCheckout = async () => {
+    if (loading || initData) return
     setLoading(true)
     setError(null)
-
     try {
       const data = await initOnlinePayment({
         clientUuid,
         bookingRequestId,
         bookingId,
         token,
-        provider,
+        provider: selectedProvider,
       })
       setInitData(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to switch payment provider.')
+      setError(err instanceof Error ? err.message : 'Payment initialization failed.')
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleSimulatePayment = async () => {
-    if (!initData) return
-    setVerifying(true)
-    setError(null)
-
-    try {
-      const prefix = selectedProvider === 'esewa' ? 'ESEWA' : selectedProvider === 'khalti' ? 'KH' : 'FP'
-      const mockTxnRef = `${prefix}-${Date.now().toString().slice(-6)}`
-      const verifyRes = await verifyOnlinePayment({
-        intentId: initData.intent_id,
-        provider: selectedProvider,
-        providerRef: mockTxnRef,
-        uid: mockTxnRef,
-        pidx: selectedProvider === 'khalti' ? mockTxnRef : undefined,
-        responseCode: 'successful',
-      })
-
-      if (verifyRes.success) {
-        const result = {
-          intentId: initData.intent_id,
-          paymentNo: verifyRes.payment_no,
-          amountPaisa: initData.amount_paisa,
-        }
-        setSuccessResult(result)
-        onPaymentSuccess?.(result)
-      } else {
-        setError(verifyRes.error || 'Payment verification failed.')
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Verification failed.')
-    } finally {
-      setVerifying(false)
     }
   }
 
@@ -223,7 +171,7 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
         {/* Content */}
         <div style={{ padding: 20 }}>
           {/* Provider Selection Tabs (only shown if at least 1 provider available) */}
-          {providers.length > 1 && !successResult && (
+          {providers.length > 1 && !initData && (
             <div
               style={{
                 display: 'flex',
@@ -241,7 +189,7 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
                     key={p.provider}
                     type="button"
                     onClick={() => handleSelectProvider(p.provider)}
-                    disabled={loading || verifying}
+                    disabled={loading}
                     style={{
                       flex: 1,
                       minHeight: 44,
@@ -250,7 +198,7 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
                       background: isSelected ? 'var(--accent-gold, #eab308)' : 'transparent',
                       color: isSelected ? '#000' : 'var(--text-main, #f3f4f6)',
                       fontWeight: isSelected ? 700 : 500,
-                      cursor: loading || verifying ? 'not-allowed' : 'pointer',
+                      cursor: loading ? 'not-allowed' : 'pointer',
                       fontSize: '0.88rem',
                       transition: 'all 0.15s ease',
                       display: 'flex',
@@ -296,40 +244,6 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
                 Close
               </button>
             </div>
-          ) : successResult ? (
-            <div style={{ textAlign: 'center', padding: '16px 0' }}>
-              <div style={{ fontSize: '3rem', color: 'var(--green-text, #22c55e)', marginBottom: 8 }}>✓</div>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 8px 0' }}>
-                Payment Received!
-              </h3>
-              <p style={{ color: 'var(--text-muted, #9ca3af)', fontSize: '0.88rem', margin: '0 0 16px 0' }}>
-                Your payment of {formatMoney(successResult.amountPaisa as Paisa)} has been verified server-to-server.
-              </p>
-              {successResult.paymentNo && (
-                <div
-                  style={{
-                    background: 'rgba(34, 197, 94, 0.1)',
-                    border: '1px solid rgba(34, 197, 94, 0.3)',
-                    padding: 10,
-                    borderRadius: 6,
-                    fontFamily: 'var(--font-mono, monospace)',
-                    fontSize: '0.9rem',
-                    color: 'var(--green-text, #22c55e)',
-                    marginBottom: 16,
-                  }}
-                >
-                  Receipt #{successResult.paymentNo}
-                </div>
-              )}
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={onClose}
-                style={{ minHeight: 44, width: '100%' }}
-              >
-                Done
-              </button>
-            </div>
           ) : initData ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {/* Amount Box */}
@@ -343,7 +257,7 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
                 }}
               >
                 <div style={{ fontSize: '0.82rem', color: 'var(--text-muted, #9ca3af)', marginBottom: 4 }}>
-                  Rental Advance Payable Now:
+                  {token ? 'Rental Payment Due Now:' : bookingId ? 'Invoice Balance Payable Now:' : 'Rental Advance Payable Now:'}
                 </div>
                 <div
                   style={{
@@ -356,7 +270,7 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
                   {formatMoney(initData.amount_paisa as Paisa)}
                 </div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--text-muted, #9ca3af)', marginTop: 4 }}>
-                  Authoritative advance calculated from booking lines
+                  Amount calculated from the current server-side payment record
                 </div>
               </div>
 
@@ -371,8 +285,8 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
                   color: 'var(--blue-text, #93c5fd)',
                 }}
               >
-                ℹ <strong>Security Deposit Policy:</strong> Online payments strictly cover rental advance only.
-                Any required security deposit is taken at physical gear handover.
+                ℹ <strong>Security Deposit Policy:</strong> Online payments cover the rental advance
+                or issued-invoice balance, not security deposits. Deposits are handled separately at equipment handover.
               </div>
 
               {/* Provider-Specific Visual Display */}
@@ -530,27 +444,23 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
                     : 'Pay via Fonepay Hosted Page ↗'}
                 </a>
 
-                <button
-                  type="button"
-                  onClick={handleSimulatePayment}
-                  disabled={verifying}
-                  style={{
-                    minHeight: 44,
-                    background: 'var(--bg-elevated, #2a2a32)',
-                    border: '1px solid var(--border-subtle, #444)',
-                    borderRadius: 6,
-                    color: 'var(--text-main, #f3f4f6)',
-                    cursor: verifying ? 'not-allowed' : 'pointer',
-                    fontSize: '0.85rem',
-                  }}
-                >
-                  {verifying
-                    ? 'Verifying with payment server...'
-                    : `Simulate Successful ${selectedProvider.toUpperCase()} Payment`}
-                </button>
+                <p style={{ color: 'var(--text-muted, #9ca3af)', fontSize: '0.82rem', margin: 0 }}>
+                  Complete payment on the provider's official checkout. Only a server-verified
+                  callback can confirm a payment or issue a receipt.
+                </p>
               </div>
             </div>
-          ) : null}
+          ) : (
+            <button
+              type="button"
+              onClick={() => { void startCheckout() }}
+              disabled={providers.length === 0}
+              className="btn-primary"
+              style={{ minHeight: 44, width: '100%' }}
+            >
+              Continue with {providers.find((p) => p.provider === selectedProvider)?.name || selectedProvider}
+            </button>
+          )}
         </div>
       </div>
     </div>
