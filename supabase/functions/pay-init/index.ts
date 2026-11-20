@@ -194,6 +194,21 @@ Deno.serve(async (req: Request) => {
       intent_id = linkDetails.intent_id
       amount_paisa = linkDetails.amount_paisa
 
+      // Never change a provider after a Khalti checkout was issued: the
+      // first pidx may already have been paid by the client.
+      const { data: storedLink, error: storedLinkError } = await supabase
+        .from('payment_intents')
+        .select('provider, provider_response, status')
+        .eq('id', intent_id)
+        .single()
+      if (storedLinkError || !storedLink || storedLink.status !== 'pending') {
+        return rejectPayment('The payment link is not available for checkout.', 409)
+      }
+      const issuedPidx = (storedLink.provider_response as Record<string, unknown> | null)?.initiated_pidx
+      if (typeof issuedPidx === 'string' && issuedPidx && storedLink.provider !== provider) {
+        return rejectPayment('A checkout is already active with the original provider.', 409)
+      }
+
       // A valid high-entropy token grants access to this pending link only.
       const { data: providerUpdate, error: providerUpdateError } = await supabase
         .from('payment_intents')
@@ -342,6 +357,44 @@ Deno.serve(async (req: Request) => {
       // Khalti ePayment v2 configuration
       const khaltiSecret = Deno.env.get('KHALTI_SECRET_KEY')
       const isSandbox = !khaltiSecret || Deno.env.get('KHALTI_ENV') === 'sandbox'
+
+      // A retry may reuse the SAME provider checkout, never mint a second
+      // provider-issued pidx for an already-bound intent.
+      const { data: existingCheckout, error: existingCheckoutError } = await supabase
+        .from('payment_intents')
+        .select('status, provider, provider_response')
+        .eq('id', intent_id)
+        .single()
+      if (existingCheckoutError || !existingCheckout || existingCheckout.status !== 'pending'
+          || existingCheckout.provider !== 'khalti') {
+        return rejectPayment('Khalti payment attempt cannot be resumed.', 409)
+      }
+      const saved = existingCheckout.provider_response as Record<string, unknown> | null
+      if (saved?.initiated_pidx) {
+        if (typeof saved.initiated_pidx !== 'string'
+            || typeof saved.initiated_payment_url !== 'string'
+            || !saved.initiated_payment_url.startsWith('https://')) {
+          return rejectPayment('The original Khalti checkout requires reconciliation.', 409)
+        }
+        return new Response(
+          JSON.stringify({
+            success: true,
+            intent_id,
+            amount_paisa,
+            amount_rupees: amountRupees,
+            provider: 'khalti',
+            pidx: saved.initiated_pidx,
+            payment_url: saved.initiated_payment_url,
+            is_sandbox: false,
+            is_existing: true,
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      if (saved && Object.keys(saved).length > 0) {
+        return rejectPayment('The Khalti checkout binding requires reconciliation.', 409)
+      }
+
       let pidx = `KH-${intent_id.slice(0, 8)}`
       let paymentUrl = `${siteUrl}/pay/callback?provider=khalti&intent_id=${intent_id}&pidx=${pidx}`
 
@@ -374,11 +427,17 @@ Deno.serve(async (req: Request) => {
             .from('payment_intents')
             .update({
               provider: 'khalti',
-              provider_response: { initiated_pidx: khaltiData.pidx },
+              provider_response: {
+                initiated_pidx: khaltiData.pidx,
+                initiated_payment_url: khaltiData.payment_url,
+                checkout_issued_at: new Date().toISOString(),
+              },
               updated_at: new Date().toISOString(),
             })
             .eq('id', intent_id)
+            .eq('provider', 'khalti')
             .eq('status', 'pending')
+            .is('provider_response', null)
             .select('id')
             .single()
           if (bindError || !boundIntent) {
