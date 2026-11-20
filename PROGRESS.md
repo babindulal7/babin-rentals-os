@@ -1,5 +1,80 @@
 # Progress Log
 
+## 2026-11-20 — T7-16: Store analytics: GA4 and Meta Pixel (Lane C / Windows)
+
+**Did**
+- Completed **T7-16 · Store analytics: GA4 and Meta Pixel** (`lane-c/T7-16-store-analytics-ga4-and-meta-pixel`):
+  - Created `src/lib/storeAnalytics.ts`:
+    - Implemented `initStoreAnalyticsScripts`: loads Google Analytics 4 (`https://www.googletagmanager.com/gtag/js?id=...`) and Meta Pixel (`https://connect.facebook.net/en_US/fbevents.js`) lazily after page load on the public booking app only. Strictly refuses initialization when `isStaffApp` is true (Law 6, B37).
+    - Implemented `trackStoreEvent`: dispatches the 5 required public store events (`page_view`, `view_item`, `add_to_request`, `request_sent`, `payment_done`) to GA4 `gtag` and Meta `fbq` (`PageView`, `ViewContent`, `AddToCart`, `Lead`, `Purchase`).
+    - Implemented `sanitizeAnalyticsEvent`: strictly scrubs all PII. Strips query parameters and hashes from page paths (preventing email or token leaks), preserves item metadata (id, name, category) and integer rupee amounts, and excludes personal names, phone numbers, email addresses, or booking numbers.
+    - Implemented `shouldEnableStoreAnalytics`: enforces strict boundary check preventing any dispatch on staff application surfaces.
+  - Integration on Public Store:
+    - `src/booking/App.tsx`:
+      - Initializes store analytics asynchronously on mount and fires sanitized `page_view`.
+      - Dispatches `view_item` when an equipment item modal is opened, with item metadata and daily rate in rupees.
+      - Dispatches `add_to_request` when an equipment item is added to the cart, with item metadata and daily rate in rupees.
+      - Added responsive footer disclosing anonymous GA4 and Meta Pixel usage without collecting personal identifying information.
+    - `src/booking/booking.css`: added styles for footer and privacy disclosure notice.
+    - `src/booking/components/CartDrawer.tsx`:
+      - Dispatches `request_sent` on successful booking request submission with total estimated value in rupees.
+      - Dispatches `payment_done` on advance payment settlement with paid rupee amount.
+    - `src/booking/pay/PaymentLinkPage.tsx`:
+      - Initializes store analytics and dispatches sanitized `page_view` (`/pay/link` with token and booking ref omitted).
+      - Dispatches `payment_done` on successful online settlement with authoritative rupee value.
+      - Added privacy disclosure notice in footer.
+  - Configuration & CSP:
+    - Updated `nginx.conf` and `public/_headers`: expanded Content-Security-Policy to allow GA4 and Meta Pixel endpoints (`https://www.googletagmanager.com`, `https://connect.facebook.net`, `https://*.google-analytics.com`, `https://*.analytics.google.com`, `https://www.facebook.com`).
+    - Updated `.env.example` with public configuration variables `VITE_GA4_ID` and `VITE_META_PIXEL_ID`.
+  - Tests & Verification:
+    - Authored comprehensive test suite in `src/lib/__tests__/storeAnalytics.test.ts` (8/8 tests passing):
+      - Verifies PII stripping (emails, phone numbers, tokens, query params).
+      - Verifies `view_item` and `add_to_request` formatting with item metadata and rupee amounts.
+      - Verifies `payment_done` with rupee value and asserts `booking_id`, `booking_no`, and `client_id` are undefined.
+      - Verifies strict rejection of staff app initialization (`isStaffApp: true`).
+      - Verifies `initStoreAnalyticsScripts` DOM script injection on public app and refusal on staff app.
+      - Verifies static boundary proof: asserts `index.html`, `src/App.tsx`, and `src/main.tsx` contain zero references to `googletagmanager.com`, `connect.facebook.net`, `gtag`, `fbq`, or `storeAnalytics`.
+    - `npm run typecheck`: clean (0 errors).
+    - `npm run lint`: clean (0 errors, 0 warnings).
+    - `npm run lint:ui-copy`: 0 developer-text violations.
+    - `npm run check:contrast`: 97/97 WCAG AA passing.
+    - `npx vitest run src/booking/`: 10/10 test files passed (39 tests passing).
+    - `npm run check:pglite`: 252/252 applied, 0 failed, 0 leaks.
+    - `npm run check:lifecycle`: 96/96 steps green.
+    - `node scripts/test-booking-financial-integrity.mjs`: PASS.
+    - `npm run check:security`: 18/18 SQL regressions passed.
+    - `npm run test:server-contracts`: PASS.
+    - `npm run test:partial-return`: 58/58 passed.
+    - `node --test scripts/test-receipt.test.mjs`: 11/11 passed.
+    - `npm run lint:shell`: 943 files checked, clean.
+    - `npm run build`: built cleanly in 1m 40s.
+  - Updated `docs/plans/T7_ONLINE_BOOKING.md` card T7-16 status to `ready — awaiting merge (lane-c/T7-16-store-analytics-ga4-and-meta-pixel)`.
+
+**Ruled**
+- GA4 and Meta Pixel are strictly scoped to the public booking site (`booking.html` / `src/booking/*`) and never load or execute in the staff app (Law 6, B37).
+- No personal identifying data (names, emails, phone numbers, booking numbers) may ever be included in any analytics event.
+- Analytics scripts load deferred/asynchronously so initial store page rendering is unaffected.
+- GA4 and Meta Pixel measurement is explicitly disclosed on the booking site footer.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 112 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | +0 |
+| Lifecycle | steps green / total | 96 / 96 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 252 files · check:pglite 252/252 applied, 0 failed (recorded 2026-11-20T15:49:44.646Z). Suite: Historical suite: 7460/7460 passed, 0 failed (recorded 2026-11-20T12:59:21.277Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 7398/7398 passed, 0 failed (recorded 2026-11-19T01:10:17.481Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-20T15:50:40.345Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Track 7 cards completed by Windows: T7-02, T7-03, T7-04, T7-05, T7-06, T7-07, T7-08, T7-09, T7-12, T7-13, T7-14, T7-15, T7-16.
+- Final Track 7 card: T7-11 · Launch.
+
 ## 2026-11-20 — T7-15: Payment link from any booking (Lane C / Windows)
 
 **Did**

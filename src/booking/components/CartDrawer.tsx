@@ -9,6 +9,7 @@ import type { OnlineBookingAwayStatus } from '@/lib/awayMode'
 import { TurnstileWidget } from './TurnstileWidget'
 import { OnlinePaymentModal } from '../pay/OnlinePaymentModal'
 import { formatMoney, type Paisa } from '@/lib/money'
+import { trackStoreEvent } from '@/lib/storeAnalytics'
 
 export interface CartLine {
   item: CatalogueItem
@@ -149,6 +150,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
       setPaymentClientUuid(crypto.randomUUID())
       setPaidAdvance(false)
       setStep('success')
+      trackStoreEvent({
+        event: 'request_sent',
+        valueNpr: Math.round((res.total_paisa + res.vat_paisa) / 100),
+      })
       onClearCart()
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to submit request.'
@@ -661,6 +666,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           clientUuid={paymentClientUuid || crypto.randomUUID()}
           onPaymentSuccess={() => {
             setPaidAdvance(true)
+            trackStoreEvent({
+              event: 'payment_done',
+              valueNpr: Math.round(confirmedResult.advance_due_paisa / 100),
+            })
           }}
         />
       )}

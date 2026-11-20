@@ -4,6 +4,7 @@ import { fetchPaymentLinkDetails, type PaymentLinkDetails } from './payApi'
 import { OnlinePaymentModal } from './OnlinePaymentModal'
 import { formatMoney, type Paisa } from '../../lib/money'
 import Icon from '../../components/ui/Icon'
+import { initStoreAnalyticsScripts, trackStoreEvent } from '../../lib/storeAnalytics'
 
 export const PaymentLinkPage: React.FC = () => {
   const [searchParams] = useSearchParams()
@@ -15,6 +16,15 @@ export const PaymentLinkPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [showPayModal, setShowPayModal] = useState(false)
   const [paymentSettled, setPaymentSettled] = useState(false)
+
+  // Initialize store analytics and dispatch page view without leaking tokens (T7-16)
+  useEffect(() => {
+    initStoreAnalyticsScripts(false)
+    trackStoreEvent({
+      event: 'page_view',
+      pagePath: '/pay/link',
+    })
+  }, [])
 
   useEffect(() => {
     let isMounted = true
@@ -354,12 +364,19 @@ export const PaymentLinkPage: React.FC = () => {
           onPaymentSuccess={() => {
             setShowPayModal(false)
             setPaymentSettled(true)
+            trackStoreEvent({
+              event: 'payment_done',
+              valueNpr: typeof details.amount_paisa === 'number' ? Math.round(details.amount_paisa / 100) : 0,
+            })
           }}
         />
       )}
 
       {/* Footer */}
       <footer style={{ marginTop: 'auto', paddingTop: 'var(--sp-xl, 24px)', textAlign: 'center', fontSize: '0.75rem', color: 'var(--muted, #64748b)' }}>
+        <p style={{ margin: '0 0 4px', fontSize: '0.7rem', color: 'var(--muted, #64748b)' }}>
+          This portal uses Google Analytics 4 and Meta Pixel for anonymous measurement. No identifying customer data is tracked.
+        </p>
         © 2026 Babin Rentals. Payments are processed securely via licensed payment systems in Nepal.
       </footer>
     </div>

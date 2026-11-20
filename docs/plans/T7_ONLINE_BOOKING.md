@@ -240,7 +240,7 @@ sandbox; the payment appears once on the booking and in daily closing; an edited
 refused; Warehouse cannot make a link; screen check.
 **Needs** — T7-05.
 
-### T7-16 · Store analytics: GA4 and Meta Pixel            status: todo · size: S · lane C · [go-live] · slips first
+### T7-16 · Store analytics: GA4 and Meta Pixel            status: ready — awaiting merge (lane-c/T7-16-store-analytics-ga4-and-meta-pixel) · size: S · lane C · [go-live] · slips first
 **What** — Add Google Analytics 4 and the Meta Pixel to the **public booking site only** (B37) — never
 to the staff app. Events ⭐: page view, view item, add to request, request sent, payment done (with the
 rupee value). **No personal data** in any event: no names, emails, phone numbers or booking numbers.
