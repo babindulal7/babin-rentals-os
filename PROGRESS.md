@@ -1,5 +1,68 @@
 # Progress Log
 
+# Progress Log
+
+## 2026-11-21 — T7-02: Booking Site and Public Catalogue (Lane C)
+
+**Did**
+- Implemented **T7-02 · Booking site and public catalogue** on branch `feat/t7-02-booking-site-and-public-catalogue`:
+  - Created third entry document `booking.html` and isolated bundle entrypoint in `vite.config.ts`, generating an independent, lightweight public booking web experience (`src/booking/*`) with zero staff/admin code in the bundle.
+  - Implemented client-facing interface in `src/booking/`: `App.tsx`, `booking.css`, `BookingHeader.tsx`, `CartDrawer.tsx`, `CategoryNav.tsx`, `ProductCard.tsx`, `ProductDetailModal.tsx`, `catalogueApi.ts`, and `main.tsx`.
+  - Allocated and applied migration `supabase/migrations/0255_booking_site_and_public_catalogue.sql`:
+    - Extends `products` and `bundles` with `show_online` (boolean, default false), `online_bundle_only` (boolean, default false), `photos` (text[]), and auto-generated `slug` trigger.
+    - Creates deliberately public view `public_catalogue_v` exposing published products/bundles, descriptions, photo paths, integer paisa rates (`daily_rate_paisa`, `weekly_rate_paisa`, `monthly_rate_paisa`), and bundle contents; strictly excludes internal costs, replacement values, serials, and stock counts (Law 6).
+    - Creates stable `SECURITY DEFINER` function `public_availability(product_ids uuid[], from date, to date)` returning boolean daily availability while never leaking customer details, booking numbers, or reservation records.
+    - Configures public read storage policy on `catalogue` bucket and restricts uploads to `Owner`, `Admin`, and `Manager`.
+  - Registered `public_availability` in `scripts/allowed-anon-functions.mjs` and `public_catalogue_v` in `scripts/allowed-anon-views.mjs`.
+  - Updated `scripts/check-anon-exposure.mjs` and `scripts/check-pglite.mjs` to enforce public view and function allow-lists.
+  - Added lifecycle verification step `L93` in `scripts/e2e-lifecycle.mjs` asserting anon query visibility, bundling rules, schema blindness, view mutation rejection, and RPC availability.
+  - Updated `docs/plans/MIGRATION_LEDGER.md` (claimed 0255 for T7-02, next free number 0256) and `docs/plans/T7_ONLINE_BOOKING.md` (`acceptance_pending`).
+  - Added `T7-02` assertion in `src/lib/__tests__/roadmapStatusTruth.test.ts` (7/7 passed).
+  - Authored design and verification record [`docs/verification/T7-02_DESIGN.md`](docs/verification/T7-02_DESIGN.md).
+
+**Ruled**
+- Zero live schema or data writes executed (Rule N-5).
+- Anonymous visitors may only query the explicitly allow-listed view (`public_catalogue_v`) and RPC (`public_availability`). No other internal tables, views, or functions are exposed.
+- Status is recorded as `acceptance_pending` pending hosted staging deploy and physical mobile browser validation.
+
+**Verified**
+- `npm run check:pglite`: PASS (253/253 applied from scratch, 0 leaks, 0 failed).
+- `npm run check:lifecycle`: PASS (94/94 green, including L93).
+- `npm run typecheck`: clean (0 errors across 2,927 files).
+- `npm run lint`: clean (0 warnings across `src`).
+- `npm run test:local-api-guards`: PASS.
+- `npm test`: PASS (699 test files, 7,599 tests passed, 0 failed).
+- `node scripts/test-booking-financial-integrity.mjs`: PASS.
+- `npm run check:security`: PASS (18 Phase 0 SQL + 14 Reset branch + operations grants).
+- `npm run test:server-contracts`: PASS (68/68 assertions passed).
+- `npm run test:partial-return`: PASS (58/58 assertions passed).
+- `npm run lint:shell`: PASS (943 files checked).
+- `npm run lint:ui-copy`: PASS (0 violations, 12/12 tests passed).
+- `npm run check:contrast`: PASS (97/97 passed).
+- `node scripts/check-anon-exposure.mjs`: PASS (142 tables + 1 view, 0 unauthorized).
+- `npx vitest run src/booking/__tests__/catalogue.test.ts`: PASS (5/5 passed).
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: PASS (7/7 passed).
+- `npm run build`: PASS (`dist/booking.html`, `dist/assets/`, `dist/sw.js` generated).
+- `node scripts/lint-progress.mjs`: PASS.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 112 / 113 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 94 / 94 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+### Remaining
+- Staging-only dry run rehearsal of batch apply (T1-02 / T1-04) once approved by Babin.
+- Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
+- Staff inventory deposit data entry across active products (T3-02).
+- T3-13, T3-20, T3-30: pending remaining accountant & staged receipts.
+- T0-12: hosted staging migration apply by Babin.
+- T7-03: Client accounts by verified email (next online booking card).
+
 ## 2026-11-21 — T0-04: Read-only remote branch census and owner-gated cleanup (Docs audit)
 
 **Did**
@@ -33,8 +96,6 @@
 - Request specific owner authorization before any future remote archive tagging or deletion; no cleanup is preauthorized.
 - Continue release T1-02 staging provenance and safety acceptance under separate authorization, not via branch cleanup.
 
-
-
 ## 2026-11-21 — T1-04: Batch 0 anonymous business RPC lockdown rehearsal & production apply (Lane A + Babin)
 
 **Did**
@@ -64,25 +125,6 @@
 - `npm run typecheck`: clean AST check with 0 errors.
 - `npm run lint`: clean, 0 warnings.
 - `npm run lint:ui-copy`: PASS (0 text violations).
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 112 / 113 (99%) | +0 |
-| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | 93 / 93 (100%) | +0 |
-| Overall | structural mean of five | ≈ 96% | — |
-
-### Remaining
-- Staging-only dry run rehearsal of batch apply (T1-02 / T1-04) once approved by Babin.
-- Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
-- Staff inventory deposit data entry across active products (T3-02).
-- T3-14 (Draft invoice at Confirm, number on full payment): resync integrity & numbering moment (PR #259).
-- T3-13, T3-20, T3-30: pending remaining accountant & staged receipts.
-- T0-12: hosted staging migration apply by Babin.
-- T7 online booking: Track T7 lane C integration.
 
 ## 2026-11-21 — Roadmap Truth Reconciliation: T1-03, T1-15, T3-14, T3-18, T3-28, T3-29 (All Lanes)
 

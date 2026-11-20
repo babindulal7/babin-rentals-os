@@ -27,6 +27,7 @@ export const ALLOWED_ANON_FUNCTIONS = new Set([
   'invoice_outstanding',
   'invoice_vat_amount',
   'next_booking_stage',
+  'public_availability',
   'retired_stage_to_canonical',
   'set_request_context',
 ]);
