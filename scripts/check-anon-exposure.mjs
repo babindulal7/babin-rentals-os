@@ -49,6 +49,21 @@ check(paymentAllocationGrants.length === 1 && !paymentAllocationGrants[0].anon_c
   && !paymentAllocationGrants[0].client_can_allocate && paymentAllocationGrants[0].verifier_can_allocate,
   'money-allocation RPC is service-role only (neither anon nor authenticated can execute)')
 
+const intentCreationGrants = await q(`select
+  has_function_privilege('anon', 'public.create_payment_intent(text,uuid,uuid,text)', 'EXECUTE') as anon_can_create,
+  has_function_privilege('authenticated', 'public.create_payment_intent(text,uuid,uuid,text)', 'EXECUTE') as client_can_create,
+  has_function_privilege('service_role', 'public.create_payment_intent(text,uuid,uuid,text)', 'EXECUTE') as verifier_can_create`)
+check(intentCreationGrants.length === 1 && !intentCreationGrants[0].anon_can_create
+  && !intentCreationGrants[0].client_can_create && intentCreationGrants[0].verifier_can_create,
+  'money-intent creation RPC is service-role only')
+
+const requestViewSecurity = await q(`select coalesce(
+  reloptions::text[] @> array['security_invoker=true'], false
+) as invoker from pg_class
+where relnamespace = 'public'::regnamespace and relname = 'booking_requests_v'`)
+check(requestViewSecurity.length === 1 && requestViewSecurity[0].invoker,
+  'booking requests view evaluates caller RLS (security_invoker=true)')
+
 console.log('2. Relations anon can read')
 // Supabase grants SELECT on public tables to anon and relies on RLS, so a table is fine if RLS is on.
 // A view that runs with owner rights skips that RLS, so anon must not read it at all.
