@@ -291,6 +291,70 @@ begin
 end;
 $$;
 
+-- 3a. Client-owned invoice balance for the portal.
+-- Does not expose the invoices table or another client's finance records.
+create or replace function public.get_client_booking_balance(p_request_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $
+declare
+  v_caller uuid := auth.uid();
+  v_req record;
+  v_inv record;
+  v_total bigint;
+  v_due bigint;
+begin
+  if v_caller is null or p_request_id is null then
+    raise exception 'GATE:gate.auth.unauthorized|A signed-in client is required.';
+  end if;
+
+  select id, booking_id, status
+    into v_req
+    from public.booking_requests
+   where id = p_request_id
+     and requester_auth_uid = v_caller;
+  if not found then
+    raise exception 'GATE:gate.auth.unauthorized|Booking request is not owned by this client.';
+  end if;
+
+  if v_req.status <> 'confirmed' or v_req.booking_id is null then
+    return jsonb_build_object('available', false, 'reason', 'booking_not_confirmed');
+  end if;
+
+  select id, total_amount, outstanding_amount, status
+    into v_inv
+    from public.invoices
+   where booking_id = v_req.booking_id
+     and status not in ('Void', 'Draft')
+   order by created_at desc
+   limit 1;
+
+  if not found or v_inv.total_amount is null or v_inv.outstanding_amount is null then
+    return jsonb_build_object('available', false, 'reason', 'invoice_not_issued');
+  end if;
+
+  v_total := round(v_inv.total_amount::numeric * 100)::bigint;
+  v_due := round(v_inv.outstanding_amount::numeric * 100)::bigint;
+  if v_total < 0 or v_due < 0 or v_due > v_total then
+    raise exception 'GATE:gate.payment.invalid_invoice_balance|Invoice totals require reconciliation.';
+  end if;
+
+  return jsonb_build_object(
+    'available', true,
+    'booking_id', v_req.booking_id,
+    'total_paisa', v_total,
+    'paid_paisa', v_total - v_due,
+    'balance_paisa', v_due,
+    'invoice_id', v_inv.id
+  );
+end;
+$;
+
+revoke all on function public.get_client_booking_balance(uuid) from public, anon;
+grant execute on function public.get_client_booking_balance(uuid) to authenticated;
+
 -- 4. Re-declare allocate_payment_intent to validate active status and safe stage enum comparison
 create or replace function public.allocate_payment_intent(
   p_intent_id uuid,
