@@ -10606,6 +10606,24 @@ STEPS.push({
     assertEq(linked.booking_id, bookingId, 'staff confirmation links intent to booking')
     assertEq(linked.payment_id, null, 'no fabricated payment row from confirmation')
 
+    // The trusted allocation RPC must not mint a Received payment without
+    // a provider-issued, independently verified transaction reference.
+    await asService(async () => {
+      let rejected = false
+      try {
+        await q('select public.allocate_payment_intent($1::uuid, $2, $3::jsonb)',
+          [intentId, '', JSON.stringify({ status: 'successful' })])
+      } catch (err) {
+        rejected = true
+        assert(String(err.message).includes('provider_ref_required'),
+          'blank provider reference rejected at SQL money boundary')
+      }
+      assert(rejected, 'blank transaction reference does not allocate')
+    })
+    const unchanged = (await q('select status from public.payment_intents where id = $1',
+      [intentId])).rows[0]
+    assertEq(unchanged.status, 'pending', 'rejected blank provider ref leaves intent pending')
+
     const providerRef = 'FP-L96-VERIFIED-REF'
     let paymentId
     await asService(async () => {
