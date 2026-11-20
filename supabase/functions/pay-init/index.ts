@@ -12,6 +12,12 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+const rejectPayment = (message: string, status = 403) =>
+  new Response(JSON.stringify({ success: false, error: message }), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
+
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -142,7 +148,20 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    const { clientUuid, bookingRequestId, bookingId, token, provider = 'fonepay', returnUrl } = body
+    const { clientUuid, bookingRequestId, bookingId, token, provider = 'fonepay' } = body
+
+    if (!['fonepay', 'esewa', 'khalti'].includes(provider)) {
+      return rejectPayment('Unsupported payment provider.', 400)
+    }
+    const { data: configuredProviders, error: providerError } =
+      await supabase.rpc('get_online_payment_providers')
+    if (providerError || !Array.isArray(configuredProviders)) {
+      return rejectPayment('Payment providers are unavailable.', 503)
+    }
+    if (!configuredProviders.some((item: { provider: string; enabled: boolean }) =>
+      item.provider === provider && item.enabled === true)) {
+      return rejectPayment('The selected payment provider is disabled.', 400)
+    }
 
     if (!clientUuid || typeof clientUuid !== 'string') {
       return new Response(
@@ -175,20 +194,73 @@ Deno.serve(async (req: Request) => {
       intent_id = linkDetails.intent_id
       amount_paisa = linkDetails.amount_paisa
 
-      // Update provider choice on intent
-      await supabase
+      // A valid high-entropy token grants access to this pending link only.
+      const { data: providerUpdate, error: providerUpdateError } = await supabase
         .from('payment_intents')
         .update({ provider, updated_at: new Date().toISOString() })
         .eq('id', intent_id)
+        .eq('status', 'pending')
+        .select('id')
+        .single()
+      if (providerUpdateError || !providerUpdate) {
+        return rejectPayment('This payment link is no longer payable.', 409)
+      }
     } else {
-      if (!bookingRequestId && !bookingId) {
-        return new Response(
-          JSON.stringify({ error: 'Either bookingRequestId, bookingId, or token must be provided.' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
+      if ((!bookingRequestId && !bookingId) || (bookingRequestId && bookingId)) {
+        return rejectPayment('Provide exactly one booking or request target.', 400)
       }
 
-      // Call create_payment_intent RPC (server-authoritative computation of amount & switch check)
+      // IMPORTANT: this Edge Function uses service_role. It MUST authorize the
+      // end user before reading another client's target or calling a money RPC.
+      const bearer = req.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1]
+      if (!bearer) return rejectPayment('Sign in before creating a payment intent.', 401)
+
+      const { data: authResult, error: authError } = await supabase.auth.getUser(bearer)
+      const userId = authResult?.user?.id
+      if (authError || !userId || authResult.user?.is_anonymous === true) {
+        return rejectPayment('Valid authentication is required.', 401)
+      }
+
+      const { data: staff, error: staffError } = await supabase
+        .from('users')
+        .select('primary_role, is_active')
+        .eq('id', userId)
+        .maybeSingle()
+      if (staffError) return rejectPayment('Unable to verify caller permissions.', 503)
+      const moneyStaff = staff?.is_active === true
+        && ['Owner', 'Admin', 'Manager', 'Accounts'].includes(staff.primary_role)
+
+      if (bookingRequestId) {
+        const { data: request, error: targetError } = await supabase
+          .from('booking_requests')
+          .select('id, requester_auth_uid')
+          .eq('id', bookingRequestId)
+          .maybeSingle()
+        if (targetError) return rejectPayment('Unable to verify booking request ownership.', 503)
+        if (!request || (!moneyStaff && request.requester_auth_uid !== userId)) {
+          return rejectPayment('Payment target is not available to this account.', 403)
+        }
+      } else if (!moneyStaff) {
+        // A client pays an existing booking through its issued high-entropy
+        // payment link; arbitrary booking IDs are not an ownership proof.
+        return rejectPayment('Booking payment requires an authorized payment link.', 403)
+      }
+
+      // Idempotency keys cannot be reused to obtain an intent for another target.
+      const { data: existing, error: existingError } = await supabase
+        .from('payment_intents')
+        .select('booking_id, booking_request_id, requester_auth_uid')
+        .eq('client_uuid', clientUuid)
+        .maybeSingle()
+      if (existingError) return rejectPayment('Could not verify payment idempotency.', 503)
+      if (existing &&
+        (existing.booking_request_id !== (bookingRequestId || null)
+          || (bookingId && existing.booking_id !== bookingId)
+          || (!moneyStaff && existing.requester_auth_uid !== userId))) {
+        return rejectPayment('Payment idempotency key belongs to another target.', 409)
+      }
+
+      // The server RPC computes authoritative totals; the browser sends no amount.
       const { data: intentRes, error: intentError } = await supabase.rpc('create_payment_intent', {
         p_client_uuid: clientUuid,
         p_booking_id: bookingId || null,
@@ -209,9 +281,9 @@ Deno.serve(async (req: Request) => {
       amount_paisa = intentRes.amount_paisa
     }
     const amountRupees = (amount_paisa / 100).toFixed(2)
-    const siteUrl = Deno.env.get('SITE_URL') || 'https://book.babinrentals.com'
-    const defaultReturnUrl = `${siteUrl}/pay/callback?intent_id=${intent_id}&provider=${provider}`
-    const finalReturnUrl = returnUrl || defaultReturnUrl
+    const siteUrl = Deno.env.get('SITE_URL') || 'https://babinrentals.com'
+    // Never accept an arbitrary browser-supplied return URL for a hosted payment.
+    const finalReturnUrl = `${siteUrl}/pay/callback?intent_id=${intent_id}&provider=${provider}`
 
     if (provider === 'esewa') {
       // eSewa ePAY v2 configuration
