@@ -217,15 +217,15 @@ export async function fetchMyBookings(): Promise<ClientBooking[]> {
       // Fetch request lines
       const { data: reqLines } = await supabase
         .from('booking_request_lines')
-        .select('id, product_name, qty, rate_paisa')
+        .select('id, product_id, bundle_id, quantity, daily_rate_paisa')
         .eq('request_id', req.id)
 
       if (reqLines) {
-        lines = reqLines.map((l: { id: string; product_name: string; qty: number; rate_paisa?: number | null }) => ({
+        lines = reqLines.map((l: { id: string; product_id: string | null; bundle_id: string | null; quantity: number; daily_rate_paisa: number }) => ({
           id: l.id,
-          product_name: l.product_name,
-          qty: l.qty,
-          rate_paisa: l.rate_paisa ?? undefined,
+          product_name: l.bundle_id ? 'Rental bundle' : 'Rental equipment',
+          qty: l.quantity,
+          rate_paisa: l.daily_rate_paisa,
         }))
       }
 
@@ -280,40 +280,9 @@ export async function fetchMyBookings(): Promise<ClientBooking[]> {
         paymentKind = 'none'
       }
 
-      // Attach available documents based on stage
-      documents.push({
-        id: `quote-${req.id}`,
-        title: `Online Rental Quote (${req.request_number || 'Draft'})`,
-        kind: 'quote',
-        created_at: req.created_at,
-      })
-
-      if (paidPaisa > 0) {
-        documents.push({
-          id: `rec-${req.id}`,
-          title: `Online Payment Receipt (${bkgNo})`,
-          kind: 'receipt',
-          created_at: req.created_at,
-        })
-      }
-
-      if (stage !== 'Pending' && stage !== 'Cancelled') {
-        documents.push({
-          id: `agmt-${req.id}`,
-          title: `Rental Terms Agreement (${bkgNo})`,
-          kind: 'agreement',
-          created_at: req.created_at,
-        })
-      }
-
-      if (stage === 'Closed' || stage === 'Returned') {
-        documents.push({
-          id: `inv-${req.id}`,
-          title: `Tax Invoice (${bkgNo})`,
-          kind: 'invoice',
-          created_at: req.created_at,
-        })
-      }
+      // No invented quotes, receipts, agreements or VAT invoices.
+      // Documents must come from a server-authorized stored attachment record.
+      // Until the document/attachment integration is verified, leave this empty.
 
       const { step, progress } = mapStageToTimeline(stage)
 
