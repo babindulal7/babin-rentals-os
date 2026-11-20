@@ -185,6 +185,7 @@ declare
   v_provider_val jsonb;
   v_is_enabled boolean;
   v_setting_key text;
+  v_linked_booking_id uuid;
 begin
   if p_client_uuid is null or trim(p_client_uuid) = '' then
     raise exception 'GATE:gate.payment.missing_client_uuid|A client UUID is required.';
@@ -214,6 +215,15 @@ begin
   -- Idempotency check: if intent already exists for this client_uuid, return it
   select * into v_existing from public.payment_intents where client_uuid = p_client_uuid;
   if found then
+    -- A client_uuid must never silently select an unrelated/settled intent.
+    if v_existing.provider <> v_clean_provider
+       or v_existing.booking_request_id is distinct from p_booking_request_id
+       or (p_booking_request_id is null
+           and v_existing.booking_id is distinct from p_booking_id)
+       or v_existing.status <> 'pending'
+       or v_existing.expires_at <= now() then
+      raise exception 'GATE:gate.payment.idempotency_conflict|This payment attempt is no longer reusable.';
+    end if;
     return jsonb_build_object(
       'success', true,
       'intent_id', v_existing.id,
@@ -229,10 +239,11 @@ begin
   v_requester_auth_uid := auth.uid();
 
   if p_booking_request_id is not null then
-    select id, client_id, requester_auth_uid, total_paisa, vat_paisa, advance_due_paisa, status
+    select id, client_id, requester_auth_uid, total_paisa, vat_paisa, advance_due_paisa, status, booking_id
       into v_req
       from public.booking_requests
-     where id = p_booking_request_id;
+     where id = p_booking_request_id
+     for update;
 
     if not found then
       raise exception 'GATE:gate.booking_request.not_found|Booking request not found.';
@@ -244,10 +255,42 @@ begin
 
     v_client_id := v_req.client_id;
     v_requester_auth_uid := coalesce(v_requester_auth_uid, v_req.requester_auth_uid);
-    if v_req.advance_due_paisa > 0 then
-      v_amount_paisa := v_req.advance_due_paisa;
+
+    if v_req.status = 'confirmed' then
+      -- A confirmed request is no longer an advance quote.
+      -- Only the latest non-void, issued invoice controls balance payments.
+      if v_req.booking_id is null then
+        raise exception 'GATE:gate.payment.confirmed_booking_missing|The request has no confirmed booking.';
+      end if;
+      v_linked_booking_id := v_req.booking_id;
+      select id, outstanding_amount, status
+        into v_inv
+        from public.invoices
+       where booking_id = v_linked_booking_id and status <> 'Void'
+       order by created_at desc
+       limit 1;
+      if not found or v_inv.status = 'Draft' or v_inv.outstanding_amount is null
+         or v_inv.outstanding_amount <= 0 then
+        raise exception 'GATE:gate.payment.balance_not_available|An issued invoice with a positive outstanding balance is required.';
+      end if;
+      v_amount_paisa := round(v_inv.outstanding_amount::numeric * 100)::bigint;
     else
-      v_amount_paisa := public.calculate_advance_required(v_req.total_paisa + v_req.vat_paisa);
+      if v_req.advance_due_paisa > 0 then
+        v_amount_paisa := v_req.advance_due_paisa;
+      else
+        v_amount_paisa := public.calculate_advance_required(v_req.total_paisa + v_req.vat_paisa);
+      end if;
+    end if;
+
+    -- One active attempt per request, across provider changes or new UUIDs.
+    -- Request FOR UPDATE above serializes concurrent initiations for this request.
+    if exists (
+      select 1 from public.payment_intents pi
+       where pi.booking_request_id = p_booking_request_id
+         and (pi.status = 'paid'
+              or (pi.status = 'pending' and pi.expires_at > now()))
+    ) then
+      raise exception 'GATE:gate.payment.attempt_in_progress|An unsettled payment attempt already exists for this request.';
     end if;
 
   elsif p_booking_id is not null then
@@ -309,7 +352,7 @@ begin
     status
   ) values (
     p_client_uuid,
-    p_booking_id,
+    coalesce(v_linked_booking_id, p_booking_id),
     p_booking_request_id,
     v_client_id,
     v_requester_auth_uid,
