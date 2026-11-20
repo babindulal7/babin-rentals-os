@@ -11,6 +11,7 @@ export interface OnlinePaymentProviderInfo {
 
 export interface PayInitResponse {
   success: boolean
+  error?: string | undefined
   intent_id: string
   amount_paisa: number
   amount_rupees: string
