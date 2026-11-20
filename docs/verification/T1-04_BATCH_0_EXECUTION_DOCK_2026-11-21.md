@@ -4,8 +4,8 @@
 **Card:** T1-04 · Batch 0 — close the six anonymous RPCs first  
 **Branch:** `lane-a/T1-04-batch-0-close-the-six-anonymous`  
 **Migration:** `supabase/migrations/0163_close_six_anon_business_rpcs.sql`  
-**Status:** **REHEARSED & READY FOR OPERATOR APPLY — ZERO LIVE WRITES (Rule N-5)**  
-**Production Target (Read-Only):** `sxguwvgoserhdolewibb`  
+**Status:** **APPLIED & VERIFIED ON PRODUCTION BY BABIN (21 Nov 2026)**  
+**Production Target:** `sxguwvgoserhdolewibb` (Batch 0 Applied)  
 **Staging Target:** `babin-staging` — `klhmsrunqrdxjudyhnkm`  
 
 ---
@@ -194,4 +194,24 @@ commit;
 - `npm run check:anon`: PASS (19 callable anon functions, 142 RLS tables, 0 owner-rights views, 6/6 Batch 0 RPC denials).
 - `npm run check:pglite`: PASS (251/251 migrations applied cleanly).
 - `npm run check:lifecycle`: PASS (92/92 steps green).
-- Zero remote writes to `sxguwvgoserhdolewibb` or `klhmsrunqrdxjudyhnkm` (Law N-5).
+- Zero remote writes executed by agent (Law N-5).
+
+---
+
+## 7. Production Execution & Verification Receipt
+
+- **Executed by:** Babin (Owner)
+- **Target:** Production project `sxguwvgoserhdolewibb`
+- **Date:** 21 November 2026 (01:00 NPT)
+- **Method:** Supabase SQL Editor execution of `supabase/migrations/0163_close_six_anon_business_rpcs.sql`
+- **Result:**
+  - Transaction committed cleanly (`Success. No rows returned`).
+  - Pre-flight check confirmed initial exposure (`anon_can_execute = true`).
+  - Post-flight check confirmed full closure:
+    - `adjust_stock`: `anon_can_execute = false`, `auth_can_execute = true`
+    - `portal_claim_by_verified_email`: `anon_can_execute = false`, `auth_can_execute = true`
+    - `read_quote_editor`: `anon_can_execute = false`, `auth_can_execute = true`
+    - `set_staff_active`: `anon_can_execute = false`, `auth_can_execute = true`
+    - `set_staff_role`: `anon_can_execute = false`, `auth_can_execute = true`
+    - `update_rental_quote`: `anon_can_execute = false`, `auth_can_execute = true`
+- **Card Completion:** `T1-04 · Batch 0 — close the six anonymous RPCs first` is **DONE · PRODUCTION-VERIFIED**.

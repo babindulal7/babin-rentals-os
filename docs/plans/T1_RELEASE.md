@@ -56,7 +56,7 @@ and shares this project — confirm, and record whether its tables stay).
 **Done when** — `npm run db:plan` prints **no blockers** and a numbered apply list.
 **Needs** — T1-02 (so the comparison can also be run on the restored copy).
 
-### T1-04 · Batch 0 — close the six anonymous RPCs first            status: ready — awaiting merge (lane-a/T1-04-batch-0-close-the-six-anonymous) · size: S · lane A + Babin
+### T1-04 · Batch 0 — close the six anonymous RPCs first            status: done — applied to production by Babin (21 Nov 2026); six business RPCs confirmed closed to anon · size: S · lane A + Babin
 **What** — Rehearse `0163_close_six_anon_business_rpcs.sql` alone on staging (`npm run check:anon`
 against staging before/after), then Babin applies it alone to live.
 **Why** — It is a live security exposure today; it should not wait for the big batch.
