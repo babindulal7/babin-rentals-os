@@ -11,15 +11,15 @@
 Rule N-5 dictates backup-first: no live schema mutation is permitted without a fresh, restorable backup stored off-device.
 Because Supabase Free tier does not include Point-in-Time Recovery (PITR) or automated backups, the owner maintains independent backups before applying any migration batches.
 
-Two authorized backup methods exist depending on the workstation environment:
-- **Option A (Web Table Editor CSV Export — Zero Tooling):** Applicable on any machine without local PostgreSQL client tools or Docker. Exports all critical business tables directly to Google Drive.
-- **Option B (Native `pg_dump` CLI via `backup-db.ps1`):** Complete SQL schema + data dump requiring local `pg_dump` client tools (v17+).
+Two backup tiers exist:
+- **Tier 1 (Supplemental CSV Table Snapshot — Completed 21 Nov 2026):** Exporting critical tables (`bookings`, `clients`, `products`, `security_deposits`) via the Supabase Table Editor. **Note:** This is a supplemental business recovery artifact, NOT a complete restorable database backup. It does not include `booking_lines`, `payments`, `invoices`, foreign keys, views, or database schema. It does NOT satisfy the Rule N-5 pre-migration backup gate.
+- **Tier 2 (Full Native `pg_dump` SQL Backup — Required for Live Apply):** Complete PostgreSQL schema + all data rows produced via `scripts/backup-db.ps1` or `pg_dump` CLI (v17+). Only this full dump validated by `scripts/check-dump.mjs` satisfies the Rule N-5 backup prerequisite before any live migration batch is applied.
 
 ---
 
-## 2. Option A: Web Dashboard Core Table Export (Completed 21 Nov 2026)
+## 2. Tier 1: Supplemental Web Dashboard CSV Export (Completed 21 Nov 2026)
 
-When local machine tools (`pg_dump`) are not installed:
+When local machine tools (`pg_dump`) are not installed, the owner secures core table data as an emergency safeguard:
 
 1. **Log in to Supabase Dashboard:**
    - Project: `sxguwvgoserhdolewibb` (Production)
@@ -37,10 +37,11 @@ When local machine tools (`pg_dump`) are not installed:
    - Move downloaded CSVs to Babin's secure Google Drive:
      `Google Drive / Babin Rentals / Backups / Database / 2026-11-21 /`
    - Verify all 4 files are present and non-empty.
+   - *Limitation:* Preserves raw entity rows only; does not restore relational schema or financial ledgers.
 
 ---
 
-## 3. Option B: Native PostgreSQL `pg_dump` CLI
+## 3. Tier 2: Native PostgreSQL `pg_dump` CLI (Full Backup Gate)
 
 When PostgreSQL client tools (`pg_dump`) are installed on PATH:
 
@@ -85,8 +86,8 @@ node --test scripts/check-dump.test.mjs
 
 ## 5. Acceptance Criteria for Card T1-01 Closeout
 
-- [x] Critical business tables exported and stored off-laptop in Babin's Google Drive (Option A completed 21 Nov 2026).
-- [x] Dump validation logic and failure modes verified by `scripts/check-dump.test.mjs`.
-- [x] Credential isolation verified by `scripts/backup-db.test.mjs`.
-- [x] PROGRESS.md updated with date and backup verification receipt.
+- [x] Supplemental critical business tables exported and stored off-laptop in Babin's Google Drive (Tier 1 CSV snapshot completed 21 Nov 2026).
+- [x] Dump validation logic and failure modes verified by `scripts/check-dump.test.mjs` (7 synthetic tests passing).
+- [x] Credential isolation verified by `scripts/backup-db.test.mjs` (3 environment tests passing).
+- [ ] Full `pg_dump` SQL production backup executed by Babin, validated with `npm run check:dump`, and SHA-256 recorded in `PROGRESS.md` (required before live migration apply).
 - [ ] Restoration drill into staging rehearsed as part of T1-02.

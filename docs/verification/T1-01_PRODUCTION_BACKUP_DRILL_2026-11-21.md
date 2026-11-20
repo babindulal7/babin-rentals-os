@@ -11,10 +11,13 @@
 ## 1. Executive Summary
 
 Prior to applying any further database migrations or live operational changes, Rule N-5 mandates that a restorable backup must exist off-laptop.
-On 21 Nov 2026, Babin completed **Option A**:
+On 21 Nov 2026, Babin completed **Tier 1 (Supplemental CSV Table Snapshot)**:
 - Exported the 4 required business-critical tables (`bookings`, `clients`, `products`, `security_deposits`) as CSV files directly from the Supabase Table Editor on production (`sxguwvgoserhdolewibb`).
 - Uploaded and secured the backup files in Babin's Google Drive (`Google Drive / Babin Rentals / Backups / Database / 2026-11-21 /`).
 - Ensured zero credentials, connection URIs, or secret tokens were handled or logged by AI agents (Rule N-8).
+
+**Boundary Clarification (Codex Review Finding):**
+These CSV exports preserve core entity rows off-laptop as a supplemental disaster-recovery precaution. However, they do not include dependent relational tables (`booking_lines`, `payments`, `invoices`), triggers, or database schema. Therefore, the Tier 1 CSV snapshot is classified as a **supplemental recovery artifact**, not a full database backup. The Rule N-5 pre-apply gate for production migrations remains strictly closed until a full PostgreSQL `.sql` dump is generated via `pg_dump` and certified by `scripts/check-dump.mjs`.
 
 In addition, the offline verification test suites for backup generation and dump validation were executed and confirmed green.
 
@@ -69,9 +72,8 @@ The backup script test suite validates that:
 
 ---
 
-## 4. Next Phase: Restore Drill (T1-02)
+## 4. Next Phase: Restore Drill & Live Migration Prerequisite (T1-01 / T1-02)
 
-With the production backup secured off-device by Babin and verified in this drill, the prerequisites for staging restoration and rehearsal (T1-02) are satisfied:
-1. Reconcile existing staging schema against latest `main` migrations.
-2. Apply synthetic test dataset into `babin-staging` (`klhmsrunqrdxjudyhnkm`).
-3. Rehearse restoration drill without risk to production data.
+1. **Supplemental Data Safety:** Core business entities are secured off-device in Google Drive.
+2. **Full pg_dump SQL Requirement:** Before any live migration batch (e.g., Batch 1) is applied to production, a complete PostgreSQL `.sql` dump must be executed via `scripts/backup-db.ps1` (or `pg_dump`) and pass `npm run check:dump` with SHA-256 recorded.
+3. **Staging Restoration Drill (T1-02):** Reconcile staging schema on `babin-staging` (`klhmsrunqrdxjudyhnkm`), apply synthetic dataset, and rehearse restoration drill without risk to production data.
