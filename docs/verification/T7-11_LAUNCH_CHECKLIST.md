@@ -6,27 +6,44 @@
 
 ---
 
-## 1. Architecture & Domain Routing (Day X)
+## 1. Architecture & Domain Routing (Babin Ruling)
 
 | Hostname | Destination / Target | Purpose | Config Location |
 |---|---|---|---|
-| `book.babinrentals.com` | Production Web Host (Vercel / Nginx) | Public Online Booking Store & Catalogue | DNS CNAME `book` → Host |
-| `babinrentals.com` | `301 Redirect` → `https://book.babinrentals.com` | Root redirect with path preservation (O-1, B5) | DNS Host / Cloudflare Page Rule |
-| `app.babinrentals.com` | Production Web Host (Vercel / Nginx) | Staff Operations App (`index.html`) | Separate domain / path isolation |
+| `babinrentals.com` | Production Web Host (Vercel / Cloudflare / Nginx) | **Client Front Door**: Public Online Booking Store, Gear Catalogue, Client Accounts, and Public Payment Links | Root domain / Primary public ingress |
+| `app.babinrentals.com` | Production Web Host (Cloudflare Pages / Nginx) | **Staff Operations**: Booking management, Today dashboard, Inventory, Floor verification, Crew, Finance, Settings | Subdomain / Staff authentication boundary |
+| `book.babinrentals.com` | Canonical Alias / 301 Redirect | Alias redirecting to `https://babinrentals.com` | DNS CNAME `book` → `babinrentals.com` |
 
 ---
 
-## 2. DNS & Ingress Preflight (Babin Action)
+## 2. babinrentals.com Backup Verification (Booqable Corpus)
 
-- [ ] **DNS CNAME Record:**
-  - Host: `book.babinrentals.com`
-  - Target: Vercel / Nginx ingress edge
-  - TTL: 300s (lowered prior to Day X)
-- [ ] **Apex Redirect:**
-  - `https://babinrentals.com/*` → `https://book.babinrentals.com/*` (301 Permanent Redirect)
-  - Ensures legacy marketing and Instagram bio links automatically resolve to the store.
-- [ ] **SSL / TLS Certificate:**
-  - Automated Let's Encrypt / Vercel SSL verified active on `book.babinrentals.com`.
+The backup of the original `babinrentals.com` Booqable catalog was located and inspected at:
+`C:\Users\use\Desktop\Babin rentals products app\archive\legacy_and_duplicates\products-export-2026-06-30.csv`
+
+### Verified Backup Inventory:
+- **Total Catalog Products:** 274 equipment products.
+- **Fields Preserved:** Booqable UUID, Product Name, SKU, Category/Collections, Stock Identifiers, Base Price in Paisa/Cents (`base_price_in_cents`), Deposit amounts, Photo CDN URLs (`content.booqablecdn.com`), and Barcodes.
+- **Sample Verified Items:**
+  - `GRP-10-10-SKM-KIT`: 10x10 Skimmer Frame and Cloth (NPR 1,500/day)
+  - `GRP-12-12-SKM-KIT`: 12x12 Skimmer and Cloth
+  - `GRP-20-20-SKM`: 20x20 Skimmer Cloth (NPR 2,000/day)
+  - `58MM_ND`: 58mm ND Filter (NPR 50/day)
+- **Integration with Babin Rentals OS:**
+  - `external_refs` table (migration 0040) stores Booqable UUID mappings.
+  - Legacy URL resolver (T7-17, `src/lib/legacyUrlResolver.ts`) maps historical slugs directly into canonical catalogue IDs so bookmarked links resolve without error.
+  - Product rates are mapped 1:1 into integer paisa (`src/lib/money.ts`).
+
+---
+
+## 3. DNS & Ingress Preflight (Babin Action)
+
+- [ ] **DNS Apex & Subdomain Records:**
+  - `babinrentals.com` (A / ALIAS) → Production Web Host (Public Booking Store).
+  - `app.babinrentals.com` (CNAME) → Production Web Host (Staff App).
+  - `book.babinrentals.com` (CNAME) → `babinrentals.com` (Alias).
+- [ ] **SSL / TLS Certificates:**
+  - Active SSL certificates verified on both `babinrentals.com` and `app.babinrentals.com`.
 
 ---
 
