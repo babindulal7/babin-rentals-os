@@ -105,7 +105,7 @@ overtime days. Hours stay visible as information only.
 **Done when** — no "Estimated pay" label remains; totals match Crew Assist payouts.
 **Needs** — T8-06.
 
-### T8-08 · TDS on crew payouts            status: acceptance_pending — branch commits included in main; accountant O-5 rate and staged payouts pending · size: M · lane A + accountant
+### T8-08 · TDS on crew payouts            status: done — ruled by Babin 20 Nov 2026 (O-5: 1.5% staff, 15% freelance crew); migration 0229, lifecycle L44 & CrewTdsReport verified · size: M · lane A + accountant
 **What** — Settings ▸ Financial ▸ "TDS on crew payouts" (rate set by the accountant — O-5). Crew
 payouts show **gross, TDS, net**; a TDS report per month for the accountant. Until a rate is set,
 payouts show "TDS: rate not set". Money roles only (PERMISSIONS §5).

@@ -90,8 +90,12 @@ Under Section 88 of the Nepal Income Tax Act (2058 / 2002), withholding tax must
    - *Accountant Decision:* [ ] Approved / [ ] Comments: ______________________
 
 4. **Crew TDS Withholding Rates:**
-   - Which default TDS rate should be configured in Settings for local freelance crew payouts: **1.5%** (service contract with PAN) or **15%** (technical service / unverified)?
-   - *Accountant Decision:* Preferred Default Rate: ________ %
+   - Which default TDS rate should be configured in Settings for crew payouts?
+   - **Owner Ruling (Babin, 20 Nov 2026 — `O-5` / `T8-08`):**
+     - **Internal Staff (performing crew roles):** **1.5%** withholding.
+     - **Freelance External Crew:** **15%** withholding.
+     - *Status:* **RULED & ACCEPTED by Owner**. Configured in Settings / payout pipeline.
+   - *Accountant Decision:* [x] Approved as ruled (1.5% internal staff, 15% external crew) / [ ] Further notes: ______________________
 
 5. **Credit Note (`CRN-`) Format:**
    - Does the credit note format in `04_Sample_Credit_Note_CRN-2083-0005.pdf` satisfy your VAT adjustment ledger requirements for voided bookings?

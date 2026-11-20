@@ -7,6 +7,7 @@ import {
 import type { Dest } from '../../../lib/queries/settings'
 import { NotTrackedYet, SectionCards } from './shared'
 import { CancellationFeeTiersCard } from './CancellationFeeTiersCard'
+import { DeliveryFeeGridCard } from './DeliveryFeeGridCard'
 import { OpeningBalanceCard } from './OpeningBalanceCard'
 import { CreditPolicyCard } from '../../clients/CreditPolicyCard'
 import type { Section } from './shared'
@@ -79,6 +80,12 @@ export const FINANCIAL_SECTIONS: Section[] = [
         note: `Default charge per crew-day (Rs ${toRupees(FEE_PER_CREW_DAY_PAISA)}). Proposed default, not yet confirmed.`,
         settingKey: 'crewCoordinationFeeRupees',
         readBy: 'Crew Assist’s payout ledger',
+      },
+      {
+        label: 'Late-night delivery charge',
+        note: 'Flat extra charge for a late-night or emergency delivery, Rs, VAT exclusive. 0 means not set: New Rental then asks staff for an amount.',
+        settingKey: 'lateNightDeliveryRupees',
+        readBy: 'New Rental ▸ Services & other charges ▸ Add late-night delivery',
       },
       {
         label: 'TDS on crew payouts',
@@ -198,6 +205,7 @@ export function FinancialPane() {
       <CreditPolicyCard />
 
       <CancellationFeeTiersCard />
+      <DeliveryFeeGridCard />
       <OpeningBalanceCard />
     </>
   )

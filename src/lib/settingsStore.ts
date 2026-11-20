@@ -40,6 +40,7 @@ export type SettingKey =
   | 'vatRatePercent'
   | 'crewPayoutTdsPercent'
   | 'crewCoordinationFeeRupees'
+  | 'lateNightDeliveryRupees'
   | 'paymentTermsDays'
   | 'overdueStopDays'
   | 'latePaymentPercentPerMonth'
@@ -157,6 +158,22 @@ export const SETTING_SPECS: Record<SettingKey, SettingSpec> = {
     validate: (v) => {
       const n = Number(v)
       if (!Number.isFinite(n) || n < 0) return 'A fee cannot be negative.'
+      return null
+    },
+  },
+  /**
+   * **RULING 2026-11-19 (S2 row 5)** — the flat extra charge for a late-night or emergency delivery,
+   * in rupees, VAT exclusive. 0 means NOT SET: the booking then asks staff for an amount rather than
+   * assuming a free late-night delivery. Babin types the real figure; none is invented here.
+   * A money setting (migration 0249), so money-blind roles cannot read it (Law 6).
+   */
+  lateNightDeliveryRupees: {
+    default: 0,
+    kind: 'number',
+    suffix: ' Rs (0 = not set)',
+    validate: (v) => {
+      const n = Number(v)
+      if (!Number.isFinite(n) || n < 0) return 'A charge cannot be negative.'
       return null
     },
   },

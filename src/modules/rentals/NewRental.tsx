@@ -824,6 +824,10 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     pickupAt,
     returnAt,
     deliveryType,
+    deliveryZone: transportDetails.deliveryZone,
+    outsourcedVehicle: transportDetails.outsourcedVehicle
+      ? { vendor: transportDetails.outsourcedVendor ?? '', note: transportDetails.outsourcedNote ?? '' }
+      : null,
     pricing,
     manualDiscountReason,
     manualDiscountAuthorizedBy,

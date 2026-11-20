@@ -84,6 +84,10 @@ export function useNewRentalLogistics({
   const [pickupLocation, setPickupLocation] = useState('')
   const [returnLocation, setReturnLocation] = useState('')
   const [specialInstructions, setSpecialInstructions] = useState('')
+  // S2 row 8: an outsourced vehicle is a manual quote with an approval note (recorded after the booking exists).
+  const [outsourcedVehicle, setOutsourcedVehicle] = useState(false)
+  const [outsourcedVendor, setOutsourcedVendor] = useState('')
+  const [outsourcedNote, setOutsourcedNote] = useState('')
 
   // Return Pickup Logistics (§3.3)
   const [returnPickupType, setReturnPickupType] = useState<'Client Return' | 'Babin Pickup'>('Client Return')
@@ -154,8 +158,14 @@ export function useNewRentalLogistics({
       deliveryChargePaisa,
       fuelChargePaisa,
       transportPaisa,
+      outsourcedVehicle,
+      outsourcedVendor,
+      outsourcedNote,
     }),
     [
+      outsourcedVehicle,
+      outsourcedVendor,
+      outsourcedNote,
       clientPickup,
       deliveryType,
       deliveryZone,
@@ -194,6 +204,9 @@ export function useNewRentalLogistics({
     if (updates.returnPickupChargePaisa !== undefined) setReturnPickupChargePaisa(updates.returnPickupChargePaisa)
     if (updates.deliveryChargePaisa !== undefined) setDeliveryChargePaisa(updates.deliveryChargePaisa)
     if (updates.fuelChargePaisa !== undefined) setFuelChargePaisa(updates.fuelChargePaisa)
+    if (updates.outsourcedVehicle !== undefined) setOutsourcedVehicle(updates.outsourcedVehicle)
+    if (updates.outsourcedVendor !== undefined) setOutsourcedVendor(updates.outsourcedVendor)
+    if (updates.outsourcedNote !== undefined) setOutsourcedNote(updates.outsourcedNote)
   }, [])
 
   return {
