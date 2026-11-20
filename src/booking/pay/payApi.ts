@@ -169,8 +169,8 @@ export async function fetchOnlinePaymentProviders(): Promise<OnlinePaymentProvid
 }
 
 /**
- * Initializes an online payment via pay-init Edge Function or RPC fallback.
- * Computes amount server-side; client amount is never passed.
+ * Initialize payment through the trusted server only.
+ * A failed Edge call must never synthesize a checkout or create an intent in-browser.
  */
 export async function initOnlinePayment(params: {
   clientUuid?: string | undefined
@@ -185,112 +185,17 @@ export async function initOnlinePayment(params: {
     (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'client-intent-uuid')
   const { bookingRequestId, bookingId, token, provider = 'fonepay', returnUrl } = params
 
-  try {
-    const { data, error } = await supabase.functions.invoke<PayInitResponse>('pay-init', {
-      body: { clientUuid, bookingRequestId, bookingId, token, provider, returnUrl },
-    })
+  const { data, error } = await supabase.functions.invoke<PayInitResponse>('pay-init', {
+    body: { clientUuid, bookingRequestId, bookingId, token, provider, returnUrl },
+  })
 
-    if (!error && data && data.success) {
-      return data
-    }
-  } catch (err) {
-    console.warn('[payApi] Edge function pay-init failed, trying direct RPC fallback:', err)
+  if (error) {
+    throw new Error(error.message || 'Could not initialize payment with the server.')
   }
-
-  // Fallback: direct RPC invocation (for local / mock environment)
-  let intentId: string
-  let amountPaisa: number
-
-  if (token) {
-    const details = await fetchPaymentLinkDetails(token)
-    if (!details.valid || !details.intent_id || !details.amount_paisa) {
-      throw new Error(details.reason === 'expired' ? 'Payment link has expired (48h).' : 'Payment link is invalid or already paid.')
-    }
-    intentId = details.intent_id
-    amountPaisa = details.amount_paisa
-  } else {
-    const { data: rpcData, error: rpcError } = await supabase.rpc('create_payment_intent', {
-      p_client_uuid: clientUuid,
-      p_booking_id: bookingId || null,
-      p_booking_request_id: bookingRequestId || null,
-      p_provider: provider,
-    })
-
-    if (rpcError || !rpcData) {
-      throw new Error(rpcError?.message || 'Failed to initialize payment intent on server.')
-    }
-
-    const res = rpcData as {
-      intent_id: string
-      amount_paisa: number
-      provider: string
-    }
-    intentId = res.intent_id
-    amountPaisa = res.amount_paisa
+  if (!data?.success) {
+    throw new Error(data?.error || 'Payment initialization failed; no checkout was created.')
   }
-
-  const amtRupees = (amountPaisa / 100).toFixed(2)
-
-  if (provider === 'esewa') {
-    return {
-      success: true,
-      intent_id: intentId,
-      amount_paisa: amountPaisa,
-      amount_rupees: amtRupees,
-      provider: 'esewa',
-      payment_url: `https://rc-epay.esewa.com.np/api/epay/main/v2/form?transaction_uuid=${intentId}&amount=${amtRupees}`,
-      esewa_params: {
-        amount: amtRupees,
-        tax_amount: '0',
-        total_amount: amtRupees,
-        transaction_uuid: intentId,
-        product_code: 'EPAYTEST',
-        product_service_charge: '0',
-        product_delivery_charge: '0',
-        success_url: returnUrl || `https://book.babinrentals.com/pay/callback?intent_id=${intentId}&provider=esewa`,
-        failure_url: `https://book.babinrentals.com/pay/callback?status=failed&intent_id=${intentId}&provider=esewa`,
-        signed_field_names: 'total_amount,transaction_uuid,product_code',
-        signature: 'mock_esewa_sig_base64',
-      },
-      is_sandbox: true,
-    }
-  }
-
-  if (provider === 'khalti') {
-    const mockPidx = `KH-${intentId.slice(0, 8)}`
-    return {
-      success: true,
-      intent_id: intentId,
-      amount_paisa: amountPaisa,
-      amount_rupees: amtRupees,
-      provider: 'khalti',
-      pidx: mockPidx,
-      payment_url: `https://test-pay.khalti.com/?pidx=${mockPidx}`,
-      is_sandbox: true,
-    }
-  }
-
-  return {
-    success: true,
-    intent_id: intentId,
-    amount_paisa: amountPaisa,
-    amount_rupees: amtRupees,
-    provider: 'fonepay',
-    payment_url: `https://dev-clientapi.fonepay.com/api/merchantRequest?PRN=${intentId}&AMT=${amtRupees}`,
-    fonepay_params: {
-      PID: 'MDULAL',
-      MD: 'P',
-      PRN: intentId,
-      AMT: amtRupees,
-      CRN: 'NPR',
-      DT: new Date().toLocaleDateString('en-US'),
-      R1: `Rental Advance - Intent ${intentId.slice(0, 8)}`,
-      R2: 'Babin Rentals',
-      RU: returnUrl || `https://book.babinrentals.com/pay/callback?intent_id=${intentId}`,
-      DV: 'mock_dv_hash',
-    },
-    is_sandbox: true,
-  }
+  return data
 }
 
 /**
