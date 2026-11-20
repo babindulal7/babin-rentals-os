@@ -1,5 +1,89 @@
 # Progress Log
 
+## 2026-11-20 — T7-15: Payment link from any booking (Lane C / Windows)
+
+**Did**
+- Completed **T7-15 · Payment link from any booking** (`lane-c/T7-15-payment-link-from-any-booking`):
+  - Design note authored in `docs/verification/T7-15_DESIGN.md` addressing token generation, SHA-256 storage, 48h expiration, replay protection (Law 4), server-authoritative amounts (Law 1, D30), security deposit exclusion (O-3, B38, Law 5), and role authorization (Law 6).
+  - Authored Migration `supabase/migrations/0255_payment_link_from_any_booking.sql` (claimed migration 0255 in ledger):
+    - Added `token_hash text unique`, `is_payment_link boolean not null default false`, and `created_by uuid references public.users(id)` to `public.payment_intents`.
+    - Authored `public.create_booking_payment_link(p_client_uuid text, p_booking_id uuid)`:
+      - Validates role permissions with `auth_can_view_money()` (rejects Warehouse, Technician, Driver, and unauthenticated callers).
+      - Computes authoritative amount due from issued invoices or booking estimate minus payments (never accepts client-supplied amounts; Law 1, D30).
+      - Security deposits strictly excluded (O-3, B38, Law 5).
+      - Automatically expires prior pending links for the same booking.
+      - Generates cryptographically secure 64-hex token and stores SHA-256 hash with 48-hour expiration (`expires_at = clock_timestamp() + interval '48 hours'`).
+      - Records audit log entry with `audit_event_class = 'money movement'`, category `'Finance'`, action `'Create'`.
+      - Returns booking details, masked client name, item count, amount, and the unhashed token URL.
+    - Authored `public.get_payment_link_details(p_token text)`:
+      - Hashes provided token with SHA-256 and retrieves intent.
+      - Verifies 48-hour expiration and pending status; rejects expired or inactive intents.
+      - Returns client-masked summary (e.g. `B*** D***`), project name, rental period, item count, and amount in paisa.
+    - Re-declared `public.allocate_payment_intent(p_intent_id uuid, p_provider_ref text, p_fee_paisa bigint, p_metadata jsonb)`:
+      - Enforces idempotent allocation to an immutable `public.payments` row (Law 4).
+      - Ensures expired or inactive payment intents cannot be allocated.
+      - Replays return existing payment reference safely.
+    - Security-definer hygiene: Pinned `search_path = public, pg_temp`, revoked execute from `public, anon`, granted to `authenticated`.
+  - Lifecycle Step L95 (`scripts/e2e-lifecycle.mjs`):
+    - Added Step L95 asserting:
+      - Server-side amount computation (cannot be tampered).
+      - Role gate: Warehouse denied creation of payment link.
+      - Expiry check: 48-hour link expiration enforced.
+      - Link replacement: generating a new link expires previous pending link.
+      - Refusal: expired link rejects payment.
+      - Allocation: payment intent allocates into immutable `payments` row.
+      - Replay safety: replayed callback changes nothing and returns existing payment.
+      - Rejection: already paid link cannot be paid twice.
+    - Verified via `npm run check:pglite`: 252/252 applied, 0 failed, 0 leaks.
+    - Verified via `npm run check:lifecycle`: 96/96 steps green.
+  - Edge Functions & API Integration:
+    - `supabase/functions/pay-init/index.ts`: added `action=link_details` handler and `body.token` payload support for initiating Fonepay, eSewa, or Khalti from a payment link.
+    - `src/lib/whatsappTemplates.ts`: added `WaPaymentLink` interface and `paymentLink` message template.
+    - `src/booking/pay/payApi.ts`: authored `createBookingPaymentLink` and `fetchPaymentLinkDetails`.
+  - UI Implementation:
+    - Authored `src/modules/rentals/booking/PaymentLinkModal.tsx`: modal in Booking Detail allowing staff (Coordinator and above) to create 48h links, copy to clipboard, send WhatsApp draft, send Email draft, and view security deposit notice.
+    - Integrated "Payment Link" button into `src/modules/rentals/BookingDetail.tsx` under Quick Actions, visible only when money due and caller has financial visibility (`canBookingMoney`).
+    - Authored `src/booking/pay/PaymentLinkPage.tsx`: responsive customer-facing payment landing page at `/pay/link/:token` displaying booking summary, masked client identity, rental window, amount due, 48h expiration badge, deposit in-person reminder, and trigger for `OnlinePaymentModal`.
+    - Registered routes in `src/App.tsx`.
+  - Tests & Verification:
+    - Unit tests in `src/booking/pay/__tests__/paymentLink.test.tsx`: 4/4 passing.
+    - `npm run typecheck`: clean (0 errors).
+    - `npm run lint`: clean (0 errors, 0 warnings).
+    - `npm run lint:ui-copy`: 0 developer-text violations.
+    - `npm run check:contrast`: 97/97 WCAG AA passing.
+    - `npm run check:pglite`: 252/252 applied, 0 failed.
+    - `npm run check:lifecycle`: 96/96 steps green.
+    - `npm test`: 671 test files passed, 7460 tests passed.
+    - `npm run build`: clean production build.
+  - Updated `docs/plans/T7_ONLINE_BOOKING.md` card T7-15 status to `ready — awaiting merge (lane-c/T7-15-payment-link-from-any-booking)`.
+
+**Ruled**
+- The server strictly computes the payment link amount, never the client (D30, Law 1).
+- Security deposits are liabilities taken in person at gear handover, never online (O-3, B38, Law 5).
+- Payment links expire after 48 hours; generating a new link replaces the old link for that booking.
+- Paid links cannot be paid twice; replayed callbacks change nothing (Law 4).
+- Warehouse, Technician, and Driver roles cannot create payment links (Law 6).
+- Public links use unguessable 64-character hexadecimal tokens stored as SHA-256 hashes.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 112 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | +0 |
+| Lifecycle | steps green / total | 96 / 96 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 252 files · check:pglite 252/252 applied, 0 failed (recorded 2026-11-20T12:19:37.494Z). Suite: PASS — 7460/7460 passed, 0 failed (recorded 2026-11-20T12:59:21.277Z); source fingerprint matches.
+Coverage suite: Historical suite: 7398/7398 passed, 0 failed (recorded 2026-11-19T01:10:17.481Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-20T12:20:23.245Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Track 7 cards completed by Windows: T7-02, T7-03, T7-04, T7-05, T7-06, T7-07, T7-08, T7-09, T7-12, T7-13, T7-14, and now T7-15.
+- Next Track 7 card: T7-16 · Store analytics: GA4 and Meta Pixel.
+
 ## 2026-11-20 — T7-06: eSewa and Khalti payment providers (Lane C / Windows)
 
 **Did**

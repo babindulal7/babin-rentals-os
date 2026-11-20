@@ -21,6 +21,7 @@ interface PayInitRequest {
   clientUuid?: string
   bookingRequestId?: string
   bookingId?: string
+  token?: string
   provider?: 'fonepay' | 'esewa' | 'khalti'
   returnUrl?: string
   action?: string
@@ -91,6 +92,24 @@ Deno.serve(async (req: Request) => {
       )
     }
 
+    // Handle payment link details request
+    const tokenParam = url.searchParams.get('token')
+    if (url.searchParams.get('action') === 'link_details' && tokenParam) {
+      const { data: linkDetails, error: linkErr } = await supabase.rpc('get_payment_link_details', {
+        p_token: tokenParam,
+      })
+      if (linkErr) {
+        return new Response(
+          JSON.stringify({ error: linkErr.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      return new Response(
+        JSON.stringify({ success: true, details: linkDetails }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const body: PayInitRequest = await req.json().catch(() => ({} as PayInitRequest))
     if (body.action === 'providers') {
       const { data: providers, error: provError } = await supabase.rpc('get_online_payment_providers')
@@ -106,7 +125,24 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    const { clientUuid, bookingRequestId, bookingId, provider = 'fonepay', returnUrl } = body
+    if (body.action === 'link_details') {
+      const linkToken = body.token || tokenParam || ''
+      const { data: linkDetails, error: linkErr } = await supabase.rpc('get_payment_link_details', {
+        p_token: linkToken,
+      })
+      if (linkErr) {
+        return new Response(
+          JSON.stringify({ error: linkErr.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      return new Response(
+        JSON.stringify({ success: true, details: linkDetails }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const { clientUuid, bookingRequestId, bookingId, token, provider = 'fonepay', returnUrl } = body
 
     if (!clientUuid || typeof clientUuid !== 'string') {
       return new Response(
@@ -115,31 +151,63 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    if (!bookingRequestId && !bookingId) {
-      return new Response(
-        JSON.stringify({ error: 'Either bookingRequestId or bookingId must be provided.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    let intent_id: string
+    let amount_paisa: number
+
+    if (token) {
+      // Payment link flow: server resolves amount from payment_intents using token
+      const { data: linkDetails, error: linkErr } = await supabase.rpc('get_payment_link_details', {
+        p_token: token,
+      })
+      if (linkErr || !linkDetails || !linkDetails.valid) {
+        const reason = linkDetails?.reason || 'invalid'
+        const msg = reason === 'expired'
+          ? 'This payment link has expired (48-hour limit).'
+          : reason === 'already_paid'
+          ? 'This payment link has already been settled.'
+          : 'Invalid or missing payment link.'
+        return new Response(
+          JSON.stringify({ error: msg }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      intent_id = linkDetails.intent_id
+      amount_paisa = linkDetails.amount_paisa
+
+      // Update provider choice on intent
+      await supabase
+        .from('payment_intents')
+        .update({ provider, updated_at: new Date().toISOString() })
+        .eq('id', intent_id)
+    } else {
+      if (!bookingRequestId && !bookingId) {
+        return new Response(
+          JSON.stringify({ error: 'Either bookingRequestId, bookingId, or token must be provided.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Call create_payment_intent RPC (server-authoritative computation of amount & switch check)
+      const { data: intentRes, error: intentError } = await supabase.rpc('create_payment_intent', {
+        p_client_uuid: clientUuid,
+        p_booking_id: bookingId || null,
+        p_booking_request_id: bookingRequestId || null,
+        p_provider: provider,
+      })
+
+      if (intentError || !intentRes) {
+        return new Response(
+          JSON.stringify({
+            error: intentError?.message || 'Failed to initialize payment intent.',
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      intent_id = intentRes.intent_id
+      amount_paisa = intentRes.amount_paisa
     }
-
-    // Call create_payment_intent RPC (server-authoritative computation of amount & switch check)
-    const { data: intentRes, error: intentError } = await supabase.rpc('create_payment_intent', {
-      p_client_uuid: clientUuid,
-      p_booking_id: bookingId || null,
-      p_booking_request_id: bookingRequestId || null,
-      p_provider: provider,
-    })
-
-    if (intentError || !intentRes) {
-      return new Response(
-        JSON.stringify({
-          error: intentError?.message || 'Failed to initialize payment intent.',
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    const { intent_id, amount_paisa } = intentRes
     const amountRupees = (amount_paisa / 100).toFixed(2)
     const siteUrl = Deno.env.get('SITE_URL') || 'https://book.babinrentals.com'
     const defaultReturnUrl = `${siteUrl}/pay/callback?intent_id=${intent_id}&provider=${provider}`

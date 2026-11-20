@@ -10309,6 +10309,195 @@ STEPS.push({
   },
 })
 
+// -----------------------------------------------------------------------------
+// STEP L95: Payment link from any booking (T7-15, B17, B38, B55, D30)
+//
+// Authority:
+//   - T7-15 · Payment link from any booking
+//   - Ruling D30: Server-to-server confirmation only; server computes the figure.
+//   - Ruling B17, B55: Links expire after 48h; new link replaces the old.
+//   - Ruling O-3, B38: Security deposit strictly excluded from online links.
+//   - Law 4: Immutable payments; replayed callback changes nothing.
+//   - Law 6: Warehouse cannot make a link (money-blind).
+// -----------------------------------------------------------------------------
+STEPS.push({
+  id: 'L95',
+  title: 'payment link from any booking (T7-15) — server-computed amount, 48h expiry, replaces old, expired refuses, replay idempotent, warehouse denied',
+  expect: 'green',
+  run: async () => {
+    let bookingId
+    let invoiceId
+
+    // 1. Setup confirmed booking with invoice and outstanding balance
+    await as('Coordinator', async () => {
+      const bPayload = {
+        client_uuid: crypto.randomUUID(),
+        created_by: U.Coordinator,
+        branch_id: BRANCH,
+        client_id: CLIENT,
+        pickup_at: '2026-12-20T06:00:00Z',
+        return_at: '2026-12-22T06:00:00Z',
+        delivery_type: 'Client Pickup',
+        project_name: 'Payment Link Test Shoot',
+        lines: [
+          {
+            client_uuid: crypto.randomUUID(),
+            product_id: SERIAL_PRODUCT,
+            qty: 1,
+            days: 2,
+            rate: 4500,
+          },
+        ],
+      }
+      const bRes = await q('select public.create_booking($1::jsonb) as res', [JSON.stringify(bPayload)])
+      bookingId = bRes.rows[0].res.booking_id
+      assert(Boolean(bookingId), 'booking created')
+    })
+
+    // Create invoice for this booking as Accounts (R-05)
+    await as('Accounts', async () => {
+      const invPayload = {
+        client_uuid: crypto.randomUUID(),
+        created_by: U.Accounts,
+        booking_id: bookingId,
+      }
+      const invRes = await q('select public.create_invoice($1::jsonb) as res', [JSON.stringify(invPayload)])
+      invoiceId = invRes.rows[0].res.invoice_id
+      assert(Boolean(invoiceId), 'invoice created')
+    })
+
+    // Fetch invoice outstanding amount
+    const invRow = (await q(`select outstanding_amount from public.invoices where id = '${invoiceId}'`)).rows[0]
+    const invoiceOutstandingRupees = Number(invRow.outstanding_amount)
+    const expectedPaisa = Math.round(invoiceOutstandingRupees * 100)
+    assert(expectedPaisa > 0, 'invoice has positive outstanding amount')
+
+    // 2. Law 6: Warehouse cannot make a payment link
+    await as('Warehouse', async () => {
+      let threw = false
+      try {
+        await q(
+          `select public.create_booking_payment_link($1, $2::uuid) as res`,
+          [crypto.randomUUID(), bookingId]
+        )
+      } catch (err) {
+        threw = true
+        assert(err.message.includes('GATE:gate.rbac.money_denied'), 'Warehouse denied with GATE:gate.rbac.money_denied')
+      }
+      assert(threw, 'Warehouse refused from generating payment link')
+    })
+
+    // 3. Coordinator creates first payment link
+    let link1
+    await as('Coordinator', async () => {
+      const res = (await q(
+        `select public.create_booking_payment_link($1, $2::uuid) as res`,
+        [crypto.randomUUID(), bookingId]
+      )).rows[0].res
+      link1 = typeof res === 'string' ? JSON.parse(res) : res
+      assertEq(link1.success, true, 'create_booking_payment_link succeeded')
+      assert(Boolean(link1.token), 'token returned in plaintext')
+      assertEq(Number(link1.amount_paisa), expectedPaisa, 'paid amount is the server\'s figure')
+      assert(Boolean(link1.expires_at), 'expires_at is set')
+
+      // Check expiry is approx 48h from now
+      const expiry = new Date(link1.expires_at).getTime()
+      const diffHours = (expiry - Date.now()) / (1000 * 60 * 60)
+      assert(diffHours >= 47 && diffHours <= 49, 'link expires after ~48 hours')
+    })
+
+    // 4. Public client inspects link 1 details
+    await as('Admin', async () => {
+      const detailsRes = (await q(
+        `select public.get_payment_link_details($1) as res`,
+        [link1.token]
+      )).rows[0].res
+      const details = typeof detailsRes === 'string' ? JSON.parse(detailsRes) : detailsRes
+      assertEq(details.valid, true, 'payment link 1 is valid')
+      assertEq(Number(details.amount_paisa), expectedPaisa, 'amount is server computed')
+      assert(details.client_name_masked.includes('***'), 'client name is masked for privacy')
+    })
+
+    // 5. "A new link replaces the old" — Coordinator creates a second payment link
+    let link2
+    await as('Coordinator', async () => {
+      const res = (await q(
+        `select public.create_booking_payment_link($1, $2::uuid) as res`,
+        [crypto.randomUUID(), bookingId]
+      )).rows[0].res
+      link2 = typeof res === 'string' ? JSON.parse(res) : res
+      assertEq(link2.success, true, 'second payment link created')
+      assert(link2.token !== link1.token, 'new link has distinct token')
+    })
+
+    // 6. Old link is now expired; get_payment_link_details reports expired
+    await as('Admin', async () => {
+      const oldDetailsRes = (await q(
+        `select public.get_payment_link_details($1) as res`,
+        [link1.token]
+      )).rows[0].res
+      const oldDetails = typeof oldDetailsRes === 'string' ? JSON.parse(oldDetailsRes) : oldDetailsRes
+      assertEq(oldDetails.valid, false, 'old link is no longer valid')
+      assertEq(oldDetails.reason, 'expired', 'old link reason is expired')
+    })
+
+    // 7. "An expired link refuses" — allocate_payment_intent on old intent throws
+    await as('Admin', async () => {
+      let threw = false
+      try {
+        await q(
+          `select public.allocate_payment_intent($1::uuid, $2, $3::jsonb) as res`,
+          [link1.intent_id, 'FP-ATTEMPT-OLD', JSON.stringify({ status: 'SUCCESS' })]
+        )
+      } catch (err) {
+        threw = true
+        assert(err.message.toLowerCase().includes('expired') || err.message.toLowerCase().includes('inactive'), `expired intent refuses payment: got ${err.message}`)
+      }
+      assert(threw, 'attempting to allocate expired link intent failed closed')
+    })
+
+    // 8. Client pays the new link (server-to-server confirmation via Fonepay)
+    const providerRef = 'FP-LINK-' + Date.now()
+    await as('Admin', async () => {
+      const allocRes = (await q(
+        `select public.allocate_payment_intent($1::uuid, $2, $3::jsonb) as res`,
+        [link2.intent_id, providerRef, JSON.stringify({ fonepay_status: 'SUCCESS' })]
+      )).rows[0].res
+      const alloc = typeof allocRes === 'string' ? JSON.parse(allocRes) : allocRes
+      assertEq(alloc.success, true, 'new link allocated successfully')
+      assertEq(alloc.status, 'allocated', 'intent status is allocated')
+      assert(Boolean(alloc.payment_id), 'payment row created')
+    })
+
+    // 9. "A replayed callback changes nothing" (Law 4 & D30 idempotency)
+    await as('Admin', async () => {
+      const replayRes = (await q(
+        `select public.allocate_payment_intent($1::uuid, $2, $3::jsonb) as res`,
+        [link2.intent_id, providerRef, JSON.stringify({ fonepay_status: 'SUCCESS' })]
+      )).rows[0].res
+      const replay = typeof replayRes === 'string' ? JSON.parse(replayRes) : replayRes
+      assertEq(replay.success, true, 'replayed callback returns success')
+      assertEq(replay.already_allocated, true, 'marked already_allocated')
+    })
+
+    // 10. Exactly ONE immutable payment row exists for this booking
+    const payRows = (await q(`select * from public.payments where booking_id = '${bookingId}'`)).rows
+    assertEq(payRows.length, 1, 'exactly one immutable payment row was minted')
+    assertEq(Number(payRows[0].amount), invoiceOutstandingRupees, 'payment amount matches invoice outstanding')
+
+    // 11. "A paid link cannot be paid twice" — get_payment_link_details reports already_paid
+    await as('Admin', async () => {
+      const paidDetailsRes = (await q(
+        `select public.get_payment_link_details($1) as res`,
+        [link2.token]
+      )).rows[0].res
+      const paidDetails = typeof paidDetailsRes === 'string' ? JSON.parse(paidDetailsRes) : paidDetailsRes
+      assertEq(paidDetails.valid, false, 'paid link is not valid for new payment')
+      assertEq(paidDetails.reason, 'already_paid', 'reason is already_paid')
+    })
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break

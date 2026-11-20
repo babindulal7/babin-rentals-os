@@ -20,7 +20,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
-| 0255 | T7-15 | payment-link-from-any-booking | lane-c/T7-15-payment-link-from-any-booking | claimed |
+| 0255 | T7-15 | payment-link-from-any-booking | lane-c/T7-15-payment-link-from-any-booking | verified (check:pglite 252/252 + check:lifecycle 96/96 Step L95) |
 | 0254 | T7-06 | esewa-and-khalti-payment-providers | lane-c/T7-06-esewa-and-khalti | verified (check:pglite 251/251 + check:lifecycle 95/95 Step L94) |
 | 0253 | T7-07 | online-payment-refunds-and-reconciliation | lane-c/T7-07-refunds-and-reconciliation | verified (check:pglite 250/250 + check:lifecycle 94/94 Step L93) |
 | 0252 | T7-12 | product-recommendations-and-co-rented-items | lane-c/T7-12-recommended-items | verified (check:pglite 249/249 + check:lifecycle 93/93 Step L92) |

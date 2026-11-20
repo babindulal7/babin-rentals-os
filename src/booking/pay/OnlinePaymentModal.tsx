@@ -15,6 +15,7 @@ export interface OnlinePaymentModalProps {
   bookingRequestId?: string | undefined
   bookingId?: string | undefined
   clientUuid?: string | undefined
+  token?: string | undefined
   onPaymentSuccess?: ((result: { intentId: string; paymentNo?: string | undefined; amountPaisa: number }) => void) | undefined
 }
 
@@ -24,6 +25,7 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
   bookingRequestId,
   bookingId,
   clientUuid,
+  token,
   onPaymentSuccess,
 }) => {
   const [providers, setProviders] = useState<OnlinePaymentProviderInfo[]>([])
@@ -71,6 +73,7 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
           clientUuid,
           bookingRequestId,
           bookingId,
+          token,
           provider: initial,
         })
       })
@@ -90,7 +93,7 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
     return () => {
       isMounted = false
     }
-  }, [isOpen, clientUuid, bookingRequestId, bookingId])
+  }, [isOpen, clientUuid, bookingRequestId, bookingId, token])
 
   // Handle provider switch by user
   const handleSelectProvider = async (provider: PaymentProvider) => {
@@ -104,6 +107,7 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
         clientUuid,
         bookingRequestId,
         bookingId,
+        token,
         provider,
       })
       setInitData(data)

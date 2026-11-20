@@ -70,6 +70,7 @@ import { canAssignPricedCrew } from '../../lib/crewAssignment'
 import { CreateSubRentalModal } from './modals/CreateSubRentalModal'
 import { AddConsumableModal } from './booking/AddConsumableModal'
 import { RecordPaymentModal } from '../finance/modals/RecordPaymentModal'
+import { PaymentLinkModal } from './booking/PaymentLinkModal'
 import { CreateInvoiceModal } from '../finance/modals/CreateInvoiceModal'
 import { CreateDocumentModal } from '../documents/CreateDocumentModal'
 import { LineItemTree } from './LineItemTree'
@@ -1014,6 +1015,7 @@ function BookingDetailView() {
   const [crewVersion, setCrewVersion] = useState(0)
   const [showSubRentalModal, setShowSubRentalModal] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [showPaymentLinkModal, setShowPaymentLinkModal] = useState(false)
   const [showCreateInvoice, setShowCreateInvoice] = useState(false)
   const [showCreateDocument, setShowCreateDocument] = useState(false)
   const [pickListPrinting, setPickListPrinting] = useState(false)
@@ -2259,6 +2261,26 @@ function BookingDetailView() {
     )
   }
 
+  const paymentLinkButton = (label: string = 'Payment Link') => {
+    let reason: string | null = null
+    if (stage === 'Closed') {
+      reason = 'Payment links cannot be created for closed bookings.'
+    } else if (totals.outstanding <= 0 && (!hasInvoice || totals.outstanding <= 0)) {
+      reason = 'No balance or advance is due on this booking.'
+    }
+    return reason === null ? (
+      <Button icon="external_link" variant="secondary" onClick={() => setShowPaymentLinkModal(true)}>
+        {label}
+      </Button>
+    ) : (
+      <Unavailable reason={reason}>
+        <Button icon="external_link" variant="secondary" disabled>
+          {label}
+        </Button>
+      </Unavailable>
+    )
+  }
+
   /**
    * **Create Invoice** — R-01's second entry point.
    *
@@ -2340,6 +2362,7 @@ function BookingDetailView() {
           <Card title="Quick Actions">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)' }}>
               {canTakePayment && recordPaymentButton('Record Payment')}
+              {canBookingMoney && paymentLinkButton('Payment Link')}
               {canRaiseInvoice && createInvoiceButton(hasInvoice ? 'View Invoice' : 'Create Invoice')}
               {draftInvoice && (
                 <Button
@@ -3748,6 +3771,19 @@ function BookingDetailView() {
               }
             })()
           }}
+        />
+      )}
+
+      {canBookingMoney && showPaymentLinkModal && (
+        <PaymentLinkModal
+          isOpen={showPaymentLinkModal}
+          onClose={() => setShowPaymentLinkModal(false)}
+          bookingId={id}
+          bookingNo={booking?.bookingNo || id}
+          clientName={booking?.clientName || 'Client'}
+          clientPhone={clientPhone}
+          clientEmail={clientEmail}
+          outstandingPaisa={totals.outstanding as Paisa}
         />
       )}
 

@@ -224,6 +224,13 @@ export interface WaBalanceDue {
   balance: Paisa
 }
 
+export interface WaPaymentLink {
+  clientName: string
+  bookingNo: string
+  amount: Paisa
+  paymentUrl: string
+}
+
 export interface WaDailyDigest {
   businessDateIso: string
   pickupsCount: number
@@ -513,6 +520,20 @@ export function balanceDue(i: WaBalanceDue, b: WaBusiness): string {
     '',
     'A reminder that booking ' + i.bookingNo + ' has an outstanding balance of ' + money(i.balance) + '.',
     'You can pay by cash or bank transfer at pickup or return.',
+    '',
+    close(b),
+  ].join('\n')
+}
+
+export function paymentLink(i: WaPaymentLink, b: WaBusiness): string {
+  return [
+    open(i.clientName),
+    '',
+    'Here is the secure payment link for booking ' + i.bookingNo + ' for ' + money(i.amount) + ':',
+    i.paymentUrl,
+    '',
+    'This link expires in 48 hours. You can pay securely via Fonepay, eSewa, or Khalti.',
+    'Note: Security deposits are handled separately at gear pickup.',
     '',
     close(b),
   ].join('\n')
