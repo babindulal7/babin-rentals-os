@@ -65,7 +65,8 @@ begin
   select id, client_id, branch_id, stage, booking_no
     into v_bk
     from public.bookings
-   where id = p_booking_id;
+   where id = p_booking_id
+   for update;
 
   if not found then
     raise exception 'GATE:gate.booking.not_found|Booking not found.';
@@ -75,13 +76,26 @@ begin
     raise exception 'GATE:gate.payment.booking_inactive|Cannot create payment link for an inactive or closed booking.';
   end if;
 
+  -- A client-owned intent and a staff payment link must never both
+  -- present the full booking balance for collection.  Lock the same booking
+  -- row as create_payment_intent before checking the pending attempt.
+  if exists (
+    select 1 from public.payment_intents pi
+     where pi.booking_id = p_booking_id
+       and pi.is_payment_link = false
+       and (pi.status = 'paid'
+          or (pi.status = 'pending' and pi.expires_at > now()))
+  ) then
+    raise exception 'GATE:gate.payment.attempt_in_progress|A client checkout is already in progress for this booking.';
+  end if;
+
   -- Calculate authoritative amount due (server-computed, Law 1)
   -- 1) Latest non-void invoice with outstanding balance
   select id, outstanding_amount, status
     into v_inv
     from public.invoices
    where booking_id = p_booking_id
-     and status <> 'Void'
+     and status not in ('Void', 'Draft')
    order by created_at desc
    limit 1;
 
