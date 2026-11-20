@@ -111,62 +111,28 @@ export async function createBookingPaymentLink(bookingId: string): Promise<{
  * Fetches sanitized payment link details for public payment page (T7-15).
  */
 export async function fetchPaymentLinkDetails(token: string): Promise<PaymentLinkDetails> {
-  try {
-    const { data, error } = await supabase.functions.invoke<{ success: boolean; details: PaymentLinkDetails }>('pay-init', {
-      body: { action: 'link_details', token },
-    })
-    if (!error && data && data.details) {
-      return data.details
-    }
-  } catch (err) {
-    console.warn('[payApi] Edge function link_details call failed, falling back:', err)
+  const { data, error } = await supabase.functions.invoke<{
+    success: boolean
+    details: PaymentLinkDetails
+  }>('pay-init', { body: { action: 'link_details', token } })
+
+  if (error || !data?.success || !data.details) {
+    return { valid: false, reason: 'verification_unavailable' }
   }
-
-  // Direct RPC fallback (for authenticated staff / local / mock)
-  const { data: rpcData, error: rpcError } = await supabase.rpc('get_payment_link_details', {
-    p_token: token,
-  })
-
-  if (rpcError || !rpcData) {
-    return { valid: false, reason: rpcError?.message || 'not_found' }
-  }
-
-  return rpcData as PaymentLinkDetails
+  return data.details
 }
 
-/**
- * Fetches available online payment providers from server.
- * Returns only configured and enabled providers for customer checkout.
- */
+/** Publicly list only providers explicitly enabled by the server. */
 export async function fetchOnlinePaymentProviders(): Promise<OnlinePaymentProviderInfo[]> {
-  try {
-    // 1. Try Edge function invocation
-    const { data, error } = await supabase.functions.invoke<{
-      success: boolean
-      providers: OnlinePaymentProviderInfo[]
-    }>('pay-init?action=providers', {
-      method: 'GET',
-    })
+  const { data, error } = await supabase.functions.invoke<{
+    success: boolean
+    providers: OnlinePaymentProviderInfo[]
+  }>('pay-init', { body: { action: 'providers' } })
 
-    if (!error && data && Array.isArray(data.providers)) {
-      return data.providers
-    }
-  } catch (err) {
-    console.warn('[payApi] Edge function providers fetch failed, falling back to direct RPC:', err)
+  if (error || !data?.success || !Array.isArray(data.providers)) {
+    throw new Error('Payment providers could not be verified. Please try again later.')
   }
-
-  // 2. Direct RPC fallback
-  const { data: rpcData, error: rpcError } = await supabase.rpc('get_online_payment_providers')
-  if (!rpcError && Array.isArray(rpcData)) {
-    return rpcData as OnlinePaymentProviderInfo[]
-  }
-
-  // Safe fallback default if database RPC is unauthenticated: Fonepay enabled, others off
-  return [
-    { provider: 'fonepay', name: 'Fonepay', enabled: true, env: 'sandbox' },
-    { provider: 'esewa', name: 'eSewa', enabled: false, env: 'sandbox' },
-    { provider: 'khalti', name: 'Khalti', enabled: false, env: 'sandbox' },
-  ]
+  return data.providers.filter((provider) => provider.enabled === true)
 }
 
 /**
