@@ -1,5 +1,60 @@
 # Progress Log
 
+## 2026-11-20 — T7-11: Online Booking Launch (Lane C / Windows)
+
+**Did**
+- Completed **T7-11 · Launch** (`lane-c/T7-11-launch`):
+  - Prepared the comprehensive operational launch runbook in `docs/verification/T7-11_LAUNCH_CHECKLIST.md` addressing:
+    - Domain and DNS routing: `book.babinrentals.com` host CNAME setup, apex 301 permanent redirect (`babinrentals.com/*` → `book.babinrentals.com/*`, O-1, B5), and SSL/TLS certificate verification.
+    - Environment secrets and credential hygiene: Vite public environment variables (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_GA4_ID`, `VITE_META_PIXEL_ID`, `VITE_APP_VERSION`) and Supabase Edge Function secrets (`FONEPAY_MERCHANT_CODE`, `FONEPAY_SECRET_KEY`, `ESEWA_PRODUCT_CODE`, `ESEWA_SECRET_KEY`, `KHALTI_SECRET_KEY`, `TURNSTILE_SECRET_KEY`) strictly maintained under N-8.
+    - Upstream Track 7 card integration review: verified all 16 Track 7 cards (T7-01 through T7-10, T7-12 through T7-17) are implemented, tested, and green.
+    - Day X cutover timeline: step-by-step procedure for Booqable storefront decommissioning (T9-05), DNS switch, SSL handshake, and first live transaction verification.
+    - Rollback procedure: fail-closed safety with store Away mode activation (T7-14) in case of unexpected DNS or upstream provider downtime.
+  - Verified local and PGlite gates:
+    - `npm run typecheck`: clean (0 errors).
+    - `npm run lint`: clean (0 errors, 0 warnings).
+    - `npm run lint:ui-copy`: 0 developer-text violations.
+    - `npm run check:contrast`: 97/97 WCAG AA passing.
+    - `npx vitest run src/booking/`: 10/10 test files passed (39 tests passing).
+    - `npx vitest run src/lib/__tests__/storeAnalytics.test.ts`: 8/8 tests passing.
+    - `npm run check:pglite`: 252/252 applied, 0 failed, 0 leaks.
+    - `npm run check:lifecycle`: 96/96 steps green.
+    - `node scripts/test-booking-financial-integrity.mjs`: PASS.
+    - `npm run check:security`: 18/18 SQL regressions passed.
+    - `npm run test:server-contracts`: PASS.
+    - `npm run test:partial-return`: 58/58 passed.
+    - `node --test scripts/test-receipt.test.mjs`: 11/11 passed.
+    - `npm run lint:shell`: 943 files checked, clean.
+    - `npm run build`: built cleanly in 1m 40s.
+  - Updated `docs/plans/T7_ONLINE_BOOKING.md` card T7-11 status to `ready — awaiting merge (lane-c/T7-11-launch)`.
+
+**Ruled**
+- `book.babinrentals.com` is the canonical public booking host; `babinrentals.com` 301-redirects to `book.babinrentals.com` (O-1, B5).
+- Booqable stops taking new online bookings on Day X with an announcement banner directing clients to `book.babinrentals.com` (T9-05).
+- All Track 7 cards are 100% complete and verified; full Track 7 is ready for Babin's live cutover.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 112 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 87 / 87 (100%) | +0 |
+| Lifecycle | steps green / total | 96 / 96 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 252 files · check:pglite 252/252 applied, 0 failed (recorded 2026-11-20T15:49:44.646Z). Suite: Historical suite: 7460/7460 passed, 0 failed (recorded 2026-11-20T12:59:21.277Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 7398/7398 passed, 0 failed (recorded 2026-11-19T01:10:17.481Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-20T15:50:40.345Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- **Track 7 is 100% complete**: All 17 cards (T7-01 through T7-17) are finished and marked ready.
+- **Waiting on Babin (Owner actions for Day X cutover)**:
+  1. Point DNS CNAME for `book.babinrentals.com` to host and configure apex 301 redirect.
+  2. Populate production merchant credentials in Supabase Edge Function secrets (`FONEPAY_MERCHANT_CODE`, `FONEPAY_SECRET_KEY`, etc.).
+  3. Decommission Booqable storefront (T9-05) on Day X and execute first live booking transaction.
+
 ## 2026-11-20 — T7-16: Store analytics: GA4 and Meta Pixel (Lane C / Windows)
 
 **Did**

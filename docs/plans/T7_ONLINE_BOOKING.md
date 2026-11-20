@@ -281,7 +281,7 @@ match the code; the public pay page of T7-15 and the analytics of T7-16 are cove
 **Done when** — Babin reads the one-page summary and says go.
 **Needs** — T7-02 … T7-09.
 
-### T7-11 · Launch            status: todo · size: S · lane C + Babin
+### T7-11 · Launch            status: ready — awaiting merge (lane-c/T7-11-launch) · size: S · lane C (Windows) + Babin
 **What** — `book.babinrentals.com` goes live on day X (CNAME at the DNS host); `babinrentals.com`
 redirects to `book.babinrentals.com` and old store links open the same item (O-1 ruled 27 Oct — B5;
 T7-17); the Booqable store stops taking new bookings the same day (T9-05).
