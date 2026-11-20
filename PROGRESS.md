@@ -1,6 +1,51 @@
 # Progress Log
 
-# Progress Log
+## 2026-11-20 — T2-24: Temporary stock from partners (Lane A)
+
+**Did**
+- Implemented **T2-24 · Temporary stock from partners** (`lane-a/T2-24-partner-stock-0253`):
+  - Authored migration `supabase/migrations/0253_temporary_stock_from_partners.sql`:
+    - Created `temporary_stock` table tracking partner equipment agreements (`supplier_id`, `product_id`, `quantity`, `available_from`, `available_until`, `cost_kind`, `cost_paisa`, `status`).
+    - Extended `product_units` with `temporary_stock_id` and `is_partner_unit` boolean flag.
+    - Created `temporary_stock_v` view masking partner rates and total cost from money-blind floor roles (`Warehouse`, `Technician`, `Driver`, `Client`) under Law 6.
+    - Added RPC `record_temporary_stock(p_payload jsonb)` (Owner, Admin, Manager, Coordinator) minting partner units with `is_partner_unit = true`.
+    - Added RPC `return_temporary_stock(p_payload jsonb)` with safety check refusing return while units are on rent or packed, transitioning agreement to `'Returned to partner'` and retiring units (Law 3).
+    - Added reservation trigger `validate_unit_reservability` refusing any reservation of partner units outside `[available_from, available_until)`.
+  - Updated availability calculation in `src/lib/availability.ts` to include partner units dynamically only when the booking interval falls completely within the partner agreement window.
+  - Implemented floor actions `src/actions/inventory/recordTemporaryStock.ts` and `src/actions/inventory/returnTemporaryStock.ts`.
+  - Built `src/modules/inventory/modals/TemporaryStockModal.tsx` for adding partner gear and `src/modules/operations/modals/ReturnPartnerStockModal.tsx` for floor return scans.
+  - Updated `src/modules/operations/SubRental.tsx` with `PartnerStockTable` listing active and returned partner agreements with Law 6 money masking.
+  - Added end-to-end lifecycle verification steps `L90` and `L91` in `scripts/e2e-lifecycle.mjs`.
+
+**Ruled**
+- Partner stock is bounded strictly between `available_from` and `available_until`; capacity contributes to booking availability only within this interval (B13).
+- Return to partner task appears at agreement end date; completing it marks units `'Retired'` and removes availability permanently (B36, Law 3).
+- Partner cost is masked under Law 6 from floor roles and visible only to money roles (B47).
+
+**Verified**
+- `npm run check:pglite`: 251/251 migrations applied cleanly from scratch, 0 failed, 0 leaks, 224 definer search paths pinned.
+- `npm run check:lifecycle`: 92/92 steps green (L1 through L92, including L90 partner stock window & L91 return to partner).
+- `npm run check:security`: 18/18 Phase 0 SQL regressions, 14 Reset branch tests, operations grants, and glossary revisions pass.
+- `npm run typecheck`: clean strict TypeScript AST check with 0 errors.
+- `npm run lint:ui-copy`: 0 developer-text violations across all modules.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 112 / 113 (99%) | +2 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 92 / 92 (100%) | +2 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+### Remaining
+- Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
+- Staff inventory deposit data entry across active products (T3-02).
+- T3-14 (Draft invoice at Confirm, number on full payment): resync integrity & numbering moment.
+- T3-13, T3-20, T3-30: pending remaining accountant & staged receipts.
+- T0-12: hosted staging migration apply by Babin.
+- T7 online booking: Track T7 lane C integration.
 
 ## 2026-11-20 — T3 & T8 Acceptance Reconciliation: T3-22, T8-02, T8-04, T8-07, T8-09 to Done (Lane A, B, C)
 

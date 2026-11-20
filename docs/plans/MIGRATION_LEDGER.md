@@ -99,5 +99,6 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0250 | O-28b S2 | outsourced-vehicle-quote | feat/r-9-18-delivery-fee-grid | written, not applied (N-5); append-only quote table, RPC records the approver, audit trigger, Law 3 immutability; money-visible read only; needs 0010 and 0246 |
 | 0251 | O-28b S2 | waiting-charge-line | feat/r-9-18-delivery-fee-grid | written, not applied (N-5); add_waiting_charge_line() adds a flat Service line, appends to a Draft invoice, refuses an issued one (R-03); conditional audit trigger; needs 0010 and 0168 |
 | 0252 | T2-23 | allow-overbooking-on-chosen-products | feat/t2-23-product-overbooking-0245 | verified |
+| 0253 | T2-24 | temporary-stock-from-partners | lane-a/T2-24-partner-stock-0253 | verified |
 
 ## Expected migrations (not yet claimed)
