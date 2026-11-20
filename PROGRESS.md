@@ -1,5 +1,49 @@
 # Progress Log
 
+## 2026-11-20 — T3 Acceptance Reconciliation: T3-10, T3-11, T3-16, T3-19 to Done (Lane C)
+
+**Did**
+- Reconciled and promoted four verified Track T3 cards to `done` across roadmap documentation (`docs/plans/T3_BOOKING_MONEY.md`) following merged implementations and Babin's 20 Nov 2026 device deferral ruling:
+  - **T3-10 · After-hours line:** PR #188 merged; voluntary service line in $\le 2$ taps, flat rate calculation (`qty * 1 * rate`), duplicate addition block, and Law 6 price masking for Warehouse/Technician verified (9/9 tests pass).
+  - **T3-11 · Late fee — acceptance only:** PR #210 merged; three return boundaries verified (20 min grace $\to$ Rs 0; 90 min $\to$ half-day; 3 hr $\to$ full day), waiver policy requiring $\ge 10$ character reason restricted to Manager/Owner, and floor money blindness verified (37/37 tests pass).
+  - **T3-16 · Share documents in one tap:** PR #181 merged; universal document share engine (WhatsApp compose link, transactional email T5-03, browser print/PDF, and text copy) and Law 6 role masking verified (17/17 tests pass). Physical printer and native iPad share sheet deferred post-live per ruling.
+  - **T3-19 · Add gear by scanning in New Rental:** PR #163 merged; rapid code resolution, 1500ms duplicate burst protection, conflict and availability checking, and draft line reservation verified (5/5 tests pass). Physical Bluetooth barcode hardware & iPad camera scanning deferred post-live per ruling.
+- Authored verification receipt in `docs/verification/T3_ACCEPTANCE_RECONCILIATION_2026-11-20.md`.
+- Updated test suites in `src/lib/__tests__/roadmapStatusTruth.test.ts` and `src/lib/__tests__/t3RoadmapDocumentation.test.ts` asserting that `T3-10`, `T3-11`, `T3-16`, and `T3-19` are `status: done`.
+
+**Ruled**
+- Babin 20 Nov 2026 product ruling applied: physical device peripherals (iPads, Bluetooth/barcode scanners, camera barcode scanning, label/counter printers, share sheet) are formally deferred to Phase 2 after live.
+- Software implementation, security boundaries, and automated test gates being 100% green qualifies these cards for `done` status.
+
+**Verified**
+- `npm run check:pglite`: 242/242 applied cleanly from scratch, 0 leaks (recorded 2026-11-20T11:04:32.180Z).
+- `npm run check:lifecycle`: 87/87 green, 0 known-red, 0 failed (recorded 2026-11-20T11:06:22.542Z).
+- Unit test suites:
+  - `npm test -- afterHoursHandoverServiceLine.test.tsx BookingEquipmentSection.test.tsx`: 9/9 passed.
+  - `npm test -- LateFeeAcceptance.test.tsx lateFee.test.ts`: 32/32 passed.
+  - `npm test -- documentShare.test.ts DocumentShareModal.test.tsx`: 17/17 passed.
+  - `npm test -- scanToAddEquipment.test.ts`: 5/5 passed.
+  - `npm test -- roadmapStatusTruth.test.ts t3RoadmapDocumentation.test.ts`: all passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 111 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 87 / 87 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 242 files · check:pglite 242/242 applied, 0 failed (recorded 2026-11-20T11:04:32.180Z).
+Gates read from .lifecycle-result.json, written 2026-11-20T11:06:22.542Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T3-14 (Draft invoice at Confirm, number on full payment): resync integrity & numbering moment.
+- T3-02 (Deposits per product, entered before go-live): staged role checks and deposit data-entry.
+- T3-13, T3-20, T3-23: pending remaining accountant & staged receipts.
+
 ## 2026-11-20 — T3-31: Counter sale completion & device testing deferral ruling (Lane C)
 
 **Did**
