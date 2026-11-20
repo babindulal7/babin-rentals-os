@@ -47,14 +47,14 @@ mattered is shown to exist on `main` (file + line), not assumed. Claude does the
 the list (W74 — Claude never closes or pushes); Babin or a local agent closes the PRs.
 **Needs** — none.
 
-### T0-04 · Branch triage            status: todo · size: M · Babin + Codex-1 (local)
-**What** — For each of the ~90 remote branches: list commits not on `main`
+### T0-04 · Branch triage            status: doing — 345 remote branch snapshot, 37 zero-ahead candidates verified, owner approval for deletion pending · size: M · Babin + Codex-1 (local)
+**What** — An updated [read-only 21 Nov 2026 inventory](../verification/REMOTE_BRANCH_AUDIT_2026-11-21.md) found **345 remote branches including main**; 37 older candidates are verified as exactly zero ahead, and 10 branches head open PRs. Classification of all other branches is not yet complete. Never execute cleanup based on the outdated ~90-branch estimate. For each remote branch: list commits not on `main`
 (`git log --oneline main..origin/<branch>`). Merged → delete the branch. Unmerged → tag it
 `archive/<branch>` then delete the branch, and list the tags in `docs/archive/BRANCHES_2026-10.md`.
 **Why** — Branch sprawl hides unmerged work; tags keep it (Law 3 spirit) without the noise.
 **Where** — git remote; `docs/archive/BRANCHES_2026-10.md`.
 **Database** — none.
-**Done when** — 1) `git ls-remote --heads origin` lists only `main` and live lane branches;
+**Done when** — 1) owner explicitly authorizes an exact reviewable list of branch deletions after fresh open-PR and ahead/behind checks; 2) every unmerged branch to remove has a verified durable archive tag; 3) `git ls-remote --heads origin` lists only `main` and live lane branches;
 2) every deleted unmerged branch has an `archive/` tag.
 **Needs** — Babin's OK to delete branches (GitHub settings may protect some).
 
