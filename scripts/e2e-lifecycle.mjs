@@ -10723,6 +10723,125 @@ STEPS.push({
   },
 })
 
+
+/**
+ * L98 — Booking-level payment intent lock.
+ *
+ * Sequentially checks both serial orders of independently-created client and
+ * staff checkouts using executed SQL. True simultaneous transaction tests must
+ * run with two independent PostgreSQL connections in a separate integration
+ * harness; PGlite's single process does not establish concurrency correctness.
+ */
+STEPS.push({
+  id: 'L98',
+  title: 'only one staff payment link or client invoice checkout is active per booking',
+  expect: 'green',
+  async run() {
+    let bookingId
+    await as('Coordinator', async () => {
+      const b = {
+        client_uuid: crypto.randomUUID(), created_by: U.Coordinator,
+        branch_id: BRANCH, client_id: CLIENT,
+        pickup_at: '2099-12-26T06:00:00Z',
+        return_at: '2099-12-28T06:00:00Z',
+        delivery_type: 'Client Pickup',
+        lines: [{ client_uuid: crypto.randomUUID(), product_id: SERIAL_PRODUCT,
+          qty: 1, days: 2, rate: 3500 }],
+      }
+      const out = (await q('select public.create_booking($1::jsonb) as res',
+        [JSON.stringify(b)])).rows[0].res
+      bookingId = out.booking_id
+      assert(Boolean(bookingId), 'booking fixture exists')
+    })
+
+    let requestId
+    await asOwnerOfTheDatabase(async () => {
+      const out = await q(`insert into public.booking_requests
+        (request_number, client_name, client_email, client_phone, start_date,
+         end_date, fulfillment_type, status, total_paisa, vat_paisa,
+         advance_due_paisa, requester_auth_uid, client_id, booking_id)
+         values ('REQ-L98-PAYMENT-LOCK', 'Intent Lock Test', 'l98@example.invalid',
+         '+977-9800000098', '2099-12-26', '2099-12-28',
+         'pickup', 'confirmed', 700000, 91000, 500000, $1::uuid, $2::uuid, $3::uuid)
+         returning id`, [U.Client, CLIENT, bookingId])
+      requestId = out.rows[0].id
+    })
+
+    await as('Accounts', async () => {
+      const out = (await q('select public.create_invoice($1::jsonb) as res',
+        [JSON.stringify({
+          client_uuid: crypto.randomUUID(), created_by: U.Accounts,
+          booking_id: bookingId,
+        })])).rows[0].res
+      assert(Boolean(out.invoice_id), 'invoice created')
+      await q('select public.issue_invoice($1::jsonb)',
+        [JSON.stringify({ invoice_id: out.invoice_id, issued_by: U.Accounts })])
+    })
+
+    // Order A: staff payment link exists; client checkout must NOT create a
+    // second active payable intent for the same invoice outstanding amount.
+    let staffLink
+    await as('Coordinator', async () => {
+      const out = (await q(
+        'select public.create_booking_payment_link($1, $2::uuid) as res',
+        [crypto.randomUUID(), bookingId]
+      )).rows[0].res
+      staffLink = out
+      assert(Boolean(staffLink.intent_id), 'staff-issued payment link exists')
+    })
+    await asService(async () => {
+      let refused = false
+      try {
+        await q('select public.create_payment_intent($1, null, $2::uuid, $3)',
+          [crypto.randomUUID(), requestId, 'fonepay'])
+      } catch (err) {
+        refused = true
+        assert(String(err.message).includes('attempt_in_progress'),
+          'client checkout refused for an active staff link')
+      }
+      assert(refused, 'cannot create second client checkout while staff link is active')
+    })
+
+    // The failed checkout never produced a payment intent.
+    const afterStaff = (await q(`select count(*)::int as n from public.payment_intents
+      where booking_id = $1 and status = 'pending'`, [bookingId])).rows[0].n
+    assertEq(Number(afterStaff), 1, 'only staff payment link remains pending')
+
+    // Expire the disposable test link, then verify inverse order.
+    await asOwnerOfTheDatabase(async () => {
+      await q(`update public.payment_intents set status = 'expired'
+        where id = $1`, [staffLink.intent_id])
+    })
+
+    let clientIntent
+    await asService(async () => {
+      const out = (await q('select public.create_payment_intent($1, null, $2::uuid, $3) as res',
+        [crypto.randomUUID(), requestId, 'fonepay'])).rows[0].res
+      clientIntent = out.intent_id
+      assert(Boolean(clientIntent), 'client attempt starts after link is expired')
+    })
+    await as('Coordinator', async () => {
+      let refused = false
+      try {
+        await q('select public.create_booking_payment_link($1, $2::uuid)',
+          [crypto.randomUUID(), bookingId])
+      } catch (err) {
+        refused = true
+        assert(String(err.message).includes('attempt_in_progress'),
+          'staff link refused for an active client checkout')
+      }
+      assert(refused, 'cannot create staff link while client checkout is active')
+    })
+    const current = (await q(`select count(*)::int as n from public.payment_intents
+      where booking_id = $1 and status = 'pending'`, [bookingId])).rows[0].n
+    assertEq(Number(current), 1, 'exactly one active checkout remains')
+    const linked = (await q(`select booking_request_id from public.payment_intents
+      where id = $1`, [clientIntent])).rows[0]
+    assertEq(linked.booking_request_id, requestId,
+      'the surviving checkout retains the correct client request')
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break
