@@ -332,7 +332,8 @@ begin
 end;
 $$;
 
-revoke all on function public.create_payment_intent(text, uuid, uuid, text) from public, anon;
-grant execute on function public.create_payment_intent(text, uuid, uuid, text) to authenticated;
+-- No direct browser intent creation: the pay-init Edge Function holds the service key.
+revoke all on function public.create_payment_intent(text, uuid, uuid, text) from public, anon, authenticated;
+grant execute on function public.create_payment_intent(text, uuid, uuid, text) to service_role;
 
 commit;
