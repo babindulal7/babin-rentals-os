@@ -83,7 +83,7 @@ end;
 $$;
 
 revoke all on function public.get_online_payment_providers() from public, anon;
-grant execute on function public.get_online_payment_providers() to authenticated;
+grant execute on function public.get_online_payment_providers() to authenticated, service_role;
 
 -- 3. Function for staff management to toggle provider status
 create or replace function public.set_online_payment_provider_status(
