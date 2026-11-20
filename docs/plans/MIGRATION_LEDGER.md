@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0253**  (0241, 0242, 0243 are T3-29, T2-19 and T3-18 on `main`; 0245 R-9.8 on its own branch; 0244, 0246, 0247, 0248, 0249, 0250 and 0251 R-9.18 here)
+**Next free number: 0254**
 
 > **Legacy exception:** `0188` exists as two distinct, locally verified migration files
 > (`0188_smart_reservation_holds.sql` and `0188_staff_renting_gear.sql`). Both are preserved because
@@ -20,6 +20,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
+| 0253 | T2-24 | temporary-stock-from-partners | feat/t2-24-partner-stock | verified |
 | 0238 | T3-30 | consumables-pricing-restock-and-low-stock | lane-c/T3-30-consumables-unit-price-add-at-the | verified |
 | 0237 | T3-28 | rental-day-start-setting | lane-c/T3-28-rental-day-start-as-a-setting | verified |
 | 0225 | T0-12 / T6 glossary | owner-approved-glossary-revisions | lane-a/T0-12-main-integration | APPLIED live 7 Nov 2026 as 20261107105159 after validated backup; 17 local gates and live DB/RLS/RPC post-checks PASS; hosted/device acceptance pending |

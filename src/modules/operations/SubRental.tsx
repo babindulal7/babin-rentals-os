@@ -31,6 +31,10 @@ import {
 } from '../../lib/queries/subrentals'
 import type { GateContext } from '../../lib/fieldGating'
 import { IconPlus, IconDownload, IconArrowUpRight, IconArrowDownLeft } from '@tabler/icons-react'
+import { TemporaryStockModal } from '../inventory/modals/TemporaryStockModal'
+import { ReturnPartnerStockModal } from './modals/ReturnPartnerStockModal'
+import { PartnerStockTable } from './components/PartnerStockTable'
+import { listPartnerStock, type PartnerStockRecord } from '../../lib/queries/partnerStock'
 
 export type { SubRentalRecord }
 
@@ -460,8 +464,27 @@ export function SubRental({
   )
   const [activeFilter, setActiveFilter] = useState<FilterKey>('All')
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set())
-  const [subTab, setSubTab] = useState<'Transactions' | 'Suppliers'>('Transactions')
+  const [subTab, setSubTab] = useState<'Transactions' | 'Suppliers' | 'PartnerStock'>('Transactions')
   const [supplierSearch, setSupplierSearch] = useState('')
+  const [partnerStockRows, setPartnerStockRows] = useState<PartnerStockRecord[]>([])
+  const [partnerSearch, setPartnerSearch] = useState('')
+  const [isAddPartnerOpen, setIsAddPartnerOpen] = useState(false)
+  const [returningStock, setReturningStock] = useState<PartnerStockRecord | null>(null)
+
+  const canAddPartnerStock = ['Owner', 'Admin', 'Manager', 'Coordinator', 'Accounts'].includes(user?.role ?? '')
+  const canReturnPartnerStock = ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician'].includes(user?.role ?? '')
+
+  const fetchPartnerStock = useCallback(() => {
+    listPartnerStock().then((res) => {
+      if (!res.error) {
+        setPartnerStockRows(res.rows)
+      }
+    })
+  }, [])
+
+  useEffect(() => {
+    fetchPartnerStock()
+  }, [fetchPartnerStock])
 
   const supplierRows = useMemo(() => {
     const all = Array.from(supplierGroups.values())
@@ -558,13 +581,21 @@ export function SubRental({
                   placeholder: 'Search supplier name, city, phone… (press /)',
                   ariaLabel: 'Search suppliers',
                 }
-              : {
-                  value: searchQuery,
-                  onChange: setSearchQuery,
-                  onClear: () => setSearchQuery(''),
-                  placeholder: 'Search SR ID, equipment, partner… (press /)',
-                  ariaLabel: 'Search sub-rental transactions',
-                }
+              : subTab === 'PartnerStock'
+                ? {
+                    value: partnerSearch,
+                    onChange: setPartnerSearch,
+                    onClear: () => setPartnerSearch(''),
+                    placeholder: 'Search partner name, equipment, serial number… (press /)',
+                    ariaLabel: 'Search partner stock',
+                  }
+                : {
+                    value: searchQuery,
+                    onChange: setSearchQuery,
+                    onClear: () => setSearchQuery(''),
+                    placeholder: 'Search SR ID, equipment, partner… (press /)',
+                    ariaLabel: 'Search sub-rental transactions',
+                  }
           }
         />
       )}
@@ -575,9 +606,10 @@ export function SubRental({
           options={[
             { id: 'Transactions', label: 'Transactions', icon: 'file' },
             { id: 'Suppliers', label: 'Suppliers Directory', icon: 'users' },
+            { id: 'PartnerStock', label: 'Partner Stock', icon: 'package' },
           ]}
           value={subTab}
-          onChange={(val) => setSubTab(val as 'Transactions' | 'Suppliers')}
+          onChange={(val) => setSubTab(val as 'Transactions' | 'Suppliers' | 'PartnerStock')}
         />
       </div>
 
@@ -588,6 +620,17 @@ export function SubRental({
           gctx={gctx}
           search={supplierSearch}
           onSearchChange={setSupplierSearch}
+        />
+      ) : subTab === 'PartnerStock' ? (
+        <PartnerStockTable
+          rows={partnerStockRows}
+          canSeeFinance={canSeeFinance}
+          canAddStock={canAddPartnerStock}
+          canReturnStock={canReturnPartnerStock}
+          onAddStock={() => setIsAddPartnerOpen(true)}
+          onReturnStock={(r) => setReturningStock(r)}
+          search={partnerSearch}
+          onSearchChange={setPartnerSearch}
         />
       ) : (
         <>
@@ -909,6 +952,25 @@ export function SubRental({
       </Card>
         </>
       )}
+
+      <TemporaryStockModal
+        isOpen={isAddPartnerOpen}
+        onClose={() => setIsAddPartnerOpen(false)}
+        onSaved={() => {
+          setIsAddPartnerOpen(false)
+          fetchPartnerStock()
+        }}
+      />
+
+      <ReturnPartnerStockModal
+        isOpen={Boolean(returningStock)}
+        temporaryStock={returningStock}
+        onClose={() => setReturningStock(null)}
+        onReturned={() => {
+          setReturningStock(null)
+          fetchPartnerStock()
+        }}
+      />
     </PageShell>
   )
 }

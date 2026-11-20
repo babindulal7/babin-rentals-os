@@ -9594,6 +9594,131 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L90',
+  title: 'Temporary partner stock: available inside agreement window only; outside window capacity is 0 (T2-24, B13)',
+  expect: 'green',
+  run: async () => {
+    // 1. Setup a partner supplier
+    const partnerId = crypto.randomUUID()
+    await as('Owner', async () => {
+      await q(`insert into suppliers (id, client_uuid, supplier_code, name, contact_person, phone, email, is_active, created_by)
+        values ('${partnerId}', gen_random_uuid(), 'SUP-S9', 'Studio 9 Rentals', 'Rajesh K', '+9779841234567', 'partner@studio9.com', true, '${U.Owner}')`)
+    })
+
+    // 2. Setup a product for partner stock
+    const productId = crypto.randomUUID()
+    const catId = (await q('select id from inventory_categories limit 1')).rows[0].id
+    await as('Owner', async () => {
+      await q(`insert into products (id, client_uuid, asset_code, name, category_id, brand, tracking_mode, total_quantity, daily_rate, status, created_by)
+        values ('${productId}', gen_random_uuid(), 'EQ990050', 'Partner Cinema Prime 50mm', '${catId}', 'PartnerBrand', 'Serialised', 0, 4500, 'Active', '${U.Owner}')`)
+    })
+
+    // 3. Coordinator/Owner adds partner agreement for 7 days: Day 10 to Day 17
+    const windowStart = new Date(Date.now() + 10 * 86400000).toISOString()
+    const windowEnd = new Date(Date.now() + 17 * 86400000).toISOString()
+
+    await as('Owner', async () => {
+      const res = await one('select record_temporary_stock($1::jsonb)', [JSON.stringify({
+        supplier_id: partnerId,
+        product_id: productId,
+        quantity: 2,
+        available_from: windowStart,
+        available_until: windowEnd,
+        cost_kind: 'daily',
+        cost_paisa: 150000,
+        asset_codes: ['EQ990050-P1', 'EQ990050-P2'],
+        notes: 'Wedding season rush loan',
+      })])
+      assertEq(res.status, 'Active', 'record_temporary_stock succeeded')
+      bookingIds.t2_24_stock_id = res.id
+      bookingIds.t2_24_product_id = productId
+      bookingIds.t2_24_partner_id = partnerId
+    })
+
+    // Verify 2 inventory units created with status In Stock, is_partner_unit = true, temporary_stock_id linked
+    const units = (await q(`select id, serial_no, status, is_partner_unit, temporary_stock_id from product_units where temporary_stock_id = '${bookingIds.t2_24_stock_id}'`)).rows
+    assertEq(units.length, 2, '2 partner inventory units created')
+    assertEq(units[0].is_partner_unit, true, 'unit is partner unit')
+    assertEq(units[0].status, 'In Stock', 'partner unit is In Stock')
+    bookingIds.t2_24_unit_id = units[0].id
+
+    // 4. Assert availability inside agreement window is 2
+    const insideRange = `[${windowStart}, ${windowEnd})`
+    const capInside = (await q(`select get_available_product_capacity('${productId}', '${insideRange}'::tstzrange) as cap`)).rows[0].cap
+    assertEq(Number(capInside), 2, 'inside agreement window: capacity is 2')
+
+    // 5. Assert availability outside agreement window (before window) is 0
+    const beforeStart = new Date(Date.now() + 1 * 86400000).toISOString()
+    const beforeEnd = new Date(Date.now() + 3 * 86400000).toISOString()
+    const beforeRange = `[${beforeStart}, ${beforeEnd})`
+    const capBefore = (await q(`select get_available_product_capacity('${productId}', '${beforeRange}'::tstzrange) as cap`)).rows[0].cap
+    assertEq(Number(capBefore), 0, 'before agreement window: capacity is 0')
+
+    // 6. Assert availability outside agreement window (after window) is 0
+    const afterStart = new Date(Date.now() + 20 * 86400000).toISOString()
+    const afterEnd = new Date(Date.now() + 22 * 86400000).toISOString()
+    const afterRange = `[${afterStart}, ${afterEnd})`
+    const capAfter = (await q(`select get_available_product_capacity('${productId}', '${afterRange}'::tstzrange) as cap`)).rows[0].cap
+    assertEq(Number(capAfter), 0, 'after agreement window: capacity is 0')
+
+    // 7. Reserving partner unit outside window is refused by validate_unit_reservability
+    const lineId = (await q(`select id from booking_lines where booking_id = '${bookingIds.l88_booking}' limit 1`)).rows[0].id
+    let reserveOutsideRefused = false
+    try {
+      await as('Coordinator', async () => {
+        await q(`insert into inventory_reservations (client_uuid, booking_id, booking_line_id, asset_id, period, created_by)
+          values (gen_random_uuid(), '${bookingIds.l88_booking}', '${lineId}', '${bookingIds.t2_24_unit_id}', '${beforeRange}'::tstzrange, '${U.Coordinator}')`)
+      })
+    } catch (err) {
+      reserveOutsideRefused = true
+      assert(err.message.includes('outside_window') || err.message.includes('Partner unit reservation'), 'reservation outside window refused')
+    }
+    assert(reserveOutsideRefused, 'reserving partner unit outside agreement window is refused')
+  },
+})
+
+STEPS.push({
+  id: 'L91',
+  title: 'Return partner stock: Warehouse completes return, units retired, Law 6 money blindness verified (T2-24, B36, Law 6)',
+  expect: 'green',
+  run: async () => {
+    const stockId = bookingIds.t2_24_stock_id
+    assert(stockId, 'temporary stock agreement exists')
+
+    // 1. Law 6: Warehouse staff views agreement via temporary_stock_v -> monetary columns are completely blinded
+    await as('Warehouse', async () => {
+      const pRow = (await q(`select * from temporary_stock_v where id = '${stockId}'`)).rows[0]
+      assert(pRow !== undefined, 'Warehouse can see operational agreement details')
+      assertEq(pRow.cost_paisa, null, 'Law 6: cost_paisa is NULL for Warehouse')
+      assertEq(pRow.cost_kind, null, 'Law 6: cost_kind is NULL for Warehouse')
+    })
+
+    // 2. Warehouse initiates return of the partner stock
+    await as('Warehouse', async () => {
+      const res = await one('select return_temporary_stock($1::jsonb)', [JSON.stringify({
+        temporary_stock_id: stockId,
+        notes: 'All 2 units returned in original Pelican case',
+      })])
+      assertEq(res.status, 'Returned to partner', 'return_temporary_stock succeeded')
+    })
+
+    // 3. Verify agreement status is 'Returned to partner'
+    const agr = (await q(`select status, returned_at, returned_by from temporary_stock where id = '${stockId}'`)).rows[0]
+    assertEq(agr.status, 'Returned to partner', 'agreement status is Returned to partner')
+    assert(Boolean(agr.returned_at), 'returned_at timestamp recorded')
+    assertEq(agr.returned_by, U.Warehouse, 'returned_by is Warehouse staff')
+
+    // 4. Verify units are marked Retired so they cannot be booked or scanned for other jobs
+    const units = (await q(`select status, retired_at from product_units where temporary_stock_id = '${stockId}'`)).rows
+    assertEq(units.length, 2, '2 units checked')
+    for (const u of units) {
+      assertEq(u.status, 'Retired', 'returned partner unit is Retired')
+      assert(Boolean(u.retired_at), 'unit retired_at timestamp set')
+    }
+  },
+})
+
 
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {

@@ -1,6 +1,60 @@
 # Progress Log
 
-# Progress Log
+## 2026-11-20 — T2-24: Temporary stock from partners with bounded availability and floor return (Lane A)
+
+**Did**
+- Implemented **T2-24 · Temporary stock from partners** (`feat/t2-24-partner-stock`):
+  - Authored migration `supabase/migrations/0253_temporary_stock_from_partners.sql`:
+    - Added `public.temporary_stock` table tracking partner agreement metadata (`supplier_id`, `product_id`, `tracking_mode`, `quantity`, `available_from`, `available_until`, `cost_kind`, `cost_paisa`, `status`, `notes`, `returned_at`, `returned_by`).
+    - Added `temporary_stock_id` foreign key and `is_partner_unit` boolean flag to `product_units`.
+    - Added `public.temporary_stock_v` view enforcing Law 6 money blindness (`cost_kind` and `cost_paisa` masked to null for Warehouse, Technician, and Driver).
+    - Updated `validate_unit_reservability()` trigger enforcing that partner units can only be reserved inside their active agreement window `[available_from, available_until)`.
+    - Updated `get_available_product_capacity()` to dynamically include active partner units inside their agreement window and strictly 0 outside.
+    - Added security-definer RPC `public.record_temporary_stock(jsonb)` for recording agreements and stamping partner units.
+    - Added security-definer RPC `public.return_temporary_stock(jsonb)` for completing warehouse returns and retiring units.
+  - Implemented actions and queries:
+    - `src/actions/inventory/recordTemporaryStock.ts`
+    - `src/actions/inventory/returnTemporaryStock.ts`
+    - `src/lib/queries/partnerStock.ts`
+  - Built UI components and workflows:
+    - `src/modules/inventory/modals/TemporaryStockModal.tsx`
+    - `src/modules/operations/SubRental.tsx` (dedicated Partner Stock sub-tab)
+    - `src/modules/operations/components/PartnerStockTable.tsx`
+    - `src/modules/operations/modals/ReturnPartnerStockModal.tsx`
+    - Updated `src/lib/availability.ts` and `src/lib/labelPrinter.ts` ("PARTNER ⭐" badge).
+  - Authored design and verification spec `docs/verification/T2-24_DESIGN.md`.
+  - Added lifecycle steps `L90` and `L91` in `scripts/e2e-lifecycle.mjs` verifying bounded window capacity and Law 6 money-blinded warehouse return.
+  - Updated roadmap in `docs/plans/T2_FLOOR.md` and claimed migration 0253 in `docs/plans/MIGRATION_LEDGER.md`.
+  - Added `T2-24: 'verified'` to `src/lib/__tests__/roadmapStatusTruth.test.ts`.
+
+**Ruled**
+- Partner gear is bookable like regular stock inside the agreement window only; outside the window, capacity is 0 (B13).
+- Returned partner units transition to Retired status; Law 6 hides partner costs from floor roles (B36, B47).
+
+**Verified**
+- `npm run check:pglite`: 251/251 applied cleanly from scratch, 0 leaks, 0 definer defects.
+- `npm run check:lifecycle`: 92/92 green (including L90 and L91), 0 known-red, 0 failed.
+- `npm run check:security`: 18/18 SQL regressions + operations grants pass.
+- `npm run typecheck`: clean, 0 errors.
+- `npm run lint`: clean, 0 warnings.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 111 / 111 (100%) | +1 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 92 / 92 (100%) | +2 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+### Remaining
+- Physical-device partner stock label printing verification with live barcode scanner.
+- Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
+- Staff inventory deposit data entry across active products (T3-02).
+- T3-14 (Draft invoice at Confirm, number on full payment): resync integrity & numbering moment.
+- T3-13, T3-20, T3-30: pending remaining accountant & staged receipts.
+- T0-12: hosted staging migration apply by Babin.
 
 ## 2026-11-20 — T3 & T8 Acceptance Reconciliation: T3-22, T8-02, T8-04, T8-07, T8-09 to Done (Lane A, B, C)
 
