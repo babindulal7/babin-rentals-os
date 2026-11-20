@@ -15,7 +15,7 @@
     "db:stop": "supabase stop",
     "db:apply": "node scripts/apply-migrations-local.mjs",
     "db:list": "node scripts/apply-migrations-local.mjs --list",
-    "db:plan": "node scripts/plan-migrations.mjs",
+    "db:plan": "node scripts/plan-migrations.mjs --accept-rename",
     "db:plan:selftest": "node scripts/plan-migrations.mjs --selftest",
     "db:rebuild": "supabase db reset --no-seed && node scripts/apply-migrations-local.mjs",
     "build": "tsc --noEmit && vite build",

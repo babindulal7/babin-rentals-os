@@ -43,7 +43,7 @@ business RPCs are still executable by `anon` on live (`adjust_stock`,
 **Phase 1 done when** — 1) reviewed migration manifest and restore/recovery procedure are recorded with exact SQL fingerprints; 2) the staging schema is safely installed **after owner approval** with synthetic, non-personal fixtures and outbound email/SMS/payments/webhooks disabled; 3) nine staff/portal role contexts and Client A/B row/storage isolation pass hosted tests; 4) desk/manual floor booking → Pack → Handover → Return → Reset, availability/no double booking, payments/deposits/daily closing, and paper invoice references are reconciled on hosted staging; 5) all P0 security blockers and evidence receipts are resolved. **Physical iPad/scanner/printer testing is Phase 2 after live**, not a Phase 1 blocker.
 **Needs** — T1-01 backup/recovery plan, T1-03 ledger reconciliation, current P0 security PR #242 and staging-only owner write approval before any hosted schema/fixture mutation.
 
-### T1-03 · Settle the ledger before anything is applied            status: todo · size: M · lane A
+### T1-03 · Settle the ledger before anything is applied            status: ready — awaiting merge (lane-a/T1-03-settle-the-ledger-before-anything-is) · size: M · lane A
 **What** — Refresh the live ledger read-only (`npm run db:plan -- --sql`, run in the SQL editor,
 save `docs/live/schema_migrations_<date>.txt`). For each of the 7 renames decide "same migration,
 renamed" vs "different migration" by comparing the live function/policy bodies with the local
