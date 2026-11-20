@@ -479,6 +479,17 @@ begin
     raise exception 'GATE:gate.payment.intent_inactive|Payment intent is %.', v_intent.status;
   end if;
 
+  -- A provider-confirmed settlement MUST have an immutable, nonblank
+  -- transaction reference. The Edge verifier is the proof authority, but
+  -- the money RPC must also fail closed against missing or altered references.
+  if p_provider_ref is null or btrim(p_provider_ref) = '' then
+    raise exception 'GATE:gate.payment.provider_ref_required|A verified provider transaction reference is required.';
+  end if;
+  if v_intent.status = 'paid'
+      and v_intent.provider_ref is distinct from btrim(p_provider_ref) then
+    raise exception 'GATE:gate.payment.provider_ref_mismatch|A paid intent cannot change its verified provider reference.';
+  end if;
+
   -- Guard against reused provider_ref across different intents
   if p_provider_ref is not null and trim(p_provider_ref) <> '' then
     select id into v_duplicate_ref
