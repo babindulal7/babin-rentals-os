@@ -15,8 +15,8 @@
     "db:stop": "supabase stop",
     "db:apply": "node scripts/apply-migrations-local.mjs",
     "db:list": "node scripts/apply-migrations-local.mjs --list",
-    "db:plan": "node scripts/plan-migrations.mjs --accept-rename",
-    "db:plan:selftest": "node scripts/plan-migrations.mjs --selftest",
+    "db:plan": "node scripts/plan-migrations.mjs",
+    "db:plan:selftest": "node scripts/plan-migrations.mjs --selftest && node --test scripts/plan-migrations-safety.test.mjs",
     "db:rebuild": "supabase db reset --no-seed && node scripts/apply-migrations-local.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
@@ -45,6 +45,7 @@
     "storage:local": "node scripts/local-storage.mjs",
     "data:wipe": "node scripts/wipe-user-data.mjs",
     "check:anon": "node scripts/check-anon-exposure.mjs",
+    "check:batch-0": "node scripts/rehearse-batch-0-anon-rpcs.mjs",
     "test:audit-coverage": "node scripts/test-audit-trigger-coverage.mjs",
     "test:settings": "node scripts/test-settings-table.mjs",
     "test:saved-views": "node scripts/test-saved-views.mjs",
@@ -61,7 +62,9 @@
     "i18n:export": "node scripts/i18n-review-export.mjs",
     "i18n:import": "node scripts/i18n-review-import.mjs",
     "check:fixtures": "node scripts/check-no-fixtures.mjs",
-    "check:security": "node scripts/check-astra-phase0.mjs && npm run test:operations-grants && node scripts/test-reset-branch-boundary.mjs && node scripts/test-glossary-revisions.mjs"
+    "check:security": "node scripts/check-astra-phase0.mjs && npm run test:operations-grants && node scripts/test-reset-branch-boundary.mjs && node scripts/test-glossary-revisions.mjs",
+    "db:plan:reviewed": "node scripts/plan-migrations.mjs --accept-rename",
+    "test:db-plan-safety": "node --test scripts/plan-migrations-safety.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

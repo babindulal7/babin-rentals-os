@@ -128,6 +128,10 @@ jobs:
         if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
         run: npm run check:pglite
 
+      - name: Migration planner fail-closed and regression selftests
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
+        run: npm run db:plan:selftest
+
       - name: Booking and invoice financial integrity (isolated PGlite)
         if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
         run: node scripts/test-booking-financial-integrity.mjs
@@ -288,6 +292,9 @@ jobs:
 
       - name: Migrations build from scratch
         run: npm run check:pglite
+
+      - name: Migration planner fail-closed and regression selftests
+        run: npm run db:plan:selftest
 
       - name: Booking and invoice financial integrity (isolated PGlite)
         run: node scripts/test-booking-financial-integrity.mjs

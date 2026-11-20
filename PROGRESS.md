@@ -34,6 +34,7 @@
 - Continue release T1-02 staging provenance and safety acceptance under separate authorization, not via branch cleanup.
 
 
+
 ## 2026-11-21 — T1-04: Batch 0 anonymous business RPC lockdown rehearsal & production apply (Lane A + Babin)
 
 **Did**

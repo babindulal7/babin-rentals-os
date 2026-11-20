@@ -109,18 +109,13 @@ to `AGENTS.md` so Codex and Gemini follow the same protocol.
 **Done when** — AGENTS.md has a "Parallel work" section that matches PLAN.md §6.
 **Needs** — T0-01.
 
-### T0-09 · CI off: local checks are the gate            status: todo · size: S · Babin
-**What** — GitHub CI has not passed since 15 Oct; the run on PR #29 (25 Oct) shows GitHub refusing to
-start the job for a billing reason. Babin ruled **keep CI off** (W75): 1) Babin disables the workflow
-(GitHub → Actions → CI → ⋯ → Disable workflow; re-enable any time); 2) every agent runs the full
-local list before saying a task is done (PLAN §6.4) and pastes the results into its PROGRESS entry;
-3) Babin runs the same list before merging locally; 4) Claude re-runs the fast checks on `main` at
-each check-in (7:38 AM / 7:38 PM) and reports anything red.
-**Why** — W75, W77.
-**Where** — GitHub settings (Babin); `AGENTS.md` "Commands" note (done in the 26 Oct package).
-**Database** — none.
-**Done when** — no new red X appears on pushes; the first check-in report shows the gates on `main`.
-**Needs** — none.
+### T0-09 · Active CI + independent local gates            status: acceptance_pending — current CI enabled and PR checks running; exact-head GREEN and owner acceptance pending · size: S · Babin + agents
+**What** — Reconcile superseded Oct 26 W75 `keep CI off` guidance with Babin's later Nov 9 R-9.9 ruling: **keep GitHub CI enabled**. Every same-repository PR runs required CI checks; push to `main` runs main checks, and manual dispatch is available. Self-hosted Mac/Windows runners are capacity constraints, **not** reasons to disable verification. Agents must run local gates (see `AGENTS.md` and `npm run gates`) and record results before proposing a merge; GitHub's required current-head CI must also pass. Never merge on stale-head or merely queued/running/skipped results, and never silently disable required checks or required main builds.
+**Why** — The historical CI-disabled/billing workaround is outdated. An actual PR-head CI run was observed in progress 21 Nov 2026; both local verification and independent GitHub checks are necessary for safe production work.
+**Where** — `.github/workflows/ci.yml`, `AGENTS.md` Verification order, GitHub Actions, and [`T0-09_CI_POLICY_RECONCILIATION_2026-11-21.md`](../verification/T0-09_CI_POLICY_RECONCILIATION_2026-11-21.md).
+**Database** — none; policy/documentation only, no workflow setting or remote mutation.
+**Done when** — 1) exact-head required CI runs on an eligible current code PR and returns green, not merely queued; 2) required `main` job(s) pass on the corresponding merged SHA; 3) local verification outputs are recorded without leaked credentials; 4) workflow state/runners verified with no disabled required checks; 5) Babin accepts the current enabled-CI policy and the old W75 card is recognized as superseded, not re-enabled.
+**Needs** — current CI run completion, owner confirmation on any GitHub billing/branch protection control outside this documentation PR.
 
 ### T0-10 · Tests never run with live settings            status: done — merged on `main` 2 Nov 2026 (#64, `673ef99a`); status corrected 4 Nov after the rule audit · size: S · lane A · [go-live]
 **What** — Since T0-02 (`3fca220`), `scripts/run-tests.mjs` picks mock data only when no
