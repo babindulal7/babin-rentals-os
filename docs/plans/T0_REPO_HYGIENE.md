@@ -48,14 +48,11 @@ the list (W74 — Claude never closes or pushes); Babin or a local agent closes 
 **Needs** — none.
 
 ### T0-04 · Branch triage            status: doing — 345 remote branch snapshot, 37 zero-ahead candidates verified, owner approval for deletion pending · size: M · Babin + Codex-1 (local)
-**What** — An updated [read-only 21 Nov 2026 inventory](../verification/REMOTE_BRANCH_AUDIT_2026-11-21.md) found **345 remote branches including main**; 37 older candidates are verified as exactly zero ahead, and 10 branches head open PRs. Classification of all other branches is not yet complete. Never execute cleanup based on the outdated ~90-branch estimate. For each remote branch: list commits not on `main`
-(`git log --oneline main..origin/<branch>`). Merged → delete the branch. Unmerged → tag it
-`archive/<branch>` then delete the branch, and list the tags in `docs/archive/BRANCHES_2026-10.md`.
+**What** — An updated [read-only 21 Nov 2026 inventory](../verification/REMOTE_BRANCH_AUDIT_2026-11-21.md) found **345 remote branches including main**; 37 older candidates are verified as exactly zero ahead, and 10 branches head open PRs. Classification of all other branches is not yet complete. Never execute cleanup based on the outdated ~90-branch estimate. For each remote branch: inspect commits not on `main` (`git log --oneline main..origin/<branch>`). Classify as active PR, verified-merged, unmerged, protected/recovery, or unresolved. **Do not delete any branch or push archive tags** without a specific owner-approved cleanup list, independently verified SHA and safe retention plan. Proposed archival tags and deletions must be documented first; execution is a separate owner-gated action.
 **Why** — Branch sprawl hides unmerged work; tags keep it (Law 3 spirit) without the noise.
 **Where** — git remote; `docs/archive/BRANCHES_2026-10.md`.
 **Database** — none.
-**Done when** — 1) owner explicitly authorizes an exact reviewable list of branch deletions after fresh open-PR and ahead/behind checks; 2) every unmerged branch to remove has a verified durable archive tag; 3) `git ls-remote --heads origin` lists only `main` and live lane branches;
-2) every deleted unmerged branch has an `archive/` tag.
+**Done when** — 1) complete inventory classifies all remote branches against a fresh `main` and open-PR list; 2) owner explicitly authorizes each proposed archival/deletion batch; 3) any unmerged branch to delete has a verified durable archive reference and independent reviewer receipt; 4) only after authorized cleanup, inspect `git ls-remote --heads origin` to confirm intended remaining branches. **This audit-only PR satisfies neither owner approval nor deletion completion.**
 **Needs** — Babin's OK to delete branches (GitHub settings may protect some).
 
 ### T0-05 · Documents tell the truth            status: done (26 Oct, `3fca220`) · size: S · lane A
