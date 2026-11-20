@@ -112,7 +112,32 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    const effectiveProvider = provider || intent.provider || 'fonepay'
+    const effectiveProvider = provider || intent.provider
+    if (!['fonepay', 'esewa', 'khalti'].includes(effectiveProvider) || (provider && provider !== intent.provider)) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Provider does not match the payment intent.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    if (['refunded', 'expired', 'failed'].includes(intent.status)) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Payment intent is terminal and cannot be replayed.' }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    // Sandbox callbacks and missing merchant credentials are not proof of payment.
+    // Only a verified production provider response may reach the money-writing RPC.
+    const secretName = effectiveProvider === 'esewa'
+      ? 'ESEWA_SECRET_KEY'
+      : effectiveProvider === 'khalti' ? 'KHALTI_SECRET_KEY' : 'FONEPAY_SECRET_KEY'
+    const envName = effectiveProvider === 'esewa'
+      ? 'ESEWA_ENV' : effectiveProvider === 'khalti' ? 'KHALTI_ENV' : 'FONEPAY_ENV'
+    if (!Deno.env.get(secretName) || Deno.env.get(envName) === 'sandbox') {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Provider verification is not configured for live settlement.' }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     // Idempotency: if already allocated or paid, return current state
     if (intent.status === 'allocated') {
@@ -154,7 +179,13 @@ Deno.serve(async (req: Request) => {
           const statusUrl = `https://epay.esewa.com.np/api/epay/transaction/status/?product_code=${encodeURIComponent(productCode)}&total_amount=${encodeURIComponent(amountRupees)}&transaction_uuid=${encodeURIComponent(intentId)}`
           const statusRes = await fetch(statusUrl)
           const statusJson = await statusRes.json()
-          verified = statusJson.status === 'COMPLETE'
+          verified = statusRes.ok
+            && statusJson.status === 'COMPLETE'
+            && statusJson.transaction_uuid === intentId
+            && statusJson.product_code === productCode
+            && Number(statusJson.total_amount) === Number(amountRupees)
+            && typeof statusJson.ref_id === 'string'
+            && statusJson.ref_id.length > 0
           upstreamData = statusJson
           if (statusJson.ref_id) finalRef = statusJson.ref_id
         } catch (fetchErr) {
@@ -163,7 +194,7 @@ Deno.serve(async (req: Request) => {
         }
       } else {
         // Sandbox mode verification
-        verified = esewaDecoded.status === 'COMPLETE' || Boolean(finalRef) || responseCode === 'successful' || true
+        verified = false // Sandbox must not write production payments
         upstreamData = {
           mock_verified: true,
           sandbox: true,
@@ -171,12 +202,13 @@ Deno.serve(async (req: Request) => {
           ...esewaDecoded,
         }
       }
-      finalRef = finalRef || `ESEWA-${Date.now()}`
+      // A genuine upstream payment reference is required; never mint one locally.
     } else if (effectiveProvider === 'khalti') {
       const khaltiSecret = Deno.env.get('KHALTI_SECRET_KEY')
       const isSandbox = !khaltiSecret || Deno.env.get('KHALTI_ENV') === 'sandbox'
 
-      if (khaltiSecret && !isSandbox && pidx) {
+      const initiatedPidx = (intent.provider_response as Record<string, unknown> | null)?.initiated_pidx
+      if (khaltiSecret && !isSandbox && pidx && initiatedPidx === pidx) {
         try {
           const lookupRes = await fetch('https://khalti.com/api/v2/epayment/lookup/', {
             method: 'POST',
@@ -187,7 +219,13 @@ Deno.serve(async (req: Request) => {
             body: JSON.stringify({ pidx }),
           })
           const lookupJson = await lookupRes.json()
-          verified = lookupJson.status === 'Completed'
+          verified = lookupRes.ok
+            && lookupJson.status === 'Completed'
+            && lookupJson.pidx === pidx
+            && Number(lookupJson.total_amount) === Number(intent.amount_paisa)
+            && lookupJson.refunded === false
+            && typeof lookupJson.transaction_id === 'string'
+            && lookupJson.transaction_id.length > 0
           upstreamData = lookupJson
           if (lookupJson.transaction_id) finalRef = lookupJson.transaction_id
         } catch (fetchErr) {
@@ -196,7 +234,7 @@ Deno.serve(async (req: Request) => {
         }
       } else {
         // Sandbox mode verification
-        verified = Boolean(pidx) || Boolean(finalRef) || responseCode === 'successful' || true
+        verified = false // Missing or unbound pidx, or sandbox, cannot settle a payment
         upstreamData = {
           mock_verified: true,
           sandbox: true,
@@ -204,7 +242,7 @@ Deno.serve(async (req: Request) => {
           pidx,
         }
       }
-      finalRef = finalRef || pidx || `KH-${Date.now()}`
+      // The verified Khalti transaction_id must be used as the immutable provider reference.
     } else {
       // Default: Fonepay server-to-server verification
       const merchantCode = Deno.env.get('FONEPAY_MERCHANT_CODE') || 'MDULAL'
@@ -222,21 +260,21 @@ Deno.serve(async (req: Request) => {
           upstreamData = JSON.parse(upstreamText)
           verified = (upstreamData.responseCode === 'successful' || upstreamData.success === true)
         } catch {
-          verified = upstreamText.includes('<response_code>successful</response_code>') || upstreamText.includes('success')
+          verified = upstreamText.includes('<response_code>successful</response_code>')
           upstreamData = { raw: upstreamText }
         }
       } else {
-        verified = responseCode === 'successful' || Boolean(providerRef) || Boolean(uid)
+        verified = false // Sandbox callbacks cannot create Received ledger rows
         upstreamData = {
           mock_verified: true,
           response_code: responseCode || 'successful',
           sandbox: true,
         }
       }
-      finalRef = providerRef || uid || `FP-${Date.now()}`
+      finalRef = providerRef || uid
     }
 
-    if (!verified) {
+    if (!verified || !finalRef.trim()) {
       return new Response(
         JSON.stringify({
           success: false,
