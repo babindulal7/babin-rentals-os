@@ -1,5 +1,11 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('../languageReadiness', () => ({
+  canEnable: () => false,
+  NEPALI_UNAVAILABLE: 'Nepali will be available after all staff screens have been reviewed and checked.',
+}))
+
 import { readSettings, languageCodeOf } from '../settingsStore'
 import { setLanguagePreference, getLanguagePreference } from '../languagePreferenceStore'
 import { applyLanguage, getCurrentLanguage } from '../i18n'

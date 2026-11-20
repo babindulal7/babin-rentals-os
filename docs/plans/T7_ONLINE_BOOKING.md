@@ -35,7 +35,7 @@ PERMISSIONS §5/§7 text that will change.
 and O-3 defaults are written in.
 **Needs** — none.
 
-### T7-02 · Booking site and public catalogue            status: todo · size: L · lane C
+### T7-02 · Booking site and public catalogue            status: ready — awaiting merge (feat/win-t7-02-booking-site-and-public-catalogue) · size: L · lane C (Windows)
 **What** — A third entry document (`booking.html`, like `marketing.html`) with its own small bundle —
 no staff code in it — deployed by the second Pages project (T1-07). Reads a deliberately public
 `public_catalogue_v`: product name, category, description, photos, **daily rate** (and week/month

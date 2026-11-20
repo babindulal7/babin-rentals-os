@@ -46,6 +46,8 @@ export interface LabelData {
   /** Selects the actual encoded symbol on the printable label. */
   symbology?: 'qr' | 'code128' | undefined
   orgName?: string | undefined
+  /** Renders PARTNER ⭐ badge on thermal label (T2-24, B13) */
+  isPartner?: boolean | undefined
 }
 
 // Code 128B pattern table (values 0..106)
@@ -254,6 +256,7 @@ export function generateLabelHtml(data: LabelData, preset: LabelPreset = 'standa
     <span class="asset-code">${safeAssetCode}</span>
   </div>
   <div class="title-block">
+    ${data.isPartner ? `<div style="display:inline-block; font-size:${preset === 'cable' ? '6px' : '7.5px'}; font-weight:900; background:#000; color:#fff; padding:1px 4px; border-radius:2px; margin-bottom:2px; letter-spacing:0.5px;">PARTNER ⭐</div>` : ''}
     <div class="title">${safeTitle}</div>
     ${safeSubtitle || safeSerialNo ? `<div class="subtitle">${safeSubtitle}${safeSerialNo ? ` · SN: ${safeSerialNo}` : ''}</div>` : ''}
   </div>

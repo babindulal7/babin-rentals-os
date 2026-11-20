@@ -168,6 +168,25 @@ async function asService(fn) {
   }
 }
 
+async function asAnon(fn) {
+  await db.exec(`set role anon;
+    select set_config('app.current_user_id', '', false);
+    select set_config('request.jwt.claim.sub', '', false);
+    select set_config('request.jwt.claim.role', 'anon', false);`)
+  try {
+    return await fn()
+  } finally {
+    try {
+      await db.exec(`reset role; select set_config('app.current_user_id', '', false);
+        select set_config('request.jwt.claim.sub', '', false); select set_config('request.jwt.claim.role', '', false);`)
+    } catch {
+      await db.exec('rollback;')
+      await db.exec(`reset role; select set_config('app.current_user_id', '', false);
+        select set_config('request.jwt.claim.sub', '', false); select set_config('request.jwt.claim.role', '', false);`)
+    }
+  }
+}
+
 /**
  * Run a block and UNDO it, whatever it did.
  *
@@ -389,7 +408,7 @@ async function seed() {
 
 let bookingIds = {}
 
-function createPayload({ key, window, actor, lines, discountPercent, clientId }) {
+function createPayload({ key, window, actor, lines, discountPercent, clientId, projectType }) {
   const payload = {
     client_uuid: crypto.randomUUID(),
     created_by: U[actor],
@@ -398,6 +417,7 @@ function createPayload({ key, window, actor, lines, discountPercent, clientId })
     pickup_at: window[0],
     return_at: window[1],
     delivery_type: 'Client Pickup',
+    ...(projectType !== undefined ? { project_type: projectType } : {}),
     lines: lines.map((line) => ({
       client_uuid: crypto.randomUUID(),
       line_type: 'Equipment',
@@ -9318,7 +9338,6 @@ STEPS.push({
   },
 })
 
-
 STEPS.push({
   id: 'L86',
   title: 'at-risk monetary resolutions refuse Coordinator and allow Manager role gate (P0, Law 6)',
@@ -9371,6 +9390,546 @@ STEPS.push({
       await refuses('Client cannot resolve at-risk monetarily', call,
         [payload('refund', 100)], /booking desk roles only/i)
     })
+  },
+})
+
+STEPS.push({
+  id: 'L87',
+  title: 'anon reads catalogue and availability, nothing else (T7-02)',
+  expect: 'green',
+  async run() {
+    await undone(async () => {
+      const pOnline = crypto.randomUUID()
+      const pOffline = crypto.randomUUID()
+      const pBundleOnly = crypto.randomUUID()
+      const bOnline = crypto.randomUUID()
+
+      await asOwnerOfTheDatabase(async () => {
+        const cat = await one('select id from inventory_categories order by name limit 1')
+        await q(
+          `insert into products (id, client_uuid, asset_code, name, category_id, brand, tracking_mode, total_quantity, daily_rate, show_online, online_bundle_only, is_active, created_by)
+           values
+             ($1, gen_random_uuid(), 'EQ999001', 'Online Alpha Camera', $4, 'Sony', 'Quantity', 5, 5000, true, false, true, $3),
+             ($2, gen_random_uuid(), 'EQ999002', 'Secret Beta Camera', $4, 'Sony', 'Quantity', 5, 6000, false, false, true, $3),
+             ($5, gen_random_uuid(), 'EQ999003', 'Component Lens', $4, 'Sony', 'Quantity', 5, 2000, true, true, true, $3)`,
+          [pOnline, pOffline, U.Owner, cat, pBundleOnly]
+        )
+
+        await q(
+          `insert into bundles (id, client_uuid, bundle_code, name, category_id, daily_rate, show_online, is_active, created_by)
+           values ($1, gen_random_uuid(), 'BDL-999001', 'Indie Creator Kit', $2, 6500, true, true, $3)`,
+          [bOnline, cat, U.Owner]
+        )
+
+        await q(
+          `insert into bundle_items (id, client_uuid, bundle_id, product_id, quantity, created_by)
+           values (gen_random_uuid(), gen_random_uuid(), $1, $2, 1, $3)`,
+          [bOnline, pBundleOnly, U.Owner]
+        )
+      })
+
+      // Query as anon
+      await asAnon(async () => {
+        const reject = async (what, sql, params, matcher) => {
+          await q('savepoint probe')
+          try {
+            await refuses(what, sql, params, matcher)
+          } finally {
+            await q('rollback to savepoint probe')
+          }
+        }
+
+        const rows = (await q('select * from public_catalogue_v')).rows
+
+        const hasOnline = rows.find((r) => r.id === pOnline)
+        assert(Boolean(hasOnline), 'pOnline must be listed in public_catalogue_v')
+        assertEq(hasOnline.daily_rate_paisa, 500000n, 'pOnline daily rate converted to paisa')
+
+        const hasOffline = rows.find((r) => r.id === pOffline)
+        assert(!hasOffline, 'pOffline (show_online=false) must NOT be listed')
+
+        const hasBundleOnly = rows.find((r) => r.id === pBundleOnly)
+        assert(!hasBundleOnly, 'pBundleOnly must NOT be listed as its own row')
+
+        const hasBundle = rows.find((r) => r.id === bOnline)
+        assert(Boolean(hasBundle), 'bOnline bundle must be listed in public_catalogue_v')
+        assert(Array.isArray(hasBundle.bundle_contents), 'bundle_contents must be json array')
+        assert(hasBundle.bundle_contents.some((c) => c.name === 'Component Lens'), 'bundle includes component item')
+
+        const forbiddenCols = ['purchase_price', 'replacement_value', 'serial_number', 'supplier_id', 'notes_internal']
+        const keys = Object.keys(rows[0] || {})
+        for (const col of forbiddenCols) {
+          assert(!keys.includes(col), `public_catalogue_v must NEVER contain ${col}`)
+        }
+
+        await reject(
+          'anon cannot insert into public_catalogue_v',
+          `insert into public_catalogue_v (id, name) values ('${pOnline}', 'Hacked')`,
+          [],
+          /permission denied|cannot insert into view/i
+        )
+
+        const today = new Date().toISOString().slice(0, 10)
+        const avail = (await q(`select * from public_availability(array['${pOnline}']::uuid[], '${today}'::date, '${today}'::date)`)).rows
+        assertEq(avail.length, 1, 'public_availability returns one day row for queried product')
+        assertEq(avail[0].available, true, 'stock of 5 with no reservations is available')
+
+        const bkCount = Number((await q('select count(*) from bookings')).rows[0].count)
+        assertEq(bkCount, 0, 'anon sees 0 bookings under RLS')
+
+        const invCount = Number((await q('select count(*) from invoices')).rows[0].count)
+        assertEq(invCount, 0, 'anon sees 0 invoices under RLS')
+
+        const clientCount = Number((await q('select count(*) from clients')).rows[0].count)
+        assertEq(clientCount, 0, 'anon sees 0 clients under RLS')
+
+        await reject(
+          'anon cannot read audit_logs',
+          'select count(*) from audit_logs',
+          [],
+          /permission denied/i
+        )
+      })
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L88',
+  title: 'past stock without the switch is refused (T2-23, B12, K4)',
+  expect: 'green',
+  run: async () => {
+    let bookingId
+    const clientCode = await one("select next_document_number('client')")
+    const clientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+      values (gen_random_uuid(), '${clientCode}', 'L87 Client', '+9779800009986', 'Active', '${U.Owner}')
+      returning id`)).rows[0].id
+
+    // Create a product with total_quantity = 2, allow_overbooking = false
+    const catId = await one('select id from inventory_categories order by name limit 1')
+    const prodCode = await one("select next_document_number('equipment')")
+    const prodId = (await q(`insert into products (client_uuid, asset_code, name, brand, category_id, tracking_mode, total_quantity, allow_overbooking, created_by)
+      values (gen_random_uuid(), '${prodCode}', 'L87 Limited Stock Lens', 'Sony', '${catId}', 'Quantity', 2, false, '${U.Owner}')
+      returning id`)).rows[0].id
+
+    // Create a booking requesting qty = 3 (more than stock on hand 2)
+    await as('Coordinator', async () => {
+      const res = await createBooking({
+        key: 'l87_booking',
+        window: ['2099-08-01T00:00:00Z', '2099-08-05T00:00:00Z'],
+        actor: 'Coordinator',
+        clientId,
+        projectType: 'Music Video',
+        lines: [{
+          productId: prodId,
+          description: 'L87 Limited Stock Lens',
+          qty: 3,
+          days: 4,
+          rate: 1000,
+        }],
+      })
+      bookingId = res.booking_id
+    })
+
+    // Confirm must be refused by capacity ceiling because allow_overbooking is false
+    let refused = false
+    try {
+      await as('Coordinator', async () => {
+        await one('select confirm_booking_atomic($1::uuid, $2::uuid, $3::uuid, now(), $4)', [
+          bookingId,
+          U.Coordinator,
+          crypto.randomUUID(),
+          'Attempt confirm past stock',
+        ])
+      })
+    } catch (err) {
+      refused = true
+      assert(err.message.includes('Reservation rejected') || err.message.includes('stock on hand is 2'), 'refused with capacity error')
+    }
+    assert(refused, 'past stock without the switch is refused (as today)')
+
+    const stage = await stageOf('l87_booking')
+    assertEq(stage, 'Quote', 'booking remains Quote')
+    const holds = await liveHolds('l87_booking')
+    assertEq(holds, 0, 'zero reservations placed')
+  },
+})
+
+STEPS.push({
+  id: 'L89',
+  title: 'with the switch: confirmed with a short line and no reservation (T2-23, B12, K4)',
+  expect: 'green',
+  run: async () => {
+    let bookingId
+    const clientCode = await one("select next_document_number('client')")
+    const clientId = (await q(`insert into clients (client_uuid, client_code, name, phone, status, created_by)
+      values (gen_random_uuid(), '${clientCode}', 'L88 Client', '+9779800009987', 'Active', '${U.Owner}')
+      returning id`)).rows[0].id
+
+    // Create a product with total_quantity = 2, allow_overbooking = true
+    const catId = await one('select id from inventory_categories order by name limit 1')
+    const prodCode = await one("select next_document_number('equipment')")
+    const prodId = (await q(`insert into products (client_uuid, asset_code, name, brand, category_id, tracking_mode, total_quantity, allow_overbooking, created_by)
+      values (gen_random_uuid(), '${prodCode}', 'L88 High Demand Light', 'Aputure', '${catId}', 'Quantity', 2, true, '${U.Owner}')
+      returning id`)).rows[0].id
+
+    // Create booking requesting qty = 3 (stock on hand is 2)
+    await as('Coordinator', async () => {
+      const res = await createBooking({
+        key: 'l88_booking',
+        window: ['2099-08-10T00:00:00Z', '2099-08-14T00:00:00Z'],
+        actor: 'Coordinator',
+        clientId,
+        projectType: 'Music Video',
+        lines: [{
+          productId: prodId,
+          description: 'L88 High Demand Light',
+          qty: 3,
+          days: 4,
+          rate: 2000,
+        }],
+      })
+      bookingId = res.booking_id
+    })
+
+    // Confirm succeeds with switch on
+    await as('Coordinator', async () => {
+      const res = await one('select confirm_booking_atomic($1::uuid, $2::uuid, $3::uuid, now(), $4)', [
+        bookingId,
+        U.Coordinator,
+        crypto.randomUUID(),
+        'Confirmed with overbooking allowed',
+      ])
+      assertEq(res.success, true, 'confirmation succeeded')
+      assertEq(res.stage, 'Booked', 'stage moved to Booked')
+    })
+
+    // Check line short_quantity is exactly 1 (3 requested - 2 free)
+    const lineRow = (await q(`select qty, short_quantity from booking_lines where booking_id = '${bookingId}' and voided_at is null`)).rows[0]
+    assertEq(lineRow.qty, 3, 'requested qty is 3')
+    assertEq(lineRow.short_quantity, 1, 'short_quantity is 1')
+
+    // Check inventory_reservations reserved exactly 2 (never 3)
+    const resQty = await one(`select coalesce(sum(qty), 0) from inventory_reservations where booking_id = '${bookingId}' and released_at is null`)
+    assertEq(Number(resQty), 2, 'inventory_reservations holds exactly 2 (free stock)')
+
+    // Check booking_at_risk logged shortage
+    const atRiskRow = (await q(`select cause, product_name, resolution_notes, resolved_at from booking_at_risk where booking_id = '${bookingId}' and cause = 'overbooking_shortage'`)).rows[0]
+    assert(Boolean(atRiskRow), 'booking_at_risk has overbooking_shortage row')
+    assertEq(atRiskRow.resolution_notes, '1 short — sub-rent or swap', 'notes state 1 short — sub-rent or swap')
+    assertEq(atRiskRow.resolved_at, null, 'shortage is initially unresolved')
+  },
+})
+
+STEPS.push({
+  id: 'L90',
+  title: 'Pack refuses a short line; resolving clears shortage and allows Pack (T2-23, K4)',
+  expect: 'green',
+  run: async () => {
+    const bookingId = bookingIds.l88_booking
+    assert(Boolean(bookingId), 'booking from L88 exists')
+
+    // 1. Attempt Pack transition while shortage remains unresolved -> must be refused
+    let packRefused = false
+    try {
+      await as('Warehouse', async () => {
+        await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
+          values (gen_random_uuid(), '${bookingId}', '${BRANCH}', 'Booked', 'Packed', '${U.Warehouse}', 'Warehouse', now(), 'Attempt Pack with shortage')`)
+      })
+    } catch (err) {
+      packRefused = true
+      assert(err.message.includes('gate.pack.shortage') || err.message.includes('unresolved short item'), 'refused by gate.pack.shortage')
+    }
+    assert(packRefused, 'Pack refuses an unresolved short line')
+
+    // 2. Handover attempt must also be refused
+    let handoverRefused = false
+    try {
+      await as('Warehouse', async () => {
+        await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
+          values (gen_random_uuid(), '${bookingId}', '${BRANCH}', 'Booked', 'On Rent', '${U.Warehouse}', 'Warehouse', now(), 'Attempt Handover with shortage')`)
+      })
+    } catch (err) {
+      handoverRefused = true
+      assert(err.message.includes('gate.pack.shortage'), 'Handover cannot bypass shortage stop')
+    }
+    assert(handoverRefused, 'Handover refuses an unresolved short line')
+
+    // 3a. Attempting resolution with notes only without coverage does NOT clear shortage
+    const atRiskId = (await q(`select id from booking_at_risk where booking_id = '${bookingId}' and cause = 'overbooking_shortage' and resolved_at is null`)).rows[0].id
+    await as('Coordinator', async () => {
+      const res = await one('select resolve_booking_at_risk($1::jsonb)', [JSON.stringify({
+        at_risk_id: atRiskId,
+        resolution: 'sub_rent',
+        notes: 'Promised to call Studio 9 later',
+      })])
+      assertEq(res.resolved, false, 'notes alone without coverage leaves at-risk unresolved')
+      assertEq(res.remaining_short_quantity, 1, 'remaining shortage is still 1')
+    })
+    const lineStillShort = (await q(`select short_quantity from booking_lines where booking_id = '${bookingId}' and voided_at is null`)).rows[0]
+    assertEq(lineStillShort.short_quantity, 1, 'short_quantity remains 1 without coverage')
+
+    // 3b. Pack is STILL refused because shortage is not covered
+    let packStillRefused = false
+    try {
+      await as('Warehouse', async () => {
+        await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
+          values (gen_random_uuid(), '${bookingId}', '${BRANCH}', 'Booked', 'Packed', '${U.Warehouse}', 'Warehouse', now(), 'Attempt Pack with uncovered note')`)
+      })
+    } catch (err) {
+      packStillRefused = true
+    }
+    assert(packStillRefused, 'Pack remains refused when resolution lacks actual coverage')
+
+    // 3c. Provide durable sub-rent coverage (covering_qty: 1)
+    await as('Coordinator', async () => {
+      const res = await one('select resolve_booking_at_risk($1::jsonb)', [JSON.stringify({
+        at_risk_id: atRiskId,
+        resolution: 'sub_rent',
+        covering_qty: 1,
+        notes: 'Sub-rent confirmed with partner Studio 9',
+      })])
+      assertEq(res.success, true, 'resolve_booking_at_risk succeeds with coverage')
+    })
+
+    // 4. Assert short_quantity is cleared to 0 and at_risk is resolved
+    const lineAfter = (await q(`select short_quantity from booking_lines where booking_id = '${bookingId}' and voided_at is null`)).rows[0]
+    assertEq(lineAfter.short_quantity, 0, 'short_quantity cleared to 0 upon resolution')
+
+    const atRiskAfter = (await q(`select resolved_at, resolution from booking_at_risk where id = '${atRiskId}'`)).rows[0]
+    assert(Boolean(atRiskAfter.resolved_at), 'booking_at_risk is resolved')
+    assertEq(atRiskAfter.resolution, 'sub_rent', 'resolution is sub_rent')
+
+    // 5. Pack now succeeds once packing session exists
+    await as('Warehouse', async () => {
+      const sessionId = crypto.randomUUID()
+      await q(`insert into operation_sessions (id, client_uuid, booking_id, operation, session_no, state, warehouse_staff_id, created_by)
+        values ('${sessionId}', gen_random_uuid(), '${bookingId}', 'Packing', 1, 'In Progress', '${U.Warehouse}', '${U.Warehouse}')`)
+
+      await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
+        values (gen_random_uuid(), '${bookingId}', '${BRANCH}', 'Booked', 'Packed', '${U.Warehouse}', 'Warehouse', now(), 'Pack completed')`)
+    })
+    const finalStage = await stageOf('l88_booking')
+    assertEq(finalStage, 'Packed', 'booking reached Packed after shortage resolved')
+  },
+})
+
+STEPS.push({
+  id: 'L91',
+  title: 'Temporary partner stock: available inside agreement window only; outside window capacity is 0 (T2-24, B13)',
+  expect: 'green',
+  run: async () => {
+    // 1. Setup supplier & product with 0 owned stock
+    let supplierId
+    let productId
+    await asOwnerOfTheDatabase(async () => {
+      const catId = await one('select id from inventory_categories order by name limit 1')
+      const supCode = 'SUP-L90-' + crypto.randomUUID().slice(0, 6)
+      const supRes = await q(`insert into suppliers (client_uuid, supplier_code, name, created_by)
+        values (gen_random_uuid(), '${supCode}', 'Cine Partner Nepal', '${U.Owner}')
+        returning id`)
+      supplierId = supRes.rows[0].id
+
+      const prodCode = await one("select next_document_number('equipment')")
+      const prodRes = await q(`insert into products (client_uuid, asset_code, name, brand, category_id, model, tracking_mode, total_quantity, allow_overbooking, created_by)
+        values (gen_random_uuid(), '${prodCode}', 'Partner Cinema Prime 50mm', 'CineGear', '${catId}', 'LENS-50', 'Serialised', 0, false, '${U.Owner}')
+        returning id`)
+      productId = prodRes.rows[0].id
+    })
+
+    // 2. Add temporary stock for 2 lenses for 5 days (2090-05-10 to 2090-05-15 UTC)
+    let tempStockId
+    await as('Coordinator', async () => {
+      const res = await one('select record_temporary_stock($1::jsonb)', [JSON.stringify({
+        supplier_id: supplierId,
+        product_id: productId,
+        quantity: 2,
+        available_from: '2090-05-10 00:15:00+00',
+        available_until: '2090-05-15 00:15:00+00',
+        cost_kind: 'daily',
+        cost_paisa: 500000,
+        asset_codes: ['P-L90-01', 'P-L90-02'],
+      })])
+      tempStockId = res.id
+      assert(Boolean(tempStockId), 'record_temporary_stock returns agreement id')
+      assertEq(res.quantity, 2, 'quantity recorded')
+    })
+
+    // 3. Verify units created with is_partner_unit = true
+    const units = (await q(`select id, serial_no, asset_tag, is_partner_unit, temporary_stock_id from product_units where temporary_stock_id = '${tempStockId}'`)).rows
+    assertEq(units.length, 2, '2 partner units created')
+    assert(units.every((u) => u.is_partner_unit === true), 'all units flagged is_partner_unit')
+
+    // 4. Booking inside window: 2090-05-11 to 2090-05-14 (3 days) -> Capacity is 2
+    const capInside = Number(await one(`select get_available_product_capacity('${productId}', tstzrange('2090-05-11 00:15:00+00', '2090-05-14 00:15:00+00', '[)'))`))
+    assertEq(capInside, 2, 'partner gear contributes to capacity inside window')
+
+    // 5. Booking extending past window: 2090-05-14 to 2090-05-16 -> Capacity is 0
+    const capOutside = Number(await one(`select get_available_product_capacity('${productId}', tstzrange('2090-05-14 00:15:00+00', '2090-05-16 00:15:00+00', '[)'))`))
+    assertEq(capOutside, 0, 'partner gear contributes 0 capacity when booking extends outside window')
+
+    // 6. Confirm booking inside window succeeds
+    let bookingInsideId
+    await as('Coordinator', async () => {
+      const bNo1 = await one("select next_document_number('booking')")
+      const bRes = await q(`insert into bookings (client_uuid, booking_no, branch_id, client_id, stage, project_type, delivery_type, pickup_at, return_at, created_by, updated_by)
+        values (gen_random_uuid(), '${bNo1}', '${BRANCH}', '${CLIENT}', 'Quote', 'Music Video', 'Client Pickup', '2090-05-11 00:15:00+00', '2090-05-14 00:15:00+00', '${U.Coordinator}', '${U.Coordinator}')
+        returning id`)
+      bookingInsideId = bRes.rows[0].id
+
+      await q(`insert into booking_lines (client_uuid, booking_id, line_type, product_id, qty, days, rate, created_by)
+        values (gen_random_uuid(), '${bookingInsideId}', 'Equipment', '${productId}', 2, 3, 5000, '${U.Coordinator}')`)
+
+      const conf = await one('select confirm_booking_atomic($1::uuid, $2::uuid, $3::uuid, now(), $4)', [
+        bookingInsideId,
+        U.Coordinator,
+        crypto.randomUUID(),
+        'Confirmed inside partner window',
+      ])
+      assertEq(conf.success, true, 'confirming inside window succeeds')
+    })
+
+    // 7. Attempt booking extending outside window fails capacity check
+    await as('Coordinator', async () => {
+      const bNo2 = await one("select next_document_number('booking')")
+      const bRes = await q(`insert into bookings (client_uuid, booking_no, branch_id, client_id, stage, project_type, delivery_type, pickup_at, return_at, created_by, updated_by)
+        values (gen_random_uuid(), '${bNo2}', '${BRANCH}', '${CLIENT}', 'Quote', 'Music Video', 'Client Pickup', '2090-05-14 00:15:00+00', '2090-05-16 00:15:00+00', '${U.Coordinator}', '${U.Coordinator}')
+        returning id`)
+      const bookingOutsideId = bRes.rows[0].id
+
+      await q(`insert into booking_lines (client_uuid, booking_id, line_type, product_id, qty, days, rate, created_by)
+        values (gen_random_uuid(), '${bookingOutsideId}', 'Equipment', '${productId}', 1, 2, 5000, '${U.Coordinator}')`)
+
+      let confRefused = false
+      try {
+        await one('select confirm_booking_atomic($1::uuid, $2::uuid, $3::uuid, now(), $4)', [
+          bookingOutsideId,
+          U.Coordinator,
+          crypto.randomUUID(),
+          'Attempt confirm outside partner window',
+        ])
+      } catch (err) {
+        confRefused = true
+        assert(err.message.includes('Reservation rejected') || err.message.includes('capacity') || err.message.includes('stock on hand'), 'refused by capacity check')
+      }
+      assert(confRefused, 'booking extending outside window cannot confirm')
+    })
+
+    // 8. Direct reservation outside window is refused by trigger validate_unit_reservability
+    await asOwnerOfTheDatabase(async () => {
+      let resRefused = false
+      try {
+        await q(`insert into inventory_reservations (client_uuid, booking_id, booking_line_id, asset_id, period, created_by, hold_state)
+          values (gen_random_uuid(), '${bookingInsideId}', (select id from booking_lines where booking_id = '${bookingInsideId}' limit 1),
+                  '${units[0].id}', tstzrange('2090-05-14 00:15:00+00', '2090-05-17 00:15:00+00', '[)'), '${U.Owner}', 'confirmed')`)
+      } catch (err) {
+        resRefused = true
+        assert(err.message.includes('outside_window'), 'refused by gate.partner_stock.outside_window')
+      }
+      assert(resRefused, 'direct reservation outside agreement window is refused by database trigger')
+    })
+
+    // Save for L91
+    bookingIds.l90_temp_stock = tempStockId
+    bookingIds.l90_product = productId
+    bookingIds.l90_booking = bookingInsideId
+  },
+})
+
+STEPS.push({
+  id: 'L92',
+  title: 'Return partner stock: Warehouse completes return, units retired, Law 6 money blindness verified (T2-24, B36, Law 6)',
+  expect: 'green',
+  run: async () => {
+    const tempStockId = bookingIds.l90_temp_stock
+    const bookingId = bookingIds.l90_booking
+    const productId = bookingIds.l90_product
+    assert(Boolean(tempStockId), 'tempStockId from L90 exists')
+
+    // 1. Law 6: Warehouse queries temporary_stock_v -> cost_kind and cost_paisa are null
+    await as('Warehouse', async () => {
+      const row = (await q(`select * from temporary_stock_v where id = '${tempStockId}'`)).rows[0]
+      assert(Boolean(row), 'Warehouse can read temporary_stock_v')
+      assertEq(row.cost_kind, null, 'Warehouse reads NULL for cost_kind (Law 6)')
+      assertEq(row.cost_paisa, null, 'Warehouse reads NULL for cost_paisa (Law 6)')
+      assertEq(row.status, 'Active', 'status is Active')
+    })
+
+    // 2. Law 6: Owner queries temporary_stock_v -> sees cost_kind and cost_paisa
+    await as('Owner', async () => {
+      const row = (await q(`select * from temporary_stock_v where id = '${tempStockId}'`)).rows[0]
+      assert(Boolean(row), 'Owner can read temporary_stock_v')
+      assertEq(row.cost_kind, 'daily', 'Owner reads daily cost_kind')
+      assertEq(Number(row.cost_paisa), 500000, 'Owner reads 500000 cost_paisa')
+    })
+
+    // 3. Attempting to return partner stock while units are active on open booking is blocked if on rent
+    // Assign both units to booking line before transitioning to Packed
+    const unitRows = (await q(`select id from product_units where temporary_stock_id = '${tempStockId}'`)).rows
+    const lineId = (await q(`select id from booking_lines where booking_id = '${bookingId}' limit 1`)).rows[0].id
+    await asOwnerOfTheDatabase(async () => {
+      for (const u of unitRows) {
+        await q(`insert into booking_line_units (client_uuid, booking_line_id, asset_id, created_by)
+          values (gen_random_uuid(), '${lineId}', '${u.id}', '${U.Owner}')`)
+      }
+    })
+
+    // Transition our booking to Packed
+    await as('Warehouse', async () => {
+      const sessionId = crypto.randomUUID()
+      await q(`insert into operation_sessions (id, client_uuid, booking_id, operation, session_no, state, warehouse_staff_id, created_by)
+        values ('${sessionId}', gen_random_uuid(), '${bookingId}', 'Packing', 1, 'In Progress', '${U.Warehouse}', '${U.Warehouse}')`)
+
+      for (const u of unitRows) {
+        await q(`insert into session_line_movements (client_uuid, session_id, booking_line_id, unit_id, serial, qty, moved_at, created_by)
+          values (gen_random_uuid(), '${sessionId}', '${lineId}', '${u.id}', 'SN-L91', 1, now(), '${U.Warehouse}')`)
+      }
+
+      await q(`insert into booking_stage_transitions (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
+        values (gen_random_uuid(), '${bookingId}', '${BRANCH}', 'Booked', 'Packed', '${U.Warehouse}', 'Warehouse', now(), 'Packed for shoot')`)
+    })
+
+    let returnBlocked = false
+    try {
+      await as('Warehouse', async () => {
+        await one('select return_temporary_stock($1::jsonb)', [JSON.stringify({
+          temporary_stock_id: tempStockId,
+          notes: 'Attempting return while packed',
+        })])
+      })
+    } catch (err) {
+      returnBlocked = true
+      assert(err.message.includes('currently_on_rent'), 'blocked while units packed/on rent')
+    }
+    assert(returnBlocked, 'return refused while partner units are packed/on rent')
+
+    // 4. Release booking / return booking gear
+    await asOwnerOfTheDatabase(async () => {
+      for (const u of unitRows) {
+        await q(`update booking_line_units set released_at = now(), released_by = '${U.Owner}' where asset_id = '${u.id}'`)
+      }
+      await q(`update bookings set stage = 'Returned' where id = '${bookingId}'`)
+    })
+
+    // 5. Warehouse completes partner return (B36, Law 3)
+    await as('Warehouse', async () => {
+      const res = await one('select return_temporary_stock($1::jsonb)', [JSON.stringify({
+        temporary_stock_id: tempStockId,
+        notes: 'Both lenses checked and returned in original pelican case.',
+      })])
+      assertEq(res.status, 'Returned to partner', 'agreement status is Returned to partner')
+    })
+
+    // 6. Verify database state: agreement is Returned to partner, units are retired, capacity is 0
+    const stockAfter = (await q(`select status, returned_at from temporary_stock where id = '${tempStockId}'`)).rows[0]
+    assertEq(stockAfter.status, 'Returned to partner', 'temporary_stock status updated')
+    assert(Boolean(stockAfter.returned_at), 'returned_at timestamp recorded')
+
+    const unitsAfter = (await q(`select status, retired_at from product_units where temporary_stock_id = '${tempStockId}'`)).rows
+    assert(unitsAfter.every((u) => u.status === 'Retired' && u.retired_at !== null), 'all partner units are now Retired')
+
+    const capAfter = Number(await one(`select get_available_product_capacity('${productId}', tstzrange('2090-05-11 00:15:00+00', '2090-05-14 00:15:00+00', '[)'))`))
+    assertEq(capAfter, 0, 'capacity is now 0 after partner stock returned')
   },
 })
 

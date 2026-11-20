@@ -2524,7 +2524,16 @@ function BookingDetailView() {
               {/* The stage is named by the stepper below ("Closed — current stage"), so no badge here. */}
               {booking.isCancelled && <Badge flag="Cancelled" />}
               {subRental && <SubRentedMark label="Sub-rental" />}
-              {atRiskRecords.length > 0 && <Badge tone="danger" label="⚠️ At Risk — Clash" />}
+              {atRiskRecords.length > 0 && (
+                <Badge
+                  tone="danger"
+                  label={
+                    atRiskRecords.some((r) => r.cause === 'overbooking_shortage')
+                      ? '⚠️ Shortage — sub-rent or swap'
+                      : '⚠️ At Risk — Clash'
+                  }
+                />
+              )}
               {stage === 'Quote' && availabilityEvaluation && !availabilityEvaluation.isAllAvailable && (
                 <Badge tone="danger" label="Needs attention / Availability changed" />
               )}
@@ -2780,9 +2789,15 @@ function BookingDetailView() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)' }}>
             <Icon name="alert_triangle" size={16} style={{ flexShrink: 0 }} />
             <div>
-              <strong>Booking is At-Risk (Equipment Clash / Overdue Return)</strong>
+              <strong>
+                {atRiskRecords.some((r) => r.cause === 'overbooking_shortage')
+                  ? 'Booking has Equipment Shortage'
+                  : 'Booking is At-Risk (Equipment Clash / Overdue Return)'}
+              </strong>
               <div style={{ fontSize: 'var(--t-caption)', color: 'var(--text2)', marginTop: 2 }}>
-                Pack stage is blocked until this clash is resolved. Choose a resolution (similar item, sub-rental, credit, or refund).
+                {atRiskRecords.some((r) => r.cause === 'overbooking_shortage')
+                  ? (atRiskRecords.find((r) => r.cause === 'overbooking_shortage')?.resolution_notes || 'Pack stage is blocked until shortage is resolved. Sub-rent or swap to cover.')
+                  : 'Pack stage is blocked until this clash is resolved. Choose a resolution (similar item, sub-rental, credit, or refund).'}
               </div>
             </div>
           </div>

@@ -13,11 +13,12 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 import { ALLOWED_ANON_FUNCTIONS } from './allowed-anon-functions.mjs'
+import { ALLOWED_ANON_VIEWS } from './allowed-anon-views.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 // Why each is public: RLS policies call them in the invoking role's name, so anon needs EXECUTE.
 const ALLOWED_FUNCTIONS = ALLOWED_ANON_FUNCTIONS
-const ALLOWED_RELATIONS = new Set([]) // anon reads no table or view
+const ALLOWED_RELATIONS = ALLOWED_ANON_VIEWS
 
 const db = await PGlite.create({ extensions: { pgcrypto, btree_gist } })
 await db.exec(readFileSync(join(ROOT, 'supabase/pglite-prelude.sql'), 'utf8'))
