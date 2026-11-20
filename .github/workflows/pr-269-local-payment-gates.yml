@@ -1,6 +1,6 @@
-# PR #269: isolate and execute the money safety gates on the owner's Mac runner.
-# Branch-only; no secrets, deployments, hosted databases or external payments.
-name: PR269 · disposable payment gates
+# PR #269 ONLY: exact-head full mandatory Mac CI equivalent, plus payment and anon gates.
+# No hosted database, provider requests, messages, payments, deploy or merge.
+name: PR269 · full offline CI
 
 on:
   push:
@@ -11,44 +11,65 @@ permissions:
   contents: read
 
 concurrency:
-  group: pr269-disposable-money-gates-${{ github.ref }}
+  group: pr269-full-ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  payment-safety:
-    name: L95–L98 · PGlite and anonymous-access checks
+  full-verification:
+    name: typecheck · test · build · financial and security gates
     if: github.repository == 'babindulal7/babin-rentals-os'
     runs-on: [self-hosted, macOS, ARM64]
-    timeout-minutes: 90
+    timeout-minutes: 120
     env:
       CI: 'true'
       VITE_DATA_SOURCE: mock
-
+      NODE_OPTIONS: '--max-old-space-size=2048'
     steps:
-      - name: Check out the exact PR branch head
+      - name: Check out the exact PR head
         uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Configure Node 22
+      - name: Configure Node 24 without npm cache
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-      - name: Show the exact tested SHA
-        run: git rev-parse HEAD
+          node-version: '24'
+      - name: Show the exact tested SHA and runner
+        run: |
+          git rev-parse HEAD
+          echo "Runner: ${RUNNER_NAME} (${RUNNER_OS}/${RUNNER_ARCH})"
       - name: Install locked dependencies
         id: deps
         run: npm ci
-      - name: Check JavaScript syntax for security and lifecycle suites
+      - name: Check JavaScript syntax
         if: ${{ always() && steps.deps.outcome == 'success' }}
-        run: |
-          node --check scripts/check-anon-exposure.mjs
-          node --check scripts/e2e-lifecycle.mjs
-      - name: Build migrations in disposable PGlite
+        run: node --check scripts/check-anon-exposure.mjs && node --check scripts/e2e-lifecycle.mjs
+      - name: Typecheck
+        if: ${{ always() && steps.deps.outcome == 'success' }}
+        run: npm run typecheck
+      - name: Lint source
+        if: ${{ always() && steps.deps.outcome == 'success' }}
+        run: npm run lint
+      - name: Local API verification safety guards
+        if: ${{ always() && steps.deps.outcome == 'success' }}
+        run: npm run test:local-api-guards
+      - name: Test (offline mock backend)
+        if: ${{ always() && steps.deps.outcome == 'success' }}
+        run: npm run test
+      - name: Migrations build from scratch (disposable PGlite)
         if: ${{ always() && steps.deps.outcome == 'success' }}
         run: npm run check:pglite
-      - name: Anonymous and tenant privilege regression checks
+      - name: Booking and invoice financial integrity (isolated PGlite)
+        if: ${{ always() && steps.deps.outcome == 'success' }}
+        run: node scripts/test-booking-financial-integrity.mjs
+      - name: Authenticated security and branch-Reset regressions (isolated PGlite)
+        if: ${{ always() && steps.deps.outcome == 'success' }}
+        run: npm run check:security
+      - name: Anonymous and tenant privilege regression checks (isolated PGlite)
         if: ${{ always() && steps.deps.outcome == 'success' }}
         run: npm run check:anon
+      - name: Lifecycle (all 98 steps; isolated PGlite)
+        if: ${{ always() && steps.deps.outcome == 'success' }}
+        run: npm run check:lifecycle
       - name: L95 staff payment link safety
         if: ${{ always() && steps.deps.outcome == 'success' }}
         run: npm run check:lifecycle -- --only L95
@@ -64,16 +85,60 @@ jobs:
       - name: Payment API fail-closed Vitest regression
         if: ${{ always() && steps.deps.outcome == 'success' }}
         run: npx vitest run src/booking/pay/__tests__/payVerifySecurity.test.ts
-      - name: Typecheck application
+      - name: Record sections, equipment lifecycle and membership RPC contracts
         if: ${{ always() && steps.deps.outcome == 'success' }}
-        run: npm run typecheck
-      - name: Attach local verification receipts
+        run: npm run test:server-contracts
+      - name: Verified partial serial and quantity Return reservations
+        if: ${{ always() && steps.deps.outcome == 'success' }}
+        run: npm run test:partial-return
+      - name: PROGRESS.md carries Completion and Remaining blocks
+        if: ${{ always() && steps.deps.outcome == 'success' }}
+        run: npm run lint:progress
+      - name: Completion receipts cannot certify stale or failed runs
+        if: ${{ always() && steps.deps.outcome == 'success' }}
+        run: node --test scripts/test-receipt.test.mjs
+      - name: Page shell design invariants
+        if: ${{ always() && steps.deps.outcome == 'success' }}
+        run: npm run lint:shell
+      - name: Staff UI contains no developer notes
+        if: ${{ always() && steps.deps.outcome == 'success' }}
+        run: npm run lint:ui-copy
+      - name: Contrast (WCAG AA, light + dark)
+        if: ${{ always() && steps.deps.outcome == 'success' }}
+        run: npm run check:contrast
+      - name: Build (TypeScript and Vite)
+        if: ${{ always() && steps.deps.outcome == 'success' }}
+        run: npm run build
+      - name: Coverage (offline mock backend)
+        if: ${{ always() && steps.deps.outcome == 'success' }}
+        run: npm run test:coverage
+      - name: Upload PGlite and lifecycle receipts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pr269-local-payment-gates
+          name: pr269-full-ci-lifecycle
           path: |
             .pglite-result.json
             .lifecycle-result.json
           if-no-files-found: ignore
           retention-days: 7
+      - name: Upload offline test coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr269-full-ci-coverage
+          path: |
+            coverage/
+            artifacts/coverage-runs/
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Record exact-head evidence
+        if: always()
+        shell: bash
+        run: |
+          echo "### PR269 Full Mac Offline CI" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Commit: ${GITHUB_SHA}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Ref: ${GITHUB_REF}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Runner: ${RUNNER_NAME} (${RUNNER_OS}/${RUNNER_ARCH})" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Required suite: 17 gates from ci.yml + anonymous-access and targeted payment gates." >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Hosted Supabase, real payments, secrets and deployment are excluded." >> "${GITHUB_STEP_SUMMARY}"
