@@ -255,8 +255,9 @@ begin
 end;
 $$;
 
-revoke all on function public.create_payment_intent(text, uuid, uuid, text) from public, anon;
-grant execute on function public.create_payment_intent(text, uuid, uuid, text) to authenticated;
+-- Create intents through the trusted pay-init service, never a browser RPC.
+revoke all on function public.create_payment_intent(text, uuid, uuid, text) from public, anon, authenticated;
+grant execute on function public.create_payment_intent(text, uuid, uuid, text) to service_role;
 
 -- 5. RPC: allocate_payment_intent
 -- Transitions payment intent to 'paid' and, if booking_id is present, records an immutable
