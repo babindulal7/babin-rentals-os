@@ -53,6 +53,8 @@ export interface ClientBooking {
   total_paisa: number
   paid_paisa: number
   balance_paisa: number
+  payment_available?: boolean
+  payment_kind?: 'advance' | 'balance' | 'none'
   lines: ClientBookingLine[]
   documents: ClientBookingDocument[]
   created_at: string
@@ -191,7 +193,7 @@ export async function fetchMyBookings(): Promise<ClientBooking[]> {
     // 1. Fetch client requests created by this auth user
     const { data: requests, error: reqErr } = await supabase
       .from('booking_requests')
-      .select('id, request_number, client_name, project_name, shoot_location, start_date, end_date, status, total_paisa, advance_due_paisa, booking_id, created_at')
+      .select('id, request_number, client_name, project_name, shoot_location, start_date, end_date, status, total_paisa, vat_paisa, advance_due_paisa, booking_id, created_at')
       .eq('requester_auth_uid', user.id)
       .order('created_at', { ascending: false })
 
@@ -202,11 +204,15 @@ export async function fetchMyBookings(): Promise<ClientBooking[]> {
 
     for (const req of (requests || [])) {
       let bkgNo = req.request_number || 'REQ-ONLINE'
-      let stage = req.status === 'Confirmed' ? 'Booked' : req.status === 'Declined' ? 'Cancelled' : 'Pending'
+      let stage = req.status === 'confirmed' ? 'Booked' : req.status === 'declined' || req.status === 'cancelled' ? 'Cancelled' : 'Pending'
       let lines: ClientBookingLine[] = []
       const documents: ClientBookingDocument[] = []
       let paidPaisa = 0
-      const totalPaisa = Number(req.total_paisa || 0)
+      // Request subtotal and VAT are separate paisa fields.
+      let totalPaisa = Number(req.total_paisa || 0) + Number(req.vat_paisa || 0)
+      let balancePaisa = Number(req.advance_due_paisa || 0)
+      let paymentAvailable = req.status === 'pending'
+      let paymentKind: ClientBooking['payment_kind'] = paymentAvailable ? 'advance' : 'none'
 
       // Fetch request lines
       const { data: reqLines } = await supabase
@@ -233,6 +239,7 @@ export async function fetchMyBookings(): Promise<ClientBooking[]> {
         paidPaisa = intents
           .filter((i: { status: string }) => i.status === 'paid' || i.status === 'allocated')
           .reduce((sum: number, i: { amount_paisa: number }) => sum + Number(i.amount_paisa), 0)
+        balancePaisa = Math.max(0, balancePaisa - paidPaisa)
       }
 
       // If linked to confirmed booking, fetch official booking stage
@@ -247,6 +254,30 @@ export async function fetchMyBookings(): Promise<ClientBooking[]> {
           bkgNo = bkg.booking_no
           stage = bkg.stage
         }
+      }
+
+      // Only the authenticated owner may see the actual, issued invoice balance.
+      // Requests without an issued invoice are never presented as payable balances.
+      if (req.status === 'confirmed' && req.booking_id) {
+        const { data: invoiceBalance, error: balanceErr } = await supabase.rpc('get_client_booking_balance', {
+          p_request_id: req.id,
+        })
+        if (balanceErr) throw balanceErr
+        if (invoiceBalance?.available === true && invoiceBalance.booking_id === req.booking_id) {
+          totalPaisa = Number(invoiceBalance.total_paisa)
+          paidPaisa = Number(invoiceBalance.paid_paisa)
+          balancePaisa = Number(invoiceBalance.balance_paisa)
+          paymentAvailable = balancePaisa > 0
+          paymentKind = 'balance'
+        } else {
+          balancePaisa = 0
+          paymentAvailable = false
+          paymentKind = 'none'
+        }
+      } else if (req.status !== 'pending') {
+        balancePaisa = 0
+        paymentAvailable = false
+        paymentKind = 'none'
       }
 
       // Attach available documents based on stage
@@ -284,7 +315,6 @@ export async function fetchMyBookings(): Promise<ClientBooking[]> {
         })
       }
 
-      const balancePaisa = Math.max(0, totalPaisa - paidPaisa)
       const { step, progress } = mapStageToTimeline(stage)
 
       bookingsList.push({
@@ -302,20 +332,18 @@ export async function fetchMyBookings(): Promise<ClientBooking[]> {
         total_paisa: totalPaisa,
         paid_paisa: paidPaisa,
         balance_paisa: balancePaisa,
+        payment_available: paymentAvailable && balancePaisa > 0,
+        payment_kind: paymentKind,
         lines,
         documents,
         created_at: req.created_at,
       })
     }
 
-    if (bookingsList.length === 0) {
-      return getMockClientBookings()
-    }
-
     return bookingsList
   } catch (err) {
-    console.warn('[MyBookings] Failed to query online bookings, falling back to cached corpus:', err)
-    return getMockClientBookings()
+    console.error('[MyBookings] Could not load the client's real bookings:', err)
+    throw new Error('Booking records are temporarily unavailable. Please try again or contact Babin Rentals.')
   }
 }
 
