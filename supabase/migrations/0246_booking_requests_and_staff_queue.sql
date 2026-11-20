@@ -77,7 +77,7 @@ create policy booking_request_lines_staff_select on public.booking_request_lines
   );
 
 -- 5. Secure view masking money columns for floor roles (Law 6)
-create or replace view public.booking_requests_v as
+create or replace view public.booking_requests_v with (security_invoker = true) as
 select
   r.id,
   r.request_number,
