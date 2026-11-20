@@ -1,5 +1,48 @@
 # Progress Log
 
+## 2026-11-21 — Roadmap Truth Reconciliation: T1-03, T1-15, T3-14, T3-18, T3-28, T3-29 (All Lanes)
+
+**Did**
+- Synchronised roadmap truth across `docs/plans/T1_RELEASE.md` and `docs/plans/T3_BOOKING_MONEY.md` with merged code, migrations, and owner rulings on `origin/main` (`48c7f24f`):
+  - `T1-03 · Settle the ledger before anything is applied`: Promoted from `ready — awaiting merge` to `done` following merge of PR #260 (`48c7f24f`), verified 157 live entries snapshot (`docs/live/schema_migrations_2026-11-20.txt`), 7 settled renames, quarantined `0047_seed_reference_corpus.sql`, and verified sequential 96-migration plan (`0157`–`0254`).
+  - `T1-15 · Switch user with name + PIN`: Standardised status syntax from markdown bold `**done · merged**` to canonical `done — PR #208 merged; staff PIN switch verified`.
+  - `T3-14 · Draft invoice at Confirm, number on full payment`: Promoted from `complete` to `done — PR #259 merged 20 Nov 2026; 0254 migration and lifecycle L92 verified` following merge of PR #259 (`82d6cdbe`).
+  - `T3-18 · Change a confirmed booking`: Standardised status syntax from `complete` to `done — PR #224 merged 19 Nov 2026; change_booking RPC and linked bookings verified` (`44300a17`).
+  - `T3-28 · Rental day start as a setting`: Standardised status syntax from `complete` to `done — PR #211 merged 18 Nov 2026; rental_day_start setting verified` (`5ca1d538`).
+  - `T3-29 · Extension clash: the Manager decides`: Standardised status syntax from `complete` to `done — PR #208 merged 18 Nov 2026; extension clash manager decisions and at-risk workflow verified` (`c29cb212`).
+- Expanded automated roadmap regression test `src/lib/__tests__/roadmapStatusTruth.test.ts` to assert that `T1-03`, `T1-15`, `T3-14`, `T3-18`, `T3-28`, and `T3-29` are recorded as `done` and cannot regress to `todo`, `ready`, or `acceptance_pending`.
+- Created comprehensive verification report [`docs/verification/ROADMAP_MERGED_TRUTH_RECONCILIATION_2026-11-21.md`](docs/verification/ROADMAP_MERGED_TRUTH_RECONCILIATION_2026-11-21.md).
+
+**Ruled**
+- Zero live schema or data writes executed (Rule N-5).
+- Roadmap cards reflect reality of merged master commits, verified PGlite migrations, and owner rulings.
+
+**Verified**
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: PASS (7/7 tests).
+- `npm run check:pglite`: PASS (252/252 migrations applied in PGlite from scratch, 0 failed).
+- `npm run check:lifecycle`: PASS (93/93 steps green, L1–L92).
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint:ui-copy`: clean (0 errors).
+- `node scripts/lint-progress.mjs`: PASS.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 112 / 113 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 93 / 93 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+### Remaining
+- Staging-only dry run rehearsal of batch apply (T1-02 / T1-04) once approved by Babin.
+- Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
+- Staff inventory deposit data entry across active products (T3-02).
+- T3-13, T3-20, T3-30: pending remaining accountant & staged receipts.
+- T0-12: hosted staging migration apply by Babin.
+- T7 online booking: Track T7 lane C integration.
+
 ## 2026-11-20 — T1-03: Settle the migration ledger, live apply plan and hazard quarantine (Lane A)
 
 **Did**
