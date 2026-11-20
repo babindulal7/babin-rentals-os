@@ -1,5 +1,40 @@
 # Progress Log
 
+## 2026-11-21 — T0-04: Read-only remote branch census and owner-gated cleanup (Docs audit)
+
+**Did**
+- Audited GitHub remote branch inventory at the recorded snapshot: **345 remote branches including main**, with **10 open PR head branches**, **37 previously merged candidates rechecked as ahead_by = 0 against main**, and **297 remaining unverified**.
+- Added [docs/verification/REMOTE_BRANCH_AUDIT_2026-11-21.md](docs/verification/REMOTE_BRANCH_AUDIT_2026-11-21.md), including complete names, short SHAs, classification boundaries, and safeguards.
+- Changed the T0-04 roadmap card from todo to doing on draft [PR #267](https://github.com/babindulal7/babin-rentals-os/pull/267); corrected its outdated implied delete instructions and duplicated completion numbering.
+- Addressed independent Codex review finding that this session must be recorded in PROGRESS.md.
+
+**Ruled**
+- NO branch deletion, tag push, force-push, renaming, merge, database write, GitHub Actions change, or owner cleanup authorization occurred.
+- Do not delete active PR branches, backup/recovery branches, or any unverified branch. Explicit owner approval is needed for any future exact-SHA cleanup batch.
+
+**Verified**
+- GitHub API branch list pagination retrieved pages 1–5; open PR heads were matched to the recorded branch inventory.
+- Thirty-seven previously merged candidates were independently compared with main and all had zero commits ahead. The 297 other branches were NOT individually classified.
+- This is a **read-only snapshot**, not proof that GitHub branch counts remain constant after the snapshot. Docs-only PR CI may be omitted by paths-ignore; skipped checks are not passing checks.
+
+### Completion
+| Dimension | Recorded result | Verification source |
+|---|---|---|
+| T0-04 audit snapshot | 345/345 branch names inventoried | GitHub API branch list |
+| Candidates rechecked | 37 confirmed zero-ahead | GitHub compare against main |
+| Active PR heads preserved | 10/10 identified | GitHub open PR list |
+| Remaining branch comparisons | 297 unverified | Derived from snapshot buckets |
+| Roadmap overall | 92 done / 155 cards (63 not done) | Main roadmap census at 21 Nov 2026 |
+| App structural completion | Last recorded ≈96%; **not recomputed in this docs-only session** | Prior PROGRESS.md completion output |
+
+### Remaining
+- Independently compare all 297 unverified remote branches against current main, inspect unmerged diffs, and identify active Windows/Mac worktrees.
+- Resolve Codex review feedback and get exact-head documentation/CI gate validation for PR #267.
+- Request specific owner authorization before any future remote archive tagging or deletion; no cleanup is preauthorized.
+- Continue release T1-02 staging provenance and safety acceptance under separate authorization, not via branch cleanup.
+
+
+
 ## 2026-11-21 — T1-04: Batch 0 anonymous business RPC lockdown rehearsal & production apply (Lane A + Babin)
 
 **Did**
