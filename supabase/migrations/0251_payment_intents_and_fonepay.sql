@@ -473,6 +473,9 @@ begin
 
   -- Idempotency: if already confirmed with the same booking_id, return success
   if v_req.status = 'confirmed' then
+    if v_req.booking_id is distinct from p_booking_id then
+      raise exception 'GATE:gate.booking_request.already_confirmed|Request belongs to another booking.';
+    end if;
     return jsonb_build_object(
       'success', true,
       'request_id', p_request_id,
@@ -496,7 +499,10 @@ begin
     updated_at = now()
   where id = p_request_id;
 
-  -- Allocate any paid intents for this request
+  -- Serialize all pending/paid intents while this request is locked.
+  -- Pending intents must be linked now, BEFORE their callback arrives;
+  -- paid intents must receive exactly one immutable payment row.
+  -- The callback allocator takes the same lock order: request, then intent.
   select id into v_received_by
     from public.users
    where primary_role in ('Owner', 'Admin', 'Manager')
@@ -516,10 +522,26 @@ begin
   for v_intent in
     select * from public.payment_intents
      where booking_request_id = p_request_id
-       and status = 'paid'
+       and status in ('pending', 'paid')
        and allocated_at is null
      for update
   loop
+    if v_intent.booking_id is not null and v_intent.booking_id <> p_booking_id then
+      raise exception 'GATE:gate.payment.booking_mismatch|Intent linked to different booking.';
+    end if;
+
+    if v_intent.status = 'pending' then
+      update public.payment_intents
+         set booking_id = p_booking_id, updated_at = now()
+       where id = v_intent.id;
+      continue;
+    end if;
+
+    -- Only verified paid intents produce Received ledger entries.
+    if v_intent.provider_ref is null or btrim(v_intent.provider_ref) = '' then
+      raise exception 'GATE:gate.payment.provider_ref_missing|A verified provider reference is required.';
+    end if;
+
     v_payment_id := gen_random_uuid();
     v_payment_no := public.next_document_number('payment');
 
