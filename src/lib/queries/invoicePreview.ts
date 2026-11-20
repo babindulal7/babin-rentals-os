@@ -468,8 +468,10 @@ export async function previewInvoiceForBooking(
     const storedTotal = l.line_total !== null && l.line_total !== undefined
       ? Number(l.line_total)
       : null
+    // `line_total` is stored in rupees and `rupees()` already converts to paisa, so it is NOT multiplied
+    // by 100 here (it was, which showed a Rs 500 waiting charge as Rs 50,000 in this preview).
     const netPaisa = storedTotal !== null
-      ? rupees(Math.max(0, storedTotal * 100))
+      ? rupees(Math.max(0, storedTotal))
       : rupees(Math.max(0, qty * days * rate - discount))
     return {
       key: l.client_uuid,

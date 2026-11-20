@@ -476,3 +476,26 @@ describe('previewInvoiceForBooking — it reads what the action reads', () => {
     expect(db.state.selects.get('booking_crew_lines_v')).toContain('name')
   })
 })
+
+describe('previewInvoiceForBooking — a stored line_total is rupees, shown once', () => {
+  it('previews a flat waiting charge (rate 500, line_total 500) as Rs 500, not Rs 50,000', async () => {
+    seedBooking()
+    db.state.tables.set('booking_lines_v', [
+      equipmentLine({
+        client_uuid: 'aaaaaaaa-0000-4000-8000-000000000009',
+        line_type: 'Service',
+        description: 'Waiting charge (25 min)',
+        qty: 1,
+        days: 1,
+        rate: 500,
+        line_total: 500,
+      }),
+    ])
+
+    const p = await previewInvoiceForBooking('B-715', 'Owner', NOW)
+    if (p.kind !== 'preview') throw new Error(`expected a preview, got ${p.kind}`)
+    expect(p.lines[0]?.ratePaisa).toBe(50_000)
+    expect(p.lines[0]?.netPaisa).toBe(50_000)
+    expect(p.buckets.services).toBe(50_000)
+  })
+})

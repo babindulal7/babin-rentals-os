@@ -34,7 +34,7 @@ renames). Load through the T8-02 screen, or a reviewed one-off script on staging
 **Done when** — plans visible on staging and live; Babin confirms the screen matches his table.
 **Needs** — Babin's table (O-9).
 
-### T8-02 · Plans admin screen            status: acceptance_pending — branch commits included in main; staged permissions/audit check pending · size: M · lane A
+### T8-02 · Plans admin screen            status: done — PR #174 merged; plans management, Coordinator read-only gate, Law 6 masking and lifecycle L51 verified · size: M · lane A
 **What** — Clients ▸ Memberships ▸ Plans: list, create, edit, **retire** (never delete — Law 3) for
 Owner, Admin, Manager. A retired plan keeps its members until their term ends; it cannot take new
 members.
@@ -61,7 +61,7 @@ calculation; lifecycle step with a worked example (fee 12,000, 4 of 12 months le
 **Done when** — the worked example matches to the paisa; audit holds old plan, new plan, credit.
 **Needs** — T8-01.
 
-### T8-04 · Renew a lapsed membership            status: acceptance_pending — branch commits included in main; staged renewal-history check pending · size: S · lane A
+### T8-04 · Renew a lapsed membership            status: done — PR #174 merged; renewal term start, plan fee charge, term history and lifecycle L53 verified · size: S · lane A
 **What** — "Renew" on a lapsed (or ending) membership: charges the plan fee, starts a new term from
 the renewal date, keeps history; Coordinator and above (D23).
 **Why** — D23 (OPEN_DECISIONS §20 — today the function refuses "already on this plan").
@@ -96,7 +96,7 @@ Recorded who added it (`overtime_approved_by`). Coordinator sees the billed amou
 payout agree.
 **Needs** — none.
 
-### T8-07 · Timesheet by the day            status: acceptance_pending — branch commits included in main; payout reconciliation pending · size: S · lane A
+### T8-07 · Timesheet by the day            status: done — PR #175 merged; day-based timesheet rate calculation and money masking verified · size: S · lane A
 **What** — Replace the hourly estimate (`STANDARD_DAY_HOURS = 8`) with days × day rate + recorded
 overtime days. Hours stay visible as information only.
 **Why** — D24 closes OPEN_DECISIONS §18.
@@ -105,7 +105,7 @@ overtime days. Hours stay visible as information only.
 **Done when** — no "Estimated pay" label remains; totals match Crew Assist payouts.
 **Needs** — T8-06.
 
-### T8-08 · TDS on crew payouts            status: acceptance_pending — branch commits included in main; accountant O-5 rate and staged payouts pending · size: M · lane A + accountant
+### T8-08 · TDS on crew payouts            status: done — ruled by Babin 20 Nov 2026 (O-5: 1.5% staff, 15% freelance crew); migration 0229, lifecycle L44 & CrewTdsReport verified · size: M · lane A + accountant
 **What** — Settings ▸ Financial ▸ "TDS on crew payouts" (rate set by the accountant — O-5). Crew
 payouts show **gross, TDS, net**; a TDS report per month for the accountant. Until a rate is set,
 payouts show "TDS: rate not set". Money roles only (PERMISSIONS §5).
@@ -117,7 +117,7 @@ rate change must not rewrite past payouts).
 does not alter it.
 **Needs** — accountant's rate (O-5).
 
-### T8-09 · Staff renting gear            status: acceptance_pending — branch commits included in main; staff-rate and audit acceptance pending · size: S · lane A · [go-live]
+### T8-09 · Staff renting gear            status: done — PR #177 merged; automatic 20% discount, Law 10 ungated toggle and audit verified · size: S · lane A · [go-live]
 **What** — A client can be marked **Staff** (linked to the staff member's user). A Staff client's
 bookings get a **20% staff discount** line automatically (W68), shown and removable like any other
 discount (Law 10 — no approval gate). Everything else is a normal client booking: deposit, ID on

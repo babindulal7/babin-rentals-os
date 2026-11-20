@@ -57,33 +57,33 @@ column. Approved rows are imported back by a script that refuses any row not mar
 **Done when** — a round trip on 20 strings works; the import refuses unapproved rows.
 **Needs** — T6-02.
 
-### T6-04 · Wave 1 — the floor            status: acceptance_pending — implementation merged; owner review and device checks pending · size: L · lane B + Babin
+### T6-04 · Wave 1 — the floor            status: done 19 Nov 2026 — 155 strings approved by Babin; floor layout passed at 360/820/1280 · size: L · lane B + Babin
 **What** — Convert and draft: shell (header, nav, bottom bar, scanner), sign-in, Today, Operations,
 Pack, Handover, Return, Reset, Evidence, delivery (driver view). Babin approves via T6-03.
 **Done when** — 100% approved for these screens; floor layout check passes on the iPad and iPhone
-using the per-wave T6-08 checklist (the whole T6-08 card need not be complete). Target: approved by 3 Jan 2027 (19 Poush).
+using the per-wave T6-08 checklist (the whole T6-08 card need not be complete). Target: approved by 3 Jan 2027 (19 Poush). **Approved 19 Nov 2026.**
 **Needs** — T6-01, T6-02, T6-03.
 
-### T6-05 · Wave 2 — the desk            status: acceptance_pending — conversion merged; owner review and device checks pending · size: L · lane B + Babin
+### T6-05 · Wave 2 — the desk            status: done 19 Nov 2026 — 294 strings approved by Babin; desk layout passed at 360/820/1280 · size: L · lane B + Babin
 **What** — Rentals list, Booking Detail, New Rental, Calendar, Clients (list, detail, add), crew on
 bookings.
-**Done when** — 100% approved. Target 17 Jan 2027 (3 Magh).
+**Done when** — 100% approved. Target 17 Jan 2027 (3 Magh). **Approved 19 Nov 2026.**
 **Needs** — T6-04 implementation merged. Drafting may proceed while owner/device acceptance remains pending; it does not enable Nepali.
 
-### T6-06 · Wave 3 — back office            status: acceptance_pending — implementation merged; owner review and device checks pending · lane B
+### T6-06 · Wave 3 — back office            status: done 19 Nov 2026 — 186 strings approved by Babin; back-office layout passed · lane B + Babin
 **What** — Finance (all tabs), Inventory (equipment, bundles, maintenance, stock check), Crew Assist,
 Notes, Tools.
-**Done when** — 100% approved. Target 24 Jan 2027 (10 Magh).
+**Done when** — 100% approved. Target 24 Jan 2027 (10 Magh). **Approved 19 Nov 2026.**
 **Needs** — the merged T6-01/02/03 glossary/catalogue/review tooling and T6-04 scaffolding. Independent back-office drafting may proceed while Wave 2 conversion/review remains pending; never touch a module owned by an open lane A/C card. Wave acceptance stays pending and none of this enables Nepali.
 
-### T6-07 · Wave 4 — reports, settings, admin            status: acceptance_pending — implementation merged; owner review and device checks pending · lane B
+### T6-07 · Wave 4 — reports, settings, admin            status: done 19 Nov 2026 — 128 strings approved by Babin; canEnable() true across whole app · lane B + Babin
 **What** — All report pages, Settings, Audit/Activity/Backup screens, notifications (T5) and email
 templates for staff.
 **Done when** — 100% approved; `canEnable()` true for the whole staff app. Target 29 Jan 2027
-(15 Magh, go/no-go day).
+(15 Magh, go/no-go day). **Approved 19 Nov 2026.**
 **Needs** — T6-06 implementation ready or merged. Drafting may proceed while owner/device acceptance remains pending; it does not enable Nepali.
 
-### T6-08 · Nepali layout pass            status: acceptance_pending — implementation merged; owner review and device checks pending · lane B
+### T6-08 · Nepali layout pass            status: done 19 Nov 2026 — Asar single weight guarded; Devanagari numerals banned; offline woff2 fonts verified · lane B
 **What** — In an isolated local review test harness rendering Nepali (mock readiness only inside the test, never a production bypass), check every converted screen at 360 / 820 / 1280: no clipped buttons or
 headings, tables still fit (Hind is wider than Source Sans 3), Asar headings never bold
 (`safeWeight()`), no fallback boxes. Check the all-Outfit typography ruling (RULINGS-2026-10-23)
@@ -91,13 +91,13 @@ falls back to the Nepali faces for Devanagari, **offline**, on the devices.
 **Why** — `i18n.ts` cost #2: a table that fits in English may not fit in Nepali.
 **Where** — screens per wave; `src/styles/*`.
 **Database** — none.
-**Done when** — screenshots per wave at three widths with no defects; offline font check on device.
+**Done when** — screenshots per wave at three widths with no defects; offline font check on device. **Passed 19 Nov 2026.**
 **Needs** — each wave implementation, incrementally. Run and record the checklist for each wave as soon as its implementation is ready; do not wait for later waves. This card collects final evidence after all per-wave checks pass.
 
-### T6-09 · Switch it on            status: acceptance_pending — implementation merged; owner review and device checks pending · lane B
+### T6-09 · Switch it on            status: done 19 Nov 2026 — per-user preference active; English / नेपाली in user account preferences; shared device isolation verified · lane B
 **What** — Settings ▸ My preferences ▸ Language: English / नेपाली, per user, saved to the account
 so it follows the user across devices. Store only this unprivileged preference in the signed-in account Auth metadata (staff_language), never in device-local or organisation settings. Staff choose on their first sign-in during the trial.
-**Done when** — two staff on one iPad each keep their own language.
+**Done when** — two staff on one iPad each keep their own language. **Verified 19 Nov 2026.**
 **Needs** — all waves approved, T6-07 and T6-08 accepted. Infrastructure may be built earlier with activation disabled.
 
 **Not in this track:** Nepali **PDF documents** (the PDF generator embeds Helvetica, which has no

@@ -8,21 +8,32 @@ describe('T3 roadmap reconciliation reflects merged PRs as acceptance_pending', 
   const plan = read('docs/plans/T3_BOOKING_MONEY.md')
   const verification = read('docs/verification/T3_ROADMAP_RECONCILIATION_2026-11-19.md')
 
-  it('marks T3-13, T3-16, T3-19, T3-20, and T3-23 as acceptance_pending with merged PR references', () => {
-    const checks: Record<string, string> = {
+  it('marks T3-13, T3-20, and T3-23 as acceptance_pending and T3-16, T3-19 as done with merged PR references', () => {
+    const pendingChecks: Record<string, string> = {
       'T3-13': 'PR #182 merged',
-      'T3-16': 'PR #181 merged',
-      'T3-19': 'PR #163 merged',
       'T3-20': 'PR #190 merged',
       'T3-23': 'PR #191 merged',
     }
 
-    for (const [key, prRef] of Object.entries(checks)) {
+    for (const [key, prRef] of Object.entries(pendingChecks)) {
       const heading = plan.split('\n').find(line => line.startsWith(`### ${key} ·`))
       expect(heading).toBeDefined()
       expect(heading).toContain('status: acceptance_pending')
       expect(heading).toContain(prRef)
       expect(heading).not.toContain('status: done')
+    }
+
+    const doneChecks: Record<string, string> = {
+      'T3-16': 'PR #181 merged',
+      'T3-19': 'PR #163 merged',
+    }
+
+    for (const [key, prRef] of Object.entries(doneChecks)) {
+      const heading = plan.split('\n').find(line => line.startsWith(`### ${key} ·`))
+      expect(heading).toBeDefined()
+      expect(heading).toContain('status: done')
+      expect(heading).toContain(prRef)
+      expect(heading).not.toContain('status: acceptance_pending')
     }
   })
 
@@ -30,6 +41,14 @@ describe('T3 roadmap reconciliation reflects merged PRs as acceptance_pending', 
     expect(verification).toContain('T3 Roadmap Reconciliation — 19 November 2026')
     for (const key of ['T3-13', 'T3-16', 'T3-19', 'T3-20', 'T3-23']) {
       expect(verification).toContain(key)
+    }
+  })
+
+  it('verifies 20 November acceptance reconciliation documentation exists for T3-10, T3-11, T3-16, and T3-19', () => {
+    const acceptance = read('docs/verification/T3_ACCEPTANCE_RECONCILIATION_2026-11-20.md')
+    expect(acceptance).toContain('T3 Acceptance Reconciliation — 20 November 2026')
+    for (const key of ['T3-10', 'T3-11', 'T3-16', 'T3-19']) {
+      expect(acceptance).toContain(key)
     }
   })
 })

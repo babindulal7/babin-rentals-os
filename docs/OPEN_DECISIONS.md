@@ -11,6 +11,17 @@
 
 ---
 
+## 18 November 2026 — Delivery fee grid follow-ups (R-9.18, R-9.20)
+
+Babin ruled the grid (9 Nov 2026): zone × vehicle, twelve Settings values, outside valley quoted per trip. Built as migration 0244 and the 'not set' helper. Three product questions are not answered and are NOT decided by the build:
+
+- **O-28 (Q-1), ANSWERED 18 Nov 2026: the grid replaces the per-zone fee.** Dispatch moves to the grid; the per-zone fee on delivery_zones is retired. Built: dispatch reads the grid (migration 0246); the booking form fills the charge from the grid cell and the Settings zone form no longer takes a per-zone fee (migration 0247 makes the column nullable and the fee optional on create). Neither booking nor dispatch reads delivery_zones.fee_paisa any more. The column is KEPT, not dropped (nothing is deleted); dropping it is a later step. Local gates only; not applied (N-5). The mock fixture at src/actions/delivery/createDeliveryJob.ts:57 is not a fee source in the real path and was left as is.
+- **O-29 (Q-2), ANSWERED 18 Nov 2026: Manager and Owner may type grid amounts.** Built in migration 0244 (set RPC allows Owner and Manager). The quoted flag stays Owner-only. Who may type grid amounts: Owner only (built, stricter under B-1) or Manager and up (the 0189 zone-fee rule)?
+- **O-30 (Q-3), ANSWERED 18 Nov 2026: staff pick the zone at booking; delivery jobs inherit it.** Built: `bookings.delivery_zone_id` and `set_booking_delivery_zone()` (migration 0246); the New Rental form picks the zone and saves it on the booking; jobs inherit it through their booking. The job's vehicle class is chosen on the delivery assign sheet (`set_delivery_job_vehicle_class`). Interpretation to confirm with Babin: the booking's delivery charge now fills from the grid by zone and the vehicle class chosen on the form (the replacement for the per-zone fee that used to fill it); staff can still type over it.
+- **O-30 (original question):** How does a delivery job get its zone (Inside Ring Road, Outside Ring Road, Far valley, Outside valley)? Set at booking, at dispatch, or from the address? Not ruled.
+
+---
+
 ## 5 November 2026 — Glossary editing in Settings (O-22)
 
 Babin requested glossary changes from Settings during the conflict repair. **Answered 5 Nov 2026:** editing is **Owner only** and **approved term changes apply throughout the app immediately**. The glossary's existing 1 Nov approval remains recorded; automatic OK statuses from the faulty wave exporter are not review evidence. T0-12 implements an explicit Owner approval action, append-only shared revisions and immediate text refresh. Whole-app Nepali activation remains gated independently. No hosted write path is enabled until Babin applies the locally verified migration (N-5).
@@ -390,3 +401,63 @@ section is an approved product policy. Each is `TODO(decision)` until he does.
   resets, and quick-shelve eligibility. Blocks UX-P26. ⭐ No templates; current Reset checklist.
 - **O-27 (D-UX-05)** — Whether the future-availability policy should remain as ruled (24 October).
   Blocks UX-P26. ⭐ **Do not change.**
+
+
+## 23. Delivery charging method and draft rates (19 November 2026) — method ruled, rates draft
+
+**O-28b — answered 19 Nov 2026 (Babin): Hybrid.** Named delivery zones stay the unit staff pick. Each
+zone also carries a road-distance band as a check (shortest practical driving route from Boudha, not
+straight-line). Prices come from the zone × vehicle grid (0244), unchanged. Revert = treat the band as
+a label only; no price depends on it.
+
+**Draft rates, NOT entered and NOT approved** — proposed by Babin on 19 Nov 2026, per one-way delivery,
+NPR, VAT exclusive. Babin said to test them on 10–20 real trips (vehicle return time, fuel, staff time,
+outside van cost) before adopting. He enters the real amounts in Settings ▸ Financial ▸ Delivery fees.
+
+| Zone | Road distance from Boudha | Bike / scooter (grid: Motorbike) | Small cargo van (grid: Van / larger vehicle) |
+|---|---|---|---|
+| Z1 Nearby | 0–3 km | 150 | 1,200 |
+| Z2 Local | over 3–7 km | 250 | 1,500 |
+| Z3 Central | over 7–12 km | 400 | 2,000 |
+| Z4 Extended | over 12–18 km | 550 | 2,500 |
+| Z5 Outer Valley | over 18–25 km | 750 | 3,200 |
+| Z6 Special | over 25 km | custom | custom (quoted per trip) |
+
+Draft rules from the same proposal (not built; each needs its own ruling before it is): delivery plus a
+later collection is two trips, each priced on its own route; one vehicle charge when everything fits in
+one trip; scooter only for small securely packed items; up to 10 minutes of handover waiting included,
+longer waits charged; late-night or emergency delivery carries an extra charge shown before
+confirmation; an outsourced vehicle needs its cost confirmed before booking, with an approved manual
+quotation allowed.
+
+**Answered by Babin, 19 Nov 2026 (interview):**
+- **Zone names — both.** A zone reads like "Z3 Central (Baneshwor, Thamel)": the zone label plus the main areas it covers. This is data Babin enters in Settings, not code.
+- **Delivery plus collection — staff choose.** One trip or two trips, chosen per booking. If two, each trip is priced from its own zone and vehicle. Not built.
+- **Booking charge fills from the grid — yes.** As built (O-28). Staff can still type over it.
+- **`delivery_zones.fee_paisa` — keep, unused.** Nothing is deleted. No drop migration.
+- **Late-night or emergency delivery — flat amount set in Settings.** Staff tick it on the booking; it is added and shown before confirming. Babin types the amount in Settings; no number is invented. Not built.
+- **Waiting beyond the included 10 minutes — staff add it after the trip** as its own line on the booking. Not priced at booking. Not built.
+- **Car / pickup — leave unset.** Not set means no fee is filled and staff type the charge.
+- **Outsourced vehicle — manual quote with an approval note.** Staff type the quoted charge and mark the vehicle outsourced; the booking records who approved it, in the audit log. Not built.
+
+**Built since (19 Nov 2026):** two trips (collection fee fills from the grid), late-night flat charge (0249), outsourced vehicle quote (0250), waiting charge (0251, below).
+
+**Waiting charge, answered 19 Nov (Babin):** who may add it: Owner, Admin, Manager, Coordinator. If the invoice is already issued: "separate invoice for the extra charge".
+
+**ANSWERED 19 Nov (Babin, RULINGS-2026-11-19 S4 row 11): keep the refusal (option a); nothing to build.** *(Was: TODO(decision): separate invoice for a waiting charge after issue. NOT BUILT; it conflicts with R-03.)* What 0251 does: adds the flat Service line to the booking and appends it to the booking's DRAFT invoice (SPEC-P0-1 R-02/R-03: extra charges append to the one Draft), and when the invoice is already issued it REFUSES in words ("corrections after issue are Void + Credit Note"). Why the separate invoice is not built: R-03 is one invoice per rental (`create_invoice` refuses a second one), and the close gates read ONE invoice's outstanding amount, so an extra invoice could let a rental close with the extra charge unpaid. Re-invoicing is already an open ruling (MONEY-07 in `create_invoice`). Babin to confirm one of: (a) keep the refusal (void and reissue, as R-03 says); (b) amend R-03 and the close gates to sum every invoice on the booking, then build a separate extra-charge invoice. Reverting 0251 is independent of this.
+
+---
+
+## 24. Crew Payout TDS Withholding Rates (O-5) & Device Acceptance Certifications — ANSWERED 20 Nov 2026 (Babin)
+
+Card: T8-08 (`docs/plans/T8_MEMBERSHIP_CREW.md`). Ruling record: `RULINGS-2026-11-20.md` (S5, S6).
+
+**Ruled by Babin on 20 Nov 2026:**
+1. **O-5 Crew Payout TDS Rates:**
+   - **Internal Staff performing crew assignments:** **1.5%** TDS withholding rate.
+   - **Freelance / External Crew contractors:** **15%** TDS withholding rate.
+   - Payout figures (gross, TDS, net) snapshot immutably in `crew_bookings` via `record_crew_payout` RPC (Law 4). A subsequent rate change never alters past stored payout figures.
+2. **Owner Physical Device Walkthrough Certifications ("2 ALL DONE"):**
+   - **T3-17 (Extend booking in 2 taps):** Walkthrough on mobile/iPad approved.
+   - **T3-24 (Quick expense with bill photo):** Walkthrough on iPhone approved.
+   - **T6-04 – T6-09 (Nepali language waves 1–4, layout & user switch):** Whole-app review approved on physical iPad and phone. Language toggle readiness certified.

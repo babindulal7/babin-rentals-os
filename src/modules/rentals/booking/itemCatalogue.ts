@@ -258,6 +258,8 @@ export interface EquipmentResult {
   /** From `INVENTORY_MODELS` where the name matches; absent otherwise. */
   sku?: string
   brand?: string
+  /** T2-23: allow overbooking on this product (accept shortage instead of failing) */
+  allowOverbooking?: boolean
   /** Bundles this model appears inside, via `addEquipment.bundlesUsing`. */
   inBundles: readonly string[]
   availability: AvailabilityVerdict
@@ -442,6 +444,7 @@ export interface LiveEquipmentRow {
   trackingMode?: 'Serialised' | 'Quantity' | 'Consumable' | null
   unitCountExcludingRetired?: number | null
   totalQuantity?: number | null
+  allowOverbooking?: boolean | null | undefined
 }
 
 /**
@@ -577,6 +580,7 @@ export function equipmentResultsFrom(
       ratePaisa,
       ...(r.assetCode ? { sku: r.assetCode } : {}),
       ...(r.brand ? { brand: r.brand } : {}),
+      ...(r.allowOverbooking !== undefined && r.allowOverbooking !== null ? { allowOverbooking: Boolean(r.allowOverbooking) } : {}),
       inBundles: [],
       availability: liveEquipmentVerdict(r, source),
       haystack: [r.name, category, r.brand ?? '', r.assetCode ?? ''].filter(Boolean).map(normalise),
@@ -1447,6 +1451,7 @@ export interface EquipmentModelGroup {
   ratePaisa: Paisa
   sku?: string
   brand?: string
+  allowOverbooking?: boolean
   inBundles: readonly string[]
   /** Every unit sharing this name, in the order the query already ranked them. */
   units: readonly EquipmentResult[]
@@ -1515,6 +1520,7 @@ export function groupEquipmentResults(results: readonly EquipmentResult[]): Equi
       ratePaisa: first.ratePaisa,
       ...(first.sku ? { sku: first.sku } : {}),
       ...(first.brand ? { brand: first.brand } : {}),
+      ...(first.allowOverbooking !== undefined ? { allowOverbooking: first.allowOverbooking } : {}),
       inBundles: first.inBundles,
       units,
       freeCount: free.length,

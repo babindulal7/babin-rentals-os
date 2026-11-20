@@ -1,5 +1,6 @@
 import { createAction } from '../core';
 import { IS_MOCK, supabase } from '../../lib/supabase';
+import { ZONE_FEE_STATUSES, type ZoneFeeStatus } from '../../lib/deliveryFeeGrid';
 
 export interface DayRouteStop {
   id: string;
@@ -20,6 +21,62 @@ export interface DayRouteStop {
   vehicle: string | null;
   zoneName: string | null;
   zoneFeePaisa: number | null;
+  /** Why the fee is or is not shown (migration 0246). Null for a money-blind caller. */
+  zoneFeeStatus: ZoneFeeStatus | null;
+}
+
+/** One row as get_day_route returns it (snake_case, migration 0246). */
+type DayRouteRow = {
+  id: string;
+  booking_id: string;
+  booking_no: string;
+  leg: 'Outbound' | 'Return';
+  scheduled_at: string;
+  status: string;
+  route_position: number | null;
+  client_name: string;
+  client_phone: string;
+  address: string;
+  neighborhood: string;
+  map_pin_lat: number | null;
+  map_pin_lng: number | null;
+  driver_name: string | null;
+  driver_phone: string | null;
+  vehicle: string | null;
+  zone_name: string | null;
+  zone_fee_paisa: number | string | null;
+  zone_fee_status: string | null;
+};
+
+const KNOWN_ZONE_FEE_STATUSES: readonly string[] = ZONE_FEE_STATUSES
+
+function toZoneFeeStatus(value: string | null): ZoneFeeStatus | null {
+  return value !== null && KNOWN_ZONE_FEE_STATUSES.includes(value) ? (value as ZoneFeeStatus) : null
+}
+
+/** Map a snake_case route row to the screen shape. Money stays integer paisa. */
+export function toDayRouteStop(row: DayRouteRow): DayRouteStop {
+  return {
+    id: row.id,
+    bookingId: row.booking_id,
+    bookingNo: row.booking_no,
+    leg: row.leg,
+    scheduledAt: row.scheduled_at,
+    status: row.status,
+    routePosition: row.route_position,
+    clientName: row.client_name,
+    clientPhone: row.client_phone,
+    address: row.address,
+    neighborhood: row.neighborhood,
+    mapPinLat: row.map_pin_lat,
+    mapPinLng: row.map_pin_lng,
+    driverName: row.driver_name,
+    driverPhone: row.driver_phone,
+    vehicle: row.vehicle,
+    zoneName: row.zone_name,
+    zoneFeePaisa: row.zone_fee_paisa === null ? null : Number(row.zone_fee_paisa),
+    zoneFeeStatus: toZoneFeeStatus(row.zone_fee_status),
+  }
 }
 
 export type GetDayRouteInput = {
@@ -57,7 +114,8 @@ export const getDayRoute = createAction<GetDayRouteInput, GetDayRouteOutput>({
       throw new Error(`Failed to get day route: ${error.message}`);
     }
 
-    return { result: { stops: data as DayRouteStop[] }, events: [] };
+    const rows = (data ?? []) as DayRouteRow[]
+    return { result: { stops: rows.map(toDayRouteStop) }, events: [] };
   },
 });
 

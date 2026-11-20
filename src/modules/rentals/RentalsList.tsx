@@ -90,6 +90,7 @@ import { FloatingBulkActionBar } from '../../components/ui/QuickActionPanel'
 import { BooqableRentalFilterDrawer } from '../../components/ui/BooqableRentalFilterDrawer'
 import { FastReturnModal } from './modals/FastReturnModal'
 import { BarcodeLookupModal } from './modals/BarcodeLookupModal'
+import { CounterSaleModal } from '../sales/CounterSaleModal'
 import { RecordPaymentModal } from '../finance/modals/RecordPaymentModal'
 import { captureError } from '../../lib/monitoring'
 import { TouchTarget } from '../../components/ui/TouchTarget'
@@ -927,6 +928,7 @@ export default function RentalsList() {
    */
   const [rawParams, setRawParams] = useSearchParams()
   const isNew = rawParams.get('action') === 'new' || rawParams.get('tab') === 'new' || Boolean(rawParams.get('draft'))
+  const isCounterSale = rawParams.get('action') === 'counter-sale'
   const perPage = useMemo(() => {
     const n = Number(rawParams.get('per'))
     return (ROWS_PER_PAGE as readonly number[]).includes(n) ? n : 20
@@ -3140,6 +3142,21 @@ export default function RentalsList() {
         isOpen={Boolean(summaryBookingNo)}
         onClose={() => setSummaryBookingNo(null)}
         bookingNo={summaryBookingNo ?? ''}
+      />
+
+      <CounterSaleModal
+        isOpen={isCounterSale}
+        onClose={() => {
+          const p = new URLSearchParams(rawParams)
+          p.delete('action')
+          setRawParams(p)
+        }}
+        onSuccess={() => {
+          refreshAll()
+          const p = new URLSearchParams(rawParams)
+          p.delete('action')
+          setRawParams(p)
+        }}
       />
 
     </PageShell>

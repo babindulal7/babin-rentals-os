@@ -40,6 +40,7 @@ describe('Roadmap status truth across merged tracks', () => {
       'T2-20': 'merged',
       'T2-21': 'merged',
       'T2-22': 'merged',
+      'T2-23': 'verified',
     }
     for (const [key, ref] of Object.entries(cards)) {
       const heading = t2.split('\n').find((l) => l.startsWith(`### ${key} ·`))
@@ -51,23 +52,35 @@ describe('Roadmap status truth across merged tracks', () => {
     }
   })
 
-  it('T3 booking money track reflects all merged cards as acceptance_pending', () => {
+  it('T3 booking money track reflects all merged cards as acceptance_pending or done', () => {
     const t3 = read('docs/plans/T3_BOOKING_MONEY.md')
-    const cards: Record<string, string> = {
-      'T3-10': 'PR #188 merged',
-      'T3-11': 'PR #210 merged',
+    const pendingCards: Record<string, string> = {
       'T3-13': 'PR #182 merged',
-      'T3-16': 'PR #181 merged',
-      'T3-19': 'PR #163 merged',
       'T3-20': 'PR #190 merged',
       'T3-23': 'PR #191 merged',
     }
-    for (const [key, prRef] of Object.entries(cards)) {
+    for (const [key, prRef] of Object.entries(pendingCards)) {
       const heading = t3.split('\n').find((l) => l.startsWith(`### ${key} ·`))
       expect(heading).toBeDefined()
       expect(heading).toContain('status: acceptance_pending')
       expect(heading).toContain(prRef)
       expect(heading).not.toContain('status: todo')
+    }
+
+    // T3-10, T3-11, T3-16, T3-19, and T3-31 are fully verified with green suites; physical device testing deferred post-live per Babin ruling (20 Nov)
+    const doneCards: Record<string, string> = {
+      'T3-10': 'PR #188 merged',
+      'T3-11': 'PR #210 merged',
+      'T3-16': 'PR #181 merged',
+      'T3-19': 'PR #163 merged',
+      'T3-22': 'PR #161 merged',
+    }
+    for (const [key, prRef] of Object.entries(doneCards)) {
+      const heading = t3.split('\n').find((l) => l.startsWith(`### ${key} ·`))
+      expect(heading).toBeDefined()
+      expect(heading).toContain('status: done')
+      expect(heading).toContain(prRef)
+      expect(heading).not.toContain('status: acceptance_pending')
     }
 
     // T3-31 was verified green across PR #234 and PR #240, and physical device testing was explicitly deferred post-live by Babin ruling (20 Nov)
@@ -76,6 +89,24 @@ describe('Roadmap status truth across merged tracks', () => {
     expect(t331Heading).toContain('status: done')
     expect(t331Heading).toContain('PR #234')
     expect(t331Heading).toContain('PR #240')
+  })
+
+  it('T8 membership and crew track reflects reconciled cards as done', () => {
+    const t8 = read('docs/plans/T8_MEMBERSHIP_CREW.md')
+    const doneCards: Record<string, string> = {
+      'T8-02': 'PR #174 merged',
+      'T8-04': 'PR #174 merged',
+      'T8-07': 'PR #175 merged',
+      'T8-08': 'ruled by Babin 20 Nov 2026',
+      'T8-09': 'PR #177 merged',
+    }
+    for (const [key, ref] of Object.entries(doneCards)) {
+      const heading = t8.split('\n').find((l) => l.startsWith(`### ${key} ·`))
+      expect(heading).toBeDefined()
+      expect(heading).toContain('status: done')
+      expect(heading).toContain(ref)
+      expect(heading).not.toContain('status: acceptance_pending')
+    }
   })
 
   it('T7 online booking track reflects merged PRs as acceptance_pending', () => {

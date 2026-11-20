@@ -32,6 +32,7 @@ interface ProductDetails {
   inspection_required: boolean | null
   packing_required: boolean | null
   rental_enabled: boolean | null
+  allow_overbooking: boolean | null
   is_active: boolean | null
   reorder_level: number | null
 }
@@ -56,6 +57,7 @@ type BulkFieldKey =
   | 'inspection_required'
   | 'packing_required'
   | 'rental_enabled'
+  | 'allow_overbooking'
   | 'is_active'
   | 'reorder_level'
 
@@ -113,7 +115,7 @@ export function BulkEditProductsModal({
         const { data: prods, error: pErr } = await supabase
           .from('products_v')
           .select(
-            'id, asset_code, name, category_id, brand, daily_rate, weekly_rate, monthly_rate, deposit_percent, deposit_fixed, prep_time_minutes, cleaning_time_minutes, inspection_required, packing_required, rental_enabled, is_active, reorder_level'
+            'id, asset_code, name, category_id, brand, daily_rate, weekly_rate, monthly_rate, deposit_percent, deposit_fixed, prep_time_minutes, cleaning_time_minutes, inspection_required, packing_required, rental_enabled, allow_overbooking, is_active, reorder_level'
           )
           .in('id', productIds)
 
@@ -221,6 +223,7 @@ export function BulkEditProductsModal({
         case 'inspection_required':
         case 'packing_required':
         case 'rental_enabled':
+        case 'allow_overbooking':
         case 'is_active': {
           const rawOld = details ? details[selectedField] : null
           oldDisplay = rawOld != null ? (rawOld ? 'Yes' : 'No') : '—'
@@ -274,6 +277,7 @@ export function BulkEditProductsModal({
       case 'inspection_required':
       case 'packing_required':
       case 'rental_enabled':
+      case 'allow_overbooking':
       case 'is_active':
         return { [selectedField]: booleanVal }
     }
@@ -502,6 +506,7 @@ export function BulkEditProductsModal({
                   <option value="inspection_required">Inspection Required</option>
                   <option value="packing_required">Packing Required</option>
                   <option value="rental_enabled">Rental Enabled</option>
+                  <option value="allow_overbooking">Allow Overbooking</option>
                   <option value="is_active">Active Status</option>
                 </optgroup>
               </select>
@@ -656,7 +661,7 @@ export function BulkEditProductsModal({
                 </div>
               )}
 
-              {['inspection_required', 'packing_required', 'rental_enabled', 'is_active'].includes(selectedField) && (
+              {['inspection_required', 'packing_required', 'rental_enabled', 'allow_overbooking', 'is_active'].includes(selectedField) && (
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', height: '44px' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', cursor: 'pointer' }}>
                     <input

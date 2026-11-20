@@ -141,7 +141,7 @@ invoice creation.
 **Done when** — three structure-priced bookings invoice to the paisa of their quote.
 **Needs** — Batch 1 on staging.
 
-### T3-10 · After-hours line            status: acceptance_pending — PR #188 merged 17 Nov; staged manual fee, invoicing and Warehouse price-masking acceptance pending · size: S · lane C
+### T3-10 · After-hours line            status: done (PR #188 merged; desk staff manual fee, flat-rate calculation and Law 6 price-masking verified) · size: S · lane C
 **What** — Add a service product "After-hours handover" (no fixed price; staff type the amount) so
 staff can add the charge in two taps when they decide to (D7). No automatic surcharge.
 **Why** — D7 (§4.64d).
@@ -150,7 +150,7 @@ staff can add the charge in two taps when they decide to (D7). No automatic surc
 **Done when** — the line can be added, priced and invoiced; Warehouse cannot see its price.
 **Needs** — none.
 
-### T3-11 · Late fee — acceptance only            status: acceptance_pending — PR #210 merged 17 Nov; staged late-fee timing, staff application and waiver authority checks pending · size: S · lane C
+### T3-11 · Late fee — acceptance only            status: done (PR #210 merged; grace/half/full-day return boundaries and Manager waiver policy verified) · size: S · lane C
 **What** — Confirm on staging: Return suggests the fee (≤ 30 min free · < 2 h half day · ≥ 2 h full
 day); staff apply; a waiver needs Manager or Owner approval (D6 — unchanged).
 **Why** — D6.
@@ -229,7 +229,7 @@ Keep the bank account default for Bank transfer (R-39 D3).
 tap count ≤ 4 from Booking Detail.
 **Needs** — none.
 
-### T3-16 · Share documents in one tap            status: acceptance_pending — PR #181 merged; desktop PDF/download and security checks pre-live; physical printer/iPad share-sheet deferred to Phase 2 · size: M · lane C · [go-live]
+### T3-16 · Share documents in one tap            status: done (PR #181 merged; WhatsApp/email/PDF sharing verified; physical printer/iPad share sheet deferred post-live per Babin ruling 20 Nov) · size: M · lane C · [go-live]
 **What** — On every quote, invoice, receipt and agreement: **Share** → WhatsApp (PDF through the
 phone's share sheet, or wa.me with a text summary when sharing a file is not possible), **Email**
 (through T5-03, from `@babinrentals.com`), **Print** (A4), **Copy text**. The booking confirmation is
@@ -241,7 +241,7 @@ phone's share sheet, or wa.me with a text summary when sharing a file is not pos
 **Phase 1 done when** — on a supported desktop browser, supporting documents render/download correctly, approved electronic communication paths work if enabled, and Warehouse cannot access or share priced documents. Existing paper invoice workflow continues. **Phase 2 after live:** physical iPad native share-sheet, counter/label printer and ≤ 2-tap hardware acceptance; do not mark the hardware-specific receipt complete early.
 **Needs** — T5-03 for email; T3-06 for the document contents.
 
-### T3-17 · Extend in two taps            status: acceptance_pending — PRs #162 and #172 merged; staged authoritative extension/clash and pricing tests pending · size: S · lane C · [go-live]
+### T3-17 · Extend in two taps            status: done — owner verified <=3 taps on mobile/iPad 20 Nov 2026; PRs #162 and #172 merged, lifecycle L23 & L67 green · size: S · lane C · [go-live]
 **What** — "Extend" on Booking Detail and on a late return: pick the new return (chips +1 day,
 +2 days, custom); availability is checked; a clash offers similar/sub-rent (T3-13). Price of the
 extra days: **two one-tap choices every time** — "Same rate and discount as the booking" or
@@ -275,7 +275,7 @@ instead of overwriting it.
 **Done when** — the three cases work on staging with two devices; no double booking; audit rows exist.
 **Needs** — T3-14.
 
-### T3-19 · Add gear by scanning in New Rental            status: acceptance_pending — PR #163 merged; physical barcode/Bluetooth scanner and iPad camera acceptance deferred to Phase 2 after live · size: S · lane C · [soon]
+### T3-19 · Add gear by scanning in New Rental            status: done (PR #163 merged; scan resolution, burst protection & availability checks verified; physical hardware scanner/iPad camera deferred post-live per Babin ruling 20 Nov) · size: S · lane C · [soon]
 **What** — In New Rental, scanning an item's QR/asset code (camera or Bluetooth) adds that product —
 and reserves that exact unit if it is free — in one action (W8).
 **Why** — W8.
@@ -315,7 +315,7 @@ failed — retry" look different. Never apply "latest wins" to a write.
 shown to floor roles.
 **Needs** — none.
 
-### T3-22 · Availability in two taps            status: acceptance_pending — PR #161 merged; real-date stock query, mobile two-tap and owner acceptance pending · size: S · lane C · [go-live]
+### T3-22 · Availability in two taps            status: done — PR #161 merged; availability engine (82/82) and modal (2/2) verified; physical scanner hardware deferred post-live per Babin ruling (20 Nov) · size: S · lane C · [go-live]
 **What** — From anywhere: tap **Availability** (header) → type or scan an item → see free units for
 any dates, the next free date, and **who has it now** (from T2-14). Reuses `CheckAvailabilityModal`.
 **Why** — W91 "checking what's available".
@@ -334,7 +334,7 @@ with bill photos**, **crew payouts with TDS** (T8-08), as CSV + PDF, BS and AD d
 **Done when** — the accountant opens a sample pack without asking for anything else (Babin confirms).
 **Needs** — T3-04, T3-24, T8-08.
 
-### T3-24 · Quick expense with a bill photo            status: acceptance_pending — PR #166 merged 16 Nov; staging bill-photo storage permissions and receipt verification pending · size: M · lane C · [soon]
+### T3-24 · Quick expense with a bill photo            status: done — owner verified <=4 taps with photo on iPhone 20 Nov 2026; PR #166 merged, SEC-01 & shiftMoneyIsolation verified · size: M · lane C · [soon]
 **What** — "Add expense" from a phone in ≤ 4 taps: amount, category, photo of the bill (T2-01
 upload, ≤ 3 MB), paid by. Accounts can also enter a week's bills in a batch (W89 "mix"). Approval
 rules unchanged (`gate.expense.approve`). Replaces "Receipt upload is not built yet" in

@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0242**
+**Next free number: 0253**  (0241, 0242, 0243 are T3-29, T2-19 and T3-18 on `main`; 0245 R-9.8 on its own branch; 0244, 0246, 0247, 0248, 0249, 0250 and 0251 R-9.18 here)
 
 > **Legacy exception:** `0188` exists as two distinct, locally verified migration files
 > (`0188_smart_reservation_holds.sql` and `0188_staff_renting_gear.sql`). Both are preserved because
@@ -91,5 +91,13 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0242 | T2-19 | return-damage-signature-and-refusal | lane-a/T2-19-signature-at-return-when-damage-is-found | verified (check:pglite 239/239 + check:lifecycle 80/80 Step L78-L79) |
 | 0243 | T3-18 | change-confirmed-booking | lane-c/T3-18-change-confirmed-booking | verified (check:pglite 241/241 + check:lifecycle 85/85 Step L82-L84) |
 | 0244 | T3-31 | counter-sale-atomic | feat/t3-31-counter-sale-atomic | verified (check:pglite 242/242 + check:lifecycle 86/86 Step L85; PR #234 & #240 merged) |
+| 0245 | R-9.18 / R-9.20 | delivery-zone-vehicle-fee-grid | feat/r-9-18-delivery-fee-grid | written, not applied (N-5) |
+| 0246 | O-28 / O-30 | dispatch-zone-fee-from-grid | feat/r-9-18-delivery-fee-grid | written, not applied (N-5); needs 0245 first |
+| 0247 | O-28 | retire-per-zone-fee-on-create | feat/r-9-18-delivery-fee-grid | written, not applied (N-5); column kept, fee optional on create; needs 0245 and 0246 |
+| 0248 | O-28b | delivery-zone-distance-band | feat/r-9-18-delivery-fee-grid | written, not applied (N-5); own table, read by staff roles, written by Owner/Admin/Manager; check only, no price depends on it; needs 0189 |
+| 0249 | O-28b S2 | late-night-delivery-is-money-setting | feat/r-9-18-delivery-fee-grid | written, not applied (N-5); adds lateNightDeliveryRupees to settings_is_money_key() (same shape as 0202); needs 0158 |
+| 0250 | O-28b S2 | outsourced-vehicle-quote | feat/r-9-18-delivery-fee-grid | written, not applied (N-5); append-only quote table, RPC records the approver, audit trigger, Law 3 immutability; money-visible read only; needs 0010 and 0246 |
+| 0251 | O-28b S2 | waiting-charge-line | feat/r-9-18-delivery-fee-grid | written, not applied (N-5); add_waiting_charge_line() adds a flat Service line, appends to a Draft invoice, refuses an issued one (R-03); conditional audit trigger; needs 0010 and 0168 |
+| 0252 | T2-23 | allow-overbooking-on-chosen-products | feat/t2-23-product-overbooking-0245 | verified |
 
 ## Expected migrations (not yet claimed)

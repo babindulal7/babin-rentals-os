@@ -4,7 +4,8 @@ import { supabase } from '../../lib/supabase';
 export type CreateDeliveryZoneInput = {
   name: string;
   description: string;
-  feePaisa: number;
+  /** Retired per-zone fee (O-28). Optional: omitted means not set. Amounts live in the delivery fee grid. */
+  feePaisa?: number | null;
 };
 
 export type CreateDeliveryZoneOutput = {
@@ -25,18 +26,21 @@ export const createDeliveryZone = createAction<CreateDeliveryZoneInput, CreateDe
     if (input.description && input.description.length > 500) {
       throw new Error('Description exceeds maximum length (500 characters)');
     }
-    if (input.feePaisa < 0) {
-      throw new Error('Zone fee cannot be negative');
-    }
-    if (!Number.isInteger(input.feePaisa)) {
-      throw new Error('Zone fee must be an integer (paisa)');
+    if (input.feePaisa !== undefined && input.feePaisa !== null) {
+      if (input.feePaisa < 0) {
+        throw new Error('Zone fee cannot be negative');
+      }
+      if (!Number.isInteger(input.feePaisa)) {
+        throw new Error('Zone fee must be an integer (paisa)');
+      }
     }
   },
   execute: async (input, ctx) => {
+    const feePaisa = input.feePaisa ?? null;
     const { data, error } = await supabase.rpc('create_delivery_zone', {
       p_name: input.name.trim(),
       p_description: input.description?.trim() ?? '',
-      p_fee_paisa: input.feePaisa,
+      p_fee_paisa: feePaisa,
     });
 
     if (error) {
@@ -50,7 +54,7 @@ export const createDeliveryZone = createAction<CreateDeliveryZoneInput, CreateDe
       events: [
         {
           type: 'DELIVERY_ZONE_CREATED',
-          payload: { zoneId, name: input.name.trim(), feePaisa: input.feePaisa, createdBy: ctx.userId },
+          payload: { zoneId, name: input.name.trim(), feePaisa, createdBy: ctx.userId },
         },
       ],
     };

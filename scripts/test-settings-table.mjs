@@ -36,6 +36,7 @@ const set = (k, v, scope = 'org', loc = null, cu = uuid()) => db.query(`select *
 await as('Owner')
 await set('operationalDayStart', '06:00')
 await set('vatRatePercent', 13)
+await set('lateNightDeliveryRupees', 750) // test value in a disposable database; 0249 registers it as a money key
 const cu = uuid()
 await set('operationalDayStart', '05:30', 'org', null, cu)
 await set('operationalDayStart', '05:30', 'org', null, cu)
@@ -53,11 +54,13 @@ check(await fails(() => db.query(`update settings set value = '"x"'::jsonb`), 'p
 await as('Manager')
 check(await fails(() => set('operationalDayStart', '04:00'), 'gate.settings.role'), 'Manager write refused')
 check((await db.query(`select count(*)::int n from settings where key='vatRatePercent'`)).rows[0].n === 1, 'Manager can read money settings')
+check((await db.query(`select count(*)::int n from settings where key='lateNightDeliveryRupees'`)).rows[0].n === 1, 'Manager can read the late-night delivery charge (money setting, 0249)')
 
 await as('Warehouse')
 check(await fails(() => set('operationalDayStart', '04:00'), 'gate.settings.role'), 'Warehouse write refused')
 const wh = (await db.query(`select key from settings`)).rows.map((r) => r.key)
 check(wh.includes('operationalDayStart') && !wh.includes('vatRatePercent'), 'Warehouse reads operational settings but never a money setting (Law 6)')
+check(!wh.includes('lateNightDeliveryRupees'), 'Warehouse never reads the late-night delivery charge (money setting, Law 6, 0249)')
 check((await db.query(`select count(*)::int n from settings_history`)).rows[0].n === 0, 'Warehouse reads no history')
 
 await db.exec('reset role')

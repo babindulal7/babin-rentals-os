@@ -2,6 +2,7 @@ import { businessDayAd, kathmanduMinutes } from '../../data/today'
 import { IS_MOCK, supabase } from '../supabase'
 import { canPerformOperations, canViewMoney } from '../rbac'
 import type { SystemRole } from '../../types/database'
+import type { DeliveryVehicleClass } from '../deliveryFeeGrid'
 
 export interface DeliveryWriteContext {
   role: SystemRole | null
@@ -74,6 +75,8 @@ export interface DeliveryRecord {
   driverName?: string | undefined
   driverPhone?: string | undefined
   vehiclePlate?: string | undefined
+  /** Grid vehicle class (O-28). Undefined until chosen; the fee shows only with it. */
+  vehicleClass?: DeliveryVehicleClass | undefined
   status: DeliveryStatus
   scheduledDate: string
   scheduledTime: string
@@ -312,6 +315,7 @@ interface JobRow {
   received_by: string | null
   last_note: string | null
   vehicle: string | null
+  vehicle_class: string | null
   rider_name: string | null
   rider_phone: string | null
 }
@@ -358,6 +362,7 @@ export async function fetchDeliveries(role: SystemRole | null): Promise<Delivery
       received_by,
       last_note,
       vehicle,
+      vehicle_class,
       rider_name,
       rider_phone
     `)
@@ -447,6 +452,7 @@ export async function fetchDeliveries(role: SystemRole | null): Promise<Delivery
       driverName: job.rider_name || (job.assigned_driver_id ? 'Assigned Driver' : undefined),
       driverPhone: job.rider_phone || undefined,
       vehiclePlate: job.vehicle || undefined,
+      vehicleClass: (job.vehicle_class as DeliveryVehicleClass | null) ?? undefined,
       status: job.status as DeliveryStatus,
       scheduledDate,
       scheduledTime,
