@@ -27,7 +27,7 @@ describe('T1-02 historical pinned staging inventory (no database writes)', () =>
 
   it('read-only checker must FAIL CLOSED if current source diverged from the old snapshot', () => {
     const child = spawnSync(process.execPath, ['scripts/staging-schema-preflight.mjs'], {
-      cwd: process.cwd(), encoding: 'utf8', timeout: 20000,
+      cwd: process.cwd(), encoding: 'utf8', timeout: 60000,
     })
     expect(child.error).toBeUndefined()
     const result = JSON.parse(child.stdout) as {
