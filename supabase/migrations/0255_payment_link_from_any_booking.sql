@@ -312,7 +312,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public, pg_temp
-as $
+as $client_balance$
 declare
   v_caller uuid := auth.uid();
   v_req record;
@@ -364,7 +364,7 @@ begin
     'invoice_id', v_inv.id
   );
 end;
-$;
+$client_balance$;
 
 revoke all on function public.get_client_booking_balance(uuid) from public, anon;
 grant execute on function public.get_client_booking_balance(uuid) to authenticated;
