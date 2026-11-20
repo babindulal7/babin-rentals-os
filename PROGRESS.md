@@ -1,5 +1,67 @@
 # Progress Log
 
+## 2026-11-20 — T2-24: Temporary stock from partners (Lane A)
+
+**Did**
+- Implemented **T2-24 · Temporary stock from partners** (`lane-a/T2-24-temporary-stock-from-partners`):
+  - Authored migration `supabase/migrations/0247_temporary_stock_from_partners.sql`:
+    - Created enums `partner_cost_kind` (`'per_day'`, `'fixed'`) and `temporary_stock_status` (`'Active'`, `'Returned to partner'`).
+    - Created table `temporary_stock` storing `supplier_id`, `product_id`, `quantity`, bounded date range (`available_from`, `available_until`), `cost_kind`, `cost_paisa`, `status`, and `notes`.
+    - Added columns `temporary_stock_id` and `is_partner_unit` to `product_units`.
+    - Created Law 6 secure view `temporary_stock_v` masking `cost_kind` and `cost_paisa` as NULL for non-financial floor roles (Warehouse, Technician, Driver).
+    - Added trigger `validate_unit_reservability` enforcing that partner units can only be reserved strictly within their active agreement window `[available_from, available_until)`.
+    - Updated `get_available_product_capacity` and `enforce_inventory_reservation_capacity` to incorporate partner units solely within their agreement window and strictly exclude them outside.
+    - Updated `confirm_booking_atomic` to fail closed against genuine capacity when `allow_overbooking` is false.
+    - Added RPC `record_temporary_stock(jsonb)`: validates supplier/product, creates agreement, and mints serialised/bulk partner units.
+    - Added RPC `return_temporary_stock(jsonb)`: named terminal action (Law 3, B36) validating no units remain packed or on rent, marking agreement as `'Returned to partner'`, setting unit `retired_at = now()`, and updating unit status to `'Retired'`.
+  - Application logic:
+    - Added `recordTemporaryStock` and `returnTemporaryStock` actions under `src/actions/inventory/`.
+    - Extended `src/lib/availability.ts` to surface `isPartner`, `partnerWindow`, and enforce window bounds.
+    - Extended `src/lib/labelPrinter.ts` to print thermal labels with `PARTNER ⭐` badge (T2-08, B13).
+    - Added query helper `src/lib/queries/partnerStock.ts` with Bikram Sambat date formatting and role-aware typing.
+  - Floor UI:
+    - Created `TemporaryStockModal.tsx` for registering incoming partner gear.
+    - Created `ReturnPartnerStockModal.tsx` for warehouse scanning and return verification.
+    - Created `PartnerStockTable.tsx` with filter chips (All, Active, Returned, Expired), search, `PARTNER ⭐` badges, Law 6 masked cost columns, and return action button.
+    - Integrated `PartnerStock` tab into `src/modules/operations/SubRental.tsx`.
+  - Added lifecycle steps `L90` and `L91` in `scripts/e2e-lifecycle.mjs`:
+    - `L90`: partner units available strictly within agreement window, 0 capacity outside.
+    - `L91`: warehouse completes floor return, units retired without deletion (Law 3), Law 6 money blindness verified.
+
+**Ruled**
+- B13: Partner units add capacity strictly within `[available_from, available_until)`.
+- B36: Named floor return action completes temporary stock agreements without record deletion.
+- B47: Partner agreements support per-day or fixed partner costs visible only to financial roles.
+- B53: Units retired upon agreement completion; excluded from owned stock, depreciation, and future reservations.
+- Law 6: Warehouse, Technician, and Driver roles read NULL for all partner cost fields.
+
+**Verified**
+- `npm run check:pglite`: 245/245 migrations applied, 0 failed, 0 view leaks, 0 definer defects.
+- `npm run check:lifecycle`: 92/92 green, 0 known-red, 0 failed.
+- `npm run typecheck`: exit 0.
+- `npm run lint`: exit 0.
+- `npm run build`: built in 43.10s, exit code 0.
+- `npm test`: 662/662 files passed, 7,410/7,410 tests passed.
+- `npm run check:security`: exit 0.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 112 / 113 (99%) | +2 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 92 / 92 (100%) | +2 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 245 files · check:pglite 245/245 applied, 0 failed (recorded 2026-11-19T23:47:18.346Z). Suite: PASS — 7410/7410 passed, 0 failed (recorded 2026-11-19T23:56:52.349Z); source fingerprint matches.
+Coverage suite: Historical suite: 6946/6946 passed, 0 failed (recorded 2026-11-12T14:54:27.393Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-19T23:47:57.080Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T2-24 completed and verified. Ready for Babin review.
+
 ## 2026-11-20 — T2-23: Allow overbooking on chosen products with safe shortages (Lane A)
 
 **Did**
