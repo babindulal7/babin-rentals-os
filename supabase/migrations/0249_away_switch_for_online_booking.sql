@@ -303,11 +303,11 @@ begin
 
     v_rate := 0;
     if v_product_id is not null then
-      select coalesce(daily_rate, 0) into v_rate
+      select round(coalesce(daily_rate, 0)::numeric * 100)::bigint into v_rate
       from public.products
       where id = v_product_id;
     elsif v_bundle_id is not null then
-      select coalesce(daily_rate, 0) into v_rate
+      select round(coalesce(daily_rate, 0)::numeric * 100)::bigint into v_rate
       from public.bundles
       where id = v_bundle_id;
     else
@@ -334,11 +334,14 @@ begin
     );
   end loop;
 
-  -- 13% Government VAT in Nepal
+  -- Catalogue daily_rate is NPR; request line totals are in integer paisa.
+  -- Keep VAT separate from the pretax subtotal to avoid double counting.
   v_vat_paisa := round(v_total_paisa * 0.13);
-  v_total_paisa := v_total_paisa + v_vat_paisa;
-  -- 50% standard advance deposit
-  v_advance_due_paisa := round(v_total_paisa * 0.5);
+
+  -- Approved tiered advance for VAT-inclusive rental:
+  -- up to NPR 5,000 full, to NPR 10,000 NPR 5,000, above 50%.
+  -- Whole-rupee rounding is centralized in calculate_advance_required.
+  v_advance_due_paisa := public.calculate_advance_required(v_total_paisa + v_vat_paisa);
 
   -- Update calculated totals on header
   update public.booking_requests
