@@ -311,7 +311,7 @@ export async function fetchMyBookings(): Promise<ClientBooking[]> {
 
     return bookingsList
   } catch (err) {
-    console.error('[MyBookings] Could not load the client's real bookings:', err)
+    console.error("[MyBookings] Could not load the client's real bookings:", err)
     throw new Error('Booking records are temporarily unavailable. Please try again or contact Babin Rentals.')
   }
 }
