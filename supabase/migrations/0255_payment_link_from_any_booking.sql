@@ -5,7 +5,7 @@
 -- Rules:
 -- - Server computes amount; client-submitted figures are strictly ignored (D30).
 -- - Security deposits strictly excluded; online payment covers rental advance or invoice balance only (O-3, B38).
--- - Links expire after 48 hours; a new link replaces the old; a paid link cannot be paid twice.
+-- - Links expire after 48 hours; an active link must be settled or reconciled before replacement.
 -- - Law 4: payments rows are immutable.
 -- - Law 6: floor roles (Warehouse, Technician, Driver) denied from creating links.
 -- - Functions revoked from public/anon to honor function-leak gate.
@@ -76,17 +76,17 @@ begin
     raise exception 'GATE:gate.payment.booking_inactive|Cannot create payment link for an inactive or closed booking.';
   end if;
 
-  -- A client-owned intent and a staff payment link must never both
-  -- present the full booking balance for collection.  Lock the same booking
-  -- row as create_payment_intent before checking the pending attempt.
+  -- Once issued, a pending payment link may have been opened with the
+  -- provider already. Replacing it silently can leave actual provider money
+  -- paid against an invalidated intent. The booking row FOR UPDATE above
+  -- serializes all staff-link and client-intent creation paths.
   if exists (
     select 1 from public.payment_intents pi
      where pi.booking_id = p_booking_id
-       and pi.is_payment_link = false
        and (pi.status = 'paid'
           or (pi.status = 'pending' and pi.expires_at > now()))
   ) then
-    raise exception 'GATE:gate.payment.attempt_in_progress|A client checkout is already in progress for this booking.';
+    raise exception 'GATE:gate.payment.attempt_in_progress|A payment checkout already exists for this booking. Settle or reconcile it before issuing another link.';
   end if;
 
   -- Calculate authoritative amount due (server-computed, Law 1)
@@ -118,13 +118,15 @@ begin
     raise exception 'GATE:gate.payment.nothing_due|No payment or advance is due on this booking.';
   end if;
 
-  -- "A new link replaces the old" — expire any prior active pending links for this booking
+  -- Expire only links whose 48-hour time window already elapsed.
+  -- Never revoke a still-payable link just because staff generate another.
   update public.payment_intents
      set status = 'expired',
          updated_at = now()
    where booking_id = p_booking_id
      and is_payment_link = true
-     and status = 'pending';
+     and status = 'pending'
+     and expires_at <= now();
 
   -- High-entropy 64-character token
   v_raw_token := replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '');
