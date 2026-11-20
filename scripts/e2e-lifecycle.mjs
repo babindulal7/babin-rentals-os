@@ -10500,6 +10500,107 @@ STEPS.push({
   },
 })
 
+
+/**
+ * L96: The pending-payment callback may arrive after staff confirms the
+ * request. The request row must lock before payment_intents in both flows.
+ * This checks the executed PL/pgSQL path, not only a mock.
+ */
+STEPS.push({
+  id: 'L96',
+  title: 'confirmation-before-callback links pending intent, allocates once, client direct RPC denied',
+  expect: 'green',
+  async run() {
+    let bookingId
+    await as('Coordinator', async () => {
+      const payload = {
+        client_uuid: crypto.randomUUID(),
+        created_by: U.Coordinator,
+        branch_id: BRANCH,
+        client_id: CLIENT,
+        pickup_at: '2099-12-15T06:00:00Z',
+        return_at: '2099-12-17T06:00:00Z',
+        delivery_type: 'Client Pickup',
+        lines: [{
+          client_uuid: crypto.randomUUID(),
+          product_id: SERIAL_PRODUCT,
+          qty: 1,
+          days: 2,
+          rate: 3500,
+        }],
+      }
+      const res = await q('select public.create_booking($1::jsonb) as res', [JSON.stringify(payload)])
+      bookingId = res.rows[0].res.booking_id
+      assert(Boolean(bookingId), 'confirmed booking fixture created')
+    })
+
+    let requestId
+    await asOwnerOfTheDatabase(async () => {
+      const requestRes = await q(`insert into public.booking_requests
+        (request_number, client_name, client_email, client_phone, start_date,
+         end_date, fulfillment_type, status, total_paisa, vat_paisa, advance_due_paisa)
+        values ('REQ-L96-CALLBACK-RACE', 'Callback Race Test', 'l96@example.invalid',
+          '+977-9800000096', '2099-12-15', '2099-12-17',
+          'pickup', 'pending', 700000, 91000, 500000)
+        returning id`)
+      requestId = requestRes.rows[0].id
+    })
+
+    let intentId
+    await asService(async () => {
+      const out = (await q(
+        'select public.create_payment_intent($1, null, $2::uuid, $3) as res',
+        [crypto.randomUUID(), requestId, 'fonepay']
+      )).rows[0].res
+      intentId = out.intent_id
+      assert(Boolean(intentId), 'pending payment intent created by service_role')
+    })
+
+    await as('Client', async () => {
+      let denied = false
+      try {
+        await q('select public.allocate_payment_intent($1::uuid, $2, $3::jsonb)', [
+          intentId, 'FORGED-CALLBACK', JSON.stringify({ status: 'successful' }),
+        ])
+      } catch {
+        denied = true
+      }
+      assert(denied, 'ordinary authenticated client cannot call trusted money allocation')
+    })
+
+    await as('Coordinator', async () => {
+      const res = (await q('select public.confirm_booking_request($1::uuid, $2::uuid) as res',
+        [requestId, bookingId])).rows[0].res
+      assertEq(res.success, true, 'request confirmation succeeded')
+      assertEq(Number(res.allocated_payments), 0, 'pending intent is not yet a received payment')
+    })
+    const linked = (await q('select status, booking_id, payment_id from public.payment_intents where id = $1',
+      [intentId])).rows[0]
+    assertEq(linked.status, 'pending', 'pending intent stays pending')
+    assertEq(linked.booking_id, bookingId, 'staff confirmation links intent to booking')
+    assertEq(linked.payment_id, null, 'no fabricated payment row from confirmation')
+
+    const providerRef = 'FP-L96-VERIFIED-REF'
+    let paymentId
+    await asService(async () => {
+      const first = (await q('select public.allocate_payment_intent($1::uuid, $2, $3::jsonb) as res',
+        [intentId, providerRef, JSON.stringify({ status: 'successful' })])).rows[0].res
+      assertEq(first.status, 'allocated', 'callback creates a verified booking payment')
+      paymentId = first.payment_id
+      assert(Boolean(paymentId), 'ledger payment created')
+
+      const replay = (await q('select public.allocate_payment_intent($1::uuid, $2, $3::jsonb) as res',
+        [intentId, providerRef, JSON.stringify({ status: 'successful' })])).rows[0].res
+      assertEq(replay.already_allocated, true, 'callback replay is idempotent')
+      assertEq(replay.payment_id, paymentId, 'replay returns original ledger payment')
+    })
+
+    const count = (await q('select count(*)::int as n from public.payments where booking_id = $1',
+      [bookingId])).rows[0].n
+    assertEq(Number(count), 1, 'exactly one immutable payment recorded after replay')
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break
