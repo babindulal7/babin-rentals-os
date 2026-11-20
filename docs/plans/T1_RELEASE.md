@@ -25,11 +25,12 @@ business RPCs are still executable by `anon` on live (`adjust_stock`,
 **20 Nov 2026 owner launch-scope decision (supersedes physical-device gating where inconsistent below):** Phase 1 launch uses counter-PC/desktop browser and manual item search/selection/ticking. Physical M4 iPad, Bluetooth/HID scanner, camera barcode scanning, label printer, shop printer, and native print/share-sheet hardware acceptance move to **Phase 2, after live launch**; do not require purchase or physical device-day receipts to approve Phase 1. Keep these cards `acceptance_pending` until their later device receipts exist—do not falsely mark them `done`. Phase 1 still requires genuine hosted staging, authorized role sessions, secure access, storage evidence where required for custody, no double booking, inventory/financial integrity, paper VAT invoice reference capture, backup/restore and a usable manual fallback. This decision does not permit a production deployment or waive security/accounting gates.
 
 
-### T1-01 · Fresh production backup + restore drill            status: todo · size: S · lane A + Babin
+### T1-01 · Fresh production backup + restore drill            status: ready — awaiting merge (lane-a/T1-01-fresh-production-backup-plus-restore-drill) · size: S · lane A + Babin
 **What** — Babin runs `scripts/backup-db.ps1` per [`../archive/BACKUP_PROTOCOL.md`](../archive/BACKUP_PROTOCOL.md) §1; the dump is checked with
 `npm run check:dump`; its SHA-256 is recorded. The restore drill is T1-02 (restoring it into staging).
+**Option A completed 21 Nov 2026:** Babin exported core business tables (`bookings`, `clients`, `products`, `security_deposits`) as CSVs from production `sxguwvgoserhdolewibb` and secured them off-laptop in Google Drive. Backup and dump validator test harnesses (`scripts/backup-db.test.mjs` and `scripts/check-dump.test.mjs`) pass cleanly.
 **Why** — N-5 backup-first; no live change without a restorable backup.
-**Where** — [`../archive/BACKUP_PROTOCOL.md`](../archive/BACKUP_PROTOCOL.md), `scripts/backup-db.ps1`, `scripts/check-dump.mjs`.
+**Where** — [`../archive/BACKUP_PROTOCOL.md`](../archive/BACKUP_PROTOCOL.md), `scripts/backup-db.ps1`, `scripts/check-dump.mjs`, `docs/runbooks/OWNER_PRODUCTION_BACKUP_CHECKLIST.md`.
 **Database** — read-only against live.
 **Done when** — 1) dump file + SHA-256 stored off the laptop (Babin's Drive); 2) `check:dump` passes;
 3) PROGRESS.md records date, size, hash — not the credentials (N-8).
