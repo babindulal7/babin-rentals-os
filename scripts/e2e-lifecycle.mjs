@@ -10601,6 +10601,128 @@ STEPS.push({
   },
 })
 
+
+/**
+ * L97: Confirmed client-owned requests use the issued invoice, not the
+ * historical request advance. The balance lookup is tenant-authorized.
+ */
+STEPS.push({
+  id: 'L97',
+  title: 'confirmed booking balances are invoice-owned, tenant-bound and idempotent',
+  expect: 'green',
+  async run() {
+    let bookingId
+    await as('Coordinator', async () => {
+      const payload = {
+        client_uuid: crypto.randomUUID(), created_by: U.Coordinator,
+        branch_id: BRANCH, client_id: CLIENT,
+        pickup_at: '2099-12-21T06:00:00Z', return_at: '2099-12-23T06:00:00Z',
+        delivery_type: 'Client Pickup',
+        lines: [{
+          client_uuid: crypto.randomUUID(), product_id: SERIAL_PRODUCT,
+          qty: 1, days: 2, rate: 3500,
+        }],
+      }
+      const out = (await q('select public.create_booking($1::jsonb) as res', [JSON.stringify(payload)])).rows[0].res
+      bookingId = out.booking_id
+      assert(Boolean(bookingId), 'booking fixture created')
+    })
+
+    let requestId
+    await asOwnerOfTheDatabase(async () => {
+      const out = await q(`insert into public.booking_requests
+        (request_number, client_name, client_email, client_phone, start_date,
+         end_date, fulfillment_type, status, total_paisa, vat_paisa,
+         advance_due_paisa, requester_auth_uid, client_id, booking_id)
+        values ('REQ-L97-INVOICE-OWNED', 'Invoice Owner', 'l97@example.invalid',
+          '+977-9800000097', '2099-12-21', '2099-12-23', 'pickup',
+          'confirmed', 800000, 104000, 450000, $1::uuid, $2::uuid, $3::uuid)
+        returning id`, [U.Client, CLIENT, bookingId])
+      requestId = out.rows[0].id
+    })
+
+    await as('Client', async () => {
+      const lookup = (await q('select public.get_client_booking_balance($1::uuid) as res',
+        [requestId])).rows[0].res
+      assertEq(lookup.available, false, 'no issued invoice is not a payable balance')
+    })
+
+    let invoiceId
+    await as('Accounts', async () => {
+      const payload = {
+        client_uuid: crypto.randomUUID(), created_by: U.Accounts, booking_id: bookingId,
+      }
+      const out = (await q('select public.create_invoice($1::jsonb) as res',
+        [JSON.stringify(payload)])).rows[0].res
+      invoiceId = out.invoice_id
+      assert(Boolean(invoiceId), 'invoice draft created')
+    })
+
+    await as('Client', async () => {
+      const lookup = (await q('select public.get_client_booking_balance($1::uuid) as res',
+        [requestId])).rows[0].res
+      assertEq(lookup.available, false, 'draft invoice cannot be charged as final balance')
+    })
+
+    await as('Accounts', async () => {
+      const out = (await q('select public.issue_invoice($1::jsonb) as res',
+        [JSON.stringify({ invoice_id: invoiceId, issued_by: U.Accounts })])).rows[0].res
+      assert(out, 'invoice issued')
+    })
+
+    const invoice = (await q('select total_amount, outstanding_amount, status from public.invoices where id = $1',
+      [invoiceId])).rows[0]
+    assert(invoice.status !== 'Draft' && invoice.status !== 'Void', 'invoice is issued')
+    const expectedBalance = Math.round(Number(invoice.outstanding_amount) * 100)
+    assert(expectedBalance > 0, 'issued invoice has money outstanding')
+
+    await as('Client', async () => {
+      const lookup = (await q('select public.get_client_booking_balance($1::uuid) as res',
+        [requestId])).rows[0].res
+      assertEq(lookup.available, true, 'owner can view issued balance')
+      assertEq(lookup.booking_id, bookingId, 'balance refers to confirmed booking')
+      assertEq(Number(lookup.balance_paisa), expectedBalance, 'balance matches issued invoice')
+      assertEq(Number(lookup.total_paisa), Math.round(Number(invoice.total_amount) * 100), 'total includes invoice VAT')
+    })
+
+    await as('Warehouse', async () => {
+      let denied = false
+      try {
+        await q('select public.get_client_booking_balance($1::uuid)', [requestId])
+      } catch {
+        denied = true
+      }
+      assert(denied, 'different auth account cannot access private invoice balance')
+    })
+
+    let intentId
+    await asService(async () => {
+      const out = (await q('select public.create_payment_intent($1, null, $2::uuid, $3) as res',
+        [crypto.randomUUID(), requestId, 'fonepay'])).rows[0].res
+      intentId = out.intent_id
+      assert(Boolean(intentId), 'trusted service created balance intent')
+      assertEq(Number(out.amount_paisa), expectedBalance,
+        'confirmed request charges invoice balance, not original advance')
+
+      let secondRefused = false
+      try {
+        await q('select public.create_payment_intent($1, null, $2::uuid, $3)',
+          [crypto.randomUUID(), requestId, 'fonepay'])
+      } catch {
+        secondRefused = true
+      }
+      assert(secondRefused, 'another unverified pending intent cannot double-charge')
+    })
+
+    const ledger = (await q('select booking_id, booking_request_id, status, requester_auth_uid from public.payment_intents where id = $1',
+      [intentId])).rows[0]
+    assertEq(ledger.booking_id, bookingId, 'balance intent uses the real confirmed booking')
+    assertEq(ledger.booking_request_id, requestId, 'owner request is preserved')
+    assertEq(ledger.requester_auth_uid, U.Client, 'payment intent belongs to original portal client')
+    assertEq(ledger.status, 'pending', 'checkout initiation is not a received payment')
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break
