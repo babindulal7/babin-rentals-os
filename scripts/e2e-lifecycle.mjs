@@ -9223,13 +9223,17 @@ STEPS.push({
     const resCountAfter = Number((await q('select count(*) from inventory_reservations')).rows[0].count)
     assertEq(resCountAfter, resCountBefore, 'a booking request creates 0 inventory reservations')
 
-    // 3. Floor roles cannot see money (Law 6)
+    // 3. Pending client requests are not floor tasks yet. The invoker-RLS
+    // request view denies Warehouse altogether; this is stronger than
+    // merely masking price fields while leaking private request metadata.
     await as('Warehouse', async () => {
+      const rows = (await q(`select * from public.booking_requests_v where id = '${reqId}'`)).rows
+      assertEq(rows.length, 0, 'Warehouse sees no unconfirmed client request metadata or money')
+    })
+    await as('Owner', async () => {
       const r = (await q(`select * from public.booking_requests_v where id = '${reqId}'`)).rows[0]
-      assert(Boolean(r), 'Warehouse can see request metadata')
-      assertEq(r.total_paisa, null, 'Warehouse sees null for total_paisa (Law 6)')
-      assertEq(r.vat_paisa, null, 'Warehouse sees null for vat_paisa (Law 6)')
-      assertEq(r.advance_due_paisa, null, 'Warehouse sees null for advance_due_paisa (Law 6)')
+      assert(Boolean(r), 'authorized staff can review pending booking requests')
+      assert(Number(r.total_paisa) > 0, 'money-authorized Owner sees the request quote')
     })
 
     const realBookingId = bookingIds.a
