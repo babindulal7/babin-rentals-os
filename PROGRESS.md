@@ -1,5 +1,50 @@
 # Progress Log
 
+## 2026-11-21 — T7-02, T7-03, T7-04, T7-05, T7-08, T7-15: Online Booking Platform & Client Portal (Lane C)
+
+**Did**
+- Implemented **Track T7 Online Booking Platform & Client Portal** (`lane-c/T7-03-online-booking-requests-and-client-portal`):
+  - Migrations sequenced after `0254`:
+    - `0255_booking_site_and_public_catalogue.sql` (T7-02): Public catalogue view (`public_catalogue_v`) and public date-range availability check (`public_availability`) without leaking stock or booking counts.
+    - `0256_booking_requests_and_staff_queue.sql` (T7-04): Public request submission (`submit_booking_request`), line items, queue view (`booking_requests_v`), and atomic staff confirmation/decline RPCs (`confirm_booking_request`, `decline_booking_request`).
+    - `0257_client_accounts_and_portal_binding.sql` (T7-03): Client accounts, passwordless sign-in, KYC ID upload to private bucket (`request-ids`), multi-tenant D-5 isolation, and staff account binding (`bind_online_account_to_client`).
+    - `0258_payment_intents_and_fonepay.sql` (T7-05): Payment intents (`payment_intents`) with server-side amount calculation, Fonepay integration, multi-tenant RLS, and immutable payment allocation (`allocate_payment_intent`).
+    - `0259_payment_link_from_any_booking.sql` (T7-15): Payment links from any booking, 48-hour expiration, replacement of older links, public token resolution (`get_payment_link_details`), and WhatsApp share template.
+  - Client Application (`src/booking/` & `booking.html`):
+    - Separate public HTML entrypoint with responsive layout, Category Nav, Cart Drawer, and 5 screen states.
+    - `MyBookingsModal.tsx` (T7-08): 6-step visual booking timeline, balance, download invoices/agreements.
+    - `OnlinePaymentModal.tsx` & `PaymentLinkPage.tsx` (T7-05 / T7-15): Fonepay QR/redirect and public payment link resolution.
+  - Staff Application:
+    - `OnlineRequestsQueue.tsx` (T7-04): Queue management in Rentals with approve/decline workflow and Law 6 money masking.
+    - `PaymentLinkModal.tsx` (T7-15): Coordinator action to generate and share 48h payment links.
+  - Lifecycle Steps `L93`, `L94`, `L95` in `scripts/e2e-lifecycle.mjs`:
+    - L93: Requests queue, rental days & VAT, queue visibility, warehouse money-blind, decline reason, atomic confirm.
+    - L94: Client accounts, KYC upload, and D-5 tenant isolation, warehouse Law 6 masking, binding audited.
+    - L95: Payment link from any booking, server-computed amount, 48h expiry, replaces old, replay idempotent, warehouse denied.
+
+**Ruled**
+- Ruling B17, B55: Payment links expire after 48 hours; a new link replaces the old; a paid link cannot be paid twice.
+- Ruling O-3, B38: Security deposits are strictly excluded from online payment links (handled at gear pickup).
+- Law 1 & Law 6: Server computes authoritative amount due; Warehouse and floor roles cannot view unmasked financial figures.
+- Law 4 & Ruling D30: Payments are immutable; server-to-server callback confirmation only; replayed callbacks change nothing.
+- D-5: Strict tenant isolation; authenticated clients see 0 rows belonging to any other client.
+
+**Verified**
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 warnings, 0 errors).
+- `npm test`: PASS (705 test files passed, 7,629/7,629 tests passed).
+- `npm run check:pglite`: PASS (257/257 applied, 0 failed, 235 definer search paths pinned).
+- `node scripts/test-booking-financial-integrity.mjs`: PASS (financial integrity verified in isolated PGlite).
+- `npm run check:security`: PASS (18 Phase 0 SQL regressions, operations branch grants, reset boundaries, and glossary revisions passed).
+- `npm run check:lifecycle`: PASS (96/96 steps green, 0 failed — steps L93, L94, L95 green).
+- `npm run test:server-contracts`: PASS (68/68 integration assertions passed).
+- `npm run test:partial-return`: PASS (58/58 partial return acceptance assertions passed).
+- `node --test scripts/test-receipt.test.mjs`: PASS (11/11 passed).
+- `npm run lint:shell`: PASS (958 files checked, 0 violations).
+- `npm run lint:ui-copy`: PASS (0 developer-text violations, all copy tests passed).
+- `npm run check:contrast`: PASS (97/97 WCAG AA checks passed).
+- `npm run build`: PASS (`tsc --noEmit && vite build` clean, 8,360 modules transformed).
+
 ## 2026-11-21 — T1-01: Production backup drill & off-device verification (Lane A + Babin)
 
 **Did**
@@ -27,6 +72,7 @@
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
+<<<<<<< HEAD
 | Backend | actions implemented / total | 112 / 113 (99%) | +0 |
 | Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
 | DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
@@ -103,6 +149,24 @@
 - T3-13, T3-20, T3-30: pending remaining accountant & staged receipts.
 - T0-12: hosted staging migration apply by Babin.
 - T7-03: Client accounts by verified email (next online booking card).
+=======
+| Backend | actions implemented / total | 114 / 115 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 96 / 96 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 257 files · check:pglite 257/257 applied, 0 failed (recorded 2026-11-20T21:15:21.579Z). Suite: PASS — 7629/7629 passed, 0 failed (recorded 2026-11-20T21:19:52.608Z); source fingerprint matches.
+Coverage suite: Historical suite: 6946/6946 passed, 0 failed (recorded 2026-11-12T14:54:27.393Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-20T21:16:13.455Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Track T7 complete and verified on `lane-c/T7-03-online-booking-requests-and-client-portal`. Ready for merge by Babin.
+
+
+>>>>>>> lane-c/T7-03-online-booking-requests-and-client-portal
 
 ## 2026-11-21 — T0-04: Read-only remote branch census and owner-gated cleanup (Docs audit)
 
