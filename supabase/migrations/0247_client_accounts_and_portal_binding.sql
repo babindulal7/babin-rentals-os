@@ -550,15 +550,19 @@ begin
 
     v_rate := 0;
     if v_product_id is not null then
-      select coalesce(daily_rate, 0) into v_rate
+      select round(coalesce(daily_rate, 0)::numeric * 100)::bigint into v_rate
       from public.products
       where id = v_product_id;
     elsif v_bundle_id is not null then
-      select coalesce(daily_rate, 0) into v_rate
+      select round(coalesce(daily_rate, 0)::numeric * 100)::bigint into v_rate
       from public.bundles
       where id = v_bundle_id;
     end if;
 
+    if v_rate is null or v_rate <= 0 then
+      raise exception 'GATE:gate.booking_request.invalid_item_rate|A selected item has no valid published daily price.';
+    end if;
+    -- Catalogue daily_rate is stored in NPR; all request arithmetic uses paisa.
     v_line_total := v_rate * v_rental_days * v_quantity;
     v_total_paisa := v_total_paisa + v_line_total;
 
@@ -581,7 +585,16 @@ begin
 
   -- Standard Nepal 13% VAT and 50% advance due
   v_vat_paisa := round(v_total_paisa * 0.13);
-  v_advance_due_paisa := round((v_total_paisa + v_vat_paisa) * 0.50);
+  -- Match the approved deposit/advance policy in integer paisa:
+  -- up to NPR 5,000: full; up to NPR 10,000: NPR 5,000; above: 50%
+  -- rounded to the nearest whole rupee (payment deposit excluded).
+  if v_total_paisa + v_vat_paisa <= 500000 then
+    v_advance_due_paisa := v_total_paisa + v_vat_paisa;
+  elsif v_total_paisa + v_vat_paisa <= 1000000 then
+    v_advance_due_paisa := 500000;
+  else
+    v_advance_due_paisa := (round(((v_total_paisa + v_vat_paisa)::numeric * 0.50) / 100) * 100)::bigint;
+  end if;
 
   update public.booking_requests
   set total_paisa = v_total_paisa,
