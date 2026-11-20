@@ -64,6 +64,40 @@ where relnamespace = 'public'::regnamespace and relname = 'booking_requests_v'`)
 check(requestViewSecurity.length === 1 && requestViewSecurity[0].invoker,
   'booking requests view evaluates caller RLS (security_invoker=true)')
 
+
+console.log('2. Relations anon can read')
+// Supabase grants SELECT on public tables to anon and relies on RLS, so a table is fine if RLS is on.
+// A view that runs with owner rights skips that RLS, so anon must not read it at all.
+const rels = await q(`select c.relname, c.relkind, c.relrowsecurity rls,
+    coalesce(c.reloptions::text[] @> array['security_invoker=true'], false) invoker
+  from pg_class c where c.relnamespace='public'::regnamespace and c.relkind in ('r','v','m','p')
+    and has_table_privilege('anon', c.oid, 'select') order by 1`)
+const noRls = rels.filter((r) => r.relkind === 'r' && !r.rls && !ALLOWED_RELATIONS.has(r.relname))
+check(noRls.length === 0, `every table anon can read has RLS on (${rels.filter((r) => r.relkind === 'r').length} tables)`)
+for (const r of noRls) console.log('       RLS off:', r.relname)
+const defView = rels.filter((r) => r.relkind !== 'r' && !r.invoker && !ALLOWED_RELATIONS.has(r.relname))
+check(defView.length === 0, `anon reads no view that runs with owner rights (${rels.filter((r) => r.relkind !== 'r').length} views readable by anon)`)
+for (const r of defView) console.log('       owner-rights view readable by anon:', r.relname)
+
+console.log('3. Behaviour')
+const one = async (s) => (await q(s))[0]
+const owner = (await one(`select id from users where primary_role='Owner' and is_active limit 1`)).id
+const wh = (await one(`select id from users where primary_role='Warehouse' and is_active limit 1`))?.id
+const other = (await one(`select id from users where primary_role='Admin' and is_active and id<>'${owner}' limit 1`))?.id ?? owner
+const quote = async () => (await one(`select id from bookings where stage::text in ('Quote','Booked') and cancelled_at is null order by created_at limit 1`)).id
+const as = async (role, uid, sql) => {
+  try {
+    await db.exec('begin')
+    await db.exec(`set local role ${role}`)
+    if (uid) await db.query(`select set_config('request.jwt.claim.sub','${uid}',true), set_config('request.jwt.claim.role','${role}',true)`)
+    const r = await db.query(sql)
+    await db.exec('reset role')
+    const extra = await q(`select cancelled_by, cancellation_reason from bookings where cancelled_at is not null order by cancelled_at desc limit 1`)
+    return { ok: true, rows: r.rows, after: extra[0] }
+  } catch (e) { return { ok: false, err: String(e.message).split('\n')[0] } }
+  finally { try { await db.exec('rollback') } catch {} }
+}
+
 // Real PL/pgSQL pricing regression: verify a published NPR rate is stored as
 // integer paisa, and that the same request uses the approved advance policy.
 // This is a disposable PGlite transaction; no client or payment is persisted.
@@ -99,38 +133,6 @@ if (!catalogueRateProbe) {
     `request pricing uses NPR-to-paisa conversion and approved advance thresholds (${subtotal} subtotal paisa)`)
 }
 
-console.log('2. Relations anon can read')
-// Supabase grants SELECT on public tables to anon and relies on RLS, so a table is fine if RLS is on.
-// A view that runs with owner rights skips that RLS, so anon must not read it at all.
-const rels = await q(`select c.relname, c.relkind, c.relrowsecurity rls,
-    coalesce(c.reloptions::text[] @> array['security_invoker=true'], false) invoker
-  from pg_class c where c.relnamespace='public'::regnamespace and c.relkind in ('r','v','m','p')
-    and has_table_privilege('anon', c.oid, 'select') order by 1`)
-const noRls = rels.filter((r) => r.relkind === 'r' && !r.rls && !ALLOWED_RELATIONS.has(r.relname))
-check(noRls.length === 0, `every table anon can read has RLS on (${rels.filter((r) => r.relkind === 'r').length} tables)`)
-for (const r of noRls) console.log('       RLS off:', r.relname)
-const defView = rels.filter((r) => r.relkind !== 'r' && !r.invoker && !ALLOWED_RELATIONS.has(r.relname))
-check(defView.length === 0, `anon reads no view that runs with owner rights (${rels.filter((r) => r.relkind !== 'r').length} views readable by anon)`)
-for (const r of defView) console.log('       owner-rights view readable by anon:', r.relname)
-
-console.log('3. Behaviour')
-const one = async (s) => (await q(s))[0]
-const owner = (await one(`select id from users where primary_role='Owner' and is_active limit 1`)).id
-const wh = (await one(`select id from users where primary_role='Warehouse' and is_active limit 1`))?.id
-const other = (await one(`select id from users where primary_role='Admin' and is_active and id<>'${owner}' limit 1`))?.id ?? owner
-const quote = async () => (await one(`select id from bookings where stage::text in ('Quote','Booked') and cancelled_at is null order by created_at limit 1`)).id
-const as = async (role, uid, sql) => {
-  try {
-    await db.exec('begin')
-    await db.exec(`set local role ${role}`)
-    if (uid) await db.query(`select set_config('request.jwt.claim.sub','${uid}',true), set_config('request.jwt.claim.role','${role}',true)`)
-    const r = await db.query(sql)
-    await db.exec('reset role')
-    const extra = await q(`select cancelled_by, cancellation_reason from bookings where cancelled_at is not null order by cancelled_at desc limit 1`)
-    return { ok: true, rows: r.rows, after: extra[0] }
-  } catch (e) { return { ok: false, err: String(e.message).split('\n')[0] } }
-  finally { try { await db.exec('rollback') } catch {} }
-}
 const bk = await quote()
 const REASON = 'check-anon-exposure probe reason'
 
