@@ -40,6 +40,7 @@ describe('Roadmap status truth across merged tracks', () => {
       'T2-20': 'merged',
       'T2-21': 'merged',
       'T2-22': 'merged',
+      'T2-23': 'verified',
     }
     for (const [key, ref] of Object.entries(cards)) {
       const heading = t2.split('\n').find((l) => l.startsWith(`### ${key} ·`))

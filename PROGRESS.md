@@ -1,5 +1,68 @@
 # Progress Log
 
+## 2026-11-20 — T2-23: Allow overbooking on chosen products with safe shortages (Lane A)
+
+**Did**
+- Implemented **T2-23 · Allow overbooking on chosen products** (`feat/t2-23-product-overbooking-0245`):
+  - Authored migration `supabase/migrations/0252_allow_overbooking_on_chosen_products.sql`:
+    - Added `products.allow_overbooking boolean not null default false` (off by default, B12).
+    - Added `booking_lines.short_quantity integer not null default 0 check (short_quantity >= 0)`.
+    - Extended `booking_at_risk` causes to include `'overbooking_shortage'`.
+    - Exposed `allow_overbooking` on `products_v` and updated `record_editor_private` schemas.
+    - Updated `confirm_booking_atomic`:
+      - Evaluates available capacity atomically under row locks (`FOR UPDATE` on `products`).
+      - If `allow_overbooking = true` and requested quantity exceeds free stock, reserves only genuine free units, records the excess as `short_quantity`, leaves physical units unreserved, logs `booking_at_risk` row with `overbooking_shortage`, and advances to `Booked`.
+      - If `allow_overbooking = false`, fails closed if capacity is exceeded.
+    - Added stage gate trigger `trg_a_enforce_pack_shortage_gate` on `booking_stage_transitions`:
+      - Strictly blocks moving to `Packed` or `On Rent` while `short_quantity > 0` or unresolved overbooking risk exists (`gate.pack.shortage`).
+    - Remediated `resolve_booking_at_risk` to require durable coverage:
+      - Checks active sub-rental lines (`line_type = 'Sub-rental'`) or explicit `covering_qty`.
+      - Notes alone without coverage leave `short_quantity` unchanged and Pack blocked.
+      - Retains P0 monetary authorization check restricting credit/refund to Manager, Admin, Owner.
+  - Updated Frontend:
+    - Added "Allow overbooking" checkbox to `EquipmentRecordEditor.tsx` in Pricing & Rental section.
+    - Added overbooking switch to `BulkEditProductsModal.tsx` for bulk product updates.
+    - Removed legacy device-only setting in `src/lib/bookingRules.ts` and unconditional bypass in `AddItemPanel.tsx`.
+    - Rendered shortage badge ("1 short — sub-rent or swap") in `LineItemTree.tsx` and `BookingDetail.tsx`.
+  - Added lifecycle steps `L87`, `L88`, `L89` in `scripts/e2e-lifecycle.mjs`:
+    - `L87`: past stock without switch is refused.
+    - `L88`: with switch on, confirms with short line and 0 phantom reservations.
+    - `L89`: Pack refuses short line; notes alone fail to clear shortage; providing sub-rental coverage clears shortage and allows Pack.
+  - Authored design documentation in `docs/verification/T2-23_DESIGN.md` and decision record in `docs/decisions/T2-23-product-overbooking.md`.
+
+**Ruled**
+- B12, B53, K4: Overbooking is product-specific and off by default. Physical GiST exclusion constraint on units is never bypassed.
+- Shortage clearance requires durable coverage; notes or resolution labels alone never unblock Pack.
+- Warehouse views of shortages strictly mask all prices and supplier rates (Law 6).
+
+**Verified**
+- `npm run check:pglite`: 250/250 applied cleanly, 0 leaks, 0 defects.
+- `npm run check:lifecycle`: 90/90 green (all steps including L87, L88, L89 passing).
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (0 warnings).
+- `npm run build`: successful production build.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 110 / 111 (99%) | -2 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 90 / 90 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 250 files · check:pglite 250/250 applied, 0 failed (recorded 2026-11-20T12:59:55.201Z).
+Gates read from .lifecycle-result.json, written 2026-11-20T13:01:00.115Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
+- Staff inventory deposit data entry across active products (T3-02).
+- T2-24 (Temporary stock from partners): continue Track 2 floor scope.
+- T3-14 (Draft invoice at Confirm, number on full payment): continue Track 3 money scope.
+- T3-13, T3-20: pending remaining accountant & staged receipts.
+
 ## 2026-11-20 — Closeout verification, TDS ruling (O-5) and physical device acceptance (Lane B & C)
 
 **Did**
@@ -22,22 +85,6 @@
 - `npm run lint:ui-copy`: 0 developer text violations; 12/12 review tests pass.
 - `npm run typecheck`: clean, 0 errors.
 - Targeted test suites: 141/141 tests pass (T8-07, T3-17, T3-22, T8-04, T8-09, T3-02, PlansAdmin).
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 112 / 113 (99%) | +2 |
-| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | 87 / 87 (100%) | +0 |
-| Overall | structural mean of five | ≈ 97% | — |
-
-### Remaining
-- Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
-- Staff inventory deposit data entry across active products (T3-02).
-- T3-14 (Draft invoice at Confirm, number on full payment): resync integrity & numbering moment.
-- T3-13, T3-20: pending remaining accountant & staged receipts.
 
 ## 2026-11-20 — T3 Acceptance Reconciliation: T3-10, T3-11, T3-16, T3-19 to Done (Lane C)
 

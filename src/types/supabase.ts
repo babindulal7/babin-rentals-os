@@ -954,6 +954,7 @@ export type Database = {
           qty: number
           rate: number
           service_basis: Database["public"]["Enums"]["service_basis"] | null
+          short_quantity: number
           sort_order: number
           supplier_cost: number | null
           supplier_id: string | null
@@ -979,6 +980,7 @@ export type Database = {
           qty?: number
           rate?: number
           service_basis?: Database["public"]["Enums"]["service_basis"] | null
+          short_quantity?: number
           sort_order?: number
           supplier_cost?: number | null
           supplier_id?: string | null
@@ -1004,6 +1006,7 @@ export type Database = {
           qty?: number
           rate?: number
           service_basis?: Database["public"]["Enums"]["service_basis"] | null
+          short_quantity?: number
           sort_order?: number
           supplier_cost?: number | null
           supplier_id?: string | null
@@ -7703,6 +7706,7 @@ export type Database = {
           description: string | null
           hourly_rate: number | null
           id: string
+          allow_overbooking: boolean
           inspection_required: boolean
           is_active: boolean
           is_subrental_only: boolean
@@ -7737,6 +7741,7 @@ export type Database = {
           weight_kg: number | null
         }
         Insert: {
+          allow_overbooking?: boolean
           asset_code: string
           brand: string
           case_capacity?: number | null
@@ -7785,6 +7790,7 @@ export type Database = {
           weight_kg?: number | null
         }
         Update: {
+          allow_overbooking?: boolean
           asset_code?: string
           brand?: string
           case_capacity?: number | null
@@ -12061,6 +12067,7 @@ export type Database = {
           weight_kg?: number | null
         }
         Update: {
+          allow_overbooking?: boolean
           asset_code?: string | null
           brand?: string | null
           case_capacity?: number | null

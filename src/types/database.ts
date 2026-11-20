@@ -473,6 +473,7 @@ export interface Database {
           deposit_rate: number
           total_stock: number
           available_stock: number
+          allow_overbooking: boolean
           is_active: boolean
           created_at: string
           created_by: string | null
@@ -492,6 +493,7 @@ export interface Database {
           deposit_rate?: number
           total_stock?: number
           available_stock?: number
+          allow_overbooking?: boolean
           is_active?: boolean
           created_at?: string
           created_by?: string | null
@@ -787,6 +789,7 @@ export interface Database {
           line_kind: LineKind
           description: string
           quantity: number
+          short_quantity: number
           days: number
           daily_rate: number
           discount_percent: number
@@ -804,6 +807,7 @@ export interface Database {
           line_kind?: LineKind
           description: string
           quantity?: number
+          short_quantity?: number
           days?: number
           daily_rate?: number
           discount_percent?: number

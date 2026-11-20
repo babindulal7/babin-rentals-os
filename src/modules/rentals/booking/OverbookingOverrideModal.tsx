@@ -88,7 +88,7 @@ export function OverbookingOverrideModal({
   onSubRent,
 }: OverbookingOverrideModalProps) {
   const hasSubRent = typeof onSubRent === 'function'
-  const hasOverbook = Boolean(allowOverbooking)
+  const hasOverbook = Boolean(unit?.allowOverbooking ?? allowOverbooking)
 
   // Default to Sub-rent (preferred) if supported; otherwise fallback to overbooking if allowed.
   const defaultChoice: 'sub-rent' | 'overbook' = hasSubRent ? 'sub-rent' : 'overbook'
