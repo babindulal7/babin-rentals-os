@@ -106,7 +106,7 @@ after Pack is complete saves; gates green; driven in `dev:mock` at 375, 820 and
 1440 px as Warehouse and Technician.
 **Needs** — T2-01 (done in part). Staging checks of T2-01 (Done when 1–3) still wait for T1-06.
 
-### T2-17 · Save a unit's details            status: doing · size: M · lane A · [go-live]
+### T2-17 · Save a unit's details            status: done — PR #90 merged 3 Nov; migration 0221, monotonic revision guards, role gates and unit persistence verified · size: M · lane A · [go-live]
 **What** — On the equipment page, the unit editor (`AssetDetail.tsx`, `UnitEditor`) lets staff change
 a unit's asset tag, serial, status, rack, shelf, bin and condition, then says "Editing this session
 only — there is no unit-update action yet, so nothing is persisted" (line 223). Staff label and
@@ -479,7 +479,7 @@ confirms with "1 short"; 3) Today shows the short line to desk roles and to Ware
 4) a sub-rent line clears it; 5) the device-only setting is gone; 6) screen check.
 **Needs** — T3-13 (the similar / sub-rent choices); T2-21 (same availability files).
 
-### T2-24 · Temporary stock from partners            status: doing — migration 0253, bounded availability, floor return and L90/L91 verification · size: L · lane A · [go-live] · slips first
+### T2-24 · Temporary stock from partners            status: done — PR #257 merged 20 Nov; migration 0253, bounded availability, floor return and lifecycle L90/L91 verified · size: L · lane A · [go-live] · slips first
 **What** — Add partner gear to our stock **for a period** (B13): the partner (a `suppliers` record, as
 for sub-rents), the product (an existing one, or a new "partner only" product), the units (asset codes;
 labels printed with "PARTNER" ⭐) or a quantity, **from – until**, and **what the partner charges: per
