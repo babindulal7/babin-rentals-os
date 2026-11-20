@@ -352,7 +352,8 @@ begin
   -- A request confirmed while this callback was pending must be linked before
   -- any ledger insertion. The row locks serialize with confirmation's paid
   -- and pending-intent handling.
-  if v_request_id is not null and v_request_booking_id is not null then
+  if v_request_id is not null and v_request_booking_id is not null
+      and v_intent.status in ('pending', 'paid') then
     if v_intent.booking_id is not null
         and v_intent.booking_id <> v_request_booking_id then
       raise exception 'GATE:gate.payment.booking_mismatch|Intent is linked to another booking.';
