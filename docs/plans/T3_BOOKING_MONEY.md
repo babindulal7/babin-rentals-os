@@ -315,7 +315,7 @@ failed — retry" look different. Never apply "latest wins" to a write.
 shown to floor roles.
 **Needs** — none.
 
-### T3-22 · Availability in two taps            status: acceptance_pending — PR #161 merged; real-date stock query, mobile two-tap and owner acceptance pending · size: S · lane C · [go-live]
+### T3-22 · Availability in two taps            status: done — PR #161 merged; availability engine (82/82) and modal (2/2) verified; physical scanner hardware deferred post-live per Babin ruling (20 Nov) · size: S · lane C · [go-live]
 **What** — From anywhere: tap **Availability** (header) → type or scan an item → see free units for
 any dates, the next free date, and **who has it now** (from T2-14). Reuses `CheckAvailabilityModal`.
 **Why** — W91 "checking what's available".
