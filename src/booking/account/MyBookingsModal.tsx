@@ -105,13 +105,6 @@ export const MyBookingsModal: React.FC<MyBookingsModalProps> = ({
     })
   }, [bookings, activeTab, searchQuery])
 
-  const handlePaymentSuccess = () => {
-    // Server-side confirmation is authoritative; never fabricate a local receipt
-    // or adjust invoice balances by a client-calculated figure.
-    setPaymentBooking(null)
-    void loadBookings()
-  }
-
   if (!isOpen) return null
 
   return (
@@ -674,10 +667,9 @@ export const MyBookingsModal: React.FC<MyBookingsModalProps> = ({
       {paymentBooking && (
         <OnlinePaymentModal
           isOpen={true}
-          onClose={() => setPaymentBooking(null)}
+          onClose={() => { setPaymentBooking(null); void loadBookings() }}
           bookingId={paymentBooking.payment_kind === 'balance' ? paymentBooking.id : undefined}
           bookingRequestId={paymentBooking.request_id}
-          onPaymentSuccess={handlePaymentSuccess}
         />
       )}
     </div>
