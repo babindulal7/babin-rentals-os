@@ -191,7 +191,7 @@ product "similar" grouping (category + subcategory, or a manual "similar to" lin
 each; the sub-rent line carries supplier and cost (money roles only).
 **Needs** — none.
 
-### T3-14 · Draft invoice at Confirm, number on full payment            status: complete · size: L · lane C · [go-live]
+### T3-14 · Draft invoice at Confirm, number on full payment            status: done — PR #259 merged 20 Nov 2026; 0254 migration and lifecycle L92 verified · size: L · lane C · [go-live]
 **What** — 1) **Confirm creates a Draft invoice** (no number) for the booking automatically (W15).
 2) While Draft it **follows the booking** — line, date, discount, crew, delivery, late-fee and damage
 changes regenerate its lines and totals (same engine as the booking; Law 1). 3) It gets its **final
@@ -255,7 +255,7 @@ option if it needs a new parameter.
 never double-books.
 **Needs** — T3-13 for the clash options.
 
-### T3-18 · Change a confirmed booking            status: complete · size: L · lane C · [go-live]
+### T3-18 · Change a confirmed booking            status: done — PR #224 merged 19 Nov 2026; change_booking RPC and linked bookings verified · size: L · lane C · [go-live]
 **What** — **Any desk staff** may change items and dates after Confirm (W88): before Pack — add,
 remove or swap lines and move dates, with reservations updated in the same transaction; after Pack
 — removing an item asks Warehouse to unpack it (a floor session); after Handover — **"Add gear"
@@ -397,7 +397,7 @@ N-6); lifecycle "a pro forma takes no document number and stays out of the VAT r
 VAT or sales reports; Warehouse cannot open it (money); screen check.
 **Needs** — T3-14, T3-26.
 
-### T3-28 · Rental day start as a setting            status: complete · size: L · lane C · [go-live] · slips first
+### T3-28 · Rental day start as a setting            status: done — PR #211 merged 18 Nov 2026; rental_day_start setting verified · size: L · lane C · [go-live] · slips first
 **What** — The 06:00 → 06:00 rental day becomes a setting (B24): Settings ▸ Operations rules ▸
 **"Rental day starts at"** (⭐ 06:00; quarter hours). **Owner and Admin** change it (B26), enforced in
 Postgres, with an audit row. **Design note first** — an engine change: today the boundary is the
@@ -421,7 +421,7 @@ total; 4) Manager cannot change it (the database refuses); 5) Today and daily cl
 day start; 6) all gates green, financial integrity included.
 **Needs** — T3-14 and T3-18 merged first (both price bookings).
 
-### T3-29 · Extension clash: the Manager decides            status: complete · size: M · lane C · [go-live] · slips first
+### T3-29 · Extension clash: the Manager decides            status: done — PR #208 merged 18 Nov 2026; extension clash manager decisions and at-risk workflow verified · size: M · lane C · [go-live] · slips first
 **What** — When an extension (T3-17) needs a unit that the next booking already holds (B41), the desk
 neither refuses nor overrides alone: the request goes to a **Manager decision** (Owner · Admin ·
 Manager), one tap each with a reason, audited: **a)** extend, and move the next booking to a similar
