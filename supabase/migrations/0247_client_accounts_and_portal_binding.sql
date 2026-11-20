@@ -360,7 +360,7 @@ create policy booking_request_lines_client_select on public.booking_request_line
 
 -- Update public.booking_requests_v with auth and client binding columns
 drop view if exists public.booking_requests_v cascade;
-create or replace view public.booking_requests_v as
+create or replace view public.booking_requests_v with (security_invoker = true) as
 select
   r.id,
   r.request_number,
