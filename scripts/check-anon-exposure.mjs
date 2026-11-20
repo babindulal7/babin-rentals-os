@@ -127,9 +127,23 @@ if (!catalogueRateProbe) {
   const advance = gross <= 500000 ? gross
     : gross <= 1000000 ? 500000
     : Math.round((gross * 0.5) / 100) * 100
-  check(pricingQuote.ok && Number(out?.total_paisa) === subtotal
+  const pricingMatches = pricingQuote.ok && Number(out?.total_paisa) === subtotal
     && Number(out?.vat_paisa) === vat
-    && Number(out?.advance_due_paisa) === advance,
+    && Number(out?.advance_due_paisa) === advance
+  if (!pricingMatches) {
+    // Synthetic-only diagnostics: avoid hiding an RPC error behind a generic
+    // arithmetic assertion. Never log credentials or real customer data.
+    console.log('       pricing probe mismatch:', JSON.stringify({
+      rpc_error: pricingQuote.err || null,
+      returned_subtotal_paisa: out?.total_paisa ?? null,
+      returned_vat_paisa: out?.vat_paisa ?? null,
+      returned_advance_paisa: out?.advance_due_paisa ?? null,
+      expected_subtotal_paisa: subtotal,
+      expected_vat_paisa: vat,
+      expected_advance_paisa: advance,
+    }))
+  }
+  check(pricingMatches,
     `request pricing uses NPR-to-paisa conversion and approved advance thresholds (${subtotal} subtotal paisa)`)
 }
 
