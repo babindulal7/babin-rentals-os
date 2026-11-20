@@ -1,0 +1,70 @@
+# PR #269: isolate and execute the money safety gates on the owner's Mac runner.
+# Branch-only; no secrets, deployments, hosted databases or external payments.
+name: PR269 · disposable payment gates
+
+on:
+  push:
+    branches:
+      - 'lane-c/T7-15-payment-link-from-any-booking'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr269-disposable-money-gates-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  payment-safety:
+    name: L95–L98 · PGlite and anonymous-access checks
+    if: github.repository == 'babindulal7/babin-rentals-os'
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 90
+    env:
+      CI: 'true'
+      VITE_DATA_SOURCE: mock
+
+    steps:
+      - name: Check out the exact PR branch head
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Configure Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Show the exact tested SHA
+        run: git rev-parse HEAD
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Check JavaScript syntax for security and lifecycle suites
+        run: |
+          node --check scripts/check-anon-exposure.mjs
+          node --check scripts/e2e-lifecycle.mjs
+      - name: Build migrations in disposable PGlite
+        run: npm run check:pglite
+      - name: Anonymous and tenant privilege regression checks
+        run: npm run check:anon
+      - name: L95 staff payment link safety
+        run: npm run check:lifecycle -- --only L95
+      - name: L96 provider callback and missing-reference safety
+        run: npm run check:lifecycle -- --only L96
+      - name: L97 issued invoice and own-client balance
+        run: npm run check:lifecycle -- --only L97
+      - name: L98 single active booking checkout in both orders
+        run: npm run check:lifecycle -- --only L98
+      - name: Payment API fail-closed Vitest regression
+        run: npx vitest run src/booking/pay/__tests__/payVerifySecurity.test.ts
+      - name: Typecheck application
+        run: npm run typecheck
+      - name: Attach local verification receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr269-local-payment-gates
+          path: |
+            .pglite-result.json
+            .lifecycle-result.json
+          if-no-files-found: ignore
+          retention-days: 7
