@@ -12,7 +12,6 @@ import { SETTING_SPECS, formatSetting } from '../../../lib/settingsStore'
 import type { SettingKey, SettingValue, SettingsRecord } from '../../../lib/settingsStore'
 import { useTheme } from '../../../lib/theme'
 import { useViewport } from '../../../lib/device'
-import { getAllowOverbooking, setAllowOverbooking } from '../../../lib/bookingRules'
 import { TEXT_SIZES, applyTextSize, readTextSize } from '../../../lib/textSize'
 import type { TextSize } from '../../../lib/textSize'
 import type { UseEditModeResult } from '../../../lib/edit/useEditMode'
@@ -538,9 +537,6 @@ export function FieldRow({ f }: { f: Field }) {
   const edit = useContext(EditCtx)
   const { theme, glass, choose } = useTheme()
   const [textSize, setTextSize] = useState<TextSize>(() => readTextSize())
-  // This is the only toggle retained here: it writes to device-local storage.
-  // T1-16 removes every switch that had no persistence or real save handler.
-  const [allowOverbooking, setAllowOverbookingState] = useState<boolean>(() => getAllowOverbooking())
 
   return (
     <div
@@ -647,38 +643,6 @@ export function FieldRow({ f }: { f: Field }) {
             )
           })}
         </span>
-      ) : f.label === 'Allow overbooking' ? (
-        /* Same pill, same reasoning as `Switch` above — kept a separate element
-           only because this one is the wired toggle and carries the write. It
-           gets `tap` for the identical reason: 34x19 of paint is right, 34x19 of
-           target is not, and this is the one switch on the page where a
-           mis-flip changes what the booking rules allow. */
-        <button
-          type="button"
-          className="tap"
-          role="switch"
-          aria-checked={allowOverbooking}
-          aria-label={f.label}
-          onClick={() => {
-            const next = !allowOverbooking
-            setAllowOverbookingState(next)
-            setAllowOverbooking(next)
-          }}
-          style={{
-            width: 34,
-            height: 19,
-            borderRadius: 'var(--r-badge)',
-            border: 'none',
-            padding: 2,
-            background: allowOverbooking ? 'var(--success)' : 'var(--disabled)',
-            cursor: 'pointer',
-            flexShrink: 0,
-            display: 'flex',
-            justifyContent: allowOverbooking ? 'flex-end' : 'flex-start',
-          }}
-        >
-          <span aria-hidden style={{ width: 15, height: 15, borderRadius: 'var(--r-badge)', background: 'var(--card)', display: 'block' }} />
-        </button>
       ) : f.readOnlyWhy && !f.settingKey && f.value === undefined ? (
         <NotBuilt why={f.readOnlyWhy} />
       ) : f.dest ? (

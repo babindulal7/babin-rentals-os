@@ -1209,6 +1209,8 @@ export interface FloorLine {
   /** `booking_lines.id` — the key every floor verb writes against. */
   id: string
   qty: number
+  /** T2-23: short quantity (uncovered by stock on hand when allow_overbooking is ON). */
+  shortQty?: number | undefined
   lineType: string
   description: string | null
   productId: string | null
@@ -1276,6 +1278,7 @@ interface RawFloorUnit {
 interface RawFloorLine {
   id: string
   qty: number
+  short_quantity?: number | null
   line_type: string
   description: string | null
   product_id: string | null
@@ -1331,7 +1334,7 @@ interface RawFloorBooking {
 const FLOOR_COLUMNS =
   'id, booking_no, client_id, parent_booking_id, stage, project, project_name, shoot_location, rental_day_start, pickup_at, return_at, actual_return_at, delivery_type, cancelled_at, closed_at, ' +
   'clients ( name ), ' +
-  'booking_lines ( id, qty, line_type, description, product_id, parent_line_id, sort_order, ' +
+  'booking_lines ( id, qty, short_quantity, line_type, description, product_id, parent_line_id, sort_order, ' +
   'products ( name, tracking_mode ), ' +
   'booking_line_units ( id, asset_id, unit_state, is_required, packed, damaged, released_at, ' +
   'product_units ( serial_no, asset_tag, rack, shelf, bin ) ) )'
@@ -1409,6 +1412,7 @@ export async function fetchFloorBooking(bookingRef: string): Promise<FloorBookin
         (l): FloorLine => ({
           id: l.id,
           qty: l.qty,
+          shortQty: l.short_quantity ?? 0,
           lineType: l.line_type,
           description: l.description,
           productId: l.product_id,
