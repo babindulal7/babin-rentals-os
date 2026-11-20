@@ -293,6 +293,12 @@ begin
     raise exception 'GATE:gate.payment.intent_not_found|Payment intent not found.';
   end if;
 
+  -- Reversed and failed intents are terminal. A provider callback replay must never
+  -- recreate a Received payment after a refund or reactivate a closed intent.
+  if v_intent.status in ('refunded', 'expired', 'failed') then
+    raise exception 'GATE:gate.payment.intent_terminal|Payment intent status % cannot be allocated.', v_intent.status;
+  end if;
+
   -- Replay guard 1: if already allocated, return idempotent success
   if v_intent.status = 'allocated' and v_intent.payment_id is not null then
     return jsonb_build_object(
@@ -433,8 +439,10 @@ begin
 end;
 $$;
 
-revoke all on function public.allocate_payment_intent(uuid, text, jsonb) from public, anon;
-grant execute on function public.allocate_payment_intent(uuid, text, jsonb) to authenticated;
+-- This SECURITY DEFINER RPC records real money. Only the Edge verifier's
+-- service-role connection may allocate; browsers and staff sessions cannot.
+revoke all on function public.allocate_payment_intent(uuid, text, jsonb) from public, anon, authenticated;
+grant execute on function public.allocate_payment_intent(uuid, text, jsonb) to service_role;
 
 -- 6. Update confirm_booking_request to allocate any paid payment intents linked to the request
 create or replace function public.confirm_booking_request(p_request_id uuid, p_booking_id uuid)
