@@ -37,26 +37,36 @@ jobs:
       - name: Show the exact tested SHA
         run: git rev-parse HEAD
       - name: Install locked dependencies
+        id: deps
         run: npm ci
       - name: Check JavaScript syntax for security and lifecycle suites
+        if: ${{ always() && steps.deps.outcome == 'success' }}
         run: |
           node --check scripts/check-anon-exposure.mjs
           node --check scripts/e2e-lifecycle.mjs
       - name: Build migrations in disposable PGlite
+        if: ${{ always() && steps.deps.outcome == 'success' }}
         run: npm run check:pglite
       - name: Anonymous and tenant privilege regression checks
+        if: ${{ always() && steps.deps.outcome == 'success' }}
         run: npm run check:anon
       - name: L95 staff payment link safety
+        if: ${{ always() && steps.deps.outcome == 'success' }}
         run: npm run check:lifecycle -- --only L95
       - name: L96 provider callback and missing-reference safety
+        if: ${{ always() && steps.deps.outcome == 'success' }}
         run: npm run check:lifecycle -- --only L96
       - name: L97 issued invoice and own-client balance
+        if: ${{ always() && steps.deps.outcome == 'success' }}
         run: npm run check:lifecycle -- --only L97
       - name: L98 single active booking checkout in both orders
+        if: ${{ always() && steps.deps.outcome == 'success' }}
         run: npm run check:lifecycle -- --only L98
       - name: Payment API fail-closed Vitest regression
+        if: ${{ always() && steps.deps.outcome == 'success' }}
         run: npx vitest run src/booking/pay/__tests__/payVerifySecurity.test.ts
       - name: Typecheck application
+        if: ${{ always() && steps.deps.outcome == 'success' }}
         run: npm run typecheck
       - name: Attach local verification receipts
         if: always()
