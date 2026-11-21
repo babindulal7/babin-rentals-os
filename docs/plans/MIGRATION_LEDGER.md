@@ -116,5 +116,6 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0258 | T7-05 | payment-intents-and-fonepay | lane-c/T7-15-payment-link-from-any-booking | verified (check:pglite 257/257) |
 | 0259 | T7-15 | payment-link-from-any-booking | lane-c/T7-15-payment-link-from-any-booking | verified (check:pglite 257/257 + check:lifecycle 97/97 Step L96) |
 | 0260 | T7-07 | online-payment-refunds-and-reconciliation | lane-c/T7-07-refunds-and-reconciliation | verified (check:pglite 258/258 + check:lifecycle 98/98 Step L97) |
+| 0261 | T9-02 | external-booqable-holds-db-gate | fix/t9-02-db-external-holds-20261122 | drafted; unverified; no staging/production apply authorized; importer/UI missing |
 
 ## Expected migrations (not yet claimed)
