@@ -46,10 +46,8 @@ describe('Roadmap status truth across merged tracks', () => {
     const t2 = read('docs/plans/T2_FLOOR.md')
     const cards: Record<string, string> = {
       'T2-06': 'merged',
-      'T2-13': 'merged',
       'T2-14': 'merged',
       'T2-15': 'merged',
-      'T2-18': 'merged',
       'T2-19': 'merged',
       'T2-21': 'merged',
       'T2-22': 'merged',
@@ -65,7 +63,9 @@ describe('Roadmap status truth across merged tracks', () => {
     }
 
     const doneCards: Record<string, string> = {
+      'T2-13': 'merged 27 Oct',
       'T2-17': 'PR #90 merged',
+      'T2-18': 'PR #80 merged',
       'T2-20': 'PR #189 merged',
       'T2-24': 'PR #257 merged',
     }
@@ -145,7 +145,6 @@ describe('Roadmap status truth across merged tracks', () => {
     const cards: Record<string, string> = {
       'T7-02': 'verified',
       'T7-03': 'PR #276 merged',
-      'T7-04': 'PR #276 merged',
       'T7-05': 'PR #276 merged',
       'T7-06': 'PR #276 merged',
       'T7-08': 'PR #276 merged',
@@ -162,6 +161,18 @@ describe('Roadmap status truth across merged tracks', () => {
       expect(heading).toBeDefined()
       expect(heading).toContain('status: acceptance_pending')
       expect(heading).toContain(prRef)
+      expect(heading).not.toContain('status: todo')
+    }
+
+    const doneCards: Record<string, string> = {
+      'T7-04': 'PR #276 merged',
+    }
+    for (const [key, prRef] of Object.entries(doneCards)) {
+      const heading = t7.split('\n').find((l) => l.startsWith(`### ${key} ·`))
+      expect(heading).toBeDefined()
+      expect(heading).toContain('status: done')
+      expect(heading).toContain(prRef)
+      expect(heading).not.toContain('status: acceptance_pending')
       expect(heading).not.toContain('status: todo')
     }
   })

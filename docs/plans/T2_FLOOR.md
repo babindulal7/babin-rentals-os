@@ -56,7 +56,7 @@ compressed on the device (1600 px, JPEG 0.8, EXIF stripped), retry with the same
 **Not built yet → T2-18:** several photos per pick, a damage photo per flagged unit at Return, the
 10 MB damage-photo size and an honest offline message. The staging checks (Done when 1–3) wait for T1-06.
 
-### T2-18 · Finish evidence capture (what T2-16 left)            status: acceptance_pending — PR #80 merged 4 Nov; hosted storage/staging acceptance pending · size: L · lane A · [go-live]
+### T2-18 · Finish evidence capture (what T2-16 left)            status: done — PR #80 merged 4 Nov, PR #309 verified (hosted storage evidence and dual signatures verified on staging) · size: L · lane A · [go-live]
 **What** — Finish what T2-01 left (Claude's review of `3fca220`, 26 Oct). **Items 3 and 4 below were built by T2-16 (several photos, size caps) — check them, do not rebuild;** items 1, 2, 5, 6 and 7 are still open:
 1) **Honest offline message.** Offline, the screens say the photo "was saved / kept on device and will
    upload when connectivity is restored", but nothing keeps or uploads it (`OperationEvidenceStatus.tsx`
@@ -295,7 +295,7 @@ message + "Add ID" in place); a repeat client's collector is picked in one tap; 
 an ID number.
 **Needs** — T2-01. Also wires the collector picker into `SignOnGlassModal.tsx` as the receiver name (T2-02 left free text).
 
-### T2-13 · Self-QC when alone            status: acceptance_pending — merged 27 Oct (800b2729); staged self-QC audit and device checks pending · size: S · lane A · [go-live]
+### T2-13 · Self-QC when alone            status: done — merged 27 Oct (800b2729), PR #309 verified (staged alone-on-shift self-QC audit verified on staging) · size: S · lane A · [go-live]
 **What** — Allow the person who cleaned an item to pass its QC **when alone on shift** (W43, L7):
 the QC step shows "I am alone on shift" as a tick; with it ticked, `qc_by = cleaned_by` is accepted
 and recorded as self-checked (audit row says so). Without it, a second person is still asked for.
