@@ -67,7 +67,7 @@ against staging before/after), then Babin applies it alone to live.
 test as Owner still works.
 **Needs** — T1-01, T1-03.
 
-### T1-05 · Nine role seats + read-only role harness            status: acceptance_pending — PR #173 merged; role seat staging test pending · size: M · lane A + Babin
+### T1-05 · Nine role seats + read-only role harness            status: ready — awaiting merge (lane-a/T1-05-nine-role-seats-plus-read-only) · size: M · lane A + Babin
 **What** — On staging create one test login per role (Owner, Admin, Manager, Coordinator,
 Warehouse, Technician, Accounts, Driver, Client) with matching `users` rows; Client seat linked to
 a test client. Give every staff seat the Boudha site grant automatically (D27). Run

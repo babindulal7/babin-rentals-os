@@ -79,7 +79,7 @@ export async function verifyStaging(configuration, fixtures, request = fetch, in
   return { project: configuration.reference, checks, status: checks.every((check) => check.status === 'PASS') ? 'PASS' : checks.some((check) => check.status === 'FAIL') ? 'FAIL' : 'INCOMPLETE' }
 }
 
-async function inspectStagingPrivileges(configuration, connection) {
+export async function inspectStagingPrivileges(configuration, connection) {
   const target = new URL(connection)
   if (!['postgres:', 'postgresql:'].includes(target.protocol)
       || !(target.hostname === `db.${configuration.reference}.supabase.co`
