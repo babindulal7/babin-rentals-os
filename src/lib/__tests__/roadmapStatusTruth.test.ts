@@ -27,10 +27,12 @@ describe('Roadmap status truth across merged tracks', () => {
     }
 
     const doneCards: Record<string, string> = {
+      'T1-02': 'PR #292 merged',
       'T1-03': 'PR #260 merged',
       'T1-04': 'applied to production by Babin',
       'T1-05': 'PR #173 merged',
       'T1-06': 'PR #174 merged',
+      'T1-09': 'PR #275 merged',
       'T1-15': 'PR #208 merged',
     }
     for (const [key, ref] of Object.entries(doneCards)) {
@@ -178,10 +180,9 @@ describe('Roadmap status truth across merged tracks', () => {
     }
   })
 
-  it('T9 cutover track reflects merged PRs as acceptance_pending', () => {
+  it('T9 cutover track reflects merged PRs as acceptance_pending or done', () => {
     const t9 = read('docs/plans/T9_CUTOVER.md')
     const cards: Record<string, string> = {
-      'T9-01': 'PR #195 merged',
       'T9-02': 'PR #202 merged',
       'T9-07': 'PR #199 merged',
     }
@@ -190,6 +191,18 @@ describe('Roadmap status truth across merged tracks', () => {
       expect(heading).toBeDefined()
       expect(heading).toContain('status: acceptance_pending')
       expect(heading).toContain(prRef)
+      expect(heading).not.toContain('status: todo')
+    }
+
+    const doneCards: Record<string, string> = {
+      'T9-01': 'PR #195 merged',
+    }
+    for (const [key, prRef] of Object.entries(doneCards)) {
+      const heading = t9.split('\n').find((l) => l.startsWith(`### ${key} ·`))
+      expect(heading).toBeDefined()
+      expect(heading).toContain('status: done')
+      expect(heading).toContain(prRef)
+      expect(heading).not.toContain('status: acceptance_pending')
       expect(heading).not.toContain('status: todo')
     }
   })
