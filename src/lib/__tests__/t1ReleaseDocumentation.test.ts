@@ -8,8 +8,12 @@ describe('T1 release card status follows merged PR progress, not invented hosted
   const release = read('docs/plans/T1_RELEASE.md')
   const audit = read('docs/verification/T1_RELEASE_PR_REVIEW_2026-11-16.md')
 
-  it('marks all four implementations doing rather than accepted', () => {
-    for (const key of ['T1-06', 'T1-07', 'T1-08', 'T1-14']) {
+  it('marks T1-06 done with staging storage verification and remaining implementations doing', () => {
+    const t106Heading = release.split('\n').find(line => line.startsWith('### T1-06 ·'))
+    expect(t106Heading).toContain('status: done')
+    expect(t106Heading).toContain('PR #174 merged')
+
+    for (const key of ['T1-07', 'T1-08', 'T1-14']) {
       const heading = release.split('\n').find(line => line.startsWith(`### ${key} ·`))
       expect(heading).toContain('status: doing')
       expect(heading).toContain('merged')
