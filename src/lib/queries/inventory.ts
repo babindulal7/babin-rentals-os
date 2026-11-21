@@ -1780,3 +1780,61 @@ export type {
   RailRow,
   SortKey,
 } from '../../data/inventory'
+
+/**
+ * Fetch crew members available for import (for bundle line crew references).
+ * Returns minimal fields needed for import validation.
+ */
+export async function listCrewForImport(): Promise<{ id: string; fullName: string }[]> {
+  const { data, error } = await supabase
+    .from('crew_members_v')
+    .select('id, full_name')
+    .eq('status', 'Active')
+    .order('full_name')
+  if (error) throw new Error(error.message)
+  return (data ?? []).map(r => ({ id: r.id, fullName: r.full_name }))
+}
+
+/**
+ * Fetch pricing structures for import validation.
+ * Returns active pricing structures with their tiles and rulesets.
+ */
+export async function listPricingStructures(): Promise<{
+  id: string
+  name: string
+  extra_day_amount: number | null
+  tiles: { duration_days: number; amount: number }[]
+  rulesets: { id: string; name: string; valid_until: string | null; rules: Record<string, unknown>[] }[]
+}[]> {
+  const { data, error } = await supabase
+    .from('pricing_structures')
+    .select(`
+      id,
+      name,
+      extra_day_amount,
+      pricing_structure_tiles!inner(duration_days, amount),
+      pricing_rulesets!inner(
+        id,
+        name,
+        valid_until,
+        pricing_rules!inner(kind, name, charge_action, pickup_after, return_before, percent, weekdays, valid_from, valid_to, apply_when, stack)
+      )
+    `)
+    .is('retired_at', null)
+    .order('name')
+  
+  if (error) throw new Error(error.message)
+  
+  return (data ?? []).map(s => ({
+    id: s.id,
+    name: s.name,
+    extra_day_amount: s.extra_day_amount,
+    tiles: s.pricing_structure_tiles.map(t => ({ duration_days: t.duration_days, amount: t.amount })),
+    rulesets: s.pricing_rulesets.map(rs => ({
+      id: rs.id,
+      name: rs.name,
+      valid_until: rs.valid_until,
+      rules: rs.pricing_rules
+    }))
+  }))
+}

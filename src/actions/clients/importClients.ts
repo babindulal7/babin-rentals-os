@@ -83,6 +83,22 @@ export const importClientsConfig: ActionConfig<ImportClientsInput, ImportClients
       try {
         const saved = await confirmedWithin(saveRecord({ kind: 'client', id: null, expectedRevision: null, clientUuid: row.clientUuid, values: row.values, rows: [] }, ctx))
         if (!saved.id || !saved.code || !saved.revision) throw new Error('Save confirmation was incomplete. Retry with the same save key.')
+        // Insert Booqable metadata into external_refs (T9-01, migration 0040)
+        const booqableId = row.values.booqableId
+        const storeSlug = row.values.storeSlug
+        if (booqableId || storeSlug) {
+          const externalId = booqableId || storeSlug || ''
+          const { error: extRefError } = await supabase
+            .from('external_refs')
+            .insert({
+              provider: 'booqable',
+              entity: 'clients',
+              local_id: saved.id,
+              external_id: externalId,
+              payload_hash: storeSlug ?? null,
+            })
+          if (extRefError) throw new Error(`Failed to store Booqable reference: ${extRefError.message}`)
+        }
         outcomes[index] = { rowIndex: row.rowIndex, status: 'saved', clientId: saved.id, clientCode: saved.code }
         events.push({ type: EVENT_TYPES.CLIENT_CREATED, payload: { clientId: saved.id, clientCode: saved.code, userId: ctx.userId } })
       } catch (error: unknown) {
