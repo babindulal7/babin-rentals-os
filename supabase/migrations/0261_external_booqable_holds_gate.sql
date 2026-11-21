@@ -98,6 +98,12 @@ create trigger trg_external_holds_no_delete
 before delete on public.external_holds for each row
 execute function public.reject_external_hold_deletion();
 
+-- Missing the singleton cutover state must not silently restore availability.
+-- Preserve its row even for service_role; disable explicitly through an UPDATE.
+create trigger trg_booqable_feed_state_no_delete
+before delete on public.booqable_hold_feed_state for each row
+execute function public.reject_external_hold_deletion();
+
 -- Cross-table database gate, not browser/UI advice.
 -- Every active OS reservation and external-hold write locks the same product
 -- before checking both tables, so concurrent transactions cannot both win.
@@ -169,6 +175,10 @@ begin
   if tg_table_name = 'inventory_reservations' then
     select * into v_feed from public.booqable_hold_feed_state
      where source = 'booqable';
+    if not found then
+      raise exception 'GATE:booqable_feed_missing|Cutover feed state cannot be read.'
+        using errcode = '23514';
+    end if;
     if v_feed.enabled and (
       not v_feed.healthy
       or v_feed.last_full_sync_at is null
