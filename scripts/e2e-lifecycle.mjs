@@ -189,24 +189,6 @@ async function asService(fn) {
   }
 }
 
-async function asAnon(fn) {
-  await db.exec(`set role anon;
-    select set_config('app.current_user_id', '', false);
-    select set_config('request.jwt.claim.sub', '', false);
-    select set_config('request.jwt.claim.role', 'anon', false);`)
-  try {
-    return await fn()
-  } finally {
-    try {
-      await db.exec(`reset role; select set_config('app.current_user_id', '', false);
-        select set_config('request.jwt.claim.sub', '', false); select set_config('request.jwt.claim.role', '', false);`)
-    } catch {
-      await db.exec('rollback;')
-      await db.exec(`reset role; select set_config('app.current_user_id', '', false);
-        select set_config('request.jwt.claim.sub', '', false); select set_config('request.jwt.claim.role', '', false);`)
-    }
-  }
-}
 
 /**
  * Run a block and UNDO it, whatever it did.
@@ -10732,4 +10714,5 @@ if (failed.length > 0) {
   for (const r of failed) console.log(`  ${r.id}  ${r.title}\n     ${r.detail || r.outcome}`)
   process.exit(1)
 }
-console.log('The lifecycle holds. (PGlite, not Supabase ΓÇö no JWT and no PostgREST. See this fileΓÇÖs header.)')
+console.log('The lifecycle holds. (PGlite, not Supabase \u2014 no JWT and no PostgREST. See this file\u2019s header.)')
+process.exit(0)

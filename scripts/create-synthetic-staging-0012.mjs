@@ -9,14 +9,16 @@
  * node scripts/create-synthetic-staging-0012.mjs --write
  */
 import { createHash } from 'node:crypto'
-import { readFileSync, mkdirSync, writeFileSync } from 'node:fs'
+import { readFileSync, mkdirSync, writeFileSync, existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const name = '0012_seed_data.sql'
 const srcPath = join(root, 'supabase', 'migrations', name)
-const manifestPath = join(root, 'docs', 'verification', 'STAGING_SQL_INVENTORY_2026-11-16.json')
+const manifestPath = existsSync(join(root, 'docs', 'verification', 'STAGING_SQL_INVENTORY_2026-11-21.json'))
+  ? join(root, 'docs', 'verification', 'STAGING_SQL_INVENTORY_2026-11-21.json')
+  : join(root, 'docs', 'verification', 'STAGING_SQL_INVENTORY_2026-11-16.json')
 const output = join(root, '.localdb', 'staging-fixtures', '0012_seed_data.synthetic.sql')
 const flags = process.argv.slice(2)
 if (flags.some((flag) => flag !== '--write') || flags.filter((flag) => flag === '--write').length > 1) {

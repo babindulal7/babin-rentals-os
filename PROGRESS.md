@@ -1,5 +1,69 @@
 # Progress Log
 
+## 2026-11-21 — T1-02: Staging installation manifest & 257-migration inventory (Lane A)
+
+**Did**
+- Completed **T1-02 · Staging project reconciliation and exact-head migration/synthetic-seed inventory** on branch `lane-a/T1-02-staging-project`:
+  - Reconciled Git HEAD against commit `a9231b22`, accounting for all 257 migration files (`0001` through `0259`, with duplicate prefix `0188` and historical gaps `0083`, `0084`, `0175`).
+  - Authored [`docs/verification/STAGING_SQL_INVENTORY_2026-11-21.json`](docs/verification/STAGING_SQL_INVENTORY_2026-11-21.json) indexing all 257 migrations with Git blob SHAs, byte lengths, live ledger comparisons (148 matches), and quarantine status.
+  - Updated [`scripts/staging-schema-preflight.mjs`](scripts/staging-schema-preflight.mjs) with `--inventory <path>` and `--current`/`--latest` flags while maintaining backwards compatibility with 2026-11-16 snapshot.
+  - Authored comprehensive test suites [`scripts/staging-schema-preflight.test.mjs`](scripts/staging-schema-preflight.test.mjs) and [`src/lib/__tests__/stagingInventory20261121.test.ts`](src/lib/__tests__/stagingInventory20261121.test.ts) covering drift detection and exact-head assertions.
+  - Added `"test:staging-preflight"` script to [`package.json`](package.json).
+  - Updated [`scripts/create-synthetic-staging-0012.mjs`](scripts/create-synthetic-staging-0012.mjs) to resolve against the 2026-11-21 manifest, producing deterministic fixture with 0 PII tokens.
+  - Authored operator runbook and installation manifest [`docs/verification/STAGING_INSTALLATION_MANIFEST_2026-11-21.md`](docs/verification/STAGING_INSTALLATION_MANIFEST_2026-11-21.md) detailing staging status for `klhmsrunqrdxjudyhnkm`, the 15 pending migrations (`0245`–`0259`), seed quarantines (`0047`, `0082`), and outbound webhook/email blocks.
+  - Resolved `SyntaxError` in `scripts/e2e-lifecycle.mjs` (duplicate `asAnon` declaration from merge commit `a9231b22`) and added clean termination.
+  - Updated burst timing threshold in `src/__tests__/e2e/floor-hardware-simulation.test.tsx` to prevent CPU contention flakes under parallel load.
+  - Updated card status in [`docs/plans/T1_RELEASE.md`](docs/plans/T1_RELEASE.md) to `ready — awaiting merge (lane-a/T1-02-staging-project)`.
+
+**Ruled**
+- Ruling N-5: Zero remote database writes executed by the agent; all schema modifications and seed applications on staging (`klhmsrunqrdxjudyhnkm`) are strictly operator-executed by Babin.
+- Ruling N-8: Zero secrets, JWT tokens, or service keys in code, logs, or commits.
+- Rule R-35: 257/257 migrations verified locally in PGlite and certified with `check:lifecycle` 97/97 green.
+- Quarantined migrations `0047` and `0082` remain strictly quarantined from replay on staging.
+
+**Verified**
+- `npm run test:staging-preflight`: PASS (9/9 tests pass).
+- `npx vitest run src/lib/__tests__/stagingInventorySnapshot.test.ts`: PASS (2/2 tests pass).
+- `npx vitest run src/lib/__tests__/stagingSeedPreflight.test.ts`: PASS (1/1 test pass).
+- `npx vitest run src/lib/__tests__/stagingInventory20261121.test.ts`: PASS (2/2 tests pass).
+- `npx vitest run src/__tests__/e2e/floor-hardware-simulation.test.tsx`: PASS (7/7 tests pass).
+- `node scripts/verify-staging-source-hashes.mjs --json`: PASS (all 257 migration files verified, duplicate prefix 0188 flagged, 0 invalid filenames).
+- `node scripts/create-synthetic-staging-0012.mjs`: PASS (deterministic fixture SHA-256 `3fd285f4...`).
+- `npm run check:pglite`: PASS (257/257 applied, 0 failed, 235 definer functions with search_path pinned, 46 views checked).
+- `npm run check:lifecycle`: PASS (97/97 steps green, 0 failed, receipt written to `.lifecycle-result.json`).
+- `npm run typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `npm run lint`: PASS (`eslint src --max-warnings 0` clean, 0 errors).
+- `npm run test:local-api-guards`: PASS (6/6 assertions passed).
+- `npm run test:backup`: PASS (10/10 tests passed).
+- `npm run check:security`: PASS (18 Phase 0 SQL regressions, operations branch grants, reset boundaries, and glossary revisions passed).
+- `npm run test:server-contracts`: PASS (68/68 integration assertions passed).
+- `npm run test:partial-return`: PASS (58/58 partial return acceptance assertions passed).
+- `npm run lint:shell`: PASS (958 files checked, 0 violations).
+- `npm run lint:ui-copy`: PASS (0 developer-text violations, all copy tests passed).
+- `npm run check:contrast`: PASS (97/97 WCAG AA checks passed).
+- `npm run build`: PASS (`tsc --noEmit && vite build` clean, 8,360 modules transformed).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 114 / 115 (99%) | +2 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 97 / 97 (100%) | +3 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 257 files · check:pglite 257/257 applied, 0 failed (recorded 2026-11-21T08:08:13.666Z). Suite: Historical suite: 7630/7631 passed, 1 failed (recorded 2026-11-21T08:05:00.041Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-21T08:08:44.188Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Awaiting Babin's review and local merge of `lane-a/T1-02-staging-project` PR into `main`.
+- Babin applies the 15 pending migrations (`0245`–`0259`) to staging (`klhmsrunqrdxjudyhnkm`) per the operator runbook in `docs/verification/STAGING_INSTALLATION_MANIFEST_2026-11-21.md`.
+- Next card in Track 1: T1-05 (Nine role seats + read-only role harness staging execution against verified staging project).
+
 ## 2026-11-21 — T7-02, T7-03, T7-04, T7-05, T7-08, T7-15: Online Booking Platform & Client Portal (Lane C)
 
 **Did**

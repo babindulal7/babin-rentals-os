@@ -37,6 +37,7 @@
     "check:lifecycle": "node scripts/e2e-lifecycle.mjs",
     "check:dump": "node scripts/check-dump.mjs",
     "test:backup": "node --test scripts/backup-db.test.mjs && node --test scripts/check-dump.test.mjs",
+    "test:staging-preflight": "node --test scripts/staging-schema-preflight.test.mjs && node --test scripts/verify-staging-readonly.test.mjs",
     "completion": "node scripts/completion.mjs",
     "lint:progress": "node scripts/lint-progress.mjs",
     "lint:shell": "node scripts/check-page-shell-lint.mjs",
