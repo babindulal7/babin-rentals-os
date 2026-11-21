@@ -1,5 +1,47 @@
 # Progress Log
 
+## 2026-11-22 — T7-13: Option Picker on the Product Page (Lane C)
+
+### Did
+- Added the option picker to the product detail modal ([`src/booking/components/ProductDetailModal.tsx`](src/booking/components/ProductDetailModal.tsx)). It shows when a product has two or more options on the catalogue page. Each option has its own rate, and an option unavailable for the chosen dates is disabled and labelled. Adding to the request adds the chosen option's own product, not the requested one.
+- Added the pure helper [`src/booking/lib/familyOptions.ts`](src/booking/lib/familyOptions.ts), which decides the choices: sort order, options missing from the catalogue are dropped, a family with fewer than two options shows nothing.
+- Added `fetchFamilyOptions` in [`src/booking/lib/catalogueApi.ts`](src/booking/lib/catalogueApi.ts), which reads `public_product_family_options_v`. It fails soft: if the read fails, products show as standalone and the error is logged.
+- Wired the picker into [`src/booking/App.tsx`](src/booking/App.tsx) with per-option availability.
+- The cart line carries the chosen option's product ID ([`src/booking/components/CartDrawer.tsx`](src/booking/components/CartDrawer.tsx), `product_id: line.item.id`).
+- Branch `feat/t7-13-option-picker-ui` at `2faaea31`, based on `main`. It does not include the migrations on `feat/t7-13-family-schema` (0261 family tables and RPC, 0262 public view). Merge that branch first, or the picker finds no families and shows products standalone.
+
+### Ruled
+- None. Option availability uses the existing per-product availability check. Each option keeps its own stock and rate, as the family engine already requires.
+
+### Verified
+- `vitest run src/booking/lib/__tests__/familyOptions.test.ts`: 5 of 5 pass.
+- `VITE_DATA_SOURCE=mock vitest run src/booking/components/__tests__/productDetailFamily.test.tsx`: 5 of 5 pass. Covers the standalone product, both options offered with the requested one selected, the chosen option reaching the cart, an unavailable option disabled, and Add disabled for an unavailable requested product.
+- `VITE_DATA_SOURCE=mock vitest run src/booking`: 10 files, 44 tests pass.
+- `tsc --noEmit`: exit 0. `eslint` on the six changed files with `--max-warnings 0`: exit 0.
+- `npm run check:lifecycle`: 98 of 98 green.
+- Not run on this branch: `check:pglite` (this branch is based on `main` and lacks 0261 and 0262; both pass on `feat/t7-13-family-schema`), the full suite, and any hosted check.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 258 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-21T20:55:37.562Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T7-13 stays `acceptance_pending`. Not done until: the family schema branch is merged with this one, a hosted check shows the picker and per-option reservation on staging, and Babin signs off.
+- Reservation: the request carries the chosen product ID. The reservation is checked per product by existing gates, not per option on a hosted booking yet.
+- Next session starts with: merge `feat/t7-13-family-schema` into this branch, re-run `check:pglite`, then the hosted check for T7-13 once staging writes are authorised.
+
 ## 2026-11-22 — T1-02, T1-09 & T9-01: Roadmap Documentation & Acceptance Reconciliation (Lane A)
 
 ### Did
