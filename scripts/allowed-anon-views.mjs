@@ -7,4 +7,5 @@
 
 export const ALLOWED_ANON_VIEWS = new Set([
   'public_catalogue_v',
+  'public_product_family_options_v',
 ]);
