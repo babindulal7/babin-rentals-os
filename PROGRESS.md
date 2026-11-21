@@ -1,5 +1,53 @@
 # Progress Log
 
+## 2026-11-22 — Staging Inventory Re-pinned at 261 Files; Staging Read-Only Check of the Paisa Fault (Lane C)
+
+### Did
+- Owner decisions, asked and answered 22 Nov: T7-13 is done as it stands, so the public picker and schema branches stay unmerged. Check staging before deciding on the paisa fix. Re-pin the staging SQL inventory as a new snapshot. No hosted staging checks for T7-13 yet.
+- Read-only check of staging (`klhmsrunqrdxjudyhnkm`, babin-staging) through the Supabase connector, two SELECT statements only. The live `submit_booking_request` still does the raw rupee lookup and has no paisa conversion (`has_paisa_conversion` false, `has_raw_rupee_lookup` true). Staging's migration history ends at 0259; 0260 and 0261–0263 are not applied there. No write. The production project was not queried.
+- Re-pinned the staging SQL inventory: `docs/verification/STAGING_SQL_INVENTORY_2026-11-22.json` covers 261 migration files, generated from Git blobs by the new `scripts/build-staging-inventory.mjs`. Drift since the 21 Nov snapshot is exactly 0261, 0262 and 0263 (added), with no changed or removed files. The 21 Nov snapshot is unchanged.
+- `scripts/staging-schema-preflight.mjs --current` now reads the 22 Nov snapshot. The 21 Nov guard test now asserts that the only drift is the four expected errors (the count and the three added files), so any other change still fails closed. The 16 Nov guard is unchanged.
+- Found while re-pinning: the 21 Nov snapshot records `source_without_exact_live_name` as 109, but the same method gives 110 (148 + 110 = 258). Noted in the new snapshot, not corrected.
+
+### Ruled
+- Owner, 22 Nov: T7-13 done as it stands; the picker and schema branches stay unmerged.
+- Owner, 22 Nov: the paisa fix (0263) is to be checked against staging before a decision.
+- Owner, 22 Nov: the staging inventory is re-pinned as a new snapshot, not replaced.
+
+### Verified
+- Staging read-only check: `has_paisa_conversion` false, `has_raw_rupee_lookup` true; latest applied migration `0259_payment_link_from_any_booking`.
+- 22 Nov snapshot against the current tree: 261 of 261, no errors, source identity verified.
+- 21 Nov snapshot against the current tree: `BLOCKED_SOURCE_DRIFT` with exactly the four expected errors.
+- `npm run test:staging-preflight`: exit 0. Vitest inventory guards (3 files): 5 of 5 pass. ESLint on the changed test: exit 0.
+- Full suite `VITE_DATA_SOURCE=mock npm run test`: 712 of 712 files, 7,669 of 7,669 tests pass.
+- `npm run test:coverage` (mock): 712 of 712 files, 7,669 of 7,669 pass. All files: statements 67.47%, branches 74.21%, functions 51.75%, lines 67.4%.
+- `npm run check:lifecycle`: 98 of 98 green. `npm run check:pglite`: 261 of 261 applied, 0 failed.
+- Not run: hosted apply of 0261–0263 (not authorised). The 22 Nov staging report's paisa figures were not reproduced; see Remaining.
+
+### Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 261 files · check:pglite 261/261 applied, 0 failed (recorded 2026-11-21T21:47:30.815Z). Suite: PASS — 7669/7669 passed, 0 failed (recorded 2026-11-21T22:14:23.993Z); source fingerprint matches.
+Coverage suite: PASS — 7669/7669 passed, 0 failed (recorded 2026-11-21T22:14:23.993Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-21T21:47:18.270Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Paisa fault: the function on staging and in the repo computes request totals from rupee rates into paisa fields, 100 times too small. The 22 Nov staging report's paisa figures (VAT 195,000 paisa for `REQ-20261121-1001`) do not match what this function computes from the rupee rates. Explain them against the rates actually used before deciding on 0263.
+- Owner decision needed on applying 0263 (`fix/submit-request-paisa`). Applying 0261–0263 to staging needs separate authorisation, which has not been requested.
+- `scripts/create-synthetic-staging-0012.mjs` still prefers the 21 Nov manifest when it exists. Point it at the 22 Nov snapshot once the owner decides.
+- T7-13 is done as it stands. No further T7-13 work on these branches.
+- Next session starts with: the discrepancy between the 22 Nov staging report and the staging function.
+
 ## 2026-11-22 — T7-13: Option Picker on the Product Page (Lane C)
 
 ### Did
