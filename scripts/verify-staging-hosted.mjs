@@ -40,9 +40,9 @@ if (!process.env.BABIN_STAGING_FIXTURES) process.env.BABIN_STAGING_FIXTURES = 'd
 const anonKey = process.env.BABIN_STAGING_ANON_KEY
 const authPassword = process.env.BABIN_STAGING_SYNTHETIC_PASSWORD || 'BabinSynthetic2026!'
 
-if (!anonKey) {
-  console.error('\n[ERROR] Missing BABIN_STAGING_ANON_KEY in environment or .env.staging.local.')
-  console.error('Please configure .env.staging.local with the staging project anon key.\n')
+if (!anonKey || anonKey === 'PASTE_STAGING_ANON_KEY_HERE') {
+  console.error('\n[ERROR] Missing or placeholder BABIN_STAGING_ANON_KEY in .env.staging.local.')
+  console.error('Please open .env.staging.local and replace PASTE_STAGING_ANON_KEY_HERE with your staging anon key.\n')
   process.exit(1)
 }
 
