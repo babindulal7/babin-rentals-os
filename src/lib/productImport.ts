@@ -39,6 +39,9 @@ export type ProductImportTargetField =
   | 'dailyRate'
   | 'description'
   | 'notes'
+  // Booqable metadata (T9-01)
+  | 'booqableId'
+  | 'storeSlug'
 
 export interface ProductImportFieldDef {
   key: ProductImportTargetField
@@ -58,6 +61,9 @@ export const PRODUCT_IMPORT_TARGET_FIELDS: ProductImportFieldDef[] = [
   { key: 'dailyRate', label: 'Daily Rate' },
   { key: 'description', label: 'Description' },
   { key: 'notes', label: 'Internal Notes' },
+  // Booqable metadata (T9-01)
+  { key: 'booqableId', label: 'Booqable ID' },
+  { key: 'storeSlug', label: 'Store Slug' },
 ]
 
 /**
@@ -84,6 +90,9 @@ export function guessProductTargetField(header: string): ProductImportTargetFiel
     ['dailyRate', ['dailyrate', 'rate', 'dayrate', 'dailyrent', 'rentperday', 'dailyprice', 'price']],
     ['description', ['description', 'details']],
     ['notes', ['notes', 'internalnotes', 'remarks']],
+    // Booqable metadata (T9-01)
+    ['booqableId', ['booqableid', 'booqable_id', 'external_id']],
+    ['storeSlug', ['storeslug', 'slug', 'store']],
     // Deliberately NOT guessed: onhand / stock / stockcount (BQ-407 — an
     // on-hand count is never a total_quantity at creation) and purchase/serial
     // metadata that belongs to units, not catalogue rows.
@@ -107,6 +116,9 @@ export interface ImportedProductFields {
   dailyRatePaisa?: Paisa | undefined
   description?: string | undefined
   notes?: string | undefined
+  // Booqable metadata (T9-01) - stored in external_refs per 0040
+  booqableId?: string | undefined
+  storeSlug?: string | undefined
 }
 
 /** The catalogue rows a file row may duplicate — fetched before the dry-run. */
@@ -240,6 +252,9 @@ export function buildProductImportRow(
           ...(dailyRatePaisa !== undefined ? { dailyRatePaisa } : {}),
           ...(cell(raw, 'description') ? { description: cell(raw, 'description') } : {}),
           ...(cell(raw, 'notes') ? { notes: cell(raw, 'notes') } : {}),
+          // Booqable metadata (T9-01)
+          ...(cell(raw, 'booqableId') ? { booqableId: cell(raw, 'booqableId') } : {}),
+          ...(cell(raw, 'storeSlug') ? { storeSlug: cell(raw, 'storeSlug') } : {}),
         }
       : null
 
@@ -344,6 +359,8 @@ export const PRODUCT_IMPORT_SAMPLE_HEADERS = [
   'Daily Rate',
   'Description',
   'Internal Notes',
+  'Booqable ID',
+  'Store Slug',
 ] as const
 
 export const PRODUCT_IMPORT_SAMPLE_ROW = [
@@ -357,4 +374,6 @@ export const PRODUCT_IMPORT_SAMPLE_ROW = [
   '3500',
   'Full-frame cinema camera with 28-70mm kit lens',
   'Serial 002 has a small scratch on the LCD cover',
+  'BQ-12345',
+  'kathmandu',
 ] as const

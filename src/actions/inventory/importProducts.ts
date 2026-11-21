@@ -248,6 +248,20 @@ export const importProductsConfig: ActionConfig<ImportProductsInput, ImportProdu
         if (!saved.productId || !saved.assetCode) {
           throw new Error('Save confirmation was incomplete. Retry with the same save key.')
         }
+        // Insert Booqable metadata into external_refs (T9-01, migration 0040)
+        if (row.values.booqableId || row.values.storeSlug) {
+          const externalId = row.values.booqableId || row.values.storeSlug || ''
+          const { error: extRefError } = await supabase
+            .from('external_refs')
+            .insert({
+              provider: 'booqable',
+              entity: 'products',
+              local_id: saved.productId,
+              external_id: externalId,
+              payload_hash: row.values.storeSlug ?? null,
+            })
+          if (extRefError) throw new Error(`Failed to store Booqable reference: ${extRefError.message}`)
+        }
         outcomes[index] = {
           rowIndex: row.rowIndex,
           status: 'saved',

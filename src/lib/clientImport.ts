@@ -5,7 +5,7 @@ import { recordDefaults, recordFields, recordPayload, validateRecord, type Recor
 import { canCreateClient } from './rbac'
 import type { SystemRole } from '../types/database'
 
-export type ImportTargetField = 'skip' | 'name' | 'company' | 'phone' | 'email' | 'clientType' | 'orgSubtype' | 'membership' | 'address' | 'city' | 'pan' | 'businessRegistrationNo' | 'notes'
+export type ImportTargetField = 'skip' | 'name' | 'company' | 'phone' | 'email' | 'clientType' | 'orgSubtype' | 'membership' | 'address' | 'city' | 'pan' | 'businessRegistrationNo' | 'notes' | 'booqableId' | 'storeSlug'
 export interface ImportFieldDef { key: ImportTargetField; label: string; required?: boolean }
 export const IMPORT_TARGET_FIELDS: ImportFieldDef[] = [
   { key: 'skip', label: '— Skip this column —' },
@@ -15,6 +15,9 @@ export const IMPORT_TARGET_FIELDS: ImportFieldDef[] = [
   { key: 'orgSubtype', label: 'Organisation Type' }, { key: 'address', label: 'Address' },
   { key: 'city', label: 'City' }, { key: 'pan', label: 'PAN' },
   { key: 'businessRegistrationNo', label: 'Business Reg. No.' }, { key: 'notes', label: 'Notes' },
+  // Booqable metadata (T9-01)
+  { key: 'booqableId', label: 'Booqable ID' },
+  { key: 'storeSlug', label: 'Store Slug' },
   // Recognized legacy mappings stay visible so populated fields cannot silently disappear.
   { key: 'company', label: 'Separate Company — map to Name or skip' },
   { key: 'membership', label: 'Membership — use Membership after import' },
@@ -36,6 +39,9 @@ export function guessTargetField(header: string): ImportTargetField {
     ['address', ['address', 'addressline']], ['city', ['city']], ['pan', ['pan', 'pannumber', 'vat', 'panvat']],
     ['businessRegistrationNo', ['regno', 'registrationno', 'businessregno', 'regnumber', 'businessregistration']],
     ['notes', ['notes', 'note', 'remarks']],
+    // Booqable metadata (T9-01)
+    ['booqableId', ['booqableid', 'booqable_id', 'external_id']],
+    ['storeSlug', ['storeslug', 'slug', 'store']],
   ]
   return aliases.find(([, names]) => names.includes(h))?.[0] ?? 'skip'
 }
@@ -43,6 +49,9 @@ export interface ImportedClientFields {
   name: string; phone: string; email: string; clientType: ClientType; orgSubtype: string;
   address: string; city?: string | undefined; pan?: string | undefined;
   businessRegistrationNo?: string | undefined; notes?: string | undefined;
+  // Booqable metadata (T9-01)
+  booqableId?: string | undefined
+  storeSlug?: string | undefined
 }
 export interface ImportRowResult {
   rowIndex: number; record: ImportedClientFields | null; errors: string[]; warnings: string[];
@@ -79,6 +88,9 @@ export function buildImportRow(raw: Partial<Record<ImportTargetField, string>>, 
     name, phone: canonicalPhone(phone), email, clientType, orgSubtype: orgSubtype ?? '',
     address: cell(raw, 'address'), city: cell(raw, 'city') || undefined, pan: pan || undefined,
     businessRegistrationNo: cell(raw, 'businessRegistrationNo') || undefined, notes: cell(raw, 'notes') || undefined,
+    // Booqable metadata (T9-01)
+    booqableId: cell(raw, 'booqableId') || undefined,
+    storeSlug: cell(raw, 'storeSlug') || undefined,
   } : null
   return { rowIndex, record, errors, warnings: [], duplicateOf, skip: false }
 }
@@ -128,5 +140,5 @@ export function importClientValues(record: ImportedClientFields): RecordValues {
   if (Object.keys(errors).length) throw new Error(Object.values(errors).join(' '))
   return recordPayload('client', values, false)
 }
-export const IMPORT_SAMPLE_HEADERS: ImportTargetField[] = ['name', 'phone', 'email', 'clientType', 'orgSubtype', 'address', 'city', 'pan']
-export const IMPORT_SAMPLE_ROW = ['Everest Vision Media', '9801112233', 'contact@everestvision.com.np', 'Organisation', 'Production House', 'Baneshwor, Kathmandu', 'Kathmandu', '600111222']
+export const IMPORT_SAMPLE_HEADERS: ImportTargetField[] = ['name', 'phone', 'email', 'clientType', 'orgSubtype', 'address', 'city', 'pan', 'booqableId', 'storeSlug']
+export const IMPORT_SAMPLE_ROW = ['Everest Vision Media', '9801112233', 'contact@everestvision.com.np', 'Organisation', 'Production House', 'Baneshwor, Kathmandu', 'Kathmandu', '600111222', 'BQ-12345', 'kathmandu']
