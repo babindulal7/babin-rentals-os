@@ -1,6 +1,6 @@
 # Progress Log
 
-## 2026-11-21 — T7-02, T7-03, T7-04, T7-05, T7-08, T7-15: Online Booking Platform & Client Portal (Lane C)
+## 2026-11-21 — T7-02, T7-03, T7-04, T7-05, T7-06, T7-08, T7-15: Online Booking Platform & Multi-Provider Client Payments (Lane C)
 
 **Did**
 - Implemented **Track T7 Online Booking Platform & Client Portal** (`lane-c/T7-03-online-booking-requests-and-client-portal`):
@@ -10,6 +10,11 @@
     - `0257_client_accounts_and_portal_binding.sql` (T7-03): Client accounts, passwordless sign-in, KYC ID upload to private bucket (`request-ids`), multi-tenant D-5 isolation, and staff account binding (`bind_online_account_to_client`).
     - `0258_payment_intents_and_fonepay.sql` (T7-05): Payment intents (`payment_intents`) with server-side amount calculation, Fonepay integration, multi-tenant RLS, and immutable payment allocation (`allocate_payment_intent`).
     - `0259_payment_link_from_any_booking.sql` (T7-15): Payment links from any booking, 48-hour expiration, replacement of older links, public token resolution (`get_payment_link_details`), and WhatsApp share template.
+  - Multi-Provider Payment Engine (T7-06):
+    - Added eSewa and Khalti support to Edge Functions `pay-init` and `pay-verify` alongside Fonepay QR.
+    - Provider credential and environment toggle detection (switches stay off until credentials exist, D30).
+    - `OnlinePaymentModal.tsx` provider selection tabs (Fonepay / eSewa / Khalti), rendering active methods and sandbox simulation.
+    - Added unit test suite `src/booking/pay/__tests__/esewaKhalti.test.tsx` (6/6 tests passing).
   - Client Application (`src/booking/` & `booking.html`):
     - Separate public HTML entrypoint with responsive layout, Category Nav, Cart Drawer, and 5 screen states.
     - `MyBookingsModal.tsx` (T7-08): 6-step visual booking timeline, balance, download invoices/agreements.
@@ -33,6 +38,7 @@
 - `npm run typecheck`: PASS (0 errors).
 - `npm run lint`: PASS (0 warnings, 0 errors).
 - `npm test`: PASS (705 test files passed, 7,629/7,629 tests passed).
+- `npx vitest run src/booking/pay/__tests__/esewaKhalti.test.tsx`: PASS (6/6 tests passing).
 - `npm run check:pglite`: PASS (257/257 applied, 0 failed, 235 definer search paths pinned).
 - `node scripts/test-booking-financial-integrity.mjs`: PASS (financial integrity verified in isolated PGlite).
 - `npm run check:security`: PASS (18 Phase 0 SQL regressions, operations branch grants, reset boundaries, and glossary revisions passed).

@@ -128,7 +128,7 @@ changes nothing", "intent allocates once".
 **Needs** — T7-04; Babin obtains Fonepay merchant API credentials from the bank and enters them as
 Edge Function secrets (N-8).
 
-### T7-06 · eSewa and Khalti            status: todo · size: M each · lane C + Babin
+### T7-06 · eSewa and Khalti            status: ready — awaiting merchant account onboarding (lane-c/T7-03-online-booking-requests-and-client-portal) · size: M each · lane C + Babin
 **What** — The same pattern as T7-05 for eSewa and for Khalti, each behind a switch that stays off
 until its merchant account and credentials exist. The pay screen shows only switched-on methods.
 **Why** — D30.
