@@ -95,6 +95,15 @@ Deno.serve(async (req: Request) => {
       )
     }
 
+    // A verified refund is terminal. Do not re-credit an already reversed
+    // provider settlement, even when a duplicate success callback arrives.
+    if (intent.status === 'refunded') {
+      return new Response(
+        JSON.stringify({ success: false, status: 'refunded', error: 'This payment was already refunded.' }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Idempotency: if already allocated or paid, return current state
     if (intent.status === 'allocated') {
       return new Response(
