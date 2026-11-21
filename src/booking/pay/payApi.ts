@@ -197,7 +197,14 @@ export async function initOnlinePayment(params: {
     console.warn('[payApi] Edge function pay-init failed, trying direct RPC fallback:', err)
   }
 
-  // Fallback: direct RPC invocation (for local / mock environment)
+  // Fail closed in every non-mock environment. An Edge Function outage,
+  // rejected caller, or provider configuration error must never be silently
+  // converted into a direct SQL checkout or a fabricated sandbox payment.
+  if (import.meta.env.VITE_DATA_SOURCE !== 'mock') {
+    throw new Error('Secure checkout is unavailable. Please contact the rental desk if you already paid.')
+  }
+
+  // Synthetic mock-mode fallback ONLY; never a production payment pathway.
   let intentId: string
   let amountPaisa: number
 
