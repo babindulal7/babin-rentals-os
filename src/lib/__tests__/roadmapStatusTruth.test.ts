@@ -144,10 +144,17 @@ describe('Roadmap status truth across merged tracks', () => {
     const t7 = read('docs/plans/T7_ONLINE_BOOKING.md')
     const cards: Record<string, string> = {
       'T7-02': 'verified',
+      'T7-03': 'PR #276 merged',
+      'T7-04': 'PR #276 merged',
+      'T7-05': 'PR #276 merged',
+      'T7-06': 'PR #276 merged',
+      'T7-08': 'PR #276 merged',
       'T7-09': 'PR #201 merged',
       'T7-12': 'PR #196 merged',
       'T7-13': 'PR #197 merged',
       'T7-14': 'PR #200 merged',
+      'T7-15': 'PR #276 merged',
+      'T7-16': 'PR #276 merged',
       'T7-17': 'PR #198 merged',
     }
     for (const [key, prRef] of Object.entries(cards)) {
