@@ -17,7 +17,7 @@
     - Storage object deletion refusal (`astra_storage_immutable_delete` / Law 3): DELETE rejected for `documents` and `evidence`.
     - Direct storage quarantine enumeration restricted: PASS.
   - Authored quarantine inventory report [`docs/live/STORAGE_QUARANTINE_INVENTORY_2026-11-21.md`](docs/live/STORAGE_QUARANTINE_INVENTORY_2026-11-21.md) detailing quarantined staging objects and audit procedures under Ruling D33.
-  - Updated card status in [`docs/plans/T1_RELEASE.md`](docs/plans/T1_RELEASE.md) to `ready — awaiting merge (lane-a/T1-06-storage-scoping-accepted-on-staging)`.
+  - Updated card status in [`docs/plans/T1_RELEASE.md`](docs/plans/T1_RELEASE.md) to `doing — PR #174 merged, PR #305 merged (staging Storage API and quarantine evidenced); owner signoff pending`.
 
 ### Ruled
 - Storage objects in `documents` and `evidence` are strictly immutable under Law 3 and enforced by `astra_storage_immutable_update` and `astra_storage_immutable_delete`.
