@@ -30,6 +30,7 @@ describe('Roadmap status truth across merged tracks', () => {
       'T1-03': 'PR #260 merged',
       'T1-04': 'applied to production by Babin',
       'T1-05': 'PR #173 merged',
+      'T1-06': 'PR #174 merged',
       'T1-15': 'PR #208 merged',
     }
     for (const [key, ref] of Object.entries(doneCards)) {
@@ -50,7 +51,6 @@ describe('Roadmap status truth across merged tracks', () => {
       'T2-15': 'merged',
       'T2-19': 'merged',
       'T2-21': 'merged',
-      'T2-22': 'merged',
       'T2-23': 'verified',
     }
     for (const [key, ref] of Object.entries(cards)) {
@@ -67,6 +67,7 @@ describe('Roadmap status truth across merged tracks', () => {
       'T2-17': 'PR #90 merged',
       'T2-18': 'PR #80 merged',
       'T2-20': 'PR #189 merged',
+      'T2-22': 'PR #184 merged',
       'T2-24': 'PR #257 merged',
     }
     for (const [key, ref] of Object.entries(doneCards)) {

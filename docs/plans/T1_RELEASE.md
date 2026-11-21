@@ -80,7 +80,7 @@ real PostgREST, not only PGlite.
 tables; Client reads only its own rows; `anon` reads nothing internal.
 **Needs** — T1-02.
 
-### T1-06 · Storage scoping accepted on staging            status: doing — PR #174 merged, PR #305 merged (staging Storage API and quarantine evidenced); owner signoff pending · size: M · lane A
+### T1-06 · Storage scoping accepted on staging            status: done — PR #174 merged, PR #305 merged; live hosted storage API 22/22 checks verified [docs/verification/T1-06_T2-22_ACCEPTANCE_2026-11-22.md] · size: M · lane A
 **What** — With 0170 applied on staging, test the `documents` and `evidence` buckets with staff
 roles and two Client seats: upload, signed URL, read, refusal. Count objects with no linked record
 and leave them **quarantined** (D33) — list them for Babin in `docs/live/`.
