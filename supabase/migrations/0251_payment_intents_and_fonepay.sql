@@ -293,6 +293,14 @@ begin
     raise exception 'GATE:gate.payment.intent_not_found|Payment intent not found.';
   end if;
 
+  -- A refund is a terminal financial event. Never turn the same provider
+  -- settlement into another Received payment after a callback replay.
+  -- This check must precede all paid/allocated replay and expiry branches.
+  if v_intent.status = 'refunded' then
+    raise exception 'GATE:gate.payment.refunded_terminal|A refunded payment cannot be credited again.'
+      using errcode = '42501';
+  end if;
+
   -- Replay guard 1: if already allocated, return idempotent success
   if v_intent.status = 'allocated' and v_intent.payment_id is not null then
     return jsonb_build_object(
