@@ -43,15 +43,10 @@ describe('Roadmap status truth across merged tracks', () => {
     }
   })
 
-  it('T2 floor track reflects all merged floor features as acceptance_pending', () => {
+  it('T2 floor track reflects all merged floor features as acceptance_pending or done', () => {
     const t2 = read('docs/plans/T2_FLOOR.md')
     const cards: Record<string, string> = {
-      'T2-06': 'merged',
       'T2-14': 'merged',
-      'T2-15': 'merged',
-      'T2-19': 'merged',
-      'T2-21': 'merged',
-      'T2-23': 'verified',
     }
     for (const [key, ref] of Object.entries(cards)) {
       const heading = t2.split('\n').find((l) => l.startsWith(`### ${key} ·`))
@@ -63,11 +58,16 @@ describe('Roadmap status truth across merged tracks', () => {
     }
 
     const doneCards: Record<string, string> = {
+      'T2-06': 'merged',
       'T2-13': 'merged 27 Oct',
+      'T2-15': 'PR #30 merged',
       'T2-17': 'PR #90 merged',
       'T2-18': 'PR #80 merged',
+      'T2-19': 'PR #209 merged',
       'T2-20': 'PR #189 merged',
+      'T2-21': 'PR #170 merged',
       'T2-22': 'PR #184 merged',
+      'T2-23': 'verified',
       'T2-24': 'PR #257 merged',
     }
     for (const [key, ref] of Object.entries(doneCards)) {
@@ -93,7 +93,7 @@ describe('Roadmap status truth across merged tracks', () => {
       expect(heading).not.toContain('status: todo')
     }
 
-    // T3-10, T3-11, T3-14, T3-16, T3-18, T3-19, T3-20, T3-22, T3-23, T3-28, T3-29, and T3-31 are fully verified with green suites; physical device testing deferred post-live per Babin ruling (20 Nov)
+    // T3-10, T3-11, T3-14, T3-16, T3-18, T3-19, T3-20, T3-22, T3-23, T3-28, T3-29, T3-30, and T3-31 are fully verified with green suites; physical device testing deferred post-live per Babin ruling (20 Nov)
     const doneCards: Record<string, string> = {
       'T3-10': 'PR #188 merged',
       'T3-11': 'PR #210 merged',
@@ -106,6 +106,7 @@ describe('Roadmap status truth across merged tracks', () => {
       'T3-23': 'PR #191 merged',
       'T3-28': 'PR #211 merged',
       'T3-29': 'PR #208 merged',
+      'T3-30': 'PR #185 merged',
     }
     for (const [key, prRef] of Object.entries(doneCards)) {
       const heading = t3.split('\n').find((l) => l.startsWith(`### ${key} ·`))

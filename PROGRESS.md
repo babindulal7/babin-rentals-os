@@ -1,5 +1,50 @@
 # Progress Log
 
+## 2026-11-22 — T2 & T3: Floor & Consumables Operations Acceptance Reconciliation (Lane A)
+
+### Did
+- Documented Floor & Consumables operations acceptance in [`docs/verification/FLOOR_AND_CONSUMABLES_ACCEPTANCE_2026-11-22.md`](docs/verification/FLOOR_AND_CONSUMABLES_ACCEPTANCE_2026-11-22.md):
+  - Promoted **T2-06 · Repair job closes the damage** to `done`: verified repair job lifecycle, resolution notes, and GiST exclusion unblocking across migration `0184` and lifecycle step `L41`.
+  - Promoted **T2-15 · Damage found during reset** to `done`: verified reset turnaround damage capture, photo upload to `evidence` bucket, and maintenance ticket dispatch without altering closed invoices (PR #30).
+  - Promoted **T2-19 · Signature at Return when damage is found** to `done`: verified `gate.return.damage_unsigned` hard block and clean return bypass across PR #209 and lifecycle steps `L78`/`L79`.
+  - Promoted **T2-21 · Planned downtime with a reason** to `done`: verified scheduled downtime windows, calendar blackouts, and early termination in `src/lib/queries/__tests__/downtime.test.ts` and lifecycle step `L72`.
+  - Promoted **T2-23 · Allow overbooking on chosen products** to `done`: verified short line confirmation without GiST reservations, and Pack stage hard-blocking until durable coverage in `AddItemPanel.overbooking.test.tsx` and lifecycle steps `L87`-`L89`.
+  - Promoted **T3-30 · Consumables: unit price, add at the desk, restock, low stock** to `done`: verified unit pricing, single-charge rental lines, handover stock deduction, and Law 6 price masking in `consumablesPricingAndRestock.test.ts` and lifecycle step `L73`.
+- Updated Track 2 and Track 3 roadmaps in [`docs/plans/T2_FLOOR.md`](docs/plans/T2_FLOOR.md) and [`docs/plans/T3_BOOKING_MONEY.md`](docs/plans/T3_BOOKING_MONEY.md).
+- Synchronized roadmap regression assertions in [`src/lib/__tests__/roadmapStatusTruth.test.ts`](src/lib/__tests__/roadmapStatusTruth.test.ts) (7/7 tests pass).
+
+### Ruled
+- Gate `gate.return.damage_unsigned`: Flagged returns strictly require customer/collector signature or explicit staff refusal reason; clean returns require no signatures.
+- GiST Invariant: Units with open damage findings or active maintenance tickets are excluded from reservation until the repair job is marked closed.
+- Overbooking Guard: Overbooking switch allows short line confirmation, but Pack stage is fail-closed blocked until durable stock or sub-rent coverage is bound.
+- Law 6 & Consumables: Consumables are charged per unit (not multi-day multiples); cost and margin figures remain strictly masked from floor roles.
+
+### Verified
+- `npm test -- src/lib/__tests__/consumablesPricingAndRestock.test.ts src/lib/queries/__tests__/downtime.test.ts src/modules/rentals/booking/__tests__/AddItemPanel.overbooking.test.tsx`: 13/13 tests pass.
+- `npm test -- src/lib/__tests__/roadmapStatusTruth.test.ts`: 7/7 tests pass.
+- `npm run check:pglite`: 258/258 migrations applied cleanly, 0 failed.
+- `npm run check:lifecycle`: 98/98 steps green.
+- `npm run typecheck`: 0 errors.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 258 files · check:pglite 258/258 applied, 0 failed.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Track 7 online booking live client portal requests and Fonepay merchant credentials.
+- Cloudflare Pages DNS and production deployment configuration (T1-07).
+- Phase 2 physical hardware cards remain pending for post-live shop device day per 20 Nov ruling.
+
 ## 2026-11-22 — T7: Online Booking Acceptance Reconciliation (Lane C)
 
 ### Did
