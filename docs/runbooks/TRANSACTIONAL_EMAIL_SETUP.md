@@ -54,11 +54,13 @@ Planned transactional email volume based on target Kathmandu rental operations:
 > [!IMPORTANT]
 > Only the owner or authorized DNS operator may change records during a separately approved launch. Keep Cloudflare DNS records used for email unproxied (where a proxy toggle applies), and preserve existing mail records until their dependencies are understood.
 
+**DNS lookup notation:** In a shell supporting `dig`, populate `RETURN_PATH_HOSTNAME` and `DKIM_HOSTNAME` from the Resend dashboard before using commands below. These are variables, not literal DNS hostnames; do not publish values based on examples in this runbook.
+
 ### 4.1 Sender Policy Framework (SPF)
 - In Resend, use the **generated SPF TXT hostname/value** for the configured sending/return-path domain. The default return-path subdomain is often `send`, but can be customized.
 - Do **not** unconditionally add `v=spf1 include:_spf.resend.com ~all` to the root. Resend's provider-generated example uses an SPF TXT on the return-path subdomain. Other services may already use SPF at the root or another hostname.
 - Each DNS hostname must have **at most one SPF policy**. If multiple sending services require the same hostname, reconcile mechanisms with the existing DNS/mail administrator rather than publishing multiple SPF TXT policies.
-- Verify the *exact generated host* with `dig TXT <return-path-hostname>`; verify DMARC alignment and the sending domain separately.
+- Verify the *exact generated host* with `dig TXT "$RETURN_PATH_HOSTNAME"`; verify DMARC alignment and the sending domain separately.
 
 ### 4.2 DomainKeys Identified Mail (DKIM)
 - **Type / selector / value:** use exactly what the current Resend domain setup generates. For the legacy Resend configuration, the dashboard commonly provides a **TXT record at `resend._domainkey` containing the domain-specific public key**, not a generic CNAME pointing at `dkim.resend.com`.
@@ -80,7 +82,7 @@ Specifies how receiving servers handle messages that fail SPF or DKIM.
 - Resend generates the return-path host (often `send.babinrentals.com`, or an approved custom subdomain), **MX destination and priority**, and a **corresponding SPF TXT**. Copy these as a pair from the exact domain dashboard.
 - The MX destination is region/provider dependent; **do not** enter `feedback-smtp.resend.com` or invent a `bounces`/`mail` hostname.
 - Keep mail-receiving MX records for the root domain intact; the return-path MX is a separate subdomain record and does not replace mail delivery for staff inboxes.
-- Use `dig MX <return-path-hostname>` and `dig TXT <return-path-hostname>` to inspect the published values, then verify them in Resend.
+- Use `dig MX "$RETURN_PATH_HOSTNAME"` and `dig TXT "$RETURN_PATH_HOSTNAME"` to inspect the published values, then verify them in Resend.
 - Source of truth: [Resend custom return paths](https://resend.com/changelog/custom-return-path), [Resend-generated DNS example](https://resend.com/changelog/new-domain-webhooks), and current Resend Domain dashboard instructions.
 
 ---
@@ -130,8 +132,8 @@ supabase secrets set RESEND_API_KEY="re_..." --project-ref sxguwvgoserhdolewibb
 Before accepting this card as production-certified:
 
 - [ ] **Provider records captured:** Record the generated SPF TXT host/value, DKIM host/type/value, and return-path MX host/value/priority from the current Resend domain configuration; do not commit account-specific public keys to an example runbook.
-- [ ] **SPF and return path:** `dig TXT <return-path-hostname>` and `dig MX <return-path-hostname>` match the provider-generated records. If the root is also an active sending hostname, separately reconcile its existing SPF policy; never add a second SPF record at the same hostname.
-- [ ] **DKIM:** `dig TXT <provider-dkim-hostname>` (or `dig CNAME` when generated as CNAME) matches the actual domain-specific value.
+- [ ] **SPF and return path:** `dig TXT "$RETURN_PATH_HOSTNAME"` and `dig MX "$RETURN_PATH_HOSTNAME"` match the provider-generated records. If the root is also an active sending hostname, separately reconcile its existing SPF policy; never add a second SPF record at the same hostname.
+- [ ] **DKIM:** `dig TXT "$DKIM_HOSTNAME"` (or `dig CNAME "$DKIM_HOSTNAME"` when generated as CNAME) matches the actual domain-specific value.
 - [ ] **DMARC:** `dig TXT _dmarc.babinrentals.com` returns the *approved* DMARC policy. Verify any `rua` reporting mailbox exists before publishing it.
 - [ ] **Provider verification:** Resend shows the required sending records verified for this exact domain and region. Record screenshot/evidence without secrets.
 - [ ] **Gmail Inbox Test:**
