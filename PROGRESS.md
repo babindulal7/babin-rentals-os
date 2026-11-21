@@ -53,6 +53,32 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - Finalize operator verification of remaining Track 7 cards on staging.
 - Phase 2 physical hardware cards remain pending for post-live shop device day per 20 Nov ruling.
 
+## 2026-11-21 — T3-20 & T3-23: External Accountant Sign-off & Acceptance (Lane C)
+
+### Did
+- Documented external chartered accountant sign-off in [`docs/verification/ACCOUNTANT_ACCEPTANCE_2026-11-21.md`](docs/verification/ACCOUNTANT_ACCEPTANCE_2026-11-21.md) following the sample format handoff in PR #301.
+- Promoted **T3-23 · Monthly pack for the accountant** from `acceptance_pending` to `done`:
+  - Verified Sales/VAT register compliance with IRD format (BS/AD dates, PAN, 13% VAT, exempt amounts).
+  - Verified Operating Expenses register and 15% crew service TDS calculation schedules.
+  - Verified 12/12 unit tests pass in `src/modules/reports/__tests__/MonthlyPack.test.tsx`.
+- Promoted **T3-20 · Who owes** from `acceptance_pending` to `done`:
+  - Verified client balance and receivables reconciled to the integer paisa (`rupees()`, `price()`).
+  - Verified 0-30, 31-60, 61-90, 90+ day aging buckets and PDF 1.4 Statement generation.
+  - Verified 7/7 unit tests pass in `src/modules/finance/__tests__/WhoOwes.test.tsx`.
+- Reconciled roadmap truth regression guards in `src/lib/__tests__/roadmapStatusTruth.test.ts` and `src/lib/__tests__/t3RoadmapDocumentation.test.ts`.
+
+### Ruled
+- Owner (Babin) confirmed external chartered accountant completed sample pack review and finalized ledger reconciliation to the paisa (21 Nov 2026).
+- Law 4: Ledger balances and payments remain immutable integer paisa.
+- Law 6: Non-money roles (`Warehouse`, `Technician`, `Driver`, `Client`) strictly money-blind across all accounting registers and receivables.
+
+### Verified
+- `npx vitest run src/modules/finance/__tests__/WhoOwes.test.tsx src/modules/reports/__tests__/MonthlyPack.test.tsx`: 19/19 tests pass.
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts src/lib/__tests__/t3RoadmapDocumentation.test.ts`: 10/10 tests pass.
+- `npm run check:pglite`: 258/258 migrations applied, 0 failed.
+- `npm run check:lifecycle`: 98/98 steps green.
+- `npm run typecheck`: 0 errors.
+
 ## 2026-11-21 — T1-05 & T2-20: Hosted Staging Acceptance & Role Isolation (Lane A)
 
 ### Did
@@ -78,6 +104,7 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `npm run check:lifecycle`: 98/98 steps green.
 - `npm run typecheck`: 0 errors.
 
+>>>>>>> origin/main
 ## 2026-11-21 — T1-06: Storage Scoping Accepted on Staging (Lane A)
 
 ### Did
