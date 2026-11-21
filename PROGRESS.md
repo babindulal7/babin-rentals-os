@@ -1,5 +1,50 @@
 # Progress Log
 
+## 2026-11-22 — T7 & T9: Client Authentication, Away Mode & Cutover Calendar Holds Acceptance (Lane C)
+
+### Did
+- Documented Client Authentication, Away Mode & Cutover Calendar Holds acceptance in [`docs/verification/CLIENT_AUTH_AND_CUTOVER_HOLDS_ACCEPTANCE_2026-11-22.md`](docs/verification/CLIENT_AUTH_AND_CUTOVER_HOLDS_ACCEPTANCE_2026-11-22.md):
+  - Promoted **T7-01 · Online booking spec** to `done`: verified owner defaults UL-01 to UL-09 and security contracts reconciled in `docs/ONLINE_BOOKING_SPEC.md` (PR #301).
+  - Promoted **T7-03 · Client accounts by verified email** to `done`: verified passwordless email OTP sign-in, KYC ID upload, and strict D-5 tenant isolation across migration `0257`, lifecycle step `L95`, and `clientAuth.test.ts`.
+  - Promoted **T7-14 · "Away" switch for online booking** to `done`: verified away mode toggle, customizable public message, and server-side request rejection in `awayMode.test.ts` (PR #200).
+  - Promoted **T9-02 · Booqable rentals block the OS calendar** to `done`: verified external hold synchronization, double-booking prevention, and calendar blocking across migration `0206` and `externalHolds.test.ts` (PR #202).
+- Updated Track 7 and Track 9 roadmaps in [`docs/plans/T7_ONLINE_BOOKING.md`](docs/plans/T7_ONLINE_BOOKING.md) and [`docs/plans/T9_CUTOVER.md`](docs/plans/T9_CUTOVER.md).
+- Synchronized roadmap regression assertions in [`src/lib/__tests__/roadmapStatusTruth.test.ts`](src/lib/__tests__/roadmapStatusTruth.test.ts) (7/7 tests pass).
+
+### Ruled
+- D-5 Tenant Isolation: Client accounts access only their own requests, bookings, invoices, and payments; cross-client access returns 0 rows.
+- KYC Document Security: Client ID documents upload to secure `documents` bucket under client-scoped paths, accessible only by the owning client and staff with clearance.
+- Away Mode Switch: When away mode is active, public catalogue remains browseable, but request submission fails closed on the server with configured return message.
+- External Holds Synchronization: Pre-cutover Booqable bookings synchronize into `external_holds`, blocking inventory availability in Babin Rentals OS to eliminate double-booking.
+
+### Verified
+- `npm test -- src/booking/__tests__/clientAuth.test.ts src/lib/__tests__/awayMode.test.ts src/lib/__tests__/externalHolds.test.ts`: 16/16 tests pass.
+- `npm test -- src/lib/__tests__/roadmapStatusTruth.test.ts`: 7/7 tests pass.
+- `npm run check:pglite`: 258/258 migrations applied cleanly, 0 failed.
+- `npm run check:lifecycle`: 98/98 steps green.
+- `npm run typecheck`: 0 errors.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 258 files · check:pglite 258/258 applied, 0 failed.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Live gateway merchant credentials for Fonepay, eSewa, and Khalti (T7-05, T7-06).
+- Setup two-step sign-in (T1-17) and new-device sign-in alerts (T1-18) on staging.
+- Cloudflare Pages DNS and production deployment configuration (T1-07).
+- Fonepay merchant credentials live rehearsal.
+- Phase 2 physical hardware cards remain pending for post-live shop device day per 20 Nov ruling.
+
 ## 2026-11-22 — T7-07 & T7-10: Online Booking Refunds & Security Review Reconciliation (Lane C)
 
 ### Did
@@ -18,26 +63,6 @@
 - `npm run test:online-booking-n7-review`: 17/17 security assertions pass.
 - `npm run typecheck`: clean (0 errors).
 - `npm run lint`: clean (0 warnings/errors).
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
-| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
-| Overall | structural mean of five | ≈ 96% | — |
-
-Migrations 258 files · check:pglite 258/258 applied, 0 failed.
-Counted by `npm run completion`, not typed.
-Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
-
-### Remaining
-- Setup two-step sign-in (T1-17) and new-device sign-in alerts (T1-18) on staging.
-- Cloudflare Pages DNS and production deployment configuration (T1-07).
-- Fonepay merchant credentials live rehearsal.
-- Phase 2 physical hardware cards remain pending for post-live shop device day per 20 Nov ruling.
 
 ## 2026-11-22 — T2 & T3: Floor & Consumables Operations Acceptance Reconciliation (Lane A)
 

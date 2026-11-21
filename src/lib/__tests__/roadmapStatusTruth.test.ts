@@ -147,11 +147,9 @@ describe('Roadmap status truth across merged tracks', () => {
   it('T7 online booking track reflects merged PRs as acceptance_pending or done', () => {
     const t7 = read('docs/plans/T7_ONLINE_BOOKING.md')
     const cards: Record<string, string> = {
-      'T7-03': 'PR #276 merged',
       'T7-05': 'PR #276 merged',
       'T7-06': 'PR #276 merged',
       'T7-09': 'PR #201 merged',
-      'T7-14': 'PR #200 merged',
     }
     for (const [key, prRef] of Object.entries(cards)) {
       const heading = t7.split('\n').find((l) => l.startsWith(`### ${key} ·`))
@@ -162,13 +160,16 @@ describe('Roadmap status truth across merged tracks', () => {
     }
 
     const doneCards: Record<string, string> = {
+      'T7-01': 'PR #301 merged',
       'T7-02': 'PR #276 merged',
+      'T7-03': 'PR #276 merged',
       'T7-04': 'PR #276 merged',
       'T7-07': 'PR #266 merged',
       'T7-08': 'PR #276 merged',
       'T7-10': 'PR #299 merged',
       'T7-12': 'PR #196 merged',
       'T7-13': 'PR #197 merged',
+      'T7-14': 'PR #200 merged',
       'T7-15': 'PR #276 merged',
       'T7-16': 'PR #276 merged',
       'T7-17': 'PR #198 merged',
@@ -186,7 +187,6 @@ describe('Roadmap status truth across merged tracks', () => {
   it('T9 cutover track reflects merged PRs as acceptance_pending or done', () => {
     const t9 = read('docs/plans/T9_CUTOVER.md')
     const cards: Record<string, string> = {
-      'T9-02': 'PR #202 merged',
       'T9-07': 'PR #199 merged',
     }
     for (const [key, prRef] of Object.entries(cards)) {
@@ -199,6 +199,7 @@ describe('Roadmap status truth across merged tracks', () => {
 
     const doneCards: Record<string, string> = {
       'T9-01': 'PR #195 merged',
+      'T9-02': 'PR #202 merged',
     }
     for (const [key, prRef] of Object.entries(doneCards)) {
       const heading = t9.split('\n').find((l) => l.startsWith(`### ${key} ·`))
