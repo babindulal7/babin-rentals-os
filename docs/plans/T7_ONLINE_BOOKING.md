@@ -62,7 +62,7 @@ catalogue and availability, nothing else".
 returns nothing; Warehouse-only fields never appear in the payload.
 **Needs** — T1-07.
 
-### T7-03 · Client accounts by verified email            status: ready — awaiting merge (lane-c/T7-03-online-booking-requests-and-client-portal) · size: L · lane C
+### T7-03 · Client accounts by verified email            status: acceptance_pending — PR #276 merged; verified across migration 0257 and L95 · size: L · lane C
 **What** — Sign-in with an **emailed one-time code** (no passwords — PERMISSIONS §7), through
 Supabase Auth with the T1-09 SMTP. First sign-in asks for name, phone and optional company/PAN.
 **Binding (30 Aug D2):** if the verified email matches exactly one client record's stored email,
@@ -82,7 +82,7 @@ Client B = 0 across bookings, invoices, payments, cases, documents, requests, pa
 N-7 respected (no write path enabled before D-5 green).
 **Needs** — T1-05 (two Client seats), T1-09, T7-01.
 
-### T7-04 · Requests and the staff queue            status: todo · size: L · lane C
+### T7-04 · Requests and the staff queue            status: acceptance_pending — PR #276 merged; verified across migration 0256 and L94 · size: L · lane C
 **What** — Client side: cart → dates (availability shown, D31: **nothing held**) → request with the
 full price **with VAT** and the advance due (D34, computed server-side). Staff side: an "Online
 requests" queue (chip on Rentals and a Today card; paid requests on top, D31); **Confirm** opens New
@@ -106,7 +106,7 @@ request holds nothing until staff confirm; staff confirm through `confirm_bookin
 **Done when** — end-to-end on staging with two clients; a double-tap on Confirm creates one booking.
 **Needs** — T7-02, T7-03.
 
-### T7-05 · Online payment — Fonepay first            status: todo · size: L · lane C + Babin
+### T7-05 · Online payment — Fonepay first            status: acceptance_pending — PR #276 merged; verified across migration 0258; awaiting live merchant credentials · size: L · lane C + Babin
 **What** — Edge Functions `pay-init` and `pay-verify` (+ the provider's callback URL). `pay-init`
 computes the amount **on the server** (advance from the request or the balance of an invoice —
 SQL mirror of `calculateAdvanceRequired()`, tested equal to the TypeScript), creates a
@@ -128,7 +128,7 @@ changes nothing", "intent allocates once".
 **Needs** — T7-04; Babin obtains Fonepay merchant API credentials from the bank and enters them as
 Edge Function secrets (N-8).
 
-### T7-06 · eSewa and Khalti            status: ready — awaiting merchant account onboarding (lane-c/T7-03-online-booking-requests-and-client-portal) · size: M each · lane C + Babin
+### T7-06 · eSewa and Khalti            status: acceptance_pending — PR #276 merged; eSewa and Khalti adapters verified in tests; awaiting live merchant accounts · size: M each · lane C + Babin
 **What** — The same pattern as T7-05 for eSewa and for Khalti, each behind a switch that stays off
 until its merchant account and credentials exist. The pay screen shows only switched-on methods.
 **Why** — D30.
@@ -154,7 +154,7 @@ is T3-29. A reconciliation report lists online payments by provider and day agai
 the report reconciles a sandbox day.
 **Needs** — T7-05.
 
-### T7-08 · My bookings            status: todo · size: M · lane C
+### T7-08 · My bookings            status: acceptance_pending — PR #276 merged; MyBookings modal and timeline verified in tests · size: M · lane C
 **What** — For a signed-in client: their bookings (the six-step client timeline), invoices with
 balance, receipts, documents (quote, agreement, invoice — PERMISSIONS §7 P2–P5) and **Pay balance**
 (T7-05). Read-only otherwise. Extension requests, payment-proof upload and remote agreement signing
@@ -222,7 +222,7 @@ otherwise claim a number); lifecycle "a request while away is refused".
 screen check.
 **Needs** — T7-04.
 
-### T7-15 · Payment link from any booking            status: ready — awaiting merge (lane-c/T7-15-payment-link-from-any-booking) · size: M · lane C · [go-live] · slips first
+### T7-15 · Payment link from any booking            status: acceptance_pending — PR #276 merged; verified across migration 0259 and L96 · size: M · lane C · [go-live] · slips first
 **What** — On any booking with money due (B17), "**Payment link**" makes a Fonepay link for the advance
 or the outstanding balance — **the server computes the amount**, never the screen — and shares it by
 WhatsApp draft, email or copy (T3-16). When Fonepay confirms server-to-server (T7-05's `pay-verify`),
@@ -240,7 +240,7 @@ sandbox; the payment appears once on the booking and in daily closing; an edited
 refused; Warehouse cannot make a link; screen check.
 **Needs** — T7-05.
 
-### T7-16 · Store analytics: GA4 and Meta Pixel            status: todo · size: S · lane C · [go-live] · slips first
+### T7-16 · Store analytics: GA4 and Meta Pixel            status: acceptance_pending — PR #276 merged; store analytics scripts and tests verified · size: S · lane C · [go-live] · slips first
 **What** — Add Google Analytics 4 and the Meta Pixel to the **public booking site only** (B37) — never
 to the staff app. Events ⭐: page view, view item, add to request, request sent, payment done (with the
 rupee value). **No personal data** in any event: no names, emails, phone numbers or booking numbers.

@@ -109,10 +109,10 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0252 | T2-23 | allow-overbooking-on-chosen-products | feat/t2-23-product-overbooking-0245 | verified |
 | 0253 | T2-24 | temporary-stock-from-partners | lane-a/T2-24-partner-stock-0253 | verified |
 | 0254 | T3-14 | draft-invoice-resync-integrity-and-settlement-numbering | lane-c/T3-14-draft-invoice-full-settlement | verified (check:pglite 252/252 + check:lifecycle 93/93 Step L92) |
-| 0255 | T7-02 | booking-site-and-public-catalogue | lane-c/T7-03-online-booking-requests-and-client-portal | written |
-| 0256 | T7-04 | booking-requests-and-staff-queue | lane-c/T7-03-online-booking-requests-and-client-portal | written |
-| 0257 | T7-03 | client-accounts-and-portal-binding | lane-c/T7-03-online-booking-requests-and-client-portal | written |
+| 0255 | T7-02 | booking-site-and-public-catalogue | lane-c/T7-03-online-booking-requests-and-client-portal | verified (check:pglite 257/257 + check:lifecycle Step L93) |
+| 0256 | T7-04 | booking-requests-and-staff-queue | lane-c/T7-03-online-booking-requests-and-client-portal | verified (check:pglite 257/257 + check:lifecycle Step L94) |
+| 0257 | T7-03 | client-accounts-and-portal-binding | lane-c/T7-03-online-booking-requests-and-client-portal | verified (check:pglite 257/257 + check:lifecycle Step L95) |
 | 0258 | T7-05 | payment-intents-and-fonepay | lane-c/T7-15-payment-link-from-any-booking | verified (check:pglite 257/257) |
-| 0259 | T7-15 | payment-link-from-any-booking | lane-c/T7-15-payment-link-from-any-booking | verified (check:pglite 257/257 + check:lifecycle 94/94 Step L95) |
+| 0259 | T7-15 | payment-link-from-any-booking | lane-c/T7-15-payment-link-from-any-booking | verified (check:pglite 257/257 + check:lifecycle 97/97 Step L96) |
 
 ## Expected migrations (not yet claimed)
