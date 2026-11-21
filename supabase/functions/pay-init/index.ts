@@ -74,20 +74,48 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
+    // Determine provider availability: each stays off until credentials/switch exist (T7-06)
+    const getAvailableProviders = async () => {
+      // 1. Check database setting if available
+      try {
+        const { data: settingRow } = await supabase
+          .from('system_settings')
+          .select('value')
+          .eq('key', 'online_payment_providers')
+          .maybeSingle()
+
+        if (settingRow && settingRow.value) {
+          const val = settingRow.value as Record<string, { enabled?: boolean; env?: string }>
+          return [
+            { provider: 'fonepay', name: 'Fonepay', enabled: val.fonepay?.enabled ?? true, env: val.fonepay?.env ?? 'sandbox' },
+            { provider: 'esewa', name: 'eSewa', enabled: val.esewa?.enabled ?? false, env: val.esewa?.env ?? 'sandbox' },
+            { provider: 'khalti', name: 'Khalti', enabled: val.khalti?.enabled ?? false, env: val.khalti?.env ?? 'sandbox' },
+          ]
+        }
+      } catch {
+        // Fall back to environment variable detection
+      }
+
+      // 2. Fall back to environment variable switches
+      const fonepayEnabled = Deno.env.get('FONEPAY_ENABLED') !== 'false'
+      const esewaEnabled = Deno.env.get('ESEWA_ENABLED') === 'true' || Boolean(Deno.env.get('ESEWA_SECRET_KEY'))
+      const khaltiEnabled = Deno.env.get('KHALTI_ENABLED') === 'true' || Boolean(Deno.env.get('KHALTI_SECRET_KEY'))
+
+      return [
+        { provider: 'fonepay', name: 'Fonepay', enabled: fonepayEnabled, env: Deno.env.get('FONEPAY_ENV') || 'sandbox' },
+        { provider: 'esewa', name: 'eSewa', enabled: esewaEnabled, env: Deno.env.get('ESEWA_ENV') || 'sandbox' },
+        { provider: 'khalti', name: 'Khalti', enabled: khaltiEnabled, env: Deno.env.get('KHALTI_ENV') || 'sandbox' },
+      ]
+    }
+
     // Handle provider list request
     const url = new URL(req.url)
     const isListReq = req.method === 'GET' || url.searchParams.get('action') === 'providers'
 
     if (isListReq) {
-      const { data: providers, error: provError } = await supabase.rpc('get_online_payment_providers')
-      if (provError) {
-        return new Response(
-          JSON.stringify({ error: provError.message }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
+      const providers = await getAvailableProviders()
       return new Response(
-        JSON.stringify({ success: true, providers: providers || [] }),
+        JSON.stringify({ success: true, providers }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -112,15 +140,9 @@ Deno.serve(async (req: Request) => {
 
     const body: PayInitRequest = await req.json().catch(() => ({} as PayInitRequest))
     if (body.action === 'providers') {
-      const { data: providers, error: provError } = await supabase.rpc('get_online_payment_providers')
-      if (provError) {
-        return new Response(
-          JSON.stringify({ error: provError.message }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
+      const providers = await getAvailableProviders()
       return new Response(
-        JSON.stringify({ success: true, providers: providers || [] }),
+        JSON.stringify({ success: true, providers }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }

@@ -20,6 +20,10 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
+| 0259 | T7-15 | payment-link-from-any-booking | lane-c/T7-03-online-booking-requests-and-client-portal | verified |
+| 0258 | T7-05 | payment-intents-and-fonepay | lane-c/T7-03-online-booking-requests-and-client-portal | verified |
+| 0257 | T7-03 | client-accounts-and-portal-binding | lane-c/T7-03-online-booking-requests-and-client-portal | verified |
+| 0256 | T7-04 | booking-requests-and-staff-queue | lane-c/T7-03-online-booking-requests-and-client-portal | verified |
 | 0255 | T7-02 | booking-site-and-public-catalogue | lane-c/T7-02-booking-site-and-public-catalogue | verified |
 | 0254 | T3-14 | draft-invoice-resync-integrity-and-settlement-numbering | lane-c/T3-14-draft-invoice-full-settlement | verified |
 | 0253 | T2-24 | temporary-stock-from-partners | lane-a/T2-24-partner-stock-0253 | verified |
