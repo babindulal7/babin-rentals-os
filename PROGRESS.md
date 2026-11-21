@@ -1,5 +1,51 @@
 # Progress Log
 
+## 2026-11-21 — Eight-Card Acceptance Verification Audit & Spec Reconciliation (Lane B / Gemini)
+
+**Did**
+- Executed full local verification and staging preflight audit for the eight-card acceptance scope: T0-03, T7-01, T3-23, T3-20, T2-20, T2-22, T7-12, T7-13 on clean `origin/main` snapshot `0586865cf2a4ce2f6de64dc1d8da1548f91ec211`.
+- Performed fresh runs of targeted unit and integration test suites:
+  - `src/lib/__tests__/productFamilies.test.ts`: 4/4 passed (T7-13).
+  - `src/lib/__tests__/recommendations.test.ts`: 4/4 passed (T7-12).
+  - `src/lib/__tests__/availability.test.ts`: 82/82 passed (T2-22).
+  - `src/modules/reports/__tests__/MonthlyPack.test.tsx`: 12/12 passed (T3-23).
+  - `src/modules/finance/__tests__/WhoOwes.test.tsx`: 7/7 passed (T3-20).
+  - Additional test coverage (36/36 passed): `FloorConsumables.test.tsx` (6/6), `consumablesPricingAndRestock.test.ts` (8/8), `packEquipment.test.ts` (5/5), `catalogue.test.ts` (5/5), `reportFamilies.test.tsx` (6/6), `reportFamiliesCompleteness.test.ts` (6/6).
+- Reconciled [`docs/ONLINE_BOOKING_SPEC.md`](docs/ONLINE_BOOKING_SPEC.md) for **T7-01** against the 12 Nov 2026 unified-launch rulings (UL-01 to UL-09): integrated pickup AND return dates/times first, guest request submission without mandatory account registration, public base pricing, server-calculated client discounts, and the five Owner/Admin configurable settings under OS → Settings → Website & Client Portal.
+- Authored [`docs/verification/PR_TRIAGE_2026-11-21.md`](docs/verification/PR_TRIAGE_2026-11-21.md) for **T0-03**: verified closed/merged state with commit/file evidence for all historical PRs (#6, #7, #17, #19, #23, #24, #25, #26, #28, #30, #31) and mapped all 20 active PRs to their respective tracks and owners.
+- Authored [`docs/verification/T3-23_ACCOUNTANT_PACK_SYNTHETIC_AUDIT_2026-11-21.md`](docs/verification/T3-23_ACCOUNTANT_PACK_SYNTHETIC_AUDIT_2026-11-21.md) and [`docs/verification/T3-20_WHO_OWES_SYNTHETIC_AUDIT_2026-11-21.md`](docs/verification/T3-20_WHO_OWES_SYNTHETIC_AUDIT_2026-11-21.md) detailing test assertions, IRD Annex 5 compliance, and packaging requirements for external accountant review.
+- Completed Phase B preflight checklist against staging project `klhmsrunqrdxjudyhnkm`: classified migration gap (0244 vs 0255), quarantined seed corpus (0012/0047/0082), audited advisor flags on `staff_directory_v`, confirmed absent `payment_intents` table, and confirmed zero live mutations or outbound communications.
+- Authored verification document [`docs/verification/EIGHT_CARD_ACCEPTANCE_VERIFICATION_2026-11-21.md`](docs/verification/EIGHT_CARD_ACCEPTANCE_VERIFICATION_2026-11-21.md) and opened PR #287.
+
+**Ruled**
+- Zero cards promoted to `done` on implementation evidence alone (canonical acceptance requirements remain pending for all 8 cards).
+- Truthful roadmap baseline affirmed at **92 / 155 done** (92 done, 32 acceptance_pending, 7 doing, 23 todo, 1 written).
+- Staging writes remain strictly on **HOLD** pending preflight clearance and migration ledger reconciliation under T1-02.
+- Local verification only; zero changes to production or hosted staging.
+
+**Verified**
+- `npm run typecheck`: PASS (0 errors).
+- `npm run check:pglite`: PASS (253/253 migrations applied cleanly, 0 failures, 0 anon view leaks, 226 definer search_paths pinned).
+- `npm run check:lifecycle`: PASS (94/94 lifecycle steps green, 0 failed, 0 known-red).
+- Targeted test suites: PASS (145/145 tests passing across 11 test files).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 112 / 113 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 94 / 94 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+### Remaining
+- Owner review and approval of reconciled online booking spec (T7-01)
+- Owner triage and disposition of active PRs (T0-03)
+- External accountant sample pack written review (T3-23)
+- Accountant ledger reconciliation and permitted device walkthrough of WhatsApp share intent (T3-20)
+- Staging preflight clearance and hosted role-isolation verification (T2-20, T2-22, T7-12, T7-13)
+
 ## 2026-11-21 — T7-01: Reconcile Online Booking Spec with 12 Nov Unified Launch Rulings (Lane C)
 
 **Did**
@@ -39996,6 +40042,7 @@ roles 6 vs 12, sidebar 7 vs 8 vs 8-with-Tools, and two I could resolve (motion s
 Design Tokens v2.0 wins as the root; mobile bottom bar → Navigation v2.0 wins as it
 explicitly supersedes). Plus: `Prisma Schema.md` names a stack no spec mentions — it is
 Supabase + RLS.
+
 
 
 
