@@ -82,23 +82,14 @@ describe('Roadmap status truth across merged tracks', () => {
     }
   })
 
-  it('T3 booking money track reflects all merged cards as acceptance_pending or done', () => {
+  it('T3 booking money track reflects all merged cards as done', () => {
     const t3 = read('docs/plans/T3_BOOKING_MONEY.md')
-    const pendingCards: Record<string, string> = {
-      'T3-13': 'PR #182 merged',
-    }
-    for (const [key, prRef] of Object.entries(pendingCards)) {
-      const heading = t3.split('\n').find((l) => l.startsWith(`### ${key} ·`))
-      expect(heading).toBeDefined()
-      expect(heading).toContain('status: acceptance_pending')
-      expect(heading).toContain(prRef)
-      expect(heading).not.toContain('status: todo')
-    }
-
-    // T3-10, T3-11, T3-14, T3-16, T3-18, T3-19, T3-20, T3-22, T3-23, T3-28, T3-29, T3-30, and T3-31 are fully verified with green suites; physical device testing deferred post-live per Babin ruling (20 Nov)
     const doneCards: Record<string, string> = {
+      'T3-02': 'PR #183 merged',
+      'T3-06': 'PR #169 merged',
       'T3-10': 'PR #188 merged',
       'T3-11': 'PR #210 merged',
+      'T3-13': 'PR #182 merged',
       'T3-14': 'PR #259 merged',
       'T3-16': 'PR #181 merged',
       'T3-18': 'PR #224 merged',

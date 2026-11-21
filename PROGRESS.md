@@ -1,5 +1,46 @@
 # Progress Log
 
+## 2026-11-22 — T3: Deposits, Documents & Sub-Rentals Acceptance Reconciliation (Lane C)
+
+### Did
+- Documented Track 3 booking, deposits, documents, and sub-rentals acceptance in [`docs/verification/T3_DEPOSITS_DOCUMENTS_SUBRENT_ACCEPTANCE_2026-11-22.md`](docs/verification/T3_DEPOSITS_DOCUMENTS_SUBRENT_ACCEPTANCE_2026-11-22.md):
+  - Promoted **T3-02 · Deposits per product, entered before go-live** to `done`: verified DepositSetup editor, progress counter, CSV dry run, and Law 6 role restriction in `DepositSetup.test.tsx` and `productDeposit.test.ts` (staff data entry tracked as operational task, PR #183).
+  - Promoted **T3-06 · Invoice and agreement documents** to `done`: verified immutable invoice snapshots, signed agreement storage, and PDF rendering in `exportPdf.test.ts` and `Finance.pdf.test.tsx` (PR #169).
+  - Promoted **T3-13 · Fully booked → similar item or sub-rent** to `done`: verified sub-rental creation RPC, partner attribution, and shortage absorption in `createSubRental.test.ts` and `subrentals.test.ts` (PR #182).
+- Updated Track 3 roadmap in [`docs/plans/T3_BOOKING_MONEY.md`](docs/plans/T3_BOOKING_MONEY.md).
+- Synchronized roadmap regression assertions in [`src/lib/__tests__/roadmapStatusTruth.test.ts`](src/lib/__tests__/roadmapStatusTruth.test.ts) (7/7 tests pass).
+
+### Ruled
+- Law 4 & Law 6: Invoice PDF exports strictly use the persisted financial breakdown snapshot without recalculation; DepositSetup enforces `RestrictedState` for non-financial roles (`Warehouse`).
+- Sub-rental Engine: Sub-rented units from vetted partners bind to shortages without corrupting internal asset inventory.
+
+### Verified
+- `npm test -- src/lib/__tests__/productDeposit.test.ts src/lib/__tests__/productDepositSetup.test.ts src/lib/queries/__tests__/productDeposits.test.ts src/modules/inventory/__tests__/DepositSetup.test.tsx src/actions/subrentals/__tests__/createSubRental.test.ts src/lib/queries/__tests__/subrentals.test.ts`: 40/40 tests pass.
+- `npm test -- src/lib/pdf/__tests__/exportPdf.test.ts src/lib/pdf/__tests__/generatePdf.test.ts src/modules/finance/__tests__/Finance.pdf.test.tsx`: 36/36 tests pass.
+- `npm test -- src/lib/__tests__/roadmapStatusTruth.test.ts`: 7/7 tests pass.
+- `npm run check:pglite`: 258/258 migrations applied cleanly, 0 failed.
+- `npm run check:lifecycle`: 98/98 steps green.
+- `npm run typecheck`: 0 errors.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 258 files · check:pglite 258/258 applied, 0 failed.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Live gateway merchant credentials for Fonepay, eSewa, and Khalti (T7-05, T7-06).
+- Cloudflare Pages DNS and production deployment configuration (T1-07).
+- Phase 2 physical hardware cards remain pending for post-live shop device day per 20 Nov ruling.
+
 ## 2026-11-22 — T7 & T9: Client Authentication, Away Mode & Cutover Calendar Holds Acceptance (Lane C)
 
 ### Did
