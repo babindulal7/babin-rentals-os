@@ -66,4 +66,63 @@ revoke all on public.product_family_members from anon;
 revoke delete on public.product_families from authenticated;
 revoke delete on public.product_family_members from authenticated;
 
+
+-- Grouping RPC (T7-13). Owner, Admin and Manager only (canManageProductFamilies).
+-- Idempotent on p_client_uuid (Law 8). Products must be active and not already in a family.
+create or replace function public.group_products_into_family(
+  p_client_uuid uuid,
+  p_family_name text,
+  p_members jsonb
+) returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_family_id uuid;
+  v_member jsonb;
+begin
+  if public.auth_user_role() not in ('Owner', 'Admin', 'Manager') then
+    raise exception 'permission denied: only Owner, Admin or Manager can group products'
+      using errcode = '42501';
+  end if;
+
+  select id into v_family_id from public.product_families where client_uuid = p_client_uuid;
+  if v_family_id is not null then
+    return v_family_id;
+  end if;
+
+  if p_members is null or jsonb_typeof(p_members) <> 'array' or jsonb_array_length(p_members) < 2 then
+    raise exception 'a family needs at least two options';
+  end if;
+
+  insert into public.product_families (name, client_uuid)
+  values (btrim(p_family_name), p_client_uuid)
+  returning id into v_family_id;
+
+  for v_member in select * from jsonb_array_elements(p_members) loop
+    if not exists (
+      select 1 from public.products p
+      where p.id = (v_member->>'product_id')::uuid and p.is_active
+    ) then
+      raise exception 'product % is not an active product', v_member->>'product_id';
+    end if;
+    insert into public.product_family_members
+      (family_id, product_id, option_label, sort_order, client_uuid)
+    values (
+      v_family_id,
+      (v_member->>'product_id')::uuid,
+      btrim(v_member->>'option_label'),
+      coalesce((v_member->>'sort_order')::int, 0),
+      (v_member->>'client_uuid')::uuid
+    );
+  end loop;
+
+  return v_family_id;
+end;
+$$;
+
+revoke all on function public.group_products_into_family(uuid, text, jsonb) from public, anon;
+grant execute on function public.group_products_into_family(uuid, text, jsonb) to authenticated;
+
 commit;
