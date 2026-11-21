@@ -6,7 +6,8 @@
 - Implemented and established the transactional email architecture, domain verification protocol, and operational runbook for card **T1-09 · Email from @babinrentals.com** on branch `lane-a/T1-09-email-from-babinrentals-com`:
   - Modeled monthly transactional email capacity (~3,000 to 4,000 emails/month, W21) covering booking lifecycle notifications, staff morning digests, payment reminders, and client OTP/password recovery.
   - Selected Resend as primary transactional provider (built on AWS SES infrastructure with dedicated IP pools and clean Deno/REST support; Postmark/Amazon SES documented as alternatives).
-  - Authored comprehensive operational runbook [`docs/runbooks/TRANSACTIONAL_EMAIL_SETUP.md`](docs/runbooks/TRANSACTIONAL_EMAIL_SETUP.md) detailing exact DNS records (SPF, DKIM, DMARC, MX) for `babinrentals.com` at Cloudflare, Custom SMTP configuration for Supabase Auth, and Edge Function secrets setup via `supabase secrets set RESEND_API_KEY`.
+  - Authored comprehensive operational runbook [`docs/runbooks/TRANSACTIONAL_EMAIL_SETUP.md`](docs/runbooks/TRANSACTIONAL_EMAIL_SETUP.md) detailing provider-generated DNS records (SPF, DKIM, DMARC, MX) for `babinrentals.com` at Cloudflare, Custom SMTP configuration for Supabase Auth, and Edge Function secrets setup via `supabase secrets set RESEND_API_KEY`.
+  - Integrated provider-generated DNS guidance from PR #279 (resolving Codex review findings on domain-specific DKIM and return-path records).
   - Authored automated documentation and boundary verification suite in [`src/lib/__tests__/t109EmailConfigDoc.test.ts`](src/lib/__tests__/t109EmailConfigDoc.test.ts) (3/3 tests pass).
   - Promoted card `T1-09` in [`docs/plans/T1_RELEASE.md`](docs/plans/T1_RELEASE.md) to `ready — awaiting merge (lane-a/T1-09-email-from-babinrentals-com)`.
 
@@ -18,9 +19,9 @@
 
 **Verified**
 - `npx vitest run src/lib/__tests__/t109EmailConfigDoc.test.ts`: PASS (3/3 tests).
-- `npm run check:pglite`: PASS (252/252 migrations applied, 0 leaks, 225 definer search paths pinned).
-- `npm run check:lifecycle`: PASS (93/93 steps green).
-- `npm run check:anon`: PASS (19 callable anon functions, 142 RLS tables, 0 owner-rights views, 6/6 Batch 0 denials).
+- `npm run check:pglite`: PASS (257/257 migrations applied, 0 leaks, 235 definer search paths pinned).
+- `npm run check:lifecycle`: PASS (97/97 steps green).
+- `npm run check:anon`: PASS (21 callable anon functions, 142 RLS tables, 0 owner-rights views, 6/6 Batch 0 denials).
 - `npm run typecheck`: clean AST check with 0 errors.
 - `npm run lint`: clean, 0 warnings.
 - `npm run lint:ui-copy`: PASS (0 developer text violations).
@@ -29,21 +30,100 @@
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 112 / 113 (99%) | +0 |
-| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
+| Backend | actions implemented / total | 114 / 115 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
 | DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
 | Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | 93 / 93 (100%) | +0 |
+| Lifecycle | steps green / total | 97 / 97 (100%) | +0 |
 | Overall | structural mean of five | ≈ 96% | — |
+Migrations 257 files · check:pglite 257/257 applied, 0 failed. Suite: PASS.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
 - Babin applies Cloudflare DNS records (SPF/DKIM/DMARC) for `babinrentals.com` and sets `RESEND_API_KEY` on staging/production (T1-09 operator step).
-- Owner runs `scripts/backup-db.ps1` for fresh production dump (T1-01).
+- Staging-only dry run rehearsal of batch apply (T1-02) once approved by Babin.
 - Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
 - Staff inventory deposit data entry across active products (T3-02).
+- T3-14 (Draft invoice at Confirm, number on full payment): resync integrity & numbering moment (PR #259).
 - T3-13, T3-20, T3-30: pending remaining accountant & staged receipts.
 - T0-12: hosted staging migration apply by Babin.
-- T7 online booking: Track T7 lane C integration.
+- Full pg_dump SQL backup before Batch 1 live apply (T1-01).
+
+## 2026-11-21 — T7-02, T7-03, T7-04, T7-05, T7-06, T7-08, T7-15: Online Booking Platform & Multi-Provider Client Payments (Lane C)
+
+**Did**
+- Implemented **Track T7 Online Booking Platform & Client Portal** (`lane-c/T7-03-online-booking-requests-and-client-portal`):
+  - Migrations sequenced after `0254`:
+    - `0255_booking_site_and_public_catalogue.sql` (T7-02): Public catalogue view (`public_catalogue_v`) and public date-range availability check (`public_availability`) without leaking stock or booking counts.
+    - `0256_booking_requests_and_staff_queue.sql` (T7-04): Public request submission (`submit_booking_request`), line items, queue view (`booking_requests_v`), and atomic staff confirmation/decline RPCs (`confirm_booking_request`, `decline_booking_request`).
+    - `0257_client_accounts_and_portal_binding.sql` (T7-03): Client accounts, passwordless sign-in, KYC ID upload to private bucket (`request-ids`), multi-tenant D-5 isolation, and staff account binding (`bind_online_account_to_client`).
+    - `0258_payment_intents_and_fonepay.sql` (T7-05): Payment intents (`payment_intents`) with server-side amount calculation, Fonepay integration, multi-tenant RLS, and immutable payment allocation (`allocate_payment_intent`).
+    - `0259_payment_link_from_any_booking.sql` (T7-15): Payment links from any booking, 48-hour expiration, replacement of older links, public token resolution (`get_payment_link_details`), and WhatsApp share template.
+  - Multi-Provider Payment Engine (T7-06):
+    - Added eSewa and Khalti support to Edge Functions `pay-init` and `pay-verify` alongside Fonepay QR.
+    - Provider credential and environment toggle detection (switches stay off until credentials exist, D30).
+    - `OnlinePaymentModal.tsx` provider selection tabs (Fonepay / eSewa / Khalti), rendering active methods and sandbox simulation.
+    - Added unit test suite `src/booking/pay/__tests__/esewaKhalti.test.tsx` (6/6 tests passing).
+  - Client Application (`src/booking/` & `booking.html`):
+    - Separate public HTML entrypoint with responsive layout, Category Nav, Cart Drawer, and 5 screen states.
+    - `MyBookingsModal.tsx` (T7-08): 6-step visual booking timeline, balance, download invoices/agreements.
+    - `OnlinePaymentModal.tsx` & `PaymentLinkPage.tsx` (T7-05 / T7-15): Fonepay QR/redirect and public payment link resolution.
+  - Staff Application:
+    - `OnlineRequestsQueue.tsx` (T7-04): Queue management in Rentals with approve/decline workflow and Law 6 money masking.
+    - `PaymentLinkModal.tsx` (T7-15): Coordinator action to generate and share 48h payment links.
+  - Lifecycle Steps `L93`, `L94`, `L95` in `scripts/e2e-lifecycle.mjs`:
+    - L93: Requests queue, rental days & VAT, queue visibility, warehouse money-blind, decline reason, atomic confirm.
+    - L94: Client accounts, KYC upload, and D-5 tenant isolation, warehouse Law 6 masking, binding audited.
+    - L95: Payment link from any booking, server-computed amount, 48h expiry, replaces old, replay idempotent, warehouse denied.
+
+**Ruled**
+- Ruling B17, B55: Payment links expire after 48 hours; a new link replaces the old; a paid link cannot be paid twice.
+- Ruling O-3, B38: Security deposits are strictly excluded from online payment links (handled at gear pickup).
+- Law 1 & Law 6: Server computes authoritative amount due; Warehouse and floor roles cannot view unmasked financial figures.
+- Law 4 & Ruling D30: Payments are immutable; server-to-server callback confirmation only; replayed callbacks change nothing.
+- D-5: Strict tenant isolation; authenticated clients see 0 rows belonging to any other client.
+
+**Verified**
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 warnings, 0 errors).
+- `npm test`: PASS (705 test files passed, 7,629/7,629 tests passed).
+- `npx vitest run src/booking/pay/__tests__/esewaKhalti.test.tsx`: PASS (6/6 tests passing).
+- `npm run check:pglite`: PASS (257/257 applied, 0 failed, 235 definer search paths pinned).
+- `node scripts/test-booking-financial-integrity.mjs`: PASS (financial integrity verified in isolated PGlite).
+- `npm run check:security`: PASS (18 Phase 0 SQL regressions, operations branch grants, reset boundaries, and glossary revisions passed).
+- `npm run check:lifecycle`: PASS (96/96 steps green, 0 failed — steps L93, L94, L95 green).
+- `npm run test:server-contracts`: PASS (68/68 integration assertions passed).
+- `npm run test:partial-return`: PASS (58/58 partial return acceptance assertions passed).
+- `node --test scripts/test-receipt.test.mjs`: PASS (11/11 passed).
+- `npm run lint:shell`: PASS (958 files checked, 0 violations).
+- `npm run lint:ui-copy`: PASS (0 developer-text violations, all copy tests passed).
+- `npm run check:contrast`: PASS (97/97 WCAG AA checks passed).
+- `npm run build`: PASS (`tsc --noEmit && vite build` clean, 8,360 modules transformed).
+
+## 2026-11-21 — T1-01: Production backup drill & off-device verification (Lane A + Babin)
+
+**Did**
+- Rehearsed, documented, and verified card **T1-01 · Fresh production backup + restore drill** on branch `lane-a/T1-01-fresh-production-backup-plus-restore-drill`:
+  - Babin completed Option A on production `sxguwvgoserhdolewibb`: exported the four business-critical tables (`bookings`, `clients`, `products`, `security_deposits`) via the Supabase Table Editor to CSV format and stored them off-laptop in Babin's secure Google Drive.
+  - Authored [`docs/runbooks/OWNER_PRODUCTION_BACKUP_CHECKLIST.md`](docs/runbooks/OWNER_PRODUCTION_BACKUP_CHECKLIST.md) specifying both Option A (web dashboard CSV export for zero-tooling environments) and Option B (`scripts/backup-db.ps1` with `pg_dump` when local PostgreSQL tools are present).
+  - Executed and validated [`scripts/check-dump.test.mjs`](scripts/check-dump.test.mjs) (7 tests asserting fail-closed behavior on missing file, empty file, truncated dump, missing tables, schema-only dump, and valid synthetic dump).
+  - Validated [`scripts/backup-db.test.mjs`](scripts/backup-db.test.mjs) (3 tests asserting credentials isolation, CLI hygiene, and refusal to overwrite).
+  - Added `"test:backup"` npm script to [`package.json`](package.json) running both backup test suites cleanly.
+  - Authored verification dock [`docs/verification/T1-01_PRODUCTION_BACKUP_DRILL_2026-11-21.md`](docs/verification/T1-01_PRODUCTION_BACKUP_DRILL_2026-11-21.md).
+  - Updated [`docs/plans/T1_RELEASE.md`](docs/plans/T1_RELEASE.md) to record supplemental CSV backup secured, with full pg_dump SQL backup required before live migration apply.
+
+**Ruled**
+- Supplemental CSV snapshot provides disaster-recovery entity protection for core tables off-laptop.
+- Per Codex review and Rule N-5, full `pg_dump` SQL backup and `check:dump` pass remain strictly required before applying any live database migration batch.
+- Zero live credentials handled or logged by agent (Rule N-8).
+- Restoration into staging remains staged under T1-02.
+
+**Verified**
+- Babin confirmed off-device preservation of `bookings.csv`, `clients.csv`, `products.csv`, and `security_deposits.csv` in Google Drive.
+- `npm run test:backup`: PASS (10/10 tests green across `backup-db.test.mjs` and `check-dump.test.mjs`).
+- `npm run check:pglite`: PASS (253/253 migrations applied cleanly, 0 leaks).
+- `npm run check:lifecycle`: PASS (94/94 steps green).
 
 ## 2026-11-21 — T0-04: Read-only remote branch census and owner-gated cleanup (Docs audit)
 
@@ -107,25 +187,6 @@
 - `npm run typecheck`: clean AST check with 0 errors.
 - `npm run lint`: clean, 0 warnings.
 - `npm run lint:ui-copy`: PASS (0 text violations).
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 112 / 113 (99%) | +0 |
-| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | 93 / 93 (100%) | +0 |
-| Overall | structural mean of five | ≈ 96% | — |
-
-### Remaining
-- Staging-only dry run rehearsal of batch apply (T1-02 / T1-04) once approved by Babin.
-- Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
-- Staff inventory deposit data entry across active products (T3-02).
-- T3-14 (Draft invoice at Confirm, number on full payment): resync integrity & numbering moment (PR #259).
-- T3-13, T3-20, T3-30: pending remaining accountant & staged receipts.
-- T0-12: hosted staging migration apply by Babin.
-- T7 online booking: Track T7 lane C integration.
 
 ## 2026-11-21 — Roadmap Truth Reconciliation: T1-03, T1-15, T3-14, T3-18, T3-28, T3-29 (All Lanes)
 

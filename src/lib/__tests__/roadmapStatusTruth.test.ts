@@ -143,6 +143,7 @@ describe('Roadmap status truth across merged tracks', () => {
   it('T7 online booking track reflects merged PRs as acceptance_pending', () => {
     const t7 = read('docs/plans/T7_ONLINE_BOOKING.md')
     const cards: Record<string, string> = {
+      'T7-02': 'verified',
       'T7-09': 'PR #201 merged',
       'T7-12': 'PR #196 merged',
       'T7-13': 'PR #197 merged',

@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0253**  (0241, 0242, 0243 are T3-29, T2-19 and T3-18 on `main`; 0245 R-9.8 on its own branch; 0244, 0246, 0247, 0248, 0249, 0250 and 0251 R-9.18 here)
+**Next free number: 0260**  (0245-0251 R-9.18; 0252 T2-23; 0253 T2-24; 0254 T3-14; 0255 T7-02; 0256 T7-04; 0257 T7-03; 0258 T7-05; 0259 T7-15)
 
 > **Legacy exception:** `0188` exists as two distinct, locally verified migration files
 > (`0188_smart_reservation_holds.sql` and `0188_staff_renting_gear.sql`). Both are preserved because
@@ -20,6 +20,14 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
+| 0259 | T7-15 | payment-link-from-any-booking | lane-c/T7-03-online-booking-requests-and-client-portal | verified |
+| 0258 | T7-05 | payment-intents-and-fonepay | lane-c/T7-03-online-booking-requests-and-client-portal | verified |
+| 0257 | T7-03 | client-accounts-and-portal-binding | lane-c/T7-03-online-booking-requests-and-client-portal | verified |
+| 0256 | T7-04 | booking-requests-and-staff-queue | lane-c/T7-03-online-booking-requests-and-client-portal | verified |
+| 0255 | T7-02 | booking-site-and-public-catalogue | lane-c/T7-02-booking-site-and-public-catalogue | verified |
+| 0254 | T3-14 | draft-invoice-resync-integrity-and-settlement-numbering | lane-c/T3-14-draft-invoice-full-settlement | verified |
+| 0253 | T2-24 | temporary-stock-from-partners | lane-a/T2-24-partner-stock-0253 | verified |
+| 0252 | T2-23 | allow-overbooking-on-chosen-products | feat/t2-23-product-overbooking-0245 | verified |
 | 0238 | T3-30 | consumables-pricing-restock-and-low-stock | lane-c/T3-30-consumables-unit-price-add-at-the | verified |
 | 0237 | T3-28 | rental-day-start-setting | lane-c/T3-28-rental-day-start-as-a-setting | verified |
 | 0225 | T0-12 / T6 glossary | owner-approved-glossary-revisions | lane-a/T0-12-main-integration | APPLIED live 7 Nov 2026 as 20261107105159 after validated backup; 17 local gates and live DB/RLS/RPC post-checks PASS; hosted/device acceptance pending |
@@ -101,5 +109,10 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0252 | T2-23 | allow-overbooking-on-chosen-products | feat/t2-23-product-overbooking-0245 | verified |
 | 0253 | T2-24 | temporary-stock-from-partners | lane-a/T2-24-partner-stock-0253 | verified |
 | 0254 | T3-14 | draft-invoice-resync-integrity-and-settlement-numbering | lane-c/T3-14-draft-invoice-full-settlement | verified (check:pglite 252/252 + check:lifecycle 93/93 Step L92) |
+| 0255 | T7-02 | booking-site-and-public-catalogue | lane-c/T7-03-online-booking-requests-and-client-portal | written |
+| 0256 | T7-04 | booking-requests-and-staff-queue | lane-c/T7-03-online-booking-requests-and-client-portal | written |
+| 0257 | T7-03 | client-accounts-and-portal-binding | lane-c/T7-03-online-booking-requests-and-client-portal | written |
+| 0258 | T7-05 | payment-intents-and-fonepay | lane-c/T7-15-payment-link-from-any-booking | verified (check:pglite 257/257) |
+| 0259 | T7-15 | payment-link-from-any-booking | lane-c/T7-15-payment-link-from-any-booking | verified (check:pglite 257/257 + check:lifecycle 94/94 Step L95) |
 
 ## Expected migrations (not yet claimed)
