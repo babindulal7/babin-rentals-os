@@ -138,7 +138,7 @@ until its merchant account and credentials exist. The pay screen shows only swit
 **Needs** — Babin opens both merchant accounts (start week 1; onboarding time unknown). **X does
 not wait for these** — PLAN §5.
 
-### T7-07 · Refunds and reconciliation            status: todo · size: M · lane C
+### T7-07 · Refunds and reconciliation            status: ready — awaiting merge (lane-c/T7-07-refunds-and-reconciliation) · size: M · lane C
 **What** — If staff decline a request that was paid, the screen shows "Refund due" with the
 provider and reference; staff refund in the provider's merchant portal (or by API where offered) and
 record it — a reversal row, never an edit (Law 4). **When a paid booking cannot go ahead (O-2, ruled
