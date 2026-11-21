@@ -6,7 +6,7 @@
 **Current Head SHA:** `04746df2ef225057ec25f36c19e9eb9f389b3f26`  
 **Target Environment:** `babin-staging` (Free Supabase Project, Singapore region)  
 **Production Target:** `sxguwvgoserhdolewibb` — **NEVER TOUCHED, ZERO CHANGES**  
-**Status:** **STAGE 0 VERIFIED · STAGES 1–3 BLOCKED PENDING EXPLICIT OWNER AUTHORIZATION**  
+**Status:** **STAGE 0 VERIFIED · STAGE 1 READY FOR OPERATOR EXECUTION · STAGES 2–3 BLOCKED PENDING STAGE 1**  
 
 ---
 
@@ -61,7 +61,7 @@ Before hosted staging execution (Stage 2) can begin, Stage 1 provisioning must c
 [STAGE 0: Read-Only Preflight]  ==>  PASS (Catalog, inventory, and migration hashes verified read-only)
           │
           ▼
-[STAGE 1: Schema & Synthetic Seed] ==> BLOCKED (Awaiting explicit Owner write approval for staging)
+[STAGE 1: Schema & Synthetic Seed] ==> READY FOR OPERATOR EXECUTION (SQL bundles and runbook prepared)
           │
           ▼
 [STAGE 2: Hosted PostgREST & Storage] ==> BLOCKED (Depends on Stage 1 completion)
@@ -77,11 +77,12 @@ Before hosted staging execution (Stage 2) can begin, Stage 1 provisioning must c
   - Proven that local scripts fail closed and reject hosted staging URLs unless explicitly configured.
   - Zero staging mutations executed by Antigravity per Rule N-5.
 
-- **Stage 1 (Staging Schema Alignment & Synthetic Seeding): `BLOCKED`**  
-  - Requires explicit owner sign-off on `docs/verification/STAGING_INSTALLATION_MANIFEST_2026-11-21.md`.
-  - Must apply the 15 pending migrations (`0245`–`0259`) using the reviewed manifest.
-  - Must populate only synthetic seed `0012` and provision the 10 synthetic auth users.
-  - **Action Required:** Owner to authorize executing the reviewed staging apply script.
+- **Stage 1 (Staging Schema Alignment & Synthetic Seeding): `READY FOR OPERATOR EXECUTION`**  
+  - Stage 1 execution bundles packaged and independently verified in local PGlite:
+    - [`01_APPLY_PENDING_MIGRATIONS_0245_TO_0259.sql`](./staging_bundles/01_APPLY_PENDING_MIGRATIONS_0245_TO_0259.sql) (applies 15 pending migrations `0245`–`0259`).
+    - [`02_SEED_SYNTHETIC_STAGE1_USERS.sql`](./staging_bundles/02_SEED_SYNTHETIC_STAGE1_USERS.sql) (provisions 10 synthetic identities across 9 canonical roles + Client B).
+  - Operator execution runbook authored in [`STAGE_1_STAGING_EXECUTION_RUNBOOK.md`](./STAGE_1_STAGING_EXECUTION_RUNBOOK.md).
+  - **Action Required:** Operator (Babin) executes the two SQL bundles in the `babin-staging` (`klhmsrunqrdxjudyhnkm`) SQL Editor.
 
 - **Stage 2 (Real Hosted JWT / PostgREST / Storage Acceptance): `BLOCKED`**  
   - Requires authenticating as the 10 real GoTrue users in the staging environment.

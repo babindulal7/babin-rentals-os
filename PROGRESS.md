@@ -23,6 +23,11 @@
   - [`docs/security/acceptance/T0_SECURITY_AUDIT_RESULTS.md`](docs/security/acceptance/T0_SECURITY_AUDIT_RESULTS.md): Full audit report, preflight inventory, checklist, and gate verdicts.
   - [`docs/security/acceptance/T0_ROLE_CLIENT_MATRIX.csv`](docs/security/acceptance/T0_ROLE_CLIENT_MATRIX.csv): Sanitized role/client test matrix (zero PII, secrets, or keys).
   - [`docs/security/acceptance/T0_HOSTED_GATE_REGISTER.md`](docs/security/acceptance/T0_HOSTED_GATE_REGISTER.md): Hosted staging prerequisites, schema provenance, and Stage 0–3 gate register.
+- Packaged, tested, and verified Stage 1 staging schema alignment bundles in `docs/security/acceptance/staging_bundles/`:
+  - [`docs/security/acceptance/staging_bundles/01_APPLY_PENDING_MIGRATIONS_0245_TO_0259.sql`](docs/security/acceptance/staging_bundles/01_APPLY_PENDING_MIGRATIONS_0245_TO_0259.sql): Concatenated 15 pending migrations `0245`–`0259` with migration recording.
+  - [`docs/security/acceptance/staging_bundles/02_SEED_SYNTHETIC_STAGE1_USERS.sql`](docs/security/acceptance/staging_bundles/02_SEED_SYNTHETIC_STAGE1_USERS.sql): Provisions 10 synthetic identities across 9 canonical roles + Client B, test clients `C-9901` and `C-9902`, and portal users.
+- Authored step-by-step operator execution guide:
+  - [`docs/security/acceptance/STAGE_1_STAGING_EXECUTION_RUNBOOK.md`](docs/security/acceptance/STAGE_1_STAGING_EXECUTION_RUNBOOK.md): Explicit operator instructions for applying Stage 1 SQL to `babin-staging` (`klhmsrunqrdxjudyhnkm`), with strict prohibition against production mutation.
 
 **Ruled**
 - Babin 28 Oct 2026 Ruling: Staff PIN is 4 digits with 5-attempt server lockout.
@@ -68,8 +73,9 @@ Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Awaiting explicit Owner authorization for Stage 1 staging schema alignment (applying 15 pending migrations `0245`–`0259` and synthetic seed `0012` to `babin-staging`).
-- Stage 2 hosted PostgREST and Storage acceptance testing with 10 synthetic identities.
+- Operator (Babin) manual execution of Stage 1 bundles (`01_APPLY_PENDING_MIGRATIONS_0245_TO_0259.sql` and `02_SEED_SYNTHETIC_STAGE1_USERS.sql`) in `babin-staging` (`klhmsrunqrdxjudyhnkm`) SQL Editor per `STAGE_1_STAGING_EXECUTION_RUNBOOK.md`.
+- Operator configuration of `.env.staging.local` with synthetic user JWTs and staging credentials.
+- Stage 2 hosted PostgREST and Storage acceptance testing with 10 synthetic identities (`scripts/verify-staging-readonly.mjs`).
 - Phase 1 launch sign-off by Babin; production release remains on strict HOLD.
 
 ## 2026-11-21 — T7-11: Online Booking Launch Operational Checklist & Domain Routing (Lane C)
