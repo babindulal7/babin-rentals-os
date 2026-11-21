@@ -10136,7 +10136,7 @@ STEPS.push({
 
 
 // -----------------------------------------------------------------------------
-// STEP L93: Booking requests and staff queue (T7-04)
+// STEP L94: Booking requests and staff queue (T7-04)
 //
 // Authority:
 //   - T7-04 · Online booking requests, line items, staff queue, and atomic confirmation/decline RPCs.
@@ -10144,7 +10144,7 @@ STEPS.push({
 //   - Law 6: Warehouse can view request in queue but total/VAT/advance are masked (null).
 // -----------------------------------------------------------------------------
 STEPS.push({
-  id: 'L93',
+  id: 'L94',
   title: 'booking requests and staff queue (T7-04) — submit, rental days & VAT, queue visibility, warehouse money-blind, decline reason, atomic confirm',
   expect: 'green',
   run: async () => {
@@ -10257,7 +10257,7 @@ STEPS.push({
 
 
 // -----------------------------------------------------------------------------
-// STEP L94: Client accounts, KYC upload, and D-5 tenant isolation (T7-03)
+// STEP L95: Client accounts, KYC upload, and D-5 tenant isolation (T7-03)
 //
 // Authority:
 //   - T7-03 · Client accounts by verified email
@@ -10268,7 +10268,7 @@ STEPS.push({
 //   - Law 6: Warehouse cannot view client PAN or unmasked ID document number.
 // -----------------------------------------------------------------------------
 STEPS.push({
-  id: 'L94',
+  id: 'L95',
   title: 'client accounts, KYC upload, and D-5 tenant isolation (T7-03) — anon denied, self-registration, D-5 isolation, warehouse Law 6 masked, binding audited',
   expect: 'green',
   run: async () => {
@@ -10461,7 +10461,7 @@ STEPS.push({
 
 
 // -----------------------------------------------------------------------------
-// STEP L95: Payment link from any booking (T7-15, B17, B38, B55, D30)
+// STEP L96: Payment link from any booking (T7-15, B17, B38, B55, D30)
 //
 // Authority:
 //   - T7-15 · Payment link from any booking
@@ -10472,7 +10472,7 @@ STEPS.push({
 //   - Law 6: Warehouse cannot make a link (money-blind).
 // -----------------------------------------------------------------------------
 STEPS.push({
-  id: 'L95',
+  id: 'L96',
   title: 'payment link from any booking (T7-15) — server-computed amount, 48h expiry, replaces old, expired refuses, replay idempotent, warehouse denied',
   expect: 'green',
   run: async () => {
@@ -10645,6 +10645,203 @@ STEPS.push({
       const paidDetails = typeof paidDetailsRes === 'string' ? JSON.parse(paidDetailsRes) : paidDetailsRes
       assertEq(paidDetails.valid, false, 'paid link is not valid for new payment')
       assertEq(paidDetails.reason, 'already_paid', 'reason is already_paid')
+    })
+  },
+})
+
+
+// -----------------------------------------------------------------------------
+// STEP L97: Online payment refunds and reconciliation (T7-07, D30, D31, B39, O-2, Law 4, Law 6)
+//
+// Authority:
+//   - T7-07 · Refunds and reconciliation
+//   - Ruling B39 / O-2: Store credit or refund to same wallet within 3 working days (client choice).
+//   - Ruling D30, D31: Server-to-server confirmation; provider reference recorded.
+//   - Law 4: Immutable payments; allocated intent mints payment_reversals row, never mutates payment.
+//   - Law 6: Warehouse denied RPC and receives 0 reconciliation rows.
+// -----------------------------------------------------------------------------
+STEPS.push({
+  id: 'L97',
+  title: 'online payment refunds and reconciliation (T7-07, Law 4, Law 6) — wallet refund mints reversal row, account credit credits client, reconciliation flags unallocated intent after 3 days',
+  expect: 'green',
+  run: async () => {
+    // 1. Create a paid payment intent for an unconfirmed request
+    const intentUuid1 = crypto.randomUUID()
+    let intentId1
+    await asOwnerOfTheDatabase(async () => {
+      const reqRes = await q(`
+        insert into public.booking_requests (
+          request_number, client_name, client_email, client_phone, start_date, end_date, fulfillment_type, total_paisa, advance_due_paisa, status
+        ) values (
+          'REQ-L97-01', 'L97 Requester 1', 'l97_1@example.com', '+977-9841000001', '2026-12-10', '2026-12-12', 'pickup', 1000000, 500000, 'declined'
+        ) returning id
+      `)
+      const reqId1 = reqRes.rows[0].id
+
+      const ins = await q(`
+        insert into public.payment_intents (
+          client_uuid, booking_id, booking_request_id, client_id, provider, amount_paisa, status, provider_ref, paid_at
+        ) values (
+          $1, null, $2, $3, 'fonepay', 500000, 'paid', 'FP-REFUND-1', now()
+        ) returning id
+      `, [intentUuid1, reqId1, CLIENT])
+      intentId1 = ins.rows[0].id
+      assert(Boolean(intentId1), 'created paid intent')
+    })
+
+    // 2. Staff records refund via record_online_payment_refund
+    await as('Accounts', async () => {
+      const refRes = (await q(
+        `select public.record_online_payment_refund($1::uuid, 'wallet_refund', 'FP-RET-001', 'Booking declined by staff - refunding wallet') as res`,
+        [intentId1]
+      )).rows[0].res
+      assertEq(refRes.success, true, 'refund recorded successfully')
+      assertEq(refRes.status, 'refunded', 'status is refunded')
+    })
+
+    const intentRow1 = (await q(`select * from public.payment_intents where id = '${intentId1}'`)).rows[0]
+    assertEq(intentRow1.status, 'refunded', 'intent marked refunded')
+    assertEq(intentRow1.refund_ref, 'FP-RET-001', 'refund_ref saved')
+    assert(Boolean(intentRow1.refunded_at), 'refunded_at is set')
+
+    // 3. Second call is idempotent
+    await as('Accounts', async () => {
+      const idempotentRes = (await q(
+        `select public.record_online_payment_refund($1::uuid, 'wallet_refund', 'FP-RET-001', 'Duplicate call should succeed') as res`,
+        [intentId1]
+      )).rows[0].res
+      assertEq(idempotentRes.success, true, 'idempotent refund succeeds')
+      assertEq(idempotentRes.already_refunded, true, 'marked already_refunded')
+    })
+
+    // 4. Test allocated intent refund: mints immutable payment_reversals row (Law 4)
+    const bookingUuid = crypto.randomUUID()
+    const payClientUuid = crypto.randomUUID()
+    let bookingId
+    let paymentId
+    await as('Coordinator', async () => {
+      const bRes = await q('select public.create_booking($1::jsonb) as res', [JSON.stringify({
+        client_uuid: bookingUuid,
+        created_by: U.Coordinator,
+        branch_id: BRANCH,
+        client_id: CLIENT,
+        pickup_at: '2026-12-15T06:00:00Z',
+        return_at: '2026-12-17T06:00:00Z',
+        delivery_type: 'Client Pickup',
+        lines: [{ client_uuid: crypto.randomUUID(), product_id: SERIAL_PRODUCT, qty: 1, days: 2, rate: 3500 }],
+      })])
+      bookingId = bRes.rows[0].res.booking_id
+
+      const payRes = await q(`
+        insert into public.payments (client_uuid, payment_no, booking_id, client_id, branch_id, amount, payment_type, payment_date, received_by)
+        values ($1, next_document_number('payment'), $2, $3, $4, 3500, 'Advance Payment', now(), $5)
+        returning id
+      `, [payClientUuid, bookingId, CLIENT, BRANCH, U.Coordinator])
+      paymentId = payRes.rows[0].id
+    })
+
+    const intentUuid2 = crypto.randomUUID()
+    let intentId2
+    await asOwnerOfTheDatabase(async () => {
+      const ins = await q(`
+        insert into public.payment_intents (
+          client_uuid, booking_id, client_id, provider, amount_paisa, status, provider_ref, payment_id, paid_at, allocated_at
+        ) values (
+          $1, $2, $3, 'fonepay', 350000, 'allocated', 'FP-ALLOC-1', $4, now(), now()
+        ) returning id
+      `, [intentUuid2, bookingId, CLIENT, paymentId])
+      intentId2 = ins.rows[0].id
+    })
+
+    await as('Manager', async () => {
+      const refRes2 = (await q(
+        `select public.record_online_payment_refund($1::uuid, 'wallet_refund', 'FP-RET-002', 'Client cancelled shoot - wallet refund') as res`,
+        [intentId2]
+      )).rows[0].res
+      assertEq(refRes2.success, true, 'allocated refund succeeded')
+      assert(Boolean(refRes2.reversal_id), 'mints reversal_id')
+    })
+
+    const revRows = (await q(`select * from public.payment_reversals where original_payment_id = '${paymentId}'`)).rows
+    assertEq(revRows.length, 1, 'exactly one immutable payment_reversals row minted (Law 4)')
+    assertEq(Number(revRows[0].amount), 3500, 'reversal amount matches payment amount')
+
+    // 5. Account credit choice (B39, O-2): client receives account credit
+    const intentUuid3 = crypto.randomUUID()
+    let intentId3
+    const initialCreditPaisa = Number((await q(`select account_credit_paisa from public.clients where id = '${CLIENT}'`)).rows[0].account_credit_paisa || 0)
+    await asOwnerOfTheDatabase(async () => {
+      const reqRes3 = await q(`
+        insert into public.booking_requests (
+          request_number, client_name, client_email, client_phone, start_date, end_date, fulfillment_type, total_paisa, advance_due_paisa, status
+        ) values (
+          'REQ-L97-03', 'L97 Requester 3', 'l97_3@example.com', '+977-9841000003', '2026-12-10', '2026-12-12', 'pickup', 400000, 200000, 'declined'
+        ) returning id
+      `)
+      const reqId3 = reqRes3.rows[0].id
+
+      const ins = await q(`
+        insert into public.payment_intents (
+          client_uuid, booking_id, booking_request_id, client_id, provider, amount_paisa, status, provider_ref, paid_at
+        ) values (
+          $1, null, $2, $3, 'esewa', 200000, 'paid', 'ESEWA-CR-1', now()
+        ) returning id
+      `, [intentUuid3, reqId3, CLIENT])
+      intentId3 = ins.rows[0].id
+    })
+
+    await as('Accounts', async () => {
+      const crRes = (await q(
+        `select public.record_online_payment_refund($1::uuid, 'account_credit', null, 'Client chose store credit for postponed shoot') as res`,
+        [intentId3]
+      )).rows[0].res
+      assertEq(crRes.success, true, 'account credit recorded')
+      assertEq(crRes.refund_type, 'account_credit', 'refund_type is account_credit')
+    })
+
+    const updatedCreditPaisa = Number((await q(`select account_credit_paisa from public.clients where id = '${CLIENT}'`)).rows[0].account_credit_paisa)
+    assertEq(updatedCreditPaisa, initialCreditPaisa + 200000, 'client account credit incremented by exact paisa')
+
+    // 6. Reconciliation report & 3-day unallocated flag
+    const oldIntentUuid = crypto.randomUUID()
+    await asOwnerOfTheDatabase(async () => {
+      const reqResStale = await q(`
+        insert into public.booking_requests (
+          request_number, client_name, client_email, client_phone, start_date, end_date, fulfillment_type, total_paisa, advance_due_paisa, status
+        ) values (
+          'REQ-L97-STALE', 'L97 Requester Stale', 'l97_stale@example.com', '+977-9841000004', '2026-12-10', '2026-12-12', 'pickup', 240000, 120000, 'pending'
+        ) returning id
+      `)
+      const reqIdStale = reqResStale.rows[0].id
+
+      await q(`
+        insert into public.payment_intents (
+          client_uuid, booking_id, booking_request_id, client_id, provider, amount_paisa, status, provider_ref, paid_at, created_at
+        ) values (
+          $1, null, $2, $3, 'fonepay', 120000, 'paid', 'FP-STALE-1', now() - interval '4 days', now() - interval '4 days'
+        )
+      `, [oldIntentUuid, reqIdStale, CLIENT])
+    })
+
+    await as('Accounts', async () => {
+      const reconRows = (await q('select * from public.get_online_payment_reconciliation()')).rows
+      assert(reconRows.length > 0, 'reconciliation returns rows')
+      const staleFlagged = reconRows.reduce((sum, r) => sum + Number(r.flagged_unreconciled_intents), 0)
+      assert(staleFlagged >= 1, 'flags unallocated intent older than 3 days')
+    })
+
+    // 7. Money-blind role isolation (Law 6)
+    await as('Warehouse', async () => {
+      let refundBlocked = false
+      try {
+        await q(`select public.record_online_payment_refund('${intentId1}'::uuid, 'wallet_refund')`)
+      } catch {
+        refundBlocked = true
+      }
+      assert(refundBlocked, 'Warehouse denied record_online_payment_refund (Law 6)')
+
+      const reconRows = (await q('select * from public.get_online_payment_reconciliation()')).rows
+      assertEq(reconRows.length, 0, 'Warehouse receives 0 reconciliation rows (Law 6)')
     })
   },
 })

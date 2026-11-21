@@ -1,5 +1,57 @@
 # Progress Log
 
+## 2026-11-21 — T7-07: Online Payment Refunds and Reconciliation (Lane C)
+
+**Did**
+- Implemented **T7-07 · Refunds and reconciliation** on branch `lane-c/T7-07-refunds-and-reconciliation`:
+  - Sequenced migration `supabase/migrations/0260_online_payment_refunds_and_reconciliation.sql`:
+    - Extends `payment_intents` with refund metadata (`refunded_at`, `refund_ref`, `refund_reason`, `refund_type`, `refunded_by`) and expands status check to include `'refunded'`.
+    - Creates atomic RPC `public.record_online_payment_refund(p_intent_id, p_refund_type, p_refund_ref, p_reason)`:
+      - Strictly role-gated to money roles (`Owner`, `Admin`, `Manager`, `Accounts`) via `auth_can_view_money()`.
+      - Law 4: If intent was allocated to a payment, mints an immutable `payment_reversals` row with document sequence (`REV-...`), leaving original payment row untouched.
+      - Ruling B39 / O-2: If client chooses account credit, inserts into `client_account_credits` and updates `clients.account_credit` and `clients.account_credit_paisa`.
+      - Idempotent: repeated calls return `already_refunded: true` without minting duplicate reversals.
+    - Creates reconciliation RPC `public.get_online_payment_reconciliation(p_start_date, p_end_date)`:
+      - Groups online intents by provider and date, reporting total, paid, allocated, and refunded amounts.
+      - Flags unallocated/unrefunded paid intents older than 3 working days (`flagged_unreconciled_intents`).
+      - Strictly money-gated; returns empty set for Warehouse/technician/driver roles (Law 6).
+  - Staff Interface (`src/modules/finance/OnlineReconciliationWorkspace.tsx`):
+    - Added dedicated Online Reconciliation & Refunds Workspace in Finance.
+    - Added launcher in `src/modules/finance/Payments.tsx` via `[Online Reconciliation]` button.
+    - Displays provider settlement summaries, 3-day aging alerts, and refund action modal for wallet refund vs account credit.
+  - Verification:
+    - Added lifecycle Step `L97` in `scripts/e2e-lifecycle.mjs` asserting wallet refund reversal creation, account credit updates, 3-day stale intent flagging, idempotency, and Warehouse denial.
+    - Added unit test suite `src/modules/finance/__tests__/onlineReconciliation.test.tsx` (5/5 tests passing).
+    - Claimed migration `0260` in `docs/plans/MIGRATION_LEDGER.md` (next free: `0261`).
+
+**Ruled**
+- Ruling B39, O-2: Paid requests that cannot proceed offer refund to the same wallet within 3 working days or store account credit at client choice.
+- Law 4: Payments are immutable; refund of an allocated intent mints a compensating `payment_reversals` row.
+- Law 6: Warehouse and floor roles cannot call refund RPC or view unmasked reconciliation figures.
+
+**Verified**
+- `npm run check:pglite`: PASS (258/258 migrations applied cleanly, 0 leaks).
+- `npm run check:lifecycle`: PASS (98/98 steps green, including L97).
+- `npm run check:anon`: PASS (14/14 checks green).
+- `npx vitest run src/modules/finance/__tests__/onlineReconciliation.test.tsx`: PASS (5/5 passed).
+- `npm run typecheck`: PASS (0 errors).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 115 / 116 (99%) | +1 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | — |
+| Lifecycle | steps green / total | 98 / 98 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 258 files · check:pglite 258/258 applied, 0 failed.
+Gates read from .lifecycle-result.json.
+Counted by `npm run completion`, not typed.
+
+### Remaining
+- Track T7 complete across online booking, catalogue, client portal, payment links, and refunds. Ready for merge.
+
 ## 2026-11-21 — T1-09: Transactional email configuration and domain verification protocol (Lane A)
 
 **Did**
@@ -26,30 +78,6 @@
 - `npm run lint`: clean, 0 warnings.
 - `npm run lint:ui-copy`: PASS (0 developer text violations).
 - `npm run check:contrast`: PASS (97/97 WCAG AA).
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 114 / 115 (99%) | +0 |
-| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | 97 / 97 (100%) | +0 |
-| Overall | structural mean of five | ≈ 96% | — |
-Migrations 257 files · check:pglite 257/257 applied, 0 failed. Suite: PASS.
-Counted by `npm run completion`, not typed.
-Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
-
-### Remaining
-- Babin applies Cloudflare DNS records (SPF/DKIM/DMARC) for `babinrentals.com` and sets `RESEND_API_KEY` on staging/production (T1-09 operator step).
-- Staging-only dry run rehearsal of batch apply (T1-02) once approved by Babin.
-- Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
-- Staff inventory deposit data entry across active products (T3-02).
-- T3-14 (Draft invoice at Confirm, number on full payment): resync integrity & numbering moment (PR #259).
-- T3-13, T3-20, T3-30: pending remaining accountant & staged receipts.
-- T0-12: hosted staging migration apply by Babin.
-- Full pg_dump SQL backup before Batch 1 live apply (T1-01).
-
 ## 2026-11-21 — T7-02, T7-03, T7-04, T7-05, T7-06, T7-08, T7-15: Online Booking Platform & Multi-Provider Client Payments (Lane C)
 
 **Did**
