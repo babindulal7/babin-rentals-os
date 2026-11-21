@@ -10,7 +10,7 @@
  *   - payment_done (with rupee value)
  * - Strict Privacy Boundary:
  *   - NEVER sends personal data (no names, phone numbers, email addresses, or booking numbers).
- *   - NEVER loads or executes inside the staff operations app.
+ *   - NEVER loads or executes inside the staff operations app (Law 6, B37).
  *   - Uses public environment variables (VITE_GA4_ID, VITE_META_PIXEL_ID).
  */
 
@@ -80,6 +80,83 @@ export function sanitizeAnalyticsEvent(data: AnalyticsEventData): SanitizedAnaly
 /** Check if analytics should be enabled (only on public booking surfaces, never staff app) */
 export function shouldEnableStoreAnalytics(isStaffApp: boolean): boolean {
   return !isStaffApp
+}
+
+/**
+ * Injects GA4 and Meta Pixel script tags lazily on the public booking app.
+ * STRICT: Refuses execution if isStaffApp is true (Law 6, B37).
+ */
+export function initStoreAnalyticsScripts(isStaffApp = false): boolean {
+  if (!shouldEnableStoreAnalytics(isStaffApp)) {
+    return false
+  }
+
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return false
+  }
+
+  const ga4Id = (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_GA4_ID
+  const metaPixelId = (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_META_PIXEL_ID
+
+  // Initialize GA4 if ID is configured
+  if (ga4Id && !document.getElementById('ga4-script')) {
+    const gaScript = document.createElement('script')
+    gaScript.id = 'ga4-script'
+    gaScript.async = true
+    gaScript.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(ga4Id)}`
+    document.head.appendChild(gaScript)
+
+    const win = window as unknown as {
+      dataLayer?: unknown[]
+      gtag?: (...args: unknown[]) => void
+    }
+    win.dataLayer = win.dataLayer || []
+    function gtag(...args: unknown[]) {
+      win.dataLayer?.push(args)
+    }
+    win.gtag = gtag
+    gtag('js', new Date())
+    gtag('config', ga4Id, { send_page_view: false })
+  }
+
+  // Initialize Meta Pixel if ID is configured
+  if (metaPixelId && !document.getElementById('meta-pixel-script')) {
+    const pixelScript = document.createElement('script')
+    pixelScript.id = 'meta-pixel-script'
+    pixelScript.async = true
+    pixelScript.src = 'https://connect.facebook.net/en_US/fbevents.js'
+    document.head.appendChild(pixelScript)
+
+    const win = window as unknown as {
+      fbq?: unknown
+      _fbq?: unknown
+    }
+    if (!win.fbq) {
+      type FbqFn = ((...args: unknown[]) => void) & {
+        callMethod?: (...args: unknown[]) => void
+        push?: unknown
+        loaded?: boolean
+        version?: string
+        queue?: unknown[]
+      }
+      const fbq: FbqFn = function (...args: unknown[]) {
+        if (fbq.callMethod) {
+          fbq.callMethod(...args)
+        } else {
+          fbq.queue?.push(args)
+        }
+      }
+      fbq.push = fbq
+      fbq.loaded = true
+      fbq.version = '2.0'
+      fbq.queue = []
+      win.fbq = fbq
+      win._fbq = fbq
+      fbq('init', metaPixelId)
+    }
+  }
+
+  return true
 }
 
 /**

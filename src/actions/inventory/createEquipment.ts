@@ -138,6 +138,9 @@ export type CreateEquipmentInput = {
   /** Free-text position of the chosen bin. `storage_zone_id` stays null: the
    *  form's zone labels are seed strings, not `storage_zones` rows. */
   location?: { rack: string; shelf: string; bin: string } | undefined
+  /** Product family grouping (T7-13). */
+  familyId?: string | null | undefined
+  optionLabel?: string | null | undefined
   /**
    * `products.status` — `'Draft'` on Save Draft; on Create the CALLER passes
    * `'Active'` only when its own Ready-to-Rent gate cleared. That rule already
@@ -216,6 +219,8 @@ type ProductInsertPayload = {
   notes_internal: string | null
   notes_warehouse: string | null
   created_by: string
+  family_id?: string | null
+  option_label?: string | null
 }
 
 type UnitInsertPayload = {
@@ -451,6 +456,8 @@ export const createEquipmentConfig: ActionConfig<CreateEquipmentInput, CreateEqu
       notes_internal: orNull(input.internalNotes),
       notes_warehouse: orNull(input.warehouseNotes),
       created_by: ctx.userId,
+      ...(input.familyId ? { family_id: input.familyId } : {}),
+      ...(input.optionLabel ? { option_label: input.optionLabel } : {}),
     }
 
     let productResult: Awaited<ReturnType<typeof idempotentInsert>>

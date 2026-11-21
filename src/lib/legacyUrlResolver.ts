@@ -10,6 +10,8 @@
  * - Unknown or invalid paths fallback safely to the catalogue home (/catalogue).
  */
 
+import { supabase } from './supabase'
+
 export interface LegacyMappingEntry {
   booqableSlug: string
   canonicalSlug: string
@@ -20,12 +22,100 @@ export interface ResolveUrlResult {
   matched: boolean
   targetPath: string
   isFallback: boolean
+  entityType?: 'product' | 'category' | 'home'
+  resolvedSlug?: string
+  categoryName?: string
   sanitizedQuery?: string
+}
+
+export const DEFAULT_LEGACY_MAPPINGS: readonly LegacyMappingEntry[] = [
+  // Cameras
+  { booqableSlug: 'sony-fx3-cinema-line', canonicalSlug: 'sony-fx3-cinema-line-camera', entityType: 'product' },
+  { booqableSlug: 'sony-fx3', canonicalSlug: 'sony-fx3-cinema-line-camera', entityType: 'product' },
+  { booqableSlug: 'sony-a7s-iii', canonicalSlug: 'sony-a7s-iii', entityType: 'product' },
+  { booqableSlug: 'canon-c70-4k', canonicalSlug: 'canon-eos-c70', entityType: 'product' },
+  { booqableSlug: 'canon-eos-c70', canonicalSlug: 'canon-eos-c70', entityType: 'product' },
+  { booqableSlug: 'blackmagic-pocket-6k-pro', canonicalSlug: 'bmpcc-6k-pro', entityType: 'product' },
+  { booqableSlug: 'red-komodo-6k', canonicalSlug: 'red-komodo-6k', entityType: 'product' },
+
+  // Lenses
+  { booqableSlug: 'sony-fe-24-70mm-f2-8-gm-ii', canonicalSlug: 'sony-fe-24-70mm-f2-8-gm-ii', entityType: 'product' },
+  { booqableSlug: 'sony-24-70-gm2', canonicalSlug: 'sony-fe-24-70mm-f2-8-gm-ii', entityType: 'product' },
+  { booqableSlug: 'sony-fe-70-200mm-f2-8-gm-oss-ii', canonicalSlug: 'sony-fe-70-200mm-f2-8-gm-oss-ii', entityType: 'product' },
+  { booqableSlug: 'sigma-24-70mm-f2-8-dg-dn-art', canonicalSlug: 'sigma-24-70mm-f2-8-art-e-mount', entityType: 'product' },
+  { booqableSlug: 'lenses-primes', canonicalSlug: 'cinema-primes', entityType: 'category' },
+
+  // Lighting
+  { booqableSlug: 'aputure-ls-600d-pro-daylight-led', canonicalSlug: 'aputure-ls-600d-pro-daylight-led', entityType: 'product' },
+  { booqableSlug: 'aputure-600d-pro', canonicalSlug: 'aputure-ls-600d-pro-daylight-led', entityType: 'product' },
+  { booqableSlug: 'aputure-300d-mark-ii', canonicalSlug: 'aputure-ls-c300d-ii', entityType: 'product' },
+  { booqableSlug: 'nanlite-forza-500b-ii', canonicalSlug: 'nanlite-forza-500b-ii', entityType: 'product' },
+  { booqableSlug: 'amaran-200x-bi-color', canonicalSlug: 'amaran-200x-led', entityType: 'product' },
+
+  // Grip
+  { booqableSlug: 'dji-rs-3-pro-gimbal-stabilizer', canonicalSlug: 'dji-rs-3-pro-gimbal-stabilizer', entityType: 'product' },
+  { booqableSlug: 'dji-rs3-pro', canonicalSlug: 'dji-rs-3-pro-gimbal-stabilizer', entityType: 'product' },
+  { booqableSlug: 'dji-ronin-sc', canonicalSlug: 'dji-ronin-sc', entityType: 'product' },
+  { booqableSlug: 'c-stand-20-turtle-base', canonicalSlug: 'matthews-40-c-stand', entityType: 'product' },
+
+  // Audio
+  { booqableSlug: 'sennheiser-mkh-416-shotgun-mic', canonicalSlug: 'sennheiser-mkh-416-shotgun-mic', entityType: 'product' },
+  { booqableSlug: 'sennheiser-mkh416', canonicalSlug: 'sennheiser-mkh-416-shotgun-mic', entityType: 'product' },
+  { booqableSlug: 'rode-wireless-go-ii-dual', canonicalSlug: 'rode-wireless-pro', entityType: 'product' },
+  { booqableSlug: 'zoom-f6-field-recorder', canonicalSlug: 'zoom-f6-audio-recorder', entityType: 'product' },
+
+  // Categories
+  { booqableSlug: 'cameras', canonicalSlug: 'Cameras', entityType: 'category' },
+  { booqableSlug: 'video-cameras', canonicalSlug: 'Cameras', entityType: 'category' },
+  { booqableSlug: 'cinema-cameras', canonicalSlug: 'Cameras', entityType: 'category' },
+  { booqableSlug: 'lenses', canonicalSlug: 'Lenses', entityType: 'category' },
+  { booqableSlug: 'lighting', canonicalSlug: 'Lighting', entityType: 'category' },
+  { booqableSlug: 'lights', canonicalSlug: 'Lighting', entityType: 'category' },
+  { booqableSlug: 'audio', canonicalSlug: 'Audio', entityType: 'category' },
+  { booqableSlug: 'sound', canonicalSlug: 'Audio', entityType: 'category' },
+  { booqableSlug: 'grip', canonicalSlug: 'Grip', entityType: 'category' },
+  { booqableSlug: 'support', canonicalSlug: 'Grip', entityType: 'category' },
+  { booqableSlug: 'bundles', canonicalSlug: 'Bundle Deals', entityType: 'category' },
+  { booqableSlug: 'packages', canonicalSlug: 'Bundle Deals', entityType: 'category' },
+]
+
+/**
+ * Fetch dynamic legacy mappings from database (external_refs table),
+ * falling back to or merging with DEFAULT_LEGACY_MAPPINGS.
+ */
+export async function fetchLegacyMappings(): Promise<LegacyMappingEntry[]> {
+  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock' || !supabase
+
+  if (isMock) {
+    return [...DEFAULT_LEGACY_MAPPINGS]
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('external_refs')
+      .select('external_id, local_id')
+      .eq('provider', 'booqable')
+      .eq('entity', 'products')
+
+    if (error || !data) {
+      return [...DEFAULT_LEGACY_MAPPINGS]
+    }
+
+    const dynamicMappings: LegacyMappingEntry[] = data.map((row) => ({
+      booqableSlug: row.external_id,
+      canonicalSlug: row.local_id,
+      entityType: 'product' as const,
+    }))
+
+    return [...DEFAULT_LEGACY_MAPPINGS, ...dynamicMappings]
+  } catch {
+    return [...DEFAULT_LEGACY_MAPPINGS]
+  }
 }
 
 export function resolveLegacyBooqableUrl(
   inputUrlOrPath: string,
-  mappings: LegacyMappingEntry[] = [],
+  mappings: readonly LegacyMappingEntry[] = DEFAULT_LEGACY_MAPPINGS,
 ): ResolveUrlResult {
   const fallbackResult: ResolveUrlResult = {
     matched: false,
@@ -67,6 +157,8 @@ export function resolveLegacyBooqableUrl(
       matched: true,
       targetPath: `/catalogue/${encodeURIComponent(targetSlug)}`,
       isFallback: false,
+      entityType: 'product',
+      resolvedSlug: targetSlug,
       ...(queryString ? { sanitizedQuery: sanitizeQuery(queryString) } : {}),
     }
   }
@@ -84,16 +176,19 @@ export function resolveLegacyBooqableUrl(
       matched: true,
       targetPath: `/catalogue?category=${encodeURIComponent(targetCat)}`,
       isFallback: false,
+      entityType: 'category',
+      categoryName: targetCat,
       ...(queryString ? { sanitizedQuery: sanitizeQuery(queryString) } : {}),
     }
   }
 
-  // 3. Store Home / Cart: / or /store or /cart
-  if (normalizedPath === '/' || normalizedPath === '/store') {
+  // 3. Store Home / Cart: / or /store or /cart or /catalogue
+  if (normalizedPath === '/' || normalizedPath === '/store' || normalizedPath === '/cart' || normalizedPath === '/catalogue') {
     return {
       matched: true,
       targetPath: '/catalogue',
       isFallback: false,
+      entityType: 'home',
     }
   }
 

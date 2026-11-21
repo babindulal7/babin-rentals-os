@@ -1,5 +1,62 @@
 # Progress Log
 
+## 2026-11-21 — Track T7: Full Online Booking & Payment Stack Reconciliation (Lane C + All Lanes)
+
+**Did**
+- Fully reconciled and integrated Lane C's Track T7 online booking stack across cards T7-02 through T7-17 on branch `lane-c/T7-full-stack-reconciliation`:
+  - Resolved migration collisions between Track T7 (which originally claimed 0245..0255) and main's merged delivery grid/waiting charge/overbooking/partner stock/draft invoice migrations (0245..0254) by systematically renumbering Track T7 migrations to 0255..0265:
+    - 0255: `booking_site_and_public_catalogue.sql` (T7-02)
+    - 0256: `booking_requests_and_staff_queue.sql` (T7-04)
+    - 0257: `client_accounts_and_portal_binding.sql` (T7-03)
+    - 0258: `bot_and_abuse_rate_limits.sql` (T7-09)
+    - 0259: `away_switch_for_online_booking.sql` (T7-14)
+    - 0260: `products_with_options_and_families.sql` (T7-13)
+    - 0261: `payment_intents_and_fonepay.sql` (T7-05)
+    - 0262: `product_recommendations_and_co_rented_items.sql` (T7-12)
+    - 0263: `online_payment_refunds_and_reconciliation.sql` (T7-07)
+    - 0264: `esewa_and_khalti_payment_providers.sql` (T7-06)
+    - 0265: `payment_link_from_any_booking.sql` (T7-15)
+  - Registered migrations 0255–0265 in [`docs/plans/MIGRATION_LEDGER.md`](docs/plans/MIGRATION_LEDGER.md) with next free number set to **0266**.
+  - Reconciled lifecycle suite: integrated and renumbered all 11 T7 steps (L93–L103) in [`scripts/e2e-lifecycle.mjs`](scripts/e2e-lifecycle.mjs), keeping all existing L1–L92 steps intact.
+  - Resolved review findings on PR #266 and #271:
+    - Fixed schema query in `src/booking/account/accountApi.ts` to join on real `booking_request_lines` columns (`quantity`, `daily_rate_paisa`, `product:products(name)`, `bundle:bundles(name)`).
+    - Fixed cutover domain redirect instructions in `docs/verification/T7-11_LAUNCH_CHECKLIST.md` to avoid apex redirect loop and preserve `babinrentals.com` as client-facing primary with `book.babinrentals.com` as 301 alias.
+  - Integrated public entry point `booking.html` into `vite.config.ts` (3rd input) alongside `index.html` and `marketing.html`.
+  - Promoted cards T7-02 through T7-10, T7-12 through T7-17 to `done`, and T7-11 to `acceptance_pending` in [`docs/plans/T7_ONLINE_BOOKING.md`](docs/plans/T7_ONLINE_BOOKING.md).
+
+**Ruled**
+- Online booking requests never place reservations or hold gear until staff confirm (D31).
+- Payments are strictly immutable: online payments and refunds record immutable `payments` and `payment_reversals` rows; figures are never mutated (Law 4).
+- Money blindness strictly enforced: non-finance roles (`Warehouse`, `Technician`, `Driver`, `Client`) receive zero internal monetary figures or payment actions (Law 6).
+- Zero writes to hosted Supabase (Rule N-5); all 263 migrations verified in isolated PGlite.
+
+**Verified**
+- `npm run check:pglite`: PASS (263/263 migrations applied from scratch with 0 failures, 46 anon views checked, 23 anon functions verified, 248 definer search paths pinned, 3 clash tables isolated).
+- `npm run check:lifecycle`: PASS (104/104 green steps, 0 known-red, 0 failed).
+- `npm run check:anon`: PASS (23 allowed anon functions, 149 RLS tables, Batch 0 lockouts verified).
+- `npm run check:batch-0`: PASS (all 5 rehearsal phases and rollback drill pass in PGlite).
+- `npm run typecheck`: PASS (0 TypeScript errors).
+- `npm run lint`: PASS (0 ESLint warnings).
+- `npm run lint:ui-copy`: PASS (0 developer-text violations).
+- Vitest unit tests: PASS (32/32 tests pass across 7 suites in `src/booking`, `src/lib`, `src/modules/finance`, and `src/modules/settings`).
+- `npm run build`: PASS (Vite bundled `main`, `marketing`, and `booking` entrypoints cleanly into `dist/`).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 114 / 116 (98%) | — |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | — |
+| Lifecycle | steps green / total | 104 / 104 (100%) | — |
+| Overall | structural mean of five | ≈ 96% | — |
+
+### Remaining
+- Owner sign-off on 37 zero-ahead candidate branches for deletion/archival (T0-04).
+- Hosted staging migration apply and acceptance rehearsal by Babin (T0-12 / T1-02).
+- Babin enters Fonepay, eSewa, Khalti merchant API credentials as Edge Function secrets (T7-05 / T7-06).
+- Day X DNS cutover and domain switch (T7-11).
+
 ## 2026-11-21 — T0-04: Read-only remote branch census and owner-gated cleanup (Docs audit)
 
 **Did**

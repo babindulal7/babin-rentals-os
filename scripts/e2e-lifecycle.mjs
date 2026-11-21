@@ -168,6 +168,25 @@ async function asService(fn) {
   }
 }
 
+async function asAnon(fn) {
+  await db.exec(`set role anon;
+    select set_config('app.current_user_id', '', false);
+    select set_config('request.jwt.claim.sub', '', false);
+    select set_config('request.jwt.claim.role', 'anon', false);`)
+  try {
+    return await fn()
+  } finally {
+    try {
+      await db.exec(`reset role; select set_config('app.current_user_id', '', false);
+        select set_config('request.jwt.claim.sub', '', false); select set_config('request.jwt.claim.role', '', false);`)
+    } catch {
+      await db.exec('rollback;')
+      await db.exec(`reset role; select set_config('app.current_user_id', '', false);
+        select set_config('request.jwt.claim.sub', '', false); select set_config('request.jwt.claim.role', '', false);`)
+    }
+  }
+}
+
 /**
  * Run a block and UNDO it, whatever it did.
  *
@@ -10012,6 +10031,1425 @@ STEPS.push({
   },
 })
 
+
+
+
+STEPS.push({
+  id: 'L101',
+  title: 'anon reads catalogue and availability, nothing else (T7-02)',
+  expect: 'green',
+  async run() {
+    await undone(async () => {
+      const pOnline = crypto.randomUUID()
+      const pOffline = crypto.randomUUID()
+      const pBundleOnly = crypto.randomUUID()
+      const bOnline = crypto.randomUUID()
+
+      await asOwnerOfTheDatabase(async () => {
+        const cat = await one('select id from inventory_categories order by name limit 1')
+        await q(
+          `insert into products (id, client_uuid, asset_code, name, category_id, brand, tracking_mode, total_quantity, daily_rate, show_online, online_bundle_only, is_active, created_by)
+           values
+             ($1, gen_random_uuid(), 'EQ999001', 'Online Alpha Camera', $4, 'Sony', 'Quantity', 5, 5000, true, false, true, $3),
+             ($2, gen_random_uuid(), 'EQ999002', 'Secret Beta Camera', $4, 'Sony', 'Quantity', 5, 6000, false, false, true, $3),
+             ($5, gen_random_uuid(), 'EQ999003', 'Component Lens', $4, 'Sony', 'Quantity', 5, 2000, true, true, true, $3)`,
+          [pOnline, pOffline, U.Owner, cat, pBundleOnly]
+        )
+
+        await q(
+          `insert into bundles (id, client_uuid, bundle_code, name, category_id, daily_rate, show_online, is_active, created_by)
+           values ($1, gen_random_uuid(), 'BDL-999001', 'Indie Creator Kit', $2, 6500, true, true, $3)`,
+          [bOnline, cat, U.Owner]
+        )
+
+        await q(
+          `insert into bundle_items (id, client_uuid, bundle_id, product_id, quantity, created_by)
+           values (gen_random_uuid(), gen_random_uuid(), $1, $2, 1, $3)`,
+          [bOnline, pBundleOnly, U.Owner]
+        )
+      })
+
+      // Query as anon
+      await asAnon(async () => {
+        const reject = async (what, sql, params, matcher) => {
+          await q('savepoint probe')
+          try {
+            await refuses(what, sql, params, matcher)
+          } finally {
+            await q('rollback to savepoint probe')
+          }
+        }
+
+        const rows = (await q('select * from public_catalogue_v')).rows
+
+        const hasOnline = rows.find((r) => r.id === pOnline)
+        assert(Boolean(hasOnline), 'pOnline must be listed in public_catalogue_v')
+        assertEq(hasOnline.daily_rate_paisa, 500000n, 'pOnline daily rate converted to paisa')
+
+        const hasOffline = rows.find((r) => r.id === pOffline)
+        assert(!hasOffline, 'pOffline (show_online=false) must NOT be listed')
+
+        const hasBundleOnly = rows.find((r) => r.id === pBundleOnly)
+        assert(!hasBundleOnly, 'pBundleOnly must NOT be listed as its own row')
+
+        const hasBundle = rows.find((r) => r.id === bOnline)
+        assert(Boolean(hasBundle), 'bOnline bundle must be listed in public_catalogue_v')
+        assert(Array.isArray(hasBundle.bundle_contents), 'bundle_contents must be json array')
+        assert(hasBundle.bundle_contents.some((c) => c.name === 'Component Lens'), 'bundle includes component item')
+
+        const forbiddenCols = ['purchase_price', 'replacement_value', 'serial_number', 'supplier_id', 'notes_internal']
+        const keys = Object.keys(rows[0] || {})
+        for (const col of forbiddenCols) {
+          assert(!keys.includes(col), `public_catalogue_v must NEVER contain ${col}`)
+        }
+
+        await reject(
+          'anon cannot insert into public_catalogue_v',
+          `insert into public_catalogue_v (id, name) values ('${pOnline}', 'Hacked')`,
+          [],
+          /permission denied|cannot insert into view/i
+        )
+
+        const today = new Date().toISOString().slice(0, 10)
+        const avail = (await q(`select * from public_availability(array['${pOnline}']::uuid[], '${today}'::date, '${today}'::date)`)).rows
+        assertEq(avail.length, 1, 'public_availability returns one day row for queried product')
+        assertEq(avail[0].available, true, 'stock of 5 with no reservations is available')
+
+        const bkCount = Number((await q('select count(*) from bookings')).rows[0].count)
+        assertEq(bkCount, 0, 'anon sees 0 bookings under RLS')
+
+        const invCount = Number((await q('select count(*) from invoices')).rows[0].count)
+        assertEq(invCount, 0, 'anon sees 0 invoices under RLS')
+
+        const clientCount = Number((await q('select count(*) from clients')).rows[0].count)
+        assertEq(clientCount, 0, 'anon sees 0 clients under RLS')
+
+        await reject(
+          'anon cannot read audit_logs',
+          'select count(*) from audit_logs',
+          [],
+          /permission denied/i
+        )
+      })
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L102',
+  title: 'online booking request creates no reservations until staff confirm; confirm creates exactly one booking (T7-04)',
+  expect: 'green',
+  async run() {
+    let reqId
+    let reqNum
+    const resCountBefore = Number((await q('select count(*) from inventory_reservations')).rows[0].count)
+
+    // 1. Anon submits booking request
+    await asAnon(async () => {
+      const payload = {
+        client_name: 'Online Requester',
+        client_email: 'requester@example.com',
+        client_phone: '+977-9800000000',
+        project_name: 'Commercial Shoot',
+        shoot_location: 'Mustang',
+        start_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+        end_date: new Date(Date.now() + 8 * 86400000).toISOString().slice(0, 10),
+        fulfillment_type: 'pickup',
+        lines: [
+          {
+            product_id: SERIAL_PRODUCT,
+            quantity: 1,
+          },
+        ],
+      }
+      const res = (await q(`select public.submit_booking_request($1::jsonb) as res`, [JSON.stringify(payload)])).rows[0].res
+      assert(Boolean(res.request_id), 'submit_booking_request returns request_id')
+      assert(Boolean(res.request_number), 'submit_booking_request returns request_number')
+      assertEq(res.status, 'pending', 'initial status is pending')
+      assert(Number(res.total_paisa) > 0, 'total_paisa calculated')
+      assert(Number(res.advance_due_paisa) > 0, 'advance_due_paisa calculated')
+      reqId = res.request_id
+      reqNum = res.request_number
+    })
+
+    // 2. Request creates ZERO reservations (D31)
+    const resCountAfter = Number((await q('select count(*) from inventory_reservations')).rows[0].count)
+    assertEq(resCountAfter, resCountBefore, 'a booking request creates 0 inventory reservations')
+
+    // 3. Floor roles cannot see money (Law 6)
+    await as('Warehouse', async () => {
+      const r = (await q(`select * from public.booking_requests_v where id = '${reqId}'`)).rows[0]
+      assert(Boolean(r), 'Warehouse can see request metadata')
+      assertEq(r.total_paisa, null, 'Warehouse sees null for total_paisa (Law 6)')
+      assertEq(r.vat_paisa, null, 'Warehouse sees null for vat_paisa (Law 6)')
+      assertEq(r.advance_due_paisa, null, 'Warehouse sees null for advance_due_paisa (Law 6)')
+    })
+
+    const realBookingId = bookingIds.a
+    await refusesAs(
+      'Warehouse',
+      'Warehouse cannot confirm booking request',
+      'select public.confirm_booking_request($1::uuid, $2::uuid)',
+      [reqId, realBookingId],
+      /unauthorized|permission denied/i
+    )
+
+    // 4. Coordinator confirms and declines
+    let decId
+    await as('Coordinator', async () => {
+      // Create another dummy request to test decline
+      const decRes = (await q(`select public.submit_booking_request($1::jsonb) as res`, [
+        JSON.stringify({
+          client_name: 'Decline Tester',
+          client_email: 'decline@example.com',
+          client_phone: '+977-9811111111',
+          start_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+          end_date: new Date(Date.now() + 8 * 86400000).toISOString().slice(0, 10),
+          fulfillment_type: 'pickup',
+          lines: [{ product_id: SERIAL_PRODUCT, quantity: 1 }],
+        }),
+      ])).rows[0].res
+      decId = decRes.request_id
+    })
+
+    await refusesAs(
+      'Coordinator',
+      'Decline requires a reason',
+      'select public.decline_booking_request($1::uuid, $2)',
+      [decId, '   '],
+      /reason is required/i
+    )
+
+    await as('Coordinator', async () => {
+      const decResult = (await q(`select public.decline_booking_request('${decId}'::uuid, 'Dates clash with maintenance') as res`)).rows[0].res
+      assertEq(decResult.status, 'declined', 'request declined successfully')
+
+      // Confirm main request
+      const confRes = (await q(`select public.confirm_booking_request('${reqId}'::uuid, '${realBookingId}'::uuid) as res`)).rows[0].res
+      assertEq(confRes.success, true, 'request confirmed successfully')
+      assertEq(confRes.booking_id, realBookingId, 'linked to booking id')
+
+      // Double-confirm is idempotent
+      const replayConf = (await q(`select public.confirm_booking_request('${reqId}'::uuid, '${realBookingId}'::uuid) as res`)).rows[0].res
+      assertEq(replayConf.success, true, 'double-confirm is idempotent')
+      assertEq(replayConf.already_confirmed, true, 'idempotent flag returned')
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L103',
+  title: 'client self-registration profile, KYC upload, and D-5 tenant isolation (T7-03)',
+  expect: 'green',
+  async run() {
+    const clientBUid = '00000000-0000-0000-0000-000000000099'
+    await q(`insert into auth.users (id, email, email_confirmed_at)
+      values ('${clientBUid}', 'clientb@lifecycle.test', now())
+      on conflict (id) do nothing`)
+
+    // 1. Anon cannot execute online_profile_save or read online_profiles_v
+    await asAnon(async () => {
+      await refuses(
+        'anon cannot save profile',
+        `select public.online_profile_save('Anon User', '+977-9800000000')`,
+        [],
+        /permission denied/i
+      )
+      await refuses(
+        'anon cannot read online_profiles_v',
+        `select * from public.online_profiles_v`,
+        [],
+        /permission denied/i
+      )
+    })
+
+    // 2. Client A saves profile with PAN and ID document
+    await as('Client', async () => {
+      const res = (await q(
+        `select * from public.online_profile_save(
+          'Client A Production',
+          '+977-9801234567',
+          'Company A Pvt Ltd',
+          '102030405',
+          'citizenship',
+          '12-34-56-7890',
+          '00000000-0000-0000-0000-000000000005/citizenship.jpg'
+        )`
+      )).rows[0]
+      assertEq(res.name, 'Client A Production', 'Client A profile saved name')
+      assertEq(res.pan, '102030405', 'Client A saved PAN')
+      assertEq(res.id_doc_number, '12-34-56-7890', 'Client A saved ID number')
+
+      // Reads own profile through online_profiles_v with unmasked PAN and ID
+      const v = (await q(`select * from public.online_profiles_v where auth_uid = '${U.Client}'`)).rows[0]
+      assert(Boolean(v), 'Client A sees own profile in view')
+      assertEq(v.pan, '102030405', 'Client A sees own PAN unmasked')
+      assertEq(v.id_doc_number, '12-34-56-7890', 'Client A sees own ID number unmasked')
+    })
+
+    // 3. Client B saves profile
+    await db.exec(`set role authenticated;
+      select set_config('app.current_user_id', '${clientBUid}', false);
+      select set_config('request.jwt.claim.sub', '${clientBUid}', false);
+      select set_config('request.jwt.claim.role', 'authenticated', false);`)
+    try {
+      await q(
+        `select public.online_profile_save(
+          'Client B Studios',
+          '+977-9841234567',
+          'Studio B',
+          '998877665',
+          'passport',
+          'PP-99881122',
+          '${clientBUid}/passport.jpg'
+        )`
+      )
+
+      // D-5: Client B CANNOT see Client A's profile row in online_profiles_v
+      const clientARows = (await q(`select * from public.online_profiles_v where auth_uid = '${U.Client}'`)).rows
+      assertEq(clientARows.length, 0, 'D-5: Client B cannot see Client A profile row')
+
+      // Client B sees only their own profile
+      const ownRows = (await q('select * from public.online_profiles_v')).rows
+      assertEq(ownRows.length, 1, 'Client B sees only own profile')
+      assertEq(ownRows[0].auth_uid, clientBUid, 'Client B sees own auth_uid')
+    } finally {
+      await db.exec(`reset role; select set_config('app.current_user_id', '', false);
+        select set_config('request.jwt.claim.sub', '', false); select set_config('request.jwt.claim.role', '', false);`)
+    }
+
+    // 4. Warehouse sees masked data (Law 6)
+    await as('Warehouse', async () => {
+      const rows = (await q(`select * from public.online_profiles_v where auth_uid = '${U.Client}'`)).rows
+      assertEq(rows.length, 1, 'Warehouse can see profile metadata')
+      assertEq(rows[0].pan, null, 'Warehouse sees NULL for PAN (Law 6)')
+      assert(rows[0].id_doc_number.startsWith('••••-••••-'), 'Warehouse sees masked ID number')
+      assertEq(rows[0].id_doc_path, null, 'Warehouse sees NULL for id_doc_path')
+    })
+
+    // 5. Coordinator binds client account
+    await as('Coordinator', async () => {
+      const bindRes = (await q(
+        `select public.bind_online_account_to_client(
+          '${clientBUid}'::uuid,
+          '${CLIENT}'::uuid,
+          'Verified business registration document'
+        ) as res`
+      )).rows[0].res
+      assertEq(bindRes.success, true, 'Coordinator bound account to client')
+    })
+
+    // Warehouse cannot bind
+    await refusesAs(
+      'Warehouse',
+      'Warehouse cannot bind online accounts',
+      `select public.bind_online_account_to_client(
+        '${clientBUid}'::uuid,
+        '${CLIENT}'::uuid,
+        'Unauthorized binding attempt'
+      )`,
+      [],
+      /access denied|permission denied/i
+    )
+  },
+})
+
+STEPS.push({
+  id: 'L96',
+  title: 'bot and abuse protection rate limits on public booking requests and OTP (T7-09)',
+  expect: 'green',
+  async run() {
+    // 1. Direct access to public_rate_limits is blocked
+    await asAnon(async () => {
+      const rows = (await q('select * from public.public_rate_limits')).rows
+      assertEq(rows.length, 0, 'anon sees 0 rows in public_rate_limits (RLS denied)')
+    })
+
+    // 2. Public rate limit verification RPC checks target limits
+    await asAnon(async () => {
+      const target = 'abuse_test_' + Date.now() + '@example.com'
+      for (let i = 0; i < 5; i++) {
+        const check = (await q(
+          `select public.verify_public_rate_limit('email_otp', $1) as res`,
+          [target]
+        )).rows[0].res
+        assertEq(check.allowed, true, `attempt ${i + 1} allowed`)
+      }
+
+      // 6th attempt within window is rate limited
+      const blocked = (await q(
+        `select public.verify_public_rate_limit('email_otp', $1) as res`,
+        [target]
+      )).rows[0].res
+      assertEq(blocked.allowed, false, '6th attempt is rate limited')
+      assertEq(blocked.code, 'RATE_LIMITED', 'returns RATE_LIMITED code')
+    })
+
+    // 3. submit_booking_request trips rate limit on spam burst
+    await asAnon(async () => {
+      const spamEmail = 'spammer_' + Date.now() + '@burst.test'
+      const payload = {
+        client_name: 'Spam Burst Tester',
+        client_email: spamEmail,
+        client_phone: '+977-9811112233',
+        start_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+        end_date: new Date(Date.now() + 8 * 86400000).toISOString().slice(0, 10),
+        fulfillment_type: 'pickup',
+        lines: [{ product_id: SERIAL_PRODUCT, quantity: 1 }],
+      }
+
+      // First 10 requests allowed
+      for (let i = 0; i < 10; i++) {
+        const res = (await q(
+          `select public.submit_booking_request($1::jsonb) as res`,
+          [JSON.stringify(payload)]
+        )).rows[0].res
+        assert(Boolean(res.request_id), `request ${i + 1} accepted`)
+      }
+
+      // 11th request trips rate limit gate
+      let failed = false
+      try {
+        await q(
+          `select public.submit_booking_request($1::jsonb) as res`,
+          [JSON.stringify(payload)]
+        )
+      } catch (err) {
+        failed = true
+        assert(/rate_limited|Too many booking requests/i.test(err.message), 'expected rate_limited gate')
+      }
+      assert(failed, '11th burst request is rejected by rate limit gate')
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L97',
+  title: 'online booking away mode switch and server-side request refusal (T7-14)',
+  expect: 'green',
+  async run() {
+    // 1. Warehouse is refused when trying to configure Away mode
+    await as('Warehouse', async () => {
+      let failed = false
+      try {
+        await q(
+          `select public.set_online_booking_away(true, 'Away test', null) as res`
+        )
+      } catch (err) {
+        failed = true
+        assert(/gate\.settings\.role|Only Owner, Admin, and Manager/i.test(err.message), 'expected role gate')
+      }
+      assert(failed, 'Warehouse cannot configure away mode')
+    })
+
+    // 2. Manager configures Away mode with custom message
+    await as('Manager', async () => {
+      const res = (await q(
+        `select public.set_online_booking_away(true, 'Back on 15 Feb — call or WhatsApp us', null) as res`
+      )).rows[0].res
+      assertEq(res.is_away, true, 'is_away is true')
+      assertEq(res.can_accept_requests, false, 'can_accept_requests is false')
+      assertEq(res.message, 'Back on 15 Feb — call or WhatsApp us', 'message preserved')
+    })
+
+    // 3. Anon checks status and gets active away mode
+    await asAnon(async () => {
+      const status = (await q(
+        `select public.get_online_booking_away_status() as res`
+      )).rows[0].res
+      assertEq(status.is_away, true, 'anon sees is_away = true')
+      assertEq(status.can_accept_requests, false, 'anon sees can_accept_requests = false')
+      assertEq(status.message, 'Back on 15 Feb — call or WhatsApp us', 'message matches')
+    })
+
+    // 4. Anon request submission is refused with away_mode gate
+    await asAnon(async () => {
+      const payload = {
+        client_name: 'Away Tester',
+        client_email: 'away_tester@example.com',
+        client_phone: '+977-9812345678',
+        start_date: new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10),
+        end_date: new Date(Date.now() + 6 * 86400000).toISOString().slice(0, 10),
+        fulfillment_type: 'pickup',
+        lines: [{ product_id: SERIAL_PRODUCT, quantity: 1 }],
+      }
+
+      let failed = false
+      try {
+        await q(
+          `select public.submit_booking_request($1::jsonb) as res`,
+          [JSON.stringify(payload)]
+        )
+      } catch (err) {
+        failed = true
+        assert(/gate\.booking_request\.away_mode|temporarily disabled/i.test(err.message), 'expected away_mode gate')
+      }
+      assert(failed, 'request while away is refused by server')
+    })
+
+    // 5. Manager turns Away mode OFF
+    await as('Manager', async () => {
+      const res = (await q(
+        `select public.set_online_booking_away(false, '', null) as res`
+      )).rows[0].res
+      assertEq(res.is_away, false, 'is_away is false after disengagement')
+      assertEq(res.can_accept_requests, true, 'can_accept_requests is true')
+    })
+
+    // 6. Anon can now submit booking request successfully
+    await asAnon(async () => {
+      const payload = {
+        client_name: 'Active Tester',
+        client_email: 'active_tester_' + Date.now() + '@example.com',
+        client_phone: '+977-9812345678',
+        start_date: new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10),
+        end_date: new Date(Date.now() + 6 * 86400000).toISOString().slice(0, 10),
+        fulfillment_type: 'pickup',
+        lines: [{ product_id: SERIAL_PRODUCT, quantity: 1 }],
+      }
+
+      const res = (await q(
+        `select public.submit_booking_request($1::jsonb) as res`,
+        [JSON.stringify(payload)]
+      )).rows[0].res
+      assert(Boolean(res.request_id), 'request accepted when away mode is off')
+    })
+  },
+})
+
+STEPS.push({
+  id: 'L98',
+  title: "products with options and families (T7-13) — booking an option reserves that option's units only",
+  expect: 'green',
+  async run() {
+    // 1. Setup two distinct products representing options of a family
+    const prodOptionA = '00000000-0000-4000-8000-000000000081'
+    const prodOptionB = '00000000-0000-4000-8000-000000000082'
+
+    await as('Owner', async () => {
+      await q(`
+        insert into public.products (id, client_uuid, asset_code, name, brand, category_id, daily_rate, is_active, show_online, online_bundle_only)
+        values
+          ('${prodOptionA}', gen_random_uuid(), 'EQ818181', 'DZOFilm Vespid 35mm PL', 'DZOFilm', (select id from public.inventory_categories limit 1), 3500, true, true, false),
+          ('${prodOptionB}', gen_random_uuid(), 'EQ828282', 'DZOFilm Vespid 35mm EF', 'DZOFilm', (select id from public.inventory_categories limit 1), 3500, true, true, false)
+        on conflict (id) do nothing
+      `)
+      await q(`
+        insert into public.product_units (id, client_uuid, product_id, serial_no, asset_tag, status, warehouse_id, branch_id)
+        values
+          (gen_random_uuid(), gen_random_uuid(), '${prodOptionA}', 'SN-DZ-PL-01', 'TAG-PL-01', 'In Stock', (select id from public.warehouses limit 1), '${BRANCH}'),
+          (gen_random_uuid(), gen_random_uuid(), '${prodOptionB}', 'SN-DZ-EF-01', 'TAG-EF-01', 'In Stock', (select id from public.warehouses limit 1), '${BRANCH}')
+      `)
+    })
+
+    // 2. Warehouse is refused when trying to group into family
+    await as('Warehouse', async () => {
+      let failed = false
+      try {
+        await q(
+          `select public.group_products_into_family('Lens Family', null, 'Mount', $1::jsonb) as res`,
+          [JSON.stringify([{ product_id: prodOptionA, option_label: 'PL Mount' }])]
+        )
+      } catch (err) {
+        failed = true
+        assert(/ONLY_MANAGEMENT_CAN_MANAGE_FAMILIES/i.test(err.message), 'expected role refusal')
+      }
+      assert(failed, 'Warehouse cannot group products into family')
+    })
+
+    // 3. Manager groups products into family
+    let familyId
+    await as('Manager', async () => {
+      const res = (await q(
+        `select public.group_products_into_family('DZOFilm Vespid 35mm', null, 'Mount', $1::jsonb) as res`,
+        [JSON.stringify([
+          { product_id: prodOptionA, option_label: 'PL Mount' },
+          { product_id: prodOptionB, option_label: 'EF Mount' },
+        ])]
+      )).rows[0].res
+      familyId = res
+      assert(Boolean(familyId), 'family created successfully')
+    })
+
+    // 4. Verify products carry family_id and option_label and public_catalogue_v reflects them
+    const pRows = (await q(
+      `select id, family_id, option_label from public.products where id in ('${prodOptionA}', '${prodOptionB}') order by option_label desc`
+    )).rows
+    assertEq(pRows[0].family_id, familyId, 'prodOptionA has family_id')
+    assertEq(pRows[0].option_label, 'PL Mount', 'prodOptionA has option_label PL Mount')
+    assertEq(pRows[1].family_id, familyId, 'prodOptionB has family_id')
+    assertEq(pRows[1].option_label, 'EF Mount', 'prodOptionB has option_label EF Mount')
+
+    // 5. Booking option A (PL Mount)
+    const bookingUuid = crypto.randomUUID()
+    const lineUuid = crypto.randomUUID()
+    let bookingId
+    await as('Coordinator', async () => {
+      const payload = {
+        client_uuid: bookingUuid,
+        created_by: U.Coordinator,
+        branch_id: BRANCH,
+        client_id: CLIENT,
+        pickup_at: '2026-12-01T06:00:00Z',
+        return_at: '2026-12-03T06:00:00Z',
+        delivery_type: 'Client Pickup',
+        lines: [
+          {
+            client_uuid: lineUuid,
+            product_id: prodOptionA,
+            qty: 1,
+            days: 2,
+            rate: 3500,
+          },
+        ],
+      }
+      const res = await q('select public.create_booking($1::jsonb) as res', [JSON.stringify(payload)])
+      bookingId = res.rows[0].res.booking_id
+      assert(Boolean(bookingId), 'booking created for option A')
+
+      // Transition to Booked (runs 0155 trigger and mints reservations)
+      await q(
+        `insert into booking_stage_transitions
+           (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
+         values (gen_random_uuid(), $1, $2, 'Quote', 'Booked', $3, 'Coordinator', now(), 'Client confirmed shoot dates')`,
+        [bookingId, BRANCH, U.Coordinator]
+      )
+    })
+
+    // 6. Verify Option A is reserved; Option B remains completely unreserved
+    const resA = (await q(
+      `select count(*) from public.inventory_reservations r
+       where r.product_id = '${prodOptionA}' and r.booking_id = '${bookingId}'`
+    )).rows[0].count
+    const resB = (await q(
+      `select count(*) from public.inventory_reservations r
+       where r.product_id = '${prodOptionB}' and r.booking_id = '${bookingId}'`
+    )).rows[0].count
+
+    assertEq(Number(resA), 1, 'Option A has 1 reservation')
+    assertEq(Number(resB), 0, 'Option B has ZERO reservations from booking Option A')
+
+    // 7. Manager ungroups the family
+    await as('Manager', async () => {
+      const unRes = (await q(
+        `select public.ungroup_product_family('${familyId}'::uuid) as res`
+      )).rows[0].res
+      assertEq(unRes, true, 'ungroup returns true')
+    })
+
+    // 8. Family row deleted; both products remain completely intact with family_id set to null
+    const famCount = (await q(`select count(*) from public.product_families where id = '${familyId}'`)).rows[0].count
+    assertEq(Number(famCount), 0, 'product_family deleted')
+
+    const prodsAfter = (await q(
+      `select id, family_id, option_label from public.products where id in ('${prodOptionA}', '${prodOptionB}')`
+    )).rows
+    assertEq(prodsAfter.length, 2, 'both products still exist (never deleted)')
+    assertEq(prodsAfter[0].family_id, null, 'family_id reset to null')
+    assertEq(prodsAfter[0].option_label, null, 'option_label reset to null')
+    assertEq(prodsAfter[1].family_id, null, 'family_id reset to null')
+    assertEq(prodsAfter[1].option_label, null, 'option_label reset to null')
+  },
+})
+
+STEPS.push({
+  id: 'L99',
+  title: 'online payment intent and Fonepay allocation (T7-05) — tampered amount refused, replayed callback changes nothing, intent allocates once',
+  expect: 'green',
+  async run() {
+    // 1. Setup a booking request
+    const requestClientUuid = crypto.randomUUID()
+    const reqPayload = {
+      client_uuid: requestClientUuid,
+      client_name: 'Online Payment Tester',
+      client_email: 'payment_tester_' + Date.now() + '@example.com',
+      client_phone: '+977-9841001122',
+      start_date: new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10),
+      end_date: new Date(Date.now() + 4 * 86400000).toISOString().slice(0, 10),
+      fulfillment_type: 'pickup',
+      lines: [{ product_id: SERIAL_PRODUCT, quantity: 1 }],
+    }
+
+    let requestId
+    let calculatedAdvancePaisa
+    await as('Coordinator', async () => {
+      const res = (await q(
+        `select public.submit_booking_request($1::jsonb) as res`,
+        [JSON.stringify(reqPayload)]
+      )).rows[0].res
+      requestId = res.request_id
+      calculatedAdvancePaisa = res.advance_due_paisa
+      assert(Boolean(requestId), 'booking request submitted')
+      assert(calculatedAdvancePaisa > 0, 'advance calculated server-side')
+    })
+
+    // 2. Client intent creation via create_payment_intent: amount is computed on server
+    const intentUuid = crypto.randomUUID()
+    let intentId
+    await as('Coordinator', async () => {
+      const intentRes = (await q(
+        `select public.create_payment_intent($1, null, $2, 'fonepay') as res`,
+        [intentUuid, requestId]
+      )).rows[0].res
+      assertEq(intentRes.success, true, 'intent created successfully')
+      assertEq(intentRes.amount_paisa, calculatedAdvancePaisa, 'amount is derived server-side, matching advance required')
+      intentId = intentRes.intent_id
+    })
+
+    // 3. Direct client insert or update to tamper with amount is refused by RLS
+    await as('Client', async () => {
+      let updateFailed = false
+      try {
+        await q(`update public.payment_intents set amount_paisa = 100 where id = '${intentId}'`)
+      } catch {
+        updateFailed = true
+      }
+      assert(updateFailed, 'client cannot tamper with payment_intents amount directly')
+    })
+
+    // 4. Floor roles (Warehouse, Technician, Driver) cannot view payment intents (Law 6)
+    await as('Warehouse', async () => {
+      const rows = (await q(`select * from public.payment_intents where id = '${intentId}'`)).rows
+      assertEq(rows.length, 0, 'Warehouse receives 0 payment intent rows (Law 6)')
+    })
+
+    // 5. Unconfirmed request: callback marks intent as 'paid', but not allocated (no booking yet)
+    const providerRef1 = 'FP-TXN-' + Date.now()
+    await as('Owner', async () => {
+      const allocRes = (await q(
+        `select public.allocate_payment_intent($1::uuid, $2, $3::jsonb) as res`,
+        [intentId, providerRef1, JSON.stringify({ fonepay_status: 'SUCCESS' })]
+      )).rows[0].res
+      assertEq(allocRes.success, true, 'allocate_payment_intent succeeded')
+      assertEq(allocRes.status, 'paid', 'unconfirmed request intent status is paid')
+      assertEq(allocRes.payment_id, null, 'no payment row yet before staff confirmation')
+    })
+
+    // 6. Callback replay: replayed callback changes nothing (idempotent)
+    await as('Owner', async () => {
+      const replayRes = (await q(
+        `select public.allocate_payment_intent($1::uuid, $2, $3::jsonb) as res`,
+        [intentId, providerRef1, JSON.stringify({ fonepay_status: 'SUCCESS' })]
+      )).rows[0].res
+      assertEq(replayRes.success, true, 'replayed callback returns success')
+      assertEq(replayRes.already_paid, true, 'marked already_paid')
+    })
+
+    // 7. Confirmed booking creation and request confirmation allocates the payment intent once
+    const bookingUuid = crypto.randomUUID()
+    const lineUuid = crypto.randomUUID()
+    let bookingId
+    await as('Coordinator', async () => {
+      const payload = {
+        client_uuid: bookingUuid,
+        created_by: U.Coordinator,
+        branch_id: BRANCH,
+        client_id: CLIENT,
+        pickup_at: '2026-12-10T06:00:00Z',
+        return_at: '2026-12-12T06:00:00Z',
+        delivery_type: 'Client Pickup',
+        lines: [
+          {
+            client_uuid: lineUuid,
+            product_id: SERIAL_PRODUCT,
+            qty: 1,
+            days: 2,
+            rate: 3500,
+          },
+        ],
+      }
+      const res = await q('select public.create_booking($1::jsonb) as res', [JSON.stringify(payload)])
+      bookingId = res.rows[0].res.booking_id
+      assert(Boolean(bookingId), 'booking created for request')
+
+      // Confirm the request, which triggers allocation of the paid intent
+      const confRes = (await q(
+        `select public.confirm_booking_request($1::uuid, $2::uuid) as res`,
+        [requestId, bookingId]
+      )).rows[0].res
+      assertEq(confRes.success, true, 'confirm_booking_request succeeded')
+      assertEq(confRes.allocated_payments, 1, 'allocated 1 paid payment intent')
+    })
+
+    // 8. Verify the intent is now 'allocated' and linked to an immutable payment row
+    const intentAfter = (await q(`select * from public.payment_intents where id = '${intentId}'`)).rows[0]
+    assertEq(intentAfter.status, 'allocated', 'intent is now allocated')
+    assert(Boolean(intentAfter.allocated_at), 'allocated_at is set')
+    assert(Boolean(intentAfter.payment_id), 'payment_id is populated')
+
+    const payRow = (await q(`select * from public.payments where id = '${intentAfter.payment_id}'`)).rows[0]
+    assertEq(payRow.booking_id, bookingId, 'payment belongs to booking')
+    assertEq(payRow.status, 'Received', 'payment status is Received')
+    assertEq(payRow.payment_type, 'Advance Payment', 'payment_type is Advance Payment')
+    assertEq(payRow.transaction_ref, providerRef1, 'transaction_ref matches Fonepay provider ref')
+
+    // 9. Second confirmation attempt or re-allocation attempt changes nothing (idempotent)
+    await as('Owner', async () => {
+      const secondAlloc = (await q(
+        `select public.allocate_payment_intent($1::uuid, $2, $3::jsonb) as res`,
+        [intentId, providerRef1, JSON.stringify({ fonepay_status: 'SUCCESS' })]
+      )).rows[0].res
+      assertEq(secondAlloc.success, true, 'idempotent call returns success')
+      assertEq(secondAlloc.already_allocated, true, 'intent is marked already_allocated')
+      assertEq(secondAlloc.payment_id, intentAfter.payment_id, 'returns exact same payment_id')
+    })
+
+    const payCount = (await q(`select count(*) from public.payments where booking_id = '${bookingId}'`)).rows[0].count
+    assertEq(Number(payCount), 1, 'exactly ONE immutable payment row was minted, never duplicated')
+  },
+})
+
+STEPS.push({
+  id: 'L100',
+  title: 'product recommendations and co-rented items (T7-12) — auto-fills from 12-month bookings, staff pins persist across refresh, items not shown online never leak to public',
+  expect: 'green',
+  async run() {
+    // 1. Create 4 active test products: Target Camera, Co-rented Lens, Co-rented Mic, Staff Pinned Tripod
+    let targetProdId
+    let lensProdId
+    let micProdId
+    let tripodProdId
+    await as('Owner', async () => {
+      const catId = (await q('select id from public.inventory_categories limit 1')).rows[0].id
+
+      targetProdId = (await q(`
+        insert into public.products (client_uuid, asset_code, name, category_id, brand, tracking_mode, daily_rate, total_quantity, show_online, is_active)
+        values (gen_random_uuid(), 'EQ991001', 'Recommendation Test Camera', $1, 'Sony', 'Quantity', 3000, 5, true, true)
+        returning id
+      `, [catId])).rows[0].id
+
+      lensProdId = (await q(`
+        insert into public.products (client_uuid, asset_code, name, category_id, brand, tracking_mode, daily_rate, total_quantity, show_online, is_active)
+        values (gen_random_uuid(), 'EQ991002', 'Recommendation Test Lens 24-70mm', $1, 'Sony', 'Quantity', 1500, 5, true, true)
+        returning id
+      `, [catId])).rows[0].id
+
+      micProdId = (await q(`
+        insert into public.products (client_uuid, asset_code, name, category_id, brand, tracking_mode, daily_rate, total_quantity, show_online, is_active)
+        values (gen_random_uuid(), 'EQ991003', 'Recommendation Wireless Mic', $1, 'Rode', 'Quantity', 800, 5, true, true)
+        returning id
+      `, [catId])).rows[0].id
+
+      tripodProdId = (await q(`
+        insert into public.products (client_uuid, asset_code, name, category_id, brand, tracking_mode, daily_rate, total_quantity, show_online, is_active)
+        values (gen_random_uuid(), 'EQ991004', 'Recommendation Carbon Tripod', $1, 'Manfrotto', 'Quantity', 1000, 5, true, true)
+        returning id
+      `, [catId])).rows[0].id
+    })
+
+    // 2. Create a confirmed past booking within the last 365 days containing Camera + Lens + Mic
+    const pastBookingUuid = crypto.randomUUID()
+    let pastBookingId
+    await as('Coordinator', async () => {
+      const payload = {
+        client_uuid: pastBookingUuid,
+        created_by: U.Coordinator,
+        branch_id: BRANCH,
+        client_id: CLIENT,
+        pickup_at: new Date(Date.now() - 30 * 86400000).toISOString(),
+        return_at: new Date(Date.now() - 28 * 86400000).toISOString(),
+        delivery_type: 'Client Pickup',
+        lines: [
+          { client_uuid: crypto.randomUUID(), product_id: targetProdId, qty: 1, days: 2, rate: 3000 },
+          { client_uuid: crypto.randomUUID(), product_id: lensProdId, qty: 1, days: 2, rate: 1500 },
+          { client_uuid: crypto.randomUUID(), product_id: micProdId, qty: 1, days: 2, rate: 800 },
+        ],
+      }
+      const bRes = await q('select public.create_booking($1::jsonb) as res', [JSON.stringify(payload)])
+      pastBookingId = bRes.rows[0].res.booking_id
+      assert(Boolean(pastBookingId), 'past booking created')
+      bookingIds.l92 = pastBookingId
+      await transition('l92', 'Quote', 'Booked', 'Coordinator')
+    })
+
+    // 3. Trigger refresh_product_recommendations(targetProdId)
+    await as('Owner', async () => {
+      const refreshedCount = (await q('select public.refresh_product_recommendations($1::uuid) as cnt', [targetProdId])).rows[0].cnt
+      assert(refreshedCount > 0, 'refreshed recommendations for target product')
+    })
+
+    // 4. Verify auto-fill populated Lens and Mic at position 1 and 2 with source = 'auto'
+    const autoRecs = (await q(`
+      select recommended_product_id, "position", source
+      from public.product_recommendations
+      where product_id = '${targetProdId}'
+      order by "position" asc
+    `)).rows
+    assertEq(autoRecs.length, 2, 'found 2 auto recommendations')
+    assertEq(autoRecs[0].source, 'auto', 'first recommendation is auto')
+    assertEq(autoRecs[1].source, 'auto', 'second recommendation is auto')
+    const recIds = autoRecs.map(r => r.recommended_product_id)
+    assert(recIds.includes(lensProdId), 'Lens is recommended')
+    assert(recIds.includes(micProdId), 'Mic is recommended')
+
+    // 5. Staff pins Tripod at position 1 via set_staff_product_recommendations
+    await as('Manager', async () => {
+      const staffPayload = [
+        { recommended_product_id: tripodProdId, position: 1 },
+      ]
+      const setRes = (await q(
+        'select public.set_staff_product_recommendations($1::uuid, $2::jsonb) as res',
+        [targetProdId, JSON.stringify(staffPayload)]
+      )).rows[0].res
+      assertEq(setRes, true, 'staff pinned recommendation successfully')
+    })
+
+    // 6. Verify Tripod is pinned at position 1 with source = 'staff', while Lens & Mic fill remaining positions
+    const recsAfterPin = (await q(`
+      select recommended_product_id, "position", source
+      from public.product_recommendations
+      where product_id = '${targetProdId}'
+      order by "position" asc
+    `)).rows
+    assertEq(recsAfterPin[0].recommended_product_id, tripodProdId, 'position 1 is staff-pinned Tripod')
+    assertEq(recsAfterPin[0].source, 'staff', 'position 1 source is staff')
+    assertEq(recsAfterPin.length, 3, 'total 3 recommendations (1 staff + 2 auto)')
+
+    // 7. Re-running refresh_product_recommendations() NEVER touches staff rows
+    await as('Owner', async () => {
+      await q('select public.refresh_product_recommendations($1::uuid)', [targetProdId])
+    })
+    const recsAfterRefresh = (await q(`
+      select recommended_product_id, "position", source
+      from public.product_recommendations
+      where product_id = '${targetProdId}'
+      order by "position" asc
+    `)).rows
+    assertEq(recsAfterRefresh[0].recommended_product_id, tripodProdId, 'position 1 is still Tripod after refresh')
+    assertEq(recsAfterRefresh[0].source, 'staff', 'staff pin preserved across refresh')
+
+    // 8. Public visibility gate: an item not shown online never leaks to public
+    // Take Mic offline (show_online = false)
+    await as('Owner', async () => {
+      await q(`update public.products set show_online = false where id = '${micProdId}'`)
+    })
+
+    // Calling get_public_product_recommendations as authenticated or checking public policy:
+    // Mic MUST NOT be returned!
+    await as('Coordinator', async () => {
+      const publicRecs = (await q(
+        'select id, name from public.get_public_product_recommendations($1::uuid)',
+        [targetProdId]
+      )).rows
+      const publicIds = publicRecs.map(r => r.id)
+      assert(publicIds.includes(tripodProdId), 'public sees Tripod')
+      assert(publicIds.includes(lensProdId), 'public sees Lens')
+      assert(!publicIds.includes(micProdId), 'item with show_online=false NEVER appears in public recommendations')
+    })
+
+    // Non-management role (e.g. Warehouse or Coordinator) is REFUSED by set_staff_product_recommendations
+    let denied = false
+    try {
+      await as('Warehouse', async () => {
+        await q(
+          'select public.set_staff_product_recommendations($1::uuid, $2::jsonb)',
+          [targetProdId, JSON.stringify([{ recommended_product_id: lensProdId, position: 1 }])]
+        )
+      })
+    } catch {
+      denied = true
+    }
+    assert(denied, 'Warehouse is refused by set_staff_product_recommendations')
+  },
+})
+
+STEPS.push({
+  id: 'L93',
+  title: 'online payment refunds and reconciliation (T7-07, Law 4, Law 6) — wallet refund mints reversal row, account credit credits client, reconciliation flags unallocated intent after 3 days',
+  expect: 'green',
+  async run() {
+    // 1. Create a paid payment intent for an unconfirmed request
+    const intentUuid1 = crypto.randomUUID()
+    let intentId1
+    await asOwnerOfTheDatabase(async () => {
+      const reqRes = await q(`
+        insert into public.booking_requests (
+          request_number, client_name, client_email, client_phone, start_date, end_date, fulfillment_type, total_paisa, advance_due_paisa, status
+        ) values (
+          'REQ-L93-01', 'L93 Requester 1', 'l93_1@example.com', '+977-9841000001', '2026-12-10', '2026-12-12', 'pickup', 1000000, 500000, 'declined'
+        ) returning id
+      `)
+      const reqId1 = reqRes.rows[0].id
+
+      const ins = await q(`
+        insert into public.payment_intents (
+          client_uuid, booking_id, booking_request_id, client_id, provider, amount_paisa, status, provider_ref, paid_at
+        ) values (
+          $1, null, $2, $3, 'fonepay', 500000, 'paid', 'FP-REFUND-1', now()
+        ) returning id
+      `, [intentUuid1, reqId1, CLIENT])
+      intentId1 = ins.rows[0].id
+      assert(Boolean(intentId1), 'created paid intent')
+    })
+
+    // 2. Staff records refund via record_online_payment_refund
+    await as('Accounts', async () => {
+      const refRes = (await q(
+        `select public.record_online_payment_refund($1::uuid, 'wallet_refund', 'FP-RET-001', 'Booking declined by staff - refunding wallet') as res`,
+        [intentId1]
+      )).rows[0].res
+      assertEq(refRes.success, true, 'refund recorded successfully')
+      assertEq(refRes.status, 'refunded', 'status is refunded')
+    })
+
+    const intentRow1 = (await q(`select * from public.payment_intents where id = '${intentId1}'`)).rows[0]
+    assertEq(intentRow1.status, 'refunded', 'intent marked refunded')
+    assertEq(intentRow1.refund_ref, 'FP-RET-001', 'refund_ref saved')
+    assert(Boolean(intentRow1.refunded_at), 'refunded_at is set')
+
+    // 3. Second call is idempotent
+    await as('Accounts', async () => {
+      const idempotentRes = (await q(
+        `select public.record_online_payment_refund($1::uuid, 'wallet_refund', 'FP-RET-001', 'Duplicate call should succeed') as res`,
+        [intentId1]
+      )).rows[0].res
+      assertEq(idempotentRes.success, true, 'idempotent refund succeeds')
+      assertEq(idempotentRes.already_refunded, true, 'marked already_refunded')
+    })
+
+    // 4. Test allocated intent refund: mints immutable payment_reversals row (Law 4)
+    const bookingUuid = crypto.randomUUID()
+    const payClientUuid = crypto.randomUUID()
+    let bookingId
+    let paymentId
+    await as('Coordinator', async () => {
+      const bRes = await q('select public.create_booking($1::jsonb) as res', [JSON.stringify({
+        client_uuid: bookingUuid,
+        created_by: U.Coordinator,
+        branch_id: BRANCH,
+        client_id: CLIENT,
+        pickup_at: '2026-12-15T06:00:00Z',
+        return_at: '2026-12-17T06:00:00Z',
+        delivery_type: 'Client Pickup',
+        lines: [{ client_uuid: crypto.randomUUID(), product_id: SERIAL_PRODUCT, qty: 1, days: 2, rate: 3500 }],
+      })])
+      bookingId = bRes.rows[0].res.booking_id
+
+      const payRes = await q(`
+        insert into public.payments (client_uuid, payment_no, booking_id, client_id, branch_id, amount, payment_type, payment_date, received_by)
+        values ($1, next_document_number('payment'), $2, $3, $4, 3500, 'Advance Payment', now(), $5)
+        returning id
+      `, [payClientUuid, bookingId, CLIENT, BRANCH, U.Coordinator])
+      paymentId = payRes.rows[0].id
+    })
+
+    const intentUuid2 = crypto.randomUUID()
+    let intentId2
+    await asOwnerOfTheDatabase(async () => {
+      const ins = await q(`
+        insert into public.payment_intents (
+          client_uuid, booking_id, client_id, provider, amount_paisa, status, provider_ref, payment_id, paid_at, allocated_at
+        ) values (
+          $1, $2, $3, 'fonepay', 350000, 'allocated', 'FP-ALLOC-1', $4, now(), now()
+        ) returning id
+      `, [intentUuid2, bookingId, CLIENT, paymentId])
+      intentId2 = ins.rows[0].id
+    })
+
+    await as('Manager', async () => {
+      const refRes2 = (await q(
+        `select public.record_online_payment_refund($1::uuid, 'wallet_refund', 'FP-RET-002', 'Client cancelled shoot - wallet refund') as res`,
+        [intentId2]
+      )).rows[0].res
+      assertEq(refRes2.success, true, 'allocated refund succeeded')
+      assert(Boolean(refRes2.reversal_id), 'mints reversal_id')
+    })
+
+    const revRows = (await q(`select * from public.payment_reversals where original_payment_id = '${paymentId}'`)).rows
+    assertEq(revRows.length, 1, 'exactly one immutable payment_reversals row minted (Law 4)')
+    assertEq(Number(revRows[0].amount), 3500, 'reversal amount matches payment amount')
+
+    // 5. Account credit choice (B39, O-2): client receives account credit
+    const intentUuid3 = crypto.randomUUID()
+    let intentId3
+    const initialCreditPaisa = Number((await q(`select account_credit_paisa from public.clients where id = '${CLIENT}'`)).rows[0].account_credit_paisa || 0)
+    await asOwnerOfTheDatabase(async () => {
+      const reqRes3 = await q(`
+        insert into public.booking_requests (
+          request_number, client_name, client_email, client_phone, start_date, end_date, fulfillment_type, total_paisa, advance_due_paisa, status
+        ) values (
+          'REQ-L93-03', 'L93 Requester 3', 'l93_3@example.com', '+977-9841000003', '2026-12-10', '2026-12-12', 'pickup', 400000, 200000, 'declined'
+        ) returning id
+      `)
+      const reqId3 = reqRes3.rows[0].id
+
+      const ins = await q(`
+        insert into public.payment_intents (
+          client_uuid, booking_id, booking_request_id, client_id, provider, amount_paisa, status, provider_ref, paid_at
+        ) values (
+          $1, null, $2, $3, 'esewa', 200000, 'paid', 'ESEWA-CR-1', now()
+        ) returning id
+      `, [intentUuid3, reqId3, CLIENT])
+      intentId3 = ins.rows[0].id
+    })
+
+    await as('Accounts', async () => {
+      const crRes = (await q(
+        `select public.record_online_payment_refund($1::uuid, 'account_credit', null, 'Client chose store credit for postponed shoot') as res`,
+        [intentId3]
+      )).rows[0].res
+      assertEq(crRes.success, true, 'account credit recorded')
+      assertEq(crRes.refund_type, 'account_credit', 'refund_type is account_credit')
+    })
+
+    const updatedCreditPaisa = Number((await q(`select account_credit_paisa from public.clients where id = '${CLIENT}'`)).rows[0].account_credit_paisa)
+    assertEq(updatedCreditPaisa, initialCreditPaisa + 200000, 'client account credit incremented by exact paisa')
+
+    // 6. Reconciliation report & 3-day unallocated flag
+    // Create an old paid intent created 4 days ago that is neither allocated nor refunded
+    const oldIntentUuid = crypto.randomUUID()
+    await asOwnerOfTheDatabase(async () => {
+      const reqResStale = await q(`
+        insert into public.booking_requests (
+          request_number, client_name, client_email, client_phone, start_date, end_date, fulfillment_type, total_paisa, advance_due_paisa, status
+        ) values (
+          'REQ-L93-STALE', 'L93 Requester Stale', 'l93_stale@example.com', '+977-9841000004', '2026-12-10', '2026-12-12', 'pickup', 240000, 120000, 'pending'
+        ) returning id
+      `)
+      const reqIdStale = reqResStale.rows[0].id
+
+      await q(`
+        insert into public.payment_intents (
+          client_uuid, booking_id, booking_request_id, client_id, provider, amount_paisa, status, provider_ref, paid_at, created_at
+        ) values (
+          $1, null, $2, $3, 'fonepay', 120000, 'paid', 'FP-STALE-1', now() - interval '4 days', now() - interval '4 days'
+        )
+      `, [oldIntentUuid, reqIdStale, CLIENT])
+    })
+
+    await as('Accounts', async () => {
+      const reconRows = (await q('select * from public.get_online_payment_reconciliation()')).rows
+      assert(reconRows.length > 0, 'reconciliation returns rows')
+      const staleFlagged = reconRows.reduce((sum, r) => sum + Number(r.flagged_unreconciled_intents), 0)
+      assert(staleFlagged >= 1, 'flags unallocated intent older than 3 days')
+    })
+
+    // 7. Money-blind role isolation (Law 6)
+    await as('Warehouse', async () => {
+      let refundBlocked = false
+      try {
+        await q(`select public.record_online_payment_refund('${intentId1}'::uuid, 'wallet_refund')`)
+      } catch {
+        refundBlocked = true
+      }
+      assert(refundBlocked, 'Warehouse denied record_online_payment_refund (Law 6)')
+
+      const reconRows = (await q('select * from public.get_online_payment_reconciliation()')).rows
+      assertEq(reconRows.length, 0, 'Warehouse receives 0 reconciliation rows (Law 6)')
+    })
+  },
+})
+
+// -----------------------------------------------------------------------------
+// STEP L94: Online payment providers eSewa and Khalti (T7-06, D30)
+//
+// Authority:
+//   - T7-06 · eSewa and Khalti payment providers
+//   - Ruling D30: Server-to-server confirmation only. Browser redirect alone never counts.
+//   - Provider switch invariant: Providers stay off until merchant credentials exist.
+//   - Law 1: Authoritative amount calculated on server.
+//   - Law 4: Payment rows immutable.
+//   - Law 6: Non-management and money-blind roles cannot alter provider status.
+// -----------------------------------------------------------------------------
+STEPS.push({
+  id: 'L94',
+  title: 'online payment providers eSewa and Khalti (T7-06, D30) — activation switch, disabled refused, enabled creates intent and allocates',
+  expect: 'green',
+  run: async () => {
+    let reqId
+    await asOwnerOfTheDatabase(async () => {
+      const res = await q(`
+        insert into public.booking_requests (
+          request_number, client_name, client_email, client_phone, start_date, end_date,
+          fulfillment_type, total_paisa, vat_paisa, advance_due_paisa, status
+        ) values (
+          'REQ-L94-01', 'L94 Requester', 'l94@example.com', '+977-9841000094', '2026-12-15', '2026-12-17',
+          'pickup', 1500000, 195000, 750000, 'pending'
+        )
+        returning id;
+      `)
+      reqId = res.rows[0].id
+    })
+
+    // 1. Initial provider status: Fonepay enabled, eSewa and Khalti disabled by default
+    await as('Owner', async () => {
+      const providersJson = (await q('select public.get_online_payment_providers() as prov')).rows[0].prov
+      const providers = typeof providersJson === 'string' ? JSON.parse(providersJson) : providersJson
+      assert(Array.isArray(providers), 'get_online_payment_providers returns array')
+
+      const fonepay = providers.find((p) => p.provider === 'fonepay')
+      const esewa = providers.find((p) => p.provider === 'esewa')
+      const khalti = providers.find((p) => p.provider === 'khalti')
+
+      assert(fonepay && fonepay.enabled === true, 'Fonepay enabled by default')
+      assert(esewa && esewa.enabled === false, 'eSewa disabled by default')
+      assert(khalti && khalti.enabled === false, 'Khalti disabled by default')
+    })
+
+    // 2. Disabled provider (eSewa) is refused when creating intent
+    await as('Owner', async () => {
+      let threw = false
+      let errMsg = ''
+      try {
+        await q(`select public.create_payment_intent(gen_random_uuid()::text, null, '${reqId}'::uuid, 'esewa')`)
+      } catch (err) {
+        threw = true
+        errMsg = err.message
+      }
+      assert(threw, 'create_payment_intent with disabled eSewa threw error')
+      assert(errMsg.includes('PAYMENT_PROVIDER_DISABLED'), 'Error mentions PAYMENT_PROVIDER_DISABLED')
+    })
+
+    // 3. Role isolation: Warehouse cannot modify provider switch (Law 6)
+    await as('Warehouse', async () => {
+      let blocked = false
+      try {
+        await q("select public.set_online_payment_provider_status('esewa', true, 'sandbox')")
+      } catch {
+        blocked = true
+      }
+      assert(blocked, 'Warehouse role refused set_online_payment_provider_status')
+    })
+
+    // 4. Staff (Manager / Admin / Owner) activates eSewa switch
+    await as('Manager', async () => {
+      const setRes = (await q("select public.set_online_payment_provider_status('esewa', true, 'sandbox') as res")).rows[0].res
+      const parsed = typeof setRes === 'string' ? JSON.parse(setRes) : setRes
+      assertEq(parsed.enabled, true, 'eSewa enabled updated to true')
+      assertEq(parsed.provider, 'esewa', 'provider confirmed as esewa')
+    })
+
+    // 5. eSewa intent can now be created and allocated
+    let esewaIntentId
+    await as('Owner', async () => {
+      const intentRes = (await q(`select public.create_payment_intent(gen_random_uuid()::text, null, '${reqId}'::uuid, 'esewa') as res`)).rows[0].res
+      const parsed = typeof intentRes === 'string' ? JSON.parse(intentRes) : intentRes
+      assert(parsed.intent_id, 'eSewa intent created')
+      assertEq(parsed.provider, 'esewa', 'intent provider is esewa')
+      esewaIntentId = parsed.intent_id
+
+      // Server-to-server allocation (D30)
+      const allocRes = (await q(`
+        select public.allocate_payment_intent(
+          '${esewaIntentId}'::uuid,
+          'ESEWA-TEST-REF-94',
+          '{"mock_verified": true, "status": "COMPLETE"}'::jsonb
+        ) as res
+      `)).rows[0].res
+      const allocParsed = typeof allocRes === 'string' ? JSON.parse(allocRes) : allocRes
+      assertEq(allocParsed.success, true, 'eSewa intent successfully allocated')
+      assertEq(allocParsed.status, 'paid', 'status is paid on booking request target')
+    })
+
+    // 6. Staff activates Khalti switch, creates and allocates Khalti intent
+    await as('Admin', async () => {
+      await q("select public.set_online_payment_provider_status('khalti', true, 'sandbox')")
+      const intentRes = (await q(`select public.create_payment_intent(gen_random_uuid()::text, null, '${reqId}'::uuid, 'khalti') as res`)).rows[0].res
+      const parsed = typeof intentRes === 'string' ? JSON.parse(intentRes) : intentRes
+      assert(parsed.intent_id, 'Khalti intent created')
+      assertEq(parsed.provider, 'khalti', 'intent provider is khalti')
+
+      const allocRes = (await q(`
+        select public.allocate_payment_intent(
+          '${parsed.intent_id}'::uuid,
+          'KHALTI-TEST-PIDX-94',
+          '{"mock_verified": true, "status": "Completed"}'::jsonb
+        ) as res
+      `)).rows[0].res
+      const allocParsed = typeof allocRes === 'string' ? JSON.parse(allocRes) : allocRes
+      assertEq(allocParsed.success, true, 'Khalti intent allocated')
+    })
+  },
+})
+
+// -----------------------------------------------------------------------------
+// STEP L95: Payment link from any booking (T7-15, B17, B38, B55, D30)
+//
+// Authority:
+//   - T7-15 · Payment link from any booking
+//   - Ruling D30: Server-to-server confirmation only; server computes the figure.
+//   - Ruling B17, B55: Links expire after 48h; new link replaces the old.
+//   - Ruling O-3, B38: Security deposit strictly excluded from online links.
+//   - Law 4: Immutable payments; replayed callback changes nothing.
+//   - Law 6: Warehouse cannot make a link (money-blind).
+// -----------------------------------------------------------------------------
+STEPS.push({
+  id: 'L95',
+  title: 'payment link from any booking (T7-15) — server-computed amount, 48h expiry, replaces old, expired refuses, replay idempotent, warehouse denied',
+  expect: 'green',
+  run: async () => {
+    let bookingId
+    let invoiceId
+
+    // 1. Setup confirmed booking with invoice and outstanding balance
+    await as('Coordinator', async () => {
+      const bPayload = {
+        client_uuid: crypto.randomUUID(),
+        created_by: U.Coordinator,
+        branch_id: BRANCH,
+        client_id: CLIENT,
+        pickup_at: '2026-12-20T06:00:00Z',
+        return_at: '2026-12-22T06:00:00Z',
+        delivery_type: 'Client Pickup',
+        project_name: 'Payment Link Test Shoot',
+        lines: [
+          {
+            client_uuid: crypto.randomUUID(),
+            product_id: SERIAL_PRODUCT,
+            qty: 1,
+            days: 2,
+            rate: 4500,
+          },
+        ],
+      }
+      const bRes = await q('select public.create_booking($1::jsonb) as res', [JSON.stringify(bPayload)])
+      bookingId = bRes.rows[0].res.booking_id
+      assert(Boolean(bookingId), 'booking created')
+    })
+
+    // Create invoice for this booking as Accounts (R-05)
+    await as('Accounts', async () => {
+      const invPayload = {
+        client_uuid: crypto.randomUUID(),
+        created_by: U.Accounts,
+        booking_id: bookingId,
+      }
+      const invRes = await q('select public.create_invoice($1::jsonb) as res', [JSON.stringify(invPayload)])
+      invoiceId = invRes.rows[0].res.invoice_id
+      assert(Boolean(invoiceId), 'invoice created')
+    })
+
+    // Fetch invoice outstanding amount
+    const invRow = (await q(`select outstanding_amount from public.invoices where id = '${invoiceId}'`)).rows[0]
+    const invoiceOutstandingRupees = Number(invRow.outstanding_amount)
+    const expectedPaisa = Math.round(invoiceOutstandingRupees * 100)
+    assert(expectedPaisa > 0, 'invoice has positive outstanding amount')
+
+    // 2. Law 6: Warehouse cannot make a payment link
+    await as('Warehouse', async () => {
+      let threw = false
+      try {
+        await q(
+          `select public.create_booking_payment_link($1, $2::uuid) as res`,
+          [crypto.randomUUID(), bookingId]
+        )
+      } catch (err) {
+        threw = true
+        assert(err.message.includes('GATE:gate.rbac.money_denied'), 'Warehouse denied with GATE:gate.rbac.money_denied')
+      }
+      assert(threw, 'Warehouse refused from generating payment link')
+    })
+
+    // 3. Coordinator creates first payment link
+    let link1
+    await as('Coordinator', async () => {
+      const res = (await q(
+        `select public.create_booking_payment_link($1, $2::uuid) as res`,
+        [crypto.randomUUID(), bookingId]
+      )).rows[0].res
+      link1 = typeof res === 'string' ? JSON.parse(res) : res
+      assertEq(link1.success, true, 'create_booking_payment_link succeeded')
+      assert(Boolean(link1.token), 'token returned in plaintext')
+      assertEq(Number(link1.amount_paisa), expectedPaisa, 'paid amount is the server\'s figure')
+      assert(Boolean(link1.expires_at), 'expires_at is set')
+
+      // Check expiry is approx 48h from now
+      const expiry = new Date(link1.expires_at).getTime()
+      const diffHours = (expiry - Date.now()) / (1000 * 60 * 60)
+      assert(diffHours >= 47 && diffHours <= 49, 'link expires after ~48 hours')
+    })
+
+    // 4. Public client inspects link 1 details
+    await as('Admin', async () => {
+      const detailsRes = (await q(
+        `select public.get_payment_link_details($1) as res`,
+        [link1.token]
+      )).rows[0].res
+      const details = typeof detailsRes === 'string' ? JSON.parse(detailsRes) : detailsRes
+      assertEq(details.valid, true, 'payment link 1 is valid')
+      assertEq(Number(details.amount_paisa), expectedPaisa, 'amount is server computed')
+      assert(details.client_name_masked.includes('***'), 'client name is masked for privacy')
+    })
+
+    // 5. "A new link replaces the old" — Coordinator creates a second payment link
+    let link2
+    await as('Coordinator', async () => {
+      const res = (await q(
+        `select public.create_booking_payment_link($1, $2::uuid) as res`,
+        [crypto.randomUUID(), bookingId]
+      )).rows[0].res
+      link2 = typeof res === 'string' ? JSON.parse(res) : res
+      assertEq(link2.success, true, 'second payment link created')
+      assert(link2.token !== link1.token, 'new link has distinct token')
+    })
+
+    // 6. Old link is now expired; get_payment_link_details reports expired
+    await as('Admin', async () => {
+      const oldDetailsRes = (await q(
+        `select public.get_payment_link_details($1) as res`,
+        [link1.token]
+      )).rows[0].res
+      const oldDetails = typeof oldDetailsRes === 'string' ? JSON.parse(oldDetailsRes) : oldDetailsRes
+      assertEq(oldDetails.valid, false, 'old link is no longer valid')
+      assertEq(oldDetails.reason, 'expired', 'old link reason is expired')
+    })
+
+    // 7. "An expired link refuses" — allocate_payment_intent on old intent throws
+    await as('Admin', async () => {
+      let threw = false
+      try {
+        await q(
+          `select public.allocate_payment_intent($1::uuid, $2, $3::jsonb) as res`,
+          [link1.intent_id, 'FP-ATTEMPT-OLD', JSON.stringify({ status: 'SUCCESS' })]
+        )
+      } catch (err) {
+        threw = true
+        assert(err.message.toLowerCase().includes('expired') || err.message.toLowerCase().includes('inactive'), `expired intent refuses payment: got ${err.message}`)
+      }
+      assert(threw, 'attempting to allocate expired link intent failed closed')
+    })
+
+    // 8. Client pays the new link (server-to-server confirmation via Fonepay)
+    const providerRef = 'FP-LINK-' + Date.now()
+    await as('Admin', async () => {
+      const allocRes = (await q(
+        `select public.allocate_payment_intent($1::uuid, $2, $3::jsonb) as res`,
+        [link2.intent_id, providerRef, JSON.stringify({ fonepay_status: 'SUCCESS' })]
+      )).rows[0].res
+      const alloc = typeof allocRes === 'string' ? JSON.parse(allocRes) : allocRes
+      assertEq(alloc.success, true, 'new link allocated successfully')
+      assertEq(alloc.status, 'allocated', 'intent status is allocated')
+      assert(Boolean(alloc.payment_id), 'payment row created')
+    })
+
+    // 9. "A replayed callback changes nothing" (Law 4 & D30 idempotency)
+    await as('Admin', async () => {
+      const replayRes = (await q(
+        `select public.allocate_payment_intent($1::uuid, $2, $3::jsonb) as res`,
+        [link2.intent_id, providerRef, JSON.stringify({ fonepay_status: 'SUCCESS' })]
+      )).rows[0].res
+      const replay = typeof replayRes === 'string' ? JSON.parse(replayRes) : replayRes
+      assertEq(replay.success, true, 'replayed callback returns success')
+      assertEq(replay.already_allocated, true, 'marked already_allocated')
+    })
+
+    // 10. Exactly ONE immutable payment row exists for this booking
+    const payRows = (await q(`select * from public.payments where booking_id = '${bookingId}'`)).rows
+    assertEq(payRows.length, 1, 'exactly one immutable payment row was minted')
+    assertEq(Number(payRows[0].amount), invoiceOutstandingRupees, 'payment amount matches invoice outstanding')
+
+    // 11. "A paid link cannot be paid twice" — get_payment_link_details reports already_paid
+    await as('Admin', async () => {
+      const paidDetailsRes = (await q(
+        `select public.get_payment_link_details($1) as res`,
+        [link2.token]
+      )).rows[0].res
+      const paidDetails = typeof paidDetailsRes === 'string' ? JSON.parse(paidDetailsRes) : paidDetailsRes
+      assertEq(paidDetails.valid, false, 'paid link is not valid for new payment')
+      assertEq(paidDetails.reason, 'already_paid', 'reason is already_paid')
+    })
+  },
+})
 
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {

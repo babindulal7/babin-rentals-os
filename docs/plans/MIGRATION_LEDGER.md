@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0253**  (0241, 0242, 0243 are T3-29, T2-19 and T3-18 on `main`; 0245 R-9.8 on its own branch; 0244, 0246, 0247, 0248, 0249, 0250 and 0251 R-9.18 here)
+**Next free number: 0266**
 
 > **Legacy exception:** `0188` exists as two distinct, locally verified migration files
 > (`0188_smart_reservation_holds.sql` and `0188_staff_renting_gear.sql`). Both are preserved because
@@ -20,6 +20,28 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
+| 0265 | T7-15 | payment-link-from-any-booking | lane-c/T7-15-payment-link-from-any-booking | verified |
+| 0264 | T7-06 | esewa-and-khalti-payment-providers | lane-c/T7-06-esewa-and-khalti-payment-providers | verified |
+| 0263 | T7-07 | online-payment-refunds-and-reconciliation | lane-c/T7-07-refunds-and-reconciliation | verified |
+| 0262 | T7-12 | product-recommendations-and-co-rented-items | lane-c/T7-12-often-rented-with-recommendations | verified |
+| 0261 | T7-05 | payment-intents-and-fonepay | lane-c/T7-05-payment-intent-and-fonepay-first | verified |
+| 0260 | T7-13 | products-with-options-and-families | lane-c/T7-13-products-with-options-on-one-page | verified |
+| 0259 | T7-14 | away-switch-for-online-booking | lane-c/T7-14-away-switch-for-online-booking | verified |
+| 0258 | T7-09 | bot-and-abuse-rate-limits | lane-c/T7-09-bot-and-abuse-protection-on-online | verified |
+| 0257 | T7-03 | client-accounts-and-portal-binding | lane-c/T7-03-client-accounts-by-verified-email | verified |
+| 0256 | T7-04 | booking-requests-and-staff-queue | lane-c/T7-04-requests-and-the-staff-queue | verified |
+| 0255 | T7-02 | booking-site-and-public-catalogue | lane-c/T7-02-booking-site-and-public-catalogue | verified |
+| 0254 | T3-14 | draft-invoice-resync-integrity-and-settlement-numbering | lane-c/T3-14-draft-invoice-resync-settlement-numbering | verified |
+| 0253 | T2-24 | temporary-stock-from-partners | lane-a/T2-24-temporary-stock-from-partners | verified |
+| 0252 | T2-23 | allow-overbooking-on-chosen-products | lane-a/T2-23-allow-overbooking-on-chosen-products | verified |
+| 0251 | T4-waiting | waiting-charge-line | lane-b/T4-waiting-charge | verified |
+| 0250 | T4-outsourced | outsourced-vehicle-quote | lane-b/T4-outsourced-vehicle | verified |
+| 0249 | T4-late-night | late-night-delivery-is-money-setting | lane-b/T4-late-night | verified |
+| 0248 | T4-distance | delivery-zone-distance-band | lane-b/T4-distance-band | verified |
+| 0247 | T4-retire | retire-per-zone-fee-on-create | lane-b/T4-retire-per-zone-fee | verified |
+| 0246 | T4-dispatch | dispatch-zone-fee-from-grid | lane-b/T4-dispatch-zone-fee | verified |
+| 0245 | T4-grid | delivery-zone-vehicle-fee-grid | lane-b/T4-delivery-grid | verified |
+| 0244 | T3-31 | counter-sale | lane-c/T3-31-counter-sale | verified |
 | 0238 | T3-30 | consumables-pricing-restock-and-low-stock | lane-c/T3-30-consumables-unit-price-add-at-the | verified |
 | 0237 | T3-28 | rental-day-start-setting | lane-c/T3-28-rental-day-start-as-a-setting | verified |
 | 0225 | T0-12 / T6 glossary | owner-approved-glossary-revisions | lane-a/T0-12-main-integration | APPLIED live 7 Nov 2026 as 20261107105159 after validated backup; 17 local gates and live DB/RLS/RPC post-checks PASS; hosted/device acceptance pending |

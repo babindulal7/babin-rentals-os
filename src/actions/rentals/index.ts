@@ -19,3 +19,6 @@ export * from './updateBookingProject'
 export * from './setBookingTags'
 export * from './fulfillServiceRental'
 export * from './addConsumableLine'
+export * from './confirmBookingRequest'
+export * from './declineBookingRequest'
+

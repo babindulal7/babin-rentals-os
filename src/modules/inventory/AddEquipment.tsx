@@ -134,6 +134,8 @@ function AddEquipmentLayout({ embedded, onDone }: { embedded?: boolean; onDone?:
       location: chosenLocation
         ? { rack: chosenLocation.rack, shelf: chosenLocation.shelf, bin: chosenLocation.bin }
         : undefined,
+      familyId: ctx.familyId || undefined,
+      optionLabel: ctx.optionLabel || undefined,
       /*
        * `products.status` — Draft on Save Draft; Create publishes Active only
        * when this page's own Ready-to-Rent gate cleared (`rentable`), which is

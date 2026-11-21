@@ -13,6 +13,7 @@ import {
   type BookingWindow,
   type BookingLineDraft,
   type BundleResult,
+  equipmentLineDraft,
   defaultTransportOptions,
 } from './itemCatalogue'
 import { crewPool, type CrewMember } from '../../../lib/queries/crew'
@@ -20,8 +21,9 @@ import type { PricingPipelineResult } from '../../../lib/pricingPipeline'
 import type { GateContext } from '../../../lib/fieldGating'
 import type { AuthUser } from '../../../lib/auth'
 import { newClientUuid } from '../../../lib/supabase'
-import { rupees, type Paisa } from '../../../lib/money'
+import { rupees, formatMoney, type Paisa } from '../../../lib/money'
 import { processScanToAddEquipment } from '../../../lib/scanToAddEquipment'
+import { fetchProductRecommendationsAdmin, type ProductRecommendationAdmin } from '../../../lib/queries/recommendations'
 import './booking-equipment-section.css'
 
 const inlineInfoStyle = {
@@ -117,6 +119,23 @@ export function BookingEquipmentSection({
   const [afterHoursError, setAfterHoursError] = useState<string | null>(null)
   const afterHoursFormRef = useRef<HTMLDivElement>(null)
 
+  const [lastAddedProduct, setLastAddedProduct] = useState<{ id: string; name: string } | null>(null)
+  const [recommendedForLastAdded, setRecommendedForLastAdded] = useState<ProductRecommendationAdmin[]>([])
+
+  useEffect(() => {
+    let active = true
+    if (lastAddedProduct?.id) {
+      fetchProductRecommendationsAdmin(lastAddedProduct.id).then((recs) => {
+        if (active) setRecommendedForLastAdded(recs)
+      })
+    } else {
+      setRecommendedForLastAdded([])
+    }
+    return () => {
+      active = false
+    }
+  }, [lastAddedProduct?.id])
+
   const hasAfterHoursLine = useMemo(
     () => lines.some((l) => l.name.toLowerCase().includes('after-hours handover') && l.lineType === 'Service'),
     [lines],
@@ -138,6 +157,9 @@ export function BookingEquipmentSection({
 
   const addDrafts = useCallback(
     (drafts: readonly BookingLineDraft[], source: AddItemSource) => {
+      if (source.kind === 'equipment') {
+        setLastAddedProduct({ id: source.id, name: source.name })
+      }
       setBundleNotice(
         source.kind === 'bundle' && source.bundle
           ? { name: source.name, notes: source.bundle.notes, skipped: source.bundle.skipped }
@@ -343,6 +365,69 @@ export function BookingEquipmentSection({
           {...(onCopyPastBooking ? { onCopyPastBooking } : {})}
         />
       </div>
+
+      {lastAddedProduct && recommendedForLastAdded.length > 0 && (
+        <div
+          role="region"
+          aria-label="Frequently co-rented recommendations"
+          style={{
+            background: 'var(--surface-2)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--r-btn)',
+            padding: '8px 12px',
+            marginBottom: 10,
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--muted)' }}>
+            Often added with {lastAddedProduct.name}:
+          </span>
+          {recommendedForLastAdded.map((rec) => {
+            const match = liveEquipment?.find(
+              (e) => e.productKey === rec.recommended_product_id || e.id === rec.recommended_product_id,
+            )
+            return (
+              <button
+                key={rec.id}
+                type="button"
+                className="btn-pill"
+                onClick={() => {
+                  if (match) {
+                    addDrafts([equipmentLineDraft(match, days || 1)], {
+                      kind: match.kind,
+                      id: match.id,
+                      name: match.name,
+                    })
+                  }
+                }}
+                disabled={!match}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: '999px',
+                  border: '1px solid var(--primary)',
+                  background: 'var(--bg)',
+                  color: 'var(--primary)',
+                  fontSize: 'var(--t-meta)',
+                  cursor: match ? 'pointer' : 'default',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                <span>+ {rec.recommended_name}</span>
+                {canBookingMoney && match && (
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', opacity: 0.85 }}>
+                    ({formatMoney(match.ratePaisa)})
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {lines.length > 0 && (() => {
         const conflicted = conflictSummary.conflicts.length > 0
