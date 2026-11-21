@@ -166,10 +166,18 @@ Deno.serve(async (req: Request) => {
         verified = typeof code === 'string' && code.trim().toLowerCase() === 'successful'
       }
     } catch {
-      // Fonepay deployments may return XML instead of JSON. Match the exact
-      // response_code element, not a substring such as "unsuccessful".
-      const code = upstreamText.match(/<response_code>\s*([^<]+)\s*<\/response_code>/i)
-      verified = code?.[1]?.trim().toLowerCase() === 'successful'
+      // Some contracted Fonepay responses are XML. Read known fields from the
+      // bank's response to prevent an echoed transaction mismatch being ignored.
+      const xmlField = (name: string): string | null => {
+        const match = upstreamText.match(new RegExp('<' + name + '>\\s*([^<]+)\\s*</' + name + '>', 'i'))
+        return match?.[1]?.trim() ?? null
+      }
+      const code = xmlField('response_code')
+      verified = code?.toLowerCase() === 'successful'
+      for (const name of ['PRN', 'PID', 'UID', 'AMT']) {
+        const value = xmlField(name)
+        if (value !== null) upstreamFields[name] = value
+      }
     }
 
     // When the provider echoes identifiers, require them to match the exact
