@@ -1,5 +1,54 @@
 # Progress Log
 
+## 2026-11-22 — T1-06 & T2-22: Staging Storage Scoping & Operations Turnaround Acceptance (Lane A)
+
+### Did
+- Documented live hosted staging acceptance in [`docs/verification/T1-06_T2-22_ACCEPTANCE_2026-11-22.md`](docs/verification/T1-06_T2-22_ACCEPTANCE_2026-11-22.md):
+  - Promoted **T1-06 · Storage scoping accepted on staging** to `done`:
+    - Verified 22/22 live storage assertions against hosted Supabase Storage API (`scripts/verify-staging-storage-acceptance.mjs`).
+    - Verified commercial document upload and read scoping to financial roles (`Owner`, `Admin`, `Manager`, `Coordinator`, `Accounts`).
+    - Verified non-financial roles (`Warehouse`, `Technician`, `Driver`, `Client`) denied upload and commercial document read access.
+    - Verified Law 3 immutability (overwrite and deletion prevention) and Ruling D33 storage quarantine tracking.
+  - Promoted **T2-22 · Time between rentals: account-wide or per product** to `done`:
+    - Verified Account-wide mode preserves instantaneous same-day turnaround behavior.
+    - Verified Per product mode enforces item-specific prep minutes before pickup and cleaning minutes after return.
+    - Verified lifecycle integration gates L74 (refusal of conflicting turnaround pickup) and L75 (acceptance of same-day turnaround).
+    - Verified 82/82 unit tests pass in `src/lib/__tests__/availability.test.ts`.
+- Updated Track 1 and Track 2 plans in [`docs/plans/T1_RELEASE.md`](docs/plans/T1_RELEASE.md) and [`docs/plans/T2_FLOOR.md`](docs/plans/T2_FLOOR.md).
+- Synchronized roadmap regression assertions in [`src/lib/__tests__/roadmapStatusTruth.test.ts`](src/lib/__tests__/roadmapStatusTruth.test.ts) and [`src/lib/__tests__/t1ReleaseDocumentation.test.ts`](src/lib/__tests__/t1ReleaseDocumentation.test.ts).
+
+### Ruled
+- Law 3: Storage objects in `documents` and `evidence` are immutable once uploaded; updates and deletions are rejected.
+- Law 6: Commercial document paths are restricted from non-financial roles (`Warehouse`, `Technician`, `Driver`, `Client`).
+- Migration 0240: In Per product mode, GiST exclusion constraints enforce `[pickup - prep_minutes, return + cleaning_minutes)`.
+
+### Verified
+- `node scripts/verify-staging-storage-acceptance.mjs`: 22/22 live storage checks green on staging.
+- `npx vitest run src/lib/__tests__/availability.test.ts`: 82/82 tests pass.
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts src/lib/__tests__/t1ReleaseDocumentation.test.ts`: 9/9 tests pass.
+- `npm run check:pglite`: 258/258 migrations applied cleanly, 0 failed.
+- `npm run check:lifecycle`: 98/98 steps green.
+- `npm run typecheck`: 0 errors.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 258 files · check:pglite 258/258 applied, 0 failed.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Track 7 online booking live client portal requests and Fonepay merchant credentials.
+- Cloudflare Pages DNS and production deployment configuration (T1-07).
+- Phase 2 physical hardware cards remain pending for post-live shop device day per 20 Nov ruling.
+
 ## 2026-11-22 — T2-13, T2-18 & T7-04: Staging Hosted Acceptance Reconciliation (Lane A & C)
 
 ### Did
