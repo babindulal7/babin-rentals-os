@@ -129,3 +129,9 @@ BEGIN
 END $$;
 
 COMMIT;
+
+-- Verification output for operator
+SELECT u.id, u.email, u.primary_role, u.is_active
+FROM public.users u
+WHERE u.email LIKE '%@babinrentals.test'
+ORDER BY u.email;
