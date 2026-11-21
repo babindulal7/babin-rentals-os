@@ -324,7 +324,7 @@ any dates, the next free date, and **who has it now** (from T2-14). Reuses `Chec
 **Done when** — ≤ 2 taps to an answer from any screen; matches New Rental's availability exactly.
 **Needs** — T2-14.
 
-### T3-23 · Monthly pack for the accountant            status: acceptance_pending — PR #191 merged; accountant sample pack review & upstream staging dependencies pending · size: M · lane C · [soon]
+### T3-23 · Monthly pack for the accountant            status: acceptance_pending — PR #191 merged; synthetic format-review pack prepared (NOT app generated); external accountant sign-off and approved staging export pending · size: M · lane C · [soon]
 **What** — Finance ▸ Reports ▸ **Monthly pack**: pick a Nepali month (or AD month) → one zip with the
 **Sales/VAT register** (standard and non-VAT sections, T3-04), **payments and refunds**, **expenses
 with bill photos**, **crew payouts with TDS** (T8-08), as CSV + PDF, BS and AD dates. Money roles only.
