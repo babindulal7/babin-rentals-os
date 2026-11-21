@@ -1,5 +1,46 @@
 # Progress Log
 
+## 2026-11-21 — T1-05: Restore acceptance_pending Status (Lane A)
+
+### Did
+- Restored the T1-05 heading in [`docs/plans/T1_RELEASE.md`](docs/plans/T1_RELEASE.md) to the text on `main`: `status: acceptance_pending — PR #173 merged; role seat staging test pending`. This reverts the `ready — awaiting merge` edit in the entry below, which failed the roadmap truth guard. `T1_RELEASE.md` now matches `main`.
+- Changed no other file. The staging scripts, fixtures and the entry below are as they were.
+
+### Ruled
+- None. T1-05 stays `acceptance_pending`: the implementation merged in PR #173 and owner acceptance is missing. `ready` means implementation prepared and not yet merged ([`docs/plans/README.md`](docs/plans/README.md)).
+
+### Verified
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: 7 of 7 pass. The T1 check was the failing test on the PR head.
+- `VITE_DATA_SOURCE=mock npm run test` (as CI runs it): 710 of 710 files, 7,659 of 7,659 tests pass. `npm run test:coverage`: same counts, pass.
+- `npm run typecheck`, `npm run lint`, `npm run test:local-api-guards`, `npm run db:plan:selftest`, `npm run check:security`, `npm run test:server-contracts`, `npm run test:partial-return`, `npm run lint:shell`, `npm run lint:ui-copy`, `npm run check:contrast`, `npm run build`: all exit 0. The build warns about chunks over 500 kB; that is not a failure.
+- `node scripts/test-booking-financial-integrity.mjs` and `node --test scripts/test-receipt.test.mjs`: exit 0.
+- `npm run check:pglite`: 258 of 258 migrations applied, 0 failed. `npm run check:lifecycle`: 98 of 98 green.
+- Run in a detached worktree at PR #303's head with the T1-05 line restored. The suite fingerprint covers code and scripts, not docs. Hosted CI has not run on the new head yet.
+
+### Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +1 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 258 files · check:pglite 258/258 applied, 0 failed (recorded 2026-11-21T15:04:15.135Z). Suite: PASS — 7659/7659 passed, 0 failed (recorded 2026-11-21T15:28:45.521Z); source fingerprint matches.
+Coverage suite: PASS — 7659/7659 passed, 0 failed (recorded 2026-11-21T15:28:45.521Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-21T15:04:28.971Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T1-05 is not `done`. It needs Babin's acceptance and the merge of PR #303, and `done` only after both are evidenced.
+- Owner approval for the hosted staging writes in the entry below (nine role seats, fixtures, booking request `REQ-20261121-1001`) is not on record in the docs read this session. Babin's answer is needed before acceptance.
+- Not re-checked here: the Did, Ruled and Verified claims in the entry below. It says "zero automated remote writes" while listing live staging writes, and its Backend figure (115 / 116) does not match the 116 / 118 this counter gives on the same commit.
+- Not counted this session: project-wide feature and bug totals.
+- Next session starts with: Babin's decision on the staging writes, then the required check on the new head.
+
 ## 2026-11-21 — T1-05: Nine Role Seats + Read-Only Role Harness on Staging (Lane A)
 
 **Did**
