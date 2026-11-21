@@ -385,7 +385,17 @@ select
   case when auth_can_view_money() or r.requester_auth_uid = auth.uid() then r.advance_due_paisa else null end as advance_due_paisa,
   r.created_at,
   r.updated_at
-from public.booking_requests r;
+from public.booking_requests r
+-- Views use the creator's privileges by default, so the underlying table RLS
+-- alone does NOT protect this exposed request view. Restrict rows explicitly.
+-- A newly signed-up Client may read only requests from its own auth identity;
+-- floor roles and unauthenticated sessions must see zero request rows.
+where public.auth_user_role() in ('Owner', 'Admin', 'Manager', 'Coordinator', 'Accounts')
+   or (
+     public.auth_user_role() = 'Client'
+     and auth.uid() is not null
+     and r.requester_auth_uid = auth.uid()
+   );
 
 revoke all on public.booking_requests_v from public, anon;
 grant select on public.booking_requests_v to authenticated;
