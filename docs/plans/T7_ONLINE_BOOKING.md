@@ -138,7 +138,7 @@ until its merchant account and credentials exist. The pay screen shows only swit
 **Needs** — Babin opens both merchant accounts (start week 1; onboarding time unknown). **X does
 not wait for these** — PLAN §5.
 
-### T7-07 · Refunds and reconciliation            status: ready — awaiting merge (lane-c/T7-07-refunds-and-reconciliation) · size: M · lane C
+### T7-07 · Refunds and reconciliation            status: done — PR #266 merged; migration 0260, refund actions, reconciliation workspace and tests verified · size: M · lane C
 **What** — If staff decline a request that was paid, the screen shows "Refund due" with the
 provider and reference; staff refund in the provider's merchant portal (or by API where offered) and
 record it — a reversal row, never an edit (Law 4). **When a paid booking cannot go ahead (O-2, ruled
@@ -271,7 +271,7 @@ product's old store slug beside it. Claim a number only if a new column or entit
 path lands on the catalogue home; screen check.
 **Needs** — T7-02, T9-01.
 
-### T7-10 · Security review — the N-7 gate            status: ready — awaiting merge (lane-c/T7-10-security-review-the-n-7-gate) · size: M · lane C
+### T7-10 · Security review — the N-7 gate            status: done — PR #299 merged; N-7 gate audit and 17/17 security assertions verified [docs/verification/ONLINE_BOOKING_REVIEW_2026-11-21.md] · size: M · lane C
 **What** — Before any client write path is on in live: D-5 green on staging; amount tampering,
 callback replay and forged-session tests green; secrets only in Edge Function secrets; no PII or
 amounts in logs; the anon allow-list contains exactly the two public objects; PERMISSIONS §5/§7

@@ -164,7 +164,9 @@ describe('Roadmap status truth across merged tracks', () => {
     const doneCards: Record<string, string> = {
       'T7-02': 'PR #276 merged',
       'T7-04': 'PR #276 merged',
+      'T7-07': 'PR #266 merged',
       'T7-08': 'PR #276 merged',
+      'T7-10': 'PR #299 merged',
       'T7-12': 'PR #196 merged',
       'T7-13': 'PR #197 merged',
       'T7-15': 'PR #276 merged',
