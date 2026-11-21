@@ -22,7 +22,7 @@ in v1" and §5 "rates on request/quote only" → public daily rates (D34); a fif
 
 ---
 
-### T7-01 · Online booking spec            status: written 1 Nov 2026 — `docs/ONLINE_BOOKING_SPEC.md`; awaiting Babin's approval · size: M · Claude writes (arrives as a file)
+### T7-01 · Online booking spec            status: acceptance_pending — reconciled 21 Nov 2026 with 12 Nov unified launch rulings (UL-01 to UL-09); awaiting Babin's final sign-off · size: M · lane C
 **What** — One document, `docs/ONLINE_BOOKING_SPEC.md`, fixing before any code: the screens
 (catalogue, product, cart with dates, sign-in, request, pay, my bookings), the tables
 (`booking_requests`, `booking_request_lines`, `payment_intents`, portal binding), the RPCs and
