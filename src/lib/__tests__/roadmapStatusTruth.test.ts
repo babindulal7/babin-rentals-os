@@ -16,7 +16,6 @@ describe('Roadmap status truth across merged tracks', () => {
   it('T1 release track reflects merged PRs as acceptance_pending or done', () => {
     const t1 = read('docs/plans/T1_RELEASE.md')
     const cards: Record<string, string> = {
-      'T1-05': 'PR #173 merged',
       'T1-17': 'PR #203 merged',
       'T1-18': 'PR #204 merged',
     }
@@ -30,6 +29,7 @@ describe('Roadmap status truth across merged tracks', () => {
     const doneCards: Record<string, string> = {
       'T1-03': 'PR #260 merged',
       'T1-04': 'applied to production by Babin',
+      'T1-05': 'PR #173 merged',
       'T1-15': 'PR #208 merged',
     }
     for (const [key, ref] of Object.entries(doneCards)) {
@@ -51,7 +51,6 @@ describe('Roadmap status truth across merged tracks', () => {
       'T2-15': 'merged',
       'T2-18': 'merged',
       'T2-19': 'merged',
-      'T2-20': 'merged',
       'T2-21': 'merged',
       'T2-22': 'merged',
       'T2-23': 'verified',
@@ -67,6 +66,7 @@ describe('Roadmap status truth across merged tracks', () => {
 
     const doneCards: Record<string, string> = {
       'T2-17': 'PR #90 merged',
+      'T2-20': 'PR #189 merged',
       'T2-24': 'PR #257 merged',
     }
     for (const [key, ref] of Object.entries(doneCards)) {

@@ -1,5 +1,48 @@
 # Progress Log
 
+## 2026-11-21 — T1-05 & T2-20: Hosted Staging Acceptance & Role Isolation (Lane A)
+
+### Did
+- Executed and verified live hosted staging acceptance on project `klhmsrunqrdxjudyhnkm` (`babin-staging`):
+  - Provisioned and authenticated all 9 role seats (`Owner`, `Admin`, `Manager`, `Coordinator`, `Warehouse`, `Technician`, `Accounts`, `Driver`, `Client` `@babinrentals.test`) against Supabase GoTrue with JWTs issued.
+  - Ran [`scripts/run-staging-readonly-suite.mjs`](scripts/run-staging-readonly-suite.mjs): verified 57/57 live PostgREST assertions green.
+  - Ran [`scripts/verify-staging-storage-acceptance.mjs`](scripts/verify-staging-storage-acceptance.mjs): verified 22/22 storage isolation assertions green.
+  - Verified Law 6 money-blindness on live HTTP payloads: `Warehouse`, `Technician`, `Driver`, and `Client` have rental amounts, line prices, payments, invoices, and security deposits strictly suppressed.
+  - Promoted **T1-05 · Nine role seats + read-only role harness** to `done` ([`docs/verification/STAGING_HOSTED_ACCEPTANCE_2026-11-21.md`](docs/verification/STAGING_HOSTED_ACCEPTANCE_2026-11-21.md)).
+  - Promoted **T2-20 · Floor adds consumables at Pack and Handover** to `done` ([`docs/verification/STAGING_HOSTED_ACCEPTANCE_2026-11-21.md`](docs/verification/STAGING_HOSTED_ACCEPTANCE_2026-11-21.md)).
+  - Synchronized roadmap regression guard in [`src/lib/__tests__/roadmapStatusTruth.test.ts`](src/lib/__tests__/roadmapStatusTruth.test.ts).
+
+### Ruled
+- Law 6: Floor and client roles remain strictly money-blind on live PostgREST responses.
+- Law 3: Storage objects in `documents` and `evidence` remain immutable (overwrites and deletes rejected).
+- D-5: Cross-tenant isolation enforced on live hosted sessions (Client A cannot query Client B bookings).
+
+### Verified
+- `node scripts/run-staging-readonly-suite.mjs sb_publishable_I8NeNGI8ZLbGHybUYHm-SQ_ypCLh1La`: 9/9 roles authenticated, 57/57 PostgREST checks green.
+- `node scripts/verify-staging-storage-acceptance.mjs`: 22/22 storage checks green.
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: 7/7 tests pass.
+- `npm run check:pglite`: 258/258 migrations applied, 0 failed.
+- `npm run check:lifecycle`: 98/98 steps green.
+- `npm run typecheck`: 0 errors.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 258 files · check:pglite 258/258 applied, 0 failed.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Finalize operator verification of remaining Track 7 cards on staging.
+- Phase 2 physical hardware cards remain pending for post-live shop device day per 20 Nov ruling.
+
 ## 2026-11-21 — T1-06: Storage Scoping Accepted on Staging (Lane A)
 
 ### Did
