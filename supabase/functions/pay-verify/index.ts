@@ -72,7 +72,7 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const { intentId, providerRef, bid = '', uid = '', responseCode } = body
+    const { intentId, bid = '', uid = '' } = body
 
     if (!intentId) {
       return new Response(
@@ -109,55 +109,109 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    // 2. Perform Server-to-Server verification with Fonepay
-    const merchantCode = Deno.env.get('FONEPAY_MERCHANT_CODE') || 'MDULAL'
-    const secretKey = Deno.env.get('FONEPAY_SECRET_KEY')
-    const isSandbox = !secretKey || Deno.env.get('FONEPAY_ENV') === 'sandbox'
-
-    const amountRupees = (intent.amount_paisa / 100).toFixed(2)
-    let verified = false
-    let upstreamData: Record<string, unknown> = {}
-
-    if (secretKey && !isSandbox) {
-      const verifyEndpoint = 'https://clientapi.fonepay.com/api/merchantRequest/verificationMerchant'
-      const dvHash = await hmacSha512Hex(secretKey, `${merchantCode},${intentId},${amountRupees},${bid},${uid}`)
-
-      const verifyUrl = `${verifyEndpoint}?PRN=${encodeURIComponent(intentId)}&PID=${encodeURIComponent(merchantCode)}&BID=${encodeURIComponent(bid)}&AMT=${encodeURIComponent(amountRupees)}&UID=${encodeURIComponent(uid)}&DV=${encodeURIComponent(dvHash)}`
-
-      const upstreamRes = await fetch(verifyUrl, { method: 'GET' })
-      const upstreamText = await upstreamRes.text()
-      try {
-        upstreamData = JSON.parse(upstreamText)
-        verified = (upstreamData.responseCode === 'successful' || upstreamData.success === true)
-      } catch {
-        // XML or text response parsing
-        verified = upstreamText.includes('<response_code>successful</response_code>') || upstreamText.includes('success')
-        upstreamData = { raw: upstreamText }
-      }
-    } else {
-      // Sandbox / Test mode verification:
-      // In sandbox, check responseCode === 'successful' or valid providerRef or mock simulation
-      verified = responseCode === 'successful' || Boolean(providerRef) || Boolean(uid)
-      upstreamData = {
-        mock_verified: true,
-        response_code: responseCode || 'successful',
-        sandbox: true,
-      }
-    }
-
-    if (!verified) {
+    // 2. Only the merchant's independent server-to-server verification can
+    // authorize a payment. A redirect, UID, responseCode or providerRef supplied
+    // by a browser never counts as proof of receipt.
+    if (intent.provider !== 'fonepay') {
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'Fonepay server-to-server verification failed.',
-          details: upstreamData,
-        }),
+        JSON.stringify({ error: 'Wrong payment provider for Fonepay verification.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
+    const merchantCode = Deno.env.get('FONEPAY_MERCHANT_CODE')?.trim()
+    const secretKey = Deno.env.get('FONEPAY_SECRET_KEY')?.trim()
+    const providerEnvironment = Deno.env.get('FONEPAY_ENV')?.trim().toLowerCase()
+
+    // Never credit a production ledger from sandbox or absent credentials.
+    // Synthetic settlement tests belong in isolated test fixtures, not this
+    // deployed verification endpoint.
+    if (!merchantCode || !secretKey || providerEnvironment !== 'production') {
+      return new Response(
+        JSON.stringify({ error: 'Verified Fonepay payments are not configured.' }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (!bid || !uid || bid.length > 128 || uid.length > 128) {
+      return new Response(
+        JSON.stringify({ error: 'A provider transaction reference is required.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const amountRupees = (intent.amount_paisa / 100).toFixed(2)
+    const verifyEndpoint = 'https://clientapi.fonepay.com/api/merchantRequest/verificationMerchant'
+    // Preserve the existing merchant signature contract until the acquired
+    // bank/Fonepay integration specification is independently validated.
+    const dvHash = await hmacSha512Hex(secretKey, `${merchantCode},${intentId},${amountRupees},${bid},${uid}`)
+    const verifyUrl = `${verifyEndpoint}?PRN=${encodeURIComponent(intentId)}&PID=${encodeURIComponent(merchantCode)}&BID=${encodeURIComponent(bid)}&AMT=${encodeURIComponent(amountRupees)}&UID=${encodeURIComponent(uid)}&DV=${encodeURIComponent(dvHash)}`
+
+    const upstreamRes = await fetch(verifyUrl, { method: 'GET' })
+    if (!upstreamRes.ok) {
+      return new Response(
+        JSON.stringify({ error: 'Fonepay verification could not be confirmed.' }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const upstreamText = await upstreamRes.text()
+    let upstreamFields: Record<string, unknown> = {}
+    let verified = false
+    try {
+      const parsed: unknown = JSON.parse(upstreamText)
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        upstreamFields = parsed as Record<string, unknown>
+        const code = upstreamFields.responseCode ?? upstreamFields.response_code
+        verified = typeof code === 'string' && code.trim().toLowerCase() === 'successful'
+      }
+    } catch {
+      // Fonepay deployments may return XML instead of JSON. Match the exact
+      // response_code element, not a substring such as "unsuccessful".
+      const code = upstreamText.match(/<response_code>\\s*([^<]+)\\s*<\\/response_code>/i)
+      verified = code?.[1]?.trim().toLowerCase() === 'successful'
+    }
+
+    // When the provider echoes identifiers, require them to match the exact
+    // merchant request. Empty/missing values do not override a rejected status.
+    const providerClaim = (names: string[]): string | null => {
+      for (const name of names) {
+        const value = upstreamFields[name]
+        if (typeof value === 'string' || typeof value === 'number') {
+          return String(value).trim()
+        }
+      }
+      return null
+    }
+    const echoedPrn = providerClaim(['PRN', 'prn', 'merchant_prn'])
+    const echoedPid = providerClaim(['PID', 'pid', 'merchant_code'])
+    const echoedUid = providerClaim(['UID', 'uid', 'transaction_id'])
+    const echoedAmount = providerClaim(['AMT', 'amt', 'amount'])
+    if (
+      (echoedPrn !== null && echoedPrn !== intentId) ||
+      (echoedPid !== null && echoedPid !== merchantCode) ||
+      (echoedUid !== null && echoedUid !== uid) ||
+      (echoedAmount !== null && (!Number.isFinite(Number(echoedAmount)) || Number(echoedAmount).toFixed(2) !== amountRupees))
+    ) {
+      verified = false
+    }
+
+    if (!verified) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Fonepay server-to-server verification failed.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Never store the raw gateway response (which may contain payer details).
+    const upstreamData: Record<string, unknown> = {
+      verified_by: 'fonepay_s2s',
+      verification_code: 'successful',
+    }
+
     // 3. Atomically allocate payment intent in database via RPC
-    const finalRef = providerRef || uid || `FP-${Date.now()}`
+    // The verified transaction reference is the UID used in the signed S2S lookup.
+    const finalRef = uid
     const { data: allocResult, error: allocError } = await supabase.rpc('allocate_payment_intent', {
       p_intent_id: intentId,
       p_provider_ref: finalRef,
