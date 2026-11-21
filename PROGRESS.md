@@ -1,5 +1,59 @@
 # Progress Log
 
+## 2026-11-21 — T1-06: Storage Scoping Accepted on Staging (Lane A)
+
+### Did
+- Executed card **T1-06 · Storage scoping accepted on staging** against staging project `klhmsrunqrdxjudyhnkm` (`babin-staging`):
+  - Staged [`docs/verification/STAGING_ENSURE_STORAGE_BUCKETS.sql`](docs/verification/STAGING_ENSURE_STORAGE_BUCKETS.sql) registering standard storage buckets (`documents`, `evidence`, `catalogue`, `problem-reports`, `request-ids`) with private public-access configurations.
+  - Authored live storage verification harness [`scripts/verify-staging-storage-acceptance.mjs`](scripts/verify-staging-storage-acceptance.mjs) testing Storage API & RLS rules across all 9 staging role seats.
+  - Verified 22/22 live storage assertions against GoTrue & Supabase Storage API:
+    - Financial roles (`Owner`, `Admin`, `Manager`, `Coordinator`, `Accounts`) upload to own scoped namespace (`documents/{user_id}/*`): PASS (HTTP 200).
+    - Overwrite refusal (`astra_storage_immutable_update` / Law 3): UPDATE/upsert on existing objects rejected (HTTP 400/403).
+    - Cross-staff upload spoofing refusal: uploading to another user's path rejected (HTTP 400/403).
+    - Non-financial roles (`Warehouse`, `Technician`, `Driver`, `Client`) upload to `documents` bucket rejected: PASS (HTTP 400/403).
+    - Commercial document read protection (`Warehouse`, `Technician`, `Driver`, `Client` denied access to invoice/agreement PDFs): PASS (HTTP 400/403).
+    - Unlinked cross-staff objects quarantined per Ruling D33 (Owner denied access to unlinked Coordinator upload without `document_registry` link): PASS (HTTP 400/403).
+    - Time-limited signed URL generation & download for authorized object: PASS (HTTP 200).
+    - Storage object deletion refusal (`astra_storage_immutable_delete` / Law 3): DELETE rejected for `documents` and `evidence`.
+    - Direct storage quarantine enumeration restricted: PASS.
+  - Authored quarantine inventory report [`docs/live/STORAGE_QUARANTINE_INVENTORY_2026-11-21.md`](docs/live/STORAGE_QUARANTINE_INVENTORY_2026-11-21.md) detailing quarantined staging objects and audit procedures under Ruling D33.
+  - Updated card status in [`docs/plans/T1_RELEASE.md`](docs/plans/T1_RELEASE.md) to `ready — awaiting merge (lane-a/T1-06-storage-scoping-accepted-on-staging)`.
+
+### Ruled
+- Storage objects in `documents` and `evidence` are strictly immutable under Law 3 and enforced by `astra_storage_immutable_update` and `astra_storage_immutable_delete`.
+- Objects in `documents` without an active link in `document_registry` or `invoices` remain quarantined under Ruling D33: only the original uploader may read them; cross-staff reads require explicit registration.
+
+### Verified
+- `scripts/verify-staging-storage-acceptance.mjs`: 22/22 live storage assertions passed against hosted staging (`klhmsrunqrdxjudyhnkm`).
+- `npm run check:pglite`: 258/258 migrations applied, 0 failed.
+- `npm run check:lifecycle`: 98/98 steps green.
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (0 warnings/errors).
+- `npm run test:local-api-guards`, `npm run lint:shell`, `npm run lint:ui-copy`, `npm run check:contrast`, `npm run check:security`: all exit 0.
+- `npm run test:server-contracts` (68/68 passed), `npm run test:partial-return` (58/58 passed), `scripts/test-booking-financial-integrity.mjs`, `scripts/test-receipt.test.mjs` (11/11 passed): all exit 0.
+- `npm run build`: built clean in 1m 19s (dist/ produced).
+
+### Completion
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 258 files · check:pglite 258/258 applied, 0 failed (recorded 2026-11-21T16:10:58.615Z).
+Gates read from .lifecycle-result.json, written 2026-11-21T16:10:42.335Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Open pull request for `lane-a/T1-06-storage-scoping-accepted-on-staging` and merge into `main`.
+- Card T1-06 status moves to `acceptance_pending` once PR is merged into `main`.
+- Proceed with T1-17 (Staging smoke walkthrough & 9-role signoff) and T7-04 (Requests & staff queue: Coordinator confirm flow for `REQ-20261121-1001`).
+
 ## 2026-11-21 — T1-05: Restore acceptance_pending Status (Lane A)
 
 ### Did
