@@ -7,6 +7,7 @@
 **Supabase Project Ref:** `klhmsrunqrdxjudyhnkm`  
 **Region:** Singapore (`ap-southeast-1`)  
 **Scope:** Stage 1 Schema Alignment (Migrations `0245`–`0259`) & Synthetic Identity Seeding  
+**Status:** **EXECUTED & CONFIRMED BY OPERATOR (21 Nov 2026)** — Migrations 0245–0259 applied; synthetic test identities seeded.  
 
 ---
 
@@ -93,15 +94,28 @@ node scripts/staging-schema-preflight.mjs --current
 - `status: "SOURCE_IDENTITY_VERIFIED_REVIEW_STILL_REQUIRED"`
 - `errors: []`
 
-### 2. Verify Staging Read-Only API & RLS Gates
-Once the operator populates `.env.staging.local` with the staging URL, anon key, and JWT tokens generated for the synthetic users:
-```powershell
-node scripts/verify-staging-readonly.mjs
-```
-*Expected Result:*
-- 9-role authorization matrix verified live against PostgREST.
-- Money-blind roles (`Warehouse`, `Technician`, `Driver`, `Client`) confirmed to receive 0 financial values.
-- Cross-client isolation verified: Client A cannot read Client B's bookings or invoices.
+### 2. Stage 2: Verify Staging Read-Only API & RLS Gates
+1. Run `03_SEED_SYNTHETIC_STAGE2_FIXTURES.sql` in the Supabase SQL Editor for `babin-staging` (`klhmsrunqrdxjudyhnkm`):
+   - Sets the synthetic test password (`BabinSynthetic2026!`) on all 10 synthetic test accounts in `auth.users`.
+   - Seeds test product (`10000000-0000-4000-8000-000000000001`), bookings (`b0000000-0000-4000-8000-000000000001` and `b0000000-0000-4000-8000-000000000002`), booking line, and driver delivery job matching `docs/security/acceptance/staging_fixtures_manifest.json`.
+2. Populate `.env.staging.local` with the staging anon key:
+   ```env
+   BABIN_STAGING_PROJECT_REF=klhmsrunqrdxjudyhnkm
+   BABIN_STAGING_SUPABASE_URL=https://klhmsrunqrdxjudyhnkm.supabase.co
+   BABIN_STAGING_ANON_KEY=<your_staging_anon_key>
+   BABIN_STAGING_FIXTURES=docs/security/acceptance/staging_fixtures_manifest.json
+   BABIN_STAGING_SYNTHETIC_PASSWORD=BabinSynthetic2026!
+   ```
+3. Run the automated hosted acceptance script:
+   ```powershell
+   node scripts/verify-staging-hosted.mjs
+   ```
+   *Expected Result:*
+   - Automatically logs in via GoTrue to mint real JWTs for all 9 canonical roles.
+   - 9-role authorization matrix verified live against PostgREST.
+   - Money-blind roles (`Warehouse`, `Technician`, `Driver`, `Client`) confirmed to receive 0 financial values.
+   - Cross-client isolation verified: Client A cannot read Client B's bookings.
+   - Driver verified to read assigned booking only and denied unassigned trips.
 
 ---
 

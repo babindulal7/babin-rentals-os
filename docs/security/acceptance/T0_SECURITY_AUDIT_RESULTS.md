@@ -224,9 +224,10 @@ All verification commands specified in the audit contract and CI reference list 
 
 ## 6. Final Recommendation & Next Safe Action
 
-- **Audit Recommendation:** **`SAFE FOR OWNER REVIEW` / `HOLD FOR HOSTED STAGING APPROVAL`**
+- **Audit Recommendation:** **`SAFE FOR OWNER REVIEW` / `STAGE 1 PASS` / `STAGE 2 READY FOR CREDENTIAL CONFIGURATION`**
 - **Production Status:** **`STRICT HOLD`** — No production release or live migrations permitted under this task.
 - **Next Safe Steps:**
-  1. Present this report, `docs/security/acceptance/T0_ROLE_CLIENT_MATRIX.csv`, and `docs/security/acceptance/T0_HOSTED_GATE_REGISTER.md` to the repository owner.
-  2. Request explicit Owner authorization for **Stage 1 staging schema alignment** (applying the 15 pending migrations `0245`–`0259` to `babin-staging` and seeding synthetic seed `0012`).
-  3. Following Stage 1 approval, execute **Stage 2 hosted role & storage acceptance** using the 10 synthetic accounts.
+  1. Operator ran `01_APPLY_PENDING_MIGRATIONS_0245_TO_0259.sql` and `02_SEED_SYNTHETIC_STAGE1_USERS.sql` on `babin-staging` (`klhmsrunqrdxjudyhnkm`), bringing schema to 100% parity (all 258 migrations applied).
+  2. Operator runs `03_SEED_SYNTHETIC_STAGE2_FIXTURES.sql` to initialize test passwords and deterministic test fixtures (`productId`, `bookingId`, `lineId`, delivery job).
+  3. Operator populates `.env.staging.local` with `BABIN_STAGING_ANON_KEY`.
+  4. Execute Stage 2 hosted verification (`node scripts/verify-staging-hosted.mjs`).
