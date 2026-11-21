@@ -37,8 +37,8 @@ describe('T1-02 exact-head 21 Nov 2026 staging inventory (no database writes)', 
     expect(inventory.source_drift_since_prior_snapshot.removed_files).toEqual([])
   })
 
-  it('verifies exact Git blob identities and byte counts with zero errors under --current', () => {
-    const child = spawnSync(process.execPath, ['scripts/staging-schema-preflight.mjs', '--current'], {
+  it('reports exactly the three migrations added after this snapshot as drift, and nothing else', () => {
+    const child = spawnSync(process.execPath, ['scripts/staging-schema-preflight.mjs', '--inventory', 'STAGING_SQL_INVENTORY_2026-11-21.json'], {
       cwd: process.cwd(),
       encoding: 'utf8',
       timeout: 60000,
@@ -59,14 +59,18 @@ describe('T1-02 exact-head 21 Nov 2026 staging inventory (no database writes)', 
     }
     expect(result.mode).toBe('READ_ONLY_PINNED_SOURCE_INTEGRITY')
     expect(result.sourceBaseline).toBe('3a8d90b9fa197d1a69326483a89140e404385b85')
-    expect(result.localFileCount).toBe(258)
+    expect(result.localFileCount).toBe(261)
     expect(result.pinnedFileCount).toBe(258)
     expect(result.approvalToApplyStaging).toBe(false)
     expect(result.databaseConnected).toBe(false)
     expect(result.sqlExecuted).toBe(false)
-    expect(result.errors).toEqual([])
-    expect(result.sourceIdentityVerified).toBe(true)
-    expect(result.status).toBe('SOURCE_IDENTITY_VERIFIED_REVIEW_STILL_REQUIRED')
-    expect(child.status).toBe(0)
+    expect(result.errors).toEqual([
+      'migration file count differs from pinned inventory: local=261, pinned=258',
+      '0261_product_families.sql: absent from pinned inventory',
+      '0262_public_product_family_options.sql: absent from pinned inventory',
+      '0263_submit_request_rates_in_paisa.sql: absent from pinned inventory',
+    ])
+    expect(result.sourceIdentityVerified).toBe(false)
+    expect(result.status).toBe('BLOCKED_SOURCE_DRIFT')
   })
 })

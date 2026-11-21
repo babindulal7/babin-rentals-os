@@ -23,7 +23,7 @@ const invIdx = args.indexOf('--inventory')
 if (invIdx !== -1 && args[invIdx + 1]) {
   inventoryFile = args[invIdx + 1]
 } else if (args.includes('--current') || args.includes('--latest') || process.env.STAGING_INVENTORY === 'current') {
-  inventoryFile = 'STAGING_SQL_INVENTORY_2026-11-21.json'
+  inventoryFile = 'STAGING_SQL_INVENTORY_2026-11-22.json'
 }
 
 const inventoryPath = inventoryFile.startsWith('/') || inventoryFile.includes(':') || inventoryFile.startsWith('.')
