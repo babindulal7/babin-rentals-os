@@ -1,5 +1,77 @@
 # Progress Log
 
+## 2026-11-21 — T0: Security Acceptance Audit & Governance Deliverables (Lane B / Windows)
+
+**Did**
+- Executed comprehensive T0 Security Acceptance Audit on clean `origin/main` snapshot `04746df2ef225057ec25f36c19e9eb9f389b3f26` on Windows.
+- Audited staff PIN/session switching (`src/lib/auth.tsx`, `src/lib/staffSwitch.ts`, `src/lib/deviceSession.ts`, migrations `0066`, `0208`):
+  - Verified 4-digit PIN policy with 5-attempt server lockout (15 minutes).
+  - Confirmed isolated candidate client (`createStaffSwitchClient()`) with ephemeral storageKey prevents cross-tab broadcast leaks.
+  - Confirmed fail-closed limbo curtain, offline write queue checks, and read cache purges before session adoption.
+- Audited 9-role RBAC, Law 6 money blindness, and financial boundaries:
+  - Confirmed `Warehouse`, `Technician`, `Driver`, and `Client` receive zero monetary values in views and tables.
+  - Verified Coordinator advance taking is preserved while monetary credit/refund resolutions remain blocked (L86 / PR #242).
+  - Verified Admin superior target protection (`guard_admin_superior_target`) prevents modifying Owner account.
+- Audited Client A/B and tenant isolation (migration `0110`):
+  - Confirmed `auth_client_id()` scopes `clients_select`, `bookings_select`, and `booking_lines_select`.
+  - Confirmed Client A reading Client B returns 0 rows, and Driver receives 0 unassigned bookings.
+- Audited database RLS, view security, security definer hygiene, and Storage scoping:
+  - 146 tables with RLS enabled; 46 views closed to `anon`; 237 definer functions with search_path pinned.
+  - 6 Batch 0 business RPCs (migration `0163`) confirmed closed to `anon`.
+  - Storage bucket isolation and Law 3 object immutability confirmed (`scripts/test-storage-privacy-isolation.mjs`).
+- Authored three required security governance deliverables in `docs/security/acceptance/`:
+  - [`docs/security/acceptance/T0_SECURITY_AUDIT_RESULTS.md`](docs/security/acceptance/T0_SECURITY_AUDIT_RESULTS.md): Full audit report, preflight inventory, checklist, and gate verdicts.
+  - [`docs/security/acceptance/T0_ROLE_CLIENT_MATRIX.csv`](docs/security/acceptance/T0_ROLE_CLIENT_MATRIX.csv): Sanitized role/client test matrix (zero PII, secrets, or keys).
+  - [`docs/security/acceptance/T0_HOSTED_GATE_REGISTER.md`](docs/security/acceptance/T0_HOSTED_GATE_REGISTER.md): Hosted staging prerequisites, schema provenance, and Stage 0–3 gate register.
+
+**Ruled**
+- Babin 28 Oct 2026 Ruling: Staff PIN is 4 digits with 5-attempt server lockout.
+- Babin 20 Nov 2026 Ruling: Physical iPad, Bluetooth scanner, and shop printer hardware checks are deferred to Phase 2; Phase 1 is validated on desktop/counter-PC.
+- Rule N-5 & N-8: Zero remote database writes by agent; production database `sxguwvgoserhdolewibb` was never accessed or mutated.
+- Final Recommendation: `SAFE FOR OWNER REVIEW` / `HOLD FOR HOSTED STAGING APPROVAL`.
+
+**Verified**
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 errors, 0 warnings).
+- `npm test`: PASS (710 test files, 7,659 tests passed, mock backend).
+- `npm run build`: PASS (Vite production build, 320 precache entries).
+- `npm run check:pglite`: PASS (258/258 migrations applied from scratch, 0 leaks).
+- `npm run check:security`: PASS (18 Phase 0 SQL regressions passed, 14 reset branch tests passed).
+- `npm run check:anon`: PASS (146 RLS tables, 21 allowlisted anon functions, 6 Batch 0 RPCs closed).
+- `npm run test:operations-grants`: PASS (Operations branch grants verified).
+- `npm run test:server-contracts`: PASS (All 68 integration contract assertions passed).
+- `npm run test:local-api-guards`: PASS (6/6 tests passed).
+- `npm run test:staging-preflight`: PASS (9/9 assertions passed).
+- `npm run check:lifecycle`: PASS (98/98 lifecycle steps green).
+- `npm run test:partial-return`: PASS (58/58 partial return assertions passed).
+- `npm run check:contrast`: PASS (97/97 WCAG AA checks passed).
+- `npm run lint:shell`: PASS (968 files checked, 0 violations).
+- `npm run lint:ui-copy`: PASS (0 developer text violations, 12/12 i18n tests passed).
+- `node scripts/test-receipt.mjs`: PASS (11/11 receipt assertions passed).
+- `node scripts/test-role-permissions-isolated.mjs`: PASS (17/17 checks passed).
+- `node scripts/test-storage-privacy-isolation.mjs`: PASS (20/20 checks passed).
+- `npm run lint:progress`: PASS.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +1 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 258 files · check:pglite 258/258 applied, 0 failed (recorded 2026-11-21T12:06:12.584Z). Suite: PASS — 7659/7659 passed, 0 failed (recorded 2026-11-21T12:03:13.746Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-21T12:07:07.015Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Awaiting explicit Owner authorization for Stage 1 staging schema alignment (applying 15 pending migrations `0245`–`0259` and synthetic seed `0012` to `babin-staging`).
+- Stage 2 hosted PostgREST and Storage acceptance testing with 10 synthetic identities.
+- Phase 1 launch sign-off by Babin; production release remains on strict HOLD.
+
 ## 2026-11-21 — T7-11: Online Booking Launch Operational Checklist & Domain Routing (Lane C)
 
 **Did**
