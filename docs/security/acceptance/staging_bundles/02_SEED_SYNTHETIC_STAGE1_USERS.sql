@@ -10,7 +10,9 @@ BEGIN;
 
 DO $$
 DECLARE
-  v_branch_id uuid;
+  v_branch_id   uuid;
+  v_client_a_id uuid;
+  v_client_b_id uuid;
 BEGIN
   -- 1. Resolve Primary Branch (Kathmandu Main)
   SELECT id INTO v_branch_id FROM branches ORDER BY is_headquarters DESC, created_at ASC LIMIT 1;
@@ -21,12 +23,25 @@ BEGIN
     ON CONFLICT (branch_code) DO NOTHING;
   END IF;
 
-  -- 2. Seed Synthetic Clients A and B in clients table
+  -- 2. Seed Synthetic Clients A and B in clients table (idempotent on client_code)
   INSERT INTO clients (id, client_uuid, client_code, name, email, phone, type_parent)
   VALUES
-    ('c0000000-0000-4000-8000-000000000001', gen_random_uuid(), 'C-9901', 'Synthetic Client Alpha', 'client-a@babinrentals.test', '+9779800000009', 'Individual'),
+    ('c0000000-0000-4000-8000-000000000001', gen_random_uuid(), 'C-9901', 'Synthetic Client Alpha', 'client-a@babinrentals.test', '+9779800000009', 'Individual')
+  ON CONFLICT (client_code) DO UPDATE SET email = EXCLUDED.email, name = EXCLUDED.name, phone = EXCLUDED.phone
+  RETURNING id INTO v_client_a_id;
+
+  INSERT INTO clients (id, client_uuid, client_code, name, email, phone, type_parent)
+  VALUES
     ('c0000000-0000-4000-8000-000000000002', gen_random_uuid(), 'C-9902', 'Synthetic Client Beta', 'client-b@babinrentals.test', '+9779800000099', 'Individual')
-  ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, name = EXCLUDED.name, phone = EXCLUDED.phone;
+  ON CONFLICT (client_code) DO UPDATE SET email = EXCLUDED.email, name = EXCLUDED.name, phone = EXCLUDED.phone
+  RETURNING id INTO v_client_b_id;
+
+  IF v_client_a_id IS NULL THEN
+    SELECT id INTO v_client_a_id FROM clients WHERE client_code = 'C-9901';
+  END IF;
+  IF v_client_b_id IS NULL THEN
+    SELECT id INTO v_client_b_id FROM clients WHERE client_code = 'C-9902';
+  END IF;
 
   -- 3. Seed Auth and Public Users for All 9 Roles + Client B
   -- Role: Owner
@@ -122,8 +137,8 @@ BEGIN
   -- 4. Seed Portal Users link for Client A and Client B
   INSERT INTO portal_users (id, client_uuid, client_id, auth_user_id, email, phone, display_name, status, self_registered_at, created_at)
   VALUES
-    ('a0000000-0000-4000-8000-000000000009', gen_random_uuid(), 'c0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000009', 'client-a@babinrentals.test', '+9779800000009', 'Test Client Alpha', 'Active', now(), now()),
-    ('a0000000-0000-4000-8000-000000000099', gen_random_uuid(), 'c0000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000099', 'client-b@babinrentals.test', '+9779800000099', 'Test Client Beta', 'Active', now(), now())
+    ('a0000000-0000-4000-8000-000000000009', gen_random_uuid(), v_client_a_id, 'a0000000-0000-4000-8000-000000000009', 'client-a@babinrentals.test', '+9779800000009', 'Test Client Alpha', 'Active', now(), now()),
+    ('a0000000-0000-4000-8000-000000000099', gen_random_uuid(), v_client_b_id, 'a0000000-0000-4000-8000-000000000099', 'client-b@babinrentals.test', '+9779800000099', 'Test Client Beta', 'Active', now(), now())
   ON CONFLICT (id) DO UPDATE SET status = 'Active';
 
 END $$;
