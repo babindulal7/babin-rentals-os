@@ -28,8 +28,8 @@ describe('T7 Fonepay verification fail-closed source gate', () => {
 
   it('fails if the provider returns an HTTP error or mismatched identifiers or amount', () => {
     expect(verifier).toMatch(/if \(!upstreamRes\.ok\)/)
-    expect(verifier).toMatch(/xmlField\\('response_code'\\)/)
-    expect(verifier).toMatch(/upstreamFields\\[name\\] = value/)
+    expect(verifier).toMatch(/xmlField\('response_code'\)/)
+    expect(verifier).toMatch(/upstreamFields\[name\] = value/)
     expect(verifier).toMatch(/echoedPrn !== intentId/)
     expect(verifier).toMatch(/echoedPid !== merchantCode/)
     expect(verifier).toMatch(/echoedUid !== uid/)
