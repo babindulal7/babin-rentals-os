@@ -1,22 +1,31 @@
 # TODO — Booqable ADOPTIONS 1–9
 
+_Re-verified 21 Nov 2026 against the code and each task's listed tests. Found and fixed: Task 1 (counted Dashboard links were deferred), Task 7 (Finance definitions and zero explanations had been lost), Task 8 (description named a file that was never created). Test counts below are the current ones. Gate results are in the verification log at the end._
+
 ## Task 1: Item 7 — `latePickups(nowAd)` + counted View late links
-**Status:** DONE (engine + Operations delegation; Dashboard counted links deferred — /rentals route contract for activity-scoped overdue links needs a check first, recorded below)
+**Status:** DONE. The counted Dashboard footer links were deferred in October, waiting on an activity param for /rentals. They now open the Operations exception facets (`?exception=overdue_start`, `?exception=overdue_end`), which already run the same named sets, so no /rentals param was needed.
 **Description:** Add the one missing Attention-required predicate (late pickup) alongside todaysOutgoing/todaysIncoming/overdue, surface as Operations chip + two counted Dashboard footer links. No new component.
 **Acceptance criteria:**
 - [x] `latePickups(nowAd)` in `src/lib/queries/bookings.ts` returns pickup_at < now, stage Booked/Packed, cancelled false
 - [x] Unit test pins boundary + stage set + minute-floored instant
 - [x] Operations exception facets `overdue_start`/`overdue_end` delegate to `latePickups()`/`overdue()` (minute-stable, one definition)
-- [ ] Dashboard counted footer links — deferred, needs /rentals activity-param route check
+- [x] Dashboard counted footer links: Pickups footer "N late pickups" → `/operations?exception=overdue_start`; Returns footer "N overdue returns" → `/operations?exception=overdue_end`. Both counts are head-only totals of the same named sets. An unknown count reads "View …", never "0".
 **Verification:**
 - [x] Tests pass: `npx vitest run src/lib/queries/__tests__/bookings.test.ts` (48/48)
 - [x] `npx vitest run src/modules/operations/__tests__/operationsQueues.test.ts` (39/39)
+- [x] `src/modules/today/__tests__/movementPanel.test.tsx` — 4 footer-link cases (known count, singular, unknown, zero with "View all" kept)
+- [x] Browser (mock, 21 Nov): the Pickups footer reads "48 late pickups" and the Returns footer "24 overdue returns". Each opens an Operations list headed "Today & Overdue (48)" and "Today & Overdue (24)".
 - [x] Typecheck clean
 **Dependencies:** None
 **Files touched:**
 - `src/lib/queries/bookings.ts` (+`latePickups`)
 - `src/lib/queries/__tests__/bookings.test.ts` (+3 tests)
 - `src/modules/operations/OperationsQueues.tsx` (delegation)
+- `src/modules/today/Today.tsx` (two head-only attention counts, passed to the two panels)
+- `src/modules/today/DashboardMovementPanel.tsx` (counted footer link)
+- `src/modules/today/dashboard.css` (footer wraps and spaces the two links)
+- `src/modules/today/__tests__/movementPanel.test.tsx` (+4 footer-link tests)
+- `src/modules/today/__tests__/dashboardLayout.test.tsx` (refresh now refetches the four lists: two queues, two counts)
 **Estimated scope:** M (3-5 files)
 
 ## Task 2: Item 3 — single next-verb invariant lock
@@ -27,7 +36,7 @@
 - [x] BookingDetail header + LifecycleProgress banner read `getRentalPrimaryAction`; MovementList rows use movement-scoped `primaryFor`; RentalsList rows carry no verb (RAIL F3); `jobForStage` (backward) vs `jobThatSets` (forward) confirmed distinct predicates
 - [x] No duplicate JOB_ORDER.find lookups added
 **Verification:**
-- [x] Tests pass: `npx vitest run src/lib/__tests__/rentalActions.test.ts` (11/11)
+- [x] Tests pass: `npx vitest run src/lib/__tests__/rentalActions.test.ts` (14/14 on 21 Nov; the file has grown since October's 11)
 **Dependencies:** None
 **Files touched:**
 - `src/lib/__tests__/rentalActions.test.ts` (+Unknown fall-through test)
@@ -48,7 +57,7 @@
 **Estimated scope:** S
 
 ## Checkpoint: Phase 1
-- [x] All focused tests pass (bookings 48, operations 39, rentalActions 11, rentalsList 91)
+- [x] All focused tests pass (bookings 48, operations 39, rentalActions 14, rentalsList 91 — counts as of 21 Nov)
 - [x] Typecheck clean
 - [x] No product copy invented
 
@@ -76,7 +85,8 @@
 - [x] Date presets documented: `DateRangePresets` are single range pickers, not option groups — per-option counts are meaningless there; the range's result count already shows in the drawer footer (`resultCount`)
 - [x] Non-column groups: none on this screen (project_type is a real column; sub-rental is id-set based and correctly count-less)
 **Verification:**
-- [x] Focused suites green: rentalsList 91 + render + facetCounts (137 total across 3 files)
+- [x] Focused suites green on 21 Nov: rentalsList 91 + rentalsList.render 42 + facetCounts 5 (138 across 3 files; was 137 in October)
+- Known noise, not a failure (present before 21 Nov): `rentalsList.render.test.tsx` logs `[AuditEngine] Failed to write audit event` because its `lib/supabase` mock omits `IS_MOCK`. Follow-up: add the export to the mock factory and confirm the 42 cases still pass.
 **Dependencies:** Task 4
 **Files touched:**
 - `src/modules/rentals/RentalsList.tsx` (hook wiring + prop + §10 comment correction)
@@ -100,32 +110,39 @@
 **Estimated scope:** S
 
 ## Checkpoint: Phase 2
-- [x] `npm run check:pglite` (166/166) + `npm run check:lifecycle` (31/31) green together
+- [x] `npm run check:pglite` + `npm run check:lifecycle` green together — current counts in the verification log (October's 166/166 and 31/31 were the migration and lifecycle counts of that date)
 - [x] Focused suites green (all 8 slices)
 
 ## Task 7: Items 1–2 — money-tile definitions + zero explanations
-**Status:** DONE (Finance slice — 3 tiles, code-derived copy; remaining ~20 call sites logged as follow-up, not invented)
-**Description:** Fill factual `definition` + `zeroExplanation` on money KpiStrip tiles lacking them. Derive from query code; TODO(decision) where population unclear.
+**Status:** DONE — restored 21 Nov 2026. The three Finance tiles lost their definitions and zero explanations in commit `b038973c` (17 Oct 2026), when Finance moved to `ModuleKpiStrip`, which had no field for them. `ModuleKpiStrip` now takes `definition` and `zeroExplanation`, and the approved copy is back, word for word. Remaining ~20 call sites stay a logged follow-up, not invented.
+**Description:** Fill factual `definition` + `zeroExplanation` on money tiles lacking them. Derive from query code; TODO(decision) where population unclear. Printed as one ellipsised caption on the tile, never as an (i) tooltip (RULING 2026-10-23).
 **Acceptance criteria:**
-- [x] Finance Outstanding/Overdue/Received carry one-line definitions in `(i)` tooltip
-- [x] Zero explanations ride only on known totals (conditional spread — `—` unknown never reads as zero)
-- [x] No invented population (copy names the exact query sets)
+- [x] Finance Outstanding/Overdue/Received carry one-line definitions printed on the tile
+- [x] Zero explanations ride only on known totals (conditional spread — `—` unknown never reads as zero; a known zero replaces the definition, as on KpiStrip)
+- [x] No invented population (copy names the exact query sets: unsettled = Sent + Partially Paid; overdue = unsettled with the due date passed; received = payment rows in the period)
 **Verification:**
-- [x] Typecheck clean; plumbing pinned by existing `KpiStrip.info.test.tsx`
+- [x] `src/modules/finance/__tests__/Finance.restricted.test.tsx` — "the KPI tiles say what they count" (3 cases)
+- [x] `src/components/ui/__tests__/ModuleKpiStrip.caption.test.tsx` (5/5)
+- [x] Browser (mock, 21 Nov, Owner): Outstanding and Overdue show their definitions; Received, a known "Rs 0", shows "No payments recorded …" in place of its definition. Checked at desktop and 375px.
+- [x] Typecheck clean
 **Dependencies:** Phase 2 checkpoint
 **Files touched:**
-- `src/modules/finance/Finance.tsx` (3-tile copy)
+- `src/components/ui/module-shell/ModuleKpiStrip.tsx` (+`definition`, `zeroExplanation`, `isZeroFigure`)
+- `src/components/ui/module-shell/module-shell.css` (`.module-kpi-card__caption`)
+- `src/modules/finance/Finance.tsx` (three tiles)
+- `src/modules/finance/__tests__/Finance.restricted.test.tsx` (+3 cases)
+- `src/components/ui/__tests__/ModuleKpiStrip.caption.test.tsx` (new)
 **Estimated scope:** M (sliced: Finance first)
 
 ## Task 8: Item 5 — unified date-engine façade
 **Status:** DONE (weekStarts input + legacy split documented; full PERIODS retirement logged as follow-up — caller migration, not an edit here)
-**Description:** New `src/lib/period.ts` merging forward `periodRange` + backward `PERIODS` with `operationalDayStart` + `weekStarts` inputs. Migrate one caller; retire nothing.
+**Description:** `weekStarts` input on `periodRange` in `src/data/today.ts` (0 Sunday / 1 Monday, default 1, so every existing caller is unchanged), with the file header documenting why `operationalDayStart` is not an input and marking PERIODS legacy with its retirement path. Corrected 21 Nov 2026: the card first also planned a new `src/lib/period.ts` merging PERIODS. That file was never created, and the merge is the caller migration logged as follow-up. The card's scope is the input and the documentation.
 **Acceptance criteria:**
 - [x] `periodRange` takes optional `weekStarts` (0 Sunday / 1 Monday, default 1 = every existing caller unchanged)
 - [x] Header documents why `operationalDayStart` is NOT an input (day markers; bounds read the setting per call in `queries/bookings.ts`, D4) and marks PERIODS legacy with the retirement path
 - [x] Sunday-start tests pin the new input; all existing Monday expectations untouched
 **Verification:**
-- [x] `src/modules/today/__tests__/todayQuery.test.ts` (68/68 incl. 1 new weekStarts test)
+- [x] `src/modules/today/__tests__/todayQuery.test.ts` (69/69 on 21 Nov, incl. the weekStarts test; was 68 in October)
 **Dependencies:** Task 7
 **Files touched:**
 - `src/data/today.ts` (`WeekStarts` + param + docs)
@@ -133,5 +150,8 @@
 **Estimated scope:** L (sliced: input + docs + tests; no caller migration)
 
 ## Checkpoint: Complete
-- [x] `npm test` full green (369 files / 4664 tests); `npm run build` EXIT=0; `check:contrast` 82/82; `lint` clean
-- [x] `npm run completion` + `lint:progress` EXIT=0; PROGRESS.md Completion/Remaining written
+- [x] Full test suite and gates re-run on 21 Nov 2026 — numbers in the verification log below
+- [x] `npm run completion` + `lint:progress`; PROGRESS.md entry written for 21 Nov
+
+## Verification log
+_Pending: the numbers for the full-suite run, the database gates, the build and the lint pass are added here once they finish._
