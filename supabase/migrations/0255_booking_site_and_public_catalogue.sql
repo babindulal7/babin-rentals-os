@@ -189,26 +189,37 @@ begin
   queried_items as (
     select distinct unnest(p_product_ids) as pid
   ),
-  -- Map requested IDs to products (either direct product or bundle components)
+  -- Only published catalogue IDs can be queried anonymously. Reuse the
+  -- catalogue view's visibility/rate/active rules to prevent drift. A private
+  -- component can still contribute to a *published bundle*'s availability
+  -- without becoming independently queryable by UUID.
+  publicly_queryable as (
+    select qi.pid, catalogue.kind
+    from queried_items qi
+    join public.public_catalogue_v catalogue on catalogue.id = qi.pid
+  ),
+  -- Map the *visible request IDs* to products or published bundle components.
   product_expansion as (
-    -- Direct products
+    -- Visible standalone products; bundle-only and unpublished IDs are omitted.
     select
       qi.pid as requested_id,
       p.id as underlying_product_id,
       1 as required_qty,
       false as is_bundle
-    from queried_items qi
+    from publicly_queryable qi
     join public.products p on p.id = qi.pid
+    where qi.kind = 'product'
     union all
-    -- Bundles expanded to components
+    -- Published bundles: include private/bundle-only components for capacity.
     select
       qi.pid as requested_id,
       bi.product_id as underlying_product_id,
       bi.quantity as required_qty,
       true as is_bundle
-    from queried_items qi
+    from publicly_queryable qi
     join public.bundles b on b.id = qi.pid
     join public.bundle_items bi on bi.bundle_id = b.id
+    where qi.kind = 'bundle'
   ),
   -- Compute capacity of each underlying product
   product_capacity as (
