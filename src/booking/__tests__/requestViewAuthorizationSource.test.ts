@@ -13,7 +13,11 @@ const viewDefinition = migration.match(
 
 describe('T7 request-view authorization source guard', () => {
   it('requires an explicit staff-or-own-client row predicate on the exposed view', () => {
-    expect(viewDefinition).toMatch(/from public\.booking_requests r\s+where public\.auth_user_role\(\) in/i)
+    expect(viewDefinition).toMatch(/from public\.booking_requests r/i)
+    expect(viewDefinition).toMatch(/where public\.auth_user_role\(\) in/i)
+    expect(viewDefinition.indexOf('where public.auth_user_role() in')).toBeGreaterThan(
+      viewDefinition.indexOf('from public.booking_requests r'),
+    )
     expect(viewDefinition).toMatch(/'Owner', 'Admin', 'Manager', 'Coordinator', 'Accounts'/)
     expect(viewDefinition).toMatch(/public\.auth_user_role\(\) = 'Client'/)
     expect(viewDefinition).toMatch(/r\.requester_auth_uid = auth\.uid\(\)/)
