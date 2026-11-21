@@ -435,7 +435,7 @@ those days only; 2) a downtime over an existing booking is refused with the book
 frees the dates at once; 4) the calendar bar shows the reason to every staff role; 5) screen check.
 **Needs** — T3-22 merged first if it is open (both change `src/lib/queries/availability.ts`).
 
-### T2-22 · Time between rentals: account-wide or per product            status: acceptance_pending — PR #184 merged 17 Nov; staged per-product setting toggle checks pending · size: M · lane A · [go-live] · slips first
+### T2-22 · Time between rentals: account-wide or per product            status: done — PR #184 merged; migration 0240 and lifecycle L74/L75 verified [docs/verification/T1-06_T2-22_ACCEPTANCE_2026-11-22.md] · size: M · lane A · [go-live] · slips first
 **What** — Settings ▸ Operations rules gets "**Time between rentals: Account-wide · Per product**"
 (B11, reading). *Account-wide* is today's `rentalTurnaround` setting. *Per product* uses each product's
 **prep minutes before pickup** and **cleaning minutes after return** — `products.prep_time_minutes` and
