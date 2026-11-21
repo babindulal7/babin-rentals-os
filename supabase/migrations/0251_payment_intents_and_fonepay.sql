@@ -433,8 +433,10 @@ begin
 end;
 $$;
 
-revoke all on function public.allocate_payment_intent(uuid, text, jsonb) from public, anon;
-grant execute on function public.allocate_payment_intent(uuid, text, jsonb) to authenticated;
+-- Financial allocation is a trusted server action. Never expose a
+-- SECURITY DEFINER ledger writer to arbitrary signed-in browser sessions.
+revoke all on function public.allocate_payment_intent(uuid, text, jsonb) from public, anon, authenticated;
+grant execute on function public.allocate_payment_intent(uuid, text, jsonb) to service_role;
 
 -- 6. Update confirm_booking_request to allocate any paid payment intents linked to the request
 create or replace function public.confirm_booking_request(p_request_id uuid, p_booking_id uuid)
