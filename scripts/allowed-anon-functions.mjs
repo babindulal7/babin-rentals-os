@@ -30,4 +30,5 @@ export const ALLOWED_ANON_FUNCTIONS = new Set([
   'public_availability',
   'retired_stage_to_canonical',
   'set_request_context',
+  'submit_booking_request',
 ]);

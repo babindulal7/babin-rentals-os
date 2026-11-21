@@ -18,6 +18,7 @@ export const GATES = Object.freeze([
   { label: 'Local API verification safety guards', command: 'npm', args: ['run', 'test:local-api-guards'] },
   { label: 'Test (offline mock backend)', command: 'npm', args: ['run', 'test'], mock: true },
   { label: 'Migrations build from scratch', command: 'npm', args: ['run', 'check:pglite'] },
+  { label: 'Migration planner fail-closed and regression selftests', command: 'npm', args: ['run', 'db:plan:selftest'] },
   { label: 'Booking and invoice financial integrity', command: 'node', args: ['scripts/test-booking-financial-integrity.mjs'] },
   { label: 'Authenticated security and branch-Reset regressions', command: 'npm', args: ['run', 'check:security'] },
   { label: 'Lifecycle', command: 'npm', args: ['run', 'check:lifecycle'] },

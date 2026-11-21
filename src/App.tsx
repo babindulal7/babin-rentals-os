@@ -95,6 +95,7 @@ const InternalNotesPage = lazy(() => import('./modules/notes/InternalNotesPage')
 const RiderDeliveryPage = lazy(() => import('./modules/operations/RiderDeliveryPage'))
 const ApprovalsInbox    = lazy(() => import('./modules/approvals/ApprovalsInbox'))
 const UnsubscribePage   = lazy(() => import('./modules/communication/UnsubscribePage').then(m => ({ default: m.UnsubscribePage })))
+const PaymentLinkPage   = lazy(() => import('./booking/pay/PaymentLinkPage').then(m => ({ default: m.PaymentLinkPage })))
 const OfferCampaigns   = lazy(() => import('./modules/communication/OfferCampaigns').then(m => ({ default: m.OfferCampaigns })))
 
 function FinanceTabRedirect({ tab }: { tab: FinanceTabSlug }) {
@@ -179,6 +180,9 @@ export default function App() {
         <Route path="/rider" element={<Suspense fallback={AuthFallback}><RiderDeliveryPage /></Suspense>} />
         {/* Public Marketing Unsubscribe route (T5-12, K6): unauthenticated, token-hashed */}
         <Route path="/unsubscribe" element={<Suspense fallback={AuthFallback}><UnsubscribePage /></Suspense>} />
+        {/* Public Payment Link route (T7-15): unauthenticated, token-hashed */}
+        <Route path="/pay/link" element={<Suspense fallback={AuthFallback}><PaymentLinkPage /></Suspense>} />
+        <Route path="/pay/link/:token" element={<Suspense fallback={AuthFallback}><PaymentLinkPage /></Suspense>} />
         <Route path="/" element={<Navigate to={user ? defaultNavTarget(user.role) : '/login'} replace />} />
 
         {/*
