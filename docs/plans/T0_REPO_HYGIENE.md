@@ -109,7 +109,7 @@ to `AGENTS.md` so Codex and Gemini follow the same protocol.
 **Done when** — AGENTS.md has a "Parallel work" section that matches PLAN.md §6.
 **Needs** — T0-01.
 
-### T0-09 · Active CI + independent local gates            status: acceptance_pending — current CI enabled and PR checks running; exact-head GREEN and owner acceptance pending · size: S · Babin + agents
+### T0-09 · Active CI + independent local gates            status: acceptance_pending — PR #289 exact-head + current main CI GREEN; branch-protection enforcement, independent local receipt and owner sign-off pending · size: S · Babin + agents
 **What** — Reconcile superseded Oct 26 W75 `keep CI off` guidance with Babin's later Nov 9 R-9.9 ruling: **keep GitHub CI enabled**. Every same-repository PR runs required CI checks; push to `main` runs main checks, and manual dispatch is available. Self-hosted Mac/Windows runners are capacity constraints, **not** reasons to disable verification. Agents must run local gates (see `AGENTS.md` and `npm run gates`) and record results before proposing a merge; GitHub's required current-head CI must also pass. Never merge on stale-head or merely queued/running/skipped results, and never silently disable required checks or required main builds.
 **Why** — The historical CI-disabled/billing workaround is outdated. An actual PR-head CI run was observed in progress 21 Nov 2026; both local verification and independent GitHub checks are necessary for safe production work.
 **Where** — `.github/workflows/ci.yml`, `AGENTS.md` Verification order, GitHub Actions, and [`T0-09_CI_POLICY_RECONCILIATION_2026-11-21.md`](../verification/T0-09_CI_POLICY_RECONCILIATION_2026-11-21.md).
