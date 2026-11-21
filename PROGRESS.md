@@ -1,5 +1,60 @@
 # Progress Log
 
+## 2026-11-22 — Option 2: Production Deployment Preparation & Migration Bundles (Lane B / Windows)
+
+**Did**
+- Finalized Option 2 (Production Deployment Preparation) following 100% Lane B task completion and Stage 0, 1, and 2 hosted staging verification (`klhmsrunqrdxjudyhnkm`).
+- Reconciled authoritative live production database state (`sxguwvgoserhdolewibb`, 157 baseline migrations in `docs/live/schema_migrations_2026-11-20.txt`):
+  - Preserved 7 reviewed renames from T1-03 without duplicate execution.
+  - Quarantined hazard seed `0047_seed_reference_corpus.sql` and preserved existing `0047_seed_tail_b917_equipment_line`.
+  - Identified already applied migrations: `0164_booking_discount_vat_payment_integrity.sql` and `0225_owner_approved_glossary_revisions.sql`.
+  - Identified 102 pending migrations spanning `0157` through `0260`.
+- Built automated production bundler script [`scripts/build-production-bundles.mjs`](scripts/build-production-bundles.mjs) generating three verified, transactional SQL bundles in [`docs/production/bundles/`](docs/production/bundles/):
+  - [`01_PRODUCTION_BATCH_1_0157_TO_0177.sql`](docs/production/bundles/01_PRODUCTION_BATCH_1_0157_TO_0177.sql): 19 migrations (244.2 KB) — Audit triggers, settings table, saved views, pricing structures, branch grants, section saves, verified return reservations.
+  - [`02_PRODUCTION_BATCH_2_0178_TO_0244.sql`](docs/production/bundles/02_PRODUCTION_BATCH_2_0178_TO_0244.sql): 67 migrations (902.1 KB) — Operations lifecycle, floor gate overrides, team notes, shifts, delivery proof, notification preferences, email logs, consumables, counter sale.
+  - [`03_PRODUCTION_BATCH_3_0245_TO_0260.sql`](docs/production/bundles/03_PRODUCTION_BATCH_3_0245_TO_0260.sql): 16 migrations (224.6 KB) — Delivery fee grid, outsourced vehicles, booking requests queue, client portal binding, Fonepay intents, payment links, refunds & reconciliation.
+  - [`04_PRODUCTION_POST_CUTOVER_VERIFICATION.sql`](docs/production/bundles/04_PRODUCTION_POST_CUTOVER_VERIFICATION.sql): 7.0 KB — Comprehensive verification assertions for schema migrations registry, anon RPC deny-checks, core cutover tables, and column extensions.
+  - [`bundles_manifest.json`](docs/production/bundles/bundles_manifest.json): Exact JSON manifest with SHA-256 hashes, assigned 14-digit monotonic timestamp versions, and metadata.
+- Authored comprehensive Production Deployment Playbook & Execution Runbook [`docs/production/PRODUCTION_DEPLOYMENT_PLAYBOOK.md`](docs/production/PRODUCTION_DEPLOYMENT_PLAYBOOK.md):
+  - Phase 0: Physical backup protocol (`.\scripts\backup-db.ps1`) and SHA-256 checksum verification.
+  - Phase 1–3: Phased SQL batch execution in Supabase Dashboard SQL Editor with inline verification queries.
+  - Phase 4: Post-cutover validation checks and live schema migrations registry export.
+  - Phase 5: Cloudflare Pages frontend deployment configuration and smoke testing.
+  - Phase 6: Rollback and disaster recovery instructions via `psql` restore.
+
+**Ruled**
+- Rule N-5: Antigravity never mutates live production; Babin manually executes the SQL bundles in Supabase SQL Editor.
+- Rule N-8: Zero database credentials or secrets in code, logs, or commits.
+- Batch 1, 2, and 3 SQL bundles are fully idempotent and transactional, automatically inserting their corresponding entries into `supabase_migrations.schema_migrations`.
+
+**Verified**
+- `npm run check:pglite`: PASS (258/258 migrations applied from scratch, 0 leaks, 46 views closed, 21 allowlisted anon functions, 237 definer search paths pinned).
+- `npm run check:lifecycle`: PASS (98/98 lifecycle steps green under real Postgres + RLS).
+- `npm test`: PASS (710 test files, 7,659 tests passed, mock backend).
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 errors, 0 warnings).
+- `npm run lint:progress`: PASS.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 258 files · check:pglite 258/258 applied, 0 failed (recorded 2026-11-21T20:23:15.000Z). Suite: PASS — 7659/7659 passed, 0 failed (recorded 2026-11-21T20:39:46.272Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-21T20:24:16.164Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin review and execution of Phase 0 backup (`.\scripts\backup-db.ps1`) and Phase 1–3 migration bundles in Supabase SQL Editor per `docs/production/PRODUCTION_DEPLOYMENT_PLAYBOOK.md`.
+- Lane B tasks in Tracks T4, T5, and T6 are 100% complete (34/34 cards).
+- Open repository cards are limited to Lane A physical hardware tests and Babin Owner production release actions.
+
 ## 2026-11-21 — T0: Security Acceptance Audit & Governance Deliverables (Lane B / Windows)
 
 **Did**
