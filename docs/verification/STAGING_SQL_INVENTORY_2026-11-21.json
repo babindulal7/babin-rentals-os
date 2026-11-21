@@ -1,10 +1,10 @@
 {
   "title": "Babin Rentals OS staged SQL preflight inventory: review required, never auto-apply",
   "observed_date": "2026-11-21",
-  "source_main_commit": "a9231b229f8a3c50bfec41873a62f3b4f5366899",
+  "source_main_commit": "3a8d90b9fa197d1a69326483a89140e404385b85",
   "target_staging_project_ref": "klhmsrunqrdxjudyhnkm",
   "protected_production_project_ref": "sxguwvgoserhdolewibb",
-  "migration_files": 257,
+  "migration_files": 258,
   "live_recorded_history_count": 157,
   "exact_name_matches": 148,
   "source_without_exact_live_name": 109,
@@ -1786,8 +1786,8 @@
     },
     {
       "filename": "0255_booking_site_and_public_catalogue.sql",
-      "git_blob_sha": "11f040d7e405c1d78d3118f4a1330a17c1fb8df6",
-      "bytes": 13056,
+      "git_blob_sha": "f77787ecfb3570c0f02dfda7a42a9b025397f6f3",
+      "bytes": 13665,
       "live_exact_name_found": false,
       "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
     },
@@ -1818,6 +1818,13 @@
       "bytes": 14415,
       "live_exact_name_found": false,
       "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0260_online_payment_refunds_and_reconciliation.sql",
+      "git_blob_sha": "e6ca4701fff45a78ce7faeb777e7920dbf96fe73",
+      "bytes": 8736,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
     }
   ],
   "historical_live_comparison_observed_date": "2026-11-20",
@@ -1844,7 +1851,8 @@
       "0256_booking_requests_and_staff_queue.sql",
       "0257_client_accounts_and_portal_binding.sql",
       "0258_payment_intents_and_fonepay.sql",
-      "0259_payment_link_from_any_booking.sql"
+      "0259_payment_link_from_any_booking.sql",
+      "0260_online_payment_refunds_and_reconciliation.sql"
     ],
     "changed_files": [
       {
