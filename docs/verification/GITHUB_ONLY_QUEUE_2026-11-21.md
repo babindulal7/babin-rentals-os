@@ -28,6 +28,17 @@
 
 **Static source review:** 12/12 inspected assertions matched, **not** a Vitest or PGlite run. Both changes are *prepared only*, neither the parent nor main has been updated. No runner dispatch, hosted database write, merge or deployment.
 
+## Payment authentication child chain — prepared, not accepted
+
+| Parent | Draft | Scope | Dependency |
+|---|---|---|---|
+| [#266](https://github.com/babindulal7/babin-rentals-os/pull/266) | [#285](https://github.com/babindulal7/babin-rentals-os/pull/285) | Revoke direct client EXECUTE on privileged allocation SQL RPC, remove browser fallback; static regression guard | Source review → PGlite role grants → exact-head full CI |
+| #285 child branch | [#286](https://github.com/babindulal7/babin-rentals-os/pull/286) | Fail-closed Fonepay verification with merchant configuration + independent upstream response and non-mock UI guard | **Depends on #285**; bank response/HMAC contract, negative tests, refund replay and exact integrated acceptance |
+
+**Verified from GitHub:** #285 and #286 had zero exact-head workflow runs; the original #266 head remained unchanged. #285 changes 3 files, #286 changes 4 files. Source review matched 11 #286 guard assertions; **no Vitest, Deno, PGlite, hosted RLS, real provider or browser tests were executed.**
+
+**HARD STOP:** Do not merge #285/#286 without reconciling #283 (refunded replay guard), #282 (owner-only payment target), the alternate payment-link function redefinitions in #269, and every later effective function grant. Do not accept simulated success as proof of payment. No migrations or live configuration changes authorized.
+
 ## Next GitHub-only work — no computer necessary to prepare
 
 | Priority | Input | Smallest useful action here | Must remain blocked without computer/approval |
