@@ -19,6 +19,15 @@
 | All open PR / 155-card snapshot | [Draft audit #278](https://github.com/babindulal7/babin-rentals-os/pull/278) | **documented, not accepted** | Reconcile again at current main/head when merging; statuses are declarations, not independent evidence |
 | Public booking Kathmandu date default | [Isolated source branch](https://github.com/babindulal7/babin-rentals-os/tree/fix/booking-kathmandu-date-defaults-20261121) | **source fix prepared, unmerged** | Review overlap with #276; Windows test run, full CI and device matrix before acceptance |
 
+## Latest prepared security children — 21 November 2026
+
+| Parent | Child draft | GitHub-only preparation completed | Runtime acceptance remaining |
+|---|---|---|---|
+| [#266 refunds](https://github.com/babindulal7/babin-rentals-os/pull/266) | [#283](https://github.com/babindulal7/babin-rentals-os/pull/283) | Terminal refunded state guard in SQL allocation + Edge verify, plus static regression test | Duplicate callback/refund concurrency, ledger invariants, full local gates, independent review; caller-auth/provider verification remains separate P0 |
+| [#269 payment links/portal](https://github.com/babindulal7/babin-rentals-os/pull/269) | [#284](https://github.com/babindulal7/babin-rentals-os/pull/284) | Narrow KYC Storage policy, raw profile staff read, exposed view, plus static regression test | Supabase Storage/role JWT integration, policy union review, signed URL/ownership checks and staging preflight |
+
+**Static source review:** 12/12 inspected assertions matched, **not** a Vitest or PGlite run. Both changes are *prepared only*, neither the parent nor main has been updated. No runner dispatch, hosted database write, merge or deployment.
+
 ## Next GitHub-only work — no computer necessary to prepare
 
 | Priority | Input | Smallest useful action here | Must remain blocked without computer/approval |
