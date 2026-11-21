@@ -1,25 +1,30 @@
 # Progress Log
 
-## 2026-11-22 — T1-02, T1-09 & T9-01: Roadmap Documentation & Acceptance Reconciliation (Lane A)
+## 2026-11-22 — T2 & T3: Floor & Consumables Operations Acceptance Reconciliation (Lane A)
 
 ### Did
-- Reconciled roadmap statuses and promoted verified cards to `done` across Track 1 and Track 9:
-  - Promoted **T1-02 · Staging project** to `done`: PR #292 merged with verified exact-head 257-migration inventory (`docs/verification/STAGING_SQL_INVENTORY_2026-11-21.json`), synthetic replacement seed `0012` with 0 PII tokens, and comprehensive installation manifest (`docs/verification/STAGING_INSTALLATION_MANIFEST_2026-11-21.md`).
-  - Promoted **T1-09 · Email from @babinrentals.com** to `done`: PR #275 and PR #279 merged with transactional email setup, volume model (~3,000–4,000 emails/month), Resend DNS verification runbook (SPF, DKIM, DMARC), and Supabase custom SMTP integration guide.
-  - Promoted **T9-01 · Bring the catalogue and clients across** to `done`: PR #195 and PR #288 merged with comprehensive catalogue match report (`docs/verification/T9-01_BOOQABLE_CATALOGUE_MATCH_REPORT_2026-11-21.md`) validating 197 base products, 274 variants, 325 clients, 22 kit bundles, 9 pricing structures, 4 seasonal rulesets, and 20/20 3-day pricing parity.
-- Updated Track 1 and Track 9 roadmaps: [`docs/plans/T1_RELEASE.md`](docs/plans/T1_RELEASE.md) and [`docs/plans/T9_CUTOVER.md`](docs/plans/T9_CUTOVER.md).
+- Documented Floor & Consumables operations acceptance in [`docs/verification/FLOOR_AND_CONSUMABLES_ACCEPTANCE_2026-11-22.md`](docs/verification/FLOOR_AND_CONSUMABLES_ACCEPTANCE_2026-11-22.md):
+  - Promoted **T2-06 · Repair job closes the damage** to `done`: verified repair job lifecycle, resolution notes, and GiST exclusion unblocking across migration `0184` and lifecycle step `L41`.
+  - Promoted **T2-15 · Damage found during reset** to `done`: verified reset turnaround damage capture, photo upload to `evidence` bucket, and maintenance ticket dispatch without altering closed invoices (PR #30).
+  - Promoted **T2-19 · Signature at Return when damage is found** to `done`: verified `gate.return.damage_unsigned` hard block and clean return bypass across PR #209 and lifecycle steps `L78`/`L79`.
+  - Promoted **T2-21 · Planned downtime with a reason** to `done`: verified scheduled downtime windows, calendar blackouts, and early termination in `src/lib/queries/__tests__/downtime.test.ts` and lifecycle step `L72`.
+  - Promoted **T2-23 · Allow overbooking on chosen products** to `done`: verified short line confirmation without GiST reservations, and Pack stage hard-blocking until durable coverage in `AddItemPanel.overbooking.test.tsx` and lifecycle steps `L87`-`L89`.
+  - Promoted **T3-30 · Consumables: unit price, add at the desk, restock, low stock** to `done`: verified unit pricing, single-charge rental lines, handover stock deduction, and Law 6 price masking in `consumablesPricingAndRestock.test.ts` and lifecycle step `L73`.
+- Updated Track 2 and Track 3 roadmaps in [`docs/plans/T2_FLOOR.md`](docs/plans/T2_FLOOR.md) and [`docs/plans/T3_BOOKING_MONEY.md`](docs/plans/T3_BOOKING_MONEY.md).
 - Synchronized roadmap regression assertions in [`src/lib/__tests__/roadmapStatusTruth.test.ts`](src/lib/__tests__/roadmapStatusTruth.test.ts) (7/7 tests pass).
 
 ### Ruled
-- Staging installation manifest and migration inventory are pinned to Git head; live migrations are strictly controlled under Rule N-5.
-- Transactional email configuration requires production DNS alignment (Resend SPF/DKIM/DMARC) and Supabase custom SMTP configuration without leaking secrets (Rule N-8).
-- Catalogue cutover preserves Booqable external references (`external_refs`) and pricing parity across seasonal rules and structures.
+- Gate `gate.return.damage_unsigned`: Flagged returns strictly require customer/collector signature or explicit staff refusal reason; clean returns require no signatures.
+- GiST Invariant: Units with open damage findings or active maintenance tickets are excluded from reservation until the repair job is marked closed.
+- Overbooking Guard: Overbooking switch allows short line confirmation, but Pack stage is fail-closed blocked until durable stock or sub-rent coverage is bound.
+- Law 6 & Consumables: Consumables are charged per unit (not multi-day multiples); cost and margin figures remain strictly masked from floor roles.
 
 ### Verified
-- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: 7/7 tests pass.
-- `npx vitest run src/lib/__tests__/t1ReleaseDocumentation.test.ts`: 2/2 tests pass.
-- `npm run typecheck`: clean (0 errors).
-- `npm run lint`: clean (0 warnings/errors).
+- `npm test -- src/lib/__tests__/consumablesPricingAndRestock.test.ts src/lib/queries/__tests__/downtime.test.ts src/modules/rentals/booking/__tests__/AddItemPanel.overbooking.test.tsx`: 13/13 tests pass.
+- `npm test -- src/lib/__tests__/roadmapStatusTruth.test.ts`: 7/7 tests pass.
+- `npm run check:pglite`: 258/258 migrations applied cleanly, 0 failed.
+- `npm run check:lifecycle`: 98/98 steps green.
+- `npm run typecheck`: 0 errors.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -40,6 +45,27 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - Cloudflare Pages DNS and production deployment configuration (T1-07).
 - Fonepay merchant credentials live rehearsal.
 - Phase 2 physical hardware cards remain pending for post-live shop device day per 20 Nov ruling.
+
+## 2026-11-22 — T1-02, T1-09 & T9-01: Roadmap Documentation & Acceptance Reconciliation (Lane A)
+
+### Did
+- Reconciled roadmap statuses and promoted verified cards to `done` across Track 1 and Track 9:
+  - Promoted **T1-02 · Staging project** to `done`: PR #292 merged with verified exact-head 257-migration inventory (`docs/verification/STAGING_SQL_INVENTORY_2026-11-21.json`), synthetic replacement seed `0012` with 0 PII tokens, and comprehensive installation manifest (`docs/verification/STAGING_INSTALLATION_MANIFEST_2026-11-21.md`).
+  - Promoted **T1-09 · Email from @babinrentals.com** to `done`: PR #275 and PR #279 merged with transactional email setup, volume model (~3,000–4,000 emails/month), Resend DNS verification runbook (SPF, DKIM, DMARC), and Supabase custom SMTP integration guide.
+  - Promoted **T9-01 · Bring the catalogue and clients across** to `done`: PR #195 and PR #288 merged with comprehensive catalogue match report (`docs/verification/T9-01_BOOQABLE_CATALOGUE_MATCH_REPORT_2026-11-21.md`) validating 197 base products, 274 variants, 325 clients, 22 kit bundles, 9 pricing structures, 4 seasonal rulesets, and 20/20 3-day pricing parity.
+- Updated Track 1 and Track 9 roadmaps: [`docs/plans/T1_RELEASE.md`](docs/plans/T1_RELEASE.md) and [`docs/plans/T9_CUTOVER.md`](docs/plans/T9_CUTOVER.md).
+- Synchronized roadmap regression assertions in [`src/lib/__tests__/roadmapStatusTruth.test.ts`](src/lib/__tests__/roadmapStatusTruth.test.ts) (7/7 tests pass).
+
+### Ruled
+- Staging installation manifest and migration inventory are pinned to Git head; live migrations are strictly controlled under Rule N-5.
+- Transactional email configuration requires production DNS alignment (Resend SPF/DKIM/DMARC) and Supabase custom SMTP configuration without leaking secrets (Rule N-8).
+- Catalogue cutover preserves Booqable external references (`external_refs`) and pricing parity across seasonal rules and structures.
+
+### Verified
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: 7/7 tests pass.
+- `npx vitest run src/lib/__tests__/t1ReleaseDocumentation.test.ts`: 2/2 tests pass.
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (0 warnings/errors).
 
 ## 2026-11-22 — T7: Online Booking Acceptance Reconciliation (Lane C)
 

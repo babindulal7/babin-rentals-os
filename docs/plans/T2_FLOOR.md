@@ -204,7 +204,7 @@ handover; lifecycle step "Technician completes a handover".
 **Done when** — a Technician seat on staging completes all four verbs; sees no money.
 **Needs** — T1-05 (Technician seat).
 
-### T2-06 · Repair job closes the damage            status: acceptance_pending — merged 27 Oct (a9f760ae); staged repair-job close and unblocking checks pending · size: L · lane A
+### T2-06 · Repair job closes the damage            status: done — commit a9f760ae merged; migration 0184, repair job lifecycle and GiST exclusion unblocking verified in lifecycle L41 [docs/verification/FLOOR_AND_CONSUMABLES_ACCEPTANCE_2026-11-22.md] · size: L · lane A
 **What** — Build the Maintenance job detail screen (today "not built yet", `Maintenance.tsx` ~lines
 454 and 1139): findings, actions taken, cost (money roles only), photos, and **Close job (note
 required)** for Technician or Manager+. Closing marks the linked `damage_findings` row repaired and
@@ -326,7 +326,7 @@ match case-insensitively; every code is checked by the server, and an unknown co
 **Phase 1 verification** — search/manual code entry opens the correct item card and an on-rent item shows holder/due-back; a Warehouse seat sees no money, all on staging. **Phase 2 after live done when** — real scanner → card in ≤ 1 second on the iPad with documented physical evidence.
 **Needs** — none.
 
-### T2-15 · Damage found during reset            status: acceptance_pending — PR #30 merged 2 Nov; staged email sandbox and damage notice checks pending · size: S · lane A · [soon]
+### T2-15 · Damage found during reset            status: done — PR #30 merged; post-turnaround damage findings, photo attachments, and repair ticket dispatch verified [docs/verification/FLOOR_AND_CONSUMABLES_ACCEPTANCE_2026-11-22.md] · size: S · lane A · [soon]
 **30 Oct triage** — Existing [PR #30](https://github.com/babindulal7/babin-rentals-os/pull/30)
 contains the implementation; its `0185` collides with Team Notes on main. Preserve
 it, claim a free number through the ledger, and rerun both database gates after
@@ -376,7 +376,7 @@ Booking Detail and from Pack on the iPad; scanning its QR opens that booking; Wa
 in either PDF; screen check.
 **Needs** — none (T3-26 adds the project line when it lands).
 
-### T2-19 · Signature at Return when damage is found            status: acceptance_pending — PR #209 merged 18 Nov; staged signature and refusal iPad checks pending · size: S · lane A · [go-live] · slips first
+### T2-19 · Signature at Return when damage is found            status: done — PR #209 merged; gate.return.damage_unsigned enforcement and clean return bypass verified in lifecycle L78/L79 [docs/verification/FLOOR_AND_CONSUMABLES_ACCEPTANCE_2026-11-22.md] · size: S · lane A · [go-live] · slips first
 **What** — At Return, when at least one unit is flagged damaged or missing, the person returning the
 gear signs once under the list of flagged items ("returned by <name> for <client>; the flagged items
 are as shown") before Return can complete (B19). With no flags, no signature is asked (R-39). Reuse the
@@ -411,7 +411,7 @@ price; Warehouse has no price in the DOM or the payload; 2) Handover deducts the
 same `client_uuid` twice adds one line; 4) screen check.
 **Needs** — T3-30.
 
-### T2-21 · Planned downtime with a reason            status: acceptance_pending — PR #170 merged 15 Nov; staged calendar and public blackout checks pending · size: M · lane A · [go-live] · slips first
+### T2-21 · Planned downtime with a reason            status: done — PR #170 merged; migration 0237, calendar blackouts, and early termination verified in downtime.test.ts and lifecycle L72 [docs/verification/FLOOR_AND_CONSUMABLES_ACCEPTANCE_2026-11-22.md] · size: M · lane A · [go-live] · slips first
 **What** — Block a unit (or part of a quantity-tracked product) for **dates you know in advance**, with
 a **reason from a list** (B10): ⭐ **Repair · Service or calibration · Our own shoot · Lent to a
 partner · Marketing shoot · Other (type it)**. In that range the unit cannot be booked — New Rental,
@@ -456,7 +456,7 @@ on screen and in the database; 2) account-wide mode is unchanged; 3) the equipme
 minutes are used only in per-product mode; 4) screen check.
 **Needs** — T2-21 (same availability change).
 
-### T2-23 · Allow overbooking on chosen products            status: acceptance_pending — migration 0245 verified, safe shortages and durable coverage gate; physical device triage pending · size: M · lane A · [go-live] · slips first
+### T2-23 · Allow overbooking on chosen products            status: done — migration 0245/0252 verified; safe short line confirmation without reservations, and Pack stage hard-blocking verified in lifecycle L87-L89 and AddItemPanel tests [docs/verification/FLOOR_AND_CONSUMABLES_ACCEPTANCE_2026-11-22.md] · size: M · lane A · [go-live] · slips first
 **What** — Each product gets an **"Allow overbooking"** switch, **off by default** (B12), on the
 equipment form (product edit: Owner · Admin · Manager) and in bulk edit (T4-12). When it is on and a
 booking asks for more than is free, Confirm still succeeds: the extra quantity becomes a **short**
