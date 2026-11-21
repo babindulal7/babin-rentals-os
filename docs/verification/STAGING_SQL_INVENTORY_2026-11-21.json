@@ -1800,8 +1800,8 @@
     },
     {
       "filename": "0257_client_accounts_and_portal_binding.sql",
-      "git_blob_sha": "d102b018558bc57c7ed3ad12353520310456d9b4",
-      "bytes": 18748,
+      "git_blob_sha": "6821fe65a5feff98eb7e6a55f4974c4893747501",
+      "bytes": 19083,
       "live_exact_name_found": false,
       "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
     },

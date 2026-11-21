@@ -38,11 +38,13 @@ create policy online_profiles_self on public.online_profiles
   using (auth_uid = auth.uid())
   with check (auth_uid = auth.uid());
 
--- Staff reads all client profiles
+-- Only online-request desk staff may inspect other clients' profile/ID data.
+-- Floor roles and Accounts must not bypass the masked view by reading this
+-- base table directly; clients retain their own-row policy above.
 drop policy if exists online_profiles_staff_select on public.online_profiles;
 create policy online_profiles_staff_select on public.online_profiles
   for select to authenticated
-  using (public.auth_is_staff());
+  using (public.auth_user_role() in ('Owner', 'Admin', 'Manager', 'Coordinator'));
 
 -- 2. View public.online_profiles_v with Law 6 money and PII masking
 create or replace view public.online_profiles_v as
@@ -119,22 +121,20 @@ begin
         );
     end if;
 
-    -- Client can select own files; staff can select all request-ids objects
-    if not exists (
-      select 1 from pg_policies
-      where schemaname = 'storage' and tablename = 'objects' and policyname = 'request_ids_select'
-    ) then
-      create policy "request_ids_select"
-        on storage.objects for select
-        to authenticated
-        using (
-          bucket_id = 'request-ids'
-          and (
-            (string_to_array(name, '/'))[1] = auth.uid()::text
-            or public.auth_is_staff()
-          )
-        );
-    end if;
+    -- Private KYC documents: signed-in client owns its UUID folder, while
+    -- only the online-request desk roles may view other clients' ID files.
+    -- A previous broad staff SELECT is intentionally replaced if present.
+    drop policy if exists "request_ids_select" on storage.objects;
+    create policy "request_ids_select"
+      on storage.objects for select
+      to authenticated
+      using (
+        bucket_id = 'request-ids'
+        and (
+          (auth.uid() is not null and (string_to_array(name, '/'))[1] = auth.uid()::text)
+          or public.auth_user_role() in ('Owner', 'Admin', 'Manager', 'Coordinator')
+        )
+      );
   end if;
 end $$;
 
