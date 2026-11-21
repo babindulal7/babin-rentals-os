@@ -119,6 +119,39 @@ const MOCK_CATALOGUE: CatalogueItem[] = [
       { name: 'Sennheiser MKH 416 Shotgun Microphone', qty: 1 },
     ],
   },
+  // T7-13 mock family for the local preview: one cable family whose options differ only by length.
+  {
+    id: '77777777-7777-4777-8777-777777777777',
+    kind: 'product',
+    slug: 'bnc-sdi-cable-5m',
+    name: 'BNC SDI Cable 5m',
+    category_name: 'Cables',
+    description: 'Broadcast-grade BNC SDI cable, 5 metres.',
+    photo_paths: [],
+    daily_rate_paisa: 50000, // Rs. 500
+    weekly_rate_paisa: null,
+    monthly_rate_paisa: null,
+    bundle_contents: [],
+  },
+  {
+    id: '88888888-8888-4888-8888-888888888888',
+    kind: 'product',
+    slug: 'bnc-sdi-cable-10m',
+    name: 'BNC SDI Cable 10m',
+    category_name: 'Cables',
+    description: 'Broadcast-grade BNC SDI cable, 10 metres.',
+    photo_paths: [],
+    daily_rate_paisa: 70000, // Rs. 700
+    weekly_rate_paisa: null,
+    monthly_rate_paisa: null,
+    bundle_contents: [],
+  },
+]
+
+/** T7-13 mock family rows, used only with VITE_DATA_SOURCE=mock for the local preview. */
+const MOCK_FAMILY_ROWS: FamilyOptionRow[] = [
+  { familyId: 'mock-family-bnc-sdi', familyName: 'BNC SDI Cable', productId: '77777777-7777-4777-8777-777777777777', optionLabel: '5m', sortOrder: 1 },
+  { familyId: 'mock-family-bnc-sdi', familyName: 'BNC SDI Cable', productId: '88888888-8888-4888-8888-888888888888', optionLabel: '10m', sortOrder: 2 },
 ]
 
 export async function fetchPublicCatalogue(): Promise<CatalogueItem[]> {
@@ -293,7 +326,10 @@ export async function submitBookingRequest(payload: BookingRequestPayload): Prom
  * show, each as a standalone item, and the failure is logged.
  */
 export async function fetchFamilyOptions(): Promise<FamilyOptionRow[]> {
-  if (import.meta.env.VITE_DATA_SOURCE === 'mock' || import.meta.env.MODE === 'test') {
+  if (import.meta.env.VITE_DATA_SOURCE === 'mock') {
+    return MOCK_FAMILY_ROWS
+  }
+  if (import.meta.env.MODE === 'test') {
     return []
   }
 
