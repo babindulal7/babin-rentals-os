@@ -3,7 +3,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import DashboardMovementPanel from '../DashboardMovementPanel'
+import DashboardMovementPanel, { type DashboardAttentionLink } from '../DashboardMovementPanel'
 import dashboardCss from '../dashboard.css?raw'
 import type { MovementRow } from '../../../lib/queries/today'
 
@@ -26,7 +26,7 @@ const row: MovementRow = {
   due: 'Due 22 Sept 2026 · 10:00 AM', duration: '21 Sept → 22 Sept',
   pickupLocation: null, returnLocation: null, deliveryType: 'Client Pickup',
 }
-async function mount(overrides: Partial<MovementRow> = {}, side: 'incoming' | 'outgoing' = 'incoming', paging: { onLoadMore?: () => void; hasMore?: boolean; total?: number } = {}) {
+async function mount(overrides: Partial<MovementRow> = {}, side: 'incoming' | 'outgoing' = 'incoming', paging: { onLoadMore?: () => void; hasMore?: boolean; total?: number; attention?: DashboardAttentionLink } = {}) {
   host = document.createElement('div')
   document.body.append(host)
   root = createRoot(host)
@@ -35,10 +35,40 @@ async function mount(overrides: Partial<MovementRow> = {}, side: 'incoming' | 'o
     filterControl={null} onClearFilters={() => {}}
     {...(paging.onLoadMore ? { onLoadMore: paging.onLoadMore } : {})}
     {...(paging.hasMore !== undefined ? { hasMore: paging.hasMore } : {})}
+    {...(paging.attention ? { attention: paging.attention } : {})}
     list={{ rows: [{ ...row, ...overrides }], total: paging.total ?? 1, loading: false, error: null, isEmpty: false, isFiltered: true, refetch: () => {}, lastFetchedAt: null }}
   /></MemoryRouter>))
 }
 afterEach(async () => { if (root) await act(async () => root.unmount()); host?.remove(); vi.clearAllMocks() })
+
+describe('the counted footer link opens the Operations exception its count is of', () => {
+  const late = { to: '/operations?exception=overdue_start', singular: 'late pickup', plural: 'late pickups' }
+  const overdueReturns = { to: '/operations?exception=overdue_end', singular: 'overdue return', plural: 'overdue returns' }
+
+  it('prints a known late-pickup count and links it to the late-pickup exception', async () => {
+    await mount({ status: 'Booked' }, 'outgoing', { attention: { ...late, count: 3 } })
+    const link = host.querySelector<HTMLAnchorElement>(`a[href="${late.to}"]`)
+    expect(link?.textContent).toContain('3 late pickups')
+  })
+
+  it('uses the singular for one', async () => {
+    await mount({ status: 'Booked' }, 'outgoing', { attention: { ...late, count: 1 } })
+    expect(host.querySelector(`a[href="${late.to}"]`)?.textContent).toContain('1 late pickup')
+  })
+
+  it('prints an unknown count as an invitation, never as a zero', async () => {
+    await mount({}, 'incoming', { attention: { ...overdueReturns, count: null } })
+    const link = host.querySelector<HTMLAnchorElement>(`a[href="${overdueReturns.to}"]`)
+    expect(link?.textContent).toContain('View overdue returns')
+    expect(link?.textContent).not.toMatch(/\d/)
+  })
+
+  it('keeps the all-bookings link beside a known zero, which is still a count', async () => {
+    await mount({ status: 'Booked' }, 'outgoing', { attention: { ...late, count: 0 } })
+    expect(host.querySelector(`a[href="${late.to}"]`)?.textContent).toContain('0 late pickups')
+    expect(host.querySelector('a[href="/rentals"]')?.textContent).toContain('View all bookings')
+  })
+})
 
 describe('movement board task clarity', () => {
   it('does not label a future return as due today or claim booked quantities are outstanding', async () => {
