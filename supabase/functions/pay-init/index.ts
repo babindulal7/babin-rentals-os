@@ -210,8 +210,43 @@ Deno.serve(async (req: Request) => {
         )
       }
 
-      // Call create_payment_intent RPC (server-authoritative computation of amount & switch check)
-      const { data: intentRes, error: intentError } = await supabase.rpc('create_payment_intent', {
+      // No payment-link token was supplied: require a real signed-in client.
+      // Never invoke create_payment_intent through the service-role client for
+      // a caller-supplied target: SECURITY DEFINER would bypass target RLS.
+      const authorization = req.headers.get('authorization') || ''
+      const bearer = /^Bearer\\s+(\\S+)$/i.exec(authorization)
+      if (!bearer) {
+        return new Response(
+          JSON.stringify({ error: 'Sign in to pay your own booking or request.' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
+      if (!anonKey) {
+        return new Response(
+          JSON.stringify({ error: 'Payment authorization is unavailable.' }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const userSupabase = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authorization } },
+        auth: { autoRefreshToken: false, persistSession: false },
+      })
+      // An anon/publishable key is not an authenticated user session.
+      // getUser verifies the bearer token against Supabase Auth.
+      const { data: authData, error: authError } = await userSupabase.auth.getUser(bearer[1])
+      if (authError || !authData?.user) {
+        return new Response(
+          JSON.stringify({ error: 'Sign in to pay your own booking or request.' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Execute the ownership-gated RPC in that verified user's context.
+      // Staff-generated payment links use the separate token branch above.
+      const { data: intentRes, error: intentError } = await userSupabase.rpc('create_payment_intent', {
         p_client_uuid: clientUuid,
         p_booking_id: bookingId || null,
         p_booking_request_id: bookingRequestId || null,
