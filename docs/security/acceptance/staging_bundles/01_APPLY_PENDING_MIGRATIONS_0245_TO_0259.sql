@@ -3838,6 +3838,7 @@ alter table public.booking_requests enable row level security;
 alter table public.booking_request_lines enable row level security;
 
 -- Policies for booking_requests
+drop policy if exists booking_requests_staff_select on public.booking_requests;
 create policy booking_requests_staff_select on public.booking_requests
   for select
   to authenticated
@@ -3845,6 +3846,7 @@ create policy booking_requests_staff_select on public.booking_requests
     auth_user_role() in ('Owner', 'Admin', 'Manager', 'Coordinator', 'Accounts')
   );
 
+drop policy if exists booking_requests_staff_update on public.booking_requests;
 create policy booking_requests_staff_update on public.booking_requests
   for update
   to authenticated
@@ -3853,6 +3855,7 @@ create policy booking_requests_staff_update on public.booking_requests
   );
 
 -- Policies for booking_request_lines
+drop policy if exists booking_request_lines_staff_select on public.booking_request_lines;
 create policy booking_request_lines_staff_select on public.booking_request_lines
   for select
   to authenticated
@@ -3861,6 +3864,7 @@ create policy booking_request_lines_staff_select on public.booking_request_lines
   );
 
 -- 5. Secure view masking money columns for floor roles (Law 6)
+drop view if exists public.booking_requests_v cascade;
 create or replace view public.booking_requests_v as
 select
   r.id,
@@ -4843,6 +4847,7 @@ create index if not exists idx_payment_intents_provider_ref on public.payment_in
 alter table public.payment_intents enable row level security;
 
 -- Staff with money view permission can view all intents
+drop policy if exists payment_intents_staff_select on public.payment_intents;
 create policy payment_intents_staff_select on public.payment_intents
   for select
   to authenticated
@@ -4851,6 +4856,7 @@ create policy payment_intents_staff_select on public.payment_intents
   );
 
 -- Clients can view intents belonging to their account or requests
+drop policy if exists payment_intents_client_select on public.payment_intents;
 create policy payment_intents_client_select on public.payment_intents
   for select
   to authenticated
