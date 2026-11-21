@@ -64,7 +64,6 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - Babin applies the 15 pending migrations (`0245`–`0259`) to staging (`klhmsrunqrdxjudyhnkm`) per the operator runbook in `docs/verification/STAGING_INSTALLATION_MANIFEST_2026-11-21.md`.
 - Next card in Track 1: T1-05 (Nine role seats + read-only role harness staging execution against verified staging project).
 
-
 ## 2026-11-21 — Track T7 Roadmap Truth Reconciliation & Lifecycle Gate Parity (Lane C)
 
 **Did**
