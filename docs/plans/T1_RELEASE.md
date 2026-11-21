@@ -36,7 +36,7 @@ business RPCs are still executable by `anon` on live (`adjust_stock`,
 3) PROGRESS.md records date, size, hash — not the credentials (N-8).
 **Needs** — Babin, week 1.
 
-### T1-02 · Staging project            status: ready — awaiting merge (lane-a/T1-02-staging-project) — exact-head 257-migration inventory, synthetic 0012 seed and installation manifest verified · size: M · lane A + Babin
+### T1-02 · Staging project            status: done — PR #292 merged (exact-head 257-migration inventory, synthetic 0012 seed and installation manifest verified) · size: M · lane A + Babin
 **What** — Use the **existing** Free Supabase project `babin-staging` (`klhmsrunqrdxjudyhnkm`, Singapore). **Never create a duplicate project.** **Read-only recheck 21 Nov 2026:** staging already contains 171 public tables, 242 migration-history entries (ending at `0244_counter_sale.sql`), and nonzero row counts in 19 public tables. Prepared exact-head reviewed migration/dependency/checksum manifest covering all 257 migration files (`0001` through `0259`), pinned in `docs/verification/STAGING_SQL_INVENTORY_2026-11-21.json` and documented in `docs/verification/STAGING_INSTALLATION_MANIFEST_2026-11-21.md`. Synthetic replacement seed `0012` is verified (`3fd285f4...`) with 0 real PII tokens. Seed quarantines (`0047`, `0082`) and duplicate prefix `0188` are preserved. Delta of 15 pending migrations (`0245`–`0259`) sequenced for operator staging apply. Zero remote writes executed by agent per Rule N-5.
 **Why** — The existing hosted staging project contains a partially reconciled application schema. Verify its provenance and privacy isolation before further hosted rehearsal or any production change.
 **Where** — Supabase `babin-staging` project; `docs/verification/STAGING_PHASE1_PREFLIGHT_2026-11-20.md`; existing `scripts/staging-schema-preflight.mjs` in PR #179; `.env.staging.local` (ignored).
@@ -126,7 +126,7 @@ Raw database or gate text (`GATE:…`, Postgres messages) goes to the log, never
 **Done when** — a forced test error on staging appears in Sentry with path only, no query string.
 **Needs** — T1-07.
 
-### T1-09 · Email from @babinrentals.com            status: ready — awaiting merge (lane-a/T1-09-email-from-babinrentals-com) · size: M · lane A + Babin
+### T1-09 · Email from @babinrentals.com            status: done — PR #275 merged, PR #279 merged (transactional email configuration, volume model, and DNS runbook verified) · size: M · lane A + Babin
 **What** — Pick the transactional email service at setup time by checking live prices and daily
 limits (candidates: Resend, Postmark, Amazon SES, Brevo); Babin creates the account. Verify the
 domain: SPF, DKIM, DMARC (start `p=none`, move to `quarantine` after two clean weeks). Point

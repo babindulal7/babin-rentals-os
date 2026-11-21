@@ -25,7 +25,7 @@ archived; by 10 Mar Booqable is cancelled.
 
 ---
 
-### T9-01 · Bring the catalogue and clients across            status: acceptance_pending — PR #195 merged; Booqable export reconciliation verified (ready for merge: lane-a/T9-01-bring-the-catalogue-and-clients-across) · size: M · lane A
+### T9-01 · Bring the catalogue and clients across            status: done — PR #195 merged, PR #288 merged (Booqable catalogue and clients reconciled with match report and 20/20 pricing parity) · size: M · lane A
 **What** — From Booqable exports (CSV/API, read-only): clients created or changed since the earlier
 import, products, bundles (and the kit-style products that are bundles — 18 Aug), **pricing
 structures** ("Babin Daily", "Days wise discount", "Rental Rate Card", … — 0160) and the **four
