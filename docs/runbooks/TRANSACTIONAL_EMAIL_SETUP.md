@@ -72,11 +72,11 @@ Specifies how receiving servers handle messages that fail SPF or DKIM.
 
 - **Type:** `TXT`
 - **Name:** `_dmarc`
-- **Content:** `v=DMARC1; p=none; rua=mailto:dmarc-reports@babinrentals.com; sp=none; aspf=r;`
-- **Policy Rollout Strategy:**
-  1. **Phase 1 (Week 1–2):** `p=none` (Monitoring mode — collects reports without rejecting legitimate mail during initial cutover).
-  2. **Phase 2 (Week 3+):** Upgrade to `p=quarantine` (Suspicious/spoofed emails routed to Spam folder).
-  3. **Phase 3 (Post-stabilization):** Upgrade to `p=reject` (Strict anti-spoofing enforcement).
+- **Content:** generate or preserve the owner-approved DMARC policy after checking current sending domains and any existing `_dmarc` TXT record. Do not publish a sample reporting mailbox or overwrite existing policy.
+- **Policy Rollout Strategy (each stage needs separate owner approval and deliverability evidence):**
+  1. Start with an appropriate monitoring policy such as `p=none` **only if compatible with existing mail**; confirm SPF/DKIM alignment and a functioning reporting mailbox before adding `rua`.
+  2. Consider `p=quarantine` only after monitoring shows legitimate email will pass.
+  3. Consider `p=reject` only after owner/security review confirms no unintended mail loss. **No automatic time-based changes.**
 
 ### 4.4 Custom Return-Path / Mail-From Domain
 - Resend generates the return-path host (often `send.babinrentals.com`, or an approved custom subdomain), **MX destination and priority**, and a **corresponding SPF TXT**. Copy these as a pair from the exact domain dashboard.
