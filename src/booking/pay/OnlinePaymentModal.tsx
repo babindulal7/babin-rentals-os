@@ -342,6 +342,9 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
                   Pay via Fonepay Hosted Page ↗
                 </a>
 
+                {/* Synthetic settlement controls are for the explicit mock app only.
+                    A configured checkout must never expose browser-forced success. */}
+                {import.meta.env.VITE_DATA_SOURCE === 'mock' && (
                 <button
                   type="button"
                   onClick={handleSimulatePayment}
@@ -358,6 +361,7 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
                 >
                   {verifying ? 'Verifying with bank server-to-server...' : 'Simulate Successful Payment (Sandbox)'}
                 </button>
+                )}
               </div>
             </div>
           ) : null}
