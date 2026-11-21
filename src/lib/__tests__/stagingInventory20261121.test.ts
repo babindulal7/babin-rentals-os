@@ -17,12 +17,12 @@ describe('T1-02 exact-head 21 Nov 2026 staging inventory (no database writes)', 
     files: Array<{ filename: string; git_blob_sha: string; bytes: number; live_exact_name_found: boolean; review_state: string }>
   }
 
-  it('keeps the 21 Nov 2026 exact-head snapshot covering all 257 migrations', () => {
-    expect(inventory.migration_files).toBe(257)
+  it('keeps the 21 Nov 2026 exact-head snapshot covering all 258 migrations', () => {
+    expect(inventory.migration_files).toBe(258)
     expect(inventory.source_main_commit).toBe('a9231b229f8a3c50bfec41873a62f3b4f5366899')
     expect(inventory.target_staging_project_ref).toBe('klhmsrunqrdxjudyhnkm')
     expect(inventory.protected_production_project_ref).toBe('sxguwvgoserhdolewibb')
-    expect(inventory.files).toHaveLength(257)
+    expect(inventory.files).toHaveLength(258)
     expect(inventory.must_not_run_automatically).toEqual([
       '0012_seed_data.sql',
       '0047_seed_reference_corpus.sql',
@@ -32,7 +32,7 @@ describe('T1-02 exact-head 21 Nov 2026 staging inventory (no database writes)', 
       '0188_smart_reservation_holds.sql',
       '0188_staff_renting_gear.sql',
     ])
-    expect(inventory.source_drift_since_prior_snapshot.added_files).toHaveLength(17)
+    expect(inventory.source_drift_since_prior_snapshot.added_files).toHaveLength(18)
     expect(inventory.source_drift_since_prior_snapshot.changed_files).toHaveLength(1)
     expect(inventory.source_drift_since_prior_snapshot.removed_files).toEqual([])
   })
@@ -59,8 +59,8 @@ describe('T1-02 exact-head 21 Nov 2026 staging inventory (no database writes)', 
     }
     expect(result.mode).toBe('READ_ONLY_PINNED_SOURCE_INTEGRITY')
     expect(result.sourceBaseline).toBe('a9231b229f8a3c50bfec41873a62f3b4f5366899')
-    expect(result.localFileCount).toBe(257)
-    expect(result.pinnedFileCount).toBe(257)
+    expect(result.localFileCount).toBe(258)
+    expect(result.pinnedFileCount).toBe(258)
     expect(result.approvalToApplyStaging).toBe(false)
     expect(result.databaseConnected).toBe(false)
     expect(result.sqlExecuted).toBe(false)
