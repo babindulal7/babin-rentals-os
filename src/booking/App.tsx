@@ -2,11 +2,21 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import './booking.css'
 import type { CatalogueItem } from './lib/catalogueApi'
 import { fetchPublicCatalogue, checkPublicAvailability } from './lib/catalogueApi'
+import {
+  type ClientUser,
+  type OnlineProfile,
+  getCurrentClientUser,
+  fetchOnlineProfile,
+} from './lib/clientAuthApi'
 import { BookingHeader } from './components/BookingHeader'
 import { CategoryNav } from './components/CategoryNav'
 import { ProductCard } from './components/ProductCard'
 import { ProductDetailModal } from './components/ProductDetailModal'
 import { CartDrawer, type CartLine } from './components/CartDrawer'
+import { ClientAuthModal } from './components/ClientAuthModal'
+import { ClientProfileModal } from './components/ClientProfileModal'
+import { MyBookingsModal } from './account/MyBookingsModal'
+import { initStoreAnalyticsScripts, trackStoreEvent } from '../lib/storeAnalytics'
 
 export default function BookingApp() {
   const getTomorrowString = () => {
@@ -33,6 +43,28 @@ export default function BookingApp() {
   const [cart, setCart] = useState<CartLine[]>([])
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false)
   const [isOffline, setIsOffline] = useState<boolean>(() => typeof navigator !== 'undefined' && !navigator.onLine)
+  const [clientUser, setClientUser] = useState<ClientUser | null>(null)
+  const [clientProfile, setClientProfile] = useState<OnlineProfile | null>(null)
+  const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false)
+  const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false)
+  const [isMyBookingsOpen, setIsMyBookingsOpen] = useState<boolean>(false)
+
+  // Load client auth session and profile
+  useEffect(() => {
+    let active = true
+    getCurrentClientUser().then((u) => {
+      if (!active) return
+      setClientUser(u)
+      if (u) {
+        fetchOnlineProfile().then((p) => {
+          if (active) setClientProfile(p)
+        })
+      }
+    })
+    return () => {
+      active = false
+    }
+  }, [])
 
   // Track online/offline status
   useEffect(() => {
@@ -44,6 +76,15 @@ export default function BookingApp() {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
     }
+  }, [])
+
+  // Initialize store analytics and dispatch initial page view (T7-16)
+  useEffect(() => {
+    initStoreAnalyticsScripts(false)
+    trackStoreEvent({
+      event: 'page_view',
+      pagePath: typeof window !== 'undefined' ? window.location.pathname : '/',
+    })
   }, [])
 
   // Load public catalogue
@@ -116,6 +157,15 @@ export default function BookingApp() {
 
   // Cart operations
   const handleAddToCart = (item: CatalogueItem) => {
+    trackStoreEvent({
+      event: 'add_to_request',
+      item: {
+        itemId: item.id,
+        itemName: item.name,
+        ...(item.category_name ? { category: item.category_name } : {}),
+        ...(item.daily_rate_paisa ? { valueNpr: Math.round(item.daily_rate_paisa / 100) } : {}),
+      },
+    })
     setCart((prev) => {
       const existing = prev.find((line) => line.item.id === item.id)
       if (existing) {
@@ -126,6 +176,19 @@ export default function BookingApp() {
       return [...prev, { item, quantity: 1 }]
     })
     setIsCartOpen(true)
+  }
+
+  const handleViewDetails = (item: CatalogueItem) => {
+    setSelectedItem(item)
+    trackStoreEvent({
+      event: 'view_item',
+      item: {
+        itemId: item.id,
+        itemName: item.name,
+        ...(item.category_name ? { category: item.category_name } : {}),
+        ...(item.daily_rate_paisa ? { valueNpr: Math.round(item.daily_rate_paisa / 100) } : {}),
+      },
+    })
   }
 
   const handleUpdateQty = (itemId: string, delta: number) => {
@@ -163,6 +226,11 @@ export default function BookingApp() {
         onEndDateChange={setEndDate}
         cartCount={totalCartCount}
         onOpenCart={() => setIsCartOpen(true)}
+        user={clientUser}
+        profileName={clientProfile?.name}
+        onOpenAuth={() => setIsAuthOpen(true)}
+        onOpenProfile={() => setIsProfileOpen(true)}
+        onOpenMyBookings={() => setIsMyBookingsOpen(true)}
       />
 
       <main className="booking-container">
@@ -268,13 +336,25 @@ export default function BookingApp() {
                 item={item}
                 hasDates={Boolean(startDate && endDate)}
                 isAvailable={availability.get(item.id)}
-                onViewDetails={setSelectedItem}
+                onViewDetails={handleViewDetails}
                 onAddToCart={handleAddToCart}
               />
             ))}
           </div>
         )}
       </main>
+
+      {/* Footer with privacy disclosure */}
+      <footer className="booking-footer">
+        <div className="booking-container">
+          <p className="privacy-disclosure">
+            This booking site uses Google Analytics and Meta Pixel to improve user experience. No personal identifying information (names, emails, phone numbers) is tracked.
+          </p>
+          <div className="booking-copyright">
+            © {new Date().getFullYear()} Babin Rentals. All rights reserved.
+          </div>
+        </div>
+      </footer>
 
       {/* Product Detail Modal */}
       <ProductDetailModal
@@ -295,6 +375,46 @@ export default function BookingApp() {
         onUpdateQty={handleUpdateQty}
         onRemoveItem={handleRemoveFromCart}
         onClearCart={handleClearCart}
+        user={clientUser}
+        profile={clientProfile}
+        onOpenAuth={() => setIsAuthOpen(true)}
+      />
+
+      {/* Client Auth Modal */}
+      <ClientAuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        onSuccess={(user) => {
+          setClientUser(user)
+          fetchOnlineProfile().then((p) => {
+            setClientProfile(p)
+            if (!p) {
+              // Open profile setup if profile doesn't exist yet
+              setIsProfileOpen(true)
+            }
+          })
+        }}
+      />
+
+      {/* Client Profile & KYC Modal */}
+      <ClientProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        user={clientUser}
+        onSignOut={() => {
+          setClientUser(null)
+          setClientProfile(null)
+        }}
+        onProfileUpdated={(updated) => setClientProfile(updated)}
+        onOpenMyBookings={() => setIsMyBookingsOpen(true)}
+      />
+
+      {/* My Bookings & Invoices Modal (T7-08) */}
+      <MyBookingsModal
+        isOpen={isMyBookingsOpen}
+        onClose={() => setIsMyBookingsOpen(false)}
+        user={clientUser}
+        onOpenAuth={() => setIsAuthOpen(true)}
       />
     </div>
   )

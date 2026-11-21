@@ -1,4 +1,5 @@
 import React from 'react'
+import type { ClientUser } from '../lib/clientAuthApi'
 
 interface BookingHeaderProps {
   startDate: string
@@ -7,6 +8,11 @@ interface BookingHeaderProps {
   onEndDateChange: (val: string) => void
   cartCount: number
   onOpenCart: () => void
+  user?: ClientUser | null | undefined
+  profileName?: string | null | undefined
+  onOpenAuth?: (() => void) | undefined
+  onOpenProfile?: (() => void) | undefined
+  onOpenMyBookings?: (() => void) | undefined
 }
 
 export const BookingHeader: React.FC<BookingHeaderProps> = ({
@@ -16,6 +22,11 @@ export const BookingHeader: React.FC<BookingHeaderProps> = ({
   onEndDateChange,
   cartCount,
   onOpenCart,
+  user,
+  profileName,
+  onOpenAuth,
+  onOpenProfile,
+  onOpenMyBookings,
 }) => {
   return (
     <header className="booking-header" role="banner">
@@ -61,16 +72,56 @@ export const BookingHeader: React.FC<BookingHeaderProps> = ({
             </div>
           </div>
 
-          <button
-            type="button"
-            className="cart-button"
-            onClick={onOpenCart}
-            aria-label={`View booking request cart, ${cartCount} items selected`}
-          >
-            <span aria-hidden="true">🛒</span>
-            <span>Cart</span>
-            {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {user ? (
+              <>
+                <button
+                  type="button"
+                  className="cart-button"
+                  onClick={onOpenMyBookings}
+                  style={{ background: 'var(--bg-surface)' }}
+                  aria-label="View my rental bookings and invoices"
+                >
+                  <span aria-hidden="true">📋</span>
+                  <span>My Bookings</span>
+                </button>
+                <button
+                  type="button"
+                  className="cart-button"
+                  onClick={onOpenProfile}
+                  style={{ background: 'var(--bg-surface)' }}
+                  aria-label={`Open client account profile for ${profileName || user.email}`}
+                >
+                  <span aria-hidden="true">👤</span>
+                  <span style={{ maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {profileName || user.email.split('@')[0]}
+                  </span>
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="cart-button"
+                onClick={onOpenAuth}
+                style={{ background: 'var(--bg-surface)' }}
+                aria-label="Sign in to client portal"
+              >
+                <span aria-hidden="true">👤</span>
+                <span>Sign In</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              className="cart-button"
+              onClick={onOpenCart}
+              aria-label={`View booking request cart, ${cartCount} items selected`}
+            >
+              <span aria-hidden="true">🛒</span>
+              <span>Cart</span>
+              {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
+            </button>
+          </div>
         </div>
       </div>
     </header>
