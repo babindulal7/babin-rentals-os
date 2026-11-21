@@ -22,7 +22,7 @@ in v1" and §5 "rates on request/quote only" → public daily rates (D34); a fif
 
 ---
 
-### T7-01 · Online booking spec            status: done — PR #301 merged; owner defaults UL-01 to UL-09 and security contracts reconciled and verified in docs/ONLINE_BOOKING_SPEC.md [docs/verification/CLIENT_AUTH_AND_CUTOVER_HOLDS_ACCEPTANCE_2026-11-22.md] · size: M · lane C
+### T7-01 · Online booking spec            status: acceptance_pending — unresolved evidence gate flagged in review PR #316; prior implementation claim retained for audit: — PR #301 merged; owner defaults UL-01 to UL-09 and security contracts reconciled and verified in docs/ONLINE_BOOKING_SPEC.md [docs/verification/CLIENT_AUTH_AND_CUTOVER_HOLDS_ACCEPTANCE_2026-11-22.md] · size: M · lane C
 **What** — One document, `docs/ONLINE_BOOKING_SPEC.md`, fixing before any code: the screens
 (catalogue, product, cart with dates, sign-in, request, pay, my bookings), the tables
 (`booking_requests`, `booking_request_lines`, `payment_intents`, portal binding), the RPCs and
@@ -138,7 +138,7 @@ until its merchant account and credentials exist. The pay screen shows only swit
 **Needs** — Babin opens both merchant accounts (start week 1; onboarding time unknown). **X does
 not wait for these** — PLAN §5.
 
-### T7-07 · Refunds and reconciliation            status: done — PR #266 merged; migration 0260, refund actions, reconciliation workspace and tests verified · size: M · lane C
+### T7-07 · Refunds and reconciliation            status: acceptance_pending — unresolved evidence gate flagged in review PR #315; prior implementation claim retained for audit: — PR #266 merged; migration 0260, refund actions, reconciliation workspace and tests verified · size: M · lane C
 **What** — If staff decline a request that was paid, the screen shows "Refund due" with the
 provider and reference; staff refund in the provider's merchant portal (or by API where offered) and
 record it — a reversal row, never an edit (Law 4). **When a paid booking cannot go ahead (O-2, ruled
@@ -209,7 +209,7 @@ units only".
 ungroup products on the equipment form; screen check.
 **Needs** — T7-02.
 
-### T7-14 · "Away" switch for online booking            status: done — PR #200 merged; away mode toggle, customizable public message, and server-side request rejection verified in awayMode.test.ts [docs/verification/CLIENT_AUTH_AND_CUTOVER_HOLDS_ACCEPTANCE_2026-11-22.md] · size: S · lane C · [go-live] · slips first
+### T7-14 · "Away" switch for online booking            status: acceptance_pending — unresolved evidence gate flagged in review PR #316; prior implementation claim retained for audit: — PR #200 merged; away mode toggle, customizable public message, and server-side request rejection verified in awayMode.test.ts [docs/verification/CLIENT_AUTH_AND_CUTOVER_HOLDS_ACCEPTANCE_2026-11-22.md] · size: S · lane C · [go-live] · slips first
 **What** — One switch in Settings ▸ Online booking (⭐ Owner · Admin · Manager): **"Away — not taking
 online requests"**, with an optional message and an optional "back on" date (B6). While it is on, the
 site still shows the catalogue and rates, the request button shows the message ("Back on 15 Feb — call
