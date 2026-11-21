@@ -16,6 +16,16 @@ import { movementGlance, movementDetail } from '../../data/movementIntel'
 import { ClientIntelFromId } from '../../components/intel/ClientIntelFromId'
 import type { BookingStatus, JobName } from '../../lib/workflow'
 
+/** A counted footer link that opens the Operations exception facet running the same named set (ADOPTIONS item 7). */
+export interface DashboardAttentionLink {
+  /** The Operations URL, e.g. `/operations?exception=overdue_start`. */
+  to: string
+  singular: string
+  plural: string
+  /** The exact total of the named set, or `null` while it is loading or failed. Never printed as zero. */
+  count: number | null
+}
+
 interface DashboardMovementPanelProps {
   side: 'outgoing' | 'incoming'
   title: string
@@ -34,6 +44,7 @@ interface DashboardMovementPanelProps {
   emptyFooter?: ReactNode
   panelId?: string | undefined
   tabId?: string | undefined
+  attention?: DashboardAttentionLink | undefined
 }
 
 export function dashboardAction(row: MovementRow, side: 'outgoing' | 'incoming'): {
@@ -85,6 +96,15 @@ function rowTags(row: MovementRow, side: 'outgoing' | 'incoming'): RowTag[] {
   return tags
 }
 
+/**
+ * The counted footer link's words. A known count reads as a number; an unknown one reads as a plain
+ * invitation, so a loading or failed count is never printed as "0".
+ */
+function attentionLabel(link: DashboardAttentionLink): string {
+  if (link.count === null) return `View ${link.plural}`
+  return `${link.count} ${link.count === 1 ? link.singular : link.plural}`
+}
+
 export default function DashboardMovementPanel({
   side,
   title,
@@ -102,6 +122,7 @@ export default function DashboardMovementPanel({
   emptyFooter,
   panelId,
   tabId,
+  attention,
 }: DashboardMovementPanelProps) {
   const navigate = useNavigate()
   const { openOperations } = useOperationsWorkspace()
@@ -418,11 +439,16 @@ export default function DashboardMovementPanel({
             </div>
           )}
         </PageBody>
-        {/* ADOPTIONS item 7 (Booqable §4.3): footer link carries the panel's named
-            filter, widened. "View all" is the widen (no separate query). A counted
-            "View late" (overdue) drill-down is deferred — it needs an activity-scoped
-            /rentals route param that is not wired yet, so it is not shipped half-built. */}
+        {/* ADOPTIONS item 7 (Booqable §4.3): the counted link opens the Operations exception facet that runs
+            the same named set, so the number and the list it opens agree. "View all" widens the panel's filter
+            (no separate query). */}
         <div className="movement-panel__footer">
+          {attention ? (
+            <Link to={attention.to} className="movement-panel__footer-link press tap">
+              <span>{attentionLabel(attention)}</span>
+              <Icon name="arrow_right" size={14} />
+            </Link>
+          ) : null}
           <Link to="/rentals" className="movement-panel__footer-link press tap">
             <span>View all {side === 'outgoing' ? 'bookings' : 'rentals'}</span>
             <Icon name="arrow_right" size={14} />

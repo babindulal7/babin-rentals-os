@@ -521,6 +521,45 @@ describe('Finance — no invented figure survives', () => {
   })
 })
 
+/**
+ * The three KPI tiles say what they count, and a zero is explained only when its total is known.
+ * An unknown total is a dash, and a dash never reads as zero (Law L2). The screen attaches the zero
+ * copy only when the total is known, so these cases pin both halves: the definition is on every
+ * tile, and the zero copy appears on a known zero and nowhere else.
+ */
+describe('Finance — the KPI tiles say what they count', () => {
+  it('prints a definition on each money tile that is not a known zero, naming the query set behind it', async () => {
+    db.tables.set('invoices', { rows: [invoiceRow()], count: 1 })
+    const c = await mount()
+    expect(c.textContent).toContain('Live unpaid and partially-paid invoices; figure is Σ outstanding.')
+    expect(c.textContent).toContain('Past due date and still unpaid; figure is Σ outstanding past due.')
+    // No payment has been recorded, so the Received figure is a known zero. Its zero explanation takes
+    // the place of its definition on the tile, the same rule KpiStrip applies to a zero figure.
+    expect(c.textContent).toContain('No payments recorded')
+    expect(c.textContent).not.toContain('Sum of payment rows dated within')
+  })
+
+  it('explains a known zero on each tile', async () => {
+    db.tables.set('invoices', { rows: [], count: 0 })
+    db.tables.set('payments', { rows: [], count: 0 })
+    const c = await mount()
+    expect(c.textContent).toContain('Nothing receivable — no unpaid invoices.')
+    expect(c.textContent).toContain('Nothing past due — every invoice is within terms.')
+    expect(c.textContent).toContain('No payments recorded')
+  })
+
+  it('never explains a zero it cannot compute', async () => {
+    db.tables.set('invoices', { rows: [], count: null })
+    db.tables.set('payments', { rows: [], count: null })
+    const c = await mount()
+    expect(c.textContent).not.toContain('Nothing receivable')
+    expect(c.textContent).not.toContain('Nothing past due')
+    expect(c.textContent).not.toContain('No payments recorded')
+    // The definition still stands; only the zero copy is withheld.
+    expect(c.textContent).toContain('Live unpaid and partially-paid invoices')
+  })
+})
+
 describe('Finance — phone header de-crowding (<768px)', () => {
   it('collapses secondary actions into More menu and shows Payment on phone', async () => {
     Object.defineProperty(window, 'innerWidth', { value: 375, configurable: true, writable: true })

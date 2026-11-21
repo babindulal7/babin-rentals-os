@@ -12,7 +12,7 @@ import { useDomainEvent } from '../../events/useDomainEvent'
 import { EVENT_TYPES } from '../../events/eventBus'
 import { formatAd } from '../../lib/bs'
 import { operationalTodayAd, businessNowAd, overDays, pickupsQuery, toMovementRow, type MovementRow } from '../../lib/queries/today'
-import { listBookings, operationQueue, todaysOutgoing } from '../../lib/queries/bookings'
+import { latePickups, listBookings, operationQueue, overdue, todaysOutgoing, type BookingListRow } from '../../lib/queries/bookings'
 import type { ListFilters } from '../../lib/queries/listQuery'
 import { useList, type ListQueryResult, type ListResult } from '../../lib/queries/useList'
 import { useViewport } from '../../lib/device'
@@ -30,6 +30,14 @@ const DashboardMovementPanel = RawDashboardMovementPanel as React.ComponentType<
     date?: string
   }
 >
+
+/**
+ * The count a footer link may print: the exact total of its named set once it has loaded, otherwise null.
+ * A loading or failed count stays unknown, so it never reads as zero.
+ */
+function knownCount<T>(list: ListResult<T>): number | null {
+  return list.loading || list.error ? null : list.total
+}
 
 type QuickPeriod = 'Today' | 'Tomorrow' | 'Next 7 Days'
 type DateFilter = { kind: 'quick'; period: QuickPeriod } | { kind: 'custom'; from: string; to: string }
@@ -435,9 +443,25 @@ export default function Today() {
   const isReturnFiltered = returnDateFilter.kind !== 'quick' || returnDateFilter.period !== 'Today'
   const pickups: ListResult<MovementRow> = useList(fetchPickups, pickupFilters, { isFilteredOverride: isPickupFiltered })
   const returns: ListResult<MovementRow> = useList(fetchReturns, returnFilters, { isFilteredOverride: isReturnFiltered })
+  /* ADOPTIONS item 7: counts of the two sets the footer links open. Head-only, so no rows are read, and each
+     is the exact total of the same named set the Operations exception facet runs. */
+  const attentionNow = businessNowAd()
+  const fetchAttentionCount = useCallback(async (filters: ListFilters): Promise<ListQueryResult<BookingListRow>> => {
+    const result = await listBookings({ ...filters, headOnly: true })
+    return { rows: [], total: result.total ?? null }
+  }, [])
+  const latePickupCount: ListResult<BookingListRow> = useList(fetchAttentionCount, latePickups(attentionNow), { isFilteredOverride: false })
+  const overdueReturnCount: ListResult<BookingListRow> = useList(fetchAttentionCount, overdue(attentionNow), { isFilteredOverride: false })
   const { refetch: refetchPickups } = pickups
   const { refetch: refetchReturns } = returns
-  const refetchMovement = useCallback(() => { refetchPickups(); refetchReturns() }, [refetchPickups, refetchReturns])
+  const { refetch: refetchLatePickups } = latePickupCount
+  const { refetch: refetchOverdueReturns } = overdueReturnCount
+  const refetchMovement = useCallback(() => {
+    refetchPickups()
+    refetchReturns()
+    refetchLatePickups()
+    refetchOverdueReturns()
+  }, [refetchPickups, refetchReturns, refetchLatePickups, refetchOverdueReturns])
 
   useDomainEvent(EVENT_TYPES.RENTAL_PACKED, refetchMovement)
   useDomainEvent(EVENT_TYPES.RENTAL_PICKED_UP, refetchMovement)
@@ -842,6 +866,7 @@ export default function Today() {
                 onLoadMore={() => setPickupPage((page) => page + 1)}
                 hasMore={pickups.total !== null && pickups.rows.length < pickups.total}
                 isToday={isDispatchToday}
+                attention={{ to: '/operations?exception=overdue_start', singular: 'late pickup', plural: 'late pickups', count: knownCount(latePickupCount) }}
               />
             )}
     
@@ -872,6 +897,7 @@ export default function Today() {
                 onClearFilters={() => setReturnFilter({ kind: 'quick', period: 'Today' })}
                 onLoadMore={() => setReturnPage((page) => page + 1)}
                 hasMore={returns.total !== null && returns.rows.length < returns.total}
+                attention={{ to: '/operations?exception=overdue_end', singular: 'overdue return', plural: 'overdue returns', count: knownCount(overdueReturnCount) }}
               />
             )}
           </div>

@@ -231,6 +231,18 @@
   white-space: nowrap;
 }
 
+/* RULING 2026-10-23: the definition (or the explanation of a zero) prints on the tile as one ellipsised
+   line. It is never a tooltip. */
+.module-kpi-card__caption {
+  margin: 0;
+  font-size: var(--t-th, 12px);
+  color: var(--text2);
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Phone overrides follow the shared rules so compact spacing actually applies.
    Keep the full KPI name readable; its icon is supplementary at this width. */
 @media (max-width: 767px) {

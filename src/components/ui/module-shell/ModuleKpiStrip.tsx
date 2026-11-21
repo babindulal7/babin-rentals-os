@@ -12,6 +12,13 @@ export interface ModuleKpiItem {
   tone?: 'primary' | 'warn' | 'danger' | 'success' | 'amber' | 'emerald' | 'red' | 'neutral' | undefined
   active?: boolean | undefined
   onClick?: (() => void) | undefined
+  /** One line on the tile saying what the figure counts. RULING 2026-10-23: printed on the tile, no (i). */
+  definition?: string | undefined
+  /**
+   * Printed in place of `definition` while the figure reads as a known zero. Callers attach it only when
+   * the total is known, so an unknown figure never explains itself as zero (Law L2).
+   */
+  zeroExplanation?: string | undefined
 }
 
 export interface ModuleKpiStripProps {
@@ -20,12 +27,19 @@ export interface ModuleKpiStripProps {
   style?: React.CSSProperties | undefined
 }
 
+/** Figures that read as a known zero. A dash (unknown) and an ellipsis (loading) never do. */
+const ZERO_FIGURES: ReadonlySet<string> = new Set(['0', 'Rs 0', 'Rs. 0', 'Rs 0.00'])
+
+export function isZeroFigure(figure: number | string): boolean {
+  return ZERO_FIGURES.has(String(figure))
+}
+
 /**
  * Zone 2: 3-Card KPI Strip
  * Reuses the exact card styling from the bottom of Today screen:
  * - UPPERCASE LABEL + top-right subtle icon
  * - Compact one-row card (icon, label, count) with the subtitle on a thin line below
- * - Muted subtitle
+ * - Muted subtitle, then the one-line definition (or the zero explanation) as a caption
  * - Clicking a card filters the table below
  */
 export const ModuleKpiStrip: React.FC<ModuleKpiStripProps> = ({
@@ -39,6 +53,7 @@ export const ModuleKpiStrip: React.FC<ModuleKpiStripProps> = ({
         const tone = item.tone || 'primary'
         const isInteractive = Boolean(item.onClick)
         const displayCount = item.count ?? item.value ?? ''
+        const caption = isZeroFigure(displayCount) && item.zeroExplanation ? item.zeroExplanation : item.definition
 
         const handleKeyDown = (e: React.KeyboardEvent) => {
           if (isInteractive && (e.key === 'Enter' || e.key === ' ')) {
@@ -76,6 +91,7 @@ export const ModuleKpiStrip: React.FC<ModuleKpiStripProps> = ({
               <div className="module-kpi-card__count font-mono tabular-nums">{displayCount}</div>
             </div>
             <p className="module-kpi-card__subtitle">{item.subtitle}</p>
+            {caption ? <p className="module-kpi-card__caption">{caption}</p> : null}
           </div>
         )
       })}
