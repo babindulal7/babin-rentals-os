@@ -13,24 +13,39 @@ import { readFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { stagingConfiguration, verifyStaging, STAGING_ROLES } from './verify-staging-readonly.mjs'
 
-// 1. Load .env.staging.local if present
-const envPath = resolve('.env.staging.local')
-if (existsSync(envPath)) {
-  const lines = readFileSync(envPath, 'utf8').split(/\r?\n/)
-  for (const line of lines) {
-    const trimmed = line.trim()
-    if (!trimmed || trimmed.startsWith('#')) continue
-    const eqIdx = trimmed.indexOf('=')
-    if (eqIdx > 0) {
-      const key = trimmed.slice(0, eqIdx).trim()
-      let val = trimmed.slice(eqIdx + 1).trim()
-      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-        val = val.slice(1, -1)
+// 1. Load staging environment variables from candidate paths
+const candidatePaths = [
+  resolve('.env.staging.local'),
+  resolve('.env.staging'),
+  resolve('env.staging.local'),
+  resolve('env.staging'),
+  resolve('../env.staging'),
+  resolve('../.env.staging.local'),
+  'C:/Users/use/Desktop/babin-rentals-os/.env.staging.local',
+  'C:/Users/use/Desktop/babin-rentals-os-staging-acceptance/.env.staging.local',
+]
+
+for (const p of candidatePaths) {
+  if (existsSync(p)) {
+    const lines = readFileSync(p, 'utf8').split(/\r?\n/)
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith('#')) continue
+      const eqIdx = trimmed.indexOf('=')
+      if (eqIdx > 0) {
+        const key = trimmed.slice(0, eqIdx).trim()
+        let val = trimmed.slice(eqIdx + 1).trim()
+        if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+          val = val.slice(1, -1)
+        }
+        if (val && !process.env[key]) process.env[key] = val
       }
-      if (!process.env[key]) process.env[key] = val
     }
   }
 }
+
+// Fallback mappings if alternative naming was used
+process.env.BABIN_STAGING_ANON_KEY = process.env.BABIN_STAGING_ANON_KEY || process.env.STAGING_ANON_KEY
 
 // 2. Set defaults if missing
 if (!process.env.BABIN_STAGING_PROJECT_REF) process.env.BABIN_STAGING_PROJECT_REF = 'klhmsrunqrdxjudyhnkm'
@@ -41,8 +56,9 @@ const anonKey = process.env.BABIN_STAGING_ANON_KEY
 const authPassword = process.env.BABIN_STAGING_SYNTHETIC_PASSWORD || 'BabinSynthetic2026!'
 
 if (!anonKey || anonKey === 'PASTE_STAGING_ANON_KEY_HERE') {
-  console.error('\n[ERROR] Missing or placeholder BABIN_STAGING_ANON_KEY in .env.staging.local.')
-  console.error('Please open .env.staging.local and replace PASTE_STAGING_ANON_KEY_HERE with your staging anon key.\n')
+  console.error('\n[ERROR] Missing or placeholder BABIN_STAGING_ANON_KEY.')
+  console.error('Searched paths: .env.staging.local, .env.staging, env.staging, etc.')
+  console.error('Please specify where your env.staging file is, or set BABIN_STAGING_ANON_KEY in .env.staging.local.\n')
   process.exit(1)
 }
 
