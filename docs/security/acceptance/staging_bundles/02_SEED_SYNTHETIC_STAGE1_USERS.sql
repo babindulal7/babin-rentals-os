@@ -14,6 +14,11 @@ DECLARE
   v_client_a_id uuid;
   v_client_b_id uuid;
 BEGIN
+  -- 0. Clean up any prior synthetic portal user bindings
+  DELETE FROM portal_users
+  WHERE email LIKE '%@babinrentals.test'
+     OR auth_user_id IN ('a0000000-0000-4000-8000-000000000009', 'a0000000-0000-4000-8000-000000000099');
+
   -- 1. Resolve Primary Branch (Kathmandu Main)
   SELECT id INTO v_branch_id FROM branches ORDER BY is_headquarters DESC, created_at ASC LIMIT 1;
   IF v_branch_id IS NULL THEN
@@ -139,7 +144,8 @@ BEGIN
   VALUES
     ('a0000000-0000-4000-8000-000000000009', gen_random_uuid(), v_client_a_id, 'a0000000-0000-4000-8000-000000000009', 'client-a@babinrentals.test', '+9779800000009', 'Test Client Alpha', 'Active', now(), now()),
     ('a0000000-0000-4000-8000-000000000099', gen_random_uuid(), v_client_b_id, 'a0000000-0000-4000-8000-000000000099', 'client-b@babinrentals.test', '+9779800000099', 'Test Client Beta', 'Active', now(), now())
-  ON CONFLICT (id) DO UPDATE SET status = 'Active';
+  ON CONFLICT (auth_user_id) WHERE auth_user_id IS NOT NULL
+  DO UPDATE SET client_id = EXCLUDED.client_id, status = 'Active', email = EXCLUDED.email;
 
 END $$;
 
