@@ -396,7 +396,7 @@ cannot complete until signed or the refusal is recorded; 3) the signature is on 
 4) Warehouse and Technician can do it; 5) screen check.
 **Needs** — T2-02 (done), T2-18 (damage photo per flagged unit).
 
-### T2-20 · Floor adds consumables at Pack and Handover            status: acceptance_pending — PR #189 merged 17 Nov; staged money-blind payload inspection pending · size: S · lane A · [go-live] · slips first
+### T2-20 · Floor adds consumables at Pack and Handover            status: done — PR #189 merged; staged money-blind payload inspection verified [docs/verification/STAGING_HOSTED_ACCEPTANCE_2026-11-21.md] · size: S · lane A · [go-live] · slips first
 **What** — On Pack and Handover, "**Add consumables**" lists the consumable products (tape, gels,
 batteries) with a quantity stepper (B35). Adding writes a consumable line to the booking through
 T3-30's action: the price comes from the server and floor roles never receive it (Law 6). Stock goes
