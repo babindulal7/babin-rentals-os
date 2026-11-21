@@ -1,5 +1,70 @@
 # Progress Log
 
+## 2026-11-21 — T9-01: Bring the catalogue and clients across (Lane A)
+
+**Did**
+- Reconciled Booqable catalogue, customers, and pricing structures against Babin Rentals OS on branch `lane-a/T9-01-bring-the-catalogue-and-clients-across`:
+  - Analyzed and verified all real exported records from `C:\Users\use\Desktop\Babin rentals products app\`:
+    - 197 base products from `src/data/exports/raw/products.json`
+    - 274 rows/variants from `archive/legacy_and_duplicates/products-export-2026-06-30.csv`
+    - 325 clients from `src/data/exports/raw/customers.json`
+    - 22 kit-style bundles (Sony FX3 Cinema Kit, Canon R5C Package, Aputure 600d Pro Kit, Rode Wireless GO II Kit, etc.)
+    - 9 pricing structures ("Babin Daily", "Days wise discount", "Rental Rate Card", etc.)
+    - 4 seasonal rulesets (SUMMER25, New Year, Christmas ×2) with explicit end dates per D20
+  - Authored reconciliation runner [`scripts/reconcile-booqable-backup.mjs`](scripts/reconcile-booqable-backup.mjs) and formal match report [`docs/verification/T9-01_BOOQABLE_CATALOGUE_MATCH_REPORT_2026-11-21.md`](docs/verification/T9-01_BOOQABLE_CATALOGUE_MATCH_REPORT_2026-11-21.md).
+  - Executed 20-product 3-day pricing comparison vector verifying whole-rupee / integer-paisa parity between Booqable and OS across cameras, lenses, lighting, grip, and audio. Result: **20/20 PASS** (0 paisa variance).
+  - Upgraded and verified import actions and centers:
+    - [`src/actions/inventory/importProducts.ts`](src/actions/inventory/importProducts.ts) & [`src/actions/clients/importClients.ts`](src/actions/clients/importClients.ts): mapped Booqable IDs and store slugs to `external_refs` (`0040_booqable_sync.sql`) for backwards URL compatibility with T7-17 (`src/lib/legacyUrlResolver.ts`).
+    - [`src/actions/inventory/importBundles.ts`](src/actions/inventory/importBundles.ts) & [`src/lib/bundleImport.ts`](src/lib/bundleImport.ts): kit-style bundles import engine and transactional action (`inventory.create`).
+    - [`src/actions/inventory/importPricingStructures.ts`](src/actions/inventory/importPricingStructures.ts) & [`src/lib/pricingStructureImport.ts`](src/lib/pricingStructureImport.ts): pricing structure, tiles, rulesets, and seasonal rulesets with `valid_until` end dates engine (`inventory.create`).
+    - [`src/modules/inventory/BundlesImportCenter.tsx`](src/modules/inventory/BundlesImportCenter.tsx) & [`src/modules/inventory/PricingStructuresImportCenter.tsx`](src/modules/inventory/PricingStructuresImportCenter.tsx): full responsive UI with dry-run, CSV parser, preview table, validation summary, and accessible file upload zones.
+    - Updated [`src/lib/rbac.ts`](src/lib/rbac.ts) capabilities (`canImportPricingStructures`, `canManagePricingStructures`, `canImportBundles`).
+    - Updated [`docs/plans/T9_CUTOVER.md`](docs/plans/T9_CUTOVER.md) recording T9-01 verification ready for merge.
+
+**Ruled**
+- Ruling B4, 0040: Every product's Booqable ID and store slug are recorded in `external_refs` to preserve incoming legacy links (T7-17).
+- Ruling B45, B49: Product photos are never imported from Booqable; official high-resolution photos enter via T7-02.
+- Ruling D20: All seasonal rulesets (SUMMER25, New Year, Christmas) require explicit `valid_until` end dates so they expire automatically without staff intervention.
+- Law 1 & Law 6: Integer paisa precision strictly enforced; money-blind floor roles (Warehouse/Tech/Driver) cannot view or modify pricing structures.
+- Rule N-5: Data import operations use application actions and transactions; zero raw SQL applied to live Supabase.
+
+**Verified**
+- `scripts/reconcile-booqable-backup.mjs`: PASS (197 base products, 274 variants, 325 clients, 22 kit bundles, 9 structures, 4 seasonal rulesets reconciled; 20-product 3-day pricing vector: 20/20 PASS, 0 variance).
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 warnings, 0 errors).
+- `npm test`: PASS (706 test files passed, 7,635/7,635 tests passed).
+- `npm run check:pglite`: PASS (257/257 applied, 0 failed, 235 definer search paths pinned).
+- `node scripts/test-booking-financial-integrity.mjs`: PASS (financial integrity verified in isolated PGlite).
+- `npm run check:security`: PASS (18 Phase 0 SQL regressions, operations branch grants, reset boundaries, and glossary revisions passed).
+- `npm run check:lifecycle`: PASS (97/97 steps green, 0 failed).
+- `npm run test:server-contracts`: PASS (68/68 integration assertions passed).
+- `npm run test:partial-return`: PASS (58/58 partial return acceptance assertions passed).
+- `npm run test:pricing-structures`: PASS (16/16 assertions passed).
+- `npm run lint:shell`: PASS (958 files checked, 0 violations).
+- `npm run lint:ui-copy`: PASS (0 developer-text violations, all copy tests passed).
+- `npm run check:contrast`: PASS (97/97 color pairs pass WCAG AA).
+- `npm run build`: PASS (Vite production bundle generated cleanly, PWA precache 317 entries).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 117 (99%) | +2 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 97 / 97 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+### Remaining
+- Staging-only dry run rehearsal of batch apply (T1-02) once approved by Babin.
+- Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
+- Staff inventory deposit data entry across active products (T3-02).
+- T3-14 (Draft invoice at Confirm, number on full payment): resync integrity & numbering moment (PR #259).
+- T3-13, T3-20, T3-30: pending remaining accountant & staged receipts.
+- T0-12: hosted staging migration apply by Babin.
+- Full pg_dump SQL backup before Batch 1 live apply (T1-01).
+- End of month DNS records cutover & Resend production domain configuration (T1-09).
+
 ## 2026-11-21 — T7-07: Online Payment Refunds and Reconciliation (Lane C)
 
 **Did**
@@ -39883,4 +39948,5 @@ roles 6 vs 12, sidebar 7 vs 8 vs 8-with-Tools, and two I could resolve (motion s
 Design Tokens v2.0 wins as the root; mobile bottom bar → Navigation v2.0 wins as it
 explicitly supersedes). Plus: `Prisma Schema.md` names a stack no spec mentions — it is
 Supabase + RLS.
+
 
