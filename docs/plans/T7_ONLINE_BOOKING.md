@@ -22,7 +22,7 @@ in v1" and §5 "rates on request/quote only" → public daily rates (D34); a fif
 
 ---
 
-### T7-01 · Online booking spec            status: acceptance_pending — reconciled 21 Nov 2026 with 12 Nov unified launch rulings (UL-01 to UL-09); awaiting Babin's final sign-off · size: M · lane C
+### T7-01 · Online booking spec            status: acceptance_pending — UL-01 to UL-09 owner defaults documented; guest ID, role, quote, exact-time security contract reconciled in draft; independent review and sign-off pending · size: M · lane C
 **What** — One document, `docs/ONLINE_BOOKING_SPEC.md`, fixing before any code: the screens
 (catalogue, product, cart with dates, sign-in, request, pay, my bookings), the tables
 (`booking_requests`, `booking_request_lines`, `payment_intents`, portal binding), the RPCs and
