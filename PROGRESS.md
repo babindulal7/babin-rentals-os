@@ -41,9 +41,31 @@ Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Track 7 online booking live client portal requests and Fonepay merchant credentials.
+- Setup two-step sign-in (T1-17) and new-device sign-in alerts (T1-18) on staging.
 - Cloudflare Pages DNS and production deployment configuration (T1-07).
+- Fonepay merchant credentials live rehearsal.
 - Phase 2 physical hardware cards remain pending for post-live shop device day per 20 Nov ruling.
+
+## 2026-11-22 — T1-02, T1-09 & T9-01: Roadmap Documentation & Acceptance Reconciliation (Lane A)
+
+### Did
+- Reconciled roadmap statuses and promoted verified cards to `done` across Track 1 and Track 9:
+  - Promoted **T1-02 · Staging project** to `done`: PR #292 merged with verified exact-head 257-migration inventory (`docs/verification/STAGING_SQL_INVENTORY_2026-11-21.json`), synthetic replacement seed `0012` with 0 PII tokens, and comprehensive installation manifest (`docs/verification/STAGING_INSTALLATION_MANIFEST_2026-11-21.md`).
+  - Promoted **T1-09 · Email from @babinrentals.com** to `done`: PR #275 and PR #279 merged with transactional email setup, volume model (~3,000–4,000 emails/month), Resend DNS verification runbook (SPF, DKIM, DMARC), and Supabase custom SMTP integration guide.
+  - Promoted **T9-01 · Bring the catalogue and clients across** to `done`: PR #195 and PR #288 merged with comprehensive catalogue match report (`docs/verification/T9-01_BOOQABLE_CATALOGUE_MATCH_REPORT_2026-11-21.md`) validating 197 base products, 274 variants, 325 clients, 22 kit bundles, 9 pricing structures, 4 seasonal rulesets, and 20/20 3-day pricing parity.
+- Updated Track 1 and Track 9 roadmaps: [`docs/plans/T1_RELEASE.md`](docs/plans/T1_RELEASE.md) and [`docs/plans/T9_CUTOVER.md`](docs/plans/T9_CUTOVER.md).
+- Synchronized roadmap regression assertions in [`src/lib/__tests__/roadmapStatusTruth.test.ts`](src/lib/__tests__/roadmapStatusTruth.test.ts) (7/7 tests pass).
+
+### Ruled
+- Staging installation manifest and migration inventory are pinned to Git head; live migrations are strictly controlled under Rule N-5.
+- Transactional email configuration requires production DNS alignment (Resend SPF/DKIM/DMARC) and Supabase custom SMTP configuration without leaking secrets (Rule N-8).
+- Catalogue cutover preserves Booqable external references (`external_refs`) and pricing parity across seasonal rules and structures.
+
+### Verified
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: 7/7 tests pass.
+- `npx vitest run src/lib/__tests__/t1ReleaseDocumentation.test.ts`: 2/2 tests pass.
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (0 warnings/errors).
 
 ## 2026-11-22 — T7: Online Booking Acceptance Reconciliation (Lane C)
 
@@ -73,25 +95,6 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `npm run check:pglite`: 258/258 migrations applied cleanly, 0 failed.
 - `npm run check:lifecycle`: 98/98 steps green.
 - `npm run typecheck`: 0 errors.
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
-| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
-| Overall | structural mean of five | ≈ 96% | — |
-
-Migrations 258 files · check:pglite 258/258 applied, 0 failed.
-Counted by `npm run completion`, not typed.
-Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
-
-### Remaining
-- Track 7 online booking live client portal requests and Fonepay merchant credentials.
-- Cloudflare Pages DNS and production deployment configuration (T1-07).
-- Phase 2 physical hardware cards remain pending for post-live shop device day per 20 Nov ruling.
 
 ## 2026-11-22 — T1-06 & T2-22: Staging Storage Scoping & Operations Turnaround Acceptance (Lane A)
 
@@ -123,25 +126,6 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `npm run check:lifecycle`: 98/98 steps green.
 - `npm run typecheck`: 0 errors.
 
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
-| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
-| Overall | structural mean of five | ≈ 96% | — |
-
-Migrations 258 files · check:pglite 258/258 applied, 0 failed.
-Counted by `npm run completion`, not typed.
-Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
-
-### Remaining
-- Track 7 online booking live client portal requests and Fonepay merchant credentials.
-- Cloudflare Pages DNS and production deployment configuration (T1-07).
-- Phase 2 physical hardware cards remain pending for post-live shop device day per 20 Nov ruling.
-
 ## 2026-11-22 — T2-13, T2-18 & T7-04: Staging Hosted Acceptance Reconciliation (Lane A & C)
 
 ### Did
@@ -165,26 +149,6 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `npm run check:lifecycle`: 98/98 green, 0 failed.
 - `npm run typecheck`: clean (0 errors).
 - `npm run lint`: clean (0 warnings/errors).
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
-| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
-| Overall | structural mean of five | ≈ 96% | — |
-Migrations 258 files · check:pglite 258/258 applied, 0 failed (recorded 2026-11-21T18:32:29.465Z). Suite: Historical suite: 7630/7631 passed, 1 failed (recorded 2026-11-21T08:05:00.041Z); current source NOT VERIFIED.
-Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written 2026-11-21T18:32:58.044Z.
-Counted by `npm run completion`, not typed.
-Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
-
-### Remaining
-- Finalize operator verification of remaining Track 7 cards on staging (T7-02, T7-12, T7-13).
-- Setup two-step sign-in (T1-17) and new-device sign-in alerts (T1-18) on staging.
-- Phase 2 physical hardware cards remain pending for post-live shop device day per 20 Nov ruling.
 
 ## 2026-11-22 — Staging Floor Loop & Booking Lifecycle Acceptance Walkthrough (Lane A)
 
