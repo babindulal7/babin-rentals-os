@@ -1,5 +1,49 @@
 # Progress Log
 
+## 2026-11-22 — T2-13, T2-18 & T7-04: Staging Hosted Acceptance Reconciliation (Lane A & C)
+
+### Did
+- Formalized hosted staging acceptance in [`docs/verification/STAGING_FLOOR_LOOP_AND_REQUEST_CONFIRMATION_ACCEPTANCE_2026-11-22.md`](docs/verification/STAGING_FLOOR_LOOP_AND_REQUEST_CONFIRMATION_ACCEPTANCE_2026-11-22.md):
+  - Promoted **T2-13 · Self-QC when alone** to `done`: verified technician alone-on-shift self-QC (`qc_self_checked = true`), reason capture, and trigger `0183` audit trail in staging walkthrough.
+  - Promoted **T2-18 · Finish evidence capture (what T2-16 left)** to `done`: verified pack photo and glass signature uploads to Supabase Storage `evidence` bucket with session-scoped RLS paths, `evidence_references` linkage, and dual staff/receiver signatures.
+  - Promoted **T7-04 · Requests and the staff queue** to `done`: verified online request intake, server pricing with VAT, capacity check, reservation minting via `create_booking`, and coordinator confirmation RPC (`confirm_booking_request`).
+- Updated Track 2 and Track 7 roadmaps: [`docs/plans/T2_FLOOR.md`](docs/plans/T2_FLOOR.md) and [`docs/plans/T7_ONLINE_BOOKING.md`](docs/plans/T7_ONLINE_BOOKING.md).
+- Synchronized roadmap regression assertions in [`src/lib/__tests__/roadmapStatusTruth.test.ts`](src/lib/__tests__/roadmapStatusTruth.test.ts) (7/7 tests pass).
+
+### Ruled
+- Trigger `0183`: Technician alone-on-shift self-QC requires `qc_self_checked = true` and a valid reason recorded in the audit trail.
+- Migration `0170`: Storage uploads to bucket `evidence` must follow path `<booking_id>/<session_id>/<filename>` for active operations.
+- Migration `0256` & Law 1: Booking request confirmation is atomic, idempotent, mints reservations, and is restricted to Coordinator/Manager/Admin/Owner.
+
+### Verified
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: 7/7 tests pass.
+- `scripts/verify-staging-t2-floor-loop-receipt.mjs`: 19/19 assertions passed against staging.
+- `scripts/verify-staging-booking-request-confirmation.mjs`: 13/13 assertions passed against staging.
+- `npm run check:pglite`: 258/258 applied, 0 failed.
+- `npm run check:lifecycle`: 98/98 green, 0 failed.
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (0 warnings/errors).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 258 files · check:pglite 258/258 applied, 0 failed (recorded 2026-11-21T18:32:29.465Z). Suite: Historical suite: 7630/7631 passed, 1 failed (recorded 2026-11-21T08:05:00.041Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-21T18:32:58.044Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Finalize operator verification of remaining Track 7 cards on staging (T7-02, T7-12, T7-13).
+- Setup two-step sign-in (T1-17) and new-device sign-in alerts (T1-18) on staging.
+- Phase 2 physical hardware cards remain pending for post-live shop device day per 20 Nov ruling.
+
 ## 2026-11-22 — Staging Floor Loop & Booking Lifecycle Acceptance Walkthrough (Lane A)
 
 ### Did
