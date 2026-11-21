@@ -214,8 +214,9 @@ Deno.serve(async (req: Request) => {
       // Never invoke create_payment_intent through the service-role client for
       // a caller-supplied target: SECURITY DEFINER would bypass target RLS.
       const authorization = req.headers.get('authorization') || ''
-      const bearer = /^Bearer\\s+(\\S+)$/i.exec(authorization)
-      if (!bearer) {
+      const bearer = /^Bearer\s+(\S+)$/i.exec(authorization)
+      const accessToken = bearer?.[1]
+      if (!accessToken) {
         return new Response(
           JSON.stringify({ error: 'Sign in to pay your own booking or request.' }),
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -236,7 +237,7 @@ Deno.serve(async (req: Request) => {
       })
       // An anon/publishable key is not an authenticated user session.
       // getUser verifies the bearer token against Supabase Auth.
-      const { data: authData, error: authError } = await userSupabase.auth.getUser(bearer[1])
+      const { data: authData, error: authError } = await userSupabase.auth.getUser(accessToken)
       if (authError || !authData?.user) {
         return new Response(
           JSON.stringify({ error: 'Sign in to pay your own booking or request.' }),
