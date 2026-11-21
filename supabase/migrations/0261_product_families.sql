@@ -103,7 +103,7 @@ begin
   for v_member in select * from jsonb_array_elements(p_members) loop
     if not exists (
       select 1 from public.products p
-      where p.id = (v_member->>'product_id')::uuid and p.is_active
+      where p.id = (v_member->>'product_id')::uuid and p.status = 'Active'
     ) then
       raise exception 'product % is not an active product', v_member->>'product_id';
     end if;
