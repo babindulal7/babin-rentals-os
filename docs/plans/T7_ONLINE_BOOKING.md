@@ -22,7 +22,7 @@ in v1" and §5 "rates on request/quote only" → public daily rates (D34); a fif
 
 ---
 
-### T7-01 · Online booking spec            status: acceptance_pending — UL-01 to UL-09 owner defaults documented; guest ID, role, quote, exact-time security contract reconciled in draft; independent review and sign-off pending · size: M · lane C
+### T7-01 · Online booking spec            status: done — PR #301 merged; owner defaults UL-01 to UL-09 and security contracts reconciled and verified in docs/ONLINE_BOOKING_SPEC.md [docs/verification/CLIENT_AUTH_AND_CUTOVER_HOLDS_ACCEPTANCE_2026-11-22.md] · size: M · lane C
 **What** — One document, `docs/ONLINE_BOOKING_SPEC.md`, fixing before any code: the screens
 (catalogue, product, cart with dates, sign-in, request, pay, my bookings), the tables
 (`booking_requests`, `booking_request_lines`, `payment_intents`, portal binding), the RPCs and
@@ -62,7 +62,7 @@ catalogue and availability, nothing else".
 returns nothing; Warehouse-only fields never appear in the payload.
 **Needs** — T1-07.
 
-### T7-03 · Client accounts by verified email            status: acceptance_pending — PR #276 merged; verified across migration 0257 and L95 · size: L · lane C
+### T7-03 · Client accounts by verified email            status: done — PR #276 merged; passwordless email OTP sign-in, KYC storage, and strict D-5 tenant isolation verified across migration 0257, lifecycle L95, and clientAuth.test.ts [docs/verification/CLIENT_AUTH_AND_CUTOVER_HOLDS_ACCEPTANCE_2026-11-22.md] · size: L · lane C
 **What** — Sign-in with an **emailed one-time code** (no passwords — PERMISSIONS §7), through
 Supabase Auth with the T1-09 SMTP. First sign-in asks for name, phone and optional company/PAN.
 **Binding (30 Aug D2):** if the verified email matches exactly one client record's stored email,
@@ -209,7 +209,7 @@ units only".
 ungroup products on the equipment form; screen check.
 **Needs** — T7-02.
 
-### T7-14 · "Away" switch for online booking            status: acceptance_pending — PR #200 merged; public portal request denial verification pending · size: S · lane C · [go-live] · slips first
+### T7-14 · "Away" switch for online booking            status: done — PR #200 merged; away mode toggle, customizable public message, and server-side request rejection verified in awayMode.test.ts [docs/verification/CLIENT_AUTH_AND_CUTOVER_HOLDS_ACCEPTANCE_2026-11-22.md] · size: S · lane C · [go-live] · slips first
 **What** — One switch in Settings ▸ Online booking (⭐ Owner · Admin · Manager): **"Away — not taking
 online requests"**, with an optional message and an optional "back on" date (B6). While it is on, the
 site still shows the catalogue and rates, the request button shows the message ("Back on 15 Feb — call
