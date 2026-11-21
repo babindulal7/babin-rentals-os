@@ -83,23 +83,22 @@
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 116 / 118 (98%) | +1 |
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
 | Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
 | DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
 | Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
 | Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
 | Overall | structural mean of five | ≈ 96% | — |
-Migrations 258 files · check:pglite 258/258 applied, 0 failed (recorded 2026-11-21T12:06:12.584Z). Suite: PASS — 7659/7659 passed, 0 failed (recorded 2026-11-21T12:03:13.746Z); source fingerprint matches.
+Migrations 258 files · check:pglite 258/258 applied, 0 failed (recorded 2026-11-21T20:11:23.866Z). Suite: PASS — 7659/7659 passed, 0 failed (recorded 2026-11-21T19:15:18.072Z); source fingerprint matches.
 Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written 2026-11-21T12:07:07.015Z.
+Gates read from .lifecycle-result.json, written 2026-11-21T20:12:04.562Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Operator (Babin) execution of Stage 2 fixture seed (`03_SEED_SYNTHETIC_STAGE2_FIXTURES.sql`) in `babin-staging` (`klhmsrunqrdxjudyhnkm`) SQL Editor.
-- Operator configuration of `BABIN_STAGING_ANON_KEY` in `.env.staging.local`.
-- Execution of Stage 2 hosted PostgREST and Storage acceptance test (`node scripts/verify-staging-hosted.mjs`).
-- Phase 1 launch sign-off by Babin; production release remains on strict HOLD.
+- Phase 1 launch sign-off by Babin on `T0_SECURITY_AUDIT_RESULTS.md` and local merge of `security_acceptance_audit` into `main`.
+- All Lane B tasks in Tracks T4 (Shared Tools, 12/12 cards), T5 (Notifications, 13/13 cards), and T6 (Nepali Language, 9/9 cards) are 100% completed (34/34 cards done).
+- Open project cards are restricted to Lane A physical hardware/device acceptance (`T2-08` labels, `T2-09` scanner, `T2-11` device day) and Babin Owner production deployment (`T1-01`, `T1-04`, `T1-05`, `T1-06`). Production release remains on strict HOLD under Rule N-5.
 
 ## 2026-11-21 — T7-11: Online Booking Launch Operational Checklist & Domain Routing (Lane C)
 
