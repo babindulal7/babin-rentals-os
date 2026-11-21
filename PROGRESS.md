@@ -1,5 +1,53 @@
 # Progress Log
 
+## 2026-11-22 — T7: Online Booking Acceptance Reconciliation (Lane C)
+
+### Did
+- Documented Track 7 online booking and client portal acceptance in [`docs/verification/T7_ONLINE_BOOKING_ACCEPTANCE_2026-11-22.md`](docs/verification/T7_ONLINE_BOOKING_ACCEPTANCE_2026-11-22.md):
+  - Promoted **T7-02 · Booking site and public catalogue** to `done`: verified public catalogue, category filtering, and anonymous access boundaries across migration `0255` and lifecycle step `L93`.
+  - Promoted **T7-08 · My bookings** to `done`: verified MyBookings modal, stage timeline, and D-5 tenant isolation in test suite and RLS policies.
+  - Promoted **T7-12 · Recommended items** to `done`: verified 12-month co-rental ranking, staff pin persistence, and public item visibility (`src/lib/__tests__/recommendations.test.ts`).
+  - Promoted **T7-13 · Products with options on one page** to `done`: verified family variant option selectors, independent stock/rates, and reservation isolation under GiST constraints (`src/lib/__tests__/productFamilies.test.ts`).
+  - Promoted **T7-15 · Payment link from any booking** to `done`: verified server-computed amounts, 48-hour signed expiry, replay idempotency, and floor role denial across migration `0259` and lifecycle step `L96`.
+  - Promoted **T7-16 · Store analytics: GA4 and Meta Pixel** to `done`: verified privacy-safe event tracking with client PII redaction under Law 6.
+  - Promoted **T7-17 · Old store links open the same item** to `done`: verified Cloudflare 301 redirect map routing Booqable URLs to OS product routes.
+- Updated Track 7 roadmap in [`docs/plans/T7_ONLINE_BOOKING.md`](docs/plans/T7_ONLINE_BOOKING.md).
+- Synchronized roadmap regression assertions in [`src/lib/__tests__/roadmapStatusTruth.test.ts`](src/lib/__tests__/roadmapStatusTruth.test.ts) (7/7 tests pass).
+
+### Ruled
+- D-5 Tenant Isolation: Client accounts access only their own requests, bookings, invoices, and payments; cross-client rows return 0.
+- Law 1 & Law 4: Payment link amounts are computed authoritatively on the server; client manipulation is impossible.
+- Law 6: GA4 and Meta analytics events strictly exclude client PII (names, emails, phone numbers, booking numbers); floor roles are denied payment link generation.
+- GiST Exclusion: Variant selection reserves chosen mount without blocking sibling family variants.
+
+### Verified
+- `npm test -- src/booking/`: 8/8 test files, 34/34 tests pass.
+- `npm test -- src/lib/__tests__/recommendations.test.ts src/lib/__tests__/productFamilies.test.ts`: 8/8 tests pass.
+- `npm run test:online-booking-n7-review`: 17/17 security assertions pass.
+- `npm test -- src/lib/__tests__/roadmapStatusTruth.test.ts`: 7/7 tests pass.
+- `npm run check:pglite`: 258/258 migrations applied cleanly, 0 failed.
+- `npm run check:lifecycle`: 98/98 steps green.
+- `npm run typecheck`: 0 errors.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 258 files · check:pglite 258/258 applied, 0 failed.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Track 7 online booking live client portal requests and Fonepay merchant credentials.
+- Cloudflare Pages DNS and production deployment configuration (T1-07).
+- Phase 2 physical hardware cards remain pending for post-live shop device day per 20 Nov ruling.
+
 ## 2026-11-22 — T1-06 & T2-22: Staging Storage Scoping & Operations Turnaround Acceptance (Lane A)
 
 ### Did

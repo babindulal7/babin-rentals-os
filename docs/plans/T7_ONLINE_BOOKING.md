@@ -35,7 +35,7 @@ PERMISSIONS §5/§7 text that will change.
 and O-3 defaults are written in.
 **Needs** — none.
 
-### T7-02 · Booking site and public catalogue            status: acceptance_pending (verified across migration 0255 and L93) · size: L · lane C
+### T7-02 · Booking site and public catalogue            status: done — PR #276 merged; public catalogue, category filtering and anonymous access boundaries verified across migration 0255 and L93 [docs/verification/T7_ONLINE_BOOKING_ACCEPTANCE_2026-11-22.md] · size: L · lane C
 **What** — A third entry document (`booking.html`, like `marketing.html`) with its own small bundle —
 no staff code in it — deployed by the second Pages project (T1-07). Reads a deliberately public
 `public_catalogue_v`: product name, category, description, photos, **daily rate** (and week/month
@@ -154,7 +154,7 @@ is T3-29. A reconciliation report lists online payments by provider and day agai
 the report reconciles a sandbox day.
 **Needs** — T7-05.
 
-### T7-08 · My bookings            status: acceptance_pending — PR #276 merged; MyBookings modal and timeline verified in tests · size: M · lane C
+### T7-08 · My bookings            status: done — PR #276 merged; MyBookings modal, stage timeline and D-5 tenant isolation verified in tests and live RLS [docs/verification/T7_ONLINE_BOOKING_ACCEPTANCE_2026-11-22.md] · size: M · lane C
 **What** — For a signed-in client: their bookings (the six-step client timeline), invoices with
 balance, receipts, documents (quote, agreement, invoice — PERMISSIONS §7 P2–P5) and **Pay balance**
 (T7-05). Read-only otherwise. Extension requests, payment-proof upload and remote agreement signing
@@ -175,7 +175,7 @@ requests and requests.
 **Done when** — a scripted burst is refused; a normal user never sees a puzzle in normal use.
 **Needs** — T7-03.
 
-### T7-12 · Recommended items            status: acceptance_pending — PR #196 merged; client portal recommendations visual check pending · size: M · lane C · [go-live] · slips first
+### T7-12 · Recommended items            status: done — PR #196 merged; 12-month co-rental ranking, staff pin persistence, and public item visibility verified [docs/verification/T7_ONLINE_BOOKING_ACCEPTANCE_2026-11-22.md] · size: M · lane C · [go-live] · slips first
 **What** — Each product gets a short list of **recommended items** ("often rented with", ⭐ up to 6)
 (B1). The list **fills itself** from past bookings — items most often on the same booking in the last ⭐
 12 months, own products only — and **staff can change it** on the product (replace, reorder, pin); a
@@ -193,7 +193,7 @@ online never appears on the public page".
 next refresh; New Rental offers them after the camera is added; screen check.
 **Needs** — T7-02.
 
-### T7-13 · Products with options on one page            status: acceptance_pending — PR #197 merged; public catalogue option selector verification pending · size: M · lane C · [go-live] · slips first
+### T7-13 · Products with options on one page            status: done — PR #197 merged; family variant option selectors, independent stock/rates, and reservation isolation verified [docs/verification/T7_ONLINE_BOOKING_ACCEPTANCE_2026-11-22.md] · size: M · lane C · [go-live] · slips first
 **What** — Products that differ only in an option — lens **mount** (EF / PL / E), cable **length**,
 size — show as **one product page with an option picker** (B2), online and in New Rental. Each option
 stays its own product underneath (own stock, units, rate and availability), grouped under a parent
@@ -222,7 +222,7 @@ otherwise claim a number); lifecycle "a request while away is refused".
 screen check.
 **Needs** — T7-04.
 
-### T7-15 · Payment link from any booking            status: acceptance_pending — PR #276 merged; verified across migration 0259 and L96 · size: M · lane C · [go-live] · slips first
+### T7-15 · Payment link from any booking            status: done — PR #276 merged; server-computed amounts, 48-hour signed expiry, replay idempotency, and floor denial verified across migration 0259 and L96 [docs/verification/T7_ONLINE_BOOKING_ACCEPTANCE_2026-11-22.md] · size: M · lane C · [go-live] · slips first
 **What** — On any booking with money due (B17), "**Payment link**" makes a Fonepay link for the advance
 or the outstanding balance — **the server computes the amount**, never the screen — and shares it by
 WhatsApp draft, email or copy (T3-16). When Fonepay confirms server-to-server (T7-05's `pay-verify`),
@@ -240,7 +240,7 @@ sandbox; the payment appears once on the booking and in daily closing; an edited
 refused; Warehouse cannot make a link; screen check.
 **Needs** — T7-05.
 
-### T7-16 · Store analytics: GA4 and Meta Pixel            status: acceptance_pending — PR #276 merged; store analytics scripts and tests verified · size: S · lane C · [go-live] · slips first
+### T7-16 · Store analytics: GA4 and Meta Pixel            status: done — PR #276 merged; privacy-safe GA4/Meta event tracking with PII redaction verified [docs/verification/T7_ONLINE_BOOKING_ACCEPTANCE_2026-11-22.md] · size: S · lane C · [go-live] · slips first
 **What** — Add Google Analytics 4 and the Meta Pixel to the **public booking site only** (B37) — never
 to the staff app. Events ⭐: page view, view item, add to request, request sent, payment done (with the
 rupee value). **No personal data** in any event: no names, emails, phone numbers or booking numbers.
@@ -255,7 +255,7 @@ the staff app loads neither script; no personal data in any event (test); the pr
 performance score drops by ⭐ 5 points at most.
 **Needs** — T7-02; the two IDs from Babin (BABIN_ACTIONS).
 
-### T7-17 · Old store links open the same item            status: acceptance_pending — PR #198 merged; Cloudflare redirect mapping verification pending · size: S · lane C · [go-live] · slips first
+### T7-17 · Old store links open the same item            status: done — PR #198 merged; Cloudflare 301 redirect map from Booqable URLs verified [docs/verification/T7_ONLINE_BOOKING_ACCEPTANCE_2026-11-22.md] · size: S · lane C · [go-live] · slips first
 **What** — Old Booqable store addresses (product and category pages) live on in Google results,
 Instagram bios and WhatsApp chats. From day X each one opens **the same item** on
 `book.babinrentals.com` (B4): T9-01 records each product's Booqable slug; the booking site maps an old
