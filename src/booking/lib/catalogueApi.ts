@@ -7,6 +7,7 @@
  */
 
 import { supabase } from '@/lib/supabase'
+import type { FamilyOptionRow } from './familyOptions'
 
 export interface BundleComponent {
   readonly name: string
@@ -284,4 +285,37 @@ export async function submitBookingRequest(payload: BookingRequestPayload): Prom
   }
 
   return data as BookingRequestResult
+}
+
+/**
+ * T7-13 · Options of product families, for the option picker. Reads public_product_family_options_v,
+ * which only lists options that are publicly sold. Fails soft: if the read fails the products still
+ * show, each as a standalone item, and the failure is logged.
+ */
+export async function fetchFamilyOptions(): Promise<FamilyOptionRow[]> {
+  if (import.meta.env.VITE_DATA_SOURCE === 'mock' || import.meta.env.MODE === 'test') {
+    return []
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('public_product_family_options_v')
+      .select('family_id, family_name, product_id, option_label, sort_order')
+
+    if (error) {
+      console.error('[catalogue] family options unavailable; showing products as standalone', error)
+      return []
+    }
+
+    return (data ?? []).map((row) => ({
+      familyId: row.family_id,
+      familyName: row.family_name,
+      productId: row.product_id,
+      optionLabel: row.option_label,
+      sortOrder: row.sort_order,
+    }))
+  } catch (error) {
+    console.error('[catalogue] family options request failed', error)
+    return []
+  }
 }

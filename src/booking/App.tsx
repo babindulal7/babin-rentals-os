@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import './booking.css'
 import { getDefaultRentalDates } from './lib/kathmanduDateDefaults'
 import type { CatalogueItem } from './lib/catalogueApi'
-import { fetchPublicCatalogue, checkPublicAvailability } from './lib/catalogueApi'
+import { fetchPublicCatalogue, fetchFamilyOptions, checkPublicAvailability } from './lib/catalogueApi'
+import { familyOptionChoices, type FamilyOptionRow } from './lib/familyOptions'
 import {
   type ClientUser,
   type OnlineProfile,
@@ -26,6 +27,17 @@ export default function BookingApp() {
   const [activeCategory, setActiveCategory] = useState<string>('All')
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [items, setItems] = useState<CatalogueItem[]>([])
+  // T7-13: which catalogue products are options of one family. Empty when the read fails (products show standalone).
+  const [familyRows, setFamilyRows] = useState<FamilyOptionRow[]>([])
+  useEffect(() => {
+    let cancelled = false
+    fetchFamilyOptions().then((rows) => {
+      if (!cancelled) setFamilyRows(rows)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
   const [availability, setAvailability] = useState<Map<string, boolean>>(new Map())
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
@@ -353,6 +365,8 @@ export default function BookingApp() {
         isAvailable={selectedItem ? availability.get(selectedItem.id) : undefined}
         onClose={() => setSelectedItem(null)}
         onAddToCart={handleAddToCart}
+        familyChoices={selectedItem ? familyOptionChoices(selectedItem.id, familyRows, items) : []}
+        availabilityById={availability}
       />
 
       {/* Cart Drawer */}
