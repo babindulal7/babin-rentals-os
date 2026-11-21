@@ -1,5 +1,53 @@
 # Progress Log
 
+## 2026-11-21 — T7-10: Online Booking Security Review — The N-7 Gate (Lane C)
+
+**Did**
+- Executed the comprehensive N-7 security review for online booking and client portal surfaces:
+  - Added automated security test suite [`scripts/test-online-booking-n7-review.mjs`](scripts/test-online-booking-n7-review.mjs) registered as `npm run test:online-booking-n7-review`.
+  - Verified 17/17 security assertions covering:
+    - D-5/D-10 cross-client RLS tenant isolation (Client A cannot read or modify Client B's bookings or profile).
+    - Anonymous deny-closed boundaries (anon cannot read private tables or execute staff mutator RPCs).
+    - Function allowlist check strictly matching `ALLOWED_ANON_FUNCTIONS` (21 functions allowed, 0 leaks).
+    - Anti-price-tampering: direct insertion with forged rates rejected by database triggers.
+    - Abuse mitigation & Turnstile token single-use replay protection and burst rate-limiting.
+    - Secrets hygiene: zero service-role keys in client bundles, `check:security` registered in `package.json`.
+  - Authored comprehensive audit report [`docs/verification/ONLINE_BOOKING_REVIEW_2026-11-21.md`](docs/verification/ONLINE_BOOKING_REVIEW_2026-11-21.md) detailing the one-page executive summary for Babin, PERMISSIONS §5 and §7 compliance, and slips-first card review (T7-15 payment links and T7-16 store analytics).
+  - Updated [`docs/plans/T7_ONLINE_BOOKING.md`](docs/plans/T7_ONLINE_BOOKING.md) advancing card T7-10 to `ready — awaiting merge (lane-c/T7-10-security-review-the-n-7-gate)`.
+
+**Ruled**
+- Rule N-7: No client write path is activated in production before full security review passes and Babin signs off.
+- Law 6: Floor and client roles remain strictly money-blind across all public and internal queries.
+- Rule N-8: Zero secrets or service-role keys in client code; production credentials remain in Edge Function environment.
+- R-39: Public catalogue and booking portal remain frictionless with server-enforced safety.
+
+**Verified**
+- `npm run test:online-booking-n7-review`: PASS (17/17 assertions green).
+- `npx vitest run src/booking/`: PASS (7 test files, 31/31 assertions green).
+- `npm run check:pglite`: PASS (258/258 migrations applied cleanly, 0 leaks, 237 definers pinned).
+- `npm run check:lifecycle`: PASS (98/98 steps green, including L93-L97).
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint:progress`: PASS.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 115 / 116 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 258 files · check:pglite 258/258 applied, 0 failed.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Final owner review and sign-off on T7-10 security review report ([`docs/verification/ONLINE_BOOKING_REVIEW_2026-11-21.md`](docs/verification/ONLINE_BOOKING_REVIEW_2026-11-21.md)).
+- Track 7 implementation complete across all cards (T7-01 through T7-17).
+- Operator staging migration apply by Babin (T1-02).
+
 ## 2026-11-21 — T7-11: Online Booking Launch Operational Checklist & Domain Routing (Lane C)
 
 **Did**
