@@ -160,7 +160,9 @@ export async function fetchOnlinePaymentProviders(): Promise<OnlinePaymentProvid
     return rpcData as OnlinePaymentProviderInfo[]
   }
 
-  // Safe fallback default if database RPC is unauthenticated: Fonepay enabled, others off
+  // A production provider outage must not advertise a fake sandbox
+  // checkout. Only explicit mock mode may show synthetic payment providers.
+  if (import.meta.env.VITE_DATA_SOURCE !== 'mock') return []
   return [
     { provider: 'fonepay', name: 'Fonepay', enabled: true, env: 'sandbox' },
     { provider: 'esewa', name: 'eSewa', enabled: false, env: 'sandbox' },
