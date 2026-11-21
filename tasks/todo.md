@@ -151,7 +151,27 @@ _Re-verified 21 Nov 2026 against the code and each task's listed tests. Found an
 
 ## Checkpoint: Complete
 - [x] Full test suite and gates re-run on 21 Nov 2026 — numbers in the verification log below
-- [x] `npm run completion` + `lint:progress`; PROGRESS.md entry written for 21 Nov
+- [x] `lint:progress` passes and PROGRESS.md has the 21 Nov entry (committed on `docs/booqable-adoptions-verification-20261121`, not pushed). `npm run completion` reads no test receipt from a worktree, so its test counts are not measured.
 
 ## Verification log
-_Pending: the numbers for the full-suite run, the database gates, the build and the lint pass are added here once they finish._
+**21 Nov 2026, branch `feat/ui-kpi-captions-and-movement-counts` (tip `89004ad6`), run in the isolated worktree `.worktrees/ui-kpi-verify`.** The main checkout was not used: another process was working in it during the session. The branch was merged to `main` as PR #298 at 15:34, before this run had finished. This run covers tip `89004ad6`, which is the merged content. `main` has moved on since (`04746df2`) and was not re-verified here.
+
+| Check | Result |
+|---|---|
+| Focused suites (17 files covering Tasks 1–8 and the checkpoints) | 429 of 429 tests pass |
+| Full suite (vitest, mock data) | 709 of 709 files and 7,656 of 7,656 tests pass. The run went into one log twice; both summaries show a full pass and neither has a failure marker. |
+| Typecheck (`tsc --noEmit`) | clean |
+| Eslint on `src`, `--max-warnings 0` | clean |
+| UI copy (`lint:ui-copy`) | pass |
+| Page shell (`lint:shell`) | 967 files pass |
+| Contrast (`check:contrast`) | 97 of 97 pass |
+| PGlite migrations (`check:pglite`) | 258 of 258 applied, 0 failed. 46 public views and 21 public functions checked, none readable or executable by anon without authorization. 237 definer functions have a pinned `search_path`. Privacy gate 7 of 7. |
+| Lifecycle (`check:lifecycle`) | 98 of 98 green, 0 known-red, 0 failed |
+| Build (`npm run build`) | succeeds in 27.75 s; one chunk-size warning, not an error |
+| Browser (mock, signed in as Owner, desktop and 375 px) | run before the branch moved; the UI code has not changed since |
+
+Browser findings: the Pickups footer reads "48 late pickups" and the Returns footer "24 overdue returns". Each opens an Operations list whose heading reads "Today & Overdue (48)" and "Today & Overdue (24)". The Finance tiles show their definitions, and Received shows its zero explanation at "Rs 0".
+
+Not run here: `npm test` from the main checkout. That run writes the receipts `npm run completion` reads, so the completion counter reports the test suite as not measured for this branch.
+
+Known noise, not a failure (present before 21 Nov): `rentalsList.render.test.tsx` logs `[AuditEngine] Failed to write audit event` because its `lib/supabase` mock omits `IS_MOCK`. Follow-up: add the export to the mock and confirm its 42 cases still pass.

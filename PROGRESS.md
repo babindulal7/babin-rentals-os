@@ -1,5 +1,53 @@
 # Progress Log
 
+## 2026-11-21 — Booqable ADOPTIONS: verification, fixes and counted Dashboard links (tasks/todo.md Tasks 1–8)
+
+**Did**
+- Re-verified every DONE item in [`tasks/todo.md`](tasks/todo.md) against the code and its listed tests. Three items did not hold, and they are fixed:
+  - **Task 7 (Finance tiles):** the definitions and zero explanations were lost on 17 Oct (commit `b038973c`), when Finance moved to `ModuleKpiStrip`, which had no field for them. `ModuleKpiStrip` now takes `definition` and `zeroExplanation`, and the three tiles carry the approved copy again. A known zero replaces the definition, as on `KpiStrip`. An unknown total (a dash) never reads as zero.
+  - **Task 1 (Dashboard counted links):** they had been deferred and are now built. The Pickups footer shows "N late pickups" → `/operations?exception=overdue_start`; the Returns footer shows "N overdue returns" → `/operations?exception=overdue_end`. Both counts are head-only totals of the same named sets the Operations facets run. An unknown count reads "View …", never "0".
+  - **Task 8 (description):** it named `src/lib/period.ts`, which was never created. The card now states its real scope: the `weekStarts` input in `src/data/today.ts`.
+- Updated two test expectations to the designed behaviour: the Finance Received case (a known zero replaces the definition) and the Dashboard refresh case (four refetches: two queues and two counts).
+- Corrected stale counts in `tasks/todo.md` (rentalActions 14, todayQuery 69, rentalsList.render 42, facetCounts 5).
+- Added `src/components/ui/__tests__/ModuleKpiStrip.caption.test.tsx` (5 cases) and footer cases in `movementPanel.test.tsx` (4 cases); extended `Finance.restricted.test.tsx` (3 cases).
+
+**Ruled**
+- Engineering choice, reversible: the counted footer links open the existing Operations exception facets rather than adding a `/rentals` activity param. The facets already run the same sets, so the number and the list agree.
+- Definitions print as one caption line on the tile, not as an (i) tooltip (RULING 2026-10-23).
+
+**Verified**
+- Isolated worktree `.worktrees/ui-kpi-verify` on branch `feat/ui-kpi-captions-and-movement-counts` (tip `89004ad6`). The main checkout was not used. The two commits on that branch were made by another process, not by this session. This session committed only these docs, on `docs/booqable-adoptions-verification-20261121` (based on `main`, not pushed). No code was committed by this session.
+- Focused suites: 17 files, 429 of 429 tests pass.
+- Full suite (vitest, mock data): 709 of 709 files, 7,656 of 7,656 tests pass. The run went into one log twice; both summaries show a full pass and neither has a failure marker.
+- `tsc --noEmit` clean. Eslint on `src` clean with `--max-warnings 0`. `lint:ui-copy` pass. `lint:shell`: 967 files pass. `check:contrast`: 97 of 97.
+- `check:pglite`: 258 of 258 applied, 0 failed. 46 public views and 21 public functions checked, none readable or executable by anon without authorization. Privacy gate 7 of 7.
+- `check:lifecycle`: 98 of 98 green, 0 known-red, 0 failed.
+- `npm run build`: succeeds in 27.75 s; one chunk-size warning, not an error.
+- Browser (mock, signed in as Owner, desktop and 375 px), before the branch moved: Pickups footer "48 late pickups" and Returns footer "24 overdue returns"; each opens an Operations list with heading "Today & Overdue (48)" / "(24)". Finance tiles show their definitions; Received shows its zero explanation at "Rs 0". The UI code has not changed since.
+- Not run: `npm test` from the main checkout. It writes the receipts `npm run completion` reads, so test counts are not measured here.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +1 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 258 files · check:pglite 258/258 applied, 0 failed (recorded 2026-11-21T10:27:58.354Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-21T10:28:12.515Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- The fix is already on `main`: PR #298 merged `feat/ui-kpi-captions-and-movement-counts` at 15:34, before the full-suite run had finished. This run covers the branch tip `89004ad6`, which is the merged content. `main` has since moved to `04746df2` (booking default dates) and was not re-verified here.
+- Push `docs/booqable-adoptions-verification-20261121` and open a PR if wanted. Nothing is pushed.
+- After the merge, from the main checkout: `npm test`, then `npm run completion -- --tests`, so the counter reads a receipt for the full suite.
+- Known noise, not a failure: `rentalsList.render.test.tsx` logs an `IS_MOCK` audit warning. Add the export to its mock and confirm its 42 cases still pass.
+- Concurrency: during this session the checkout's HEAD and branch moved (PRs #287, #271, #297 and #298 merged to `main`; a docs-branch checkout; this session's edits committed to the feature branch by another process). One agent per checkout.
+
 ## 2026-11-21 — T7-11: Online Booking Launch Operational Checklist & Domain Routing (Lane C)
 
 **Did**
