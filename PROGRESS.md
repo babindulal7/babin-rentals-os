@@ -1,5 +1,52 @@
 # Progress Log
 
+## 2026-11-21 — T3-20 & T3-23: External Accountant Sign-off & Acceptance (Lane C)
+
+### Did
+- Documented external chartered accountant sign-off in [`docs/verification/ACCOUNTANT_ACCEPTANCE_2026-11-21.md`](docs/verification/ACCOUNTANT_ACCEPTANCE_2026-11-21.md) following the sample format handoff in PR #301.
+- Promoted **T3-23 · Monthly pack for the accountant** from `acceptance_pending` to `done`:
+  - Verified Sales/VAT register compliance with IRD format (BS/AD dates, PAN, 13% VAT, exempt amounts).
+  - Verified Operating Expenses register and 15% crew service TDS calculation schedules.
+  - Verified 12/12 unit tests pass in `src/modules/reports/__tests__/MonthlyPack.test.tsx`.
+- Promoted **T3-20 · Who owes** from `acceptance_pending` to `done`:
+  - Verified client balance and receivables reconciled to the integer paisa (`rupees()`, `price()`).
+  - Verified 0-30, 31-60, 61-90, 90+ day aging buckets and PDF 1.4 Statement generation.
+  - Verified 7/7 unit tests pass in `src/modules/finance/__tests__/WhoOwes.test.tsx`.
+- Reconciled roadmap truth regression guards in `src/lib/__tests__/roadmapStatusTruth.test.ts` and `src/lib/__tests__/t3RoadmapDocumentation.test.ts`.
+
+### Ruled
+- Owner (Babin) confirmed external chartered accountant completed sample pack review and finalized ledger reconciliation to the paisa (21 Nov 2026).
+- Law 4: Ledger balances and payments remain immutable integer paisa.
+- Law 6: Non-money roles (`Warehouse`, `Technician`, `Driver`, `Client`) strictly money-blind across all accounting registers and receivables.
+
+### Verified
+- `npx vitest run src/modules/finance/__tests__/WhoOwes.test.tsx src/modules/reports/__tests__/MonthlyPack.test.tsx`: 19/19 tests pass.
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts src/lib/__tests__/t3RoadmapDocumentation.test.ts`: 10/10 tests pass.
+- `npm run check:pglite`: 258/258 migrations applied, 0 failed.
+- `npm run check:lifecycle`: 98/98 steps green.
+- `npm run typecheck`: 0 errors.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 258 files · check:pglite 258/258 applied, 0 failed (recorded 2026-11-21T16:44:16.557Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-21T16:44:40.867Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Staging SQL batch apply completion by Babin (`STAGING_BATCH_0245_TO_0259.sql` and `STAGING_NINE_ROLE_SEATS_SETUP.sql`).
+- Execute `scripts/run-staging-readonly-suite.mjs` on hosted staging to verify Path 1 role seats and unblock T1-05, T2-20, T2-22, T7-02, T7-12, T7-13.
+- Phase 2 physical hardware cards remain pending for post-live shop device day per 20 Nov ruling.
+
 ## 2026-11-21 — T1-06: Storage Scoping Accepted on Staging (Lane A)
 
 ### Did

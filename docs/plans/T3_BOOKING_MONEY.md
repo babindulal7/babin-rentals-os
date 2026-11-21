@@ -286,7 +286,7 @@ the same code within ⭐ 1.5 s, server check per code.
 **Phase 1 verification** — manual item lookup/selection checks the authoritative unit availability and rejects booked units. **Phase 2 after live done when** — real camera/Bluetooth scan adds the correct available unit and a booked item identifies its holder and offers T3-13.
 **Needs** — T2-14 (shared scan lookup).
 
-### T3-20 · Who owes            status: acceptance_pending — PR #190 merged; ledger reconciliation to the paisa with accountant & mobile share walkthrough pending · size: M · lane C · [go-live]
+### T3-20 · Who owes            status: done — PR #190 merged; ledger reconciliation to the paisa with external accountant verified 21 Nov 2026 [docs/verification/ACCOUNTANT_ACCEPTANCE_2026-11-21.md] · size: M · lane C · [go-live]
 **What** — Finance ▸ **Who owes**: one list of clients with unpaid balances, oldest first, with age
 (days since completion), amount, last reminder sent, "Paused" flag; tap → the client's **statement**
 (PDF: every open invoice and booking balance, payments so far) to share (T3-16). Many production
@@ -324,7 +324,7 @@ any dates, the next free date, and **who has it now** (from T2-14). Reuses `Chec
 **Done when** — ≤ 2 taps to an answer from any screen; matches New Rental's availability exactly.
 **Needs** — T2-14.
 
-### T3-23 · Monthly pack for the accountant            status: acceptance_pending — PR #191 merged; synthetic format-review pack prepared (NOT app generated); external accountant sign-off and approved staging export pending · size: M · lane C · [soon]
+### T3-23 · Monthly pack for the accountant            status: done — PR #191 merged; external chartered accountant sign-off verified 21 Nov 2026 [docs/verification/ACCOUNTANT_ACCEPTANCE_2026-11-21.md] · size: M · lane C · [soon]
 **What** — Finance ▸ Reports ▸ **Monthly pack**: pick a Nepali month (or AD month) → one zip with the
 **Sales/VAT register** (standard and non-VAT sections, T3-04), **payments and refunds**, **expenses
 with bill photos**, **crew payouts with TDS** (T8-08), as CSV + PDF, BS and AD dates. Money roles only.

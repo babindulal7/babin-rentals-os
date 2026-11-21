@@ -83,8 +83,6 @@ describe('Roadmap status truth across merged tracks', () => {
     const t3 = read('docs/plans/T3_BOOKING_MONEY.md')
     const pendingCards: Record<string, string> = {
       'T3-13': 'PR #182 merged',
-      'T3-20': 'PR #190 merged',
-      'T3-23': 'PR #191 merged',
     }
     for (const [key, prRef] of Object.entries(pendingCards)) {
       const heading = t3.split('\n').find((l) => l.startsWith(`### ${key} ·`))
@@ -94,7 +92,7 @@ describe('Roadmap status truth across merged tracks', () => {
       expect(heading).not.toContain('status: todo')
     }
 
-    // T3-10, T3-11, T3-14, T3-16, T3-18, T3-19, T3-22, T3-28, T3-29, and T3-31 are fully verified with green suites; physical device testing deferred post-live per Babin ruling (20 Nov)
+    // T3-10, T3-11, T3-14, T3-16, T3-18, T3-19, T3-20, T3-22, T3-23, T3-28, T3-29, and T3-31 are fully verified with green suites; physical device testing deferred post-live per Babin ruling (20 Nov)
     const doneCards: Record<string, string> = {
       'T3-10': 'PR #188 merged',
       'T3-11': 'PR #210 merged',
@@ -102,7 +100,9 @@ describe('Roadmap status truth across merged tracks', () => {
       'T3-16': 'PR #181 merged',
       'T3-18': 'PR #224 merged',
       'T3-19': 'PR #163 merged',
+      'T3-20': 'PR #190 merged',
       'T3-22': 'PR #161 merged',
+      'T3-23': 'PR #191 merged',
       'T3-28': 'PR #211 merged',
       'T3-29': 'PR #208 merged',
     }
