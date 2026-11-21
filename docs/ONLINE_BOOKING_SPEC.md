@@ -1,8 +1,8 @@
 # Online booking and payments — specification (T7-01)
 
-> **RECONCILED SPECIFICATION (12 Nov 2026 Unified Launch):** Fully reconciles online booking, client portal, and Babin Rentals OS with the 12 Nov 2026 owner rulings ([`RULINGS-2026-11-12-unified-launch.md`](../RULINGS-2026-11-12-unified-launch.md)) and the unified launch plan ([`docs/plans/UNIFIED_LAUNCH_2027-02-18.md`](plans/UNIFIED_LAUNCH_2027-02-18.md)). **Pickup AND return dates/times are selected FIRST before browsing equipment.** Guest booking requests are enabled by default (UL-04); account records require verified identity. Manual staff confirmation (UL-03), public base rates (UL-05), eligible personalized discounts (UL-06), and staff notifications (UL-07) are design-approved defaults configurable by Owner/Admin in **OS → Settings → Website & Client Portal** (UL-08). SPECIFICATION ONLY: no live production mutations or unverified payments.
+> **OWNER-DECISION BASELINE (12 Nov 2026 Unified Launch):** Aligns the online booking, client portal and Babin Rentals OS design scope with the 12 Nov 2026 owner rulings; unresolved API/security contradictions appear in §17 and are not approved implementation ([`RULINGS-2026-11-12-unified-launch.md`](../RULINGS-2026-11-12-unified-launch.md)) and the unified launch plan ([`docs/plans/UNIFIED_LAUNCH_2027-02-18.md`](plans/UNIFIED_LAUNCH_2027-02-18.md)). **Pickup AND return dates/times are selected FIRST before browsing equipment.** Guest booking requests are enabled by default (UL-04); account records require verified identity. Manual staff confirmation (UL-03), public base rates (UL-05), eligible personalized discounts (UL-06), and staff notifications (UL-07) are design-approved defaults configurable by Owner/Admin in **OS → Settings → Website & Client Portal** (UL-08). SPECIFICATION ONLY: no live production mutations or unverified payments.
 
-**Status:** RECONCILED SPECIFICATION — updated 21 Nov 2026 to incorporate 12 Nov 2026 owner rulings (UL-01 through UL-09) and the coordinated three-surface launch model.
+**Status:** DESIGN DEFAULTS APPROVED (UL-01 through UL-09); T7-01 acceptance pending guest/private upload, role permissions, public quote access and exact-time availability reconciliation; owner review of corrections required. No live settings changed.
 **Binds:** [T7-02 … T7-17](plans/T7_ONLINE_BOOKING.md) (lane C · Codex-2). Each card builds the part named in §14 and may not change this document's answers — a card that finds one wrong files a ruling (B-2), it does not guess.
 **Rulings it implements:** UL-01 to UL-09 ([`RULINGS-2026-11-12-unified-launch.md`](../RULINGS-2026-11-12-unified-launch.md)), S9, S15, D29, D30, D31, D34, W50, W51, W63–W66, W84, W85 ([`RULINGS-2026-10-26.md`](../RULINGS-2026-10-26.md), [`-workflow.md`](../RULINGS-2026-10-26-workflow.md)), 30 Aug D2 (binding only by verified control of the client's stored email), Laws 3–8, P8, **N-7**, N-8.
 **Defaults taken (⭐, B-5):** O-2, O-3, UL-03–UL-07, and eleven more, listed once in §13.
@@ -50,7 +50,8 @@ Read these before any section. Each is a decision this spec makes that the plan 
 | **Unbound account** | `auth.users` row (email verified), **no** `portal_users` row; at most a `portal_link_requests` row | Browse, select dates, build a cart, submit requests, pay advance on their **own** request, read their **own** requests. Sees no booking, invoice, client record or document. |
 | **Bound client** | `portal_users` row with `client_id` (0072) | Everything above **plus** P1–P5 of PERMISSIONS §7 for their own client, **eligible personalized discounts** (UL-06) computed on the server, and **Pay balance** on their own invoices. |
 | **Coordinator** | staff | Read the queue; receive new request notifications (UL-07); **Confirm** (UL-03) or **Decline**; see requester ID image; create or link the client. |
-| **Manager · Admin · Owner** | staff | All Coordinator does, plus: configure Website & Portal settings (UL-08); set "Show online"/"Only inside bundles"/photos; hand-bind an account to a client; record an online refund or reversal. |
+| **Manager** | staff | Authorized desk functions, catalogue/media edits and audited client binding where permitted. **Cannot edit Website & Client Portal settings** under UL-08; refunds still require separate finance rights. |
+| **Admin · Owner** | staff | Manager permissions plus **Website & Client Portal settings** (UL-08). Refunds/reversals require separately authorized, audited money actions. |
 | **Accounts** | staff | **Read** requests, intents, reconciliation. No confirm, no decline, no refund. |
 | **Warehouse · Technician · Driver** | staff, money-blind | **Nothing** on this feature. The requests, intents and request ID images are invisible to them. |
 
@@ -126,7 +127,9 @@ quantity on hand, `serial_number`, `sku`, `branch_id`, location, supplier, statu
 `anon` and `authenticated` (the 7 Sep hole: all 26 older `_v` views were writable by `anon`; this one is
 born closed, and `check:pglite` asserts it).
 
-### 3.2 `public_availability(p_product_ids uuid[], p_from date, p_to date)` (function)
+### 3.2 `public_availability` — current date-only contract vs exact-time acceptance
+
+**UL-02 correction:** the existing date-based RPC is a coarse day-level hint, not proof that the exact pickup/return interval is free. The target reviewed server API must accept `pickup_at timestamptz` and `return_at timestamptz` (or a server-owned equivalent) and evaluate Kathmandu 06:00 day boundaries, turnaround, confirmed reservations, active/legacy holds and downtime. Until time-aware checks are verified, never show a date-only positive as confirmed availability: show *Checking / Unable to confirm* and let staff Confirm perform the authoritative conflict check. Review the migration ledger and use a forward-only migration if the existing migration was applied.
 
 Returns `(product_id uuid, day date, available boolean)`. `SECURITY DEFINER`, `STABLE`,
 `set search_path = public, pg_temp`, `statement_timeout` 2 s inside the function.
@@ -146,7 +149,7 @@ Returns `(product_id uuid, day date, available boolean)`. `SECURITY DEFINER`, `S
 | Bucket | Public? | Write | Read |
 |---|---|---|---|
 | `catalogue` | **public read** (objects only, listing disabled) | Owner · Admin · Manager (equipment editor, T7-02) | anyone |
-| `request-ids` | **private** | the signed-in account, **only** into `<auth_uid>/…`; ≤ 8 MB; `image/jpeg`, `image/png`, `image/webp`, `application/pdf` | the owning account; staff with `online.request.read` through a **60-second signed URL** |
+| `request-ids` | **private** | signed-in account into own UUID folder; **guest upload only via Turnstile-verified, rate-limited Edge/server endpoint using a single-use server-bound opaque upload reference**, not direct anon Storage grants; ≤ 8 MB, allowlisted file types | own verified account or explicitly authorized desk role via short signed URL; **no direct anon bucket LIST/INSERT/SELECT** |
 
 `catalogue` objects carry no EXIF location (strip on upload). Old uploaded files matching no record stay
 quarantined (D33) — the new buckets are born with the same "no linked record → no access" rule.
@@ -163,8 +166,7 @@ quarantined (D33) — the new buckets are born with the same "no linked record �
      `requester_auth_uid = null`.
    - **Privacy invariant:** A guest receives an onscreen confirmation and receipt email, but **cannot read
      the client portal (`/account`), portal tables, staff records, or another client's requests** (D-5).
-   - If the guest subsequently signs up with that same email address, historical requests matching that
-     email become visible in their account timeline.
+   - A subsequently verified email **does not automatically expose historical guest requests or ID documents solely by matching email text**. Link only after independently verified requester ownership plus a staff-audited linking decision; otherwise guest history remains inaccessible.
 2. **Client account path:** Verified sign-in via Supabase Auth email OTP code (no passwords).
    - Identity-verified clients bound to a client record receive **eligible personalized discounts** (UL-06)
      computed strictly by the server.
@@ -312,7 +314,7 @@ capability `online.catalogue.publish`.
 
 ### 6.1 Quote — `online_price_quote(p_lines jsonb, p_pickup timestamptz, p_return timestamptz, p_zone uuid)`
 
-Callable by `anon` (guest/public) and `authenticated`. **One pricing implementation, not three:** it calls
+**Direct anonymous RPC execution is denied** (as in §9.2). Guests receive public base-price quotes through a rate-limited, bot-protected server/Edge endpoint; verified bound clients get only their own eligible quote. **One pricing implementation, not three:** it calls
 the same server-side pricing internals `create_booking` uses (migration 0119, "server side prices"),
 evaluated against Kathmandu local timezone (`Asia/Kathmandu`) and the 06:00 operational day rule (UL-02).
 - **Public / Guest quotes (UL-05):** Returns published base rates per product/bundle ("per day + VAT"). Never
@@ -330,7 +332,7 @@ Steps, in one transaction, any failure rolls all back:
 
 1. **Authentication / Guest check (UL-04):**
    - If a valid JWT is present, verify non-staff session (`gate.online.staff_session`), extract `auth_uid` and verified email.
-   - If no JWT (Guest Request), validate that `p_payload` includes non-empty `guest_name`, `guest_phone`, `guest_email`, and ID upload reference.
+   - If no JWT (Guest Request), validate that `p_payload` includes non-empty `guest_name`, `guest_phone`, `guest_email`, and a **single-use private ID reference verified and bound on the server**, not an arbitrary browser-supplied Storage path.
 2. **Spam & Rate limits:** Refuse if the account or guest IP/email has ≥ 3 open `Requested` requests ⭐.
 3. **Re-price with §6.1:** **Ignore any amount the browser sent**; use server-computed subtotal, VAT, and advance.
 4. **Notice check:** Verify `pickup_at ≥ now() + 12 h` (W63).
@@ -488,7 +490,7 @@ edited (Law 4). A **reconciliation report** lists online payments by provider an
 ### 8.5 OS Settings: Website & Client Portal (UL-08)
 
 Located at **Babin Rentals OS → Settings → Website & Client Portal**. Editable only by **Owner and Admin**
-roles. Enforced by server authorization (`auth_is_owner()` / `auth_is_manager_or_above()`) with an immutable
+roles. Enforced by a verified **Owner-or-Admin-only authorization predicate** in RPC/API and database (not `auth_is_manager_or_above()`, which includes Manager), with an immutable
 audit log (`audit_events`). The launch-design defaults are:
 
 | Setting Key | Design Default | Description & Invariant |
@@ -540,7 +542,7 @@ role other than the definer functions is refused.
 | Function | anon | Unbound | Bound | Staff | Notes |
 |---|---|---|---|---|---|
 | `public_availability` | **X** | X | X | X | the only new anon-executable function |
-| `online_price_quote` | — | X | X | — (`staff_session` gate) | |
+| `online_price_quote` | — (public quotes only through protected server/Edge API) | X (public own quote) | X (own eligible quote) | — (`staff_session` gate) | No direct anonymous RPC grant and no client-controlled prices |
 | `online_profile_save` | — | X | X | — | writes own row only |
 | `booking_request_submit` | — | via Edge Function only | same | — | `revoke` from all but service role |
 | `booking_request_withdraw` | — | X (own) | X (own) | Coordinator+ on request | |
@@ -805,3 +807,22 @@ migrations `0005_clients` (portal tables), `0072_portal_email_binding_policies`,
 is a **design** that T7-02…T7-11 must prove with the §12 tests. Where the current code could not be read to
 the end (the `create_booking` + `confirm_booking_atomic` composition, `payments.received_by`
 nullability, the provider APIs) the spec says so in place and names who verifies it.
+
+---
+
+## 17. Acceptance reconciliation and owner-sign-off boundary (21 Nov 2026)
+
+**Business decisions already approved, not being re-asked:** one coordinated OS/website/client portal; dates **and times first**; guest requests enabled; staff-only manual confirmation; public approved base prices; eligible bound-client discounts; authorized desk notifications; five audited online settings editable by **Owner/Admin only**; one inventory/booking/pricing source. These UL-01–UL-09 choices are **design defaults only**, not production settings.
+
+**Technical reconciliation required, with no new user-facing feature decisions:**
+
+| Contract | Reviewed requirement | Still needs verification |
+|---|---|---|
+| Guest ID photo | Server-mediated, one-use private upload; never anonymous storage grants | Edge/session binding, storage negative tests, orphan file cleanup |
+| Site settings | Owner/Admin only; Manager not included | Actual UI, RPC and database role checks |
+| Guest quote | Protected server endpoint; no directly anon-executable personalized quote function | Permission grants, public-only products and price leak tests |
+| Date/time availability | Interval-aware server decision, not a date-only yes/no promise | Kathmandu 05:59/06:00, buffers, active holds, conflict negatives |
+| Guest history | No automatic read privilege merely from matching unverified request email | Signed ownership proof, audited linkage, Client A/B isolation |
+| Online payment | Browser redirect is never verified money; server computes amount | Correct merchant verification, callbacks, replay, deposits excluded |
+
+**Owner acceptance:** The owner already approved the launch direction and five defaults on 12 Nov. This technical reconciliation does **not** claim that he approved every rewritten security/API design choice. T7-01 remains `acceptance_pending` until the corrected spec is reviewed and accepted; implementation/staging launch gates remain independent. No Supabase, external notifications, website settings, or payment-provider settings are changed here. Physical iPad/scanner/printer acceptance is Phase 2.
