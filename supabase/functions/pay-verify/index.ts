@@ -168,7 +168,7 @@ Deno.serve(async (req: Request) => {
     } catch {
       // Fonepay deployments may return XML instead of JSON. Match the exact
       // response_code element, not a substring such as "unsuccessful".
-      const code = upstreamText.match(/<response_code>\\s*([^<]+)\\s*<\\/response_code>/i)
+      const code = upstreamText.match(/<response_code>\s*([^<]+)\s*<\/response_code>/i)
       verified = code?.[1]?.trim().toLowerCase() === 'successful'
     }
 
