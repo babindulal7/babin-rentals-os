@@ -124,7 +124,22 @@ declare
   v_prior_payments numeric(14,2) := 0;
   v_est_rupees numeric(14,2) := 0;
   v_intent_id uuid;
+  v_actor_uid uuid;
 begin
+  -- Only a signed-in Client can initialize its own online payment.
+  -- Staff issue payment links through create_booking_payment_link instead.
+  -- The Edge Function must forward and verify the customer's JWT, never call
+  -- this RPC with its service-role identity on behalf of an arbitrary caller.
+  v_actor_uid := auth.uid();
+  if v_actor_uid is null or public.auth_user_role() <> 'Client' then
+    raise exception 'GATE:gate.online.client_session_required|A signed-in client session is required.'
+      using errcode = '42501';
+  end if;
+
+  if (p_booking_id is null) = (p_booking_request_id is null) then
+    raise exception 'GATE:gate.payment.target_required|Choose exactly one booking or request.';
+  end if;
+
   if p_client_uuid is null or trim(p_client_uuid) = '' then
     raise exception 'GATE:gate.payment.missing_client_uuid|A client UUID is required.';
   end if;
@@ -134,23 +149,6 @@ begin
     raise exception 'GATE:gate.payment.invalid_provider|Provider % is not supported.', p_provider;
   end if;
 
-  -- Idempotency check: if intent already exists for this client_uuid, return it
-  select * into v_existing from public.payment_intents where client_uuid = p_client_uuid;
-  if found then
-    return jsonb_build_object(
-      'success', true,
-      'intent_id', v_existing.id,
-      'client_uuid', v_existing.client_uuid,
-      'amount_paisa', v_existing.amount_paisa,
-      'provider', v_existing.provider,
-      'status', v_existing.status,
-      'expires_at', v_existing.expires_at,
-      'is_existing', true
-    );
-  end if;
-
-  v_requester_auth_uid := auth.uid();
-
   if p_booking_request_id is not null then
     select id, client_id, requester_auth_uid, total_paisa, vat_paisa, advance_due_paisa, status
       into v_req
@@ -158,7 +156,15 @@ begin
      where id = p_booking_request_id;
 
     if not found then
-      raise exception 'GATE:gate.booking_request.not_found|Booking request not found.';
+      raise exception 'GATE:gate.payment.target_unavailable|Payment target is not available.'
+        using errcode = '42501';
+    end if;
+
+    -- SECURITY DEFINER bypasses booking_requests RLS. Check ownership before
+    -- reading or returning any money, status, or intent data.
+    if v_req.requester_auth_uid is distinct from v_actor_uid then
+      raise exception 'GATE:gate.payment.target_unavailable|Payment target is not available.'
+        using errcode = '42501';
     end if;
 
     if v_req.status in ('declined', 'cancelled') then
@@ -166,7 +172,7 @@ begin
     end if;
 
     v_client_id := v_req.client_id;
-    v_requester_auth_uid := coalesce(v_requester_auth_uid, v_req.requester_auth_uid);
+    v_requester_auth_uid := v_actor_uid;
     if v_req.advance_due_paisa > 0 then
       v_amount_paisa := v_req.advance_due_paisa;
     else
@@ -180,7 +186,15 @@ begin
      where id = p_booking_id;
 
     if not found then
-      raise exception 'GATE:gate.booking.not_found|Booking not found.';
+      raise exception 'GATE:gate.payment.target_unavailable|Payment target is not available.'
+        using errcode = '42501';
+    end if;
+
+    -- Only a client bound to this booking's client record may pay its balance.
+    if v_bk.client_id is null
+       or v_bk.client_id is distinct from public.auth_client_id() then
+      raise exception 'GATE:gate.payment.target_unavailable|Payment target is not available.'
+        using errcode = '42501';
     end if;
 
     if v_bk.stage = 'Cancelled' then
@@ -188,6 +202,7 @@ begin
     end if;
 
     v_client_id := v_bk.client_id;
+    v_requester_auth_uid := v_actor_uid;
 
     -- Look up latest non-void invoice for the booking if any
     select id, outstanding_amount, status
@@ -215,6 +230,31 @@ begin
 
   else
     raise exception 'GATE:gate.payment.target_required|Either booking_id or booking_request_id must be provided.';
+  end if;
+
+  -- Idempotency is checked only AFTER the selected target has been authorized.
+  -- A guessed client_uuid can never reveal an unrelated intent's amount/status.
+  select * into v_existing from public.payment_intents
+   where client_uuid = p_client_uuid;
+  if found then
+    if v_existing.booking_id is distinct from p_booking_id
+       or v_existing.booking_request_id is distinct from p_booking_request_id
+       or v_existing.client_id is distinct from v_client_id
+       or v_existing.requester_auth_uid is distinct from v_actor_uid
+       or v_existing.provider is distinct from v_clean_provider then
+      raise exception 'GATE:gate.payment.intent_unavailable|Payment intent is not available.'
+        using errcode = '42501';
+    end if;
+    return jsonb_build_object(
+      'success', true,
+      'intent_id', v_existing.id,
+      'client_uuid', v_existing.client_uuid,
+      'amount_paisa', v_existing.amount_paisa,
+      'provider', v_existing.provider,
+      'status', v_existing.status,
+      'expires_at', v_existing.expires_at,
+      'is_existing', true
+    );
   end if;
 
   if v_amount_paisa <= 0 then
