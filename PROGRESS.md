@@ -1,5 +1,53 @@
 # Progress Log
 
+## 2026-11-21 — Track T7 Roadmap Truth Reconciliation & Lifecycle Gate Parity (Lane C)
+
+**Did**
+- Reconciled roadmap statuses across `docs/plans/T7_ONLINE_BOOKING.md` for merged Track T7 cards:
+  - `T7-02`: Public booking site & public catalogue view (`0255`, lifecycle step `L93`).
+  - `T7-03`: Client accounts by verified email, passwordless auth, KYC upload & D-5 tenant isolation (`0257`, lifecycle step `L95`).
+  - `T7-04`: Online booking requests, line items & staff queue view (`0256`, lifecycle step `L94`).
+  - `T7-05`: Online payment intents & Fonepay integration (`0258`).
+  - `T7-06`: eSewa & Khalti payment adapters with credentials toggle (D30).
+  - `T7-08`: My bookings client portal modal & 6-step lifecycle timeline.
+  - `T7-15`: Payment links from any booking, 48h expiry, replaces older link (`0259`, lifecycle step `L96`).
+  - `T7-16`: Store analytics (privacy-safe GA4 & Meta Pixel scripts for public booking site).
+- Updated `docs/plans/MIGRATION_LEDGER.md` with verified records for migrations `0255`, `0256`, `0257`, `0258`, `0259`.
+- Fixed lifecycle step sequence and IDs in `scripts/e2e-lifecycle.mjs` (`L93`, `L94`, `L95`, `L96`), ensuring unique monotonic step indexing and exact alignment with roadmap plans.
+- Extended `src/lib/__tests__/roadmapStatusTruth.test.ts` to assert roadmap truth for cards `T7-02` through `T7-16` (7/7 tests passing).
+
+**Ruled**
+- Ruling R-35 & N-5: All migrations must build and verify cleanly in local PGlite before acceptance.
+- Law 1 & Law 6: Server computes authoritative payment link balances; non-money roles cannot access unmasked amounts.
+- D-5: Client accounts have strict tenant isolation verified via end-to-end lifecycle step `L95`.
+
+**Verified**
+- `npm run typecheck`: PASS (0 errors across 2,927 files).
+- `npm run lint`: PASS (0 warnings across `src/`).
+- `npm run check:pglite`: PASS (257/257 applied, 0 failed, 235 definer search paths pinned).
+- `npm run check:lifecycle`: PASS (97/97 steps green, 0 failed — steps L93, L94, L95, L96 verified).
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: PASS (7/7 tests passed).
+- `npm run lint:progress`: PASS.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 114 / 115 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 97 / 97 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 257 files · check:pglite 257/257 applied, 0 failed (recorded 2026-11-21T07:48:43.406Z). Suite: Historical suite: 7599/7599 passed, 0 failed (recorded 2026-11-20T20:14:00.497Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-21T07:49:43.151Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Awaiting Babin review and squash-merge of Track T7 reconciliation PR into main.
+- Outstanding acceptance items for Track T7: live merchant credentials onboarding for Fonepay/eSewa/Khalti, and physical-device / hosted staging acceptance.
+
 ## 2026-11-21 — T7-02, T7-03, T7-04, T7-05, T7-06, T7-08, T7-15: Online Booking Platform & Multi-Provider Client Payments (Lane C)
 
 **Did**

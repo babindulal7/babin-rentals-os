@@ -10136,7 +10136,7 @@ STEPS.push({
 
 
 // -----------------------------------------------------------------------------
-// STEP L93: Booking requests and staff queue (T7-04)
+// STEP L94: Booking requests and staff queue (T7-04)
 //
 // Authority:
 //   - T7-04 · Online booking requests, line items, staff queue, and atomic confirmation/decline RPCs.
@@ -10144,7 +10144,7 @@ STEPS.push({
 //   - Law 6: Warehouse can view request in queue but total/VAT/advance are masked (null).
 // -----------------------------------------------------------------------------
 STEPS.push({
-  id: 'L93',
+  id: 'L94',
   title: 'booking requests and staff queue (T7-04) — submit, rental days & VAT, queue visibility, warehouse money-blind, decline reason, atomic confirm',
   expect: 'green',
   run: async () => {
@@ -10257,7 +10257,7 @@ STEPS.push({
 
 
 // -----------------------------------------------------------------------------
-// STEP L94: Client accounts, KYC upload, and D-5 tenant isolation (T7-03)
+// STEP L95: Client accounts, KYC upload, and D-5 tenant isolation (T7-03)
 //
 // Authority:
 //   - T7-03 · Client accounts by verified email
@@ -10268,7 +10268,7 @@ STEPS.push({
 //   - Law 6: Warehouse cannot view client PAN or unmasked ID document number.
 // -----------------------------------------------------------------------------
 STEPS.push({
-  id: 'L94',
+  id: 'L95',
   title: 'client accounts, KYC upload, and D-5 tenant isolation (T7-03) — anon denied, self-registration, D-5 isolation, warehouse Law 6 masked, binding audited',
   expect: 'green',
   run: async () => {
@@ -10461,7 +10461,7 @@ STEPS.push({
 
 
 // -----------------------------------------------------------------------------
-// STEP L95: Payment link from any booking (T7-15, B17, B38, B55, D30)
+// STEP L96: Payment link from any booking (T7-15, B17, B38, B55, D30)
 //
 // Authority:
 //   - T7-15 · Payment link from any booking
@@ -10472,7 +10472,7 @@ STEPS.push({
 //   - Law 6: Warehouse cannot make a link (money-blind).
 // -----------------------------------------------------------------------------
 STEPS.push({
-  id: 'L95',
+  id: 'L96',
   title: 'payment link from any booking (T7-15) — server-computed amount, 48h expiry, replaces old, expired refuses, replay idempotent, warehouse denied',
   expect: 'green',
   run: async () => {
