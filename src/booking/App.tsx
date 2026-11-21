@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import './booking.css'
+import { getDefaultRentalDates } from './lib/kathmanduDateDefaults'
 import type { CatalogueItem } from './lib/catalogueApi'
 import { fetchPublicCatalogue, checkPublicAvailability } from './lib/catalogueApi'
 import {
@@ -19,20 +20,9 @@ import { MyBookingsModal } from './account/MyBookingsModal'
 import { initStoreAnalyticsScripts, trackStoreEvent } from '../lib/storeAnalytics'
 
 export default function BookingApp() {
-  const getTomorrowString = () => {
-    const d = new Date()
-    d.setDate(d.getDate() + 1)
-    return d.toISOString().slice(0, 10)
-  }
-
-  const getDayAfterTomorrowString = () => {
-    const d = new Date()
-    d.setDate(d.getDate() + 3)
-    return d.toISOString().slice(0, 10)
-  }
-
-  const [startDate, setStartDate] = useState<string>(getTomorrowString)
-  const [endDate, setEndDate] = useState<string>(getDayAfterTomorrowString)
+  const [initialDates] = useState(getDefaultRentalDates)
+  const [startDate, setStartDate] = useState<string>(initialDates.startDate)
+  const [endDate, setEndDate] = useState<string>(initialDates.endDate)
   const [activeCategory, setActiveCategory] = useState<string>('All')
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [items, setItems] = useState<CatalogueItem[]>([])
