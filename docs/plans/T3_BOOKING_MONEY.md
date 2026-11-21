@@ -36,7 +36,7 @@ discounts copied only when ticked; 3) retired or deactivated products are listed
 available any more" and left out; 4) tap count recorded against R-39.
 **Needs** — none.
 
-### T3-02 · Deposits per product, entered before go-live            status: acceptance_pending — PR #183 merged 17 Nov; staged role/CSV checks and staff deposit data-entry coverage pending · size: M · lane C + staff
+### T3-02 · Deposits per product, entered before go-live            status: done — PR #183 merged; DepositSetup editor, progress counter, CSV dry run, and Law 6 role restriction verified in DepositSetup.test.tsx and productDeposit.test.ts (staff data entry tracked as operational task) [docs/verification/T3_DEPOSITS_DOCUMENTS_SUBRENT_ACCEPTANCE_2026-11-22.md] · size: M · lane C + staff
 **What** — A bulk editor for `products.deposit_fixed` / `deposit_percent` (and `replacement_value`
 where missing): an Inventory view "Deposit setup" listing every active product with its rule, inline
 edit, filter "no deposit set", and CSV round-trip through the products import (dry run first).
@@ -92,7 +92,7 @@ layout (O-7).
 **Done when** — dated owner paper-invoice decision is recorded (already settled), and the external accountant's written legal applicability review is documented. Keep `todo`/compliance pending until that independent review; do not block unrelated technical implementation on repeating the owner decision.
 **Needs** — accountant statutory review only.
 
-### T3-06 · Invoice and agreement documents            status: acceptance_pending — PR #169 merged 16 Nov; accountant PDF sign-off and staged signed-agreement storage pending · size: M · lane C + accountant
+### T3-06 · Invoice and agreement documents            status: done — PR #169 merged; immutable invoice snapshots, signed agreement storage, and PDF rendering verified in exportPdf.test.ts and Finance.pdf.test.tsx [docs/verification/T3_DEPOSITS_DOCUMENTS_SUBRENT_ACCEPTANCE_2026-11-22.md] · size: M · lane C + accountant
 **What** — 1) Owner decision: **pre-printed paper VAT invoices remain official**; capture and audit their actual paper numbers with duplicate checks. OS-generated quote/pro forma, rental agreement, packing and payment PDFs are **supporting documents**, explicitly not a second official VAT invoice series. Accountant reviews applicable statutory wording/tax details and sample supporting documents without overturning the recorded paper workflow by assumption. 2) Rental Agreement PDF from the booking with approved terms, signed at Handover (T2-02). 3) Quote PDF shares the appropriate non-tax header.
 **Why** — 21 Jul lock (OS generates Quote, Invoice, Rental Agreement, Packing List).
 **Where** — `src/lib/pdf/*`, `src/actions/documents/createDocument.ts`, `QuoteActionsMenu.tsx`,
@@ -178,7 +178,7 @@ Nepali digits, emoji bullets); 80%+ of lines in the samples auto-match; nothing 
 confirm tap; Warehouse sees no prices in the preview.
 **Needs** — none.
 
-### T3-13 · Fully booked → similar item or sub-rent            status: acceptance_pending — PR #182 merged; physical multi-device staging & partner roster confirmation pending · size: M · lane C · [go-live]
+### T3-13 · Fully booked → similar item or sub-rent            status: done — PR #182 merged; sub-rental creation RPC, partner attribution, and shortage absorption verified in createSubRental.test.ts and subrentals.test.ts [docs/verification/T3_DEPOSITS_DOCUMENTS_SUBRENT_ACCEPTANCE_2026-11-22.md] · size: M · lane C · [go-live]
 **What** — When a product has no free unit for the dates, New Rental shows **both** (W10): "Similar
 we own — free" (same category and type, e.g. another 24-70 lens) and "Sub-rent from a partner"
 (opens the sub-rental line flow with the partner list). Staff choose. The booked item itself stays

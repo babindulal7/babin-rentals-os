@@ -8,20 +8,9 @@ describe('T3 roadmap reconciliation reflects merged PRs as acceptance_pending', 
   const plan = read('docs/plans/T3_BOOKING_MONEY.md')
   const verification = read('docs/verification/T3_ROADMAP_RECONCILIATION_2026-11-19.md')
 
-  it('marks T3-13 as acceptance_pending and T3-16, T3-19, T3-20, T3-23 as done with merged PR references', () => {
-    const pendingChecks: Record<string, string> = {
-      'T3-13': 'PR #182 merged',
-    }
-
-    for (const [key, prRef] of Object.entries(pendingChecks)) {
-      const heading = plan.split('\n').find(line => line.startsWith(`### ${key} ·`))
-      expect(heading).toBeDefined()
-      expect(heading).toContain('status: acceptance_pending')
-      expect(heading).toContain(prRef)
-      expect(heading).not.toContain('status: done')
-    }
-
+  it('marks T3-13, T3-16, T3-19, T3-20, T3-23 as done with merged PR references', () => {
     const doneChecks: Record<string, string> = {
+      'T3-13': 'PR #182 merged',
       'T3-16': 'PR #181 merged',
       'T3-19': 'PR #163 merged',
       'T3-20': 'PR #190 merged',
