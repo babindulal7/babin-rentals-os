@@ -1,5 +1,53 @@
 # Progress Log
 
+## 2026-11-21 — T7-01: Reconcile Online Booking Spec with 12 Nov Unified Launch Rulings (Lane C)
+
+**Did**
+- Fully reconciled [`docs/ONLINE_BOOKING_SPEC.md`](docs/ONLINE_BOOKING_SPEC.md) with owner rulings ([`RULINGS-2026-11-12-unified-launch.md`](RULINGS-2026-11-12-unified-launch.md)) and the unified launch plan ([`docs/plans/UNIFIED_LAUNCH_2027-02-18.md`](docs/plans/UNIFIED_LAUNCH_2027-02-18.md)):
+  - Updated document header and preamble, replacing outdated warning banners with authoritative reconciled design.
+  - Aligned Section 0 and Section 2 to enforce **Pickup AND return dates/times first** (UL-02) via a persistent range bar before equipment browsing, respecting Kathmandu 06:00 operational day, turnaround buffers (T2-22), and multi-day boundaries.
+  - Specified the dual checkout flow in Section 1, Section 4, and Section 6: **Guest requests enabled by default** (UL-04) capturing contact info + ID upload with Turnstile bot protection, while strictly enforcing D-5/D-10 (zero access to client accounts, portal tables, staff records, or other clients' requests).
+  - Defined verified-account sign-in and server-computed **eligible personalized discounts** (UL-06) for bound clients, alongside published base rental rates (UL-05) on the catalogue.
+  - Reconciled **Manual staff confirmation default** (UL-03): booking requests arrive in the OS queue and never reserve inventory automatically (D31); atomic confirmation creates exactly one reservation.
+  - Documented real-time **Staff request notifications** (UL-07) to authorized desk roles (Coordinator, Manager, Admin, Owner).
+  - Added Section 8.5 specifying the five configurable settings in **Babin Rentals OS → Settings → Website & Client Portal** (UL-08) with server-enforced access control and immutable audit logging.
+  - Updated `booking_requests` schema in Section 5.1 with `is_guest`, nullable `requester_auth_uid`, and guest contact fields with integrity CHECK constraints.
+  - Updated defaults table in Section 13.2 to include UL-03 through UL-07.
+  - Updated [`docs/plans/T7_ONLINE_BOOKING.md`](docs/plans/T7_ONLINE_BOOKING.md) moving card T7-01 to `acceptance_pending` awaiting Babin's final review.
+
+**Ruled**
+- Coordinated release of Babin Rentals OS, public website, and client portal (UL-01) by 18 Feb 2027 supersedes older postponed-site scheduling.
+- Rental pickup and return dates/times must be selected first (UL-02); availability is evaluated for that exact interval without discarding the cart on edits.
+- Guest request submission (UL-04) does not grant portal account access; account records strictly require verified email identity (D-5, D-10).
+- Launch defaults (UL-03 to UL-07) are design defaults in specification only; no production settings or live permissions changed.
+
+**Verified**
+- Reconciled document verified against UL-01 to UL-09 and `UNIFIED_LAUNCH_2027-02-18.md`.
+- `git diff --stat` confirms cleanly scoped edits to `docs/ONLINE_BOOKING_SPEC.md` and `docs/plans/T7_ONLINE_BOOKING.md`.
+- `npm run lint:progress`: PASS.
+- Road-map card recount preserved at exactly 92/155 done (0 newly claimed done).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 114 / 115 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 97 / 97 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 257 files · check:pglite 257/257 applied, 0 failed (recorded 2026-11-21T08:08:13.666Z). Suite: Historical suite: 7630/7631 passed, 1 failed (recorded 2026-11-21T08:05:00.041Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-21T08:08:44.188Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Final owner approval and sign-off on reconciled T7-01 online booking specification (PR #293).
+- Babin applies the 15 pending migrations (`0245`–`0259`) to staging (`klhmsrunqrdxjudyhnkm`) per the operator runbook in `docs/verification/STAGING_INSTALLATION_MANIFEST_2026-11-21.md`.
+- Next card in Track 1: T1-05 (Nine role seats + read-only role harness staging execution against verified staging project).
+
 ## 2026-11-21 — T9-01: Bring the catalogue and clients across (Lane A)
 
 **Did**
@@ -39948,5 +39996,6 @@ roles 6 vs 12, sidebar 7 vs 8 vs 8-with-Tools, and two I could resolve (motion s
 Design Tokens v2.0 wins as the root; mobile bottom bar → Navigation v2.0 wins as it
 explicitly supersedes). Plus: `Prisma Schema.md` names a stack no spec mentions — it is
 Supabase + RLS.
+
 
 
