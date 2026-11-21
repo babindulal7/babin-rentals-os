@@ -1,5 +1,51 @@
 # Progress Log
 
+## 2026-11-21 — T7-11: Online Booking Launch Operational Checklist & Domain Routing (Lane C)
+
+**Did**
+- Authored operational launch runbook and verification checklist [`docs/verification/T7-11_LAUNCH_CHECKLIST.md`](docs/verification/T7-11_LAUNCH_CHECKLIST.md) for **T7-11 · Launch**:
+  - Defined authoritative three-hostname production domain architecture per Babin rulings (O-1, B5, UL-01):
+    - `babinrentals.com`: Client front door (public booking store, public catalogue, client accounts, payment links).
+    - `app.babinrentals.com`: Staff operations (Today dashboard, bookings queue, inventory, floor ops, finance, settings).
+    - `book.babinrentals.com`: One-way HTTP 301 alias redirecting to `https://babinrentals.com` without redirect loops.
+  - Verified Booqable backup corpus at `C:\\Users\\use\\Desktop\\Babin rentals products app\\archive\\legacy_and_duplicates\\products-export-2026-06-30.csv` (274 equipment products, integer paisa rates, legacy external_refs mapping, and photo CDN URLs).
+  - Authored security and threat model design documents:
+    - [`docs/verification/T7-05_DESIGN.md`](docs/verification/T7-05_DESIGN.md): Fonepay integration threat model, server-to-server cryptographic verification, Law 4/8 callback replay protection, and Law 6 floor role money blindness.
+    - [`docs/verification/T7-06_DESIGN.md`](docs/verification/T7-06_DESIGN.md): Multi-gateway architecture (eSewa & Khalti) with credentials toggles and fail-closed security.
+  - Documented DNS, ingress, SSL/TLS, and production environment secrets preflight checklists for Babin.
+  - Updated [`docs/plans/T7_ONLINE_BOOKING.md`](docs/plans/T7_ONLINE_BOOKING.md) updating card T7-11 to `launch_checklist_ready`.
+
+**Ruled**
+- Ruling O-1, B5, UL-01: `babinrentals.com` serves as the primary client front door; staff application sits at `app.babinrentals.com`.
+- Ruling D30: Payment verification is strictly server-to-server; browser redirects never mark payment intents paid.
+- Law 4 & Law 8: Online payments and reversals are strictly immutable; duplicate callbacks are idempotent.
+- Rule N-5 & N-8: Zero remote database writes by agent; production secrets reside exclusively in hosted Edge Function environment.
+
+**Verified**
+- `npm run typecheck`: PASS (0 errors).
+- `npm run check:pglite`: PASS (258/258 migrations applied cleanly, 0 leaks).
+- `npm run check:lifecycle`: PASS (98/98 steps green).
+- `npm run lint:progress`: PASS.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 115 / 116 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 258 files · check:pglite 258/258 applied, 0 failed.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Track T7 complete across online booking, catalogue, client portal, payment links, refunds, and launch runbook. Ready for Day X go-live.
+- Operator execution by Babin for staging apply (T1-02).
+- Staging role smoke testing (T1-05).
+
 ## 2026-11-21 — Eight-Card Acceptance Verification Audit & Spec Reconciliation (Lane B / Gemini)
 
 **Did**
@@ -40042,6 +40088,7 @@ roles 6 vs 12, sidebar 7 vs 8 vs 8-with-Tools, and two I could resolve (motion s
 Design Tokens v2.0 wins as the root; mobile bottom bar → Navigation v2.0 wins as it
 explicitly supersedes). Plus: `Prisma Schema.md` names a stack no spec mentions — it is
 Supabase + RLS.
+
 
 
 
