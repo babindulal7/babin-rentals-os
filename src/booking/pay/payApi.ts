@@ -114,46 +114,13 @@ export async function verifyOnlinePayment(params: {
 }): Promise<PayVerifyResponse> {
   const { intentId, providerRef, bid = '', uid = '', responseCode = 'successful' } = params
 
-  try {
-    const { data, error } = await supabase.functions.invoke<PayVerifyResponse>('pay-verify', {
-      body: { intentId, providerRef, bid, uid, responseCode },
-    })
-
-    if (!error && data && data.success) {
-      return data
-    }
-  } catch (err) {
-    console.warn('[payApi] Edge function pay-verify failed, trying direct RPC fallback:', err)
-  }
-
-  // Fallback: direct RPC invocation
-  const { data: rpcData, error: rpcError } = await supabase.rpc('allocate_payment_intent', {
-    p_intent_id: intentId,
-    p_provider_ref: providerRef,
-    p_provider_response: { mock_verified: true, responseCode, client_call: true },
+  // Only the trusted server can write a payment ledger entry. Never treat an
+  // Edge Function outage or a browser-supplied callback as receipt evidence.
+  const { data, error } = await supabase.functions.invoke<PayVerifyResponse>('pay-verify', {
+    body: { intentId, providerRef, bid, uid, responseCode },
   })
-
-  if (rpcError || !rpcData) {
-    throw new Error(rpcError?.message || 'Failed to verify and allocate payment intent.')
+  if (error || !data?.success) {
+    throw new Error(data?.error || error?.message || 'Payment verification unavailable. Do not pay again until the rental desk confirms the result.')
   }
-
-  const res = rpcData as {
-    success: boolean
-    intent_id: string
-    payment_id: string | null
-    payment_no?: string | undefined
-    amount_paisa?: number | undefined
-    status: 'pending' | 'paid' | 'allocated' | 'failed' | 'expired'
-    already_allocated?: boolean | undefined
-  }
-
-  return {
-    success: res.success,
-    intent_id: res.intent_id,
-    status: res.status,
-    payment_id: res.payment_id,
-    payment_no: res.payment_no,
-    amount_paisa: res.amount_paisa,
-    already_allocated: res.already_allocated,
-  }
+  return data
 }
