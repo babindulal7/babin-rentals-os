@@ -1,5 +1,55 @@
 # Progress Log
 
+## 2026-11-21 — T1-09: Transactional email configuration and domain verification protocol (Lane A)
+
+**Did**
+- Implemented and established the transactional email architecture, domain verification protocol, and operational runbook for card **T1-09 · Email from @babinrentals.com** on branch `lane-a/T1-09-email-from-babinrentals-com`:
+  - Modeled monthly transactional email capacity (~3,000 to 4,000 emails/month, W21) covering booking lifecycle notifications, staff morning digests, payment reminders, and client OTP/password recovery.
+  - Selected Resend as primary transactional provider (built on AWS SES infrastructure with dedicated IP pools and clean Deno/REST support; Postmark/Amazon SES documented as alternatives).
+  - Authored comprehensive operational runbook [`docs/runbooks/TRANSACTIONAL_EMAIL_SETUP.md`](docs/runbooks/TRANSACTIONAL_EMAIL_SETUP.md) detailing provider-generated DNS records (SPF, DKIM, DMARC, MX) for `babinrentals.com` at Cloudflare, Custom SMTP configuration for Supabase Auth, and Edge Function secrets setup via `supabase secrets set RESEND_API_KEY`.
+  - Integrated provider-generated DNS guidance from PR #279 (resolving Codex review findings on domain-specific DKIM and return-path records).
+  - Authored automated documentation and boundary verification suite in [`src/lib/__tests__/t109EmailConfigDoc.test.ts`](src/lib/__tests__/t109EmailConfigDoc.test.ts) (3/3 tests pass).
+  - Promoted card `T1-09` in [`docs/plans/T1_RELEASE.md`](docs/plans/T1_RELEASE.md) to `ready — awaiting merge (lane-a/T1-09-email-from-babinrentals-com)`.
+
+**Ruled**
+- Zero credentials committed to git or logs (Rule N-8, Law 6).
+- Email bodies are never persisted in the database; `email_logs` records only template, recipient, and status metadata (Rule S13, W21).
+- Client transactional notifications remain English-only (Rule W80).
+- DMARC rollout follows phased progression: `p=none` for 2 weeks monitoring, then advancing to `p=quarantine`.
+
+**Verified**
+- `npx vitest run src/lib/__tests__/t109EmailConfigDoc.test.ts`: PASS (3/3 tests).
+- `npm run check:pglite`: PASS (257/257 migrations applied, 0 leaks, 235 definer search paths pinned).
+- `npm run check:lifecycle`: PASS (97/97 steps green).
+- `npm run check:anon`: PASS (21 callable anon functions, 142 RLS tables, 0 owner-rights views, 6/6 Batch 0 denials).
+- `npm run typecheck`: clean AST check with 0 errors.
+- `npm run lint`: clean, 0 warnings.
+- `npm run lint:ui-copy`: PASS (0 developer text violations).
+- `npm run check:contrast`: PASS (97/97 WCAG AA).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 114 / 115 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 97 / 97 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 257 files · check:pglite 257/257 applied, 0 failed. Suite: PASS.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin applies Cloudflare DNS records (SPF/DKIM/DMARC) for `babinrentals.com` and sets `RESEND_API_KEY` on staging/production (T1-09 operator step).
+- Staging-only dry run rehearsal of batch apply (T1-02) once approved by Babin.
+- Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
+- Staff inventory deposit data entry across active products (T3-02).
+- T3-14 (Draft invoice at Confirm, number on full payment): resync integrity & numbering moment (PR #259).
+- T3-13, T3-20, T3-30: pending remaining accountant & staged receipts.
+- T0-12: hosted staging migration apply by Babin.
+- Full pg_dump SQL backup before Batch 1 live apply (T1-01).
+
 ## 2026-11-21 — T7-02, T7-03, T7-04, T7-05, T7-06, T7-08, T7-15: Online Booking Platform & Multi-Provider Client Payments (Lane C)
 
 **Did**
@@ -51,24 +101,6 @@
 - `npm run check:contrast`: PASS (97/97 WCAG AA checks passed).
 - `npm run build`: PASS (`tsc --noEmit && vite build` clean, 8,360 modules transformed).
 
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 114 / 115 (99%) | +0 |
-| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | 96 / 96 (100%) | +0 |
-| Overall | structural mean of five | ≈ 96% | — |
-Migrations 257 files · check:pglite 257/257 applied, 0 failed (recorded 2026-11-20T21:15:21.579Z). Suite: PASS — 7629/7629 passed, 0 failed (recorded 2026-11-20T21:19:52.608Z); source fingerprint matches.
-Coverage suite: Historical suite: 6946/6946 passed, 0 failed (recorded 2026-11-12T14:54:27.393Z); current source NOT VERIFIED.
-Gates read from .lifecycle-result.json, written 2026-11-20T21:16:13.455Z.
-Counted by `npm run completion`, not typed.
-Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
-
-### Remaining
-- Track T7 complete and verified on `lane-c/T7-03-online-booking-requests-and-client-portal`. Ready for merge by Babin.
-
 ## 2026-11-21 — T1-01: Production backup drill & off-device verification (Lane A + Babin)
 
 **Did**
@@ -92,25 +124,6 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `npm run test:backup`: PASS (10/10 tests green across `backup-db.test.mjs` and `check-dump.test.mjs`).
 - `npm run check:pglite`: PASS (253/253 migrations applied cleanly, 0 leaks).
 - `npm run check:lifecycle`: PASS (94/94 steps green).
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 112 / 113 (99%) | +0 |
-| Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | 94 / 94 (100%) | +0 |
-| Overall | structural mean of five | ≈ 96% | — |
-
-### Remaining
-- Staging-only dry run rehearsal of batch apply (T1-02) once approved by Babin.
-- Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
-- Staff inventory deposit data entry across active products (T3-02).
-- T3-14 (Draft invoice at Confirm, number on full payment): resync integrity & numbering moment (PR #259).
-- T3-13, T3-20, T3-30: pending remaining accountant & staged receipts.
-- T0-12: hosted staging migration apply by Babin.
-- Full pg_dump SQL backup before Batch 1 live apply (T1-01).
 
 ## 2026-11-21 — T0-04: Read-only remote branch census and owner-gated cleanup (Docs audit)
 
