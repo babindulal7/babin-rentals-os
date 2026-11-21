@@ -1,5 +1,58 @@
 # Progress Log
 
+## 2026-11-22 — Staging Floor Loop & Booking Lifecycle Acceptance Walkthrough (Lane A)
+
+### Did
+- Aligned 9 staging role seats and passwords on staging project `klhmsrunqrdxjudyhnkm` (`babin-staging`) via [`docs/verification/STAGING_ALIGN_NINE_ROLES.sql`](docs/verification/STAGING_ALIGN_NINE_ROLES.sql):
+  - Standardized all 10 user emails across `auth.users` and `auth.identities` to `staging-<role>@babinrentals.test` (and `client-b@babinrentals.test`).
+  - Set Blowfish cost 10 bcrypt password hashes for `StagingPass2026!`, verified `password_matches = true` on all 10 accounts and verified HTTP 200 GoTrue authentication across all 9 roles.
+- Executed **T7-04 · Staging booking request confirmation flow** ([`scripts/verify-staging-booking-request-confirmation.mjs`](scripts/verify-staging-booking-request-confirmation.mjs)) with 13/13 assertions passing:
+  - Coordinator inspected pending request `REQ-20261121-1001` with server-computed VAT (`195000` paisa) and advance due (`847500` paisa).
+  - Coordinator created confirmed booking via `create_booking` RPC (`booking_id: f861dab2-e4a6-43cc-a723-71b7481b96e2`, `booking_no: 1`).
+  - Coordinator confirmed request via `confirm_booking_request` RPC: request status transitioned to `confirmed`, linked to booking `f861dab2-e4a6-43cc-a723-71b7481b96e2`.
+  - Idempotency verified: re-calling `confirm_booking_request` returned `already_confirmed: true`.
+  - Non-coordinator refusal verified: Warehouse denied calling `confirm_booking_request` (HTTP 400/403).
+- Executed full **Staging Floor Operations Loop (T2 Loop)** ([`scripts/verify-staging-floor-loop.mjs`](scripts/verify-staging-floor-loop.mjs), [`scripts/verify-staging-t2-floor-loop-receipt.mjs`](scripts/verify-staging-t2-floor-loop-receipt.mjs)) with 19/19 assertions passing:
+  - **Quote $\to$ Booked:** evaluated capacity and verified automated reservation minting in `inventory_reservations` via trigger `0100`.
+  - **Booked $\to$ Packed (Pack):** assigned physical unit `7c75ea7f-6e07-43ed-b8ec-a66efceecb88` (`FX6-STAGING-001`), recorded packing session, packing lines, outbound movements, and pack photo evidence in `evidence` bucket.
+  - **Packed $\to$ On Rent (Handover):** recorded handover session with Law 17 delivery method `Client Pickup` and verified government ID, uploaded glass signature, captured `signatures` for `Receiver` and `Warehouse staff`, and completed handover under R-06 override.
+  - **On Rent $\to$ Returned (Return):** recorded return session, returned line in `Good` condition, and verified inspection state.
+  - **Reset & Inspection QC (T2-13 / 0183):** Technician executed alone-on-shift self-QC (`qc_self_checked = true`) under ruling `T2-13` / `0183`, marking `cleaning_queue_entries` as `Ready` with `problem_state = 'No Problems'`.
+  - **Law 1 Engine Invariant (0114):** verified direct client update to `product_units.status` is rejected (status owned by DB engine).
+  - **Law 6 Money Masking:** verified `total_paisa`, `vat_paisa`, and `advance_due_paisa` are null for Warehouse on `booking_requests_v`, and blanket `SELECT * FROM bookings` is denied (HTTP 403).
+
+### Ruled
+- Direct status updates to `product_units.status` are forbidden (`GATE:gate.unit_status.direct_write`) — the database engine computes and transitions unit status from lifecycle tables.
+- Evidence uploaded to storage bucket `evidence` must follow path `<booking_id>/<session_id>/<filename>` where the session is currently active/In Progress per migration `0170`.
+- Delivery method on `operation_sessions` is strictly enum `Client Pickup` (Law 17 / migration `0137`).
+
+### Verified
+- `scripts/verify-staging-booking-request-confirmation.mjs`: 13/13 assertions passed against staging (`klhmsrunqrdxjudyhnkm`).
+- `scripts/verify-staging-t2-floor-loop-receipt.mjs`: 19/19 assertions passed against staging.
+- `npm run check:pglite`: 258/258 applied, 0 failed.
+- `npm run check:lifecycle`: 98/98 green, 0 failed.
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (0 warnings/errors).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 258 files · check:pglite 258/258 applied, 0 failed (recorded 2026-11-21T18:32:29.465Z). Suite: Historical suite: 7630/7631 passed, 1 failed (recorded 2026-11-21T08:05:00.041Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-21T18:32:58.044Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Finalize operator verification of remaining Track 7 cards on staging.
+- Phase 2 physical hardware cards remain pending for post-live shop device day per 20 Nov ruling.
+
 ## 2026-11-21 — T3-20 & T3-23: External Accountant Sign-off & Acceptance (Lane C)
 
 ### Did
@@ -26,27 +79,32 @@
 - `npm run check:lifecycle`: 98/98 steps green.
 - `npm run typecheck`: 0 errors.
 
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
-| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
-| Overall | structural mean of five | ≈ 96% | — |
+## 2026-11-21 — T1-05 & T2-20: Hosted Staging Acceptance & Role Isolation (Lane A)
 
-Migrations 258 files · check:pglite 258/258 applied, 0 failed (recorded 2026-11-21T16:44:16.557Z). Suite: not run this session (static inspection; pass --tests to execute suite).
-Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written 2026-11-21T16:44:40.867Z.
-Counted by `npm run completion`, not typed.
-Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+### Did
+- Executed and verified live hosted staging acceptance on project `klhmsrunqrdxjudyhnkm` (`babin-staging`):
+  - Provisioned and authenticated all 9 role seats (`Owner`, `Admin`, `Manager`, `Coordinator`, `Warehouse`, `Technician`, `Accounts`, `Driver`, `Client` `@babinrentals.test`) against Supabase GoTrue with JWTs issued.
+  - Ran [`scripts/run-staging-readonly-suite.mjs`](scripts/run-staging-readonly-suite.mjs): verified 57/57 live PostgREST assertions green.
+  - Ran [`scripts/verify-staging-storage-acceptance.mjs`](scripts/verify-staging-storage-acceptance.mjs): verified 22/22 storage isolation assertions green.
+  - Verified Law 6 money-blindness on live HTTP payloads: `Warehouse`, `Technician`, `Driver`, and `Client` have rental amounts, line prices, payments, invoices, and security deposits strictly suppressed.
+  - Promoted **T1-05 · Nine role seats + read-only role harness** to `done` ([`docs/verification/STAGING_HOSTED_ACCEPTANCE_2026-11-21.md`](docs/verification/STAGING_HOSTED_ACCEPTANCE_2026-11-21.md)).
+  - Promoted **T2-20 · Floor adds consumables at Pack and Handover** to `done` ([`docs/verification/STAGING_HOSTED_ACCEPTANCE_2026-11-21.md`](docs/verification/STAGING_HOSTED_ACCEPTANCE_2026-11-21.md)).
+  - Synchronized roadmap regression guard in [`src/lib/__tests__/roadmapStatusTruth.test.ts`](src/lib/__tests__/roadmapStatusTruth.test.ts).
 
-### Remaining
-- Staging SQL batch apply completion by Babin (`STAGING_BATCH_0245_TO_0259.sql` and `STAGING_NINE_ROLE_SEATS_SETUP.sql`).
-- Execute `scripts/run-staging-readonly-suite.mjs` on hosted staging to verify Path 1 role seats and unblock T1-05, T2-20, T2-22, T7-02, T7-12, T7-13.
-- Phase 2 physical hardware cards remain pending for post-live shop device day per 20 Nov ruling.
+### Ruled
+- Law 6: Floor and client roles remain strictly money-blind on live PostgREST responses.
+- Law 3: Storage objects in `documents` and `evidence` remain immutable (overwrites and deletes rejected).
+- D-5: Cross-tenant isolation enforced on live hosted sessions (Client A cannot query Client B bookings).
 
+### Verified
+- `node scripts/run-staging-readonly-suite.mjs sb_publishable_I8NeNGI8ZLbGHybUYHm-SQ_ypCLh1La`: 9/9 roles authenticated, 57/57 PostgREST checks green.
+- `node scripts/verify-staging-storage-acceptance.mjs`: 22/22 storage checks green.
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: 7/7 tests pass.
+- `npm run check:pglite`: 258/258 migrations applied, 0 failed.
+- `npm run check:lifecycle`: 98/98 steps green.
+- `npm run typecheck`: 0 errors.
+
+>>>>>>> origin/main
 ## 2026-11-21 — T1-06: Storage Scoping Accepted on Staging (Lane A)
 
 ### Did
