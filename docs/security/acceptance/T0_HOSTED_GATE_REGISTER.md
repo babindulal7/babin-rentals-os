@@ -6,7 +6,7 @@
 **Current Head SHA:** `04746df2ef225057ec25f36c19e9eb9f389b3f26`  
 **Target Environment:** `babin-staging` (Free Supabase Project, Singapore region)  
 **Production Target:** `sxguwvgoserhdolewibb` — **NEVER TOUCHED, ZERO CHANGES**  
-**Status:** **STAGE 0 PASS · STAGE 1 PASS (100% ALIGNED & SEEDED) · STAGE 2 READY FOR CREDENTIAL CONFIGURATION · STAGE 3 HOLD**  
+**Status:** **STAGE 0 PASS · STAGE 1 PASS · STAGE 2 PASS (100% POSTGREST & STORAGE RLS VERIFIED) · STAGE 3 HOLD**  
 
 ---
 
@@ -64,10 +64,10 @@ Before hosted staging execution (Stage 2) can begin, Stage 1 provisioning must c
 [STAGE 1: Schema & Synthetic Seed] ==> PASS (Migrations 0245–0259 applied; 10 synthetic test identities seeded)
           │
           ▼
-[STAGE 2: Hosted PostgREST & Storage] ==> READY FOR CREDENTIAL CONFIGURATION (Awaiting .env.staging.local)
+[STAGE 2: Hosted PostgREST & Storage] ==> PASS (All 9 roles + Client authenticated; 61/61 RLS checks passed)
           │
           ▼
-[STAGE 3: Owner Launch Review] ==> HOLD (No production changes authorized)
+[STAGE 3: Owner Launch Review] ==> HOLD (Awaiting Babin Owner sign-off; no production changes authorized)
 ```
 
 ### Stage Status Breakdown:
@@ -82,14 +82,23 @@ Before hosted staging execution (Stage 2) can begin, Stage 1 provisioning must c
   - Staging ledger in `supabase_migrations.schema_migrations` now records all 258 migrations, achieving 100% parity with local HEAD (`3a8d90b9fa197d1a69326483a89140e404385b85`).
   - All 10 synthetic identities across the 9 canonical roles + Client B, test clients (`C-9901`, `C-9902`), and portal bindings successfully seeded via `02_SEED_SYNTHETIC_STAGE1_USERS.sql`.
 
-- **Stage 2 (Real Hosted JWT / PostgREST / Storage Acceptance): `READY FOR CREDENTIAL CONFIGURATION`**  
-  - Verification harness ready at `scripts/verify-staging-readonly.mjs`.
-  - Requires `.env.staging.local` populated with staging URL, anon key, fixture manifest, and the role JWT tokens.
-  - Will execute read-only GET requests to PostgREST and Storage to verify 9-role authorization, Law 6 money blindness, and cross-client isolation on real Supabase infrastructure.
+- **Stage 2 (Real Hosted JWT / PostgREST / Storage Acceptance): `PASS`**  
+  - Executed via `scripts/verify-staging-hosted.mjs` against `babin-staging` (`klhmsrunqrdxjudyhnkm`).
+  - All 9 canonical roles successfully authenticated via GoTrue (`/auth/v1/token`) with bcrypt password `BabinSynthetic2026!`.
+  - Verified 61/61 security assertions with 0 failures:
+    - Expected user identity and database role match for all staff identities.
+    - Permitted booking read succeeds across all roles.
+    - Full Law 6 money blindness confirmed: `Warehouse`, `Technician`, `Driver`, and `Client` have amounts suppressed on `booking_lines_v` and `products_v`, and direct access denied to `payments`, `invoices`, `security_deposits`, and `deposit_movements`.
+    - Positive financial lines readable by `Owner`, `Admin`, `Manager`, `Coordinator`, and `Accounts`.
+    - Cross-client isolation verified: Client A accessing Client B booking returns 0 rows.
+    - Driver unassigned transport route access verified: unassigned trip access denied.
+    - Unauthenticated (`anon`) access denied to `staff_directory_v`, `product_units_service_v`, and `audit_logs`.
+    - Unauthenticated (`anon`) execution privilege denied for all volatile public functions (sanctioned public intake `submit_booking_request` verified).
+  - Evidence report generated at `artifacts/staging-verification/2026-11-21T19-01-13-432Z/REPORT.md`.
 
 - **Stage 3 (Owner Launch Sign-off): `HOLD`**  
-  - Phase 1 release gate requires owner review of all evidence receipts.
-  - Production database and production migrations remain strictly locked.
+  - Ready for Phase 1 Owner Launch Review by Babin (`SAFE FOR OWNER REVIEW`).
+  - Production database `sxguwvgoserhdolewibb` remains strictly locked and untouched.
 
 ---
 

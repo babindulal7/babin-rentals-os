@@ -6,8 +6,8 @@
 **Audited Head SHA:** `04746df2ef225057ec25f36c19e9eb9f389b3f26`  
 **Commit Message:** `fix(booking): anchor public booking default dates to Kathmandu calendar day`  
 **Primary Execution Worker:** Windows Antigravity (Local Worktree `security_acceptance_audit`)  
-**Audit Status:** **LOCAL VERIFICATION COMPLETE (`PASS`) · HOSTED STAGING EXECUTION (`BLOCKED PENDING OWNER APPROVAL`) · PRODUCTION RELEASE (`HOLD`)**  
-**Final Recommendation:** **`SAFE FOR OWNER REVIEW` / `HOLD FOR HOSTED STAGING EXECUTION`**  
+**Audit Status:** **LOCAL & HOSTED STAGING VERIFICATION COMPLETE (`PASS`) · STAGE 1 & 2 PASS · PRODUCTION RELEASE (`HOLD`)**  
+**Final Recommendation:** **`SAFE FOR OWNER REVIEW`**  
 
 ---
 
@@ -200,10 +200,10 @@ All verification commands specified in the audit contract and CI reference list 
 |---|---|---|---|---|
 | **G0** | Exact source and migration head inventoried | Source | **PASS** | SHA `04746df2ef22`, 258 migrations, clean checkout |
 | **G1** | Staff PIN & session switch robustness | App/Auth | **PASS** | AUTH-01 through AUTH-13 passing in unit & integration tests |
-| **G2** | Nine-role financial & operational boundaries | DB/API | **PASS (Local)** / **BLOCKED (Hosted)** | 17/17 checks pass in PGlite; real PostgREST requires owner-approved staging execution |
-| **G3** | Client A/B and tenant isolation | DB/Storage | **PASS (Local)** / **BLOCKED (Hosted)** | ISO-01 through ISO-10 pass locally; real Storage API requires owner-approved staging execution |
-| **G4** | Money-role AAL2 MFA policy enforcement | Auth/MFA | **BLOCKED (Hosted)** | ADR documented; awaits hosted staging Supabase MFA configuration |
-| **G5** | RLS, views, RPCs, Storage match business policy | Database | **PASS (Local)** / **BLOCKED (Hosted)** | 258 migrations clean, 0 view leaks, 0 definer leaks, Batch 0 RPCs closed |
+| **G2** | Nine-role financial & operational boundaries | DB/API | **PASS** | 17/17 checks in PGlite; 61/61 checks verified in hosted staging PostgREST & Storage |
+| **G3** | Client A/B and tenant isolation | DB/Storage | **PASS** | ISO-01 through ISO-10 pass locally; cross-client booking & unassigned transport denied on hosted staging |
+| **G4** | Money-role AAL2 MFA policy enforcement | Auth/MFA | **BLOCKED (Phase 2)** | ADR documented; awaits hosted staging Supabase MFA configuration |
+| **G5** | RLS, views, RPCs, Storage match business policy | Database | **PASS** | 258 migrations clean, 0 view leaks, 0 definer leaks, Batch 0 RPCs closed, 0 unauthorized anon mutating RPCs |
 | **G6** | Full regression suites pass on Windows PR head | Tooling | **PASS** | All 20 local verification gates green with 0 errors |
 | **G7** | Existing Mac CI reports on exact PR head | CI Runner | **CI-ONLY** | Tracked via existing GitHub CI runner; no configuration modified |
 | **G8** | Zero production writes, secrets, auto-merge | Governance | **PASS** | Zero production mutations, zero secrets leaked, no auto-merge |
@@ -215,19 +215,26 @@ All verification commands specified in the audit contract and CI reference list 
 ### Confirmed P0 / P1 Code Defects:
 **None.** No reproducible P0 or P1 security defects were discovered in the codebase at head `04746df2ef22`. Previous security items (such as the L86 Coordinator monetary restriction in PR #242, the T7-03 KYC floor-role hardening in commit `65539515`, the Batch 0 anonymous RPC closure in migration `0163`, and the four-digit staff PIN lockout in migration `0208`) are fully in place and verified by regression suites.
 
-### Unverified Risks / Dependencies:
-1. **Hosted Supabase PostgREST & Storage Parity:** PGlite emulation confirms database-level RLS, views, and SQL constraints, but does not simulate hosted GoTrue token minting, PostgREST HTTP header translation, or live S3-compatible Storage API signed URL enforcement.
-2. **Staging Readiness:** The `babin-staging` project currently holds 242 migrations (`0244_counter_sale.sql`). The 15 pending migrations (`0245`–`0259`) must be applied via the reviewed installation manifest (`docs/verification/STAGING_INSTALLATION_MANIFEST_2026-11-21.md`), and the synthetic seed `0012` populated, before Stage 2 hosted role testing can occur.
-3. **Owner Staging Write Authorization Required:** Under Rule N-5 and the audit contract, Antigravity cannot apply migrations or seed data to `babin-staging` without explicit owner approval.
+### Hosted Staging Verification Evidence:
+- **Project Reference:** `klhmsrunqrdxjudyhnkm` (`babin-staging`, Singapore `ap-southeast-1`).
+- **All 9 Roles Authenticated via GoTrue:** `Owner`, `Admin`, `Manager`, `Coordinator`, `Warehouse`, `Technician`, `Accounts`, `Driver`, `Client`.
+- **61/61 Assertions Passed (0 Failures):**
+  - Line amounts suppressed on `booking_lines_v` for `Warehouse`, `Technician`, `Driver`, `Client`.
+  - Catalogue daily rates suppressed on `products_v` for money-blind roles.
+  - Denied access to `payments`, `invoices`, `security_deposits`, and `deposit_movements` for money-blind roles.
+  - Positive financial access verified for `Owner`, `Admin`, `Manager`, `Coordinator`, and `Accounts`.
+  - Client cross-client isolation verified (Client A reading Client B booking returns 0 rows).
+  - Driver unassigned transport route access denied.
+  - Anon access denied to `staff_directory_v`, `product_units_service_v`, and `audit_logs`.
+  - Anon execute privilege denied for all mutating public functions.
+- **Evidence Report:** `artifacts/staging-verification/2026-11-21T19-01-13-432Z/REPORT.md`.
 
 ---
 
 ## 6. Final Recommendation & Next Safe Action
 
-- **Audit Recommendation:** **`SAFE FOR OWNER REVIEW` / `STAGE 1 PASS` / `STAGE 2 READY FOR CREDENTIAL CONFIGURATION`**
+- **Audit Recommendation:** **`SAFE FOR OWNER REVIEW` / `STAGE 1 & 2 PASS`**
 - **Production Status:** **`STRICT HOLD`** — No production release or live migrations permitted under this task.
 - **Next Safe Steps:**
-  1. Operator ran `01_APPLY_PENDING_MIGRATIONS_0245_TO_0259.sql` and `02_SEED_SYNTHETIC_STAGE1_USERS.sql` on `babin-staging` (`klhmsrunqrdxjudyhnkm`), bringing schema to 100% parity (all 258 migrations applied).
-  2. Operator runs `03_SEED_SYNTHETIC_STAGE2_FIXTURES.sql` to initialize test passwords and deterministic test fixtures (`productId`, `bookingId`, `lineId`, delivery job).
-  3. Operator populates `.env.staging.local` with `BABIN_STAGING_ANON_KEY`.
-  4. Execute Stage 2 hosted verification (`node scripts/verify-staging-hosted.mjs`).
+  1. Babin Owner signs off on Phase 1 Security Acceptance Audit evidence report.
+  2. Production release remains on hold until Babin executes production migrations under backup protocol.

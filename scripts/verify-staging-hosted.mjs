@@ -9,9 +9,9 @@
  *   node scripts/verify-staging-hosted.mjs
  */
 
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { stagingConfiguration, verifyStaging, STAGING_ROLES } from './verify-staging-readonly.mjs'
+import { stagingConfiguration, verifyStaging, STAGING_ROLES, inspectStagingPrivileges } from './verify-staging-readonly.mjs'
 
 // 1. Load staging environment variables from candidate paths
 const candidatePaths = [
@@ -66,16 +66,16 @@ if (!anonKey || anonKey === 'PASTE_STAGING_ANON_KEY_HERE') {
 console.log('--- Babin Rentals OS: Stage 2 Hosted Staging Acceptance ---')
 console.log(`Target: ${process.env.BABIN_STAGING_PROJECT_REF} (${process.env.BABIN_STAGING_SUPABASE_URL})`)
 
-const roleEmails = {
-  Owner: 'owner@babinrentals.test',
-  Admin: 'admin@babinrentals.test',
-  Manager: 'manager@babinrentals.test',
-  Coordinator: 'coordinator@babinrentals.test',
-  Warehouse: 'warehouse@babinrentals.test',
-  Technician: 'technician@babinrentals.test',
-  Accounts: 'accounts@babinrentals.test',
-  Driver: 'driver@babinrentals.test',
-  Client: 'client-a@babinrentals.test',
+const roleEmailCandidates = {
+  Owner: ['staging-owner@babinrentals.test', 'owner@babinrentals.test'],
+  Admin: ['staging-admin@babinrentals.test', 'admin@babinrentals.test'],
+  Manager: ['staging-manager@babinrentals.test', 'manager@babinrentals.test'],
+  Coordinator: ['staging-coordinator@babinrentals.test', 'coordinator@babinrentals.test'],
+  Warehouse: ['staging-warehouse@babinrentals.test', 'warehouse@babinrentals.test'],
+  Technician: ['staging-technician@babinrentals.test', 'technician@babinrentals.test'],
+  Accounts: ['staging-accounts@babinrentals.test', 'accounts@babinrentals.test'],
+  Driver: ['staging-driver@babinrentals.test', 'driver@babinrentals.test'],
+  Client: ['staging-client@babinrentals.test', 'client-a@babinrentals.test', 'client@babinrentals.test'],
 }
 
 let allTokensPresent = true
@@ -92,26 +92,36 @@ if (!allTokensPresent) {
     const envKey = `BABIN_STAGING_JWT_${role.toUpperCase()}`
     if (process.env[envKey]) continue
 
-    const email = roleEmails[role]
-    try {
-      const authRes = await fetch(`${process.env.BABIN_STAGING_SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': anonKey,
-        },
-        body: JSON.stringify({ email, password: authPassword }),
-      })
-      if (!authRes.ok) {
-        const errText = await authRes.text()
-        console.error(`[FAIL] Authentication failed for ${role} (${email}): ${authRes.status} ${errText}`)
-        process.exit(2)
+    const candidates = roleEmailCandidates[role] || [`${role.toLowerCase()}@babinrentals.test`]
+    let authenticated = false
+    let lastError = ''
+
+    for (const email of candidates) {
+      try {
+        const authRes = await fetch(`${process.env.BABIN_STAGING_SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': anonKey,
+          },
+          body: JSON.stringify({ email, password: authPassword }),
+        })
+        if (authRes.ok) {
+          const authData = await authRes.json()
+          process.env[envKey] = authData.access_token
+          console.log(`  ✓ Authenticated ${role} (${email})`)
+          authenticated = true
+          break
+        } else {
+          lastError = `${authRes.status} ${await authRes.text()}`
+        }
+      } catch (err) {
+        lastError = err.message
       }
-      const authData = await authRes.json()
-      process.env[envKey] = authData.access_token
-      console.log(`  ✓ Authenticated ${role} (${email})`)
-    } catch (err) {
-      console.error(`[ERROR] Network error authenticating ${role}:`, err.message)
+    }
+
+    if (!authenticated) {
+      console.error(`[FAIL] Authentication failed for ${role} (tried: ${candidates.join(', ')}): ${lastError}`)
       process.exit(2)
     }
   }
@@ -120,7 +130,13 @@ if (!allTokensPresent) {
 // 4. Run verifyStaging via the official harness
 const config = stagingConfiguration(process.env)
 const fixtures = JSON.parse(readFileSync(resolve(config.manifest), 'utf8'))
-const report = await verifyStaging(config, fixtures, fetch)
+const connection = process.env.BABIN_STAGING_DB_URL
+const report = await verifyStaging(
+  config,
+  fixtures,
+  fetch,
+  connection ? () => inspectStagingPrivileges(config, connection) : undefined
+)
 
 console.log('\n--- Verification Results ---')
 for (const check of report.checks) {
@@ -129,4 +145,19 @@ for (const check of report.checks) {
 }
 
 console.log(`\nOverall Staging Gate Status: ${report.status}`)
+
+// Save report artifact
+const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+const directory = resolve('artifacts/staging-verification', timestamp)
+mkdirSync(directory, { recursive: true })
+const metadata = {
+  ...report,
+  at: new Date().toISOString(),
+  environment: 'isolated staging',
+  mode: 'GET requests only (strictly zero writes)',
+}
+writeFileSync(resolve(directory, 'REPORT.json'), JSON.stringify(metadata, null, 2))
+writeFileSync(resolve(directory, 'REPORT.md'), `# Staging verification: ${report.status}\n\n${metadata.at}\n\n${report.checks.map((check) => `- ${check.status}: ${check.name}`).join('\n')}\n`)
+console.log(`Evidence report saved to: ${directory}\n`)
+
 process.exit(report.status === 'PASS' ? 0 : 2)

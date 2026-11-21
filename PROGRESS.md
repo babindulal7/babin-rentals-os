@@ -35,15 +35,30 @@
   - [`docs/security/acceptance/env.staging.example`](docs/security/acceptance/env.staging.example): Configuration template for `.env.staging.local`.
 - Authored step-by-step operator execution guide:
   - [`docs/security/acceptance/STAGE_1_STAGING_EXECUTION_RUNBOOK.md`](docs/security/acceptance/STAGE_1_STAGING_EXECUTION_RUNBOOK.md): Explicit operator instructions for applying Stage 1 and Stage 2 SQL to `babin-staging` (`klhmsrunqrdxjudyhnkm`), with strict prohibition against production mutation.
+- Verified Stage 2 Hosted Acceptance on `babin-staging` (`klhmsrunqrdxjudyhnkm`):
+  - Operator applied `03_SEED_SYNTHETIC_STAGE2_FIXTURES.sql` and `04_FIX_SYNTHETIC_AUTH_CREDENTIALS.sql` to configure GoTrue credentials (`aud='authenticated'`, `role='authenticated'`, `confirmed=true`, `provider='email'`).
+  - Executed `scripts/verify-staging-hosted.mjs` with safe read-only requests.
+  - Successfully authenticated all 9 synthetic roles via GoTrue (`/auth/v1/token`) using bcrypt password `BabinSynthetic2026!`.
+  - Verified 61/61 assertions with 100% PASS and 0 failures:
+    - User identity matches fixture manifest and database role matches expected role for all staff roles.
+    - Permitted booking read succeeds across all roles.
+    - Full Law 6 money blindness verified: line rate suppression on `booking_lines_v`, daily rate suppression on `products_v`, and denied access to `payments`, `invoices`, `security_deposits`, and `deposit_movements` for `Warehouse`, `Technician`, `Driver`, and `Client`.
+    - Positive financial lines readable by `Owner`, `Admin`, `Manager`, `Coordinator`, and `Accounts`.
+    - Cross-client isolation verified: Client A reading Client B booking returns 0 rows.
+    - Driver unassigned transport route access denied.
+    - Anon access denied to `staff_directory_v`, `product_units_service_v`, and `audit_logs`.
+    - Anon mutating RPC execute privilege denied on hosted Postgres.
+  - Generated and archived evidence report at `artifacts/staging-verification/2026-11-21T19-01-13-432Z/REPORT.md`.
 
 **Ruled**
 - Babin 28 Oct 2026 Ruling: Staff PIN is 4 digits with 5-attempt server lockout.
 - Babin 20 Nov 2026 Ruling: Physical iPad, Bluetooth scanner, and shop printer hardware checks are deferred to Phase 2; Phase 1 is validated on desktop/counter-PC.
 - Rule N-5 & N-8: Zero remote database writes by agent; production database `sxguwvgoserhdolewibb` was never accessed or mutated.
-- Staging Stage 1 is complete (`PASS`); Stage 2 is prepared and ready for credential configuration.
-- Final Recommendation: `SAFE FOR OWNER REVIEW` / `HOLD FOR HOSTED STAGING ACCEPTANCE`.
+- Staging Stage 0 (`PASS`), Stage 1 (`PASS`), and Stage 2 (`PASS`) are complete.
+- Final Recommendation: `SAFE FOR OWNER REVIEW` / Stage 3 Production Release on `HOLD`.
 
 **Verified**
+- `node scripts/verify-staging-hosted.mjs`: PASS (61/61 hosted PostgREST and Storage RLS assertions passed on `klhmsrunqrdxjudyhnkm`).
 - `npm run typecheck`: PASS (0 errors).
 - `npm run lint`: PASS (0 errors, 0 warnings).
 - `npm test`: PASS (710 test files, 7,659 tests passed, mock backend).
