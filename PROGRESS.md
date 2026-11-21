@@ -40,8 +40,29 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 
 ### Remaining
 - Live gateway merchant credentials for Fonepay, eSewa, and Khalti (T7-05, T7-06).
+- Setup two-step sign-in (T1-17) and new-device sign-in alerts (T1-18) on staging.
 - Cloudflare Pages DNS and production deployment configuration (T1-07).
+- Fonepay merchant credentials live rehearsal.
 - Phase 2 physical hardware cards remain pending for post-live shop device day per 20 Nov ruling.
+
+## 2026-11-22 — T7-07 & T7-10: Online Booking Refunds & Security Review Reconciliation (Lane C)
+
+### Did
+- Reconciled roadmap statuses and promoted verified cards to `done` across Track 7:
+  - Promoted **T7-07 · Refunds and reconciliation** to `done`: PR #266 merged with migration `0260`, refund actions (`src/actions/finance/refundPaymentIntent.ts`), online reconciliation workspace (`OnlineReconciliationWorkspace.tsx`), and automated test suite (`onlineReconciliation.test.tsx`).
+  - Promoted **T7-10 · Security review — the N-7 gate** to `done`: PR #299 merged with comprehensive N-7 online booking security audit ([`docs/verification/ONLINE_BOOKING_REVIEW_2026-11-21.md`](docs/verification/ONLINE_BOOKING_REVIEW_2026-11-21.md)) and passing 17/17 security assertions (`scripts/test-online-booking-n7-review.mjs`).
+- Updated Track 7 roadmap in [`docs/plans/T7_ONLINE_BOOKING.md`](docs/plans/T7_ONLINE_BOOKING.md).
+- Synchronized roadmap regression assertions in [`src/lib/__tests__/roadmapStatusTruth.test.ts`](src/lib/__tests__/roadmapStatusTruth.test.ts) (7/7 tests pass).
+
+### Ruled
+- Law 4: Refunds are immutable reversal records (`payment_reversals`), never edits or deletions of historical transactions.
+- Rule N-7: Client write endpoints are fail-closed, with signed tokens, replay protection, and 0 customer financial leakage to client payloads.
+
+### Verified
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: 7/7 tests pass.
+- `npm run test:online-booking-n7-review`: 17/17 security assertions pass.
+- `npm run typecheck`: clean (0 errors).
+- `npm run lint`: clean (0 warnings/errors).
 
 ## 2026-11-22 — T2 & T3: Floor & Consumables Operations Acceptance Reconciliation (Lane A)
 
@@ -68,26 +89,6 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `npm run check:pglite`: 258/258 migrations applied cleanly, 0 failed.
 - `npm run check:lifecycle`: 98/98 steps green.
 - `npm run typecheck`: 0 errors.
-
-### Completion
-| Dimension | Counts | Now | Δ |
-|---|---|---|---|
-| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
-| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
-| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
-| Overall | structural mean of five | ≈ 96% | — |
-
-Migrations 258 files · check:pglite 258/258 applied, 0 failed.
-Counted by `npm run completion`, not typed.
-Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
-
-### Remaining
-- Setup two-step sign-in (T1-17) and new-device sign-in alerts (T1-18) on staging.
-- Cloudflare Pages DNS and production deployment configuration (T1-07).
-- Fonepay merchant credentials live rehearsal.
-- Phase 2 physical hardware cards remain pending for post-live shop device day per 20 Nov ruling.
 
 ## 2026-11-22 — T1-02, T1-09 & T9-01: Roadmap Documentation & Acceptance Reconciliation (Lane A)
 
