@@ -25,7 +25,7 @@ archived; by 10 Mar Booqable is cancelled.
 
 ---
 
-### T9-01 · Bring the catalogue and clients across            status: done — PR #195 merged, PR #288 merged (Booqable catalogue and clients reconciled with match report and 20/20 pricing parity) · size: M · lane A
+### T9-01 · Bring the catalogue and clients across            status: acceptance_pending — unresolved evidence gate flagged in review PR #313; prior implementation claim retained for audit: — PR #195 merged, PR #288 merged (Booqable catalogue and clients reconciled with match report and 20/20 pricing parity) · size: M · lane A
 **What** — From Booqable exports (CSV/API, read-only): clients created or changed since the earlier
 import, products, bundles (and the kit-style products that are bundles — 18 Aug), **pricing
 structures** ("Babin Daily", "Days wise discount", "Rental Rate Card", … — 0160) and the **four
@@ -45,7 +45,7 @@ per batch; rejected rows are listed with the reason; a failed batch leaves nothi
 20 products prices the same 3-day quote in both systems (allowing the known rounding difference).
 **Needs** — Batch 1 live; T3-09.
 
-### T9-02 · Booqable rentals block the OS calendar            status: done — PR #202 merged; migration 0206, Booqable calendar synchronization, and double-booking prevention verified in externalHolds.test.ts [docs/verification/CLIENT_AUTH_AND_CUTOVER_HOLDS_ACCEPTANCE_2026-11-22.md] · size: M · lane A
+### T9-02 · Booqable rentals block the OS calendar            status: acceptance_pending — unresolved evidence gate flagged in review PR #316; prior implementation claim retained for audit: — PR #202 merged; migration 0206, Booqable calendar synchronization, and double-booking prevention verified in externalHolds.test.ts [docs/verification/CLIENT_AUTH_AND_CUTOVER_HOLDS_ACCEPTANCE_2026-11-22.md] · size: M · lane A
 **What** — Import every **open and upcoming** Booqable booking (reserved or started) as a read-only
 **external hold** in the OS: product (and serial where Booqable has one), from/to, Booqable number.
 Holds block availability exactly like a reservation, show a neutral "Held in Booqable #831" chip
