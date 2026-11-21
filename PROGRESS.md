@@ -39,15 +39,17 @@
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 115 / 116 (99%) | +1 |
+| Backend | actions implemented / total | 114 / 116 (98%) | -1 |
 | Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
-| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
-| Permissions | capabilities mapped / declared | 89 / 89 (100%) | — |
-| Lifecycle | steps green / total | 98 / 98 (100%) | +1 |
-| Overall | structural mean of five | ≈ 97% | — |
-Migrations 258 files · check:pglite 258/258 applied, 0 failed.
-Gates read from .lifecycle-result.json.
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 258 files · check:pglite 258/258 applied, 0 failed (recorded 2026-11-21T08:16:35.887Z). Suite: Historical suite: 5/5 passed, 0 failed (recorded 2026-11-21T07:59:14.147Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-21T08:16:56.173Z.
 Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
 - Track T7 complete across online booking, catalogue, client portal, payment links, and refunds. Ready for merge.
