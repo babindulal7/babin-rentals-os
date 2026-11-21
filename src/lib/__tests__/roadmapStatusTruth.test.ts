@@ -32,7 +32,6 @@ describe('Roadmap status truth across merged tracks', () => {
       'T1-04': 'applied to production by Babin',
       'T1-05': 'PR #173 merged',
       'T1-06': 'PR #174 merged',
-      'T1-09': 'PR #275 merged',
       'T1-15': 'PR #208 merged',
     }
     for (const [key, ref] of Object.entries(doneCards)) {
@@ -86,7 +85,6 @@ describe('Roadmap status truth across merged tracks', () => {
     const t3 = read('docs/plans/T3_BOOKING_MONEY.md')
     const doneCards: Record<string, string> = {
       'T3-02': 'PR #183 merged',
-      'T3-06': 'PR #169 merged',
       'T3-10': 'PR #188 merged',
       'T3-11': 'PR #210 merged',
       'T3-13': 'PR #182 merged',
@@ -96,7 +94,6 @@ describe('Roadmap status truth across merged tracks', () => {
       'T3-19': 'PR #163 merged',
       'T3-20': 'PR #190 merged',
       'T3-22': 'PR #161 merged',
-      'T3-23': 'PR #191 merged',
       'T3-28': 'PR #211 merged',
       'T3-29': 'PR #208 merged',
       'T3-30': 'PR #185 merged',
@@ -151,16 +148,13 @@ describe('Roadmap status truth across merged tracks', () => {
     }
 
     const doneCards: Record<string, string> = {
-      'T7-01': 'PR #301 merged',
       'T7-02': 'PR #276 merged',
       'T7-03': 'PR #276 merged',
       'T7-04': 'PR #276 merged',
-      'T7-07': 'PR #266 merged',
       'T7-08': 'PR #276 merged',
       'T7-10': 'PR #299 merged',
       'T7-12': 'PR #196 merged',
       'T7-13': 'PR #197 merged',
-      'T7-14': 'PR #200 merged',
       'T7-15': 'PR #276 merged',
       'T7-16': 'PR #276 merged',
       'T7-17': 'PR #198 merged',
@@ -189,8 +183,6 @@ describe('Roadmap status truth across merged tracks', () => {
     }
 
     const doneCards: Record<string, string> = {
-      'T9-01': 'PR #195 merged',
-      'T9-02': 'PR #202 merged',
     }
     for (const [key, prRef] of Object.entries(doneCards)) {
       const heading = t9.split('\n').find((l) => l.startsWith(`### ${key} ·`))
@@ -201,4 +193,24 @@ describe('Roadmap status truth across merged tracks', () => {
       expect(heading).not.toContain('status: todo')
     }
   })
+  it('keeps eight review-blocked cards pending rather than equating merged PRs with acceptance', () => {
+    const blocked: Array<[string, string, string]> = [
+      ['docs/plans/T1_RELEASE.md', 'T1-09', 'PR #275 merged'],
+      ['docs/plans/T9_CUTOVER.md', 'T9-01', 'PR #195 merged'],
+      ['docs/plans/T9_CUTOVER.md', 'T9-02', 'PR #202 merged'],
+      ['docs/plans/T7_ONLINE_BOOKING.md', 'T7-01', 'PR #301 merged'],
+      ['docs/plans/T7_ONLINE_BOOKING.md', 'T7-07', 'PR #266 merged'],
+      ['docs/plans/T7_ONLINE_BOOKING.md', 'T7-14', 'PR #200 merged'],
+      ['docs/plans/T3_BOOKING_MONEY.md', 'T3-06', 'PR #169 merged'],
+      ['docs/plans/T3_BOOKING_MONEY.md', 'T3-23', 'PR #191 merged'],
+    ]
+    for (const [path, id, implementationRef] of blocked) {
+      const heading = read(path).split('\n').find((line) => line.startsWith(`### ${id} ·`))
+      expect(heading).toBeDefined()
+      expect(heading).toContain('status: acceptance_pending')
+      expect(heading).toContain(implementationRef)
+      expect(heading).toContain('unresolved evidence gate')
+    }
+  })
+
 })
