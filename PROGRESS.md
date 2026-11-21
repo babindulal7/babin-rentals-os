@@ -52,6 +52,70 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 ### Remaining
 - Track T7 complete across online booking, catalogue, client portal, payment links, and refunds. Ready for merge.
 
+## 2026-11-21 — T1-02: Staging installation manifest & 257-migration inventory (Lane A)
+
+**Did**
+- Completed **T1-02 · Staging project reconciliation and exact-head migration/synthetic-seed inventory** on branch `lane-a/T1-02-staging-project`:
+  - Reconciled Git HEAD against commit `a9231b22`, accounting for all 257 migration files (`0001` through `0259`, with duplicate prefix `0188` and historical gaps `0083`, `0084`, `0175`).
+  - Authored [`docs/verification/STAGING_SQL_INVENTORY_2026-11-21.json`](docs/verification/STAGING_SQL_INVENTORY_2026-11-21.json) indexing all 257 migrations with Git blob SHAs, byte lengths, live ledger comparisons (148 matches), and quarantine status.
+  - Updated [`scripts/staging-schema-preflight.mjs`](scripts/staging-schema-preflight.mjs) with `--inventory <path>` and `--current`/`--latest` flags while maintaining backwards compatibility with 2026-11-16 snapshot.
+  - Authored comprehensive test suites [`scripts/staging-schema-preflight.test.mjs`](scripts/staging-schema-preflight.test.mjs) and [`src/lib/__tests__/stagingInventory20261121.test.ts`](src/lib/__tests__/stagingInventory20261121.test.ts) covering drift detection and exact-head assertions.
+  - Added `"test:staging-preflight"` script to [`package.json`](package.json).
+  - Updated [`scripts/create-synthetic-staging-0012.mjs`](scripts/create-synthetic-staging-0012.mjs) to resolve against the 2026-11-21 manifest, producing deterministic fixture with 0 PII tokens.
+  - Authored operator runbook and installation manifest [`docs/verification/STAGING_INSTALLATION_MANIFEST_2026-11-21.md`](docs/verification/STAGING_INSTALLATION_MANIFEST_2026-11-21.md) detailing staging status for `klhmsrunqrdxjudyhnkm`, the 15 pending migrations (`0245`–`0259`), seed quarantines (`0047`, `0082`), and outbound webhook/email blocks.
+  - Resolved `SyntaxError` in `scripts/e2e-lifecycle.mjs` (duplicate `asAnon` declaration from merge commit `a9231b22`) and added clean termination.
+  - Updated burst timing threshold in `src/__tests__/e2e/floor-hardware-simulation.test.tsx` to prevent CPU contention flakes under parallel load.
+  - Updated card status in [`docs/plans/T1_RELEASE.md`](docs/plans/T1_RELEASE.md) to `ready — awaiting merge (lane-a/T1-02-staging-project)`.
+
+**Ruled**
+- Ruling N-5: Zero remote database writes executed by the agent; all schema modifications and seed applications on staging (`klhmsrunqrdxjudyhnkm`) are strictly operator-executed by Babin.
+- Ruling N-8: Zero secrets, JWT tokens, or service keys in code, logs, or commits.
+- Rule R-35: 257/257 migrations verified locally in PGlite and certified with `check:lifecycle` 97/97 green.
+- Quarantined migrations `0047` and `0082` remain strictly quarantined from replay on staging.
+
+**Verified**
+- `npm run test:staging-preflight`: PASS (9/9 tests pass).
+- `npx vitest run src/lib/__tests__/stagingInventorySnapshot.test.ts`: PASS (2/2 tests pass).
+- `npx vitest run src/lib/__tests__/stagingSeedPreflight.test.ts`: PASS (1/1 test pass).
+- `npx vitest run src/lib/__tests__/stagingInventory20261121.test.ts`: PASS (2/2 tests pass).
+- `npx vitest run src/__tests__/e2e/floor-hardware-simulation.test.tsx`: PASS (7/7 tests pass).
+- `node scripts/verify-staging-source-hashes.mjs --json`: PASS (all 257 migration files verified, duplicate prefix 0188 flagged, 0 invalid filenames).
+- `node scripts/create-synthetic-staging-0012.mjs`: PASS (deterministic fixture SHA-256 `3fd285f4...`).
+- `npm run check:pglite`: PASS (257/257 applied, 0 failed, 235 definer functions with search_path pinned, 46 views checked).
+- `npm run check:lifecycle`: PASS (97/97 steps green, 0 failed, receipt written to `.lifecycle-result.json`).
+- `npm run typecheck`: PASS (`tsc --noEmit` clean, 0 errors).
+- `npm run lint`: PASS (`eslint src --max-warnings 0` clean, 0 errors).
+- `npm run test:local-api-guards`: PASS (6/6 assertions passed).
+- `npm run test:backup`: PASS (10/10 tests passed).
+- `npm run check:security`: PASS (18 Phase 0 SQL regressions, operations branch grants, reset boundaries, and glossary revisions passed).
+- `npm run test:server-contracts`: PASS (68/68 integration assertions passed).
+- `npm run test:partial-return`: PASS (58/58 partial return acceptance assertions passed).
+- `npm run lint:shell`: PASS (958 files checked, 0 violations).
+- `npm run lint:ui-copy`: PASS (0 developer-text violations, all copy tests passed).
+- `npm run check:contrast`: PASS (97/97 WCAG AA checks passed).
+- `npm run build`: PASS (`tsc --noEmit && vite build` clean, 8,360 modules transformed).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 114 / 115 (99%) | +2 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 97 / 97 (100%) | +3 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 257 files · check:pglite 257/257 applied, 0 failed (recorded 2026-11-21T08:08:13.666Z). Suite: Historical suite: 7630/7631 passed, 1 failed (recorded 2026-11-21T08:05:00.041Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-21T08:08:44.188Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Awaiting Babin's review and local merge of `lane-a/T1-02-staging-project` PR into `main`.
+- Babin applies the 15 pending migrations (`0245`–`0259`) to staging (`klhmsrunqrdxjudyhnkm`) per the operator runbook in `docs/verification/STAGING_INSTALLATION_MANIFEST_2026-11-21.md`.
+- Next card in Track 1: T1-05 (Nine role seats + read-only role harness staging execution against verified staging project).
+
 ## 2026-11-21 — Track T7 Roadmap Truth Reconciliation & Lifecycle Gate Parity (Lane C)
 
 **Did**
@@ -81,6 +145,32 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: PASS (7/7 tests passed).
 - `npm run lint:progress`: PASS.
 
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 114 / 115 (99%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 97 / 97 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 257 files · check:pglite 257/257 applied, 0 failed (recorded 2026-11-21T07:48:43.406Z). Suite: Historical suite: 7599/7599 passed, 0 failed (recorded 2026-11-20T20:14:00.497Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-21T07:49:43.151Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Babin applies Cloudflare DNS records (SPF/DKIM/DMARC) for `babinrentals.com` and sets `RESEND_API_KEY` on staging/production (T1-09 operator step).
+- Outstanding acceptance items for Track T7: live merchant credentials onboarding for Fonepay/eSewa/Khalti, and physical-device / hosted staging acceptance.
+- Staging-only dry run rehearsal of batch apply (T1-02) once approved by Babin.
+- Final accountant sign-off on sample tax invoice (T3-06) and sample monthly pack (T3-23).
+- Staff inventory deposit data entry across active products (T3-02).
+- T3-14 (Draft invoice at Confirm, number on full payment): resync integrity & numbering moment (PR #259).
+- T3-13, T3-20, T3-30: pending remaining accountant & staged receipts.
+- T0-12: hosted staging migration apply by Babin.
+- Full pg_dump SQL backup before Batch 1 live apply (T1-01).
+
 ## 2026-11-21 — T1-09: Transactional email configuration and domain verification protocol (Lane A)
 
 **Did**
@@ -107,6 +197,7 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `npm run lint`: clean, 0 warnings.
 - `npm run lint:ui-copy`: PASS (0 developer text violations).
 - `npm run check:contrast`: PASS (97/97 WCAG AA).
+
 ## 2026-11-21 — T7-02, T7-03, T7-04, T7-05, T7-06, T7-08, T7-15: Online Booking Platform & Multi-Provider Client Payments (Lane C)
 
 **Did**
@@ -332,8 +423,6 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - T0-12: hosted staging migration apply by Babin.
 - T7 online booking: Track T7 lane C integration.
 
-=======
->>>>>>> Stashed changes
 ## 2026-11-20 — T2-24: Temporary stock from partners (Lane A)
 
 **Did**
@@ -952,7 +1041,6 @@ Counted by `npm run completion`, not typed.
 - Bugs to fix: 0 new. Delivery fee grid: Settings screen and dispatch wiring wait on O-28 to O-30.
 - Rulings open: 3 (O-28 to O-30).
 - Next session starts with: answers to O-28 to O-30, then R-9.8 driver handover permissions, one commit with PERMISSIONS.md, RLS and tests (B-3).
-=======
 | Backend | actions implemented / total | 110 / 111 (99%) | +2 |
 | Real data | DB-only · mixed · seed · none / 69 | 57 · 0 · 0 · 12 |  |
 | DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
@@ -968,7 +1056,6 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - T2-23 (Allow overbooking on chosen products): implementation ready on branch `feat/windows-t2-23-product-overbooking`.
 - T2-24 (Temporary stock from partners): next stock tool card to pick up.
 - T7 online booking core flow (T7-02, T7-03, T7-04, T7-05).
->>>>>>> origin/main
 
 ## 2026-11-18 — T3-18: Change a confirmed booking (Lane C)
 
@@ -39796,3 +39883,4 @@ roles 6 vs 12, sidebar 7 vs 8 vs 8-with-Tools, and two I could resolve (motion s
 Design Tokens v2.0 wins as the root; mobile bottom bar → Navigation v2.0 wins as it
 explicitly supersedes). Plus: `Prisma Schema.md` names a stack no spec mentions — it is
 Supabase + RLS.
+

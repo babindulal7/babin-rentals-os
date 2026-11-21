@@ -10910,4 +10910,5 @@ if (failed.length > 0) {
   for (const r of failed) console.log(`  ${r.id}  ${r.title}\n     ${r.detail || r.outcome}`)
   process.exit(1)
 }
-console.log('The lifecycle holds. (PGlite, not Supabase ΓÇö no JWT and no PostgREST. See this fileΓÇÖs header.)')
+console.log('The lifecycle holds. (PGlite, not Supabase \u2014 no JWT and no PostgREST. See this file\u2019s header.)')
+process.exit(0)
