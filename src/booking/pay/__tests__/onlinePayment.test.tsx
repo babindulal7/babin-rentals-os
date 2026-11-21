@@ -62,6 +62,7 @@ describe('OnlinePaymentModal (T7-05)', () => {
   })
 
   afterEach(async () => {
+    vi.unstubAllEnvs()
     if (root) {
       await act(async () => {
         root.unmount()
@@ -86,7 +87,8 @@ describe('OnlinePaymentModal (T7-05)', () => {
     expect(container.textContent).toContain('5,000')
   })
 
-  it('simulates payment verification and triggers onPaymentSuccess', async () => {
+  it('simulates payment verification in explicit mock mode only', async () => {
+    vi.stubEnv('VITE_DATA_SOURCE', 'mock')
     await act(async () => {
       root.render(<OnlinePaymentModal {...defaultProps} />)
     })
@@ -122,6 +124,21 @@ describe('OnlinePaymentModal (T7-05)', () => {
         amountPaisa: 500000,
       })
     )
+  })
+
+  it('does not expose a fake-success control in configured checkout mode', async () => {
+    vi.stubEnv('VITE_DATA_SOURCE', 'supabase')
+    await act(async () => {
+      root.render(<OnlinePaymentModal {...defaultProps} />)
+    })
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    })
+
+    const simulate = Array.from(container.querySelectorAll('button'))
+      .find((button) => button.textContent?.includes('Simulate Successful Payment'))
+    expect(simulate).toBeUndefined()
+    expect(payApi.verifyOnlinePayment).not.toHaveBeenCalled()
   })
 
   it('handles server init failure with inline error and close button', async () => {
