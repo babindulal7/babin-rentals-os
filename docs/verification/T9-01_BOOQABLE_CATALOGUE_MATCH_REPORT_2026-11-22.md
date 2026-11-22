@@ -1,6 +1,6 @@
 # T9-01 Booqable Catalogue & Clients Match Report (Real DB Reconciliation)
 
-**Generated:** 2026-11-22T01:43:21.025Z  
+**Generated:** 2026-11-22T12:34:07.868Z  
 **Operator:** Babin Rentals OS Automated Migration Engine  
 **Authority:** Card T9-01 (`docs/plans/T9_CUTOVER.md`), PR #313 Review P1 Resolution, R-2026-10-26 (D20, S7), R-2026-10-27 (B4, B45, B49)  
 **Input Data Directory:** `C:/Users/use/Desktop/Babin rentals products app`  
@@ -23,10 +23,10 @@ This report performs the mandatory real-data reconciliation between raw Booqable
 | Entity Type | Booqable Source Records | New | Updated | Unchanged | Conflict | Rejected | OS Database Only |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Products (Base)** | 197 | **193** | **4** | **0** | **0** | **0** | **66** |
-| **Product Variants (CSV)** | 274 | **274** | **0** | **0** | **0** | **0** | **0** |
+| **Product Variants (CSV)** | 274 | not compared | — | — | — | — | — |
 | **Clients** | 325 | **324** | **1** | **0** | **0** | **0** | **39** |
 | **Bundles (Kit-style)** | 22 | **22** | **0** | **0** | **0** | **0** | **0** |
-| **Pricing Structures** | 9 | **9** | **0** | **0** | **0** | **0** | **0** |
+| **Pricing Structures** | not measured | not measured | — | — | — | — | — |
 | **Seasonal Rulesets** | 4 | **4** | **0** | **0** | **0** | **0** | **0** |
 
 ---
@@ -53,9 +53,9 @@ The following 4 products exist in both the Booqable export and the OS seed datab
    - Variance: Rs 4,000 (OS rate is higher)
 
 ### 2.2 Client Record Matches (1 matched item)
-1. **Rupesh Karki**  
-   - Booqable ID: `3f911326-3dcd-4503-8ad1-f4e7490ddea4`  
-   - OS DB Client: `C-66` (ID: `74d2697a-a574-4034-84be-f234ee918b1a`, Phone: +9779841213926)
+1. **client 84252d9369f2** (name redacted)  
+   - Booqable ID (hashed): `84252d9369f2`  
+   - OS DB Client (hashed): `3a69d3f0f7ae` (name and phone redacted)
 
 ---
 
@@ -108,7 +108,7 @@ As mandated by card T9-01 ("a sample of 20 products prices the same 3-day quote 
 | 19 | Amaran 300c | Bulk | Rs 1,500 | Rs 4,500 | 150000 | 450000 | 0 | ✓ PASS |
 | 20 | Amaran 60d S | Bulk | Rs 700 | Rs 2,100 | 70000 | 210000 | 0 | ✓ PASS |
 
-**Test Verdict:** 20 / 20 quotes verified with 0 paisa variance between Booqable rates and Babin Rentals OS integer paisa arithmetic.
+**Test Verdict:** NOT VERIFIED. The backup holds no Booqable 3-day quote source. The "Booqable 3-Day" column above is the base rate x 3, derived from the same number, so it proves only the paisa conversion. Parity with Booqable quotes is not measured.
 
 ---
 
@@ -127,8 +127,8 @@ Exceptions detailing missing contact info and pricing differences have been expo
 
 ## 6. Owner Approval Gate
 
-- [x] Counts reconcile with Booqable export data against OS DB (193 New Products, 4 Updated, 66 OS-only; 324 New Clients, 1 Updated, 39 OS-only)
-- [x] 20 sample products price identically for 3-day quotes (0 paisa variance)
+- [ ] Counts: 197 Booqable products (193 new, 4 rate differences, 66 OS-only); 325 Booqable clients (324 new, 1 matched, 39 OS-only). Owner review required.
+- [ ] 3-day quote parity NOT VERIFIED: no Booqable quote source in the backup.
 - [x] Exceptions exported to CSV for manual staff triage
 - [x] Zero direct writes to production database (Rule N-5 verified)
 - [ ] Staging apply authorization by Babin

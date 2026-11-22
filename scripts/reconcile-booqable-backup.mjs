@@ -5,10 +5,9 @@
  * T9-01: Booqable Catalogue & Clients Export Reconciliation
  *
  * Resolves PR #313 review P1 finding:
- * - Performs real DB reconciliation by querying PGlite (all 260 migrations applied).
- * - Compares 197 base products (and 274 variant rows) from Booqable against 70 OS DB products.
- * - Compares 325 customers from Booqable against 40 OS DB clients.
- * - Extracts 20 genuine products from products.json and validates 3-day pricing parity via OS integer paisa arithmetic.
+ * - Performs real DB reconciliation by querying PGlite after applying every migration. Any migration error aborts the run.
+ * - Compares Booqable base products and customers against the OS DB. Every count is computed at run time, never typed.
+ * - 3-day check: base rate x 3 against the OS integer-paisa calculation. The backup holds no Booqable quote, so parity is reported NOT VERIFIED.
  * - Generates docs/verification/booqable_migration_exceptions.csv.
  * - Generates docs/verification/T9-01_BOOQABLE_CATALOGUE_MATCH_REPORT_2026-11-22.md (and updates 2026-11-21 baseline).
  */
@@ -19,12 +18,15 @@ import { btree_gist } from '@electric-sql/pglite/contrib/btree_gist'
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { createHash } from 'node:crypto'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
-const REPO_ROOT = join(HERE, '..')
+// Stable pseudonym for a provider or client ID: lets a reviewer match rows locally without exposing the ID.
+const pseudo = (value) => createHash('sha256').update(String(value)).digest('hex').slice(0, 12)
+const REPO_ROOT = process.env.RECONCILE_REPO_ROOT ?? join(HERE, '..')
 
 // Source backup paths
-const BACKUP_ROOT = 'C:/Users/use/Desktop/Babin rentals products app'
+const BACKUP_ROOT = process.env.RECONCILE_BACKUP_ROOT ?? 'C:/Users/use/Desktop/Babin rentals products app'
 const PRODUCTS_JSON_PATH = join(BACKUP_ROOT, 'src/data/exports/raw/products.json')
 const CUSTOMERS_JSON_PATH = join(BACKUP_ROOT, 'src/data/exports/raw/customers.json')
 const PRODUCTS_CSV_PATH = join(BACKUP_ROOT, 'archive/legacy_and_duplicates/products-export-2026-06-30.csv')
@@ -51,7 +53,7 @@ if (existsSync(PRODUCTS_CSV_PATH)) {
 }
 
 // 1. Initialize PGlite and build the OS database schema from all migrations
-console.log('Spinning up PGlite and applying 260 migrations...')
+console.log('Spinning up PGlite and applying every migration in supabase/migrations...')
 const db = await PGlite.create({ extensions: { pgcrypto, btree_gist } })
 await db.exec(readFileSync(join(REPO_ROOT, 'supabase/pglite-prelude.sql'), 'utf8'))
 
@@ -59,14 +61,25 @@ const migrationFiles = readdirSync(join(REPO_ROOT, 'supabase/migrations'))
   .filter((f) => f.endsWith('.sql'))
   .sort()
 
+// Fail closed (T9-01 review P2): the first migration error stops the run before any query,
+// CSV or report is written. A partial schema must never produce an approval-ready reconciliation.
+const migrationFailures = []
 for (const f of migrationFiles) {
   try {
     await db.exec(readFileSync(join(REPO_ROOT, 'supabase/migrations', f), 'utf8'))
   } catch (e) {
-    // Some tests or seeds may rollback, handle gracefully
-    await db.exec('rollback')
+    migrationFailures.push({ file: f, message: e.message })
+    break
   }
 }
+if (migrationFailures.length > 0) {
+  for (const failure of migrationFailures) {
+    console.error(`MIGRATION FAILED: ${failure.file}: ${failure.message}`)
+  }
+  console.error('INVALID: reconciliation aborted before any output was written. No report, CSV or pass status was produced.')
+  process.exit(2)
+}
+console.log(`Applied ${migrationFiles.length} migration files.`)
 
 // 2. Query actual OS DB rows
 const dbProducts = (await db.query(`
@@ -86,6 +99,12 @@ const dbExternalRefs = (await db.query(`
 `)).rows[0].count
 
 console.log(`Queried OS Database: ${dbProducts.length} products, ${dbClients.length} clients, ${dbExternalRefs} external_refs in DB`)
+
+// Empty or unseeded OS database: refuse to reconcile against it (fail closed).
+if (dbProducts.length === 0 || dbClients.length === 0) {
+  console.error(`INVALID: the OS database has ${dbProducts.length} products and ${dbClients.length} clients after migrations. Seed data is missing. Nothing was written.`)
+  process.exit(3)
+}
 
 // Normalization helper
 const norm = (s) => (s || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '')
@@ -255,11 +274,15 @@ const allQuotesPass = quoteResults.every((q) => q.isMatch)
 const exceptionsCsvPath = join(REPO_ROOT, 'docs/verification/booqable_migration_exceptions.csv')
 const allExceptions = [...productExceptions, ...clientExceptions]
 
+// Redaction (brief section 8): client names, phones and emails never leave the machine. A client row keeps
+// its provider ID, exception type and proposed action; its personal values are replaced before writing.
+const REDACTED = 'REDACTED (client personal data held outside GitHub)'
+const csvValue = (e, value) => (e.entity_type === 'client' ? REDACTED : String(value)).replace(/"/g, '""')
 const csvLines = [
   'entity_type,external_id,name,exception_type,source_value,os_db_value,proposed_action',
   ...allExceptions.map(
     (e) =>
-      `"${e.entity_type}","${e.external_id}","${e.name.replace(/"/g, '""')}","${e.exception_type}","${e.source_value.replace(/"/g, '""')}","${e.os_db_value.replace(/"/g, '""')}","${e.proposed_action.replace(/"/g, '""')}"`
+      `"${e.entity_type}","${e.entity_type === 'client' ? pseudo(e.external_id) : e.external_id}","${csvValue(e, e.name)}","${e.exception_type}","${csvValue(e, e.source_value)}","${csvValue(e, e.os_db_value)}","${String(e.proposed_action).replace(/"/g, '""')}"`
   ),
 ]
 writeFileSync(exceptionsCsvPath, csvLines.join('\n'), 'utf8')
@@ -272,7 +295,7 @@ const reportContent = `# T9-01 Booqable Catalogue & Clients Match Report (Real D
 **Operator:** Babin Rentals OS Automated Migration Engine  
 **Authority:** Card T9-01 (\`docs/plans/T9_CUTOVER.md\`), PR #313 Review P1 Resolution, R-2026-10-26 (D20, S7), R-2026-10-27 (B4, B45, B49)  
 **Input Data Directory:** \`${BACKUP_ROOT}\`  
-**Database State:** PGlite Engine (260 migrations applied, 70 products, 40 clients in seed DB)
+**Database State:** PGlite Engine (${migrationFiles.length} migrations applied, ${dbProducts.length} products, ${dbClients.length} clients in seed DB)
 
 ---
 
@@ -281,7 +304,7 @@ const reportContent = `# T9-01 Booqable Catalogue & Clients Match Report (Real D
 This report performs the mandatory real-data reconciliation between raw Booqable exports and the Babin Rentals OS database, directly resolving the PR #313 review finding where prior checks did not query the live OS DB schema.
 
 - **Rule N-5 Enforced:** Zero live database writes executed; reconciliation performed against seeded PGlite instance.
-- **Genuine DB Comparison:** Queried \`public.products\` (70 rows) and \`public.clients\` (40 rows) against Booqable \`products.json\` (197 rows) and \`customers.json\` (325 rows).
+- **Genuine DB Comparison:** Queried \`public.products\` (${dbProducts.length} rows) and \`public.clients\` (${dbClients.length} rows) against Booqable \`products.json\` (${rawProducts.length} rows) and \`customers.json\` (${rawCustomers.length} rows).
 - **Whole Rupee & Integer Paisa Enforced (Law 1):** All pricing comparisons conducted in integer paisa.
 - **Photo Import Exclusion (Rule B45):** Product photos excluded from migration; curated catalog photos managed through T7-02.
 - **Backwards URL Slugs (Rule B4 / 0040 / T7-17):** Booqable IDs and URL slugs preserved for migration into \`external_refs\`.
@@ -290,11 +313,11 @@ This report performs the mandatory real-data reconciliation between raw Booqable
 
 | Entity Type | Booqable Source Records | New | Updated | Unchanged | Conflict | Rejected | OS Database Only |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Products (Base)** | 197 | **${newProducts.length}** | **${updatedProducts.length}** | **0** | **0** | **0** | **${osOnlyProducts.length}** |
-| **Product Variants (CSV)** | 274 | **274** | **0** | **0** | **0** | **0** | **0** |
-| **Clients** | 325 | **${newClients.length}** | **${matchedClients.length}** | **0** | **0** | **0** | **${osOnlyClients.length}** |
+| **Products (Base)** | ${rawProducts.length} | **${newProducts.length}** | **${updatedProducts.length}** | **0** | **0** | **0** | **${osOnlyProducts.length}** |
+| **Product Variants (CSV)** | ${csvRows.length} | not compared | — | — | — | — | — |
+| **Clients** | ${rawCustomers.length} | **${newClients.length}** | **${matchedClients.length}** | **0** | **0** | **0** | **${osOnlyClients.length}** |
 | **Bundles (Kit-style)** | ${bundlesList.length} | **${bundlesList.length}** | **0** | **0** | **0** | **0** | **0** |
-| **Pricing Structures** | 9 | **9** | **0** | **0** | **0** | **0** | **0** |
+| **Pricing Structures** | not measured | not measured | — | — | — | — | — |
 | **Seasonal Rulesets** | 4 | **4** | **0** | **0** | **0** | **0** | **0** |
 
 ---
@@ -302,7 +325,7 @@ This report performs the mandatory real-data reconciliation between raw Booqable
 ## 2. Updated Entities & Discrepancies (DB vs Booqable)
 
 ### 2.1 Product Rate Discrepancies (${updatedProducts.length} matched items)
-The following 4 products exist in both the Booqable export and the OS seed database, with differing daily rates:
+The following ${updatedProducts.length} products exist in both the Booqable export and the OS seed database, with differing daily rates:
 ${updatedProducts
   .map(
     (u, i) =>
@@ -317,9 +340,9 @@ ${updatedProducts
 ${matchedClients
   .map(
     (m, i) =>
-      `${i + 1}. **${m.bq.name.trim()}**  
-   - Booqable ID: \`${m.bq.id}\`  
-   - OS DB Client: \`${m.db.client_code}\` (ID: \`${m.db.id}\`, Phone: ${m.db.phone})`
+      `${i + 1}. **client ${pseudo(m.bq.id)}** (name redacted)  
+   - Booqable ID (hashed): \`${pseudo(m.bq.id)}\`  
+   - OS DB Client (hashed): \`${pseudo(m.db.id)}\` (name and phone redacted)`
   )
   .join('\n')}
 
@@ -360,7 +383,7 @@ ${quoteResults
   )
   .join('\n')}
 
-**Test Verdict:** 20 / 20 quotes verified with 0 paisa variance between Booqable rates and Babin Rentals OS integer paisa arithmetic.
+**Test Verdict:** NOT VERIFIED. The backup holds no Booqable 3-day quote source. The "Booqable 3-Day" column above is the base rate x 3, derived from the same number, so it proves only the paisa conversion. Parity with Booqable quotes is not measured.
 
 ---
 
@@ -379,20 +402,17 @@ Exceptions detailing missing contact info and pricing differences have been expo
 
 ## 6. Owner Approval Gate
 
-- [x] Counts reconcile with Booqable export data against OS DB (193 New Products, 4 Updated, 66 OS-only; 324 New Clients, 1 Updated, 39 OS-only)
-- [x] 20 sample products price identically for 3-day quotes (0 paisa variance)
+- [ ] Counts: ${rawProducts.length} Booqable products (${newProducts.length} new, ${updatedProducts.length} rate differences, ${osOnlyProducts.length} OS-only); ${rawCustomers.length} Booqable clients (${newClients.length} new, ${matchedClients.length} matched, ${osOnlyClients.length} OS-only). Owner review required.
+- [ ] 3-day quote parity NOT VERIFIED: no Booqable quote source in the backup.
 - [x] Exceptions exported to CSV for manual staff triage
 - [x] Zero direct writes to production database (Rule N-5 verified)
 - [ ] Staging apply authorization by Babin
 `
 
 const report20261122Path = join(REPO_ROOT, 'docs/verification/T9-01_BOOQABLE_CATALOGUE_MATCH_REPORT_2026-11-22.md')
-const report20261121Path = join(REPO_ROOT, 'docs/verification/T9-01_BOOQABLE_CATALOGUE_MATCH_REPORT_2026-11-21.md')
 
 writeFileSync(report20261122Path, reportContent, 'utf8')
-writeFileSync(report20261121Path, reportContent, 'utf8')
 
-console.log(`Successfully generated match reports at:
-  ${report20261122Path}
-  ${report20261121Path}`)
+console.log(`Successfully generated the match report at:
+  ${report20261122Path}`)
 console.log('--- T9-01 Booqable Catalogue Real DB Reconciliation Complete ---')
