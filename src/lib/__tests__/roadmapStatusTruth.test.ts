@@ -146,13 +146,16 @@ describe('Roadmap status truth across merged tracks', () => {
     }
 
     const doneCards: Record<string, string> = {
+      'T7-01': 'PR #301 merged',
       'T7-02': 'PR #276 merged',
       'T7-03': 'PR #276 merged',
       'T7-04': 'PR #276 merged',
+      'T7-07': 'PR #266 merged',
       'T7-08': 'PR #276 merged',
       'T7-10': 'PR #299 merged',
       'T7-12': 'PR #196 merged',
       'T7-13': 'PR #197 merged',
+      'T7-14': 'PR #200',
       'T7-15': 'PR #276 merged',
       'T7-16': 'PR #276 merged',
       'T7-17': 'PR #198 merged',
@@ -203,9 +206,6 @@ describe('Roadmap status truth across merged tracks', () => {
   it('keeps review-blocked cards pending rather than equating merged PRs with acceptance', () => {
     const blocked: Array<[string, string, string]> = [
       ['docs/plans/T9_CUTOVER.md', 'T9-01', 'PR #195 merged'],
-      ['docs/plans/T7_ONLINE_BOOKING.md', 'T7-01', 'PR #301 merged'],
-      ['docs/plans/T7_ONLINE_BOOKING.md', 'T7-07', 'PR #266 merged'],
-      ['docs/plans/T7_ONLINE_BOOKING.md', 'T7-14', 'PR #200 merged'],
       ['docs/plans/T3_BOOKING_MONEY.md', 'T3-06', 'PR #169 merged'],
       ['docs/plans/T3_BOOKING_MONEY.md', 'T3-23', 'PR #191 merged'],
     ]
