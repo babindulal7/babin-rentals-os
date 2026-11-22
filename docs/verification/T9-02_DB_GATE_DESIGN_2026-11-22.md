@@ -44,6 +44,33 @@
 - Counterexamples for `create_booking`, `confirm_booking_atomic`, direct stage transitions, `create_or_extend_hold`, changes/extensions, cancellation and returns; ensure core GiST and shortage gates remain intact.
 - Complete `npm run check:pglite` **and** `npm run check:lifecycle` in the same run; run all 17 required local gates and exact-head Mac CI. Do not claim these were run here.
 
+## Phase 1 Verification Results (2026-11-22)
+
+- `npm run check:pglite`: PASS (259/259 migrations applied cleanly, 0 failed, 239 definer functions search-path pinned, 46 views safe from `anon`).
+- `npm run test:external-holds-db-gate`: PASS (21/21 assertions green):
+  1. External hold on serial asset blocks overlapping OS reservation (`GATE:booqable_serial_held`).
+  2. Pre-existing OS reservation blocks overlapping external hold (`GATE:booqable_serial_held`).
+  3. Distinct serials within capacity both succeed.
+  4. Unassigned external hold of 2 units exhausts serialized product capacity; OS reservation fails with `GATE:booqable_capacity_held`.
+  5. Combined Booqable + OS quantity hold exhausts total capacity (5); subsequent OS reservation fails with `GATE:booqable_capacity_held`.
+  6. Reverse: New external hold exceeding capacity is refused with `GATE:booqable_capacity_held`.
+  7. Contiguous touching windows [16-18) and [18-20) both succeed with full capacity (half-open boundaries).
+  8a. Inside partner window (0253): combined capacity 7 accommodates 4 Booqable + 3 OS.
+  8b. Outside partner window: partner stock is inactive; combined 4 Booqable + 2 OS fails capacity.
+  9a. Cancelling external hold with short reason (<10 chars) violates check constraint.
+  9b. Authoritative cancellation frees unit; OS reservation now succeeds.
+  10a. Law 3: Hard delete on `external_holds` is refused by trigger.
+  10b. Law 3: Hard delete on `booqable_hold_feed_state` is refused by trigger.
+  11a. Enabled + Unhealthy Booqable feed blocks OS reservations with `GATE:booqable_feed_unhealthy`.
+  11b. Enabled + Unconfigured maximum_healthy_age fails closed with `GATE:booqable_feed_unhealthy`.
+  11c. Enabled + Stale sync past maximum_healthy_age fails closed with `GATE:booqable_feed_unhealthy`.
+  11d. Enabled + Healthy and Fresh sync allows normal OS reservation.
+  12a. Authenticated user (Coordinator) cannot INSERT into `external_holds`.
+  12b. Authenticated user cannot UPDATE `booqable_hold_feed_state`.
+  12c. Warehouse staff can SELECT projection from `external_holds`.
+  12d. Anon is denied all access to `external_holds`.
+- `npm run check:lifecycle`: PASS (99/99 steps green, including step L98).
+
 ## Unresolved decisions / dependencies
 
 - **Owner decision needed before activation:** acceptable maximum age of successful Booqable sync, scope of sync health (global vs branch), exact release timing after return, and incident fallback procedure. Conservative default is **disabled**, and activation without a configured freshness limit is rejected.

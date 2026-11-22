@@ -4,7 +4,7 @@
   "source_main_commit": "3a8d90b9fa197d1a69326483a89140e404385b85",
   "target_staging_project_ref": "klhmsrunqrdxjudyhnkm",
   "protected_production_project_ref": "sxguwvgoserhdolewibb",
-  "migration_files": 258,
+  "migration_files": 259,
   "live_recorded_history_count": 157,
   "exact_name_matches": 148,
   "source_without_exact_live_name": 109,
@@ -1825,6 +1825,13 @@
       "bytes": 8736,
       "live_exact_name_found": false,
       "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0261_external_booqable_holds_gate.sql",
+      "git_blob_sha": "03433ac7ed992880bb6c6d57a2dd4aac90d294dc",
+      "bytes": 12347,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
     }
   ],
   "historical_live_comparison_observed_date": "2026-11-20",
@@ -1852,7 +1859,8 @@
       "0257_client_accounts_and_portal_binding.sql",
       "0258_payment_intents_and_fonepay.sql",
       "0259_payment_link_from_any_booking.sql",
-      "0260_online_payment_refunds_and_reconciliation.sql"
+      "0260_online_payment_refunds_and_reconciliation.sql",
+      "0261_external_booqable_holds_gate.sql"
     ],
     "changed_files": [
       {

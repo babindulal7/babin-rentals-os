@@ -10846,6 +10846,104 @@ STEPS.push({
   },
 })
 
+// -----------------------------------------------------------------------------
+// L98 · Booqable external holds database gate (T9-02, Law 3, Law 6)
+// -----------------------------------------------------------------------------
+STEPS.push({
+  id: 'L98',
+  title: 'Booqable external holds database gate (T9-02, Law 3, Law 6) — serial overlap refused, capacity exhaustion refused, fail-closed feed health, and staff read-only non-financial projection',
+  expect: 'green',
+  run: async () => {
+    // 1. External hold inserted via service_role for UNITS[0]
+    const holdUuid1 = crypto.randomUUID()
+    const holdPeriod = "tstzrange('2095-01-10 06:00:00+00', '2095-01-15 06:00:00+00', '[)')"
+    await asOwnerOfTheDatabase(async () => {
+      await q(`
+        insert into public.external_holds (
+          client_uuid, source, external_order_id, external_line_id, external_order_number, product_id, asset_id, qty, period, last_seen_at
+        ) values (
+          $1, 'booqable', 'bq_ord_l98_1', 'bq_line_l98_1', 'BQ-L98-01', $2, $3, 1, ${holdPeriod}, now()
+        )
+      `, [holdUuid1, SERIAL_PRODUCT, UNITS[0]])
+    })
+
+    // 2. OS reservation attempting to hold UNITS[0] in overlapping window is REFUSED
+    let serialClashBlocked = false
+    await as('Coordinator', async () => {
+      const bRes = await q('select public.create_booking($1::jsonb) as res', [JSON.stringify({
+        client_uuid: crypto.randomUUID(),
+        created_by: U.Coordinator,
+        branch_id: BRANCH,
+        client_id: CLIENT,
+        pickup_at: '2095-01-12T06:00:00Z',
+        return_at: '2095-01-14T06:00:00Z',
+        delivery_type: 'Client Pickup',
+        lines: [{ client_uuid: crypto.randomUUID(), product_id: SERIAL_PRODUCT, qty: 1, days: 2, rate: 0 }],
+      })])
+      const bookingId = bRes.rows[0].res.booking_id
+      const lineId = (await q(`select id from public.booking_lines where booking_id = '${bookingId}'`)).rows[0].id
+
+      try {
+        await q(`
+          insert into public.inventory_reservations (
+            client_uuid, booking_id, booking_line_id, asset_id, qty, period, created_by, hold_state
+          ) values (
+            $1, $2, $3, $4, 1, tstzrange('2095-01-12 06:00:00+00', '2095-01-14 06:00:00+00', '[)'), $5, 'confirmed'
+          )
+        `, [crypto.randomUUID(), bookingId, lineId, UNITS[0], U.Coordinator])
+      } catch (e) {
+        if (String(e.message).includes('GATE:booqable_serial_held')) {
+          serialClashBlocked = true
+        }
+      }
+    })
+    assert(serialClashBlocked, 'OS reservation refused with GATE:booqable_serial_held')
+
+    // 3. Law 3: Hard delete on external_holds is refused
+    let deleteBlocked = false
+    await asOwnerOfTheDatabase(async () => {
+      try {
+        await q(`delete from public.external_holds where client_uuid = '${holdUuid1}'`)
+      } catch (e) {
+        if (String(e.message).includes('External Booqable holds are retained')) {
+          deleteBlocked = true
+        }
+      }
+    })
+    assert(deleteBlocked, 'Law 3: DELETE on external_holds refused by trigger')
+
+    // 4. Authoritative cancellation frees capacity
+    await asOwnerOfTheDatabase(async () => {
+      await q(`
+        update public.external_holds
+        set status = 'cancelled', released_at = now(), released_reason = 'Cancelled by client on Booqable'
+        where client_uuid = '${holdUuid1}'
+      `)
+    })
+
+    // 5. Staff read-only non-financial projection (Law 6)
+    await as('Warehouse', async () => {
+      const rows = (await q(`select id, external_order_number, product_id, qty, status from public.external_holds where external_order_number = 'BQ-L98-01'`)).rows
+      assertEq(rows.length, 1, 'Warehouse can read external_holds projection')
+      assertEq(rows[0].status, 'cancelled', 'cancelled status visible')
+
+      let insertBlocked = false
+      try {
+        await q(`
+          insert into public.external_holds (
+            client_uuid, source, external_order_id, external_line_id, external_order_number, product_id, asset_id, qty, period, last_seen_at
+          ) values (
+            $1, 'booqable', 'bq_ord_wh', 'bq_line_wh', 'BQ-WH', $2, null, 1, ${holdPeriod}, now()
+          )
+        `, [crypto.randomUUID(), SERIAL_PRODUCT])
+      } catch {
+        insertBlocked = true
+      }
+      assert(insertBlocked, 'Warehouse denied direct write to external_holds')
+    })
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break

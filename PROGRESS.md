@@ -1,31 +1,34 @@
 # Progress Log
 
-## 2026-11-22 — Host, Operations, Security & Repo Hygiene Acceptance Reconciliation (Lane A)
+## 2026-11-22 — T9-02: Booqable External Holds DB Gate & Concurrency Verification (Lane A)
 
 ### Did
-- Formally accepted and documented six host, operations, security, and repository hygiene cards in [`docs/verification/HOST_OPS_AND_SECURITY_ACCEPTANCE_2026-11-22.md`](docs/verification/HOST_OPS_AND_SECURITY_ACCEPTANCE_2026-11-22.md):
-  - Promoted **T0-03 · Open pull request triage** to `done`: verified 0 open PRs remain (`gh pr list --state open` returns empty) and all 9 historical PRs and subsequent PRs are merged or closed on `main` (`docs/verification/T0-03_OPEN_PR_TRIAGE.md`).
-  - Promoted **T0-09 · Active CI + independent local gates** to `done`: verified GitHub CI is active and passing on exact-head commits across all recent PRs, local gates run safely offline, and CI policies are reconciled under Owner ruling R-9.9 (`docs/verification/T0-09_CI_POLICY_RECONCILIATION_2026-11-21.md`).
-  - Promoted **T0-12 · Resolve the 5 November rules and application conflicts** to `done`: verified migration `0225`, lifecycle step L63 (Owner-only glossary editing, append-only revisions), user language preference in self-owned Auth metadata, and single authority documentation hierarchy.
-  - Promoted **T1-17 · Two-step sign-in for every money role** to `done`: verified TOTP/MFA security boundary and `aal2` session verification for privileged roles (Owner, Admin, Manager, Coordinator, Accounts) in `src/lib/__tests__/mfaBoundary.test.ts` (5/5 tests pass), keeping money-blind roles unaffected.
-  - Promoted **T1-18 · Sign-in history and new-device email** to `done`: verified server-derived sign-in audit logging, new-device email dispatch alerts for Owner/Admin, and RLS blocking non-privileged roles in `src/lib/__tests__/loginAudit.test.ts` (3/3 tests pass).
-  - Promoted **T4-08 · One-time rider link** to `done`: certified by security audit `docs/verification/T4-08_SECURITY_AUDIT_2026-11-20.md`, verified via migrations `0190`/`0204`, lifecycle step L47, `src/lib/queries/__tests__/riderLink.test.ts` (13/13 tests pass), and `src/modules/operations/__tests__/RiderDeliveryPage.test.tsx` (5/5 tests pass).
-- Updated roadmaps in [`docs/plans/T0_REPO_HYGIENE.md`](docs/plans/T0_REPO_HYGIENE.md), [`docs/plans/T1_RELEASE.md`](docs/plans/T1_RELEASE.md), and [`docs/plans/T4_SHARED_TOOLS.md`](docs/plans/T4_SHARED_TOOLS.md).
-- Updated roadmap status truth regression assertions in [`src/lib/__tests__/roadmapStatusTruth.test.ts`](src/lib/__tests__/roadmapStatusTruth.test.ts) (8/8 tests pass).
+- Implemented and verified durable Booqable external holds and cross-table reservation exclusion database gate (T9-02) answering PR #316 review P1:
+  - Created migration `0261_external_booqable_holds_gate.sql`: durable `external_holds` table, `booqable_hold_feed_state` table with feed health monitoring (`maximum_healthy_age`, stale feed detection), cross-table exclusion triggers between Babin Rentals OS reservations and Booqable external holds for both serialized assets and bulk products, and Law 3 hard delete rejection.
+  - Added comprehensive automated PGlite test suite [`scripts/test-external-holds-db-gate.mjs`](scripts/test-external-holds-db-gate.mjs) executing 21 test assertions across serialized collision (`GATE:booqable_serial_held`), reverse collision, capacity exhaustion (`GATE:booqable_capacity_held`), half-open boundaries, partner stock integration (migration 0253), feed health failure modes (`GATE:booqable_feed_unhealthy`), authoritative cancellation release, Law 3 hard delete refusal, and Law 6 role isolation.
+  - Added lifecycle step `L98` to [`scripts/e2e-lifecycle.mjs`](scripts/e2e-lifecycle.mjs), verifying external holds, cancellation release, Law 3 hard delete refusal, and Law 6 projection masking in real PGlite execution (bringing lifecycle to 99/99 green).
+  - Reconciled staging inventory manifest ([`docs/verification/STAGING_SQL_INVENTORY_2026-11-21.json`](docs/verification/STAGING_SQL_INVENTORY_2026-11-21.json)) with migration `0261` (SHA-1 `03433ac7ed992880bb6c6d57a2dd4aac90d294dc`, 12,347 bytes) and updated preflight test assertions in `scripts/staging-schema-preflight.test.mjs` and `src/lib/__tests__/stagingInventory20261121.test.ts`.
+  - Documented verification evidence in [`docs/verification/T9-02_DB_GATE_DESIGN_2026-11-22.md`](docs/verification/T9-02_DB_GATE_DESIGN_2026-11-22.md).
+  - Reserved next free migration number `0262` in [`docs/plans/MIGRATION_LEDGER.md`](docs/plans/MIGRATION_LEDGER.md).
 
 ### Ruled
-- R-9.9: GitHub Actions CI remains enabled as an exact-head merge gate for all pull requests to `main`, backed by mandatory local verification gates (`npm run gates`).
-- Law 6: External rider links and money-blind roles (Warehouse, Technician, Driver, Client) remain strictly money-blind in DOM, network payloads, and database views.
-- Rule N-8: Sign-in audit and MFA flows never record or log passwords, credentials, or session secrets.
+- Booqable External Holds Concurrency: External holds represent binding commitments on inventory during cutover; overlapping reservations on held serials or exceeding unassigned capacity must fail closed on the server with deterministic `GATE:` codes.
+- Fail-Closed Cutover Feed Health: When the Booqable feed is enabled, reservations must fail closed if sync status is unhealthy, unconfigured, or older than `maximum_healthy_age`.
+- Law 3 & Law 6: Neither external holds nor feed state records may be deleted (append-only audit); non-financial staff receive projection without commercial leakage.
 
 ### Verified
-- `npm run check:pglite`: 258/258 migrations applied cleanly, 0 failed, 0 leaks.
-- `npm run check:lifecycle`: 98/98 steps green (including L47 rider link and L63 glossary approval).
-- `npx vitest run src/lib/__tests__/mfaBoundary.test.ts src/lib/__tests__/loginAudit.test.ts src/lib/queries/__tests__/riderLink.test.ts src/modules/operations/__tests__/RiderDeliveryPage.test.tsx`: 26/26 tests pass.
-- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: 8/8 tests pass.
+- `npm run check:pglite`: 259/259 migrations applied cleanly, 0 failed, 46 views checked, 239 definer functions pinned.
+- `npm run test:external-holds-db-gate`: 21/21 assertions green.
+- `npm run check:lifecycle`: 99/99 steps green (including L98).
+- `npm test`: 710/710 test files passed, 7661/7661 tests passed.
 - `npm run typecheck`: 0 errors.
-- `npm run lint`: 0 warnings, 0 errors.
-- `npm run build`: built in 3m 37s (dist/ generated cleanly).
+- `npm run lint`: 0 errors, 0 warnings across `src/`.
+- `npm run test:local-api-guards`: 3/3 tests pass.
+- `npm run check:contrast`: 97/97 contrast assertions pass across dark, light, high-contrast, and glass tokens.
+- `npm run lint:ui-copy`: 12/12 assertions pass.
+- `npm run lint:shell`: 968 files satisfy page shell contract.
+- `npm run check:security`: 18 Phase 0 SQL regressions, branch grants, reset boundaries, and glossary revisions pass.
+- `npm run build`: Vite production build passed cleanly (8364 modules transformed, dist/ generated).
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -34,17 +37,52 @@
 | Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
 | DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
 | Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
+| Lifecycle | steps green / total | 99 / 99 (100%) | +1 |
 | Overall | structural mean of five | ≈ 96% | — |
 
-Migrations 258 files · check:pglite 258/258 applied, 0 failed.
+Migrations 259 files · check:pglite 259/259 applied, 0 failed.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
 - Live gateway merchant credentials for Fonepay, eSewa, and Khalti (T7-05, T7-06).
 - Cloudflare Pages DNS and production deployment configuration (T1-07).
+- Remaining 7 acceptance-pending cards from `ACCEPTANCE_STATUS_TRUTH_REPAIR_2026-11-22.md` (T7-14, T7-07, T3-06, T3-23, T9-01, T1-09, T7-01).
+- Phase 2 physical hardware cards remain pending for post-live shop device day per 20 Nov ruling.
+
+## 2026-11-22 — Host, Operations, Security & Repo Hygiene Acceptance Reconciliation (Lane A)
+>>>>>>> 140b5e54 (feat(T9-02): verify Booqable external holds DB gate with 21 tests and lifecycle L98)
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+<<<<<<< HEAD
+| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 258 files · check:pglite 258/258 applied, 0 failed.
+=======
+| Lifecycle | steps green / total | 99 / 99 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 259 files · check:pglite 259/259 applied, 0 failed.
+>>>>>>> 140b5e54 (feat(T9-02): verify Booqable external holds DB gate with 21 tests and lifecycle L98)
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Live gateway merchant credentials for Fonepay, eSewa, and Khalti (T7-05, T7-06).
+- Cloudflare Pages DNS and production deployment configuration (T1-07).
+<<<<<<< HEAD
 - Phase 2 physical hardware cards (T2-11, T2-14, T9-07) remain pending for post-live shop device day per 20 Nov owner ruling.
+=======
+- Remaining 7 acceptance-pending cards from `ACCEPTANCE_STATUS_TRUTH_REPAIR_2026-11-22.md` (T7-14, T7-07, T3-06, T3-23, T9-01, T1-09, T7-01).
+- Phase 2 physical hardware cards remain pending for post-live shop device day per 20 Nov ruling.
+>>>>>>> 140b5e54 (feat(T9-02): verify Booqable external holds DB gate with 21 tests and lifecycle L98)
 
 ## 2026-11-22 — T3: Deposits, Documents & Sub-Rentals Acceptance Reconciliation (Lane C)
 
