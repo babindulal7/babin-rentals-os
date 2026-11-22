@@ -1,5 +1,39 @@
 # Progress Log
 
+## 2026-11-22 — Launch Decisions O-31 to O-33 Answered (Lane A)
+
+### Did
+- Recorded the owner's answers: O-31 launch without an accountant review; O-32 no Booqable rentals open on day X; O-33 four approval types route to the Owner.
+- Appended R-22.6 to R-22.8 to `RULINGS-2026-11-22.md`, and marked O-31 to O-33 answered in `docs/OPEN_DECISIONS.md` and `PLAN.md` §4.2. Appended the answers to `docs/plans/LAUNCH_SCOPE_2026-11-22.md`.
+- No status changed on `main`. No code changed.
+
+### Ruled
+- R-22.6 Launch without the accountant review of T3-06 and T3-23. The paper VAT invoice reference capture stays a launch requirement (20 Nov ruling).
+- R-22.7 No Booqable rentals open on day X. T9-02 is not needed for day X.
+- R-22.8 Manager-level approvals route to the Owner by the Settings choice: damage findings below Rs 25,000, late-fee waivers, extension clashes (T3-29), the approvals inbox (T5-10). The setting's default is not answered.
+
+### Verified
+- Docs only; no tests run. Checked the new rulings against `RULINGS-2026-11-22.md` and the 20 Nov launch-scope ruling: no conflicts. R-22.6 waives only the accountant review, not the invoice reference capture.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 258 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Build R-22.8 (Settings choice, routing, tests). It needs the setting's default value first, so the owner answers that before the build.
+- Next session starts with: the default value for the R-22.8 setting.
+
 ## 2026-11-22 — Launch Scope and Owner Rulings Recorded (Lane A)
 
 ### Did

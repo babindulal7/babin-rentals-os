@@ -471,3 +471,5 @@ Source: owner decisions in chat on 22 Nov 2026, recorded in `RULINGS-2026-11-22.
 **O-32 — Booqable rentals open at go-live.** Will any Booqable rentals still be open on day X? If yes, T9-02 (open rentals block the OS calendar) is needed on day X. If no, T9-02 moves to after go-live. **Default until answered:** none. Nothing is assumed.
 
 **O-33 — Manager-level approvals routed to the Owner.** The owner selects a name in Settings to decide Manager-level approvals. Which approvals does the choice cover: damage findings below Rs 25,000, late-fee waivers, extension clashes (T3-29), the approvals inbox (T5-10)? What is the default value? **Default until answered:** the current threshold rule, unchanged.
+
+**Answered 22 Nov 2026 (owner, in chat):** O-31 launch without an accountant review (R-22.6). O-32 no Booqable rentals open on day X (R-22.7). O-33 four approval types route to the Owner (R-22.8); the setting's default is still open.

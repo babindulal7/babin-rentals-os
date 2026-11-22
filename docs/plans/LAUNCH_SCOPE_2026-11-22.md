@@ -68,3 +68,9 @@ Start one batch at a time. A batch finishes with a receipt per card and a PROGRE
 5. **Live gates:** T1-07, T1-08, T1-10, T1-11, T1-13.
 
 Then the cutover (T9-03 to T9-06), and the after-go-live list.
+
+## Update: open decisions answered (22 Nov 2026)
+
+- **O-31 answered:** launch without an accountant review (R-22.6). The paper VAT invoice reference capture stays a launch requirement. T3-06 and T3-23 keep their status.
+- **O-32 answered:** no Booqable rentals open on day X (R-22.7). T9-02 is removed from the day-X list.
+- **O-33 answered in part:** four approval types route to the Owner (R-22.8). The setting's default is still open, so the build waits for that answer.
