@@ -11,7 +11,7 @@
 
 ## Phase 1: additive SQL-only protection (migration 0261)
 
-1. Add `external_holds`, a dedicated non-billing table, keyed by provider + external line identity, with mandatory mapped product, optional mapped serial, UTC half-open rental range, qty, source order display number, active/completed/cancelled state, last observed timestamp and append-preserving release reason. It may **never** be interpreted as an OS booking, packed, invoiced or billed.
+1. Add `external_holds`, a dedicated non-billing table, keyed by provider + external line identity, with mandatory mapped product, optional mapped serial, the raw Booqable window in `source_period` and the effective window in `period` (derived from it; see the repair below), qty, source order display number, active/completed/cancelled state, last observed timestamp and append-preserving release reason. It may **never** be interpreted as an OS booking, packed, invoiced or billed.
 2. A serial-level GiST exclusion on external holds prevents external double claims of the same known physical asset. New after triggers on **both** `external_holds` and `inventory_reservations` acquire the same product row lock and evaluate active OS and Booqable stock together, to avoid simultaneous inserts escaping cross-table reads. Cross-table serial overlaps are rejected even if aggregate capacity remains.
 3. Combined quantity checking uses a sweep at interval starts, exactly as the existing capacity code, with temporary partner capacity from migration 0253. This check must **not** remove, disable or weaken existing GiST, money, custody, or lifecycle rules. Overbooking permission does not bypass Booqable commitments.
 4. A private `booqable_hold_feed_state` row defaults to **disabled**, to preserve current operations while integration is incomplete. When explicitly enabled by an authorized cutover process, any missing, unsuccessful, or stale successful full-sync watermark rejects new OS reservations. The maximum healthy age is deliberately `NULL` until an Owner-approved value is configured; enabled with no configured age fails closed.
@@ -71,9 +71,26 @@
   12d. Anon is denied all access to `external_holds`.
 - `npm run check:lifecycle`: PASS (99/99 steps green, including step L98).
 
+## Repair: P1 turnaround normalization and idempotency (2026-11-22)
+
+Review P1 on PR #323: external holds were compared as supplied, without the 0240 turnaround window that OS reservations use. A 18:00 Booqable return with 120 minutes of cleaning did not block a 19:00 OS pickup.
+
+- **Normalization.** `normalize_external_hold_window()` derives `period` from `source_period` (the raw Booqable window) by calling `get_effective_rental_window()` with the product's prep and cleaning minutes. It re-implements no formula.
+- **Idempotent.** The first version recomputed `period` from the stored value on every write that touched `status` or `product_id`, so a re-sync widened the hold again. Now `period` is derived only when its inputs change: a new line, a re-mapped product, or a re-activation. A released hold keeps its window.
+- **Callers cannot set `period`.** Any direct write to it is overwritten by the trigger.
+- **Verified here (PGlite only):** `npm run test:external-holds-db-gate` passes 46 of 46 (sections 1 to 25; the header of `scripts/test-external-holds-db-gate.mjs` lists them). Test 14a failed before the fix and passes after it.
+
+Not verified here, and still required before T9-02 can be accepted:
+
+- **Real PostgreSQL concurrency** for both write orders (Booqable first, OS first). PGlite is one connection and cannot show cross-connection races. No local PostgreSQL server is available on this machine.
+- **End-to-end counterexamples** through `create_booking`, `confirm_booking_atomic`, stage transitions, `create_or_extend_hold`, changes, extensions and returns. The gate is a table trigger on `inventory_reservations`, so every writer is covered by construction. No test yet drives those paths.
+- **Importer.** Idempotent upsert by source line, staged validation, failed or partial pulls that keep every active hold, and the daily 07:00 refresh are not in this change.
+- **UI.** The "Held in Booqable #…" chip, availability and calendar are not wired. `src/lib/externalHolds.ts` is not used by the app and uses inclusive boundaries, which differ from the database. It must be replaced by the database-derived `period` before anything uses it.
+- **Owner decision.** The maximum healthy sync age has no default. Enabling cutover protection without one fails closed (test 11b).
+
 ## Unresolved decisions / dependencies
 
-- **Owner decision needed before activation:** acceptable maximum age of successful Booqable sync, scope of sync health (global vs branch), exact release timing after return, and incident fallback procedure. Conservative default is **disabled**, and activation without a configured freshness limit is rejected.
+- **Owner decision needed before activation (O-31 in `docs/OPEN_DECISIONS.md`):** acceptable maximum age of successful Booqable sync, scope of sync health (global vs branch), exact release timing after return, and incident fallback procedure. Conservative default is **disabled**, and activation without a configured freshness limit is rejected.
 - T9-01 catalogue/client reconciliation is itself acceptance pending. No source import should be considered accepted until actual OS mapping and prices are verified.
 - Staging data writes, migrations, service-role integration and trial activation require explicit separately scoped owner approval. This document authorizes none.
 

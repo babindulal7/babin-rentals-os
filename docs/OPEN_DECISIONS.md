@@ -1,5 +1,12 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 22 November 2026 — T9-02 Booqable holds: two owner decisions (OPEN, no default)
+
+Raised while repairing the review P1 on PR #323 (`fix/t9-02-external-holds-repair-20261122`). Neither is decided. The build does not guess. Context: `docs/verification/T9-02_DB_GATE_DESIGN_2026-11-22.md`, "Repair" and "Unresolved decisions".
+
+- **O-31 — maximum age of a healthy Booqable sync.** How old may the last successful full Booqable sync be before OS reservations are refused, once cutover protection is enabled? Also open with it: is the health scope global or per branch? Built so far: `booqable_hold_feed_state.maximum_healthy_age` has no default. Enabling protection without a value fails closed (`GATE:booqable_feed_unhealthy`, test 11b). It blocks activating cutover protection. The migration ships with protection off.
+- **O-32 — what staff see for a Booqable hold.** Does the "Held in Booqable #…" chip and calendar show the effective window (with prep and cleaning) or the window Booqable reports? Built so far: the database keeps both (`source_period` for the raw window, `period` for the effective one). The staff projection grants only `period`, so no screen can show the raw window until this is answered. It blocks the T9-02 UI card. No default: the UI is not built.
+
 ## 20 November 2026 — Phase 1 launch scope + accountant owner decisions (ANSWERED)
 
 **Physical peripherals are post-launch:** Babin explicitly deferred all physical iPad, Bluetooth/barcode scanner, camera barcode, label/shop printer and native hardware share-sheet verification/purchases to **Phase 2 after live**. Do not treat these as pre-live launch blockers; preserve software/emulation tests and keep physical acceptance statuses pending. For Phase 1, use counter PC/desktop and manual item lookup with working staged Pack/Handover/Return/Reset, security, payments, availability and audit. See `docs/plans/T1_RELEASE.md`, `T2_FLOOR.md`, `T3_BOOKING_MONEY.md`, `T9_CUTOVER.md`.
