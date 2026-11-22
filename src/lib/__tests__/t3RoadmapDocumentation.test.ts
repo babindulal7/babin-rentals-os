@@ -25,10 +25,10 @@ describe('T3 roadmap reconciliation reflects merged PRs as acceptance_pending', 
     }
   })
 
-  it('keeps T3-23 pending until the actual app-generated accountant export is accepted', () => {
+  it('marks T3-23 as done once the actual app-generated accountant export is accepted', () => {
     const heading = plan.split('\n').find(line => line.startsWith('### T3-23 ·'))
     expect(heading).toBeDefined()
-    expect(heading).toContain('status: acceptance_pending')
+    expect(heading).toContain('status: done')
     expect(heading).toContain('PR #191 merged')
   })
 

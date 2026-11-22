@@ -83,6 +83,7 @@ describe('Roadmap status truth across merged tracks', () => {
     const t3 = read('docs/plans/T3_BOOKING_MONEY.md')
     const doneCards: Record<string, string> = {
       'T3-02': 'PR #183 merged',
+      'T3-06': 'PR #169 merged',
       'T3-10': 'PR #188 merged',
       'T3-11': 'PR #210 merged',
       'T3-13': 'PR #182 merged',
@@ -92,6 +93,7 @@ describe('Roadmap status truth across merged tracks', () => {
       'T3-19': 'PR #163 merged',
       'T3-20': 'PR #190 merged',
       'T3-22': 'PR #161 merged',
+      'T3-23': 'PR #191 merged',
       'T3-28': 'PR #211 merged',
       'T3-29': 'PR #208 merged',
       'T3-30': 'PR #185 merged',
@@ -206,8 +208,6 @@ describe('Roadmap status truth across merged tracks', () => {
   it('keeps review-blocked cards pending rather than equating merged PRs with acceptance', () => {
     const blocked: Array<[string, string, string]> = [
       ['docs/plans/T9_CUTOVER.md', 'T9-01', 'PR #195 merged'],
-      ['docs/plans/T3_BOOKING_MONEY.md', 'T3-06', 'PR #169 merged'],
-      ['docs/plans/T3_BOOKING_MONEY.md', 'T3-23', 'PR #191 merged'],
     ]
     for (const [path, id, implementationRef] of blocked) {
       const heading = read(path).split('\n').find((line) => line.startsWith(`### ${id} ·`))
