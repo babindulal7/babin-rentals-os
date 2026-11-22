@@ -1,5 +1,47 @@
 # Progress Log
 
+## 2026-11-22 — T1-09 Transactional Email & Deliverability Evidence Verification (Lane A)
+
+### Did
+- Documented live internet DNS deliverability evidence and fail-closed error handling for **T1-09 · Email from @babinrentals.com** in [`docs/verification/T1-09_TRANSACTIONAL_EMAIL_DELIVERABILITY_VERIFICATION_2026-11-22.md`](docs/verification/T1-09_TRANSACTIONAL_EMAIL_DELIVERABILITY_VERIFICATION_2026-11-22.md):
+  - Verified live DNS resolution on authoritative name servers for `resend._domainkey.babinrentals.com` (1024-bit RSA DomainKey), `send.babinrentals.com` (CNAME to `send.forge.rmta.net` with SPF `v=spf1 ip4:52.3.252.119 ip4:44.222.39.36 ip4:199.249.231.0/24 ~all` and MX `feedback.forge.rmta.net`), `_dmarc.babinrentals.com` (`v=DMARC1; p=none;`), and apex inbound forwarding MX records (`eforward1-5.registrar-servers.com`).
+  - Verified Edge Function `send-email` and client error handling in `src/lib/email/__tests__/email.test.ts` (10/10 tests pass), confirming fail-closed error handling without exposing secrets (Rule N-8) or email bodies (Rule S13 & W21).
+  - Promoted **T1-09 · Email from @babinrentals.com** to `done` in [`docs/plans/T1_RELEASE.md`](docs/plans/T1_RELEASE.md).
+- Updated roadmap status truth regression assertions in [`src/lib/__tests__/roadmapStatusTruth.test.ts`](src/lib/__tests__/roadmapStatusTruth.test.ts) (9/9 tests pass) and [`src/lib/__tests__/t109EmailConfigDoc.test.ts`](src/lib/__tests__/t109EmailConfigDoc.test.ts) (4/4 tests pass).
+
+### Ruled
+- Law 6: Zero financial amounts or pricing details appear in damage notice templates or transactional emails delivered to non-financial roles.
+- Rule N-8 & S13: API keys and credentials are never stored in client code or logged in error messages; `email_logs` records only metadata (`template_id`, `recipient_email`, `status`, `error`, `sent_at`) with zero body storage.
+- Rule W80: Client transactional emails strictly adhere to English-only templates.
+
+### Verified
+- `npx vitest run src/lib/email/__tests__/email.test.ts src/lib/__tests__/t109EmailConfigDoc.test.ts`: 14/14 tests pass.
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: 9/9 tests pass.
+- `npm run check:pglite`: 258/258 migrations applied cleanly, 0 failed, 0 leaks.
+- `npm run check:lifecycle`: 98/98 steps green.
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 warnings, 0 errors.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 258 files · check:pglite 258/258 applied, 0 failed.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Live gateway merchant credentials for Fonepay, eSewa, and Khalti (T7-05, T7-06).
+- Cloudflare Pages DNS and production deployment configuration (T1-07).
+- Remaining review-gated verification cards in ACCEPTANCE_STATUS_TRUTH_REPAIR_2026-11-22.md (T9-01, T9-02, T7-01, T7-07, T7-14, T3-06, T3-23).
+- Phase 2 physical hardware cards (T2-11, T2-14, T9-07) remain pending for post-live shop device day per 20 Nov owner ruling.
+
 ## 2026-11-22 — Host, Operations, Security & Repo Hygiene Acceptance Reconciliation (Lane A)
 
 ### Did
