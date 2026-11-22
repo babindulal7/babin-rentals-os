@@ -94,7 +94,7 @@ export function canConfigureAwayMode(role: SystemRole): boolean {
  * Callable by anon and authenticated callers.
  */
 export async function fetchOnlineBookingAwayStatus(): Promise<OnlineBookingAwayStatus> {
-  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock' || !supabase
+  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock' || import.meta.env.MODE === 'test' || !supabase
 
   if (isMock) {
     if (mockAwayStatus.configured_away && mockAwayStatus.resume_date) {
@@ -110,15 +110,11 @@ export async function fetchOnlineBookingAwayStatus(): Promise<OnlineBookingAwayS
     return { ...mockAwayStatus }
   }
 
-  try {
-    const { data, error } = await supabase.rpc('get_online_booking_away_status' as never)
-    if (error || !data) {
-      return { ...mockAwayStatus }
-    }
-    return data as OnlineBookingAwayStatus
-  } catch {
-    return { ...mockAwayStatus }
+  const { data, error } = await supabase.rpc('get_online_booking_away_status' as never)
+  if (error || !data) {
+    throw new Error(error?.message ? error.message.replace(/^GATE:[^|]*\|/, '') : 'Failed to fetch online booking away status.')
   }
+  return data as OnlineBookingAwayStatus
 }
 
 /**
@@ -130,7 +126,7 @@ export async function saveOnlineBookingAwayStatus(params: {
   message?: string | null | undefined
   resumeDate?: string | null | undefined
 }): Promise<OnlineBookingAwayStatus> {
-  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock' || !supabase
+  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock' || import.meta.env.MODE === 'test' || !supabase
 
   const sanitizedMessage = params.message && params.message.trim().length > 0 ? params.message.trim() : DEFAULT_AWAY_MESSAGE
   const sanitizedResumeDate = params.resumeDate && params.resumeDate.trim().length > 0 ? params.resumeDate.trim() : null
