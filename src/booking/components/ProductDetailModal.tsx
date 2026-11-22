@@ -129,7 +129,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               onAddToCart(item)
               onClose()
             }}
-            disabled={hasDates && isAvailable === false}
+            disabled={!hasDates || isAvailable !== true}
             style={{ maxWidth: 220 }}
           >
             Add to Request
