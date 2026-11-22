@@ -1,5 +1,53 @@
 # Progress Log
 
+## 2026-11-22 — T9-01: Real DB Booqable Catalogue Reconciliation & Exceptions Export (Lane A)
+
+### Did
+- Resolved PR #313 review P1 finding for T9-01 (Booqable catalogue and client migration):
+  - Upgraded [`scripts/reconcile-booqable-backup.mjs`](scripts/reconcile-booqable-backup.mjs) to execute full PGlite database builds across all 260 migrations and query actual OS database rows (`public.products` 70 rows, `public.clients` 40 rows, `public.external_refs` 0 rows) rather than assuming raw export rows were unchanged.
+  - Reconciled 197 base products from `products.json` and 274 rows from `products-export-2026-06-30.csv`:
+    - 193 New products to be imported into OS DB.
+    - 4 Updated products with daily rate discrepancies identified (Blazar Great Joy 1.8x, BLAZAR MANTIS 1.33x, Meike Full Frame set, NiSi ATHENA PRIME series; OS seed rates are higher than Booqable base prices).
+    - 66 OS-only products in seed database not present in Booqable exports.
+  - Reconciled 325 customers from `customers.json`:
+    - 324 New clients to be imported into OS DB.
+    - 1 Matched client (Rupesh Karki).
+    - 39 OS-only clients in seed database.
+  - Reconciled 9 Pricing Structures and 4 Seasonal Rulesets (with self-expiring valid_to dates per D20).
+  - Selected 20 genuine products from `products.json` and verified 3-day quotes using OS integer paisa arithmetic, achieving 20/20 parity with 0 paisa variance.
+  - Generated [`docs/verification/booqable_migration_exceptions.csv`](docs/verification/booqable_migration_exceptions.csv) capturing 153 exception records (4 product rate differences, 7 zero base prices, 64 clients missing phone numbers, 78 clients missing email addresses).
+  - Generated formal match reports: [`docs/verification/T9-01_BOOQABLE_CATALOGUE_MATCH_REPORT_2026-11-22.md`](docs/verification/T9-01_BOOQABLE_CATALOGUE_MATCH_REPORT_2026-11-22.md) and updated [`docs/verification/T9-01_BOOQABLE_CATALOGUE_MATCH_REPORT_2026-11-21.md`](docs/verification/T9-01_BOOQABLE_CATALOGUE_MATCH_REPORT_2026-11-21.md).
+
+### Ruled
+- Grounded Real Data Truth: Cutover reconciliation must never evaluate against assumptions or hard-coded arrays; it must query the actual database schema and rows.
+- Integer Paisa Parity (Law 1): All price comparisons must be evaluated in integer paisa, maintaining whole-rupee discipline and explicit rounding tracking.
+- Exceptions Export: All data gaps (missing phone/email, zero rates, price mismatches) must be recorded in an exceptions ledger for staff operational review prior to any live import writes (Rule N-5).
+
+### Verified
+- `node scripts/reconcile-booqable-backup.mjs`: successfully applied 260 migrations in PGlite, queried 70 products and 40 clients, matched 193 new products, 4 updated products, 324 new clients, 1 matched client, 20/20 genuine product pricing vector pass (0 paisa variance), exported 153 exceptions to CSV.
+- `npm run check:pglite`: 260/260 migrations applied cleanly.
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: 9/9 tests pass.
+- `npx vitest run src/lib/__tests__/cutoverReconciliation.test.ts`: 4/4 tests pass.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 100 / 100 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 260 files · check:pglite 260/260 applied, 0 failed.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Live gateway merchant credentials for Fonepay, eSewa, and Khalti (T7-05, T7-06).
+- Cloudflare Pages DNS and production deployment configuration (T1-07).
+- Remaining 5 acceptance-pending cards from `ACCEPTANCE_STATUS_TRUTH_REPAIR_2026-11-22.md` (T7-07, T3-06, T3-23, T1-09, T7-01).
+
 ## 2026-11-22 — T7-14: Online Booking Away Mode Server Gate, Settings & Cart Integration (Lane C)
 
 ### Did
