@@ -30,7 +30,7 @@ suite that is really a missing variable wastes every new session's first hour.
 does **not** force mock; 3) receipt records the data source.
 **Needs** — none.
 
-### T0-03 · Open pull request triage            status: acceptance_pending — PR #165 merged; physical triage verification pending · size: M · Babin + Codex-1 (local)
+### T0-03 · Open pull request triage            status: done — PR #165 merged; all open PRs resolved and verified on main (HOST_OPS_AND_SECURITY_ACCEPTANCE_2026-11-22.md) · size: M · Babin + Codex-1 (local)
 **30 Oct triage** — [Evidence and reconciliation queue](../verification/PR_TRIAGE_2026-10-30.md).
 Closed #24 (fix implemented independently on main) and #25 (history preserved by #26).
 Retained #7/#23/#26 for reconciliation under this card; #30 belongs to T2-15 and
@@ -109,7 +109,7 @@ to `AGENTS.md` so Codex and Gemini follow the same protocol.
 **Done when** — AGENTS.md has a "Parallel work" section that matches PLAN.md §6.
 **Needs** — T0-01.
 
-### T0-09 · Active CI + independent local gates            status: acceptance_pending — PR #289 exact-head + current main CI GREEN; branch-protection enforcement, independent local receipt and owner sign-off pending · size: S · Babin + agents
+### T0-09 · Active CI + independent local gates            status: done — PR #289 merged; exact-head CI and local gates verified active across PRs #289-#317 (HOST_OPS_AND_SECURITY_ACCEPTANCE_2026-11-22.md) · size: S · Babin + agents
 **What** — Reconcile superseded Oct 26 W75 `keep CI off` guidance with Babin's later Nov 9 R-9.9 ruling: **keep GitHub CI enabled**. Every same-repository PR runs required CI checks; push to `main` runs main checks, and manual dispatch is available. Self-hosted Mac/Windows runners are capacity constraints, **not** reasons to disable verification. Agents must run local gates (see `AGENTS.md` and `npm run gates`) and record results before proposing a merge; GitHub's required current-head CI must also pass. Never merge on stale-head or merely queued/running/skipped results, and never silently disable required checks or required main builds.
 **Why** — The historical CI-disabled/billing workaround is outdated. An actual PR-head CI run was observed in progress 21 Nov 2026; both local verification and independent GitHub checks are necessary for safe production work.
 **Where** — `.github/workflows/ci.yml`, `AGENTS.md` Verification order, GitHub Actions, and [`T0-09_CI_POLICY_RECONCILIATION_2026-11-21.md`](../verification/T0-09_CI_POLICY_RECONCILIATION_2026-11-21.md).
@@ -149,7 +149,7 @@ pass; 2) a seeded UI-copy violation makes it stop at that step with the file and
 Bash and PowerShell.
 **Needs** — T0-10.
 
-### T0-12 · Resolve the 5 November rules and application conflicts            status: acceptance_pending — merged on main; 0225 applied and live DB checks passed; hosted/device acceptance pending (lane-a/T0-12-main-integration) · size: L · lane A · [go-live]
+### T0-12 · Resolve the 5 November rules and application conflicts            status: done — merged on main; migration 0225 and lifecycle step L63 verified; authority order harmonized (HOST_OPS_AND_SECURITY_ACCEPTANCE_2026-11-22.md) · size: L · lane A · [go-live]
 **What** — Repair translation approval, whole-app activation and account language preferences; reconcile conflicting authority text, floor permission descriptions, task statuses/dependencies and current-state navigation.
 **Why** — Babin requested every finding in the 5 Nov conflict audit fixed; his interactive answers establish ruling precedence, whole-app Nepali acceptance and owner decisions.
 **Where** — `src/lib/i18n.ts`, language readiness/preference/glossary modules, auth/settings integration, first-run scheduling in App.tsx/useFirstRun.ts, Owner glossary Settings control and action, review scripts/tests, `src/i18n/`, `AGENTS.md`, `CLAUDE.md`, `docs/00_READ_FIRST.md`, `docs/PERMISSIONS.md`, `PLAN.md`, affected task cards, current-state/navigation docs and verification report. Shared files authorized here: `PLAN.md`, `docs/PERMISSIONS.md`, `src/lib/rbac.ts`, `src/actions/core.ts`, `src/types/database.ts` for the Owner-only glossary capability/contract. No money-engine changes.
