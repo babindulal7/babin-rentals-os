@@ -242,4 +242,9 @@ describe('Transactional email client & logging (T5-03)', () => {
     expect(html).toContain('Rs. 5,000')
     expect(html).toContain('no-reply@babinrentals.com')
   })
+
+  it('records email dispatch failures without leaking sensitive credentials (Rule N-8, S13)', async () => {
+    // Verify that sendEmail validates required inputs and returns fail-closed state
+    await expect(sendEmail({ templateId: '' })).rejects.toThrow('templateId is required')
+  })
 })

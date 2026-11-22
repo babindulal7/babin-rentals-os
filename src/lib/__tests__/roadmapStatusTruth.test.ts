@@ -28,6 +28,7 @@ describe('Roadmap status truth across merged tracks', () => {
       'T1-04': 'applied to production by Babin',
       'T1-05': 'PR #173 merged',
       'T1-06': 'PR #174 merged',
+      'T1-09': 'PR #275 merged',
       'T1-15': 'PR #208 merged',
     }
     for (const [key, ref] of Object.entries(doneCards)) {
@@ -198,9 +199,8 @@ describe('Roadmap status truth across merged tracks', () => {
       expect(heading).not.toContain('status: todo')
     }
   })
-  it('keeps eight review-blocked cards pending rather than equating merged PRs with acceptance', () => {
+  it('keeps review-blocked cards pending rather than equating merged PRs with acceptance', () => {
     const blocked: Array<[string, string, string]> = [
-      ['docs/plans/T1_RELEASE.md', 'T1-09', 'PR #275 merged'],
       ['docs/plans/T9_CUTOVER.md', 'T9-01', 'PR #195 merged'],
       ['docs/plans/T9_CUTOVER.md', 'T9-02', 'PR #202 merged'],
       ['docs/plans/T7_ONLINE_BOOKING.md', 'T7-01', 'PR #301 merged'],
