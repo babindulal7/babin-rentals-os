@@ -4,6 +4,7 @@ import { PARENTS } from './inventory'
 import { BUNDLES } from './bundles'
 import { UNITS as PACKED_UNITS } from './packing'
 import { STORAGE_LOCATIONS } from './warehouse'
+import { findModelMatches } from '../lib/smartEquipment'
 
 /**
  * **Add Equipment** seed — `06 Inventory/Add Equipment.md` v3.0 (Build Locked)
@@ -143,11 +144,19 @@ export const EXISTING_SERIALS: ReadonlyMap<string, string> = (() => {
   return m
 })()
 
-/** §7 — duplicate detection on name + model, not only on serial. */
+/** §7 — duplicate detection on name + model, not only on serial. Uses smart model token matching. */
 export function existingModelMatch(name: string, model: string): InventoryModel | null {
   const n = name.trim().toLowerCase()
   const mdl = model.trim().toLowerCase()
-  if (n.length < 3 && mdl.length < 3) return null
+  if (n.length < 2 && mdl.length < 2) return null
+
+  const matches = findModelMatches(name, model)
+  const top = matches[0]
+  if (top && top.isExactOrPrimary) {
+    const found = INVENTORY_MODELS.find((m) => m.id === top.candidate.id)
+    if (found) return found
+  }
+
   return (
     INVENTORY_MODELS.find(
       (m) => m.name.toLowerCase() === n || (mdl.length >= 3 && m.sku.toLowerCase().includes(mdl)),
