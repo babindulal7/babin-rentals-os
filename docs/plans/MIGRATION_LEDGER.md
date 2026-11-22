@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0261**  (0245-0251 R-9.18; 0252 T2-23; 0253 T2-24; 0254 T3-14; 0255 T7-02; 0256 T7-04; 0257 T7-03; 0258 T7-05; 0259 T7-15; 0260 T7-07)
+**Next free number: 0265 (0261 to 0263 are on unmerged branches, 0264 on feat/manager-approvals-to-owner)**  (0245-0251 R-9.18; 0252 T2-23; 0253 T2-24; 0254 T3-14; 0255 T7-02; 0256 T7-04; 0257 T7-03; 0258 T7-05; 0259 T7-15; 0260 T7-07)
 
 > **Legacy exception:** `0188` exists as two distinct, locally verified migration files
 > (`0188_smart_reservation_holds.sql` and `0188_staff_renting_gear.sql`). Both are preserved because
@@ -21,6 +21,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
 | 0260 | T7-07 | online-payment-refunds-and-reconciliation | lane-c/T7-07-refunds-and-reconciliation | verified |
+| 0264 | R-22.8 | manager-approvals-to-owner | feat/manager-approvals-to-owner | written, local only; claimed after 0263 because 0261 to 0263 sit on unmerged branches |
 | 0259 | T7-15 | payment-link-from-any-booking | lane-c/T7-03-online-booking-requests-and-client-portal | verified |
 | 0258 | T7-05 | payment-intents-and-fonepay | lane-c/T7-03-online-booking-requests-and-client-portal | verified |
 | 0257 | T7-03 | client-accounts-and-portal-binding | lane-c/T7-03-online-booking-requests-and-client-portal | verified |
@@ -116,5 +117,6 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0258 | T7-05 | payment-intents-and-fonepay | lane-c/T7-15-payment-link-from-any-booking | verified (check:pglite 257/257) |
 | 0259 | T7-15 | payment-link-from-any-booking | lane-c/T7-15-payment-link-from-any-booking | verified (check:pglite 257/257 + check:lifecycle 97/97 Step L96) |
 | 0260 | T7-07 | online-payment-refunds-and-reconciliation | lane-c/T7-07-refunds-and-reconciliation | verified (check:pglite 258/258 + check:lifecycle 98/98 Step L97) |
+| 0264 | R-22.8 | manager-approvals-to-owner | feat/manager-approvals-to-owner | written, local only; claimed after 0263 because 0261 to 0263 sit on unmerged branches |
 
 ## Expected migrations (not yet claimed)

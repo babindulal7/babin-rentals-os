@@ -1,5 +1,43 @@
 # Progress Log
 
+## 2026-11-22 — Manager-Level Approvals Go to the Owner by Setting: Migration 0264 (Lane A)
+
+### Did
+- Built the database part of R-22.8 on `feat/manager-approvals-to-owner`. Migration 0264 seeds the setting `managerApprovalsToOwner` to true, adds `auth_manager_approvals_to_owner()`, and makes `auth_can_approve_damage` and `auth_can_approve_late_fee_waiver` allow the Owner only while the setting is on. Stricter only.
+- Added `scripts/test-manager-approvals-to-owner.mjs` (12 checks).
+- Recorded R-22.9 (default on) in `RULINGS-2026-11-22.md`. Marked O-33 answered in `docs/OPEN_DECISIONS.md` and `PLAN.md` §4.2. Added ledger row 0264.
+- Not built yet: the Settings control, the TypeScript mirror in `src/lib/rbac.ts`, the approvals inbox routing (T5-10), and the extension-clash decision (T3-29). Their enforcement is traced before they change.
+
+### Ruled
+- R-22.9 Manager-level approvals route to the Owner by default (setting on), as R-22.8 describes.
+
+### Verified
+- `scripts/test-manager-approvals-to-owner.mjs`: 12 of 12 pass (default on, setting off, and the setting row cannot be deleted, Law 3).
+- `npm run check:pglite`: 259 of 259 applied. View, function, definer-hygiene, RLS and privacy gates clean.
+- `npm run check:lifecycle`: 98 of 98 green.
+- Staging inventory guard fails on this branch, as designed: 259 local files against the pinned 258 (`stagingInventory20261121.test.ts`). Adding 0264 is a source change, so the pin has to be re-taken. It waits for the owner's decision on which migrations land together (0261 to 0264). The fix branch's 22 Nov snapshot covers 0261 to 0263 only.
+- Not run: the full suite. Coverage NOT VERIFIED (no coverage receipt this session).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 98 / 98 (100%) | — |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 259 files · check:pglite 259/259 applied, 0 failed (recorded 2026-11-22T11:12:22.730Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-22T11:12:36.382Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Re-take the staging inventory once the owner decides the merge set (0261 to 0264). Until then the 21 Nov guard fails on this branch, so CI blocks it.
+- Build the Settings control (Owner only), the TypeScript mirror in `rbac.ts`, and the approvals inbox routing (T5-10), then the extension clash (T3-29), with tests.
+- Next session starts with: the merge-set decision for migrations 0261 to 0264.
+
 ## 2026-11-22 — Launch Decisions O-31 to O-33 Answered (Lane A)
 
 ### Did
