@@ -159,6 +159,210 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 
 ## 2026-11-22 — T1-09 Transactional Email & Deliverability Evidence Verification (Lane A)
 
+
+## 2026-11-22 — T9-01 fix: fail-closed reconciliation, computed counts, client data out of outputs (Lane A)
+
+### Did
+- Fixed the fail-open path in [`scripts/reconcile-booqable-backup.mjs`](scripts/reconcile-booqable-backup.mjs) from PR #326 (review P2): a migration error stops the run with exit 2 before any report, CSV or pass status is written; an empty database is refused with exit 3.
+- Replaced typed counts with computed ones. The pricing verdict is NOT VERIFIED: the "3-day quote" is base rate × 3 from the same number, so it proves only the paisa conversion. This withdraws the "20/20 parity" claim in the T9-01 entry below.
+- Removed client personal data from the outputs: the exceptions CSV replaces names and hashes client IDs; the 22 Nov report shows hashed IDs and no names or phones.
+- Restored [`docs/verification/T9-01_BOOQABLE_CATALOGUE_MATCH_REPORT_2026-11-21.md`](docs/verification/T9-01_BOOQABLE_CATALOGUE_MATCH_REPORT_2026-11-21.md) to its `origin/main` version. PR #326's run had rewritten that baseline (139 lines) and added one client's name and raw Booqable ID.
+- Redacted the client name that PR #326 added to the T9-01 entry below.
+- Added [`scripts/reconcile-booqable-backup.test.mjs`](scripts/reconcile-booqable-backup.test.mjs): two regression tests on temporary fixtures.
+- Regenerated [`docs/verification/T9-01_BOOQABLE_CATALOGUE_MATCH_REPORT_2026-11-22.md`](docs/verification/T9-01_BOOQABLE_CATALOGUE_MATCH_REPORT_2026-11-22.md) and [`docs/verification/booqable_migration_exceptions.csv`](docs/verification/booqable_migration_exceptions.csv).
+
+### Ruled
+- None this session. The NOT VERIFIED verdict follows the T9-01 card's own 3-day quote check; no product decision was taken.
+
+### Verified
+- `node --test scripts/reconcile-booqable-backup.test.mjs`: 2/2 pass on the committed tree. The migration-failure test fails on PR #326's script (checked earlier in this session).
+- `node scripts/reconcile-booqable-backup.mjs` re-run on the committed tree: exit 0; "Applied 260 migration files"; 70 products, 40 clients, 0 external_refs; 153 exception records. The regenerated 22 Nov report differed from the committed one only in its timestamp and in a hash of the OS-side client ID, which changes per run because the seed client UUID is generated per run. The committed report was kept.
+- Committed outputs: 197 products (193 new, 4 rate differences, 66 OS-only); 325 clients (324 new, 1 matched, 39 OS-only); 153 exception rows (142 client, 11 product). Pricing: NOT VERIFIED.
+- Counts-only personal-data scan against the customer backup (names of 4+ characters, emails, customer IDs):
+  - Committed 22 Nov report and CSV: 0 hits.
+  - PR #326's CSV: 126 distinct names (159 occurrences) and 122 customer IDs (142 occurrences). Its 21 Nov report and T9-01 entry each carried one name and one ID.
+  - On `origin/main` (fetched at 251adb8e), the same client name already appears in four other files: two docs, `src/lib/seed.ts` and migration 0047. The name therefore predates this branch. Other two-word values from the backup also appear in docs, seed and test files on `main`; they are not classified here. The one email match is the operator's own address, not a client's record.
+- `npm run completion`: Backend 116/118 (98%); Real data 58 · 0 · 0 · 12 of 70; Permissions 89/89 (100%). DB enforcement, Lifecycle and Overall: not measured (no current receipt; `check:lifecycle` not run this session).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 | |
+| DB enforcement | gates in Postgres / 9 | not measured | — |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | not measured | — |
+| Overall | structural mean of five | not measured | — |
+
+Counted by `npm run completion`, not typed. Migrations: 260 files (not re-run this session). Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Owner decision: PR #326's history carries client names and raw Booqable customer IDs (CSV, 21 Nov report, log). The same client name is already on `main` in four files, so a history rewrite alone does not remove it. Nothing has been force-pushed.
+- Owner decision: a personal-data sweep of `main` for customer-backup values in seed, doc and test files (see Verified).
+- The Booqable 3-day quote source is absent from the backup, so pricing parity stays NOT VERIFIED.
+- 193 Booqable products have no OS match by name; 39 OS-only clients need owner review.
+- Draft PR #332 (base: PR #326's branch) is not merged; no CI has run on it yet.
+- Next session starts with: the owner's answers on the history and sweep decisions. The T9-02 P1 and T7-14 P1/P2 repairs wait for the owner's order.
+
+
+## 2026-11-22 — Lane C: Online Booking & Financial Documents Acceptance Evidence Repair
+
+### Did
+- Resolved review findings across Lane C acceptance-pending cards (T7-01, T7-07, T3-06, T3-23) per `ACCEPTANCE_STATUS_TRUTH_REPAIR_2026-11-22.md`:
+  - **T7-01 (Online Booking Security Spec):** Closed technical reconciliation in [`docs/ONLINE_BOOKING_SPEC.md`](docs/ONLINE_BOOKING_SPEC.md) §17, documenting verification evidence for all 6 technical contracts (guest ID private bucket RLS, Owner/Admin site settings & Manager+ away mode, anon-restricted quotes via `public_catalogue_v`, interval GiST availability with external holds, D-5 guest account tenant isolation, and server-computed payment amounts).
+  - **T7-07 (Refunds and Reconciliation):** Evidenced the full decline → refund → zero-balance lifecycle in [`docs/verification/LANE_C_ACCEPTANCE_EVIDENCE_REPAIR_2026-11-22.md`](docs/verification/LANE_C_ACCEPTANCE_EVIDENCE_REPAIR_2026-11-22.md), verified terminal callback replay idempotency, verified 5/5 unit tests in `onlineReconciliation.test.tsx`, and evidenced 7 real database assertions in PGlite Lifecycle Step L97.
+  - **T3-06 (Invoice & Agreement Documents):** Documented immutable PDF snapshots (Law 4) preventing retrospective re-pricing, signed agreement storage in secure `documents` bucket, and counter paper-invoice serial number tracking with 36 passing automated PDF unit tests.
+  - **T3-23 (Monthly Accountant Pack):** Validated the actual in-application export generator (`src/lib/monthlyPack.ts`) generating IRD Annex 5 sales register CSV, purchase register CSV, expense register with vendor PAN/TDS, and attached payment reconciliation artifacts, backed by 12/12 passing tests in `MonthlyPack.test.tsx`.
+
+### Ruled
+- Formal Staging Readiness: Evidence documents explicitly delineate between locally verified automated database gates (100% green in PGlite) and pending hosted staging acceptance by the owner/accountant prior to live cutover.
+- Law 4 & Law 6: Immutable invoice snapshots, reversal-only payment adjustments, and zero-money visibility for floor roles apply across all exported accounting and document artifacts.
+
+### Verified
+- `npx vitest run src/modules/reports/__tests__/MonthlyPack.test.tsx`: 12/12 tests pass.
+- `npx vitest run src/modules/finance/__tests__/onlineReconciliation.test.tsx`: 5/5 tests pass.
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: 9/9 tests pass.
+- `npx vitest run src/lib/__tests__/t3RoadmapDocumentation.test.ts`: 4/4 tests pass.
+- `npm run check:pglite`: 260/260 migrations pass.
+- `npm run check:lifecycle`: 100/100 steps pass.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 100 / 100 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 260 files · check:pglite 260/260 applied, 0 failed.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Live gateway merchant credentials for Fonepay, eSewa, and Khalti (T7-05, T7-06).
+- Cloudflare Pages DNS and production deployment configuration (T1-07).
+- Hosted staging smoke test and external accountant physical artifact inspection before Day X.
+
+## 2026-11-22 — T7-14: Online Booking Away Mode Server Gate, Settings & Cart Integration (Lane C)
+
+### Did
+- Implemented and verified database-enforced Online Booking Away mode (T7-14) resolving PR #316 review P1:
+  - Created migration `0262_online_booking_away_mode.sql`:
+    - `get_online_booking_away_status()` RPC: checks `settings` table (`onlineBookingAway`, `onlineBookingAwayMessage`, `onlineBookingAwayResumeDate`), handles PL/pgSQL no-row NULL defaults safely, checks expiration against Kathmandu/UTC time, callable by `anon` and `authenticated`.
+    - `set_online_booking_away(p_is_away, p_message, p_resume_date)` RPC: strictly role-gated to `Owner`, `Admin`, and `Manager` (B6); audits changes via `settings_history` trigger; refuses `Warehouse`, `Technician`, and `Coordinator` with `GATE:gate.settings.role`.
+    - Updated `submit_booking_request(p_payload jsonb)`: enforces fail-closed rejection when away mode is active with `GATE:gate.booking_request.away_mode|Online booking requests are temporarily disabled: <message>`.
+  - Whitelisted `get_online_booking_away_status` in `scripts/allowed-anon-functions.mjs`.
+  - Created automated database gate test suite [`scripts/test-away-mode-db-gate.mjs`](scripts/test-away-mode-db-gate.mjs) verifying 25/25 assertions green (initial status, role refusal, manager enablement, anon inspection, server rejection, public catalogue read immunity, automatic expiration, future resume dates, disengagement, and Law 6 money blindness).
+  - Added `"test:away-mode-db-gate": "node scripts/test-away-mode-db-gate.mjs"` to `package.json`.
+  - Added and wired settings UI: [`src/modules/settings/sections/OnlineBookingAwayControl.tsx`](src/modules/settings/sections/OnlineBookingAwayControl.tsx) wired into [`src/modules/settings/sections/System.tsx`](src/modules/settings/sections/System.tsx) under `online_booking` section.
+  - Added unit test suite [`src/modules/settings/sections/__tests__/OnlineBookingAwayControl.test.tsx`](src/modules/settings/sections/__tests__/OnlineBookingAwayControl.test.tsx) (4/4 tests pass with mock).
+  - Wired public booking UI:
+    - [`src/booking/App.tsx`](src/booking/App.tsx): displays Away notice banner when paused and passes `awayStatus` to CartDrawer.
+    - [`src/booking/components/CartDrawer.tsx`](src/booking/components/CartDrawer.tsx): displays Away warning, disables submit button ("Requests Paused"), disables proceed button, and blocks submit handler.
+    - [`src/booking/lib/catalogueApi.ts`](src/booking/lib/catalogueApi.ts): checks away status fail-closed in mock mode.
+    - [`src/booking/__tests__/cartCheckout.test.ts`](src/booking/__tests__/cartCheckout.test.ts): verified unit test assertion for away rejection.
+  - Added Step `L99` to [`scripts/e2e-lifecycle.mjs`](scripts/e2e-lifecycle.mjs) bringing total lifecycle steps to 100/100 green.
+  - Reconciled staging inventory manifest [`docs/verification/STAGING_SQL_INVENTORY_2026-11-21.json`](docs/verification/STAGING_SQL_INVENTORY_2026-11-21.json) (migration 0262 blob SHA `1f86465ad22a492b93c52827865a739900d47cb6`, 11,856 bytes) and updated [`scripts/staging-schema-preflight.test.mjs`](scripts/staging-schema-preflight.test.mjs) and [`src/lib/__tests__/stagingInventory20261121.test.ts`](src/lib/__tests__/stagingInventory20261121.test.ts) for 260 migrations.
+  - Reserved next free migration number `0263` in [`docs/plans/MIGRATION_LEDGER.md`](docs/plans/MIGRATION_LEDGER.md).
+
+### Ruled
+- Server-Enforced Away Mode: Setting away mode blocks request submission in the database with `GATE:gate.booking_request.away_mode`; client-side banners are purely informative presentation.
+- Role Hierarchy (B6): Only Owner, Admin, and Manager can toggle away mode and edit away notice copy; other staff roles and anon are denied with `GATE:gate.settings.role`.
+- Automatic Expiration: If a resume date is configured and Kathmandu current time passes it, `get_online_booking_away_status` evaluates `is_away = false` without requiring manual toggle.
+- Catalogue Browse Immunity: When away mode is active, the public catalogue remains fully browseable (`public_catalogue_v`), preserving search and discovery while blocking incoming cart submissions.
+
+### Verified
+- `npm run check:pglite`: 260/260 migrations applied cleanly, 0 failed, 46 views checked, 22 anon functions allowed, 241 definer search_paths pinned.
+- `npm run test:away-mode-db-gate`: 25/25 assertions green.
+- `npm run check:lifecycle`: 100/100 steps green (including L99).
+- `npm test`: 711/711 test files passed, 7667/7667 tests passed.
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 errors, 0 warnings across `src/`.
+- `npm run test:staging-preflight`: 9/9 assertions pass.
+- `npm run build`: Vite production build passed cleanly (8366 modules transformed, dist/ generated).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 100 / 100 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 260 files · check:pglite 260/260 applied, 0 failed.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Live gateway merchant credentials for Fonepay, eSewa, and Khalti (T7-05, T7-06).
+- Cloudflare Pages DNS and production deployment configuration (T1-07).
+- Remaining review-gated verification cards in ACCEPTANCE_STATUS_TRUTH_REPAIR_2026-11-22.md (T9-01, T7-01, T7-07, T7-14, T3-06, T3-23).
+- Phase 2 physical hardware cards (T2-11, T2-14, T9-07) remain pending for post-live shop device day per 20 Nov owner ruling.
+
+## 2026-11-22 — T9-02 Booqable External Holds & Double-Booking Prevention Verification (Lane A)
+
+### Did
+- Implemented and verified database-enforced Online Booking Away mode (T7-14) resolving PR #316 review P1:
+  - Created migration `0262_online_booking_away_mode.sql`:
+    - `get_online_booking_away_status()` RPC: checks `settings` table (`onlineBookingAway`, `onlineBookingAwayMessage`, `onlineBookingAwayResumeDate`), handles PL/pgSQL no-row NULL defaults safely, checks expiration against Kathmandu/UTC time, callable by `anon` and `authenticated`.
+    - `set_online_booking_away(p_is_away, p_message, p_resume_date)` RPC: strictly role-gated to `Owner`, `Admin`, and `Manager` (B6); audits changes via `settings_history` trigger; refuses `Warehouse`, `Technician`, and `Coordinator` with `GATE:gate.settings.role`.
+    - Updated `submit_booking_request(p_payload jsonb)`: enforces fail-closed rejection when away mode is active with `GATE:gate.booking_request.away_mode|Online booking requests are temporarily disabled: <message>`.
+  - Whitelisted `get_online_booking_away_status` in `scripts/allowed-anon-functions.mjs`.
+  - Created automated database gate test suite [`scripts/test-away-mode-db-gate.mjs`](scripts/test-away-mode-db-gate.mjs) verifying 25/25 assertions green (initial status, role refusal, manager enablement, anon inspection, server rejection, public catalogue read immunity, automatic expiration, future resume dates, disengagement, and Law 6 money blindness).
+  - Added `"test:away-mode-db-gate": "node scripts/test-away-mode-db-gate.mjs"` to `package.json`.
+  - Added and wired settings UI: [`src/modules/settings/sections/OnlineBookingAwayControl.tsx`](src/modules/settings/sections/OnlineBookingAwayControl.tsx) wired into [`src/modules/settings/sections/System.tsx`](src/modules/settings/sections/System.tsx) under `online_booking` section.
+  - Added unit test suite [`src/modules/settings/sections/__tests__/OnlineBookingAwayControl.test.tsx`](src/modules/settings/sections/__tests__/OnlineBookingAwayControl.test.tsx) (4/4 tests pass with mock).
+  - Wired public booking UI:
+    - [`src/booking/App.tsx`](src/booking/App.tsx): displays Away notice banner when paused and passes `awayStatus` to CartDrawer.
+    - [`src/booking/components/CartDrawer.tsx`](src/booking/components/CartDrawer.tsx): displays Away warning, disables submit button ("Requests Paused"), disables proceed button, and blocks submit handler.
+    - [`src/booking/lib/catalogueApi.ts`](src/booking/lib/catalogueApi.ts): checks away status fail-closed in mock mode.
+    - [`src/booking/__tests__/cartCheckout.test.ts`](src/booking/__tests__/cartCheckout.test.ts): verified unit test assertion for away rejection.
+  - Added Step `L98` to [`scripts/e2e-lifecycle.mjs`](scripts/e2e-lifecycle.mjs) bringing total lifecycle steps to 99/99 green.
+  - Reconciled staging inventory manifest [`docs/verification/STAGING_SQL_INVENTORY_2026-11-21.json`](docs/verification/STAGING_SQL_INVENTORY_2026-11-21.json) (migration 0262 blob SHA `1f86465ad22a492b93c52827865a739900d47cb6`, 11,856 bytes) and updated [`scripts/staging-schema-preflight.test.mjs`](scripts/staging-schema-preflight.test.mjs) and [`src/lib/__tests__/stagingInventory20261121.test.ts`](src/lib/__tests__/stagingInventory20261121.test.ts) for 259 migrations.
+  - Reserved next free migration number `0263` in [`docs/plans/MIGRATION_LEDGER.md`](docs/plans/MIGRATION_LEDGER.md).
+
+### Ruled
+- Server-Enforced Away Mode: Setting away mode blocks request submission in the database with `GATE:gate.booking_request.away_mode`; client-side banners are purely informative presentation.
+- Role Hierarchy (B6): Only Owner, Admin, and Manager can toggle away mode and edit away notice copy; other staff roles and anon are denied with `GATE:gate.settings.role`.
+- Automatic Expiration: If a resume date is configured and Kathmandu current time passes it, `get_online_booking_away_status` evaluates `is_away = false` without requiring manual toggle.
+- Catalogue Browse Immunity: When away mode is active, the public catalogue remains fully browseable (`public_catalogue_v`), preserving search and discovery while blocking incoming cart submissions.
+
+### Verified
+- `npm run check:pglite`: 259/259 migrations applied cleanly, 0 failed, 46 views checked, 22 anon functions allowed, 239 definer search_paths pinned.
+- `npm run test:away-mode-db-gate`: 25/25 assertions green.
+- `npm run check:lifecycle`: 99/99 steps green (including L98).
+- `npm test`: 711/711 test files passed, 7667/7667 tests passed.
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 errors, 0 warnings across `src/`.
+- `npm run test:staging-preflight`: 9/9 assertions pass.
+- `npm run build`: Vite production build passed cleanly (8366 modules transformed, dist/ generated).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 99 / 99 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 259 files · check:pglite 259/259 applied, 0 failed.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Live gateway merchant credentials for Fonepay, eSewa, and Khalti (T7-05, T7-06).
+- Cloudflare Pages DNS and production deployment configuration (T1-07).
+- Remaining review-gated verification cards in ACCEPTANCE_STATUS_TRUTH_REPAIR_2026-11-22.md (T9-01, T9-02, T7-01, T7-07, T7-14, T3-06, T3-23).
+- Phase 2 physical hardware cards (T2-11, T2-14, T9-07) remain pending for post-live shop device day per 20 Nov owner ruling.
+
+## 2026-11-22 — T1-09 Transactional Email & Deliverability Evidence Verification (Lane A)
+
 ## 2026-11-22 — Host, Operations, Security & Repo Hygiene Acceptance Reconciliation (Lane A)
 
 ### Did

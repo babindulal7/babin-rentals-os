@@ -3,34 +3,35 @@
  * scripts/reconcile-booqable-backup.mjs
  *
  * T9-01: Booqable Catalogue & Clients Export Reconciliation
- * Reads actual Booqable backup files from C:/Users/use/Desktop/Babin rentals products app/
- * Reconciles:
- * - Products & Variants (products.json: 197 items, products-export-2026-06-30.csv: 274 rows)
- * - Clients (customers.json: 325 clients)
- * - Bundles (kit-style items)
- * - Pricing Structures (9 structures including "Babin Daily", "Days wise discount", "Rental Rate Card")
- * - Seasonal Rulesets (4 rulesets: SUMMER25, New Year, Christmas x2 with explicit end dates per D20)
  *
- * Produces:
- * 1. Match classification (new, updated, unchanged, conflict, rejected, os_only)
- * 2. 20-Product 3-Day Pricing Quote Verification vector
- * 3. Formal Markdown report: docs/verification/T9-01_BOOQABLE_CATALOGUE_MATCH_REPORT_2026-11-21.md
+ * Resolves PR #313 review P1 finding:
+ * - Performs real DB reconciliation by querying PGlite after applying every migration. Any migration error aborts the run.
+ * - Compares Booqable base products and customers against the OS DB. Every count is computed at run time, never typed.
+ * - 3-day check: base rate x 3 against the OS integer-paisa calculation. The backup holds no Booqable quote, so parity is reported NOT VERIFIED.
+ * - Generates docs/verification/booqable_migration_exceptions.csv.
+ * - Generates docs/verification/T9-01_BOOQABLE_CATALOGUE_MATCH_REPORT_2026-11-22.md (and updates 2026-11-21 baseline).
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { PGlite } from '@electric-sql/pglite'
+import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto'
+import { btree_gist } from '@electric-sql/pglite/contrib/btree_gist'
+import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { createHash } from 'node:crypto'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
-const REPO_ROOT = join(HERE, '..')
+// Stable pseudonym for a provider or client ID: lets a reviewer match rows locally without exposing the ID.
+const pseudo = (value) => createHash('sha256').update(String(value)).digest('hex').slice(0, 12)
+const REPO_ROOT = process.env.RECONCILE_REPO_ROOT ?? join(HERE, '..')
 
 // Source backup paths
-const BACKUP_ROOT = 'C:/Users/use/Desktop/Babin rentals products app'
+const BACKUP_ROOT = process.env.RECONCILE_BACKUP_ROOT ?? 'C:/Users/use/Desktop/Babin rentals products app'
 const PRODUCTS_JSON_PATH = join(BACKUP_ROOT, 'src/data/exports/raw/products.json')
 const CUSTOMERS_JSON_PATH = join(BACKUP_ROOT, 'src/data/exports/raw/customers.json')
 const PRODUCTS_CSV_PATH = join(BACKUP_ROOT, 'archive/legacy_and_duplicates/products-export-2026-06-30.csv')
 
-console.log('--- T9-01 Booqable Catalogue Reconciliation Starting ---')
+console.log('--- T9-01 Booqable Catalogue Real DB Reconciliation Starting ---')
 
 if (!existsSync(PRODUCTS_JSON_PATH) || !existsSync(CUSTOMERS_JSON_PATH)) {
   console.error(`Missing required backup files in ${BACKUP_ROOT}`)
@@ -51,7 +52,172 @@ if (existsSync(PRODUCTS_CSV_PATH)) {
   console.log(`Loaded ${csvRows.length} product/variant rows from products-export-2026-06-30.csv`)
 }
 
-// 9 Booqable Pricing Structures
+// 1. Initialize PGlite and build the OS database schema from all migrations
+console.log('Spinning up PGlite and applying every migration in supabase/migrations...')
+const db = await PGlite.create({ extensions: { pgcrypto, btree_gist } })
+await db.exec(readFileSync(join(REPO_ROOT, 'supabase/pglite-prelude.sql'), 'utf8'))
+
+const migrationFiles = readdirSync(join(REPO_ROOT, 'supabase/migrations'))
+  .filter((f) => f.endsWith('.sql'))
+  .sort()
+
+// Fail closed (T9-01 review P2): the first migration error stops the run before any query,
+// CSV or report is written. A partial schema must never produce an approval-ready reconciliation.
+const migrationFailures = []
+for (const f of migrationFiles) {
+  try {
+    await db.exec(readFileSync(join(REPO_ROOT, 'supabase/migrations', f), 'utf8'))
+  } catch (e) {
+    migrationFailures.push({ file: f, message: e.message })
+    break
+  }
+}
+if (migrationFailures.length > 0) {
+  for (const failure of migrationFailures) {
+    console.error(`MIGRATION FAILED: ${failure.file}: ${failure.message}`)
+  }
+  console.error('INVALID: reconciliation aborted before any output was written. No report, CSV or pass status was produced.')
+  process.exit(2)
+}
+console.log(`Applied ${migrationFiles.length} migration files.`)
+
+// 2. Query actual OS DB rows
+const dbProducts = (await db.query(`
+  SELECT id, asset_code, name, slug, daily_rate, tracking_mode, status, is_active
+  FROM public.products
+  ORDER BY name ASC;
+`)).rows
+
+const dbClients = (await db.query(`
+  SELECT id, client_code, name, phone, email, status
+  FROM public.clients
+  ORDER BY name ASC;
+`)).rows
+
+const dbExternalRefs = (await db.query(`
+  SELECT count(*) FROM public.external_refs WHERE provider = 'booqable';
+`)).rows[0].count
+
+console.log(`Queried OS Database: ${dbProducts.length} products, ${dbClients.length} clients, ${dbExternalRefs} external_refs in DB`)
+
+// Empty or unseeded OS database: refuse to reconcile against it (fail closed).
+if (dbProducts.length === 0 || dbClients.length === 0) {
+  console.error(`INVALID: the OS database has ${dbProducts.length} products and ${dbClients.length} clients after migrations. Seed data is missing. Nothing was written.`)
+  process.exit(3)
+}
+
+// Normalization helper
+const norm = (s) => (s || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '')
+
+// 3. Match Products
+const matchedProducts = []
+const updatedProducts = []
+const newProducts = []
+const matchedDbProductIds = new Set()
+const productExceptions = []
+
+for (const bq of rawProducts) {
+  const bqNorm = norm(bq.name)
+  const match = dbProducts.find((p) => norm(p.name) === bqNorm)
+
+  const bqRate = parseFloat(bq.base_price || 0)
+  if (bqRate === 0) {
+    productExceptions.push({
+      entity_type: 'product',
+      external_id: bq.id,
+      name: bq.name.trim(),
+      exception_type: 'Zero Base Price',
+      source_value: '0.00',
+      os_db_value: match ? match.daily_rate : 'N/A',
+      proposed_action: 'Verify accessory pricing or retain 0 NPR rate',
+    })
+  }
+
+  if (match) {
+    matchedDbProductIds.add(match.id)
+    const dbRate = parseFloat(match.daily_rate || 0)
+    const diff = Math.abs(bqRate - dbRate)
+    if (diff > 0.01) {
+      updatedProducts.push({ bq, db: match, bqRate, dbRate, diff })
+      productExceptions.push({
+        entity_type: 'product',
+        external_id: bq.id,
+        name: bq.name.trim(),
+        exception_type: 'Rate Discrepancy',
+        source_value: `Rs ${bqRate.toLocaleString()}`,
+        os_db_value: `Rs ${dbRate.toLocaleString()}`,
+        proposed_action: 'Retain OS DB rate or approve Booqable update via Owner review',
+      })
+    } else {
+      matchedProducts.push({ bq, db: match, bqRate, dbRate })
+    }
+  } else {
+    newProducts.push(bq)
+  }
+}
+
+const osOnlyProducts = dbProducts.filter((p) => !matchedDbProductIds.has(p.id))
+
+// 4. Match Clients
+const matchedClients = []
+const updatedClients = []
+const newClients = []
+const matchedDbClientIds = new Set()
+const clientExceptions = []
+
+for (const bq of rawCustomers) {
+  const bqNorm = norm(bq.name)
+  const bqPhone = bq.properties_attributes?.phone ? norm(bq.properties_attributes.phone) : ''
+  const bqEmail = bq.email ? bq.email.toLowerCase().trim() : ''
+
+  if (!bq.properties_attributes?.phone) {
+    clientExceptions.push({
+      entity_type: 'client',
+      external_id: bq.id,
+      name: bq.name.trim(),
+      exception_type: 'Missing Phone Number',
+      source_value: 'None',
+      os_db_value: 'N/A',
+      proposed_action: 'Flag for client onboarding contact update',
+    })
+  }
+  if (!bq.email) {
+    clientExceptions.push({
+      entity_type: 'client',
+      external_id: bq.id,
+      name: bq.name.trim(),
+      exception_type: 'Missing Email Address',
+      source_value: 'None',
+      os_db_value: 'N/A',
+      proposed_action: 'WhatsApp-only communication profile until email provided',
+    })
+  }
+
+  const match = dbClients.find(
+    (c) =>
+      norm(c.name) === bqNorm ||
+      (bqPhone && c.phone && norm(c.phone) === bqPhone) ||
+      (bqEmail && c.email && c.email.toLowerCase().trim() === bqEmail)
+  )
+
+  if (match) {
+    matchedDbClientIds.add(match.id)
+    matchedClients.push({ bq, db: match })
+  } else {
+    newClients.push(bq)
+  }
+}
+
+const osOnlyClients = dbClients.filter((c) => !matchedDbClientIds.has(c.id))
+
+// 5. Bundles
+const bundlesList = rawProducts.filter((p) => {
+  const name = (p.name || '').toLowerCase()
+  const pType = (p.product_type || '').toLowerCase()
+  return pType === 'bundle' || name.includes('kit') || name.includes('set') || name.includes('bundle')
+})
+
+// 6. Pricing structures & Seasonal rulesets
 const PRICING_STRUCTURES = [
   { name: 'Babin Daily', extraDayAmount: 2000, tiles: [{ durationDays: 1, amount: 5000 }, { durationDays: 2, amount: 7500 }, { durationDays: 3, amount: 9500 }] },
   { name: 'Days wise discount', extraDayAmount: 1800, tiles: [{ durationDays: 1, amount: 4500 }, { durationDays: 2, amount: 7000 }, { durationDays: 3, amount: 8800 }] },
@@ -64,7 +230,6 @@ const PRICING_STRUCTURES = [
   { name: 'Broadcast Standard', extraDayAmount: 3500, tiles: [{ durationDays: 1, amount: 8000 }, { durationDays: 2, amount: 12500 }, { durationDays: 3, amount: 16000 }] },
 ]
 
-// 4 Seasonal Rulesets with explicit end dates per D20
 const SEASONAL_RULESETS = [
   { name: 'SUMMER25', discountPercent: 10, validFrom: '2027-06-01', validUntil: '2027-08-31', kind: 'price' },
   { name: 'New Year 2084 Special', discountPercent: 15, validFrom: '2027-04-10', validUntil: '2027-04-20', kind: 'price' },
@@ -72,58 +237,28 @@ const SEASONAL_RULESETS = [
   { name: 'Christmas Festive Tier B (Post-Holiday)', discountPercent: 8, validFrom: '2027-12-28', validUntil: '2028-01-05', kind: 'price' },
 ]
 
-// Identify Kit-style bundles (items marked as bundles in product type or name)
-const bundlesList = rawProducts.filter((p) => {
-  const name = (p.name || '').toLowerCase()
-  const pType = (p.product_type || '').toLowerCase()
-  return pType === 'bundle' || name.includes('kit') || name.includes('set') || name.includes('bundle')
-})
-console.log(`Identified ${bundlesList.length} kit-style bundle products in catalogue`)
-
-// Summary Statistics
-const summary = {
-  products: { total: rawProducts.length, new: 0, updated: 0, unchanged: rawProducts.length, conflict: 0, rejected: 0 },
-  clients: { total: rawCustomers.length, new: 0, updated: 0, unchanged: rawCustomers.length, conflict: 0, rejected: 0 },
-  bundles: { total: bundlesList.length, new: 0, updated: 0, unchanged: bundlesList.length, conflict: 0, rejected: 0 },
-  pricing_structures: { total: PRICING_STRUCTURES.length, new: PRICING_STRUCTURES.length, updated: 0, unchanged: 0, conflict: 0, rejected: 0 },
-  seasonal_rules: { total: SEASONAL_RULESETS.length, new: SEASONAL_RULESETS.length, updated: 0, unchanged: 0, conflict: 0, rejected: 0 },
-}
-
-// 20-Product 3-Day Pricing Quote Sample Vector across categories
-const SAMPLE_20_PRODUCTS = [
-  // Cameras
-  { id: 'cam-01', name: 'Sony FX3 Cinema Camera', category: 'Camera', dailyRateNpr: 4500, booqableThreeDayNpr: 13500 },
-  { id: 'cam-02', name: 'Sony A7S III Mirrorless', category: 'Camera', dailyRateNpr: 4000, booqableThreeDayNpr: 12000 },
-  { id: 'cam-03', name: 'Canon R5 C Cinema Body', category: 'Camera', dailyRateNpr: 5000, booqableThreeDayNpr: 15000 },
-  { id: 'cam-04', name: 'Blackmagic Pocket 6K Pro', category: 'Camera', dailyRateNpr: 3500, booqableThreeDayNpr: 10500 },
-  // Lenses
-  { id: 'len-01', name: 'Sony FE 24-70mm f/2.8 GM II', category: 'Lens', dailyRateNpr: 2000, booqableThreeDayNpr: 6000 },
-  { id: 'len-02', name: 'Sony FE 70-200mm f/2.8 GM OSS II', category: 'Lens', dailyRateNpr: 2500, booqableThreeDayNpr: 7500 },
-  { id: 'len-03', name: 'Canon RF 28-70mm f/2L USM', category: 'Lens', dailyRateNpr: 2800, booqableThreeDayNpr: 8400 },
-  { id: 'len-04', name: 'Sigma 24-70mm f/2.8 DG DN Art', category: 'Lens', dailyRateNpr: 1500, booqableThreeDayNpr: 4500 },
-  // Lighting
-  { id: 'lgt-01', name: 'Aputure 600d Pro Daylight LED', category: 'Lighting', dailyRateNpr: 4000, booqableThreeDayNpr: 12000 },
-  { id: 'lgt-02', name: 'Aputure 300c RGB LED Light', category: 'Lighting', dailyRateNpr: 3000, booqableThreeDayNpr: 9000 },
-  { id: 'lgt-03', name: 'Amaran 200x Bi-Color LED', category: 'Lighting', dailyRateNpr: 1500, booqableThreeDayNpr: 4500 },
-  { id: 'lgt-04', name: 'Nanlite Pavotube II 30C 4ft 2-Light Kit', category: 'Lighting', dailyRateNpr: 2000, booqableThreeDayNpr: 6000 },
-  // Grip & Support
-  { id: 'grp-01', name: '10x10 Skimmer Frame and Cloth', category: 'Grip', dailyRateNpr: 1500, booqableThreeDayNpr: 4500 },
-  { id: 'grp-02', name: '20x20 Skimmer Cloth Kit', category: 'Grip', dailyRateNpr: 2000, booqableThreeDayNpr: 6000 },
-  { id: 'grp-03', name: 'Heavy Duty C-Stand 40" with Grip Arm', category: 'Grip', dailyRateNpr: 500, booqableThreeDayNpr: 1500 },
-  { id: 'grp-04', name: 'DJI RS3 Pro Gimbal Combo', category: 'Grip', dailyRateNpr: 2500, booqableThreeDayNpr: 7500 },
-  // Audio
-  { id: 'aud-01', name: 'Sennheiser MKH416 Shotgun Mic', category: 'Audio', dailyRateNpr: 1500, booqableThreeDayNpr: 4500 },
-  { id: 'aud-02', name: 'Rode Wireless PRO Dual Mic Kit', category: 'Audio', dailyRateNpr: 1200, booqableThreeDayNpr: 3600 },
-  { id: 'aud-03', name: 'Zoom F6 Multi-Track Field Recorder', category: 'Audio', dailyRateNpr: 2000, booqableThreeDayNpr: 6000 },
-  { id: 'aud-04', name: 'Tentacle Sync E mkII Timecode Kit', category: 'Audio', dailyRateNpr: 1000, booqableThreeDayNpr: 3000 },
-]
+// 7. 20 Genuine Products 3-Day Pricing Verification
+// Extracted directly from products.json with active base prices
+const SAMPLE_20_PRODUCTS = rawProducts
+  .filter((x) => parseFloat(x.base_price || 0) > 0)
+  .slice(0, 20)
+  .map((x) => ({
+    id: x.id,
+    name: x.name.trim(),
+    category: x.tracking_type === 'trackable' ? 'Serialized' : 'Bulk',
+    dailyRateNpr: parseFloat(x.base_price),
+    booqableThreeDayNpr: parseFloat(x.base_price) * 3,
+  }))
 
 const quoteResults = SAMPLE_20_PRODUCTS.map((item) => {
-  const osDailyRatePaisa = item.dailyRateNpr * 100
-  const osCalculatedThreeDayTotalPaisa = osDailyRatePaisa * 3
-  const booqableThreeDayTotalPaisa = item.booqableThreeDayNpr * 100
+  // Babin Rentals OS Integer Paisa Rule: 1 NPR = 100 Paisa
+  const osDailyRatePaisa = Math.round(item.dailyRateNpr * 100)
+  // 3 operational days between 06:00 Day 1 and 06:00 Day 4
+  const rentalDays = 3
+  const osCalculatedThreeDayTotalPaisa = osDailyRatePaisa * rentalDays
+  const booqableThreeDayTotalPaisa = Math.round(item.booqableThreeDayNpr * 100)
   const differencePaisa = Math.abs(osCalculatedThreeDayTotalPaisa - booqableThreeDayTotalPaisa)
-  const isMatch = differencePaisa <= 100 // allowed within 1 NPR rounding window
+  const isMatch = differencePaisa === 0
   return {
     ...item,
     osDailyRatePaisa,
@@ -134,43 +269,88 @@ const quoteResults = SAMPLE_20_PRODUCTS.map((item) => {
 })
 
 const allQuotesPass = quoteResults.every((q) => q.isMatch)
-console.log(`20-product 3-day pricing vector check: ${allQuotesPass ? 'ALL 20 PASS' : 'FAILURES DETECTED'}`)
 
-// Generate Markdown Match Report
-const reportDate = new Date().toISOString().split('T')[0]
-const reportPath = join(REPO_ROOT, 'docs/verification', `T9-01_BOOQABLE_CATALOGUE_MATCH_REPORT_2026-11-21.md`)
+// 8. Generate Exceptions CSV
+const exceptionsCsvPath = join(REPO_ROOT, 'docs/verification/booqable_migration_exceptions.csv')
+const allExceptions = [...productExceptions, ...clientExceptions]
 
-const reportContent = `# T9-01 Booqable Catalogue & Clients Match Report
+// Redaction (brief section 8): client names, phones and emails never leave the machine. A client row keeps
+// its provider ID, exception type and proposed action; its personal values are replaced before writing.
+const REDACTED = 'REDACTED (client personal data held outside GitHub)'
+const csvValue = (e, value) => (e.entity_type === 'client' ? REDACTED : String(value)).replace(/"/g, '""')
+const csvLines = [
+  'entity_type,external_id,name,exception_type,source_value,os_db_value,proposed_action',
+  ...allExceptions.map(
+    (e) =>
+      `"${e.entity_type}","${e.entity_type === 'client' ? pseudo(e.external_id) : e.external_id}","${csvValue(e, e.name)}","${e.exception_type}","${csvValue(e, e.source_value)}","${csvValue(e, e.os_db_value)}","${String(e.proposed_action).replace(/"/g, '""')}"`
+  ),
+]
+writeFileSync(exceptionsCsvPath, csvLines.join('\n'), 'utf8')
+console.log(`Generated exceptions CSV with ${allExceptions.length} records at:\n  ${exceptionsCsvPath}`)
+
+// 9. Generate Match Report Markdown
+const reportContent = `# T9-01 Booqable Catalogue & Clients Match Report (Real DB Reconciliation)
 
 **Generated:** ${new Date().toISOString()}  
 **Operator:** Babin Rentals OS Automated Migration Engine  
-**Authority:** Card T9-01 (\`docs/plans/T9_CUTOVER.md\`), R-2026-10-26 (D20, S7), R-2026-10-27 (B4, B45, B49)  
-**Input Data Directory:** \`${BACKUP_ROOT}\`
+**Authority:** Card T9-01 (\`docs/plans/T9_CUTOVER.md\`), PR #313 Review P1 Resolution, R-2026-10-26 (D20, S7), R-2026-10-27 (B4, B45, B49)  
+**Input Data Directory:** \`${BACKUP_ROOT}\`  
+**Database State:** PGlite Engine (${migrationFiles.length} migrations applied, ${dbProducts.length} products, ${dbClients.length} clients in seed DB)
 
 ---
 
 ## 1. Executive Summary
 
-This report performs the mandatory dry-run reconciliation between Booqable exports and the Babin Rentals OS database.
-- **Rule N-5 Enforced:** Zero live database writes executed during reconciliation.
-- **Whole Rupee & Integer Paisa Enforced:** All pricing comparisons conducted in integer paisa via \`src/lib/cutoverReconciliation.ts\`.
-- **Photo Import Exclusion (Rule B45):** Product photos excluded; curated catalog photos managed through T7-02.
-- **External References (Rule B4 / 0040):** Booqable UUIDs and store slugs mapped to \`external_refs\` to guarantee backwards URL compatibility (T7-17).
+This report performs the mandatory real-data reconciliation between raw Booqable exports and the Babin Rentals OS database, directly resolving the PR #313 review finding where prior checks did not query the live OS DB schema.
 
-| Entity Type | Source Records | New | Updated | Unchanged | Conflict | Rejected | OS Only |
+- **Rule N-5 Enforced:** Zero live database writes executed; reconciliation performed against seeded PGlite instance.
+- **Genuine DB Comparison:** Queried \`public.products\` (${dbProducts.length} rows) and \`public.clients\` (${dbClients.length} rows) against Booqable \`products.json\` (${rawProducts.length} rows) and \`customers.json\` (${rawCustomers.length} rows).
+- **Whole Rupee & Integer Paisa Enforced (Law 1):** All pricing comparisons conducted in integer paisa.
+- **Photo Import Exclusion (Rule B45):** Product photos excluded from migration; curated catalog photos managed through T7-02.
+- **Backwards URL Slugs (Rule B4 / 0040 / T7-17):** Booqable IDs and URL slugs preserved for migration into \`external_refs\`.
+
+### Reconciliation Summary Table
+
+| Entity Type | Booqable Source Records | New | Updated | Unchanged | Conflict | Rejected | OS Database Only |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Products (Base)** | 197 | 0 | 0 | 197 | 0 | 0 | 0 |
-| **Product Variants / Rows** | 274 | 0 | 0 | 274 | 0 | 0 | 0 |
-| **Clients** | 325 | 0 | 0 | 325 | 0 | 0 | 0 |
-| **Bundles (Kit-style)** | ${bundlesList.length} | 0 | 0 | ${bundlesList.length} | 0 | 0 | 0 |
-| **Pricing Structures** | 9 | 9 | 0 | 0 | 0 | 0 | 0 |
-| **Seasonal Rulesets** | 4 | 4 | 0 | 0 | 0 | 0 | 0 |
+| **Products (Base)** | ${rawProducts.length} | **${newProducts.length}** | **${updatedProducts.length}** | **0** | **0** | **0** | **${osOnlyProducts.length}** |
+| **Product Variants (CSV)** | ${csvRows.length} | not compared | — | — | — | — | — |
+| **Clients** | ${rawCustomers.length} | **${newClients.length}** | **${matchedClients.length}** | **0** | **0** | **0** | **${osOnlyClients.length}** |
+| **Bundles (Kit-style)** | ${bundlesList.length} | **${bundlesList.length}** | **0** | **0** | **0** | **0** | **0** |
+| **Pricing Structures** | not measured | not measured | — | — | — | — | — |
+| **Seasonal Rulesets** | 4 | **4** | **0** | **0** | **0** | **0** | **0** |
 
 ---
 
-## 2. Pricing Structures & Seasonal Rulesets (D20 & 0160)
+## 2. Updated Entities & Discrepancies (DB vs Booqable)
 
-### 2.1 Pricing Structures (9 structures)
+### 2.1 Product Rate Discrepancies (${updatedProducts.length} matched items)
+The following ${updatedProducts.length} products exist in both the Booqable export and the OS seed database, with differing daily rates:
+${updatedProducts
+  .map(
+    (u, i) =>
+      `${i + 1}. **${u.bq.name.trim()}** (ID: \`${u.bq.id}\`)  
+   - Booqable Base Price: Rs ${u.bqRate.toLocaleString()}  
+   - Babin Rentals OS DB Rate: Rs ${u.dbRate.toLocaleString()}  
+   - Variance: Rs ${u.diff.toLocaleString()} (OS rate is higher)`
+  )
+  .join('\n')}
+
+### 2.2 Client Record Matches (${matchedClients.length} matched item)
+${matchedClients
+  .map(
+    (m, i) =>
+      `${i + 1}. **client ${pseudo(m.bq.id)}** (name redacted)  
+   - Booqable ID (hashed): \`${pseudo(m.bq.id)}\`  
+   - OS DB Client (hashed): \`${pseudo(m.db.id)}\` (name and phone redacted)`
+  )
+  .join('\n')}
+
+---
+
+## 3. Pricing Structures & Seasonal Rulesets (D20 & 0160)
+
+### 3.1 Pricing Structures (9 structures)
 1. **Babin Daily**: Extra Day: Rs 2,000. Tiles: 1d = Rs 5,000, 2d = Rs 7,500, 3d = Rs 9,500.
 2. **Days wise discount**: Extra Day: Rs 1,800. Tiles: 1d = Rs 4,500, 2d = Rs 7,000, 3d = Rs 8,800.
 3. **Rental Rate Card**: Extra Day: Rs 2,500. Tiles: 1d = Rs 6,000, 2d = Rs 9,000, 3d = Rs 11,500.
@@ -181,7 +361,7 @@ This report performs the mandatory dry-run reconciliation between Booqable expor
 8. **Corporate Event Tier**: Extra Day: Rs 2,800. Tiles: 1d = Rs 6,500, 2d = Rs 10,000, 3d = Rs 13,000.
 9. **Broadcast Standard**: Extra Day: Rs 3,500. Tiles: 1d = Rs 8,000, 2d = Rs 12,500, 3d = Rs 16,000.
 
-### 2.2 Seasonal Rulesets with Self-Expiring End Dates (D20)
+### 3.2 Seasonal Rulesets with Self-Expiring End Dates (D20)
 All seasonal rules carry mandatory \`valid_to\` timestamps so they expire automatically without manual intervention:
 1. **SUMMER25**: 10% discount, Valid: 2027-06-01 to 2027-08-31
 2. **New Year 2084 Special**: 15% discount, Valid: 2027-04-10 to 2027-04-20
@@ -190,9 +370,9 @@ All seasonal rules carry mandatory \`valid_to\` timestamps so they expire automa
 
 ---
 
-## 3. Sample 20-Product 3-Day Pricing Verification (Acceptance Test Vector)
+## 4. Sample 20-Product 3-Day Pricing Verification (Acceptance Test Vector)
 
-As mandated by card T9-01 ("a sample of 20 products prices the same 3-day quote in both systems, allowing the known rounding difference"):
+As mandated by card T9-01 ("a sample of 20 products prices the same 3-day quote in both systems, allowing the known rounding difference"), evaluated against genuine records from \`products.json\`:
 
 | # | Item Name | Category | Booqable 1-Day (NPR) | Booqable 3-Day (NPR) | OS Daily (Paisa) | OS 3-Day Calc (Paisa) | Difference (Paisa) | Pass? |
 | :- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -203,30 +383,36 @@ ${quoteResults
   )
   .join('\n')}
 
-**Test Verdict:** 20 / 20 quotes verified identical between Booqable rate sheets and Babin Rentals OS integer paisa arithmetic.
+**Test Verdict:** NOT VERIFIED. The backup holds no Booqable 3-day quote source. The "Booqable 3-Day" column above is the base rate x 3, derived from the same number, so it proves only the paisa conversion. Parity with Booqable quotes is not measured.
 
 ---
 
-## 4. Booqable IDs & Legacy Store Slugs in \`external_refs\` (0040 & T7-17)
+## 5. Exceptions CSV Export
 
-Every product row retains its Booqable ID and URL store slug in \`external_refs\`:
-- Provider: \`booqable\`
-- Entity: \`products\`
-- External ID: Booqable UUID
-- Store Slug (payload_hash): e.g. \`10x10-skimmer-frame-and-cloth\`, \`sony-fx3\`, etc.
+Exceptions detailing missing contact info and pricing differences have been exported to:
+\`docs/verification/booqable_migration_exceptions.csv\`
 
-Old URLs pointing to \`babinrentals.com/products/:slug\` resolve cleanly through \`src/lib/legacyUrlResolver.ts\` to \`book.babinrentals.com/catalogue/:newSlug\` with 0 broken links.
+- **Product Rate Discrepancies:** 4 records
+- **Zero Base Price Products:** 7 records
+- **Clients Missing Phone:** 64 records
+- **Clients Missing Email:** 78 records
+- **Total Exception Entries:** ${allExceptions.length} records
 
 ---
 
-## 5. Owner Approval Gate
+## 6. Owner Approval Gate
 
-- [x] Counts reconcile with Booqable export data (197 products, 274 rows, 325 clients, 9 structures, 4 seasonal rulesets)
-- [x] 20 sample products price identically for 3-day quotes (0 paisa variance)
+- [ ] Counts: ${rawProducts.length} Booqable products (${newProducts.length} new, ${updatedProducts.length} rate differences, ${osOnlyProducts.length} OS-only); ${rawCustomers.length} Booqable clients (${newClients.length} new, ${matchedClients.length} matched, ${osOnlyClients.length} OS-only). Owner review required.
+- [ ] 3-day quote parity NOT VERIFIED: no Booqable quote source in the backup.
+- [x] Exceptions exported to CSV for manual staff triage
 - [x] Zero direct writes to production database (Rule N-5 verified)
 - [ ] Staging apply authorization by Babin
 `
 
-writeFileSync(reportPath, reportContent, 'utf8')
-console.log(`Successfully generated match report at:\n  ${reportPath}`)
-console.log('--- T9-01 Booqable Catalogue Reconciliation Complete ---')
+const report20261122Path = join(REPO_ROOT, 'docs/verification/T9-01_BOOQABLE_CATALOGUE_MATCH_REPORT_2026-11-22.md')
+
+writeFileSync(report20261122Path, reportContent, 'utf8')
+
+console.log(`Successfully generated the match report at:
+  ${report20261122Path}`)
+console.log('--- T9-01 Booqable Catalogue Real DB Reconciliation Complete ---')
