@@ -1,5 +1,49 @@
 # Progress Log
 
+## 2026-11-22 — T9-01 fix: fail-closed reconciliation, computed counts, client data out of outputs (Lane A)
+
+### Did
+- Fixed the fail-open path in [`scripts/reconcile-booqable-backup.mjs`](scripts/reconcile-booqable-backup.mjs) from PR #326 (review P2): a migration error stops the run with exit 2 before any report, CSV or pass status is written; an empty database is refused with exit 3.
+- Replaced typed counts with computed ones. The pricing verdict is NOT VERIFIED: the "3-day quote" is base rate × 3 from the same number, so it proves only the paisa conversion. This withdraws the "20/20 parity" claim in the T9-01 entry below.
+- Removed client personal data from the outputs: the exceptions CSV replaces names and hashes client IDs; the 22 Nov report shows hashed IDs and no names or phones.
+- Restored [`docs/verification/T9-01_BOOQABLE_CATALOGUE_MATCH_REPORT_2026-11-21.md`](docs/verification/T9-01_BOOQABLE_CATALOGUE_MATCH_REPORT_2026-11-21.md) to its `origin/main` version. PR #326's run had rewritten that baseline (139 lines) and added one client's name and raw Booqable ID.
+- Redacted the client name that PR #326 added to the T9-01 entry below.
+- Added [`scripts/reconcile-booqable-backup.test.mjs`](scripts/reconcile-booqable-backup.test.mjs): two regression tests on temporary fixtures.
+- Regenerated [`docs/verification/T9-01_BOOQABLE_CATALOGUE_MATCH_REPORT_2026-11-22.md`](docs/verification/T9-01_BOOQABLE_CATALOGUE_MATCH_REPORT_2026-11-22.md) and [`docs/verification/booqable_migration_exceptions.csv`](docs/verification/booqable_migration_exceptions.csv).
+
+### Ruled
+- None this session. The NOT VERIFIED verdict follows the T9-01 card's own 3-day quote check; no product decision was taken.
+
+### Verified
+- `node --test scripts/reconcile-booqable-backup.test.mjs`: 2/2 pass on the committed tree. The migration-failure test fails on PR #326's script (checked earlier in this session).
+- `node scripts/reconcile-booqable-backup.mjs` re-run on the committed tree: exit 0; "Applied 260 migration files"; 70 products, 40 clients, 0 external_refs; 153 exception records. The regenerated 22 Nov report differed from the committed one only in its timestamp and in a hash of the OS-side client ID, which changes per run because the seed client UUID is generated per run. The committed report was kept.
+- Committed outputs: 197 products (193 new, 4 rate differences, 66 OS-only); 325 clients (324 new, 1 matched, 39 OS-only); 153 exception rows (142 client, 11 product). Pricing: NOT VERIFIED.
+- Counts-only personal-data scan against the customer backup (names of 4+ characters, emails, customer IDs):
+  - Committed 22 Nov report and CSV: 0 hits.
+  - PR #326's CSV: 126 distinct names (159 occurrences) and 122 customer IDs (142 occurrences). Its 21 Nov report and T9-01 entry each carried one name and one ID.
+  - On `origin/main` (fetched at 251adb8e), the same client name already appears in four other files: two docs, `src/lib/seed.ts` and migration 0047. The name therefore predates this branch. Other two-word values from the backup also appear in docs, seed and test files on `main`; they are not classified here. The one email match is the operator's own address, not a client's record.
+- `npm run completion`: Backend 116/118 (98%); Real data 58 · 0 · 0 · 12 of 70; Permissions 89/89 (100%). DB enforcement, Lifecycle and Overall: not measured (no current receipt; `check:lifecycle` not run this session).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 | |
+| DB enforcement | gates in Postgres / 9 | not measured | — |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | not measured | — |
+| Overall | structural mean of five | not measured | — |
+
+Counted by `npm run completion`, not typed. Migrations: 260 files (not re-run this session). Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Owner decision: PR #326's history carries client names and raw Booqable customer IDs (CSV, 21 Nov report, log). The same client name is already on `main` in four files, so a history rewrite alone does not remove it. Nothing has been force-pushed.
+- Owner decision: a personal-data sweep of `main` for customer-backup values in seed, doc and test files (see Verified).
+- The Booqable 3-day quote source is absent from the backup, so pricing parity stays NOT VERIFIED.
+- 193 Booqable products have no OS match by name; 39 OS-only clients need owner review.
+- Draft PR #332 (base: PR #326's branch) is not merged; no CI has run on it yet.
+- Next session starts with: the owner's answers on the history and sweep decisions. The T9-02 P1 and T7-14 P1/P2 repairs wait for the owner's order.
+
 ## 2026-11-22 — T9-01: Real DB Booqable Catalogue Reconciliation & Exceptions Export (Lane A)
 
 ### Did
@@ -11,7 +55,7 @@
     - 66 OS-only products in seed database not present in Booqable exports.
   - Reconciled 325 customers from `customers.json`:
     - 324 New clients to be imported into OS DB.
-    - 1 Matched client (Rupesh Karki).
+    - 1 Matched client (name redacted).
     - 39 OS-only clients in seed database.
   - Reconciled 9 Pricing Structures and 4 Seasonal Rulesets (with self-expiring valid_to dates per D20).
   - Selected 20 genuine products from `products.json` and verified 3-day quotes using OS integer paisa arithmetic, achieving 20/20 parity with 0 paisa variance.
