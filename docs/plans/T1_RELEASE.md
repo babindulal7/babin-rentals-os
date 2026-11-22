@@ -245,7 +245,7 @@ says "this device only"; 3) a test fails if a `Switch` renders with neither a se
 save handler; 4) screen check at 375 / 820 / 1440.
 **Needs** — none.
 
-### T1-17 · Two-step sign-in for every money role            status: done — PR #203 merged; mfaBoundary tests verified (HOST_OPS_AND_SECURITY_ACCEPTANCE_2026-11-22.md) · size: L · lane A · [go-live] · slips first
+### T1-17 · Two-step sign-in for every money role            status: acceptance_pending — PR #203 merged; app-side mfaBoundary helpers tested; database-enforced AAL2 on money access not demonstrated (PR #324 review P1) · size: L · lane A · [go-live] · slips first
 **What** — Every role that sees money — **Owner, Admin, Manager, Coordinator, Accounts**
 (PERMISSIONS §5) — signs in with the password **plus a 6-digit code from an authenticator app**
 (Supabase Auth MFA, TOTP) (B21). On a device where that person has done this, the **PIN of T1-15**
@@ -275,7 +275,7 @@ the app says why; 3) the PIN switch on a trusted device works for 30 days, then 
 is never asked for a code and still sees no money; 7) the Settings row shows the real state.
 **Needs** — T1-15, T1-05 (role seats on staging), T1-16.
 
-### T1-18 · Sign-in history and new-device email            status: done — PR #204 merged; loginAudit tests verified (HOST_OPS_AND_SECURITY_ACCEPTANCE_2026-11-22.md) · size: M · lane A · [go-live] · slips first
+### T1-18 · Sign-in history and new-device email            status: acceptance_pending — PR #204 merged; client-side loginAudit helper tested; server-side sign-in event persistence and new-device email dispatch not found in supabase/ (checked 22 Nov 2026) · size: M · lane A · [go-live] · slips first
 **What** — 1) **Sign-in history**, Owner and Admin only (B22), in Settings ▸ People & Access: time,
 person, device (browser and system), IP address, success or failed attempt, and the PIN switches of
 T1-15. Sign-ins come from records written on the server (Supabase Auth's own audit log, read through a
