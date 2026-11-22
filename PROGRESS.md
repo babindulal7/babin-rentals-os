@@ -1,5 +1,56 @@
 # Progress Log
 
+## 2026-11-22 — T9-02 Booqable External Holds & Double-Booking Prevention Verification (Lane A)
+
+### Did
+- Formally accepted and verified **T9-02 · Booqable rentals block the OS calendar** with comprehensive database enforcement and tests, documented in [`docs/verification/T9-02_EXTERNAL_HOLDS_PREVENTION_ACCEPTANCE_2026-11-22.md`](docs/verification/T9-02_EXTERNAL_HOLDS_PREVENTION_ACCEPTANCE_2026-11-22.md):
+  - Claimed and implemented migration `0261` (`supabase/migrations/0261_external_holds_and_double_booking_prevention.sql`):
+    - Table `public.external_holds` with a `btree_gist` exclusion constraint `external_holds_no_duplicate_serial` on `(asset_id with =, period with &&)` where `status = 'active' and asset_id is not null`.
+    - Trigger `trg_check_external_hold_against_reservations` executing `check_external_hold_against_reservations()` to reject inserting or activating an external hold if the asset is already reserved by an active OS booking.
+    - Updated `enforce_inventory_reservation_capacity()` to reject reservations when an active external hold exists on that asset, and to include active external holds in peak concurrency calculations for quantity and serial tracking.
+    - Idempotent staff RPC `sync_external_holds(p_holds jsonb)` with strict role gating (`Owner`, `Admin`, `Manager`, `Coordinator`).
+    - Secure view `public.external_holds_v` exposing `display_chip` (`Held in Booqable #<number>`) and joining product/asset names while completely excluding financial fields (Law 6).
+    - Strict RLS and grants: authenticated staff select/write, anon revoked.
+  - Added Step L98 to `scripts/e2e-lifecycle.mjs` verifying mutual exclusion between external holds and OS reservations, serial collisions, GiST exclusion, capacity accounting, cancellation unlocking, and anon denial (99/99 lifecycle steps pass).
+  - Verified client availability conflict model in `src/lib/__tests__/externalHolds.test.ts` (5/5 tests pass).
+  - Promoted **T9-02 · Booqable rentals block the OS calendar** to `done` in [`docs/plans/T9_CUTOVER.md`](docs/plans/T9_CUTOVER.md).
+  - Updated roadmap status truth regression assertions in [`src/lib/__tests__/roadmapStatusTruth.test.ts`](src/lib/__tests__/roadmapStatusTruth.test.ts) (9/9 tests pass).
+  - Recorded migration 0261 in [`docs/plans/MIGRATION_LEDGER.md`](docs/plans/MIGRATION_LEDGER.md).
+
+### Ruled
+- Law 6: External holds contain neutral order reference numbers only (`Held in Booqable #<number>`). No client rates, payments, or financial figures are stored or exposed.
+- Fail-Closed: Availability decisions fail closed when sync feed is degraded or unhealthy.
+- Rule N-5: Migration 0261 is verified locally via PGlite and Lifecycle suite; zero remote migration pushes or applies.
+- Rule N-8: Zero secrets or service-role keys in repo code, commits, or client bundles.
+
+### Verified
+- `npx vitest run src/lib/__tests__/externalHolds.test.ts`: 5/5 tests pass.
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: 9/9 tests pass.
+- `npm run check:pglite`: 259/259 migrations applied cleanly, 0 failed, 0 leaks.
+- `npm run check:lifecycle`: 99/99 steps green (Step L98 passes).
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 warnings, 0 errors.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 99 / 99 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 259 files · check:pglite 259/259 applied, 0 failed.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Live gateway merchant credentials for Fonepay, eSewa, and Khalti (T7-05, T7-06).
+- Cloudflare Pages DNS and production deployment configuration (T1-07).
+- Remaining review-gated verification cards in ACCEPTANCE_STATUS_TRUTH_REPAIR_2026-11-22.md (T9-01, T7-01, T7-07, T7-14, T3-06, T3-23).
+- Phase 2 physical hardware cards (T2-11, T2-14, T9-07) remain pending for post-live shop device day per 20 Nov owner ruling.
+
 ## 2026-11-22 — T1-09 Transactional Email & Deliverability Evidence Verification (Lane A)
 
 ### Did

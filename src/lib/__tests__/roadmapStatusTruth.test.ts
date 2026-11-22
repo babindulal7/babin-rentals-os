@@ -192,6 +192,7 @@ describe('Roadmap status truth across merged tracks', () => {
     }
 
     const doneCards: Record<string, string> = {
+      'T9-02': 'PR #202 merged',
     }
     for (const [key, prRef] of Object.entries(doneCards)) {
       const heading = t9.split('\n').find((l) => l.startsWith(`### ${key} ·`))
@@ -205,7 +206,6 @@ describe('Roadmap status truth across merged tracks', () => {
   it('keeps review-blocked cards pending rather than equating merged PRs with acceptance', () => {
     const blocked: Array<[string, string, string]> = [
       ['docs/plans/T9_CUTOVER.md', 'T9-01', 'PR #195 merged'],
-      ['docs/plans/T9_CUTOVER.md', 'T9-02', 'PR #202 merged'],
       ['docs/plans/T7_ONLINE_BOOKING.md', 'T7-01', 'PR #301 merged'],
       ['docs/plans/T7_ONLINE_BOOKING.md', 'T7-07', 'PR #266 merged'],
       ['docs/plans/T7_ONLINE_BOOKING.md', 'T7-14', 'PR #200 merged'],

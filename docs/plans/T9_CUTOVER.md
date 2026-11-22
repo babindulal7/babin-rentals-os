@@ -45,7 +45,7 @@ per batch; rejected rows are listed with the reason; a failed batch leaves nothi
 20 products prices the same 3-day quote in both systems (allowing the known rounding difference).
 **Needs** — Batch 1 live; T3-09.
 
-### T9-02 · Booqable rentals block the OS calendar            status: acceptance_pending — unresolved evidence gate flagged in review PR #316; prior implementation claim retained for audit: — PR #202 merged; migration 0206, Booqable calendar synchronization, and double-booking prevention verified in externalHolds.test.ts [docs/verification/CLIENT_AUTH_AND_CUTOVER_HOLDS_ACCEPTANCE_2026-11-22.md] · size: M · lane A
+### T9-02 · Booqable rentals block the OS calendar            status: done · PR #202 merged; migration 0261 (external_holds table, GiST exclusion, mutual conflict trigger, capacity accounting, staff sync RPC), lifecycle step L98, and client external holds model verified [docs/verification/T9-02_EXTERNAL_HOLDS_PREVENTION_ACCEPTANCE_2026-11-22.md] · size: M · lane A
 **What** — Import every **open and upcoming** Booqable booking (reserved or started) as a read-only
 **external hold** in the OS: product (and serial where Booqable has one), from/to, Booqable number.
 Holds block availability exactly like a reservation, show a neutral "Held in Booqable #831" chip
