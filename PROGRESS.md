@@ -1,5 +1,53 @@
 # Progress Log
 
+## 2026-11-23 — PR #339 Merged (T7-02 Fail-Closed Public Catalogue), PR #338 Merged (T1-07 Isolated Site Builds) & Issue #322 Resolved
+
+### Did
+- Reviewed, verified, and merged PR #339 (`fix/T7-02-public-catalogue-availability-failclosed-20261123`):
+  - Fixed fail-open public availability vulnerability by establishing strict database and API fail-closed defaults.
+  - Verified catalogue safety suites: `publicAvailabilitySafety.test.ts`, `catalogue.test.ts`, `cartCheckout.test.ts` (15/15 passed).
+  - GitHub Actions CI `typecheck · test · build` completed 100% green; merged into `main` (`5b7f1bcf`).
+- Completed verification and merged PR #338 (`lane-a/T1-07-cloudflare-isolated-site-builds-20261123`):
+  - Built and finalized isolated staff app bundle `dist-staff/` (`build:staff`).
+  - Built and finalized isolated public/client marketing and booking bundle `dist-client/` (`build:client`).
+  - Ran static verification test suite `scripts/verify-site-builds.mjs`: verified robots.txt disallow, zero public sample leaks, zero staff bundle/service-worker leaks into client, client 404 behavior, and independent bundle routing.
+  - GitHub Actions CI runs passed 100% green: `typecheck · test · build` (4m53s) and `client/staff build separation (no deploy)` (6m13s); merged into `main` (`0f796a05`).
+- Audited and closed Issue #322 (P1 Mac CI-only — exact-head 17-gate verification and audit PR #314 six disputed Done cards):
+  - Reconciled PR #319 truth-in-tracking demotions to `acceptance_pending`.
+  - Audited PR #314 six floor and consumables cards (T2-06, T2-15, T2-19, T2-21, T2-23, T3-30) against PostgreSQL GiST exclusion, database lifecycle gates (L41, L72, L73, L78, L79, L87-L89), and unit test suites; validated legitimate `done` status.
+  - Documented exact-head 17-gate full CI receipts and closed Issue #322 with full verification trail.
+
+### Ruled
+- R-22.9 reaffirmed: Fonepay QR is the unified digital payment standard for launch; direct wallet adapters deferred to Phase 2.
+
+### Verified
+- `npm run check:pglite`: 265/265 applied, 0 failed.
+- `npm run check:lifecycle`: 101/101 lifecycle steps green.
+- `npm run verify:sites`: both `[staff]` and `[client]` static artifact checks passed cleanly.
+- `gh pr checks 338`: `typecheck · test · build` passed (4m53s), `client/staff build separation (no deploy)` passed (6m13s).
+- `gh pr checks 339`: `typecheck · test · build` passed (4m37s).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 101 / 101 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 265 files · check:pglite 265/265 applied, 0 failed (recorded 2026-11-22T22:57:27.686Z). Suite: Historical suite: 7653/7659 passed, 6 failed (recorded 2026-11-21T23:16:24.131Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 7599/7599 passed, 0 failed (recorded 2026-11-20T23:59:38.542Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-22T22:56:59.007Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- PR #340 staging installation manifest review and delta runbook validation.
+- Owner authorizes GitHub Branch Protection ruleset on `main`.
+- Babin provides Fonepay sandbox / production credentials for T7-05 / T7-15.
+
 ## 2026-11-23 — T1-17: Database-Enforced AAL2 Two-Step Sign-In for Money Roles (Lane A)
 
 ### Did
