@@ -153,6 +153,54 @@ create trigger trg_t9_external_holds_normalize
 before insert or update on public.external_holds
 for each row execute function public.normalize_external_hold_window();
 
+-- Lock order. Every reservation and hold takes its product row lock in a BEFORE trigger,
+-- which runs before the foreign-key check. Otherwise the insert's FK check holds a KEY SHARE
+-- lock on products, and the AFTER triggers then ask for FOR UPDATE on that row. Two such inserts
+-- for one quantity product each hold KEY SHARE and wait for the other to release it, so
+-- PostgreSQL aborts one with 40P01 instead of letting the gate refuse it. Locking first
+-- serializes them. Releases are not locked, so they are never blocked here.
+create or replace function public.lock_product_before_reservation()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_product_id uuid;
+begin
+  if tg_table_name = 'inventory_reservations' then
+    if new.released_at is not null then
+      return new;
+    end if;
+    if new.product_id is not null then
+      v_product_id := new.product_id;
+    else
+      select pu.product_id into v_product_id
+        from public.product_units pu where pu.id = new.asset_id;
+    end if;
+  else
+    if new.status <> 'active' then
+      return new;
+    end if;
+    v_product_id := new.product_id;
+  end if;
+
+  if v_product_id is not null then
+    perform 1 from public.products p where p.id = v_product_id for update;
+  end if;
+  return new;
+end;
+$$;
+revoke all on function public.lock_product_before_reservation() from public, anon, authenticated;
+
+create trigger trg_t9_lock_product_before_reservation
+before insert or update on public.inventory_reservations
+for each row execute function public.lock_product_before_reservation();
+
+create trigger trg_t9_lock_product_before_hold
+before insert or update on public.external_holds
+for each row execute function public.lock_product_before_reservation();
+
 -- Cross-table database gate, not browser/UI advice.
 -- Every active OS reservation and external-hold write locks the same product
 -- before checking both tables, so concurrent transactions cannot both win.
