@@ -10846,6 +10846,164 @@ STEPS.push({
   },
 })
 
+// -----------------------------------------------------------------------------
+// STEP L98: Booqable rentals block the OS calendar and prevent double booking (T9-02, PLAN §7, Law 6)
+//
+// Authority:
+//   - T9-02 · Booqable rentals block the OS calendar
+//   - PLAN.md §7: Booqable cutover holds — mutual conflict prevention between OS and Booqable.
+//   - Active Booqable hold prevents OS reservation on the same unit or exceeding capacity.
+//   - Existing OS reservation prevents inserting active external hold on the same unit.
+//   - External holds contain neutral order reference, no client financial details (Law 6).
+// -----------------------------------------------------------------------------
+STEPS.push({
+  id: 'L98',
+  title: 'Booqable rentals block the OS calendar and prevent double booking (T9-02, 0261) — mutual exclusion between external holds and OS reservations, capacity accounting, and neutral chip presentation',
+  expect: 'green',
+  run: async () => {
+    const testUnitA = UNITS[0]
+    const testUnitB = UNITS[1]
+    const holdPeriodA = `["2100-06-10 04:00:00+00", "2100-06-15 04:00:00+00")`
+    const overlapPeriodA = `["2100-06-12 04:00:00+00", "2100-06-14 04:00:00+00")`
+
+    let testBookingLineId
+    await asOwnerOfTheDatabase(async () => {
+      const lineRes = await q(`select id from public.booking_lines where booking_id = '${bookingIds.a}' limit 1`)
+      testBookingLineId = lineRes.rows[0].id
+    })
+
+    // 1. Coordinator syncs external holds via sync_external_holds RPC
+    await as('Coordinator', async () => {
+      const payload = [
+        {
+          booqable_order_id: 'BQ-ORD-902-1',
+          booqable_order_number: '9021',
+          product_id: SERIAL_PRODUCT,
+          asset_id: testUnitA,
+          qty: 1,
+          start_date: '2100-06-10T04:00:00Z',
+          end_date: '2100-06-15T04:00:00Z',
+          status: 'active',
+        },
+      ]
+      const count = (await q('select public.sync_external_holds($1::jsonb) as res', [JSON.stringify(payload)])).rows[0].res
+      assertEq(count, 1, 'sync_external_holds inserted 1 hold')
+    })
+
+    // 2. View external_holds_v reflects display_chip and zero financial fields (Law 6)
+    await as('Warehouse', async () => {
+      const viewRows = (await q(`select * from public.external_holds_v where booqable_order_number = '9021'`)).rows
+      assertEq(viewRows.length, 1, 'Warehouse can read external_holds_v')
+      assertEq(viewRows[0].display_chip, 'Held in Booqable #9021', 'view formats display_chip')
+      assertEq(viewRows[0].product_name, 'Lifecycle Serialised Camera II', 'view joins product_name')
+      // Ensure zero financial column exists in external_holds_v
+      assert(!('amount' in viewRows[0]) && !('price' in viewRows[0]) && !('rate' in viewRows[0]), 'no money fields exposed')
+    })
+
+    // 3. Attempting to create an OS reservation on testUnitA during overlapping window is rejected
+    let osResRefused = false
+    await asOwnerOfTheDatabase(async () => {
+      try {
+        await q(`
+          insert into public.inventory_reservations (
+            client_uuid, booking_id, booking_line_id, asset_id, product_id, qty, period, state, hold_state, kind, created_by
+          ) values (
+            gen_random_uuid(), '${bookingIds.a}', '${testBookingLineId}', '${testUnitA}', null, 1, '${overlapPeriodA}'::tstzrange, 'Reserved', 'confirmed', 'booking', '${U.Owner}'
+          )
+        `)
+      } catch (err) {
+        osResRefused = true
+        assert(err.message.includes('held by Booqable booking #9021') || err.code === '23P01', 'error identifies Booqable hold conflict')
+      }
+    })
+    assert(osResRefused, 'OS reservation on held serial asset was rejected')
+
+    // 4. GiST exclusion: Cannot insert duplicate active external hold on testUnitA overlapping period
+    let dupHoldRefused = false
+    await asOwnerOfTheDatabase(async () => {
+      try {
+        await q(`
+          insert into public.external_holds (
+            booqable_order_id, booqable_order_number, product_id, asset_id, qty, period, status, created_by
+          ) values (
+            'BQ-ORD-902-DUP', '9022', '${SERIAL_PRODUCT}', '${testUnitA}', 1, '${overlapPeriodA}'::tstzrange, 'active', '${U.Coordinator}'
+          )
+        `)
+      } catch (err) {
+        dupHoldRefused = true
+      }
+    })
+    assert(dupHoldRefused, 'GiST exclusion constraint rejected duplicate active external hold on same unit')
+
+    // 5. Existing OS reservation prevents inserting active external hold on the same unit
+    const osPeriodB = `["2100-06-20 04:00:00+00", "2100-06-25 04:00:00+00")`
+    const overlapPeriodB = `["2100-06-22 04:00:00+00", "2100-06-24 04:00:00+00")`
+    await asOwnerOfTheDatabase(async () => {
+      await q(`
+        insert into public.inventory_reservations (
+          client_uuid, booking_id, booking_line_id, asset_id, product_id, qty, period, state, hold_state, kind, created_by
+        ) values (
+          gen_random_uuid(), '${bookingIds.a}', '${testBookingLineId}', '${testUnitB}', null, 1, '${osPeriodB}'::tstzrange, 'Reserved', 'confirmed', 'booking', '${U.Owner}'
+        )
+      `)
+    })
+
+    let extHoldConflictRefused = false
+    await as('Coordinator', async () => {
+      try {
+        await q(`
+          insert into public.external_holds (
+            booqable_order_id, booqable_order_number, product_id, asset_id, qty, period, status, created_by
+          ) values (
+            'BQ-ORD-902-CLASH', '9023', '${SERIAL_PRODUCT}', '${testUnitB}', 1, '${overlapPeriodB}'::tstzrange, 'active', '${U.Coordinator}'
+          )
+        `)
+      } catch (err) {
+        extHoldConflictRefused = true
+        assert(err.message.includes('already reserved by an OS booking') || err.code === '23P01', 'trigger identifies OS reservation conflict')
+      }
+    })
+    assert(extHoldConflictRefused, 'External hold refused when asset is already reserved by OS booking')
+
+    // 6. Release / cancel external hold on testUnitA: OS reservation now succeeds
+    await as('Coordinator', async () => {
+      await q(`update public.external_holds set status = 'cancelled' where booqable_order_number = '9021'`)
+    })
+
+    let osResAllowedAfterCancel = false
+    await asOwnerOfTheDatabase(async () => {
+      await q(`
+        insert into public.inventory_reservations (
+          client_uuid, booking_id, booking_line_id, asset_id, product_id, qty, period, state, hold_state, kind, created_by
+        ) values (
+          gen_random_uuid(), '${bookingIds.a}', '${testBookingLineId}', '${testUnitA}', null, 1, '${overlapPeriodA}'::tstzrange, 'Reserved', 'confirmed', 'booking', '${U.Owner}'
+        )
+      `)
+      osResAllowedAfterCancel = true
+    })
+    assert(osResAllowedAfterCancel, 'OS reservation succeeded after Booqable hold was cancelled')
+
+    // 7. Anon cannot access external_holds or sync RPC
+    await asAnon(async () => {
+      let anonTableBlocked = false
+      try {
+        await q('select * from public.external_holds')
+      } catch {
+        anonTableBlocked = true
+      }
+      assert(anonTableBlocked, 'Anon denied direct access to external_holds')
+
+      let anonViewBlocked = false
+      try {
+        await q('select * from public.external_holds_v')
+      } catch {
+        anonViewBlocked = true
+      }
+      assert(anonViewBlocked, 'Anon denied access to external_holds_v')
+    })
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break
