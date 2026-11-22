@@ -11101,6 +11101,85 @@ STEPS.push({
   },
 })
 
+// -----------------------------------------------------------------------------
+// STEP L100: Database-enforced AAL2 two-step sign-in for money roles (T1-17 / B21 / B40 / P3)
+// -----------------------------------------------------------------------------
+STEPS.push({
+  id: 'L100',
+  title: 'database-enforced AAL2 two-step sign-in for money roles (T1-17)',
+  expect: 'green',
+  async run() {
+    // 1. In unarmed mode, money roles at AAL1 can read payments
+    await as('Owner', async () => {
+      const count = Number((await q(`select count(*)::int as c from payments`)).rows[0].c)
+      assert(count > 0, 'unarmed Owner can read payments')
+    })
+
+    // 2. Warehouse at AAL1 is money-blind (Law 6)
+    await as('Warehouse', async () => {
+      const count = Number((await q(`select count(*)::int as c from payments`)).rows[0].c)
+      assertEq(count, 0, 'unarmed Warehouse reads zero payments (Law 6)')
+    })
+
+    // 3. Unauthorized role cannot arm two-step sign-in enforcement
+    await as('Warehouse', async () => {
+      let failed = false
+      try {
+        await q(`select public.set_two_step_auth_enforcement(true)`)
+      } catch (err) {
+        failed = true
+        assert(/gate\.settings\.role|Only the Owner/i.test(err.message), 'expected role gate')
+      }
+      assert(failed, 'Warehouse cannot arm two-step auth enforcement')
+    })
+
+    // 4. Owner arms two-step sign-in enforcement
+    await as('Owner', async () => {
+      const res = (await q(`select public.set_two_step_auth_enforcement(true) as res`)).rows[0].res
+      assertEq(res.is_enforced, true, 'two-step sign-in enforcement armed')
+    })
+
+    // 5. While armed, a money role (Owner) at aal1 reads zero payment rows
+    await as('Owner', async () => {
+      const count = Number((await q(`select count(*)::int as c from payments`)).rows[0].c)
+      assertEq(count, 0, 'a money role at aal1 reads zero payment rows while armed')
+      assertEq((await q(`select public.auth_can_view_money() as r`)).rows[0].r, false, 'auth_can_view_money is false at aal1')
+    })
+
+    // 6. At aal2 it reads them
+    await as('Owner', async () => {
+      await db.exec(`select set_config('request.jwt.claims', '{"aal":"aal2"}', false);`)
+      const count = Number((await q(`select count(*)::int as c from payments`)).rows[0].c)
+      assert(count > 0, 'at aal2 it reads them')
+      assertEq((await q(`select public.auth_can_view_money() as r`)).rows[0].r, true, 'auth_can_view_money is true at aal2')
+    })
+
+    // 7. Warehouse is unchanged: reads zero payment rows at aal1 and at aal2
+    await as('Warehouse', async () => {
+      await db.exec(`select set_config('request.jwt.claims', '{"aal":"aal2"}', false);`)
+      const count = Number((await q(`select count(*)::int as c from payments`)).rows[0].c)
+      assertEq(count, 0, 'Warehouse is unchanged (reads zero rows even if claiming aal2)')
+      assertEq((await q(`select public.auth_can_view_money() as r`)).rows[0].r, false, 'Warehouse auth_can_view_money remains false')
+    })
+
+    // 8. Staff factor enrolment and recovery RPCs
+    await as('Owner', async () => {
+      const enrollRes = (await q(`select public.record_staff_mfa_enrolment() as res`)).rows[0].res
+      assertEq(enrollRes.status, 'verified', 'Owner can enrol MFA factor')
+
+      const resetRes = (await q(`select public.reset_staff_mfa('${U.Coordinator}') as res`)).rows[0].res
+      assertEq(resetRes.success, true, 'Owner can reset staff MFA factor for lost phone')
+    })
+
+    // 9. Owner disarms two-step sign-in to restore clean state
+    await as('Owner', async () => {
+      await db.exec(`select set_config('request.jwt.claims', '{"aal":"aal2"}', false);`)
+      const res = (await q(`select public.set_two_step_auth_enforcement(false) as res`)).rows[0].res
+      assertEq(res.is_enforced, false, 'two-step sign-in enforcement disarmed')
+    })
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break
