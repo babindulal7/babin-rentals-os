@@ -126,7 +126,7 @@ Raw database or gate text (`GATE:…`, Postgres messages) goes to the log, never
 **Done when** — a forced test error on staging appears in Sentry with path only, no query string.
 **Needs** — T1-07.
 
-### T1-09 · Email from @babinrentals.com            status: acceptance_pending — unresolved evidence gate flagged in review PR #313; prior implementation claim retained for audit: — PR #275 merged, PR #279 merged (transactional email configuration, volume model, and DNS runbook verified) · size: M · lane A + Babin
+### T1-09 · Email from @babinrentals.com            status: done — PR #275 merged, PR #279 merged; live DNS records, Resend Forge return-path & deliverability failure verified (T1-09_TRANSACTIONAL_EMAIL_DELIVERABILITY_VERIFICATION_2026-11-22.md) · size: M · lane A + Babin
 **What** — Pick the transactional email service at setup time by checking live prices and daily
 limits (candidates: Resend, Postmark, Amazon SES, Brevo); Babin creates the account. Verify the
 domain: SPF, DKIM, DMARC (start `p=none`, move to `quarantine` after two clean weeks). Point

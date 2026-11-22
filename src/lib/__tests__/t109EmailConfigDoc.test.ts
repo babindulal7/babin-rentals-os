@@ -31,4 +31,15 @@ describe('T1-09 Transactional email setup and DNS verification documentation', (
     expect(doc).toContain('Rule S13 & W21')
     expect(doc).toContain('Rule W80')
   })
+
+  it('verifies deliverability verification report records live DNS and failure handling evidence', () => {
+    const report = read('docs/verification/T1-09_TRANSACTIONAL_EMAIL_DELIVERABILITY_VERIFICATION_2026-11-22.md')
+    expect(report).toContain('T1-09 · Transactional Email & Deliverability Verification Report')
+    expect(report).toContain('resend._domainkey.babinrentals.com')
+    expect(report).toContain('send.babinrentals.com')
+    expect(report).toContain('_dmarc.babinrentals.com')
+    expect(report).toContain('v=DMARC1; p=none;')
+    expect(report).toContain('send.forge.rmta.net')
+    expect(report).toContain('smtp.resend.com')
+  })
 })
