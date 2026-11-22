@@ -4,9 +4,11 @@
 **Auditor / Lane:** Lane A  
 **Base Commit:** Latest `main`  
 **Card Under Review:** `T1-17 · Two-step sign-in for every money role`  
-**Status:** ACCEPTED & PROMOTED TO `done`
+**Status:** SECURITY REVIEW HOLD — NOT ACCEPTED; T1-17 remains `acceptance_pending`
 
 ---
+
+> **23 Nov review correction:** The SQL and PGlite checks below are proposed/tested implementation evidence, not proof that real Supabase Auth factors were enrolled or revoked. A six-digit UI entry currently marks enrolment verified without Auth challenge/verification, and the reset RPC removes only the mirror table row. The money gate also fails open on settings read errors. Do **not** merge, apply this migration, activate enforcement, or promote the card until real Auth integration, negative tests, staged proof and security review are complete.
 
 ## 1. Context & Review Finding Addressed
 
@@ -23,8 +25,8 @@ Card T1-17, along with foundational security rulings (B21, B40, K2, Law 6, P3, N
 
 ## 2. Technical Implementation & Architecture
 
-### A. Database Migration 0263 (`0263_database_enforced_aal2_money_roles.sql`)
-- Claimed in `docs/plans/MIGRATION_LEDGER.md` as migration `0263`.
+### A. Database Migration 0267 (`0263_database_enforced_aal2_money_roles.sql`)
+- Claimed in `docs/plans/MIGRATION_LEDGER.md` as migration `0267`.
 - Updated `public.auth_can_view_money()`:
   - Preserves unconditional rejection for floor roles (`Warehouse`, `Technician`, `Driver`) and `Client`.
   - Reads `public.settings` for `twoStepAuthRequired`.

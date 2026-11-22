@@ -116,7 +116,7 @@ end if;
 
 ## 6. Implementation & Verification Plan
 
-1. **Migration 0263:**
+1. **Migration 0267:**
    - Claim number in `docs/plans/MIGRATION_LEDGER.md`.
    - Update `auth_can_view_money()` with `mfaRequiredForMoneyRoles` check and `auth.jwt() ->> 'aal'` evaluation.
    - Create `staff_mfa_audit` table.

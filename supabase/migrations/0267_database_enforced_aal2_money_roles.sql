@@ -1,4 +1,4 @@
--- Migration 0263: Database-enforced AAL2 two-step sign-in for money roles (T1-17 / B21 / B40 / P3)
+-- Migration 0267: Database-enforced AAL2 two-step sign-in for money roles (T1-17 / B21 / B40 / P3)
 --
 -- Security card:
 -- 1. Evaluates Supabase Auth AAL (Authenticator Assurance Level) in auth_can_view_money().

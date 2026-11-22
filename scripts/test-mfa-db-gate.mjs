@@ -2,7 +2,7 @@
 /**
  * scripts/test-mfa-db-gate.mjs
  *
- * T1-17 / Migration 0263: Database-Enforced AAL2 Two-Step Sign-In for Money Roles Test Suite.
+ * T1-17 / Migration 0267: Database-Enforced AAL2 Two-Step Sign-In for Money Roles Test Suite.
  *
  * Verifies:
  * 1. Default (Unarmed) Mode:
