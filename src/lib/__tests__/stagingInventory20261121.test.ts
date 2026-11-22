@@ -18,11 +18,11 @@ describe('T1-02 exact-head 21 Nov 2026 staging inventory (no database writes)', 
   }
 
   it('keeps the 21 Nov 2026 exact-head snapshot covering all 258 migrations', () => {
-    expect(inventory.migration_files).toBe(258)
+    expect(inventory.migration_files).toBe(259)
     expect(inventory.source_main_commit).toBe('3a8d90b9fa197d1a69326483a89140e404385b85')
     expect(inventory.target_staging_project_ref).toBe('klhmsrunqrdxjudyhnkm')
     expect(inventory.protected_production_project_ref).toBe('sxguwvgoserhdolewibb')
-    expect(inventory.files).toHaveLength(258)
+    expect(inventory.files).toHaveLength(259)
     expect(inventory.must_not_run_automatically).toEqual([
       '0012_seed_data.sql',
       '0047_seed_reference_corpus.sql',
@@ -32,7 +32,7 @@ describe('T1-02 exact-head 21 Nov 2026 staging inventory (no database writes)', 
       '0188_smart_reservation_holds.sql',
       '0188_staff_renting_gear.sql',
     ])
-    expect(inventory.source_drift_since_prior_snapshot.added_files).toHaveLength(18)
+    expect(inventory.source_drift_since_prior_snapshot.added_files).toHaveLength(19)
     expect(inventory.source_drift_since_prior_snapshot.changed_files).toHaveLength(1)
     expect(inventory.source_drift_since_prior_snapshot.removed_files).toEqual([])
   })
@@ -59,8 +59,8 @@ describe('T1-02 exact-head 21 Nov 2026 staging inventory (no database writes)', 
     }
     expect(result.mode).toBe('READ_ONLY_PINNED_SOURCE_INTEGRITY')
     expect(result.sourceBaseline).toBe('3a8d90b9fa197d1a69326483a89140e404385b85')
-    expect(result.localFileCount).toBe(258)
-    expect(result.pinnedFileCount).toBe(258)
+    expect(result.localFileCount).toBe(259)
+    expect(result.pinnedFileCount).toBe(259)
     expect(result.approvalToApplyStaging).toBe(false)
     expect(result.databaseConnected).toBe(false)
     expect(result.sqlExecuted).toBe(false)
