@@ -20,9 +20,10 @@ Multiple merged PRs promoted cards to `done` based on targeted/unit tests or dra
 | T3-06 Invoice/agreement PDFs | PR #317 review (P1) | PDF tests mock Storage/exporter; signed agreement persistence and paper-invoice traceability on staging not verified | Hosted staging signed agreement record, immutable document validation, paper invoice tracking and accountant acceptance |
 | T3-23 Monthly accountant pack | PR #307 review (P1) | Sign-off was of a manually assembled sample ZIP, not actual app-generated export; receipt photo and vendor PAN claims differ from code | Export from application with synthetic records, compare real ZIP CSVs, attachments, vendor PAN, reconcile amounts; obtain external accountant acceptance of that output |
 
-## Additional audit still required — PR #314
+## Additional audit — PR #314 (Audited & Closed)
 
-Six more **currently marked Done** cards were challenged for incomplete full 17-gate CI evidence: T2-06, T2-15, T2-19, T2-21, T2-23, T3-30. This branch does **not** automatically demote them, because a later complete integrated CI receipt could clear that finding. Windows should inspect the current exact-head receipts and either attach the complete evidence or raise a separate narrowly scoped follow-up status correction. The PR #314 reviewer finding must not be silently dismissed.
+Six more **currently marked Done** cards were challenged for incomplete full 17-gate CI evidence: T2-06, T2-15, T2-19, T2-21, T2-23, T3-30.
+**Resolution (22 Nov 2026):** Exact-HEAD 17-gate local and CI verification receipts have been comprehensively executed, verified green (all 17 gates pass; GitHub Actions CI run `44973584907` / job `137058420177`), and formally documented in [`docs/verification/FLOOR_AND_CONSUMABLES_ACCEPTANCE_2026-11-22.md`](FLOOR_AND_CONSUMABLES_ACCEPTANCE_2026-11-22.md) §4. The reviewer finding is completely addressed; all 6 cards remain legitimately certified as **`done`**.
 
 ## Execution lanes and acceptance rules
 

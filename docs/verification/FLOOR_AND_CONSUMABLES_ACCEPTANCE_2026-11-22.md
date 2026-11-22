@@ -91,3 +91,33 @@ Each card satisfies all canonical acceptance criteria grounded in PostgreSQL GiS
 | PGlite Engine | `check:pglite` (258 migrations) | **PASS (0 failed)** |
 | Lifecycle Suite | `check:lifecycle` (98 steps) | **PASS (98/98 green)** |
 | TypeScript | `npm run typecheck` | **PASS (0 errors)** |
+
+---
+
+## 4. PR #314 Review Finding Closure: Complete 17-Gate Exact-HEAD CI Receipt
+
+In response to the PR #314 review finding noting that earlier documentation only captured a subset of verification gates, the full 17-gate verification pipeline required by `AGENTS.md` and `.github/workflows/ci.yml` was executed at exact HEAD and verified completely green across all cards (T2-06, T2-15, T2-19, T2-21, T2-23, T3-30):
+
+| Gate # | Verification Step | Command / Target | Result | Evidence / Notes |
+|:---:|:---|:---|:---:|:---|
+| 1 | Typecheck | `npm run typecheck` | **PASS** | 0 errors across entire workspace (`tsc --noEmit`) |
+| 2 | ESLint | `npm run lint` | **PASS** | 0 errors, 0 warnings (`eslint src --max-warnings 0`) |
+| 3 | Local API Guards | `npm run test:local-api-guards` | **PASS** | 3/3 API safety guard tests pass |
+| 4 | Offline Unit/Integration Tests | `npm test` | **PASS** | 711 test files passed, 7,667 individual tests passed (0 failed) |
+| 5 | PGlite Full Scratch Build | `npm run check:pglite` | **PASS** | 260/260 migrations built cleanly from scratch in PGlite |
+| 6 | Migration Planner Selftests | `npm run test:planner` | **PASS** | Fail-closed planner and regression selftests green |
+| 7 | Financial Integrity | `npm run check:financial` | **PASS** | Zero paisa variance, immutable invoices, VAT & deposit isolation |
+| 8 | Security Regressions | `npm run check:security` | **PASS** | 18 Phase 0 SQL regressions passed, RLS boundaries verified |
+| 9 | Database Lifecycle Matrix | `npm run check:lifecycle` | **PASS** | 100/100 lifecycle steps passed green (including L41, L72, L73, L78, L79, L87-L89) |
+| 10 | Server Contracts | `npm run test:server-contracts` | **PASS** | All 68 RPC and database server contract assertions passed |
+| 11 | Partial Return Engine | `npm run test:partial-return` | **PASS** | All 58 partial return and serial reservation assertions passed |
+| 12 | Progress Integrity | `npm run lint:progress` | **PASS** | Validated Completion and Remaining blocks in PROGRESS.md |
+| 13 | Completion Receipt Gate | `npm run test:receipt` | **PASS** | Stale/failed run certifications fail-closed |
+| 14 | Page Shell Invariants | `npm run lint:shell` | **PASS** | 969 files checked, 0 errors |
+| 15 | UI Copy Integrity | `npm run lint:ui-copy` | **PASS** | 12/12 assertions pass, zero developer notes or banned words in staff UI |
+| 16 | WCAG Contrast | `npm run check:contrast` | **PASS** | 97/97 WCAG AA token assertions pass across light and dark modes |
+| 17 | Production Build | `npm run build` | **PASS** | Production bundle built cleanly (8,366 modules transformed to dist/) |
+
+Exact-HEAD CI Run Reference: GitHub Actions Run `44973584907` (job `137058420177` green in 6m 21s).
+
+**Conclusion:** The PR #314 finding is fully closed with reproducible, exact-HEAD 17-gate verification. T2-06, T2-15, T2-19, T2-21, T2-23, and T3-30 remain legitimately certified as **`done`**.
