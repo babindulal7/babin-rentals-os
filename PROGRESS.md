@@ -4,7 +4,7 @@
 
 ### Did
 - Authored design note `docs/verification/T1-17_DESIGN.md` establishing fail-closed database-enforced AAL2 security architecture for all money-viewing and money-writing roles.
-- Claimed migration 0263 in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0263_database_enforced_aal2_money_roles.sql`:
+- Claimed migration 0267 in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0267_database_enforced_aal2_money_roles.sql`:
   - Updated `public.auth_can_view_money()` to inspect `public.settings.twoStepAuthRequired`. When armed (`true`), any money role (`Owner`, `Admin`, `Manager`, `Coordinator`, `Accounts`) without `aal = 'aal2'` in JWT claims receives `false`, automatically masking column-level money figures in views (`products_v`, `booking_lines_v`, `product_units_v`) to `NULL` and returning 0 rows in financial tables (`payments`, `invoices`, `daily_closings`).
   - Maintained Law 6 strict precedence: floor roles (`Warehouse`, `Technician`, `Driver`) and external `Client` roles unconditionally evaluate to `false` even if an `aal2` claim is presented.
   - Updated `public.auth_is_finance_or_admin()` to require `aal2` when armed before permitting financial write operations.
@@ -21,13 +21,41 @@
 - Babin ruling (B21, B40, K2, P3, N-3): Two-step sign-in enforcement must be evaluated at the PostgreSQL layer, fail closed, support staged rollout via an organization setting, protect floor role money blindness under Law 6, and restrict lost-phone resets by role hierarchy.
 
 ### Verified
-- `npm run check:pglite`: 261/261 migrations applied, 0 failed, 47 views checked (0 readable by anon), 22 public functions checked (0 unauthorized), 247 definers verified with search_path.
+- `npm run check:pglite`: 265/265 migrations applied, 0 failed, 48 views checked (0 readable by anon), 22 public functions checked (0 unauthorized), 247 definers verified with search_path.
 - `npm run check:lifecycle`: 101/101 lifecycle steps green (including L100).
 - `npm run test:mfa-db-gate`: 25/25 database gate assertions passed cleanly.
 - `npm run typecheck`: 0 errors.
 - `npm run lint`: 0 errors, 0 warnings.
 - `npx vitest run src/modules/settings/sections/__tests__/TwoStepAuthControl.test.tsx src/lib/__tests__/mfaBoundary.test.ts`: 9/9 tests passed.
 - `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: 10/10 tests passed.
+
+## 2026-11-23 — Launch Migrations 0263–0266 Merged (PR #329) & Issue #320 Full Resolution and Closeout
+
+### Did
+- Reviewed and addressed owner decisions on Launch Migrations PR #329:
+  1. Approved `0265` whole rupee to paisa conversion in `submit_booking_request` (`round(daily_rate * 100)::bigint`).
+  2. Approved `0266` `managerApprovalsToOwner = true` default setting (Manager damage approvals and late-fee waivers route to Owner at go-live).
+- Embedded `0262`'s Away Mode refusal gate (`gate.booking_request.away_mode`) directly into `0265` to ensure `submit_booking_request` does not regress Away Mode.
+- Pinned updated staging SQL inventory snapshot `docs/verification/STAGING_SQL_INVENTORY_2026-11-23.json` covering all 264 migration files.
+- Rebased branch `feat/launch-migrations-2026-11-22` onto latest `main`, marked PR #329 ready for review, ran all CI checks, and merged PR #329 into `main`.
+- Documented complete verification receipt and closed Issue #320:
+  - T9-02: DB-backed external booking holds, GiST exclusion constraints, lifecycle step L98, 21-point test suite (PR #323 merged).
+  - T9-01: Real database reconciliation against Booqable product and customer exports with match report and exception CSV (PR #327 merged).
+  - T1-09: Resend and transactional email deliverability verification report and tests (PR #324 merged).
+  - T1 infrastructure audit & cutover prep: Verification report and Windows priority reconciliation (PR #331, PR #334, PR #335 merged).
+
+### Ruled
+- None. Follows Babin's explicit approval of `0265` paisa rate calculation and `0266` Manager-to-Owner approval redirection at go-live.
+
+### Verified
+- `npm run check:pglite`: 264/264 migrations applied, 0 failed.
+- `npm run check:lifecycle`: 100/100 lifecycle steps green.
+- `node scripts/test-product-families.mjs`: 8/8 passed.
+- `node scripts/test-submit-request-paisa.mjs`: 5/5 passed.
+- `node scripts/test-manager-approvals-to-owner.mjs`: 12/12 passed.
+- `node scripts/test-away-mode-db-gate.mjs`: 25/25 passed.
+- `npm run test:staging-preflight`: 2/2 preflight suites passed (264 migrations verified under --current).
+- `gh pr checks 329`: typecheck · test · build passed in 4m33s on GitHub Actions CI.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -39,7 +67,7 @@
 | Lifecycle | steps green / total | 101 / 101 (100%) | +1 |
 | Overall | structural mean of five | ≈ 97% | — |
 
-Migrations 261 files · check:pglite 261/261 applied, 0 failed.
+Migrations 265 files · check:pglite 265/265 applied, 0 failed.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
@@ -47,6 +75,10 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - Owner enables GitHub repository branch protection on `main` (T0-09).
 - Server-side persistence of sign-in events and real new-device email dispatch (T1-18).
 - Live gateway merchant credentials for Fonepay, eSewa, and Khalti (T7-05, T7-06).
+- PR #338 (T1-07 Cloudflare isolated site builds) review and progress.
+- PR #340 (T1-02 staging installation manifest) review.
+- Issue #322 (P1 Mac CI-only 17-gate verification).
+- Hosted staging proof (read-only verification without live writes).
 
 ## 2026-11-23 — Lane B Architecture Audit & Action Dispatcher Completion: 118/118 (100%) Implemented
 

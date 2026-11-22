@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0264**  (0245-0251 R-9.18; 0252 T2-23; 0253 T2-24; 0254 T3-14; 0255 T7-02; 0256 T7-04; 0257 T7-03; 0258 T7-05; 0259 T7-15; 0260 T7-07; 0261 T9-02; 0262 T7-14; 0263 T1-17)
+**Next free number: 0268**  (0245-0251 R-9.18; 0252 T2-23; 0253 T2-24; 0254 T3-14; 0255 T7-02; 0256 T7-04; 0257 T7-03; 0258 T7-05; 0259 T7-15; 0260 T7-07; 0261 T9-02; 0262 T7-14; 0263 T7-13; 0264 T7-13; 0265 T7-04; 0266 R-22.8; 0267 T1-17)
 
 > **Legacy exception:** `0188` exists as two distinct, locally verified migration files
 > (`0188_smart_reservation_holds.sql` and `0188_staff_renting_gear.sql`). Both are preserved because
@@ -20,7 +20,11 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
-| 0263 | T1-17 | database-enforced-aal2-money-roles | lane-a/T1-17-database-enforced-aal2 | written |
+| 0267 | T1-17 | database-enforced-aal2-money-roles | lane-a/T1-17-database-enforced-aal2 | written |
+| 0266 | R-22.8 | manager-approvals-to-owner | feat/launch-migrations-2026-11-22 | written |
+| 0265 | T7-04 | submit-request-rates-in-paisa | feat/launch-migrations-2026-11-22 | written |
+| 0264 | T7-13 | public-product-family-options | feat/launch-migrations-2026-11-22 | written |
+| 0263 | T7-13 | product-families | feat/launch-migrations-2026-11-22 | written |
 | 0262 | T7-14 | online-booking-away-mode | feat/t7-14-away-switch-20261122 | written |
 | 0261 | T9-02 | external-holds-and-double-booking-prevention | lane-a/T9-02-cutover-holds-prevention | verified |
 | 0260 | T7-07 | online-payment-refunds-and-reconciliation | lane-c/T7-07-refunds-and-reconciliation | verified |

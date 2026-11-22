@@ -4,10 +4,10 @@
   "source_main_commit": "3a8d90b9fa197d1a69326483a89140e404385b85",
   "target_staging_project_ref": "klhmsrunqrdxjudyhnkm",
   "protected_production_project_ref": "sxguwvgoserhdolewibb",
-  "migration_files": 261,
+  "migration_files": 260,
   "live_recorded_history_count": 157,
   "exact_name_matches": 148,
-  "source_without_exact_live_name": 112,
+  "source_without_exact_live_name": 111,
   "live_without_exact_source_name": 9,
   "policy": "Exact filename matches alone do not prove content identity or safe apply. Git blob hashes verify source bytes, NOT applied SQL equivalence. This inventory is not a staged migration execution authorization.",
   "must_not_run_automatically": [
@@ -1839,13 +1839,6 @@
       "bytes": 11856,
       "live_exact_name_found": false,
       "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
-    },
-    {
-      "filename": "0263_database_enforced_aal2_money_roles.sql",
-      "git_blob_sha": "4d253e8d9f7c75529480b70d3b63dbb95f0eb846",
-      "bytes": 10664,
-      "live_exact_name_found": false,
-      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
     }
   ],
   "historical_live_comparison_observed_date": "2026-11-20",
@@ -1875,8 +1868,7 @@
       "0259_payment_link_from_any_booking.sql",
       "0260_online_payment_refunds_and_reconciliation.sql",
       "0261_external_holds_and_double_booking_prevention.sql",
-      "0262_online_booking_away_mode.sql",
-      "0263_database_enforced_aal2_money_roles.sql"
+      "0262_online_booking_away_mode.sql"
     ],
     "changed_files": [
       {
