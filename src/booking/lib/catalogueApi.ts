@@ -8,6 +8,7 @@
 
 import { supabase } from '@/lib/supabase'
 import { fetchOnlineBookingAwayStatus } from '@/lib/awayMode'
+import { rentalDaysInclusive, resolveCompleteAvailability, type PublicDayAvailability } from './publicAvailabilitySafety'
 
 export interface BundleComponent {
   readonly name: string
@@ -122,36 +123,46 @@ const MOCK_CATALOGUE: CatalogueItem[] = [
 ]
 
 export async function fetchPublicCatalogue(): Promise<CatalogueItem[]> {
+  // Fixture data is permitted ONLY in explicit local mock/test environments.
   if (import.meta.env.VITE_DATA_SOURCE === 'mock' || import.meta.env.MODE === 'test') {
     return MOCK_CATALOGUE
   }
 
+  let data: unknown
   try {
-    const { data, error } = await supabase
+    const response = await supabase
       .from('public_catalogue_v')
       .select('*')
       .order('name', { ascending: true })
-
-    if (error || !data || data.length === 0) {
-      // In development or when live DB has no online items yet, fallback to mock catalogue
-      return MOCK_CATALOGUE
+    if (response.error || !Array.isArray(response.data)) {
+      throw new Error('Catalogue response unavailable')
     }
+    data = response.data
+  } catch {
+    throw new Error('Catalogue temporarily unavailable. Please retry.')
+  }
 
-    interface RawCatalogueRow {
-      id: string
-      kind?: string | undefined
-      slug?: string | undefined
-      name: string
-      category_name?: string | undefined
-      description?: string | undefined
-      photo_paths?: string[] | undefined
-      daily_rate_paisa?: number | undefined
-      weekly_rate_paisa?: number | null | undefined
-      monthly_rate_paisa?: number | null | undefined
-      bundle_contents?: BundleComponent[] | undefined
+  interface RawCatalogueRow {
+    id: string
+    kind?: string | undefined
+    slug?: string | undefined
+    name: string
+    category_name?: string | undefined
+    description?: string | undefined
+    photo_paths?: string[] | undefined
+    daily_rate_paisa?: number | undefined
+    weekly_rate_paisa?: number | null | undefined
+    monthly_rate_paisa?: number | null | undefined
+    bundle_contents?: BundleComponent[] | undefined
+  }
+
+  // A legitimate empty published catalogue stays empty, not a fabricated set.
+  return (data as RawCatalogueRow[]).map((row) => {
+    const dailyRate = Number(row.daily_rate_paisa)
+    if (!row.id || !row.name || !Number.isSafeInteger(dailyRate) || dailyRate <= 0) {
+      throw new Error('Published catalogue information is incomplete. Please retry.')
     }
-
-    return (data as RawCatalogueRow[]).map((row) => ({
+    return {
       id: row.id,
       kind: row.kind === 'bundle' ? 'bundle' : 'product',
       slug: row.slug || row.id,
@@ -159,14 +170,12 @@ export async function fetchPublicCatalogue(): Promise<CatalogueItem[]> {
       category_name: row.category_name || (row.kind === 'bundle' ? 'Bundle Deals' : 'Other'),
       description: row.description || '',
       photo_paths: Array.isArray(row.photo_paths) ? row.photo_paths : [],
-      daily_rate_paisa: Number(row.daily_rate_paisa || 0),
-      weekly_rate_paisa: row.weekly_rate_paisa ? Number(row.weekly_rate_paisa) : null,
-      monthly_rate_paisa: row.monthly_rate_paisa ? Number(row.monthly_rate_paisa) : null,
+      daily_rate_paisa: dailyRate,
+      weekly_rate_paisa: row.weekly_rate_paisa == null ? null : Number(row.weekly_rate_paisa),
+      monthly_rate_paisa: row.monthly_rate_paisa == null ? null : Number(row.monthly_rate_paisa),
       bundle_contents: Array.isArray(row.bundle_contents) ? row.bundle_contents : [],
-    }))
-  } catch {
-    return MOCK_CATALOGUE
-  }
+    }
+  })
 }
 
 export async function checkPublicAvailability(
@@ -174,44 +183,42 @@ export async function checkPublicAvailability(
   fromDate: string,
   toDate: string,
 ): Promise<Map<string, boolean>> {
+  if (!productIds.length) return new Map()
+
+  // Reject malformed and out-of-range dates before calling the anonymous RPC.
+  const dates = rentalDaysInclusive(fromDate, toDate)
+  const uniqueIds = Array.from(new Set(productIds))
+
+  if (import.meta.env.VITE_DATA_SOURCE === 'mock' || import.meta.env.MODE === 'test') {
+    // Explicit local fixtures only, never the hosted/public client.
+    return new Map(uniqueIds.map((id) => [id, true]))
+  }
+
+  // The SQL RPC accepts a maximum of 30 IDs per request; check every item,
+  // including large catalogues, instead of silently ignoring IDs 31 onward.
   const result = new Map<string, boolean>()
-  if (!productIds.length || !fromDate || !toDate) return result
-
-  if (import.meta.env.VITE_DATA_SOURCE === 'mock') {
-    // In mock mode, every item is available
-    for (const id of productIds) {
-      result.set(id, true)
-    }
-    return result
-  }
-
-  try {
-    const { data, error } = await supabase.rpc('public_availability', {
-      p_product_ids: productIds.slice(0, 30),
-      p_from: fromDate,
-      p_to: toDate,
-    })
-
-    if (error || !Array.isArray(data)) {
-      for (const id of productIds) result.set(id, true)
-      return result
-    }
-
-    // Availability per product: available over the ENTIRE interval if available on every day
-    for (const row of data as AvailabilityResult[]) {
-      const current = result.get(row.product_id)
-      if (current === undefined) {
-        result.set(row.product_id, row.available)
-      } else {
-        result.set(row.product_id, current && row.available)
+  for (let i = 0; i < uniqueIds.length; i += 30) {
+    const batch = uniqueIds.slice(i, i + 30)
+    let rows: PublicDayAvailability[]
+    try {
+      const response = await supabase.rpc('public_availability', {
+        p_product_ids: batch,
+        p_from: fromDate,
+        p_to: toDate,
+      })
+      if (response.error || !Array.isArray(response.data)) {
+        throw new Error('Availability RPC unavailable')
       }
+      rows = response.data as PublicDayAvailability[]
+    } catch {
+      throw new Error('Unable to verify equipment availability. Please retry.')
     }
 
-    return result
-  } catch {
-    for (const id of productIds) result.set(id, true)
-    return result
+    // Only a complete product/day matrix can produce an Available badge.
+    const batchResult = resolveCompleteAvailability(batch, dates, rows)
+    for (const [id, free] of batchResult) result.set(id, free)
   }
+  return result
 }
 
 export function getPublicPhotoUrl(path: string | undefined): string | null {
