@@ -289,6 +289,18 @@ export async function submitBookingRequest(payload: BookingRequestPayload): Prom
     }
   }
 
+  // A request can sit in a cart while stock changes or the browser goes offline.
+  // Recheck every selected item immediately before the server-side submission.
+  const ids = payload.lines.map((line) => line.product_id ?? line.bundle_id)
+  if (!payload.lines.length || ids.some((id) => !id) ||
+      payload.lines.some((line) => !Number.isInteger(line.quantity) || line.quantity < 1)) {
+    throw new Error('Booking request contains an invalid item or quantity.')
+  }
+  const verified = await checkPublicAvailability(ids as string[], payload.start_date, payload.end_date)
+  if (ids.some((id) => verified.get(id as string) !== true)) {
+    throw new Error('Some equipment is no longer available for the selected dates. Please review your request.')
+  }
+
   const { data, error } = await supabase.rpc('submit_booking_request', {
     p_payload: payload,
   })
