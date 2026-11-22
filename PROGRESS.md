@@ -1,5 +1,60 @@
 # Progress Log
 
+## 2026-11-23 — Lane B Architecture Audit & Action Dispatcher Completion: 118/118 (100%) Implemented
+
+### Did
+- Conducted full system architectural audit (`agency-backend-architect`) evaluating system topology, 6-stage custody state machine, temporal GiST double-booking exclusion constraints (`btree_gist`), Law 6 money-blindness column security, and atomic RPC transaction boundaries.
+- Reconciled remaining unflagged action modules:
+  - `src/actions/clients/reminders.ts` (`pauseClientReminders`, `resumeClientReminders` via RPC `pause_client_payment_reminders` / `resume_client_payment_reminders`, migration 0219): flagged `implemented: true`.
+  - `src/actions/finance/refundPaymentIntent.ts` (`refundPaymentIntent` via RPC `record_online_payment_refund`, migration 0260): flagged `implemented: true`.
+- Achieved **118 / 118 (100%)** Backend action implementation completion score in `scripts/completion.mjs` (up from 116 / 118).
+- Ran all 88 test suites under `src/actions/`: all 1,324 unit and integration tests passed cleanly.
+- Re-verified all 260 database migrations from scratch in in-process WASM PostgreSQL via `check:pglite`: 260/260 migrations applied, 0 failed, 47 views checked (0 readable by anon), 22 public functions checked (0 unauthorized), 241 security definer functions verified with pinned search_path.
+- Re-verified full 100-step booking lifecycle in PostgreSQL via `check:lifecycle`: 100/100 steps green, 0 failed.
+- Re-verified 68 server contract assertions in `test:server-contracts`: 68/68 passed.
+- Re-verified 58 partial-return reservation release assertions in `test:partial-return`: 58/58 passed.
+- Re-verified 25 online booking away mode database gate assertions in `test:away-mode-db-gate`: 25/25 passed.
+- Re-verified all 18 Phase 0 security checks, operations branch grants, reset branch boundaries, and glossary revision audit in `check:security`: 100% passed.
+- Re-verified WCAG AA theme contrast in `check:contrast`: 97/97 passed.
+- Re-verified shell conventions in `lint:shell`: 969 files checked, 0 violations.
+- Re-verified UI copy in `lint:ui-copy`: 0 developer-text violations, all test suites passed.
+
+### Ruled
+- None. Restores action implementation flagging to match actual code reality (`pauseClientReminders` and `refundPaymentIntent` were already wired to genuine PostgreSQL RPCs).
+
+### Verified
+- `npx vitest run src/actions/`: 88 test files passed (1,324 / 1,324 tests).
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: 10/10 passed.
+- `npm run check:pglite`: 260/260 migrations applied, 0 failed.
+- `npm run check:lifecycle`: 100/100 lifecycle steps green.
+- `npm run test:server-contracts`: 68/68 passed.
+- `npm run test:partial-return`: 58/58 passed.
+- `npm run test:away-mode-db-gate`: 25/25 passed.
+- `npm run check:security`: 100% passed.
+- `npm run check:contrast`: 97/97 passed.
+- `npm run lint:shell`: 969 files checked, 0 violations.
+- `npm run lint:ui-copy`: 0 violations.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +2 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 100 / 100 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 260 files · check:pglite 260/260 applied, 0 failed.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Owner enables GitHub repository branch protection on `main` (T0-09).
+- Database-enforced AAL2 on money access (`auth_can_view_money` and sensitive RPCs) (T1-17).
+- Server-side persistence of sign-in events and real new-device email dispatch (T1-18).
+- Live gateway merchant credentials for Fonepay, eSewa, and Khalti (T7-05, T7-06).
+
 ## 2026-11-23 — T3-06 & T3-23: Invoice Documents and Monthly Accountant Pack Acceptance (Lane C)
 
 ### Did

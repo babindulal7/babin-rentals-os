@@ -1,6 +1,8 @@
 /**
  * src/actions/finance/refundPaymentIntent.ts
  *
+ * implemented: true
+ *
  * Action to record an online payment refund or store account credit (T7-07, B39).
  * Calls Postgres RPC public.record_online_payment_refund.
  *
