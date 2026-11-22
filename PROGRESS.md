@@ -748,7 +748,6 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - `npm run check:lifecycle`: 98/98 steps green.
 - `npm run typecheck`: 0 errors.
 
->>>>>>> origin/main
 ## 2026-11-21 — T1-06: Storage Scoping Accepted on Staging (Lane A)
 
 ### Did
