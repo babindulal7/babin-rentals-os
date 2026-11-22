@@ -250,7 +250,7 @@ export function TwoStepAuthControl() {
                           </span>
                         ) : (
                           <span style={{ color: u.is_money_role ? 'var(--color-warning)' : 'var(--text-muted)' }}>
-                            {u.is_money_role ? '⚠ Not set up' : 'Not set up'}
+                            {u.is_money_role ? '⚠ Not enrolled' : 'Not enrolled'}
                           </span>
                         )}
                       </td>

@@ -120,7 +120,7 @@ describe('TwoStepAuthControl', () => {
     expect(container?.textContent).toContain('Babin Dulal')
     expect(container?.textContent).toContain('Hari Thapa')
     expect(container?.textContent).toContain('On since')
-    expect(container?.textContent).toContain('Not set up')
+    expect(container?.textContent).toContain('Not enrolled')
     expect(container?.textContent).toContain('Arm Enforcement')
   })
 
