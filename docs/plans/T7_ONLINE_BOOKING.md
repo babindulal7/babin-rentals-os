@@ -33,6 +33,7 @@ PERMISSIONS §5/§7 text that will change.
 **Database** — none (design only).
 **Done when** — the spec answers every "who may read/write what" for anon, Client and staff; O-2
 and O-3 defaults are written in.
+**Evidence / PR** — §17 technical reconciliation closed in `docs/ONLINE_BOOKING_SPEC.md`: guest ID private upload, settings roles, protected guest quotes, interval availability, and server payment computation evidenced across migrations 0255, 0257, 0258, 0259, 0261, 0262 and lifecycle steps L93–L99.
 **Needs** — none.
 
 ### T7-02 · Booking site and public catalogue            status: done — PR #276 merged; public catalogue, category filtering and anonymous access boundaries verified across migration 0255 and L93 [docs/verification/T7_ONLINE_BOOKING_ACCEPTANCE_2026-11-22.md] · size: L · lane C
