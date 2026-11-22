@@ -121,3 +121,31 @@ test('check-dump: succeeds (exit 0) on valid synthetic dump with all tables and 
   assert.match(result.stdout, /PASS  contains row data/)
   assert.match(result.stdout, /Plausible|All checks passed/)
 })
+
+test('check-dump: succeeds on quoted identifiers from pg_dump --quote-all-identifiers', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'babin-check-dump-'))
+  const file = join(dir, 'valid_quoted.sql')
+  const padding = '-- '.padEnd(300 * 1024, 'x') + '\n'
+  const content = [
+    '-- PostgreSQL database dump',
+    padding,
+    'CREATE TABLE "public"."bookings" ("id" uuid);',
+    'CREATE TABLE "public"."clients" ("id" uuid);',
+    'CREATE TABLE "public"."products" ("id" uuid);',
+    'CREATE TABLE "public"."security_deposits" ("id" uuid);',
+    'COPY "public"."bookings" ("id") FROM stdin;',
+    '11111111-1111-1111-1111-111111111111',
+    '\\.',
+    '-- PostgreSQL database dump complete',
+  ].join('\n')
+  writeFileSync(file, content)
+
+  const result = runCheckDump([file])
+  assert.equal(result.status, 0)
+  assert.match(result.stdout, /PASS  contains bookings/)
+  assert.match(result.stdout, /PASS  contains clients/)
+  assert.match(result.stdout, /PASS  contains products/)
+  assert.match(result.stdout, /PASS  contains security_deposits/)
+  assert.match(result.stdout, /PASS  contains row data/)
+})
+
