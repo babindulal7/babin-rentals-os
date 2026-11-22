@@ -68,7 +68,10 @@
     "test:online-booking-n7-review": "node scripts/test-online-booking-n7-review.mjs",
     "test:away-mode-db-gate": "node scripts/test-away-mode-db-gate.mjs",
     "db:plan:reviewed": "node scripts/plan-migrations.mjs --accept-rename",
-    "test:db-plan-safety": "node --test scripts/plan-migrations-safety.test.mjs"
+    "test:db-plan-safety": "node --test scripts/plan-migrations-safety.test.mjs",
+    "build:staff": "node scripts/check-site-env.mjs staff && tsc --noEmit && vite build --mode staff && node scripts/finalize-site-build.mjs staff && node scripts/verify-site-builds.mjs staff",
+    "build:client": "node scripts/check-site-env.mjs client && tsc --noEmit && vite build --mode client && node scripts/finalize-site-build.mjs client && node scripts/verify-site-builds.mjs client",
+    "verify:sites": "node scripts/verify-site-builds.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
