@@ -1,5 +1,47 @@
 # Progress Log
 
+## 2026-11-22 — T1-09: Live DNS Records Audit & Deliverability Verification Evidence (Lane A)
+
+### Did
+- Resolved PR #313 review P1 finding for T1-09 (Email from @babinrentals.com):
+  - Conducted live DNS inspection for `babinrentals.com` from Windows environment using authoritative lookups against `dns1.registrar-servers.com` and Google DNS:
+    - Verified root SPF policy: `v=spf1 include:spf.efwd.registrar-servers.com ~all`.
+    - Verified return-path subdomain `send.babinrentals.com` CNAME pointing to `send.forge.rmta.net` (Resend Forge infrastructure).
+    - Verified return-path SPF: `v=spf1 ip4:52.3.252.119 ip4:44.222.39.36 ip4:199.249.231.0/24 ~all`.
+    - Verified return-path MX: `send.babinrentals.com` -> `feedback.forge.rmta.net` (Preference 10).
+    - Verified DMARC policy on root: `_dmarc.babinrentals.com` TXT `v=DMARC1; p=none;`.
+    - Verified link tracking subdomain: `book.babinrentals.com` CNAME `links2.resend-dns.com`.
+  - Documented Edge Function `send-email` (`supabase/functions/send-email/index.ts`) failure modes, non-sensitive logging in `email_log`, mock fallback when `RESEND_API_KEY` is not present, Law 1 server-side payload building, Law 6 role money blindness, and Rule W80 English-only client email constraints.
+  - Authored comprehensive evidence document [`docs/verification/T1-09_EMAIL_ACCEPTANCE_EVIDENCE_2026-11-22.md`](docs/verification/T1-09_EMAIL_ACCEPTANCE_EVIDENCE_2026-11-22.md) establishing staging password reset and client OTP verification protocols.
+
+### Ruled
+- Live DNS Evidence: Transactional email verification requires evidencing published DNS records across SPF, DKIM, DMARC, and Return-Path MX rather than relying on abstract assumptions.
+- No Secrets in Repositories (Rule N-8): `RESEND_API_KEY` must never be stored in files or commits; Edge Function handles missing secrets via graceful mock fallback.
+
+### Verified
+- Live DNS lookups executed via PowerShell `Resolve-DnsName` for NS, SPF, CNAME, MX, and DMARC.
+- `npx vitest run src/lib/__tests__/t109EmailConfigDoc.test.ts`: 3/3 tests pass.
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: 9/9 tests pass.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 100 / 100 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 260 files · check:pglite 260/260 applied, 0 failed.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Live gateway merchant credentials for Fonepay, eSewa, and Khalti (T7-05, T7-06).
+- Cloudflare Pages DNS and production deployment configuration (T1-07).
+- Remaining 4 acceptance-pending cards from `ACCEPTANCE_STATUS_TRUTH_REPAIR_2026-11-22.md` (T7-07, T3-06, T3-23, T7-01).
+
 ## 2026-11-22 — T9-01: Real DB Booqable Catalogue Reconciliation & Exceptions Export (Lane A)
 
 ### Did

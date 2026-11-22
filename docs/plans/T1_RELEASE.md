@@ -139,6 +139,7 @@ bookings a day, plus staff digests and payment reminders) when picking the plan.
 **Database** — none.
 **Done when** — a test email from `no-reply@babinrentals.com` lands in Gmail's inbox (not spam)
 with SPF/DKIM pass; a staging password reset arrives through the custom SMTP.
+**Evidence / PR** — `lane-a/t1-09-email-evidence-20261122`: Live DNS queries documented for babinrentals.com (NS, SPF, DMARC, Return-Path CNAME send.forge.rmta.net, Return-Path SPF/MX, link tracking CNAME); Edge Function send-email failure paths, Law 1/Law 6 enforcement, and delivery failure logging documented in `docs/verification/T1-09_EMAIL_ACCEPTANCE_EVIDENCE_2026-11-22.md`.
 **Needs** — T1-02; Babin (account + DNS). Owner-only §6.2 #8 is Babin's own call (S13).
 
 ### T1-10 · Live batches (Babin applies)            status: todo · size: S each · Babin + lane A
