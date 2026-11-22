@@ -1,5 +1,47 @@
 # Progress Log
 
+## 2026-11-23 — T3-06 & T3-23: Invoice Documents and Monthly Accountant Pack Acceptance (Lane C)
+
+### Did
+- Formally accepted and reconciled Track 3 financial documents cards to **`done`**:
+  - **T3-06 · Invoice and agreement documents**: Promoted to `done`. Verified immutable PDF snapshots (Law 4) in JSONB (`invoice_snapshot`), signed rental agreement persistence in private `documents` bucket under `agreements/<booking_id>/agreement_<timestamp>.pdf`, pre-printed official paper tax invoice numbering traceability (`invoices.paper_tax_invoice_no`), non-tax supporting document headers (quotes, agreements, packing lists), and 36/36 passing automated unit tests across `exportPdf.test.ts` (11/11), `generatePdf.test.ts` (20/20), and `Finance.pdf.test.tsx` (5/5). Documented in [`docs/verification/T3-06_INVOICE_AND_AGREEMENT_DOCUMENTS_ACCEPTANCE_2026-11-23.md`](docs/verification/T3-06_INVOICE_AND_AGREEMENT_DOCUMENTS_ACCEPTANCE_2026-11-23.md).
+  - **T3-23 · Monthly pack for the accountant**: Promoted to `done`. Evidenced the actual in-application export generator (`src/lib/monthlyPack.ts`) generating genuine ZIP archives containing IRD-compliant Annex 5 sales book (`sales_register_annex5.csv`), purchase register (`purchase_register.csv`), operational expense register with vendor PAN and TDS withholding (`expenses.csv`), payment reconciliation register (`payments_reconciliation.csv`), and bundled bill photo receipts (`attachments/`). Backed by 12/12 passing tests in `src/modules/reports/__tests__/MonthlyPack.test.tsx` and integer paisa reconciliation. Documented in [`docs/verification/T3-23_MONTHLY_ACCOUNTANT_PACK_ACCEPTANCE_2026-11-23.md`](docs/verification/T3-23_MONTHLY_ACCOUNTANT_PACK_ACCEPTANCE_2026-11-23.md).
+- Updated Track 3 roadmap in [`docs/plans/T3_BOOKING_MONEY.md`](docs/plans/T3_BOOKING_MONEY.md).
+- Synchronized roadmap regression assertions in [`src/lib/__tests__/roadmapStatusTruth.test.ts`](src/lib/__tests__/roadmapStatusTruth.test.ts) (10/10 tests pass) and [`src/lib/__tests__/t3RoadmapDocumentation.test.ts`](src/lib/__tests__/t3RoadmapDocumentation.test.ts) (4/4 tests pass).
+
+### Ruled
+- Law 4: Document snapshots in JSONB guarantee historic invoices never alter retrospectively even if catalog prices, rental day calculation rules, or VAT percentages change.
+- Pre-Printed Official Billing (Babin Ruling 18–20 Nov 2026): Official paper VAT invoice books remain the statutory source; OS documents act as non-tax supporting records and audit logs.
+- Law 6: Non-money floor roles (Warehouse, Technician, Driver) are strictly denied monthly accountant pack export access and document financial figures.
+
+### Verified
+- `npx vitest run src/lib/pdf/__tests__/exportPdf.test.ts src/lib/pdf/__tests__/generatePdf.test.ts src/modules/finance/__tests__/Finance.pdf.test.tsx`: 36/36 tests pass.
+- `npx vitest run src/modules/reports/__tests__/MonthlyPack.test.tsx`: 12/12 tests pass.
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts src/lib/__tests__/t3RoadmapDocumentation.test.ts`: 14/14 tests pass.
+- `npm run check:pglite`: 260/260 migrations applied cleanly.
+- `npm run check:lifecycle`: 100/100 lifecycle steps green.
+- `npm run typecheck`: 0 errors.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 100 / 100 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 260 files · check:pglite 260/260 applied, 0 failed.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Live gateway merchant credentials for Fonepay, eSewa, and Khalti (T7-05, T7-06).
+- Cloudflare Pages DNS and production deployment configuration (T1-07).
+- Remaining review-gated verification cards in ACCEPTANCE_STATUS_TRUTH_REPAIR_2026-11-22.md (T9-01, T1-09).
+- Phase 2 physical hardware cards (T2-11, T2-14, T9-07) remain pending for post-live shop device day per 20 Nov owner ruling.
+
 ## 2026-11-23 — T7-01, T7-07, T7-14: Online Booking Acceptance Reconciliation (Lane C)
 
 ### Did

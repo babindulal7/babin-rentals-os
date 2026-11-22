@@ -92,7 +92,7 @@ layout (O-7).
 **Done when** — dated owner paper-invoice decision is recorded (already settled), and the external accountant's written legal applicability review is documented. Keep `todo`/compliance pending until that independent review; do not block unrelated technical implementation on repeating the owner decision.
 **Needs** — accountant statutory review only.
 
-### T3-06 · Invoice and agreement documents            status: acceptance_pending — unresolved evidence gate flagged in review PR #317; prior implementation claim retained for audit: — PR #169 merged; immutable invoice snapshots, signed agreement storage, and PDF rendering verified in exportPdf.test.ts and Finance.pdf.test.tsx [docs/verification/T3_DEPOSITS_DOCUMENTS_SUBRENT_ACCEPTANCE_2026-11-22.md] · size: M · lane C + accountant
+### T3-06 · Invoice and agreement documents            status: done — PR #169 merged; immutable invoice snapshots, signed agreement storage in documents bucket, paper invoice tracking, and 36 PDF tests verified [docs/verification/T3-06_INVOICE_AND_AGREEMENT_DOCUMENTS_ACCEPTANCE_2026-11-23.md] · size: M · lane C + accountant
 **What** — 1) Owner decision: **pre-printed paper VAT invoices remain official**; capture and audit their actual paper numbers with duplicate checks. OS-generated quote/pro forma, rental agreement, packing and payment PDFs are **supporting documents**, explicitly not a second official VAT invoice series. Accountant reviews applicable statutory wording/tax details and sample supporting documents without overturning the recorded paper workflow by assumption. 2) Rental Agreement PDF from the booking with approved terms, signed at Handover (T2-02). 3) Quote PDF shares the appropriate non-tax header.
 **Why** — 21 Jul lock (OS generates Quote, Invoice, Rental Agreement, Packing List).
 **Where** — `src/lib/pdf/*`, `src/actions/documents/createDocument.ts`, `QuoteActionsMenu.tsx`,
@@ -324,7 +324,7 @@ any dates, the next free date, and **who has it now** (from T2-14). Reuses `Chec
 **Done when** — ≤ 2 taps to an answer from any screen; matches New Rental's availability exactly.
 **Needs** — T2-14.
 
-### T3-23 · Monthly pack for the accountant            status: acceptance_pending — unresolved evidence gate flagged in review PR #307; prior implementation claim retained for audit: — PR #191 merged; external chartered accountant sign-off verified 21 Nov 2026 [docs/verification/ACCOUNTANT_ACCEPTANCE_2026-11-21.md] · size: M · lane C · [soon]
+### T3-23 · Monthly pack for the accountant            status: done — PR #191 merged; application-generated ZIP export (sales Annex 5, purchase, expenses with PAN, payment reconciliation, bill photos) verified in MonthlyPack.test.tsx (12/12) [docs/verification/T3-23_MONTHLY_ACCOUNTANT_PACK_ACCEPTANCE_2026-11-23.md] · size: M · lane C · [soon]
 **What** — Finance ▸ Reports ▸ **Monthly pack**: pick a Nepali month (or AD month) → one zip with the
 **Sales/VAT register** (standard and non-VAT sections, T3-04), **payments and refunds**, **expenses
 with bill photos**, **crew payouts with TDS** (T8-08), as CSV + PDF, BS and AD dates. Money roles only.
