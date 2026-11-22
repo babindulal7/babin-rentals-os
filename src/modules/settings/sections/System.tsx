@@ -7,6 +7,7 @@ import { DeliveryZonesControl } from './DeliveryZonesControl'
 import { CalendarFeedControl } from './CalendarFeedControl'
 import { NotificationPreferencesControl } from './NotificationPreferencesControl'
 import { OnlineBookingAwayControl } from './OnlineBookingAwayControl'
+import { TwoStepAuthControl } from './TwoStepAuthControl'
 
 /**
  * **Settings ▸ System** — appearance, notifications, preferences, security and
@@ -221,7 +222,11 @@ export const SYSTEM_SECTIONS: Section[] = [
     title: 'Access',
     icon: 'crew',
     fields: [
-      { label: 'Two-factor authentication', note: 'Multi-factor sign-in for privileged staff.', readOnlyWhy: 'Not built yet — arrives with T1-17. This does not currently enforce two-factor authentication.' },
+      {
+        label: 'Two-factor authentication',
+        note: 'Multi-factor sign-in for privileged money staff (Owner, Admin, Manager, Coordinator, Accounts).',
+        custom: <TwoStepAuthControl />,
+      },
       { label: 'Password policy', note: 'Min 12 chars, mixed case, number, symbol. 90-day expiry.', settingKey: 'passwordPolicy' },
       { label: 'Shared-device screen lock', note: 'Name-and-PIN switching on shared tablets.', readOnlyWhy: 'Not built yet — arrives with T1-15. The separate Idle screen lock setting below remains available.' },
       /*

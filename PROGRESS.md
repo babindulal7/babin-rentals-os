@@ -1,5 +1,57 @@
 # Progress Log
 
+## 2026-11-23 — T1-17: Database-Enforced AAL2 Two-Step Sign-In for Money Roles (Lane A)
+
+### Did
+- Authored design note `docs/verification/T1-17_DESIGN.md` establishing fail-closed database-enforced AAL2 security architecture for all money-viewing and money-writing roles.
+- Claimed migration 0267 in `docs/plans/MIGRATION_LEDGER.md` and authored `supabase/migrations/0267_database_enforced_aal2_money_roles.sql`:
+  - Updated `public.auth_can_view_money()` to inspect `public.settings.twoStepAuthRequired`. When armed (`true`), any money role (`Owner`, `Admin`, `Manager`, `Coordinator`, `Accounts`) without `aal = 'aal2'` in JWT claims receives `false`, automatically masking column-level money figures in views (`products_v`, `booking_lines_v`, `product_units_v`) to `NULL` and returning 0 rows in financial tables (`payments`, `invoices`, `daily_closings`).
+  - Maintained Law 6 strict precedence: floor roles (`Warehouse`, `Technician`, `Driver`) and external `Client` roles unconditionally evaluate to `false` even if an `aal2` claim is presented.
+  - Updated `public.auth_is_finance_or_admin()` to require `aal2` when armed before permitting financial write operations.
+  - Created `public.staff_mfa_factors` factor registry and `public.staff_mfa_audit` append-only audit trail.
+  - Implemented RPCs: `set_two_step_auth_enforcement` (Owner only), `reset_staff_mfa` (Owner any, Admin up to Manager per AD2), `record_staff_mfa_enrolment` (self-registration), and `get_staff_mfa_overview` (Owner, Admin, Manager).
+- Created automated database gate suite `scripts/test-mfa-db-gate.mjs` verifying all 25 assertions across 7 test suites against real PGlite PostgreSQL (`npm run test:mfa-db-gate`).
+- Added Step L100 to `scripts/e2e-lifecycle.mjs` verifying AAL2 enforcement within the 101-step booking lifecycle runner (`npm run check:lifecycle`: 101/101 green).
+- Expanded `src/lib/mfaBoundary.ts` with typed helpers for staff MFA overview, enforcement toggling, factor enrolment, and lost-phone resets.
+- Built `src/modules/settings/sections/TwoStepAuthControl.tsx` and wired it into `src/modules/settings/sections/System.tsx` under `Access ▸ Two-factor authentication`, replacing the static T1-16 placeholder with real staff factor management.
+- Authored unit test suites `src/modules/settings/sections/__tests__/TwoStepAuthControl.test.tsx` (4/4 passed) and updated `src/lib/__tests__/roadmapStatusTruth.test.ts` (10/10 passed).
+- Authored acceptance document `docs/verification/T1-17_TWO_STEP_SIGN_IN_ACCEPTANCE_2026-11-23.md`.
+
+### Ruled
+- Babin ruling (B21, B40, K2, P3, N-3): Two-step sign-in enforcement must be evaluated at the PostgreSQL layer, fail closed, support staged rollout via an organization setting, protect floor role money blindness under Law 6, and restrict lost-phone resets by role hierarchy.
+
+### Verified
+- `npm run check:pglite`: 265/265 migrations applied, 0 failed, 47 views checked (0 readable by anon), 22 public functions checked (0 unauthorized), 247 definers verified with search_path.
+- `npm run check:lifecycle`: 101/101 lifecycle steps green (including L100).
+- `npm run test:mfa-db-gate`: 25/25 database gate assertions passed cleanly.
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 errors, 0 warnings.
+- `npx vitest run src/modules/settings/sections/__tests__/TwoStepAuthControl.test.tsx src/lib/__tests__/mfaBoundary.test.ts`: 9/9 tests passed.
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: 10/10 tests passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 101 / 101 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 265 files · check:pglite 265/265 applied, 0 failed.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Owner enables GitHub repository branch protection on `main` (T0-09).
+- Server-side persistence of sign-in events and real new-device email dispatch (T1-18).
+- Live gateway merchant credentials for Fonepay, eSewa, and Khalti (T7-05, T7-06).
+- PR #338 (T1-07 Cloudflare isolated site builds) review and progress.
+- PR #339 (T7-02 fail-closed public catalogue & availability) review and progress.
+- Issue #322 (P1 Mac CI-only 17-gate verification).
+- Hosted staging proof (read-only verification without live writes).
+
 ## 2026-11-23 — Launch Migrations 0263–0266 Merged (PR #329) & Issue #320 Full Resolution and Closeout
 
 ### Did
@@ -35,18 +87,19 @@
 | Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
 | DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
 | Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | 100 / 100 (100%) | +0 |
+| Lifecycle | steps green / total | 101 / 101 (100%) | +1 |
 | Overall | structural mean of five | ≈ 97% | — |
 
-Migrations 264 files · check:pglite 264/264 applied, 0 failed (recorded 2026-11-22T21:09:58.701Z). Suite: Historical suite: 7653/7659 passed, 6 failed (recorded 2026-11-21T23:16:24.131Z); current source NOT VERIFIED.
-Coverage suite: Historical suite: 7599/7599 passed, 0 failed (recorded 2026-11-20T23:59:38.542Z); current source NOT VERIFIED.
-Gates read from .lifecycle-result.json, written 2026-11-22T21:10:02.465Z.
+Migrations 265 files · check:pglite 265/265 applied, 0 failed.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
+- Owner enables GitHub repository branch protection on `main` (T0-09).
+- Server-side persistence of sign-in events and real new-device email dispatch (T1-18).
+- Live gateway merchant credentials for Fonepay, eSewa, and Khalti (T7-05, T7-06).
 - PR #338 (T1-07 Cloudflare isolated site builds) review and progress.
-- PR #339 (T7-02 fail-closed public catalogue & availability) review and progress.
+- PR #340 (T1-02 staging installation manifest) review.
 - Issue #322 (P1 Mac CI-only 17-gate verification).
 - Hosted staging proof (read-only verification without live writes).
 

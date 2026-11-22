@@ -59,17 +59,18 @@ describe('T1-02 exact-head 21 Nov 2026 staging inventory (no database writes)', 
     }
     expect(result.mode).toBe('READ_ONLY_PINNED_SOURCE_INTEGRITY')
     expect(result.sourceBaseline).toBe('3a8d90b9fa197d1a69326483a89140e404385b85')
-    expect(result.localFileCount).toBe(264)
+    expect(result.localFileCount).toBe(265)
     expect(result.pinnedFileCount).toBe(260)
     expect(result.approvalToApplyStaging).toBe(false)
     expect(result.databaseConnected).toBe(false)
     expect(result.sqlExecuted).toBe(false)
     expect(result.errors).toEqual([
-      'migration file count differs from pinned inventory: local=264, pinned=260',
+      'migration file count differs from pinned inventory: local=265, pinned=260',
       '0263_product_families.sql: absent from pinned inventory',
       '0264_public_product_family_options.sql: absent from pinned inventory',
       '0265_submit_request_rates_in_paisa.sql: absent from pinned inventory',
       '0266_manager_approvals_to_owner.sql: absent from pinned inventory',
+      '0267_database_enforced_aal2_money_roles.sql: absent from pinned inventory',
     ])
     expect(result.sourceIdentityVerified).toBe(false)
     expect(result.status).toBe('BLOCKED_SOURCE_DRIFT')
