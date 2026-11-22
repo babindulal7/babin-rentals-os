@@ -22,7 +22,7 @@ for (const site of sites) {
   const entries = Object.entries(manifest)
     .filter(([, item]) => item.isEntry)
     .map(([name]) => name)
-  assert.match(robots, /Disallow: \/$/, 'Unapproved sites must not be indexed')
+  assert.match(robots, /^Disallow: \/$/m, 'Unapproved sites must not be indexed')
   for (const name of ['elements.html', 'preview.html']) {
     assert.equal(await exists(join(out, name)), false, `Unexpected public sample page: ${name}`)
   }
