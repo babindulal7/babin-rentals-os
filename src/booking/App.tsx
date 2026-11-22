@@ -4,6 +4,10 @@ import { getDefaultRentalDates } from './lib/kathmanduDateDefaults'
 import type { CatalogueItem } from './lib/catalogueApi'
 import { fetchPublicCatalogue, checkPublicAvailability } from './lib/catalogueApi'
 import {
+  type OnlineBookingAwayStatus,
+  fetchOnlineBookingAwayStatus,
+} from '@/lib/awayMode'
+import {
   type ClientUser,
   type OnlineProfile,
   getCurrentClientUser,
@@ -38,6 +42,62 @@ export default function BookingApp() {
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false)
   const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false)
   const [isMyBookingsOpen, setIsMyBookingsOpen] = useState<boolean>(false)
+  const [awayStatus, setAwayStatus] = useState<OnlineBookingAwayStatus | null>(null)
+
+  const refreshAwayStatus = useCallback(async () => {
+    try {
+      const status = await fetchOnlineBookingAwayStatus()
+      setAwayStatus(status)
+      return status
+    } catch {
+      return null
+    }
+  }, [])
+
+  // Load online booking away mode status and keep it synchronized:
+  // - Re-fetches immediately when a scheduled resumes_at timestamp expires
+  // - Re-checks every 60s while away mode is active
+  // - Re-checks when the window regains focus or tab becomes visible
+  useEffect(() => {
+    let active = true
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    const check = async () => {
+      const status = await refreshAwayStatus()
+      if (!active || !status) return
+
+      if (status.is_away && status.resume_date) {
+        const msUntilResume = new Date(status.resume_date).getTime() - Date.now()
+        if (msUntilResume > 0 && msUntilResume < 24 * 60 * 60 * 1000) {
+          timer = setTimeout(() => {
+            if (active) void check()
+          }, msUntilResume + 1000)
+        }
+      }
+    }
+
+    void check()
+
+    const interval = setInterval(() => {
+      if (active && awayStatus?.is_away) {
+        void check()
+      }
+    }, 60000)
+
+    const onFocus = () => {
+      if (active) void check()
+    }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onFocus)
+
+    return () => {
+      active = false
+      if (timer) clearTimeout(timer)
+      clearInterval(interval)
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onFocus)
+    }
+  }, [refreshAwayStatus, awayStatus?.is_away, awayStatus?.resume_date])
 
   // Load client auth session and profile
   useEffect(() => {
@@ -224,6 +284,34 @@ export default function BookingApp() {
       />
 
       <main className="booking-container">
+        {awayStatus?.is_away && (
+          <div
+            role="status"
+            aria-live="polite"
+            style={{
+              background: 'rgba(234, 179, 8, 0.12)',
+              color: 'var(--accent-gold, #fef08a)',
+              padding: '12px 18px',
+              borderRadius: 'var(--radius-md)',
+              margin: '16px 0',
+              fontSize: '0.9rem',
+              border: '1px solid rgba(234, 179, 8, 0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+            }}
+          >
+            <span style={{ fontSize: '1.25rem' }}>⏸</span>
+            <div>
+              <strong>Online Requests Paused:</strong> {awayStatus.message}
+              {awayStatus.resume_date && (
+                <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                  Resuming online requests on {new Date(awayStatus.resume_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
         {isOffline && (
           <div
             role="status"
@@ -368,6 +456,8 @@ export default function BookingApp() {
         user={clientUser}
         profile={clientProfile}
         onOpenAuth={() => setIsAuthOpen(true)}
+        awayStatus={awayStatus}
+        onRefreshAwayStatus={refreshAwayStatus}
       />
 
       {/* Client Auth Modal */}

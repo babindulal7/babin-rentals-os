@@ -7,6 +7,7 @@
  */
 
 import { supabase } from '@/lib/supabase'
+import { fetchOnlineBookingAwayStatus } from '@/lib/awayMode'
 
 export interface BundleComponent {
   readonly name: string
@@ -262,6 +263,12 @@ export async function submitBookingRequest(payload: BookingRequestPayload): Prom
   const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock' || import.meta.env.MODE === 'test' || !supabase
 
   if (isMock) {
+    // Check away mode status first (fail-closed, matching server contract)
+    const awayStatus = await fetchOnlineBookingAwayStatus()
+    if (awayStatus.is_away) {
+      throw new Error(`Online booking requests are temporarily disabled: ${awayStatus.message}`)
+    }
+
     // Generate simulated response for local/offline mock
     const fakeId = 'req-' + Math.random().toString(36).substring(2, 9)
     const fakeNum = 'REQ-' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + Math.floor(1000 + Math.random() * 9000)

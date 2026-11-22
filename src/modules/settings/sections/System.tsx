@@ -6,6 +6,7 @@ import { LegacyExportControl } from './LegacyExportControl'
 import { DeliveryZonesControl } from './DeliveryZonesControl'
 import { CalendarFeedControl } from './CalendarFeedControl'
 import { NotificationPreferencesControl } from './NotificationPreferencesControl'
+import { OnlineBookingAwayControl } from './OnlineBookingAwayControl'
 
 /**
  * **Settings ▸ System** — appearance, notifications, preferences, security and
@@ -199,6 +200,18 @@ export const SYSTEM_SECTIONS: Section[] = [
         note: 'Zones and fees for delivery dispatch. Pickup at the shop is always Rs 0. Owner, Admin and Manager can create, edit, and deactivate zones.',
         custom: <DeliveryZonesControl />,
         readBy: 'lib/queries/delivery.ts, modules/operations/DeliveryWorkspace.tsx',
+      },
+    ],
+  },
+  {
+    key: 'online_booking',
+    title: 'Online booking',
+    icon: 'activity',
+    fields: [
+      {
+        label: 'Away mode',
+        note: 'Pause online booking requests during holidays or stocktaking. Public catalogue and rates remain viewable; server refuses new requests (B6).',
+        custom: <OnlineBookingAwayControl />,
       },
     ],
   },
