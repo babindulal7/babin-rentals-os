@@ -127,7 +127,13 @@ function ensureIdempotentSql(sql) {
   // 2. Ensure CREATE INDEX IF NOT EXISTS
   res = res.replace(/\bcreate\s+(unique\s+)?index\s+(?!if\s+not\s+exists)([a-zA-Z0-9_]+)/gi, 'create $1index if not exists $2');
 
-  // 3. Ensure DROP POLICY IF EXISTS before CREATE POLICY
+  // 3. Ensure CREATE OR REPLACE FUNCTION
+  res = res.replace(/\bcreate\s+(?!or\s+replace\s+)function\s+/gi, 'create or replace function ');
+
+  // 4. Ensure ADD COLUMN IF NOT EXISTS
+  res = res.replace(/\badd\s+column\s+(?!if\s+not\s+exists)([a-zA-Z0-9_]+)/gi, 'add column if not exists $1');
+
+  // 5. Ensure DROP POLICY IF EXISTS before CREATE POLICY
   res = res.replace(/(?:drop\s+policy\s+if\s+exists\s+[a-zA-Z0-9_]+\s+on\s+[a-zA-Z0-9_.]+\s*;\s*)?create\s+policy\s+([a-zA-Z0-9_]+)\s+on\s+([a-zA-Z0-9_.]+)/gi, (match, pol, tbl) => {
     return `drop policy if exists ${pol} on ${tbl};\ncreate policy ${pol} on ${tbl}`;
   });

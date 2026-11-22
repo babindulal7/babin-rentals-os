@@ -3319,7 +3319,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0187_delivery_dispatch_rpcs.sql
--- SHA-256: 5994bf6ae1a4892918d55f85bbbcc029918743bfe41c29a5f8b588f0696f2485
+-- SHA-256: 7f4e804c24b8fc858e0b01d0643d2291ee9099c17c15ad24116cdaf3dd60760a
 -- Version: 20261122030028
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -3339,7 +3339,7 @@ drop function if exists public.delivery_create_job(uuid,text,timestamptz,uuid);
 drop function if exists public.delivery_assign_driver(uuid,uuid,uuid);
 drop function if exists public.delivery_transition_job(uuid,text,text,uuid,text,text);
 
-create function public.delivery_create_job(
+create or replace function public.delivery_create_job(
   p_booking_id uuid,
   p_leg text,
   p_scheduled_at timestamptz,
@@ -3411,7 +3411,7 @@ begin
 end;
 $$;
 
-create function public.delivery_assign_driver(
+create or replace function public.delivery_assign_driver(
   p_job_id uuid,
   p_driver_id uuid default null,
   p_request_key uuid default null,
@@ -3497,7 +3497,7 @@ begin
 end;
 $$;
 
-create function public.delivery_transition_job(
+create or replace function public.delivery_transition_job(
   p_job_id uuid,
   p_expected_status text,
   p_next_status text,
@@ -18870,13 +18870,13 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0234_return_damage_photo_per_unit.sql
--- SHA-256: 5ca64112ea13270c2f424d0907296ce4c9ea2cbad5775dc7593a9dc8635480a9
+-- SHA-256: 4086b21d4225ccebb6dfeb4b55c64801d37cca355b9577a26c5f6fe2de7f045e
 -- Version: 20261122030115
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 begin;
 
-create function public.require_return_damage_photo_per_unit()
+create or replace function public.require_return_damage_photo_per_unit()
 returns trigger
 language plpgsql
 security definer
@@ -22170,7 +22170,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0241_extension_clash_manager_decision_and_at_risk.sql
--- SHA-256: b3e69aff3d058b1299e168316a1df1cc96c93868a125306c2e31823af6ab5519
+-- SHA-256: e999945ddd0fceb6ff89d9e823ba0f81d8b2763c4d7799a4b2d52195b5bdb253
 -- Version: 20261122030122
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -22303,10 +22303,10 @@ grant select on table public.client_account_credits to authenticated;
 do $$
 begin
   if not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'clients' and column_name = 'account_credit') then
-    alter table public.clients add column account_credit numeric(14,2) not null default 0 check (account_credit >= 0);
+    alter table public.clients add column if not exists account_credit numeric(14,2) not null default 0 check (account_credit >= 0);
   end if;
   if not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'clients' and column_name = 'account_credit_paisa') then
-    alter table public.clients add column account_credit_paisa bigint not null default 0 check (account_credit_paisa >= 0);
+    alter table public.clients add column if not exists account_credit_paisa bigint not null default 0 check (account_credit_paisa >= 0);
   end if;
 end $$;
 

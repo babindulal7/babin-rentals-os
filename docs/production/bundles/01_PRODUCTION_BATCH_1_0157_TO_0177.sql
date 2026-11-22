@@ -624,7 +624,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0160_pricing_structures.sql
--- SHA-256: a66b8e1d176d85659b4a57be7365a6436f29a8f5f8f4b019606159a88316dd54
+-- SHA-256: 39128c0bb5da0e3e9e2d4cea225893a564952c5377c7204c3c6f336c20c80693
 -- Version: 20261122030003
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -796,8 +796,8 @@ end $$;
 -- ---------------------------------------------------------------------------
 -- Products point at one structure and one ruleset.
 -- ---------------------------------------------------------------------------
-alter table products add column pricing_structure_id uuid references pricing_structures (id);
-alter table products add column pricing_ruleset_id uuid references pricing_rulesets (id);
+alter table products add column if not exists pricing_structure_id uuid references pricing_structures (id);
+alter table products add column if not exists pricing_ruleset_id uuid references pricing_rulesets (id);
 create index if not exists idx_products_pricing_structure on products (pricing_structure_id) where pricing_structure_id is not null;
 create index if not exists idx_products_pricing_ruleset on products (pricing_ruleset_id) where pricing_ruleset_id is not null;
 
@@ -1045,7 +1045,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0165_delivery_jobs_and_event_rpc.sql
--- SHA-256: 4df01d8fad98d7f1de092fd752581391ab67a6a1bb3d25e7d0fd03965bc35ce6
+-- SHA-256: d6fc26a4a661908e912d9836c9551f85966bf8e82a232ff25f4a0fbe37b823a6
 -- Version: 20261122030007
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -1132,7 +1132,7 @@ create policy delivery_job_events_authenticated_read on public.delivery_job_even
     and exists (select 1 from public.delivery_jobs j where j.id = delivery_job_events.job_id)
   );
 
-create function public.delivery_create_job(
+create or replace function public.delivery_create_job(
   p_booking_id uuid, p_leg text, p_scheduled_at timestamptz, p_key uuid
 ) returns uuid
 language plpgsql security definer set search_path = public, pg_temp
@@ -1182,7 +1182,7 @@ begin
 end;
 $$;
 
-create function public.delivery_assign_driver(
+create or replace function public.delivery_assign_driver(
   p_job_id uuid, p_driver_id uuid, p_request_key uuid
 ) returns uuid
 language plpgsql security definer set search_path = public, pg_temp
@@ -1239,7 +1239,7 @@ begin
 end;
 $$;
 
-create function public.delivery_transition_job(
+create or replace function public.delivery_transition_job(
   p_job_id uuid, p_expected_status text, p_next_status text,
   p_request_key uuid, p_recipient text default null, p_note text default null
 ) returns uuid
@@ -1377,7 +1377,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0166_booking_transport_dispatch.sql
--- SHA-256: ffe64da2d74ddf7c326733dc0d272a3ce280ffdf816f1a6519f1ec920b7c6fe7
+-- SHA-256: 9480f0efeb39b369a53329c0cfc362e9875dc699718f3e293dae4d9053420bda
 -- Version: 20261122030008
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -1385,14 +1385,14 @@ on conflict (version) do update set name = excluded.name;
 begin;
 
 alter table public.booking_transport
-  add column delivery_status text not null default 'Scheduled' check (delivery_status in ('Scheduled','Ready','In Transit','Delivered','Failed')),
-  add column scheduled_at timestamptz,
-  add column dispatched_at timestamptz,
-  add column delivered_at timestamptz,
-  add column recipient_name text,
-  add column delivery_note text,
-  add column delivery_revision integer not null default 1 check (delivery_revision>0),
-  add column delivery_updated_at timestamptz not null default now();
+  add column if not exists delivery_status text not null default 'Scheduled' check (delivery_status in ('Scheduled','Ready','In Transit','Delivered','Failed')),
+  add column if not exists scheduled_at timestamptz,
+  add column if not exists dispatched_at timestamptz,
+  add column if not exists delivered_at timestamptz,
+  add column if not exists recipient_name text,
+  add column if not exists delivery_note text,
+  add column if not exists delivery_revision integer not null default 1 check (delivery_revision>0),
+  add column if not exists delivery_updated_at timestamptz not null default now();
 alter table public.booking_transport add constraint booking_transport_delivery_receipt
   check (delivery_status<>'Delivered' or (delivered_at is not null and dispatched_at is not null and length(btrim(recipient_name))>=2));
 create index if not exists booking_transport_driver_delivery_idx on public.booking_transport(driver_id,delivery_status);
@@ -1422,7 +1422,7 @@ where auth_user_id() is not null and b.cancelled_at is null and b.stage<>'Quote'
 revoke all on public.delivery_transport_v from public,anon;
 grant select on public.delivery_transport_v to authenticated;
 
-create function public.mutate_booking_transport(
+create or replace function public.mutate_booking_transport(
   p_id uuid,p_revision integer,p_key uuid,p_action text,
   p_driver uuid default null,p_recipient text default null,p_note text default null
 ) returns jsonb language plpgsql security definer set search_path=public,pg_temp as $$
@@ -1499,15 +1499,15 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0167_rental_revert_archive.sql
--- SHA-256: 48d1a83aa38284ffc5fbfa53cba8aa5e441bdea3e604eb62d1f27b17b4d2abb3
+-- SHA-256: 2da4f843629481778b7f2cbf3729e257f061e2d1057c31ea26f430064e483f94
 -- Version: 20261122030009
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 -- RULING 2026-10-16: Manager+ may revert only before handover; archive only
 -- Closed/Cancelled rentals. No custody undo and no invoice/payment changes.
 begin;
-alter table public.bookings add column archived_at timestamptz;
-alter table public.bookings add column archived_by uuid references public.users(id);
+alter table public.bookings add column if not exists archived_at timestamptz;
+alter table public.bookings add column if not exists archived_by uuid references public.users(id);
 alter table public.bookings add constraint booking_archive_terminal check (
   (archived_at is null and archived_by is null) or
   (archived_at is not null and archived_by is not null and (stage='Closed' or cancelled_at is not null))
@@ -1515,7 +1515,7 @@ alter table public.bookings add constraint booking_archive_terminal check (
 grant select (archived_at, archived_by) on public.bookings to authenticated;
 
 -- Private shared custody predicate: never expose other bookings' evidence as an RPC.
-create function public.rental_has_pickup_evidence(p_booking_id uuid) returns boolean
+create or replace function public.rental_has_pickup_evidence(p_booking_id uuid) returns boolean
 language sql volatile security definer set search_path = public, pg_temp as $$
   select exists(select 1 from public.booking_line_units u join public.booking_lines l on l.id=u.booking_line_id
                 where l.booking_id=p_booking_id and u.unit_state::text in ('Picked Up','Returned'))
@@ -1529,7 +1529,7 @@ $$;
 revoke all on function public.rental_has_pickup_evidence(uuid) from public, anon, authenticated;
 
 -- Cancellation has always been pre-custody; include unit-less partial pickups.
-create function public.guard_rental_cancel_custody() returns trigger
+create or replace function public.guard_rental_cancel_custody() returns trigger
 language plpgsql security definer set search_path = public, pg_temp as $$
 begin
   if OLD.cancelled_at is null and NEW.cancelled_at is not null and public.rental_has_pickup_evidence(OLD.id) then
@@ -1540,7 +1540,7 @@ end $$;
 create trigger trg_guard_rental_cancel_custody before update of cancelled_at on public.bookings
 for each row execute function public.guard_rental_cancel_custody();
 
-create function public.guard_booking_archive() returns trigger
+create or replace function public.guard_booking_archive() returns trigger
 language plpgsql set search_path = public, pg_temp as $$
 begin
   if current_user in ('authenticated','anon') and
@@ -1555,7 +1555,7 @@ for each row execute function public.guard_booking_archive();
 
 -- Ordinary staff cannot bypass the named correction RPC by forging approval fields.
 -- The separately ruled Closed -> Returned reopen path is unchanged.
-create function public.guard_rental_reversal_writer() returns trigger
+create or replace function public.guard_rental_reversal_writer() returns trigger
 language plpgsql set search_path = public, pg_temp as $$
 begin
   if NEW.is_reversal and NEW.from_stage<>'Closed' and current_user in ('authenticated','anon') then
@@ -1568,7 +1568,7 @@ for each row execute function public.guard_rental_reversal_writer();
 
 -- Serialize physical pickup evidence with the correction's booking lock. A
 -- concurrent floor writer must see the new stage before recording custody.
-create function public.guard_rental_outbound_write() returns trigger
+create or replace function public.guard_rental_outbound_write() returns trigger
 language plpgsql security definer set search_path = public, pg_temp as $$
 declare v_booking public.bookings%rowtype;
 begin
@@ -1597,7 +1597,7 @@ for each row execute function public.guard_rental_outbound_write();
 create trigger trg_guard_rental_pickup_line before insert or update of state on public.handover_lines
 for each row execute function public.guard_rental_outbound_write();
 
-create function public.manage_rental_lifecycle(p_payload jsonb) returns jsonb
+create or replace function public.manage_rental_lifecycle(p_payload jsonb) returns jsonb
 language plpgsql security definer set search_path = public, pg_temp as $$
 declare
   v_actor uuid := auth.uid();
@@ -2760,7 +2760,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0170_astra_phase0_authorization.sql
--- SHA-256: 42e1808219d999df72ec819f4488f4abb375e6983a2bc6e004ee08012f63d863
+-- SHA-256: 7479ccfb022fd9b2bcbd6e61c36a1ba272aee6e1bb886232098277925335e29d
 -- Version: 20261122030012
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -2786,7 +2786,7 @@ end $migration$;
 
 -- SEC-03: direct client writes cannot claim another human/role. Definer-written
 -- server receipts retain their actor (including legitimately attested floor PINs).
-create function public.bind_direct_audit_actor() returns trigger
+create or replace function public.bind_direct_audit_actor() returns trigger
 language plpgsql set search_path = public, pg_temp as $$
 begin
   if current_user = 'authenticated' then
@@ -2805,7 +2805,7 @@ for each row execute function public.bind_direct_audit_actor();
 
 -- SEC-04: retain existing last-Owner/self-deactivation invariants while checking
 -- the OLD target as well as the NEW privilege level.
-create function public.guard_admin_superior_target() returns trigger
+create or replace function public.guard_admin_superior_target() returns trigger
 language plpgsql set search_path = public, pg_temp as $$
 begin
   if new.id is distinct from old.id then
@@ -2825,7 +2825,7 @@ create trigger guard_admin_superior_target before update on public.users
 for each row execute function public.guard_admin_superior_target();
 
 -- SEC-05: no recursion through bookings/client RLS when testing driver scope.
-create function public.auth_driver_has_open_booking(p_booking uuid) returns boolean
+create or replace function public.auth_driver_has_open_booking(p_booking uuid) returns boolean
 language sql stable security definer set search_path = public, pg_temp as $$
   select auth_user_role() = 'Driver' and exists (
     select 1 from public.delivery_jobs j join public.bookings b on b.id=j.booking_id
@@ -2860,7 +2860,7 @@ create policy booking_lines_select on public.booking_lines for select to authent
 
 -- Driver contact details belong inside a trip, not the client-directory row
 -- (which also contains identity/tax/billing fields). Provide a narrow DTO.
-create function public.driver_trip_context(p_booking uuid) returns jsonb
+create or replace function public.driver_trip_context(p_booking uuid) returns jsonb
 language plpgsql stable security definer set search_path = public, pg_temp as $$
 declare result jsonb;
 begin
@@ -2904,7 +2904,7 @@ grant select(id,client_uuid,document_no,document_type,booking_id,client_id,
   voided_at,void_reason,created_at,created_by,updated_at,updated_by)
 on public.document_registry to authenticated;
 
-create function public.document_file_location(p_document uuid) returns text
+create or replace function public.document_file_location(p_document uuid) returns text
 language plpgsql stable security definer set search_path = public, pg_temp as $$
 declare location text;
 begin
@@ -2922,7 +2922,7 @@ grant execute on function public.document_file_location(uuid) to authenticated;
 
 -- Document upload ownership is encoded before metadata registration. Shared
 -- financial-staff reads require a registry/invoice link; orphan paths fail closed.
-create function public.auth_storage_object_allowed(p_bucket text, p_name text, p_upload boolean)
+create or replace function public.auth_storage_object_allowed(p_bucket text, p_name text, p_upload boolean)
 returns boolean language plpgsql stable security definer set search_path = public, pg_temp as $$
 declare
   v_actor uuid := auth_user_id();
@@ -3775,7 +3775,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0172_reset_branch_write_boundary.sql
--- SHA-256: 9c8dcc94841221765347259a6a3b0906104275b6cc128e5d2ef7e5324b844a05
+-- SHA-256: 03bb4638133678beb473f1d127d73df28db1f4702339e48d782679536429d849
 -- Version: 20261122030014
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -3786,7 +3786,7 @@ on conflict (version) do update set name = excluded.name;
 -- narrow them, never authorize another role. Both old and new scopes must pass.
 begin;
 
-create function public.auth_may_reset_entry(p_booking_id uuid, p_unit_id uuid)
+create or replace function public.auth_may_reset_entry(p_booking_id uuid, p_unit_id uuid)
 returns boolean
 language sql stable security invoker
 set search_path = public, pg_temp
@@ -4401,7 +4401,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0174_change_client_membership.sql
--- SHA-256: 34ec91daeb114f6b5ca0b60e755b7d9ee507eb137500b83b2d3d2f05ef2a9b4b
+-- SHA-256: cf61f2ad61b5b1e7faeb6e5ea53a65eaadc86bfcffe2a7bb36727aa81c6adb5c
 -- Version: 20261122030016
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -4440,7 +4440,7 @@ on conflict (version) do update set name = excluded.name;
 
 begin;
 
-create function public.change_client_membership(p_payload jsonb) returns jsonb
+create or replace function public.change_client_membership(p_payload jsonb) returns jsonb
 language plpgsql security definer set search_path = public, pg_temp as $$
 declare
   v_actor uuid := auth.uid();

@@ -28,7 +28,7 @@
         "file": "0160_pricing_structures.sql",
         "name": "0160_pricing_structures",
         "version": "20261122030003",
-        "sha256": "a66b8e1d176d85659b4a57be7365a6436f29a8f5f8f4b019606159a88316dd54"
+        "sha256": "39128c0bb5da0e3e9e2d4cea225893a564952c5377c7204c3c6f336c20c80693"
       },
       {
         "file": "0161_grant_booking_project_type.sql",
@@ -52,19 +52,19 @@
         "file": "0165_delivery_jobs_and_event_rpc.sql",
         "name": "0165_delivery_jobs_and_event_rpc",
         "version": "20261122030007",
-        "sha256": "4df01d8fad98d7f1de092fd752581391ab67a6a1bb3d25e7d0fd03965bc35ce6"
+        "sha256": "d6fc26a4a661908e912d9836c9551f85966bf8e82a232ff25f4a0fbe37b823a6"
       },
       {
         "file": "0166_booking_transport_dispatch.sql",
         "name": "0166_booking_transport_dispatch",
         "version": "20261122030008",
-        "sha256": "ffe64da2d74ddf7c326733dc0d272a3ce280ffdf816f1a6519f1ec920b7c6fe7"
+        "sha256": "9480f0efeb39b369a53329c0cfc362e9875dc699718f3e293dae4d9053420bda"
       },
       {
         "file": "0167_rental_revert_archive.sql",
         "name": "0167_rental_revert_archive",
         "version": "20261122030009",
-        "sha256": "48d1a83aa38284ffc5fbfa53cba8aa5e441bdea3e604eb62d1f27b17b4d2abb3"
+        "sha256": "2da4f843629481778b7f2cbf3729e257f061e2d1057c31ea26f430064e483f94"
       },
       {
         "file": "0168_booking_line_totals_and_breakdown.sql",
@@ -82,7 +82,7 @@
         "file": "0170_astra_phase0_authorization.sql",
         "name": "0170_astra_phase0_authorization",
         "version": "20261122030012",
-        "sha256": "42e1808219d999df72ec819f4488f4abb375e6983a2bc6e004ee08012f63d863"
+        "sha256": "7479ccfb022fd9b2bcbd6e61c36a1ba272aee6e1bb886232098277925335e29d"
       },
       {
         "file": "0171_operations_branch_grants.sql",
@@ -94,7 +94,7 @@
         "file": "0172_reset_branch_write_boundary.sql",
         "name": "0172_reset_branch_write_boundary",
         "version": "20261122030014",
-        "sha256": "9c8dcc94841221765347259a6a3b0906104275b6cc128e5d2ef7e5324b844a05"
+        "sha256": "03bb4638133678beb473f1d127d73df28db1f4702339e48d782679536429d849"
       },
       {
         "file": "0173_section_saves_and_unit_lifecycle.sql",
@@ -106,7 +106,7 @@
         "file": "0174_change_client_membership.sql",
         "name": "0174_change_client_membership",
         "version": "20261122030016",
-        "sha256": "34ec91daeb114f6b5ca0b60e755b7d9ee507eb137500b83b2d3d2f05ef2a9b4b"
+        "sha256": "cf61f2ad61b5b1e7faeb6e5ea53a65eaadc86bfcffe2a7bb36727aa81c6adb5c"
       },
       {
         "file": "0176_partial_return_reservation_release.sql",
@@ -187,7 +187,7 @@
         "file": "0187_delivery_dispatch_rpcs.sql",
         "name": "0187_delivery_dispatch_rpcs",
         "version": "20261122030028",
-        "sha256": "5994bf6ae1a4892918d55f85bbbcc029918743bfe41c29a5f8b588f0696f2485"
+        "sha256": "7f4e804c24b8fc858e0b01d0643d2291ee9099c17c15ad24116cdaf3dd60760a"
       },
       {
         "file": "0188_smart_reservation_holds.sql",
@@ -469,7 +469,7 @@
         "file": "0234_return_damage_photo_per_unit.sql",
         "name": "0234_return_damage_photo_per_unit",
         "version": "20261122030115",
-        "sha256": "5ca64112ea13270c2f424d0907296ce4c9ea2cbad5775dc7593a9dc8635480a9"
+        "sha256": "4086b21d4225ccebb6dfeb4b55c64801d37cca355b9577a26c5f6fe2de7f045e"
       },
       {
         "file": "0235_delivery_route_branch_hardening.sql",
@@ -511,7 +511,7 @@
         "file": "0241_extension_clash_manager_decision_and_at_risk.sql",
         "name": "0241_extension_clash_manager_decision_and_at_risk",
         "version": "20261122030122",
-        "sha256": "b3e69aff3d058b1299e168316a1df1cc96c93868a125306c2e31823af6ab5519"
+        "sha256": "e999945ddd0fceb6ff89d9e823ba0f81d8b2763c4d7799a4b2d52195b5bdb253"
       },
       {
         "file": "0242_return_damage_signature_and_refusal.sql",
@@ -550,13 +550,13 @@
         "file": "0246_dispatch_zone_fee_from_grid.sql",
         "name": "0246_dispatch_zone_fee_from_grid",
         "version": "20261122030127",
-        "sha256": "f0255679917233db62edb8b35b2d7a191a6575b6fb884aed5667089a52d4221c"
+        "sha256": "a75c5e1eb23b17ae5ad70865d4b625f0b67fbadd3a121246daf5a19835ed3b27"
       },
       {
         "file": "0247_retire_per_zone_fee_on_create.sql",
         "name": "0247_retire_per_zone_fee_on_create",
         "version": "20261122030128",
-        "sha256": "da9c8e079071d0de9f02c9aafd63027ff2b7fcf20bc70ae5611588e5b4389bc1"
+        "sha256": "fd4ba8005ff7ce51e95fc1b03c575b7c0b9a169d4434368aca1df42efd2ec88e"
       },
       {
         "file": "0248_delivery_zone_distance_band.sql",

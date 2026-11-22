@@ -198,7 +198,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0246_dispatch_zone_fee_from_grid.sql
--- SHA-256: f0255679917233db62edb8b35b2d7a191a6575b6fb884aed5667089a52d4221c
+-- SHA-256: a75c5e1eb23b17ae5ad70865d4b625f0b67fbadd3a121246daf5a19835ed3b27
 -- Version: 20261122030127
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -348,7 +348,7 @@ grant execute on function public.set_delivery_job_vehicle_class(uuid, text) to a
 -- The return shape gains zone_fee_status, so the old function is dropped first.
 drop function if exists public.get_day_route(uuid, date);
 
-create function public.get_day_route(
+create or replace function public.get_day_route(
   p_branch_id uuid,
   p_date date
 ) returns table (
@@ -490,7 +490,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0247_retire_per_zone_fee_on_create.sql
--- SHA-256: da9c8e079071d0de9f02c9aafd63027ff2b7fcf20bc70ae5611588e5b4389bc1
+-- SHA-256: fd4ba8005ff7ce51e95fc1b03c575b7c0b9a169d4434368aca1df42efd2ec88e
 -- Version: 20261122030128
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -523,7 +523,7 @@ comment on column public.delivery_zones.fee_paisa is
 
 drop function if exists public.create_delivery_zone(text, text, bigint);
 
-create function public.create_delivery_zone(
+create or replace function public.create_delivery_zone(
     p_name text,
     p_description text,
     p_fee_paisa bigint default null
