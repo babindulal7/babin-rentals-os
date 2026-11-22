@@ -8,8 +8,10 @@ import {
   fetchTwoStepAuthEnforcement,
   setTwoStepAuthEnforcement,
   resetStaffMfa,
-  recordStaffMfaEnrolment,
+  enrollTotpFactor,
+  verifyTotpFactor,
   type StaffMfaOverviewItem,
+  type MfaEnrollmentResponse,
 } from '../../../lib/mfaBoundary'
 
 export function TwoStepAuthControl() {
@@ -28,6 +30,8 @@ export function TwoStepAuthControl() {
   // Modals
   const [resetModalUser, setResetModalUser] = useState<StaffMfaOverviewItem | null>(null)
   const [enrolModalOpen, setEnrolModalOpen] = useState(false)
+  const [enrolLoading, setEnrolLoading] = useState(false)
+  const [enrolData, setEnrolData] = useState<MfaEnrollmentResponse | null>(null)
   const [totpCode, setTotpCode] = useState('')
   const [enrolError, setEnrolError] = useState<string | null>(null)
 
@@ -83,7 +87,26 @@ export function TwoStepAuthControl() {
     }
   }
 
+  const handleOpenEnrolModal = async () => {
+    setEnrolModalOpen(true)
+    setEnrolLoading(true)
+    setEnrolError(null)
+    setTotpCode('')
+    try {
+      const data = await enrollTotpFactor()
+      setEnrolData(data)
+    } catch (err) {
+      setEnrolError(err instanceof Error ? err.message : 'Failed to initialize authenticator enrollment.')
+    } finally {
+      setEnrolLoading(false)
+    }
+  }
+
   const handleCompleteEnrolment = async () => {
+    if (!enrolData?.factorId) {
+      setEnrolError('Authenticator enrollment session not initialized.')
+      return
+    }
     if (totpCode.trim().length !== 6) {
       setEnrolError('Enter a valid 6-digit code from your authenticator app.')
       return
@@ -91,13 +114,14 @@ export function TwoStepAuthControl() {
     setActionLoading(true)
     setEnrolError(null)
     try {
-      await recordStaffMfaEnrolment()
+      await verifyTotpFactor(enrolData.factorId, totpCode, user?.id)
       showSuccessToast('Authenticator enrolled successfully')
       setEnrolModalOpen(false)
+      setEnrolData(null)
       setTotpCode('')
       await loadData()
     } catch (err) {
-      setEnrolError(err instanceof Error ? err.message : 'Enrolment failed')
+      setEnrolError(err instanceof Error ? err.message : 'Verification failed')
     } finally {
       setActionLoading(false)
     }
@@ -148,7 +172,7 @@ export function TwoStepAuthControl() {
             {!isCurrentUserEnrolled && (
               <Button
                 variant="primary"
-                onClick={() => setEnrolModalOpen(true)}
+                onClick={handleOpenEnrolModal}
                 disabled={actionLoading}
               >
                 Set up authenticator
@@ -306,37 +330,81 @@ export function TwoStepAuthControl() {
         <Modal
           title="Set Up Authenticator App"
           isOpen={enrolModalOpen}
-          onClose={() => setEnrolModalOpen(false)}
+          onClose={() => {
+            setEnrolModalOpen(false)
+            setEnrolData(null)
+            setEnrolError(null)
+            setTotpCode('')
+          }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-sm)', padding: 'var(--sp-sm) 0' }}>
-            <p style={{ margin: 0, fontSize: 'var(--t-body)' }}>
-              1. Open your authenticator app (e.g. Google Authenticator, Apple Passwords, 1Password).
-            </p>
-            <p style={{ margin: 0, fontSize: 'var(--t-body)' }}>
-              2. Add account for <strong>Babin Rentals OS ({user?.name ?? 'Staff'})</strong>.
-            </p>
-            <p style={{ margin: 0, fontSize: 'var(--t-body)' }}>
-              3. Enter the 6-digit verification code below:
-            </p>
+            {enrolLoading ? (
+              <div style={{ textAlign: 'center', padding: 'var(--sp-md)', color: 'var(--text-muted)' }}>
+                Generating authenticator QR code…
+              </div>
+            ) : enrolData ? (
+              <>
+                <p style={{ margin: 0, fontSize: 'var(--t-body)' }}>
+                  1. Scan the QR code below using your authenticator app (e.g. Google Authenticator, 1Password, Apple Keychain):
+                </p>
 
-            <input
-              type="text"
-              inputMode="numeric"
-              maxLength={6}
-              value={totpCode}
-              onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
-              placeholder="000000"
-              style={{
-                fontSize: '1.5rem',
-                letterSpacing: '0.25em',
-                textAlign: 'center',
-                padding: 'var(--sp-sm)',
-                borderRadius: 'var(--r-sm)',
-                border: '1px solid var(--border-subtle)',
-                backgroundColor: 'var(--bg-input)',
-                color: 'var(--text-primary)',
-              }}
-            />
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: 'var(--sp-sm)',
+                    backgroundColor: '#ffffff',
+                    borderRadius: 'var(--r-sm)',
+                    width: 'fit-content',
+                    margin: '0 auto',
+                    border: '1px solid var(--border-subtle)',
+                  }}
+                >
+                  <img
+                    src={
+                      enrolData.qrCode.startsWith('data:') || enrolData.qrCode.startsWith('http')
+                        ? enrolData.qrCode
+                        : `data:image/svg+xml;utf8,${encodeURIComponent(enrolData.qrCode)}`
+                    }
+                    alt="Authenticator QR code"
+                    style={{ width: 160, height: 160, display: 'block' }}
+                  />
+                </div>
+
+                <div style={{ fontSize: 'var(--t-caption)', color: 'var(--text-muted)', textAlign: 'center' }}>
+                  Can't scan? Enter secret key:{' '}
+                  <strong style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.05em' }}>
+                    {enrolData.totpSecret}
+                  </strong>
+                </div>
+
+                <p style={{ margin: 0, fontSize: 'var(--t-body)', marginTop: 'var(--sp-xs)' }}>
+                  2. Enter the 6-digit verification code generated by your authenticator app:
+                </p>
+
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={totpCode}
+                  onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
+                  placeholder="000000"
+                  aria-label="6-digit verification code"
+                  style={{
+                    fontSize: '1.5rem',
+                    letterSpacing: '0.25em',
+                    textAlign: 'center',
+                    padding: 'var(--sp-sm)',
+                    borderRadius: 'var(--r-sm)',
+                    border: '1px solid var(--border-subtle)',
+                    backgroundColor: 'var(--bg-input)',
+                    color: 'var(--text-primary)',
+                    fontFamily: 'var(--font-mono)',
+                  }}
+                />
+              </>
+            ) : null}
 
             {enrolError && (
               <div style={{ color: 'var(--color-error)', fontSize: 'var(--t-caption)' }}>
@@ -345,10 +413,23 @@ export function TwoStepAuthControl() {
             )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--sp-xs)', marginTop: 'var(--sp-sm)' }}>
-              <Button variant="secondary" onClick={() => setEnrolModalOpen(false)} disabled={actionLoading}>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setEnrolModalOpen(false)
+                  setEnrolData(null)
+                  setEnrolError(null)
+                  setTotpCode('')
+                }}
+                disabled={actionLoading}
+              >
                 Cancel
               </Button>
-              <Button variant="primary" onClick={handleCompleteEnrolment} disabled={actionLoading || totpCode.length !== 6}>
+              <Button
+                variant="primary"
+                onClick={handleCompleteEnrolment}
+                disabled={actionLoading || enrolLoading || !enrolData || totpCode.length !== 6}
+              >
                 {actionLoading ? 'Verifying…' : 'Verify & Enable'}
               </Button>
             </div>

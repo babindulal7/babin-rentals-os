@@ -64,9 +64,10 @@ declare
   v_enforced boolean := false;
   v_aal text;
 begin
-  -- Step 1: Law 6 — floor roles, external clients, anon, or unauthenticated are ALWAYS money-blind
+  -- Step 1: Strict allow-list — ONLY approved money roles can EVER view money figures (PERMISSIONS.md §5 / Law 6)
+  -- All floor roles (Warehouse, Technician, Driver), Clients, Anon, NULL, or unknown roles fail closed.
   v_role := public.auth_user_role();
-  if v_role in ('Warehouse', 'Technician', 'Driver', 'Client', 'Anon') or v_role is null then
+  if v_role not in ('Owner', 'Admin', 'Manager', 'Coordinator', 'Accounts') or v_role is null then
     return false;
   end if;
 
@@ -76,11 +77,12 @@ begin
     from public.settings
     where key = 'twoStepAuthRequired' and scope = 'org';
   exception when others then
-    v_enforced := false;
+    -- Fail closed: if settings cannot be read or query errors, do NOT disable security
+    return false;
   end;
 
   if not coalesce(v_enforced, false) then
-    -- Unarmed: legitimate money roles can view money
+    -- Unarmed: approved money roles can view money during staging enrolment
     return true;
   end if;
 
@@ -88,7 +90,7 @@ begin
   begin
     v_aal := auth.jwt() ->> 'aal';
   exception when others then
-    v_aal := null;
+    return false;
   end;
 
   return coalesce(v_aal, 'aal1') = 'aal2';
@@ -192,7 +194,13 @@ begin
     raise exception 'GATE:gate.security.mfa_reset_forbidden|Only Owner or Admin can reset staff two-step verification.' using errcode = '42501';
   end if;
 
+  -- Delete factor from public tracking
   delete from public.staff_mfa_factors where user_id = p_target_user_id;
+
+  -- Delete enrolled factors from auth schema if table exists in hosted environment
+  if exists (select 1 from information_schema.tables where table_schema = 'auth' and table_name = 'mfa_factors') then
+    execute 'delete from auth.mfa_factors where user_id = $1' using p_target_user_id;
+  end if;
 
   insert into public.staff_mfa_audit (user_id, action, actor_id, actor_role, metadata)
   values (
