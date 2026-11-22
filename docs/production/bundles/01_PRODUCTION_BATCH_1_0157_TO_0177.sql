@@ -135,7 +135,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0158_settings_table.sql
--- SHA-256: 5b21eabd5c8321960bc019cf90cade98ef1e0054275071d196b77b6d9a5218e9
+-- SHA-256: ea4127cd52526059bc392133dbb3a357bc041749eb811018b51f7959848aa7cc
 -- Version: 20261122030001
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -177,7 +177,7 @@ on conflict (version) do update set name = excluded.name;
 
 begin;
 
-create table settings (
+create table if not exists settings (
   id               uuid         not null default gen_random_uuid() primary key,
   key              text         not null,
   value            jsonb        not null,
@@ -197,10 +197,10 @@ create table settings (
   constraint settings_value_scalar check (jsonb_typeof(value) in ('string', 'number', 'boolean'))
 );
 
-create unique index settings_key_scope_location_key
+create unique index if not exists settings_key_scope_location_key
   on settings (key, scope, coalesce(location_id, '00000000-0000-0000-0000-000000000000'::uuid));
 
-create table settings_history (
+create table if not exists settings_history (
   id            uuid         not null default gen_random_uuid() primary key,
   client_uuid   uuid         not null,
   setting_id    uuid         not null references settings (id),
@@ -215,7 +215,7 @@ create table settings_history (
   constraint settings_history_client_uuid_key unique (client_uuid)
 );
 
-create index idx_settings_history_setting on settings_history (setting_id, changed_at desc);
+create index if not exists idx_settings_history_setting on settings_history (setting_id, changed_at desc);
 
 -- ---------------------------------------------------------------------------
 -- Which keys are money (Law 6) and which may be overridden per location. Immutable lists in code,
@@ -271,9 +271,11 @@ create trigger trg_settings_history_reject_delete before delete on settings_hist
 alter table settings enable row level security;
 alter table settings_history enable row level security;
 
+drop policy if exists settings_select on settings;
 create policy settings_select on settings for select to authenticated
   using (auth_is_staff() and (not is_money or auth_can_view_money()));
 
+drop policy if exists settings_history_select on settings_history;
 create policy settings_history_select on settings_history for select to authenticated
   using (auth_user_role() in ('Owner', 'Admin', 'Manager') and (not settings_is_money_key(key) or auth_can_view_money()));
 
@@ -371,7 +373,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0159_saved_views.sql
--- SHA-256: 6d9189383793a63dbd6bdb25fe086a5dfa28d72821069aad55f88cd7be691b05
+-- SHA-256: fc5aaf31c3d4e849514e1c6631451f4d3d08fbec144f62055acc8790d90c8e05
 -- Version: 20261122030002
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -405,7 +407,7 @@ on conflict (version) do update set name = excluded.name;
 
 begin;
 
-create table saved_views (
+create table if not exists saved_views (
   id             uuid         not null default gen_random_uuid() primary key,
   client_uuid    uuid         not null,
   list_key       text         not null,
@@ -433,10 +435,10 @@ create table saved_views (
   )
 );
 
-create unique index saved_views_system_key_key on saved_views (system_key) where system_key is not null;
-create unique index saved_views_team_name_key
+create unique index if not exists saved_views_system_key_key on saved_views (system_key) where system_key is not null;
+create unique index if not exists saved_views_team_name_key
   on saved_views (list_key, lower(btrim(name))) where visibility = 'team' and retired_at is null;
-create unique index saved_views_private_name_key
+create unique index if not exists saved_views_private_name_key
   on saved_views (list_key, owner_id, lower(btrim(name))) where visibility = 'private' and retired_at is null;
 
 -- Which queries touch money. Stricter wins (B-1): a key on this list, or the Payment Due chip.
@@ -473,6 +475,7 @@ create trigger trg_saved_views_reject_delete before delete on saved_views
 -- ---------------------------------------------------------------------------
 alter table saved_views enable row level security;
 
+drop policy if exists saved_views_select on saved_views;
 create policy saved_views_select on saved_views for select to authenticated
   using (
     auth_is_staff()
@@ -621,7 +624,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0160_pricing_structures.sql
--- SHA-256: 6a6973ad236ab2601b9001db9c5b213c4081e194e168ab0cc6fff458e1fe9af5
+-- SHA-256: a66b8e1d176d85659b4a57be7365a6436f29a8f5f8f4b019606159a88316dd54
 -- Version: 20261122030003
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -667,7 +670,7 @@ on conflict (version) do update set name = excluded.name;
 
 begin;
 
-create table pricing_structures (
+create table if not exists pricing_structures (
   id                uuid          not null default gen_random_uuid() primary key,
   client_uuid       uuid          not null,
   name              text          not null,
@@ -681,9 +684,9 @@ create table pricing_structures (
   constraint pricing_structures_client_uuid_key unique (client_uuid),
   constraint pricing_structures_name_len check (char_length(btrim(name)) between 1 and 120)
 );
-create unique index pricing_structures_name_key on pricing_structures (lower(btrim(name))) where retired_at is null;
+create unique index if not exists pricing_structures_name_key on pricing_structures (lower(btrim(name))) where retired_at is null;
 
-create table pricing_structure_tiles (
+create table if not exists pricing_structure_tiles (
   id              uuid          not null default gen_random_uuid() primary key,
   client_uuid     uuid          not null,
   structure_id    uuid          not null references pricing_structures (id),
@@ -696,10 +699,10 @@ create table pricing_structure_tiles (
   updated_by      uuid          references users (id),
   constraint pricing_structure_tiles_client_uuid_key unique (client_uuid)
 );
-create unique index pricing_structure_tiles_duration_key
+create unique index if not exists pricing_structure_tiles_duration_key
   on pricing_structure_tiles (structure_id, duration_days) where retired_at is null;
 
-create table pricing_rulesets (
+create table if not exists pricing_rulesets (
   id           uuid         not null default gen_random_uuid() primary key,
   client_uuid  uuid         not null,
   name         text         not null,
@@ -713,9 +716,9 @@ create table pricing_rulesets (
   constraint pricing_rulesets_client_uuid_key unique (client_uuid),
   constraint pricing_rulesets_name_len check (char_length(btrim(name)) between 1 and 120)
 );
-create unique index pricing_rulesets_name_key on pricing_rulesets (lower(btrim(name))) where retired_at is null;
+create unique index if not exists pricing_rulesets_name_key on pricing_rulesets (lower(btrim(name))) where retired_at is null;
 
-create table pricing_rules (
+create table if not exists pricing_rules (
   id             uuid         not null default gen_random_uuid() primary key,
   client_uuid    uuid         not null,
   ruleset_id     uuid         not null references pricing_rulesets (id),
@@ -746,7 +749,7 @@ create table pricing_rules (
     or (kind = 'price' and charge_action is null and percent is not null and percent between -100 and 1000)
   )
 );
-create index idx_pricing_rules_ruleset on pricing_rules (ruleset_id, sort_order);
+create index if not exists idx_pricing_rules_ruleset on pricing_rules (ruleset_id, sort_order);
 
 -- ---------------------------------------------------------------------------
 -- Law 3 — nothing is deleted.
@@ -795,8 +798,8 @@ end $$;
 -- ---------------------------------------------------------------------------
 alter table products add column pricing_structure_id uuid references pricing_structures (id);
 alter table products add column pricing_ruleset_id uuid references pricing_rulesets (id);
-create index idx_products_pricing_structure on products (pricing_structure_id) where pricing_structure_id is not null;
-create index idx_products_pricing_ruleset on products (pricing_ruleset_id) where pricing_ruleset_id is not null;
+create index if not exists idx_products_pricing_structure on products (pricing_structure_id) where pricing_structure_id is not null;
+create index if not exists idx_products_pricing_ruleset on products (pricing_ruleset_id) where pricing_ruleset_id is not null;
 
 -- products carries column-level grants (0062); a new column is not readable until it is named.
 grant select (pricing_structure_id, pricing_ruleset_id) on products to authenticated;
@@ -1042,7 +1045,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0165_delivery_jobs_and_event_rpc.sql
--- SHA-256: e46e9ccb4fb76593333eef01d921c2da185f20462a3fd82d6315c7c37a7d2c4b
+-- SHA-256: 4df01d8fad98d7f1de092fd752581391ab67a6a1bb3d25e7d0fd03965bc35ce6
 -- Version: 20261122030007
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -1054,7 +1057,7 @@ on conflict (version) do update set name = excluded.name;
 -- receive a payment, or waive the existing handover/return gates.
 begin;
 
-create table public.delivery_jobs (
+create table if not exists public.delivery_jobs (
   id uuid primary key default gen_random_uuid(),
   client_uuid uuid not null unique,
   booking_id uuid not null references public.bookings(id),
@@ -1079,12 +1082,12 @@ create table public.delivery_jobs (
   constraint delivery_job_dispatched_requires_clock
     check (status <> 'In Transit' or dispatched_at is not null)
 );
-create index delivery_jobs_driver_status_idx on public.delivery_jobs(assigned_driver_id,status);
-create index delivery_jobs_branch_schedule_idx on public.delivery_jobs(branch_id,scheduled_at);
+create index if not exists delivery_jobs_driver_status_idx on public.delivery_jobs(assigned_driver_id,status);
+create index if not exists delivery_jobs_branch_schedule_idx on public.delivery_jobs(branch_id,scheduled_at);
 
 -- Durable action receipt. The request key identifies ONE operation and actor.
 -- Never store a contact number or other client PII in event metadata.
-create table public.delivery_job_events (
+create table if not exists public.delivery_job_events (
   id uuid primary key default gen_random_uuid(),
   request_key uuid not null unique,
   job_id uuid not null references public.delivery_jobs(id),
@@ -1095,7 +1098,7 @@ create table public.delivery_job_events (
   metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
-create index delivery_events_job_created_idx on public.delivery_job_events(job_id, created_at);
+create index if not exists delivery_events_job_created_idx on public.delivery_job_events(job_id, created_at);
 
 alter table public.delivery_jobs enable row level security;
 alter table public.delivery_job_events enable row level security;
@@ -1109,6 +1112,7 @@ grant select on public.delivery_job_events to authenticated;
 
 -- Direct staff-role reads below bind role to auth.uid() *and* active staff row.
 -- No client-supplied role, claim override or app.current_user_id fallback is trusted.
+drop policy if exists delivery_jobs_authenticated_read on public.delivery_jobs;
 create policy delivery_jobs_authenticated_read on public.delivery_jobs
   for select to authenticated using (
     auth.uid() is not null and exists (
@@ -1121,6 +1125,7 @@ create policy delivery_jobs_authenticated_read on public.delivery_jobs
     )
   );
 
+drop policy if exists delivery_job_events_authenticated_read on public.delivery_job_events;
 create policy delivery_job_events_authenticated_read on public.delivery_job_events
   for select to authenticated using (
     auth.uid() is not null
@@ -1372,7 +1377,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0166_booking_transport_dispatch.sql
--- SHA-256: 2952d80dcf6a1597609f45be127612512424a96268afdc132ac9ccfe7fd38de8
+-- SHA-256: ffe64da2d74ddf7c326733dc0d272a3ce280ffdf816f1a6519f1ec920b7c6fe7
 -- Version: 20261122030008
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -1390,7 +1395,7 @@ alter table public.booking_transport
   add column delivery_updated_at timestamptz not null default now();
 alter table public.booking_transport add constraint booking_transport_delivery_receipt
   check (delivery_status<>'Delivered' or (delivered_at is not null and dispatched_at is not null and length(btrim(recipient_name))>=2));
-create index booking_transport_driver_delivery_idx on public.booking_transport(driver_id,delivery_status);
+create index if not exists booking_transport_driver_delivery_idx on public.booking_transport(driver_id,delivery_status);
 grant select (delivery_status,scheduled_at,dispatched_at,delivered_at,recipient_name,delivery_revision,delivery_updated_at) on public.booking_transport to authenticated;
 
 create view public.delivery_transport_v with (security_barrier=true) as
@@ -2755,7 +2760,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0170_astra_phase0_authorization.sql
--- SHA-256: 1ddc6077f29cf880fa9fe6b1a5fdcd57cc9accbf9a6ff441a66c08d53a9a7558
+-- SHA-256: 42e1808219d999df72ec819f4488f4abb375e6983a2bc6e004ee08012f63d863
 -- Version: 20261122030012
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -2831,17 +2836,20 @@ $$;
 revoke all on function public.auth_driver_has_open_booking(uuid) from public, anon;
 grant execute on function public.auth_driver_has_open_booking(uuid) to authenticated;
 drop policy clients_select on public.clients;
+drop policy if exists clients_select on public.clients;
 create policy clients_select on public.clients for select to authenticated using (
   (auth_is_staff() and auth_user_role() <> 'Driver')
   or (auth_user_role() = 'Client' and id = auth_client_id())
 );
 drop policy bookings_select on public.bookings;
+drop policy if exists bookings_select on public.bookings;
 create policy bookings_select on public.bookings for select to authenticated using (
   (auth_is_staff() and auth_user_role() <> 'Driver')
   or (auth_user_role() = 'Client' and client_id = auth_client_id())
   or auth_driver_has_open_booking(id)
 );
 drop policy booking_lines_select on public.booking_lines;
+drop policy if exists booking_lines_select on public.booking_lines;
 create policy booking_lines_select on public.booking_lines for select to authenticated using (
   (auth_is_staff() and auth_user_role() <> 'Driver')
   or auth_driver_has_open_booking(booking_id)
@@ -2969,23 +2977,29 @@ grant execute on function public.auth_storage_object_allowed(text,text,boolean) 
 drop policy if exists documents_evidence_select_policy on storage.objects;
 drop policy if exists documents_evidence_insert_policy on storage.objects;
 drop policy if exists documents_evidence_update_policy on storage.objects;
-drop policy if exists documents_evidence_delete_policy on storage.objects;
+drop policy if exists documents_evidence_select_policy on storage.objects;
 create policy documents_evidence_select_policy on storage.objects for select to authenticated
 using (bucket_id in ('documents','evidence') and public.auth_storage_object_allowed(bucket_id,name,false));
+drop policy if exists documents_evidence_insert_policy on storage.objects;
 create policy documents_evidence_insert_policy on storage.objects for insert to authenticated
 with check (bucket_id in ('documents','evidence') and public.auth_storage_object_allowed(bucket_id,name,true));
 -- Restrictive policies prevent a permissive legacy policy from reopening either bucket.
+drop policy if exists astra_storage_read_boundary on storage.objects;
 create policy astra_storage_read_boundary on storage.objects as restrictive for select to authenticated
 using (bucket_id not in ('documents','evidence') or public.auth_storage_object_allowed(bucket_id,name,false));
+drop policy if exists astra_storage_insert_boundary on storage.objects;
 create policy astra_storage_insert_boundary on storage.objects as restrictive for insert to authenticated
 with check (bucket_id not in ('documents','evidence') or public.auth_storage_object_allowed(bucket_id,name,true));
+drop policy if exists astra_storage_immutable_update on storage.objects;
 create policy astra_storage_immutable_update on storage.objects as restrictive for update to authenticated
 using (bucket_id not in ('documents','evidence')) with check (bucket_id not in ('documents','evidence'));
+drop policy if exists astra_storage_immutable_delete on storage.objects;
 create policy astra_storage_immutable_delete on storage.objects as restrictive for delete to authenticated
 using (bucket_id not in ('documents','evidence'));
 
 -- Public buckets bypass object SELECT policies for downloads. Keep business
 -- buckets private as well as denying anonymous access through permissive policies.
+drop policy if exists astra_storage_anon_boundary on storage.objects;
 create policy astra_storage_anon_boundary on storage.objects as restrictive for all to anon
 using (bucket_id not in ('documents','evidence'))
 with check (bucket_id not in ('documents','evidence'));
@@ -3011,7 +3025,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0171_operations_branch_grants.sql
--- SHA-256: e0900a3eb4d9fa456ac427fd2a8983852cf7406fd3535e1b263107e5de41d9f5
+-- SHA-256: 92a1d889e064c94904bf9d9b7ac19de96ad4dba9a142d42ed62ef8d1820698a7
 -- Version: 20261122030013
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -3066,7 +3080,7 @@ begin;
 
 -- ── 1. The table ──────────────────────────────────────────────────────────
 
-create table operations_grants (
+create table if not exists operations_grants (
   id          uuid        not null default gen_random_uuid() primary key,
   client_uuid uuid        not null unique,               -- Law 8: retry returns the same row
   user_id     uuid        not null references users (id),
@@ -3091,11 +3105,11 @@ comment on column operations_grants.operation is
   'The floor verb slug: pack | handover | return | reset — matching operations.pack|handover|return|reset '
   'in actions/core.ts and the JOBS keys in floorVerb.ts.';
 
-create unique index operations_grants_active_unique
+create unique index if not exists operations_grants_active_unique
   on operations_grants (user_id, branch_id, operation)
   where revoked_at is null;
 
-create index operations_grants_user_operation_idx
+create index if not exists operations_grants_user_operation_idx
   on operations_grants (user_id, operation);
 
 revoke all on operations_grants from public, anon;
@@ -3108,6 +3122,7 @@ revoke insert, update, delete on operations_grants from authenticated;
 
 alter table operations_grants enable row level security;
 
+drop policy if exists operations_grants_read on operations_grants;
 create policy operations_grants_read on operations_grants
   for select to authenticated
   using (
@@ -3760,7 +3775,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0172_reset_branch_write_boundary.sql
--- SHA-256: 7875ae27af3f80350540b7ba61a5e8dc0296c9be713370c1df626a8ef06bc76c
+-- SHA-256: 9c8dcc94841221765347259a6a3b0906104275b6cc128e5d2ef7e5324b844a05
 -- Version: 20261122030014
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -3795,23 +3810,28 @@ comment on function public.auth_may_reset_entry(uuid, uuid) is
   '0172 Reset write scope: booking branch when linked; otherwise current warehouse branch. '
   'Unknown identity/site denies. Invoker lookup preserves RLS; grants only narrow existing roles.';
 
+drop policy if exists reset_queue_insert_boundary on public.cleaning_queue_entries;
 create policy reset_queue_insert_boundary on public.cleaning_queue_entries
 as restrictive for insert to authenticated
 with check (public.auth_may_reset_entry(booking_id, unit_id));
+drop policy if exists reset_queue_update_boundary on public.cleaning_queue_entries;
 create policy reset_queue_update_boundary on public.cleaning_queue_entries
 as restrictive for update to authenticated
 using (public.auth_may_reset_entry(booking_id, unit_id))
 with check (public.auth_may_reset_entry(booking_id, unit_id));
+drop policy if exists reset_queue_delete_boundary on public.cleaning_queue_entries;
 create policy reset_queue_delete_boundary on public.cleaning_queue_entries
 as restrictive for delete to authenticated
 using (public.auth_may_reset_entry(booking_id, unit_id));
 
+drop policy if exists reset_tasks_insert_boundary on public.cleaning_task_results;
 create policy reset_tasks_insert_boundary on public.cleaning_task_results
 as restrictive for insert to authenticated
 with check (exists (
   select 1 from public.cleaning_queue_entries q
   where q.id = cleaning_queue_entry_id and public.auth_may_reset_entry(q.booking_id, q.unit_id)
 ));
+drop policy if exists reset_tasks_update_boundary on public.cleaning_task_results;
 create policy reset_tasks_update_boundary on public.cleaning_task_results
 as restrictive for update to authenticated
 using (exists (
@@ -3822,6 +3842,7 @@ with check (exists (
   select 1 from public.cleaning_queue_entries q
   where q.id = cleaning_queue_entry_id and public.auth_may_reset_entry(q.booking_id, q.unit_id)
 ));
+drop policy if exists reset_tasks_delete_boundary on public.cleaning_task_results;
 create policy reset_tasks_delete_boundary on public.cleaning_task_results
 as restrictive for delete to authenticated
 using (exists (
@@ -4863,7 +4884,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0177_verified_return_reservations.sql
--- SHA-256: 81298633b9bb9fbec883b7f955ec4c4c560d1dc4878af2765b5e3a395857e70c
+-- SHA-256: a8a176dea2f25aea122ee50e206ab254d213dbaae661995f38d6624048166262
 -- Version: 20261122030018
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -4875,7 +4896,7 @@ begin;
 
 -- Only verified new receipts enter this private ledger. Historical movements
 -- without inspection proof are never reclassified as usable inventory.
-create table record_editor_private.verified_return_quantities (
+create table if not exists record_editor_private.verified_return_quantities (
   movement_id uuid primary key references session_line_movements(id),
   booking_line_id uuid not null references booking_lines(id),
   quantity_delta integer not null check (quantity_delta <> 0),

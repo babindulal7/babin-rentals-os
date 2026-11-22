@@ -118,6 +118,23 @@ function getNextVersion() {
   return v;
 }
 
+function ensureIdempotentSql(sql) {
+  let res = sql;
+
+  // 1. Ensure CREATE TABLE IF NOT EXISTS
+  res = res.replace(/\bcreate\s+table\s+(?!if\s+not\s+exists)([a-zA-Z0-9_.]+)/gi, 'create table if not exists $1');
+
+  // 2. Ensure CREATE INDEX IF NOT EXISTS
+  res = res.replace(/\bcreate\s+(unique\s+)?index\s+(?!if\s+not\s+exists)([a-zA-Z0-9_]+)/gi, 'create $1index if not exists $2');
+
+  // 3. Ensure DROP POLICY IF EXISTS before CREATE POLICY
+  res = res.replace(/(?:drop\s+policy\s+if\s+exists\s+[a-zA-Z0-9_]+\s+on\s+[a-zA-Z0-9_.]+\s*;\s*)?create\s+policy\s+([a-zA-Z0-9_]+)\s+on\s+([a-zA-Z0-9_.]+)/gi, (match, pol, tbl) => {
+    return `drop policy if exists ${pol} on ${tbl};\ncreate policy ${pol} on ${tbl}`;
+  });
+
+  return res;
+}
+
 const batchSummaries = [];
 
 for (const b of batches) {
@@ -152,7 +169,8 @@ for (const b of batches) {
   for (const f of filesInBatch) {
     const name = f.replace(/\.sql$/, '');
     const version = getNextVersion();
-    const content = readFileSync(join(MIGRATIONS_DIR, f), 'utf8');
+    const rawContent = readFileSync(join(MIGRATIONS_DIR, f), 'utf8');
+    const content = ensureIdempotentSql(rawContent);
     const sha256 = createHash('sha256').update(content).digest('hex');
 
     migrationLedgerEntries.push({ file: f, name, version, sha256 });

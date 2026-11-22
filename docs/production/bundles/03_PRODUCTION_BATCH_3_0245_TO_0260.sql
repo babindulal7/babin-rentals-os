@@ -3833,7 +3833,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0256_booking_requests_and_staff_queue.sql
--- SHA-256: 2aac6a877640e48d8e22ab6f0a142ffb71c9908432bee7fa7d10e9411d2a2b30
+-- SHA-256: a21778c06d58f6b542d66929bd50b3a42cd90221d0f7c1198ac71c67f635c394
 -- Version: 20261122030137
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -3893,6 +3893,7 @@ alter table public.booking_requests enable row level security;
 alter table public.booking_request_lines enable row level security;
 
 -- Policies for booking_requests
+drop policy if exists booking_requests_staff_select on public.booking_requests;
 create policy booking_requests_staff_select on public.booking_requests
   for select
   to authenticated
@@ -3900,6 +3901,7 @@ create policy booking_requests_staff_select on public.booking_requests
     auth_user_role() in ('Owner', 'Admin', 'Manager', 'Coordinator', 'Accounts')
   );
 
+drop policy if exists booking_requests_staff_update on public.booking_requests;
 create policy booking_requests_staff_update on public.booking_requests
   for update
   to authenticated
@@ -3908,6 +3910,7 @@ create policy booking_requests_staff_update on public.booking_requests
   );
 
 -- Policies for booking_request_lines
+drop policy if exists booking_request_lines_staff_select on public.booking_request_lines;
 create policy booking_request_lines_staff_select on public.booking_request_lines
   for select
   to authenticated
@@ -4233,14 +4236,14 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0257_client_accounts_and_portal_binding.sql
--- SHA-256: 704be908524e04a7908d696834915f623ee1ab116084f8b2e2cc6d5b7422eff8
+-- SHA-256: 280fbb2500d5142969524d69a649ad1327c86add4a222e316113124ec933d6bd
 -- Version: 20261122030138
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 -- Migration 0253: Client accounts and portal binding (T7-03)
 -- Authority: docs/ONLINE_BOOKING_SPEC.md §4, §5.5, §9; docs/PERMISSIONS.md §7; Rulings D2, D29, W50, W51, W84.
 
--- 1. Create table public.online_profiles
+-- 1. create table if not exists public.online_profiles
 create table if not exists public.online_profiles (
   auth_uid uuid not null primary key references auth.users (id) on delete cascade,
   name text not null,
@@ -4853,7 +4856,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0258_payment_intents_and_fonepay.sql
--- SHA-256: f940bda297b4339b5ff2ab133ba5d10fbc7e4c821c1fe1e72d1708209801efad
+-- SHA-256: ff4c2eca3a96c63778783d45b7a0461499a748fa7d81f39c37397ead79593a4f
 -- Version: 20261122030139
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -4906,6 +4909,7 @@ create index if not exists idx_payment_intents_provider_ref on public.payment_in
 alter table public.payment_intents enable row level security;
 
 -- Staff with money view permission can view all intents
+drop policy if exists payment_intents_staff_select on public.payment_intents;
 create policy payment_intents_staff_select on public.payment_intents
   for select
   to authenticated
@@ -4914,6 +4918,7 @@ create policy payment_intents_staff_select on public.payment_intents
   );
 
 -- Clients can view intents belonging to their account or requests
+drop policy if exists payment_intents_client_select on public.payment_intents;
 create policy payment_intents_client_select on public.payment_intents
   for select
   to authenticated

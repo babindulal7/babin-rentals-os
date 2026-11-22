@@ -2398,7 +2398,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0185_team_notes.sql
--- SHA-256: 755b11bfb1d14e6e5168bc3dc8a18fcae80e3437a533e274ffe8296bb23f6ac9
+-- SHA-256: 1638d41ead46486f9dde3f9871c186f5510a2eb0585b394ebda129e4966d460a
 -- Version: 20261122030026
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -2451,11 +2451,13 @@ create index if not exists team_notes_client_uuid_idx on public.team_notes (clie
 alter table public.team_notes enable row level security;
 
 -- Read policy: authenticated staff (all non-client roles) can read
+drop policy if exists team_notes_select_staff on public.team_notes;
 create policy team_notes_select_staff on public.team_notes
     for select to authenticated
     using (public.auth_is_staff());
 
 -- Direct insert policy: authenticated staff can insert with matching author_id
+drop policy if exists team_notes_insert_staff on public.team_notes;
 create policy team_notes_insert_staff on public.team_notes
     for insert to authenticated
     with check (
@@ -2775,7 +2777,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0186_shift_handovers.sql
--- SHA-256: cce0a15534248ba17565ceb1c9ed4c6e0c49ab451d212f37cb45af1225358f6a
+-- SHA-256: 0598da52b053170a8b9ef653b005f8e3ec1af6bdbeb86a411284ef9cca466d08
 -- Version: 20261122030027
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -2798,7 +2800,7 @@ on conflict (version) do update set name = excluded.name;
 begin;
 
 -- 1. Create shift_handovers table (operational details only, zero cash columns)
-create table public.shift_handovers (
+create table if not exists public.shift_handovers (
   id                     uuid        not null default gen_random_uuid() primary key,
   client_uuid            uuid        not null unique,
   shift_code             text        not null default 'A' check (shift_code in ('A', 'B', 'C', 'Morning', 'Day/Evening', 'Night')),
@@ -2826,7 +2828,7 @@ comment on table public.shift_handovers is
   'Shared staff shift handovers across the three operational shifts (W32). Staff-only (auth_is_staff). Operational details only; zero cash columns (Law 6). Archive, never delete (Law 3).';
 
 -- 2. Create shift_handover_finances table (strictly isolated financial records under Law 6)
-create table public.shift_handover_finances (
+create table if not exists public.shift_handover_finances (
   id                     uuid        not null default gen_random_uuid() primary key,
   handover_id            uuid        not null unique references public.shift_handovers (id) on delete cascade,
   cash_counted_paisa     bigint      default 0 check (cash_counted_paisa >= 0),
@@ -2855,10 +2857,12 @@ revoke update, delete on public.shift_handovers from public, anon, authenticated
 -- RLS: shift_handovers
 alter table public.shift_handovers enable row level security;
 
+drop policy if exists shift_handovers_select on public.shift_handovers;
 create policy shift_handovers_select on public.shift_handovers
   for select
   using (public.auth_is_staff());
 
+drop policy if exists shift_handovers_insert on public.shift_handovers;
 create policy shift_handovers_insert on public.shift_handovers
   for insert
   with check (public.auth_is_staff() and from_user_id = public.auth_user_id());
@@ -2871,10 +2875,12 @@ revoke update, delete on public.shift_handover_finances from public, anon, authe
 -- RLS: shift_handover_finances
 alter table public.shift_handover_finances enable row level security;
 
+drop policy if exists shift_handover_finances_select on public.shift_handover_finances;
 create policy shift_handover_finances_select on public.shift_handover_finances
   for select
   using (public.auth_can_view_money());
 
+drop policy if exists shift_handover_finances_insert on public.shift_handover_finances;
 create policy shift_handover_finances_insert on public.shift_handover_finances
   for insert
   with check (public.auth_can_view_money());
@@ -4386,7 +4392,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0189_delivery_zones.sql
--- SHA-256: 98b2231899fda456216fdcbb0d6631e0f65d53c7b7c100e498287d4c03e7a1ee
+-- SHA-256: 9a608ff6751c8be90502ee11537ba6004cfb243104f27796d8ad1b9244e41110
 -- Version: 20261122030031
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -4418,6 +4424,7 @@ alter table public.delivery_zones enable row level security;
 
 -- Read policy: authenticated staff (non-client roles) can read base columns
 -- fee_paisa is filtered by RPCs below via auth_can_view_money()
+drop policy if exists delivery_zones_read_staff on public.delivery_zones;
 create policy delivery_zones_read_staff on public.delivery_zones
     for select to authenticated
     using (
@@ -4430,6 +4437,7 @@ create policy delivery_zones_read_staff on public.delivery_zones
 
 -- Write policy: Owner/Admin/Manager only (not Coordinator) — INSERT and UPDATE only, no DELETE
 -- "Deactivate" is the terminal action via RPC
+drop policy if exists delivery_zones_insert_manager_plus on public.delivery_zones;
 create policy delivery_zones_insert_manager_plus on public.delivery_zones
     for insert to authenticated
     with check (
@@ -4440,6 +4448,7 @@ create policy delivery_zones_insert_manager_plus on public.delivery_zones
         )
     );
 
+drop policy if exists delivery_zones_update_manager_plus on public.delivery_zones;
 create policy delivery_zones_update_manager_plus on public.delivery_zones
     for update to authenticated
     using (
@@ -4708,7 +4717,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0190_one_time_rider_links.sql
--- SHA-256: 2a931f0eb3fc6ce7bc1e30f329faf03bd547915b53ac5ed52e945b42b4118fc3
+-- SHA-256: 5e715256f37989e431aa63b0d4af5c4088eabe7254519eb5f0bc284505a7aaca
 -- Version: 20261122030032
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -4718,7 +4727,7 @@ on conflict (version) do update set name = excluded.name;
 begin;
 
 -- Table: delivery_job_links
-create table public.delivery_job_links (
+create table if not exists public.delivery_job_links (
   id uuid primary key default gen_random_uuid(),
   client_uuid uuid not null unique,
   job_id uuid not null references public.delivery_jobs(id) on delete cascade,
@@ -4734,10 +4743,10 @@ create table public.delivery_job_links (
   constraint delivery_job_links_expires_after_created check (expires_at > created_at)
 );
 
-create index delivery_job_links_token_hash_idx on public.delivery_job_links(token_hash)
+create index if not exists delivery_job_links_token_hash_idx on public.delivery_job_links(token_hash)
   where revoked_at is null and completed_at is null;
-create index delivery_job_links_job_id_idx on public.delivery_job_links(job_id);
-create index delivery_job_links_client_uuid_idx on public.delivery_job_links(client_uuid);
+create index if not exists delivery_job_links_job_id_idx on public.delivery_job_links(job_id);
+create index if not exists delivery_job_links_client_uuid_idx on public.delivery_job_links(client_uuid);
 
 alter table public.delivery_job_links enable row level security;
 
@@ -4760,6 +4769,7 @@ grant select (
   created_by
 ) on public.delivery_job_links to authenticated;
 
+drop policy if exists delivery_job_links_staff_read on public.delivery_job_links;
 create policy delivery_job_links_staff_read on public.delivery_job_links
   for select to authenticated using (
     auth.uid() is not null and exists (
@@ -9096,7 +9106,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0204_rider_link_v2_contract_fix.sql
--- SHA-256: 6c1dc8d1722846ed1debeec7fc20bcaddec52cdc933b7d90746e1cdd073b620e
+-- SHA-256: c94668ba78ff945a4f85d387d9004f035370052ca00bbc3a6b2d55683e01e16c
 -- Version: 20261122030046
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -9270,7 +9280,6 @@ grant select (
 
 -- Recreate the staff read policy without token_hash access
 drop policy if exists delivery_job_links_staff_read on public.delivery_job_links;
-
 create policy delivery_job_links_staff_read on public.delivery_job_links
   for select to authenticated using (
     auth.uid() is not null and exists (
@@ -10339,7 +10348,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0209_calendar_feed_tokens.sql
--- SHA-256: b18c5831efbf5593aabb3a063e47916d55b4fbc5a4fa497b994d32cfa07b0ad9
+-- SHA-256: c24218a6d4d85ff96e8a188feac6676f563a98a5713acc91a90b01c62938efad
 -- Version: 20261122030051
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -10350,7 +10359,7 @@ on conflict (version) do update set name = excluded.name;
 begin;
 
 -- Table: calendar_feed_tokens
-create table public.calendar_feed_tokens (
+create table if not exists public.calendar_feed_tokens (
     id uuid primary key default gen_random_uuid(),
     user_id uuid not null references public.users(id) on delete cascade,
     token_hash text not null unique check (char_length(token_hash) = 64),
@@ -10366,12 +10375,14 @@ comment on column public.calendar_feed_tokens.token_hash is 'SHA-256 hash of the
 alter table public.calendar_feed_tokens enable row level security;
 
 -- Staff can see their own token status (not the raw token)
+drop policy if exists calendar_feed_tokens_self_read on public.calendar_feed_tokens;
 create policy calendar_feed_tokens_self_read on public.calendar_feed_tokens
     for select to authenticated using (
         auth.uid() = user_id
     );
 
 -- Owner/Admin can see all tokens (for revocation UI)
+drop policy if exists calendar_feed_tokens_admin_read on public.calendar_feed_tokens;
 create policy calendar_feed_tokens_admin_read on public.calendar_feed_tokens
     for select to authenticated using (
         exists (
@@ -11384,7 +11395,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0212_cancellation_fee_tiers.sql
--- SHA-256: e6f98e1ca1bc2de776c9b052f88b3473137ac8c2eaedc1e431dbcf1d1933bb62
+-- SHA-256: eb6429c56b6c3829a8e76c4af2675952d72f2a9929febb67e16aaab4ca36089b
 -- Version: 20261122030054
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -11438,10 +11449,12 @@ create index if not exists idx_cancellation_fee_tiers_notice on cancellation_fee
 -- RLS
 alter table cancellation_fee_tiers enable row level security;
 
+drop policy if exists cancellation_fee_tiers_read on cancellation_fee_tiers;
 create policy cancellation_fee_tiers_read on cancellation_fee_tiers
   for select to authenticated
   using (auth_user_role() in ('Owner', 'Admin', 'Manager', 'Coordinator'));
 
+drop policy if exists cancellation_fee_tiers_write on cancellation_fee_tiers;
 create policy cancellation_fee_tiers_write on cancellation_fee_tiers
   for all to authenticated
   using (auth_user_role() = 'Owner')
@@ -11465,7 +11478,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0213_non_vat_bills.sql
--- SHA-256: a960aa4aa4df79c2808c77f27a4aee657b7b70aa52511ee6b12aeaf5aa5bb8ba
+-- SHA-256: fe92f6c93b23c5d9a3d3bfa1d01e4c89dad9e592ab89ce2a3bf9623db201a56d
 -- Version: 20261122030055
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -11483,7 +11496,7 @@ on conflict (version) do update set name = excluded.name;
 --   1. Add `vat_treatment` enum ('standard', 'non_vat') to invoices.
 --   2. Add `vat_treatment` column to invoices (default 'standard').
 --   3. Backfill existing zero-VAT invoices as 'non_vat' with an audit note.
---   4. Create index for filtering by treatment.
+--   4. create index if not exists for filtering by treatment.
 --
 -- REVERT: drop column vat_treatment from invoices; drop type vat_treatment;
 -- ============================================================================
@@ -11549,7 +11562,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0214_opening_balances.sql
--- SHA-256: b75d5d88a835fe354e3b5dcbe87dd7f118275a5c6364b4fe812c1d549d2ad72b
+-- SHA-256: 2921ddad4055e5a4fb39b6a58bd2239270645aa85ea51fca122bbd2df865927b
 -- Version: 20261122030056
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -11610,10 +11623,12 @@ create index if not exists idx_opening_balances_account on opening_balances (acc
 -- RLS
 alter table opening_balances enable row level security;
 
+drop policy if exists opening_balances_read on opening_balances;
 create policy opening_balances_read on opening_balances
   for select to authenticated
   using (auth_can_view_money() and auth_user_role() in ('Owner', 'Admin', 'Manager', 'Accounts'));
 
+drop policy if exists opening_balances_write on opening_balances;
 create policy opening_balances_write on opening_balances
   for all to authenticated
   using (auth_user_role() = 'Owner')
@@ -12027,7 +12042,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0216_morning_digest_schedule_and_query.sql
--- SHA-256: d8c3f0ae354c832c80642dc5e11ed0e1bc435d9a87b9ca951c035d648483e408
+-- SHA-256: c22ecf0a39fbf45389a2484e422d821cdaf06c61ac0513d0b8700b00d5119b58
 -- Version: 20261122030058
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -12081,6 +12096,7 @@ revoke all on public.cron_schedules from public, anon;
 grant select on public.cron_schedules to authenticated;
 alter table public.cron_schedules enable row level security;
 
+drop policy if exists cron_schedules_staff_select on public.cron_schedules;
 create policy cron_schedules_staff_select on public.cron_schedules
   for select to authenticated using (auth_is_staff());
 
@@ -15372,7 +15388,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0224_offer_campaigns_and_recipients.sql
--- SHA-256: de1c9fb7a51c58343f36953c99d0dd71f21a6ab6b3f84b041f34af17da5994cb
+-- SHA-256: e68f4e3d7d76c8c175c6e6a87bf05e9e28991730329315f338c4f97caef54e7e
 -- Version: 20261122030106
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -15384,7 +15400,7 @@ begin;
 -- =============================================================================
 -- Table: offer_campaigns
 -- =============================================================================
-create table public.offer_campaigns (
+create table if not exists public.offer_campaigns (
   id                   uuid        not null default gen_random_uuid() primary key,
   client_uuid          uuid        not null unique,
   subject              text        not null check (char_length(trim(subject)) >= 3 and char_length(subject) <= 200),
@@ -15413,7 +15429,7 @@ comment on table public.offer_campaigns is 'Marketing offer campaigns authored b
 -- =============================================================================
 -- Table: offer_campaign_recipients
 -- =============================================================================
-create table public.offer_campaign_recipients (
+create table if not exists public.offer_campaign_recipients (
   id                     uuid        not null default gen_random_uuid() primary key,
   campaign_id            uuid        not null references public.offer_campaigns(id) on delete restrict,
   client_id              uuid        not null references public.clients(id) on delete restrict,
@@ -15429,10 +15445,10 @@ create table public.offer_campaign_recipients (
 
 comment on table public.offer_campaign_recipients is 'Recipient queue and delivery log for marketing offer campaigns with tokenized unsubscribe hashes (T5-12, K6)';
 
-create index idx_offer_campaign_recipients_lookup
+create index if not exists idx_offer_campaign_recipients_lookup
   on public.offer_campaign_recipients (campaign_id, status);
 
-create index idx_offer_campaign_recipients_unsub
+create index if not exists idx_offer_campaign_recipients_unsub
   on public.offer_campaign_recipients (unsubscribe_token_hash);
 
 -- =============================================================================
@@ -15442,10 +15458,12 @@ alter table public.offer_campaigns enable row level security;
 alter table public.offer_campaign_recipients enable row level security;
 
 -- Read policy: Owner, Admin, Manager only (B43)
+drop policy if exists offer_campaigns_select on public.offer_campaigns;
 create policy offer_campaigns_select on public.offer_campaigns
   for select to authenticated
   using (public.auth_user_role() in ('Owner', 'Admin', 'Manager'));
 
+drop policy if exists offer_campaign_recipients_select on public.offer_campaign_recipients;
 create policy offer_campaign_recipients_select on public.offer_campaign_recipients
   for select to authenticated
   using (public.auth_user_role() in ('Owner', 'Admin', 'Manager'));
@@ -16173,7 +16191,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0227_message_templates.sql
--- SHA-256: 61df7b2c571d79e18ac828f05b4c5c394331b16ce373046c99112f7929715dd8
+-- SHA-256: e4f65d0d2f46ec8f5f7c077c6d18fd15e24124a75453bfc83e2fb0ef2f015f11
 -- Version: 20261122030108
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -16214,27 +16232,27 @@ create index if not exists idx_message_templates_key_version
 alter table public.message_templates enable row level security;
 
 -- Read policy: Authenticated staff can view active templates and history
-create policy message_templates_read
-  on public.message_templates
+drop policy if exists message_templates_read on public.message_templates;
+create policy message_templates_read on public.message_templates
   for select
   to authenticated
   using (true);
 
 -- Direct writes forbidden; all modifications must go through security definer RPCs
-create policy message_templates_no_direct_insert
-  on public.message_templates
+drop policy if exists message_templates_no_direct_insert on public.message_templates;
+create policy message_templates_no_direct_insert on public.message_templates
   for insert
   to authenticated
   with check (false);
 
-create policy message_templates_no_direct_update
-  on public.message_templates
+drop policy if exists message_templates_no_direct_update on public.message_templates;
+create policy message_templates_no_direct_update on public.message_templates
   for update
   to authenticated
   using (false);
 
-create policy message_templates_no_direct_delete
-  on public.message_templates
+drop policy if exists message_templates_no_direct_delete on public.message_templates;
+create policy message_templates_no_direct_delete on public.message_templates
   for delete
   to authenticated
   using (false);
@@ -20245,7 +20263,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0239_consumables_pricing_restock_and_low_stock.sql
--- SHA-256: 243ae23dad4c39e0f44ae85da240a4c025225da47d3bff159d0f3a71315c637f
+-- SHA-256: a6b768f4043831acb71aef658d93edc35fb85e03dc568e9390fff1aa0faf9e00
 -- Version: 20261122030120
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -20996,6 +21014,7 @@ create index if not exists idx_consumable_restock_movements_product
 alter table public.consumable_restock_movements enable row level security;
 
 -- Base table direct select: restricted to money-visible management roles
+drop policy if exists consumable_restock_movements_select on public.consumable_restock_movements;
 create policy consumable_restock_movements_select on public.consumable_restock_movements
   for select to authenticated
   using (auth_user_role() in ('Owner', 'Admin', 'Manager', 'Accounts'));
@@ -22151,7 +22170,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0241_extension_clash_manager_decision_and_at_risk.sql
--- SHA-256: 98bf27fde1297d29a08a15a9363ab76c7455f480944f4b46ff6663e3d1e06b19
+-- SHA-256: b3e69aff3d058b1299e168316a1df1cc96c93868a125306c2e31823af6ab5519
 -- Version: 20261122030122
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -22177,11 +22196,13 @@ create table if not exists public.extension_clash_decisions (
 alter table public.extension_clash_decisions enable row level security;
 
 -- A Supabase authenticated session can be a Client. Manager decisions are staff-only.
+drop policy if exists extension_clash_decisions_select on public.extension_clash_decisions;
 create policy extension_clash_decisions_select on public.extension_clash_decisions
   for select to authenticated using (
     auth_user_role() in ('Owner', 'Admin', 'Manager', 'Coordinator')
   );
 
+drop policy if exists extension_clash_decisions_insert on public.extension_clash_decisions;
 create policy extension_clash_decisions_insert on public.extension_clash_decisions
   for insert to authenticated with check (
     auth_user_role() in ('Owner', 'Admin', 'Manager')
@@ -22215,16 +22236,19 @@ alter table public.booking_at_risk enable row level security;
 
 -- Client accounts must never read other clients' booking clashes.
 -- The floor team may see non-money operational risk, but Drivers/Clients may not.
+drop policy if exists booking_at_risk_select on public.booking_at_risk;
 create policy booking_at_risk_select on public.booking_at_risk
   for select to authenticated using (
     auth_user_role() in ('Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician')
   );
 
+drop policy if exists booking_at_risk_insert on public.booking_at_risk;
 create policy booking_at_risk_insert on public.booking_at_risk
   for insert to authenticated with check (
     auth_user_role() in ('Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician')
   );
 
+drop policy if exists booking_at_risk_update on public.booking_at_risk;
 create policy booking_at_risk_update on public.booking_at_risk
   for update to authenticated using (
     auth_user_role() in ('Owner', 'Admin', 'Manager', 'Coordinator')
@@ -22246,11 +22270,13 @@ create table if not exists public.client_account_credits (
 
 alter table public.client_account_credits enable row level security;
 
+drop policy if exists client_account_credits_select on public.client_account_credits;
 create policy client_account_credits_select on public.client_account_credits
   for select to authenticated using (
     auth_user_role() in ('Owner', 'Admin', 'Manager', 'Coordinator', 'Accounts')
   );
 
+drop policy if exists client_account_credits_insert on public.client_account_credits;
 create policy client_account_credits_insert on public.client_account_credits
   for insert to authenticated with check (
     auth_user_role() in ('Owner', 'Admin', 'Manager', 'Accounts')
