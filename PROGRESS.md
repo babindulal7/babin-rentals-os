@@ -1,5 +1,55 @@
 # Progress Log
 
+## 2026-11-23 — Launch Migrations 0263–0266 Merged (PR #329) & Issue #320 Full Resolution and Closeout
+
+### Did
+- Reviewed and addressed owner decisions on Launch Migrations PR #329:
+  1. Approved `0265` whole rupee to paisa conversion in `submit_booking_request` (`round(daily_rate * 100)::bigint`).
+  2. Approved `0266` `managerApprovalsToOwner = true` default setting (Manager damage approvals and late-fee waivers route to Owner at go-live).
+- Embedded `0262`'s Away Mode refusal gate (`gate.booking_request.away_mode`) directly into `0265` to ensure `submit_booking_request` does not regress Away Mode.
+- Pinned updated staging SQL inventory snapshot `docs/verification/STAGING_SQL_INVENTORY_2026-11-23.json` covering all 264 migration files.
+- Rebased branch `feat/launch-migrations-2026-11-22` onto latest `main`, marked PR #329 ready for review, ran all CI checks, and merged PR #329 into `main`.
+- Documented complete verification receipt and closed Issue #320:
+  - T9-02: DB-backed external booking holds, GiST exclusion constraints, lifecycle step L98, 21-point test suite (PR #323 merged).
+  - T9-01: Real database reconciliation against Booqable product and customer exports with match report and exception CSV (PR #327 merged).
+  - T1-09: Resend and transactional email deliverability verification report and tests (PR #324 merged).
+  - T1 infrastructure audit & cutover prep: Verification report and Windows priority reconciliation (PR #331, PR #334, PR #335 merged).
+
+### Ruled
+- None. Follows Babin's explicit approval of `0265` paisa rate calculation and `0266` Manager-to-Owner approval redirection at go-live.
+
+### Verified
+- `npm run check:pglite`: 264/264 migrations applied, 0 failed.
+- `npm run check:lifecycle`: 100/100 lifecycle steps green.
+- `node scripts/test-product-families.mjs`: 8/8 passed.
+- `node scripts/test-submit-request-paisa.mjs`: 5/5 passed.
+- `node scripts/test-manager-approvals-to-owner.mjs`: 12/12 passed.
+- `node scripts/test-away-mode-db-gate.mjs`: 25/25 passed.
+- `npm run test:staging-preflight`: 2/2 preflight suites passed (264 migrations verified under --current).
+- `gh pr checks 329`: typecheck · test · build passed in 4m33s on GitHub Actions CI.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 100 / 100 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 264 files · check:pglite 264/264 applied, 0 failed (recorded 2026-11-22T21:09:58.701Z). Suite: Historical suite: 7653/7659 passed, 6 failed (recorded 2026-11-21T23:16:24.131Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 7599/7599 passed, 0 failed (recorded 2026-11-20T23:59:38.542Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-22T21:10:02.465Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- PR #338 (T1-07 Cloudflare isolated site builds) review and progress.
+- PR #339 (T7-02 fail-closed public catalogue & availability) review and progress.
+- Issue #322 (P1 Mac CI-only 17-gate verification).
+- Hosted staging proof (read-only verification without live writes).
+
 ## 2026-11-23 — Lane B Architecture Audit & Action Dispatcher Completion: 118/118 (100%) Implemented
 
 ### Did
