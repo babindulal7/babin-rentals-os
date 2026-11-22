@@ -9,6 +9,7 @@
 import { supabase } from '@/lib/supabase'
 import { fetchOnlineBookingAwayStatus } from '@/lib/awayMode'
 import { rentalDaysInclusive, resolveCompleteAvailability, type PublicDayAvailability } from './publicAvailabilitySafety'
+import type { FamilyOptionRow } from './familyOptions'
 
 export interface BundleComponent {
   readonly name: string
@@ -120,6 +121,39 @@ const MOCK_CATALOGUE: CatalogueItem[] = [
       { name: 'Sennheiser MKH 416 Shotgun Microphone', qty: 1 },
     ],
   },
+  // T7-13 mock family for the local preview: one cable family whose options differ only by length.
+  {
+    id: '77777777-7777-4777-8777-777777777777',
+    kind: 'product',
+    slug: 'bnc-sdi-cable-5m',
+    name: 'BNC SDI Cable 5m',
+    category_name: 'Cables',
+    description: 'Broadcast-grade BNC SDI cable, 5 metres.',
+    photo_paths: [],
+    daily_rate_paisa: 50000, // Rs. 500
+    weekly_rate_paisa: null,
+    monthly_rate_paisa: null,
+    bundle_contents: [],
+  },
+  {
+    id: '88888888-8888-4888-8888-888888888888',
+    kind: 'product',
+    slug: 'bnc-sdi-cable-10m',
+    name: 'BNC SDI Cable 10m',
+    category_name: 'Cables',
+    description: 'Broadcast-grade BNC SDI cable, 10 metres.',
+    photo_paths: [],
+    daily_rate_paisa: 70000, // Rs. 700
+    weekly_rate_paisa: null,
+    monthly_rate_paisa: null,
+    bundle_contents: [],
+  },
+]
+
+/** T7-13 mock family rows, used only with VITE_DATA_SOURCE=mock for the local preview. */
+const MOCK_FAMILY_ROWS: FamilyOptionRow[] = [
+  { familyId: 'mock-family-bnc-sdi', familyName: 'BNC SDI Cable', productId: '77777777-7777-4777-8777-777777777777', optionLabel: '5m', sortOrder: 1 },
+  { familyId: 'mock-family-bnc-sdi', familyName: 'BNC SDI Cable', productId: '88888888-8888-4888-8888-888888888888', optionLabel: '10m', sortOrder: 2 },
 ]
 
 export async function fetchPublicCatalogue(): Promise<CatalogueItem[]> {
@@ -310,4 +344,40 @@ export async function submitBookingRequest(payload: BookingRequestPayload): Prom
   }
 
   return data as BookingRequestResult
+}
+
+/**
+ * T7-13 · Options of product families, for the option picker. Reads public_product_family_options_v,
+ * which only lists options that are publicly sold. Fails soft: if the read fails the products still
+ * show, each as a standalone item, and the failure is logged.
+ */
+export async function fetchFamilyOptions(): Promise<FamilyOptionRow[]> {
+  if (import.meta.env.VITE_DATA_SOURCE === 'mock') {
+    return MOCK_FAMILY_ROWS
+  }
+  if (import.meta.env.MODE === 'test') {
+    return []
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('public_product_family_options_v')
+      .select('family_id, family_name, product_id, option_label, sort_order')
+
+    if (error) {
+      console.error('[catalogue] family options unavailable; showing products as standalone', error)
+      return []
+    }
+
+    return (data ?? []).map((row) => ({
+      familyId: row.family_id,
+      familyName: row.family_name,
+      productId: row.product_id,
+      optionLabel: row.option_label,
+      sortOrder: row.sort_order,
+    }))
+  } catch (error) {
+    console.error('[catalogue] family options request failed', error)
+    return []
+  }
 }

@@ -1,5 +1,58 @@
 # Progress Log
 
+## 2026-11-23 — T7-13: Product Family Option Picker UI Integration (Lane C)
+
+### Did
+- Implemented frontend product family option picker engine for online booking in `src/booking/lib/familyOptions.ts`:
+  - `familyOptionChoices(selectedProductId, rows, items)` filters and sorts family options for the chosen product, requiring at least 2 options before presenting a picker (`MIN_FAMILY_OPTIONS = 2`).
+  - Guarantees standalone items (or families where only 1 option is publicly sold) do not show option pickers.
+- Updated `src/booking/lib/catalogueApi.ts`:
+  - Added typed `fetchFamilyOptions()` reading from `public_product_family_options_v`.
+  - Added mock cable family items (5m and 10m BNC SDI cables) and `MOCK_FAMILY_ROWS` for local development and offline mock preview.
+  - Maintained fail-closed availability guarantees and online booking away-mode checks.
+- Updated `src/booking/components/ProductDetailModal.tsx`:
+  - Rendered `Choose an option` radio group when a product has 2 or more family options.
+  - Radio options dynamically display the option label, individual daily rate, and `Not available on these dates` state when unavailable for the chosen rental dates.
+  - Enforced fail-closed button disabling: Add to Request remains strictly disabled if dates are not selected (`!hasDates`) or if the selected option is unavailable (`chosenAvailable !== true`).
+- Integrated family option state in `src/booking/App.tsx`, fetching `familyRows` and passing family choices and live availability map into `ProductDetailModal`.
+- Authored comprehensive test suites:
+  - `src/booking/lib/__tests__/familyOptions.test.ts`: 5/5 unit tests passed.
+  - `src/booking/components/__tests__/productDetailFamily.test.tsx`: 6/6 component tests passed.
+  - `scripts/test-product-family-request.mjs`: verified in PGlite that submitting a booking request with a chosen 10m option records strictly that product option line.
+  - `src/booking/`: all 54 tests passed across 11 test suites.
+
+### Ruled
+- Babin ruling (B2, B7): Products differing only in an option (mount, length, size) present as a single product page with an option picker. Each option underneath retains its own stock, units, rates, and reservations. An unavailable option cannot be added to a request.
+- R-22.9 reaffirmed: Fonepay QR is the unified digital payment standard for launch; direct wallet adapters deferred to Phase 2.
+
+### Verified
+- `npx vitest run src/booking/lib/__tests__/familyOptions.test.ts src/booking/components/__tests__/productDetailFamily.test.tsx`: 11/11 tests passed.
+- `npx vitest run src/booking/`: 54/54 tests passed across all 11 booking suites.
+- `node scripts/test-product-family-request.mjs`: all checks passed in clean PGlite scratch database.
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 errors, 0 warnings.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 101 / 101 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 265 files · check:pglite 265/265 applied, 0 failed (recorded 2026-11-22T22:57:27.686Z). Suite: Historical suite: 7653/7659 passed, 6 failed (recorded 2026-11-21T23:16:24.131Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 7599/7599 passed, 0 failed (recorded 2026-11-20T23:59:38.542Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-22T22:56:59.007Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- PR #340 staging installation manifest review and delta runbook validation.
+- Owner authorizes GitHub Branch Protection ruleset on `main`.
+- Babin provides Fonepay sandbox / production credentials for T7-05 / T7-15.
+
 ## 2026-11-23 — PR #339 Merged (T7-02 Fail-Closed Public Catalogue), PR #338 Merged (T1-07 Isolated Site Builds) & Issue #322 Resolved
 
 ### Did
