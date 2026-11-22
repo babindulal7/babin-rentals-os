@@ -1,5 +1,46 @@
 # Progress Log
 
+## 2026-11-22 — Status Correction: T0-09, T1-17 and T1-18 Back to acceptance_pending (Lane A)
+
+### Did
+- Returned three cards to `acceptance_pending`, as the 22 Nov repair brief requires, because their enforcement was not evidenced on `main`:
+  - T0-09 (branch protection): GitHub returns `Branch not protected` for `main`, and the rulesets list is empty. Green CI runs do not enforce the required check. The owner must enable `typecheck · test · build` as a required check. This is a repo setting, so no agent changes it.
+  - T1-17 (two-step sign-in for money roles): the `mfaBoundary` helpers are tested, but a database-enforced AAL2 condition on money access is not demonstrated (PR #324 review P1).
+  - T1-18 (sign-in history and new-device email): the client-side `loginAudit` helper is tested. Server-side persistence of sign-in events and dispatch of the new-device email are not found in `supabase/`.
+- Updated `src/lib/__tests__/roadmapStatusTruth.test.ts`: the three cards leave the `done` lists, and a new check requires `acceptance_pending` with the PR reference.
+- No code, migration, settings or branch protection changed.
+
+### Ruled
+- None. This restores status to what the evidence shows (B-7, status truth). It is not a product decision.
+
+### Verified
+- `gh api repos/babindulal7/babin-rentals-os/branches/main/protection`: `Branch not protected` (HTTP 404). `gh api .../rulesets`: empty list (read-only).
+- `git grep -i "login_audit|loginAudit|sign_in_event|new_device" origin/main -- supabase src scripts`: only `src/lib/loginAudit.ts` and its test. No table, function or dispatch in `supabase/`.
+- `vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: 10 of 10 pass.
+- `eslint` on the changed test with `--max-warnings 0`: exit 0.
+- Not run: the full suite, `check:pglite`, `check:lifecycle`. The change is documentation and a test file; none of these depend on it. The completion counter's lifecycle and migration dimensions are not measured in this worktree.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 258 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- T0-09: owner enables branch protection on `main` with `typecheck · test · build` as a required check, then exact-head evidence is recorded.
+- T1-17: database-enforced AAL2 on money access (`auth_can_view_money` and sensitive RPCs), staging-only enrolment and recovery proof, then independent verification.
+- T1-18: server-side persistence of sign-in events and a real new-device email dispatch, evidenced on staging with synthetic accounts after separate authorisation.
+- Next session starts with: the owner's branch-protection decision for `main`.
+
 ## 2026-11-22 — Host, Operations, Security & Repo Hygiene Acceptance Reconciliation (Lane A)
 
 ### Did
