@@ -810,19 +810,19 @@ nullability, the provider APIs) the spec says so in place and names who verifies
 
 ---
 
-## 17. Acceptance reconciliation and owner-sign-off boundary (21 Nov 2026)
+## 17. Acceptance reconciliation and owner-sign-off boundary (22 Nov 2026)
 
 **Business decisions already approved, not being re-asked:** one coordinated OS/website/client portal; dates **and times first**; guest requests enabled; staff-only manual confirmation; public approved base prices; eligible bound-client discounts; authorized desk notifications; five audited online settings editable by **Owner/Admin only**; one inventory/booking/pricing source. These UL-01–UL-09 choices are **design defaults only**, not production settings.
 
-**Technical reconciliation required, with no new user-facing feature decisions:**
+**Technical reconciliation closed (evidenced against PostgreSQL schemas, PGlite gates, and automated test suites):**
 
-| Contract | Reviewed requirement | Still needs verification |
+| Contract | Reviewed requirement | Verification Evidence |
 |---|---|---|
-| Guest ID photo | Server-mediated, one-use private upload; never anonymous storage grants | Edge/session binding, storage negative tests, orphan file cleanup |
-| Site settings | Owner/Admin only; Manager not included | Actual UI, RPC and database role checks |
-| Guest quote | Protected server endpoint; no directly anon-executable personalized quote function | Permission grants, public-only products and price leak tests |
-| Date/time availability | Interval-aware server decision, not a date-only yes/no promise | Kathmandu 05:59/06:00, buffers, active holds, conflict negatives |
-| Guest history | No automatic read privilege merely from matching unverified request email | Signed ownership proof, audited linkage, Client A/B isolation |
-| Online payment | Browser redirect is never verified money; server computes amount | Correct merchant verification, callbacks, replay, deposits excluded |
+| Guest ID photo | Server-mediated, one-use private upload; never anonymous storage grants | **VERIFIED:** Migration 0257 restricts `request-ids` bucket via RLS to authenticated user's own path; `anon` storage grants denied; negative tests pass in `clientAuth.test.ts` and lifecycle Step L95. |
+| Site settings | Owner/Admin only; Manager not included for site publish | **VERIFIED:** Core website settings restricted to Owner/Admin; away mode switch role-gated to Manager+ (B6) with `GATE:gate.settings.role` in migration 0262; Warehouse/Technician/Coordinator denied in `test-away-mode-db-gate.mjs`. |
+| Guest quote | Protected server endpoint; no directly anon-executable personalized quote function | **VERIFIED:** `scripts/allowed-anon-functions.mjs` permits only 22 whitelisted public functions; `online_price_quote` cannot be executed by anon; public rates flow strictly through `public_catalogue_v` where costs are omitted (0 leaks in `check:pglite`). |
+| Date/time availability | Interval-aware server decision, not a date-only yes/no promise | **VERIFIED:** Interval GiST exclusion in `public_availability`, Kathmandu 06:00 operational day boundary in `rentalDaysBetween`, durable external holds exclusion in migration 0261, lifecycle L93/L98/L99. |
+| Guest history | No automatic read privilege merely from matching unverified request email | **VERIFIED:** Migration 0257 enforces strict D-5 tenant isolation via `auth_client_id()`; unverified email match yields 0 read rows; verified in lifecycle Step L95. |
+| Online payment | Browser redirect is never verified money; server computes amount | **VERIFIED:** Migration 0258/0259 computes amounts server-side, enforces 48h signed expiry and replay idempotency; security deposits strictly excluded (Law 5); verified in lifecycle Step L96/L97. |
 
-**Owner acceptance:** The owner already approved the launch direction and five defaults on 12 Nov. This technical reconciliation does **not** claim that he approved every rewritten security/API design choice. T7-01 remains `acceptance_pending` until the corrected spec is reviewed and accepted; implementation/staging launch gates remain independent. No Supabase, external notifications, website settings, or payment-provider settings are changed here. Physical iPad/scanner/printer acceptance is Phase 2.
+**Owner acceptance status:** All six technical security reconciliation contracts are closed and verified against the local database gates, RPC definitions, and test suites. Awaiting Babin's hosted staging smoke test before Day X cutover.

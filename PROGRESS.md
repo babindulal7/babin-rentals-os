@@ -1,5 +1,46 @@
 # Progress Log
 
+
+## 2026-11-22 — Lane C: Online Booking & Financial Documents Acceptance Evidence Repair
+
+### Did
+- Resolved review findings across Lane C acceptance-pending cards (T7-01, T7-07, T3-06, T3-23) per `ACCEPTANCE_STATUS_TRUTH_REPAIR_2026-11-22.md`:
+  - **T7-01 (Online Booking Security Spec):** Closed technical reconciliation in [`docs/ONLINE_BOOKING_SPEC.md`](docs/ONLINE_BOOKING_SPEC.md) §17, documenting verification evidence for all 6 technical contracts (guest ID private bucket RLS, Owner/Admin site settings & Manager+ away mode, anon-restricted quotes via `public_catalogue_v`, interval GiST availability with external holds, D-5 guest account tenant isolation, and server-computed payment amounts).
+  - **T7-07 (Refunds and Reconciliation):** Evidenced the full decline → refund → zero-balance lifecycle in [`docs/verification/LANE_C_ACCEPTANCE_EVIDENCE_REPAIR_2026-11-22.md`](docs/verification/LANE_C_ACCEPTANCE_EVIDENCE_REPAIR_2026-11-22.md), verified terminal callback replay idempotency, verified 5/5 unit tests in `onlineReconciliation.test.tsx`, and evidenced 7 real database assertions in PGlite Lifecycle Step L97.
+  - **T3-06 (Invoice & Agreement Documents):** Documented immutable PDF snapshots (Law 4) preventing retrospective re-pricing, signed agreement storage in secure `documents` bucket, and counter paper-invoice serial number tracking with 36 passing automated PDF unit tests.
+  - **T3-23 (Monthly Accountant Pack):** Validated the actual in-application export generator (`src/lib/monthlyPack.ts`) generating IRD Annex 5 sales register CSV, purchase register CSV, expense register with vendor PAN/TDS, and attached payment reconciliation artifacts, backed by 12/12 passing tests in `MonthlyPack.test.tsx`.
+
+### Ruled
+- Formal Staging Readiness: Evidence documents explicitly delineate between locally verified automated database gates (100% green in PGlite) and pending hosted staging acceptance by the owner/accountant prior to live cutover.
+- Law 4 & Law 6: Immutable invoice snapshots, reversal-only payment adjustments, and zero-money visibility for floor roles apply across all exported accounting and document artifacts.
+
+### Verified
+- `npx vitest run src/modules/reports/__tests__/MonthlyPack.test.tsx`: 12/12 tests pass.
+- `npx vitest run src/modules/finance/__tests__/onlineReconciliation.test.tsx`: 5/5 tests pass.
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: 9/9 tests pass.
+- `npx vitest run src/lib/__tests__/t3RoadmapDocumentation.test.ts`: 4/4 tests pass.
+- `npm run check:pglite`: 260/260 migrations pass.
+- `npm run check:lifecycle`: 100/100 steps pass.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 100 / 100 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 260 files · check:pglite 260/260 applied, 0 failed.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Live gateway merchant credentials for Fonepay, eSewa, and Khalti (T7-05, T7-06).
+- Cloudflare Pages DNS and production deployment configuration (T1-07).
+- Hosted staging smoke test and external accountant physical artifact inspection before Day X.
+
 ## 2026-11-22 — T7-14: Online Booking Away Mode Server Gate, Settings & Cart Integration (Lane C)
 
 ### Did
