@@ -51,7 +51,7 @@ describe('Public booking availability: fail closed', () => {
       ['2026-11-30', '2026-11-29'],
       ['2026-11-24', '2027-02-25'],
       ['2026/11/24', '2026-11-25'],
-    ]) {
+    ] as const) {
       expect(() => rentalDaysInclusive(from, to)).toThrow()
     }
   })
