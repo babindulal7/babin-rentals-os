@@ -23,8 +23,8 @@ Card T1-17, along with foundational security rulings (B21, B40, K2, Law 6, P3, N
 
 ## 2. Technical Implementation & Architecture
 
-### A. Database Migration 0263 (`0263_database_enforced_aal2_money_roles.sql`)
-- Claimed in `docs/plans/MIGRATION_LEDGER.md` as migration `0263`.
+### A. Database Migration 0267 (`0267_database_enforced_aal2_money_roles.sql`)
+- Claimed in `docs/plans/MIGRATION_LEDGER.md` as migration `0267`.
 - Updated `public.auth_can_view_money()`:
   - Preserves unconditional rejection for floor roles (`Warehouse`, `Technician`, `Driver`) and `Client`.
   - Reads `public.settings` for `twoStepAuthRequired`.
@@ -77,7 +77,7 @@ Card T1-17, along with foundational security rulings (B21, B40, K2, Law 6, P3, N
 |---|---|---|---|
 | Database MFA Gate | `node scripts/test-mfa-db-gate.mjs` (`npm run test:mfa-db-gate`) | PASS | 25/25 assertions pass |
 | Lifecycle Suite | `npm run check:lifecycle` | PASS | 101/101 steps green (including L100) |
-| PGlite Rebuild | `npm run check:pglite` | PASS | 261/261 migrations applied, 0 leaks, 247 definers pinned |
+| PGlite Rebuild | `npm run check:pglite` | PASS | 265/265 migrations applied, 0 leaks, 247 definers pinned |
 | UI Component Tests | `TwoStepAuthControl.test.tsx` | PASS | 4/4 tests pass |
 | Boundary Engine Tests | `mfaBoundary.test.ts` | PASS | 5/5 tests pass |
 | Roadmap Truth Suite | `roadmapStatusTruth.test.ts` | PASS | 10/10 tests pass |

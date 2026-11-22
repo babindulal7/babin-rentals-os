@@ -21,13 +21,36 @@
 - Babin ruling (B21, B40, K2, P3, N-3): Two-step sign-in enforcement must be evaluated at the PostgreSQL layer, fail closed, support staged rollout via an organization setting, protect floor role money blindness under Law 6, and restrict lost-phone resets by role hierarchy.
 
 ### Verified
-- `npm run check:pglite`: 265/265 migrations applied, 0 failed, 48 views checked (0 readable by anon), 22 public functions checked (0 unauthorized), 247 definers verified with search_path.
+- `npm run check:pglite`: 265/265 migrations applied, 0 failed, 47 views checked (0 readable by anon), 22 public functions checked (0 unauthorized), 247 definers verified with search_path.
 - `npm run check:lifecycle`: 101/101 lifecycle steps green (including L100).
 - `npm run test:mfa-db-gate`: 25/25 database gate assertions passed cleanly.
 - `npm run typecheck`: 0 errors.
 - `npm run lint`: 0 errors, 0 warnings.
 - `npx vitest run src/modules/settings/sections/__tests__/TwoStepAuthControl.test.tsx src/lib/__tests__/mfaBoundary.test.ts`: 9/9 tests passed.
 - `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: 10/10 tests passed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 101 / 101 (100%) | +1 |
+| Overall | structural mean of five | ≈ 97% | — |
+
+Migrations 265 files · check:pglite 265/265 applied, 0 failed.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Owner enables GitHub repository branch protection on `main` (T0-09).
+- Server-side persistence of sign-in events and real new-device email dispatch (T1-18).
+- Live gateway merchant credentials for Fonepay, eSewa, and Khalti (T7-05, T7-06).
+- PR #338 (T1-07 Cloudflare isolated site builds) review and progress.
+- PR #339 (T7-02 fail-closed public catalogue & availability) review and progress.
+- Issue #322 (P1 Mac CI-only 17-gate verification).
+- Hosted staging proof (read-only verification without live writes).
 
 ## 2026-11-23 — Launch Migrations 0263–0266 Merged (PR #329) & Issue #320 Full Resolution and Closeout
 
