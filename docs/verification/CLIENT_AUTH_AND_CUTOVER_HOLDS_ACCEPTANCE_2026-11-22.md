@@ -37,12 +37,15 @@ Each card satisfies all canonical acceptance criteria grounded in PostgreSQL RLS
   - KYC Storage: Private ID documents upload to secure `documents` bucket under client-scoped paths, accessible only by the owning client and staff with clearance.
 
 ### 2.3 T7-14 · "Away" switch for online booking
-- **Merged PR:** #200 (merged 18 Nov 2026)
-- **Status:** `done — PR #200 merged; away mode toggle, customizable public message, and server-side request rejection verified in awayMode.test.ts [docs/verification/CLIENT_AUTH_AND_CUTOVER_HOLDS_ACCEPTANCE_2026-11-22.md]`
-- **Implementation:** `src/lib/awayMode.ts`, `src/booking/components/AwayNotice.tsx`.
+- **Merged PR:** #200 (merged 18 Nov 2026); Truth repair branch: `feat/t7-14-away-switch-20261122`
+- **Status:** Database gate, server refusal RPC, lifecycle L99, and Settings/Booking UI verified. Awaiting PR merge and staging acceptance.
+- **Implementation:** Migration `0262_online_booking_away_mode.sql`, `scripts/test-away-mode-db-gate.mjs`, `scripts/e2e-lifecycle.mjs` (Step L99), `src/lib/awayMode.ts`, `src/modules/settings/sections/OnlineBookingAwayControl.tsx`, `src/booking/App.tsx`, `src/booking/components/CartDrawer.tsx`.
 - **Verification Evidence:**
   - Automated tests: `src/lib/__tests__/awayMode.test.ts` (5/5 passed).
-  - Behavior: When the Away switch is turned on (Owner/Admin/Manager), the public catalogue remains browseable with daily rates, but new booking request submissions are refused with the configured return date or contact notice.
+  - Database gate test: `scripts/test-away-mode-db-gate.mjs` (25/25 passed) testing Owner/Admin/Manager permissions, anonymous inspection, server-side fail-closed rejection in `submit_booking_request`, catalogue read-only access while away, and auto-expiration.
+  - Lifecycle step: Step L99 verified green (100/100 lifecycle steps passed).
+  - Settings UI test: `src/modules/settings/sections/__tests__/OnlineBookingAwayControl.test.tsx` (4/4 passed).
+  - Cart UI test: `src/booking/__tests__/cartCheckout.test.ts` (2/2 passed).
 
 ### 2.4 T9-02 · Booqable rentals block the OS calendar
 - **Merged PR:** #202 (merged 18 Nov 2026), migration `0206_external_holds.sql`

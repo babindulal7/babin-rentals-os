@@ -21,6 +21,7 @@ export const ALLOWED_ANON_FUNCTIONS = new Set([
   'auth_user_branch_id',
   'auth_user_id',
   'auth_user_role',
+  'get_online_booking_away_status',
   'intel_field_allowed',
   'invoice_credit',
   'invoice_discount_amount',

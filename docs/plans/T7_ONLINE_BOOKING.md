@@ -220,6 +220,7 @@ or WhatsApp us"), and the server refuses new requests. No closed-days calendar.
 otherwise claim a number); lifecycle "a request while away is refused".
 **Done when** — on: the site shows the message and the server refuses a request; off: requests work;
 screen check.
+**Evidence / PR** — `feat/t7-14-away-switch-20261122`: migration 0262 + RPCs get_online_booking_away_status / set_online_booking_away + submit_booking_request fail-closed server refusal + test:away-mode-db-gate (25/25) + lifecycle Step L99 (100/100) + Settings & Booking Cart UI.
 **Needs** — T7-04.
 
 ### T7-15 · Payment link from any booking            status: done — PR #276 merged; server-computed amounts, 48-hour signed expiry, replay idempotency, and floor denial verified across migration 0259 and L96 [docs/verification/T7_ONLINE_BOOKING_ACCEPTANCE_2026-11-22.md] · size: M · lane C · [go-live] · slips first

@@ -13,6 +13,7 @@
  */
 
 import type { SystemRole } from '../types/database'
+import { supabase } from './supabase'
 
 export interface AwayModeConfig {
   isAway: boolean
@@ -33,9 +34,123 @@ export interface AwayModeCheckResult {
   }
 }
 
+export interface OnlineBookingAwayStatus {
+  is_away: boolean
+  configured_away: boolean
+  can_accept_requests: boolean
+  message: string
+  resume_date: string | null
+}
+
+const DEFAULT_AWAY_MESSAGE = 'Back on 15 Feb — call or WhatsApp us'
+
+let mockAwayStatus: OnlineBookingAwayStatus = {
+  is_away: false,
+  configured_away: false,
+  can_accept_requests: true,
+  message: DEFAULT_AWAY_MESSAGE,
+  resume_date: null,
+}
+
+export function setMockOnlineBookingAwayStatus(status: Partial<OnlineBookingAwayStatus>): void {
+  mockAwayStatus = {
+    ...mockAwayStatus,
+    ...status,
+  }
+  if (mockAwayStatus.configured_away) {
+    if (mockAwayStatus.resume_date) {
+      const resume = new Date(mockAwayStatus.resume_date)
+      if (!isNaN(resume.getTime()) && new Date() >= resume) {
+        mockAwayStatus.is_away = false
+      } else {
+        mockAwayStatus.is_away = true
+      }
+    } else {
+      mockAwayStatus.is_away = true
+    }
+  } else {
+    mockAwayStatus.is_away = false
+  }
+  mockAwayStatus.can_accept_requests = !mockAwayStatus.is_away
+}
+
+export function resetMockOnlineBookingAwayStatus(): void {
+  mockAwayStatus = {
+    is_away: false,
+    configured_away: false,
+    can_accept_requests: true,
+    message: DEFAULT_AWAY_MESSAGE,
+    resume_date: null,
+  }
+}
+
 /** Check if user has permission to configure Away mode */
 export function canConfigureAwayMode(role: SystemRole): boolean {
   return role === 'Owner' || role === 'Admin' || role === 'Manager'
+}
+
+/**
+ * Fetch online booking away status.
+ * Callable by anon and authenticated callers.
+ */
+export async function fetchOnlineBookingAwayStatus(): Promise<OnlineBookingAwayStatus> {
+  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock' || import.meta.env.MODE === 'test' || !supabase
+
+  if (isMock) {
+    if (mockAwayStatus.configured_away && mockAwayStatus.resume_date) {
+      const resume = new Date(mockAwayStatus.resume_date)
+      if (!isNaN(resume.getTime()) && new Date() >= resume) {
+        return {
+          ...mockAwayStatus,
+          is_away: false,
+          can_accept_requests: true,
+        }
+      }
+    }
+    return { ...mockAwayStatus }
+  }
+
+  const { data, error } = await supabase.rpc('get_online_booking_away_status' as never)
+  if (error || !data) {
+    throw new Error(error?.message ? error.message.replace(/^GATE:[^|]*\|/, '') : 'Failed to fetch online booking away status.')
+  }
+  return data as OnlineBookingAwayStatus
+}
+
+/**
+ * Update online booking away mode settings.
+ * Gated to Owner, Admin, Manager on database and client.
+ */
+export async function saveOnlineBookingAwayStatus(params: {
+  isAway: boolean
+  message?: string | null | undefined
+  resumeDate?: string | null | undefined
+}): Promise<OnlineBookingAwayStatus> {
+  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock' || import.meta.env.MODE === 'test' || !supabase
+
+  const sanitizedMessage = params.message && params.message.trim().length > 0 ? params.message.trim() : DEFAULT_AWAY_MESSAGE
+  const sanitizedResumeDate = params.resumeDate && params.resumeDate.trim().length > 0 ? params.resumeDate.trim() : null
+
+  if (isMock) {
+    setMockOnlineBookingAwayStatus({
+      configured_away: params.isAway,
+      message: sanitizedMessage,
+      resume_date: sanitizedResumeDate,
+    })
+    return { ...mockAwayStatus }
+  }
+
+  const { error } = await supabase.rpc('set_online_booking_away' as never, {
+    p_is_away: params.isAway,
+    p_message: sanitizedMessage,
+    p_resume_date: sanitizedResumeDate,
+  } as never)
+
+  if (error) {
+    throw new Error(error.message.replace(/^GATE:[^|]*\|/, ''))
+  }
+
+  return fetchOnlineBookingAwayStatus()
 }
 
 /**
@@ -66,7 +181,7 @@ export function evaluateAwayMode(
   }
 
   // Active Away Mode
-  const fallbackMessage = 'We are currently away and not accepting online rental requests.'
+  const fallbackMessage = DEFAULT_AWAY_MESSAGE
   const userMessage = config.publicMessage?.trim() || fallbackMessage
 
   return {
