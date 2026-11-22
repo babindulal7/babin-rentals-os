@@ -217,6 +217,9 @@ stay in [`docs/OPEN_DECISIONS.md`](docs/OPEN_DECISIONS.md).
 | O-25 (D-UX-03) | Testing bay: saved in the database or a local note? How is custody shown? | Local note only; no custody change | UX-P23 |
 | O-26 (D-UX-04) | QC templates per category, handling of client media and settings resets, quick-shelve eligibility. | No templates; current Reset checklist | UX-P26 |
 | O-27 (D-UX-05) | Should the future-availability rule of 24 Oct change? | **Do not change** | UX-P26 |
+| O-31 (22 Nov launch scope) | Accountant review at launch: launch without an accountant's review of invoices and agreements (T3-06) and the monthly pack (T3-23), or name a reviewer and date? | None: nothing assumed | T3-06, T3-23 |
+| O-32 (22 Nov launch scope) | Booqable at go-live: will any Booqable rentals still be open on day X? | None: nothing assumed | T9-02, T9-05 |
+| O-33 (22 Nov launch scope) | Manager-level approvals routed to the Owner by a Settings choice: which approvals does it cover (damage below Rs 25,000, late-fee waivers, extension clashes T3-29, approvals inbox T5-10), and what is the default? | Current threshold rule, unchanged | T3-29, T5-10 |
 
 ### §4.3 How a new decision gets in
 

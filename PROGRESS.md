@@ -1,5 +1,48 @@
 # Progress Log
 
+## 2026-11-22 — Launch Scope and Owner Rulings Recorded (Lane A)
+
+### Did
+- Recorded the owner's decisions for the first launch in `RULINGS-2026-11-22.md` (R-22.1 to R-22.5). Wrote the launch plan `docs/plans/LAUNCH_SCOPE_2026-11-22.md`.
+- Added three open questions to `docs/OPEN_DECISIONS.md` (section 25) and to `PLAN.md` §4.2 (O-31, O-32, O-33). None is answered. Each states its default.
+- No status on `main` changed. No code changed. No migration applied.
+
+### Ruled
+- R-22.1 Manager-level approvals can route to the Owner by a Settings choice. Not built.
+- R-22.2 Online payments held for launch. Payments entered manually.
+- R-22.3 Money in whole rupees, no paisa shown (§2.3). Migration 0263 approved for review, not applied.
+- R-22.4 Booqable not used for testing.
+- R-22.5 No Bluetooth, scanner or printer hardware at first launch.
+
+### Verified
+- `main` at `13178dc3`: 57 cards carry the `[go-live]` tag. 56 are `done`. T7-14 is `acceptance_pending`.
+- The 12 Nov unified-launch ruling does not conflict with R-22.1 to R-22.5. It keeps Booqable until its replacement is proven.
+- `src/lib/money.ts` `formatMoney` shows whole rupees with no decimals, matching §2.3.
+- No Manager-to-Owner routing setting exists on `main`. Approvals split by threshold in `src/lib/damage.ts` and `src/lib/lateFee.ts`.
+- Docs only: no tests were run. Lifecycle and migration dimensions below are not measured, because this worktree has no receipts for them.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+
+Migrations 258 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Owner answers O-31 (accountant review at launch), O-32 (Booqable rentals open at go-live) and O-33 (which approvals the Settings choice covers, and its default).
+- Build R-22.1 after O-33: a Settings choice routing Manager-level approvals to the Owner. It narrows permissions (B-1), so it needs the RBAC change and its tests.
+- Staging: the 0263 review and staging check need separate owner authorisation (R-22.3).
+- Next session starts with: the O-31, O-32 and O-33 answers.
+
 ## 2026-11-22 — Host, Operations, Security & Repo Hygiene Acceptance Reconciliation (Lane A)
 
 ### Did

@@ -461,3 +461,13 @@ Card: T8-08 (`docs/plans/T8_MEMBERSHIP_CREW.md`). Ruling record: `RULINGS-2026-1
    - **T3-17 (Extend booking in 2 taps):** Walkthrough on mobile/iPad approved.
    - **T3-24 (Quick expense with bill photo):** Walkthrough on iPhone approved.
    - **T6-04 – T6-09 (Nepali language waves 1–4, layout & user switch):** Whole-app review approved on physical iPad and phone. Language toggle readiness certified.
+
+## 25. Launch-scope questions (22 Nov 2026) — OPEN
+
+Source: owner decisions in chat on 22 Nov 2026, recorded in `RULINGS-2026-11-22.md` (R-22.1 to R-22.5). Index: `PLAN.md` §4.2, rows O-31 to O-33. Launch plan: `docs/plans/LAUNCH_SCOPE_2026-11-22.md`.
+
+**O-31 — Accountant review at launch.** Invoices and agreement documents (T3-06) and the monthly pack for the accountant (T3-23) are waiting for an accountant's review. Options: launch without that review (the owner accepts the risk), or name a reviewer and a date. **Default until answered:** none. Nothing is assumed.
+
+**O-32 — Booqable rentals open at go-live.** Will any Booqable rentals still be open on day X? If yes, T9-02 (open rentals block the OS calendar) is needed on day X. If no, T9-02 moves to after go-live. **Default until answered:** none. Nothing is assumed.
+
+**O-33 — Manager-level approvals routed to the Owner.** The owner selects a name in Settings to decide Manager-level approvals. Which approvals does the choice cover: damage findings below Rs 25,000, late-fee waivers, extension clashes (T3-29), the approvals inbox (T5-10)? What is the default value? **Default until answered:** the current threshold rule, unchanged.
