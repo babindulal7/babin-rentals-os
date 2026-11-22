@@ -1,5 +1,62 @@
 # Progress Log
 
+## 2026-11-22 — T7-14: Online Booking Away Mode Server Gate, Settings & Cart Integration (Lane C)
+
+### Did
+- Implemented and verified database-enforced Online Booking Away mode (T7-14) resolving PR #316 review P1:
+  - Created migration `0262_online_booking_away_mode.sql`:
+    - `get_online_booking_away_status()` RPC: checks `settings` table (`onlineBookingAway`, `onlineBookingAwayMessage`, `onlineBookingAwayResumeDate`), handles PL/pgSQL no-row NULL defaults safely, checks expiration against Kathmandu/UTC time, callable by `anon` and `authenticated`.
+    - `set_online_booking_away(p_is_away, p_message, p_resume_date)` RPC: strictly role-gated to `Owner`, `Admin`, and `Manager` (B6); audits changes via `settings_history` trigger; refuses `Warehouse`, `Technician`, and `Coordinator` with `GATE:gate.settings.role`.
+    - Updated `submit_booking_request(p_payload jsonb)`: enforces fail-closed rejection when away mode is active with `GATE:gate.booking_request.away_mode|Online booking requests are temporarily disabled: <message>`.
+  - Whitelisted `get_online_booking_away_status` in `scripts/allowed-anon-functions.mjs`.
+  - Created automated database gate test suite [`scripts/test-away-mode-db-gate.mjs`](scripts/test-away-mode-db-gate.mjs) verifying 25/25 assertions green (initial status, role refusal, manager enablement, anon inspection, server rejection, public catalogue read immunity, automatic expiration, future resume dates, disengagement, and Law 6 money blindness).
+  - Added `"test:away-mode-db-gate": "node scripts/test-away-mode-db-gate.mjs"` to `package.json`.
+  - Added and wired settings UI: [`src/modules/settings/sections/OnlineBookingAwayControl.tsx`](src/modules/settings/sections/OnlineBookingAwayControl.tsx) wired into [`src/modules/settings/sections/System.tsx`](src/modules/settings/sections/System.tsx) under `online_booking` section.
+  - Added unit test suite [`src/modules/settings/sections/__tests__/OnlineBookingAwayControl.test.tsx`](src/modules/settings/sections/__tests__/OnlineBookingAwayControl.test.tsx) (4/4 tests pass with mock).
+  - Wired public booking UI:
+    - [`src/booking/App.tsx`](src/booking/App.tsx): displays Away notice banner when paused and passes `awayStatus` to CartDrawer.
+    - [`src/booking/components/CartDrawer.tsx`](src/booking/components/CartDrawer.tsx): displays Away warning, disables submit button ("Requests Paused"), disables proceed button, and blocks submit handler.
+    - [`src/booking/lib/catalogueApi.ts`](src/booking/lib/catalogueApi.ts): checks away status fail-closed in mock mode.
+    - [`src/booking/__tests__/cartCheckout.test.ts`](src/booking/__tests__/cartCheckout.test.ts): verified unit test assertion for away rejection.
+  - Added Step `L99` to [`scripts/e2e-lifecycle.mjs`](scripts/e2e-lifecycle.mjs) bringing total lifecycle steps to 100/100 green.
+  - Reconciled staging inventory manifest [`docs/verification/STAGING_SQL_INVENTORY_2026-11-21.json`](docs/verification/STAGING_SQL_INVENTORY_2026-11-21.json) (migration 0262 blob SHA `1f86465ad22a492b93c52827865a739900d47cb6`, 11,856 bytes) and updated [`scripts/staging-schema-preflight.test.mjs`](scripts/staging-schema-preflight.test.mjs) and [`src/lib/__tests__/stagingInventory20261121.test.ts`](src/lib/__tests__/stagingInventory20261121.test.ts) for 260 migrations.
+  - Reserved next free migration number `0263` in [`docs/plans/MIGRATION_LEDGER.md`](docs/plans/MIGRATION_LEDGER.md).
+
+### Ruled
+- Server-Enforced Away Mode: Setting away mode blocks request submission in the database with `GATE:gate.booking_request.away_mode`; client-side banners are purely informative presentation.
+- Role Hierarchy (B6): Only Owner, Admin, and Manager can toggle away mode and edit away notice copy; other staff roles and anon are denied with `GATE:gate.settings.role`.
+- Automatic Expiration: If a resume date is configured and Kathmandu current time passes it, `get_online_booking_away_status` evaluates `is_away = false` without requiring manual toggle.
+- Catalogue Browse Immunity: When away mode is active, the public catalogue remains fully browseable (`public_catalogue_v`), preserving search and discovery while blocking incoming cart submissions.
+
+### Verified
+- `npm run check:pglite`: 260/260 migrations applied cleanly, 0 failed, 46 views checked, 22 anon functions allowed, 241 definer search_paths pinned.
+- `npm run test:away-mode-db-gate`: 25/25 assertions green.
+- `npm run check:lifecycle`: 100/100 steps green (including L99).
+- `npm test`: 711/711 test files passed, 7667/7667 tests passed.
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 errors, 0 warnings across `src/`.
+- `npm run test:staging-preflight`: 9/9 assertions pass.
+- `npm run build`: Vite production build passed cleanly (8366 modules transformed, dist/ generated).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 100 / 100 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 260 files · check:pglite 260/260 applied, 0 failed.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Live gateway merchant credentials for Fonepay, eSewa, and Khalti (T7-05, T7-06).
+- Cloudflare Pages DNS and production deployment configuration (T1-07).
+- Remaining 6 acceptance-pending cards from `ACCEPTANCE_STATUS_TRUTH_REPAIR_2026-11-22.md` (T7-07, T3-06, T3-23, T9-01, T1-09, T7-01).
+
 ## 2026-11-22 — T9-02: Booqable External Holds DB Gate & Concurrency Verification (Lane A)
 
 ### Did

@@ -10944,6 +10944,100 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L99',
+  title: 'online booking away mode switch and server-side request refusal (T7-14)',
+  expect: 'green',
+  async run() {
+    // 1. Warehouse is refused when trying to configure Away mode
+    await as('Warehouse', async () => {
+      let failed = false
+      try {
+        await q(
+          `select public.set_online_booking_away(true, 'Away test', null) as res`
+        )
+      } catch (err) {
+        failed = true
+        assert(/gate\.settings\.role|Only Owner, Admin, and Manager/i.test(err.message), 'expected role gate')
+      }
+      assert(failed, 'Warehouse cannot configure away mode')
+    })
+
+    // 2. Manager configures Away mode with custom message
+    await as('Manager', async () => {
+      const res = (await q(
+        `select public.set_online_booking_away(true, 'Back on 15 Feb — call or WhatsApp us', null) as res`
+      )).rows[0].res
+      assertEq(res.is_away, true, 'is_away is true')
+      assertEq(res.can_accept_requests, false, 'can_accept_requests is false')
+      assertEq(res.message, 'Back on 15 Feb — call or WhatsApp us', 'message preserved')
+    })
+
+    // 3. Anon checks status and gets active away mode
+    await asAnon(async () => {
+      const status = (await q(
+        `select public.get_online_booking_away_status() as res`
+      )).rows[0].res
+      assertEq(status.is_away, true, 'anon sees is_away = true')
+      assertEq(status.can_accept_requests, false, 'anon sees can_accept_requests = false')
+      assertEq(status.message, 'Back on 15 Feb — call or WhatsApp us', 'message matches')
+    })
+
+    // 4. Anon request submission is refused with away_mode gate
+    await asAnon(async () => {
+      const payload = {
+        client_name: 'Away Tester',
+        client_email: 'away_tester@example.com',
+        client_phone: '+977-9812345678',
+        start_date: new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10),
+        end_date: new Date(Date.now() + 6 * 86400000).toISOString().slice(0, 10),
+        fulfillment_type: 'pickup',
+        lines: [{ product_id: SERIAL_PRODUCT, quantity: 1 }],
+      }
+
+      let failed = false
+      try {
+        await q(
+          `select public.submit_booking_request($1::jsonb) as res`,
+          [JSON.stringify(payload)]
+        )
+      } catch (err) {
+        failed = true
+        assert(/gate\.booking_request\.away_mode|temporarily disabled/i.test(err.message), 'expected away_mode gate')
+      }
+      assert(failed, 'request while away is refused by server')
+    })
+
+    // 5. Manager turns Away mode OFF
+    await as('Manager', async () => {
+      const res = (await q(
+        `select public.set_online_booking_away(false, '', null) as res`
+      )).rows[0].res
+      assertEq(res.is_away, false, 'is_away is false after disengagement')
+      assertEq(res.can_accept_requests, true, 'can_accept_requests is true')
+    })
+
+    // 6. Anon can now submit booking request successfully
+    await asAnon(async () => {
+      const payload = {
+        client_name: 'Active Tester',
+        client_email: 'active_tester_' + Date.now() + '@example.com',
+        client_phone: '+977-9812345678',
+        start_date: new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10),
+        end_date: new Date(Date.now() + 6 * 86400000).toISOString().slice(0, 10),
+        fulfillment_type: 'pickup',
+        lines: [{ product_id: SERIAL_PRODUCT, quantity: 1 }],
+      }
+
+      const res = (await q(
+        `select public.submit_booking_request($1::jsonb) as res`,
+        [JSON.stringify(payload)]
+      )).rows[0].res
+      assert(Boolean(res.request_id), 'request accepted when away mode is off')
+    })
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break
