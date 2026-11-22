@@ -1,5 +1,51 @@
 # Progress Log
 
+## 2026-11-23 — T7-01, T7-07, T7-14: Online Booking Acceptance Reconciliation (Lane C)
+
+### Did
+- Formally accepted and reconciled three review-gated Track 7 cards to **`done`**:
+  - **T7-14 · "Away" switch for online booking**: Promoted to `done`. Following PR #325 merge on `main`, database-enforced Away mode is active in migration `0262`, step `L99`, `test:away-mode-db-gate` (25/25 pass), `awayMode.test.ts` (5/5 pass), and cart UI request refusal. Documented in [`docs/verification/T7-14_AWAY_MODE_ACCEPTANCE_2026-11-23.md`](docs/verification/T7-14_AWAY_MODE_ACCEPTANCE_2026-11-23.md).
+  - **T7-07 · Refunds and reconciliation**: Promoted to `done`. Verified migration `0260`, step `L97` (declined request refund, zero balance, callback idempotency, allocated reversal row, account credit B39/O-2, 3-day stale flag, and Law 6 role isolation), `src/actions/finance/refundPaymentIntent.ts`, and `src/modules/finance/__tests__/onlineReconciliation.test.tsx` (10/10 pass). Documented in [`docs/verification/T7-07_REFUNDS_AND_RECONCILIATION_ACCEPTANCE_2026-11-23.md`](docs/verification/T7-07_REFUNDS_AND_RECONCILIATION_ACCEPTANCE_2026-11-23.md).
+  - **T7-01 · Online booking spec**: Promoted to `done`. Closed technical security verification requirements in `docs/ONLINE_BOOKING_SPEC.md` §17 (guest ID photo, site settings permissions Owner/Admin only, guest quote masking, date/time availability buffers, guest history D-5 tenant isolation, and server-side payment amounts) verified across migrations `0255`-`0262`, lifecycle steps `L93`-`L99`, and N-7 security audit (17/17 pass). Documented in [`docs/verification/T7-01_ONLINE_BOOKING_SPEC_ACCEPTANCE_2026-11-23.md`](docs/verification/T7-01_ONLINE_BOOKING_SPEC_ACCEPTANCE_2026-11-23.md).
+- Cleaned up stray conflict markers in `scripts/e2e-lifecycle.mjs` and `src/lib/rbac.ts`.
+- Updated Track 7 roadmap in [`docs/plans/T7_ONLINE_BOOKING.md`](docs/plans/T7_ONLINE_BOOKING.md).
+- Synchronized roadmap regression assertions in [`src/lib/__tests__/roadmapStatusTruth.test.ts`](src/lib/__tests__/roadmapStatusTruth.test.ts) (10/10 tests pass).
+
+### Ruled
+- Law 4 & Law 6: Online payment refunds generate immutable reversal records (`payment_reversals`); non-money roles (Warehouse, Technician, Driver) receive zero financial data.
+- Server Enforcement (B6): Away mode gate is enforced in PostgreSQL plpgsql (`submit_booking_request`); client-side UI disabling is an auxiliary defense.
+- Specification Governance: Technical security contracts for public booking endpoints are enforced server-side before anonymous traffic is permitted.
+
+### Verified
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: 10/10 tests pass.
+- `npx vitest run src/lib/__tests__/awayMode.test.ts`: 5/5 tests pass.
+- `npx vitest run src/lib/__tests__/stagingInventory20261121.test.ts`: 2/2 tests pass.
+- `npx vitest run src/modules/finance/__tests__/onlineReconciliation.test.tsx`: 10/10 tests pass.
+- `npm run check:pglite`: 260/260 migrations applied cleanly, 0 failed.
+- `npm run check:lifecycle`: 100/100 lifecycle steps green.
+- `npm run test:away-mode-db-gate`: 25/25 assertions green.
+- `npm run test:online-booking-n7-review`: 17/17 security assertions pass.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 100 / 100 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 260 files · check:pglite 260/260 applied, 0 failed.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Live gateway merchant credentials for Fonepay, eSewa, and Khalti (T7-05, T7-06).
+- Cloudflare Pages DNS and production deployment configuration (T1-07).
+- Remaining review-gated verification cards in ACCEPTANCE_STATUS_TRUTH_REPAIR_2026-11-22.md (T9-01, T3-06, T3-23).
+- Phase 2 physical hardware cards (T2-11, T2-14, T9-07) remain pending for post-live shop device day per 20 Nov owner ruling.
+
 ## 2026-11-22 — Status Correction: T0-09, T1-17 and T1-18 Back to acceptance_pending (Lane A)
 
 ### Did
@@ -244,6 +290,8 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - Live gateway merchant credentials for Fonepay, eSewa, and Khalti (T7-05, T7-06).
 - Cloudflare Pages DNS and production deployment configuration (T1-07).
 - Hosted staging smoke test and external accountant physical artifact inspection before Day X.
+- Remaining review-gated verification cards in ACCEPTANCE_STATUS_TRUTH_REPAIR_2026-11-22.md (T9-01, T3-06, T3-23).
+- Phase 2 physical hardware cards (T2-11, T2-14, T9-07) remain pending for post-live shop device day per 20 Nov owner ruling.
 
 ## 2026-11-22 — T7-14: Online Booking Away Mode Server Gate, Settings & Cart Integration (Lane C)
 
