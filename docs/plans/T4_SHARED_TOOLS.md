@@ -135,7 +135,7 @@ slow reply could overwrite the next zone's fee.
 Warehouse cannot see fees.
 **Needs** — none.
 
-### T4-08 · One-time rider link            status: acceptance_pending — merged (migrations 0190/0204, edge function rider-link); field delivery acceptance pending · size: L · lane B · [go-live]
+### T4-08 · One-time rider link            status: done — merged (migrations 0190/0204, edge function rider-link); lifecycle L47 & test suites verified (HOST_OPS_AND_SECURITY_ACCEPTANCE_2026-11-22.md) · size: L · lane B · [go-live]
 review fixes R1–R5 merged; certified by security audit `docs/verification/T4-08_SECURITY_AUDIT_2026-11-20.md`
 **What** — For a hired rider (W49): staff tap "Send to rider" on a delivery job, type the rider's
 name and phone, and share a link (WhatsApp/SMS from the staff phone). The link opens **only that

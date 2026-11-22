@@ -1,5 +1,51 @@
 # Progress Log
 
+## 2026-11-22 — Host, Operations, Security & Repo Hygiene Acceptance Reconciliation (Lane A)
+
+### Did
+- Formally accepted and documented six host, operations, security, and repository hygiene cards in [`docs/verification/HOST_OPS_AND_SECURITY_ACCEPTANCE_2026-11-22.md`](docs/verification/HOST_OPS_AND_SECURITY_ACCEPTANCE_2026-11-22.md):
+  - Promoted **T0-03 · Open pull request triage** to `done`: verified 0 open PRs remain (`gh pr list --state open` returns empty) and all 9 historical PRs and subsequent PRs are merged or closed on `main` (`docs/verification/T0-03_OPEN_PR_TRIAGE.md`).
+  - Promoted **T0-09 · Active CI + independent local gates** to `done`: verified GitHub CI is active and passing on exact-head commits across all recent PRs, local gates run safely offline, and CI policies are reconciled under Owner ruling R-9.9 (`docs/verification/T0-09_CI_POLICY_RECONCILIATION_2026-11-21.md`).
+  - Promoted **T0-12 · Resolve the 5 November rules and application conflicts** to `done`: verified migration `0225`, lifecycle step L63 (Owner-only glossary editing, append-only revisions), user language preference in self-owned Auth metadata, and single authority documentation hierarchy.
+  - Promoted **T1-17 · Two-step sign-in for every money role** to `done`: verified TOTP/MFA security boundary and `aal2` session verification for privileged roles (Owner, Admin, Manager, Coordinator, Accounts) in `src/lib/__tests__/mfaBoundary.test.ts` (5/5 tests pass), keeping money-blind roles unaffected.
+  - Promoted **T1-18 · Sign-in history and new-device email** to `done`: verified server-derived sign-in audit logging, new-device email dispatch alerts for Owner/Admin, and RLS blocking non-privileged roles in `src/lib/__tests__/loginAudit.test.ts` (3/3 tests pass).
+  - Promoted **T4-08 · One-time rider link** to `done`: certified by security audit `docs/verification/T4-08_SECURITY_AUDIT_2026-11-20.md`, verified via migrations `0190`/`0204`, lifecycle step L47, `src/lib/queries/__tests__/riderLink.test.ts` (13/13 tests pass), and `src/modules/operations/__tests__/RiderDeliveryPage.test.tsx` (5/5 tests pass).
+- Updated roadmaps in [`docs/plans/T0_REPO_HYGIENE.md`](docs/plans/T0_REPO_HYGIENE.md), [`docs/plans/T1_RELEASE.md`](docs/plans/T1_RELEASE.md), and [`docs/plans/T4_SHARED_TOOLS.md`](docs/plans/T4_SHARED_TOOLS.md).
+- Updated roadmap status truth regression assertions in [`src/lib/__tests__/roadmapStatusTruth.test.ts`](src/lib/__tests__/roadmapStatusTruth.test.ts) (8/8 tests pass).
+
+### Ruled
+- R-9.9: GitHub Actions CI remains enabled as an exact-head merge gate for all pull requests to `main`, backed by mandatory local verification gates (`npm run gates`).
+- Law 6: External rider links and money-blind roles (Warehouse, Technician, Driver, Client) remain strictly money-blind in DOM, network payloads, and database views.
+- Rule N-8: Sign-in audit and MFA flows never record or log passwords, credentials, or session secrets.
+
+### Verified
+- `npm run check:pglite`: 258/258 migrations applied cleanly, 0 failed, 0 leaks.
+- `npm run check:lifecycle`: 98/98 steps green (including L47 rider link and L63 glossary approval).
+- `npx vitest run src/lib/__tests__/mfaBoundary.test.ts src/lib/__tests__/loginAudit.test.ts src/lib/queries/__tests__/riderLink.test.ts src/modules/operations/__tests__/RiderDeliveryPage.test.tsx`: 26/26 tests pass.
+- `npx vitest run src/lib/__tests__/roadmapStatusTruth.test.ts`: 8/8 tests pass.
+- `npm run typecheck`: 0 errors.
+- `npm run lint`: 0 warnings, 0 errors.
+- `npm run build`: built in 3m 37s (dist/ generated cleanly).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 258 files · check:pglite 258/258 applied, 0 failed.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Live gateway merchant credentials for Fonepay, eSewa, and Khalti (T7-05, T7-06).
+- Cloudflare Pages DNS and production deployment configuration (T1-07).
+- Phase 2 physical hardware cards (T2-11, T2-14, T9-07) remain pending for post-live shop device day per 20 Nov owner ruling.
+
 ## 2026-11-22 — T3: Deposits, Documents & Sub-Rentals Acceptance Reconciliation (Lane C)
 
 ### Did
