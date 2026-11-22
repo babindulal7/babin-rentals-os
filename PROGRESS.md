@@ -1,5 +1,46 @@
 # Progress Log
 
+## 2026-11-22 — T9-02 P1 repair: Booqable holds use turnaround rules, idempotently, with the raw window kept (Lane A)
+
+### Did
+- Reproduced the review P1 on PR #323 (head `17e56f3e`). An external hold was stored without the 0240 turnaround window that OS reservations use, so a Booqable return at 18:00 with 120 minutes of cleaning did not block an OS pickup at 19:00. A second defect came with the first fix attempt: the trigger re-applied the buffer to the stored window on every write that touched `status` or `product_id`, so a re-sync widened the hold again. RED: test 14a, `24 passed, 1 failed`.
+- Fixed in [`supabase/migrations/0261_external_booqable_holds_gate.sql`](supabase/migrations/0261_external_booqable_holds_gate.sql). New column `source_period` holds the Booqable window as reported. `period` is derived from it by `normalize_external_hold_window()` through `get_effective_rental_window()` (0240), with the product's prep and cleaning minutes. It is recomputed only when the source window, the product or the active state changes. Callers cannot set `period`. A released hold keeps its window.
+- [`scripts/test-external-holds-db-gate.mjs`](scripts/test-external-holds-db-gate.mjs) grows from 24 to 48 assertions (sections 13 to 26; the file header lists them). They cover the regression matrix where PGlite can show it: prep and cleaning, both account-wide modes, the reverse write order, two-unit quantity stock, a disabled and a missing feed, bad source data, a repeated line, staff release, released history, and reschedule or extension on update. Settings change by update, never by delete (Law 3), through a `setOrgSetting` helper.
+- [`scripts/e2e-lifecycle.mjs`](scripts/e2e-lifecycle.mjs) step L98 inserts into `source_period`.
+- Staging inventory manifest pins `0261` at blob `c99b01750e99c63ee554660124da8dea5d235f09`, 14,344 bytes (was `5b022f4e…`, 13,327). An older line in the 22 Nov entry above quotes SHA-1 `03433ac7…` and 12,347 bytes; that pin is superseded.
+- [`docs/verification/T9-02_DB_GATE_DESIGN_2026-11-22.md`](docs/verification/T9-02_DB_GATE_DESIGN_2026-11-22.md) gains a repair section listing what remains open. [`docs/plans/MIGRATION_LEDGER.md`](docs/plans/MIGRATION_LEDGER.md) row 0261 is now repaired and unapplied.
+- Shared files touched, as the card allows: [`docs/OPEN_DECISIONS.md`](docs/OPEN_DECISIONS.md) gains O-31 (maximum healthy sync age) and O-32 (raw or effective window for staff). Both are indexed as rows O-31 and O-32 in `PLAN.md` §4.2. Neither is decided; neither has a default.
+
+### Ruled
+- None taken. O-31 and O-32 are open. Cutover protection stays off, and enabling it without an age fails closed (test 11b).
+- Stricter than the matrix wording, kept under B-1: a missing cutover state row blocks OS reservations even while cutover is disabled (test 21a). The disabled default row does not block (test 20a).
+
+### Verified
+- `npm run test:external-holds-db-gate`: 48 passed, 0 failed, exit 0 on the final source. Test 14a failed before the fix.
+- `npm run check:pglite`: 259 of 259 migrations applied, 0 failed. `npm run check:lifecycle`: 99 of 99 green, 0 known-red, 0 failed. Both were run back to back on the final source and both exited 0. Their receipts are current, as the completion counter below shows.
+- `node --test scripts/staging-schema-preflight.test.mjs`, `node --test scripts/plan-migrations-safety.test.mjs`, and `npx vitest run src/lib/__tests__/stagingInventory20261121.test.ts` (2 of 2): exit 0.
+- Not run this session: typecheck, lint, build, the full vitest suite, `check:security`, `test:server-contracts`, `test:partial-return`, `lint:ui-copy`, `check:contrast`, and the screen check at 375, 820 and 1440 px. No TypeScript or UI source changed. These are NOT VERIFIED for this branch.
+- NOT verified: concurrency under real PostgreSQL for both write orders. PGlite is one connection, and no PostgreSQL server is installed on this machine. Also NOT verified: writers driven end to end (`create_booking`, `confirm_booking_atomic`, stage transitions, `create_or_extend_hold`, extensions, returns), the importer, and the UI.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 99 / 99 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 259 files · check:pglite 259/259 applied, 0 failed (recorded 2026-11-22T17:17:21.778Z). Suite: not run this session (static inspection; pass --tests to execute suite). Coverage suite: NOT VERIFIED — invalid test receipt. Gates read from .lifecycle-result.json, written 2026-11-22T17:17:51.151Z. Counted by `npm run completion`, not typed. Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Features to build (2): the Booqable importer (idempotent upsert by source line, staged validation, partial or failed pulls keep every active hold, 07:00 refresh) and the UI (the "Held in Booqable #…" chip, availability and calendar; blocked on O-32).
+- Bugs to fix (1): `src/lib/externalHolds.ts` is not used by the app. It uses inclusive boundaries, which differ from the database, and it ignores turnaround. Replace it with the database-derived `period` before anything wires it.
+- Rulings open (2): O-31 (maximum healthy sync age and health scope) and O-32 (raw or effective window for staff).
+- Verification open (2): concurrency under real PostgreSQL for both write orders, which needs a server; end-to-end writer counterexamples. T9-02 stays `acceptance_pending`.
+- Next session starts with: how the concurrency harness gets a real PostgreSQL server (a local install, or an approved disposable project), then the importer.
+
 ## 2026-11-22 — T9-02: Booqable External Holds DB Gate & Concurrency Verification (Lane A)
 
 ### Did

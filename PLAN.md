@@ -217,6 +217,8 @@ stay in [`docs/OPEN_DECISIONS.md`](docs/OPEN_DECISIONS.md).
 | O-25 (D-UX-03) | Testing bay: saved in the database or a local note? How is custody shown? | Local note only; no custody change | UX-P23 |
 | O-26 (D-UX-04) | QC templates per category, handling of client media and settings resets, quick-shelve eligibility. | No templates; current Reset checklist | UX-P26 |
 | O-27 (D-UX-05) | Should the future-availability rule of 24 Oct change? | **Do not change** | UX-P26 |
+| O-31 (T9-02, 22 Nov) | Maximum age of a healthy Booqable sync before OS reservations are refused; and whether that health is global or per branch. Full text in `docs/OPEN_DECISIONS.md`. | None. Cutover protection ships off; enabling it without an age fails closed. | T9-02 cutover activation |
+| O-32 (T9-02, 22 Nov) | Does the Booqable hold chip and calendar show the effective window (with prep and cleaning) or the window Booqable reports? Full text in `docs/OPEN_DECISIONS.md`. | None. The UI is not built; staff see only the effective window. | T9-02 UI card |
 
 ### §4.3 How a new decision gets in
 

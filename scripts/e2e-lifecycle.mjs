@@ -10860,7 +10860,7 @@ STEPS.push({
     await asOwnerOfTheDatabase(async () => {
       await q(`
         insert into public.external_holds (
-          client_uuid, source, external_order_id, external_line_id, external_order_number, product_id, asset_id, qty, period, last_seen_at
+          client_uuid, source, external_order_id, external_line_id, external_order_number, product_id, asset_id, qty, source_period, last_seen_at
         ) values (
           $1, 'booqable', 'bq_ord_l98_1', 'bq_line_l98_1', 'BQ-L98-01', $2, $3, 1, ${holdPeriod}, now()
         )
@@ -10931,7 +10931,7 @@ STEPS.push({
       try {
         await q(`
           insert into public.external_holds (
-            client_uuid, source, external_order_id, external_line_id, external_order_number, product_id, asset_id, qty, period, last_seen_at
+            client_uuid, source, external_order_id, external_line_id, external_order_number, product_id, asset_id, qty, source_period, last_seen_at
           ) values (
             $1, 'booqable', 'bq_ord_wh', 'bq_line_wh', 'BQ-WH', $2, null, 1, ${holdPeriod}, now()
           )

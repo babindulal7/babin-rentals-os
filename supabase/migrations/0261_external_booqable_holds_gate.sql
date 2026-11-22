@@ -1,5 +1,5 @@
--- T9-02 / 0261 — Booqable external stock commitments (database-gate draft).
--- IMPORTANT: DRAFT / UNVERIFIED. Do not deploy or apply to staging/production.
+-- T9-02 / 0261 — Booqable external stock commitments (database gate).
+-- IMPORTANT: NOT APPLIED to any database. Do not apply to staging or production without explicit approval (N-5).
 -- No importer, web availability projection or calendar UI in this migration.
 -- Depends on 0040 sync tables, 0188 hold_state, and 0253 partner-stock capacity.
 -- Source design: docs/verification/T9-02_DB_GATE_DESIGN_2026-11-22.md.
@@ -17,6 +17,14 @@ create table public.external_holds (
   product_id uuid not null references public.products(id),
   asset_id uuid references public.product_units(id),
   qty integer not null check (qty > 0 and (asset_id is null or qty = 1)),
+  -- The Booqable window exactly as the source reports it. The importer writes this
+  -- column and it is never widened, so re-syncing the same line cannot change it.
+  source_period tstzrange not null
+    check (not isempty(source_period)
+      and not lower_inf(source_period) and not upper_inf(source_period)
+      and lower_inc(source_period)),
+  -- The effective window that availability uses: the 0240 turnaround rules applied
+  -- to source_period. Derived by normalize_external_hold_window(); callers never set it.
   period tstzrange not null
     check (not isempty(period)
       and not lower_inf(period) and not upper_inf(period)
@@ -104,7 +112,10 @@ create trigger trg_booqable_feed_state_no_delete
 before delete on public.booqable_hold_feed_state for each row
 execute function public.reject_external_hold_deletion();
 
--- Normalize external hold windows using product turnaround rules (0240)
+-- Derive the effective window (0240 turnaround rules) from the raw source window.
+-- period is recomputed only when its inputs change: a new line, a re-mapped product,
+-- or a re-activation. Re-saving an unchanged line keeps its window, so a re-sync
+-- never applies the cleaning or prep buffer a second time, and released history is kept.
 create or replace function public.normalize_external_hold_window()
 returns trigger
 language plpgsql
@@ -115,7 +126,11 @@ declare
   v_prep_minutes integer;
   v_cleaning_minutes integer;
 begin
-  if new.status <> 'active' then
+  if tg_op = 'UPDATE'
+     and new.source_period is not distinct from old.source_period
+     and new.product_id is not distinct from old.product_id
+     and not (old.status <> 'active' and new.status = 'active') then
+    new.period := old.period;
     return new;
   end if;
 
@@ -124,8 +139,8 @@ begin
     from public.products p where p.id = new.product_id;
 
   new.period := public.get_effective_rental_window(
-    lower(new.period),
-    upper(new.period),
+    lower(new.source_period),
+    upper(new.source_period),
     v_prep_minutes,
     v_cleaning_minutes
   );
@@ -135,7 +150,7 @@ $$;
 revoke all on function public.normalize_external_hold_window() from public, anon, authenticated;
 
 create trigger trg_t9_external_holds_normalize
-before insert or update of product_id, period, status on public.external_holds
+before insert or update on public.external_holds
 for each row execute function public.normalize_external_hold_window();
 
 -- Cross-table database gate, not browser/UI advice.
