@@ -44,16 +44,60 @@ export default function BookingApp() {
   const [isMyBookingsOpen, setIsMyBookingsOpen] = useState<boolean>(false)
   const [awayStatus, setAwayStatus] = useState<OnlineBookingAwayStatus | null>(null)
 
-  // Load online booking away mode status
-  useEffect(() => {
-    let active = true
-    fetchOnlineBookingAwayStatus().then((status) => {
-      if (active) setAwayStatus(status)
-    })
-    return () => {
-      active = false
+  const refreshAwayStatus = useCallback(async () => {
+    try {
+      const status = await fetchOnlineBookingAwayStatus()
+      setAwayStatus(status)
+      return status
+    } catch {
+      return null
     }
   }, [])
+
+  // Load online booking away mode status and keep it synchronized:
+  // - Re-fetches immediately when a scheduled resumes_at timestamp expires
+  // - Re-checks every 60s while away mode is active
+  // - Re-checks when the window regains focus or tab becomes visible
+  useEffect(() => {
+    let active = true
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    const check = async () => {
+      const status = await refreshAwayStatus()
+      if (!active || !status) return
+
+      if (status.is_away && status.resume_date) {
+        const msUntilResume = new Date(status.resume_date).getTime() - Date.now()
+        if (msUntilResume > 0 && msUntilResume < 24 * 60 * 60 * 1000) {
+          timer = setTimeout(() => {
+            if (active) void check()
+          }, msUntilResume + 1000)
+        }
+      }
+    }
+
+    void check()
+
+    const interval = setInterval(() => {
+      if (active && awayStatus?.is_away) {
+        void check()
+      }
+    }, 60000)
+
+    const onFocus = () => {
+      if (active) void check()
+    }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onFocus)
+
+    return () => {
+      active = false
+      if (timer) clearTimeout(timer)
+      clearInterval(interval)
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onFocus)
+    }
+  }, [refreshAwayStatus, awayStatus?.is_away, awayStatus?.resume_date])
 
   // Load client auth session and profile
   useEffect(() => {
@@ -413,6 +457,7 @@ export default function BookingApp() {
         profile={clientProfile}
         onOpenAuth={() => setIsAuthOpen(true)}
         awayStatus={awayStatus}
+        onRefreshAwayStatus={refreshAwayStatus}
       />
 
       {/* Client Auth Modal */}

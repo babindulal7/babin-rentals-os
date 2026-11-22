@@ -27,6 +27,7 @@ interface CartDrawerProps {
   profile?: OnlineProfile | null | undefined
   onOpenAuth?: (() => void) | undefined
   awayStatus?: OnlineBookingAwayStatus | null | undefined
+  onRefreshAwayStatus?: (() => Promise<unknown>) | undefined
 }
 
 export const CartDrawer: React.FC<CartDrawerProps> = ({
@@ -42,6 +43,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   profile,
   onOpenAuth,
   awayStatus,
+  onRefreshAwayStatus,
 }) => {
   const [step, setStep] = useState<'cart' | 'checkout' | 'success'>('cart')
   const [clientName, setClientName] = useState('')
@@ -72,6 +74,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     }
   }, [user, profile, clientEmail, clientName, clientPhone, projectName])
 
+  // Re-verify online booking away mode status when cart drawer is opened
+  useEffect(() => {
+    if (isOpen && onRefreshAwayStatus) {
+      void onRefreshAwayStatus()
+    }
+  }, [isOpen, onRefreshAwayStatus])
+
   if (!isOpen) return null
 
   // Calculate rental days (minimum 1 day)
@@ -98,6 +107,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMessage(null)
+
+    if (onRefreshAwayStatus && awayStatus?.is_away) {
+      await onRefreshAwayStatus()
+    }
 
     if (awayStatus?.is_away) {
       setErrorMessage(`Online requests are currently paused: ${awayStatus.message}`)
