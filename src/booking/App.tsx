@@ -31,6 +31,9 @@ export default function BookingApp() {
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [items, setItems] = useState<CatalogueItem[]>([])
   const [availability, setAvailability] = useState<Map<string, boolean>>(new Map())
+  const [availabilityPending, setAvailabilityPending] = useState(false)
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null)
+  const [availabilityRetry, setAvailabilityRetry] = useState(0)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedItem, setSelectedItem] = useState<CatalogueItem | null>(null)
@@ -118,8 +121,15 @@ export default function BookingApp() {
 
   // Track online/offline status
   useEffect(() => {
-    const handleOnline = () => setIsOffline(false)
-    const handleOffline = () => setIsOffline(true)
+    const handleOnline = () => {
+      setIsOffline(false)
+      setAvailability(new Map())
+      setAvailabilityRetry((n) => n + 1)
+    }
+    const handleOffline = () => {
+      setIsOffline(true)
+      setAvailability(new Map())
+    }
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
     return () => {
@@ -141,6 +151,8 @@ export default function BookingApp() {
   const loadCatalogue = useCallback(async () => {
     setLoading(true)
     setError(null)
+    setItems([])
+    setAvailability(new Map())
     try {
       const data = await fetchPublicCatalogue()
       setItems(data)
@@ -156,23 +168,39 @@ export default function BookingApp() {
     loadCatalogue()
   }, [loadCatalogue])
 
-  // Query availability when dates or items change
+  // Treat unverified/failed/offline stock as UNKNOWN, never as Available.
+  // Clear prior date/product results immediately so stale responses cannot be used.
   useEffect(() => {
-    if (!startDate || !endDate || items.length === 0) return
-
     let cancelled = false
-    const productIds = items.map((i) => i.id)
+    setAvailability(new Map())
+    setAvailabilityError(null)
 
-    checkPublicAvailability(productIds, startDate, endDate).then((res) => {
-      if (!cancelled) {
-        setAvailability(res)
-      }
-    })
-
-    return () => {
-      cancelled = true
+    if (!startDate || !endDate || items.length === 0) {
+      setAvailabilityPending(false)
+      return () => { cancelled = true }
     }
-  }, [items, startDate, endDate])
+    if (isOffline) {
+      setAvailabilityPending(false)
+      setAvailabilityError('Availability cannot be checked while offline. Reconnect and retry.')
+      return () => { cancelled = true }
+    }
+
+    setAvailabilityPending(true)
+    void checkPublicAvailability(items.map((i) => i.id), startDate, endDate)
+      .then((res) => {
+        if (!cancelled) setAvailability(res)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAvailability(new Map())
+          setAvailabilityError('Unable to verify availability right now. Please retry.')
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setAvailabilityPending(false)
+      })
+    return () => { cancelled = true }
+  }, [items, startDate, endDate, availabilityRetry, isOffline])
 
   // Extract unique categories (preserving 'Bundle Deals' order)
   const categories = useMemo(() => {
@@ -207,6 +235,8 @@ export default function BookingApp() {
 
   // Cart operations
   const handleAddToCart = (item: CatalogueItem) => {
+    if (!startDate || !endDate || isOffline || availabilityPending || availabilityError ||
+        availability.get(item.id) !== true) return
     trackStoreEvent({
       event: 'add_to_request',
       item: {
@@ -272,8 +302,8 @@ export default function BookingApp() {
       <BookingHeader
         startDate={startDate}
         endDate={endDate}
-        onStartDateChange={setStartDate}
-        onEndDateChange={setEndDate}
+        onStartDateChange={(date) => { setStartDate(date); setAvailability(new Map()) }}
+        onEndDateChange={(date) => { setEndDate(date); setAvailability(new Map()) }}
         cartCount={totalCartCount}
         onOpenCart={() => setIsCartOpen(true)}
         user={clientUser}
@@ -327,6 +357,24 @@ export default function BookingApp() {
           >
             📡 You are currently offline. Showing cached catalogue rates. Live reservation sync will resume when connection is restored.
           </div>
+        )}
+
+        {availabilityError && !loading && !error && (
+          <div role="alert" style={{ padding: '12px 18px', margin: '16px 0',
+            background: 'rgba(136,19,55,0.2)', color: 'var(--rose-text)',
+            border: '1px solid var(--rose-text)', borderRadius: 'var(--radius-md)' }}>
+            <span>{availabilityError} Requests are temporarily blocked until the check succeeds.</span>
+            {!isOffline && (
+              <button type="button" className="btn-secondary"
+                style={{ marginLeft: 12, width: 'auto' }}
+                onClick={() => setAvailabilityRetry((n) => n + 1)}>Retry availability</button>
+            )}
+          </div>
+        )}
+        {availabilityPending && !loading && !error && (
+          <p role="status" style={{ color: 'var(--text-muted)', padding: '8px 0' }}>
+            Checking live equipment availability…
+          </p>
         )}
 
         {/* Hero & Search bar */}
@@ -413,7 +461,7 @@ export default function BookingApp() {
                 key={item.id}
                 item={item}
                 hasDates={Boolean(startDate && endDate)}
-                isAvailable={availability.get(item.id)}
+                isAvailable={isOffline || availabilityPending || availabilityError ? undefined : availability.get(item.id)}
                 onViewDetails={handleViewDetails}
                 onAddToCart={handleAddToCart}
               />
@@ -438,7 +486,7 @@ export default function BookingApp() {
       <ProductDetailModal
         item={selectedItem}
         hasDates={Boolean(startDate && endDate)}
-        isAvailable={selectedItem ? availability.get(selectedItem.id) : undefined}
+        isAvailable={!isOffline && !availabilityPending && !availabilityError && selectedItem ? availability.get(selectedItem.id) : undefined}
         onClose={() => setSelectedItem(null)}
         onAddToCart={handleAddToCart}
       />
@@ -458,6 +506,9 @@ export default function BookingApp() {
         onOpenAuth={() => setIsAuthOpen(true)}
         awayStatus={awayStatus}
         onRefreshAwayStatus={refreshAwayStatus}
+        bookingChecksReady={!isOffline && !availabilityPending && !availabilityError &&
+          Boolean(startDate && endDate) && cart.length > 0 &&
+          cart.every((line) => availability.get(line.item.id) === true)}
       />
 
       {/* Client Auth Modal */}

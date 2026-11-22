@@ -28,6 +28,7 @@ interface CartDrawerProps {
   onOpenAuth?: (() => void) | undefined
   awayStatus?: OnlineBookingAwayStatus | null | undefined
   onRefreshAwayStatus?: (() => Promise<unknown>) | undefined
+  bookingChecksReady: boolean
 }
 
 export const CartDrawer: React.FC<CartDrawerProps> = ({
@@ -44,6 +45,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onOpenAuth,
   awayStatus,
   onRefreshAwayStatus,
+  bookingChecksReady,
 }) => {
   const [step, setStep] = useState<'cart' | 'checkout' | 'success'>('cart')
   const [clientName, setClientName] = useState('')
@@ -114,6 +116,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
     if (awayStatus?.is_away) {
       setErrorMessage(`Online requests are currently paused: ${awayStatus.message}`)
+      return
+    }
+
+    if (!bookingChecksReady) {
+      setErrorMessage('Equipment availability is not verified for these dates. Please retry the catalogue check.')
       return
     }
 
@@ -469,14 +476,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={submitting || (awayStatus?.is_away ?? false)}
+                disabled={submitting || !bookingChecksReady || (awayStatus?.is_away ?? false)}
                 className="btn-primary"
                 style={{
                   flex: 2,
                   minHeight: 48,
                   fontSize: '0.95rem',
-                  opacity: (awayStatus?.is_away ?? false) ? 0.65 : 1,
-                  cursor: (awayStatus?.is_away ?? false) ? 'not-allowed' : 'pointer',
+                  opacity: (!bookingChecksReady || (awayStatus?.is_away ?? false)) ? 0.65 : 1,
+                  cursor: (!bookingChecksReady || (awayStatus?.is_away ?? false)) ? 'not-allowed' : 'pointer',
                 }}
               >
                 {submitting
@@ -595,7 +602,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 <button
                   type="button"
                   className="btn-primary"
-                  disabled={awayStatus?.is_away ?? false}
+                  disabled={!bookingChecksReady || (awayStatus?.is_away ?? false)}
                   style={{
                     width: '100%',
                     minHeight: 48,
@@ -607,7 +614,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 >
                   {(awayStatus?.is_away ?? false)
                     ? `Requests Paused — ${awayStatus?.message ?? 'Online requests paused'}`
-                    : 'Proceed to Contact & Location'}
+                    : !bookingChecksReady
+                      ? 'Waiting for verified availability'
+                      : 'Proceed to Contact & Location'}
                 </button>
 
                 <p className="cart-disclaimer">
