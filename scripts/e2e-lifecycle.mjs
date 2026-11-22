@@ -10847,7 +10847,6 @@ STEPS.push({
 })
 
 // -----------------------------------------------------------------------------
-<<<<<<< HEAD
 // STEP L98: Booqable rentals block the OS calendar and prevent double booking (T9-02, PLAN §7, Law 6)
 //
 // Authority:

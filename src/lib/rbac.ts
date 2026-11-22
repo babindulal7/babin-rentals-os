@@ -1006,7 +1006,6 @@ export function canRescheduleDeliveryJob(role: SystemRole | null | undefined): b
 }
 
 /**
-<<<<<<< HEAD
  * Set delivery route position (T4-09) — Owner, Admin, Manager, Coordinator, Warehouse.
  * Mirrors `set_delivery_route_position` authorization.
  */
