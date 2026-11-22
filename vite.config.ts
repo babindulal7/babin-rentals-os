@@ -5,11 +5,11 @@ import path from 'node:path'
 import fs from 'node:fs'
 import { VitePWA } from 'vite-plugin-pwa'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     tailwindcss(),
-    VitePWA({
+    ...(mode === 'client' ? [] : [VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'robots.txt', 'icons/*.png'],
       manifest: {
@@ -102,9 +102,12 @@ export default defineConfig({
           }
         ]
       }
-    })
+    })]),
   ],
   build: {
+    // Keep each Cloudflare hostname's HTML/JS build physically separate.
+    outDir: mode === 'staff' ? 'dist-staff' : mode === 'client' ? 'dist-client' : 'dist',
+    manifest: mode === 'staff' || mode === 'client',
     /* Explicitly off, not merely defaulted. Rentman ships `*.js.map` with
        `sourcesContent` in its production bundle, which is how the 30 Aug 2026
        forensics pack reconstructed 1,500 of their source paths, their whole
@@ -118,11 +121,18 @@ export default defineConfig({
          module) down to a first-time visitor, and its Tailwind stylesheet must
          not reach the app — see src/marketing/marketing.css for why that
          isolation is load-bearing. */
-      input: {
-        main: path.resolve(__dirname, 'index.html'),
-        marketing: path.resolve(__dirname, 'marketing.html'),
-        booking: path.resolve(__dirname, 'booking.html'),
-      },
+      input: mode === 'staff'
+        ? { main: path.resolve(__dirname, 'index.html') }
+        : mode === 'client'
+          ? {
+              marketing: path.resolve(__dirname, 'marketing.html'),
+              booking: path.resolve(__dirname, 'booking.html'),
+            }
+          : {
+              main: path.resolve(__dirname, 'index.html'),
+              marketing: path.resolve(__dirname, 'marketing.html'),
+              booking: path.resolve(__dirname, 'booking.html'),
+            },
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
@@ -195,4 +205,4 @@ export default defineConfig({
       ? process.env['VITE_ALLOWED_HOSTS'].split(',').map((h) => h.trim())
       : ['.localhost', '127.0.0.1'],
   },
-})
+}))

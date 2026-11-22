@@ -1,0 +1,49 @@
+name: Cloudflare isolated site builds (non-deploy)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'vite.config.ts'
+      - 'package.json'
+      - 'src/marketing/**'
+      - 'src/booking/**'
+      - 'public/_redirects'
+      - 'public/_headers'
+      - 'scripts/check-site-env.mjs'
+      - 'scripts/finalize-site-build.mjs'
+      - 'scripts/verify-site-builds.mjs'
+      - '.github/workflows/cloudflare-isolated-sites.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-site-builds-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  isolated-builds:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    name: client/staff build separation (no deploy)
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install exact lockfile dependencies
+        run: npm ci
+      - name: Build isolated staff bundle and verify
+        run: npm run build:staff
+      - name: Build isolated public/client bundle and verify
+        run: npm run build:client
+      - name: Verify both outputs
+        run: npm run verify:sites
+      - name: No Cloudflare deployment
+        run: echo 'Artifact-only verification; no deploy, DNS, secrets, or database changes performed.'
