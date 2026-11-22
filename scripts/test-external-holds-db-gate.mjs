@@ -483,6 +483,49 @@ check(anonBlocked, '12d. Anon is denied all access to external_holds')
 await as('service_role')
 
 // ---------------------------------------------------------------------------
+// 13. Turnaround and Effective Window Normalization (0240 integration)
+// ---------------------------------------------------------------------------
+// Set timeBetweenRentals to 'Per product' and give fx3Id 120 cleaning minutes
+await sql(`delete from settings where key = 'timeBetweenRentals' and scope = 'org'`)
+await sql(`insert into settings (key, value, scope) values ('timeBetweenRentals', '"Per product"', 'org')`)
+await sql(`update products set cleaning_time_minutes = 120, prep_time_minutes = 0 where id = $1`, [fx3Id])
+
+// External hold returns at 18:00
+const bqTurnaroundLine = 'bq_line_turnaround_1'
+await sql(`
+  insert into external_holds (client_uuid, source, external_order_id, external_line_id, external_order_number, product_id, asset_id, qty, period, last_seen_at)
+  values ($1, 'booqable', 'bq_ord_ta', $2, 'BQ-TA', $3, $4, 1, tstzrange('2027-03-01 10:00:00+00', '2027-03-01 18:00:00+00', '[)'), now())
+`, [uuid(), bqTurnaroundLine, fx3Id, fx3Unit1])
+
+// Verify external hold period was normalized to include 120m cleaning turnaround -> 20:00:00+00
+const isNormalized = (await sql(`
+  select (upper(period) = '2027-03-01 20:00:00+00'::timestamptz) as ok
+    from external_holds where external_line_id = $1
+`, [bqTurnaroundLine])).rows[0]?.ok
+check(
+  Boolean(isNormalized),
+  '13a. External hold period is normalized with 120m cleaning turnaround to 20:00:00+00'
+)
+
+// OS booking attempts pickup at 19:00 on the same unit: must fail because 19:00 is within 18:00-20:00 cleaning window
+const b13Conflict = await createOsBooking(fx3Id, fx3Unit1, 1, '2027-03-01 19:00:00+00', '2027-03-01 22:00:00+00')
+const osPickupInCleaningFails = await fails(async () => {
+  await sql(`
+    insert into inventory_reservations (client_uuid, booking_id, booking_line_id, asset_id, qty, period, created_by, hold_state)
+    values (gen_random_uuid(), $1, $2, $3, 1, tstzrange('2027-03-01 19:00:00+00', '2027-03-01 22:00:00+00', '[)'), $4, 'confirmed')
+  `, [b13Conflict.bookingId, b13Conflict.lineId, fx3Unit1, ids.Owner])
+}, 'GATE:booqable_serial_held')
+check(osPickupInCleaningFails, '13b. OS reservation at 19:00 is blocked by Booqable 18:00 return with 120m cleaning turnaround')
+
+// OS booking at 20:00:00+00 (after cleaning turnaround): succeeds cleanly
+const b13Clean = await createOsBooking(fx3Id, fx3Unit1, 1, '2027-03-01 20:00:00+00', '2027-03-01 23:00:00+00')
+await sql(`
+  insert into inventory_reservations (client_uuid, booking_id, booking_line_id, asset_id, qty, period, created_by, hold_state)
+  values (gen_random_uuid(), $1, $2, $3, 1, tstzrange('2027-03-01 20:00:00+00', '2027-03-01 23:00:00+00', '[)'), $4, 'confirmed')
+`, [b13Clean.bookingId, b13Clean.lineId, fx3Unit1, ids.Owner])
+check(true, '13c. OS reservation at 20:00 succeeds cleanly after 120m cleaning turnaround completes')
+
+// ---------------------------------------------------------------------------
 // Summary
 // ---------------------------------------------------------------------------
 console.log(`\nResults: ${passed} passed, ${failed} failed`)

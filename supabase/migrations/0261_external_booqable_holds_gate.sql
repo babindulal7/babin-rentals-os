@@ -20,7 +20,7 @@ create table public.external_holds (
   period tstzrange not null
     check (not isempty(period)
       and not lower_inf(period) and not upper_inf(period)
-      and lower_inc(period) and not upper_inc(period)),
+      and lower_inc(period)),
   status text not null default 'active'
     check (status in ('active', 'completed', 'cancelled')),
   released_at timestamptz,
@@ -103,6 +103,40 @@ execute function public.reject_external_hold_deletion();
 create trigger trg_booqable_feed_state_no_delete
 before delete on public.booqable_hold_feed_state for each row
 execute function public.reject_external_hold_deletion();
+
+-- Normalize external hold windows using product turnaround rules (0240)
+create or replace function public.normalize_external_hold_window()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_prep_minutes integer;
+  v_cleaning_minutes integer;
+begin
+  if new.status <> 'active' then
+    return new;
+  end if;
+
+  select coalesce(p.prep_time_minutes, 0), coalesce(p.cleaning_time_minutes, 0)
+    into v_prep_minutes, v_cleaning_minutes
+    from public.products p where p.id = new.product_id;
+
+  new.period := public.get_effective_rental_window(
+    lower(new.period),
+    upper(new.period),
+    v_prep_minutes,
+    v_cleaning_minutes
+  );
+  return new;
+end;
+$$;
+revoke all on function public.normalize_external_hold_window() from public, anon, authenticated;
+
+create trigger trg_t9_external_holds_normalize
+before insert or update of product_id, period, status on public.external_holds
+for each row execute function public.normalize_external_hold_window();
 
 -- Cross-table database gate, not browser/UI advice.
 -- Every active OS reservation and external-hold write locks the same product
