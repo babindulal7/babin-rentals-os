@@ -157,7 +157,7 @@ one transaction per file, stops at first failure) → `docs/live/POST_CUTOVER_CH
 file APPLIED + PRODUCTION-VERIFIED only after T1-11 passes.
 **Needs** — T1-03 … T1-06 for Batch 1; each later batch needs its tracks' staging acceptance (0260-0269 rehearsed on staging 23 Nov 2026).
 
-### T1-11 · Live smoke test per role            status: todo · size: S each · lane A + Babin
+### T1-11 · Live smoke test per role            status: ready — runbook authored in docs/live/SMOKE_TEST.md, cutover protocol in docs/verification/CUTOVER_DRY_RUN_PROTOCOL.md, and E2E invariants verified in src/__tests__/e2e/cutoverDryRunAndPilotInvariants.test.tsx · size: S each · lane A + Babin
 **What** — After every batch: sign in as Owner, Coordinator, Warehouse, Accounts (real staff
 accounts) and run the script in `docs/live/` (open Today, Rentals, a booking, Finance; Warehouse
 must see no money; create and cancel a test quote).
