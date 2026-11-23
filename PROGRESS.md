@@ -1,5 +1,48 @@
 # Progress Log
 
+## 2026-11-24 — Staging Counter Dual-Entry Trial Protocol & Law 6 Money Blindness Audit (Windows Antigravity)
+
+### Did
+- Executed Week 1 Action 3: Established the Staging Counter Dual-Entry Trial Protocol (`Quote → Pack → Handover → Return`) in `docs/verification/COUNTER_DUAL_ENTRY_TRIAL_RUNBOOK.md` and `docs/verification/STAGING_COUNTER_TRIAL_RUNBOOK.md`.
+- Created `docs/verification/STAGING_SYNCHRONIZE_NINE_ROLES.sql` providing idempotent setup, password synchronization, and Boudha branch floor permissions for the 9 test seats on `babin-staging` (`klhmsrunqrdxjudyhnkm`).
+- Authored E2E counter dual-entry stage verification suite `src/__tests__/e2e/counterDualEntryTrial.test.tsx` (15/15 passing tests) validating 06:00 NPT boundaries, 13% VAT, 50% advance due, GiST reservation minting, single-job floor concurrency, duration overrun bands (`lateBand`), mandatory damage photos (`require_return_damage_photo_per_unit()` / L68), deposit settlement (Law 5), and the four closing gates.
+- Authored Law 6 Money Blindness Audit suite `src/lib/__tests__/floorRoleMoneyBlindnessAudit.test.ts` (13/13 passing tests) validating zero-money visibility across core RBAC (`canViewMoney`), field gating (`moneyScope`), Rental Intelligence scrubbing (`explainCanonicalQuote` / RI-02), and workspace source code architectures (`PackingWorkspace`, `HandoverWorkspace`, `ReturnWorkspace`, `ResetWorkspace`, `DeliveryWorkspace`, `RiderDeliveryPage`, `ScannerFab`).
+- Opened and verified PR #395 with all required CI checks passing green (`typecheck · test · build` in 5m 42s).
+
+### Ruled
+- Floor workspaces (`Packing`, `Handover`, `Return`, `Reset`) must remain strictly money-free by construction: `lib/money.ts` and `formatMoney()` remain banned from warehouse floor views (Foundation §8.3, Law 6). Overruns render as time bands (`lateBand`), never rupee penalty figures.
+- Handover against unpaid bookings requires Accounts clearance or a documented R-06 manager justification; Warehouse cannot self-certify financial gates without recorded justification.
+- Returning person signature or documented refusal reason (≥ 10 chars) and damage photo evidence are mandatory before completing flagged returns (R-39, Migration 0234, L68).
+
+### Verified
+- `npx vitest run src/__tests__/e2e/counterDualEntryTrial.test.tsx src/lib/__tests__/floorRoleMoneyBlindnessAudit.test.ts`: PASS (28/28 tests passing).
+- `gh pr checks 395`: PASS across all Mac CI jobs.
+- `npm run check:pglite`: PASS (267/267 migrations build from scratch, 48 views checked, 253 definer search paths pinned).
+- `npm run check:lifecycle`: PASS (102/102 lifecycle steps green in PGlite real Postgres + RLS).
+- `npm run check:contrast`: PASS (97/97 checks compliant).
+- `npm run lint:shell`: PASS (1003 files checked, 100% compliant).
+- `npm run lint:progress`: PASS.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-23T20:15:12.644Z). Suite: Historical suite: 7946/7946 passed, 0 failed (recorded 2026-11-23T19:18:59.474Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 7934/7934 passed, 0 failed (recorded 2026-11-23T18:18:19.757Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-23T20:15:43.382Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Merge PR #395 by Babin (Counter Dual-Entry Runbook & Law 6 Money Blindness Audit).
+- Operator live apply of migrations 0260–0269 by Babin per `docs/live/PRODUCTION_LIVE_BATCH_PLAN_2026-11-23.md`.
+- Week 2 Launch Hardening: Complete and harden core rental flow edge cases (overlapping bookings, external holds, post-06:00 returns, concurrent staff updates).
+
 ## 2026-11-24 — Staging Forward-Migration Rehearsal (0261–0269) & Production Table Baseline Snapshot (Windows Antigravity)
 
 ### Did
