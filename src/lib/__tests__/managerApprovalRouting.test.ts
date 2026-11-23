@@ -4,8 +4,6 @@ import {
   readManagerApprovalRouting,
   writeSettings,
   resetSettings,
-  applyRemoteSettingPatch,
-  clearRemoteSettings,
 } from '../settingsStore'
 import {
   canDecideManagerApproval,
