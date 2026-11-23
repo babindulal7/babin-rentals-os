@@ -79,7 +79,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             className="btn-primary"
             onClick={() => onAddToCart(item)}
             disabled={!hasDates || isAvailable !== true}
-            aria-label={`Add ${item.name} to booking request`}
+            title={!hasDates ? 'Select rental dates above' : isAvailable !== true ? 'Not available on selected dates' : `Add ${item.name} to request`}
+            aria-label={!hasDates ? `Select rental dates above to check availability for ${item.name}` : isAvailable !== true ? `${item.name} is not available on selected dates` : `Add ${item.name} to booking request`}
           >
             Add to Request
           </button>

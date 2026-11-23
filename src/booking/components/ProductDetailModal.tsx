@@ -127,7 +127,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               return (
                 <label
                   key={choice.item.id}
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', cursor: unavailable ? 'not-allowed' : 'pointer' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', minHeight: 44, cursor: unavailable ? 'not-allowed' : 'pointer' }}
                 >
                   <input
                     type="radio"
@@ -189,6 +189,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               onClose()
             }}
             disabled={!hasDates || chosenAvailable !== true}
+            title={!hasDates ? 'Select rental dates above' : chosenAvailable !== true ? 'Not available on selected dates' : `Add ${item.name} to request`}
+            aria-label={!hasDates ? `Select rental dates above to check availability for ${item.name}` : chosenAvailable !== true ? `${item.name} is not available on selected dates` : `Add ${item.name} to booking request`}
             style={{ maxWidth: 220 }}
           >
             Add to Request
