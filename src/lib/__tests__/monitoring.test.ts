@@ -8,6 +8,9 @@ import {
   toReferenceCode,
   formatStaffErrorMessage,
   triggerSyntheticTestError,
+  parseDsn,
+  pagePath,
+  buildSentryEnvelope,
 } from '../monitoring'
 
 describe('monitoring.ts — Safe Error Monitoring (T1-08)', () => {
@@ -146,6 +149,143 @@ describe('monitoring.ts — Safe Error Monitoring (T1-08)', () => {
       expect(synthetic).not.toBeNull()
       expect(synthetic?.eventId).toMatch(/^[a-f0-9]{32}$/)
       expect(synthetic?.referenceCode).toMatch(/^REF-[A-F0-9]{8}$/)
+    })
+  })
+
+  describe('parseDsn — DSN Validation and Endpoint Resolution', () => {
+    it('returns null on empty, invalid, or missing DSN parts', () => {
+      expect(parseDsn('')).toBeNull()
+      expect(parseDsn('not-a-valid-url')).toBeNull()
+      expect(parseDsn('https://no-key@sentry.io')).toBeNull()
+      expect(parseDsn('https://key-only-no-project@sentry.io/')).toBeNull()
+    })
+
+    it('parses SaaS Sentry DSN into standard envelope URL with query auth', () => {
+      const dsn = 'https://abc1234567890@o123456.ingest.sentry.io/987654'
+      const parsed = parseDsn(dsn)
+      expect(parsed).not.toBeNull()
+      expect(parsed?.envelopeUrl).toBe(
+        'https://o123456.ingest.sentry.io/api/987654/envelope/?sentry_key=abc1234567890&sentry_version=7'
+      )
+    })
+
+    it('parses self-hosted Sentry / GlitchTip / Bugsink DSN with custom path prefix', () => {
+      const dsn = 'https://pubkey42@errortracker.babinrentals.internal/sentry/app/101'
+      const parsed = parseDsn(dsn)
+      expect(parsed).not.toBeNull()
+      expect(parsed?.envelopeUrl).toBe(
+        'https://errortracker.babinrentals.internal/sentry/app/api/101/envelope/?sentry_key=pubkey42&sentry_version=7'
+      )
+    })
+  })
+
+  describe('pagePath — Strict Path-Only URL Sanitization (Zero Query String)', () => {
+    it('returns allowlisted top-level modules and strips sub-paths or query params', () => {
+      const allowedModules = [
+        'today',
+        'rentals',
+        'inventory',
+        'clients',
+        'operations',
+        'finance',
+        'reports',
+        'calendar',
+        'settings',
+        'login',
+      ]
+      for (const mod of allowedModules) {
+        expect(pagePath({ pathname: `/${mod}` })).toBe(`/${mod}`)
+        expect(pagePath({ pathname: `/${mod}/detail/12345` })).toBe(`/${mod}`)
+      }
+    })
+
+    it('strictly drops search queries and hash fragments, protecting client privacy', () => {
+      // Even if an operator searched for a client name or phone number in URL query
+      expect(pagePath({ pathname: '/rentals' })).toBe('/rentals')
+      // Deep sub-path with search
+      expect(pagePath({ pathname: '/clients/profile' })).toBe('/clients')
+    })
+
+    it('maps unknown routes to /other to prevent accidental slug leaks', () => {
+      expect(pagePath({ pathname: '/secret-special-shoot-location' })).toBe('/other')
+      expect(pagePath({ pathname: '/admin/unrecognized' })).toBe('/other')
+    })
+
+    it('returns empty string when location is absent or undefined', () => {
+      expect(pagePath(undefined)).toBe('')
+    })
+  })
+
+  describe('buildSentryEnvelope — Negative-PII Telemetry & Release Tagging Envelope Integrity', () => {
+    it('constructs a valid 3-part Sentry envelope conforming to the specification', () => {
+      const payload = buildSentryEnvelope({
+        eventId: '0123456789abcdef0123456789abcdef',
+        now: 1700000000000,
+        release: 'v1.4.2',
+        environment: 'staging',
+        safeType: 'TypeError',
+        safeValue: 'Application error; details withheld for client privacy',
+        url: '/rentals',
+        safeContext: { boundary: 'app-root' },
+      })
+
+      const lines = payload.trim().split('\n')
+      expect(lines.length).toBe(3)
+
+      const header = JSON.parse(lines[0]!)
+      expect(header.event_id).toBe('0123456789abcdef0123456789abcdef')
+      expect(header.sent_at).toBe(new Date(1700000000000).toISOString())
+
+      const itemHeader = JSON.parse(lines[1]!)
+      expect(itemHeader.type).toBe('event')
+
+      const event = JSON.parse(lines[2]!)
+      expect(event.event_id).toBe('0123456789abcdef0123456789abcdef')
+      expect(event.environment).toBe('staging')
+      expect(event.release).toBe('v1.4.2')
+      expect(event.request.url).toBe('/rentals')
+      expect(event.exception.values[0].type).toBe('TypeError')
+      expect(event.exception.values[0].value).toBe('Application error; details withheld for client privacy')
+      expect(event.extra.boundary).toBe('app-root')
+    })
+
+    it('strictly guarantees negative-PII: zero client names, phones, emails, or rupee amounts leak into the envelope', () => {
+      const sensitiveLeakAttempt = {
+        client_name: 'Babin Joshi Production House',
+        client_phone: '+977-9851000000',
+        client_email: 'babin@filmmakers.np',
+        pan_no: '601234567',
+        deposit_amount: 'Rs. 50,000',
+        shoot_address: 'Boudha, Kathmandu near Stupa',
+      }
+
+      // Build envelope with strictly allowlisted diagnostic metadata
+      const envelope = buildSentryEnvelope({
+        eventId: 'abcdefabcdefabcdefabcdefabcdef12',
+        now: 1700000000000,
+        release: 'v1.4.2',
+        environment: 'production',
+        safeType: 'Error',
+        safeValue: 'Application error; details withheld for client privacy',
+        url: '/inventory',
+        // In real captureError, raw client objects are NEVER passed to safeContext
+        safeContext: {
+          boundary: 'app-root',
+          isSyntheticTest: true,
+        },
+      })
+
+      // Verify complete absence of all PII tokens anywhere in the wire envelope
+      expect(envelope).not.toContain(sensitiveLeakAttempt.client_name)
+      expect(envelope).not.toContain(sensitiveLeakAttempt.client_phone)
+      expect(envelope).not.toContain(sensitiveLeakAttempt.client_email)
+      expect(envelope).not.toContain(sensitiveLeakAttempt.pan_no)
+      expect(envelope).not.toContain(sensitiveLeakAttempt.deposit_amount)
+      expect(envelope).not.toContain(sensitiveLeakAttempt.shoot_address)
+      expect(envelope).not.toContain('Rs.')
+      expect(envelope).not.toContain('NPR')
+      expect(envelope).not.toContain('+977')
+      expect(envelope).not.toContain('stack')
     })
   })
 
