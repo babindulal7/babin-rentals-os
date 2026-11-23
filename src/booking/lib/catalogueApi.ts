@@ -7,6 +7,9 @@
  */
 
 import { supabase } from '@/lib/supabase'
+import { fetchOnlineBookingAwayStatus } from '@/lib/awayMode'
+import { rentalDaysInclusive, resolveCompleteAvailability, type PublicDayAvailability } from './publicAvailabilitySafety'
+import type { FamilyOptionRow } from './familyOptions'
 
 export interface BundleComponent {
   readonly name: string
@@ -118,39 +121,82 @@ const MOCK_CATALOGUE: CatalogueItem[] = [
       { name: 'Sennheiser MKH 416 Shotgun Microphone', qty: 1 },
     ],
   },
+  // T7-13 mock family for the local preview: one cable family whose options differ only by length.
+  {
+    id: '77777777-7777-4777-8777-777777777777',
+    kind: 'product',
+    slug: 'bnc-sdi-cable-5m',
+    name: 'BNC SDI Cable 5m',
+    category_name: 'Cables',
+    description: 'Broadcast-grade BNC SDI cable, 5 metres.',
+    photo_paths: [],
+    daily_rate_paisa: 50000, // Rs. 500
+    weekly_rate_paisa: null,
+    monthly_rate_paisa: null,
+    bundle_contents: [],
+  },
+  {
+    id: '88888888-8888-4888-8888-888888888888',
+    kind: 'product',
+    slug: 'bnc-sdi-cable-10m',
+    name: 'BNC SDI Cable 10m',
+    category_name: 'Cables',
+    description: 'Broadcast-grade BNC SDI cable, 10 metres.',
+    photo_paths: [],
+    daily_rate_paisa: 70000, // Rs. 700
+    weekly_rate_paisa: null,
+    monthly_rate_paisa: null,
+    bundle_contents: [],
+  },
+]
+
+/** T7-13 mock family rows, used only with VITE_DATA_SOURCE=mock for the local preview. */
+const MOCK_FAMILY_ROWS: FamilyOptionRow[] = [
+  { familyId: 'mock-family-bnc-sdi', familyName: 'BNC SDI Cable', productId: '77777777-7777-4777-8777-777777777777', optionLabel: '5m', sortOrder: 1 },
+  { familyId: 'mock-family-bnc-sdi', familyName: 'BNC SDI Cable', productId: '88888888-8888-4888-8888-888888888888', optionLabel: '10m', sortOrder: 2 },
 ]
 
 export async function fetchPublicCatalogue(): Promise<CatalogueItem[]> {
+  // Fixture data is permitted ONLY in explicit local mock/test environments.
   if (import.meta.env.VITE_DATA_SOURCE === 'mock' || import.meta.env.MODE === 'test') {
     return MOCK_CATALOGUE
   }
 
+  let data: unknown
   try {
-    const { data, error } = await supabase
+    const response = await supabase
       .from('public_catalogue_v')
       .select('*')
       .order('name', { ascending: true })
-
-    if (error || !data || data.length === 0) {
-      // In development or when live DB has no online items yet, fallback to mock catalogue
-      return MOCK_CATALOGUE
+    if (response.error || !Array.isArray(response.data)) {
+      throw new Error('Catalogue response unavailable')
     }
+    data = response.data
+  } catch {
+    throw new Error('Catalogue temporarily unavailable. Please retry.')
+  }
 
-    interface RawCatalogueRow {
-      id: string
-      kind?: string | undefined
-      slug?: string | undefined
-      name: string
-      category_name?: string | undefined
-      description?: string | undefined
-      photo_paths?: string[] | undefined
-      daily_rate_paisa?: number | undefined
-      weekly_rate_paisa?: number | null | undefined
-      monthly_rate_paisa?: number | null | undefined
-      bundle_contents?: BundleComponent[] | undefined
+  interface RawCatalogueRow {
+    id: string
+    kind?: string | undefined
+    slug?: string | undefined
+    name: string
+    category_name?: string | undefined
+    description?: string | undefined
+    photo_paths?: string[] | undefined
+    daily_rate_paisa?: number | undefined
+    weekly_rate_paisa?: number | null | undefined
+    monthly_rate_paisa?: number | null | undefined
+    bundle_contents?: BundleComponent[] | undefined
+  }
+
+  // A legitimate empty published catalogue stays empty, not a fabricated set.
+  return (data as RawCatalogueRow[]).map((row) => {
+    const dailyRate = Number(row.daily_rate_paisa)
+    if (!row.id || !row.name || !Number.isSafeInteger(dailyRate) || dailyRate <= 0) {
+      throw new Error('Published catalogue information is incomplete. Please retry.')
     }
-
-    return (data as RawCatalogueRow[]).map((row) => ({
+    return {
       id: row.id,
       kind: row.kind === 'bundle' ? 'bundle' : 'product',
       slug: row.slug || row.id,
@@ -158,14 +204,12 @@ export async function fetchPublicCatalogue(): Promise<CatalogueItem[]> {
       category_name: row.category_name || (row.kind === 'bundle' ? 'Bundle Deals' : 'Other'),
       description: row.description || '',
       photo_paths: Array.isArray(row.photo_paths) ? row.photo_paths : [],
-      daily_rate_paisa: Number(row.daily_rate_paisa || 0),
-      weekly_rate_paisa: row.weekly_rate_paisa ? Number(row.weekly_rate_paisa) : null,
-      monthly_rate_paisa: row.monthly_rate_paisa ? Number(row.monthly_rate_paisa) : null,
+      daily_rate_paisa: dailyRate,
+      weekly_rate_paisa: row.weekly_rate_paisa == null ? null : Number(row.weekly_rate_paisa),
+      monthly_rate_paisa: row.monthly_rate_paisa == null ? null : Number(row.monthly_rate_paisa),
       bundle_contents: Array.isArray(row.bundle_contents) ? row.bundle_contents : [],
-    }))
-  } catch {
-    return MOCK_CATALOGUE
-  }
+    }
+  })
 }
 
 export async function checkPublicAvailability(
@@ -173,44 +217,42 @@ export async function checkPublicAvailability(
   fromDate: string,
   toDate: string,
 ): Promise<Map<string, boolean>> {
+  if (!productIds.length) return new Map()
+
+  // Reject malformed and out-of-range dates before calling the anonymous RPC.
+  const dates = rentalDaysInclusive(fromDate, toDate)
+  const uniqueIds = Array.from(new Set(productIds))
+
+  if (import.meta.env.VITE_DATA_SOURCE === 'mock' || import.meta.env.MODE === 'test') {
+    // Explicit local fixtures only, never the hosted/public client.
+    return new Map(uniqueIds.map((id) => [id, true]))
+  }
+
+  // The SQL RPC accepts a maximum of 30 IDs per request; check every item,
+  // including large catalogues, instead of silently ignoring IDs 31 onward.
   const result = new Map<string, boolean>()
-  if (!productIds.length || !fromDate || !toDate) return result
-
-  if (import.meta.env.VITE_DATA_SOURCE === 'mock') {
-    // In mock mode, every item is available
-    for (const id of productIds) {
-      result.set(id, true)
-    }
-    return result
-  }
-
-  try {
-    const { data, error } = await supabase.rpc('public_availability', {
-      p_product_ids: productIds.slice(0, 30),
-      p_from: fromDate,
-      p_to: toDate,
-    })
-
-    if (error || !Array.isArray(data)) {
-      for (const id of productIds) result.set(id, true)
-      return result
-    }
-
-    // Availability per product: available over the ENTIRE interval if available on every day
-    for (const row of data as AvailabilityResult[]) {
-      const current = result.get(row.product_id)
-      if (current === undefined) {
-        result.set(row.product_id, row.available)
-      } else {
-        result.set(row.product_id, current && row.available)
+  for (let i = 0; i < uniqueIds.length; i += 30) {
+    const batch = uniqueIds.slice(i, i + 30)
+    let rows: PublicDayAvailability[]
+    try {
+      const response = await supabase.rpc('public_availability', {
+        p_product_ids: batch,
+        p_from: fromDate,
+        p_to: toDate,
+      })
+      if (response.error || !Array.isArray(response.data)) {
+        throw new Error('Availability RPC unavailable')
       }
+      rows = response.data as PublicDayAvailability[]
+    } catch {
+      throw new Error('Unable to verify equipment availability. Please retry.')
     }
 
-    return result
-  } catch {
-    for (const id of productIds) result.set(id, true)
-    return result
+    // Only a complete product/day matrix can produce an Available badge.
+    const batchResult = resolveCompleteAvailability(batch, dates, rows)
+    for (const [id, free] of batchResult) result.set(id, free)
   }
+  return result
 }
 
 export function getPublicPhotoUrl(path: string | undefined): string | null {
@@ -262,6 +304,12 @@ export async function submitBookingRequest(payload: BookingRequestPayload): Prom
   const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock' || import.meta.env.MODE === 'test' || !supabase
 
   if (isMock) {
+    // Check away mode status first (fail-closed, matching server contract)
+    const awayStatus = await fetchOnlineBookingAwayStatus()
+    if (awayStatus.is_away) {
+      throw new Error(`Online booking requests are temporarily disabled: ${awayStatus.message}`)
+    }
+
     // Generate simulated response for local/offline mock
     const fakeId = 'req-' + Math.random().toString(36).substring(2, 9)
     const fakeNum = 'REQ-' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + Math.floor(1000 + Math.random() * 9000)
@@ -275,6 +323,18 @@ export async function submitBookingRequest(payload: BookingRequestPayload): Prom
     }
   }
 
+  // A request can sit in a cart while stock changes or the browser goes offline.
+  // Recheck every selected item immediately before the server-side submission.
+  const ids = payload.lines.map((line) => line.product_id ?? line.bundle_id)
+  if (!payload.lines.length || ids.some((id) => !id) ||
+      payload.lines.some((line) => !Number.isInteger(line.quantity) || line.quantity < 1)) {
+    throw new Error('Booking request contains an invalid item or quantity.')
+  }
+  const verified = await checkPublicAvailability(ids as string[], payload.start_date, payload.end_date)
+  if (ids.some((id) => verified.get(id as string) !== true)) {
+    throw new Error('Some equipment is no longer available for the selected dates. Please review your request.')
+  }
+
   const { data, error } = await supabase.rpc('submit_booking_request', {
     p_payload: payload,
   })
@@ -284,4 +344,40 @@ export async function submitBookingRequest(payload: BookingRequestPayload): Prom
   }
 
   return data as BookingRequestResult
+}
+
+/**
+ * T7-13 · Options of product families, for the option picker. Reads public_product_family_options_v,
+ * which only lists options that are publicly sold. Fails soft: if the read fails the products still
+ * show, each as a standalone item, and the failure is logged.
+ */
+export async function fetchFamilyOptions(): Promise<FamilyOptionRow[]> {
+  if (import.meta.env.VITE_DATA_SOURCE === 'mock') {
+    return MOCK_FAMILY_ROWS
+  }
+  if (import.meta.env.MODE === 'test') {
+    return []
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('public_product_family_options_v')
+      .select('family_id, family_name, product_id, option_label, sort_order')
+
+    if (error) {
+      console.error('[catalogue] family options unavailable; showing products as standalone', error)
+      return []
+    }
+
+    return (data ?? []).map((row) => ({
+      familyId: row.family_id,
+      familyName: row.family_name,
+      productId: row.product_id,
+      optionLabel: row.option_label,
+      sortOrder: row.sort_order,
+    }))
+  } catch (error) {
+    console.error('[catalogue] family options request failed', error)
+    return []
+  }
 }

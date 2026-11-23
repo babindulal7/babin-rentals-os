@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-test('staging-schema-preflight checks 2026-11-21 inventory with zero errors and passes', () => {
+test('staging-schema-preflight checks 2026-11-23 inventory with zero errors and passes', () => {
   const child = spawnSync(process.execPath, ['scripts/staging-schema-preflight.mjs', '--current'], {
     cwd: process.cwd(),
     encoding: 'utf8',
@@ -14,8 +14,8 @@ test('staging-schema-preflight checks 2026-11-21 inventory with zero errors and 
   assert.equal(child.status, 0, `Preflight exited with non-zero: ${child.stderr || child.stdout}`)
   const result = JSON.parse(child.stdout)
   assert.equal(result.mode, 'READ_ONLY_PINNED_SOURCE_INTEGRITY')
-  assert.equal(result.localFileCount, 258)
-  assert.equal(result.pinnedFileCount, 258)
+  assert.equal(result.localFileCount, 264)
+  assert.equal(result.pinnedFileCount, 264)
   assert.equal(result.sourceIdentityVerified, true)
   assert.equal(result.status, 'SOURCE_IDENTITY_VERIFIED_REVIEW_STILL_REQUIRED')
   assert.deepEqual(result.errors, [])

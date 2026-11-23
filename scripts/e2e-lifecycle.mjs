@@ -10846,6 +10846,340 @@ STEPS.push({
   },
 })
 
+// -----------------------------------------------------------------------------
+// STEP L98: Booqable rentals block the OS calendar and prevent double booking (T9-02, PLAN §7, Law 6)
+//
+// Authority:
+//   - T9-02 · Booqable rentals block the OS calendar
+//   - PLAN.md §7: Booqable cutover holds — mutual conflict prevention between OS and Booqable.
+//   - Active Booqable hold prevents OS reservation on the same unit or exceeding capacity.
+//   - Existing OS reservation prevents inserting active external hold on the same unit.
+//   - External holds contain neutral order reference, no client financial details (Law 6).
+// -----------------------------------------------------------------------------
+STEPS.push({
+  id: 'L98',
+  title: 'Booqable rentals block the OS calendar and prevent double booking (T9-02, 0261) — mutual exclusion between external holds and OS reservations, capacity accounting, and neutral chip presentation',
+  expect: 'green',
+  run: async () => {
+    const testUnitA = UNITS[0]
+    const testUnitB = UNITS[1]
+    const holdPeriodA = `["2100-06-10 04:00:00+00", "2100-06-15 04:00:00+00")`
+    const overlapPeriodA = `["2100-06-12 04:00:00+00", "2100-06-14 04:00:00+00")`
+
+    let testBookingLineId
+    await asOwnerOfTheDatabase(async () => {
+      const lineRes = await q(`select id from public.booking_lines where booking_id = '${bookingIds.a}' limit 1`)
+      testBookingLineId = lineRes.rows[0].id
+    })
+
+    // 1. Coordinator syncs external holds via sync_external_holds RPC
+    await as('Coordinator', async () => {
+      const payload = [
+        {
+          booqable_order_id: 'BQ-ORD-902-1',
+          booqable_order_number: '9021',
+          product_id: SERIAL_PRODUCT,
+          asset_id: testUnitA,
+          qty: 1,
+          start_date: '2100-06-10T04:00:00Z',
+          end_date: '2100-06-15T04:00:00Z',
+          status: 'active',
+        },
+      ]
+      const count = (await q('select public.sync_external_holds($1::jsonb) as res', [JSON.stringify(payload)])).rows[0].res
+      assertEq(count, 1, 'sync_external_holds inserted 1 hold')
+    })
+
+    // 2. View external_holds_v reflects display_chip and zero financial fields (Law 6)
+    await as('Warehouse', async () => {
+      const viewRows = (await q(`select * from public.external_holds_v where booqable_order_number = '9021'`)).rows
+      assertEq(viewRows.length, 1, 'Warehouse can read external_holds_v')
+      assertEq(viewRows[0].display_chip, 'Held in Booqable #9021', 'view formats display_chip')
+      assertEq(viewRows[0].product_name, 'Lifecycle Serialised Camera II', 'view joins product_name')
+      // Ensure zero financial column exists in external_holds_v
+      assert(!('amount' in viewRows[0]) && !('price' in viewRows[0]) && !('rate' in viewRows[0]), 'no money fields exposed')
+    })
+
+    // 3. Attempting to create an OS reservation on testUnitA during overlapping window is rejected
+    let osResRefused = false
+    await asOwnerOfTheDatabase(async () => {
+      try {
+        await q(`
+          insert into public.inventory_reservations (
+            client_uuid, booking_id, booking_line_id, asset_id, product_id, qty, period, state, hold_state, kind, created_by
+          ) values (
+            gen_random_uuid(), '${bookingIds.a}', '${testBookingLineId}', '${testUnitA}', null, 1, '${overlapPeriodA}'::tstzrange, 'Reserved', 'confirmed', 'booking', '${U.Owner}'
+          )
+        `)
+      } catch (err) {
+        osResRefused = true
+        assert(err.message.includes('held by Booqable booking #9021') || err.code === '23P01', 'error identifies Booqable hold conflict')
+      }
+    })
+    assert(osResRefused, 'OS reservation on held serial asset was rejected')
+
+    // 4. GiST exclusion: Cannot insert duplicate active external hold on testUnitA overlapping period
+    let dupHoldRefused = false
+    await asOwnerOfTheDatabase(async () => {
+      try {
+        await q(`
+          insert into public.external_holds (
+            booqable_order_id, booqable_order_number, product_id, asset_id, qty, period, status, created_by
+          ) values (
+            'BQ-ORD-902-DUP', '9022', '${SERIAL_PRODUCT}', '${testUnitA}', 1, '${overlapPeriodA}'::tstzrange, 'active', '${U.Coordinator}'
+          )
+        `)
+      } catch (err) {
+        dupHoldRefused = true
+      }
+    })
+    assert(dupHoldRefused, 'GiST exclusion constraint rejected duplicate active external hold on same unit')
+
+    // 5. Existing OS reservation prevents inserting active external hold on the same unit
+    const osPeriodB = `["2100-06-20 04:00:00+00", "2100-06-25 04:00:00+00")`
+    const overlapPeriodB = `["2100-06-22 04:00:00+00", "2100-06-24 04:00:00+00")`
+    await asOwnerOfTheDatabase(async () => {
+      await q(`
+        insert into public.inventory_reservations (
+          client_uuid, booking_id, booking_line_id, asset_id, product_id, qty, period, state, hold_state, kind, created_by
+        ) values (
+          gen_random_uuid(), '${bookingIds.a}', '${testBookingLineId}', '${testUnitB}', null, 1, '${osPeriodB}'::tstzrange, 'Reserved', 'confirmed', 'booking', '${U.Owner}'
+        )
+      `)
+    })
+
+    let extHoldConflictRefused = false
+    await as('Coordinator', async () => {
+      try {
+        await q(`
+          insert into public.external_holds (
+            booqable_order_id, booqable_order_number, product_id, asset_id, qty, period, status, created_by
+          ) values (
+            'BQ-ORD-902-CLASH', '9023', '${SERIAL_PRODUCT}', '${testUnitB}', 1, '${overlapPeriodB}'::tstzrange, 'active', '${U.Coordinator}'
+          )
+        `)
+      } catch (err) {
+        extHoldConflictRefused = true
+        assert(err.message.includes('already reserved by an OS booking') || err.code === '23P01', 'trigger identifies OS reservation conflict')
+      }
+    })
+    assert(extHoldConflictRefused, 'External hold refused when asset is already reserved by OS booking')
+
+    // 6. Release / cancel external hold on testUnitA: OS reservation now succeeds
+    await as('Coordinator', async () => {
+      await q(`update public.external_holds set status = 'cancelled' where booqable_order_number = '9021'`)
+    })
+
+    let osResAllowedAfterCancel = false
+    await asOwnerOfTheDatabase(async () => {
+      await q(`
+        insert into public.inventory_reservations (
+          client_uuid, booking_id, booking_line_id, asset_id, product_id, qty, period, state, hold_state, kind, created_by
+        ) values (
+          gen_random_uuid(), '${bookingIds.a}', '${testBookingLineId}', '${testUnitA}', null, 1, '${overlapPeriodA}'::tstzrange, 'Reserved', 'confirmed', 'booking', '${U.Owner}'
+        )
+      `)
+      osResAllowedAfterCancel = true
+    })
+    assert(osResAllowedAfterCancel, 'OS reservation succeeded after Booqable hold was cancelled')
+
+    // 7. Anon cannot access external_holds or sync RPC
+    await asAnon(async () => {
+      let anonTableBlocked = false
+      try {
+        await q('select * from public.external_holds')
+      } catch {
+        anonTableBlocked = true
+      }
+      assert(anonTableBlocked, 'Anon denied direct access to external_holds')
+
+      let anonViewBlocked = false
+      try {
+        await q('select * from public.external_holds_v')
+      } catch {
+        anonViewBlocked = true
+      }
+      assert(anonViewBlocked, 'Anon denied access to external_holds_v')
+    })
+  },
+})
+
+// -----------------------------------------------------------------------------
+// STEP L99: Online booking away mode switch and server-side request refusal (T7-14, B6)
+// -----------------------------------------------------------------------------
+STEPS.push({
+  id: 'L99',
+  title: 'online booking away mode switch and server-side request refusal (T7-14)',
+  expect: 'green',
+  async run() {
+    // 1. Warehouse is refused when trying to configure Away mode
+    await as('Warehouse', async () => {
+      let failed = false
+      try {
+        await q(
+          `select public.set_online_booking_away(true, 'Away test', null) as res`
+        )
+      } catch (err) {
+        failed = true
+        assert(/gate\.settings\.role|Only Owner, Admin, and Manager/i.test(err.message), 'expected role gate')
+      }
+      assert(failed, 'Warehouse cannot configure away mode')
+    })
+
+    // 2. Manager configures Away mode with custom message
+    await as('Manager', async () => {
+      const res = (await q(
+        `select public.set_online_booking_away(true, 'Back on 15 Feb — call or WhatsApp us', null) as res`
+      )).rows[0].res
+      assertEq(res.is_away, true, 'is_away is true')
+      assertEq(res.can_accept_requests, false, 'can_accept_requests is false')
+      assertEq(res.message, 'Back on 15 Feb — call or WhatsApp us', 'message preserved')
+    })
+
+    // 3. Anon checks status and gets active away mode
+    await asAnon(async () => {
+      const status = (await q(
+        `select public.get_online_booking_away_status() as res`
+      )).rows[0].res
+      assertEq(status.is_away, true, 'anon sees is_away = true')
+      assertEq(status.can_accept_requests, false, 'anon sees can_accept_requests = false')
+      assertEq(status.message, 'Back on 15 Feb — call or WhatsApp us', 'message matches')
+    })
+
+    // 4. Anon request submission is refused with away_mode gate
+    await asAnon(async () => {
+      const payload = {
+        client_name: 'Away Tester',
+        client_email: 'away_tester@example.com',
+        client_phone: '+977-9812345678',
+        start_date: new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10),
+        end_date: new Date(Date.now() + 6 * 86400000).toISOString().slice(0, 10),
+        fulfillment_type: 'pickup',
+        lines: [{ product_id: SERIAL_PRODUCT, quantity: 1 }],
+      }
+
+      let failed = false
+      try {
+        await q(
+          `select public.submit_booking_request($1::jsonb) as res`,
+          [JSON.stringify(payload)]
+        )
+      } catch (err) {
+        failed = true
+        assert(/gate\.booking_request\.away_mode|temporarily disabled/i.test(err.message), 'expected away_mode gate')
+      }
+      assert(failed, 'request while away is refused by server')
+    })
+
+    // 5. Manager turns Away mode OFF
+    await as('Manager', async () => {
+      const res = (await q(
+        `select public.set_online_booking_away(false, '', null) as res`
+      )).rows[0].res
+      assertEq(res.is_away, false, 'is_away is false after disengagement')
+      assertEq(res.can_accept_requests, true, 'can_accept_requests is true')
+    })
+
+    // 6. Anon can now submit booking request successfully
+    await asAnon(async () => {
+      const payload = {
+        client_name: 'Active Tester',
+        client_email: 'active_tester_' + Date.now() + '@example.com',
+        client_phone: '+977-9812345678',
+        start_date: new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10),
+        end_date: new Date(Date.now() + 6 * 86400000).toISOString().slice(0, 10),
+        fulfillment_type: 'pickup',
+        lines: [{ product_id: SERIAL_PRODUCT, quantity: 1 }],
+      }
+
+      const res = (await q(
+        `select public.submit_booking_request($1::jsonb) as res`,
+        [JSON.stringify(payload)]
+      )).rows[0].res
+      assert(Boolean(res.request_id), 'request accepted when away mode is off')
+    })
+  },
+})
+
+// -----------------------------------------------------------------------------
+// STEP L100: Database-enforced AAL2 two-step sign-in for money roles (T1-17 / B21 / B40 / P3)
+// -----------------------------------------------------------------------------
+STEPS.push({
+  id: 'L100',
+  title: 'database-enforced AAL2 two-step sign-in for money roles (T1-17)',
+  expect: 'green',
+  async run() {
+    // 1. In unarmed mode, money roles at AAL1 can read payments
+    await as('Owner', async () => {
+      const count = Number((await q(`select count(*)::int as c from payments`)).rows[0].c)
+      assert(count > 0, 'unarmed Owner can read payments')
+    })
+
+    // 2. Warehouse at AAL1 is money-blind (Law 6)
+    await as('Warehouse', async () => {
+      const count = Number((await q(`select count(*)::int as c from payments`)).rows[0].c)
+      assertEq(count, 0, 'unarmed Warehouse reads zero payments (Law 6)')
+    })
+
+    // 3. Unauthorized role cannot arm two-step sign-in enforcement
+    await as('Warehouse', async () => {
+      let failed = false
+      try {
+        await q(`select public.set_two_step_auth_enforcement(true)`)
+      } catch (err) {
+        failed = true
+        assert(/gate\.settings\.role|Only the Owner/i.test(err.message), 'expected role gate')
+      }
+      assert(failed, 'Warehouse cannot arm two-step auth enforcement')
+    })
+
+    // 4. Owner arms two-step sign-in enforcement
+    await as('Owner', async () => {
+      const res = (await q(`select public.set_two_step_auth_enforcement(true) as res`)).rows[0].res
+      assertEq(res.is_enforced, true, 'two-step sign-in enforcement armed')
+    })
+
+    // 5. While armed, a money role (Owner) at aal1 reads zero payment rows
+    await as('Owner', async () => {
+      const count = Number((await q(`select count(*)::int as c from payments`)).rows[0].c)
+      assertEq(count, 0, 'a money role at aal1 reads zero payment rows while armed')
+      assertEq((await q(`select public.auth_can_view_money() as r`)).rows[0].r, false, 'auth_can_view_money is false at aal1')
+    })
+
+    // 6. At aal2 it reads them
+    await as('Owner', async () => {
+      await db.exec(`select set_config('request.jwt.claims', '{"aal":"aal2"}', false);`)
+      const count = Number((await q(`select count(*)::int as c from payments`)).rows[0].c)
+      assert(count > 0, 'at aal2 it reads them')
+      assertEq((await q(`select public.auth_can_view_money() as r`)).rows[0].r, true, 'auth_can_view_money is true at aal2')
+    })
+
+    // 7. Warehouse is unchanged: reads zero payment rows at aal1 and at aal2
+    await as('Warehouse', async () => {
+      await db.exec(`select set_config('request.jwt.claims', '{"aal":"aal2"}', false);`)
+      const count = Number((await q(`select count(*)::int as c from payments`)).rows[0].c)
+      assertEq(count, 0, 'Warehouse is unchanged (reads zero rows even if claiming aal2)')
+      assertEq((await q(`select public.auth_can_view_money() as r`)).rows[0].r, false, 'Warehouse auth_can_view_money remains false')
+    })
+
+    // 8. Staff factor enrolment and recovery RPCs
+    await as('Owner', async () => {
+      const enrollRes = (await q(`select public.record_staff_mfa_enrolment() as res`)).rows[0].res
+      assertEq(enrollRes.status, 'verified', 'Owner can enrol MFA factor')
+
+      const resetRes = (await q(`select public.reset_staff_mfa('${U.Coordinator}') as res`)).rows[0].res
+      assertEq(resetRes.success, true, 'Owner can reset staff MFA factor for lost phone')
+    })
+
+    // 9. Owner disarms two-step sign-in to restore clean state
+    await as('Owner', async () => {
+      await db.exec(`select set_config('request.jwt.claims', '{"aal":"aal2"}', false);`)
+      const res = (await q(`select public.set_two_step_auth_enforcement(false) as res`)).rows[0].res
+      assertEq(res.is_enforced, false, 'two-step sign-in enforcement disarmed')
+    })
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break

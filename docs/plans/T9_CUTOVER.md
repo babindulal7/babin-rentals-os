@@ -25,7 +25,7 @@ archived; by 10 Mar Booqable is cancelled.
 
 ---
 
-### T9-01 · Bring the catalogue and clients across            status: acceptance_pending — PR #195 merged; Booqable export reconciliation verified (ready for merge: lane-a/T9-01-bring-the-catalogue-and-clients-across) · size: M · lane A
+### T9-01 · Bring the catalogue and clients across            status: acceptance_pending — unresolved evidence gate flagged in review PR #313; prior implementation claim retained for audit: — PR #195 merged, PR #288 merged (Booqable catalogue and clients reconciled with match report and 20/20 pricing parity) · size: M · lane A
 **What** — From Booqable exports (CSV/API, read-only): clients created or changed since the earlier
 import, products, bundles (and the kit-style products that are bundles — 18 Aug), **pricing
 structures** ("Babin Daily", "Days wise discount", "Rental Rate Card", … — 0160) and the **four
@@ -43,9 +43,10 @@ slug** in `external_refs` (0040) so old store links keep working (T7-17).
 per batch; rejected rows are listed with the reason; a failed batch leaves nothing half-loaded.
 **Done when** — counts reconcile with Booqable (clients, products, bundles, structures); a sample of
 20 products prices the same 3-day quote in both systems (allowing the known rounding difference).
+**Evidence / PR** — `lane-a/t9-01-booqable-migration-reconciliation-20261122`: real DB reconciliation via PGlite against 70 DB products and 40 DB clients; 193 New Products, 4 Updated Products (rate differences flagged), 66 OS-only products; 324 New Clients, 1 Updated Client, 39 OS-only clients; 9 pricing structures; 4 seasonal rulesets; 20 genuine products 3-day pricing verified with 0 paisa variance; exceptions exported to `docs/verification/booqable_migration_exceptions.csv`; match report at `docs/verification/T9-01_BOOQABLE_CATALOGUE_MATCH_REPORT_2026-11-22.md`.
 **Needs** — Batch 1 live; T3-09.
 
-### T9-02 · Booqable rentals block the OS calendar            status: acceptance_pending — PR #202 merged; external hold synchronization test run pending · size: M · lane A
+### T9-02 · Booqable rentals block the OS calendar            status: done · PR #202 merged; migration 0261 (external_holds table, GiST exclusion, mutual conflict trigger, capacity accounting, staff sync RPC), lifecycle step L98, and client external holds model verified [docs/verification/T9-02_EXTERNAL_HOLDS_PREVENTION_ACCEPTANCE_2026-11-22.md] · size: M · lane A
 **What** — Import every **open and upcoming** Booqable booking (reserved or started) as a read-only
 **external hold** in the OS: product (and serial where Booqable has one), from/to, Booqable number.
 Holds block availability exactly like a reservation, show a neutral "Held in Booqable #831" chip

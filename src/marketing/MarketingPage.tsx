@@ -354,7 +354,7 @@ export default function MarketingPage() {
             <a href="#membership" className="transition-colors hover:text-bone">Membership</a>
           </div>
           <a
-            href="#contact"
+            href="/booking"
             className="rounded-full bg-bone px-4 py-2 text-sm font-semibold text-ink transition-transform duration-300 hover:scale-[1.04]"
           >
             Check availability
@@ -1010,10 +1010,10 @@ export default function MarketingPage() {
           </h2>
           <div className="mt-11 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <a
-              href="tel:+9779801234567"
+              href="/booking"
               className="w-full rounded-full bg-gold px-8 py-4 font-display text-base font-semibold text-ink transition-transform duration-300 hover:scale-[1.04] sm:w-auto"
             >
-              Call the counter
+              Browse equipment
             </a>
             <a
               href="mailto:counter@babinrentals.com"
@@ -1054,7 +1054,7 @@ export default function MarketingPage() {
             </div>
             <div className="flex flex-col gap-3 text-sm text-ash">
               <a href="#contact" className="transition-colors hover:text-bone">Contact</a>
-              <a href="/" className="transition-colors hover:text-bone">Staff login</a>
+              <a href="https://app.babinrentals.com" className="transition-colors hover:text-bone">Staff login</a>
             </div>
           </div>
         </div>

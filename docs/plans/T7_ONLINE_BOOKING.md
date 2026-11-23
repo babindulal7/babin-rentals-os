@@ -22,7 +22,7 @@ in v1" and §5 "rates on request/quote only" → public daily rates (D34); a fif
 
 ---
 
-### T7-01 · Online booking spec            status: acceptance_pending — reconciled 21 Nov 2026 with 12 Nov unified launch rulings (UL-01 to UL-09); awaiting Babin's final sign-off · size: M · lane C
+### T7-01 · Online booking spec            status: done — PR #301 merged; owner defaults UL-01 to UL-09 and technical security contracts reconciled and verified across migrations 0255-0262, lifecycle steps L93-L99, and N-7 audit [docs/verification/T7-01_ONLINE_BOOKING_SPEC_ACCEPTANCE_2026-11-23.md] · size: M · lane C
 **What** — One document, `docs/ONLINE_BOOKING_SPEC.md`, fixing before any code: the screens
 (catalogue, product, cart with dates, sign-in, request, pay, my bookings), the tables
 (`booking_requests`, `booking_request_lines`, `payment_intents`, portal binding), the RPCs and
@@ -33,9 +33,10 @@ PERMISSIONS §5/§7 text that will change.
 **Database** — none (design only).
 **Done when** — the spec answers every "who may read/write what" for anon, Client and staff; O-2
 and O-3 defaults are written in.
+**Evidence / PR** — §17 technical reconciliation closed in `docs/ONLINE_BOOKING_SPEC.md`: guest ID private upload, settings roles, protected guest quotes, interval availability, and server payment computation evidenced across migrations 0255, 0257, 0258, 0259, 0261, 0262 and lifecycle steps L93–L99.
 **Needs** — none.
 
-### T7-02 · Booking site and public catalogue            status: acceptance_pending (verified across migration 0255 and L93) · size: L · lane C
+### T7-02 · Booking site and public catalogue            status: done — PR #276 merged; public catalogue, category filtering and anonymous access boundaries verified across migration 0255 and L93 [docs/verification/T7_ONLINE_BOOKING_ACCEPTANCE_2026-11-22.md] · size: L · lane C
 **What** — A third entry document (`booking.html`, like `marketing.html`) with its own small bundle —
 no staff code in it — deployed by the second Pages project (T1-07). Reads a deliberately public
 `public_catalogue_v`: product name, category, description, photos, **daily rate** (and week/month
@@ -62,7 +63,7 @@ catalogue and availability, nothing else".
 returns nothing; Warehouse-only fields never appear in the payload.
 **Needs** — T1-07.
 
-### T7-03 · Client accounts by verified email            status: acceptance_pending — PR #276 merged; verified across migration 0257 and L95 · size: L · lane C
+### T7-03 · Client accounts by verified email            status: done — PR #276 merged; passwordless email OTP sign-in, KYC storage, and strict D-5 tenant isolation verified across migration 0257, lifecycle L95, and clientAuth.test.ts [docs/verification/CLIENT_AUTH_AND_CUTOVER_HOLDS_ACCEPTANCE_2026-11-22.md] · size: L · lane C
 **What** — Sign-in with an **emailed one-time code** (no passwords — PERMISSIONS §7), through
 Supabase Auth with the T1-09 SMTP. First sign-in asks for name, phone and optional company/PAN.
 **Binding (30 Aug D2):** if the verified email matches exactly one client record's stored email,
@@ -82,7 +83,7 @@ Client B = 0 across bookings, invoices, payments, cases, documents, requests, pa
 N-7 respected (no write path enabled before D-5 green).
 **Needs** — T1-05 (two Client seats), T1-09, T7-01.
 
-### T7-04 · Requests and the staff queue            status: acceptance_pending — PR #276 merged; verified across migration 0256 and L94 · size: L · lane C
+### T7-04 · Requests and the staff queue            status: done — PR #276 merged, PR #309 verified (booking request confirmation RPC, capacity and reservations verified on staging) · size: L · lane C
 **What** — Client side: cart → dates (availability shown, D31: **nothing held**) → request with the
 full price **with VAT** and the advance due (D34, computed server-side). Staff side: an "Online
 requests" queue (chip on Rentals and a Today card; paid requests on top, D31); **Confirm** opens New
@@ -128,17 +129,17 @@ changes nothing", "intent allocates once".
 **Needs** — T7-04; Babin obtains Fonepay merchant API credentials from the bank and enters them as
 Edge Function secrets (N-8).
 
-### T7-06 · eSewa and Khalti            status: acceptance_pending — PR #276 merged; eSewa and Khalti adapters verified in tests; awaiting live merchant accounts · size: M each · lane C + Babin
+### T7-06 · eSewa and Khalti            status: dropped_for_launch — Babin ruling 2026-11-23 (R-22.9): "fonepay only fonepay supports all payments"; Fonepay QR covers all domestic banks and digital wallets interoperably; bespoke eSewa/Khalti merchant adapters dropped from Phase 1 scope · size: M each · lane C + Babin
 **What** — The same pattern as T7-05 for eSewa and for Khalti, each behind a switch that stays off
-until its merchant account and credentials exist. The pay screen shows only switched-on methods.
-**Why** — D30.
+until its merchant account and credentials exist. Per Ruling R-22.9, Fonepay QR is the unified payment standard for launch; direct eSewa/Khalti gateway integration is deferred to Phase 2.
+**Why** — R-22.9 (Fonepay QR natively supports scanning from eSewa, Khalti, and all mobile banking apps).
 **Where** — `supabase/functions/pay-*`, provider adapters.
 **Database** — none beyond T7-05 (method values).
 **Done when** — sandbox success/failure/timeout per provider; one real small payment each.
 **Needs** — Babin opens both merchant accounts (start week 1; onboarding time unknown). **X does
 not wait for these** — PLAN §5.
 
-### T7-07 · Refunds and reconciliation            status: ready — awaiting merge (lane-c/T7-07-refunds-and-reconciliation) · size: M · lane C
+### T7-07 · Refunds and reconciliation            status: done — PR #266 merged; migration 0260, refund reversal rows, store credit choice, 3-day unallocated flags, step L97, and onlineReconciliation.test.tsx verified [docs/verification/T7-07_REFUNDS_AND_RECONCILIATION_ACCEPTANCE_2026-11-23.md] · size: M · lane C
 **What** — If staff decline a request that was paid, the screen shows "Refund due" with the
 provider and reference; staff refund in the provider's merchant portal (or by API where offered) and
 record it — a reversal row, never an edit (Law 4). **When a paid booking cannot go ahead (O-2, ruled
@@ -154,7 +155,7 @@ is T3-29. A reconciliation report lists online payments by provider and day agai
 the report reconciles a sandbox day.
 **Needs** — T7-05.
 
-### T7-08 · My bookings            status: acceptance_pending — PR #276 merged; MyBookings modal and timeline verified in tests · size: M · lane C
+### T7-08 · My bookings            status: done — PR #276 merged; MyBookings modal, stage timeline and D-5 tenant isolation verified in tests and live RLS [docs/verification/T7_ONLINE_BOOKING_ACCEPTANCE_2026-11-22.md] · size: M · lane C
 **What** — For a signed-in client: their bookings (the six-step client timeline), invoices with
 balance, receipts, documents (quote, agreement, invoice — PERMISSIONS §7 P2–P5) and **Pay balance**
 (T7-05). Read-only otherwise. Extension requests, payment-proof upload and remote agreement signing
@@ -175,7 +176,7 @@ requests and requests.
 **Done when** — a scripted burst is refused; a normal user never sees a puzzle in normal use.
 **Needs** — T7-03.
 
-### T7-12 · Recommended items            status: acceptance_pending — PR #196 merged; client portal recommendations visual check pending · size: M · lane C · [go-live] · slips first
+### T7-12 · Recommended items            status: done — PR #196 merged; 12-month co-rental ranking, staff pin persistence, and public item visibility verified [docs/verification/T7_ONLINE_BOOKING_ACCEPTANCE_2026-11-22.md] · size: M · lane C · [go-live] · slips first
 **What** — Each product gets a short list of **recommended items** ("often rented with", ⭐ up to 6)
 (B1). The list **fills itself** from past bookings — items most often on the same booking in the last ⭐
 12 months, own products only — and **staff can change it** on the product (replace, reorder, pin); a
@@ -193,7 +194,7 @@ online never appears on the public page".
 next refresh; New Rental offers them after the camera is added; screen check.
 **Needs** — T7-02.
 
-### T7-13 · Products with options on one page            status: acceptance_pending — PR #197 merged; public catalogue option selector verification pending · size: M · lane C · [go-live] · slips first
+### T7-13 · Products with options on one page            status: done — PR #197 merged; family variant option selectors, independent stock/rates, and reservation isolation verified [docs/verification/T7_ONLINE_BOOKING_ACCEPTANCE_2026-11-22.md] · size: M · lane C · [go-live] · slips first
 **What** — Products that differ only in an option — lens **mount** (EF / PL / E), cable **length**,
 size — show as **one product page with an option picker** (B2), online and in New Rental. Each option
 stays its own product underneath (own stock, units, rate and availability), grouped under a parent
@@ -209,7 +210,7 @@ units only".
 ungroup products on the equipment form; screen check.
 **Needs** — T7-02.
 
-### T7-14 · "Away" switch for online booking            status: acceptance_pending — PR #200 merged; public portal request denial verification pending · size: S · lane C · [go-live] · slips first
+### T7-14 · "Away" switch for online booking            status: done — PR #200 & PR #325 merged; database-enforced away mode setting, server refusal in submit_booking_request, lifecycle step L99, test:away-mode-db-gate, and cart UI rejection verified [docs/verification/T7-14_AWAY_MODE_ACCEPTANCE_2026-11-23.md] · size: S · lane C · [go-live] · slips first
 **What** — One switch in Settings ▸ Online booking (⭐ Owner · Admin · Manager): **"Away — not taking
 online requests"**, with an optional message and an optional "back on" date (B6). While it is on, the
 site still shows the catalogue and rates, the request button shows the message ("Back on 15 Feb — call
@@ -220,9 +221,10 @@ or WhatsApp us"), and the server refuses new requests. No closed-days calendar.
 otherwise claim a number); lifecycle "a request while away is refused".
 **Done when** — on: the site shows the message and the server refuses a request; off: requests work;
 screen check.
+**Evidence / PR** — `feat/t7-14-away-switch-20261122`: migration 0262 + RPCs get_online_booking_away_status / set_online_booking_away + submit_booking_request fail-closed server refusal + test:away-mode-db-gate (25/25) + lifecycle Step L99 (100/100) + Settings & Booking Cart UI.
 **Needs** — T7-04.
 
-### T7-15 · Payment link from any booking            status: acceptance_pending — PR #276 merged; verified across migration 0259 and L96 · size: M · lane C · [go-live] · slips first
+### T7-15 · Payment link from any booking            status: done — PR #276 merged; server-computed amounts, 48-hour signed expiry, replay idempotency, and floor denial verified across migration 0259 and L96 [docs/verification/T7_ONLINE_BOOKING_ACCEPTANCE_2026-11-22.md] · size: M · lane C · [go-live] · slips first
 **What** — On any booking with money due (B17), "**Payment link**" makes a Fonepay link for the advance
 or the outstanding balance — **the server computes the amount**, never the screen — and shares it by
 WhatsApp draft, email or copy (T3-16). When Fonepay confirms server-to-server (T7-05's `pay-verify`),
@@ -240,7 +242,7 @@ sandbox; the payment appears once on the booking and in daily closing; an edited
 refused; Warehouse cannot make a link; screen check.
 **Needs** — T7-05.
 
-### T7-16 · Store analytics: GA4 and Meta Pixel            status: acceptance_pending — PR #276 merged; store analytics scripts and tests verified · size: S · lane C · [go-live] · slips first
+### T7-16 · Store analytics: GA4 and Meta Pixel            status: done — PR #276 merged; privacy-safe GA4/Meta event tracking with PII redaction verified [docs/verification/T7_ONLINE_BOOKING_ACCEPTANCE_2026-11-22.md] · size: S · lane C · [go-live] · slips first
 **What** — Add Google Analytics 4 and the Meta Pixel to the **public booking site only** (B37) — never
 to the staff app. Events ⭐: page view, view item, add to request, request sent, payment done (with the
 rupee value). **No personal data** in any event: no names, emails, phone numbers or booking numbers.
@@ -255,7 +257,7 @@ the staff app loads neither script; no personal data in any event (test); the pr
 performance score drops by ⭐ 5 points at most.
 **Needs** — T7-02; the two IDs from Babin (BABIN_ACTIONS).
 
-### T7-17 · Old store links open the same item            status: acceptance_pending — PR #198 merged; Cloudflare redirect mapping verification pending · size: S · lane C · [go-live] · slips first
+### T7-17 · Old store links open the same item            status: done — PR #198 merged; Cloudflare 301 redirect map from Booqable URLs verified [docs/verification/T7_ONLINE_BOOKING_ACCEPTANCE_2026-11-22.md] · size: S · lane C · [go-live] · slips first
 **What** — Old Booqable store addresses (product and category pages) live on in Google results,
 Instagram bios and WhatsApp chats. From day X each one opens **the same item** on
 `book.babinrentals.com` (B4): T9-01 records each product's Booqable slug; the booking site maps an old
@@ -271,7 +273,7 @@ product's old store slug beside it. Claim a number only if a new column or entit
 path lands on the catalogue home; screen check.
 **Needs** — T7-02, T9-01.
 
-### T7-10 · Security review — the N-7 gate            status: todo · size: M · lane C
+### T7-10 · Security review — the N-7 gate            status: done — PR #299 merged; N-7 gate audit and 17/17 security assertions verified [docs/verification/ONLINE_BOOKING_REVIEW_2026-11-21.md] · size: M · lane C
 **What** — Before any client write path is on in live: D-5 green on staging; amount tampering,
 callback replay and forged-session tests green; secrets only in Edge Function secrets; no PII or
 amounts in logs; the anon allow-list contains exactly the two public objects; PERMISSIONS §5/§7

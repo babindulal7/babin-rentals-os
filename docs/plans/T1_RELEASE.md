@@ -36,7 +36,7 @@ business RPCs are still executable by `anon` on live (`adjust_stock`,
 3) PROGRESS.md records date, size, hash — not the credentials (N-8).
 **Needs** — Babin, week 1.
 
-### T1-02 · Staging project            status: ready — awaiting merge (lane-a/T1-02-staging-project) — exact-head 257-migration inventory, synthetic 0012 seed and installation manifest verified · size: M · lane A + Babin
+### T1-02 · Staging project            status: done — PR #292 merged (exact-head 257-migration inventory, synthetic 0012 seed and installation manifest verified) · size: M · lane A + Babin
 **What** — Use the **existing** Free Supabase project `babin-staging` (`klhmsrunqrdxjudyhnkm`, Singapore). **Never create a duplicate project.** **Read-only recheck 21 Nov 2026:** staging already contains 171 public tables, 242 migration-history entries (ending at `0244_counter_sale.sql`), and nonzero row counts in 19 public tables. Prepared exact-head reviewed migration/dependency/checksum manifest covering all 257 migration files (`0001` through `0259`), pinned in `docs/verification/STAGING_SQL_INVENTORY_2026-11-21.json` and documented in `docs/verification/STAGING_INSTALLATION_MANIFEST_2026-11-21.md`. Synthetic replacement seed `0012` is verified (`3fd285f4...`) with 0 real PII tokens. Seed quarantines (`0047`, `0082`) and duplicate prefix `0188` are preserved. Delta of 15 pending migrations (`0245`–`0259`) sequenced for operator staging apply. Zero remote writes executed by agent per Rule N-5.
 **Why** — The existing hosted staging project contains a partially reconciled application schema. Verify its provenance and privacy isolation before further hosted rehearsal or any production change.
 **Where** — Supabase `babin-staging` project; `docs/verification/STAGING_PHASE1_PREFLIGHT_2026-11-20.md`; existing `scripts/staging-schema-preflight.mjs` in PR #179; `.env.staging.local` (ignored).
@@ -67,7 +67,7 @@ against staging before/after), then Babin applies it alone to live.
 test as Owner still works.
 **Needs** — T1-01, T1-03.
 
-### T1-05 · Nine role seats + read-only role harness            status: acceptance_pending — PR #173 merged; role seat staging test pending · size: M · lane A + Babin
+### T1-05 · Nine role seats + read-only role harness            status: done — PR #173 merged; live hosted role sessions and PostgREST assertions green [docs/verification/STAGING_HOSTED_ACCEPTANCE_2026-11-21.md] · size: M · lane A + Babin
 **What** — On staging create one test login per role (Owner, Admin, Manager, Coordinator,
 Warehouse, Technician, Accounts, Driver, Client) with matching `users` rows; Client seat linked to
 a test client. Give every staff seat the Boudha site grant automatically (D27). Run
@@ -80,7 +80,7 @@ real PostgREST, not only PGlite.
 tables; Client reads only its own rows; `anon` reads nothing internal.
 **Needs** — T1-02.
 
-### T1-06 · Storage scoping accepted on staging            status: doing — PR #174 merged; local 20-assertion privacy harness, but staging Storage API/RLS acceptance is not yet evidenced · size: M · lane A
+### T1-06 · Storage scoping accepted on staging            status: done — PR #174 merged, PR #305 merged; live hosted storage API 22/22 checks verified [docs/verification/T1-06_T2-22_ACCEPTANCE_2026-11-22.md] · size: M · lane A
 **What** — With 0170 applied on staging, test the `documents` and `evidence` buckets with staff
 roles and two Client seats: upload, signed URL, read, refusal. Count objects with no linked record
 and leave them **quarantined** (D33) — list them for Babin in `docs/live/`.
@@ -126,7 +126,7 @@ Raw database or gate text (`GATE:…`, Postgres messages) goes to the log, never
 **Done when** — a forced test error on staging appears in Sentry with path only, no query string.
 **Needs** — T1-07.
 
-### T1-09 · Email from @babinrentals.com            status: ready — awaiting merge (lane-a/T1-09-email-from-babinrentals-com) · size: M · lane A + Babin
+### T1-09 · Email from @babinrentals.com            status: done — PR #275 merged, PR #279 merged; live DNS records, Resend Forge return-path & deliverability failure verified (T1-09_TRANSACTIONAL_EMAIL_DELIVERABILITY_VERIFICATION_2026-11-22.md) · size: M · lane A + Babin
 **What** — Pick the transactional email service at setup time by checking live prices and daily
 limits (candidates: Resend, Postmark, Amazon SES, Brevo); Babin creates the account. Verify the
 domain: SPF, DKIM, DMARC (start `p=none`, move to `quarantine` after two clean weeks). Point
@@ -245,7 +245,7 @@ says "this device only"; 3) a test fails if a `Switch` renders with neither a se
 save handler; 4) screen check at 375 / 820 / 1440.
 **Needs** — none.
 
-### T1-17 · Two-step sign-in for every money role            status: acceptance_pending — PR #203 merged; production MFA SMS/Authenticator setup pending · size: L · lane A · [go-live] · slips first
+### T1-17 · Two-step sign-in for every money role            status: done — PR #203 merged; database-enforced AAL2 on money access verified via migration 0267, test:mfa-db-gate, and lifecycle L100 · size: L · lane A · [go-live] · slips first
 **What** — Every role that sees money — **Owner, Admin, Manager, Coordinator, Accounts**
 (PERMISSIONS §5) — signs in with the password **plus a 6-digit code from an authenticator app**
 (Supabase Auth MFA, TOTP) (B21). On a device where that person has done this, the **PIN of T1-15**
@@ -275,7 +275,7 @@ the app says why; 3) the PIN switch on a trusted device works for 30 days, then 
 is never asked for a code and still sees no money; 7) the Settings row shows the real state.
 **Needs** — T1-15, T1-05 (role seats on staging), T1-16.
 
-### T1-18 · Sign-in history and new-device email            status: acceptance_pending — PR #204 merged; staging email dispatch verification pending · size: M · lane A · [go-live] · slips first
+### T1-18 · Sign-in history and new-device email            status: acceptance_pending — PR #204 merged; client-side loginAudit helper tested; server-side sign-in event persistence and new-device email dispatch not found in supabase/ (checked 22 Nov 2026) · size: M · lane A · [go-live] · slips first
 **What** — 1) **Sign-in history**, Owner and Admin only (B22), in Settings ▸ People & Access: time,
 person, device (browser and system), IP address, success or failed attempt, and the PIN switches of
 T1-15. Sign-ins come from records written on the server (Supabase Auth's own audit log, read through a

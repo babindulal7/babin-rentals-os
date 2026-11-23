@@ -5,32 +5,32 @@ import { describe, expect, it } from 'vitest'
 const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8')
 
 describe('Roadmap status truth across merged tracks', () => {
-  it('T0 repo hygiene reflects merged PR #165 as acceptance_pending', () => {
+  it('T0 repo hygiene reflects reconciled cards as done', () => {
     const t0 = read('docs/plans/T0_REPO_HYGIENE.md')
-    const heading = t0.split('\n').find((l) => l.startsWith('### T0-03 ·'))
-    expect(heading).toBeDefined()
-    expect(heading).toContain('status: acceptance_pending')
-    expect(heading).toContain('PR #165 merged')
+    const doneCards: Record<string, string> = {
+      'T0-03': 'PR #165 merged',
+      'T0-12': 'merged on main',
+    }
+    for (const [key, ref] of Object.entries(doneCards)) {
+      const heading = t0.split('\n').find((l) => l.startsWith(`### ${key} ·`))
+      expect(heading).toBeDefined()
+      expect(heading).toContain('status: done')
+      expect(heading).toContain(ref)
+      expect(heading).not.toContain('status: acceptance_pending')
+    }
   })
 
-  it('T1 release track reflects merged PRs as acceptance_pending or done', () => {
+  it('T1 release track reflects merged PRs as done', () => {
     const t1 = read('docs/plans/T1_RELEASE.md')
-    const cards: Record<string, string> = {
-      'T1-05': 'PR #173 merged',
-      'T1-17': 'PR #203 merged',
-      'T1-18': 'PR #204 merged',
-    }
-    for (const [key, prRef] of Object.entries(cards)) {
-      const heading = t1.split('\n').find((l) => l.startsWith(`### ${key} ·`))
-      expect(heading).toBeDefined()
-      expect(heading).toContain('status: acceptance_pending')
-      expect(heading).toContain(prRef)
-    }
-
     const doneCards: Record<string, string> = {
+      'T1-02': 'PR #292 merged',
       'T1-03': 'PR #260 merged',
       'T1-04': 'applied to production by Babin',
+      'T1-05': 'PR #173 merged',
+      'T1-06': 'PR #174 merged',
+      'T1-09': 'PR #275 merged',
       'T1-15': 'PR #208 merged',
+      'T1-17': 'PR #203 merged',
     }
     for (const [key, ref] of Object.entries(doneCards)) {
       const heading = t1.split('\n').find((l) => l.startsWith(`### ${key} ·`))
@@ -39,22 +39,14 @@ describe('Roadmap status truth across merged tracks', () => {
       expect(heading).toContain(ref)
       expect(heading).not.toContain('status: ready')
       expect(heading).not.toContain('status: todo')
+      expect(heading).not.toContain('status: acceptance_pending')
     }
   })
 
-  it('T2 floor track reflects all merged floor features as acceptance_pending', () => {
+  it('T2 floor track reflects all merged floor features as acceptance_pending or done', () => {
     const t2 = read('docs/plans/T2_FLOOR.md')
     const cards: Record<string, string> = {
-      'T2-06': 'merged',
-      'T2-13': 'merged',
       'T2-14': 'merged',
-      'T2-15': 'merged',
-      'T2-18': 'merged',
-      'T2-19': 'merged',
-      'T2-20': 'merged',
-      'T2-21': 'merged',
-      'T2-22': 'merged',
-      'T2-23': 'verified',
     }
     for (const [key, ref] of Object.entries(cards)) {
       const heading = t2.split('\n').find((l) => l.startsWith(`### ${key} ·`))
@@ -66,7 +58,16 @@ describe('Roadmap status truth across merged tracks', () => {
     }
 
     const doneCards: Record<string, string> = {
+      'T2-06': 'merged',
+      'T2-13': 'merged 27 Oct',
+      'T2-15': 'PR #30 merged',
       'T2-17': 'PR #90 merged',
+      'T2-18': 'PR #80 merged',
+      'T2-19': 'PR #209 merged',
+      'T2-20': 'PR #189 merged',
+      'T2-21': 'PR #170 merged',
+      'T2-22': 'PR #184 merged',
+      'T2-23': 'verified',
       'T2-24': 'PR #257 merged',
     }
     for (const [key, ref] of Object.entries(doneCards)) {
@@ -79,32 +80,24 @@ describe('Roadmap status truth across merged tracks', () => {
     }
   })
 
-  it('T3 booking money track reflects all merged cards as acceptance_pending or done', () => {
+  it('T3 booking money track reflects all merged cards as done', () => {
     const t3 = read('docs/plans/T3_BOOKING_MONEY.md')
-    const pendingCards: Record<string, string> = {
-      'T3-13': 'PR #182 merged',
-      'T3-20': 'PR #190 merged',
-      'T3-23': 'PR #191 merged',
-    }
-    for (const [key, prRef] of Object.entries(pendingCards)) {
-      const heading = t3.split('\n').find((l) => l.startsWith(`### ${key} ·`))
-      expect(heading).toBeDefined()
-      expect(heading).toContain('status: acceptance_pending')
-      expect(heading).toContain(prRef)
-      expect(heading).not.toContain('status: todo')
-    }
-
-    // T3-10, T3-11, T3-14, T3-16, T3-18, T3-19, T3-22, T3-28, T3-29, and T3-31 are fully verified with green suites; physical device testing deferred post-live per Babin ruling (20 Nov)
     const doneCards: Record<string, string> = {
+      'T3-02': 'PR #183 merged',
+      'T3-06': 'PR #169 merged',
       'T3-10': 'PR #188 merged',
       'T3-11': 'PR #210 merged',
+      'T3-13': 'PR #182 merged',
       'T3-14': 'PR #259 merged',
       'T3-16': 'PR #181 merged',
       'T3-18': 'PR #224 merged',
       'T3-19': 'PR #163 merged',
+      'T3-20': 'PR #190 merged',
       'T3-22': 'PR #161 merged',
+      'T3-23': 'PR #191 merged',
       'T3-28': 'PR #211 merged',
       'T3-29': 'PR #208 merged',
+      'T3-30': 'PR #185 merged',
     }
     for (const [key, prRef] of Object.entries(doneCards)) {
       const heading = t3.split('\n').find((l) => l.startsWith(`### ${key} ·`))
@@ -140,22 +133,11 @@ describe('Roadmap status truth across merged tracks', () => {
     }
   })
 
-  it('T7 online booking track reflects merged PRs as acceptance_pending', () => {
+  it('T7 online booking track reflects merged PRs as acceptance_pending or done', () => {
     const t7 = read('docs/plans/T7_ONLINE_BOOKING.md')
     const cards: Record<string, string> = {
-      'T7-02': 'verified',
-      'T7-03': 'PR #276 merged',
-      'T7-04': 'PR #276 merged',
       'T7-05': 'PR #276 merged',
-      'T7-06': 'PR #276 merged',
-      'T7-08': 'PR #276 merged',
       'T7-09': 'PR #201 merged',
-      'T7-12': 'PR #196 merged',
-      'T7-13': 'PR #197 merged',
-      'T7-14': 'PR #200 merged',
-      'T7-15': 'PR #276 merged',
-      'T7-16': 'PR #276 merged',
-      'T7-17': 'PR #198 merged',
     }
     for (const [key, prRef] of Object.entries(cards)) {
       const heading = t7.split('\n').find((l) => l.startsWith(`### ${key} ·`))
@@ -164,13 +146,48 @@ describe('Roadmap status truth across merged tracks', () => {
       expect(heading).toContain(prRef)
       expect(heading).not.toContain('status: todo')
     }
+
+    const t706 = t7.split('\n').find((l) => l.startsWith('### T7-06 ·'))
+    expect(t706).toBeDefined()
+    expect(t706).toContain('status: dropped_for_launch')
+    expect(t706).toContain('R-22.9')
+
+    const doneCards: Record<string, string> = {
+      'T7-01': 'PR #301 merged',
+      'T7-02': 'PR #276 merged',
+      'T7-03': 'PR #276 merged',
+      'T7-04': 'PR #276 merged',
+      'T7-07': 'PR #266 merged',
+      'T7-08': 'PR #276 merged',
+      'T7-10': 'PR #299 merged',
+      'T7-12': 'PR #196 merged',
+      'T7-13': 'PR #197 merged',
+      'T7-14': 'PR #200',
+      'T7-15': 'PR #276 merged',
+      'T7-16': 'PR #276 merged',
+      'T7-17': 'PR #198 merged',
+    }
+    for (const [key, prRef] of Object.entries(doneCards)) {
+      const heading = t7.split('\n').find((l) => l.startsWith(`### ${key} ·`))
+      expect(heading).toBeDefined()
+      expect(heading).toContain('status: done')
+      expect(heading).toContain(prRef)
+      expect(heading).not.toContain('status: acceptance_pending')
+      expect(heading).not.toContain('status: todo')
+    }
   })
 
-  it('T9 cutover track reflects merged PRs as acceptance_pending', () => {
+  it('T4 shared tools track reflects reconciled cards as done', () => {
+    const t4 = read('docs/plans/T4_SHARED_TOOLS.md')
+    const heading = t4.split('\n').find((l) => l.startsWith('### T4-08 ·'))
+    expect(heading).toBeDefined()
+    expect(heading).toContain('status: done')
+    expect(heading).not.toContain('status: acceptance_pending')
+  })
+
+  it('T9 cutover track reflects merged PRs as acceptance_pending or done', () => {
     const t9 = read('docs/plans/T9_CUTOVER.md')
     const cards: Record<string, string> = {
-      'T9-01': 'PR #195 merged',
-      'T9-02': 'PR #202 merged',
       'T9-07': 'PR #199 merged',
     }
     for (const [key, prRef] of Object.entries(cards)) {
@@ -179,6 +196,44 @@ describe('Roadmap status truth across merged tracks', () => {
       expect(heading).toContain('status: acceptance_pending')
       expect(heading).toContain(prRef)
       expect(heading).not.toContain('status: todo')
+    }
+
+    const doneCards: Record<string, string> = {
+      'T9-02': 'PR #202 merged',
+    }
+    for (const [key, prRef] of Object.entries(doneCards)) {
+      const heading = t9.split('\n').find((l) => l.startsWith(`### ${key} ·`))
+      expect(heading).toBeDefined()
+      expect(heading).toContain('status: done')
+      expect(heading).toContain(prRef)
+      expect(heading).not.toContain('status: acceptance_pending')
+      expect(heading).not.toContain('status: todo')
+    }
+  })
+  it('keeps review-blocked cards pending rather than equating merged PRs with acceptance', () => {
+    const blocked: Array<[string, string, string]> = [
+      ['docs/plans/T9_CUTOVER.md', 'T9-01', 'PR #195 merged'],
+    ]
+    for (const [path, id, implementationRef] of blocked) {
+      const heading = read(path).split('\n').find((line) => line.startsWith(`### ${id} ·`))
+      expect(heading).toBeDefined()
+      expect(heading).toContain('status: acceptance_pending')
+      expect(heading).toContain(implementationRef)
+      expect(heading).toContain('unresolved evidence gate')
+    }
+  })
+
+  it('T0-09 and T1-18 stay acceptance_pending until their enforcement is evidenced (22 Nov 2026 reconciliation)', () => {
+    const pending: Array<[string, string, string]> = [
+      ['docs/plans/T0_REPO_HYGIENE.md', 'T0-09', 'PR #289 merged'],
+      ['docs/plans/T1_RELEASE.md', 'T1-18', 'PR #204 merged'],
+    ]
+    for (const [file, key, ref] of pending) {
+      const heading = read(file).split('\n').find((l) => l.startsWith(`### ${key} ·`))
+      expect(heading).toBeDefined()
+      expect(heading).toContain('status: acceptance_pending')
+      expect(heading).not.toContain('status: done')
+      expect(heading).toContain(ref)
     }
   })
 })

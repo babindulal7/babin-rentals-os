@@ -24,12 +24,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   let badgeClass = 'dates-needed'
   let badgeText = 'Select dates'
   if (hasDates) {
-    if (isAvailable) {
+    if (isAvailable === true) {
       badgeClass = 'available'
       badgeText = 'Available'
-    } else {
+    } else if (isAvailable === false) {
       badgeClass = 'unavailable'
       badgeText = 'Unavailable'
+    } else {
+      badgeText = 'Checking availability'
     }
   }
 
@@ -71,7 +73,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             type="button"
             className="btn-primary"
             onClick={() => onAddToCart(item)}
-            disabled={hasDates && isAvailable === false}
+            disabled={!hasDates || isAvailable !== true}
             aria-label={`Add ${item.name} to booking request`}
           >
             Add to Request
