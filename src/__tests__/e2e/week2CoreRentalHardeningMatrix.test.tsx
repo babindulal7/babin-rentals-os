@@ -177,11 +177,16 @@ describe('Week 2 Core Rental Flow Hardening & Boundary Matrix', () => {
       expect(checkExternalHoldConflicts(differentSerial, [activeHold]).hasConflict).toBe(false)
     })
 
-    it('enforces Kathmandu 06:00 AM operational day rollover', () => {
+    it('enforces Kathmandu 06:00 AM operational day rollover and rental day span calculation', () => {
       // 05:59:59 NPT is previous day
       expect(operationalDayOf('2026-12-01T05:59:59.000+05:45', OPERATIONAL_DAY_START_DEFAULT_MINUTES)).toBe('2026-11-30')
       // 06:00:00 NPT begins new day
       expect(operationalDayOf('2026-12-01T06:00:00.000+05:45', OPERATIONAL_DAY_START_DEFAULT_MINUTES)).toBe('2026-12-01')
+
+      // Rental days span calculation (Law 1) aligned to Kathmandu 06:00 AM shift
+      const pickup = '2026-12-01T00:15:00.000Z' // 06:00 NPT Dec 1
+      const returnDate = '2026-12-03T00:15:00.000Z' // 06:00 NPT Dec 3
+      expect(rentalDaysBetween(pickup, returnDate)).toBe(2)
     })
 
     it('evaluates return overruns into descriptive operational bands without rupee penalties', () => {
@@ -495,9 +500,10 @@ describe('Week 2 Core Rental Flow Hardening & Boundary Matrix', () => {
     })
 
     it('strips all money fields on floor surfaces even when accessed by Owner or Manager', () => {
-      expect(canViewMoneyField({ role: 'Owner', surface: 'floor' }, 'booking')).toBe(false)
+      const floorCtx = gateContext('Owner', { surface: 'floor' })
+      expect(canViewMoneyField(floorCtx, 'booking')).toBe(false)
       expect(canViewMoneyField({ role: 'Manager', surface: 'floor' }, 'client-balance')).toBe(false)
-      expect(moneyScope({ role: 'Owner', surface: 'floor' })).toBe('none')
+      expect(moneyScope(floorCtx)).toBe('none')
     })
 
     it('classifies finance and pricing routes as money surfaces', () => {
