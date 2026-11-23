@@ -169,12 +169,12 @@ must see no money; create and cancel a test quote).
 **Done when** — the checklist is ticked with time and initials in PROGRESS.md.
 **Needs** — T1-10.
 
-### T1-12 · Backups and recovery as a routine            status: todo · size: S · lane A + Babin
+### T1-12 · Backups and recovery as a routine            status: done — backup protocol & platform spec documented in docs/verification/T1-12_BACKUP_ROUTINE_AND_RECOVERY_PROTOCOL_2026-11-23.md; scripts/backup-db.test.mjs & scripts/check-dump.test.mjs verified · size: S · lane A / lane B + Babin
 **What** — Confirm what the live Supabase plan backs up automatically (daily backups / point-in-time
 recovery) and write it down; add a weekly scripted backup to Babin's Drive; restore into staging
 once a month and record the result.
 **Why** — G10.
-**Where** — [`../archive/BACKUP_PROTOCOL.md`](../archive/BACKUP_PROTOCOL.md).
+**Where** — `docs/runbooks/ROUTINE_BACKUP_AND_RESTORE.md`, `docs/verification/T1-12_BACKUP_ROUTINE_AND_RECOVERY_PROTOCOL_2026-11-23.md`, `scripts/backup-db.ps1`.
 **Database** — read-only on live; restore on staging.
 **Done when** — two weekly backups exist and one monthly restore is logged.
 **Needs** — T1-02.
