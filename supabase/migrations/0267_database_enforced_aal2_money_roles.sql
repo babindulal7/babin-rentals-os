@@ -41,9 +41,11 @@ alter table public.staff_mfa_factors enable row level security;
 alter table public.staff_mfa_audit enable row level security;
 
 -- Policies
+drop policy if exists staff_mfa_factors_select on public.staff_mfa_factors;
 create policy staff_mfa_factors_select on public.staff_mfa_factors for select to authenticated
   using (public.auth_is_staff() and (user_id = public.auth_user_id() or public.auth_user_role() in ('Owner', 'Admin')));
 
+drop policy if exists staff_mfa_audit_select on public.staff_mfa_audit;
 create policy staff_mfa_audit_select on public.staff_mfa_audit for select to authenticated
   using (public.auth_user_role() in ('Owner', 'Admin'));
 
