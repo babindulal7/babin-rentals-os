@@ -4,3 +4,7 @@ export * from './kitRecommender'
 export * from './safetyValidator'
 export * from './quoteExplainer'
 export * from './checklistGenerator'
+export * from './clientIntelligence'
+export * from './idleStockEngine'
+export * from './morningReport'
+

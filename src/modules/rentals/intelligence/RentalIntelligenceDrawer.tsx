@@ -25,6 +25,18 @@ import {
   type OperationalStage,
   type BookingLineForChecklist,
 } from '../../../lib/rentalIntelligence/checklistGenerator'
+import {
+  evaluateClientIntelligence,
+  type ClientProfileInput,
+} from '../../../lib/rentalIntelligence/clientIntelligence'
+import {
+  evaluateFleetIdleStock,
+  type AssetPerformanceInput,
+} from '../../../lib/rentalIntelligence/idleStockEngine'
+import {
+  generateMorningReport,
+  type MorningReportInput,
+} from '../../../lib/rentalIntelligence/morningReport'
 import type { SystemRole } from '../../../types/database'
 import type { Surface } from '../../../lib/fieldGating'
 
@@ -38,6 +50,9 @@ export interface RentalIntelligenceDrawerProps {
   currentItems?: Array<{ id?: string | undefined; name: string; quantity?: number | undefined }> | undefined
   quoteSnapshot?: CanonicalQuoteSnapshot | undefined
   checklistLines?: BookingLineForChecklist[] | undefined
+  clientProfile?: ClientProfileInput | undefined
+  fleetPerformance?: AssetPerformanceInput[] | undefined
+  morningReportInput?: MorningReportInput | undefined
   onAddSuggestion?: ((item: {
     productId: string
     displayName: string
@@ -55,6 +70,9 @@ export function RentalIntelligenceDrawer({
   currentItems = [],
   quoteSnapshot,
   checklistLines,
+  clientProfile,
+  fleetPerformance,
+  morningReportInput,
   onAddSuggestion,
 }: RentalIntelligenceDrawerProps) {
   const [selectedModule, setSelectedModule] = useState<AdviceModule | 'all' | 'recommender'>('all')
@@ -111,6 +129,24 @@ export function RentalIntelligenceDrawer({
     })
   }, [checklistLines, currentItems, bookingNo, selectedChecklistStage])
 
+  // Live Client Intelligence computation (RI-04)
+  const clientResult = useMemo(() => {
+    if (!clientProfile) return null
+    return evaluateClientIntelligence(clientProfile, userRole, surface)
+  }, [clientProfile, userRole, surface])
+
+  // Live Fleet Idle Stock computation (RI-05)
+  const idleStockResult = useMemo(() => {
+    if (!fleetPerformance || fleetPerformance.length === 0) return null
+    return evaluateFleetIdleStock(fleetPerformance, userRole, surface)
+  }, [fleetPerformance, userRole, surface])
+
+  // Live Morning Report computation (RI-03)
+  const morningReportResult = useMemo(() => {
+    if (!morningReportInput) return null
+    return generateMorningReport(morningReportInput, userRole, surface)
+  }, [morningReportInput, userRole, surface])
+
   // Combine external advices with live-evaluated modules
   const allAdvices = useMemo(() => {
     const combined = [...propAdvices]
@@ -140,8 +176,39 @@ export function RentalIntelligenceDrawer({
         }
       }
     }
+    if (clientResult) {
+      for (const adv of clientResult.advices) {
+        if (!combined.some((a) => a.id === adv.id)) {
+          combined.push(adv)
+        }
+      }
+    }
+    if (idleStockResult) {
+      for (const adv of idleStockResult.advices) {
+        if (!combined.some((a) => a.id === adv.id)) {
+          combined.push(adv)
+        }
+      }
+    }
+    if (morningReportResult) {
+      for (const adv of morningReportResult.advices) {
+        if (!combined.some((a) => a.id === adv.id)) {
+          combined.push(adv)
+        }
+      }
+    }
     return combined
-  }, [propAdvices, kitResult.advices, safetyReport.advices, quoteResult, checklistResult, currentItems.length])
+  }, [
+    propAdvices,
+    kitResult.advices,
+    safetyReport.advices,
+    quoteResult,
+    checklistResult,
+    clientResult,
+    idleStockResult,
+    morningReportResult,
+    currentItems.length,
+  ])
 
   const workingModules = RENTAL_INTELLIGENCE_MODULES.filter((m) => m.status === 'working')
   const plannedModules = RENTAL_INTELLIGENCE_MODULES.filter((m) => m.status === 'planned')
@@ -569,6 +636,242 @@ export function RentalIntelligenceDrawer({
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Client Intelligence View (RI-04) */}
+        {(selectedModule === 'all' || selectedModule === 'client') && clientResult && (
+          <div
+            style={{
+              padding: '14px',
+              borderRadius: '8px',
+              border: '1px solid var(--border)',
+              background: 'var(--surface)',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--ink)' }}>
+                Client Intelligence ({clientResult.clientName})
+              </span>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <Badge tone="primary" size="sm" label={clientResult.title} />
+                <Badge tone="neutral" size="sm" label={`Trust ${clientResult.trustFactor}x`} />
+              </div>
+            </div>
+
+            <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '6px', lineHeight: '1.4' }}>
+              <strong>Communication Tone:</strong> {clientResult.tone}
+            </div>
+
+            <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '10px' }}>
+              <strong>Technical Depth:</strong> {clientResult.technicalDepth}
+            </div>
+
+            {/* Safeguards */}
+            <div style={{ marginBottom: '10px' }}>
+              <span style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--ink)', marginBottom: '4px' }}>
+                Operational Safeguards
+              </span>
+              <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '11.5px', color: 'var(--muted)', lineHeight: '1.4' }}>
+                {clientResult.safeguards.map((sg, idx) => (
+                  <li key={idx}>{sg}</li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Due Recovery Draft */}
+            {clientResult.dueRecoveryDraft && !clientResult.isMoneyMasked && (
+              <div
+                style={{
+                  padding: '10px',
+                  background: 'var(--surface-sunken, #f8fafc)',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border)',
+                  fontSize: '11.5px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--ink)' }}>
+                    Overdue Recovery Draft ({clientResult.dueRecoveryDraft.stageName})
+                  </span>
+                  <Badge
+                    tone={clientResult.dueRecoveryDraft.warningTone === 'hold' ? 'danger' : 'warning'}
+                    size="sm"
+                    label="Staff Review Only"
+                  />
+                </div>
+                <div style={{ color: 'var(--muted)', marginBottom: '4px' }}>
+                  <strong>Subject:</strong> {clientResult.dueRecoveryDraft.subject}
+                </div>
+                <pre
+                  style={{
+                    margin: 0,
+                    padding: '8px',
+                    background: 'var(--surface)',
+                    borderRadius: '4px',
+                    border: '1px solid var(--border-light, #e2e8f0)',
+                    fontSize: '11px',
+                    fontFamily: 'inherit',
+                    whiteSpace: 'pre-wrap',
+                    color: 'var(--ink)',
+                    lineHeight: '1.4',
+                  }}
+                >
+                  {clientResult.dueRecoveryDraft.body}
+                </pre>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Idle Stock Activation View (RI-05) */}
+        {(selectedModule === 'all' || selectedModule === 'idle_stock') && idleStockResult && (
+          <div
+            style={{
+              padding: '14px',
+              borderRadius: '8px',
+              border: '1px solid var(--border)',
+              background: 'var(--surface-sunken, #f8fafc)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--ink)' }}>
+                Fleet Idle Stock &amp; Activation
+              </span>
+              {idleStockResult.totalIdleCapitalFormatted && (
+                <Badge tone="warning" size="sm" label={`Idle Capital: ${idleStockResult.totalIdleCapitalFormatted}`} />
+              )}
+            </div>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+              <Badge tone="primary" size="sm" label={`${idleStockResult.expansionCandidatesCount} Expansion`} />
+              <Badge tone="warning" size="sm" label={`${idleStockResult.idleHighCapitalCount} High Idle Capital`} />
+              <Badge tone="neutral" size="sm" label={`${idleStockResult.steadyEarnersCount} Steady Earners`} />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {idleStockResult.assets.map((asset) => {
+                const actionBadgeTone =
+                  asset.action === 'BUY_ADD_ONE_MORE'
+                    ? 'primary'
+                    : asset.action === 'BUNDLE_OR_REPOSITION'
+                      ? 'warning'
+                      : asset.action === 'HOLD_AND_OPTIMIZE'
+                        ? 'neutral'
+                        : 'neutral'
+
+                return (
+                  <div
+                    key={asset.productId}
+                    style={{
+                      padding: '8px 10px',
+                      background: 'var(--surface)',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-light, #e2e8f0)',
+                      fontSize: '12px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{asset.displayName}</span>
+                      <Badge tone={actionBadgeTone} size="sm" label={asset.action.replace(/_/g, ' ')} />
+                    </div>
+                    {asset.utilizationPct !== undefined && (
+                      <span style={{ display: 'block', fontSize: '11px', color: 'var(--muted)', marginBottom: '2px' }}>
+                        Monthly Utilization: {asset.utilizationPct}%
+                      </span>
+                    )}
+                    <p style={{ margin: 0, fontSize: '11px', color: 'var(--muted)', lineHeight: '1.3' }}>
+                      {asset.reasoning}
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Morning Report View (RI-03) */}
+        {(selectedModule === 'all' || selectedModule === 'operations') && morningReportResult && (
+          <div
+            style={{
+              padding: '14px',
+              borderRadius: '8px',
+              border: '1px solid var(--border)',
+              background: 'var(--surface)',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--ink)' }}>
+                Today Morning Operational Report
+              </span>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <Badge tone="primary" size="sm" label={`AD ${morningReportResult.reportDateIso.slice(0, 10)}`} />
+                {morningReportResult.nepaliDateBs && (
+                  <Badge tone="neutral" size="sm" label={`BS ${morningReportResult.nepaliDateBs}`} />
+                )}
+              </div>
+            </div>
+
+            {/* Queue Counts Bar */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+              <Badge tone="primary" size="sm" label={`${morningReportResult.pickupsTodayCount} Pickups Today`} />
+              <Badge tone="neutral" size="sm" label={`${morningReportResult.returnsTodayCount} Returns Today`} />
+              <Badge
+                tone={morningReportResult.overdueCount > 0 ? 'danger' : 'neutral'}
+                size="sm"
+                label={`${morningReportResult.overdueCount} Overdue`}
+              />
+              <Badge tone="neutral" size="sm" label={`${morningReportResult.maintenanceHoldCount} QC/Quarantine`} />
+            </div>
+
+            {/* Leakage Audit Details for Authorized Roles */}
+            {morningReportResult.leakageCount > 0 && !morningReportResult.isMoneyMasked && (
+              <div
+                style={{
+                  padding: '10px',
+                  background: 'var(--surface-sunken, #f8fafc)',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border-light, #e2e8f0)',
+                  fontSize: '11.5px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--ink)' }}>
+                    Revenue Leakage Audits ({morningReportResult.leakageCount})
+                  </span>
+                  {morningReportResult.totalRecoverableLeakageFormatted && (
+                    <Badge tone="danger" size="sm" label={`Recoverable: ${morningReportResult.totalRecoverableLeakageFormatted}`} />
+                  )}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {morningReportResult.leakageItems.map((leak, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: '6px 8px',
+                        background: 'var(--surface)',
+                        borderRadius: '4px',
+                        border: '1px solid var(--border-light, #e2e8f0)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontWeight: 500, color: 'var(--ink)' }}>{leak.message}</span>
+                        {leak.recoverableFormatted && (
+                          <span style={{ fontWeight: 600, color: 'var(--status-critical, #b91c1c)', marginLeft: '6px' }}>
+                            {leak.recoverableFormatted}
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ display: 'block', fontSize: '10.5px', color: 'var(--muted)', marginTop: '2px' }}>
+                        Action: {leak.action}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

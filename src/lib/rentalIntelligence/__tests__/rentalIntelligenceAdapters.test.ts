@@ -27,9 +27,12 @@ describe('Rental Intelligence: Architecture & Module Taxonomy', () => {
     expect(workingIds).toContain('quote_explanation')
     expect(workingIds).toContain('monsoon')
     expect(workingIds).toContain('checklist')
+    expect(workingIds).toContain('operations')
+    expect(workingIds).toContain('client')
+    expect(workingIds).toContain('idle_stock')
 
     const planned = RENTAL_INTELLIGENCE_MODULES.filter((m) => m.status === 'planned')
-    expect(planned.length).toBe(6)
+    expect(planned.length).toBe(3)
   })
 })
 

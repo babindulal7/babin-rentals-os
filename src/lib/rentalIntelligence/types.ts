@@ -115,7 +115,7 @@ export const RENTAL_INTELLIGENCE_MODULES: readonly IntelligenceModuleMeta[] = [
     title: 'Morning Report',
     shortDesc: 'Daily operational insights, handover risks, and overdue gear',
     icon: 'activity',
-    status: 'planned',
+    status: 'working',
     priority: 'P1',
   },
   {
@@ -123,7 +123,7 @@ export const RENTAL_INTELLIGENCE_MODULES: readonly IntelligenceModuleMeta[] = [
     title: 'Client Intelligence',
     shortDesc: 'Client rental persona insights and respectful due recovery drafts',
     icon: 'users',
-    status: 'planned',
+    status: 'working',
     priority: 'P1',
   },
   {
@@ -131,7 +131,7 @@ export const RENTAL_INTELLIGENCE_MODULES: readonly IntelligenceModuleMeta[] = [
     title: 'Idle Stock Activation',
     shortDesc: 'Utilization tracking and asset repositioning observations',
     icon: 'package',
-    status: 'planned',
+    status: 'working',
     priority: 'P1',
   },
   {
