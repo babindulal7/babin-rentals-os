@@ -15,6 +15,7 @@ import type { SystemRole } from '../../../types/database'
 import { BRANCHES } from '../../../lib/queries/settings'
 import { ToneChip, td } from './shared'
 import { StaffDirectoryCard } from './StaffDirectory'
+import { SignInHistoryCard } from './SignInHistoryCard'
 
 /**
  * **Settings ▸ Users & Roles** — §11.2: *"user list, role assignment, the
@@ -50,6 +51,9 @@ export function UsersPane() {
         9-role grid, and the grid was the only thing here until 24 Aug 2026.
       */}
       <StaffDirectoryCard />
+
+      {/* Sign-in history and new-device audit trail (T1-18 / B22 / B23) */}
+      <SignInHistoryCard />
 
       <Card
         title="Permissions Matrix"

@@ -11188,6 +11188,73 @@ STEPS.push({
   },
 })
 
+// STEP L101: Server-enforced sign-in history and new-device audit (T1-18 / B22 / B23 / B54)
+// -----------------------------------------------------------------------------
+STEPS.push({
+  id: 'L101',
+  title: 'server-enforced sign-in history and new-device audit (T1-18)',
+  expect: 'green',
+  async run() {
+    // 1. Direct write to sign_in_events is refused (immutable audit trail)
+    await as('Owner', async () => {
+      let failed = false
+      try {
+        await q(`insert into public.sign_in_events (user_id, device_hash, kind) values ('${U.Owner}', 'dev-direct', 'sign-in')`)
+      } catch (err) {
+        failed = true
+        assert(/gate\.audit\.immutable|Direct insert into sign_in_events is forbidden/i.test(err.message), 'expected direct write rejection')
+      }
+      assert(failed, 'Direct insert into sign_in_events must be refused')
+    })
+
+    // 2. record_sign_in_event: Admin signs in from a new device -> emits new_device and should_alert = true
+    await as('Admin', async () => {
+      const res = (await q(`select public.record_sign_in_event('dev-admin-laptop', 'Mozilla/5.0 Admin', '27.34.20.1') as res`)).rows[0].res
+      assertEq(res.success, true, 'Admin sign-in recorded successfully')
+      assertEq(res.is_new_device, true, 'First seen device is recognized as new')
+      assertEq(res.should_alert, true, 'Owner and Admin new device triggers email alert (B23)')
+
+      // Second sign-in from same device -> does NOT emit new_device or alert
+      const resRepeat = (await q(`select public.record_sign_in_event('dev-admin-laptop', 'Mozilla/5.0 Admin', '27.34.20.1') as res`)).rows[0].res
+      assertEq(resRepeat.is_new_device, false, 'Known device does not trigger new_device')
+      assertEq(resRepeat.should_alert, false, 'Known device does not trigger email alert')
+    })
+
+    // 3. Coordinator signs in from a new device -> records event but should_alert = false (B23)
+    await as('Coordinator', async () => {
+      const res = (await q(`select public.record_sign_in_event('dev-coord-phone', 'Mobile Safari', '27.34.20.2') as res`)).rows[0].res
+      assertEq(res.success, true, 'Coordinator sign-in recorded')
+      assertEq(res.should_alert, false, 'Coordinator does not trigger new-device email alert (B23)')
+    })
+
+    // 4. Role-gated read: Owner and Admin can read; Manager and Coordinator read 0 rows (B22)
+    await as('Owner', async () => {
+      const count = Number((await q(`select count(*)::int as c from public.sign_in_events`)).rows[0].c)
+      assert(count >= 3, 'Owner reads sign-in history rows')
+    })
+
+    await as('Admin', async () => {
+      const count = Number((await q(`select count(*)::int as c from public.sign_in_events`)).rows[0].c)
+      assert(count >= 3, 'Admin reads sign-in history rows')
+    })
+
+    await as('Manager', async () => {
+      const count = Number((await q(`select count(*)::int as c from public.sign_in_events`)).rows[0].c)
+      assertEq(count, 0, 'Manager reads 0 rows from sign_in_events (denied by RLS)')
+
+      // Query RPC is also refused
+      let refused = false
+      try {
+        await q(`select public.get_recent_sign_in_events()`)
+      } catch (err) {
+        refused = true
+        assert(/gate\.settings\.role|Only Owner or Admin/i.test(err.message), 'expected role refusal')
+      }
+      assert(refused, 'Manager is refused from get_recent_sign_in_events RPC')
+    })
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break
