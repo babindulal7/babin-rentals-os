@@ -1,5 +1,47 @@
 # Progress Log
 
+## 2026-11-23 — Core Rental Loop & Custody RPC Hardening, Staging Bundle 0261–0269 & Desktop Usability Scenarios U1–U12 (Windows Antigravity)
+
+### Did
+- Executed Option A (Core Rental Loop & Floor Custody Verification): re-verified floorVerbs test suite (104/104 passing), rental actions tests across 22 test files (391/391 passing), and partial return reservation release suite (58/58 passing) in PGlite with GiST double-booking exclusion.
+- Executed Option B (Staging Migration Alignment Bundle 0261..0269): updated `scripts/build-staging-bundle.mjs` to bundle all forward migrations 0261 through 0269 with transaction safety and schema_migrations tracking, generating `docs/verification/STAGING_MIGRATIONS_0261_TO_0269_BUNDLE.sql` (71,311 bytes) for Babin to rehearse on `babin-staging` (PR #386 merged in `afb7b644`).
+- Executed Option C (Desktop Usability Rehearsal Scenarios U1–U12): documented rehearsal protocol in `docs/verification/T9-09_USABILITY_TEST_ROUNDS_PROTOCOL_2026-11-23.md` and added Scenario 6 to `src/__tests__/e2e/tier4-scenarios.test.tsx` validating whole rupee damage reporting, counter manual payment without paisa entry, and 06:00 NPT operational day turnover (13/13 tests passing).
+- Ran complete verification gate suite on `main`: typecheck, lint, check:contrast, lint:shell, check:pglite, and check:lifecycle.
+
+### Ruled
+- Forward migrations 0261–0269 remain staged and verified locally; strictly held from live production Supabase (`sxguwvgoserhdolewibb`) under Rule N-5 and Issue #56 until Babin rehearses the staging bundle on `babin-staging`.
+- Floor custody transitions remain fail-closed online RPCs under R-40; no offline queuing of stage transitions.
+
+### Verified
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 warnings, 0 errors across `src/`).
+- `npm run check:pglite`: PASS (267/267 migrations applied from scratch, 48 views checked, 22 allowlisted anon functions, 253 definer search paths pinned).
+- `npm run check:lifecycle`: PASS (102/102 lifecycle steps green in PGlite real Postgres + RLS).
+- `npm run check:contrast`: PASS (97/97 compliant across Light, Dark, Pilot, High Contrast, and Glass tokens).
+- `npm run lint:shell`: PASS (997 files checked, 100% compliant).
+- `npx vitest run src/__tests__/e2e/tier4-scenarios.test.tsx`: PASS (13/13 passed).
+- `npm run test:partial-return`: PASS (58/58 assertions passed).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-23T17:30:03.341Z). Suite: Historical suite: 7911/7911 passed, 0 failed (recorded 2026-11-23T16:53:52.623Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 7599/7599 passed, 0 failed (recorded 2026-11-20T23:59:38.542Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-23T17:30:41.108Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Live production post-cutover database dump & isolated sandbox restore drill (P0-01 / T1-01 / SEC-01).
+- Staging rehearsal of forward migrations 0261–0269 on `babin-staging` under Issue #56 (P0-02).
+- Review and merge open PR #384 (`docs/p0-launch-blocker-ledger-20261123`).
+
 ## 2026-11-23 — Week 1 Launch Governance, Full Audit Integration & Release Suite Verification (Windows Antigravity)
 
 ### Did
