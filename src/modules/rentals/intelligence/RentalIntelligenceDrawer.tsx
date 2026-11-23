@@ -16,15 +16,28 @@ import {
 import {
   validateKitSafety,
 } from '../../../lib/rentalIntelligence/safetyValidator'
+import {
+  explainCanonicalQuote,
+  type CanonicalQuoteSnapshot,
+} from '../../../lib/rentalIntelligence/quoteExplainer'
+import {
+  generateOperationalChecklist,
+  type OperationalStage,
+  type BookingLineForChecklist,
+} from '../../../lib/rentalIntelligence/checklistGenerator'
 import type { SystemRole } from '../../../types/database'
+import type { Surface } from '../../../lib/fieldGating'
 
 export interface RentalIntelligenceDrawerProps {
   open: boolean
   onClose: () => void
   advices: RentalAdvice[]
   userRole?: SystemRole | undefined
+  surface?: Surface | undefined
   bookingNo?: string | undefined
   currentItems?: Array<{ id?: string | undefined; name: string; quantity?: number | undefined }> | undefined
+  quoteSnapshot?: CanonicalQuoteSnapshot | undefined
+  checklistLines?: BookingLineForChecklist[] | undefined
   onAddSuggestion?: ((item: {
     productId: string
     displayName: string
@@ -37,13 +50,17 @@ export function RentalIntelligenceDrawer({
   onClose,
   advices: propAdvices,
   userRole = 'Coordinator',
+  surface = 'default',
   bookingNo,
   currentItems = [],
+  quoteSnapshot,
+  checklistLines,
   onAddSuggestion,
 }: RentalIntelligenceDrawerProps) {
   const [selectedModule, setSelectedModule] = useState<AdviceModule | 'all' | 'recommender'>('all')
   const [selectedShootType, setSelectedShootType] = useState<ShootType>('Documentary')
   const [selectedTier, setSelectedTier] = useState<PackageTier>('STANDARD')
+  const [selectedChecklistStage, setSelectedChecklistStage] = useState<OperationalStage>('pack')
 
   // Live Blueprint Recommendation computation
   const kitResult = useMemo(() => {
@@ -68,7 +85,33 @@ export function RentalIntelligenceDrawer({
     )
   }, [bookingNo, currentItems])
 
-  // Combine external advices with live-evaluated kit and safety advices when currentItems are provided
+  // Live Canonical Quote Explanation computation (RI-02)
+  const quoteResult = useMemo(() => {
+    if (!quoteSnapshot) return null
+    return explainCanonicalQuote(quoteSnapshot, userRole, surface)
+  }, [quoteSnapshot, userRole, surface])
+
+  // Live Operational Checklist computation (RI-08)
+  const checklistResult = useMemo(() => {
+    const linesToUse: BookingLineForChecklist[] =
+      checklistLines ??
+      currentItems.map((item, idx) => ({
+        id: item.id ?? `LINE-${idx + 1}`,
+        productId: item.id ?? `PROD-${idx + 1}`,
+        displayName: item.name,
+        dispatchedQuantity: item.quantity ?? 1,
+      }))
+
+    if (linesToUse.length === 0) return null
+
+    return generateOperationalChecklist({
+      bookingId: bookingNo ?? 'DRAFT',
+      stage: selectedChecklistStage,
+      lines: linesToUse,
+    })
+  }, [checklistLines, currentItems, bookingNo, selectedChecklistStage])
+
+  // Combine external advices with live-evaluated modules
   const allAdvices = useMemo(() => {
     const combined = [...propAdvices]
     if (currentItems.length > 0) {
@@ -83,8 +126,22 @@ export function RentalIntelligenceDrawer({
         }
       }
     }
+    if (quoteResult) {
+      for (const adv of quoteResult.advices) {
+        if (!combined.some((a) => a.id === adv.id)) {
+          combined.push(adv)
+        }
+      }
+    }
+    if (checklistResult) {
+      for (const adv of checklistResult.advices) {
+        if (!combined.some((a) => a.id === adv.id)) {
+          combined.push(adv)
+        }
+      }
+    }
     return combined
-  }, [propAdvices, kitResult.advices, safetyReport.advices, currentItems.length])
+  }, [propAdvices, kitResult.advices, safetyReport.advices, quoteResult, checklistResult, currentItems.length])
 
   const workingModules = RENTAL_INTELLIGENCE_MODULES.filter((m) => m.status === 'working')
   const plannedModules = RENTAL_INTELLIGENCE_MODULES.filter((m) => m.status === 'planned')
@@ -96,7 +153,7 @@ export function RentalIntelligenceDrawer({
         ? allAdvices.filter((a) => a.module === 'kit')
         : allAdvices.filter((a) => a.module === selectedModule)
 
-  const isFloorRole = ['Warehouse', 'Technician', 'Driver'].includes(userRole)
+  const isFloorRole = ['Warehouse', 'Technician', 'Driver'].includes(userRole) || surface === 'floor'
 
   return (
     <ContextDrawer
@@ -121,7 +178,7 @@ export function RentalIntelligenceDrawer({
           <Badge tone="primary" size="sm" label={userRole} />
         )
       }
-      width={500}
+      width={520}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {/* Module Filter Tabs */}
@@ -200,7 +257,7 @@ export function RentalIntelligenceDrawer({
           </div>
         </div>
 
-        {/* Blueprint Kit Recommender Section */}
+        {/* Blueprint Kit Recommender Section (RI-01) */}
         {(selectedModule === 'recommender' || selectedModule === 'kit') && (
           <div
             style={{
@@ -316,7 +373,206 @@ export function RentalIntelligenceDrawer({
           </div>
         )}
 
-        {/* Live Safety Metrics Summary Card */}
+        {/* Canonical Quote Explanation View (RI-02) */}
+        {(selectedModule === 'all' || selectedModule === 'quote_explanation') && quoteResult && (
+          <div
+            style={{
+              padding: '14px',
+              borderRadius: '8px',
+              border: '1px solid var(--border)',
+              background: 'var(--surface)',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--ink)' }}>
+                Authoritative Quote Explanation (Why this price?)
+              </span>
+              <Badge tone="primary" size="sm" label={`${quoteResult.durationDays} Day(s)`} />
+            </div>
+
+            {quoteResult.isMoneyMasked ? (
+              <div
+                style={{
+                  padding: '12px',
+                  background: 'var(--surface-sunken, #f8fafc)',
+                  borderRadius: '6px',
+                  border: '1px dashed var(--border)',
+                  fontSize: '12px',
+                  color: 'var(--muted)',
+                }}
+              >
+                Commercial rates, VAT, and financial totals are omitted on floor surfaces in compliance with field-level gating.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--muted)' }}>Equipment Base Subtotal:</span>
+                  <span style={{ fontWeight: 500, color: 'var(--ink)' }}>{quoteResult.equipmentSubtotalFormatted}</span>
+                </div>
+                {quoteResult.discountPercent > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--success, #16a34a)' }}>
+                    <span>Approved Discount ({quoteResult.discountPercent}%):</span>
+                    <span style={{ fontWeight: 500 }}>-{quoteResult.discountFormatted}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--muted)' }}>Nepal VAT (13%):</span>
+                  <span style={{ fontWeight: 500, color: 'var(--ink)' }}>{quoteResult.vatFormatted}</span>
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    paddingTop: '6px',
+                    borderTop: '1px solid var(--border)',
+                    fontWeight: 700,
+                    fontSize: '13px',
+                  }}
+                >
+                  <span>Total Rental:</span>
+                  <span style={{ color: 'var(--primary)' }}>{quoteResult.totalRentalFormatted}</span>
+                </div>
+
+                {quoteResult.depositLiabilityFormatted && (
+                  <div
+                    style={{
+                      marginTop: '6px',
+                      padding: '8px',
+                      background: 'var(--primary-subtle, #e0f2fe)',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                    }}
+                  >
+                    <span style={{ fontWeight: 600, color: 'var(--primary)', display: 'block' }}>
+                      Security Deposit Liability (Law 5): {quoteResult.depositLiabilityFormatted}
+                    </span>
+                    <span style={{ color: 'var(--muted)' }}>
+                      Held separately in escrow; strictly excluded from rental revenue.
+                    </span>
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    marginTop: '4px',
+                    paddingTop: '6px',
+                    borderTop: '1px dashed var(--border-light, #e2e8f0)',
+                  }}
+                >
+                  <span style={{ color: 'var(--muted)' }}>Advance Received:</span>
+                  <span style={{ fontWeight: 500 }}>{quoteResult.advancePaidFormatted}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
+                  <span style={{ color: 'var(--ink)' }}>Balance Due at Handover:</span>
+                  <span style={{ color: 'var(--ink)' }}>{quoteResult.outstandingBalanceFormatted}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Operational Checklist Generator View (RI-08) */}
+        {(selectedModule === 'all' || selectedModule === 'checklist') && checklistResult && (
+          <div
+            style={{
+              padding: '14px',
+              borderRadius: '8px',
+              border: '1px solid var(--border)',
+              background: 'var(--surface-sunken, #f8fafc)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)' }}>
+                Operational Checklist Generator
+              </span>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <Badge tone="primary" size="sm" label={`${checklistResult.estimatedPrepMinutes}m prep`} />
+                <Badge tone="neutral" size="sm" label={checklistResult.deliveryLoadCategory.replace(/_/g, ' ')} />
+              </div>
+            </div>
+
+            {/* Stage Selector Tabs */}
+            <div style={{ display: 'flex', gap: '4px', marginBottom: '10px' }}>
+              {(['pack', 'handover', 'return', 'reset'] as OperationalStage[]).map((stg) => (
+                <button
+                  key={stg}
+                  type="button"
+                  onClick={() => setSelectedChecklistStage(stg)}
+                  style={{
+                    minHeight: '32px',
+                    flex: 1,
+                    borderRadius: '4px',
+                    border: '1px solid var(--border)',
+                    background: selectedChecklistStage === stg ? 'var(--ink)' : 'var(--surface)',
+                    color: selectedChecklistStage === stg ? 'var(--surface)' : 'var(--ink)',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {stg}
+                </button>
+              ))}
+            </div>
+
+            <p style={{ margin: '0 0 10px', fontSize: '11px', color: 'var(--muted)', lineHeight: '1.4' }}>
+              {checklistResult.deliveryLoadGuidance}
+            </p>
+
+            {/* Invariant Warning Banner (RI-A20) */}
+            <div
+              style={{
+                padding: '6px 8px',
+                background: 'var(--surface)',
+                borderRadius: '4px',
+                border: '1px solid var(--border-light, #e2e8f0)',
+                marginBottom: '10px',
+                fontSize: '10.5px',
+                color: 'var(--muted)',
+                lineHeight: '1.3',
+              }}
+            >
+              <strong>Advisory Checklist:</strong> Completing items here is for warehouse staff coordination.
+              Custody stage transitions require verified submission in Babin Rentals OS.
+            </div>
+
+            {/* Checklist Items List */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {checklistResult.items.map((item) => (
+                <div
+                  key={item.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '8px',
+                    padding: '6px 8px',
+                    background: 'var(--surface)',
+                    borderRadius: '4px',
+                    border: '1px solid var(--border-light, #e2e8f0)',
+                    fontSize: '12px',
+                  }}
+                >
+                  <input type="checkbox" style={{ marginTop: '2px', cursor: 'pointer' }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontWeight: 500, color: 'var(--ink)' }}>{item.title}</span>
+                      <Badge tone="neutral" size="sm" label={item.category} />
+                    </div>
+                    <span style={{ display: 'block', fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>
+                      {item.instruction}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Live Safety Metrics Summary Card (RI-10) */}
         {(selectedModule === 'all' || selectedModule === 'safety') && (
           <div
             style={{

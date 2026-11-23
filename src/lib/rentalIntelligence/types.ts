@@ -139,7 +139,7 @@ export const RENTAL_INTELLIGENCE_MODULES: readonly IntelligenceModuleMeta[] = [
     title: 'Checklist Generator',
     shortDesc: 'Booking-linked prep and return custody checklists',
     icon: 'check-square',
-    status: 'planned',
+    status: 'working',
     priority: 'P0',
   },
   {
