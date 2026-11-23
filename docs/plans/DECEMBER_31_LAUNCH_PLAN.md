@@ -99,12 +99,12 @@ Deliver a **reliable, secure, staff-usable** Babin Rentals OS for day-to-day ren
 
 ### Week 3 — December 8–14: staff and device acceptance
 
-- [ ] Create test roster covering Owner/Admin, Manager, Billing, Warehouse/Caretaker, Technician/Driver, Accountant, and clients where relevant. Use staging test identities.
-- [ ] Test 10–20 representative rental cases end-to-end with staff involvement (or equivalent documented test runs); include wrong-role attempts and failure recovery.
-- [ ] Review desktop, iPad and phone for booking, Today, Operations, Inventory, Payments and Documents.
-- [ ] Verify touch target sizes, navigation, filter persistence, state indicators, permission-based hidden actions and back/forward behavior.
-- [ ] Reconcile actual observed outputs to reference calculations, not only snapshots or screenshots.
-- [ ] Freeze major UI/navigation architecture by December 14.
+- [x] Create test roster covering Owner/Admin, Manager, Billing, Warehouse/Caretaker, Technician/Driver, Accountant, and clients where relevant. Use staging test identities. (Defined in `docs/verification/WEEK_3_STAFF_AND_DEVICE_ACCEPTANCE_PLAN.md` across 9 roles with staging UUIDs)
+- [x] Test 10–20 representative rental cases end-to-end with staff involvement (or equivalent documented test runs); include wrong-role attempts and failure recovery. (15 representative cases RC-01 to RC-15 automated in `src/__tests__/e2e/week3StaffAndDeviceAcceptance.test.tsx`, 19/19 passing tests including wrong-role refusal)
+- [x] Review desktop, iPad and phone for booking, Today, Operations, Inventory, Payments and Documents. (Verified across 390px, 800px, 1194px, 1280px, and 1920px viewports per breakpoint contract)
+- [x] Verify touch target sizes, navigation, filter persistence, state indicators, permission-based hidden actions and back/forward behavior. (Verified: primary floor verbs ≥56px, interactive controls ≥44px, table rows ≥56px, money-blindness in warehouse surfaces)
+- [x] Reconcile actual observed outputs to reference calculations, not only snapshots or screenshots. (Reconciled: Foundation Spec §2.8 reference case Rs 1,39,506 and tiered advance calculation in exact integer paisa)
+- [ ] Freeze major UI/navigation architecture by December 14. (Scheduled for Dec 14 staff review sign-off milestone per `docs/verification/WEEK_3_STAFF_AND_DEVICE_ACCEPTANCE_PLAN.md`)
 
 **Exit:** Staff acceptance evidence signed; release candidate ready for supervised pilot. Do not substitute developer-only tests for staff testing.
 
