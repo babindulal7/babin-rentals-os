@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { RentalIntelligenceDrawer } from '../RentalIntelligenceDrawer'
 import type { RentalAdvice } from '../../../../lib/rentalIntelligence/types'
+import type { CanonicalQuoteSnapshot } from '../../../../lib/rentalIntelligence/quoteExplainer'
+import { rupees } from '../../../../lib/money'
 
 describe('RentalIntelligenceDrawer UI Component', () => {
   const sampleAdvices: RentalAdvice[] = [
@@ -99,7 +101,7 @@ describe('RentalIntelligenceDrawer UI Component', () => {
     expect(html).toContain('Safety Validation (1)')
   })
 
-  it('renders planned capabilities section with exactly 7 planned modules', () => {
+  it('renders planned capabilities section with exactly 6 planned modules', () => {
     const html = renderToStaticMarkup(
       <RentalIntelligenceDrawer
         open={true}
@@ -108,9 +110,8 @@ describe('RentalIntelligenceDrawer UI Component', () => {
       />,
     )
 
-    expect(html).toContain('Planned Capabilities (7)')
+    expect(html).toContain('Planned Capabilities (6)')
     expect(html).toContain('Morning Report')
-    expect(html).toContain('Checklist Generator')
     expect(html).toContain('Decision Journal')
   })
 
@@ -156,5 +157,117 @@ describe('RentalIntelligenceDrawer UI Component', () => {
     )
 
     expect(html).toContain('Kit Builder')
+  })
+
+  describe('Phase RI-3: Quote Explanation & Operational Checklist views', () => {
+    const sampleQuoteSnapshot: CanonicalQuoteSnapshot = {
+      bookingId: 'BK-2026-001',
+      days: 2,
+      lineItems: [
+        {
+          productId: 'BRPI-CAM-FX3',
+          displayName: 'Sony FX3A Cinema Body',
+          quantity: 1,
+          unitRatePaisa: rupees(6000),
+          lineTotalPaisa: rupees(12000),
+        },
+        {
+          productId: 'BRPI-LNS-2470',
+          displayName: 'Sony FE 24-70mm f/2.8 GM II',
+          quantity: 1,
+          unitRatePaisa: rupees(4000),
+          lineTotalPaisa: rupees(8000),
+        },
+      ],
+      equipmentSubtotalPaisa: rupees(20000),
+      discountPercent: 10,
+      discountAmountPaisa: rupees(2000),
+      discountReason: 'Corporate repeat partner discount',
+      discountApprover: 'Owner (Babin)',
+      taxRatePercent: 13,
+      taxAmountPaisa: rupees(2340),
+      totalRentalPaisa: rupees(20340),
+      depositPaisa: rupees(50000),
+      advancePaidPaisa: rupees(10170),
+      outstandingPaisa: rupees(10170),
+      currency: 'NPR',
+      calculatedAtIso: '2026-11-23T12:00:00Z',
+    }
+
+    it('renders authoritative quote explanation breakdown for authorized roles', () => {
+      const html = renderToStaticMarkup(
+        <RentalIntelligenceDrawer
+          open={true}
+          onClose={() => {}}
+          advices={[]}
+          quoteSnapshot={sampleQuoteSnapshot}
+          userRole="Coordinator"
+        />,
+      )
+
+      expect(html).toContain('Authoritative Quote Explanation (Why this price?)')
+      expect(html).toContain('2 Day(s)')
+      expect(html).toContain('Equipment Base Subtotal:')
+      expect(html).toContain('Approved Discount (10%):')
+      expect(html).toContain('Nepal VAT (13%):')
+      expect(html).toContain('Total Rental:')
+      expect(html).toContain('Security Deposit Liability (Escrow):')
+      expect(html).toContain('Held separately in escrow; strictly excluded from rental revenue.')
+      expect(html).toContain('Advance Received:')
+      expect(html).toContain('Balance Due at Handover:')
+    })
+
+    it('masks commercial breakdown when userRole is Warehouse', () => {
+      const html = renderToStaticMarkup(
+        <RentalIntelligenceDrawer
+          open={true}
+          onClose={() => {}}
+          advices={[]}
+          quoteSnapshot={sampleQuoteSnapshot}
+          userRole="Warehouse"
+        />,
+      )
+
+      expect(html).toContain('Authoritative Quote Explanation (Why this price?)')
+      expect(html).toContain('Commercial rates, VAT, and financial totals are omitted on floor surfaces in compliance with field-level gating.')
+      expect(html).not.toContain('Equipment Base Subtotal:')
+      expect(html).not.toContain('Nepal VAT (13%):')
+    })
+
+    it('masks commercial breakdown when surface is floor', () => {
+      const html = renderToStaticMarkup(
+        <RentalIntelligenceDrawer
+          open={true}
+          onClose={() => {}}
+          advices={[]}
+          quoteSnapshot={sampleQuoteSnapshot}
+          userRole="Coordinator"
+          surface="floor"
+        />,
+      )
+
+      expect(html).toContain('Commercial rates, VAT, and financial totals are omitted on floor surfaces in compliance with field-level gating.')
+      expect(html).not.toContain('Equipment Base Subtotal:')
+    })
+
+    it('renders operational checklist generator with stage tabs, delivery load badge, and invariant notice', () => {
+      const html = renderToStaticMarkup(
+        <RentalIntelligenceDrawer
+          open={true}
+          onClose={() => {}}
+          advices={[]}
+          checklistLines={[
+            { id: 'L-1', productId: 'BRPI-CAM-FX3', displayName: 'Sony FX3A Cinema Body', dispatchedQuantity: 1 },
+            { id: 'L-2', productId: 'BRPI-LNS-2470', displayName: 'Sony FE 24-70mm f/2.8 GM II', dispatchedQuantity: 1 },
+          ]}
+        />,
+      )
+
+      expect(html).toContain('Operational Checklist Generator')
+      expect(html).toContain('prep')
+      expect(html).toContain('Custody stage transitions require verified submission in Babin Rentals OS.')
+      expect(html).toContain('Sony FX3 XLR Audio Handle Pin Check')
+      expect(html).toContain('Barcode &amp; Physical Serial Verification')
+    })
   })
 })
