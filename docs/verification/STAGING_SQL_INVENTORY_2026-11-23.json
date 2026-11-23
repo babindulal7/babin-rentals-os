@@ -4,7 +4,7 @@
   "source_main_commit": "4171ff75930af3bb24925740e207bb22553df0af",
   "target_staging_project_ref": "klhmsrunqrdxjudyhnkm",
   "protected_production_project_ref": "sxguwvgoserhdolewibb",
-  "migration_files": 264,
+  "migration_files": 266,
   "live_recorded_history_count": 157,
   "exact_name_matches": 148,
   "source_without_exact_live_name": 116,
@@ -1865,6 +1865,20 @@
       "filename": "0266_manager_approvals_to_owner.sql",
       "git_blob_sha": "3aa01e389e89ffc70096ba7ae83542a510c7d01b",
       "bytes": 3354,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0267_database_enforced_aal2_money_roles.sql",
+      "git_blob_sha": "6c13c7923d96e6f4670558b872d2c1499300354d",
+      "bytes": 11232,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0268_sign_in_events_and_new_device.sql",
+      "git_blob_sha": "f3fa84b9e59b2756b4a0d3d5cabc5a453909f36f",
+      "bytes": 7317,
       "live_exact_name_found": false,
       "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
     }
