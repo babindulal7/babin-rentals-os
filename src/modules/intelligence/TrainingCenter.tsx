@@ -32,6 +32,9 @@ import {
   executeSyntheticEvaluationRun,
 } from '../../lib/intelligence/evalEngine'
 import {
+  scanCanonicalCatalogQuality,
+} from '../../lib/intelligence/qualityScanner'
+import {
   SYNTHETIC_DATA_QUALITY_ISSUES,
   SYNTHETIC_KNOWLEDGE_REVIEW_ITEMS,
   SYNTHETIC_STAFF_FEEDBACK_ITEMS,
@@ -79,6 +82,10 @@ export default function TrainingCenter() {
   const [feedbackItems, setFeedbackItems] = useState<StaffFeedbackItem[]>(
     SYNTHETIC_STAFF_FEEDBACK_ITEMS
   )
+
+  // Data Quality Scan State (TQC-02)
+  const [qualityScanSource, setQualityScanSource] = useState<'synthetic' | 'canonical'>('synthetic')
+  const canonicalScanSummary = useMemo(() => scanCanonicalCatalogQuality(), [])
 
   // Gate Check: Refuse access to Client role (Acceptance Test 10)
   const userRole = user?.role
@@ -495,20 +502,54 @@ export default function TrainingCenter() {
         {activeTab === 'quality' && (
           <div role="tabpanel" id="panel-quality" aria-labelledby="tab-quality">
             <div style={{ ...cardStyle, padding: '1.25rem', marginBottom: '1.5rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Canonical Catalog Quality Scan</h3>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Canonical Catalog Quality Scan (TQC-02)</h3>
                   <p style={{ margin: '0.25rem 0 0', fontSize: '0.8125rem', color: '#64748b' }}>
                     Read-only automated scan of canonical equipment records, kit dependencies, and technical manuals. No automatic overwrites.
                   </p>
                 </div>
-                <div style={{ padding: '0.375rem 0.75rem', backgroundColor: '#e0f2fe', color: '#0369a1', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
-                  Scan Status: 5 Issues Detected
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <div style={{ display: 'inline-flex', borderRadius: '6px', border: '1px solid #cbd5e1', overflow: 'hidden' }}>
+                    <button
+                      onClick={() => setQualityScanSource('synthetic')}
+                      style={{
+                        padding: '0.375rem 0.75rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        border: 'none',
+                        cursor: 'pointer',
+                        backgroundColor: qualityScanSource === 'synthetic' ? '#2563eb' : '#ffffff',
+                        color: qualityScanSource === 'synthetic' ? '#ffffff' : '#475569',
+                      }}
+                    >
+                      Synthetic Baseline ({SYNTHETIC_DATA_QUALITY_ISSUES.length})
+                    </button>
+                    <button
+                      onClick={() => setQualityScanSource('canonical')}
+                      style={{
+                        padding: '0.375rem 0.75rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        border: 'none',
+                        cursor: 'pointer',
+                        backgroundColor: qualityScanSource === 'canonical' ? '#2563eb' : '#ffffff',
+                        color: qualityScanSource === 'canonical' ? '#ffffff' : '#475569',
+                      }}
+                    >
+                      Live Catalog Scan ({canonicalScanSummary.issues.length})
+                    </button>
+                  </div>
+                  <div style={{ padding: '0.375rem 0.75rem', backgroundColor: '#e0f2fe', color: '#0369a1', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
+                    {qualityScanSource === 'canonical'
+                      ? `${canonicalScanSummary.totalModelsScanned} Models Audited`
+                      : 'Synthetic Demo'}
+                  </div>
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-                {SYNTHETIC_DATA_QUALITY_ISSUES.map((issue) => (
+                {(qualityScanSource === 'synthetic' ? SYNTHETIC_DATA_QUALITY_ISSUES : canonicalScanSummary.issues).map((issue) => (
                   <div
                     key={issue.code}
                     style={{

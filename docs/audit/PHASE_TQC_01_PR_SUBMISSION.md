@@ -1,12 +1,11 @@
-# BABIN RENTALS OS — PHASE TQC-01 PR SUBMISSION PACKAGE
-## Intelligence Training Center Shell, Golden Dataset & Deterministic Evaluation Engine
+# BABIN RENTALS OS — PHASE TQC-01 & TQC-02 PR SUBMISSION PACKAGE
+## Intelligence Training Center Shell, Golden Dataset, Catalog Quality Scanner & Data Feeding Pipeline
 
 **Date:** 2026-11-23  
-**Workstream:** Intelligence / Quality & Evaluation  
+**Workstream:** Intelligence / Quality & Evaluation (TQC-01, TQC-02, Data Pipeline)  
 **Status:** **PENDING OWNER ACCEPTANCE** (No auto-merge, no production deployment, zero database mutations)  
 **Branch:** `feat/intelligence-training-center-eval-shell`  
 **Base `main` SHA:** `4c8fe9d73166c9e5b2a73e5c0da7f0107fb96eea`  
-**PR Head SHA:** `32bfcb7f`  
 
 ---
 
@@ -82,12 +81,27 @@ Phase TQC-01 introduces the staff-facing **Intelligence Training Center** for Ba
 ### D. Training Center UI Shell (`src/modules/intelligence/TrainingCenter.tsx`)
 - Responsive staff workbench with 6 interactive tabs:
   1. **Overview / Quality Dashboard:** Release gate status banner, KPI cards, suite breakdown table, and live evaluation trigger.
-  2. **Data Quality Center:** Read-only quality scan detecting identity, completeness, consistency, freshness, and operational issues with deep links to canonical records.
+  2. **Data Quality Center:** Read-only quality scan detecting identity, completeness, consistency, freshness, and operational issues with deep links to canonical records. Supports switching between Synthetic Baseline and Live Catalog Scan (TQC-02).
   3. **Knowledge Review Queue:** Diff view comparing current approved values vs candidate proposals, evidence badges, Approve (Internal/Client), and Reject with mandatory justification modal.
   4. **Golden Test Library:** Dense searchable table, suite/severity filters, case inspector modal, and JSONL export.
   5. **Evaluation Runs / Accuracy Reports:** Run wizard, progress state, per-case result breakdown, and Markdown report export.
   6. **Staff Feedback & Corrections:** Ingestion queue for field feedback with conversion to formal review candidate.
 - Responsive layout supporting Desktop, iPad (two-pane touch targets >= 44px), and Phone (stacked single-column).
+
+### E. Canonical Catalog Quality Scanner (TQC-02, `src/lib/intelligence/qualityScanner.ts`)
+- Read-only automated scanning over canonical inventory catalog (`INVENTORY_MODELS`):
+  - Strict token separation checking (FX3 vs FX30 name pollution).
+  - Near-duplicate model name collision detection using normalized alphanumeric keys.
+  - Completeness validation for daily rental rate (`unitRatePaisa`) and category assignment.
+  - Cinema camera naming consistency ("Body" designation check to prevent chassis vs kit ambiguity).
+  - Surfaces structured `DataQualityIssue` items with deep links, proposed owners, and safe fix guidance.
+
+### F. Data Feeding Pipeline Ingestion Engine (`src/lib/intelligence/dataPipeline.ts`)
+- Offline structured data ingestion and proposal generation:
+  - Strict source type validation (`oem_manual`, `service_bulletin`, `internal_sop`, `staff_correction`).
+  - Security sanitizer: stripping prompt injection payloads, hidden system instructions, and customer PII before ingestion.
+  - Heading and section chunking with metadata tracking.
+  - Automated candidate generation for the Knowledge Review Queue with unreviewed candidate status.
 
 ---
 
@@ -99,14 +113,14 @@ Executed in isolated worktree `C:\Users\use\Desktop\babin-rentals-os\.worktrees\
 ```
  RUN  v3.2.7 C:/Users/use/Desktop/babin-rentals-os/.worktrees/tqc-training-center
 
- ✓ src/lib/intelligence/__tests__/evalEngine.test.ts (10 tests) 26ms
- ✓ src/modules/inventory/__tests__/gearListParser.test.ts (30 tests) 280ms
- ✓ src/modules/intelligence/__tests__/TrainingCenter.test.tsx (7 tests) 1560ms
+ ✓ src/lib/intelligence/__tests__/evalEngine.test.ts (10 tests) 55ms
+ ✓ src/lib/intelligence/__tests__/pipelineAndScanner.test.ts (5 tests) 16ms
+ ✓ src/lib/__tests__/gearListParser.test.ts (30 tests) 794ms
+ ✓ src/modules/intelligence/__tests__/TrainingCenter.test.tsx (7 tests) 3847ms
 
- Test Files  3 passed (3)
-      Tests  47 passed (47)
-   Start at  05:45:45
-   Duration  9.11s
+ Test Files  4 passed (4)
+      Tests  52 passed (52)
+   Duration  33.84s
 ```
 
 ### TypeScript Static Analysis
@@ -116,6 +130,16 @@ Executed in isolated worktree `C:\Users\use\Desktop\babin-rentals-os\.worktrees\
 
 Exit Code: 0 (Zero compiler errors, strict mode compliant)
 ```
+
+### Browser Verification Summary (Subagent / Interactive Dev Server)
+- **URL Tested:** `http://127.0.0.1:3101/intelligence/training-center` (under `npm run dev:mock`).
+- **Visual Evidence:** `final_step_79.png` (captured at step 79).
+- **Interactive Verification Results:**
+  - All 6 navigation tabs verified interactive and correctly badged.
+  - Live evaluation suite run executed in browser (47/47 passed, Release Gate PASSING).
+  - Golden case inspection modal verified on `SYN-019` (Safety suite, burned equipment dispatch refusal).
+  - Knowledge review diff cards and action buttons verified.
+  - Data Quality Center toggles between synthetic baseline and canonical live scan.
 
 ---
 
