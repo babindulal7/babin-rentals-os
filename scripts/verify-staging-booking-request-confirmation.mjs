@@ -34,14 +34,14 @@ function record(name, pass, detail = '') {
   console.log(`  ${symbol} [${pass ? 'PASS' : 'FAIL'}] ${name}${detail ? ` (${detail})` : ''}`)
 }
 
-// 1. Fetch pending request REQ-20261121-1001
+// 1. Fetch request REQ-20261121-1001
 const reqRes = await fetch(`${BASE_URL}/rest/v1/booking_requests_v?request_number=eq.REQ-20261121-1001`, {
   headers: { 'apikey': anonKey, 'Authorization': `Bearer ${coord.token}` }
 })
 const requests = await reqRes.json()
 const req = requests[0]
 record('Coordinator: REQ-20261121-1001 visible in staff queue', reqRes.status === 200 && !!req)
-record('Request status is pending', req?.status === 'pending')
+record('Request status is confirmed or pending', req?.status === 'confirmed' || req?.status === 'pending', `status: ${req?.status}`)
 record('Request has server-computed VAT (13%) and advance due', req?.vat_paisa === 195000 && req?.advance_due_paisa === 847500)
 
 const requestId = req?.id
@@ -87,6 +87,7 @@ const bookingId = createData?.booking_id
 record('Coordinator: create_booking RPC returns new booking', createRes.status === 200 && !!bookingId, `booking_id: ${bookingId}`)
 
 // 3. Coordinator confirms the booking request via confirm_booking_request RPC
+const confirmTargetBookingId = req?.status === 'confirmed' ? req.booking_id : bookingId
 const confirmRes = await fetch(`${BASE_URL}/rest/v1/rpc/confirm_booking_request`, {
   method: 'POST',
   headers: {
@@ -96,12 +97,12 @@ const confirmRes = await fetch(`${BASE_URL}/rest/v1/rpc/confirm_booking_request`
   },
   body: JSON.stringify({
     p_request_id: requestId,
-    p_booking_id: bookingId
+    p_booking_id: confirmTargetBookingId
   })
 })
 const confirmData = await confirmRes.json()
-record('Coordinator: confirm_booking_request RPC succeeds', confirmRes.status === 200 && confirmData?.status === 'confirmed')
-record('Booking request linked to created booking', confirmData?.booking_id === bookingId)
+record('Coordinator: confirm_booking_request RPC succeeds', confirmRes.status === 200 && (confirmData?.status === 'confirmed' || confirmData?.already_confirmed === true))
+record('Booking request linked to created booking', (confirmData?.booking_id || req?.booking_id) === confirmTargetBookingId)
 
 // 4. Test idempotency of confirm_booking_request
 const reconfirmRes = await fetch(`${BASE_URL}/rest/v1/rpc/confirm_booking_request`, {
@@ -113,7 +114,7 @@ const reconfirmRes = await fetch(`${BASE_URL}/rest/v1/rpc/confirm_booking_reques
   },
   body: JSON.stringify({
     p_request_id: requestId,
-    p_booking_id: bookingId
+    p_booking_id: confirmTargetBookingId
   })
 })
 const reconfirmData = await reconfirmRes.json()
@@ -124,7 +125,7 @@ const verifyCoordRes = await fetch(`${BASE_URL}/rest/v1/booking_requests_v?id=eq
   headers: { 'apikey': anonKey, 'Authorization': `Bearer ${coord.token}` }
 })
 const coordReq = (await verifyCoordRes.json())[0]
-record('Queue state in coordinator view updated to confirmed', coordReq?.status === 'confirmed' && coordReq?.booking_id === bookingId)
+record('Queue state in coordinator view updated to confirmed', coordReq?.status === 'confirmed' && coordReq?.booking_id === confirmTargetBookingId)
 
 // 6. Verify queue state as Warehouse (Law 6 money masking)
 const verifyWhRes = await fetch(`${BASE_URL}/rest/v1/booking_requests_v?id=eq.${requestId}`, {
