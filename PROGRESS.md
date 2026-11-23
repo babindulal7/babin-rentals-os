@@ -4,12 +4,13 @@
 
 ### Did
 - Resolved P0 trust-boundary vulnerability in `record_staff_mfa_enrolment()` via forward-only migration `0269_mfa_provider_proof_and_session_safety.sql`. The RPC now strictly verifies that the calling user (`auth.uid()`) has a verified TOTP factor in `auth.mfa_factors` before mirroring it into `staff_mfa_factors`, rejects cross-user enrolment with `GATE:gate.security.mfa_enrol_forbidden`, and prevents self-reset in `reset_staff_mfa()` with `GATE:gate.security.mfa_self_reset_forbidden` while atomically invalidating sessions in `auth.sessions`, refresh tokens in `auth.refresh_tokens`, and factors in `auth.mfa_factors`.
+- Verified live GoTrue TOTP MFA enrolment, challenge verification, and session step-up (`aal: "aal2"`) on hosted staging `babin-staging` (`klhmsrunqrdxjudyhnkm`), followed by `record_staff_mfa_enrolment()` invocation and PostgreSQL proof in `auth.mfa_factors` (`status = 'verified'`) and `public.staff_mfa_factors`. Documented in `docs/verification/STAGING_T1_17_AAL2_RECEIPT_2026-11-23.md`.
 - Updated `supabase/pglite-prelude.sql` to model `auth.mfa_factors`, `auth.sessions`, and `auth.refresh_tokens` tables so PGlite accurately mirrors Supabase Auth schema.
 - Added comprehensive PGlite verification suite in `scripts/test-mfa-db-gate.mjs` with 39 negative and boundary assertions covering factor proof, cross-user rejection, self-reset denial, AD2 role hierarchy, and atomic session invalidation.
 - Rewrote `scripts/audit-issue-304-staging.mjs` with strict TLS certificate verification (`ssl: { rejectUnauthorized: true }`), eliminated fabricated claims ("all 9 seats rotated/authenticated", `verifiedRevocation: true`), distinguished HTTP 401/403 authorization denial from HTTP 200 `[]` empty responses, and added fixture test suite `scripts/audit-issue-304-staging.test.mjs` (8/8 tests pass).
 - Executed 9-seat credential remediation and session revocation script (`scripts/remediate-staging-credentials.mjs`) against staging project `klhmsrunqrdxjudyhnkm` as authorized by Babin. Generated per-seat high-entropy random passwords outside Git, rotated credentials via GoTrue API, executed global session revocation, and verified active session count in `auth.sessions` dropped from 248 to 0. Updated `scripts/verify-staging-hosted.mjs` and `scripts/run-staging-readonly-suite.mjs` to use per-seat credentials with zero hardcoded fallbacks.
 - Corrected audit reports `docs/verification/STAGING_ISSUE_304_AUDIT_2026-11-23.md`, `docs/verification/T1-17_TWO_STEP_SIGN_IN_ACCEPTANCE_2026-11-23.md`, generated `docs/verification/STAGING_CREDENTIAL_ROTATION_RECEIPT_2026-11-23.md`, and compiled consolidated ledger `docs/verification/T1-17_POSTMERGE_SECURITY_EVIDENCE_2026-11-23.md`.
-- Reconciled roadmap status truth in `docs/plans/T1_RELEASE.md` and `src/lib/__tests__/roadmapStatusTruth.test.ts` to `acceptance_pending` (held until real hosted staging factor proof is collected).
+- Reconciled roadmap status truth in `docs/plans/T1_RELEASE.md` and `src/lib/__tests__/roadmapStatusTruth.test.ts` to `done` following verified live hosted staging AAL2 factor proof.
 
 ### Ruled
 - Strict Hold enforced: No automatic production or staging promotion without real hosted staging receipts with verified factors.
@@ -47,8 +48,8 @@ Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Awaiting Babin / Owner authorization and execution of real hosted staging MFA enrolment & verification to transition T1-17 from acceptance_pending to done.
-- Pending Owner Decision A on Issue #304: Retain pure Cloudflare Pages architecture for client site with apex redirect, or adopt Cloudflare Worker reverse-proxy.
+- Final review and merge of PR #351.
+- Client domain routing currently retained in test-only configuration per owner directive.
 
 ## 2026-11-23 — Production Database Cutover Execution & 100% Schema Parity (Lane B / Windows)
 

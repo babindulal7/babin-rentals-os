@@ -245,7 +245,7 @@ says "this device only"; 3) a test fails if a `Switch` renders with neither a se
 save handler; 4) screen check at 375 / 820 / 1440.
 **Needs** — none.
 
-### T1-17 · Two-step sign-in for every money role            status: acceptance_pending — PR #203 merged; database-enforced AAL2 on money access verified via migrations 0267/0269; hosted staging real-factor acceptance pending · size: L · lane A · [go-live] · slips first
+### T1-17 · Two-step sign-in for every money role            status: done — PR #203 merged; database-enforced AAL2 on money access verified via migrations 0267/0269; hosted staging real-factor TOTP enrolment, AAL2 session step-up, and GoTrue factor proof verified (23 Nov 2026) · size: L · lane A · [go-live] · slips first
 **What** — Every role that sees money — **Owner, Admin, Manager, Coordinator, Accounts**
 (PERMISSIONS §5) — signs in with the password **plus a 6-digit code from an authenticator app**
 (Supabase Auth MFA, TOTP) (B21). On a device where that person has done this, the **PIN of T1-15**
