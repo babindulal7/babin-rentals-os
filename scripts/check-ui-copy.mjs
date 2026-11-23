@@ -18,6 +18,7 @@ export const CONVERTED_MODULES = [
   'src/modules/rentals/BookingCrewList.tsx',
   'src/modules/clients/Clients.tsx',
   'src/modules/clients/ClientsDirectory.tsx',
+  'src/modules/crew/CrewBooking.tsx',
 ]
 
 export function isConverted(file) {

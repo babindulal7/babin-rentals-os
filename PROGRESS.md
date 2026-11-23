@@ -1,5 +1,54 @@
 # Progress Log
 
+## 2026-11-23 — Public Booking Front Door & Online Catalogue Mobile/Desktop Hardening (T7 Online Booking / Windows Antigravity)
+
+### Did
+- Enhanced public booking header in `src/booking/components/BookingHeader.tsx` with standard Kathmandu rental time selectors (`06:00` start of operational day default) and responsive `.booking-header-actions` structure.
+- Refactored `src/booking/components/CartDrawer.tsx` to strictly use `rentalDaysBetween` engine calculation (Law 1) instead of raw millisecond date math.
+- Enforced ≥44px minimum touch targets across all cart drawer interactive controls:
+  - Upgraded quantity increment and decrement buttons to 44×44px (`minWidth: 44, minHeight: 44`).
+  - Upgraded remove item buttons to 44×44px touch targets.
+  - Upgraded all form inputs and selects in request submission to `minHeight: 44`.
+- Added clear date-time display in cart summary (`{startDate} ({startTime}) → {endDate} ({endTime}) · {rentalDays} days`).
+- Hardened status indicators in `src/booking/components/ProductCard.tsx` and `ProductDetailModal.tsx` to strictly use Icon + Label + Color (`✓ Available`, `✕ Unavailable`, `⏳ Checking availability`, `📅 Select dates`), never color alone.
+- Added comprehensive responsive media queries in `src/booking/booking.css` aligned with `src/lib/breakpoints.ts` thresholds (`BP = { phone: 768, desktop: 1280 }`):
+  - Handled mobile vertical stacking of header, date-time selector bar, 1-column product grid, full-width cart drawer, and mobile dialog sizing (<768px).
+  - Handled tablet 2-column grid layout (768px–1279px).
+- Fixed mock evidence relation join in `src/lib/__mocks__/engine.ts` resolving the Operations Pack evidence photo verification error.
+
+### Ruled
+- Operational rental days across public online requests strictly abide by Kathmandu 06:00 NPT → 06:00 NPT boundaries via `rentalDaysBetween`.
+- Status indicators across customer-facing catalogue cards must present explicit icon glyphs alongside label text and color tokens (Rule B-1 / Law 16).
+
+### Verified
+- `npx vitest run src/booking/`: PASS (11 test files, 54 tests green).
+- `npm run check:contrast`: PASS (97/97 tests pass, 0 fail across dark, light, high-contrast, and glass tokens).
+- `npm run check:lifecycle`: PASS (102/102 lifecycle steps green in PGlite).
+- `npm run lint`: PASS (0 errors, 0 warnings).
+- `npm run build`: PASS (bundled 8,380 modules, production PWA output generated in `dist/`).
+- `npm run completion`: PASS (118/118 backend actions, 102/102 lifecycle steps).
+- `npm run lint:progress`: PASS.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 71 | 58 · 0 · 0 · 13 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-23T13:18:14.108Z). Suite: Historical suite: 7765/7765 passed, 0 failed (recorded 2026-11-23T12:45:24.471Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 7599/7599 passed, 0 failed (recorded 2026-11-20T23:59:38.542Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-23T13:19:21.792Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Live production post-cutover database dump & isolated sandbox restore drill (T1-01 / SEC-01).
+- PGlite regression suite for Issue #223 (cross-client 0241 isolation) and Issue #226 (coordinator credit approval).
+- Staging-only rehearsal of 0261–0269 migrations and security patches (`01_REPLACE_STAFF_DIRECTORY_AUTH_USERS_JOIN.sql`, `02_PIN_MUTABLE_SEARCH_PATHS.sql`).
+
 ## 2026-11-23 — December 31, 2026 Controlled Launch Plan & Week 1 Security/Baseline Reconciliation (Windows Antigravity)
 
 ### Did

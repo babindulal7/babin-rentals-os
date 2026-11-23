@@ -64,5 +64,12 @@
   "crew.rail.payoutLedger": "भुक्तानी खाता",
   "crew.rail.unpaid": "भुक्तानी बाँकी",
   "crew.rail.tds": "TDS कट्टी",
-  "crew.rail.net": "खुद भुक्तानी"
+  "crew.rail.net": "खुद भुक्तानी",
+  "crew.status.staff": "कर्मचारी",
+  "crew.filter.roleLabel": "भूमिका",
+  "crew.roster.loadErrorPrefix": "प्रत्यक्ष क्रु रोस्टर लोड हुन सकेन, त्यसैले तल देखाइएका विवरणहरू निर्मित सन्दर्भ सेट हुन् — प्रत्यक्ष रेकर्ड होइनन्।",
+  "crew.table.perDay": "/ दिन",
+  "crew.actions.viewBooking": "बुकिङ हेर्नुहोस्",
+  "crew.calendar.weekView": "हप्ता दृश्य",
+  "crew.alerts.none": "हाल कुनै सचेतना छैन।"
 }
