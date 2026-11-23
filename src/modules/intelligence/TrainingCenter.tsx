@@ -29,7 +29,14 @@ import {
   exportGoldenCasesToJsonl,
 } from '../../lib/intelligence/goldenCases'
 import {
+  REAL_PILOT_GOLDEN_CASES,
+} from '../../lib/intelligence/realGoldenCases'
+import {
+  generatePilotQualityReport,
+} from '../../lib/intelligence/realPilotData'
+import {
   executeSyntheticEvaluationRun,
+  executeRealPilotEvaluationRun,
 } from '../../lib/intelligence/evalEngine'
 import {
   scanCanonicalCatalogQuality,
@@ -83,13 +90,43 @@ export default function TrainingCenter() {
     SYNTHETIC_STAFF_FEEDBACK_ITEMS
   )
 
-  // Data Quality Scan State (TQC-02)
-  const [qualityScanSource, setQualityScanSource] = useState<'synthetic' | 'canonical'>('synthetic')
+  // Golden Case Source State (Synthetic vs Real Pilot)
+  const [goldenCaseSource, setGoldenCaseSource] = useState<'all' | 'synthetic' | 'real_pilot'>('all')
+  const allAvailableCases = useMemo(() => [...SYNTHETIC_GOLDEN_CASES, ...REAL_PILOT_GOLDEN_CASES], [])
+
+  // Data Quality Scan State (TQC-02 & Real Pilot Audit)
+  const [qualityScanSource, setQualityScanSource] = useState<'synthetic' | 'canonical' | 'pilot_audit'>('synthetic')
   const canonicalScanSummary = useMemo(() => scanCanonicalCatalogQuality(), [])
+  const pilotQualityReport = useMemo(() => generatePilotQualityReport(), [])
+
+  const activeIssues = useMemo(() => {
+    if (qualityScanSource === 'synthetic') return SYNTHETIC_DATA_QUALITY_ISSUES
+    if (qualityScanSource === 'canonical') return canonicalScanSummary.issues
+    return pilotQualityReport.discrepancies.map((d) => ({
+      code: `${d.modelId}-${d.issueType}`,
+      severity: d.severity,
+      category: 'completeness' as const,
+      title: `${d.modelId}: ${d.issueType.replace(/_/g, ' ').toUpperCase()}`,
+      description: d.description,
+      canonicalId: d.modelId,
+      deepLink: `/inventory?model=${encodeURIComponent(d.modelId)}`,
+      evidence: d.physicalVsManufacturerNote || d.description,
+      earliestSafeFix: d.suggestedCorrection,
+      proposedOwner: d.reviewQueueOwner,
+      reviewStatus: 'open' as const,
+    }))
+  }, [qualityScanSource, canonicalScanSummary.issues, pilotQualityReport.discrepancies])
 
   // Filtered Library Cases
   const filteredCases = useMemo(() => {
-    return SYNTHETIC_GOLDEN_CASES.filter((c) => {
+    const activeCases =
+      goldenCaseSource === 'synthetic'
+        ? SYNTHETIC_GOLDEN_CASES
+        : goldenCaseSource === 'real_pilot'
+          ? REAL_PILOT_GOLDEN_CASES
+          : allAvailableCases
+
+    return activeCases.filter((c) => {
       const matchSearch =
         !searchQuery ||
         c.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -99,14 +136,14 @@ export default function TrainingCenter() {
       const matchSeverity = selectedSeverity === 'all' || c.severity === selectedSeverity
       return matchSearch && matchSuite && matchSeverity
     })
-  }, [searchQuery, selectedSuite, selectedSeverity])
+  }, [searchQuery, selectedSuite, selectedSeverity, goldenCaseSource, allAvailableCases])
 
   // Suites in Golden Dataset
   const suitesList = useMemo(() => {
     const s = new Set<string>()
-    SYNTHETIC_GOLDEN_CASES.forEach((c) => s.add(c.suite))
+    allAvailableCases.forEach((c) => s.add(c.suite))
     return Array.from(s)
-  }, [])
+  }, [allAvailableCases])
 
   // Gate Check: Refuse access to Client role (Acceptance Test 10)
   const userRole = user?.role
@@ -142,13 +179,21 @@ export default function TrainingCenter() {
     )
   }
 
-  // Handle Synthetic Evaluation Run Trigger
+  // Handle Evaluation Run Trigger
   const handleRunEvaluation = () => {
+    const casesToRun =
+      goldenCaseSource === 'synthetic'
+        ? SYNTHETIC_GOLDEN_CASES
+        : goldenCaseSource === 'real_pilot'
+          ? REAL_PILOT_GOLDEN_CASES
+          : allAvailableCases
+
     setIsRunningEval(true)
     setTimeout(() => {
-      const newRun = executeSyntheticEvaluationRun(SYNTHETIC_GOLDEN_CASES, {
-        baselineResults: currentRun?.results,
-      })
+      const newRun =
+        goldenCaseSource === 'real_pilot'
+          ? executeRealPilotEvaluationRun(casesToRun, { baselineResults: currentRun?.results })
+          : executeSyntheticEvaluationRun(casesToRun, { baselineResults: currentRun?.results })
       setCurrentRun(newRun)
       setIsRunningEval(false)
     }, 450)
@@ -560,17 +605,33 @@ export default function TrainingCenter() {
                     >
                       Live Catalog Scan ({canonicalScanSummary.issues.length})
                     </button>
+                    <button
+                      onClick={() => setQualityScanSource('pilot_audit')}
+                      style={{
+                        padding: '0.375rem 0.75rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        border: 'none',
+                        cursor: 'pointer',
+                        backgroundColor: qualityScanSource === 'pilot_audit' ? '#2563eb' : '#ffffff',
+                        color: qualityScanSource === 'pilot_audit' ? '#ffffff' : '#475569',
+                      }}
+                    >
+                      Real 10-Model Audit ({pilotQualityReport.discrepancies.length})
+                    </button>
                   </div>
                   <div style={{ padding: '0.375rem 0.75rem', backgroundColor: 'var(--surface-2)', color: 'var(--primary-text)', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid var(--border)' }}>
                     {qualityScanSource === 'canonical'
                       ? `${canonicalScanSummary.totalModelsScanned} Models Audited`
-                      : 'Synthetic Demo'}
+                      : qualityScanSource === 'pilot_audit'
+                        ? `${pilotQualityReport.modelsAudited} Pilot Models (${pilotQualityReport.completenessRatePct}% Complete)`
+                        : 'Synthetic Demo'}
                   </div>
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-                {(qualityScanSource === 'synthetic' ? SYNTHETIC_DATA_QUALITY_ISSUES : canonicalScanSummary.issues).map((issue) => (
+                {activeIssues.map((issue) => (
                   <div
                     key={issue.code}
                     style={{
@@ -892,8 +953,55 @@ export default function TrainingCenter() {
                 </button>
               </div>
 
-              {/* Filters */}
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+              {/* Dataset Scope & Filters */}
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem', alignItems: 'center' }}>
+                <div style={{ display: 'inline-flex', borderRadius: '6px', border: '1px solid #cbd5e1', overflow: 'hidden' }}>
+                  <button
+                    onClick={() => setGoldenCaseSource('all')}
+                    style={{
+                      minHeight: '44px',
+                      padding: '0.5rem 0.875rem',
+                      fontSize: '0.8125rem',
+                      fontWeight: 600,
+                      border: 'none',
+                      cursor: 'pointer',
+                      backgroundColor: goldenCaseSource === 'all' ? '#2563eb' : '#ffffff',
+                      color: goldenCaseSource === 'all' ? '#ffffff' : '#475569',
+                    }}
+                  >
+                    All Cases ({allAvailableCases.length})
+                  </button>
+                  <button
+                    onClick={() => setGoldenCaseSource('real_pilot')}
+                    style={{
+                      minHeight: '44px',
+                      padding: '0.5rem 0.875rem',
+                      fontSize: '0.8125rem',
+                      fontWeight: 600,
+                      border: 'none',
+                      cursor: 'pointer',
+                      backgroundColor: goldenCaseSource === 'real_pilot' ? '#2563eb' : '#ffffff',
+                      color: goldenCaseSource === 'real_pilot' ? '#ffffff' : '#475569',
+                    }}
+                  >
+                    Real Pilot ({REAL_PILOT_GOLDEN_CASES.length})
+                  </button>
+                  <button
+                    onClick={() => setGoldenCaseSource('synthetic')}
+                    style={{
+                      minHeight: '44px',
+                      padding: '0.5rem 0.875rem',
+                      fontSize: '0.8125rem',
+                      fontWeight: 600,
+                      border: 'none',
+                      cursor: 'pointer',
+                      backgroundColor: goldenCaseSource === 'synthetic' ? '#2563eb' : '#ffffff',
+                      color: goldenCaseSource === 'synthetic' ? '#ffffff' : '#475569',
+                    }}
+                  >
+                    Synthetic ({SYNTHETIC_GOLDEN_CASES.length})
+                  </button>
+                </div>
                 <input
                   type="text"
                   placeholder="Search case ID, prompt or suite..."
