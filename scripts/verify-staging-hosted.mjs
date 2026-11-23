@@ -54,7 +54,7 @@ if (!process.env.BABIN_STAGING_SUPABASE_URL) process.env.BABIN_STAGING_SUPABASE_
 if (!process.env.BABIN_STAGING_FIXTURES) process.env.BABIN_STAGING_FIXTURES = 'docs/security/acceptance/staging_fixtures_manifest.json'
 
 const anonKey = process.env.BABIN_STAGING_ANON_KEY
-const authPassword = process.env.BABIN_STAGING_SYNTHETIC_PASSWORD || 'BabinSynthetic2026!'
+const authPassword = process.env.BABIN_STAGING_SYNTHETIC_PASSWORD || 'StagingPass2026!'
 
 if (!anonKey || anonKey === 'PASTE_STAGING_ANON_KEY_HERE') {
   console.error('\n[ERROR] Missing or placeholder BABIN_STAGING_ANON_KEY.')

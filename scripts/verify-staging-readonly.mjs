@@ -1,6 +1,7 @@
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { ALLOWED_ANON_FUNCTIONS } from './allowed-anon-functions.mjs'
 
 export const STAGING_ROLES = ['Owner', 'Admin', 'Manager', 'Coordinator', 'Warehouse', 'Technician', 'Accounts', 'Driver', 'Client']
 const blind = new Set(['Warehouse', 'Technician', 'Driver', 'Client'])
@@ -88,14 +89,19 @@ export async function inspectStagingPrivileges(configuration, connection) {
   }
   target.search = ''
   const { Client } = await import('pg')
-  const client = new Client({ connectionString: target.href, ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 20000 })
+  const client = new Client({
+    connectionString: target.href,
+    ssl: target.hostname.includes('supabase.co') ? false : { rejectUnauthorized: false },
+    connectionTimeoutMillis: 20000
+  })
   try {
     await client.connect()
     await client.query('begin read only')
     await client.query("set local statement_timeout='20s'")
+    const allowedList = Array.from(ALLOWED_ANON_FUNCTIONS).map((f) => `'${f}'`).join(', ')
     const result = await client.query(`select p.proname from pg_proc p where p.pronamespace='public'::regnamespace
       and p.prokind='f' and p.prorettype<>'trigger'::regtype and p.provolatile='v'
-      and p.proname not in ('set_request_context', 'submit_booking_request') and has_function_privilege('anon',p.oid,'execute')`)
+      and p.proname not in (${allowedList}) and has_function_privilege('anon',p.oid,'execute')`)
     return result.rowCount === 0
   } finally { await client.query('rollback').catch(() => {}); await client.end() }
 }
