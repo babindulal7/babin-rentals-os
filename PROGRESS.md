@@ -1,5 +1,60 @@
 # Progress Log
 
+## 2026-11-23 — Week 1 Launch Governance, Full Audit Integration & Release Suite Verification (Windows Antigravity)
+
+### Did
+- Formulated and published the canonical master governance document `docs/plans/P0_BLOCKER_LEDGER.md` for the December 31, 2026 controlled internal launch.
+- Triaged and inventoried all 6 open GitHub issues and remaining pull requests against launch milestones (P0, P1, P2):
+  - Catalogued **SEC-01 / T1-01** (Physical Database Backup Dump & Sandbox Restore Drill) as the critical P0 release gate blocking go-live.
+  - Catalogued **Issue #56** (Release HOLD on 0261–0269) as the active P0 barrier preventing un-rehearsed production migrations.
+  - Formally verified and triaged **Issue #66** (`staff_directory_v` auth join): verified fail-closed (anon is 42501 denied, client receives 0 rows, floor staff receive masked NULLs); established architectural directive against enabling `security_invoker`.
+  - Re-verified **Issue #223** (0241 booking clash table client isolation) merged in PR #225 (`5f180d69`).
+  - Re-verified **Issue #226** (Coordinator credit/refund RPC authorization gate) merged in PR #242 (`353b5dd4`).
+  - Classified PR #349 (transactional email runbook) as P1 deferred (live sends disabled until owner approval).
+  - Classified PR #369 (Rental Intelligence) as P2 post-launch / shadow advisory mode only.
+- Rebased, verified, and merged the remaining read-only audit and performance PRs:
+  - **PR #350 (`70e20b53`):** `audit(security): Supabase security acceptance audit and advisor triage (T-SB-01)`.
+  - **PR #352 (`500d10f7`):** `audit(drift): Supabase 3-way migration ledger, schema drift report, and staging release gates (T-SB-02)`.
+  - **PR #355 (`c19b6fd0`):** `perf(tuning): Supabase performance baseline and RLS optimization analysis (T-SB-04)`.
+  - **PR #382 (`5e408ca4`):** `fix(release): reconcile T1-08 CI status with hosted acceptance`.
+- Executed the cutover trial real-DB migration reconciliation check (`scripts/reconcile-booqable-backup.mjs` and `scripts/reconcile-booqable-backup.test.mjs`), confirming all 267 migrations build clean and 20 real Booqable orders reconcile with integer paisa precision and Law 5 deposit separation.
+- Ran full unit and integration test suite across all 733 test files on `main`, achieving 100% green pass (7,911/7,911 tests passing, 0 failures).
+
+### Ruled
+- Controlled internal launch readiness remains on **RELEASE HOLD** pending Owner's physical database restore drill (P0-01) and staging migration rehearsal (P0-02).
+- Zero production SQL mutations or credential rotations are authorized without distinct owner approval.
+
+### Verified
+- `npm test`: PASS — 733 test files passed, 7,911/7,911 tests passing, 0 failures (recorded 2026-11-23T16:53:52.623Z; source fingerprint matches).
+- `npm run check:pglite`: PASS — 267/267 migrations applied from scratch, 48 views checked (0 leaks), 22 allowlisted anon functions, 253 definer search paths pinned.
+- `npm run check:lifecycle`: PASS — 102/102 lifecycle steps green in PGlite real Postgres + RLS.
+- `npm run test:local-api-guards`: PASS (3/3 safety guards pass).
+- `npm run lint`: PASS (0 warnings, 0 errors across `src/`).
+- `npm run lint:shell`: PASS (997 files checked, 100% compliant with PageHeader, single primary CTA, 44px floor, no dev notes).
+- `npm run lint:ui-copy`: PASS (0 developer-text violations, all fixture and i18n round-trip tests pass).
+- `npm run check:contrast`: PASS (97/97 compliant across Light, Dark, Pilot, High Contrast, and Glass tokens).
+- `npm run lint:progress`: PASS.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-23T16:42:11.480Z). Suite: PASS — 7911/7911 passed, 0 failed (recorded 2026-11-23T16:53:52.623Z); source fingerprint matches.
+Coverage suite: Historical suite: 7599/7599 passed, 0 failed (recorded 2026-11-20T23:59:38.542Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-23T16:42:41.557Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Live production post-cutover database dump & isolated sandbox restore drill (P0-01 / T1-01 / SEC-01).
+- Staging rehearsal of forward migrations 0261–0269 on `babin-staging` under Issue #56 (P0-02).
+- Week 2 (December 1–7) core rental loop and floor custody transition hardening.
+
 ## 2026-11-23 — Public Booking Front Door & Online Catalogue Mobile/Desktop Hardening (T7 Online Booking / Windows Antigravity)
 
 ### Did
