@@ -119,7 +119,7 @@ export function OperationEvidenceStatus({
 
       setUploadProgress(null)
       setRetryPayload(null)
-      setUploadSuccessMessage(files.length > 1 ? `${files.length} photos uploaded and linked to evidence.` : 'Photo uploaded and linked to evidence.')
+      setUploadSuccessMessage('Photo uploaded and linked to evidence.')
       setTimeout(() => setUploadSuccessMessage(null), 5000)
       if (fileInputRef.current) fileInputRef.current.value = ''
     } catch (err) {
@@ -164,7 +164,7 @@ export function OperationEvidenceStatus({
 
       setUploadProgress(null)
       setRetryPayload(null)
-      setUploadSuccessMessage(files.length > 1 ? `${files.length} photos uploaded and linked to evidence.` : 'Photo uploaded and linked to evidence.')
+      setUploadSuccessMessage('Photo uploaded and linked to evidence.')
       setTimeout(() => setUploadSuccessMessage(null), 5000)
       if (fileInputRef.current) fileInputRef.current.value = ''
       status.refresh()

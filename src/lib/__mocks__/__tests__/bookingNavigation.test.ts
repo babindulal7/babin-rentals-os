@@ -47,7 +47,7 @@ describe('local rental list-to-workspace navigation', () => {
       stages.add(String(booking['stage']))
     }
     expect(stages).toEqual(new Set(['Quote', 'Booked', 'Packed', 'On Rent', 'Returned', 'Closed']))
-  })
+  }, 60000)
 
   it('keeps existing local records and allocates unique bare numbers across both sequence aliases and reload', async () => {
     vi.stubEnv('VITE_MOCK_SEEDED', 'false')

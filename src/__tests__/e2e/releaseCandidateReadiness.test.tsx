@@ -4,14 +4,12 @@ import { canViewMoney, canApproveDailyClosing, type SystemRole } from '../../lib
 import { moneyScope, canViewPII, gateContext } from '../../lib/fieldGating'
 import {
   calculatePricingPipeline,
-  calculateAdvanceRequired,
   type PricingPipelineInput,
 } from '../../lib/pricingPipeline'
 import { rupees, toRupees, type Paisa, REFERENCE_CASE, REFERENCE_CASE_ERROR } from '../../lib/money'
-import { canAdvance, closeGates, FLAGS, type CloseGateInput } from '../../lib/workflow'
+import { closeGates, type CloseGateInput } from '../../lib/workflow'
 import { settleDeposit } from '../../lib/damage'
 import { viewportFor } from '../../lib/breakpoints'
-import { getRentalPrimaryAction } from '../../lib/rentalActions'
 
 function makePipelineInput(overrides: Partial<PricingPipelineInput>): PricingPipelineInput {
   return {
@@ -52,6 +50,7 @@ describe('Week 5 Release Candidate Readiness & Surface Certification Suite', () 
         if (moneyAllowedRoles.includes(role)) {
           expect(canViewMoney(role)).toBe(true)
         } else {
+          expect(moneyBlindRoles.includes(role)).toBe(true)
           expect(canViewMoney(role)).toBe(false)
         }
       }
@@ -167,6 +166,7 @@ describe('Week 5 Release Candidate Readiness & Surface Certification Suite', () 
         rentalInvoiced: false,
         rentalOutstandingPaisa: rupees(5000),
         depositHeldPaisa: rupees(10000),
+        openCases: 0,
         damageChargesPendingApproval: 1,
         collateralHeld: true,
       }
