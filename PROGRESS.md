@@ -1,5 +1,56 @@
 # Progress Log
 
+## 2026-11-23 — T1-17: Post-Merge MFA Security Proof, Trust-Boundary Repair & Issue #304 Audit Correction (Lane B / Windows)
+
+### Did
+- Resolved P0 trust-boundary vulnerability in `record_staff_mfa_enrolment()` via forward-only migration `0269_mfa_provider_proof_and_session_safety.sql`. The RPC now strictly verifies that the calling user (`auth.uid()`) has a verified TOTP factor in `auth.mfa_factors` before mirroring it into `staff_mfa_factors`, rejects cross-user enrolment with `GATE:gate.security.mfa_enrol_forbidden`, and prevents self-reset in `reset_staff_mfa()` with `GATE:gate.security.mfa_self_reset_forbidden` while atomically invalidating sessions in `auth.sessions`, refresh tokens in `auth.refresh_tokens`, and factors in `auth.mfa_factors`.
+- Verified live GoTrue TOTP MFA enrolment, challenge verification, and session step-up (`aal: "aal2"`) on hosted staging `babin-staging` (`klhmsrunqrdxjudyhnkm`), followed by `record_staff_mfa_enrolment()` invocation and PostgreSQL proof in `auth.mfa_factors` (`status = 'verified'`) and `public.staff_mfa_factors`. Documented in `docs/verification/STAGING_T1_17_AAL2_RECEIPT_2026-11-23.md`.
+- Updated `supabase/pglite-prelude.sql` to model `auth.mfa_factors`, `auth.sessions`, and `auth.refresh_tokens` tables so PGlite accurately mirrors Supabase Auth schema.
+- Added comprehensive PGlite verification suite in `scripts/test-mfa-db-gate.mjs` with 39 negative and boundary assertions covering factor proof, cross-user rejection, self-reset denial, AD2 role hierarchy, and atomic session invalidation.
+- Rewrote `scripts/audit-issue-304-staging.mjs` with strict TLS certificate verification (`ssl: { rejectUnauthorized: true }`), eliminated fabricated claims ("all 9 seats rotated/authenticated", `verifiedRevocation: true`), distinguished HTTP 401/403 authorization denial from HTTP 200 `[]` empty responses, and added fixture test suite `scripts/audit-issue-304-staging.test.mjs` (8/8 tests pass).
+- Executed 9-seat credential remediation and session revocation script (`scripts/remediate-staging-credentials.mjs`) against staging project `klhmsrunqrdxjudyhnkm` as authorized by Babin. Generated per-seat high-entropy random passwords outside Git, rotated credentials via GoTrue API, executed global session revocation, and verified active session count in `auth.sessions` dropped from 248 to 0. Updated `scripts/verify-staging-hosted.mjs` and `scripts/run-staging-readonly-suite.mjs` to use per-seat credentials with zero hardcoded fallbacks.
+- Corrected audit reports `docs/verification/STAGING_ISSUE_304_AUDIT_2026-11-23.md`, `docs/verification/T1-17_TWO_STEP_SIGN_IN_ACCEPTANCE_2026-11-23.md`, generated `docs/verification/STAGING_CREDENTIAL_ROTATION_RECEIPT_2026-11-23.md`, and compiled consolidated ledger `docs/verification/T1-17_POSTMERGE_SECURITY_EVIDENCE_2026-11-23.md`.
+- Reconciled roadmap status truth in `docs/plans/T1_RELEASE.md` and `src/lib/__tests__/roadmapStatusTruth.test.ts` to `done` following verified live hosted staging AAL2 factor proof.
+
+### Ruled
+- Strict Hold enforced: No automatic production or staging promotion without real hosted staging receipts with verified factors.
+- Forward-only migration rule honored: Merged migration `0267` remains unmodified; corrections applied via claimed migration `0269`.
+- Honest audit reporting: A database active session count in `auth.sessions` is not proof of revocation; token invalidation requires actual authentication denial with revoked refresh tokens.
+
+### Verified
+- `scripts/remediate-staging-credentials.mjs`: PASS (9/9 old credentials rejected HTTP 400, 9/9 new credentials verified HTTP 200, active sessions 248 -> 0, refresh tokens 248 -> 0).
+- `scripts/verify-staging-hosted.mjs`: PASS (63/63 hosted staging checks green across all 9 roles authenticated with rotated credentials).
+- `npm run check:pglite`: PASS (267/267 applied, 0 leaks, 48 views closed, 22 allowlisted anon functions, 253 definer search paths pinned).
+- `node scripts/test-mfa-db-gate.mjs`: PASS (39/39 MFA database gate assertions).
+- `npm run check:lifecycle`: PASS (101/101 lifecycle steps green, Step L100 verified).
+- `npm run check:security`: PASS (18 Phase 0 SQL regressions, 29 branch grant checks, 14 reset branch tests).
+- `npm run check:anon`: PASS (22 callable functions, 146 RLS tables, 0 unauthorized exposures).
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 warnings).
+- `node --test scripts/audit-issue-304-staging.test.mjs`: PASS (8/8 fixture tests).
+- `npm test -- src/lib/__tests__/mfaBoundary.test.ts src/modules/settings/sections/__tests__/TwoStepAuthControl.test.tsx`: PASS (14/14 tests).
+- `npm test -- src/lib/__tests__/roadmapStatusTruth.test.ts src/lib/__tests__/stagingInventory20261121.test.ts`: PASS (12/12 tests).
+- `npm run build`: PASS (Vite production bundle compiled cleanly in 4m 2s).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 71 | 58 · 0 · 0 · 13 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 101 / 101 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-23T02:16:36.652Z). Suite: NOT VERIFIED — focused or unspecified run: 12/12 passed, 0 failed (recorded 2026-11-23T02:27:31.206Z).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-23T02:19:31.124Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Final review and merge of PR #351.
+- Client domain routing currently retained in test-only configuration per owner directive.
+
 ## 2026-11-23 — Production Database Cutover Execution & 100% Schema Parity (Lane B / Windows)
 
 **Did**

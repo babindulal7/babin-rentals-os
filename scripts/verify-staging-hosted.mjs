@@ -16,6 +16,7 @@ import { stagingConfiguration, verifyStaging, STAGING_ROLES, inspectStagingPrivi
 // 1. Load staging environment variables from candidate paths
 const candidatePaths = [
   resolve('.env.staging.local'),
+  resolve('.env.staging.secrets.local'),
   resolve('.env.staging'),
   resolve('env.staging.local'),
   resolve('env.staging'),
@@ -93,6 +94,7 @@ if (!allTokensPresent) {
     if (process.env[envKey]) continue
 
     const candidates = roleEmailCandidates[role] || [`${role.toLowerCase()}@babinrentals.test`]
+    const password = process.env[`BABIN_STAGING_PASSWORD_${role.toUpperCase()}`] || authPassword
     let authenticated = false
     let lastError = ''
 
@@ -104,7 +106,7 @@ if (!allTokensPresent) {
             'Content-Type': 'application/json',
             'apikey': anonKey,
           },
-          body: JSON.stringify({ email, password: authPassword }),
+          body: JSON.stringify({ email, password }),
         })
         if (authRes.ok) {
           const authData = await authRes.json()

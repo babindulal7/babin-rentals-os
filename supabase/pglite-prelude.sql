@@ -32,6 +32,35 @@ create table if not exists auth.identities (
   user_id uuid references auth.users(id),
   provider text, created_at timestamptz not null default now()
 );
+create table if not exists auth.mfa_factors (
+  id                  uuid primary key default gen_random_uuid(),
+  user_id             uuid,
+  friendly_name       text,
+  factor_type         text not null default 'totp',
+  status              text not null default 'unverified',
+  created_at          timestamptz not null default now(),
+  updated_at          timestamptz not null default now(),
+  secret              text,
+  phone               text
+);
+create table if not exists auth.sessions (
+  id                  uuid primary key default gen_random_uuid(),
+  user_id             uuid,
+  created_at          timestamptz not null default now(),
+  updated_at          timestamptz not null default now(),
+  factor_id           uuid,
+  aal                 text default 'aal1',
+  not_after           timestamptz
+);
+create table if not exists auth.refresh_tokens (
+  id                  bigserial primary key,
+  token               text,
+  user_id             uuid,
+  session_id          uuid,
+  revoked             boolean default false,
+  created_at          timestamptz not null default now(),
+  updated_at          timestamptz not null default now()
+);
 create or replace function auth.uid() returns uuid language sql stable as
   $f$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $f$;
 create or replace function auth.role() returns text language sql stable as

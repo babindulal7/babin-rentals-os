@@ -4,7 +4,7 @@
 **Auditor / Lane:** Lane A  
 **Base Commit:** Latest `main`  
 **Card Under Review:** `T1-17 · Two-step sign-in for every money role`  
-**Status:** ACCEPTED & PROMOTED TO `done`
+**Status:** ACCEPTANCE PENDING (Local Database Gate Green; Hosted Staging Acceptance & Session Revocation Hold)
 
 ---
 
@@ -88,4 +88,6 @@ Card T1-17, along with foundational security rulings (B21, B40, K2, Law 6, P3, N
 
 ## 4. Conclusion & Rulings Alignment
 
-Card T1-17 has demonstrated full database-enforced security under PostgreSQL RLS, preserving Law 6 money-blindness for floor roles, enabling staged Owner rollout, and providing staff factor recovery. Card T1-17 is formally ACCEPTED and promoted to `done`.
+Card T1-17 has demonstrated full database-enforced security under PostgreSQL RLS, preserving Law 6 money-blindness for floor roles, enabling staged Owner rollout, and providing staff factor recovery. Corrective migration `0269_mfa_provider_proof_and_session_safety.sql` eliminated direct-RPC mirror forging and hardened lost-factor recovery.
+
+In accordance with strict verification boundaries (no representation of local mock/PGlite proof as hosted real-factor acceptance), Card T1-17 remains in status `acceptance_pending` until an authorized staging maintenance window confirms genuine Supabase Auth factor operations, credential rotation, and session invalidation. Release to production remains on STRICT HOLD.

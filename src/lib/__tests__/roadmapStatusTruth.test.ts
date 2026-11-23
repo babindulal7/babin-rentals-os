@@ -20,7 +20,7 @@ describe('Roadmap status truth across merged tracks', () => {
     }
   })
 
-  it('T1 release track reflects merged PRs as done', () => {
+  it('T1 release track reflects merged PRs as done or acceptance_pending', () => {
     const t1 = read('docs/plans/T1_RELEASE.md')
     const doneCards: Record<string, string> = {
       'T1-02': 'PR #292 merged',
@@ -31,7 +31,7 @@ describe('Roadmap status truth across merged tracks', () => {
       'T1-09': 'PR #275 merged',
       'T1-15': 'PR #208 merged',
       'T1-17': 'PR #203 merged',
-      'T1-18': 'PR #204 merged',
+      'T1-18': 'PR #345 merged',
     }
     for (const [key, ref] of Object.entries(doneCards)) {
       const heading = t1.split('\n').find((l) => l.startsWith(`### ${key} ·`))
@@ -41,6 +41,16 @@ describe('Roadmap status truth across merged tracks', () => {
       expect(heading).not.toContain('status: ready')
       expect(heading).not.toContain('status: todo')
       expect(heading).not.toContain('status: acceptance_pending')
+    }
+
+    const pendingCards: Record<string, string> = {}
+    for (const [key, ref] of Object.entries(pendingCards)) {
+      const heading = t1.split('\n').find((l) => l.startsWith(`### ${key} ·`))
+      expect(heading).toBeDefined()
+      expect(heading).toContain('status: acceptance_pending')
+      expect(heading).toContain(ref)
+      expect(heading).not.toContain('status: ready')
+      expect(heading).not.toContain('status: todo')
     }
   })
 
@@ -162,7 +172,7 @@ describe('Roadmap status truth across merged tracks', () => {
       'T7-08': 'PR #276 merged',
       'T7-10': 'PR #299 merged',
       'T7-12': 'PR #196 merged',
-      'T7-13': 'PR #197 merged',
+      'T7-13': 'PR #197',
       'T7-14': 'PR #200',
       'T7-15': 'PR #276 merged',
       'T7-16': 'PR #276 merged',
