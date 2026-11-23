@@ -33,6 +33,14 @@ export interface AdviceTarget {
   id: string
 }
 
+export interface SuggestedAddition {
+  productId: string
+  displayName: string
+  quantity: number
+  reason: string
+  chargeType: 'included_kit' | 'required_dependency' | 'chargeable_extra'
+}
+
 export interface RentalAdvice {
   /** Stable idempotent recommendation key */
   id: string
@@ -47,20 +55,14 @@ export interface RentalAdvice {
   sourceKinds: SourceKind[]
   /** ISO timestamp of data snapshot */
   snapshotAt: string
-  expiresAt?: string
+  expiresAt?: string | undefined
   /** Existing authorized OS route (secondary link only, never duplicate primary CTA) */
-  safeFocusTarget?: string
+  safeFocusTarget?: string | undefined
   requiredChecks: string[]
   /** Suggested additions or substitutions if applicable (IDs only, never phantom items) */
-  suggestedAdditions?: {
-    productId: string
-    displayName: string
-    quantity: number
-    reason: string
-    chargeType: 'included_kit' | 'required_dependency' | 'chargeable_extra'
-  }[]
+  suggestedAdditions?: SuggestedAddition[] | undefined
   /** Non-overrideable or review blocking errors */
-  blockingReasons?: string[]
+  blockingReasons?: string[] | undefined
 }
 
 export type ModuleConnectionStatus = 'working' | 'planned' | 'not_connected'
@@ -180,15 +182,15 @@ export interface RigPayloadInput {
 export interface PowerCircuitInput {
   targetId: string
   watts: number
-  circuitVoltage?: number // Standard Nepal grid: 230V
-  circuitAmps?: number // Standard heavy socket: 15A
+  circuitVoltage?: number | undefined // Standard Nepal grid: 230V
+  circuitAmps?: number | undefined // Standard heavy socket: 15A
 }
 
 export interface BatteryRuntimeInput {
   targetId: string
   batteryWh: number
   rigWatts: number
-  coldWeather?: boolean
+  coldWeather?: boolean | undefined
 }
 
 export interface QuoteExplanationInput {
@@ -196,8 +198,8 @@ export interface QuoteExplanationInput {
   equipmentRatePaisa: number
   days: number
   discountPercent: number
-  discountReason?: string
-  discountApprover?: string
+  discountReason?: string | undefined
+  discountApprover?: string | undefined
   vatPaisa: number
   totalPaisa: number
   depositPaisa: number

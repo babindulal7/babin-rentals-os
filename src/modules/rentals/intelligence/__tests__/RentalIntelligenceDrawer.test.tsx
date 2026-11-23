@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
-import React from 'react'
 import { RentalIntelligenceDrawer } from '../RentalIntelligenceDrawer'
 import type { RentalAdvice } from '../../../../lib/rentalIntelligence/types'
 
@@ -49,7 +48,7 @@ describe('RentalIntelligenceDrawer UI Component', () => {
         onClose={() => {}}
         advices={sampleAdvices}
         bookingNo="2026-0715"
-        userRole="Staff"
+        userRole="Coordinator"
       />,
     )
 

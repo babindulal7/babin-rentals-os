@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { ContextDrawer } from '../../../components/ui/ContextDrawer'
 import { Badge } from '../../../components/ui/Badge'
 import Icon from '../../../components/ui/Icon'
@@ -7,7 +7,7 @@ import {
   type RentalAdvice,
   type AdviceModule,
 } from '../../../lib/rentalIntelligence/types'
-import type { SystemRole } from '../../../lib/fieldGating'
+import type { SystemRole } from '../../../types/database'
 
 export interface RentalIntelligenceDrawerProps {
   open: boolean
@@ -26,7 +26,7 @@ export function RentalIntelligenceDrawer({
   open,
   onClose,
   advices,
-  userRole = 'Staff',
+  userRole = 'Coordinator',
   bookingNo,
   onAddSuggestion,
 }: RentalIntelligenceDrawerProps) {
@@ -62,7 +62,7 @@ export function RentalIntelligenceDrawer({
         isFloorRole ? (
           <Badge tone="neutral" size="sm" label="Floor Role (₨ Omitted)" />
         ) : (
-          <Badge tone="info" size="sm" label={userRole} />
+          <Badge tone="primary" size="sm" label={userRole} />
         )
       }
       width={480}
@@ -153,7 +153,7 @@ export function RentalIntelligenceDrawer({
             filteredAdvices.map((adv) => {
               const isBlocked = adv.evidenceState === 'blocked'
               const isUrgent = adv.severity === 'urgent'
-              const tone = isBlocked || isUrgent ? 'danger' : adv.severity === 'review' ? 'warning' : 'info'
+              const tone = isBlocked || isUrgent ? 'danger' : adv.severity === 'review' ? 'warning' : 'primary'
 
               return (
                 <article

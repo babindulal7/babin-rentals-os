@@ -10,7 +10,8 @@
  */
 
 import { formatMoney, type Paisa } from '../money'
-import { moneyScope, type SystemRole, type Surface } from '../fieldGating'
+import { moneyScope, type Surface } from '../fieldGating'
+import type { SystemRole } from '../../types/database'
 import type {
   RentalAdvice,
   RigPayloadInput,
@@ -18,6 +19,7 @@ import type {
   BatteryRuntimeInput,
   QuoteExplanationInput,
   AdviceTarget,
+  SuggestedAddition,
 } from './types'
 
 /* ------------------------------------------------------------------
@@ -48,13 +50,7 @@ export function evaluateKitIntelligence(input: KitIntelligenceInput): RentalAdvi
   if (hasKomodoX) {
     const hasVmount = itemNamesLower.some((n) => n.includes('v-mount') || n.includes('v mount'))
     const hasCfexpressB = itemNamesLower.some((n) => n.includes('cfexpress') && (n.includes('type b') || n.includes('b')))
-    const missingAdditions: Array<{
-      productId: string
-      displayName: string
-      quantity: number
-      reason: string
-      chargeType: 'included_kit' | 'required_dependency' | 'chargeable_extra'
-    }> = []
+    const missingAdditions: SuggestedAddition[] = []
 
     if (!hasVmount) {
       missingAdditions.push({
@@ -99,13 +95,7 @@ export function evaluateKitIntelligence(input: KitIntelligenceInput): RentalAdvi
     const hasBatteries = itemNamesLower.some((n) => n.includes('np-fz100') || n.includes('fz100') || n.includes('battery'))
     const hasMedia = itemNamesLower.some((n) => n.includes('cfexpress') || n.includes('v90') || n.includes('sd card'))
 
-    const missingAdditions: Array<{
-      productId: string
-      displayName: string
-      quantity: number
-      reason: string
-      chargeType: 'included_kit' | 'required_dependency' | 'chargeable_extra'
-    }> = []
+    const missingAdditions: SuggestedAddition[] = []
 
     if (!hasBatteries) {
       missingAdditions.push({

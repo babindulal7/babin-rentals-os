@@ -40,7 +40,7 @@ describe('Rental Intelligence RI-01: Kit Intelligence Adapter', () => {
     })
 
     expect(advices.length).toBe(1)
-    const adv = advices[0]
+    const adv = advices[0]!
     expect(adv.module).toBe('kit')
     expect(adv.evidenceState).toBe('needs_verification')
     expect(adv.severity).toBe('review')
@@ -59,9 +59,9 @@ describe('Rental Intelligence RI-01: Kit Intelligence Adapter', () => {
     })
 
     expect(advices.length).toBe(1)
-    expect(advices[0].evidenceState).toBe('supported')
-    expect(advices[0].severity).toBe('info')
-    expect(advices[0].suggestedAdditions).toBeUndefined()
+    expect(advices[0]!.evidenceState).toBe('supported')
+    expect(advices[0]!.severity).toBe('info')
+    expect(advices[0]!.suggestedAdditions).toBeUndefined()
   })
 
   it('enforces non-overrideable HARD BLOCK on Ronin 4D + external handheld gimbal', () => {
@@ -88,7 +88,7 @@ describe('Rental Intelligence RI-01: Kit Intelligence Adapter', () => {
     expect(chioptBlock).toBeDefined()
     expect(chioptBlock?.evidenceState).toBe('blocked')
     expect(chioptBlock?.severity).toBe('urgent')
-    expect(chioptBlock?.suggestedAdditions?.[0].displayName).toContain('15mm Rods')
+    expect(chioptBlock?.suggestedAdditions?.[0]?.displayName).toContain('15mm Rods')
   })
 
   it('passes CHIOPT zoom when 15mm rods and lens support are present', () => {
