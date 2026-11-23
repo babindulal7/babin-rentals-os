@@ -23,15 +23,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
   let badgeClass = 'dates-needed'
   let badgeText = 'Select dates'
+  let badgeIcon = '📅'
   if (hasDates) {
     if (isAvailable === true) {
       badgeClass = 'available'
       badgeText = 'Available'
+      badgeIcon = '✓'
     } else if (isAvailable === false) {
       badgeClass = 'unavailable'
       badgeText = 'Unavailable'
+      badgeIcon = '✕'
     } else {
       badgeText = 'Checking availability'
+      badgeIcon = '⏳'
     }
   }
 
@@ -46,6 +50,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </div>
         )}
         <span className={`availability-badge ${badgeClass}`} role="status">
+          <span aria-hidden="true" style={{ marginRight: 5, fontSize: '0.85em' }}>{badgeIcon}</span>
           {badgeText}
         </span>
       </div>

@@ -122,18 +122,50 @@ body {
   text-transform: uppercase;
 }
 
+.date-time-inputs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .date-input {
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   color: var(--text-main);
   font-family: var(--font-mono);
   font-size: 0.85rem;
   outline: none;
-  min-height: 28px;
+  min-height: 44px;
+  padding: 0 4px;
 }
 
 .date-input:focus {
   color: var(--border-focus);
+}
+
+.date-time-select {
+  min-height: 44px;
+  padding: 0 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  outline: none;
+  cursor: pointer;
+}
+
+.date-time-select:focus {
+  border-color: var(--border-focus);
+}
+
+.date-range-arrow {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cart-button {
@@ -573,4 +605,73 @@ body {
   font-size: 0.75rem;
   color: var(--text-muted);
   text-align: center;
+}
+
+/* Responsive Layouts (aligned with BP 768 / 1280 per breakpoints.ts) */
+@media (max-width: 767px) {
+  .booking-header-inner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .booking-header-inner > .brand-badge {
+    justify-content: flex-start;
+  }
+
+  .date-selector-bar {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .date-input-group {
+    width: 100%;
+  }
+
+  .date-time-inputs {
+    width: 100%;
+  }
+
+  .date-input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .date-time-select {
+    flex: 0 0 auto;
+  }
+
+  .date-range-arrow {
+    transform: rotate(90deg);
+    padding: 2px 0;
+  }
+
+  .booking-header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .product-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .cart-drawer {
+    max-width: 100%;
+  }
+
+  .modal-content {
+    padding: 16px;
+    max-height: 95vh;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1279px) {
+  .product-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+  }
 }
