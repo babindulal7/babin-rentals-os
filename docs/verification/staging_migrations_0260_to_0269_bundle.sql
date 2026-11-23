@@ -574,10 +574,12 @@ left join public.product_units pu on pu.id = eh.asset_id;
 -- 6. Row Level Security & Grants
 alter table public.external_holds enable row level security;
 
+drop policy if exists external_holds_staff_select on public.external_holds;
 create policy external_holds_staff_select on public.external_holds
   for select
   using (public.auth_is_staff());
 
+drop policy if exists external_holds_staff_write on public.external_holds;
 create policy external_holds_staff_write on public.external_holds
   for all
   using (
@@ -1892,6 +1894,7 @@ create index if not exists idx_sign_in_events_created_at on public.sign_in_event
 alter table public.sign_in_events enable row level security;
 
 -- Policy: Only Owner and Admin can read sign-in events (B22)
+drop policy if exists sign_in_events_owner_admin_select on public.sign_in_events;
 create policy sign_in_events_owner_admin_select on public.sign_in_events
   for select to authenticated
   using (public.auth_user_role() in ('Owner', 'Admin'));
