@@ -115,4 +115,48 @@ describe('mock insert — column defaults', () => {
 
     expect(row(data)?.['payment_date']).toBe('2026-10-08T08:55:12.000Z')
   })
+
+  it('embeds evidence_files on evidence_references so evidence verification succeeds', async () => {
+    const db = await freshClient()
+
+    const file = await db.from('evidence_files').insert({
+      id: '00000000-0000-4000-8000-000000000010',
+      client_uuid: '00000000-0000-4000-8000-000000000010',
+      content_hash: 'hash-10',
+      storage_path: 'b1/session/photo.jpg',
+      original_filename: 'photo.jpg',
+      media_type: 'Image',
+      format: 'jpg',
+      size_bytes: 1024,
+      category: 'Packing',
+      created_by: '00000000-0000-4000-8000-000000000001',
+    }).select().single()
+
+    expect(file.error).toBeNull()
+
+    const ref = await db.from('evidence_references').insert({
+      id: '00000000-0000-4000-8000-000000000020',
+      client_uuid: '00000000-0000-4000-8000-000000000020',
+      evidence_file_id: '00000000-0000-4000-8000-000000000010',
+      operation_stage: 'Packing',
+      booking_id: '00000000-0000-4000-8000-000000000001',
+      created_by: '00000000-0000-4000-8000-000000000001',
+    }).select().single()
+
+    expect(ref.error).toBeNull()
+
+    const queried = await db.from('evidence_references')
+      .select('id, item_id, file:evidence_files(id, media_type, removed_at, category)')
+      .eq('booking_id', '00000000-0000-4000-8000-000000000001')
+
+    expect(queried.error).toBeNull()
+    const rows = queried.data as Array<Record<string, unknown>>
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.['file']).toEqual({
+      id: '00000000-0000-4000-8000-000000000010',
+      media_type: 'Image',
+      removed_at: null,
+      category: 'Packing',
+    })
+  })
 })
