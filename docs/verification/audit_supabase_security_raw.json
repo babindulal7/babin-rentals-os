@@ -1,0 +1,3147 @@
+{
+  "timestamp": "2026-11-23T02:13:45.976Z",
+  "head": "0a2970e1",
+  "migrations_count": 266,
+  "staff_directory_v": {
+    "meta": {
+      "relname": "staff_directory_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    "definition": " SELECT u.id,\n    u.full_name,\n    u.employee_code,\n        CASE\n            WHEN auth_user_role() = ANY (ARRAY['Owner'::system_role, 'Admin'::system_role]) THEN u.email\n            ELSE NULL::text\n        END AS email,\n    u.primary_role,\n    u.department,\n        CASE\n            WHEN auth_user_role() = ANY (ARRAY['Owner'::system_role, 'Admin'::system_role]) THEN u.mobile\n            ELSE NULL::text\n        END AS mobile,\n    u.branch_id,\n    b.branch_code,\n    b.name AS branch_name,\n    u.is_active,\n        CASE\n            WHEN auth_user_role() = ANY (ARRAY['Owner'::system_role, 'Admin'::system_role]) THEN p.id IS NOT NULL\n            ELSE false\n        END AS has_pin,\n        CASE\n            WHEN (auth_user_role() = ANY (ARRAY['Owner'::system_role, 'Admin'::system_role])) AND p.locked_until > now() THEN p.locked_until\n            ELSE NULL::timestamp with time zone\n        END AS pin_locked_until,\n        CASE\n            WHEN auth_user_role() = ANY (ARRAY['Owner'::system_role, 'Admin'::system_role]) THEN COALESCE(p.rotated_at, p.set_at)\n            ELSE NULL::timestamp with time zone\n        END AS pin_set_at,\n        CASE\n            WHEN auth_user_role() = ANY (ARRAY['Owner'::system_role, 'Admin'::system_role]) THEN au.id IS NOT NULL\n            ELSE false\n        END AS has_auth_account,\n        CASE\n            WHEN auth_user_role() = ANY (ARRAY['Owner'::system_role, 'Admin'::system_role]) THEN au.last_sign_in_at\n            ELSE NULL::timestamp with time zone\n        END AS last_sign_in_at,\n        CASE\n            WHEN auth_user_role() = ANY (ARRAY['Owner'::system_role, 'Admin'::system_role]) THEN au.email_confirmed_at\n            ELSE NULL::timestamp with time zone\n        END AS email_confirmed_at\n   FROM users u\n     LEFT JOIN branches b ON b.id = u.branch_id\n     LEFT JOIN staff_auth_pins p ON p.user_id = u.id AND p.revoked_at IS NULL\n     LEFT JOIN auth.users au ON au.id = u.id\n  WHERE u.deactivated_at IS NULL AND u.is_active = true AND auth_is_staff();"
+  },
+  "security_definer_functions": [
+    {
+      "name": "acknowledge_shift_handover",
+      "args": "p_handover_id uuid, p_acknowledgement_note text, p_operator_name text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "acknowledge_team_note",
+      "args": "p_note_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "add_consumable_line",
+      "args": "p_booking_id uuid, p_product_id uuid, p_qty integer, p_client_uuid uuid, p_line_note text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "add_equipment_units",
+      "args": "p_product_id uuid, p_units jsonb, p_key uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "add_waiting_charge_line",
+      "args": "p_client_uuid uuid, p_booking_id uuid, p_minutes integer, p_amount_paisa bigint, p_note text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "adjust_stock",
+      "args": "p_product_id uuid, p_delta integer, p_reason text, p_actor_id uuid, p_client_uuid uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "allocate_payment_intent",
+      "args": "p_intent_id uuid, p_provider_ref text, p_provider_response jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "apply_booking_stage_transition",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "approve_glossary_term",
+      "args": "p_client_uuid uuid, p_term_key text, p_nepali text, p_expected_revision bigint",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "archive_shift_handover",
+      "args": "p_handover_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "archive_team_note",
+      "args": "p_note_id uuid, p_archived boolean",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "assert_operation_branch_grant",
+      "args": "p_operation text, p_booking_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "audit_glossary_revision",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "auth_can_approve_damage",
+      "args": "charge numeric",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public"
+      ]
+    },
+    {
+      "name": "auth_can_approve_late_fee_waiver",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public"
+      ]
+    },
+    {
+      "name": "auth_can_approve_purchase",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_catalog"
+      ]
+    },
+    {
+      "name": "auth_can_view_money",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, auth, pg_temp"
+      ]
+    },
+    {
+      "name": "auth_client_id",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "auth_driver_has_open_booking",
+      "args": "p_booking uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "auth_is_finance_or_admin",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "auth_is_manager_or_above",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "auth_manager_approvals_to_owner",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public"
+      ]
+    },
+    {
+      "name": "auth_may_perform_operation",
+      "args": "p_operation text, p_branch_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "auth_storage_object_allowed",
+      "args": "p_bucket text, p_name text, p_upload boolean",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "auth_user_branch_id",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "auth_user_id",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public"
+      ]
+    },
+    {
+      "name": "auth_user_role",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "bind_online_account_to_client",
+      "args": "p_auth_uid uuid, p_client_id uuid, p_reason text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "booking_estimate_total",
+      "args": "p_booking_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "build_email_payload",
+      "args": "p_template_id text, p_recipient_user_id uuid, p_entity_id text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "bulk_update_products",
+      "args": "p_product_ids uuid[], p_field text, p_value jsonb, p_client_uuid uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "cancel_booking",
+      "args": "p_payload jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "cancel_booking",
+      "args": "p_booking_id uuid, p_reason text, p_actor_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "cancel_counter_sale",
+      "args": "p_booking_id uuid, p_reason text, p_actor_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "change_booking",
+      "args": "p_id uuid, p_revision text, p_key uuid, p_payload jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "change_booking",
+      "args": "p_payload jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "change_client_membership",
+      "args": "p_payload jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "check_external_hold_against_reservations",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "check_unit_reservability_on_insert",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "client_has_id_on_file",
+      "args": "p_client_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "close_maintenance_job",
+      "args": "p_maintenance_id uuid, p_note text, p_findings text, p_actions_taken text, p_cost numeric, p_unit_condition unit_condition, p_client_uuid uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "complete_maintenance_job",
+      "args": "p_job_id uuid, p_actions_taken text, p_findings text, p_cost numeric, p_unit_condition unit_condition, p_client_uuid uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "confirm_booking_atomic",
+      "args": "p_booking_id uuid, p_actor_id uuid, p_client_uuid uuid, p_occurred_at timestamp with time zone, p_reason text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "confirm_booking_request",
+      "args": "p_request_id uuid, p_booking_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "create_booking_payment_link",
+      "args": "p_client_uuid text, p_booking_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "create_calendar_feed_token",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "create_counter_sale",
+      "args": "p_payload jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "create_damage_case",
+      "args": "p_booking_id uuid, p_unit_id uuid, p_damage_type text, p_description text, p_severity text, p_disposition text, p_client_uuid uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "create_delivery_zone",
+      "args": "p_name text, p_description text, p_fee_paisa bigint",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "create_draft_invoice_on_confirm",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "create_invoice",
+      "args": "p_payload jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "create_notification",
+      "args": "p_client_uuid uuid, p_user_id uuid, p_type text, p_title text, p_message text, p_entity_type text, p_entity_id text, p_link_url text, p_severity alert_severity",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "create_or_extend_hold",
+      "args": "p_booking_id uuid, p_booking_line_id uuid, p_asset_id uuid, p_product_id uuid, p_qty integer, p_period tstzrange, p_duration_minutes integer, p_client_uuid uuid, p_actor_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "create_payment_intent",
+      "args": "p_client_uuid text, p_booking_id uuid, p_booking_request_id uuid, p_provider text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "create_problem_report",
+      "args": "p_description text, p_client_uuid uuid, p_photo_path text, p_route_path text, p_app_version text, p_user_role text, p_device_category text, p_viewport_width integer, p_viewport_height integer, p_error_reference text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "create_rider_link",
+      "args": "p_client_uuid uuid, p_job_id uuid, p_rider_name text, p_rider_phone text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "create_shift_handover",
+      "args": "p_client_uuid uuid, p_shift_code text, p_from_user_name text, p_from_user_role text, p_to_user_id uuid, p_to_user_name text, p_cash_counted_paisa bigint, p_cash_status text, p_cash_variance_paisa bigint, p_notes text, p_open_items jsonb, p_checklist jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "create_team_note",
+      "args": "p_body text, p_client_uuid uuid, p_category text, p_priority text, p_reference_id text, p_reference_ids text[], p_pinned boolean",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "deactivate_delivery_zone",
+      "args": "p_zone_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "decline_booking_request",
+      "args": "p_request_id uuid, p_reason text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "deduct_consumable_stock_on_handover",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "delivery_assign_driver",
+      "args": "p_job_id uuid, p_driver_id uuid, p_request_key uuid, p_vehicle text, p_rider_name text, p_rider_phone text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "delivery_attach_proof",
+      "args": "p_job_id uuid, p_request_key uuid, p_photo_path text, p_signature_path text, p_fingerprint text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "delivery_create_job",
+      "args": "p_booking_id uuid, p_leg text, p_scheduled_at timestamp with time zone, p_key uuid, p_vehicle text, p_rider_name text, p_rider_phone text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "delivery_reschedule_job",
+      "args": "p_job_id uuid, p_new_scheduled_at timestamp with time zone, p_request_key uuid, p_notes text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "delivery_transition_job",
+      "args": "p_job_id uuid, p_expected_status text, p_next_status text, p_request_key uuid, p_recipient text, p_note text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "document_file_location",
+      "args": "p_document uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "driver_trip_context",
+      "args": "p_booking uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "end_equipment_downtime",
+      "args": "p_reservation_id uuid, p_client_uuid uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "enforce_approver_is_actor",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public"
+      ]
+    },
+    {
+      "name": "enforce_inventory_reservation_capacity",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "enforce_pack_at_risk_gate",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "enforce_pack_shortage_gate",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "enforce_payment_ceiling",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "enforce_payment_reversal_ceiling",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "enforce_rental_draft_update",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "enforce_users_role_ceiling",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "enroll_client_membership",
+      "args": "p_client_id uuid, p_plan_id uuid, p_join_date date, p_fee_paid numeric, p_notes text, p_key uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "extend_booking",
+      "args": "p_payload jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "extend_booking",
+      "args": "p_booking_id uuid, p_days integer, p_reason text, p_actor_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "generate_google_maps_links",
+      "args": "p_branch_id uuid, p_date date, p_shop_lat double precision, p_shop_lng double precision",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "get_available_product_capacity",
+      "args": "p_product_id uuid, p_period tstzrange, p_ignore_booking_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "get_calendar_feed",
+      "args": "p_token_hash text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "get_day_route",
+      "args": "p_branch_id uuid, p_date date",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "get_delivery_zone_fee",
+      "args": "p_zone_name text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "get_effective_rental_window",
+      "args": "p_pickup timestamp with time zone, p_return timestamp with time zone, p_prep_minutes integer, p_cleaning_minutes integer",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "get_low_stock_alerts",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "get_model_daily_rate",
+      "args": "p_product_id uuid, p_bundle_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "get_morning_digest",
+      "args": "p_user_id uuid, p_target_date date",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "get_my_notification_preferences",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "get_online_booking_away_status",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "get_online_payment_reconciliation",
+      "args": "p_start_date date, p_end_date date",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "get_payment_link_details",
+      "args": "p_token text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "get_pending_whatsapp_draft_tasks",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "get_push_notifications_for_event",
+      "args": "p_event_type text, p_payload jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "get_recent_sign_in_events",
+      "args": "p_limit integer",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "get_rider_job_by_token",
+      "args": "p_token_hash text",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "get_staff_mfa_overview",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "get_user_notification_preferences",
+      "args": "p_user_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "group_products_into_family",
+      "args": "p_client_uuid uuid, p_family_name text, p_members jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public"
+      ]
+    },
+    {
+      "name": "guard_booking_lines_money_blind",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "guard_invoice_lines_parent_status",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "guard_rental_cancel_custody",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "guard_rental_outbound_write",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "guard_unit_identity_edits",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "guard_verified_return_facts",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "issue_invoice",
+      "args": "p_payload jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "issue_invoice",
+      "args": "p_invoice_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "issue_operations_grant",
+      "args": "p_client_uuid uuid, p_user_id uuid, p_branch_id uuid, p_operation text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "list_delivery_zones",
+      "args": "p_limit integer, p_offset integer, p_active_only boolean",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "list_problem_reports",
+      "args": "p_limit integer, p_offset integer, p_status text, p_author_id uuid, p_search text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "list_team_notes",
+      "args": "p_limit integer, p_offset integer, p_include_archived boolean, p_category text, p_reference_id text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "log_audit_event",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "log_audit_event_actor",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "log_operation_session_audit",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "manage_rental_lifecycle",
+      "args": "p_payload jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "mark_all_notifications_read",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "mark_booking_will_be_late",
+      "args": "p_payload jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "mark_client_message_event_sent",
+      "args": "p_client_uuid uuid, p_event_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "mark_notification_read",
+      "args": "p_notification_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "mutate_booking_transport",
+      "args": "p_id uuid, p_revision integer, p_key uuid, p_action text, p_driver uuid, p_recipient text, p_note text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "notify_staff",
+      "args": "p_type text, p_title text, p_message_money text, p_message_money_blind text, p_link_url text, p_entity_type text, p_entity_id text, p_severity alert_severity",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "online_profile_save",
+      "args": "p_name text, p_phone text, p_company text, p_pan text, p_id_doc_type text, p_id_doc_number text, p_id_doc_path text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "open_damage_case_on_cleaning_finding",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "open_missing_case_on_return",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "pause_client_payment_reminders",
+      "args": "p_client_uuid uuid, p_client_id uuid, p_reason text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "pin_team_note",
+      "args": "p_note_id uuid, p_pinned boolean",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "plan_equipment_downtime",
+      "args": "p_client_uuid uuid, p_asset_id uuid, p_product_id uuid, p_qty integer, p_start_at timestamp with time zone, p_end_at timestamp with time zone, p_reason text, p_notes text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "portal_claim_by_verified_email",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "prevent_direct_sign_in_events_write",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "prevent_membership_plans_delete",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "preventive_service_resets_the_meter",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "preview_offer_campaign_audience",
+      "args": "p_audience_filter jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "process_client_unsubscribe",
+      "args": "p_raw_token text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "process_due_client_message_events",
+      "args": "p_limit integer",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "process_due_payment_reminders",
+      "args": "p_limit integer",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "public_availability",
+      "args": "p_product_ids uuid[], p_from date, p_to date",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp",
+        "statement_timeout=2s"
+      ]
+    },
+    {
+      "name": "queue_offer_campaign",
+      "args": "p_campaign_id uuid, p_client_uuid uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "read_booking_for_change",
+      "args": "p_id text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "read_quote_editor",
+      "args": "p_id text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "read_record_editor",
+      "args": "p_kind text, p_id text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "read_verified_return_quantities",
+      "args": "p_booking_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "recompute_invoice_payment_state",
+      "args": "p_invoice_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "recompute_unit_status",
+      "args": "p_asset_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "record_crew_payout",
+      "args": "p_client_uuid uuid, p_crew_booking_id uuid, p_tds_rate_percent numeric, p_notes text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "record_email_send",
+      "args": "p_template_id text, p_recipient_email text, p_recipient_user_id uuid, p_entity_type text, p_entity_id text, p_status text, p_error text, p_language text, p_metadata jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "record_extension_clash_decision",
+      "args": "p_payload jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "record_offer_campaign_test_send",
+      "args": "p_campaign_id uuid, p_test_email text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "record_online_payment_refund",
+      "args": "p_intent_id uuid, p_refund_type text, p_refund_ref text, p_reason text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "record_outsourced_vehicle_quote",
+      "args": "p_client_uuid uuid, p_booking_id uuid, p_vendor text, p_quote_paisa bigint, p_approval_note text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "record_password_reset_request",
+      "args": "p_user_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "record_sign_in_event",
+      "args": "p_device_hash text, p_user_agent text, p_ip_address text, p_kind text, p_metadata jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "record_sign_in_event",
+      "args": "p_device_hash text, p_user_agent text, p_ip_address text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "record_staff_mfa_enrolment",
+      "args": "p_user_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "record_temporary_stock",
+      "args": "p_payload jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "register_push_subscription",
+      "args": "p_client_uuid uuid, p_endpoint text, p_p256dh text, p_auth text, p_device_label text, p_user_agent text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "reject_invoice_edit_after_issue",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "release_hold",
+      "args": "p_reservation_id uuid, p_reason text, p_actor_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "release_reservations_on_return_session_commit",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "release_reservations_on_verified_return_receipt",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "release_unit_reservation_on_unit_change",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "remember_product_alias",
+      "args": "p_product_id uuid, p_alias text, p_alias_normalised text, p_client_uuid uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "renew_client_membership",
+      "args": "p_payload jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "rental_has_pickup_evidence",
+      "args": "p_booking_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "require_return_damage_photo_per_unit",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "require_return_damage_signature",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "reservations_follow_booking_dates",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "reset_staff_mfa",
+      "args": "p_target_user_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "resolve_booking_at_risk",
+      "args": "p_payload jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "resolve_team_note",
+      "args": "p_note_id uuid, p_resolved boolean",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "restock_consumable",
+      "args": "p_product_id uuid, p_qty integer, p_supplier text, p_cost numeric, p_received_date date, p_client_uuid uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "restore_message_template",
+      "args": "p_client_uuid uuid, p_template_key text, p_target_version integer",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "resume_client_payment_reminders",
+      "args": "p_client_uuid uuid, p_client_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "resync_draft_invoice",
+      "args": "p_booking_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "retire_equipment_unit",
+      "args": "p_unit_id uuid, p_reason text, p_key uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "retire_membership_plan",
+      "args": "p_plan_id uuid, p_retire boolean, p_client_uuid uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "retire_view",
+      "args": "p_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "return_temporary_stock",
+      "args": "p_payload jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "revoke_calendar_feed_token",
+      "args": "p_user_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "revoke_operations_grant",
+      "args": "p_client_uuid uuid, p_grant_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "revoke_own_staff_pin",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "revoke_rider_link",
+      "args": "p_link_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "revoke_staff_pin_for",
+      "args": "p_user_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "rider_complete_delivery",
+      "args": "p_token_hash text, p_receiver_name text, p_signature_svg text, p_photo_url text",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "rider_mark_picked_up",
+      "args": "p_token_hash text",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "save_membership_plan",
+      "args": "p_level text, p_label text, p_annual_fee numeric, p_individual_discount_pct numeric, p_bundle_discount_pct numeric, p_monthly_booking_limit integer, p_simultaneous_rental_limit integer, p_authorized_users integer, p_default_credit_limit numeric, p_term_months integer, p_perks text[], p_display_order integer, p_client_uuid uuid, p_plan_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "save_message_template",
+      "args": "p_client_uuid uuid, p_template_key text, p_subject text, p_body text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "save_offer_campaign",
+      "args": "p_client_uuid uuid, p_subject text, p_body_markdown text, p_hero_image_url text, p_cta_button_text text, p_cta_button_url text, p_audience_filter jsonb, p_campaign_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "save_record_editor",
+      "args": "p_kind text, p_id uuid, p_revision text, p_key uuid, p_values jsonb, p_rows jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "save_record_section",
+      "args": "p_kind text, p_id uuid, p_section text, p_revision text, p_key uuid, p_values jsonb, p_rows jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "save_view",
+      "args": "p_client_uuid uuid, p_list_key text, p_name text, p_query text, p_hidden_columns text[], p_visibility text, p_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "set_booking_delivery_zone",
+      "args": "p_booking_id uuid, p_zone_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "set_booking_tags",
+      "args": "p_client_uuid uuid, p_booking_id uuid, p_tags text[]",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "set_client_map_pin",
+      "args": "p_client_id uuid, p_lat double precision, p_lng double precision",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "set_delivery_job_vehicle_class",
+      "args": "p_job_id uuid, p_vehicle_class text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "set_delivery_route_position",
+      "args": "p_job_id uuid, p_route_position integer",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "set_delivery_zone_distance_band",
+      "args": "p_zone_id uuid, p_min_km numeric, p_max_km numeric",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "set_delivery_zone_quoted",
+      "args": "p_zone_id uuid, p_quoted boolean",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "set_delivery_zone_vehicle_fee",
+      "args": "p_zone_id uuid, p_vehicle_class text, p_fee_paisa bigint",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "set_notification_preference",
+      "args": "p_client_uuid uuid, p_user_id uuid, p_notification_type text, p_in_app boolean, p_email boolean",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "set_online_booking_away",
+      "args": "p_is_away boolean, p_message text, p_resume_date timestamp with time zone",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "set_setting",
+      "args": "p_client_uuid uuid, p_key text, p_value jsonb, p_scope text, p_location_id uuid",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "set_staff_active",
+      "args": "p_user_id uuid, p_active boolean",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "set_staff_pin",
+      "args": "p_pin text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, extensions, pg_temp"
+      ]
+    },
+    {
+      "name": "set_staff_role",
+      "args": "p_user_id uuid, p_role system_role",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "set_two_step_auth_enforcement",
+      "args": "p_enabled boolean",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "settings_write_history",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "staff_pin_status",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "submit_booking_request",
+      "args": "p_payload jsonb",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "sync_external_holds",
+      "args": "p_holds jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_booking_client_message_events_fn",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_booking_payment_reminder_completion_fn",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_case_damage_notify_fn",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_clear_damage_on_maintenance_complete",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_client_message_events_prevent_delete_fn",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_client_message_events_update_guard_fn",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_damage_finding_client_message_events_fn",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_email_log_prevent_delete_fn",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_email_log_update_guard_fn",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_guard_invoice_project_name_immutable",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_invoice_payment_reminder_settled_fn",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_notification_preferences_prevent_delete_fn",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_notifications_prevent_delete_fn",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_notifications_update_guard_fn",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_payment_reminders_prevent_delete_fn",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_payment_reminders_update_guard_fn",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_product_units_status_guard",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_push_subscriptions_prevent_delete_fn",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_recompute_unit_status_on_booking",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_recompute_unit_status_on_booking_line_unit",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_recompute_unit_status_on_case",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_recompute_unit_status_on_cleaning_queue",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_recompute_unit_status_on_damage_finding",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_recompute_unit_status_on_maintenance",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_recompute_unit_status_on_reservation",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_recompute_unit_status_on_retire",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_recompute_unit_status_on_return_line",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_recompute_unit_status_on_session",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_recompute_unit_status_on_session_movement",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_recompute_unit_status_on_stage_transition",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_shift_handover_notify_fn",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_shift_handovers_prevent_delete",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_shift_handovers_protect_fields",
+      "args": "",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "trg_snapshot_invoice_project_name",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "unregister_push_subscription",
+      "args": "p_endpoint text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "update_bundle",
+      "args": "p_id uuid, p_revision text, p_key uuid, p_payload jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "update_delivery_zone",
+      "args": "p_zone_id uuid, p_name text, p_description text, p_fee_paisa bigint, p_is_active boolean",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "update_problem_report_status",
+      "args": "p_report_id uuid, p_status text, p_reason text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "update_rental_quote",
+      "args": "p_id uuid, p_revision text, p_key uuid, p_payload jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "validate_unit_reservability",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "verify_staff_pin",
+      "args": "p_pin text",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, extensions, pg_temp"
+      ]
+    },
+    {
+      "name": "void_invoice",
+      "args": "p_payload jsonb",
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    },
+    {
+      "name": "write_reservations_on_stage_transition",
+      "args": "",
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "has_search_path": true,
+      "config": [
+        "search_path=public, pg_temp"
+      ]
+    }
+  ],
+  "security_definer_views": [],
+  "storage_policies": [
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "astra_storage_anon_boundary",
+      "roles": [
+        "anon"
+      ],
+      "cmd": "ALL",
+      "qual": "(bucket_id <> ALL (ARRAY['documents'::text, 'evidence'::text]))",
+      "with_check": "(bucket_id <> ALL (ARRAY['documents'::text, 'evidence'::text]))"
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "astra_storage_immutable_delete",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "DELETE",
+      "qual": "(bucket_id <> ALL (ARRAY['documents'::text, 'evidence'::text]))",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "astra_storage_immutable_update",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "UPDATE",
+      "qual": "(bucket_id <> ALL (ARRAY['documents'::text, 'evidence'::text]))",
+      "with_check": "(bucket_id <> ALL (ARRAY['documents'::text, 'evidence'::text]))"
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "astra_storage_insert_boundary",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "((bucket_id <> ALL (ARRAY['documents'::text, 'evidence'::text])) OR auth_storage_object_allowed(bucket_id, name, true))"
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "astra_storage_read_boundary",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "SELECT",
+      "qual": "((bucket_id <> ALL (ARRAY['documents'::text, 'evidence'::text])) OR auth_storage_object_allowed(bucket_id, name, false))",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "catalogue_public_read",
+      "roles": [
+        "anon",
+        "authenticated"
+      ],
+      "cmd": "SELECT",
+      "qual": "(bucket_id = 'catalogue'::text)",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "catalogue_staff_delete",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "DELETE",
+      "qual": "((bucket_id = 'catalogue'::text) AND (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = auth.uid()) AND (u.primary_role = ANY (ARRAY['Owner'::system_role, 'Admin'::system_role, 'Manager'::system_role])) AND (u.is_active = true)))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "catalogue_staff_insert",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "((bucket_id = 'catalogue'::text) AND (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = auth.uid()) AND (u.primary_role = ANY (ARRAY['Owner'::system_role, 'Admin'::system_role, 'Manager'::system_role])) AND (u.is_active = true)))))"
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "catalogue_staff_update",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "UPDATE",
+      "qual": "((bucket_id = 'catalogue'::text) AND (EXISTS ( SELECT 1\n   FROM users u\n  WHERE ((u.id = auth.uid()) AND (u.primary_role = ANY (ARRAY['Owner'::system_role, 'Admin'::system_role, 'Manager'::system_role])) AND (u.is_active = true)))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "documents_evidence_insert_policy",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "((bucket_id = ANY (ARRAY['documents'::text, 'evidence'::text])) AND auth_storage_object_allowed(bucket_id, name, true))"
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "documents_evidence_select_policy",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "SELECT",
+      "qual": "((bucket_id = ANY (ARRAY['documents'::text, 'evidence'::text])) AND auth_storage_object_allowed(bucket_id, name, false))",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "problem_reports_delete_policy",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "DELETE",
+      "qual": "((bucket_id = 'problem-reports'::text) AND (auth_user_role() = ANY (ARRAY['Owner'::system_role, 'Admin'::system_role])))",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "problem_reports_insert_policy",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "((bucket_id = 'problem-reports'::text) AND auth_is_staff() AND ((string_to_array(name, '/'::text))[1] = (auth.uid())::text))"
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "problem_reports_select_policy",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "SELECT",
+      "qual": "((bucket_id = 'problem-reports'::text) AND (((string_to_array(name, '/'::text))[1] = (auth.uid())::text) OR (auth_user_role() = ANY (ARRAY['Owner'::system_role, 'Admin'::system_role]))))",
+      "with_check": null
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "request_ids_client_insert",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "INSERT",
+      "qual": null,
+      "with_check": "((bucket_id = 'request-ids'::text) AND ((string_to_array(name, '/'::text))[1] = (auth.uid())::text))"
+    },
+    {
+      "schemaname": "storage",
+      "tablename": "objects",
+      "policyname": "request_ids_select",
+      "roles": [
+        "authenticated"
+      ],
+      "cmd": "SELECT",
+      "qual": "((bucket_id = 'request-ids'::text) AND (((auth.uid() IS NOT NULL) AND ((string_to_array(name, '/'::text))[1] = (auth.uid())::text)) OR (auth_user_role() = ANY (ARRAY['Owner'::system_role, 'Admin'::system_role, 'Manager'::system_role, 'Coordinator'::system_role]))))",
+      "with_check": null
+    }
+  ],
+  "role_disclosure_checks": {
+    "anon": {
+      "allowed": false,
+      "error": "permission denied for view staff_directory_v",
+      "row_count": 0
+    },
+    "Client": {
+      "row_count": 0,
+      "sample_visible_names": [],
+      "exposed_email_count": 0,
+      "exposed_mobile_count": 0,
+      "exposed_pin_metadata_count": 0,
+      "exposed_auth_metadata_count": 0,
+      "unmasked": false
+    },
+    "Warehouse": {
+      "row_count": 6,
+      "sample_visible_names": [
+        "Babin Shrestha",
+        "Operations Manager",
+        "Senior Gear Tech"
+      ],
+      "exposed_email_count": 0,
+      "exposed_mobile_count": 0,
+      "exposed_pin_metadata_count": 0,
+      "exposed_auth_metadata_count": 0,
+      "unmasked": false
+    },
+    "Technician": {
+      "row_count": 7,
+      "sample_visible_names": [
+        "Babin Shrestha",
+        "Operations Manager",
+        "Senior Gear Tech"
+      ],
+      "exposed_email_count": 0,
+      "exposed_mobile_count": 0,
+      "exposed_pin_metadata_count": 0,
+      "exposed_auth_metadata_count": 0,
+      "unmasked": false
+    },
+    "Driver": {
+      "row_count": 8,
+      "sample_visible_names": [
+        "Babin Shrestha",
+        "Operations Manager",
+        "Senior Gear Tech"
+      ],
+      "exposed_email_count": 0,
+      "exposed_mobile_count": 0,
+      "exposed_pin_metadata_count": 0,
+      "exposed_auth_metadata_count": 0,
+      "unmasked": false
+    },
+    "Coordinator": {
+      "row_count": 8,
+      "sample_visible_names": [
+        "Babin Shrestha",
+        "Operations Manager",
+        "Senior Gear Tech"
+      ],
+      "exposed_email_count": 0,
+      "exposed_mobile_count": 0,
+      "exposed_pin_metadata_count": 0,
+      "exposed_auth_metadata_count": 0,
+      "unmasked": false
+    },
+    "Accounts": {
+      "row_count": 9,
+      "sample_visible_names": [
+        "Babin Shrestha",
+        "Operations Manager",
+        "Senior Gear Tech"
+      ],
+      "exposed_email_count": 0,
+      "exposed_mobile_count": 0,
+      "exposed_pin_metadata_count": 0,
+      "exposed_auth_metadata_count": 0,
+      "unmasked": false
+    },
+    "Manager": {
+      "row_count": 10,
+      "sample_visible_names": [
+        "Babin Shrestha",
+        "Operations Manager",
+        "Senior Gear Tech"
+      ],
+      "exposed_email_count": 0,
+      "exposed_mobile_count": 0,
+      "exposed_pin_metadata_count": 0,
+      "exposed_auth_metadata_count": 0,
+      "unmasked": false
+    },
+    "Admin": {
+      "row_count": 10,
+      "sample_visible_names": [
+        "Babin Shrestha",
+        "Operations Manager",
+        "Senior Gear Tech"
+      ],
+      "exposed_email_count": 10,
+      "exposed_mobile_count": 10,
+      "exposed_pin_metadata_count": 0,
+      "exposed_auth_metadata_count": 0,
+      "unmasked": true
+    },
+    "Owner": {
+      "row_count": 10,
+      "sample_visible_names": [
+        "Babin Shrestha",
+        "Operations Manager",
+        "Senior Gear Tech"
+      ],
+      "exposed_email_count": 10,
+      "exposed_mobile_count": 10,
+      "exposed_pin_metadata_count": 0,
+      "exposed_auth_metadata_count": 0,
+      "unmasked": true
+    }
+  },
+  "public_views": [
+    {
+      "name": "accessories_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "audit_logs",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "booking_crew_lines_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "booking_lines_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "booking_requests_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "booking_transport_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "bookings_deposit_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "bundles_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "cases_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "client_channel_identities_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "client_collectors_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "client_directory_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "client_id_documents_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "client_memberships_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "clients_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "collateral_documents_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "consumable_restock_movements_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "crew_assignments_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "crew_bookings_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "crew_members_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "crew_profiles_v2_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "daily_closings_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "damage_findings_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "delivery_transport_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "email_log_v",
+      "reloptions": [
+        "security_barrier=true"
+      ],
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "external_holds_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "fulfillment_outcomes_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "late_fee_findings_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "maintenance_records_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "membership_limit_breaches_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "membership_plans_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "notification_preferences_v",
+      "reloptions": [
+        "security_barrier=true"
+      ],
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "notifications_v",
+      "reloptions": [
+        "security_barrier=true"
+      ],
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "offer_campaigns_v",
+      "reloptions": [
+        "security_invoker=true"
+      ],
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "online_profiles_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "problem_reports_v",
+      "reloptions": [
+        "security_barrier=true"
+      ],
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "product_units_service_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "product_units_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "products_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "public_catalogue_v",
+      "reloptions": null,
+      "anon_can_select": true,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "public_product_family_options_v",
+      "reloptions": null,
+      "anon_can_select": true,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "purchase_requests_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "push_subscriptions_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "return_accessory_checks_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "shift_handovers_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "staff_directory_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "temporary_stock_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    },
+    {
+      "name": "vehicle_fuel_logs_v",
+      "reloptions": null,
+      "anon_can_select": false,
+      "authenticated_can_select": true
+    }
+  ]
+}
