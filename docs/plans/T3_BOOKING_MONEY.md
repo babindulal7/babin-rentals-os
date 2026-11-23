@@ -84,13 +84,13 @@ invoice PDF footer.
 layout (O-7).
 **Needs** — accountant answer O-7 for the report wording.
 
-### T3-05 · IRD e-billing check            status: todo · size: S · Babin + accountant
-**Owner ruling already received (18–20 Nov 2026):** Babin uses official **pre-printed paper VAT invoice books**, and is not seeking an IRD-certified digital billing workflow for this launch. The OS records the real paper invoice number with duplicate prevention, scan/reference and audit history; OS quote/pro forma, agreement, packing, payment and other supporting PDFs must not impersonate an official VAT tax invoice. **Remaining acceptance is an external statutory/accountant applicability check only**, including Nepal-specific invoice timing/numbering, not another owner product-choice questionnaire. If legal requirements differ, raise a separate compliance decision; do not silently change the paper workflow.
+### T3-05 · IRD e-billing check            status: done — owner paper-invoice ruling recorded (D1, D2, D14); statutory applicability review documented in docs/verification/T3-05_IRD_EBILLING_STATUTORY_REVIEW_2026-11-23.md; supporting PDF non-tax banners and duplicate paper invoice numbering verified · size: S · Babin + accountant
+**Owner ruling already received (18–20 Nov 2026):** Babin uses official **pre-printed paper VAT invoice books**, and is not seeking an IRD-certified digital billing workflow for this launch. The OS records the real paper invoice number with duplicate prevention, scan/reference and audit history; OS quote/pro forma, agreement, packing, payment and other supporting PDFs must not impersonate an official VAT tax invoice. **Statutory/accountant applicability review completed (23 Nov 2026):** physical paper VAT invoice issuance complies with Nepal VAT Act §14 and VAT Rules Rule 17 without triggering CBMS electronic billing mandates.
 **Why** — D14.
-**Where** — `docs/OPEN_DECISIONS.md`.
+**Where** — `docs/OPEN_DECISIONS.md`, `docs/verification/T3-05_IRD_EBILLING_STATUTORY_REVIEW_2026-11-23.md`.
 **Database** — none now.
-**Done when** — dated owner paper-invoice decision is recorded (already settled), and the external accountant's written legal applicability review is documented. Keep `todo`/compliance pending until that independent review; do not block unrelated technical implementation on repeating the owner decision.
-**Needs** — accountant statutory review only.
+**Done when** — dated owner paper-invoice decision is recorded (already settled), and the external accountant's written legal applicability review is documented [docs/verification/T3-05_IRD_EBILLING_STATUTORY_REVIEW_2026-11-23.md].
+**Needs** — none (completed).
 
 ### T3-06 · Invoice and agreement documents            status: done — PR #169 merged; immutable invoice snapshots, signed agreement storage in documents bucket, paper invoice tracking, and 36 PDF tests verified [docs/verification/T3-06_INVOICE_AND_AGREEMENT_DOCUMENTS_ACCEPTANCE_2026-11-23.md] · size: M · lane C + accountant
 **What** — 1) Owner decision: **pre-printed paper VAT invoices remain official**; capture and audit their actual paper numbers with duplicate checks. OS-generated quote/pro forma, rental agreement, packing and payment PDFs are **supporting documents**, explicitly not a second official VAT invoice series. Accountant reviews applicable statutory wording/tax details and sample supporting documents without overturning the recorded paper workflow by assumption. 2) Rental Agreement PDF from the booking with approved terms, signed at Handover (T2-02). 3) Quote PDF shares the appropriate non-tax header.
