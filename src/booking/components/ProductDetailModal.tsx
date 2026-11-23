@@ -142,7 +142,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     {formatMoney(choice.item.daily_rate_paisa as Paisa)} / day
                   </span>
                   {unavailable && (
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Not available on these dates</span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      <span aria-hidden="true" style={{ marginRight: 4, color: 'var(--rose-text)' }}>✕</span>
+                      Not available on these dates
+                    </span>
                   )}
                 </label>
               )

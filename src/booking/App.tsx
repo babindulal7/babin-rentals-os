@@ -28,6 +28,8 @@ export default function BookingApp() {
   const [initialDates] = useState(getDefaultRentalDates)
   const [startDate, setStartDate] = useState<string>(initialDates.startDate)
   const [endDate, setEndDate] = useState<string>(initialDates.endDate)
+  const [startTime, setStartTime] = useState<string>('06:00')
+  const [endTime, setEndTime] = useState<string>('06:00')
   const [activeCategory, setActiveCategory] = useState<string>('All')
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [items, setItems] = useState<CatalogueItem[]>([])
@@ -316,6 +318,10 @@ export default function BookingApp() {
         endDate={endDate}
         onStartDateChange={(date) => { setStartDate(date); setAvailability(new Map()) }}
         onEndDateChange={(date) => { setEndDate(date); setAvailability(new Map()) }}
+        startTime={startTime}
+        endTime={endTime}
+        onStartTimeChange={(time) => { setStartTime(time); setAvailability(new Map()) }}
+        onEndTimeChange={(time) => { setEndTime(time); setAvailability(new Map()) }}
         cartCount={totalCartCount}
         onOpenCart={() => setIsCartOpen(true)}
         user={clientUser}
@@ -512,6 +518,8 @@ export default function BookingApp() {
         items={cart}
         startDate={startDate}
         endDate={endDate}
+        startTime={startTime}
+        endTime={endTime}
         onUpdateQty={handleUpdateQty}
         onRemoveItem={handleRemoveFromCart}
         onClearCart={handleClearCart}

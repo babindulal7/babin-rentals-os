@@ -1,11 +1,34 @@
 import React from 'react'
 import type { ClientUser } from '../lib/clientAuthApi'
 
+export const STANDARD_RENTAL_HOURS = [
+  { value: '06:00', label: '06:00 AM (Rental Day Start)' },
+  { value: '07:00', label: '07:00 AM' },
+  { value: '08:00', label: '08:00 AM' },
+  { value: '09:00', label: '09:00 AM' },
+  { value: '10:00', label: '10:00 AM' },
+  { value: '11:00', label: '11:00 AM' },
+  { value: '12:00', label: '12:00 PM' },
+  { value: '13:00', label: '01:00 PM' },
+  { value: '14:00', label: '02:00 PM' },
+  { value: '15:00', label: '03:00 PM' },
+  { value: '16:00', label: '04:00 PM' },
+  { value: '17:00', label: '05:00 PM' },
+  { value: '18:00', label: '06:00 PM' },
+  { value: '19:00', label: '07:00 PM' },
+  { value: '20:00', label: '08:00 PM' },
+  { value: '21:00', label: '09:00 PM' },
+] as const
+
 interface BookingHeaderProps {
   startDate: string
   endDate: string
   onStartDateChange: (val: string) => void
   onEndDateChange: (val: string) => void
+  startTime?: string | undefined
+  endTime?: string | undefined
+  onStartTimeChange?: ((val: string) => void) | undefined
+  onEndTimeChange?: ((val: string) => void) | undefined
   cartCount: number
   onOpenCart: () => void
   user?: ClientUser | null | undefined
@@ -20,6 +43,10 @@ export const BookingHeader: React.FC<BookingHeaderProps> = ({
   endDate,
   onStartDateChange,
   onEndDateChange,
+  startTime,
+  endTime,
+  onStartTimeChange,
+  onEndTimeChange,
   cartCount,
   onOpenCart,
   user,
@@ -45,34 +72,64 @@ export const BookingHeader: React.FC<BookingHeaderProps> = ({
               <label htmlFor="pickup-date-input" className="date-input-label">
                 Pickup (06:00 NPT)
               </label>
-              <input
-                id="pickup-date-input"
-                type="date"
-                className="date-input"
-                value={startDate}
-                onChange={(e) => onStartDateChange(e.target.value)}
-                aria-label="Rental pickup date"
-              />
+              <div className="date-time-inputs">
+                <input
+                  id="pickup-date-input"
+                  type="date"
+                  className="date-input"
+                  value={startDate}
+                  onChange={(e) => onStartDateChange(e.target.value)}
+                  aria-label="Rental pickup date"
+                />
+                <select
+                  id="pickup-time-input"
+                  className="date-time-select"
+                  value={startTime || '06:00'}
+                  onChange={(e) => onStartTimeChange?.(e.target.value)}
+                  aria-label="Rental pickup time"
+                >
+                  {STANDARD_RENTAL_HOURS.map((t) => (
+                    <option key={`pickup-${t.value}`} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            <span style={{ color: 'var(--text-subtle)' }} aria-hidden="true">→</span>
+            <span className="date-range-arrow" aria-hidden="true">→</span>
 
             <div className="date-input-group">
               <label htmlFor="return-date-input" className="date-input-label">
                 Return (06:00 NPT)
               </label>
-              <input
-                id="return-date-input"
-                type="date"
-                className="date-input"
-                value={endDate}
-                onChange={(e) => onEndDateChange(e.target.value)}
-                aria-label="Rental return date"
-              />
+              <div className="date-time-inputs">
+                <input
+                  id="return-date-input"
+                  type="date"
+                  className="date-input"
+                  value={endDate}
+                  onChange={(e) => onEndDateChange(e.target.value)}
+                  aria-label="Rental return date"
+                />
+                <select
+                  id="return-time-input"
+                  className="date-time-select"
+                  value={endTime || '06:00'}
+                  onChange={(e) => onEndTimeChange?.(e.target.value)}
+                  aria-label="Rental return time"
+                >
+                  {STANDARD_RENTAL_HOURS.map((t) => (
+                    <option key={`return-${t.value}`} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="booking-header-actions" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {user ? (
               <>
                 <button

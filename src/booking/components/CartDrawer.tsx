@@ -7,6 +7,7 @@ import {
 import type { ClientUser, OnlineProfile } from '../lib/clientAuthApi'
 import type { OnlineBookingAwayStatus } from '@/lib/awayMode'
 import { formatMoney, type Paisa } from '@/lib/money'
+import { rentalDaysBetween } from '@/lib/rentalDays'
 import { trackStoreEvent } from '@/lib/storeAnalytics'
 
 export interface CartLine {
@@ -20,6 +21,8 @@ interface CartDrawerProps {
   items: CartLine[]
   startDate: string
   endDate: string
+  startTime?: string | undefined
+  endTime?: string | undefined
   onUpdateQty: (itemId: string, delta: number) => void
   onRemoveItem: (itemId: string) => void
   onClearCart: () => void
@@ -37,6 +40,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   items,
   startDate,
   endDate,
+  startTime,
+  endTime,
   onUpdateQty,
   onRemoveItem,
   onClearCart,
@@ -85,15 +90,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
   if (!isOpen) return null
 
-  // Calculate rental days (minimum 1 day)
-  let rentalDays = 1
-  if (startDate && endDate) {
-    const s = new Date(startDate).getTime()
-    const e = new Date(endDate).getTime()
-    if (e >= s) {
-      rentalDays = Math.max(1, Math.round((e - s) / (1000 * 60 * 60 * 24)) + 1)
-    }
-  }
+  // Calculate rental days according to Kathmandu operational rental day (06:00 boundary)
+  const pickupInstant = startDate ? `${startDate}T${startTime || '06:00'}:00+05:45` : null
+  const returnInstant = endDate ? `${endDate}T${endTime || '06:00'}:00+05:45` : null
+  const rentalDays = Math.max(1, (pickupInstant && returnInstant ? rentalDaysBetween(pickupInstant, returnInstant) : null) ?? 1)
 
   // Calculate totals in integer paisa
   const subtotalPaisa = items.reduce((acc, line) => {
@@ -203,7 +203,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               {step === 'success' ? 'Request Received' : step === 'checkout' ? 'Request Details' : 'Booking Request Cart'}
             </h2>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              {startDate && endDate ? `${startDate} to ${endDate} (${rentalDays} day${rentalDays > 1 ? 's' : ''})` : 'Dates not chosen'}
+              {startDate && endDate ? `${startDate} (${startTime || '06:00'}) → ${endDate} (${endTime || '06:00'}) · ${rentalDays} day${rentalDays > 1 ? 's' : ''}` : 'Dates not chosen'}
             </span>
           </div>
           <button
@@ -333,7 +333,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   value={clientName}
                   onChange={(e) => setClientName(e.target.value)}
                   placeholder="e.g. Aayush Shrestha"
-                  style={{ width: '100%', minHeight: 42, padding: '8px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', color: 'var(--text-main)' }}
+                  style={{ width: '100%', minHeight: 44, padding: '8px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', color: 'var(--text-main)' }}
                 />
               </div>
 
@@ -347,7 +347,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   value={clientEmail}
                   onChange={(e) => setClientEmail(e.target.value)}
                   placeholder="name@example.com"
-                  style={{ width: '100%', minHeight: 42, padding: '8px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', color: 'var(--text-main)' }}
+                  style={{ width: '100%', minHeight: 44, padding: '8px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', color: 'var(--text-main)' }}
                 />
               </div>
 
@@ -361,7 +361,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   value={clientPhone}
                   onChange={(e) => setClientPhone(e.target.value)}
                   placeholder="+977-98..."
-                  style={{ width: '100%', minHeight: 42, padding: '8px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', color: 'var(--text-main)' }}
+                  style={{ width: '100%', minHeight: 44, padding: '8px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', color: 'var(--text-main)' }}
                 />
               </div>
 
@@ -374,7 +374,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   value={projectName}
                   onChange={(e) => setProjectName(e.target.value)}
                   placeholder="e.g. Feature Film, Ad Commercial"
-                  style={{ width: '100%', minHeight: 42, padding: '8px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', color: 'var(--text-main)' }}
+                  style={{ width: '100%', minHeight: 44, padding: '8px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', color: 'var(--text-main)' }}
                 />
               </div>
 
@@ -387,7 +387,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   value={shootLocation}
                   onChange={(e) => setShootLocation(e.target.value)}
                   placeholder="e.g. Kathmandu Studio, Mustang"
-                  style={{ width: '100%', minHeight: 42, padding: '8px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', color: 'var(--text-main)' }}
+                  style={{ width: '100%', minHeight: 44, padding: '8px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', color: 'var(--text-main)' }}
                 />
               </div>
 
@@ -401,7 +401,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     onClick={() => setFulfillmentType('pickup')}
                     style={{
                       flex: 1,
-                      minHeight: 42,
+                      minHeight: 44,
                       background: fulfillmentType === 'pickup' ? 'var(--accent-gold)' : 'var(--bg-surface)',
                       color: fulfillmentType === 'pickup' ? '#000' : 'var(--text-main)',
                       border: '1px solid var(--border-subtle)',
@@ -417,7 +417,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     onClick={() => setFulfillmentType('delivery')}
                     style={{
                       flex: 1,
-                      minHeight: 42,
+                      minHeight: 44,
                       background: fulfillmentType === 'delivery' ? 'var(--accent-gold)' : 'var(--bg-surface)',
                       color: fulfillmentType === 'delivery' ? '#000' : 'var(--text-main)',
                       border: '1px solid var(--border-subtle)',
@@ -438,7 +438,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     <select
                       value={deliveryZone}
                       onChange={(e) => setDeliveryZone(e.target.value)}
-                      style={{ minHeight: 42, padding: '8px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', color: 'var(--text-main)' }}
+                      style={{ minHeight: 44, padding: '8px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', color: 'var(--text-main)' }}
                     >
                       <option value="ring_road">Inside Ring Road (Kathmandu / Lalitpur)</option>
                       <option value="outer_valley">Outer Valley (Bhaktapur / Valley Suburbs)</option>
@@ -449,7 +449,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                       placeholder="Delivery street address and landmarks"
                       value={deliveryAddress}
                       onChange={(e) => setDeliveryAddress(e.target.value)}
-                      style={{ minHeight: 42, padding: '8px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', color: 'var(--text-main)' }}
+                      style={{ minHeight: 44, padding: '8px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', color: 'var(--text-main)' }}
                     />
                   </div>
                 )}
@@ -519,34 +519,46 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                         type="button"
                         onClick={() => onUpdateQty(line.item.id, -1)}
                         style={{
-                          width: 32,
-                          height: 32,
+                          width: 44,
+                          height: 44,
+                          minWidth: 44,
+                          minHeight: 44,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                           borderRadius: 'var(--radius-sm)',
                           background: 'var(--bg-surface)',
                           border: '1px solid var(--border-subtle)',
                           color: 'var(--text-main)',
                           cursor: 'pointer',
                           fontWeight: 700,
+                          fontSize: '1.1rem',
                         }}
                         aria-label={`Decrease quantity of ${line.item.name}`}
                       >
                         -
                       </button>
-                      <span style={{ fontFamily: 'var(--font-mono)', minWidth: 20, textAlign: 'center', fontWeight: 700 }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', minWidth: 24, textAlign: 'center', fontWeight: 700 }}>
                         {line.quantity}
                       </span>
                       <button
                         type="button"
                         onClick={() => onUpdateQty(line.item.id, 1)}
                         style={{
-                          width: 32,
-                          height: 32,
+                          width: 44,
+                          height: 44,
+                          minWidth: 44,
+                          minHeight: 44,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                           borderRadius: 'var(--radius-sm)',
                           background: 'var(--bg-surface)',
                           border: '1px solid var(--border-subtle)',
                           color: 'var(--text-main)',
                           cursor: 'pointer',
                           fontWeight: 700,
+                          fontSize: '1.1rem',
                         }}
                         aria-label={`Increase quantity of ${line.item.name}`}
                       >
@@ -556,13 +568,20 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                         type="button"
                         onClick={() => onRemoveItem(line.item.id)}
                         style={{
+                          width: 44,
+                          height: 44,
+                          minWidth: 44,
+                          minHeight: 44,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                           background: 'transparent',
                           border: 'none',
                           color: 'var(--rose-text)',
                           cursor: 'pointer',
-                          marginLeft: 6,
-                          fontSize: '1.1rem',
-                          padding: 4,
+                          marginLeft: 4,
+                          fontSize: '1.2rem',
+                          borderRadius: 'var(--radius-sm)',
                         }}
                         aria-label={`Remove ${line.item.name} from request`}
                       >
@@ -576,9 +595,18 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
             {items.length > 0 && (
               <div className="cart-footer">
-                <div className="cart-summary-row">
+                <div className="cart-summary-row" style={{ alignItems: 'flex-start' }}>
                   <span>Rental Period</span>
-                  <span style={{ fontFamily: 'var(--font-mono)' }}>{rentalDays} day{rentalDays > 1 ? 's' : ''}</span>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                      {rentalDays} day{rentalDays > 1 ? 's' : ''}
+                    </div>
+                    {startDate && endDate && (
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>
+                        {startDate} ({startTime || '06:00'}) → {endDate} ({endTime || '06:00'})
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="cart-summary-row">
                   <span>Subtotal</span>
