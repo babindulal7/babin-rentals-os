@@ -1,0 +1,234 @@
+# Babin Rentals OS — December 31, 2026 Controlled Launch Plan
+
+**Document type:** Implementation and acceptance handoff (`.md`)  
+**Created:** 23 November 2026 (Nepal)  
+**Target launch:** Thursday, **31 December 2026**  
+**Project:** `babindulal7/babin-rentals-os`  
+**Primary implementation agent:** Windows Antigravity  
+**CI role:** Mac runner(s) — required checks and verification; no separate feature work  
+**Launch model:** Controlled internal launch first; public website and client portal each require separate go/no-go approval  
+**Status:** PLAN / NOT AN AUTHORIZATION TO DEPLOY
+
+> **Owner decision:** Target December 31, 2026 for a controlled launch. This is a **target, not approval** for production changes, merging pull requests, customer communications, website publishing, or enabling client access. All live changes and release approval remain explicitly owner-gated.
+
+---
+
+## 1. Mission and non-negotiable rules
+
+Deliver a **reliable, secure, staff-usable** Babin Rentals OS for day-to-day rental operations by December 31, 2026. Finish critical flows before adding more features. Preserve existing approved business rules and all financial/accounting controls.
+
+1. **Never automatically merge, deploy, modify production Supabase, rotate production credentials, change live DNS, enable public portal access, send live emails, or alter financial settings.** Request distinct owner approval for each production-changing action.
+2. Prefer **read-only production audits**, **isolated worktrees/feature branches**, **local test databases**, and **staging-only tests** where separately authorized. No destructive staging resets without explicit approval.
+3. **Windows Antigravity handles implementation, tests, evidence and draft PRs. Mac remains on CI/runners only.** Do not claim CI passed without checking the exact PR head SHA and required check conclusion.
+4. Do not change existing rental-day logic, deposits, VAT, billing, discounts, permissions or booking statuses to make tests pass. Raise any policy inconsistency as an owner decision.
+5. No release is approved on date alone. Use the formal gates in sections 5–7.
+6. Intelligence recommendations, auto-mailing, expanded analytics and aesthetic enhancements are **not** launch blockers unless they introduce a critical safety/security regression into a shipped path. Defer unfinished non-critical work rather than weakening acceptance criteria.
+
+## 2. Source-of-truth snapshot (verify afresh before taking action)
+
+**GitHub snapshot checked on November 23, 2026:** 14 open PRs and 6 open issues were returned by the repository queries. Counts and states are time-sensitive; refresh them before action. A merged PR is not proof of a safe live deployment.
+
+### Evidence already recorded
+
+- [PR #348 — Production cutover and migration ledger parity](https://github.com/babindulal7/babin-rentals-os/pull/348): **merged**. Validate the installed database state and recovery evidence; do not rerun migrations based on the title alone.
+- [PR #358 — SEC-01 / INT-02 post-cutover audit](https://github.com/babindulal7/babin-rentals-os/pull/358): **open draft, awaiting owner acceptance** when checked. Its report marks the **physical post-cutover backup / sandbox restore evidence UNVERIFIED**, documents Supabase security findings and identifies staging-ready SQL patches; production changes remained blocked. Some cited audit details may have changed; read latest branch/files.
+- [Issue #66 — `staff_directory_v` / `auth.users` P0 review](https://github.com/babindulal7/babin-rentals-os/issues/66): open when checked; demand real authorization and data-exposure test evidence, not just a view rewrite.
+- [Issue #56 — Migration ledger / Driver RLS release HOLD](https://github.com/babindulal7/babin-rentals-os/issues/56): open when checked; reconcile with already merged cutover work, never blindly reapply an older migration.
+- [Issue #223 — Client isolation on extension and at-risk SELECT policies](https://github.com/babindulal7/babin-rentals-os/issues/223): open when checked.
+- [Issue #226 — Coordinator account-credit write protection](https://github.com/babindulal7/babin-rentals-os/issues/226): open when checked.
+- [PR #350 — Supabase security acceptance audit](https://github.com/babindulal7/babin-rentals-os/pull/350), [PR #352 — Migration drift ledger](https://github.com/babindulal7/babin-rentals-os/pull/352), [PR #355 — Supabase performance / RLS analysis](https://github.com/babindulal7/babin-rentals-os/pull/355), [PR #356 — Real order reconciliation](https://github.com/babindulal7/babin-rentals-os/pull/356), [PR #360 — Backup verification documentation](https://github.com/babindulal7/babin-rentals-os/pull/360), [PR #362 — Daily cutover trial reconciliation](https://github.com/babindulal7/babin-rentals-os/pull/362): review the exact evidence and statuses. In particular **documentation of backup checks is not necessarily the same as a verified restore test**.
+- [Issues #153](https://github.com/babindulal7/babin-rentals-os/issues/153) and [#154](https://github.com/babindulal7/babin-rentals-os/issues/154): website and client portal workstreams; their launch gates are distinct from the internal app.
+
+**Do first:** Read latest `main`, repository roadmap/PROGRESS records, all open launch-related PRs/issues, reviewer comments, required checks, and environments. Record discrepancies; do not silently move blocked tasks to completed.
+
+---
+
+## 3. Launch scope and feature freeze
+
+### A. P0 — must work for controlled internal launch
+
+- **Authentication, authorization and data isolation:** staff sign-in/PIN/session handling; safe account switching; least privilege; financial role guards in UI/API/database; client/tenant isolation; auditable operations; no insecure service-role exposure.
+- **Rentals:** create/edit/quote/request/confirm booking; assign gear and quantity; true stock and serial availability; prevent double booking (including external holds); preserve manual approval of booking requests.
+- **Operations:** packing -> pickup -> active -> return inspection -> cleaning/reset -> available; partial pickups and returns where supported; exceptions, damaged/missing gear and overdue states; operator can see *next action* without confusion.
+- **Billing:** integer paisa correctness; invoices/quotes; VAT 13%; discounts per approved policy; security deposits as liabilities separate from revenue; partial and overdue payments; payment audit trail and no unverified payment allocation.
+- **Accounting controls:** no destructive edits to issued invoices; role-specific permissions; traceable corrections and credit/debit handling; financial reconciliation against real orders and independently checked expected totals.
+- **Operations UX:** responsive usable workflows on desktop, iPad and phone; readable statuses, obvious action names, visible errors/loading, no accidental duplicate submits, sensible keyboard/touch access.
+- **Release reliability:** exact-head CI, tested database recovery plan, monitoring/error visibility without leaking PII, health checks and rollback approach.
+
+### B. P1 — launch only if already stable, otherwise defer
+
+- Convenient reports, additional saved filters, batch operations, advanced document templates, QR/barcode workflows, extended training UI and optional dashboards.
+- Customer notification automation: **do not enable live sends** until templates, timing, opt-outs, rate limits, sender domain, delivery handling, and owner approval are verified.
+- Non-critical polish beyond mobile usability, accessibility and clear mistakes.
+
+### C. P2 — post-launch
+
+- Expanded rental intelligence / recommendations and its human-review workbench (retain shadow/read-only restrictions).
+- Optional advanced insights and new integrations that are not required for daily operations.
+
+**Scope freeze rule (begin November 24):** A proposed new feature enters December scope only if it prevents a real launch failure and has a regression test, owner approval for the scope change, and clear rollback. Otherwise create a January backlog card.
+
+---
+
+## 4. Week-by-week execution plan
+
+### Week 1 — November 24–30: security, backup and baseline
+
+**Owner of work: Windows Antigravity. CI: Mac runners.**
+
+- [ ] Inventory all open PRs/issues and identify P0, P1, P2 based on actual effect, not title. Remove duplicate work and record dependencies.
+- [ ] Reconcile production, staging and code migration ledgers and PR #348 evidence. Explain any conflict with Issue #56; don't infer approval for SQL application.
+- [ ] Verify a current recoverable backup and **test a restore in an isolated non-production environment** with evidence, subject to authorized access and procedure.
+- [ ] Triage SEC-01 and Issues #66, #223, #226. Test policies/RPC reachability with negative authorization scenarios, not only static checks.
+- [ ] Compare staging/prod policy differences without changing production.
+- [ ] Identify launch-critical UI/backend/accounting defects with reproduction steps and severity.
+- [ ] Publish a one-page **P0 blocker ledger** showing owner, PR, exact head, repro, affected role, severity, test, CI, next safe action.
+
+**Exit:** Backup/restore evidence verified; security risks classified; migration reconciliation and go/no-go list produced. **If unmet, remain HOLD.**
+
+### Week 2 — December 1–7: complete and harden core rental flow
+
+- [ ] Test and fix create -> conflict check -> confirm -> pack -> handover -> partial return -> inspect -> clean/reset -> available.
+- [ ] Test overlapping bookings, multiple units, serial assignment, external holds, returns after 06:00 and concurrent staff changes.
+- [ ] Test financial invariants: invoices, payments, deposits, VAT, discounts, overdue, cancellations and ledger reconciliation.
+- [ ] Ensure each major operation either completes once or returns an actionable error without inconsistent intermediate state.
+- [ ] Address role-based visibility and server-side enforcement issues identified in Week 1.
+- [ ] Run targeted tests, typecheck, lint, complete regression suite and Mac CI on each exact PR head.
+
+**Exit:** No unresolved P0 workflow/security/accounting defect in the internal app; all critical paths have repeatable tests.
+
+### Week 3 — December 8–14: staff and device acceptance
+
+- [ ] Create test roster covering Owner/Admin, Manager, Billing, Warehouse/Caretaker, Technician/Driver, Accountant, and clients where relevant. Use staging test identities.
+- [ ] Test 10–20 representative rental cases end-to-end with staff involvement (or equivalent documented test runs); include wrong-role attempts and failure recovery.
+- [ ] Review desktop, iPad and phone for booking, Today, Operations, Inventory, Payments and Documents.
+- [ ] Verify touch target sizes, navigation, filter persistence, state indicators, permission-based hidden actions and back/forward behavior.
+- [ ] Reconcile actual observed outputs to reference calculations, not only snapshots or screenshots.
+- [ ] Freeze major UI/navigation architecture by December 14.
+
+**Exit:** Staff acceptance evidence signed; release candidate ready for supervised pilot. Do not substitute developer-only tests for staff testing.
+
+### Week 4 — December 15–21: supervised operational pilot
+
+- [ ] Conduct owner-approved **internal pilot** with clear data separation and rollback. Do not assume live traffic or production writes are authorized by this plan.
+- [ ] If testing real rental orders, follow an **explicitly approved** and documented pilot procedure; use non-destructive comparison to Booqable as an independent reference.
+- [ ] Validate daily pickup/return queues, availability, deposit balances, invoice totals and user-role controls.
+- [ ] Record incidents with severity, order/trace identifiers (no unnecessary client PII), reproduction, mitigation and verified fix.
+- [ ] Train staff in recovery/escalation, conflict handling, payment disputes and who can override operational states.
+
+**Exit:** No unexplained ledger discrepancy, booking conflict or critical security incident. Otherwise block launch and fix.
+
+### Week 5 — December 22–28: stabilize and prepare release
+
+- [ ] Fix remaining launch P0s; defer feature additions.
+- [ ] Verify all required PRs are merged **only after separate owner approval**, tested exact-head checks, security review and regression evidence. This plan authorizes no merges.
+- [ ] Verify one last approved restore rehearsal and disaster recovery contact/runbook.
+- [ ] Run full cross-role, cross-device, end-to-end regression on the final release candidate.
+- [ ] Prepare a release manifest listing build SHA, database migration baseline, feature flags, fallback path, owner, incident contacts and known limitations.
+- [ ] Produce internal app, website and client portal **separate** readiness reports.
+
+**Exit:** Launch packet complete. Release candidate stays staged until final owner sign-off.
+
+### December 29–31: owner go/no-go and controlled launch
+
+- [ ] December 29: frozen readiness review and blocker reconciliation.
+- [ ] December 30: evidence review, backup/rollback confirmation, staff readiness check.
+- [ ] December 31: owner-approved limited deployment **only if every critical gate passes**; otherwise continue the existing system and schedule the next review.
+- [ ] If launched, monitor logs and operational reconciliations closely; preserve an agreed path back to Booqable/manual workflow if needed.
+
+---
+
+## 5. Mandatory internal-app GO / NO-GO checklist
+
+A **GO** requires all items verified with links/receipts and a named reviewer. Unknown = HOLD.
+
+| Gate | Required evidence | Gate owner | State at plan creation |
+|---|---|---|---|
+| Security / staff sessions | Negative and positive auth/RLS/RPC role matrix, no cross-tenant or privilege escalation | Security reviewer + owner | **Unverified** |
+| Database migration parity | Reconciled exact applied migrations across production, staging and code | DB reviewer | **Unverified** |
+| Backup and restore | Current backup checksum, successful isolated restore, written recovery timing/procedure | DB owner | **Unverified; PR #358 flagged gap** |
+| No booking conflicts | Concurrency and external hold tests pass | Rentals lead | **Unverified** |
+| Rental lifecycle | Pack, pickup, active, overdue, return, inspection, reset, availability end-to-end | Operations lead | **Unverified** |
+| Finance integrity | Paisa parity, VAT, discount, deposit liability, invoice audit, payment mapping | Accountant + owner | **Unverified** |
+| Role permissions | Matrix tested in UI/API/DB across every relevant staff role | Security + operations | **Unverified** |
+| Mobile/iPad/desktop | Critical paths usable with no P0/P1 operational failure | Staff acceptance lead | **Unverified** |
+| CI at release SHA | All required checks green on exact candidate commit, no skipped required gate | CI lead (Mac) | **Unverified** |
+| Monitoring and rollback | Alerts, privacy-safe logging, release tagging, rollback tested/documented | Ops/infra lead | **Unverified** |
+| Owner acceptance | Written named approval of release scope, window and production actions | Owner | **Not granted** |
+
+**Automatic NO-GO examples:** No verified restore, known cross-client exposure, finance-role write bypass, double-booking under concurrency, unreconciled invoice/deposit amounts, failed required CI, or missing production release authorization.
+
+## 6. Independent launch gates for website and client portal
+
+Even if the OS is ready, the other two workstreams must **not** be automatically included in the December 31 go-live.
+
+### Website — own gate
+
+- Public catalogue prices display according to approved settings.
+- Date/time-first gear availability is accurate and fail-closed; no false instant confirmations.
+- Manual staff approval remains required for booking confirmation.
+- No disclosure of internal/customer-specific data to public visitors.
+- Domain, cache, performance, privacy, accessibility and error states checked.
+- Explicit owner approval for public rollout/DNS changes.
+
+### Client portal — own gate
+
+- Tenant isolation, client auth, scoped invoices/contracts, booking requests and payment states tested.
+- Guest requests do not bypass pricing, availability or approval gates.
+- Client-specific discounts and invoices are visible only to authorized users.
+- Notifications cannot be sent accidentally or repeatedly; configured templates and sender must be verified.
+- Explicit owner approval before client accounts/invites are activated.
+
+**Possible outcome on December 31:** Internal OS = GO; website = HOLD; client portal = HOLD. This is a valid success, not a failed launch.
+
+---
+
+## 7. Defect management and prioritization
+
+| Severity | Definition | Release treatment |
+|---|---|---|
+| **P0** | Data leak, unauthorized money action, booking collision, financial corruption, no recovery | Block launch |
+| **P1** | Core workflow broken/unsafe, unusable mobile critical path, bad reconciliation or critical role behavior | Fix before pilot/launch unless owner explicitly accepts a documented non-security exception |
+| **P2** | Noncritical inconvenience, optional feature, cosmetic inconsistency | January backlog |
+
+Every issue/card must include: module, workstream, device, environment, impacted role, exact reproduction, expected vs actual result, priority rationale, linked PR, current SHA, tests, CI state, reviewer, evidence URL/file and **smallest safe next step**. Keep `AWAITING OWNER ACCEPTANCE` distinct from `VERIFIED` and `COMPLETED`.
+
+## 8. Agent execution instructions — copy into Windows Antigravity
+
+> **Goal:** Deliver a *release-ready candidate* for Babin Rentals OS internal app by December 31, 2026 without compromising security, data integrity, or owner approval gates. Start from latest `origin/main`; reconcile open PRs/issues, December launch scope, current `PROGRESS.md`/roadmap, and PR #358 SEC-01 findings. Maintain an accurate launch blocker ledger. Prioritize verified recovery, Supabase RLS/session risks, double-booking and finance controls, then staff-usable workflows. Use isolated branches and local/staging-only tests under existing explicit authorization. Implement the smallest safe fixes with regression tests and evidence. Open draft PRs for review; do not merge or deploy automatically. Do not touch production Supabase, production secrets, live DNS, external customer communications or feature flags without separate approval. Keep Mac runners focused on required exact-SHA CI. Update launch readiness at the end of each work session. Mark incomplete items honestly.
+
+### Required output after each session
+
+```md
+## December Launch Status — YYYY-MM-DD
+- Release target: 2026-12-31
+- Candidate commit SHA:
+- Internal OS GO/HOLD:
+- Website GO/HOLD:
+- Client portal GO/HOLD:
+- Open P0 / P1 / P2 counts:
+- P0 changes since last report:
+- Exact-head required CI: PASS / FAIL / QUEUED / NOT RUN (links)
+- Backup/restore evidence: VERIFIED / UNVERIFIED (link)
+- Staging and production migration difference:
+- New/updated PRs and changed file scopes:
+- Staff/test evidence:
+- Owner approvals required:
+- Risks and regressions:
+- Next three smallest safe tasks:
+```
+
+---
+
+## 9. Owner decision log (do not infer consent)
+
+**Accepted for planning:** December 31, 2026 is the desired controlled internal OS launch target.  
+**Not approved by this document:** production SQL, production settings, credential rotation, live email dispatch, PR merges, cloud deployment, public website launch, client portal activation, or data migrations.  
+**Previously approved scoped staging work:** Does not imply indefinite authorization; verify the exact prior scope and environment before acting.  
+**Next formal owner decision:** Approve or reject the December 29–31 release candidate based on actual gate evidence.
+
+## 10. Definition of success
+
+Success is not the number of cards completed. Success means the Babin Rentals team can handle real reservations, preparation, pickup, return, invoicing and daily reconciliation **more reliably than the current workflow**, with tested recovery, least-privilege access, and no silent financial or inventory inconsistencies.
+
+If the internal app fails a critical gate on December 30, report **HOLD** and continue with the established operational system. Do not soften the gate just to meet December 31.

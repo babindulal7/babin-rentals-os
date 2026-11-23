@@ -1,5 +1,45 @@
 # Progress Log
 
+## 2026-11-23 — December 31, 2026 Controlled Launch Plan & Week 1 Security/Baseline Reconciliation (Windows Antigravity)
+
+### Did
+- Committed canonical implementation and acceptance handoff in `docs/plans/DECEMBER_31_LAUNCH_PLAN.md` establishing the December 31, 2026 controlled launch plan and scope freeze guidelines.
+- Triaged all open PRs (13 open) and issues (6 open), categorizing blockers into P0 (security, disaster recovery, exact-head CI, client isolation), P1 (runbooks, query tuning, error monitoring), and P2 (deferred intelligence features).
+- Reconciled production vs staging migration ledgers: live production (`sxguwvgoserhdolewibb`) cutover verified through `0260`, staging rehearsed through `0268`, codebase at `0269` with 9 forward migrations unapplied to prod.
+- Triaged SEC-01 advisor findings and Issues #66, #223, #226; flagged post-cutover physical backup dump and sandbox restore evidence as `UNVERIFIED`.
+- Verified PR #367 merge into `main` (`2c9c094f`), restoring 100% green exact-head Mac CI ([run 45177632965](https://github.com/babindulal7/babin-rentals-os/actions/runs/45177632965)).
+- Hardened public booking header and catalogue controls in `src/booking/` with 06:00 NPT Kathmandu operational day defaults and ≥44px touch targets across date-time inputs and cart drawer.
+
+### Ruled
+- Target December 31, 2026 is an owner-gated controlled internal-app launch target; website and client portal remain on distinct independent launch gates.
+- No production SQL mutations, credential rotations, automated PR merges, live emails, or live client access without distinct owner approval.
+
+### Verified
+- Exact-head Mac CI on `main` (`2c9c094f`): PASS (run 45177632965, 6m 48s).
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 warnings).
+- `npm run lint:shell`: PASS (984 files checked, 0 violations).
+- `npx vitest run src/booking`: PASS (11/11 test files, 54/54 tests green).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 71 | 58 · 0 · 0 · 13 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 267 files · check:pglite 267/267 applied, 0 failed.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Live production post-cutover database dump & isolated sandbox restore drill (T1-01 / SEC-01).
+- PGlite regression suite for Issue #223 (cross-client 0241 isolation) and Issue #226 (coordinator credit approval).
+- Staging-only rehearsal of 0261–0269 migrations and security patches (`01_REPLACE_STAFF_DIRECTORY_AUTH_USERS_JOIN.sql`, `02_PIN_MUTABLE_SEARCH_PATHS.sql`).
+
 ## 2026-11-23 — UI Design Token Replacement & Touch Target Compliance Across 13 Modules (Lane B / Windows)
 
 ### Did
