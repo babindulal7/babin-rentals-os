@@ -82,6 +82,7 @@ const Finance           = lazy(() => import('./modules/finance/Finance'))
 const Settings          = lazy(() => import('./modules/settings/Settings'))
 const ToolsLanding      = lazy(() => import('./modules/tools/ToolsLanding'))
 const TrainingCenter    = lazy(() => import('./modules/intelligence/TrainingCenter'))
+const ShadowIntelligenceReview = lazy(() => import('./modules/intelligence/ShadowIntelligenceReview'))
 const Clients           = lazy(() => import('./modules/clients/Clients'))
 const ClientDetail      = lazy(() => import('./modules/clients/ClientDetail'))
 const CasesWorkspace    = lazy(() => import('./modules/operations/CasesWorkspace').then(m => ({ default: m.CasesWorkspace })))
@@ -881,6 +882,17 @@ export default function App() {
           }
         />
         <Route path="/tools/training-center" element={<Navigate to="/intelligence/training-center" replace />} />
+
+        {/* ── Intelligence Shadow Evaluation & Review (INT-SHADOW-02) ───────── */}
+        <Route
+          path="/intelligence/shadow-review"
+          element={
+            <Shell crumbs={[{ label: 'Intelligence' }, { label: 'Shadow Review' }]} search="Search advisories…">
+              <ShadowIntelligenceReview />
+            </Shell>
+          }
+        />
+        <Route path="/tools/shadow-intelligence" element={<Navigate to="/intelligence/shadow-review" replace />} />
 
         {/* Marketing / Communication Offer Campaigns (T5-12, B43, B50) */}
         <Route
