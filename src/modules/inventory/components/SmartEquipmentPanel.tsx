@@ -130,13 +130,14 @@ export function SmartEquipmentPanel({
   }, [name, modelNo, canViewMoney])
 
   // Sync accessories selection whenever draft model changes
+  const draftAccessories = smartDraft?.accessories
   useEffect(() => {
-    if (smartDraft?.accessories) {
-      setSelectedAccessoryNames(new Set(smartDraft.accessories.map((a) => a.name)))
+    if (draftAccessories) {
+      setSelectedAccessoryNames(new Set(draftAccessories.map((a) => a.name)))
       setAccessoriesApplied(false)
       setHowToApplied(false)
     }
-  }, [smartDraft?.matchedModelId, smartDraft?.query, smartDraft?.accessories.length])
+  }, [smartDraft?.matchedModelId, smartDraft?.query, draftAccessories])
 
   const activeSelectedAccessories = useMemo(() => {
     if (!smartDraft) return []
