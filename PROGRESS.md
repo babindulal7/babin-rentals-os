@@ -1,5 +1,52 @@
 # Progress Log
 
+## 2026-11-23 — Production Database Cutover Execution & 100% Schema Parity (Lane B / Windows)
+
+**Did**
+- Successfully executed production database cutover across live Supabase project `sxguwvgoserhdolewibb` (Singapore `ap-southeast-1`), achieving 100% schema parity with the verified application codebase.
+- Upgraded `scripts/backup-db.ps1` with auto-discovery of PostgreSQL 17 client binaries on Windows to support Free Tier physical dumps without PITR.
+- Applied and verified all 102 pending cutover migrations (`0157` through `0260`) across three batches:
+  - Batch 1 (`0157` to `0177`, 19 migrations): Applied and verified (`applied_count = 19`).
+  - Batch 2 (`0178` to `0244`, 67 migrations): Handled PostgreSQL view column drop restrictions (`42P16`) and relation trigger uniqueness (`42710`) via automated `DROP VIEW IF EXISTS ... CASCADE` and idempotent trigger guards in `scripts/build-production-bundles.mjs`; generated resume bundle [`02B_PRODUCTION_BATCH_2_RESUME_0218_TO_0244.sql`](docs/production/bundles/02B_PRODUCTION_BATCH_2_RESUME_0218_TO_0244.sql); applied and verified (`BATCH 2 TOTAL = 67`).
+  - Batch 3 (`0245` to `0260`, 16 migrations): Applied and verified (`applied_count = 16`).
+- Executed comprehensive post-cutover verification ([`04_PRODUCTION_POST_CUTOVER_VERIFICATION.sql`](docs/production/bundles/04_PRODUCTION_POST_CUTOVER_VERIFICATION.sql)) in live Supabase:
+  - 1. Missing Migrations: 0 (expected: 0).
+  - 2. Total Schema Migrations: 259 (expected: >= 259; 157 baseline + 102 cutover).
+  - 3. Unauthorized Anon RPCs: 0 (expected: 0; Rule N-3 enforced).
+  - 4. Public Intake RPCs: 2 (expected: 2; `submit_booking_request` and `set_request_context` active).
+  - 5. Critical Column Extensions: Verified on `booking_lines` (`line_total`, `price_breakdown`) and `bookings` (`archived_at`, `project_name`, `shoot_location`).
+- Produced authoritative post-cutover schema ledger snapshot: [`docs/live/schema_migrations_2026-11-23.txt`](docs/live/schema_migrations_2026-11-23.txt) with all 259 registered migrations.
+
+**Ruled**
+- Rule N-5 strictly adhered to: Zero automated mutating DB connections from AI harnesses; all production DDL/DML manually executed by Babin in Supabase SQL Editor.
+- Rule N-8 strictly adhered to: Zero secrets, service role keys, or connection credentials stored in code, logs, or commits.
+
+**Verified**
+- `npm run check:pglite`: PASS (258/258 migrations applied from scratch, 0 leaks, 46 views closed, 21 allowlisted anon functions, 237 definer search paths pinned).
+- `npm run check:lifecycle`: PASS (98/98 lifecycle steps green under real Postgres + RLS).
+- `npm test`: PASS (710 test files, 7,659 tests passed, mock backend).
+- `npm run typecheck`: PASS (0 errors).
+- `npm run build`: PASS (Vite production bundle compiled cleanly in 1m 35s, PWA precache 320 entries).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 116 / 118 (98%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 98 / 98 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 258 files · check:pglite 258/258 applied, 0 failed (recorded 2026-11-23T00:21:54.135Z). Suite: PASS — 7659/7659 passed, 0 failed (recorded 2026-11-23T00:40:01.945Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-23T00:22:23.526Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Frontend hosting deployment / verification against live production project `sxguwvgoserhdolewibb`.
+- Final customer-facing smoke test on live portal and operations console.
+
 ## 2026-11-22 — Option 2: Production Deployment Preparation & Migration Bundles (Lane B / Windows)
 
 **Did**

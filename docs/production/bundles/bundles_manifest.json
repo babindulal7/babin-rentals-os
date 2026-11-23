@@ -58,7 +58,7 @@
         "file": "0166_booking_transport_dispatch.sql",
         "name": "0166_booking_transport_dispatch",
         "version": "20261122030008",
-        "sha256": "9480f0efeb39b369a53329c0cfc362e9875dc699718f3e293dae4d9053420bda"
+        "sha256": "0981a9d7ed1fd1c1d7141273aaba77cf55f3d9cfbffc028503bdc7b32b0f9bc4"
       },
       {
         "file": "0167_rental_revert_archive.sql",
@@ -70,7 +70,7 @@
         "file": "0168_booking_line_totals_and_breakdown.sql",
         "name": "0168_booking_line_totals_and_breakdown",
         "version": "20261122030010",
-        "sha256": "f567f95d108a5917b5b960cfd7c229f2d5f865c441ac3232d6e816d340c0ea73"
+        "sha256": "ba7f4fbba1011858915eff41dba918b1a4d31ec8b7027f705b3b693f9458254c"
       },
       {
         "file": "0169_pin_intel_and_guard_search_paths.sql",
@@ -82,7 +82,7 @@
         "file": "0170_astra_phase0_authorization.sql",
         "name": "0170_astra_phase0_authorization",
         "version": "20261122030012",
-        "sha256": "7479ccfb022fd9b2bcbd6e61c36a1ba272aee6e1bb886232098277925335e29d"
+        "sha256": "59d00db44e4834b6cd30cf6600399bcbebde87599ae5e7c8002f37305c9ad9b0"
       },
       {
         "file": "0171_operations_branch_grants.sql",
@@ -151,13 +151,13 @@
         "file": "0181_collateral_deposit_id_card.sql",
         "name": "0181_collateral_deposit_id_card",
         "version": "20261122030022",
-        "sha256": "507e49694952f70427ac99370eff04cfaa20d78e52912d92bc65b471fd2a1435"
+        "sha256": "b9e8ecab5666ae7a065ce5f1436b7a5c9ace6a78202fcac5b4ddf61e27739d54"
       },
       {
         "file": "0182_client_collectors_and_id_on_file.sql",
         "name": "0182_client_collectors_and_id_on_file",
         "version": "20261122030023",
-        "sha256": "393135d9191a14d75a3f5a330604ee415b86e5a8460414ec0fc5ecfe9907bfdd"
+        "sha256": "1582af1f77c22b801608a25506eba4a9a81621ad3d1ec676b638d5d94372d516"
       },
       {
         "file": "0183_reset_self_qc_when_alone.sql",
@@ -169,7 +169,7 @@
         "file": "0184_repair_job_closes_damage.sql",
         "name": "0184_repair_job_closes_damage",
         "version": "20261122030025",
-        "sha256": "50ac99a7a3ae71a09060ee85e8d09961342e4d69d78ec369c020efdee07a0c05"
+        "sha256": "3e4dd79cdc689f53e8847d328c090c7e116793304579892a499fd14fb09fdc02"
       },
       {
         "file": "0185_team_notes.sql",
@@ -181,7 +181,7 @@
         "file": "0186_shift_handovers.sql",
         "name": "0186_shift_handovers",
         "version": "20261122030027",
-        "sha256": "0598da52b053170a8b9ef653b005f8e3ec1af6bdbeb86a411284ef9cca466d08"
+        "sha256": "39217243dc410afc2b7011ed6c48adcb669e337e82d0fb0719daea94f9c1b852"
       },
       {
         "file": "0187_delivery_dispatch_rpcs.sql",
@@ -199,7 +199,7 @@
         "file": "0188_staff_renting_gear.sql",
         "name": "0188_staff_renting_gear",
         "version": "20261122030030",
-        "sha256": "272e75c66aa2ee7626cc5a0858ad6036ecb22c860bdf10bfead5e09b8521ba80"
+        "sha256": "5709d67a54d1c24095860fcbe852a445a5cfd3ebff538f3564a9da3df5f0f41a"
       },
       {
         "file": "0189_delivery_zones.sql",
@@ -223,7 +223,7 @@
         "file": "0192_notification_records.sql",
         "name": "0192_notification_records",
         "version": "20261122030034",
-        "sha256": "89919ad4c858cd5d5b3bf8ab76c068bdc6ef52300903812b35d0370c17ccc2c6"
+        "sha256": "181f7f88a860f615dbf616246980a8e32e0a04bcf258d9b6e7d290a4ee4a4078"
       },
       {
         "file": "0193_invoice_write_hardening.sql",
@@ -253,7 +253,7 @@
         "file": "0197_membership_plan_change_credit.sql",
         "name": "0197_membership_plan_change_credit",
         "version": "20261122030039",
-        "sha256": "d467029ad1c101f6f0cbcd8748a09eff5bbe5875617f5f7a7d51905db5657df3"
+        "sha256": "be2afccdb50242550bd44586c763c9adabfe2bd7a13d52ecaa915f0c9bd83d21"
       },
       {
         "file": "0198_renew_client_membership.sql",
@@ -265,7 +265,7 @@
         "file": "0199_tds_on_crew_payouts.sql",
         "name": "0199_tds_on_crew_payouts",
         "version": "20261122030041",
-        "sha256": "a4238219a7d404352be6e76875fd28821f788e79bd985c3665d201f98d4b409f"
+        "sha256": "2bca47ca321515f7ec0d174c54ce92645d2458ef69cfaffe89d8784a96881955"
       },
       {
         "file": "0200_draft_at_confirm_and_resync.sql",
@@ -277,7 +277,7 @@
         "file": "0201_fix_collateral_masking_chars.sql",
         "name": "0201_fix_collateral_masking_chars",
         "version": "20261122030043",
-        "sha256": "dc226909d7f413da542653284697ba46de69d6af895acbabde4508068c4f07a8"
+        "sha256": "a8eb1fd989f0a96bfbaaf3a19f340265d924eb8ad874d385fc086cf3adfa655e"
       },
       {
         "file": "0202_staff_discount_is_money_setting.sql",
@@ -289,7 +289,7 @@
         "file": "0203_restore_driver_client_view_scopes.sql",
         "name": "0203_restore_driver_client_view_scopes",
         "version": "20261122030045",
-        "sha256": "93a9d2cc69ee87028b298ed6da2b70d868d1b08fc2fd8fb390bc0a770329a85d"
+        "sha256": "55968c0d8798dddfc20154463a71fd4164543b6a0b0d52f51d0c36f5448b85af"
       },
       {
         "file": "0204_rider_link_v2_contract_fix.sql",
@@ -313,7 +313,7 @@
         "file": "0207_crew_overtime_half_full_day.sql",
         "name": "0207_crew_overtime_half_full_day",
         "version": "20261122030049",
-        "sha256": "8cd838f2c19bdde57e21b2518a0eb18c5e59c4c4d738fc6fc91d2989c21b5e1c"
+        "sha256": "6e8450b6027cbca7467f902879116a40215a2b42a8d12a9e3bbfd47179a664bb"
       },
       {
         "file": "0208_staff_pin_four_digits.sql",
@@ -331,7 +331,7 @@
         "file": "0210_problem_reports.sql",
         "name": "0210_problem_reports",
         "version": "20261122030052",
-        "sha256": "1492f8961ebd7f373ea025620e12525a475ba57608c63a11a2c9d255e7b81b0e"
+        "sha256": "369ac6fd7552aeff7a3f68b41e177c7844ef8ac5adcd1eb5f116c6e798d50c7c"
       },
       {
         "file": "0211_delivery_proof.sql",
@@ -361,7 +361,7 @@
         "file": "0215_email_sending_and_log.sql",
         "name": "0215_email_sending_and_log",
         "version": "20261122030057",
-        "sha256": "64b3ba74975055e6b4a4ef4b9d15018cb4f00acb2e2128ed139e46c8224bfbb5"
+        "sha256": "aeb05068ff7c115ea12d66d53d1f17074babb4664bccfbf0f4232958d1b41cec"
       },
       {
         "file": "0216_morning_digest_schedule_and_query.sql",
@@ -373,7 +373,7 @@
         "file": "0217_notification_preferences.sql",
         "name": "0217_notification_preferences",
         "version": "20261122030059",
-        "sha256": "9ab1096abab0f9eab539272cf1f4e7f5190f8ffe80932cf22df5b13ced770299"
+        "sha256": "a606e1ba198750aa26054b3a4d38225fb15929bd73e9d5f4d0eb6c64bc75580b"
       },
       {
         "file": "0218_client_message_events.sql",
@@ -385,13 +385,13 @@
         "file": "0219_payment_reminders.sql",
         "name": "0219_payment_reminders",
         "version": "20261122030101",
-        "sha256": "52a8c87c3930098a65db02ae30030bffb2f69bd11c384e59e927042544be2844"
+        "sha256": "688817b2f2a25571706e0a847f557afca69a360e9cdd2ff672111a00b0c29815"
       },
       {
         "file": "0220_push_subscriptions.sql",
         "name": "0220_push_subscriptions",
         "version": "20261122030102",
-        "sha256": "6f3667d8121b5d7d1528aeaaba5089573c8e69e4bc4664f177bbd633762c6f55"
+        "sha256": "85fbf56be57250d3e2d99870a1af3fea2a152af1ad15bc2eaafc851ea7a3eec1"
       },
       {
         "file": "0221_guard_unit_identity_edits.sql",
@@ -415,7 +415,7 @@
         "file": "0224_offer_campaigns_and_recipients.sql",
         "name": "0224_offer_campaigns_and_recipients",
         "version": "20261122030106",
-        "sha256": "e68f4e3d7d76c8c175c6e6a87bf05e9e28991730329315f338c4f97caef54e7e"
+        "sha256": "57889e41a46dfd4677f600d69c2812928aaf594df629518510c4503d9ebbbc5a"
       },
       {
         "file": "0226_bulk_update_products.sql",
@@ -499,7 +499,7 @@
         "file": "0239_consumables_pricing_restock_and_low_stock.sql",
         "name": "0239_consumables_pricing_restock_and_low_stock",
         "version": "20261122030120",
-        "sha256": "a6b768f4043831acb71aef658d93edc35fb85e03dc568e9390fff1aa0faf9e00"
+        "sha256": "1c44a1e06b2def3c6ffaff21b7938b683caa633a6d9367bc29d57046211b4acc"
       },
       {
         "file": "0240_time_between_rentals.sql",
@@ -586,13 +586,13 @@
         "file": "0252_allow_overbooking_on_chosen_products.sql",
         "name": "0252_allow_overbooking_on_chosen_products",
         "version": "20261122030133",
-        "sha256": "bf756193752532f111b990b027351412ec2f34f9636ba27ece93e29289349288"
+        "sha256": "c043d4bc5227cd139958edb3fa1b61519260ead50a775ab0e454307bdc300a95"
       },
       {
         "file": "0253_temporary_stock_from_partners.sql",
         "name": "0253_temporary_stock_from_partners",
         "version": "20261122030134",
-        "sha256": "f3f061609c0b46159490a9ed54faced716c13f0f5de3f4a04fc2dc9ba3b22105"
+        "sha256": "414eb4ff8ef6755b00b27f218813e1f6e4aa2e2d720b978388d613431a331dad"
       },
       {
         "file": "0254_draft_invoice_resync_integrity_and_settlement_numbering.sql",
@@ -604,19 +604,19 @@
         "file": "0255_booking_site_and_public_catalogue.sql",
         "name": "0255_booking_site_and_public_catalogue",
         "version": "20261122030136",
-        "sha256": "1ac979d28abbd8713c078c23e632d50cc26c9952d2e8dcf4e4c3405c533b115d"
+        "sha256": "27cfff183f4d67a6e0749a559a8118ae9d5abc2b1fc7823142323ac7c3001049"
       },
       {
         "file": "0256_booking_requests_and_staff_queue.sql",
         "name": "0256_booking_requests_and_staff_queue",
         "version": "20261122030137",
-        "sha256": "a21778c06d58f6b542d66929bd50b3a42cd90221d0f7c1198ac71c67f635c394"
+        "sha256": "c2a8090911f5a44d14950a7d1314ce9d287a6eb71b7851a6c68d8af411bfa010"
       },
       {
         "file": "0257_client_accounts_and_portal_binding.sql",
         "name": "0257_client_accounts_and_portal_binding",
         "version": "20261122030138",
-        "sha256": "280fbb2500d5142969524d69a649ad1327c86add4a222e316113124ec933d6bd"
+        "sha256": "c82d175c12ac583dc53ab608aa4d32b6dfba13a8c4dd1983f9a7ab47aa8cc0bf"
       },
       {
         "file": "0258_payment_intents_and_fonepay.sql",

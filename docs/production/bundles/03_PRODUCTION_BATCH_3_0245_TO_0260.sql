@@ -1131,7 +1131,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0252_allow_overbooking_on_chosen_products.sql
--- SHA-256: bf756193752532f111b990b027351412ec2f34f9636ba27ece93e29289349288
+-- SHA-256: c043d4bc5227cd139958edb3fa1b61519260ead50a775ab0e454307bdc300a95
 -- Version: 20261122030133
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -1226,6 +1226,7 @@ revoke all on function record_editor_private.section_fields(text, text) from pub
 grant execute on function record_editor_private.section_fields(text, text) to authenticated;
 
 -- 5. Expose allow_overbooking on products_v
+drop view if exists public.products_v cascade;
 create or replace view public.products_v as
  select id,
     client_uuid,
@@ -2007,7 +2008,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0253_temporary_stock_from_partners.sql
--- SHA-256: f3f061609c0b46159490a9ed54faced716c13f0f5de3f4a04fc2dc9ba3b22105
+-- SHA-256: 414eb4ff8ef6755b00b27f218813e1f6e4aa2e2d720b978388d613431a331dad
 -- Version: 20261122030134
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -2084,6 +2085,7 @@ grant select (
   created_at, created_by
 ) on public.temporary_stock to authenticated;
 
+drop view if exists public.temporary_stock_v cascade;
 create or replace view public.temporary_stock_v as
 select
   id,
@@ -3430,7 +3432,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0255_booking_site_and_public_catalogue.sql
--- SHA-256: 1ac979d28abbd8713c078c23e632d50cc26c9952d2e8dcf4e4c3405c533b115d
+-- SHA-256: 27cfff183f4d67a6e0749a559a8118ae9d5abc2b1fc7823142323ac7c3001049
 -- Version: 20261122030136
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -3514,6 +3516,7 @@ create index if not exists idx_bundles_online_slug on public.bundles (slug);
 
 
 -- 2. Create public_catalogue_v (view)
+drop view if exists public.public_catalogue_v cascade;
 create or replace view public.public_catalogue_v as
 select
   p.id,
@@ -3833,7 +3836,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0256_booking_requests_and_staff_queue.sql
--- SHA-256: a21778c06d58f6b542d66929bd50b3a42cd90221d0f7c1198ac71c67f635c394
+-- SHA-256: c2a8090911f5a44d14950a7d1314ce9d287a6eb71b7851a6c68d8af411bfa010
 -- Version: 20261122030137
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -3919,6 +3922,7 @@ create policy booking_request_lines_staff_select on public.booking_request_lines
   );
 
 -- 5. Secure view masking money columns for floor roles (Law 6)
+drop view if exists public.booking_requests_v cascade;
 create or replace view public.booking_requests_v as
 select
   r.id,
@@ -4236,7 +4240,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0257_client_accounts_and_portal_binding.sql
--- SHA-256: 280fbb2500d5142969524d69a649ad1327c86add4a222e316113124ec933d6bd
+-- SHA-256: c82d175c12ac583dc53ab608aa4d32b6dfba13a8c4dd1983f9a7ab47aa8cc0bf
 -- Version: 20261122030138
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -4289,6 +4293,7 @@ create policy online_profiles_staff_select on public.online_profiles
   using (public.auth_user_role() in ('Owner', 'Admin', 'Manager', 'Coordinator'));
 
 -- 2. View public.online_profiles_v with Law 6 money and PII masking
+drop view if exists public.online_profiles_v cascade;
 create or replace view public.online_profiles_v as
 select
   op.auth_uid,

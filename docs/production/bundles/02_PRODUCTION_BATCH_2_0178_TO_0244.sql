@@ -787,7 +787,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0181_collateral_deposit_id_card.sql
--- SHA-256: 507e49694952f70427ac99370eff04cfaa20d78e52912d92bc65b471fd2a1435
+-- SHA-256: b9e8ecab5666ae7a065ce5f1436b7a5c9ace6a78202fcac5b4ddf61e27739d54
 -- Version: 20261122030022
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -895,6 +895,7 @@ grant select (
 ) on public.collateral_documents to authenticated;
 
 -- 5. Masking view collateral_documents_v: unmasked document_number and evidence_file_id for Owner/Admin/Manager only
+drop view if exists public.collateral_documents_v cascade;
 create or replace view public.collateral_documents_v as
 select
   cd.id,
@@ -1426,7 +1427,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0182_client_collectors_and_id_on_file.sql
--- SHA-256: 393135d9191a14d75a3f5a330604ee415b86e5a8460414ec0fc5ecfe9907bfdd
+-- SHA-256: 1582af1f77c22b801608a25506eba4a9a81621ad3d1ec676b638d5d94372d516
 -- Version: 20261122030023
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -1571,6 +1572,7 @@ grant select (
 grant insert, update on public.client_collectors to authenticated;
 
 -- 6. Masking views for client_id_documents and client_collectors
+drop view if exists public.client_id_documents_v cascade;
 create or replace view public.client_id_documents_v as
 select
   cid.id,
@@ -1608,6 +1610,7 @@ where (
   or (public.auth_user_role() = 'Client' and cid.client_id = public.auth_client_id())
 );
 
+drop view if exists public.client_collectors_v cascade;
 create or replace view public.client_collectors_v as
 select
   cc.id,
@@ -1728,7 +1731,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0184_repair_job_closes_damage.sql
--- SHA-256: 50ac99a7a3ae71a09060ee85e8d09961342e4d69d78ec369c020efdee07a0c05
+-- SHA-256: 3e4dd79cdc689f53e8847d328c090c7e116793304579892a499fd14fb09fdc02
 -- Version: 20261122030025
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -1794,7 +1797,9 @@ create policy maintenance_records_all on public.maintenance_records
     auth_user_role() in ('Owner', 'Admin', 'Manager', 'Warehouse', 'Technician')
   );
 
--- 4. Masking views (new columns appended at the end to satisfy CREATE OR REPLACE VIEW rules)
+-- 4. Masking views (new columns appended at the end to satisfy drop view if exists rules cascade;
+create or replace view rules)
+drop view if exists public.damage_findings_v cascade;
 create or replace view public.damage_findings_v as
 select
   id,
@@ -1830,6 +1835,7 @@ where auth_is_staff();
 revoke all on public.damage_findings_v from anon, public;
 grant select on public.damage_findings_v to authenticated;
 
+drop view if exists public.maintenance_records_v cascade;
 create or replace view public.maintenance_records_v as
 select
   id,
@@ -2777,7 +2783,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0186_shift_handovers.sql
--- SHA-256: 0598da52b053170a8b9ef653b005f8e3ec1af6bdbeb86a411284ef9cca466d08
+-- SHA-256: 39217243dc410afc2b7011ed6c48adcb669e337e82d0fb0719daea94f9c1b852
 -- Version: 20261122030027
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -2886,6 +2892,7 @@ create policy shift_handover_finances_insert on public.shift_handover_finances
   with check (public.auth_can_view_money());
 
 -- 6. Views: shift_handovers_v (Law 6 cash figures masked to NULL for money-blind roles)
+drop view if exists public.shift_handovers_v cascade;
 create or replace view public.shift_handovers_v as
 select
   h.id,
@@ -4131,7 +4138,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0188_staff_renting_gear.sql
--- SHA-256: 272e75c66aa2ee7626cc5a0858ad6036ecb22c860bdf10bfead5e09b8521ba80
+-- SHA-256: 5709d67a54d1c24095860fcbe852a445a5cfd3ebff538f3564a9da3df5f0f41a
 -- Version: 20261122030030
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -4161,6 +4168,8 @@ create index if not exists clients_staff_user_id_idx on public.clients(staff_use
 grant select (is_staff, staff_user_id) on public.clients to authenticated;
 
 -- 4. Recreate clients_v with is_staff and staff_user_id appended
+drop view if exists public.client_directory_v cascade;
+drop view if exists public.clients_v cascade;
 create or replace view public.clients_v as
  select id,
     client_uuid,
@@ -4217,6 +4226,7 @@ grant select on public.clients_v to authenticated;
 revoke all on public.clients_v from anon;
 
 -- 5. Recreate client_directory_v with is_staff and staff_user_id appended
+drop view if exists public.client_directory_v cascade;
 create or replace view public.client_directory_v as
 select
   c.id,
@@ -5409,7 +5419,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0192_notification_records.sql
--- SHA-256: 89919ad4c858cd5d5b3bf8ab76c068bdc6ef52300903812b35d0370c17ccc2c6
+-- SHA-256: 181f7f88a860f615dbf616246980a8e32e0a04bcf258d9b6e7d290a4ee4a4078
 -- Version: 20261122030034
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -5531,6 +5541,7 @@ create policy notifications_delete on public.notifications
 grant select, update, delete on public.notifications to authenticated;
 
 -- 5. View for active notifications
+drop view if exists public.notifications_v cascade;
 create or replace view public.notifications_v with (security_barrier = true) as
 select
   n.id,
@@ -7389,7 +7400,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0197_membership_plan_change_credit.sql
--- SHA-256: d467029ad1c101f6f0cbcd8748a09eff5bbe5875617f5f7a7d51905db5657df3
+-- SHA-256: be2afccdb50242550bd44586c763c9adabfe2bd7a13d52ecaa915f0c9bd83d21
 -- Version: 20261122030039
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -7429,6 +7440,8 @@ revoke select (account_credit) on public.clients from authenticated;
 -- 2. Update clients_v with masked account_credit
 -- (renumbered 0188 -> 0197 on 1 Nov 2026: 0188_staff_renting_gear now runs first and already appended
 -- is_staff, staff_user_id to clients_v, so they are kept here ahead of account_credit.)
+drop view if exists public.client_directory_v cascade;
+drop view if exists public.clients_v cascade;
 create or replace view public.clients_v as
  select id,
     client_uuid,
@@ -8124,7 +8137,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0199_tds_on_crew_payouts.sql
--- SHA-256: a4238219a7d404352be6e76875fd28821f788e79bd985c3665d201f98d4b409f
+-- SHA-256: 2bca47ca321515f7ec0d174c54ce92645d2458ef69cfaffe89d8784a96881955
 -- Version: 20261122030041
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -8165,6 +8178,7 @@ grant select (payout_client_uuid, tds_rate_percent, tds_amount, net_payout, payo
 grant select (payout_client_uuid, tds_rate_percent, tds_amount, net_payout, payout_status, payout_notes, paid_at, paid_by) on public.crew_assignments to authenticated;
 
 -- 4. Update crew_bookings_v with Law 6 masking (new columns appended at end to preserve column positions)
+drop view if exists public.crew_bookings_v cascade;
 create or replace view public.crew_bookings_v as
 select
   id,
@@ -8203,6 +8217,7 @@ where auth_is_staff();
 grant select on public.crew_bookings_v to authenticated;
 
 -- 5. Update crew_assignments_v with Law 6 masking (new columns appended at end to preserve column positions)
+drop view if exists public.crew_assignments_v cascade;
 create or replace view public.crew_assignments_v as
 select
   id,
@@ -8920,7 +8935,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0201_fix_collateral_masking_chars.sql
--- SHA-256: dc226909d7f413da542653284697ba46de69d6af895acbabde4508068c4f07a8
+-- SHA-256: a8eb1fd989f0a96bfbaaf3a19f340265d924eb8ad874d385fc086cf3adfa655e
 -- Version: 20261122030043
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -8937,6 +8952,7 @@ on conflict (version) do update set name = excluded.name;
 begin;
 
 -- Fix collateral_documents_v: use bullets (•) to match test expectations
+drop view if exists public.collateral_documents_v cascade;
 create or replace view public.collateral_documents_v as
 select
   cd.id,
@@ -9039,7 +9055,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0203_restore_driver_client_view_scopes.sql
--- SHA-256: 93a9d2cc69ee87028b298ed6da2b70d868d1b08fc2fd8fb390bc0a770329a85d
+-- SHA-256: 55968c0d8798dddfc20154463a71fd4164543b6a0b0d52f51d0c36f5448b85af
 -- Version: 20261122030045
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -9071,7 +9087,8 @@ begin
   loop
     -- Match the reviewed 0170 wrapping method: get the current (post-0188)
     -- SELECT list from pg_get_viewdef, then append an outer row gate.
-    -- CREATE OR REPLACE VIEW keeps existing column definitions and grants.
+    -- drop view if exists keeps cascade;
+create or replace view keeps existing column definitions and grants.
     select regexp_replace(
       pg_get_viewdef(format('public.%I', view_name)::regclass, true),
       ';[[:space:]]*$',
@@ -9083,7 +9100,8 @@ begin
     end if;
 
     execute format(
-      'create or replace view public.%I as select scoped.* from (%s) scoped where public.auth_user_role() <> ''Driver''',
+      'drop view if exists public. cascade;
+create or replace view public.%I as select scoped.* from (%s) scoped where public.auth_user_role() <> ''Driver''',
       view_name,
       definition
     );
@@ -9992,7 +10010,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0207_crew_overtime_half_full_day.sql
--- SHA-256: 8cd838f2c19bdde57e21b2518a0eb18c5e59c4c4d738fc6fc91d2989c21b5e1c
+-- SHA-256: 6e8450b6027cbca7467f902879116a40215a2b42a8d12a9e3bbfd47179a664bb
 -- Version: 20261122030049
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -10027,7 +10045,9 @@ alter table public.crew_assignments enable row level security;
 -- 4. Update crew_assignments_v to include overtime_days and overtime_approved_by
 -- (renumbered 0186 -> 0207 on 2 Nov 2026: 0199_tds_on_crew_payouts now runs first and already
 -- extended this view with the payout/TDS columns, so they are kept here and the two overtime
--- columns are appended after them. create or replace view cannot drop columns.)
+-- columns are appended after them. drop view if exists cannot cascade;
+create or replace view cannot drop columns.)
+drop view if exists public.crew_assignments_v cascade;
 create or replace view public.crew_assignments_v as
 select
   id,
@@ -10729,7 +10749,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0210_problem_reports.sql
--- SHA-256: 1492f8961ebd7f373ea025620e12525a475ba57608c63a11a2c9d255e7b81b0e
+-- SHA-256: 369ac6fd7552aeff7a3f68b41e177c7844ef8ac5adcd1eb5f116c6e798d50c7c
 -- Version: 20261122030052
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -11144,6 +11164,7 @@ $$;
 comment on function public.update_problem_report_status(uuid, text, text) is 'Update problem report status (Owner/Admin only, min 10 char reason). Audited via trigger.';
 
 -- 9. View for convenient querying (security barrier)
+drop view if exists public.problem_reports_v cascade;
 create or replace view public.problem_reports_v with (security_barrier = true) as
 select
     pr.id,
@@ -11652,7 +11673,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0215_email_sending_and_log.sql
--- SHA-256: 64b3ba74975055e6b4a4ef4b9d15018cb4f00acb2e2128ed139e46c8224bfbb5
+-- SHA-256: aeb05068ff7c115ea12d66d53d1f17074babb4664bccfbf0f4232958d1b41cec
 -- Version: 20261122030057
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -11789,6 +11810,7 @@ revoke all on public.email_log from public, anon;
 grant select, insert, update, delete on public.email_log to authenticated;
 
 -- 5. View for active email log entries
+drop view if exists public.email_log_v cascade;
 create or replace view public.email_log_v with (security_barrier = true) as
 select
   l.id,
@@ -12361,7 +12383,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0217_notification_preferences.sql
--- SHA-256: 9ab1096abab0f9eab539272cf1f4e7f5190f8ffe80932cf22df5b13ced770299
+-- SHA-256: a606e1ba198750aa26054b3a4d38225fb15929bd73e9d5f4d0eb6c64bc75580b
 -- Version: 20261122030059
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -12473,6 +12495,7 @@ grant select, insert, update, delete on public.notification_preferences to authe
 -- -----------------------------------------------------------------------------
 -- 4. Security barrier view: public.notification_preferences_v
 -- -----------------------------------------------------------------------------
+drop view if exists public.notification_preferences_v cascade;
 create or replace view public.notification_preferences_v with (security_barrier = true) as
 select
   p.id,
@@ -13485,7 +13508,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0219_payment_reminders.sql
--- SHA-256: 52a8c87c3930098a65db02ae30030bffb2f69bd11c384e59e927042544be2844
+-- SHA-256: 688817b2f2a25571706e0a847f557afca69a360e9cdd2ff672111a00b0c29815
 -- Version: 20261122030101
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -13530,6 +13553,8 @@ comment on column public.clients.reminders_paused_at is
 grant select (reminders_paused, reminders_paused_reason, reminders_paused_by, reminders_paused_at)
   on public.clients to authenticated;
 
+drop view if exists public.client_directory_v cascade;
+drop view if exists public.clients_v cascade;
 create or replace view public.clients_v as
  SELECT id,
     client_uuid,
@@ -13593,6 +13618,7 @@ create or replace view public.clients_v as
 revoke all on public.clients_v from anon;
 grant select on public.clients_v to authenticated;
 
+drop view if exists client_directory_v cascade;
 create or replace view client_directory_v as
 select
   c.id,
@@ -14330,7 +14356,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0220_push_subscriptions.sql
--- SHA-256: 6f3667d8121b5d7d1528aeaaba5089573c8e69e4bc4664f177bbd633762c6f55
+-- SHA-256: 85fbf56be57250d3e2d99870a1af3fea2a152af1ad15bc2eaafc851ea7a3eec1
 -- Version: 20261122030102
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -14446,6 +14472,7 @@ create policy push_subscriptions_delete on public.push_subscriptions
   );
 
 -- 4. View: push_subscriptions_v (masked keys for display / inspection)
+drop view if exists public.push_subscriptions_v cascade;
 create or replace view public.push_subscriptions_v as
 select
   s.id,
@@ -15388,7 +15415,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0224_offer_campaigns_and_recipients.sql
--- SHA-256: e68f4e3d7d76c8c175c6e6a87bf05e9e28991730329315f338c4f97caef54e7e
+-- SHA-256: 57889e41a46dfd4677f600d69c2812928aaf594df629518510c4503d9ebbbc5a
 -- Version: 20261122030106
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -15474,6 +15501,7 @@ create policy offer_campaign_recipients_select on public.offer_campaign_recipien
 -- =============================================================================
 -- Views for UI
 -- =============================================================================
+drop view if exists public.offer_campaigns_v cascade;
 create or replace view public.offer_campaigns_v as
 select
   c.id,
@@ -20263,7 +20291,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0239_consumables_pricing_restock_and_low_stock.sql
--- SHA-256: a6b768f4043831acb71aef658d93edc35fb85e03dc568e9390fff1aa0faf9e00
+-- SHA-256: 1c44a1e06b2def3c6ffaff21b7938b683caa633a6d9367bc29d57046211b4acc
 -- Version: 20261122030120
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -20306,6 +20334,7 @@ comment on column public.products.unit_sale_price is
   'Server-authoritative unit sale price for consumables (gaffer tape, gels, batteries). Money-masked from floor roles (Law 6).';
 
 -- Rebuild products_v with unit_sale_price masked via auth_can_view_money()
+drop view if exists public.products_v cascade;
 create or replace view public.products_v as
  select id,
     client_uuid,
@@ -21023,6 +21052,7 @@ revoke all on public.consumable_restock_movements from public, anon;
 grant select on public.consumable_restock_movements to authenticated;
 
 -- Masked view: all staff can view restock movements; cost is masked for floor roles (Law 6)
+drop view if exists public.consumable_restock_movements_v cascade;
 create or replace view public.consumable_restock_movements_v as
 select
   id,

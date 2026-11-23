@@ -1377,7 +1377,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0166_booking_transport_dispatch.sql
--- SHA-256: 9480f0efeb39b369a53329c0cfc362e9875dc699718f3e293dae4d9053420bda
+-- SHA-256: 0981a9d7ed1fd1c1d7141273aaba77cf55f3d9cfbffc028503bdc7b32b0f9bc4
 -- Version: 20261122030008
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -1398,7 +1398,8 @@ alter table public.booking_transport add constraint booking_transport_delivery_r
 create index if not exists booking_transport_driver_delivery_idx on public.booking_transport(driver_id,delivery_status);
 grant select (delivery_status,scheduled_at,dispatched_at,delivered_at,recipient_name,delivery_revision,delivery_updated_at) on public.booking_transport to authenticated;
 
-create view public.delivery_transport_v with (security_barrier=true) as
+drop view if exists public.delivery_transport_v cascade;
+create or replace view public.delivery_transport_v with (security_barrier=true) as
 select t.id,t.booking_id,b.booking_no,b.stage::text as booking_stage,b.branch_id,
   c.name as client_name,
   case when auth_user_role()::text in ('Owner','Admin','Coordinator','Warehouse')
@@ -1696,7 +1697,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0168_booking_line_totals_and_breakdown.sql
--- SHA-256: f567f95d108a5917b5b960cfd7c229f2d5f865c441ac3232d6e816d340c0ea73
+-- SHA-256: ba7f4fbba1011858915eff41dba918b1a4d31ec8b7027f705b3b693f9458254c
 -- Version: 20261122030010
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -1803,6 +1804,7 @@ create trigger trg_guard_booking_lines_money_insert
 -- booking_lines_v: the masked read surface (mirrors 0048). Money columns are
 -- NULL for money-blind roles; nothing is granted on the base table.
 -- ---------------------------------------------------------------------------
+drop view if exists public.booking_lines_v cascade;
 create or replace view public.booking_lines_v as
  SELECT id,
     client_uuid,
@@ -2760,7 +2762,7 @@ on conflict (version) do update set name = excluded.name;
 
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 -- START MIGRATION: 0170_astra_phase0_authorization.sql
--- SHA-256: 7479ccfb022fd9b2bcbd6e61c36a1ba272aee6e1bb886232098277925335e29d
+-- SHA-256: 59d00db44e4834b6cd30cf6600399bcbebde87599ae5e7c8002f37305c9ad9b0
 -- Version: 20261122030012
 -- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -2889,7 +2891,8 @@ begin
     where n.nspname='public' and c.relkind='v' and c.relname <> 'staff_directory_v'
   loop
     select regexp_replace(pg_get_viewdef(format('public.%I',v.relname)::regclass,true),';[[:space:]]*$','') into definition;
-    execute format('create or replace view public.%I as select scoped.* from (%s) scoped where public.auth_user_role() <> ''Driver''',v.relname,definition);
+    execute format('drop view if exists public. cascade;
+create or replace view public.%I as select scoped.* from (%s) scoped where public.auth_user_role() <> ''Driver''',v.relname,definition);
   end loop;
 end $views$;
 

@@ -138,6 +138,15 @@ function ensureIdempotentSql(sql) {
     return `drop policy if exists ${pol} on ${tbl};\ncreate policy ${pol} on ${tbl}`;
   });
 
+  // 6. Ensure DROP VIEW IF EXISTS before CREATE VIEW to prevent 42P16 column drop errors
+  res = res.replace(/(?:drop\s+view\s+if\s+exists\s+[a-zA-Z0-9_., ]+\s+cascade\s*;\s*)?create\s+(?:or\s+replace\s+)?view\s+([a-zA-Z0-9_.]+)/gi, (match, viewName) => {
+    const raw = viewName.replace(/^public\./, '');
+    if (raw === 'clients_v') {
+      return `drop view if exists public.client_directory_v cascade;\ndrop view if exists public.clients_v cascade;\ncreate or replace view ${viewName}`;
+    }
+    return `drop view if exists ${viewName} cascade;\ncreate or replace view ${viewName}`;
+  });
+
   return res;
 }
 
@@ -222,6 +231,63 @@ for (const b of batches) {
     migrations: migrationLedgerEntries
   });
 }
+
+// Generate the Dedicated Resume Bundle for Batch 2 (Migrations 0218 to 0244, 26 files)
+const batch2Summary = batchSummaries[1];
+const resumeEntries = batch2Summary.migrations.slice(41); // remaining 26 files from 0218 to 0244
+
+let resumeSql = `-- =============================================================================\n` +
+  `-- BABIN RENTALS OS — PRODUCTION MIGRATION BUNDLE 2B (RESUME 0218 TO 0244)\n` +
+  `-- File: 02B_PRODUCTION_BATCH_2_RESUME_0218_TO_0244.sql\n` +
+  `-- Range: Migrations 0218 through 0244 (26 files)\n` +
+  `-- Target: Production Project sxguwvgoserhdolewibb\n` +
+  `-- Purpose: Resumes Batch 2 from migration 0218 onwards after migrations 0178-0217 applied.\n` +
+  `-- Includes automatic DROP VIEW IF EXISTS CASCADE before replacing views to avoid 42P16.\n` +
+  `--\n` +
+  `-- INSTRUCTIONS FOR BABIN:\n` +
+  `-- 1. In Supabase SQL Editor, paste this entire file and click 'RUN'.\n` +
+  `-- 2. Execute the verification query at the bottom to verify completion.\n` +
+  `-- =============================================================================\n\n` +
+  `select set_config('app.in_create_booking', 'on', false);\n\n`;
+
+for (const entry of resumeEntries) {
+  const f = entry.file;
+  const name = entry.name;
+  const version = entry.version;
+  const rawContent = readFileSync(join(MIGRATIONS_DIR, f), 'utf8');
+  const content = ensureIdempotentSql(rawContent);
+  const sha256 = entry.sha256;
+
+  resumeSql += `-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n` +
+    `-- START MIGRATION: ${f}\n` +
+    `-- SHA-256: ${sha256}\n` +
+    `-- Version: ${version}\n` +
+    `-- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n\n` +
+    content.trim() + '\n\n' +
+    `-- Record ${name} in schema_migrations\n` +
+    `insert into supabase_migrations.schema_migrations (version, name)\n` +
+    `values ('${version}', '${name}')\n` +
+    `on conflict (version) do update set name = excluded.name;\n\n` +
+    `-- <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n` +
+    `-- END MIGRATION: ${f}\n` +
+    `-- <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n`;
+}
+
+resumeSql += `-- Reset migration session config\n` +
+  `select set_config('app.in_create_booking', 'off', false);\n\n` +
+  `-- =============================================================================\n` +
+  `-- RESUME BATCH 2 VERIFICATION QUERY\n` +
+  `-- =============================================================================\n` +
+  `select 'BATCH 2 TOTAL' as check_name, count(*) as count\n` +
+  `from supabase_migrations.schema_migrations\n` +
+  `where name in (\n` +
+  batch2Summary.migrations.map((m) => `  '${m.name}'`).join(',\n') + '\n' +
+  `);\n` +
+  `-- Expected count: 67 (41 earlier + 26 resumed)\n`;
+
+const resumeOutputPath = join(OUTPUT_DIR, '02B_PRODUCTION_BATCH_2_RESUME_0218_TO_0244.sql');
+writeFileSync(resumeOutputPath, resumeSql, 'utf8');
+console.log(`Wrote ${resumeOutputPath} (${(resumeSql.length / 1024).toFixed(1)} KB)`);
 
 // Generate the Comprehensive Post-Cutover Verification SQL
 const verificationSqlPath = join(OUTPUT_DIR, '04_PRODUCTION_POST_CUTOVER_VERIFICATION.sql');

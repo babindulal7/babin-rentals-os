@@ -94,7 +94,7 @@ record(
 // Matching COPY/INSERT/CREATE TABLE rather than a bare name, so the word
 // appearing inside a comment or a policy body cannot pass for the table.
 for (const t of REQUIRED_TABLES) {
-  const re = new RegExp(`(COPY|INSERT INTO|CREATE TABLE)\\s+(public\\.)?"?${t}"?\\b`, 'i')
+  const re = new RegExp(`(COPY|INSERT INTO|CREATE TABLE)\\s+("?public"?\\.)?"?${t}"?\\b`, 'i')
   record(re.test(text), `contains ${t}`)
 }
 
