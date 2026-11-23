@@ -109,7 +109,7 @@ export function SignInHistoryCard() {
             variant="secondary"
             onClick={loadEvents}
             disabled={loading}
-            style={{ fontSize: 'var(--t-caption)', height: 32, padding: '0 var(--sp-sm)' }}
+            style={{ fontSize: 'var(--t-caption)', minHeight: 44, padding: '0 var(--sp-sm)' }}
           >
             {loading ? 'Refreshing…' : 'Refresh'}
           </Button>
@@ -141,7 +141,7 @@ export function SignInHistoryCard() {
             }}
           >
             <span>{error}</span>
-            <Button variant="secondary" onClick={loadEvents} style={{ height: 28, fontSize: 'var(--t-caption)' }}>
+            <Button variant="secondary" onClick={loadEvents} style={{ minHeight: 44, fontSize: 'var(--t-caption)' }}>
               Retry
             </Button>
           </div>
