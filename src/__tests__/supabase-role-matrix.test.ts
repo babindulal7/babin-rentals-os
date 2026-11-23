@@ -102,8 +102,8 @@ describe('T-SB-03: Real Role-Based RLS, Auth & Money-Access Matrix', () => {
     `, [clientA.id, clientB.id]);
   }, 120000);
 
-  async function asActor<T>(actor: { id: string | null; role: string | null }, fn: () => Promise<T>): Promise<T> {
-    if (!actor.id || actor.role === 'anon') {
+  async function asActor<T>(actor: { id: string | null; role: string | null } | undefined, fn: () => Promise<T>): Promise<T> {
+    if (!actor || !actor.id || actor.role === 'anon') {
       await db.exec(`
         reset role;
         set role anon;
