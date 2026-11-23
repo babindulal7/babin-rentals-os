@@ -129,10 +129,10 @@ changes nothing", "intent allocates once".
 **Needs** — T7-04; Babin obtains Fonepay merchant API credentials from the bank and enters them as
 Edge Function secrets (N-8).
 
-### T7-06 · eSewa and Khalti            status: acceptance_pending — PR #276 merged; eSewa and Khalti adapters verified in tests; awaiting live merchant accounts · size: M each · lane C + Babin
+### T7-06 · eSewa and Khalti            status: dropped_for_launch — Babin ruling 2026-11-23 (R-22.9): "fonepay only fonepay supports all payments"; Fonepay QR covers all domestic banks and digital wallets interoperably; bespoke eSewa/Khalti merchant adapters dropped from Phase 1 scope · size: M each · lane C + Babin
 **What** — The same pattern as T7-05 for eSewa and for Khalti, each behind a switch that stays off
-until its merchant account and credentials exist. The pay screen shows only switched-on methods.
-**Why** — D30.
+until its merchant account and credentials exist. Per Ruling R-22.9, Fonepay QR is the unified payment standard for launch; direct eSewa/Khalti gateway integration is deferred to Phase 2.
+**Why** — R-22.9 (Fonepay QR natively supports scanning from eSewa, Khalti, and all mobile banking apps).
 **Where** — `supabase/functions/pay-*`, provider adapters.
 **Database** — none beyond T7-05 (method values).
 **Done when** — sandbox success/failure/timeout per provider; one real small payment each.

@@ -137,7 +137,6 @@ describe('Roadmap status truth across merged tracks', () => {
     const t7 = read('docs/plans/T7_ONLINE_BOOKING.md')
     const cards: Record<string, string> = {
       'T7-05': 'PR #276 merged',
-      'T7-06': 'PR #276 merged',
       'T7-09': 'PR #201 merged',
     }
     for (const [key, prRef] of Object.entries(cards)) {
@@ -147,6 +146,11 @@ describe('Roadmap status truth across merged tracks', () => {
       expect(heading).toContain(prRef)
       expect(heading).not.toContain('status: todo')
     }
+
+    const t706 = t7.split('\n').find((l) => l.startsWith('### T7-06 ·'))
+    expect(t706).toBeDefined()
+    expect(t706).toContain('status: dropped_for_launch')
+    expect(t706).toContain('R-22.9')
 
     const doneCards: Record<string, string> = {
       'T7-01': 'PR #301 merged',

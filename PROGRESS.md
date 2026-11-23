@@ -1,5 +1,47 @@
 # Progress Log
 
+## 2026-11-23 — T1-18: Server-Side Sign-in Audit & New-Device Alert Engine (Lane A)
+
+### Did
+- Implemented T1-18 server-derived sign-in audit history and new-device alert engine via migration `0268_sign_in_events_and_new_device.sql`:
+  - Created `sign_in_events` table with immutable trigger protection (`prevent_direct_sign_in_events_write`) preventing direct client INSERT/UPDATE/DELETE.
+  - Role-gated read access strictly to Owner and Admin (B22); Manager and Floor roles receive 0 rows via RLS.
+  - Created SECURITY DEFINER RPC `record_sign_in_event()` detecting first-time device hashes for Owner and Admin (B23), emitting a dedicated `new_device` event and `should_alert = true`, suppressing duplicate alerts on return visits, and bypassing alert dispatch for non-admin staff.
+  - Created `get_recent_sign_in_events` RPC with role guards and pagination for the security audit dashboard.
+  - Authored comprehensive database gate test suite `scripts/test-login-audit-db-gate.mjs` verifying all 17 security assertions.
+- Added npm script `"test:login-audit-db-gate": "node scripts/test-login-audit-db-gate.mjs"` to `package.json`.
+- Formally registered migration 0268 in `docs/plans/MIGRATION_LEDGER.md` (next free number: 0269).
+- Codified Babin's product ruling R-22.9 in `RULINGS-2026-11-22.md` and updated `docs/plans/T7_ONLINE_BOOKING.md` (T7-06 marked `dropped_for_launch` as Fonepay QR covers all domestic banks and digital wallets interoperably).
+
+### Ruled
+- R-22.9 (2026-11-23): Fonepay only. Fonepay QR covers all domestic banks and digital wallets interoperably; bespoke eSewa/Khalti merchant adapters are dropped from Phase 1 launch scope.
+
+### Verified
+- `npm run check:pglite`: 266/266 migrations applied from scratch, 0 failed, 0 view leaks, 0 unauthorized RPCs, 253 definers pinned.
+- `node scripts/test-login-audit-db-gate.mjs`: 17/17 passed across 4 test suites.
+- `npm run check:lifecycle`: 101/101 lifecycle steps green.
+- `npm run typecheck`: clean (0 errors).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 70 | 58 · 0 · 0 · 12 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 101 / 101 (100%) | +0 |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 266 files · check:pglite 266/266 applied, 0 failed (recorded 2026-11-23T00:11:55.737Z). Suite: Historical suite: 30/30 passed, 0 failed (recorded 2026-11-22T23:26:16.539Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 7599/7599 passed, 0 failed (recorded 2026-11-20T23:59:38.542Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-23T00:12:45.737Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- PR #344 review and merge for T1-17 / Issue #304.
+- Staged enrolment of staff TOTP factors before arming `twoStepAuthRequired`.
+- Hosted staging rehearsal for migrations 0267 and 0268.
+
 ## 2026-11-23 — T7-13: Product Family Option Picker UI Integration (Lane C)
 
 ### Did
