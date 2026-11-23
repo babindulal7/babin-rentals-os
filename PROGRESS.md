@@ -1,5 +1,52 @@
 # Progress Log
 
+## 2026-11-23 — T1-17: Post-Merge MFA Security Proof, Trust-Boundary Repair & Issue #304 Audit Correction (Lane B / Windows)
+
+### Did
+- Resolved P0 trust-boundary vulnerability in `record_staff_mfa_enrolment()` via forward-only migration `0269_mfa_provider_proof_and_session_safety.sql`. The RPC now strictly verifies that the calling user (`auth.uid()`) has a verified TOTP factor in `auth.mfa_factors` before mirroring it into `staff_mfa_factors`, rejects cross-user enrolment with `GATE:gate.security.mfa_enrol_forbidden`, and prevents self-reset in `reset_staff_mfa()` with `GATE:gate.security.mfa_self_reset_forbidden` while atomically invalidating sessions in `auth.sessions`, refresh tokens in `auth.refresh_tokens`, and factors in `auth.mfa_factors`.
+- Updated `supabase/pglite-prelude.sql` to model `auth.mfa_factors`, `auth.sessions`, and `auth.refresh_tokens` tables so PGlite accurately mirrors Supabase Auth schema.
+- Added comprehensive PGlite verification suite in `scripts/test-mfa-db-gate.mjs` with 39 negative and boundary assertions covering factor proof, cross-user rejection, self-reset denial, AD2 role hierarchy, and atomic session invalidation.
+- Rewrote `scripts/audit-issue-304-staging.mjs` with strict TLS certificate verification (`ssl: { rejectUnauthorized: true }`), eliminated fabricated claims ("all 9 seats rotated/authenticated", `verifiedRevocation: true`), distinguished HTTP 401/403 authorization denial from HTTP 200 `[]` empty responses, and added fixture test suite `scripts/audit-issue-304-staging.test.mjs` (8/8 tests pass).
+- Corrected audit reports `docs/verification/STAGING_ISSUE_304_AUDIT_2026-11-23.md`, `docs/verification/T1-17_TWO_STEP_SIGN_IN_ACCEPTANCE_2026-11-23.md`, and compiled consolidated ledger `docs/verification/T1-17_POSTMERGE_SECURITY_EVIDENCE_2026-11-23.md`.
+- Reconciled roadmap status truth in `docs/plans/T1_RELEASE.md` and `src/lib/__tests__/roadmapStatusTruth.test.ts` to `acceptance_pending` (held until real hosted staging factor proof is collected).
+
+### Ruled
+- Strict Hold enforced: No automatic production or staging promotion without real hosted staging receipts with verified factors.
+- Forward-only migration rule honored: Merged migration `0267` remains unmodified; corrections applied via claimed migration `0269`.
+- Honest audit reporting: A database active session count in `auth.sessions` is not proof of revocation; token invalidation requires actual authentication denial with revoked refresh tokens.
+
+### Verified
+- `npm run check:pglite`: PASS (267/267 applied, 0 leaks, 48 views closed, 22 allowlisted anon functions, 253 definer search paths pinned).
+- `node scripts/test-mfa-db-gate.mjs`: PASS (39/39 MFA database gate assertions).
+- `npm run check:lifecycle`: PASS (101/101 lifecycle steps green, Step L100 verified).
+- `npm run check:security`: PASS (18 Phase 0 SQL regressions, 29 branch grant checks, 14 reset branch tests).
+- `npm run check:anon`: PASS (22 callable functions, 146 RLS tables, 0 unauthorized exposures).
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 warnings).
+- `node --test scripts/audit-issue-304-staging.test.mjs`: PASS (8/8 fixture tests).
+- `npm test -- src/lib/__tests__/mfaBoundary.test.ts src/modules/settings/sections/__tests__/TwoStepAuthControl.test.tsx`: PASS (14/14 tests).
+- `npm test -- src/lib/__tests__/roadmapStatusTruth.test.ts src/lib/__tests__/stagingInventory20261121.test.ts`: PASS (12/12 tests).
+- `npm run build`: PASS (Vite production bundle compiled cleanly in 4m 2s).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 71 | 58 · 0 · 0 · 13 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 101 / 101 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-23T02:16:36.652Z). Suite: NOT VERIFIED — focused or unspecified run: 12/12 passed, 0 failed (recorded 2026-11-23T02:27:31.206Z).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-23T02:19:31.124Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Awaiting Babin / Owner authorization and execution of real hosted staging MFA enrolment & verification to transition T1-17 from acceptance_pending to done.
+- Pending Owner Decision A on Issue #304: Retain pure Cloudflare Pages architecture for client site with apex redirect, or adopt Cloudflare Worker reverse-proxy.
+
 ## 2026-11-23 — Production Database Cutover Execution & 100% Schema Parity (Lane B / Windows)
 
 **Did**

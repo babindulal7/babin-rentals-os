@@ -11163,6 +11163,14 @@ STEPS.push({
     })
 
     // 8. Staff factor enrolment and recovery RPCs
+    await asOwnerOfTheDatabase(async () => {
+      await q(`
+        insert into auth.mfa_factors (user_id, factor_type, status, friendly_name)
+        values ('${U.Owner}', 'totp', 'verified', 'Owner Device')
+        on conflict (id) do nothing;
+      `)
+    })
+
     await as('Owner', async () => {
       const enrollRes = (await q(`select public.record_staff_mfa_enrolment() as res`)).rows[0].res
       assertEq(enrollRes.status, 'verified', 'Owner can enrol MFA factor')

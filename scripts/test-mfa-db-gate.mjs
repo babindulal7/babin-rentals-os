@@ -49,6 +49,10 @@ await db.exec(`
   insert into public.users (id, client_uuid, employee_code, email, mobile, primary_role, full_name, branch_id, is_active)
   values ('00000000-0000-0000-0000-000000000109', gen_random_uuid(), 'EMP-ACC01', 'testaccounts@babinrentals.com', '+977-9812349998', 'Accounts', 'Test Accounts', (select branch_id from users limit 1), true)
   on conflict (id) do nothing;
+
+  insert into auth.users (id, email)
+  select id, email from public.users
+  on conflict (id) do nothing;
 `)
 
 let failed = 0
@@ -71,6 +75,9 @@ async function asRole(role, aal = 'aal1', callback) {
   else if (role === 'Manager') userId = '00000000-0000-0000-0000-000000000108'
   else if (role === 'Warehouse') userId = '00000000-0000-0000-0000-000000000103'
   else if (role === 'Coordinator') userId = '00000000-0000-0000-0000-000000000104'
+  else if (role === 'Technician') userId = '00000000-0000-0000-0000-000000000105'
+  else if (role === 'Driver') userId = '00000000-0000-0000-0000-000000000106'
+  else if (role === 'Client') userId = '00000000-0000-0000-0000-000000000107'
   else if (role === 'Accounts') userId = '00000000-0000-0000-0000-000000000109'
 
   const claims = JSON.stringify({
@@ -129,10 +136,37 @@ await asRole('Warehouse', 'aal1', async () => {
   check(res.rows[0].can_view === false, 'Warehouse at AAL1 is money-blind (Law 6)')
 })
 
+await asRole('Technician', 'aal1', async () => {
+  const res = await db.query('select auth_can_view_money() as can_view')
+  check(res.rows[0].can_view === false, 'Technician at AAL1 is money-blind (Law 6)')
+})
+
+await asRole('Driver', 'aal1', async () => {
+  const res = await db.query('select auth_can_view_money() as can_view')
+  check(res.rows[0].can_view === false, 'Driver at AAL1 is money-blind (Law 6)')
+})
+
+await asRole('Client', 'aal1', async () => {
+  const res = await db.query('select auth_can_view_money() as can_view')
+  check(res.rows[0].can_view === false, 'Client at AAL1 is money-blind (Law 6)')
+})
+
 await asRole('anon', 'aal1', async () => {
   const res = await db.query('select auth_can_view_money() as can_view')
   check(res.rows[0].can_view === false, 'Anon caller is money-blind (Law 6)')
 })
+
+// Unknown / NULL role check
+await db.exec(`
+  set role authenticated;
+  select set_config('app.current_user_id', '99999999-9999-9999-9999-999999999999', false);
+  select set_config('request.jwt.claim.sub', '99999999-9999-9999-9999-999999999999', false);
+  select set_config('request.jwt.claim.role', 'authenticated', false);
+  select set_config('request.jwt.claims', '{"sub":"99999999-9999-9999-9999-999999999999","role":"authenticated"}', false);
+`)
+const unknownRoleRes = await db.query('select auth_can_view_money() as can_view')
+check(unknownRoleRes.rows[0].can_view === false, 'Non-existent / NULL user role fails closed')
+await db.exec('set role postgres;')
 
 console.log('--- Suite 2: Enforcement Toggle Role Guard ---')
 
@@ -190,6 +224,21 @@ await asRole('Warehouse', 'aal2', async () => {
   check(res.rows[0].can_view === false, 'Armed mode: Warehouse even at AAL2 remains strictly money-blind (Law 6)')
 })
 
+await asRole('Technician', 'aal2', async () => {
+  const res = await db.query('select auth_can_view_money() as can_view')
+  check(res.rows[0].can_view === false, 'Armed mode: Technician even at AAL2 remains strictly money-blind (Law 6)')
+})
+
+await asRole('Driver', 'aal2', async () => {
+  const res = await db.query('select auth_can_view_money() as can_view')
+  check(res.rows[0].can_view === false, 'Armed mode: Driver even at AAL2 remains strictly money-blind (Law 6)')
+})
+
+await asRole('Client', 'aal2', async () => {
+  const res = await db.query('select auth_can_view_money() as can_view')
+  check(res.rows[0].can_view === false, 'Armed mode: Client even at AAL2 remains strictly money-blind (Law 6)')
+})
+
 console.log('--- Suite 4: Column-Level Money Masking Verification ---')
 
 await asRole('Coordinator', 'aal1', async () => {
@@ -206,21 +255,57 @@ await asRole('Coordinator', 'aal2', async () => {
 console.log('--- Suite 5: Enrolment & Lost Phone Recovery ---')
 
 const targetUserId = '00000000-0000-0000-0000-000000000104' // Coordinator
+const ownerUserId = '00000000-0000-0000-0000-000000000101' // Owner
+const adminUserId = '00000000-0000-0000-0000-000000000102' // Admin
 
-await asRole('Coordinator', 'aal2', async () => {
-  const res = await db.query('select record_staff_mfa_enrolment() as r')
-  check(res.rows[0].r.success === true, 'Coordinator can enrol own TOTP factor')
-})
-
-// Cross-user enrolment refusal
+// Negative Test 1: Direct RPC invocation without provider factor MUST fail closed
 await asRole('Coordinator', 'aal2', async () => {
   try {
-    await db.query(`select record_staff_mfa_enrolment('00000000-0000-0000-0000-000000000101')`)
-    check(false, 'Cross-user enrolment should fail')
+    await db.query('select record_staff_mfa_enrolment()')
+    check(false, 'Direct RPC without provider factor should fail')
   } catch (err) {
-    check(err.message.includes('GATE:gate.security.mfa_enrol_forbidden'), 'Cross-user enrolment refused with GATE:gate.security.mfa_enrol_forbidden')
+    check(err.message.includes('GATE:gate.security.mfa_factor_unverified'), 'Direct RPC without factor refused with GATE:gate.security.mfa_factor_unverified')
   }
 })
+
+// Negative Test 2: Factor in provider exists but is unverified (status = 'unverified')
+await db.exec(`
+  insert into auth.mfa_factors (user_id, factor_type, status, friendly_name)
+  values ('${targetUserId}', 'totp', 'unverified', 'Coordinator Authenticator');
+`)
+await asRole('Coordinator', 'aal2', async () => {
+  try {
+    await db.query('select record_staff_mfa_enrolment()')
+    check(false, 'Direct RPC with unverified provider factor should fail')
+  } catch (err) {
+    check(err.message.includes('GATE:gate.security.mfa_factor_unverified'), 'Unverified factor refused with GATE:gate.security.mfa_factor_unverified')
+  }
+})
+
+// Negative Test 3: Owner/Admin attempting cross-user enrolment MUST fail (no override)
+await asRole('Owner', 'aal2', async () => {
+  try {
+    await db.query(`select record_staff_mfa_enrolment('${targetUserId}')`)
+    check(false, 'Owner attempting cross-user enrolment should fail')
+  } catch (err) {
+    check(err.message.includes('GATE:gate.security.mfa_enrol_forbidden'), 'Cross-user enrolment refused even for Owner with GATE:gate.security.mfa_enrol_forbidden')
+  }
+})
+
+// Positive Test: Provider factor is genuinely verified (status = 'verified')
+await db.exec(`
+  update auth.mfa_factors
+  set status = 'verified', updated_at = now()
+  where user_id = '${targetUserId}';
+`)
+await asRole('Coordinator', 'aal2', async () => {
+  const res = await db.query('select record_staff_mfa_enrolment() as r')
+  check(res.rows[0].r.success === true, 'Coordinator can record enrolment after provider verification')
+})
+
+// Verify factor row in mirror table
+const enrolledFactor = await db.query(`select * from public.staff_mfa_factors where user_id = '${targetUserId}'`)
+check(enrolledFactor.rows.length === 1 && enrolledFactor.rows[0].status === 'verified', 'Mirror table records verified factor')
 
 // Unauthorized reset refusal
 await asRole('Warehouse', 'aal1', async () => {
@@ -232,15 +317,31 @@ await asRole('Warehouse', 'aal1', async () => {
   }
 })
 
+// Self-reset refusal (Owner cannot self-reset via admin RPC)
+await asRole('Owner', 'aal2', async () => {
+  try {
+    await db.query(`select reset_staff_mfa('${ownerUserId}')`)
+    check(false, 'Owner self-reset should fail')
+  } catch (err) {
+    check(err.message.includes('GATE:gate.security.mfa_self_reset_forbidden'), 'Owner self-reset refused with GATE:gate.security.mfa_self_reset_forbidden')
+  }
+})
+
 // Admin cannot reset Owner (AD2 rule)
 await asRole('Admin', 'aal2', async () => {
   try {
-    await db.query(`select reset_staff_mfa('00000000-0000-0000-0000-000000000101')`)
+    await db.query(`select reset_staff_mfa('${ownerUserId}')`)
     check(false, 'Admin resetting Owner should fail')
   } catch (err) {
     check(err.message.includes('GATE:gate.security.mfa_reset_forbidden'), 'Admin cannot reset Owner factor (AD2 boundary)')
   }
 })
+
+// Seed active session and refresh token for target user to verify revocation upon reset
+await db.exec(`
+  insert into auth.sessions (user_id, aal) values ('${targetUserId}', 'aal2');
+  insert into auth.refresh_tokens (user_id, token) values ('${targetUserId}', 'token-to-be-revoked');
+`)
 
 // Admin can reset Coordinator
 await asRole('Admin', 'aal2', async () => {
@@ -248,9 +349,21 @@ await asRole('Admin', 'aal2', async () => {
   check(res.rows[0].r.success === true, 'Admin can successfully reset Coordinator MFA factor')
 })
 
-// Verify factor was cleared
+// Verify factor was cleared from public mirror table
 const factorCheck = await db.query(`select * from public.staff_mfa_factors where user_id = '${targetUserId}'`)
 check(factorCheck.rows.length === 0, 'Reset cleared factor from staff_mfa_factors')
+
+// Verify factor was cleared from auth provider table
+const providerFactorCheck = await db.query(`select * from auth.mfa_factors where user_id = '${targetUserId}'`)
+check(providerFactorCheck.rows.length === 0, 'Reset cleared factor from auth.mfa_factors')
+
+// Verify sessions were revoked from auth.sessions
+const sessionCheck = await db.query(`select * from auth.sessions where user_id = '${targetUserId}'`)
+check(sessionCheck.rows.length === 0, 'Reset invalidated active sessions in auth.sessions')
+
+// Verify refresh tokens were revoked from auth.refresh_tokens
+const refreshCheck = await db.query(`select * from auth.refresh_tokens where user_id = '${targetUserId}'`)
+check(refreshCheck.rows.length === 0, 'Reset invalidated refresh tokens in auth.refresh_tokens')
 
 // Verify audit entry for reset
 const resetAudit = await db.query(`select * from public.staff_mfa_audit where action = 'reset_by_admin' and user_id = '${targetUserId}'`)
