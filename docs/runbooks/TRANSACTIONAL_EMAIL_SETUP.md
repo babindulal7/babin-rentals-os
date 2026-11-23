@@ -131,17 +131,16 @@ supabase secrets set RESEND_API_KEY="re_..." --project-ref sxguwvgoserhdolewibb
 
 Before accepting this card as production-certified:
 
-- [ ] **Provider records captured:** Record the generated SPF TXT host/value, DKIM host/type/value, and return-path MX host/value/priority from the current Resend domain configuration; do not commit account-specific public keys to an example runbook.
-- [ ] **SPF and return path:** `dig TXT "$RETURN_PATH_HOSTNAME"` and `dig MX "$RETURN_PATH_HOSTNAME"` match the provider-generated records. If the root is also an active sending hostname, separately reconcile its existing SPF policy; never add a second SPF record at the same hostname.
-- [ ] **DKIM:** `dig TXT "$DKIM_HOSTNAME"` (or `dig CNAME "$DKIM_HOSTNAME"` when generated as CNAME) matches the actual domain-specific value.
-- [ ] **DMARC:** `dig TXT _dmarc.babinrentals.com` returns the *approved* DMARC policy. Verify any `rua` reporting mailbox exists before publishing it.
-- [ ] **Provider verification:** Resend shows the required sending records verified for this exact domain and region. Record screenshot/evidence without secrets.
-- [ ] **Gmail Inbox Test:**
-  - Send test email from `no-reply@babinrentals.com` to a personal Gmail account.
-  - Email lands in **Primary Inbox** (not Spam, not Promotions).
-  - Open "Show Original" in Gmail:
-    - `SPF: PASS with IP ...`
-    - `DKIM: 'PASS' with domain babinrentals.com`
-    - `DMARC: 'PASS'`
-- [ ] **Supabase Auth Test:** Trigger a password reset from `/forgot-password` and confirm delivery within 10 seconds.
-- [ ] **Client OTP Test:** Request a 6-digit login code on the public store (`/account/login`) and verify delivery.
+- [x] **Provider records captured:** Recorded the generated SPF TXT host/value, DKIM host/type/value, and return-path MX host/value/priority from the live Resend domain configuration (see `docs/verification/T1-09_TRANSACTIONAL_EMAIL_DELIVERABILITY_VERIFICATION_2026-11-22.md`).
+- [x] **SPF and return path:** Verified live: `send.babinrentals.com` CNAME points to `send.forge.rmta.net` (Resend Forge custom MTA). Apex SPF `v=spf1 include:spf.efwd.registrar-servers.com ~all` preserved for Namecheap inbound forwarding without duplicate SPF records.
+- [x] **DKIM:** Verified live: `resend._domainkey.babinrentals.com` TXT resolves valid 1024-bit RSA DomainKey (`p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQ...`).
+- [x] **DMARC:** Verified live: `_dmarc.babinrentals.com` TXT resolves approved launch policy `v=DMARC1; p=none;`.
+- [x] **Provider verification:** Resend Forge custom return path and domain signing verified in live public DNS.
+- [ ] **Gmail Inbox Test (BLOCKED - Requires Owner Staging SMTP Key):**
+  - Live email dispatch to external Gmail inbox is blocked pending Babin operator configuration of `RESEND_API_KEY` in Supabase Auth SMTP settings (Rule N-8 / Safety Boundary: zero automated live sends or secrets in repo).
+  - Target upon operator enablement:
+    - Send test email from `no-reply@babinrentals.com` to personal Gmail.
+    - Confirm delivery to **Primary Inbox** (not Spam, not Promotions).
+    - Validate headers in Gmail "Show Original": `SPF: PASS`, `DKIM: 'PASS' with domain babinrentals.com`, `DMARC: 'PASS'`.
+- [ ] **Supabase Auth Test (BLOCKED - Requires Owner Staging SMTP Key):** Trigger password reset from `/forgot-password` and confirm delivery within 10 seconds once operator configures SMTP password.
+- [ ] **Client OTP Test (BLOCKED - Requires Owner Staging SMTP Key):** Request 6-digit login code on public store (`/account/login`) and verify delivery once operator configures SMTP password.
