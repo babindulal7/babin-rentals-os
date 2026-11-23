@@ -177,7 +177,6 @@ describe('Babin Real Equipment Pilot Acceptance Suite (TQC-NEXT-01..06)', () => 
 
       fs.mkdirSync(path.dirname(targetPath1), { recursive: true })
       fs.writeFileSync(targetPath1, jsonl, 'utf-8')
-
       if (fs.existsSync('C:/Users/use/Desktop/rental intellegence/data')) {
         try {
           fs.writeFileSync(targetPath2, jsonl, 'utf-8')
