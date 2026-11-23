@@ -87,6 +87,27 @@ export default function TrainingCenter() {
   const [qualityScanSource, setQualityScanSource] = useState<'synthetic' | 'canonical'>('synthetic')
   const canonicalScanSummary = useMemo(() => scanCanonicalCatalogQuality(), [])
 
+  // Filtered Library Cases
+  const filteredCases = useMemo(() => {
+    return SYNTHETIC_GOLDEN_CASES.filter((c) => {
+      const matchSearch =
+        !searchQuery ||
+        c.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.suite.toLowerCase().includes(searchQuery.toLowerCase())
+      const matchSuite = selectedSuite === 'all' || c.suite === selectedSuite
+      const matchSeverity = selectedSeverity === 'all' || c.severity === selectedSeverity
+      return matchSearch && matchSuite && matchSeverity
+    })
+  }, [searchQuery, selectedSuite, selectedSeverity])
+
+  // Suites in Golden Dataset
+  const suitesList = useMemo(() => {
+    const s = new Set<string>()
+    SYNTHETIC_GOLDEN_CASES.forEach((c) => s.add(c.suite))
+    return Array.from(s)
+  }, [])
+
   // Gate Check: Refuse access to Client role (Acceptance Test 10)
   const userRole = user?.role
   if (userRole && !isStaff(userRole)) {
@@ -167,27 +188,6 @@ export default function TrainingCenter() {
     setRejectionModalId(null)
     setRejectionReason('')
   }
-
-  // Filtered Library Cases
-  const filteredCases = useMemo(() => {
-    return SYNTHETIC_GOLDEN_CASES.filter((c) => {
-      const matchSearch =
-        !searchQuery ||
-        c.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.suite.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchSuite = selectedSuite === 'all' || c.suite === selectedSuite
-      const matchSeverity = selectedSeverity === 'all' || c.severity === selectedSeverity
-      return matchSearch && matchSuite && matchSeverity
-    })
-  }, [searchQuery, selectedSuite, selectedSeverity])
-
-  // Suites in Golden Dataset
-  const suitesList = useMemo(() => {
-    const s = new Set<string>()
-    SYNTHETIC_GOLDEN_CASES.forEach((c) => s.add(c.suite))
-    return Array.from(s)
-  }, [])
 
   // Export JSONL
   const handleExportJsonl = () => {

@@ -86,7 +86,7 @@ export interface EvaluationRun {
   fixtureSnapshotId: string
   suiteVersion: string
   asOf: string
-  environment: 'synthetic_offline' | 'authorized_staging'
+  environment: 'synthetic_offline' | 'real_pilot_offline' | 'authorized_staging'
   results: EvaluationCaseResult[]
   counts: {
     pass: number
