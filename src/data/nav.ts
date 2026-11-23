@@ -213,6 +213,7 @@ export function isMoneySurface(path: string): boolean {
  * decide which STAFF roles may act once inside — mirroring rule, Law 6.
  */
 export const STAFF_ROUTES: readonly string[] = [
+  '/intelligence',
   '/notes',
   '/crew',
   '/clients/import',

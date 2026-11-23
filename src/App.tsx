@@ -81,6 +81,7 @@ const OperationsQueues  = lazy(() => import('./modules/operations/OperationsQueu
 const Finance           = lazy(() => import('./modules/finance/Finance'))
 const Settings          = lazy(() => import('./modules/settings/Settings'))
 const ToolsLanding      = lazy(() => import('./modules/tools/ToolsLanding'))
+const TrainingCenter    = lazy(() => import('./modules/intelligence/TrainingCenter'))
 const Clients           = lazy(() => import('./modules/clients/Clients'))
 const ClientDetail      = lazy(() => import('./modules/clients/ClientDetail'))
 const CasesWorkspace    = lazy(() => import('./modules/operations/CasesWorkspace').then(m => ({ default: m.CasesWorkspace })))
@@ -868,6 +869,18 @@ export default function App() {
 
         <Route path="/tools/depreciation" element={<Navigate to="/tools?tab=depreciation" replace />} />
         <Route path="/tools/pricing" element={<Navigate to="/tools?tab=pricing" replace />} />
+
+        {/* ── Intelligence Training Center (TQC-01) ────────────────────── */}
+        <Route path="/intelligence" element={<Navigate to="/intelligence/training-center" replace />} />
+        <Route
+          path="/intelligence/training-center"
+          element={
+            <Shell crumbs={[{ label: 'Intelligence' }, { label: 'Training Center' }]} search="Search intelligence…">
+              <TrainingCenter />
+            </Shell>
+          }
+        />
+        <Route path="/tools/training-center" element={<Navigate to="/intelligence/training-center" replace />} />
 
         {/* Marketing / Communication Offer Campaigns (T5-12, B43, B50) */}
         <Route
