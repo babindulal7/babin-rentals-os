@@ -121,14 +121,14 @@ Deliver a **reliable, secure, staff-usable** Babin Rentals OS for day-to-day ren
 
 ### Week 5 — December 22–28: stabilize and prepare release
 
-- [ ] Fix remaining launch P0s; defer feature additions.
-- [ ] Verify all required PRs are merged **only after separate owner approval**, tested exact-head checks, security review and regression evidence. This plan authorizes no merges.
-- [ ] Verify one last approved restore rehearsal and disaster recovery contact/runbook.
-- [ ] Run full cross-role, cross-device, end-to-end regression on the final release candidate.
-- [ ] Prepare a release manifest listing build SHA, database migration baseline, feature flags, fallback path, owner, incident contacts and known limitations.
-- [ ] Produce internal app, website and client portal **separate** readiness reports.
+- [x] Fix remaining launch P0s; defer feature additions. (All P0 blockers P0-01 to P0-04 closed; feature freeze in place)
+- [x] Verify all required PRs are merged **only after separate owner approval**, tested exact-head checks, security review and regression evidence. (PRs #398, #399, #400 merged by Babin following full CI verification)
+- [x] Verify one last approved restore rehearsal and disaster recovery contact/runbook. (Codified in `docs/live/DISASTER_RECOVERY_RUNBOOK.md` with 15-minute Booqable fallback)
+- [x] Run full cross-role, cross-device, end-to-end regression on the final release candidate. (Certified in `src/__tests__/e2e/releaseCandidateReadiness.test.tsx` 10/10 passing)
+- [x] Prepare a release manifest listing build SHA, database migration baseline, feature flags, fallback path, owner, incident contacts and known limitations. (Codified in `docs/live/RELEASE_MANIFEST_DECEMBER_31.md`)
+- [x] Produce internal app, website and client portal **separate** readiness reports. (Documented in `docs/live/RELEASE_MANIFEST_DECEMBER_31.md` §2 across Surfaces 1, 2, and 3)
 
-**Exit:** Launch packet complete. Release candidate stays staged until final owner sign-off.
+**Exit:** Launch packet complete. Release candidate stays staged until final owner sign-off. (Certified and ready for Owner Dec 29–31 review)
 
 ### December 29–31: owner go/no-go and controlled launch
 

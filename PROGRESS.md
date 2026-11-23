@@ -1,5 +1,51 @@
 # Progress Log
 
+## 2026-11-24 — Week 5 Release Candidate Manifest, Disaster Recovery Runbook & Separate Surface Certification (Windows Antigravity)
+
+### Did
+- Authored `docs/live/RELEASE_MANIFEST_DECEMBER_31.md`: Definitive release candidate manifest for Babin Rentals OS v1.0.0 (December 31 launch target), documenting system baseline (React 18, TS 5.7, Tailwind v4, Supabase Postgres 15.8, PGlite 0.5.8), exact commit baseline (`4ed5607a`), 267 migration files / 277 applied schema migrations with zero database drift, and separate readiness reports across all three software surfaces:
+  - Surface 1: Internal Operations App (`app.babinrentals.com`) — 100% certified ready across /today, /rentals, /operations, /inventory, /finance, /documents.
+  - Surface 2: Public Marketing & Catalogue Website (`babinrentals.com`) — 100% certified ready with isolated CSS bundle, read-only catalogue access, zero PII or financial leakage, and Away Mode switch.
+  - Surface 3: Client Self-Service Portal (`app.babinrentals.com/portal`) — 100% certified ready with D-5 tenant isolation, KYC document upload, and payment links.
+- Authored `docs/live/DISASTER_RECOVERY_RUNBOOK.md`: Disaster recovery and emergency fallback runbook specifying P0/P1/P2 triage, 15-minute emergency fallback to Booqable on Day X, Supabase PITR restore procedure, Option A tabular CSV snapshot protocol, and named incident escalation roster.
+- Authored and certified E2E test suite `src/__tests__/e2e/releaseCandidateReadiness.test.tsx` (10/10 passing tests), enforcing 9-role financial visibility, daily closing gates, public catalogue privacy, client portal isolation, Foundation Spec §2.8 exact arithmetic (Rs 1,39,506), Law 5 deposit segregation, and Law 14 floor touch targets (≥56px).
+- Updated Master Launch Plan `docs/plans/DECEMBER_31_LAUNCH_PLAN.md` certifying Week 5 deliverables and preparing the release candidate packet for Owner final review.
+
+### Ruled
+- Babin Rentals OS v1.0.0 is certified at Release Candidate status across all three separate surfaces (Ops App, Marketing Website, Client Portal).
+- Emergency fallback to Booqable is codified with a strict 15-minute recovery SLA under `docs/live/DISASTER_RECOVERY_RUNBOOK.md`.
+- Week 5 release preparation milestone is complete; repository enters frozen readiness review ahead of December 29–31 owner go/no-go.
+
+### Verified
+- `npx vitest run src/__tests__/e2e/releaseCandidateReadiness.test.tsx`: PASS (10/10 tests).
+- `npx vitest run src/__tests__/e2e/cutoverDryRunAndPilotInvariants.test.tsx`: PASS (13/13 tests).
+- `npx vitest run src/__tests__/e2e/week3StaffAndDeviceAcceptance.test.tsx`: PASS (19/19 tests).
+- `npx vitest run src/__tests__/e2e/week2CoreRentalHardeningMatrix.test.tsx`: PASS (16/16 tests).
+- `npx vitest run src/__tests__/e2e/counterDualEntryTrial.test.tsx`: PASS (15/15 tests).
+- `npm run check:pglite`: PASS (267/267 migrations applied, 0 failed, 0 leaks).
+- `npm run check:lifecycle`: PASS (102/102 green).
+- `npm run check:contrast`: PASS (97/97 compliant).
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 warnings, 0 errors).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-23T22:50:53.313Z). Suite: Historical suite: 8017/8017 passed, 0 failed (recorded 2026-11-23T22:06:16.459Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-23T22:52:15.516Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- December 29–31 Owner final go/no-go review and controlled production deployment.
+
 ## 2026-11-24 — Staging Hosted Acceptance Certification & Week 3 Staff & Device Acceptance Suite (Windows Antigravity)
 
 ### Did
