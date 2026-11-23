@@ -20,7 +20,7 @@ describe('Roadmap status truth across merged tracks', () => {
     }
   })
 
-  it('T1 release track reflects merged PRs as done or acceptance_pending', () => {
+  it('T1 release track distinguishes merged code from hosted acceptance', () => {
     const t1 = read('docs/plans/T1_RELEASE.md')
     const doneCards: Record<string, string> = {
       'T1-02': 'PR #292 merged',
@@ -28,7 +28,6 @@ describe('Roadmap status truth across merged tracks', () => {
       'T1-04': 'applied to production by Babin',
       'T1-05': 'PR #173 merged',
       'T1-06': 'PR #174 merged',
-      'T1-08': 'PR #176 merged',
       'T1-09': 'PR #275 merged',
       'T1-15': 'PR #208 merged',
       'T1-17': 'PR #203 merged',
@@ -42,6 +41,16 @@ describe('Roadmap status truth across merged tracks', () => {
       expect(heading).not.toContain('status: ready')
       expect(heading).not.toContain('status: todo')
       expect(heading).not.toContain('status: acceptance_pending')
+    }
+
+    // Code may be merged without a verified hosted error-monitoring receipt.
+    const hostedPendingCards: Record<string, string> = { 'T1-08': 'PR #176 merged' }
+    for (const [key, ref] of Object.entries(hostedPendingCards)) {
+      const heading = t1.split('\n').find((l) => l.startsWith(`### ${key} ·`))
+      expect(heading).toBeDefined()
+      expect(heading).toContain('status: doing')
+      expect(heading).toContain(ref)
+      expect(heading).toContain('hosted staging Sentry receipt pending')
     }
 
     const pendingCards: Record<string, string> = {}
