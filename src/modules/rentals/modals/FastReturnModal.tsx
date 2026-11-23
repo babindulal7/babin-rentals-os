@@ -95,10 +95,9 @@ export function FastReturnModal({
     let cancelled = false
     supabase
       .from('bookings')
-      .select('id, booking_no, starts_at, ends_at, stage, client_id, clients:client_id (name)')
+      .select('id, booking_no, pickup_datetime, return_datetime, stage, client_id, clients ( name )')
       .eq('stage', 'On Rent')
-      .is('cancelled_at', null)
-      .order('ends_at', { ascending: true })
+      .order('return_datetime', { ascending: true })
       .limit(10)
       .then(({ data, error: err }) => {
         if (cancelled) return
@@ -107,16 +106,16 @@ export function FastReturnModal({
           (data as unknown as Array<{
             id: string
             booking_no: string
-            starts_at: string
-            ends_at: string
+            pickup_datetime: string
+            return_datetime: string
             stage: string
             clients?: { name?: string } | null
           }>).map((b) => ({
             id: b.id,
             booking_no: b.booking_no,
             client_name: b.clients?.name,
-            starts_at: b.starts_at,
-            ends_at: b.ends_at,
+            starts_at: b.pickup_datetime,
+            ends_at: b.return_datetime,
             stage: b.stage,
           }))
         )
