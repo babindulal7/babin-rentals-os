@@ -37,6 +37,25 @@ import {
   generateMorningReport,
   type MorningReportInput,
 } from '../../../lib/rentalIntelligence/morningReport'
+import {
+  evaluateMonsoonRisk,
+  generateMonsoonAdvice,
+} from '../../../lib/rentalIntelligence/monsoonEngine'
+import {
+  searchRentalKnowledge,
+} from '../../../lib/rentalIntelligence/ragEngine'
+import {
+  calculateJournalSummary,
+  generateDecisionJournalAdvice,
+} from '../../../lib/rentalIntelligence/decisionJournal'
+import {
+  generatePlaybookAdvice,
+} from '../../../lib/rentalIntelligence/rulesPlaybooks'
+import type {
+  MonsoonEvaluationInput,
+  RagSearchInput,
+  DecisionRecord,
+} from '../../../lib/rentalIntelligence/types'
 import type { SystemRole } from '../../../types/database'
 import type { Surface } from '../../../lib/fieldGating'
 
@@ -53,6 +72,10 @@ export interface RentalIntelligenceDrawerProps {
   clientProfile?: ClientProfileInput | undefined
   fleetPerformance?: AssetPerformanceInput[] | undefined
   morningReportInput?: MorningReportInput | undefined
+  monsoonInput?: MonsoonEvaluationInput | undefined
+  ragSearchInput?: RagSearchInput | undefined
+  decisionRecords?: DecisionRecord[] | undefined
+  shootTypePlaybook?: string | undefined
   onAddSuggestion?: ((item: {
     productId: string
     displayName: string
@@ -73,6 +96,10 @@ export function RentalIntelligenceDrawer({
   clientProfile,
   fleetPerformance,
   morningReportInput,
+  monsoonInput,
+  ragSearchInput,
+  decisionRecords,
+  shootTypePlaybook,
   onAddSuggestion,
 }: RentalIntelligenceDrawerProps) {
   const [selectedModule, setSelectedModule] = useState<AdviceModule | 'all' | 'recommender'>('all')
@@ -147,6 +174,42 @@ export function RentalIntelligenceDrawer({
     return generateMorningReport(morningReportInput, userRole, surface)
   }, [morningReportInput, userRole, surface])
 
+  // Live Monsoon Risk computation (RI-06)
+  const monsoonAdvice = useMemo(() => {
+    if (monsoonInput) {
+      const assessment = evaluateMonsoonRisk(monsoonInput)
+      return generateMonsoonAdvice(assessment, bookingNo ?? 'DRAFT', userRole, surface)
+    }
+    if (currentItems.length > 0) {
+      const assessment = evaluateMonsoonRisk({
+        targetId: bookingNo ?? 'DRAFT',
+        items: currentItems.map((i) => ({ name: i.name })),
+      })
+      return generateMonsoonAdvice(assessment, bookingNo ?? 'DRAFT', userRole, surface)
+    }
+    return null
+  }, [monsoonInput, currentItems, bookingNo, userRole, surface])
+
+  // Live Rental RAG Knowledge Search computation (RI-07)
+  const ragAdvice = useMemo(() => {
+    if (!ragSearchInput) return null
+    const response = searchRentalKnowledge(ragSearchInput, userRole, surface)
+    return response.advice ?? null
+  }, [ragSearchInput, userRole, surface])
+
+  // Live Decision Journal Summary computation (RI-09)
+  const decisionAdvice = useMemo(() => {
+    if (!decisionRecords || decisionRecords.length === 0) return null
+    const summary = calculateJournalSummary(decisionRecords)
+    return generateDecisionJournalAdvice(summary, userRole, surface)
+  }, [decisionRecords, userRole, surface])
+
+  // Live Rules & Playbooks computation (RI-11)
+  const playbookAdvice = useMemo(() => {
+    if (!shootTypePlaybook) return null
+    return generatePlaybookAdvice(shootTypePlaybook, bookingNo ?? 'DRAFT', userRole, surface)
+  }, [shootTypePlaybook, bookingNo, userRole, surface])
+
   // Combine external advices with live-evaluated modules
   const allAdvices = useMemo(() => {
     const combined = [...propAdvices]
@@ -197,6 +260,18 @@ export function RentalIntelligenceDrawer({
         }
       }
     }
+    if (monsoonAdvice && !combined.some((a) => a.id === monsoonAdvice.id)) {
+      combined.push(monsoonAdvice)
+    }
+    if (ragAdvice && !combined.some((a) => a.id === ragAdvice.id)) {
+      combined.push(ragAdvice)
+    }
+    if (decisionAdvice && !combined.some((a) => a.id === decisionAdvice.id)) {
+      combined.push(decisionAdvice)
+    }
+    if (playbookAdvice && !combined.some((a) => a.id === playbookAdvice.id)) {
+      combined.push(playbookAdvice)
+    }
     return combined
   }, [
     propAdvices,
@@ -207,6 +282,10 @@ export function RentalIntelligenceDrawer({
     clientResult,
     idleStockResult,
     morningReportResult,
+    monsoonAdvice,
+    ragAdvice,
+    decisionAdvice,
+    playbookAdvice,
     currentItems.length,
   ])
 
@@ -1116,51 +1195,83 @@ export function RentalIntelligenceDrawer({
           )}
         </div>
 
-        {/* Planned Modules Taxonomy Status */}
-        <div
-          style={{
-            marginTop: '8px',
-            padding: '12px',
-            borderRadius: '8px',
-            background: 'var(--surface-sunken, #f8fafc)',
-            border: '1px solid var(--border-light, #e2e8f0)',
-          }}
-        >
-          <span
+        {/* Capabilities Taxonomy Status */}
+        {plannedModules.length === 0 ? (
+          <div
             style={{
-              display: 'block',
-              fontSize: '12px',
-              fontWeight: 600,
-              color: 'var(--muted)',
-              textTransform: 'uppercase',
-              marginBottom: '8px',
+              marginTop: '8px',
+              padding: '12px',
+              borderRadius: '8px',
+              background: 'var(--surface-sunken, #f8fafc)',
+              border: '1px solid var(--border-light, #e2e8f0)',
             }}
           >
-            Planned Capabilities ({plannedModules.length})
-          </span>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-            {plannedModules.map((m) => (
-              <div
-                key={m.id}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span
                 style={{
-                  padding: '8px',
-                  borderRadius: '6px',
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border)',
                   fontSize: '12px',
+                  fontWeight: 600,
+                  color: 'var(--ink)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontWeight: 500, color: 'var(--ink)' }}>{m.title}</span>
-                  <Badge tone="neutral" size="sm" label="Planned" />
-                </div>
-                <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--muted)', lineHeight: '1.3' }}>
-                  {m.shortDesc}
-                </p>
-              </div>
-            ))}
+                <Icon name="check" size={14} color="#16a34a" />
+                All 11 Intelligence Capabilities Active & Verified
+              </span>
+              <Badge tone="primary" size="sm" label="11 / 11 Active" />
+            </div>
+            <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--muted)', lineHeight: '1.4' }}>
+              All core advisory modules are integrated under read-only, evidence-backed contracts with strict role-based field gating.
+            </p>
           </div>
-        </div>
+        ) : (
+          <div
+            style={{
+              marginTop: '8px',
+              padding: '12px',
+              borderRadius: '8px',
+              background: 'var(--surface-sunken, #f8fafc)',
+              border: '1px solid var(--border-light, #e2e8f0)',
+            }}
+          >
+            <span
+              style={{
+                display: 'block',
+                fontSize: '12px',
+                fontWeight: 600,
+                color: 'var(--muted)',
+                textTransform: 'uppercase',
+                marginBottom: '8px',
+              }}
+            >
+              Planned Capabilities ({plannedModules.length})
+            </span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              {plannedModules.map((m) => (
+                <div
+                  key={m.id}
+                  style={{
+                    padding: '8px',
+                    borderRadius: '6px',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    fontSize: '12px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontWeight: 500, color: 'var(--ink)' }}>{m.title}</span>
+                    <Badge tone="neutral" size="sm" label="Planned" />
+                  </div>
+                  <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--muted)', lineHeight: '1.3' }}>
+                    {m.shortDesc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </ContextDrawer>
   )

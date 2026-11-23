@@ -19,7 +19,7 @@ describe('Rental Intelligence: Architecture & Module Taxonomy', () => {
     expect(uniqueIds.size).toBe(11)
   })
 
-  it('correctly marks working P0 modules vs planned modules', () => {
+  it('correctly marks all 11 modules as working with RI-5 completion', () => {
     const working = RENTAL_INTELLIGENCE_MODULES.filter((m) => m.status === 'working')
     const workingIds = working.map((m) => m.id)
     expect(workingIds).toContain('kit')
@@ -30,9 +30,13 @@ describe('Rental Intelligence: Architecture & Module Taxonomy', () => {
     expect(workingIds).toContain('operations')
     expect(workingIds).toContain('client')
     expect(workingIds).toContain('idle_stock')
+    expect(workingIds).toContain('knowledge')
+    expect(workingIds).toContain('rules')
+    expect(workingIds).toContain('decision')
+    expect(working.length).toBe(11)
 
     const planned = RENTAL_INTELLIGENCE_MODULES.filter((m) => m.status === 'planned')
-    expect(planned.length).toBe(3)
+    expect(planned.length).toBe(0)
   })
 })
 

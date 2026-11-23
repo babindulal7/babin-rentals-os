@@ -9,6 +9,8 @@
  * 4. Immutable: Advisory suggestions never mutate canonical state autonomously.
  */
 
+import type { SystemRole } from '../../types/database'
+
 export type EvidenceState = 'supported' | 'needs_verification' | 'inconclusive' | 'blocked'
 
 export type SourceKind = 'live_os' | 'approved_knowledge' | 'synthetic' | 'external_unverified'
@@ -147,7 +149,7 @@ export const RENTAL_INTELLIGENCE_MODULES: readonly IntelligenceModuleMeta[] = [
     title: 'Rental RAG',
     shortDesc: 'Approved policy and equipment manual search with citations',
     icon: 'book-open',
-    status: 'planned',
+    status: 'working',
     priority: 'P1',
   },
   {
@@ -155,7 +157,7 @@ export const RENTAL_INTELLIGENCE_MODULES: readonly IntelligenceModuleMeta[] = [
     title: 'Rules & Playbooks',
     shortDesc: 'Versioned store laws and operational shooting playbooks',
     icon: 'file-text',
-    status: 'planned',
+    status: 'working',
     priority: 'P1',
   },
   {
@@ -163,7 +165,7 @@ export const RENTAL_INTELLIGENCE_MODULES: readonly IntelligenceModuleMeta[] = [
     title: 'Decision Journal',
     shortDesc: 'Recommendation review tracking and measured outcome feedback',
     icon: 'clipboard',
-    status: 'planned',
+    status: 'working',
     priority: 'P1',
   },
 ] as const
@@ -206,3 +208,184 @@ export interface QuoteExplanationInput {
   advancePaidPaisa: number
   outstandingPaisa: number
 }
+
+/* ------------------------------------------------------------------
+ * Module RI-06: Monsoon & Environmental Protection Engine Types
+ * ------------------------------------------------------------------ */
+
+export interface MonsoonFeeLine {
+  description: string
+  amountPaisa: number
+  reason: string
+}
+
+export interface MonsoonAssessment {
+  monsoonModeActive: boolean
+  isOutdoor: boolean
+  isHighAltitudeCold: boolean
+  location?: string | undefined
+  dispatchRequirements: string[]
+  returnQcRequirements: string[]
+  storageProtocols: string[]
+  bookingPolicies: string[]
+  suggestedFeeLines: MonsoonFeeLine[]
+  warningNotes: string[]
+  advisoryOnly: boolean
+}
+
+export interface MonsoonEvaluationInput {
+  targetId: string
+  items: Array<{ name: string; category?: string }>
+  isOutdoor?: boolean | undefined
+  targetDateIso?: string | undefined
+  location?: string | undefined
+}
+
+/* ------------------------------------------------------------------
+ * Module RI-07: Rental RAG Knowledge & Retrieval Types
+ * ------------------------------------------------------------------ */
+
+export interface RagDocumentSource {
+  id: string
+  title: string
+  category: 'operational_sop' | 'equipment_manual' | 'policy' | 'playbook'
+  version: string
+  effectiveDate: string
+  expiresAt?: string | undefined
+  supersededBy?: string | undefined
+  verifiedBy: string
+  tags: string[]
+  content: string
+}
+
+export interface RagSearchResult {
+  documentId: string
+  title: string
+  category: string
+  version: string
+  relevanceScore: number
+  snippet: string
+  citationPath: string
+  isExpired: boolean
+  warningNote?: string | undefined
+  sourceKind: SourceKind
+}
+
+export interface RagSearchResponse {
+  query: string
+  sanitizedQuery: string
+  securityStatus: 'safe' | 'prompt_injection_flagged'
+  results: RagSearchResult[]
+  advice?: RentalAdvice | undefined
+}
+
+export interface RagSearchInput {
+  query: string
+  categoryFilter?: 'operational_sop' | 'equipment_manual' | 'policy' | 'playbook' | undefined
+  maxResults?: number | undefined
+}
+
+/* ------------------------------------------------------------------
+ * Module RI-09: Decision Journal & Outcome Feedback Types
+ * ------------------------------------------------------------------ */
+
+export type StaffDecisionType =
+  | 'accepted_unmodified'
+  | 'modified_by_staff'
+  | 'rejected_by_staff'
+  | 'deferred_pending_check'
+
+export type OutcomeStatus =
+  | 'pending_observation'
+  | 'completed_success'
+  | 'completed_with_lesson'
+  | 'completed_incident_avoided'
+  | 'incident_occurred'
+
+export interface DecisionRecord {
+  id: string
+  recommendationId: string
+  module: AdviceModule
+  targetId: string
+  targetType: AdviceTarget['type']
+  reviewerRole: SystemRole
+  reviewerName: string
+  decision: StaffDecisionType
+  staffNotes: string
+  modifications?: string[] | undefined
+  evidenceSnapshot: {
+    evidenceState: EvidenceState
+    sourceRefs: string[]
+  }
+  reviewedAt: string
+  observationWindow: 'during_shoot' | 'at_return_qc' | 'post_settlement'
+  actualOutcome?: {
+    status: OutcomeStatus
+    damageDetected: boolean
+    returnedOnTime: boolean
+    batteryOrPowerShortage: boolean
+    clientFeedback?: string | undefined
+    measuredAt?: string | undefined
+    learningReflection?: string | undefined
+  } | undefined
+}
+
+export interface DecisionJournalSummary {
+  totalDecisions: number
+  acceptedCount: number
+  modifiedCount: number
+  rejectedCount: number
+  acceptanceRatePercent: number
+  observedOutcomesCount: number
+  successRatePercent: number
+  incidentsAvoidedCount: number
+}
+
+/* ------------------------------------------------------------------
+ * Module RI-11: Rules & Shoot Playbooks Types
+ * ------------------------------------------------------------------ */
+
+export interface StoreRule {
+  id: string
+  ruleNumber: number
+  title: string
+  category: 'governance' | 'pricing' | 'escrow' | 'custody' | 'access'
+  version: string
+  effectiveDate: string
+  approver: string
+  summary: string
+  operationalGuideline: string
+  isCommercial: boolean
+}
+
+export interface ShootPlaybook {
+  id: string
+  shootType: string
+  displayName: string
+  primaryObjective: string
+  recommendedPackage: string[]
+  mandatoryAccessories: string[]
+  prohibitedOrAvoid: string[]
+  powerAndMediaNotes: string
+  consultativeUpsellTip?: string | undefined
+}
+
+export interface BudgetScalingVector {
+  vector: string
+  lowRunAndGun: string
+  midStandardPro: string
+  highEndCinema: string
+}
+
+export interface RuleAmendmentProposal {
+  id: string
+  ruleOrPlaybookId: string
+  proposedBy: string
+  proposedRole: SystemRole
+  proposedAt: string
+  summary: string
+  rationale: string
+  status: 'draft_pending_review'
+  isDraft: true
+}
+
