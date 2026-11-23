@@ -59,6 +59,8 @@ revoke all on public.sign_in_events from public, anon;
 grant select on public.sign_in_events to authenticated;
 
 -- 2. SECURITY DEFINER RPC: record_sign_in_event (Full signature)
+drop function if exists public.record_sign_in_event(text, text, text);
+drop function if exists public.record_sign_in_event(text, text, text, text, jsonb);
 create or replace function public.record_sign_in_event(
   p_device_hash text,
   p_user_agent text,
@@ -162,6 +164,7 @@ revoke all on function public.record_sign_in_event(text, text, text) from public
 grant execute on function public.record_sign_in_event(text, text, text) to authenticated;
 
 -- 3. Query RPC: get_recent_sign_in_events (Owner and Admin only, B22)
+drop function if exists public.get_recent_sign_in_events(int);
 create or replace function public.get_recent_sign_in_events(p_limit int default 50)
 returns jsonb
 language plpgsql
