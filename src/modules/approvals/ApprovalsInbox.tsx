@@ -18,6 +18,7 @@ import { useAuth } from '../../lib/auth'
 import { canViewMoney } from '../../lib/rbac'
 import type { SystemRole } from '../../types/database'
 import { formatMoney, rupees } from '../../lib/money'
+import { readManagerApprovalRouting } from '../../lib/settingsStore'
 import {
   fetchApprovals,
   canUserApprove,
@@ -315,8 +316,9 @@ export function ApprovalsInbox() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {filteredItems.map((item) => {
             const isTarget = item.id === targetId || item.entityNumber === targetId
-            const check = canUserApprove(item, role, user?.id || '')
-            const isOwnerOnly = item.requiredLevel === 'Owner'
+            const routing = readManagerApprovalRouting()
+            const check = canUserApprove(item, role, user?.id || '', routing)
+            const isOwnerOnly = item.requiredLevel === 'Owner' || routing === 'owner_only'
             const isManagerViewingOwnerOnly = isOwnerOnly && role !== 'Owner'
 
             return (

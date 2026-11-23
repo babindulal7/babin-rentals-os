@@ -13,7 +13,7 @@
 // =============================================================================
 
 import { supabase } from '../supabase'
-import { canViewMoney } from '../rbac'
+import { canViewMoney, type ManagerApprovalRouting } from '../rbac'
 import type { SystemRole } from '../../types/database'
 import { rupees, type Paisa } from '../money'
 import { createNotification } from './notifications'
@@ -212,6 +212,7 @@ export function canUserApprove(
   item: ApprovalItem,
   role: SystemRole,
   userId: string,
+  routing: ManagerApprovalRouting = 'standard',
 ): CanApproveResult {
   // 1. Floor roles have no approval permissions
   if (!canViewMoney(role)) {
@@ -240,6 +241,14 @@ export function canUserApprove(
   // 4. Owner can approve everything
   if (role === 'Owner') {
     return { allowed: true }
+  }
+
+  // R-22.1 / R-22.8: Single owner routing mode
+  if (routing === 'owner_only') {
+    return {
+      allowed: false,
+      reason: 'Manager-level approvals are currently routed directly to the Owner (R-22.1 / R-22.8).',
+    }
   }
 
   // 5. Owner-only threshold checks (PERMISSIONS §6.2)

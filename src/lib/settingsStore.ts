@@ -79,6 +79,8 @@ export type SettingKey =
   | 'ownerWhatsappNumber'
   | 'defaultPickupTime'
   | 'defaultReturnTime'
+  /* ── Manager approvals routing (R-22.1 / R-22.8 / O-33) ─────────────────── */
+  | 'managerApprovalRouting'
 
 export type SettingValue = string | number
 
@@ -510,6 +512,11 @@ export const SETTING_SPECS: Record<SettingKey, SettingSpec> = {
    */
   defaultPickupTime: { default: '', kind: 'text', suffix: ' (HH:mm)', validate: hhmmOrBlank },
   defaultReturnTime: { default: '', kind: 'text', suffix: ' (HH:mm)', validate: hhmmOrBlank },
+  managerApprovalRouting: {
+    default: 'standard',
+    kind: 'select',
+    options: ['standard', 'owner_only'],
+  },
 }
 
 /** `HH:mm`, or blank for "not set". Shared by the two WhatsApp time fields. */
@@ -718,6 +725,16 @@ export function getCrewPayoutTdsPercent(): number | null {
   if (v === '' || v === null || v === undefined) return null
   const n = Number(v)
   return Number.isFinite(n) && n >= 0 && n <= 100 ? n : null
+}
+
+/**
+ * Helper for Manager-level approval routing (R-22.1 / R-22.8 / O-33).
+ * - 'standard': Manager/Admin/Owner can decide (default threshold rule).
+ * - 'owner_only': Only Owner can decide.
+ */
+export function readManagerApprovalRouting(): 'standard' | 'owner_only' {
+  const v = getSetting('managerApprovalRouting')
+  return v === 'owner_only' ? 'owner_only' : 'standard'
 }
 
 /** Clears every stored override. Used by the screen's Reset and by tests. */

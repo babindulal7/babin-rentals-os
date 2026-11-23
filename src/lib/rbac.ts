@@ -201,12 +201,38 @@ export function canBlockClient(role: SystemRole): boolean {
 }
 
 /**
+ * R-22.1 / R-22.8: Manager-level approval routing mode.
+ * - 'standard': Manager, Admin, and Owner can decide Manager-level approvals.
+ * - 'owner_only': Routes all Manager-level approvals directly to the Owner seat.
+ */
+export type ManagerApprovalRouting = 'standard' | 'owner_only'
+
+/**
+ * Check if role may decide a Manager-level approval.
+ * Covers four approval categories (R-22.8 / O-33):
+ *   1. Damage findings below Rs 25,000 (today decided by a Manager).
+ *   2. Late-fee waivers (today decided by a Manager or Owner).
+ *   3. Extension availability clashes (T3-29, "the Manager decides").
+ *   4. The unified approvals inbox (T5-10).
+ *
+ * When routing is 'owner_only' (R-22.1), only Owner may decide; Manager and Admin are excluded.
+ */
+export function canDecideManagerApproval(role: SystemRole, routing: ManagerApprovalRouting = 'standard'): boolean {
+  if (routing === 'owner_only') {
+    return role === 'Owner'
+  }
+  return role === 'Owner' || role === 'Admin' || role === 'Manager'
+}
+
+/**
  * Check if role may decide an extension clash (Owner · Admin · Manager only).
  * Mirrors gate.extend.clash (0241, T3-29, B41, B42). Coordinator and floor roles
  * cannot decide or override alone.
+ *
+ * When routing is 'owner_only' (R-22.1 / R-22.8), strictly routes to Owner.
  */
-export function canDecideExtensionClash(role: SystemRole): boolean {
-  return role === 'Owner' || role === 'Admin' || role === 'Manager'
+export function canDecideExtensionClash(role: SystemRole, routing: ManagerApprovalRouting = 'standard'): boolean {
+  return canDecideManagerApproval(role, routing)
 }
 
 /**
