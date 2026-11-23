@@ -177,10 +177,17 @@ describe('Babin Real Equipment Pilot Acceptance Suite (TQC-NEXT-01..06)', () => 
 
       fs.mkdirSync(path.dirname(targetPath1), { recursive: true })
       fs.writeFileSync(targetPath1, jsonl, 'utf-8')
-      fs.writeFileSync(targetPath2, jsonl, 'utf-8')
+
+      if (fs.existsSync('C:/Users/use/Desktop/rental intellegence/data')) {
+        try {
+          fs.writeFileSync(targetPath2, jsonl, 'utf-8')
+        } catch {
+          // Optional export for local workspace
+        }
+      }
 
       expect(fs.existsSync(targetPath1)).toBe(true)
-      expect(fs.existsSync(targetPath2)).toBe(true)
+      expect(fs.readFileSync(targetPath1, 'utf-8')).toBe(jsonl)
     })
   })
 
