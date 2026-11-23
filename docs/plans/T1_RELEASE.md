@@ -179,7 +179,7 @@ once a month and record the result.
 **Done when** — two weekly backups exist and one monthly restore is logged.
 **Needs** — T1-02.
 
-### T1-13 · Real staff accounts on live            status: todo · size: S · Babin + lane A
+### T1-13 · Real staff accounts on live            status: ready — awaiting merge (lane-a/T1-13-real-staff-accounts-on-live) · size: S · Babin + lane A
 **What** — Create a login for every staff member with the correct role; deactivate test or old
 accounts (never delete — Law 3); each staff member signs in once on their own device before the
 trial.
