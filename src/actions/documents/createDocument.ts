@@ -60,11 +60,14 @@ export const createDocumentConfig: ActionConfig<CreateDocumentInput, CreateDocum
     // 1. Resolve booking if relatedBookingId provided
     if (input.relatedBookingId && input.relatedBookingId.trim()) {
       const bRef = input.relatedBookingId.trim();
-      const { data: booking } = await supabase
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bRef);
+      const bQuery = supabase
         .from('bookings')
-        .select('id, client_id, booking_no')
-        .or(`id.eq.${bRef},booking_no.eq.${bRef}`)
-        .maybeSingle();
+        .select('id, client_id, booking_no');
+
+      const { data: booking } = isUuid
+        ? await bQuery.eq('id', bRef).maybeSingle()
+        : await bQuery.eq('booking_no', bRef).maybeSingle();
 
       if (booking) {
         resolvedBookingId = booking.id;

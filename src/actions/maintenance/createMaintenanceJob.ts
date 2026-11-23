@@ -64,15 +64,15 @@ export const createMaintenanceJobConfig: ActionConfig<CreateMaintenanceJobInput,
     if (!resolvedUnitId && input.serialNo) {
       const { data: unit, error: unitError } = await supabase
         .from('product_units')
-        .select('id, serial_number')
-        .or(`serial_number.eq.${input.serialNo},unit_code.eq.${input.serialNo}`)
+        .select('id, serial_no, asset_tag')
+        .or(`serial_no.eq.${input.serialNo},asset_tag.eq.${input.serialNo}`)
         .maybeSingle();
 
       if (unitError || !unit) {
         throw new Error(`Could not find equipment unit with serial/code: ${input.serialNo}`);
       }
       resolvedUnitId = unit.id;
-      serialNumber = unit.serial_number ?? input.serialNo;
+      serialNumber = unit.serial_no ?? input.serialNo;
     }
 
     if (!resolvedUnitId) {

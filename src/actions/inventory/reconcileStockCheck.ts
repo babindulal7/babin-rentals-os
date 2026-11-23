@@ -48,11 +48,14 @@ export const reconcileStockCheckConfig: ActionConfig<ReconcileStockCheckInput, R
     let resolvedAudit: { id: string; audit_no: string; branch_id?: string; warehouse_id?: string } | null = null;
 
     if (rawTarget) {
-      const { data } = await supabase
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawTarget);
+      const aQuery = supabase
         .from('stock_audits')
-        .select('id, audit_no, branch_id, warehouse_id')
-        .or(`id.eq.${rawTarget},audit_no.eq.${rawTarget}`)
-        .maybeSingle();
+        .select('id, audit_no, branch_id, warehouse_id');
+
+      const { data } = isUuid
+        ? await aQuery.eq('id', rawTarget).maybeSingle()
+        : await aQuery.eq('audit_no', rawTarget).maybeSingle();
 
       if (!data) {
         throw new Error(`Stock audit "${rawTarget}" was not found.`);
