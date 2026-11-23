@@ -141,23 +141,21 @@ bookings a day, plus staff digests and payment reminders) when picking the plan.
 with SPF/DKIM pass; a staging password reset arrives through the custom SMTP.
 **Needs** — T1-02; Babin (account + DNS). Owner-only §6.2 #8 is Babin's own call (S13).
 
-### T1-10 · Live batches (Babin applies)            status: todo · size: S each · Babin + lane A
+### T1-10 · Live batches (Babin applies)            status: ready — awaiting merge (lane-a/T1-10-live-batches-babin-applies-20261123) · size: S each · Babin + lane A
 **What** — Three planned live windows, each: fresh backup (T1-01) → staging rehearsal of exactly
 the files in the batch → Babin runs `scripts/cutover-user-run.mjs` (hidden prompt, advisory lock,
 one transaction per file, stops at first failure) → `docs/live/POST_CUTOVER_CHECKS_2026-10-17.sql`
 → smoke test (T1-11).
-- **Batch 1 · by 6 Dec 2026 (20 Mangsir 2083):** 0157–0162, 0165–0174, 0176, 0177 (0163 went in
-  Batch 0).
+- **Batch 1 · by 6 Dec 2026 (20 Mangsir 2083):** 0157–0162, 0165–0174, 0176, 0177 (0163 went in Batch 0).
 - **Batch 2 · by 3 Jan 2027 (19 Poush):** migrations merged from T2–T5, T8 by then.
-- **Batch 3 · by 10 Jan 2027 (26 Poush):** T7, T9 and any fixes from device day.
-Extend the runner's manifest beyond 0169 for each batch (it currently covers 0157–0169).
+- **Batch 3 · by 10 Jan 2027 (26 Poush):** T7, T9 and remaining release delta: migrations `0260` through `0269` rehearsed on staging (273 migrations certified) and prepared in `docs/live/PRODUCTION_LIVE_BATCH_PLAN_2026-11-23.md`.
 **Why** — N-5. Small batches are easier to undo.
-**Where** — `scripts/cutover-user-run.mjs`, `scripts/cutover-0157-0167-USER-RUN.ps1`,
-`supabase/rollbacks/`, `docs/live/`.
+**Where** — `docs/live/PRODUCTION_LIVE_BATCH_PLAN_2026-11-23.md`, `scripts/cutover-user-run.mjs`,
+`scripts/cutover-0157-0167-USER-RUN.ps1`, `supabase/rollbacks/`, `docs/live/`.
 **Database** — live, by Babin only.
 **Done when** — ledger refreshed after each batch shows the batch's names; PROGRESS.md marks each
 file APPLIED + PRODUCTION-VERIFIED only after T1-11 passes.
-**Needs** — T1-03 … T1-06 for Batch 1; each later batch needs its tracks' staging acceptance.
+**Needs** — T1-03 … T1-06 for Batch 1; each later batch needs its tracks' staging acceptance (0260-0269 rehearsed on staging 23 Nov 2026).
 
 ### T1-11 · Live smoke test per role            status: todo · size: S each · lane A + Babin
 **What** — After every batch: sign in as Owner, Coordinator, Warehouse, Accounts (real staff
