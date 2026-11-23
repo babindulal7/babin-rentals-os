@@ -48,7 +48,7 @@ where user_id between 'a0000000-0000-4000-8000-000000000001' and 'a0000000-0000-
 
 insert into auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at)
 select 
-  id::text, 
+  id, 
   id, 
   jsonb_build_object('sub', id::text, 'email', email), 
   'email', 
