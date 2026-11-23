@@ -18,7 +18,7 @@ import { PageHeader, cardStyle } from '../../components/ui/Page'
 import { PageShell } from '../../components/ui/PageShell'
 import { useAuth } from '../../lib/auth'
 import { useViewport } from '../../lib/device'
-import { isStaff } from '../../lib/rbac'
+import { isStaff, type SystemRole } from '../../lib/rbac'
 import {
   evaluateShadowAdvisories,
   exportRedactedAdvisories,
@@ -55,7 +55,7 @@ export default function ShadowIntelligenceReview() {
 
   // Strict role check: Restrict client portal sessions
   const userRole = user?.role ?? 'Staff'
-  const isAuthorized = isStaff(userRole as any) && (userRole as string).toLowerCase() !== 'client'
+  const isAuthorized = isStaff(userRole as SystemRole) && (userRole as string).toLowerCase() !== 'client'
 
   // Construct Evaluator Context
   const context: EvaluatorContext = useMemo(() => {
