@@ -50,7 +50,7 @@ export { ctx as gateContext }
  */
 export type MoneyScope = 'full' | 'booking-and-client-balance' | 'none'
 
-const MONEY_FULL: ReadonlySet<SystemRole> = new Set(['Owner', 'Admin', 'Manager', 'Accounts'])
+const MONEY_FULL: ReadonlySet<SystemRole> = new Set<SystemRole>(['Owner', 'Admin', 'Manager', 'Accounts'])
 
 export function moneyScope(c: GateContext): MoneyScope {
   // Context gate stacks, stricter wins — a Floor surface strips money even
@@ -87,7 +87,7 @@ export function canViewUtilization(c: GateContext): boolean {
  * always; for Driver only inside a delivery context...; never for
  * Warehouse/Technician."
  */
-const PII_ALWAYS: ReadonlySet<SystemRole> = new Set(['Owner', 'Admin', 'Manager', 'Coordinator', 'Accounts'])
+const PII_ALWAYS: ReadonlySet<SystemRole> = new Set<SystemRole>(['Owner', 'Admin', 'Manager', 'Coordinator', 'Accounts'])
 
 export function canViewPII(c: GateContext): boolean {
   if (PII_ALWAYS.has(c.role)) return true
