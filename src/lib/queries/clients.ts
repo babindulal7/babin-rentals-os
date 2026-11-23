@@ -182,6 +182,25 @@ const DIRECTORY_COLUMNS =
   'kyc_docs_count, kyc_verified_count, is_blocked, deactivated_at, created_at, ' +
   'is_staff, staff_user_id, reminders_paused, reminders_paused_reason, reminders_paused_by, reminders_paused_at'
 
+const DIRECTORY_COLUMNS_LEGACY =
+  'id, client_code, name, phone, email, address_line, city, district, country, status, ' +
+  'client_since, type_parent, pan_vat, approved_credit_limit, ' +
+  'outstanding_amount, deposit_held_amount, total_paid_amount, ' +
+  'active_bookings_count, total_bookings_count, last_pickup_at, ' +
+  'contact_name, contact_designation, contact_phone, membership_level, ' +
+  'kyc_docs_count, kyc_verified_count, is_blocked, deactivated_at, created_at'
+
+function isColumnMissingError(error: { message?: string; code?: string } | null | undefined): boolean {
+  if (!error) return false
+  const msg = error.message ?? ''
+  return (
+    error.code === '42703' ||
+    msg.includes('is_staff') ||
+    msg.includes('reminders_paused') ||
+    (msg.includes('column') && msg.includes('does not exist'))
+  )
+}
+
 /**
  * Directory row -> the `ClientRecord` every clients surface already consumes.
  *
@@ -384,22 +403,31 @@ export interface ListClientsOptions {
  * so they are filtered here rather than removed from the table.
  */
 export async function listClients(opts: ListClientsOptions = {}): Promise<ClientListItem[]> {
-  let q = supabase
-    .from('client_directory_v')
-    .select(DIRECTORY_COLUMNS)
-    .is('deactivated_at', null)
-    .order('created_at', { ascending: false })
-    .limit(opts.limit ?? 100)
+  const query = (cols: string) => {
+    let q = supabase
+      .from('client_directory_v')
+      .select(cols)
+      .is('deactivated_at', null)
+      .order('created_at', { ascending: false })
+      .limit(opts.limit ?? 100)
 
-  if (opts.search?.trim()) {
-    const term = opts.search.trim()
-    // Postgrest `or` takes a comma-joined filter list; commas inside the term
-    // itself would split it into bogus filters, so they are stripped.
-    const safe = term.replace(/[,()]/g, ' ')
-    q = q.or(`name.ilike.%${safe}%,client_code.ilike.%${safe}%,phone.ilike.%${safe}%`)
+    if (opts.search?.trim()) {
+      const term = opts.search.trim()
+      // Postgrest `or` takes a comma-joined filter list; commas inside the term
+      // itself would split it into bogus filters, so they are stripped.
+      const safe = term.replace(/[,()]/g, ' ')
+      q = q.or(`name.ilike.%${safe}%,client_code.ilike.%${safe}%,phone.ilike.%${safe}%`)
+    }
+    return q
   }
 
-  const { data, error } = await q
+  let { data, error } = await query(DIRECTORY_COLUMNS)
+  if (isColumnMissingError(error)) {
+    const fallback = await query(DIRECTORY_COLUMNS_LEGACY)
+    data = fallback.data
+    error = fallback.error
+  }
+
   if (error) throw new Error(`listClients failed: ${error.message}`)
   return (data ?? []).map((r) => toListItem(r as unknown as DirectoryRow))
 }
@@ -413,19 +441,28 @@ export async function listClients(opts: ListClientsOptions = {}): Promise<Client
  * and why every caller must still gate money on the role.
  */
 export async function listClientRecords(opts: ListClientsOptions = {}): Promise<ClientRecord[]> {
-  let q = supabase
-    .from('client_directory_v')
-    .select(DIRECTORY_COLUMNS)
-    .is('deactivated_at', null)
-    .order('created_at', { ascending: false })
-    .limit(opts.limit ?? 500)
+  const query = (cols: string) => {
+    let q = supabase
+      .from('client_directory_v')
+      .select(cols)
+      .is('deactivated_at', null)
+      .order('created_at', { ascending: false })
+      .limit(opts.limit ?? 500)
 
-  if (opts.search?.trim()) {
-    const safe = opts.search.trim().replace(/[,()]/g, ' ')
-    q = q.or(`name.ilike.%${safe}%,client_code.ilike.%${safe}%,phone.ilike.%${safe}%`)
+    if (opts.search?.trim()) {
+      const safe = opts.search.trim().replace(/[,()]/g, ' ')
+      q = q.or(`name.ilike.%${safe}%,client_code.ilike.%${safe}%,phone.ilike.%${safe}%`)
+    }
+    return q
   }
 
-  const { data, error } = await q
+  let { data, error } = await query(DIRECTORY_COLUMNS)
+  if (isColumnMissingError(error)) {
+    const fallback = await query(DIRECTORY_COLUMNS_LEGACY)
+    data = fallback.data
+    error = fallback.error
+  }
+
   if (error) throw new Error(`listClientRecords failed: ${error.message}`)
   return (data ?? []).map((r) => toClientRecord(r as unknown as DirectoryRow))
 }
@@ -523,11 +560,21 @@ export async function sumDepositsHeld(): Promise<DepositsHeld> {
 }
 
 export async function getClient(id: string): Promise<ClientListItem | null> {
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('client_directory_v')
     .select(DIRECTORY_COLUMNS)
     .eq('id', id)
     .maybeSingle()
+
+  if (isColumnMissingError(error)) {
+    const fallback = await supabase
+      .from('client_directory_v')
+      .select(DIRECTORY_COLUMNS_LEGACY)
+      .eq('id', id)
+      .maybeSingle()
+    data = fallback.data
+    error = fallback.error
+  }
 
   if (error) throw new Error(`getClient failed: ${error.message}`)
   return data ? toListItem(data as unknown as DirectoryRow) : null
@@ -648,11 +695,21 @@ export async function getClientRecord(ref: string): Promise<ClientProfile | null
   // Deliberately NOT filtered on `deactivated_at`: a link to a closed account
   // must still open it (Law 3 — retained and marked). The flag is returned so
   // the screen can mark it.
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('client_directory_v')
     .select(DIRECTORY_COLUMNS)
     .eq(column, ref)
     .maybeSingle()
+
+  if (isColumnMissingError(error)) {
+    const fallback = await supabase
+      .from('client_directory_v')
+      .select(DIRECTORY_COLUMNS_LEGACY)
+      .eq(column, ref)
+      .maybeSingle()
+    data = fallback.data
+    error = fallback.error
+  }
 
   if (error) throw new Error(`getClientRecord failed: ${error.message}`)
   if (!data) return null
@@ -700,12 +757,23 @@ export async function findClientsByPhoneTail(phoneInput: string, limit = 3): Pro
   if (digits.length < 7) return []
   const tail = digits.slice(-9)
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('client_directory_v')
     .select(DIRECTORY_COLUMNS)
     .is('deactivated_at', null)
     .or(`phone.ilike.%${tail}`)
     .limit(limit)
+
+  if (isColumnMissingError(error)) {
+    const fallback = await supabase
+      .from('client_directory_v')
+      .select(DIRECTORY_COLUMNS_LEGACY)
+      .is('deactivated_at', null)
+      .or(`phone.ilike.%${tail}`)
+      .limit(limit)
+    data = fallback.data
+    error = fallback.error
+  }
 
   if (error) throw new Error(`findClientsByPhoneTail failed: ${error.message}`)
   return (data ?? []).map((r) => toClientRecord(r as unknown as DirectoryRow))
@@ -762,12 +830,23 @@ export async function findClientMatches(keys: ClientMatchKeys): Promise<ClientRe
   const CHUNK = 30
   const byId = new Map<string, DirectoryRow>()
   for (let i = 0; i < clauses.length; i += CHUNK) {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('client_directory_v')
       .select(DIRECTORY_COLUMNS)
       .is('deactivated_at', null)
       .or(clauses.slice(i, i + CHUNK).join(','))
       .limit(500)
+
+    if (isColumnMissingError(error)) {
+      const fallback = await supabase
+        .from('client_directory_v')
+        .select(DIRECTORY_COLUMNS_LEGACY)
+        .is('deactivated_at', null)
+        .or(clauses.slice(i, i + CHUNK).join(','))
+        .limit(500)
+      data = fallback.data
+      error = fallback.error
+    }
 
     if (error) throw new Error(`findClientMatches failed: ${error.message}`)
     for (const row of (data ?? []) as unknown as DirectoryRow[]) byId.set(row.id, row)
