@@ -9,6 +9,8 @@ const {
   mockSetEnforcement,
   mockResetStaff,
   mockRecordEnrolment,
+  mockEnrollTotpFactor,
+  mockVerifyTotpFactor,
   successToast,
 } = vi.hoisted(() => ({
   mockFetchOverview: vi.fn(),
@@ -16,6 +18,8 @@ const {
   mockSetEnforcement: vi.fn(),
   mockResetStaff: vi.fn(),
   mockRecordEnrolment: vi.fn(),
+  mockEnrollTotpFactor: vi.fn(),
+  mockVerifyTotpFactor: vi.fn(),
   successToast: vi.fn(),
 }))
 
@@ -39,6 +43,8 @@ vi.mock('../../../../lib/mfaBoundary', async (importOriginal) => {
     setTwoStepAuthEnforcement: (...args: unknown[]) => mockSetEnforcement(...args),
     resetStaffMfa: (...args: unknown[]) => mockResetStaff(...args),
     recordStaffMfaEnrolment: (...args: unknown[]) => mockRecordEnrolment(...args),
+    enrollTotpFactor: (...args: unknown[]) => mockEnrollTotpFactor(...args),
+    verifyTotpFactor: (...args: unknown[]) => mockVerifyTotpFactor(...args),
   }
 })
 
@@ -100,6 +106,13 @@ describe('TwoStepAuthControl', () => {
     mockSetEnforcement.mockResolvedValue(true)
     mockResetStaff.mockResolvedValue(true)
     mockRecordEnrolment.mockResolvedValue(true)
+    mockEnrollTotpFactor.mockResolvedValue({
+      factorId: 'mock-factor-123',
+      totpSecret: 'JBSWY3DPEHPK3PXP',
+      qrCode: 'data:image/svg+xml;utf8,<svg>MOCK</svg>',
+      uri: 'otpauth://totp/mock',
+    })
+    mockVerifyTotpFactor.mockResolvedValue(true)
   })
 
   afterEach(() => {
@@ -171,5 +184,96 @@ describe('TwoStepAuthControl', () => {
 
     expect(container?.textContent).not.toContain('Arm Enforcement')
     expect(container?.textContent).toContain('Set up authenticator')
+  })
+
+  it('opens enrollment modal, displays QR code and secret, and verifies with 6 digits', async () => {
+    currentRole = 'Coordinator'
+    currentUserId = '00000000-0000-0000-0000-000000000104'
+
+    await act(async () => {
+      root!.render(<TwoStepAuthControl />)
+    })
+
+    const setUpButton = Array.from(container!.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Set up authenticator')
+    )
+    expect(setUpButton).toBeDefined()
+
+    await act(async () => {
+      setUpButton!.click()
+    })
+
+    expect(mockEnrollTotpFactor).toHaveBeenCalled()
+    expect(document.body.textContent).toContain('Set Up Authenticator App')
+    expect(document.body.textContent).toContain('JBSWY3DPEHPK3PXP')
+
+    const input = document.body.querySelector('input')
+    expect(input).toBeDefined()
+
+    // Enter 6 digit code
+    await act(async () => {
+      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        'value'
+      )?.set
+      nativeInputValueSetter?.call(input, '123456')
+      input!.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+
+    const verifyButton = Array.from(document.body.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Verify & Enable')
+    )
+    expect(verifyButton).toBeDefined()
+    expect(verifyButton!.disabled).toBe(false)
+
+    await act(async () => {
+      verifyButton!.click()
+    })
+
+    expect(mockVerifyTotpFactor).toHaveBeenCalledWith(
+      'mock-factor-123',
+      '123456',
+      '00000000-0000-0000-0000-000000000104'
+    )
+    expect(successToast).toHaveBeenCalledWith(expect.stringContaining('successfully'))
+  })
+
+  it('displays error if verification fails and keeps modal open', async () => {
+    currentRole = 'Coordinator'
+    currentUserId = '00000000-0000-0000-0000-000000000104'
+    mockVerifyTotpFactor.mockRejectedValueOnce(new Error('Invalid TOTP code'))
+
+    await act(async () => {
+      root!.render(<TwoStepAuthControl />)
+    })
+
+    const setUpButton = Array.from(container!.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Set up authenticator')
+    )
+    await act(async () => {
+      setUpButton!.click()
+    })
+
+    const input = document.body.querySelector('input')
+    await act(async () => {
+      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype,
+        'value'
+      )?.set
+      nativeInputValueSetter?.call(input, '000000')
+      input!.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+
+    const verifyButton = Array.from(document.body.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Verify & Enable')
+    )
+    await act(async () => {
+      verifyButton!.click()
+    })
+
+    expect(mockVerifyTotpFactor).toHaveBeenCalled()
+    expect(document.body.textContent).toContain('Invalid TOTP code')
+    // Modal still open
+    expect(document.body.textContent).toContain('Set Up Authenticator App')
   })
 })

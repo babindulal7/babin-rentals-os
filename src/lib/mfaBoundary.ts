@@ -247,3 +247,77 @@ export async function recordStaffMfaEnrolment(userId?: string): Promise<boolean>
   const result = data as { success?: boolean }
   return Boolean(result?.success)
 }
+
+export interface MfaEnrollmentResponse {
+  factorId: string
+  totpSecret: string
+  qrCode: string
+  uri: string
+}
+
+/**
+ * Begin TOTP factor enrolment with Supabase Auth MFA provider.
+ * Returns the factor ID, secret text, and QR code representation.
+ */
+export async function enrollTotpFactor(friendlyName = 'Babin Rentals OS'): Promise<MfaEnrollmentResponse> {
+  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock' || !supabase
+  if (isMock) {
+    return {
+      factorId: 'mock-factor-' + Math.random().toString(36).slice(2, 9),
+      totpSecret: 'JBSWY3DPEHPK3PXP',
+      qrCode: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160"><rect width="160" height="160" fill="%23f3f4f6"/><text x="80" y="80" text-anchor="middle" dominant-baseline="middle" font-family="sans-serif" font-size="12" fill="%234b5563">Babin TOTP QR</text></svg>',
+      uri: 'otpauth://totp/Babin%20Rentals%20OS:staff?secret=JBSWY3DPEHPK3PXP&issuer=Babin%20Rentals%20OS',
+    }
+  }
+
+  const { data, error } = await supabase.auth.mfa.enroll({
+    factorType: 'totp',
+    friendlyName,
+  })
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  if (!data?.totp?.secret || !data?.totp?.qr_code) {
+    throw new Error('Supabase Auth did not return TOTP enrolment credentials.')
+  }
+
+  return {
+    factorId: data.id,
+    totpSecret: data.totp.secret,
+    qrCode: data.totp.qr_code,
+    uri: data.totp.uri,
+  }
+}
+
+/**
+ * Challenge and verify TOTP code with Supabase Auth MFA provider,
+ * escalating session to AAL2 and persisting verified enrolment.
+ */
+export async function verifyTotpFactor(factorId: string, code: string, userId?: string): Promise<boolean> {
+  const sanitizedCode = code.trim().replace(/\s+/g, '')
+  if (sanitizedCode.length !== 6 || !/^\d{6}$/.test(sanitizedCode)) {
+    throw new Error('Verification code must be exactly 6 digits.')
+  }
+
+  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock' || !supabase
+  if (isMock) {
+    await recordStaffMfaEnrolment(userId)
+    return true
+  }
+
+  // 1. Verify TOTP code against Supabase Auth provider
+  const { error: challengeError } = await supabase.auth.mfa.challengeAndVerify({
+    factorId,
+    code: sanitizedCode,
+  })
+
+  if (challengeError) {
+    throw new Error(challengeError.message)
+  }
+
+  // 2. Upon genuine Auth provider verification, persist factor status in public.staff_mfa_factors
+  await recordStaffMfaEnrolment(userId)
+  return true
+}
