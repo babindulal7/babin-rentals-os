@@ -7,7 +7,8 @@
 - Updated `supabase/pglite-prelude.sql` to model `auth.mfa_factors`, `auth.sessions`, and `auth.refresh_tokens` tables so PGlite accurately mirrors Supabase Auth schema.
 - Added comprehensive PGlite verification suite in `scripts/test-mfa-db-gate.mjs` with 39 negative and boundary assertions covering factor proof, cross-user rejection, self-reset denial, AD2 role hierarchy, and atomic session invalidation.
 - Rewrote `scripts/audit-issue-304-staging.mjs` with strict TLS certificate verification (`ssl: { rejectUnauthorized: true }`), eliminated fabricated claims ("all 9 seats rotated/authenticated", `verifiedRevocation: true`), distinguished HTTP 401/403 authorization denial from HTTP 200 `[]` empty responses, and added fixture test suite `scripts/audit-issue-304-staging.test.mjs` (8/8 tests pass).
-- Corrected audit reports `docs/verification/STAGING_ISSUE_304_AUDIT_2026-11-23.md`, `docs/verification/T1-17_TWO_STEP_SIGN_IN_ACCEPTANCE_2026-11-23.md`, and compiled consolidated ledger `docs/verification/T1-17_POSTMERGE_SECURITY_EVIDENCE_2026-11-23.md`.
+- Executed 9-seat credential remediation and session revocation script (`scripts/remediate-staging-credentials.mjs`) against staging project `klhmsrunqrdxjudyhnkm` as authorized by Babin. Generated per-seat high-entropy random passwords outside Git, rotated credentials via GoTrue API, executed global session revocation, and verified active session count in `auth.sessions` dropped from 248 to 0. Updated `scripts/verify-staging-hosted.mjs` and `scripts/run-staging-readonly-suite.mjs` to use per-seat credentials with zero hardcoded fallbacks.
+- Corrected audit reports `docs/verification/STAGING_ISSUE_304_AUDIT_2026-11-23.md`, `docs/verification/T1-17_TWO_STEP_SIGN_IN_ACCEPTANCE_2026-11-23.md`, generated `docs/verification/STAGING_CREDENTIAL_ROTATION_RECEIPT_2026-11-23.md`, and compiled consolidated ledger `docs/verification/T1-17_POSTMERGE_SECURITY_EVIDENCE_2026-11-23.md`.
 - Reconciled roadmap status truth in `docs/plans/T1_RELEASE.md` and `src/lib/__tests__/roadmapStatusTruth.test.ts` to `acceptance_pending` (held until real hosted staging factor proof is collected).
 
 ### Ruled
@@ -16,6 +17,8 @@
 - Honest audit reporting: A database active session count in `auth.sessions` is not proof of revocation; token invalidation requires actual authentication denial with revoked refresh tokens.
 
 ### Verified
+- `scripts/remediate-staging-credentials.mjs`: PASS (9/9 old credentials rejected HTTP 400, 9/9 new credentials verified HTTP 200, active sessions 248 -> 0, refresh tokens 248 -> 0).
+- `scripts/verify-staging-hosted.mjs`: PASS (63/63 hosted staging checks green across all 9 roles authenticated with rotated credentials).
 - `npm run check:pglite`: PASS (267/267 applied, 0 leaks, 48 views closed, 22 allowlisted anon functions, 253 definer search paths pinned).
 - `node scripts/test-mfa-db-gate.mjs`: PASS (39/39 MFA database gate assertions).
 - `npm run check:lifecycle`: PASS (101/101 lifecycle steps green, Step L100 verified).
