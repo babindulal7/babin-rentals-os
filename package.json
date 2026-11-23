@@ -68,6 +68,7 @@
     "test:online-booking-n7-review": "node scripts/test-online-booking-n7-review.mjs",
     "test:away-mode-db-gate": "node scripts/test-away-mode-db-gate.mjs",
     "test:mfa-db-gate": "node scripts/test-mfa-db-gate.mjs",
+    "test:login-audit-db-gate": "node scripts/test-login-audit-db-gate.mjs",
     "db:plan:reviewed": "node scripts/plan-migrations.mjs --accept-rename",
     "test:db-plan-safety": "node --test scripts/plan-migrations-safety.test.mjs",
     "build:staff": "node scripts/check-site-env.mjs staff && tsc --noEmit && vite build --mode staff && node scripts/finalize-site-build.mjs staff && node scripts/verify-site-builds.mjs staff",
