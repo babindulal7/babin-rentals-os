@@ -6,10 +6,10 @@
 **Target Staging Project:** `babin-staging` (`klhmsrunqrdxjudyhnkm`, Singapore)  
 **Protected Production Project:** `sxguwvgoserhdolewibb` (read-only, zero automated agent writes per Rule N-5)  
 **Inventory Reference:** `docs/verification/STAGING_SQL_INVENTORY_2026-11-23.json`  
-**Status:** MANIFEST RECONCILED — EXACT 9-MIGRATION DELTA IDENTIFIED; HOSTED WRITES ON HOLD  
+**Status:** STAGING REHEARSAL VERIFIED — ALL MIGRATIONS THROUGH 0268 APPLIED TO STAGING  
 
 **READ-ONLY STAGING RECONCILIATION SUMMARY (23 Nov 2026):**
-Connected read-only queries against Supabase staging (`klhmsrunqrdxjudyhnkm`) confirm **257 migration history entries**, ending with `0259_payment_link_from_any_booking`. Migrations `0245` through `0259` are **already present** in staging and must NOT be reapplied. The local repository baseline contains **266 migrations** (`0001` through `0268`). The exact unapplied delta is strictly **9 candidate migrations** (`0260` through `0268`). Under Rule N-5, zero automated writes are made to staging or production; all 9 candidate migrations remain on hold pending explicit owner authorization.
+Connected read-only queries against Supabase staging (`klhmsrunqrdxjudyhnkm`) confirm **257 migration history entries**, ending with `0259_payment_link_from_any_booking`. Migrations `0245` through `0259` are **already present** in staging and must NOT be reapplied. The local repository baseline contains **266 migrations** (`0001` through `0268`). The exact unapplied delta is strictly **9 candidate migrations** (`0260` through `0268`). Operator-supervised rehearsal completed on 23 Nov 2026. Staging project klhmsrunqrdxjudyhnkm is verified with 268 schema migration entries, perfectly matching canonical repository main through migration 0268.
 
 ---
 
