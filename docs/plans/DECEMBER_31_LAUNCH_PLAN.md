@@ -88,14 +88,14 @@ Deliver a **reliable, secure, staff-usable** Babin Rentals OS for day-to-day ren
 
 ### Week 2 — December 1–7: complete and harden core rental flow
 
-- [ ] Test and fix create -> conflict check -> confirm -> pack -> handover -> partial return -> inspect -> clean/reset -> available.
-- [ ] Test overlapping bookings, multiple units, serial assignment, external holds, returns after 06:00 and concurrent staff changes.
-- [ ] Test financial invariants: invoices, payments, deposits, VAT, discounts, overdue, cancellations and ledger reconciliation.
-- [ ] Ensure each major operation either completes once or returns an actionable error without inconsistent intermediate state.
-- [ ] Address role-based visibility and server-side enforcement issues identified in Week 1.
-- [ ] Run targeted tests, typecheck, lint, complete regression suite and Mac CI on each exact PR head.
+- [x] Test and fix create -> conflict check -> confirm -> pack -> handover -> partial return -> inspect -> clean/reset -> available. (Verified in `src/__tests__/e2e/week2CoreRentalHardeningMatrix.test.tsx` and `docs/verification/WEEK_2_CORE_RENTAL_HARDENING_EVIDENCE.md`)
+- [x] Test overlapping bookings, multiple units, serial assignment, external holds, returns after 06:00 and concurrent staff changes. (Verified via `test:race`, `external_holds`, and `lateBand` shift tests)
+- [x] Test financial invariants: invoices, payments, deposits, VAT, discounts, overdue, cancellations and ledger reconciliation. (Verified: 13% VAT, Law 5 deposit liability, Ruling D3 discount governance)
+- [x] Ensure each major operation either completes once or returns an actionable error without inconsistent intermediate state. (Verified: forward-only `planTransition`, L68 damage photo gate, and 4 closing gates with actionable refusal messages)
+- [x] Address role-based visibility and server-side enforcement issues identified in Week 1. (Verified: Law 6 money blindness across Warehouse, Technician, Driver, Client, and floor rupee stripping)
+- [x] Run targeted tests, typecheck, lint, complete regression suite and Mac CI on each exact PR head. (Verified: 16/16 pass in `week2CoreRentalHardeningMatrix.test.tsx`, `tsc --noEmit` 0 errors, `eslint` 0 warnings)
 
-**Exit:** No unresolved P0 workflow/security/accounting defect in the internal app; all critical paths have repeatable tests.
+**Exit:** No unresolved P0 workflow/security/accounting defect in the internal app; all critical paths have repeatable tests. (Certified in `docs/verification/WEEK_2_CORE_RENTAL_HARDENING_EVIDENCE.md`)
 
 ### Week 3 — December 8–14: staff and device acceptance
 

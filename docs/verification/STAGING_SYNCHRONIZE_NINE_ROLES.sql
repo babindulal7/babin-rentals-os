@@ -66,6 +66,9 @@ declare
   v_wh_id uuid;
   v_cat_id uuid;
 begin
+  -- Authorize unit status write for initial staging seed
+  perform set_config('app.unit_status_recompute', 'on', true);
+
   select id into v_branch_id from branches order by created_at limit 1;
   if v_branch_id is null then
     v_branch_id := '00000000-0000-0000-0000-000000000001';
@@ -129,7 +132,7 @@ begin
 
   -- 6. Seed test client if missing
   insert into clients (id, client_uuid, client_code, name, phone, email)
-  values ('e0000000-0000-4000-8000-000000000001', gen_random_uuid(), 'C-9901', 'Staging Production Client Pvt Ltd', '+9779800000001', 'staging-client@babinrentals.test')
+  values ('e0000000-0000-4000-8000-000000000001', gen_random_uuid(), 'CL-2026-9901', 'Staging Production Client Pvt Ltd', '+9779800000001', 'staging-client@babinrentals.test')
   on conflict (id) do nothing;
 end $$;
 

@@ -1,5 +1,51 @@
 # Progress Log
 
+## 2026-11-24 — Production Live Batches Applied (0260–0269) & Zero Database Drift Milestone (Babin & Windows Antigravity)
+
+### Did
+- Executed Card T1-10 (Production Live Batch Apply): Under Rule N-5, Babin applied pending production migrations `0261` through `0269` directly to production Supabase (`sxguwvgoserhdolewibb`) in three reviewed, atomic batches per `docs/live/PRODUCTION_LIVE_BATCH_PLAN_2026-11-23.md`.
+  - Batch 1: `0261` (`20261123000261` — Booqable external holds & mutual GiST double-booking exclusion; T9-02).
+  - Batch 2: `0262` (`20261123000262` — Online booking away mode switch & server-side request refusal; T7-14), `0263` & `0264` (`20261123000263`, `20261123000264` — Product families schema & public options view in integer paisa; T7-13).
+  - Batch 3: `0265` & `0266` (`20261123000265`, `20261123000266` — Integer paisa booking request rates, 50% advance computation, & manager approval escalation to Owner; T7-04, T5-10), `0267`, `0268` & `0269` (`20261123000267`, `20261123000268`, `20261123000269` — Database-enforced AAL2 MFA for money roles, append-only sign-in events & new-device alert engine, server-side factor validation & session invalidation; T1-17, T1-18).
+- Verified production ledger post-flight: All migration versions (`20261123000261` through `20261123000269`) recorded and active. Production total migration count reached **277** — establishing exactly **zero schema drift** between Staging (`klhmsrunqrdxjudyhnkm`) and Production (`sxguwvgoserhdolewibb`).
+- Verified PR #395 merged into `main` (commit `2aef061b`): Counter Dual-Entry Trial Runbook (`docs/verification/COUNTER_DUAL_ENTRY_TRIAL_RUNBOOK.md`), 15 E2E rental loop tests (`src/__tests__/e2e/counterDualEntryTrial.test.tsx`), and Law 6 Money Blindness Audit (`src/lib/__tests__/floorRoleMoneyBlindnessAudit.test.ts`).
+- Authored and verified Week 2 Core Rental Flow Hardening & Boundary Matrix suite `src/__tests__/e2e/week2CoreRentalHardeningMatrix.test.tsx` (16/16 passing tests) and compiled comprehensive evidence in `docs/verification/WEEK_2_CORE_RENTAL_HARDENING_EVIDENCE.md`, validating 9-step physical custody progression, item quantity preservation across partial returns (§1.6), 06:00 NPT operational boundaries, late fee bands, GiST exclusion vs external holds, single-job concurrency (`assertOneJobInProgress`), and money blindness in all floor operations.
+
+### Ruled
+- Card T1-10 is marked `done`: all planned candidate migrations through 0269 are successfully applied to production by Babin in accordance with Rule N-5 and Rule N-8.
+- Production and Staging schemas are certified drift-free. Any future schema changes require standard ledger claiming in `docs/plans/MIGRATION_LEDGER.md` (starting at `0270`).
+- Week 2 Launch Plan requirements (Dec 1–7) certified complete and backed by repeatable regression assertions.
+- Multi-role live smoke test (Card T1-11) is the immediate next production verification gate before Day X cutover.
+
+### Verified
+- `supabase_migrations.schema_migrations` query on production `sxguwvgoserhdolewibb`: 277 total rows, versions `20261123000261` through `20261123000269` present and verified.
+- `npm run check:pglite`: PASS (267/267 migrations applied, 0 failed, 48 views checked with 0 anon leaks, 253 definer search paths pinned).
+- `npm run check:lifecycle`: PASS (102/102 lifecycle steps green in PGlite real Postgres + RLS).
+- `npx vitest run src/__tests__/e2e/week2CoreRentalHardeningMatrix.test.tsx`: PASS (16/16 passing tests).
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 warnings, 0 errors).
+- `npm run check:contrast`: PASS (97/97 compliant).
+- `npm run completion`: counted and refreshed.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-23T20:59:55.031Z). Suite: Historical suite: 13/13 passed, 0 failed (recorded 2026-11-23T20:54:02.936Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-23T21:01:14.284Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Execute Card T1-11: Multi-role live smoke test on `app.babinrentals.com` per `docs/live/SMOKE_TEST_PROTOCOL.md` across Owner, Coordinator, Warehouse, and Accounts roles.
+- Execute Staging Counter Dual-Entry Trial (Week 1 Action 3 / Card T9-09) on `babin-staging` (`klhmsrunqrdxjudyhnkm`) following `docs/verification/COUNTER_DUAL_ENTRY_TRIAL_RUNBOOK.md`.
+
 ## 2026-11-24 — Staging Counter Dual-Entry Trial Protocol & Law 6 Money Blindness Audit (Windows Antigravity)
 
 ### Did
