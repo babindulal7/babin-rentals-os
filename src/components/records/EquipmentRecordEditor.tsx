@@ -20,6 +20,7 @@ import {
   SectionSaveBar,
   useSectionSaveManager,
 } from './RecordSectionSaveStatus'
+import { SmartEquipmentPanel } from '../../modules/inventory/components/SmartEquipmentPanel'
 
 export interface EquipmentRecordEditorProps {
   recordId?: string | undefined
@@ -66,6 +67,12 @@ export function EquipmentRecordEditor({
 
   const [barcodeModalUnit, setBarcodeModalUnit] = useState<{ unit: RecordValues; index: number } | null>(null)
   const [catalogPreviewOpen, setCatalogPreviewOpen] = useState<boolean>(false)
+  const [smartDrawerOpen, setSmartDrawerOpen] = useState<boolean>(false)
+  const [userTouchedFields, setUserTouchedFields] = useState<Set<string>>(new Set())
+
+  const markFieldTouched = (key: string) => {
+    setUserTouchedFields((prev) => new Set(prev).add(key))
+  }
   const [uploadingPhoto, setUploadingPhoto] = useState<boolean>(false)
   const imagePreviewUrl: string | null = null
 
@@ -108,6 +115,7 @@ export function EquipmentRecordEditor({
   }
 
   const set = (key: string, value: RecordValue) => {
+    markFieldTouched(key)
     setValues((v) => ({ ...v, [key]: value } as RecordValues))
     const field = recordFields.equipment.find(field => field.key === key)
     if (field) sectionManager?.markSectionDirty(recordSectionKey(field.section))
@@ -161,6 +169,29 @@ export function EquipmentRecordEditor({
       id={sectionId('Identity')}
       title="Identity"
       collapsible={false}
+      headerAction={
+        <button
+          type="button"
+          onClick={() => setSmartDrawerOpen(true)}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            minHeight: 32,
+            padding: '0 10px',
+            borderRadius: 4,
+            border: '1px solid var(--border)',
+            background: 'var(--card2)',
+            color: 'var(--nav-active-accent)',
+            fontSize: 'var(--t-th)',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          <Icon name="sparkles" size={13} />
+          Suggest with Intelligence
+        </button>
+      }
       statusBadge={
         sectionManager ? (
           <SectionSaveStatusBadge
@@ -1553,6 +1584,56 @@ export function EquipmentRecordEditor({
         canViewMoney={canViewMoney}
         imagePreviewUrl={imagePreviewUrl}
         onClose={() => setCatalogPreviewOpen(false)}
+      />
+
+      <SmartEquipmentPanel
+        isOpen={smartDrawerOpen}
+        onClose={() => setSmartDrawerOpen(false)}
+        name={String(values.name ?? '')}
+        shortName={String(values.short_name ?? '')}
+        brand={String(values.brand ?? '')}
+        modelNo={String(values.model ?? '')}
+        category={(options.categories ?? []).find((c) => c.id === values.category_id)?.name ?? ''}
+        description={String(values.description ?? '')}
+        dailyRate={String(values.daily_rate ?? '')}
+        replacementValue={String(values.replacement_value ?? '')}
+        canViewMoney={canViewMoney}
+        userTouchedFields={userTouchedFields}
+        onFieldTouched={markFieldTouched}
+        onApplyField={(field, val) => {
+          if (field === 'category') {
+            const cat = (options.categories ?? []).find((c) => c.name.toLowerCase() === String(val).toLowerCase())
+            if (cat) set('category_id', cat.id)
+          } else if (field === 'modelNo') {
+            set('model', String(val))
+          } else if (field === 'shortName') {
+            set('short_name', String(val))
+          } else if (field === 'dailyRate' && canViewMoney) {
+            set('daily_rate', typeof val === 'number' ? val : String(val))
+          } else if (field === 'replacementValue' && canViewMoney) {
+            set('replacement_value', typeof val === 'number' ? val : String(val))
+          } else {
+            set(field, typeof val === 'number' ? val : String(val))
+          }
+        }}
+        onApplyAll={(fields) => {
+          Object.entries(fields).forEach(([f, v]) => {
+            if (f === 'category') {
+              const cat = (options.categories ?? []).find((c) => c.name.toLowerCase() === String(v).toLowerCase())
+              if (cat) set('category_id', cat.id)
+            } else if (f === 'modelNo') {
+              set('model', String(v))
+            } else if (f === 'shortName') {
+              set('short_name', String(v))
+            } else if (f === 'dailyRate' && canViewMoney) {
+              set('daily_rate', typeof v === 'number' ? v : String(v))
+            } else if (f === 'replacementValue' && canViewMoney) {
+              set('replacement_value', typeof v === 'number' ? v : String(v))
+            } else {
+              set(f, typeof v === 'number' ? v : String(v))
+            }
+          })
+        }}
       />
     </div>
   )
