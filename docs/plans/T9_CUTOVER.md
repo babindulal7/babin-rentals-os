@@ -112,7 +112,7 @@ booking site since day X (O-1, B5; T9-05); a full company website follows after 
 confirmation saved; the root domain no longer shows the Booqable store.
 **Needs** — T9-06.
 
-### T9-09 · Usability test rounds            status: todo · size: S each · Babin + staff
+### T9-09 · Usability test rounds            status: doing — desktop rehearsal protocol and U1–U12 task sheet prepared at docs/verification/T9-09_USABILITY_TEST_ROUNDS_PROTOCOL_2026-11-23.md · size: S each · Babin + staff
 **What** — Watch three staff use the app on staging and fix what trips them, following
 `docs/USABILITY_TESTS.md` §2–§3: three people per round (floor, desk, someone new), about 45 minutes
 each, task cards U1–U12, a score sheet, and a same-day ranking of the ten worst problems. Rounds:
