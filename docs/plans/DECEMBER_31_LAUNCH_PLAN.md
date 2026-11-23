@@ -76,13 +76,13 @@ Deliver a **reliable, secure, staff-usable** Babin Rentals OS for day-to-day ren
 
 **Owner of work: Windows Antigravity. CI: Mac runners.**
 
-- [ ] Inventory all open PRs/issues and identify P0, P1, P2 based on actual effect, not title. Remove duplicate work and record dependencies.
-- [ ] Reconcile production, staging and code migration ledgers and PR #348 evidence. Explain any conflict with Issue #56; don't infer approval for SQL application.
-- [ ] Verify a current recoverable backup and **test a restore in an isolated non-production environment** with evidence, subject to authorized access and procedure.
-- [ ] Triage SEC-01 and Issues #66, #223, #226. Test policies/RPC reachability with negative authorization scenarios, not only static checks.
-- [ ] Compare staging/prod policy differences without changing production.
-- [ ] Identify launch-critical UI/backend/accounting defects with reproduction steps and severity.
-- [ ] Publish a one-page **P0 blocker ledger** showing owner, PR, exact head, repro, affected role, severity, test, CI, next safe action.
+- [x] Inventory all open PRs/issues and identify P0, P1, P2 based on actual effect, not title. Remove duplicate work and record dependencies. (Triaged in `docs/plans/P0_BLOCKER_LEDGER.md`)
+- [x] Reconcile production, staging and code migration ledgers and PR #348 evidence. Explain any conflict with Issue #56; don't infer approval for SQL application. (Reconciled: Prod at 0260, Staging at 0268, Code at 0269; Issue #56 Release HOLD active)
+- [ ] Verify a current recoverable backup and **test a restore in an isolated non-production environment** with evidence, subject to authorized access and procedure. (Awaiting Owner execution of physical pg_dump/pg_restore drill)
+- [x] Triage SEC-01 and Issues #66, #223, #226. Test policies/RPC reachability with negative authorization scenarios, not only static checks. (Triaged: #66 disproven exploit/keep security-definer, #223 fixed in PR #225, #226 fixed in PR #242)
+- [x] Compare staging/prod policy differences without changing production. (Recorded in `docs/verification/SUPABASE_SCHEMA_DRIFT_REPORT_2026-11-23.md`)
+- [x] Identify launch-critical UI/backend/accounting defects with reproduction steps and severity. (Catalogued in P0 Blocker Ledger)
+- [x] Publish a one-page **P0 blocker ledger** showing owner, PR, exact head, repro, affected role, severity, test, CI, next safe action. (Published at `docs/plans/P0_BLOCKER_LEDGER.md`)
 
 **Exit:** Backup/restore evidence verified; security risks classified; migration reconciliation and go/no-go list produced. **If unmet, remain HOLD.**
 
