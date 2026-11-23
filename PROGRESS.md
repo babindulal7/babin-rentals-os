@@ -1,5 +1,44 @@
 # Progress Log
 
+## 2026-11-24 — Staging Forward-Migration Rehearsal (0261–0269) & Production Table Baseline Snapshot (Windows Antigravity)
+
+### Did
+- Executed P0-02 staging forward-migration rehearsal: Babin applied `staging_migrations_0260_to_0269_bundle.sql` to hosted Supabase staging (`babin-staging` / `klhmsrunqrdxjudyhnkm`). Pre-flight resolved draft `external_holds` table, then cleanly applied all 9 forward migrations (`0261` through `0269`) with zero errors.
+- Verified staging catalog post-flight RPCs via live query: `record_staff_mfa_enrolment`, `submit_booking_request`, `get_staff_mfa_overview`, and `set_two_step_auth_enforcement` confirmed operational in hosted Postgres.
+- Executed P0-01 disaster recovery baseline capture: Babin completed Option A, exporting production tables (`clients`, `products`, `bookings`; `security_deposits` empty/0 rows) via Supabase Table Editor to CSV format and storing them off-laptop in secure Google Drive.
+- Updated `docs/plans/P0_BLOCKER_LEDGER.md` marking P0-01 (Baseline Captured) and P0-02 (Rehearsed & Unblocked on Staging) as satisfied for Week 1 launch readiness.
+- Refreshed local verification gate receipts (`check:pglite` 267/267 green, `check:lifecycle` 102/102 green).
+
+### Ruled
+- Forward migrations 0261–0269 are officially verified on staging (`klhmsrunqrdxjudyhnkm`); production live apply remains held under Rule N-5 pending the dual-entry counter operational trial.
+- Direct TCP 5432 pg_dump failure diagnosed: Supabase direct DB connections are IPv6-only on Free tier; local client ISP does not route outbound IPv6 on port 5432 and pooler is inactive on the free tier. Table Editor CSV exports serve as the authoritative pre-cutover baseline.
+
+### Verified
+- Staging Supabase (`klhmsrunqrdxjudyhnkm`): 0261–0269 forward migrations successfully applied; post-flight function inventory confirmed.
+- `npm run check:pglite`: PASS (267/267 migrations build from scratch, 48 views checked, 22 allowlisted anon functions, 253 definer search paths pinned).
+- `npm run check:lifecycle`: PASS (102/102 lifecycle steps green in PGlite real Postgres + RLS).
+- `npm run lint:progress`: PASS.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-23T19:31:31.998Z). Suite: Historical suite: 7946/7946 passed, 0 failed (recorded 2026-11-23T19:18:59.474Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 7934/7934 passed, 0 failed (recorded 2026-11-23T18:18:19.757Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-23T19:32:33.474Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Week 1 Action 3: Coordinator & Warehouse counter dual-entry trial on staging (Quote → Pack → Handover → Return).
+- Verify Law 6 money blindness on Warehouse counter screens.
+- Operator live apply of migrations 0260–0269 by Babin per `docs/live/PRODUCTION_LIVE_BATCH_PLAN_2026-11-23.md`.
+
 ## 2026-11-23 — Public Booking Accessibility & Tablet Polish, Staging Bundle Idempotency & Full Mac CI Verification (Windows Antigravity)
 
 ### Did
