@@ -66,6 +66,9 @@ declare
   v_wh_id uuid;
   v_cat_id uuid;
 begin
+  -- Authorize unit status write for initial staging seed
+  perform set_config('app.unit_status_recompute', 'on', true);
+
   select id into v_branch_id from branches order by created_at limit 1;
   if v_branch_id is null then
     v_branch_id := '00000000-0000-0000-0000-000000000001';
@@ -125,7 +128,7 @@ begin
 
   insert into product_units (id, client_uuid, product_id, serial_no, asset_tag, barcode, status, condition, branch_id, warehouse_id)
   values ('7c75ea7f-6e07-43ed-b8ec-a66efceecb88', gen_random_uuid(), '10000000-0000-4000-8000-000000000001', 'FX6-STAGING-001', 'FX6-STG-001', 'FX6-STG-001', 'In Stock'::inventory_state, 'Good'::unit_condition, v_branch_id, v_wh_id)
-  on conflict (id) do update set status = 'In Stock'::inventory_state;
+  on conflict (id) do nothing;
 
   -- 6. Seed test client if missing
   if not exists (select 1 from clients where id = 'e0000000-0000-4000-8000-000000000001' or client_code = 'C-9901' or phone = '+9779800000001') then
