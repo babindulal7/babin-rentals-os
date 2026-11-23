@@ -13,7 +13,11 @@ describe('T1 release card status follows merged PR progress, not invented hosted
     expect(t106Heading).toContain('status: done')
     expect(t106Heading).toContain('PR #174 merged')
 
-    for (const key of ['T1-07', 'T1-08', 'T1-14']) {
+    const t108Heading = release.split('\n').find(line => line.startsWith('### T1-08 ·'))
+    expect(t108Heading).toContain('status: done')
+    expect(t108Heading).toContain('PR #176 merged')
+
+    for (const key of ['T1-07', 'T1-14']) {
       const heading = release.split('\n').find(line => line.startsWith(`### ${key} ·`))
       expect(heading).toContain('status: doing')
       expect(heading).toContain('merged')
