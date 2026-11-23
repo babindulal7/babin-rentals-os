@@ -5,6 +5,21 @@ import { moreNav } from '../../data/nav'
 import { useAuth } from '../../lib/auth'
 import { usePwaInstall } from '../../lib/usePwaInstall'
 import { toggleScanner } from '../../lib/scannerEvents'
+import { useTranslation } from '../../lib/i18n'
+
+const NAV_LABEL_KEYS: Record<string, string> = {
+  '/rentals/new': 'nav.newRental',
+  '/today': 'nav.today',
+  '/operations': 'nav.operations',
+  '/rentals': 'nav.rentals',
+  '/calendar': 'nav.calendar',
+  '/crew': 'nav.crewAssist',
+  '/inventory': 'nav.inventory',
+  '/clients': 'nav.clients',
+  '/finance': 'nav.finance',
+  '/tools': 'nav.tools',
+  '/settings': 'nav.settings',
+}
 
 // Matches --dur in theme.css (the app's generic transition-duration token),
 // the same constant and the same reason as `components/ui/Modal.tsx`: the
@@ -43,6 +58,7 @@ const FOCUSABLE =
  * with a keyboard or a screen reader, so the trap is added here.
  */
 export default function MoreSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const { canInstall, isInstalled, hasPrompt, isIos, promptInstall } = usePwaInstall()
   const items = moreNav(user?.role)
@@ -209,33 +225,37 @@ export default function MoreSheet({ open, onClose }: { open: boolean; onClose: (
             }}
           >
             <Icon name="barcode" size={20} style={{ color: 'var(--primary-text)', flexShrink: 0 }} />
-            <span style={{ fontWeight: 600 }}>Scan equipment</span>
+            <span style={{ fontWeight: 600 }}>{t('nav.scanAria', 'Scan equipment')}</span>
           </button>
-          {items.map((s) => (
-            <Link
-              key={s.to}
-              to={s.to}
-              onClick={onClose}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                minHeight: ROW_H,
-                padding: '0 10px',
-                borderRadius: 'var(--r-sm)',
-                textDecoration: 'none',
-                fontSize: 'var(--t-ui)',
-                fontWeight: 500,
-                color: 'var(--text)',
-              }}
-            >
-              <Icon name={s.icon} size={20} style={{ color: 'var(--nav-icon)', flexShrink: 0 }} />
-              <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {s.label}
-              </span>
-              <Icon name="chevron_right" size={16} style={{ color: 'var(--muted)', flexShrink: 0 }} />
-            </Link>
-          ))}
+          {items.map((s) => {
+            const navKey = NAV_LABEL_KEYS[s.to]
+            const displayLabel = navKey ? t(navKey, s.label) : s.label
+            return (
+              <Link
+                key={s.to}
+                to={s.to}
+                onClick={onClose}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  minHeight: ROW_H,
+                  padding: '0 10px',
+                  borderRadius: 'var(--r-sm)',
+                  textDecoration: 'none',
+                  fontSize: 'var(--t-ui)',
+                  fontWeight: 500,
+                  color: 'var(--text)',
+                }}
+              >
+                <Icon name={s.icon} size={20} style={{ color: 'var(--nav-icon)', flexShrink: 0 }} />
+                <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {displayLabel}
+                </span>
+                <Icon name="chevron_right" size={16} style={{ color: 'var(--muted)', flexShrink: 0 }} />
+              </Link>
+            )
+          })}
 
           {canInstall && (
             <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
