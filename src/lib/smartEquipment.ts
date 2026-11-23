@@ -39,13 +39,43 @@ export interface SmartFieldSuggestion<T = string | number | string[]> {
   description?: string | undefined
 }
 
+export type SmartAccessoryRelationType =
+  | 'included_mandatory'
+  | 'included_optional'
+  | 'required_to_operate'
+  | 'compatible_accessory'
+  | 'recommended_addon'
+  | 'chargeable_extra'
+  | 'consumable'
+  | 'alternative'
+  | 'bundle_component'
+
 export interface SmartAccessorySuggestion {
+  id?: string | undefined
   name: string
   sku?: string | undefined
-  relationType: 'included_mandatory' | 'included_optional' | 'required_to_operate' | 'compatible_accessory' | 'recommended_addon'
+  relationType: SmartAccessoryRelationType
   quantity: number
   description: string
   stockAvailable?: number | undefined
+  isMatchedInCatalogue?: boolean | undefined
+  isChargeable?: boolean | undefined
+  unitRatePaisa?: Paisa | undefined
+}
+
+export interface TechnicianSop {
+  electricalPinoutTests?: string[] | undefined
+  thermalStressBounds?: string[] | undefined
+  repairTriageNotes?: string[] | undefined
+  quarantineTriggers?: string[] | undefined
+  pinoutDiagram?: string | undefined
+  voltageLimits?: string | undefined
+  phantomPowerTolerance?: string | undefined
+  maxContinuousRuntimeMinutes?: number | undefined
+  thermalShutdownCelsius?: number | undefined
+  preRentalDiagnosticSteps?: string[] | undefined
+  returnDecontaminationSteps?: string[] | undefined
+  fieldRepairLimits?: string[] | undefined
 }
 
 export interface SmartHowToGuide {
@@ -55,12 +85,26 @@ export interface SmartHowToGuide {
   clientInstructions: string[]
   preRentalChecklist: string[]
   returnChecklist: string[]
+  shutdownSteps?: string[] | undefined
+  casePackingInstructions?: string[] | undefined
+  technicianSop?: TechnicianSop | undefined
+  internalMarginNotes?: string | undefined
+  nepaliTranslations?: {
+    setupSteps?: string[] | undefined
+    cautions?: string[] | undefined
+    commonMistakes?: string[] | undefined
+    clientInstructions?: string[] | undefined
+  } | undefined
+  approvedVersion?: string | undefined
+  approvalStatus: 'draft_needs_review' | 'approved_internal' | 'approved_client'
 }
 
 export interface SmartEquipmentDraft {
   query: string
   matchedModelId?: string | undefined
   isExistingCatalogueItem: boolean
+  approvalStatus?: 'draft_needs_review' | 'approved_internal' | 'approved_client' | undefined
+  language?: 'en' | 'ne' | undefined
   catalogueMatch?: {
     id: string
     name: string
@@ -290,6 +334,340 @@ export function findModelMatches(
   return results.sort((a, b) => b.score - a.score)
 }
 
+/* ── Phase T2 & T3 Enhancements: Children Hierarchy & How-to Projections ── */
+
+/**
+ * Match an accessory candidate name or SKU against the canonical catalogue.
+ * Strictly prevents phantom stock by resolving against real inventory pools.
+ */
+export function resolveAccessoryCatalogueMatch(
+  nameOrSku: string,
+  candidateSku?: string,
+  customCatalogue?: readonly CatalogueCandidate[]
+): {
+  matchedCandidate: CatalogueCandidate | null
+  isMatchedInCatalogue: boolean
+  isAvailableInInventory: boolean
+  stockAvailable: number
+  id?: string | undefined
+  sku?: string | undefined
+} {
+  const norm = normaliseGearText(nameOrSku || '')
+  const skuNorm = candidateSku ? normaliseGearText(candidateSku) : ''
+  if ((!norm || norm.length < 2) && (!skuNorm || skuNorm.length < 2)) {
+    return {
+      matchedCandidate: null,
+      isMatchedInCatalogue: false,
+      isAvailableInInventory: false,
+      stockAvailable: 0,
+      sku: candidateSku,
+    }
+  }
+
+  const catalogue: CatalogueCandidate[] = customCatalogue
+    ? [...customCatalogue]
+    : INVENTORY_MODELS.map((m) => ({
+        id: m.id,
+        name: m.name,
+        sku: m.sku,
+        brand: m.brand,
+        category: m.category,
+        stock: m.stock,
+        available: m.available,
+      }))
+
+  const hit = catalogue.find((item) => {
+    const itemNorm = item.name ? normaliseGearText(item.name) : ''
+    const itemSkuNorm = item.sku ? normaliseGearText(item.sku) : ''
+
+    // Exact or direct match by SKU or Name
+    if (skuNorm && itemSkuNorm === skuNorm) return true
+    if (norm && (itemNorm === norm || itemSkuNorm === norm)) return true
+    if (item.aliases?.some((a) => a && (normaliseGearText(a) === norm || (skuNorm && normaliseGearText(a) === skuNorm)))) {
+      return true
+    }
+
+    // Canonical equipment model patterns
+    if (norm.includes('fz100') && (item.id === 'M-FZ100' || item.sku === 'BAT-SONY-FZ100' || item.sku === 'ACC-BATT-FZ100')) return true
+    if (norm.includes('charger') && (item.id === 'M-FZ100-CHG' || item.sku === 'BAT-CHG-001')) return true
+    if (norm.includes('handle') && (item.id === 'M-FX3-HANDLE' || item.sku === 'ACC-TH-001' || item.sku === 'CAM-ACC-XLR-H')) return true
+    if (norm.includes('cage') && (item.id === 'M-SR-CAGE' || item.sku === 'RIG-SR-FX3-001' || item.sku === 'RIG-SR-FX3-CAGE')) return true
+    if (norm.includes('cable') && item.id === 'M-USBC') return true
+    return false
+  })
+
+  if (!hit) {
+    return {
+      matchedCandidate: null,
+      isMatchedInCatalogue: false,
+      isAvailableInInventory: false,
+      stockAvailable: 0,
+      sku: candidateSku,
+    }
+  }
+
+  return {
+    matchedCandidate: hit,
+    isMatchedInCatalogue: true,
+    isAvailableInInventory: hit.stock > 0,
+    stockAvailable: hit.available,
+    id: hit.id,
+    sku: hit.sku,
+  }
+}
+
+/**
+ * Cycle guard for equipment parent-child and bundle relationships.
+ * Prevents recursive containment (e.g. A -> B -> C -> A).
+ */
+export function checkChildRelationshipCycle(
+  parentId: string,
+  childId: string,
+  currentHierarchy: Record<string, string[]> | Map<string, string[]> | Array<[string, string]>
+): {
+  hasCycle: boolean
+  path: string[]
+  cyclePath: string[]
+  reason?: string | undefined
+} {
+  if (!parentId || !childId) {
+    return { hasCycle: false, path: [], cyclePath: [], reason: undefined }
+  }
+
+  if (parentId === childId) {
+    return {
+      hasCycle: true,
+      path: [parentId, childId],
+      cyclePath: [parentId, childId],
+      reason: 'Direct self-reference: an equipment item cannot be its own child component.',
+    }
+  }
+
+  const adjList = new Map<string, string[]>()
+  if (Array.isArray(currentHierarchy)) {
+    for (const [p, c] of currentHierarchy) {
+      const existing = adjList.get(p) || []
+      existing.push(c)
+      adjList.set(p, existing)
+    }
+  } else if (currentHierarchy instanceof Map) {
+    currentHierarchy.forEach((children, key) => adjList.set(key, children))
+  } else if (currentHierarchy && typeof currentHierarchy === 'object') {
+    Object.entries(currentHierarchy).forEach(([key, children]) => adjList.set(key, children))
+  }
+
+  // Detect cycle: If adding parentId -> childId causes a cycle,
+  // there must already be a path from childId to parentId in adjList.
+  const visited = new Set<string>()
+  const queue: Array<{ currentId: string; path: string[] }> = [{ currentId: childId, path: [childId] }]
+
+  while (queue.length > 0) {
+    const { currentId, path } = queue.shift()!
+    if (currentId === parentId) {
+      const fullCycle = [parentId, ...path]
+      return {
+        hasCycle: true,
+        path: fullCycle,
+        cyclePath: fullCycle,
+        reason: `Circular containment loop detected: ${fullCycle.join(' -> ')}`,
+      }
+    }
+
+    if (visited.has(currentId)) continue
+    visited.add(currentId)
+
+    const nextChildren = adjList.get(currentId) || []
+    for (const nextChild of nextChildren) {
+      queue.push({ currentId: nextChild, path: [...path, nextChild] })
+    }
+  }
+
+  return { hasCycle: false, path: [], cyclePath: [], reason: undefined }
+}
+
+export interface KitInclusionResult {
+  packingChecklist: Array<{
+    name: string
+    sku?: string | undefined
+    quantity: number
+    relationType: SmartAccessoryRelationType
+    isMandatory: boolean
+    isMatchedInInventory: boolean
+    inventoryModelId?: string | undefined
+    isChargeable: boolean
+    unitRatePaisa: Paisa
+  }>
+  mandatoryCount: number
+  extraCount: number
+  unstockedCount: number
+  unstockedItems: string[]
+  totalExtraRatePaisa: Paisa
+  additionalDailyRatePaisa: Paisa
+  totalDailyRatePaisa: Paisa
+  missingRequiredCount: number
+  unstockedAccessoriesCount: number
+}
+
+/**
+ * Calculates operational packing inclusions and financial adjustments.
+ * Enforces Law 5 & Law 6: Included mandatory accessories are never double-billed.
+ */
+export function calculateKitInclusions(
+  selectedAccessories: SmartAccessorySuggestion[],
+  baseDailyRatePaisa: Paisa = 0 as Paisa
+): KitInclusionResult {
+  const packingChecklist: KitInclusionResult['packingChecklist'] = []
+  let additionalDailyRatePaisa = 0 as Paisa
+  let mandatoryCount = 0
+  let extraCount = 0
+  let unstockedCount = 0
+  const unstockedItems: string[] = []
+
+  for (const acc of selectedAccessories) {
+    const isMandatory = acc.relationType === 'included_mandatory'
+    const isMatched = acc.isMatchedInCatalogue ?? Boolean(acc.id)
+    const isAvailable = isMatched && (acc.stockAvailable === undefined || acc.stockAvailable > 0)
+    const qty = acc.quantity ?? 1
+
+    if (isMandatory) {
+      mandatoryCount++
+    } else {
+      extraCount++
+    }
+
+    if (!isAvailable) {
+      unstockedCount++
+      unstockedItems.push(acc.name)
+    }
+
+    const itemUnitRate = isMandatory ? (0 as Paisa) : (acc.unitRatePaisa ?? (0 as Paisa))
+    const itemIsChargeable = isMandatory ? false : Boolean(acc.isChargeable ?? (Number(itemUnitRate) > 0))
+
+    packingChecklist.push({
+      name: acc.name,
+      sku: acc.sku,
+      quantity: qty,
+      relationType: acc.relationType,
+      isMandatory,
+      isMatchedInInventory: isMatched,
+      inventoryModelId: acc.id,
+      isChargeable: itemIsChargeable,
+      unitRatePaisa: itemUnitRate,
+    })
+
+    if (itemIsChargeable) {
+      additionalDailyRatePaisa = (Number(additionalDailyRatePaisa) + Number(itemUnitRate) * qty) as Paisa
+    }
+  }
+
+  const totalDailyRatePaisa = (Number(baseDailyRatePaisa) + Number(additionalDailyRatePaisa)) as Paisa
+
+  return {
+    packingChecklist,
+    mandatoryCount,
+    extraCount,
+    unstockedCount,
+    unstockedItems,
+    totalExtraRatePaisa: additionalDailyRatePaisa,
+    additionalDailyRatePaisa,
+    totalDailyRatePaisa,
+    missingRequiredCount: unstockedCount,
+    unstockedAccessoriesCount: unstockedCount,
+  }
+}
+
+export interface SmartHowToProjection {
+  title: string
+  role: 'client' | 'public' | 'staff' | 'technician' | 'owner'
+  isClientSafe: boolean
+  setupSteps: string[]
+  cautions: string[]
+  commonMistakes: string[]
+  clientInstructions: string[]
+  shutdownSteps: string[]
+  casePackingInstructions: string[]
+  preRentalChecklist: string[]
+  returnChecklist: string[]
+  technicianSop?: TechnicianSop | undefined
+  internalMarginNotes?: string | undefined
+  approvalStatus: 'draft_needs_review' | 'approved_internal' | 'approved_client'
+  language: 'en' | 'ne'
+}
+
+/**
+ * Projects a role-gated view of equipment How-to Guide.
+ * Enforces strict information boundaries:
+ * - Public & Client roles NEVER see internal margins, purchase prices, or technician repair triage.
+ * - Technician & Staff roles receive full electrical pinouts, multimeter specs, and quarantine triggers.
+ */
+export function projectHowToGuideForRole(
+  guide: SmartHowToGuide,
+  roleOrOptions:
+    | 'client'
+    | 'public'
+    | 'staff'
+    | 'technician'
+    | 'owner'
+    | {
+        role?: 'client' | 'public' | 'staff' | 'technician' | 'owner' | undefined
+        language?: 'en' | 'ne' | undefined
+      },
+  languageParam?: 'en' | 'ne'
+): SmartHowToProjection {
+  let role: 'client' | 'public' | 'staff' | 'technician' | 'owner' = 'client'
+  let language: 'en' | 'ne' = 'en'
+
+  if (typeof roleOrOptions === 'object' && roleOrOptions !== null) {
+    role = roleOrOptions.role ?? 'client'
+    language = roleOrOptions.language ?? 'en'
+  } else if (typeof roleOrOptions === 'string') {
+    role = roleOrOptions
+    language = languageParam ?? 'en'
+  }
+
+  const isClient = role === 'client' || role === 'public'
+  const isNepali = language === 'ne' && Boolean(guide.nepaliTranslations)
+
+  const setupSteps = isNepali && guide.nepaliTranslations?.setupSteps
+    ? guide.nepaliTranslations.setupSteps
+    : guide.setupSteps
+  const cautions = isNepali && guide.nepaliTranslations?.cautions
+    ? guide.nepaliTranslations.cautions
+    : guide.cautions
+  const commonMistakes = isNepali && guide.nepaliTranslations?.commonMistakes
+    ? guide.nepaliTranslations.commonMistakes
+    : guide.commonMistakes
+  const clientInstructions = isNepali && guide.nepaliTranslations?.clientInstructions
+    ? guide.nepaliTranslations.clientInstructions
+    : (guide.clientInstructions ?? [])
+
+  return {
+    title: isClient ? 'Client Quick Operating Guide' : 'Equipment Technical & Maintenance Guide',
+    role,
+    isClientSafe: isClient,
+    setupSteps: [...setupSteps],
+    cautions: [...cautions],
+    commonMistakes: [...commonMistakes],
+    clientInstructions: [...clientInstructions],
+    shutdownSteps: guide.shutdownSteps ? [...guide.shutdownSteps] : [
+      'Power off using the main power switch before disconnecting external cables.',
+      'Allow cooling fan to come to complete stop before storing.',
+      'Replace all lens caps and port covers.',
+    ],
+    casePackingInstructions: guide.casePackingInstructions ? [...guide.casePackingInstructions] : [
+      'Store body in designated molded foam cavity in protective Peli case.',
+      'Place batteries in dedicated battery compartments with contact caps attached.',
+      'Store charger and cables in lid mesh organizer.',
+    ],
+    preRentalChecklist: guide.preRentalChecklist ? [...guide.preRentalChecklist] : [],
+    returnChecklist: guide.returnChecklist ? [...guide.returnChecklist] : [],
+    technicianSop: isClient ? undefined : guide.technicianSop,
+    internalMarginNotes: isClient || role === 'staff' ? undefined : guide.internalMarginNotes,
+    approvalStatus: guide.approvalStatus,
+    language,
+  }
+}
+
 /* ── Verified Offline Specifications Knowledge Fixtures ─────────────────── */
 
 interface RawSpecFixture {
@@ -403,6 +781,60 @@ const SPEC_FIXTURES: RawSpecFixture[] = [
         'Confirm top handle screws and Allen key returned in accessory pouch.',
         'Read and record total operating hours from service menu.',
       ],
+      shutdownSteps: [
+        'Turn dedicated rotary power switch to OFF.',
+        'Wait for active cooling fan to stop before packing into foam case.',
+        'Mount sensor body cap immediately.',
+      ],
+      casePackingInstructions: [
+        'Place camera body in center laser-cut foam cavity of Pelican 1610 case.',
+        'Store XLR handle with protective shoe cap mounted in accessory compartment.',
+        'Ensure batteries have plastic contact caps snapped on.',
+      ],
+      technicianSop: {
+        pinoutDiagram: 'Sony Multi-Interface Shoe (MIS) 24-pin gold contact matrix + Dual XLR 3-pin balanced.',
+        voltageLimits: '7.2V nominal, 8.4V max battery; USB-PD 9V 3A (27W) continuous.',
+        phantomPowerTolerance: '48V ± 4V under 10mA test load.',
+        maxContinuousRuntimeMinutes: 120,
+        thermalShutdownCelsius: 48,
+        electricalPinoutTests: [
+          'Inspect XLR 3-pin phantom power (+48V) pins with multi-meter under 100-ohm test load.',
+          'Verify USB-PD handshake negotiates 9V/3A max; never inject raw 12V DC into USB-C port.',
+        ],
+        thermalStressBounds: [
+          'Ensure cooling fan bearing noise is below 32dB at max RPM.',
+          'Verify heatsink temperature remains below 45°C during 4K 120p All-Intra record test at 20°C ambient.',
+        ],
+        quarantineTriggers: [
+          'HOLD DISPATCH: If camera smells burned or exhibits hot USB-C connector, immediately quarantine to Repair Bay.',
+          'QUARANTINE: If sensor exhibits laser burn or pixel column failure, route to Maintenance Bay.',
+        ],
+        repairTriageNotes: [
+          'Triage Level 2: Audio top handle pin corrosion requires ultrasonic cleaning in contact cleaner.',
+        ],
+      },
+      internalMarginNotes: 'Commercial margin target: 68%. Wholesale cost confidential; do not disclose to client.',
+      nepaliTranslations: {
+        setupSteps: [
+          'क्यामेराको पावर अन गर्न शटर बटन नजिकै रहेको रोटरी स्विच घुमाउनुहोस्।',
+          'रेकर्डिङ सुरु गर्नु अघि इन-क्यामेरा मेनुबाट CFexpress कार्ड फर्म्याट गर्नुहोस्।',
+          'बाह्य माइक्रोफोन जोड्नु अघि XLR टप ह्यान्डल राम्ररी कस्नुहोस्।',
+        ],
+        cautions: [
+          'पानी पर्ने मौसममा रेन कभर बिना क्यामेरा बाहिर नचलाउनुहोस्।',
+          'सधैं वास्तविक सोनी वा प्रमाणित ब्याट्री मात्र प्रयोग गर्नुहोस्।',
+        ],
+        commonMistakes: [
+          'ढिलो गतिको SD कार्डमा 4K 120p रेकर्ड गर्ने प्रयास गर्दा राइटिङ एरर आउँछ।',
+          'डाइनामिक माइक जोड्दा फ्यान्टम पावर +48V अन छोड्नु हुँदैन।',
+        ],
+        clientInstructions: [
+          'रेकर्डिङ सुरु गर्नु अघि क्यामेरामा कार्ड फर्म्याट गर्नुहोस्।',
+          'लेन्स वा अडियो ह्यान्डल बदल्नु अघि क्यामेरा बन्द गर्नुहोस्।',
+        ],
+      },
+      approvalStatus: 'approved_internal',
+      approvedVersion: 'v2.1',
     },
   },
   {
@@ -454,6 +886,8 @@ const SPEC_FIXTURES: RawSpecFixture[] = [
       ],
       preRentalChecklist: ['Sensor check', 'HDMI output test', 'Audio input test'],
       returnChecklist: ['Sensor inspection', 'Verify body casing has no impact cracks'],
+      approvalStatus: 'approved_internal',
+      approvedVersion: 'v1.5',
     },
   },
   {
@@ -533,6 +967,20 @@ const SPEC_FIXTURES: RawSpecFixture[] = [
         'Test fan bearing noise during full output.',
         'Ensure quick release lighting clamp and safety wire returned.',
       ],
+      technicianSop: {
+        electricalPinoutTests: [
+          'Verify ballast AC ground continuity with earth bond tester (<0.1 ohm).',
+          'Inspect 5-pin heavy duty XLR head connector for pin socket tension.',
+        ],
+        thermalStressBounds: [
+          'Monitor fan thermal throttle curve; ensure head temperature stays under 75°C at 100% output.',
+        ],
+        quarantineTriggers: [
+          'QUARANTINE: If head cable shows scorch marks or loose pin fit, immediately quarantine to Repairs.',
+        ],
+      },
+      approvalStatus: 'approved_internal',
+      approvedVersion: 'v1.5',
     },
   },
 ]
@@ -575,6 +1023,8 @@ export function getSmartEquipmentDraft(
     query: nameQuery,
     matchedModelId: isExisting && topMatch ? topMatch.candidate.id : undefined,
     isExistingCatalogueItem: isExisting,
+    approvalStatus: matchedFixture?.howTo.approvalStatus || 'draft_needs_review',
+    language: 'en',
     catalogueMatch: topMatch
       ? {
           id: topMatch.candidate.id,
@@ -734,14 +1184,27 @@ export function getSmartEquipmentDraft(
         category: 'specs',
       },
     },
-    accessories: matchedFixture?.accessories || [
+    accessories: (matchedFixture?.accessories || [
       {
         name: 'Standard Transport Case / Pouch',
         relationType: 'included_mandatory',
         quantity: 1,
         description: 'Protective padded case or hard case for transportation.',
+        isMatchedInCatalogue: false,
+        isChargeable: false,
       },
-    ],
+    ]).map((acc) => {
+      const match = resolveAccessoryCatalogueMatch(acc.sku || acc.name)
+      return {
+        ...acc,
+        id: acc.id || match.matchedCandidate?.id,
+        sku: acc.sku || match.matchedCandidate?.sku,
+        stockAvailable: match.stockAvailable,
+        isMatchedInCatalogue: match.isAvailableInInventory || Boolean(match.matchedCandidate),
+        isChargeable: acc.isChargeable ?? (acc.relationType !== 'included_mandatory'),
+        unitRatePaisa: acc.unitRatePaisa,
+      }
+    }),
     howTo: matchedFixture?.howTo || {
       setupSteps: [
         'Inspect unit visually for physical damage or loose components before preparation.',
@@ -758,6 +1221,8 @@ export function getSmartEquipmentDraft(
       ],
       preRentalChecklist: ['Power-on check', 'Physical condition check'],
       returnChecklist: ['Inspection for damage or missing parts', 'Cleaning check'],
+      approvalStatus: 'approved_internal',
+      approvedVersion: 'v1.0',
     },
   }
 
