@@ -9,6 +9,7 @@ import { SectionPurchase } from './components/SectionPurchase'
 import { SectionPricing } from './components/SectionPricing'
 import { SectionMaintenance } from './components/SectionMaintenance'
 import { EquipmentRightRail } from './components/EquipmentRightRail'
+import { SmartEquipmentPanel } from './components/SmartEquipmentPanel'
 import { ErrorBanner } from '../../components/ui/StateViews'
 import { Unavailable } from '../../components/ui/Unavailable'
 import { Modal } from '../../components/ui/Modal'
@@ -251,6 +252,14 @@ function AddEquipmentLayout({ embedded, onDone }: { embedded?: boolean; onDone?:
                 <Button variant="ghost" onClick={() => (isDirty ? setShowDiscard(true) : handleExit())}>
                   Cancel
                 </Button>
+                <Button
+                  variant="secondary"
+                  icon="sparkles"
+                  onClick={() => ctx.setIsSmartDrawerOpen(true)}
+                  title="Open Smart Equipment Suggestions Drawer"
+                >
+                  {phone ? 'Suggest' : 'Suggest with Intelligence'}
+                </Button>
                 {!phone && (
                   <Unavailable reason={PREVIEW_UNAVAILABLE_REASON}>
                     <Button variant="secondary" icon="eye" disabled>
@@ -404,6 +413,25 @@ function AddEquipmentLayout({ embedded, onDone }: { embedded?: boolean; onDone?:
         )}
       </div>
 
+      <SmartEquipmentPanel
+        isOpen={ctx.isSmartDrawerOpen}
+        onClose={() => ctx.setIsSmartDrawerOpen(false)}
+        name={ctx.name}
+        shortName={ctx.shortName}
+        brand={ctx.brand}
+        modelNo={ctx.modelNo}
+        category={ctx.category}
+        description={ctx.description}
+        dailyRate={ctx.dailyRate}
+        replacementValue={ctx.replacementValue}
+        canViewMoney={money}
+        userTouchedFields={ctx.userTouchedFields}
+        onFieldTouched={ctx.markFieldTouched}
+        onApplyField={ctx.applySmartField}
+        onApplyAll={ctx.applyAllSmartFields}
+        onOpenExisting={(_id) => navigate('/inventory')}
+        onDismissDuplicate={() => ctx.setDismissedDuplicate(true)}
+      />
 
       <Modal
         isOpen={showDiscard}

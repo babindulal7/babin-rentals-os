@@ -49,16 +49,46 @@ export function SectionIdentity() {
     addImages,
     errors,
     sectionNumber,
+    setIsSmartDrawerOpen,
+    markFieldTouched,
   } = useEquipmentContext()
 
   return (
-    <SectionCard id="sec-identity" n={sectionNumber('sec-identity')} title="Identity">
+    <SectionCard
+      id="sec-identity"
+      n={sectionNumber('sec-identity')}
+      title="Identity"
+      action={
+        <button
+          type="button"
+          onClick={() => setIsSmartDrawerOpen(true)}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            minHeight: 36,
+            padding: '0 12px',
+            borderRadius: 'var(--r-sm)',
+            border: '1px solid var(--border)',
+            background: 'var(--card2)',
+            color: 'var(--nav-active-accent)',
+            fontSize: 'var(--t-meta)',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          <Icon name="sparkles" size={14} />
+          Suggest with Intelligence
+        </button>
+      }
+    >
             <div style={fieldRow}>
               <Field label="Equipment Name" required error={errors.name} span={2}>
                 <input
                   value={name}
                   onChange={(e) => {
                     setName(e.target.value)
+                    markFieldTouched('name')
                   }}
                   placeholder="e.g. Sony FX3 Camera Body"
                   style={inputStyle(Boolean(errors.name))}
@@ -67,7 +97,10 @@ export function SectionIdentity() {
               <Field label="Short Name">
                 <input
                   value={shortName}
-                  onChange={(e) => setShortName(e.target.value)}
+                  onChange={(e) => {
+                    setShortName(e.target.value)
+                    markFieldTouched('shortName')
+                  }}
                   placeholder="e.g. FX3 Body"
                   style={inputStyle()}
                 />
@@ -83,6 +116,7 @@ export function SectionIdentity() {
                   value={category}
                   onChange={(e) => {
                     setCategory(e.target.value)
+                    markFieldTouched('category')
                   }}
                   style={inputStyle(Boolean(errors.category))}
                 >
@@ -105,13 +139,22 @@ export function SectionIdentity() {
                   value={brand}
                   onChange={(e) => {
                     setBrand(e.target.value)
+                    markFieldTouched('brand')
                   }}
                   placeholder="e.g. Sony"
                   style={inputStyle(Boolean(errors.brand))}
                 />
               </Field>
               <Field label="Model">
-                <input value={modelNo} onChange={(e) => setModelNo(e.target.value)} placeholder="e.g. ILME-FX3" style={inputStyle()} />
+                <input
+                  value={modelNo}
+                  onChange={(e) => {
+                    setModelNo(e.target.value)
+                    markFieldTouched('modelNo')
+                  }}
+                  placeholder="e.g. ILME-FX3"
+                  style={inputStyle()}
+                />
               </Field>
             </div>
 
@@ -163,7 +206,10 @@ export function SectionIdentity() {
               <textarea
                 value={description}
                 maxLength={1000}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => {
+                  setDescription(e.target.value)
+                  markFieldTouched('description')
+                }}
                 rows={3}
                 placeholder="Full-frame Cinema Line camera, S-Cinetone, 4K 120p, 10-bit 4:2:2 internal…"
                 style={{ ...inputStyle(), height: 'auto', padding: 10, resize: 'vertical' }}
