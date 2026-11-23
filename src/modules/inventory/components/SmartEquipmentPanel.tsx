@@ -7,6 +7,10 @@ import {
   type SmartEquipmentDraft,
   type SmartFieldSuggestion,
   type ProvenanceBadge,
+  type SmartAccessorySuggestion,
+  type SmartHowToGuide,
+  projectHowToGuideForRole,
+  calculateKitInclusions,
 } from '../../../lib/smartEquipment'
 import { formatMoney, toRupees, type Paisa } from '../../../lib/money'
 import { useViewport } from '../../../lib/device'
@@ -34,6 +38,10 @@ export interface SmartEquipmentPanelProps {
   // Tracking manual edits made by staff so intelligence never silently overwrites them
   userTouchedFields?: Set<string>
   onFieldTouched?: (field: string) => void
+
+  // Phase T2 & T3 callbacks
+  onApplyAccessories?: (accessories: SmartAccessorySuggestion[]) => void
+  onApplyHowTo?: (guide: SmartHowToGuide) => void
 }
 
 type PanelTab = 'identity' | 'specs' | 'accessories' | 'safety' | 'pricing' | 'diff'
@@ -96,6 +104,8 @@ export function SmartEquipmentPanel({
   onOpenExisting,
   onDismissDuplicate,
   userTouchedFields = new Set(),
+  onApplyAccessories,
+  onApplyHowTo,
 }: SmartEquipmentPanelProps) {
   const viewport = useViewport()
   const isPhone = viewport === 'phone'
@@ -106,11 +116,72 @@ export function SmartEquipmentPanel({
   const [acceptedFields, setAcceptedFields] = useState<Set<string>>(new Set())
   const [previousManualValues, setPreviousManualValues] = useState<Record<string, string | number>>({})
 
+  // Phase T2 & T3 interactive states
+  const [selectedAccessoryNames, setSelectedAccessoryNames] = useState<Set<string>>(new Set())
+  const [howToRoleView, setHowToRoleView] = useState<'client' | 'technician'>('client')
+  const [howToLanguage, setHowToLanguage] = useState<'en' | 'ne'>('en')
+  const [accessoriesApplied, setAccessoriesApplied] = useState(false)
+  const [howToApplied, setHowToApplied] = useState(false)
+
   // Compute smart draft proposals based on typed name and model
   const smartDraft: SmartEquipmentDraft | null = useMemo(() => {
     if (!name || name.trim().length < 2) return null
     return getSmartEquipmentDraft(name, modelNo, { canViewMoney })
   }, [name, modelNo, canViewMoney])
+
+  // Sync accessories selection whenever draft model changes
+  const draftAccessories = smartDraft?.accessories
+  useEffect(() => {
+    if (draftAccessories) {
+      setSelectedAccessoryNames(new Set(draftAccessories.map((a) => a.name)))
+      setAccessoriesApplied(false)
+      setHowToApplied(false)
+    }
+  }, [smartDraft?.matchedModelId, smartDraft?.query, draftAccessories])
+
+  const activeSelectedAccessories = useMemo(() => {
+    if (!smartDraft) return []
+    return smartDraft.accessories.filter((a) => selectedAccessoryNames.has(a.name))
+  }, [smartDraft, selectedAccessoryNames])
+
+  const kitInclusionSummary = useMemo(() => {
+    return calculateKitInclusions(activeSelectedAccessories)
+  }, [activeSelectedAccessories])
+
+  const projectedGuide = useMemo(() => {
+    if (!smartDraft) return null
+    return projectHowToGuideForRole(smartDraft.howTo, {
+      role: howToRoleView,
+      language: howToLanguage,
+    })
+  }, [smartDraft, howToRoleView, howToLanguage])
+
+  const toggleAccessory = (accName: string) => {
+    setSelectedAccessoryNames((prev) => {
+      const next = new Set(prev)
+      if (next.has(accName)) {
+        next.delete(accName)
+      } else {
+        next.add(accName)
+      }
+      return next
+    })
+    setAccessoriesApplied(false)
+  }
+
+  const handleApplySelectedAccessories = () => {
+    if (onApplyAccessories) {
+      onApplyAccessories(activeSelectedAccessories)
+    }
+    setAccessoriesApplied(true)
+  }
+
+  const handleApplyHowTo = () => {
+    if (onApplyHowTo && projectedGuide) {
+      onApplyHowTo(projectedGuide)
+    }
+    setHowToApplied(true)
+  }
 
   // Check for catalogue duplicates
   const catalogueMatches = useMemo(() => {
@@ -577,76 +648,473 @@ export function SmartEquipmentPanel({
               )}
 
               {activeTab === 'accessories' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
-                      Recommended Included Kit &amp; Accessories
-                    </span>
-                    <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
-                      Canonical Inventory Items Only
-                    </span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                    <div>
+                      <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)', display: 'block' }}>
+                        Child Items &amp; Accessory Linking
+                      </span>
+                      <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)' }}>
+                        Linked to canonical catalogue models with zero phantom serials
+                      </span>
+                    </div>
+                    {onApplyAccessories && (
+                      <Button
+                        variant={accessoriesApplied ? 'secondary' : 'primary'}
+                        onClick={handleApplySelectedAccessories}
+                        disabled={activeSelectedAccessories.length === 0}
+                        style={{ minHeight: 36, padding: '4px 12px' }}
+                      >
+                        {accessoriesApplied ? '✓ Accessories Applied' : 'Apply Selected Accessories'}
+                      </Button>
+                    )}
                   </div>
 
-                  {smartDraft.accessories.map((acc, i) => (
+                  {/* Kit Inclusion & Financial Summary Card */}
+                  <div
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: 8,
+                      background: 'var(--card2)',
+                      border: '1px solid var(--border)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 8,
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                      <span style={{ fontSize: 'var(--t-th)', fontWeight: 600, color: 'var(--text)' }}>
+                        Package Summary ({activeSelectedAccessories.length} selected):
+                      </span>
+                      <div style={{ display: 'flex', gap: 10, fontSize: 'var(--t-th)', flexWrap: 'wrap' }}>
+                        <span style={{ color: '#059669', fontWeight: 600 }}>
+                          Included in Body: {kitInclusionSummary.mandatoryCount} (Rs 0)
+                        </span>
+                        {canViewMoney && (
+                          <span style={{ color: '#2563eb', fontWeight: 600 }}>
+                            Add-ons: {kitInclusionSummary.extraCount} (+{formatMoney(kitInclusionSummary.totalExtraRatePaisa)}/day)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {kitInclusionSummary.unstockedCount > 0 && (
+                      <div
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: 6,
+                          background: 'rgba(217, 119, 6, 0.1)',
+                          border: '1px solid rgba(217, 119, 6, 0.25)',
+                          color: '#d97706',
+                          fontSize: 'var(--t-th)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        <Icon name="alert_circle" size={13} />
+                        <span>
+                          {kitInclusionSummary.unstockedCount} item(s) unstocked in catalogue (cannot allocate physical serial numbers)
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Accessory Cards List */}
+                  {smartDraft.accessories.map((acc, i) => {
+                    const isSelected = selectedAccessoryNames.has(acc.name)
+                    const isMandatory = acc.relationType === 'included_mandatory'
+                    return (
+                      <div
+                        key={i}
+                        data-testid={`accessory-row-${acc.name}`}
+                        style={{
+                          padding: '12px 14px',
+                          borderRadius: 8,
+                          background: isSelected ? 'var(--card)' : 'var(--card2)',
+                          border: `1px solid ${isSelected ? 'var(--nav-active-accent)' : 'var(--border)'}`,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 8,
+                          opacity: isSelected ? 1 : 0.6,
+                          transition: 'all 0.15s ease-in-out',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap' }}>
+                          <label
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 10,
+                              cursor: 'pointer',
+                              fontWeight: 600,
+                              fontSize: 'var(--t-ui)',
+                              color: 'var(--text)',
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleAccessory(acc.name)}
+                              style={{ width: 16, height: 16, cursor: 'pointer' }}
+                            />
+                            <span>{acc.name}</span>
+                            {acc.sku && (
+                              <span className="identifier" style={{ fontSize: 'var(--t-th)', fontWeight: 400 }}>
+                                {acc.sku}
+                              </span>
+                            )}
+                          </label>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            {/* Relation Type Badge */}
+                            <span
+                              style={{
+                                padding: '2px 8px',
+                                borderRadius: 4,
+                                fontSize: 'var(--t-th)',
+                                fontWeight: 600,
+                                background: isMandatory ? 'rgba(5, 150, 105, 0.15)' : 'rgba(37, 99, 235, 0.15)',
+                                color: isMandatory ? '#059669' : '#2563eb',
+                              }}
+                            >
+                              {isMandatory
+                                ? 'Included Standard'
+                                : acc.relationType === 'required_to_operate'
+                                ? 'Required to Operate'
+                                : acc.relationType === 'chargeable_extra'
+                                ? 'Chargeable Extra'
+                                : 'Recommended Add-on'}
+                            </span>
+
+                            {/* Stock Availability Badge */}
+                            <span
+                              data-testid={`accessory-stock-${acc.name}`}
+                              style={{
+                                padding: '2px 8px',
+                                borderRadius: 4,
+                                fontSize: 'var(--t-th)',
+                                fontWeight: 600,
+                                background: acc.isMatchedInCatalogue
+                                  ? 'rgba(5, 150, 105, 0.1)'
+                                  : 'rgba(217, 119, 6, 0.1)',
+                                color: acc.isMatchedInCatalogue ? '#059669' : '#d97706',
+                                border: `1px solid ${
+                                  acc.isMatchedInCatalogue ? 'rgba(5, 150, 105, 0.25)' : 'rgba(217, 119, 6, 0.25)'
+                                }`,
+                              }}
+                            >
+                              {acc.isMatchedInCatalogue
+                                ? `✓ In Inventory (${acc.stockAvailable} free)`
+                                : '⚠ Not in Inventory'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <p style={{ margin: 0, fontSize: 'var(--t-th)', color: 'var(--text2)', paddingLeft: 26 }}>
+                          {acc.description}
+                        </p>
+
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            paddingLeft: 26,
+                            paddingTop: 4,
+                            borderTop: '1px solid var(--border2)',
+                            fontSize: 'var(--t-th)',
+                          }}
+                        >
+                          <span style={{ color: 'var(--muted)' }}>
+                            {acc.isMatchedInCatalogue ? `Matched SKU: ${acc.sku}` : 'Requires catalogue entry creation'}
+                          </span>
+                          <span style={{ fontWeight: 600, color: isMandatory ? '#059669' : 'var(--text)' }}>
+                            {isMandatory
+                              ? 'Included with Body (Rs 0)'
+                              : canViewMoney && acc.unitRatePaisa
+                              ? `+${formatMoney(acc.unitRatePaisa)}/day`
+                              : 'Chargeable Add-on'}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {activeTab === 'safety' && projectedGuide && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {/* Controls Bar: Role & Language Selectors */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: 10,
+                      padding: '10px 14px',
+                      background: 'var(--card2)',
+                      borderRadius: 8,
+                      border: '1px solid var(--border)',
+                    }}
+                  >
+                    {/* Role Pill Switcher */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 'var(--t-th)', color: 'var(--muted)', fontWeight: 600 }}>
+                        Target Role:
+                      </span>
+                      <div
+                        style={{
+                          display: 'inline-flex',
+                          borderRadius: 6,
+                          border: '1px solid var(--border)',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <button
+                          type="button"
+                          data-testid="howto-role-client"
+                          onClick={() => setHowToRoleView('client')}
+                          style={{
+                            padding: '4px 10px',
+                            minHeight: 32,
+                            border: 'none',
+                            background: howToRoleView === 'client' ? 'var(--nav-active-accent)' : 'transparent',
+                            color: howToRoleView === 'client' ? '#fff' : 'var(--text2)',
+                            fontWeight: howToRoleView === 'client' ? 600 : 400,
+                            fontSize: 'var(--t-th)',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Client View (Safe)
+                        </button>
+                        <button
+                          type="button"
+                          data-testid="howto-role-technician"
+                          onClick={() => setHowToRoleView('technician')}
+                          style={{
+                            padding: '4px 10px',
+                            minHeight: 32,
+                            border: 'none',
+                            borderLeft: '1px solid var(--border)',
+                            background: howToRoleView === 'technician' ? 'var(--nav-active-accent)' : 'transparent',
+                            color: howToRoleView === 'technician' ? '#fff' : 'var(--text2)',
+                            fontWeight: howToRoleView === 'technician' ? 600 : 400,
+                            fontSize: 'var(--t-th)',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Technician SOP (Internal)
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Language Switcher & Apply Button */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div
+                        style={{
+                          display: 'inline-flex',
+                          borderRadius: 6,
+                          border: '1px solid var(--border)',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <button
+                          type="button"
+                          data-testid="howto-lang-en"
+                          onClick={() => setHowToLanguage('en')}
+                          style={{
+                            padding: '4px 10px',
+                            minHeight: 32,
+                            border: 'none',
+                            background: howToLanguage === 'en' ? 'var(--card)' : 'transparent',
+                            color: howToLanguage === 'en' ? 'var(--text)' : 'var(--muted)',
+                            fontWeight: howToLanguage === 'en' ? 600 : 400,
+                            fontSize: 'var(--t-th)',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          EN
+                        </button>
+                        <button
+                          type="button"
+                          data-testid="howto-lang-ne"
+                          onClick={() => setHowToLanguage('ne')}
+                          style={{
+                            padding: '4px 10px',
+                            minHeight: 32,
+                            border: 'none',
+                            borderLeft: '1px solid var(--border)',
+                            background: howToLanguage === 'ne' ? 'var(--card)' : 'transparent',
+                            color: howToLanguage === 'ne' ? 'var(--text)' : 'var(--muted)',
+                            fontWeight: howToLanguage === 'ne' ? 600 : 400,
+                            fontSize: 'var(--t-th)',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          नेपाली
+                        </button>
+                      </div>
+
+                      {onApplyHowTo && (
+                        <Button
+                          variant={howToApplied ? 'secondary' : 'primary'}
+                          onClick={handleApplyHowTo}
+                          style={{ minHeight: 32, padding: '4px 10px' }}
+                        >
+                          {howToApplied ? '✓ Guide Applied' : 'Apply How-To Guide'}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Role Privacy / Mode Banner */}
+                  {howToRoleView === 'client' ? (
                     <div
-                      key={i}
+                      data-testid="client-projection-banner"
                       style={{
-                        padding: '12px 14px',
+                        padding: '10px 14px',
                         borderRadius: 8,
-                        background: 'var(--card2)',
-                        border: '1px solid var(--border)',
+                        background: 'rgba(5, 150, 105, 0.08)',
+                        border: '1px solid rgba(5, 150, 105, 0.25)',
+                        color: '#059669',
+                        fontSize: 'var(--t-th)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                      }}
+                    >
+                      <Icon name="check" size={16} />
+                      <span>
+                        <strong>Public &amp; Client Projection:</strong> Stripped of technician electrical pinouts (+48V), internal quarantine triage, and wholesale margins. Safe for rental agreements and QR tags.
+                      </span>
+                    </div>
+                  ) : (
+                    <div
+                      data-testid="technician-projection-banner"
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: 8,
+                        background: 'rgba(37, 99, 235, 0.08)',
+                        border: '1px solid rgba(37, 99, 235, 0.25)',
+                        color: '#2563eb',
+                        fontSize: 'var(--t-th)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                      }}
+                    >
+                      <Icon name="tool" size={16} />
+                      <span>
+                        <strong>Technician SOP View:</strong> Full pre-rental electrical diagnostics, pinout tests, thermal duty bounds, and triage quarantine triggers active.
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Setup Steps */}
+                  <div>
+                    <h4
+                      style={{
+                        margin: '0 0 8px',
+                        fontSize: 'var(--t-meta)',
+                        fontWeight: 600,
+                        color: 'var(--text)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                      }}
+                    >
+                      <Icon name="check" size={14} style={{ color: '#059669' }} />
+                      Operational Setup Steps
+                    </h4>
+                    <ol
+                      style={{
+                        margin: 0,
+                        paddingLeft: 20,
+                        fontSize: 'var(--t-th)',
+                        color: 'var(--text2)',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: 6,
                       }}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div>
-                          <strong style={{ fontSize: 'var(--t-ui)', color: 'var(--text)' }}>{acc.name}</strong>
-                          {acc.sku && <span className="identifier" style={{ marginLeft: 6, fontSize: 'var(--t-th)' }}>{acc.sku}</span>}
-                        </div>
-                        <span
-                          style={{
-                            padding: '2px 8px',
-                            borderRadius: 4,
-                            fontSize: 'var(--t-th)',
-                            fontWeight: 600,
-                            background: acc.relationType === 'included_mandatory' ? 'var(--success-surface)' : 'var(--info-surface)',
-                            color: acc.relationType === 'included_mandatory' ? 'var(--success-text)' : 'var(--primary-text, var(--primary))',
-                          }}
-                        >
-                          {acc.relationType === 'included_mandatory' ? 'Included Standard' : 'Recommended Add-on'}
-                        </span>
-                      </div>
-                      <p style={{ margin: 0, fontSize: 'var(--t-th)', color: 'var(--text2)' }}>{acc.description}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {activeTab === 'safety' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  {/* Setup Steps */}
-                  <div>
-                    <h4 style={{ margin: '0 0 8px', fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <Icon name="check" size={14} style={{ color: '#059669' }} />
-                      Operational Setup Steps
-                    </h4>
-                    <ol style={{ margin: 0, paddingLeft: 20, fontSize: 'var(--t-th)', color: 'var(--text2)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {smartDraft.howTo.setupSteps.map((step, i) => (
+                      {projectedGuide.setupSteps.map((step, i) => (
                         <li key={i}>{step}</li>
                       ))}
                     </ol>
                   </div>
 
+                  {/* Client Instructions (if available) */}
+                  {projectedGuide.clientInstructions && projectedGuide.clientInstructions.length > 0 && (
+                    <div>
+                      <h4
+                        style={{
+                          margin: '0 0 8px',
+                          fontSize: 'var(--t-meta)',
+                          fontWeight: 600,
+                          color: 'var(--text)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        <Icon name="info" size={14} style={{ color: '#2563eb' }} />
+                        Client Operating Instructions
+                      </h4>
+                      <ul
+                        style={{
+                          margin: 0,
+                          paddingLeft: 20,
+                          fontSize: 'var(--t-th)',
+                          color: 'var(--text2)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 5,
+                        }}
+                      >
+                        {projectedGuide.clientInstructions.map((ins, i) => (
+                          <li key={i}>{ins}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   {/* Cautions */}
-                  <div style={{ padding: '12px 14px', borderRadius: 8, background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)' }}>
-                    <h4 style={{ margin: '0 0 6px', fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--danger-text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div
+                    style={{
+                      padding: '12px 14px',
+                      borderRadius: 8,
+                      background: 'rgba(239, 68, 68, 0.08)',
+                      border: '1px solid rgba(239, 68, 68, 0.25)',
+                    }}
+                  >
+                    <h4
+                      style={{
+                        margin: '0 0 6px',
+                        fontSize: 'var(--t-meta)',
+                        fontWeight: 600,
+                        color: 'var(--danger-text)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                      }}
+                    >
                       <Icon name="alert_triangle" size={14} />
                       Critical Handling Cautions
                     </h4>
-                    <ul style={{ margin: 0, paddingLeft: 20, fontSize: 'var(--t-th)', color: 'var(--text)', display: 'flex', flexDirection: 'column', gap: 5 }}>
-                      {smartDraft.howTo.cautions.map((c, i) => (
+                    <ul
+                      style={{
+                        margin: 0,
+                        paddingLeft: 20,
+                        fontSize: 'var(--t-th)',
+                        color: 'var(--text)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 5,
+                      }}
+                    >
+                      {projectedGuide.cautions.map((c, i) => (
                         <li key={i}>{c}</li>
                       ))}
                     </ul>
@@ -654,23 +1122,85 @@ export function SmartEquipmentPanel({
 
                   {/* Common Mistakes */}
                   <div>
-                    <h4 style={{ margin: '0 0 8px', fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <h4
+                      style={{
+                        margin: '0 0 8px',
+                        fontSize: 'var(--t-meta)',
+                        fontWeight: 600,
+                        color: 'var(--text)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                      }}
+                    >
                       <Icon name="alert_circle" size={14} style={{ color: '#d97706' }} />
                       Common Mistakes to Avoid
                     </h4>
-                    <ul style={{ margin: 0, paddingLeft: 20, fontSize: 'var(--t-th)', color: 'var(--text2)', display: 'flex', flexDirection: 'column', gap: 5 }}>
-                      {smartDraft.howTo.commonMistakes.map((m, i) => (
+                    <ul
+                      style={{
+                        margin: 0,
+                        paddingLeft: 20,
+                        fontSize: 'var(--t-th)',
+                        color: 'var(--text2)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 5,
+                      }}
+                    >
+                      {projectedGuide.commonMistakes.map((m, i) => (
                         <li key={i}>{m}</li>
                       ))}
                     </ul>
                   </div>
+
+                  {/* Case Packing Instructions */}
+                  {projectedGuide.casePackingInstructions && projectedGuide.casePackingInstructions.length > 0 && (
+                    <div
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: 8,
+                        background: 'var(--card2)',
+                        border: '1px solid var(--border)',
+                      }}
+                    >
+                      <h4
+                        style={{
+                          margin: '0 0 6px',
+                          fontSize: 'var(--t-meta)',
+                          fontWeight: 600,
+                          color: 'var(--text)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        <Icon name="box" size={14} style={{ color: '#64748b' }} />
+                        Case Packing &amp; Return Preparation
+                      </h4>
+                      <ul
+                        style={{
+                          margin: 0,
+                          paddingLeft: 20,
+                          fontSize: 'var(--t-th)',
+                          color: 'var(--text2)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 5,
+                        }}
+                      >
+                        {projectedGuide.casePackingInstructions.map((p, i) => (
+                          <li key={i}>{p}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
                   {/* Inspection Checklists */}
                   <div style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : '1fr 1fr', gap: 12 }}>
                     <div style={{ padding: 10, background: 'var(--card2)', borderRadius: 6, border: '1px solid var(--border)' }}>
                       <strong style={{ fontSize: 'var(--t-th)', color: 'var(--text)' }}>Pre-Rental QC Check</strong>
                       <ul style={{ margin: '6px 0 0', paddingLeft: 16, fontSize: 'var(--t-th)', color: 'var(--text2)' }}>
-                        {smartDraft.howTo.preRentalChecklist.map((c, i) => (
+                        {projectedGuide.preRentalChecklist.map((c, i) => (
                           <li key={i}>{c}</li>
                         ))}
                       </ul>
@@ -678,12 +1208,127 @@ export function SmartEquipmentPanel({
                     <div style={{ padding: 10, background: 'var(--card2)', borderRadius: 6, border: '1px solid var(--border)' }}>
                       <strong style={{ fontSize: 'var(--t-th)', color: 'var(--text)' }}>Return &amp; Decon Check</strong>
                       <ul style={{ margin: '6px 0 0', paddingLeft: 16, fontSize: 'var(--t-th)', color: 'var(--text2)' }}>
-                        {smartDraft.howTo.returnChecklist.map((c, i) => (
+                        {projectedGuide.returnChecklist.map((c, i) => (
                           <li key={i}>{c}</li>
                         ))}
                       </ul>
                     </div>
                   </div>
+
+                  {/* Technician-Only SOP Section */}
+                  {howToRoleView === 'technician' && projectedGuide.technicianSop && (
+                    <div
+                      data-testid="technician-sop-section"
+                      style={{
+                        padding: '14px 16px',
+                        borderRadius: 8,
+                        background: 'rgba(30, 41, 59, 0.04)',
+                        border: '1px solid rgba(30, 41, 59, 0.2)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 12,
+                      }}
+                    >
+                      <h4
+                        style={{
+                          margin: 0,
+                          fontSize: 'var(--t-meta)',
+                          fontWeight: 700,
+                          color: 'var(--text)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                        }}
+                      >
+                        <Icon name="tool" size={16} style={{ color: '#2563eb' }} />
+                        Technician Bench Diagnostics &amp; Electrical Limits
+                      </h4>
+
+                      <div style={{ fontSize: 'var(--t-th)', color: 'var(--text2)' }}>
+                        <strong>Pinout / Diagnostic Diagram: </strong>
+                        <span>{projectedGuide.technicianSop.pinoutDiagram}</span>
+                      </div>
+
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: isPhone ? '1fr' : '1fr 1fr',
+                          gap: 10,
+                          background: 'var(--card2)',
+                          padding: 10,
+                          borderRadius: 6,
+                          fontSize: 'var(--t-th)',
+                        }}
+                      >
+                        <div>
+                          <span style={{ color: 'var(--muted)', display: 'block' }}>Voltage Limits:</span>
+                          <strong style={{ color: 'var(--text)' }}>{projectedGuide.technicianSop.voltageLimits}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: 'var(--muted)', display: 'block' }}>Phantom Power Tolerance:</span>
+                          <strong style={{ color: 'var(--text)' }}>{projectedGuide.technicianSop.phantomPowerTolerance}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: 'var(--muted)', display: 'block' }}>Max Continuous Duty:</span>
+                          <strong style={{ color: 'var(--text)' }}>
+                            {projectedGuide.technicianSop.maxContinuousRuntimeMinutes} minutes
+                          </strong>
+                        </div>
+                        <div>
+                          <span style={{ color: 'var(--muted)', display: 'block' }}>Thermal Shutdown Threshold:</span>
+                          <strong style={{ color: 'var(--text)' }}>
+                            {projectedGuide.technicianSop.thermalShutdownCelsius}°C
+                          </strong>
+                        </div>
+                      </div>
+
+                      {/* Quarantine Triggers */}
+                      {projectedGuide.technicianSop.quarantineTriggers && projectedGuide.technicianSop.quarantineTriggers.length > 0 && (
+                        <div>
+                          <strong style={{ fontSize: 'var(--t-th)', color: 'var(--danger-text)', display: 'block', marginBottom: 4 }}>
+                            Immediate Quarantine Triggers:
+                          </strong>
+                          <ul style={{ margin: 0, paddingLeft: 16, fontSize: 'var(--t-th)', color: 'var(--text2)' }}>
+                            {projectedGuide.technicianSop.quarantineTriggers.map((t, idx) => (
+                              <li key={idx} style={{ color: 'var(--danger-text)' }}>{t}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Field Repair Limits */}
+                      {projectedGuide.technicianSop.fieldRepairLimits && projectedGuide.technicianSop.fieldRepairLimits.length > 0 && (
+                        <div>
+                          <strong style={{ fontSize: 'var(--t-th)', color: 'var(--text)', display: 'block', marginBottom: 4 }}>
+                            Field Repair Boundaries:
+                          </strong>
+                          <ul style={{ margin: 0, paddingLeft: 16, fontSize: 'var(--t-th)', color: 'var(--text2)' }}>
+                            {projectedGuide.technicianSop.fieldRepairLimits.map((l, idx) => (
+                              <li key={idx}>{l}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Internal Margin Strategy (Staff/Technician with Money permission only) */}
+                  {howToRoleView === 'technician' && canViewMoney && projectedGuide.internalMarginNotes && (
+                    <div
+                      data-testid="internal-margin-notes"
+                      style={{
+                        padding: '10px 14px',
+                        borderRadius: 8,
+                        background: 'rgba(124, 58, 237, 0.08)',
+                        border: '1px solid rgba(124, 58, 237, 0.25)',
+                        color: '#7c3aed',
+                        fontSize: 'var(--t-th)',
+                      }}
+                    >
+                      <strong>💼 Internal Commercial Target: </strong>
+                      <span>{projectedGuide.internalMarginNotes}</span>
+                    </div>
+                  )}
                 </div>
               )}
 
