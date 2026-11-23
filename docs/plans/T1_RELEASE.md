@@ -36,7 +36,7 @@ business RPCs are still executable by `anon` on live (`adjust_stock`,
 3) PROGRESS.md records date, size, hash — not the credentials (N-8).
 **Needs** — Babin, week 1.
 
-### T1-02 · Staging project            status: done — PR #292 merged (exact-head 257-migration inventory, synthetic 0012 seed and installation manifest verified) · size: M · lane A + Babin
+### T1-02 · Staging project            status: done — PR #292 merged (257-migration baseline) & PR #340 merged (exact 9-migration delta 0260-0268, STAGING_INSTALLATION_MANIFEST_2026-11-23.md, and STAGING_SQL_INVENTORY_2026-11-23.json verified) · size: M · lane A + Babin
 **What** — Use the **existing** Free Supabase project `babin-staging` (`klhmsrunqrdxjudyhnkm`, Singapore). **Never create a duplicate project.** **Read-only recheck 21 Nov 2026:** staging already contains 171 public tables, 242 migration-history entries (ending at `0244_counter_sale.sql`), and nonzero row counts in 19 public tables. Prepared exact-head reviewed migration/dependency/checksum manifest covering all 257 migration files (`0001` through `0259`), pinned in `docs/verification/STAGING_SQL_INVENTORY_2026-11-21.json` and documented in `docs/verification/STAGING_INSTALLATION_MANIFEST_2026-11-21.md`. Synthetic replacement seed `0012` is verified (`3fd285f4...`) with 0 real PII tokens. Seed quarantines (`0047`, `0082`) and duplicate prefix `0188` are preserved. Delta of 15 pending migrations (`0245`–`0259`) sequenced for operator staging apply. Zero remote writes executed by agent per Rule N-5.
 **Why** — The existing hosted staging project contains a partially reconciled application schema. Verify its provenance and privacy isolation before further hosted rehearsal or any production change.
 **Where** — Supabase `babin-staging` project; `docs/verification/STAGING_PHASE1_PREFLIGHT_2026-11-20.md`; existing `scripts/staging-schema-preflight.mjs` in PR #179; `.env.staging.local` (ignored).
@@ -275,7 +275,7 @@ the app says why; 3) the PIN switch on a trusted device works for 30 days, then 
 is never asked for a code and still sees no money; 7) the Settings row shows the real state.
 **Needs** — T1-15, T1-05 (role seats on staging), T1-16.
 
-### T1-18 · Sign-in history and new-device email            status: acceptance_pending — PR #204 merged; client-side loginAudit helper tested; server-side sign-in event persistence and new-device email dispatch not found in supabase/ (checked 22 Nov 2026) · size: M · lane A · [go-live] · slips first
+### T1-18 · Sign-in history and new-device email            status: done — PR #204 merged (client audit helper); PR #345 merged (Migration 0268, sign_in_events table with trigger-enforced immutability, role-gated RLS [Owner/Admin only], record_sign_in_event SECURITY DEFINER RPC with new-device detection, and 17/17 test-login-audit-db-gate tests passing) · size: M · lane A · [go-live] · slips first
 **What** — 1) **Sign-in history**, Owner and Admin only (B22), in Settings ▸ People & Access: time,
 person, device (browser and system), IP address, success or failed attempt, and the PIN switches of
 T1-15. Sign-ins come from records written on the server (Supabase Auth's own audit log, read through a

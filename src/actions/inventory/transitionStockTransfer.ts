@@ -48,13 +48,16 @@ export const transitionStockTransferConfig: ActionConfig<
   execute: async (input, ctx: ActionContext) => {
     const rawTarget = input.transferId.trim()
     const targetStatus = input.targetStatus
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawTarget)
 
     // Resolve target transfer from database
-    const { data: transfer, error: findError } = await supabase
+    const tQuery = supabase
       .from('stock_transfers')
       .select('id, transfer_no, status, source_warehouse_id, destination_warehouse_id')
-      .or(`id.eq.${rawTarget},transfer_no.eq.${rawTarget}`)
-      .maybeSingle()
+
+    const { data: transfer, error: findError } = isUuid
+      ? await tQuery.eq('id', rawTarget).maybeSingle()
+      : await tQuery.eq('transfer_no', rawTarget).maybeSingle()
 
     if (findError) {
       throw new Error(`Failed to find stock transfer: ${findError.message}`)

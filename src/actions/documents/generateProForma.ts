@@ -59,13 +59,16 @@ export const generateProFormaConfig: ActionConfig<GenerateProFormaInput, Generat
     }
 
     const bRef = input.bookingId.trim()
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bRef)
 
     // 1. Resolve booking row
-    const { data: booking, error: bErr } = await supabase
+    const bQuery = supabase
       .from('bookings')
-      .select('id, booking_no, client_id, project_name, shoot_location, deposit_required')
-      .or(`id.eq.${bRef},booking_no.eq.${bRef}`)
-      .maybeSingle()
+      .select('id, booking_no, client_id, project_title, location')
+
+    const { data: booking, error: bErr } = isUuid
+      ? await bQuery.eq('id', bRef).maybeSingle()
+      : await bQuery.eq('booking_no', bRef).maybeSingle()
 
     if (bErr || !booking) {
       throw new Error(`Booking ${bRef} was not found. Cannot generate pro forma.`)
@@ -107,7 +110,6 @@ export const generateProFormaConfig: ActionConfig<GenerateProFormaInput, Generat
       paid_amount: number
       outstanding_amount: number
       notes: string | null
-      project_name: string | null
       issue_date: string | null
       due_date: string | null
     } | null = null
@@ -115,7 +117,7 @@ export const generateProFormaConfig: ActionConfig<GenerateProFormaInput, Generat
     if (input.invoiceId && input.invoiceId.trim()) {
       const { data: inv } = await supabase
         .from('invoices')
-        .select('id, invoice_no, status, subtotal, discount_amount, discount_percent, taxable_amount, vat_rate, vat_amount, total_amount, paid_amount, outstanding_amount, notes, project_name, issue_date, due_date')
+        .select('id, invoice_no, status, subtotal, discount_amount, discount_percent, taxable_amount, vat_rate, vat_amount, total_amount, paid_amount, outstanding_amount, notes, issue_date, due_date')
         .eq('id', input.invoiceId.trim())
         .maybeSingle()
       if (inv) draftInvoice = inv
@@ -124,7 +126,7 @@ export const generateProFormaConfig: ActionConfig<GenerateProFormaInput, Generat
     if (!draftInvoice) {
       const { data: inv } = await supabase
         .from('invoices')
-        .select('id, invoice_no, status, subtotal, discount_amount, discount_percent, taxable_amount, vat_rate, vat_amount, total_amount, paid_amount, outstanding_amount, notes, project_name, issue_date, due_date')
+        .select('id, invoice_no, status, subtotal, discount_amount, discount_percent, taxable_amount, vat_rate, vat_amount, total_amount, paid_amount, outstanding_amount, notes, issue_date, due_date')
         .eq('booking_id', booking.id)
         .eq('status', 'Draft')
         .order('created_at', { ascending: false })
@@ -152,15 +154,15 @@ export const generateProFormaConfig: ActionConfig<GenerateProFormaInput, Generat
     if (lines.length === 0) {
       const { data: bLines } = await supabase
         .from('booking_lines')
-        .select('item_name, quantity, days, unit_price, line_total')
+        .select('description, quantity, days, daily_rate, line_total')
         .eq('booking_id', booking.id)
 
       if (bLines && bLines.length > 0) {
         lines = bLines.map((bl) => ({
-          description: bl.item_name || 'Equipment',
+          description: bl.description || 'Equipment',
           quantity: bl.quantity || 1,
           rentalDays: bl.days || 1,
-          ratePaisa: rupees(bl.unit_price || 0),
+          ratePaisa: rupees(bl.daily_rate || 0),
           totalPaisa: rupees(bl.line_total || 0),
         }))
       }
@@ -195,7 +197,7 @@ export const generateProFormaConfig: ActionConfig<GenerateProFormaInput, Generat
       issueDateAd: draftInvoice.issue_date || new Date().toISOString().slice(0, 10),
       dueDateAd: draftInvoice.due_date,
       bookingNo: booking.booking_no,
-      project: draftInvoice.project_name || booking.project_name || null,
+      project: booking.project_title || null,
       client: {
         name: clientName,
         phone: clientPhone,

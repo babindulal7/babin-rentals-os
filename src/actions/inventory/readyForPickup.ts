@@ -81,11 +81,11 @@ export const readyForPickupConfig: ActionConfig<ReadyForPickupInput, ReadyForPic
       // 2. Target is a product unit
       const unitQuery = supabase
         .from('product_units')
-        .select('id, serial_number, unit_code');
+        .select('id, serial_no, asset_tag, barcode');
 
       const { data: unit } = isUuid
-        ? await unitQuery.or(`id.eq.${rawTarget},serial_number.eq.${rawTarget},unit_code.eq.${rawTarget}`).maybeSingle()
-        : await unitQuery.or(`serial_number.eq.${rawTarget},unit_code.eq.${rawTarget}`).maybeSingle();
+        ? await unitQuery.or(`id.eq.${rawTarget},serial_no.eq.${rawTarget},asset_tag.eq.${rawTarget},barcode.eq.${rawTarget}`).maybeSingle()
+        : await unitQuery.or(`serial_no.eq.${rawTarget},asset_tag.eq.${rawTarget},barcode.eq.${rawTarget}`).maybeSingle();
 
       if (!unit && !isUuid) {
         throw new Error(`Target booking or equipment "${rawTarget}" not found.`);

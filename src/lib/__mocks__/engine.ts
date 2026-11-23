@@ -99,6 +99,11 @@ const REL: Record<string, Rel> = {
   'evidence_references.bookings': { kind: 'one', table: 'bookings', fk: 'booking_id' },
   'evidence_references.operation_sessions': { kind: 'one', table: 'operation_sessions', fk: 'session_id' },
   'evidence_references.product_units': { kind: 'one', table: 'product_units', fk: 'item_id' },
+  'booking_line_units.booking_lines': { kind: 'one', table: 'booking_lines', fk: 'booking_line_id' },
+  'return_lines.booking_lines': { kind: 'one', table: 'booking_lines', fk: 'booking_line_id' },
+  'cleaning_queue_entries.bookings': { kind: 'one', table: 'bookings', fk: 'booking_id' },
+  'cleaning_queue_entries.booking_lines': { kind: 'one', table: 'booking_lines', fk: 'booking_line_id' },
+  'cleaning_queue_entries.product_units': { kind: 'one', table: 'product_units', fk: 'unit_id' },
 }
 
 const warned = new Set<string>()

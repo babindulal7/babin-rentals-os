@@ -114,13 +114,13 @@ export default function TrainingCenter() {
     return (
       <PageShell>
         <div style={{ padding: '2rem', maxWidth: '640px', margin: '4rem auto', textAlign: 'center' }}>
-          <div style={{ display: 'inline-flex', padding: '1rem', borderRadius: '50%', background: '#fee2e2', color: '#dc2626', marginBottom: '1rem' }}>
+          <div style={{ display: 'inline-flex', padding: '1rem', borderRadius: '50%', background: 'var(--danger-bg)', color: 'var(--danger-text)', marginBottom: '1rem' }}>
             <Icon name="lock" size={32} />
           </div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem', color: '#111827' }}>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--text)' }}>
             Restricted Staff Surface
           </h1>
-          <p style={{ color: '#4b5563', lineHeight: 1.5, marginBottom: '1.5rem' }}>
+          <p style={{ color: 'var(--muted)', lineHeight: 1.5, marginBottom: '1.5rem' }}>
             The Intelligence Training Center is accessible to internal staff, technicians, and operations personnel only. Client portal sessions cannot view internal evaluation datasets, cost margins, or unreviewed notes.
           </p>
           <Link
@@ -128,8 +128,8 @@ export default function TrainingCenter() {
             style={{
               display: 'inline-block',
               padding: '0.625rem 1.25rem',
-              backgroundColor: '#2563eb',
-              color: '#ffffff',
+              backgroundColor: 'var(--primary)',
+              color: 'var(--on-primary)',
               borderRadius: '6px',
               textDecoration: 'none',
               fontWeight: 600,
@@ -242,12 +242,12 @@ export default function TrainingCenter() {
             justifyContent: 'space-between',
             gap: '0.75rem',
             padding: '0.625rem 1rem',
-            backgroundColor: '#f0fdf4',
-            border: '1px solid #bbf7d0',
+            backgroundColor: 'var(--success-bg)',
+            border: '1px solid var(--success-border, var(--border))',
             borderRadius: '6px',
             marginBottom: '1rem',
             fontSize: '0.8125rem',
-            color: '#166534',
+            color: 'var(--success-text)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
@@ -255,7 +255,7 @@ export default function TrainingCenter() {
             <span>SYNTHETIC OFFLINE MODE</span>
             <span style={{ fontWeight: 400, opacity: 0.85 }}>• Zero live DB writes • Zero external AI cost • 47 Golden Cases active</span>
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#15803d', fontWeight: 500 }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--success-text)', fontWeight: 500 }}>
             Base SHA: <code>4c8fe9d7</code>
           </div>
         </div>
@@ -273,7 +273,7 @@ export default function TrainingCenter() {
           style={{
             display: 'flex',
             gap: '0.25rem',
-            borderBottom: '1px solid var(--border-subtle, #e5e7eb)',
+            borderBottom: '1px solid var(--border)',
             marginBottom: '1.5rem',
             overflowX: 'auto',
             paddingBottom: '2px',
@@ -306,9 +306,9 @@ export default function TrainingCenter() {
                   minHeight: '44px',
                   borderRadius: '6px 6px 0 0',
                   border: 'none',
-                  borderBottom: isActive ? '2px solid #2563eb' : '2px solid transparent',
-                  background: isActive ? '#f8fafc' : 'transparent',
-                  color: isActive ? '#2563eb' : '#4b5563',
+                  borderBottom: isActive ? '2px solid var(--primary)' : '2px solid transparent',
+                  background: isActive ? 'var(--surface-2)' : 'transparent',
+                  color: isActive ? 'var(--primary)' : 'var(--muted)',
                   fontWeight: isActive ? 600 : 500,
                   fontSize: '0.875rem',
                   cursor: 'pointer',
@@ -323,8 +323,8 @@ export default function TrainingCenter() {
                       fontSize: '0.75rem',
                       padding: '0.125rem 0.375rem',
                       borderRadius: '999px',
-                      backgroundColor: isActive ? '#dbeafe' : '#f1f5f9',
-                      color: isActive ? '#1d4ed8' : '#64748b',
+                      backgroundColor: isActive ? 'var(--st-progress-bg)' : 'var(--surface-2)',
+                      color: isActive ? 'var(--primary-text)' : 'var(--muted)',
                     }}
                   >
                     {tab.count}
@@ -344,8 +344,8 @@ export default function TrainingCenter() {
                 padding: '1rem 1.25rem',
                 borderRadius: '8px',
                 border: '1px solid',
-                borderColor: currentRun?.metrics.zeroSafetyPrivacyViolations ? '#bbf7d0' : '#fecaca',
-                backgroundColor: currentRun?.metrics.zeroSafetyPrivacyViolations ? '#f0fdf4' : '#fef2f2',
+                borderColor: currentRun?.metrics.zeroSafetyPrivacyViolations ? 'var(--success)' : 'var(--danger)',
+                backgroundColor: currentRun?.metrics.zeroSafetyPrivacyViolations ? 'var(--success-bg)' : 'var(--danger-bg)',
                 marginBottom: '1.5rem',
                 display: 'flex',
                 alignItems: 'center',
@@ -359,17 +359,17 @@ export default function TrainingCenter() {
                   style={{
                     padding: '0.5rem',
                     borderRadius: '50%',
-                    backgroundColor: currentRun?.metrics.zeroSafetyPrivacyViolations ? '#dcfce7' : '#fee2e2',
-                    color: currentRun?.metrics.zeroSafetyPrivacyViolations ? '#16a34a' : '#dc2626',
+                    backgroundColor: currentRun?.metrics.zeroSafetyPrivacyViolations ? 'var(--success-bg)' : 'var(--danger-bg)',
+                    color: currentRun?.metrics.zeroSafetyPrivacyViolations ? 'var(--success-text)' : 'var(--danger-text)',
                   }}
                 >
                   <Icon name={currentRun?.metrics.zeroSafetyPrivacyViolations ? 'check' : 'x'} size={24} />
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#111827' }}>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text)' }}>
                     Release Quality Gate: {currentRun?.metrics.zeroSafetyPrivacyViolations ? 'PASSING' : 'FAILED'}
                   </h3>
-                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.8125rem', color: '#4b5563' }}>
+                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.8125rem', color: 'var(--muted)' }}>
                     Zero critical safety or privacy escapes allowed. Status:{' '}
                     <strong>
                       {currentRun?.metrics.zeroSafetyPrivacyViolations
@@ -385,8 +385,8 @@ export default function TrainingCenter() {
                 style={{
                   minHeight: '44px',
                   padding: '0.5rem 1rem',
-                  backgroundColor: '#2563eb',
-                  color: '#ffffff',
+                  backgroundColor: 'var(--primary)',
+                  color: 'var(--on-primary)',
                   border: 'none',
                   borderRadius: '6px',
                   fontWeight: 600,
@@ -412,41 +412,41 @@ export default function TrainingCenter() {
               }}
             >
               <div style={{ ...cardStyle, padding: '1.25rem' }}>
-                <div style={{ fontSize: '0.8125rem', color: '#64748b', fontWeight: 500 }}>Model ID Accuracy</div>
-                <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#0f172a', margin: '0.25rem 0' }}>
+                <div style={{ fontSize: '0.8125rem', color: 'var(--muted)', fontWeight: 500 }}>Model ID Accuracy</div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text)', margin: '0.25rem 0' }}>
                   {currentRun?.metrics.exactModelIdAccuracy.rate !== null ? `${currentRun?.metrics.exactModelIdAccuracy.rate}%` : 'N/A'}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 600 }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--success-text)', fontWeight: 600 }}>
                   FX3 vs FX30 token boundary verified
                 </div>
               </div>
 
               <div style={{ ...cardStyle, padding: '1.25rem' }}>
-                <div style={{ fontSize: '0.8125rem', color: '#64748b', fontWeight: 500 }}>Source Support Rate</div>
-                <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#0f172a', margin: '0.25rem 0' }}>
+                <div style={{ fontSize: '0.8125rem', color: 'var(--muted)', fontWeight: 500 }}>Source Support Rate</div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text)', margin: '0.25rem 0' }}>
                   {currentRun?.metrics.sourceSupportRate.rate !== null ? `${currentRun?.metrics.sourceSupportRate.rate}%` : 'N/A'}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
                   {currentRun?.metrics.sourceSupportRate.numerator} / {currentRun?.metrics.sourceSupportRate.denominator} claims supported
                 </div>
               </div>
 
               <div style={{ ...cardStyle, padding: '1.25rem' }}>
-                <div style={{ fontSize: '0.8125rem', color: '#64748b', fontWeight: 500 }}>Safe Abstention Rate</div>
-                <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#0f172a', margin: '0.25rem 0' }}>
+                <div style={{ fontSize: '0.8125rem', color: 'var(--muted)', fontWeight: 500 }}>Safe Abstention Rate</div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text)', margin: '0.25rem 0' }}>
                   {currentRun?.metrics.safeAbstentionRate.rate !== null ? `${currentRun?.metrics.safeAbstentionRate.rate}%` : 'N/A'}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
                   Safe refusal on unknown/unsafe prompts
                 </div>
               </div>
 
               <div style={{ ...cardStyle, padding: '1.25rem' }}>
-                <div style={{ fontSize: '0.8125rem', color: '#64748b', fontWeight: 500 }}>Regression Rate</div>
-                <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#0f172a', margin: '0.25rem 0' }}>
+                <div style={{ fontSize: '0.8125rem', color: 'var(--muted)', fontWeight: 500 }}>Regression Rate</div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text)', margin: '0.25rem 0' }}>
                   {currentRun?.metrics.regressionRate.rate}%
                 </div>
-                <div style={{ fontSize: '0.75rem', color: currentRun?.metrics.regressionRate.rate === 0 ? '#16a34a' : '#dc2626' }}>
+                <div style={{ fontSize: '0.75rem', color: currentRun?.metrics.regressionRate.rate === 0 ? 'var(--success-text)' : 'var(--danger-text)' }}>
                   {currentRun?.metrics.regressionRate.rate === 0 ? 'Zero regressions from baseline' : 'Regressions detected!'}
                 </div>
               </div>
@@ -454,13 +454,13 @@ export default function TrainingCenter() {
 
             {/* Suite Breakdown Table */}
             <div style={{ ...cardStyle, padding: '1.25rem' }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 1rem', color: '#0f172a' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 1rem', color: 'var(--text)' }}>
                 Golden Test Suite Coverage Breakdown
               </h3>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
                   <thead>
-                    <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b' }}>
+                    <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--muted)' }}>
                       <th style={{ padding: '0.75rem 0.5rem' }}>Suite</th>
                       <th style={{ padding: '0.75rem 0.5rem' }}>Cases</th>
                       <th style={{ padding: '0.75rem 0.5rem' }}>Passed</th>
@@ -479,15 +479,15 @@ export default function TrainingCenter() {
                       const rate = total > 0 ? ((passed / total) * 100).toFixed(0) : '0'
 
                       return (
-                        <tr key={suite} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                          <td style={{ padding: '0.75rem 0.5rem', fontWeight: 600, color: '#1e293b' }}>
+                        <tr key={suite} style={{ borderBottom: '1px solid var(--divider)' }}>
+                          <td style={{ padding: '0.75rem 0.5rem', fontWeight: 600, color: 'var(--text)' }}>
                             <code>{suite}</code>
                           </td>
-                          <td style={{ padding: '0.75rem 0.5rem' }}>{total}</td>
-                          <td style={{ padding: '0.75rem 0.5rem', color: '#16a34a', fontWeight: 600 }}>{passed}</td>
-                          <td style={{ padding: '0.75rem 0.5rem', color: failed > 0 ? '#dc2626' : '#64748b' }}>{failed}</td>
-                          <td style={{ padding: '0.75rem 0.5rem', color: blocked > 0 ? '#ea580c' : '#64748b' }}>{blocked}</td>
-                          <td style={{ padding: '0.75rem 0.5rem', fontWeight: 600 }}>{rate}%</td>
+                          <td style={{ padding: '0.75rem 0.5rem', color: 'var(--text)' }}>{total}</td>
+                          <td style={{ padding: '0.75rem 0.5rem', color: 'var(--success-text)', fontWeight: 600 }}>{passed}</td>
+                          <td style={{ padding: '0.75rem 0.5rem', color: failed > 0 ? 'var(--danger-text)' : 'var(--muted)' }}>{failed}</td>
+                          <td style={{ padding: '0.75rem 0.5rem', color: blocked > 0 ? 'var(--warn-text)' : 'var(--muted)' }}>{blocked}</td>
+                          <td style={{ padding: '0.75rem 0.5rem', fontWeight: 600, color: 'var(--text)' }}>{rate}%</td>
                         </tr>
                       )
                     })}
@@ -504,13 +504,13 @@ export default function TrainingCenter() {
             <div style={{ ...cardStyle, padding: '1.25rem', marginBottom: '1.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Canonical Catalog Quality Scan (TQC-02)</h3>
-                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.8125rem', color: '#64748b' }}>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text)' }}>Canonical Catalog Quality Scan (TQC-02)</h3>
+                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.8125rem', color: 'var(--muted)' }}>
                     Read-only automated scan of canonical equipment records, kit dependencies, and technical manuals. No automatic overwrites.
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  <div style={{ display: 'inline-flex', borderRadius: '6px', border: '1px solid #cbd5e1', overflow: 'hidden' }}>
+                  <div style={{ display: 'inline-flex', borderRadius: '6px', border: '1px solid var(--border)', overflow: 'hidden' }}>
                     <button
                       onClick={() => setQualityScanSource('synthetic')}
                       style={{
@@ -519,8 +519,8 @@ export default function TrainingCenter() {
                         fontWeight: 600,
                         border: 'none',
                         cursor: 'pointer',
-                        backgroundColor: qualityScanSource === 'synthetic' ? '#2563eb' : '#ffffff',
-                        color: qualityScanSource === 'synthetic' ? '#ffffff' : '#475569',
+                        backgroundColor: qualityScanSource === 'synthetic' ? 'var(--primary)' : 'var(--surface)',
+                        color: qualityScanSource === 'synthetic' ? 'var(--on-primary)' : 'var(--muted)',
                       }}
                     >
                       Synthetic Baseline ({SYNTHETIC_DATA_QUALITY_ISSUES.length})
@@ -533,14 +533,14 @@ export default function TrainingCenter() {
                         fontWeight: 600,
                         border: 'none',
                         cursor: 'pointer',
-                        backgroundColor: qualityScanSource === 'canonical' ? '#2563eb' : '#ffffff',
-                        color: qualityScanSource === 'canonical' ? '#ffffff' : '#475569',
+                        backgroundColor: qualityScanSource === 'canonical' ? 'var(--primary)' : 'var(--surface)',
+                        color: qualityScanSource === 'canonical' ? 'var(--on-primary)' : 'var(--muted)',
                       }}
                     >
                       Live Catalog Scan ({canonicalScanSummary.issues.length})
                     </button>
                   </div>
-                  <div style={{ padding: '0.375rem 0.75rem', backgroundColor: '#e0f2fe', color: '#0369a1', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
+                  <div style={{ padding: '0.375rem 0.75rem', backgroundColor: 'var(--surface-2)', color: 'var(--primary-text)', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid var(--border)' }}>
                     {qualityScanSource === 'canonical'
                       ? `${canonicalScanSummary.totalModelsScanned} Models Audited`
                       : 'Synthetic Demo'}
@@ -553,10 +553,10 @@ export default function TrainingCenter() {
                   <div
                     key={issue.code}
                     style={{
-                      border: '1px solid #e2e8f0',
+                      border: '1px solid var(--border)',
                       borderRadius: '6px',
                       padding: '1rem',
-                      backgroundColor: '#ffffff',
+                      backgroundColor: 'var(--surface)',
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -567,33 +567,33 @@ export default function TrainingCenter() {
                             fontWeight: 700,
                             padding: '0.125rem 0.5rem',
                             borderRadius: '4px',
-                            backgroundColor: issue.severity === 'critical' ? '#fee2e2' : '#fef3c7',
-                            color: issue.severity === 'critical' ? '#dc2626' : '#d97706',
+                            backgroundColor: issue.severity === 'critical' ? 'var(--danger-bg)' : 'var(--st-progress-bg)',
+                            color: issue.severity === 'critical' ? 'var(--danger-text)' : 'var(--warn-text)',
                           }}
                         >
                           {issue.severity.toUpperCase()}
                         </span>
                         <code style={{ fontSize: '0.8125rem', fontWeight: 600 }}>{issue.code}</code>
-                        <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#0f172a' }}>{issue.title}</span>
+                        <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)' }}>{issue.title}</span>
                       </div>
-                      <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'capitalize' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--muted)', textTransform: 'capitalize' }}>
                         Category: <strong>{issue.category}</strong>
                       </span>
                     </div>
 
-                    <p style={{ margin: '0.5rem 0', fontSize: '0.875rem', color: '#334155' }}>{issue.description}</p>
+                    <p style={{ margin: '0.5rem 0', fontSize: '0.875rem', color: 'var(--text2)' }}>{issue.description}</p>
 
-                    <div style={{ fontSize: '0.8125rem', color: '#64748b', backgroundColor: '#f8fafc', padding: '0.5rem 0.75rem', borderRadius: '4px', margin: '0.5rem 0' }}>
+                    <div style={{ fontSize: '0.8125rem', color: 'var(--muted)', backgroundColor: 'var(--surface-2)', padding: '0.5rem 0.75rem', borderRadius: '4px', margin: '0.5rem 0', border: '1px solid var(--divider)' }}>
                       <div><strong>Evidence:</strong> {issue.evidence}</div>
                       <div><strong>Earliest Safe Fix:</strong> {issue.earliestSafeFix}</div>
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', fontSize: '0.75rem', color: '#64748b' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--muted)' }}>
                       <span>Owner: <strong>{issue.proposedOwner}</strong></span>
                       <Link
                         to={issue.deepLink}
                         style={{
-                          color: '#2563eb',
+                          color: 'var(--primary-text)',
                           textDecoration: 'none',
                           fontWeight: 600,
                           display: 'inline-flex',
@@ -616,8 +616,8 @@ export default function TrainingCenter() {
           <div role="tabpanel" id="panel-reviews" aria-labelledby="tab-reviews">
             <div style={{ ...cardStyle, padding: '1.25rem', marginBottom: '1.5rem' }}>
               <div style={{ marginBottom: '1rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Staff Knowledge Review Queue</h3>
-                <p style={{ margin: '0.25rem 0 0', fontSize: '0.8125rem', color: '#64748b' }}>
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text)' }}>Staff Knowledge Review Queue</h3>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.8125rem', color: 'var(--muted)' }}>
                   Candidate claims, kit inclusion changes, and technical how-tos awaiting human authorization.
                   Rejections persist across sync cycles.
                 </p>
@@ -628,16 +628,16 @@ export default function TrainingCenter() {
                   <div
                     key={item.id}
                     style={{
-                      border: '1px solid #e2e8f0',
+                      border: '1px solid var(--border)',
                       borderRadius: '8px',
                       padding: '1.25rem',
-                      backgroundColor: '#ffffff',
+                      backgroundColor: 'var(--surface)',
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
                       <div>
-                        <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>{item.modelName}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                        <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text)' }}>{item.modelName}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
                           Model ID: <code>{item.modelId}</code> • Category: <strong>{item.category}</strong>
                         </div>
                       </div>
@@ -650,16 +650,16 @@ export default function TrainingCenter() {
                             fontWeight: 600,
                             backgroundColor:
                               item.status === 'approved_internal' || item.status === 'approved_client'
-                                ? '#dcfce7'
+                                ? 'var(--success-bg)'
                                 : item.status === 'rejected'
-                                  ? '#fee2e2'
-                                  : '#fef3c7',
+                                  ? 'var(--danger-bg)'
+                                  : 'var(--st-progress-bg)',
                             color:
                               item.status === 'approved_internal' || item.status === 'approved_client'
-                                ? '#16a34a'
+                                ? 'var(--success-text)'
                                 : item.status === 'rejected'
-                                  ? '#dc2626'
-                                  : '#d97706',
+                                  ? 'var(--danger-text)'
+                                  : 'var(--warn-text)',
                           }}
                         >
                           Status: {item.status.toUpperCase()}
@@ -669,8 +669,8 @@ export default function TrainingCenter() {
                             fontSize: '0.75rem',
                             padding: '0.25rem 0.5rem',
                             borderRadius: '4px',
-                            backgroundColor: '#f1f5f9',
-                            color: '#475569',
+                            backgroundColor: 'var(--surface-2)',
+                            color: 'var(--muted)',
                           }}
                         >
                           Evidence: <code>{item.confidence}</code>
@@ -680,23 +680,23 @@ export default function TrainingCenter() {
 
                     {/* Diff View */}
                     <div style={{ display: 'grid', gridTemplateColumns: viewport === 'phone' ? '1fr' : '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                      <div style={{ backgroundColor: '#f8fafc', padding: '0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', marginBottom: '0.25rem' }}>CURRENT APPROVED VALUE</div>
-                        <div style={{ fontSize: '0.875rem', color: '#1e293b' }}>{item.currentApprovedValue}</div>
+                      <div style={{ backgroundColor: 'var(--surface-2)', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--muted)', marginBottom: '0.25rem' }}>CURRENT APPROVED VALUE</div>
+                        <div style={{ fontSize: '0.875rem', color: 'var(--text)' }}>{item.currentApprovedValue}</div>
                       </div>
-                      <div style={{ backgroundColor: '#eff6ff', padding: '0.75rem', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
-                        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#1d4ed8', marginBottom: '0.25rem' }}>PROPOSED CANDIDATE VALUE</div>
-                        <div style={{ fontSize: '0.875rem', color: '#1e3a8a' }}>{item.proposedValue}</div>
+                      <div style={{ backgroundColor: 'var(--surface-2)', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--primary-text)' }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--primary-text)', marginBottom: '0.25rem' }}>PROPOSED CANDIDATE VALUE</div>
+                        <div style={{ fontSize: '0.875rem', color: 'var(--text)' }}>{item.proposedValue}</div>
                       </div>
                     </div>
 
                     {item.rejectionReason && (
-                      <div style={{ padding: '0.5rem 0.75rem', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '4px', marginBottom: '0.75rem', fontSize: '0.8125rem', color: '#b91c1c' }}>
+                      <div style={{ padding: '0.5rem 0.75rem', backgroundColor: 'var(--danger-bg)', border: '1px solid var(--danger)', borderRadius: '4px', marginBottom: '0.75rem', fontSize: '0.8125rem', color: 'var(--danger-text)' }}>
                         <strong>Rejection Reason:</strong> {item.rejectionReason}
                       </div>
                     )}
 
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '1rem' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: '1rem' }}>
                       Source: <strong>{item.publisher}</strong> ({item.sourceType}) • Revision: {item.sourceRevision}
                     </div>
 
@@ -708,8 +708,8 @@ export default function TrainingCenter() {
                         style={{
                           minHeight: '44px',
                           padding: '0.5rem 1rem',
-                          backgroundColor: '#16a34a',
-                          color: '#ffffff',
+                          backgroundColor: 'var(--success)',
+                          color: 'var(--on-success)',
                           border: 'none',
                           borderRadius: '6px',
                           fontWeight: 600,
@@ -725,8 +725,8 @@ export default function TrainingCenter() {
                         style={{
                           minHeight: '44px',
                           padding: '0.5rem 1rem',
-                          backgroundColor: '#2563eb',
-                          color: '#ffffff',
+                          backgroundColor: 'var(--primary)',
+                          color: 'var(--on-primary)',
                           border: 'none',
                           borderRadius: '6px',
                           fontWeight: 600,
@@ -741,8 +741,8 @@ export default function TrainingCenter() {
                         style={{
                           minHeight: '44px',
                           padding: '0.5rem 1rem',
-                          backgroundColor: '#ef4444',
-                          color: '#ffffff',
+                          backgroundColor: 'var(--danger)',
+                          color: 'var(--on-danger)',
                           border: 'none',
                           borderRadius: '6px',
                           fontWeight: 600,
@@ -767,7 +767,7 @@ export default function TrainingCenter() {
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  backgroundColor: 'rgba(0,0,0,0.5)',
+                  backgroundColor: 'rgba(0,0,0,0.6)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -775,9 +775,9 @@ export default function TrainingCenter() {
                   zIndex: 9999,
                 }}
               >
-                <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', maxWidth: '480px', width: '100%', padding: '1.5rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+                <div style={{ backgroundColor: 'var(--card)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '8px', maxWidth: '480px', width: '100%', padding: '1.5rem', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)' }}>
                   <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.125rem', fontWeight: 700 }}>Mandatory Rejection Justification</h3>
-                  <p style={{ margin: '0 0 1rem', fontSize: '0.875rem', color: '#64748b' }}>
+                  <p style={{ margin: '0 0 1rem', fontSize: '0.875rem', color: 'var(--muted)' }}>
                     State why this candidate claim is rejected. This reason is stored durably to prevent duplicate regeneration.
                   </p>
                   <textarea
@@ -789,7 +789,9 @@ export default function TrainingCenter() {
                       width: '100%',
                       boxSizing: 'border-box',
                       padding: '0.5rem',
-                      border: '1px solid #cbd5e1',
+                      border: '1px solid var(--border)',
+                      backgroundColor: 'var(--surface-2)',
+                      color: 'var(--text)',
                       borderRadius: '6px',
                       fontSize: '0.875rem',
                       marginBottom: '1rem',
@@ -804,9 +806,9 @@ export default function TrainingCenter() {
                       style={{
                         minHeight: '44px',
                         padding: '0.5rem 1rem',
-                        backgroundColor: '#f1f5f9',
-                        color: '#475569',
-                        border: 'none',
+                        backgroundColor: 'var(--surface-2)',
+                        color: 'var(--text)',
+                        border: '1px solid var(--border)',
                         borderRadius: '6px',
                         cursor: 'pointer',
                       }}
@@ -819,8 +821,8 @@ export default function TrainingCenter() {
                       style={{
                         minHeight: '44px',
                         padding: '0.5rem 1rem',
-                        backgroundColor: '#dc2626',
-                        color: '#ffffff',
+                        backgroundColor: 'var(--danger)',
+                        color: 'var(--on-danger)',
                         border: 'none',
                         borderRadius: '6px',
                         fontWeight: 600,
@@ -842,8 +844,8 @@ export default function TrainingCenter() {
             <div style={{ ...cardStyle, padding: '1.25rem', marginBottom: '1.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Golden Test Case Library</h3>
-                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.8125rem', color: '#64748b' }}>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text)' }}>Golden Test Case Library</h3>
+                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.8125rem', color: 'var(--muted)' }}>
                     Curated collection of 47 synthetic golden assertions with explicit expected dispositions.
                   </p>
                 </div>
@@ -852,9 +854,9 @@ export default function TrainingCenter() {
                   style={{
                     minHeight: '44px',
                     padding: '0.5rem 1rem',
-                    backgroundColor: '#0f172a',
-                    color: '#ffffff',
-                    border: 'none',
+                    backgroundColor: 'var(--surface-2)',
+                    color: 'var(--text)',
+                    border: '1px solid var(--border)',
                     borderRadius: '6px',
                     fontSize: '0.8125rem',
                     fontWeight: 600,
@@ -881,14 +883,16 @@ export default function TrainingCenter() {
                     minHeight: '44px',
                     padding: '0.5rem 0.75rem',
                     borderRadius: '6px',
-                    border: '1px solid #cbd5e1',
+                    border: '1px solid var(--border)',
+                    backgroundColor: 'var(--surface)',
+                    color: 'var(--text)',
                     fontSize: '0.875rem',
                   }}
                 />
                 <select
                   value={selectedSuite}
                   onChange={(e) => setSelectedSuite(e.target.value)}
-                  style={{ minHeight: '44px', padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.875rem' }}
+                  style={{ minHeight: '44px', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)', backgroundColor: 'var(--surface)', color: 'var(--text)', fontSize: '0.875rem' }}
                 >
                   <option value="all">All Suites</option>
                   {suitesList.map((s) => (
@@ -898,7 +902,7 @@ export default function TrainingCenter() {
                 <select
                   value={selectedSeverity}
                   onChange={(e) => setSelectedSeverity(e.target.value)}
-                  style={{ minHeight: '44px', padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.875rem' }}
+                  style={{ minHeight: '44px', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)', backgroundColor: 'var(--surface)', color: 'var(--text)', fontSize: '0.875rem' }}
                 >
                   <option value="all">All Severities</option>
                   <option value="critical">Critical</option>
@@ -912,7 +916,7 @@ export default function TrainingCenter() {
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8125rem' }}>
                   <thead>
-                    <tr style={{ borderBottom: '2px solid #e2e8f0', color: '#64748b' }}>
+                    <tr style={{ borderBottom: '2px solid var(--border)', color: 'var(--muted)' }}>
                       <th style={{ padding: '0.625rem 0.5rem' }}>ID</th>
                       <th style={{ padding: '0.625rem 0.5rem' }}>Suite</th>
                       <th style={{ padding: '0.625rem 0.5rem' }}>Severity</th>
@@ -924,15 +928,15 @@ export default function TrainingCenter() {
                   </thead>
                   <tbody>
                     {filteredCases.map((c) => (
-                      <tr key={c.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '0.625rem 0.5rem', fontWeight: 600 }}><code>{c.id}</code></td>
-                        <td style={{ padding: '0.625rem 0.5rem' }}>{c.suite}</td>
+                      <tr key={c.id} style={{ borderBottom: '1px solid var(--divider)' }}>
+                        <td style={{ padding: '0.625rem 0.5rem', fontWeight: 600, color: 'var(--text)' }}><code>{c.id}</code></td>
+                        <td style={{ padding: '0.625rem 0.5rem', color: 'var(--text)' }}>{c.suite}</td>
                         <td style={{ padding: '0.625rem 0.5rem' }}>
                           <span
                             style={{
                               fontSize: '0.75rem',
                               fontWeight: 600,
-                              color: c.severity === 'critical' ? '#dc2626' : c.severity === 'high' ? '#d97706' : '#475569',
+                              color: c.severity === 'critical' ? 'var(--danger-text)' : c.severity === 'high' ? 'var(--warn-text)' : 'var(--muted)',
                             }}
                           >
                             {c.severity}
@@ -943,7 +947,8 @@ export default function TrainingCenter() {
                             style={{
                               padding: '0.125rem 0.375rem',
                               borderRadius: '4px',
-                              backgroundColor: '#f1f5f9',
+                              backgroundColor: 'var(--surface-2)',
+                              color: 'var(--text)',
                               fontSize: '0.75rem',
                               fontWeight: 600,
                             }}
@@ -951,19 +956,20 @@ export default function TrainingCenter() {
                             {c.expectedDisposition}
                           </span>
                         </td>
-                        <td style={{ padding: '0.625rem 0.5rem', color: '#64748b' }}>{c.audience}</td>
-                        <td style={{ padding: '0.625rem 0.5rem', color: '#1e293b' }}>{c.question}</td>
+                        <td style={{ padding: '0.625rem 0.5rem', color: 'var(--muted)' }}>{c.audience}</td>
+                        <td style={{ padding: '0.625rem 0.5rem', color: 'var(--text)' }}>{c.question}</td>
                         <td style={{ padding: '0.625rem 0.5rem' }}>
                           <button
                             onClick={() => setSelectedCaseModal(c)}
                             style={{
                               minHeight: '36px',
                               padding: '0.25rem 0.5rem',
-                              backgroundColor: '#f1f5f9',
-                              border: '1px solid #cbd5e1',
+                              backgroundColor: 'var(--surface-2)',
+                              border: '1px solid var(--border)',
                               borderRadius: '4px',
                               fontSize: '0.75rem',
                               cursor: 'pointer',
+                              color: 'var(--text)',
                             }}
                           >
                             Inspect
@@ -985,7 +991,7 @@ export default function TrainingCenter() {
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  backgroundColor: 'rgba(0,0,0,0.5)',
+                  backgroundColor: 'rgba(0,0,0,0.6)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -993,14 +999,14 @@ export default function TrainingCenter() {
                   zIndex: 9999,
                 }}
               >
-                <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', maxWidth: '600px', width: '100%', padding: '1.5rem', maxHeight: '90vh', overflowY: 'auto' }}>
+                <div style={{ backgroundColor: 'var(--card)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '8px', maxWidth: '600px', width: '100%', padding: '1.5rem', maxHeight: '90vh', overflowY: 'auto' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                     <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 700 }}>
                       Case {selectedCaseModal.id} Details
                     </h3>
                     <button
                       onClick={() => setSelectedCaseModal(null)}
-                      style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '0.5rem' }}
+                      style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '0.5rem', color: 'var(--text)' }}
                     >
                       <Icon name="x" size={20} />
                     </button>
@@ -1010,7 +1016,7 @@ export default function TrainingCenter() {
                     <div><strong>Expected Disposition:</strong> <code>{selectedCaseModal.expectedDisposition}</code></div>
                     <div>
                       <strong>Required Assertions:</strong>
-                      <ul style={{ margin: '0.25rem 0 0', paddingLeft: '1.25rem', color: '#15803d' }}>
+                      <ul style={{ margin: '0.25rem 0 0', paddingLeft: '1.25rem', color: 'var(--success-text)' }}>
                         {selectedCaseModal.requiredAssertions.map((a, i) => (
                           <li key={i}>{a}</li>
                         ))}
@@ -1018,7 +1024,7 @@ export default function TrainingCenter() {
                     </div>
                     <div>
                       <strong>Forbidden Assertions:</strong>
-                      <ul style={{ margin: '0.25rem 0 0', paddingLeft: '1.25rem', color: '#b91c1c' }}>
+                      <ul style={{ margin: '0.25rem 0 0', paddingLeft: '1.25rem', color: 'var(--danger-text)' }}>
                         {selectedCaseModal.forbiddenAssertions.map((a, i) => (
                           <li key={i}>{a}</li>
                         ))}
@@ -1039,8 +1045,8 @@ export default function TrainingCenter() {
             <div style={{ ...cardStyle, padding: '1.25rem', marginBottom: '1.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Evaluation Runs & Accuracy Reports</h3>
-                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.8125rem', color: '#64748b' }}>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text)' }}>Evaluation Runs & Accuracy Reports</h3>
+                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.8125rem', color: 'var(--muted)' }}>
                     Run offline evaluations across test suites, compare deltas against baseline, and export reports.
                   </p>
                 </div>
@@ -1050,12 +1056,13 @@ export default function TrainingCenter() {
                     style={{
                       minHeight: '44px',
                       padding: '0.5rem 1rem',
-                      backgroundColor: '#f1f5f9',
-                      border: '1px solid #cbd5e1',
+                      backgroundColor: 'var(--surface-2)',
+                      border: '1px solid var(--border)',
                       borderRadius: '6px',
                       fontSize: '0.8125rem',
                       fontWeight: 600,
                       cursor: 'pointer',
+                      color: 'var(--text)',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '0.5rem',
@@ -1070,8 +1077,8 @@ export default function TrainingCenter() {
                     style={{
                       minHeight: '44px',
                       padding: '0.5rem 1rem',
-                      backgroundColor: '#2563eb',
-                      color: '#ffffff',
+                      backgroundColor: 'var(--primary)',
+                      color: 'var(--on-primary)',
                       border: 'none',
                       borderRadius: '6px',
                       fontWeight: 600,
@@ -1086,18 +1093,18 @@ export default function TrainingCenter() {
 
               {currentRun && (
                 <div>
-                  <div style={{ backgroundColor: '#f8fafc', padding: '1rem', borderRadius: '6px', border: '1px solid #e2e8f0', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.8125rem' }}>
+                  <div style={{ backgroundColor: 'var(--surface-2)', padding: '1rem', borderRadius: '6px', border: '1px solid var(--border)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.8125rem' }}>
                     <div><strong>Run ID:</strong> <code>{currentRun.runId}</code></div>
                     <div><strong>Environment:</strong> <code>{currentRun.environment}</code></div>
                     <div><strong>Evaluated At:</strong> {new Date(currentRun.asOf).toLocaleTimeString()}</div>
-                    <div><strong>Passed:</strong> <span style={{ color: '#16a34a', fontWeight: 700 }}>{currentRun.counts.pass}</span> / {currentRun.counts.total}</div>
+                    <div><strong>Passed:</strong> <span style={{ color: 'var(--success-text)', fontWeight: 700 }}>{currentRun.counts.pass}</span> / {currentRun.counts.total}</div>
                   </div>
 
                   {/* Per-Case Results */}
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8125rem' }}>
                       <thead>
-                        <tr style={{ borderBottom: '2px solid #e2e8f0', color: '#64748b' }}>
+                        <tr style={{ borderBottom: '2px solid var(--border)', color: 'var(--muted)' }}>
                           <th style={{ padding: '0.5rem' }}>Case ID</th>
                           <th style={{ padding: '0.5rem' }}>Suite</th>
                           <th style={{ padding: '0.5rem' }}>Verdict</th>
@@ -1108,9 +1115,9 @@ export default function TrainingCenter() {
                       </thead>
                       <tbody>
                         {currentRun.results.map((res) => (
-                          <tr key={res.caseId} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '0.5rem', fontWeight: 600 }}><code>{res.caseId}</code></td>
-                            <td style={{ padding: '0.5rem' }}>{res.suite}</td>
+                          <tr key={res.caseId} style={{ borderBottom: '1px solid var(--divider)' }}>
+                            <td style={{ padding: '0.5rem', fontWeight: 600, color: 'var(--text)' }}><code>{res.caseId}</code></td>
+                            <td style={{ padding: '0.5rem', color: 'var(--text)' }}>{res.suite}</td>
                             <td style={{ padding: '0.5rem' }}>
                               <span
                                 style={{
@@ -1118,16 +1125,16 @@ export default function TrainingCenter() {
                                   fontWeight: 700,
                                   padding: '0.125rem 0.375rem',
                                   borderRadius: '4px',
-                                  backgroundColor: res.verdict === 'pass' ? '#dcfce7' : res.verdict === 'fail' ? '#fee2e2' : '#fef3c7',
-                                  color: res.verdict === 'pass' ? '#16a34a' : res.verdict === 'fail' ? '#dc2626' : '#d97706',
+                                  backgroundColor: res.verdict === 'pass' ? 'var(--success-bg)' : res.verdict === 'fail' ? 'var(--danger-bg)' : 'var(--st-progress-bg)',
+                                  color: res.verdict === 'pass' ? 'var(--success-text)' : res.verdict === 'fail' ? 'var(--danger-text)' : 'var(--warn-text)',
                                 }}
                               >
                                 {res.verdict.toUpperCase()}
                               </span>
                             </td>
-                            <td style={{ padding: '0.5rem' }}><code>{res.candidateDisposition}</code></td>
-                            <td style={{ padding: '0.5rem', color: '#64748b' }}>{res.evidenceStatus}</td>
-                            <td style={{ padding: '0.5rem', color: '#64748b' }}>{res.durationMs}ms</td>
+                            <td style={{ padding: '0.5rem', color: 'var(--text)' }}><code>{res.candidateDisposition}</code></td>
+                            <td style={{ padding: '0.5rem', color: 'var(--muted)' }}>{res.evidenceStatus}</td>
+                            <td style={{ padding: '0.5rem', color: 'var(--muted)' }}>{res.durationMs}ms</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1144,8 +1151,8 @@ export default function TrainingCenter() {
           <div role="tabpanel" id="panel-feedback" aria-labelledby="tab-feedback">
             <div style={{ ...cardStyle, padding: '1.25rem' }}>
               <div style={{ marginBottom: '1rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Staff Feedback & Correction Queue</h3>
-                <p style={{ margin: '0.25rem 0 0', fontSize: '0.8125rem', color: '#64748b' }}>
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text)' }}>Staff Feedback & Correction Queue</h3>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.8125rem', color: 'var(--muted)' }}>
                   Field corrections submitted by operators from How-to, AV Brain, and Add Equipment drawers.
                   Never mutates live pricing or booking rules automatically.
                 </p>
@@ -1156,35 +1163,35 @@ export default function TrainingCenter() {
                   <div
                     key={item.id}
                     style={{
-                      border: '1px solid #e2e8f0',
+                      border: '1px solid var(--border)',
                       borderRadius: '6px',
                       padding: '1rem',
-                      backgroundColor: '#ffffff',
+                      backgroundColor: 'var(--surface)',
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <code style={{ fontSize: '0.8125rem', fontWeight: 600 }}>{item.id}</code>
-                        <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>{item.modelName}</span>
+                        <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)' }}>{item.modelName}</span>
                         <span
                           style={{
                             fontSize: '0.75rem',
                             fontWeight: 600,
                             padding: '0.125rem 0.375rem',
                             borderRadius: '4px',
-                            backgroundColor: item.feedbackType === 'unsafe' ? '#fee2e2' : '#f1f5f9',
-                            color: item.feedbackType === 'unsafe' ? '#dc2626' : '#475569',
+                            backgroundColor: item.feedbackType === 'unsafe' ? 'var(--danger-bg)' : 'var(--surface-2)',
+                            color: item.feedbackType === 'unsafe' ? 'var(--danger-text)' : 'var(--muted)',
                           }}
                         >
                           {item.feedbackType}
                         </span>
                       </div>
-                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
                         Reported by: <strong>{item.userRole}</strong> • Surface: {item.sourceType}
                       </span>
                     </div>
 
-                    <p style={{ margin: '0.5rem 0', fontSize: '0.875rem', color: '#334155' }}>
+                    <p style={{ margin: '0.5rem 0', fontSize: '0.875rem', color: 'var(--text2)' }}>
                       "{item.comment}"
                     </p>
 
@@ -1193,7 +1200,7 @@ export default function TrainingCenter() {
                         style={{
                           fontSize: '0.75rem',
                           fontWeight: 600,
-                          color: item.status === 'review_candidate_created' ? '#16a34a' : '#d97706',
+                          color: item.status === 'review_candidate_created' ? 'var(--success-text)' : 'var(--warn-text)',
                         }}
                       >
                         Status: {item.status === 'review_candidate_created' ? 'Review Candidate Created' : 'Pending Review'}
@@ -1208,8 +1215,8 @@ export default function TrainingCenter() {
                           style={{
                             minHeight: '36px',
                             padding: '0.25rem 0.75rem',
-                            backgroundColor: '#2563eb',
-                            color: '#ffffff',
+                            backgroundColor: 'var(--primary)',
+                            color: 'var(--on-primary)',
                             border: 'none',
                             borderRadius: '4px',
                             fontSize: '0.75rem',

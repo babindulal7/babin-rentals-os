@@ -22,35 +22,39 @@ vi.mock('../../../../lib/auth', () => ({
   useAuth: () => ({ user: mockUser }),
 }))
 
-vi.mock('../../../../lib/supabase', () => ({
-  supabase: {
-    from: () => ({
-      select: () => ({
-        eq: () => ({
-          is: () => ({
-            order: () => ({
-              limit: () =>
-                Promise.resolve({
-                  data: [
-                    {
-                      id: 'booking-on-rent-1',
-                      booking_no: 'B-00100',
-                      starts_at: '2026-09-01T00:00:00Z',
-                      ends_at: '2026-09-10T00:00:00Z',
-                      stage: 'On Rent',
-                      clients: { name: 'Acme Studios' },
-                    },
-                  ],
-                  error: null,
-                }),
-            }),
-          }),
-        }),
-      }),
-    }),
-  },
-  newClientUuid: () => '00000000-0000-4000-8000-000000000001',
-}))
+vi.mock('../../../../lib/supabase', () => {
+  const createQueryBuilder = () => {
+    const builder: Record<string, unknown> = {}
+    const promise = Promise.resolve({
+      data: [
+        {
+          id: 'booking-on-rent-1',
+          booking_no: 'B-00100',
+          pickup_datetime: '2026-09-01T00:00:00Z',
+          return_datetime: '2026-09-10T00:00:00Z',
+          stage: 'On Rent',
+          clients: { name: 'Acme Studios' },
+        },
+      ],
+      error: null,
+    })
+    builder.select = () => builder
+    builder.eq = () => builder
+    builder.is = () => builder
+    builder.order = () => builder
+    builder.limit = () => promise
+    builder.then = promise.then.bind(promise)
+    builder.catch = promise.catch.bind(promise)
+    return builder
+  }
+
+  return {
+    supabase: {
+      from: () => createQueryBuilder(),
+    },
+    newClientUuid: () => '00000000-0000-4000-8000-000000000001',
+  }
+})
 
 let container: HTMLDivElement
 let root: Root
