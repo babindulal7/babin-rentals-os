@@ -1,5 +1,49 @@
 # Progress Log
 
+## 2026-11-23 — Public Booking Accessibility & Tablet Polish, Staging Bundle Idempotency & Full Mac CI Verification (Windows Antigravity)
+
+### Did
+- Polished public front door and online booking flow (T7) in `src/booking/booking.css` for tablet viewports (768px-1024px): aligned brand logo and user/cart buttons to row 1 with date/time picker centered full-width in row 2.
+- Enforced accessibility and touch target standards on `ProductCard.tsx` and `ProductDetailModal.tsx`: guaranteed minimum 44px height on family radio option targets, descriptive `title` tooltips, and explanatory `aria-label` tags on disabled Add to Request buttons (PR #390 merged as `1f60f708`).
+- Added end-to-end integration test suite `src/booking/components/__tests__/bookingFlowE2E.test.tsx` (7/7 tests passing) validating product browsing, availability indicators, cart drawer rental calculation at 06:00 NPT boundaries, integer paisa money formatting, 13% VAT, 50% advance due, confirmed REQ receipt screen, and Away mode pause handling.
+- Enhanced staging rehearsal bundle `docs/verification/staging_migrations_0260_to_0269_bundle.sql` with idempotent `drop policy if exists` guards for `external_holds_staff_select`, `external_holds_staff_write`, and `sign_in_events_owner_admin_select` while strictly preserving unmodified migration file digests in `supabase/migrations/` (PR #389 merged as `28bae155`).
+- Executed exact-head GitHub Actions CI verification:
+  - Run `45239400078` on PR #390: completed `success` across all pipeline jobs on Mac runner.
+  - Run `45240963072` on `main` (`28bae155`): completed `success` across all 26 steps on Apple Silicon runner `BABIN-MAC-01` (Node 24.22.2, arm64).
+
+### Ruled
+- Pinned migration files in `supabase/migrations/` (0001 through 0262) must remain strictly immutable to maintain SHA source integrity against `STAGING_SQL_INVENTORY_2026-11-21.json`; idempotent policy drop guards belong in staging rehearsal bundles, never retroactively edited into pinned historical migrations.
+- Touch target floor of 44px (Law 16 / UX standard) and dual accessibility semantics (`aria-label` + `title`) are mandatory across all public catalog interactive controls.
+
+### Verified
+- Mac Full CI run `45240963072` on `BABIN-MAC-01`: PASS (26/26 steps green).
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 warnings, 0 errors across `src/`).
+- `npm run check:pglite`: PASS (267/267 migrations applied, 48 views checked, 22 allowlisted anon functions, 253 definer search paths pinned).
+- `npm run check:lifecycle`: PASS (102/102 lifecycle steps green in PGlite real Postgres + RLS).
+- `npx vitest run src/booking/components/__tests__/bookingFlowE2E.test.tsx`: PASS (7/7 tests passing).
+- `npx vitest run src/lib/__tests__/stagingInventory20261121.test.ts`: PASS (2/2 tests passing).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-23T18:47:45.855Z). Suite: Historical suite: 7927/7927 passed, 0 failed (recorded 2026-11-23T18:40:50.469Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 7934/7934 passed, 0 failed (recorded 2026-11-23T18:18:19.757Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-23T18:48:58.739Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Live production post-cutover database dump & isolated sandbox restore drill (P0-01 / T1-01 / SEC-01).
+- Staging rehearsal of forward migrations 0261–0269 on `babin-staging` under Issue #56 (P0-02).
+- Operator live apply of migrations 0260–0269 by Babin per `docs/live/PRODUCTION_LIVE_BATCH_PLAN_2026-11-23.md`.
+
 ## 2026-11-23 — Core Rental Loop & Custody RPC Hardening, Staging Bundle 0261–0269 & Desktop Usability Scenarios U1–U12 (Windows Antigravity)
 
 ### Did
