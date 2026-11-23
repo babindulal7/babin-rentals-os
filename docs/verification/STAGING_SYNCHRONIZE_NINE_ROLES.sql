@@ -128,9 +128,10 @@ begin
   on conflict (id) do update set status = 'In Stock'::inventory_state;
 
   -- 6. Seed test client if missing
-  insert into clients (id, client_uuid, client_code, name, phone, email)
-  values ('e0000000-0000-4000-8000-000000000001', gen_random_uuid(), 'C-9901', 'Staging Production Client Pvt Ltd', '+9779800000001', 'staging-client@babinrentals.test')
-  on conflict (id) do nothing;
+  if not exists (select 1 from clients where id = 'e0000000-0000-4000-8000-000000000001' or client_code = 'C-9901' or phone = '+9779800000001') then
+    insert into clients (id, client_uuid, client_code, name, phone, email)
+    values ('e0000000-0000-4000-8000-000000000001', gen_random_uuid(), 'C-9901', 'Staging Production Client Pvt Ltd', '+9779800000001', 'staging-client@babinrentals.test');
+  end if;
 end $$;
 
 commit;
