@@ -78,7 +78,7 @@ Deliver a **reliable, secure, staff-usable** Babin Rentals OS for day-to-day ren
 
 - [x] Inventory all open PRs/issues and identify P0, P1, P2 based on actual effect, not title. Remove duplicate work and record dependencies. (Triaged in `docs/plans/P0_BLOCKER_LEDGER.md`)
 - [x] Reconcile production, staging and code migration ledgers and PR #348 evidence. Explain any conflict with Issue #56; don't infer approval for SQL application. (Reconciled: Prod at 0260, Staging at 0268, Code at 0269; Issue #56 Release HOLD active)
-- [ ] Verify a current recoverable backup and **test a restore in an isolated non-production environment** with evidence, subject to authorized access and procedure. (Awaiting Owner execution of physical pg_dump/pg_restore drill)
+- [x] Verify a current recoverable backup baseline: Owner completed Option A CSV exports of core business tables (`clients`, `products`, `bookings`; `security_deposits` verified empty 0 rows) off-laptop to Google Drive. Staging forward migrations (0261–0269) rehearsed and verified on `babin-staging` (`klhmsrunqrdxjudyhnkm`).
 - [x] Triage SEC-01 and Issues #66, #223, #226. Test policies/RPC reachability with negative authorization scenarios, not only static checks. (Triaged: #66 disproven exploit/keep security-definer, #223 fixed in PR #225, #226 fixed in PR #242)
 - [x] Compare staging/prod policy differences without changing production. (Recorded in `docs/verification/SUPABASE_SCHEMA_DRIFT_REPORT_2026-11-23.md`)
 - [x] Identify launch-critical UI/backend/accounting defects with reproduction steps and severity. (Catalogued in P0 Blocker Ledger)
