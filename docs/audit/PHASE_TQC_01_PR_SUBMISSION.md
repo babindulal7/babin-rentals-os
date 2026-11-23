@@ -6,6 +6,7 @@
 **Status:** **PENDING OWNER ACCEPTANCE** (No auto-merge, no production deployment, zero database mutations)  
 **Branch:** `feat/intelligence-training-center-eval-shell`  
 **Base `main` SHA:** `4c8fe9d73166c9e5b2a73e5c0da7f0107fb96eea`  
+**PR Head SHA:** `a57fc0fd` (Feature) / `b6b82e08` (Audit Update)  
 
 ---
 
@@ -26,7 +27,7 @@ Phase TQC-01 introduces the staff-facing **Intelligence Training Center** for Ba
 |---|---|---|
 | **Base `main` SHA** | `4c8fe9d73166c9e5b2a73e5c0da7f0107fb96eea` | Clean upstream main |
 | **Phase T1 Branch** | `feat/intelligence-smart-equipment-draft-entry` | Head: `99b785ff` (Dedicated worktree, isolated) |
-| **TQC-01 Branch** | `feat/intelligence-training-center-eval-shell` | Head: `32bfcb7f` (Dedicated worktree, isolated) |
+| **TQC-01 & TQC-02 Branch** | `feat/intelligence-training-center-eval-shell` | Head: `a57fc0fd` (Dedicated worktree, isolated) |
 | **Environment** | `synthetic_offline` | Vitest masked Supabase transport (`mock`) |
 | **Release Gate** | **PASSING** | 0 critical safety/privacy violations |
 
