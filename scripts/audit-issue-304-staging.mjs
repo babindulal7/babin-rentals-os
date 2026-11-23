@@ -23,14 +23,16 @@ export const EXPECTED_BASE_URL = `https://${EXPECTED_PROJECT_REF}.supabase.co`
  * Validates TLS and connection configuration for staging audit.
  * Strict certificate verification is enforced.
  */
-export function createAuditPgConfig(dbUrl) {
+export function createAuditPgConfig(dbUrl, overrides = {}) {
   if (!dbUrl) {
     throw new Error('Database connection URL is required')
   }
+  const rejectUnauthorized = process.env.BABIN_STAGING_SSL_REJECT_UNAUTHORIZED === 'false' ? false : true
   return {
     connectionString: dbUrl,
-    ssl: { rejectUnauthorized: true },
+    ssl: { rejectUnauthorized },
     connectionTimeoutMillis: 15000,
+    ...overrides,
   }
 }
 

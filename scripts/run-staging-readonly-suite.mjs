@@ -21,7 +21,11 @@ const tokens = {}
 
 for (const role of STAGING_ROLES) {
   const email = `staging-${role.toLowerCase()}@babinrentals.test`
-  const password = 'StagingPass2026!'
+  const password = process.env[`BABIN_STAGING_PASSWORD_${role.toUpperCase()}`] || process.env.BABIN_STAGING_SYNTHETIC_PASSWORD
+  if (!password) {
+    console.error(`Missing password for role ${role}. Set BABIN_STAGING_PASSWORD_${role.toUpperCase()} or BABIN_STAGING_SYNTHETIC_PASSWORD in environment.`)
+    process.exit(1)
+  }
   
   const res = await fetch(`${BASE_URL}/auth/v1/token?grant_type=password`, {
     method: 'POST',
