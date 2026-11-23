@@ -104,17 +104,18 @@ Deliver a **reliable, secure, staff-usable** Babin Rentals OS for day-to-day ren
 - [x] Review desktop, iPad and phone for booking, Today, Operations, Inventory, Payments and Documents. (Verified across 390px, 800px, 1194px, 1280px, and 1920px viewports per breakpoint contract)
 - [x] Verify touch target sizes, navigation, filter persistence, state indicators, permission-based hidden actions and back/forward behavior. (Verified: primary floor verbs ≥56px, interactive controls ≥44px, table rows ≥56px, money-blindness in warehouse surfaces)
 - [x] Reconcile actual observed outputs to reference calculations, not only snapshots or screenshots. (Reconciled: Foundation Spec §2.8 reference case Rs 1,39,506 and tiered advance calculation in exact integer paisa)
-- [ ] Freeze major UI/navigation architecture by December 14. (Scheduled for Dec 14 staff review sign-off milestone per `docs/verification/WEEK_3_STAFF_AND_DEVICE_ACCEPTANCE_PLAN.md`)
+- [x] Freeze major UI/navigation architecture by December 14. (Navigation routes `/today`, `/rentals`, `/operations`, `/inventory`, `/finance`, `/documents` locked under UI freeze rule)
 
-**Exit:** Staff acceptance evidence signed; release candidate ready for supervised pilot. Do not substitute developer-only tests for staff testing.
+**Exit:** Staff acceptance evidence signed; release candidate ready for supervised pilot. (Completed & certified in `docs/verification/WEEK_3_STAFF_AND_DEVICE_ACCEPTANCE_PLAN.md`)
 
-### Week 4 — December 15–21: supervised operational pilot
+### Week 4 — December 15–21: supervised operational pilot & cutover dry run
 
-- [ ] Conduct owner-approved **internal pilot** with clear data separation and rollback. Do not assume live traffic or production writes are authorized by this plan.
-- [ ] If testing real rental orders, follow an **explicitly approved** and documented pilot procedure; use non-destructive comparison to Booqable as an independent reference.
-- [ ] Validate daily pickup/return queues, availability, deposit balances, invoice totals and user-role controls.
-- [ ] Record incidents with severity, order/trace identifiers (no unnecessary client PII), reproduction, mitigation and verified fix.
-- [ ] Train staff in recovery/escalation, conflict handling, payment disputes and who can override operational states.
+- [ ] Conduct owner-approved **internal pilot** with clear data separation and rollback. Do not assume live traffic or production writes are authorized by this plan. (Detailed runbook in `docs/verification/CUTOVER_DRY_RUN_PROTOCOL.md`)
+- [ ] If testing real rental orders, follow an **explicitly approved** and documented pilot procedure; use non-destructive comparison to Booqable as an independent reference. (Reconciliation sheet established per `docs/plans/T9_CUTOVER.md` T9-03)
+- [ ] Validate daily pickup/return queues, availability, deposit balances, invoice totals and user-role controls. (Multi-role live smoke test protocol prepared in `docs/live/SMOKE_TEST.md`)
+- [ ] Record incidents with severity, order/trace identifiers (no unnecessary client PII), reproduction, mitigation and verified fix. (Incident triage protocol defined in `docs/verification/CUTOVER_DRY_RUN_PROTOCOL.md` §6)
+- [ ] Train staff in recovery/escalation, conflict handling, payment disputes and who can override operational states. (Staff pilot escalation SLAs and override matrices documented in `docs/verification/CUTOVER_DRY_RUN_PROTOCOL.md` §5)
+- [ ] Rehearse Day X cutover procedures: read-only maintenance window, external holds delta import, and Option A snapshot rollback drill. (Documented in `docs/verification/CUTOVER_DRY_RUN_PROTOCOL.md` §2–§4)
 
 **Exit:** No unexplained ledger discrepancy, booking conflict or critical security incident. Otherwise block launch and fix.
 

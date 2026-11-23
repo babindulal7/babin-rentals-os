@@ -11,10 +11,15 @@
   - `node scripts/verify-staging-storage-acceptance.mjs` — PASS (22/22 assertions, scoping, immutability, role isolation, signed URLs).
   - `node scripts/verify-staging-mfa-flow.mjs` — PASS (TOTP enrollment, RFC 6238 verification, AAL2 step-up session, database audit trail).
 - Authored and certified Week 3 Staff & Device Acceptance Plan (`docs/verification/WEEK_3_STAFF_AND_DEVICE_ACCEPTANCE_PLAN.md`) and E2E test suite `src/__tests__/e2e/week3StaffAndDeviceAcceptance.test.tsx` (19/19 passing tests), covering 15 representative rental acceptance cases (RC-01 to RC-15), physical viewport constraints (§7.7: Phone 390px, Tablet 800px/1194px, Desktop 1280px/1920px), ergonomic touch targets (≥56px floor verbs, ≥44px controls), and Foundation Spec §2.8 canonical reference case reconciliation.
+- Authored `docs/live/SMOKE_TEST.md`: complete multi-role live smoke test runbook for Card T1-11 across Owner, Coordinator, Warehouse, and Accounts roles enforcing Law 1, Law 3, Law 5, Law 6, and touch targets.
+- Authored `docs/verification/CUTOVER_DRY_RUN_PROTOCOL.md`: comprehensive cutover rehearsal and operational pilot runbook for Week 4 (December 15–21, 2026) specifying pre-cutover freeze, read-only maintenance window, external holds delta import, rollback protocol, and incident escalation procedure.
+- Updated Master Launch Plan `docs/plans/DECEMBER_31_LAUNCH_PLAN.md` with certified Week 3 acceptance milestones and Week 4 cutover dry run linkages.
 
 ### Ruled
 - Staging environment `klhmsrunqrdxjudyhnkm` is certified 100% operational across all 9 roles and storage buckets with zero RLS or money blindness leaks.
 - Week 3 Staff & Device Acceptance requirements (Dec 8–14) are certified complete and enforced by automated regression suites.
+- Live multi-role smoke testing (Card T1-11) is codified in `docs/live/SMOKE_TEST.md`.
+- Week 4 supervised pilot and cutover dry run operates strictly under `docs/verification/CUTOVER_DRY_RUN_PROTOCOL.md` and Rule N-5.
 
 ### Verified
 - `node scripts/verify-staging-hosted.mjs`: PASS (all 9 roles authenticated and verified).
@@ -37,9 +42,9 @@
 | Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
 | Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
 | Overall | structural mean of five | ≈ 96% | — |
-Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-23T22:16:02.261Z). Suite: Historical suite: 8017/8017 passed, 0 failed (recorded 2026-11-23T22:06:16.459Z); current source NOT VERIFIED.
+Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-23T22:28:57.812Z). Suite: Historical suite: 8017/8017 passed, 0 failed (recorded 2026-11-23T22:06:16.459Z); current source NOT VERIFIED.
 Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written 2026-11-23T22:17:49.704Z.
+Gates read from .lifecycle-result.json, written 2026-11-23T22:30:00.753Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
