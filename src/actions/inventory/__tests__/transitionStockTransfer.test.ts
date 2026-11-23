@@ -64,19 +64,26 @@ vi.mock('../../../lib/dataAccess', () => ({
 vi.mock('../../../lib/supabase', () => ({
   supabase: {
     from: (table: string) => ({
-      select: () => ({
-        or: (condition: string) => ({
+      select: () => {
+        let conditionStr = ''
+        const queryChain: Record<string, any> = {
+          or: (condition: string) => {
+            conditionStr = condition
+            return queryChain
+          },
+          eq: (col: string, val: string) => {
+            conditionStr = `${col}.eq.${val}`
+            return queryChain
+          },
           maybeSingle: async () => {
             if (table === 'stock_transfers') {
               const match = db.state.transfers.find(
-                (t) => condition.includes(t.id) || condition.includes(t.transfer_no),
+                (t) => conditionStr.includes(t.id) || conditionStr.includes(t.transfer_no),
               )
               return { data: match || null, error: null }
             }
             return { data: null, error: null }
           },
-        }),
-        eq: () => ({
           then: (resolve: (val: unknown) => void) => {
             if (table === 'stock_transfer_lines') {
               resolve({ data: db.state.lines, error: null })
@@ -84,8 +91,9 @@ vi.mock('../../../lib/supabase', () => ({
               resolve({ data: [], error: null })
             }
           },
-        }),
-      }),
+        }
+        return queryChain
+      },
     }),
   },
 }))

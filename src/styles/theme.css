@@ -707,6 +707,24 @@
   --on-accent: var(--on-brand);
   --nav-active-accent-bg: var(--nav-active-bg);
 
+  /* Elevation & text aliases across modules for theme consistency */
+  --text-muted: var(--muted);
+  --border-subtle: var(--border);
+  --surface-raised: var(--card);
+  --surface-subtle: var(--surface-2);
+  --surface-sunken: var(--inset);
+  --bg-card: var(--card);
+  --bg-subtle: var(--surface-2);
+  --bg-active: var(--surface-2);
+  --bg-input: var(--surface);
+  --color-primary: var(--primary);
+  --color-success: var(--success);
+  --color-warning: var(--warn);
+  --color-muted: var(--muted);
+  --radius-md: var(--r-card, 8px);
+  --radius-sm: var(--r-sm, 6px);
+  --space-md: var(--sp-md, 12px);
+
   /* spacing */
   --sp-xs: 4px;
   --sp-sm: 8px;

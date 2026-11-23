@@ -47,6 +47,10 @@ const db = vi.hoisted(() => {
         orFilter = condition;
         return chain;
       },
+      eq: (col: string, val: string) => {
+        orFilter = `${col}.eq.${val}`;
+        return chain;
+      },
       order: () => chain,
       limit: () => chain,
       maybeSingle: async () => {
