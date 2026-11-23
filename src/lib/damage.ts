@@ -36,6 +36,7 @@
 
 import { rupees, formatMoney } from './money'
 import type { Paisa } from './money'
+import type { ManagerApprovalRouting } from './rbac'
 
 /** ≥ this figure needs the Owner; below it a Manager may approve. Ruled 12 Aug. */
 export const OWNER_APPROVAL_THRESHOLD: Paisa = rupees(25000)
@@ -67,8 +68,11 @@ export interface DamageReportInput {
  * The boundary is inclusive at the top: exactly Rs 25,000 goes to the Owner.
  * "< Rs 25,000 → Manager · ≥ Rs 25,000 → Owner" leaves no gap, and a threshold
  * that both roles could claim is the kind that gets argued about later.
+ *
+ * R-22.1 / R-22.8: When routing is 'owner_only', all damage approvals route to Owner.
  */
-export function approverFor(chargePaisa: Paisa): DamageApprover {
+export function approverFor(chargePaisa: Paisa, routing: ManagerApprovalRouting = 'standard'): DamageApprover {
+  if (routing === 'owner_only') return 'Owner'
   return chargePaisa >= OWNER_APPROVAL_THRESHOLD ? 'Owner' : 'Manager'
 }
 
@@ -81,7 +85,7 @@ export interface DamageValidation {
   approver: DamageApprover
 }
 
-export function validateDamageReport(i: DamageReportInput): DamageValidation {
+export function validateDamageReport(i: DamageReportInput, routing: ManagerApprovalRouting = 'standard'): DamageValidation {
   const errors: Record<string, string> = {}
   const warnings: string[] = []
 
@@ -110,7 +114,7 @@ export function validateDamageReport(i: DamageReportInput): DamageValidation {
     valid: Object.keys(errors).length === 0,
     errors,
     warnings,
-    approver: approverFor(i.chargePaisa),
+    approver: approverFor(i.chargePaisa, routing),
   }
 }
 

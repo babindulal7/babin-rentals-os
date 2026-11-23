@@ -16,6 +16,7 @@ import { BRANCHES } from '../../../lib/queries/settings'
 import { ToneChip, td } from './shared'
 import { StaffDirectoryCard } from './StaffDirectory'
 import { SignInHistoryCard } from './SignInHistoryCard'
+import { ManagerApprovalRoutingCard } from './ManagerApprovalRoutingCard'
 
 /**
  * **Settings ▸ Users & Roles** — §11.2: *"user list, role assignment, the
@@ -54,6 +55,9 @@ export function UsersPane() {
 
       {/* Sign-in history and new-device audit trail (T1-18 / B22 / B23) */}
       <SignInHistoryCard />
+
+      {/* Manager-level approvals routing control (R-22.1 / R-22.8 / O-33) */}
+      <ManagerApprovalRoutingCard />
 
       <Card
         title="Permissions Matrix"

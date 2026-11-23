@@ -7,6 +7,7 @@ import { rupees, formatMoney, type Paisa } from '../../../lib/money'
 import { extendRental } from '../../../actions/rentals/extendRental'
 import { useAuth } from '../../../lib/auth'
 import { canViewMoney, canDecideExtensionClash } from '../../../lib/rbac'
+import { readManagerApprovalRouting } from '../../../lib/settingsStore'
 import { checkExtensionClash, type ExtensionClashDetail } from '../../../lib/queries/extensionClash'
 import { supabase } from '../../../lib/supabase'
 
@@ -58,7 +59,8 @@ export function ExtendRentalModal({
   const { user } = useAuth()
   const userRole = user?.role
   const canSeeMoney = userRole ? canViewMoney(userRole) : false
-  const isManager = userRole ? canDecideExtensionClash(userRole) : false
+  const routing = readManagerApprovalRouting()
+  const isManager = userRole ? canDecideExtensionClash(userRole, routing) : false
   const radioGroupId = useId()
 
   // 1. Day selection: +1 day default (1-tap budget), +2 days, or custom

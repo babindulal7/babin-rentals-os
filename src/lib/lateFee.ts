@@ -34,6 +34,9 @@
 
 import { lateFee, rupees, toRupees } from './money'
 import type { LateFeeInput, LateFeeResult, Paisa } from './money'
+import type { SystemRole } from '../types/database'
+import type { ManagerApprovalRouting } from './rbac'
+import { canDecideManagerApproval } from './rbac'
 
 export { lateFee }
 export type { LateFeeInput, LateFeeResult }
@@ -135,6 +138,14 @@ export const WAIVER_REASON_MIN = 10
  * was asked to settle.
  */
 export const WAIVER_NEEDS_APPROVER = true
+
+/**
+ * Checks if a role is authorized to approve late fee waivers.
+ * R-22.1 / R-22.8: When routing is 'owner_only', only Owner can approve.
+ */
+export function canApproveLateFeeWaiver(role: SystemRole, routing: ManagerApprovalRouting = 'standard'): boolean {
+  return canDecideManagerApproval(role, routing)
+}
 
 export type LateFeeDecision = 'Apply' | 'Waive'
 
