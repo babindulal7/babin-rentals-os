@@ -42,7 +42,7 @@ on conflict (id) do update set
   is_sso_user = false,
   updated_at = now();
 
--- 2. Upsert identities into auth.identities so GoTrue password auth resolves the account
+-- 2. Upsert identities into auth.identities
 delete from auth.identities 
 where user_id between 'a0000000-0000-4000-8000-000000000001' and 'a0000000-0000-4000-8000-000000000009';
 
@@ -63,10 +63,27 @@ where id between 'a0000000-0000-4000-8000-000000000001' and 'a0000000-0000-4000-
 do $$
 declare
   v_branch_id uuid;
+  v_wh_id uuid;
+  v_cat_id uuid;
 begin
   select id into v_branch_id from branches order by created_at limit 1;
   if v_branch_id is null then
     v_branch_id := '00000000-0000-0000-0000-000000000001';
+  end if;
+
+  select id into v_wh_id from warehouses where branch_id = v_branch_id limit 1;
+  if v_wh_id is null then
+    v_wh_id := '00000000-0000-0000-0000-000000000011';
+    insert into warehouses (id, client_uuid, warehouse_code, branch_id, name, address, status, is_primary, is_active)
+    values (v_wh_id, gen_random_uuid(), 'WH-KTM-MAIN', v_branch_id, 'Boudha Main Vault', 'Boudha, Kathmandu', 'Active', true, true)
+    on conflict (warehouse_code) do nothing;
+  end if;
+
+  select id into v_cat_id from inventory_categories limit 1;
+  if v_cat_id is null then
+    v_cat_id := gen_random_uuid();
+    insert into inventory_categories (id, client_uuid, code, name, is_active)
+    values (v_cat_id, gen_random_uuid(), 'CAT-CAM', 'Cinema Cameras', true);
   end if;
 
   insert into public.users (id, client_uuid, employee_code, email, full_name, mobile, primary_role, branch_id, is_active)
@@ -91,8 +108,6 @@ begin
   select gen_random_uuid(), u.id, v_branch_id, op, u.id, now()
   from unnest(array[
     'a0000000-0000-4000-8000-000000000001'::uuid,
-    'a0000000-0000-4000-8000-000000000002'::uuid,
-    'a0000000-0000-4000-8000-000000000003'::uuid,
     'a0000000-0000-4000-8000-000000000004'::uuid,
     'a0000000-0000-4000-8000-000000000005'::uuid,
     'a0000000-0000-4000-8000-000000000006'::uuid
@@ -104,13 +119,13 @@ begin
   );
 
   -- 5. Seed test product and unit if missing
-  insert into products (id, client_uuid, asset_code, name, brand, tracking_mode, total_quantity, daily_rate)
-  values ('10000000-0000-4000-8000-000000000001', gen_random_uuid(), 'EQ000999', 'Staging Sony FX6 Cinema Camera', 'Sony', 'Serialised', 5, 500000)
-  on conflict (id) do update set daily_rate = 500000;
+  insert into products (id, client_uuid, asset_code, name, category_id, brand, tracking_mode, total_quantity, daily_rate)
+  values ('10000000-0000-4000-8000-000000000001', gen_random_uuid(), 'EQ000999', 'Staging Sony FX6 Cinema Camera', v_cat_id, 'Sony', 'Serialised', 5, 500000)
+  on conflict (id) do update set daily_rate = 500000, category_id = v_cat_id;
 
-  insert into product_units (id, client_uuid, product_id, serial_number, barcode, status, condition_grade)
-  values ('7c75ea7f-6e07-43ed-b8ec-a66efceecb88', gen_random_uuid(), '10000000-0000-4000-8000-000000000001', 'FX6-STAGING-001', 'FX6-STG-001', 'Available', 'Good')
-  on conflict (id) do update set status = 'Available';
+  insert into product_units (id, client_uuid, product_id, serial_no, asset_tag, barcode, status, condition, branch_id, warehouse_id)
+  values ('7c75ea7f-6e07-43ed-b8ec-a66efceecb88', gen_random_uuid(), '10000000-0000-4000-8000-000000000001', 'FX6-STAGING-001', 'FX6-STG-001', 'FX6-STG-001', 'In Stock'::inventory_state, 'Good'::unit_condition, v_branch_id, v_wh_id)
+  on conflict (id) do update set status = 'In Stock'::inventory_state;
 
   -- 6. Seed test client if missing
   insert into clients (id, client_uuid, client_code, name, phone, email)
