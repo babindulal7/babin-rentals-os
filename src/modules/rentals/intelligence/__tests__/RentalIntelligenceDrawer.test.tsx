@@ -211,7 +211,7 @@ describe('RentalIntelligenceDrawer UI Component', () => {
       expect(html).toContain('Approved Discount (10%):')
       expect(html).toContain('Nepal VAT (13%):')
       expect(html).toContain('Total Rental:')
-      expect(html).toContain('Security Deposit Liability (Law 5):')
+      expect(html).toContain('Security Deposit Liability (Escrow):')
       expect(html).toContain('Held separately in escrow; strictly excluded from rental revenue.')
       expect(html).toContain('Advance Received:')
       expect(html).toContain('Balance Due at Handover:')

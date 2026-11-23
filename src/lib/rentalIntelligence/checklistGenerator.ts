@@ -216,7 +216,7 @@ export function generateOperationalChecklist(
 
       items.push({
         id: `chk-handover-deposit-verification`,
-        title: 'Security Deposit Confirmation (Law 5)',
+        title: 'Security Deposit Confirmation (Escrow)',
         category: 'custody',
         mandatory: true,
         instruction: 'Confirm security deposit has been received and receipted into separate liability escrow ledger.',

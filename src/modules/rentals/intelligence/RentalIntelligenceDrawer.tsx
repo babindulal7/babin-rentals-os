@@ -445,7 +445,7 @@ export function RentalIntelligenceDrawer({
                     }}
                   >
                     <span style={{ fontWeight: 600, color: 'var(--primary)', display: 'block' }}>
-                      Security Deposit Liability (Law 5): {quoteResult.depositLiabilityFormatted}
+                      Security Deposit Liability (Escrow): {quoteResult.depositLiabilityFormatted}
                     </span>
                     <span style={{ color: 'var(--muted)' }}>
                       Held separately in escrow; strictly excluded from rental revenue.
