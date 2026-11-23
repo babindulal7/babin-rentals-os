@@ -37,9 +37,9 @@
 | Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
 | Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
 | Overall | structural mean of five | ≈ 96% | — |
-Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-23T22:50:53.313Z). Suite: Historical suite: 8017/8017 passed, 0 failed (recorded 2026-11-23T22:06:16.459Z); current source NOT VERIFIED.
+Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-23T23:56:10.846Z). Suite: Historical suite: 8048/8049 passed, 1 failed (recorded 2026-11-23T23:39:06.287Z); current source NOT VERIFIED.
 Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written 2026-11-23T22:52:15.516Z.
+Gates read from .lifecycle-result.json, written 2026-11-23T23:57:53.140Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 

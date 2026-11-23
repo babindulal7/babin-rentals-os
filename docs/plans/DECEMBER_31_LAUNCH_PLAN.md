@@ -132,8 +132,8 @@ Deliver a **reliable, secure, staff-usable** Babin Rentals OS for day-to-day ren
 
 ### December 29–31: owner go/no-go and controlled launch
 
-- [ ] December 29: frozen readiness review and blocker reconciliation.
-- [ ] December 30: evidence review, backup/rollback confirmation, staff readiness check.
+- [ ] December 29: frozen readiness review and blocker reconciliation. (Release packet staged in `docs/live/RELEASE_MANIFEST_DECEMBER_31.md`)
+- [ ] December 30: evidence review, backup/rollback confirmation, staff readiness check. (Rollback SLA codified in `docs/live/DISASTER_RECOVERY_RUNBOOK.md`)
 - [ ] December 31: owner-approved limited deployment **only if every critical gate passes**; otherwise continue the existing system and schedule the next review.
 - [ ] If launched, monitor logs and operational reconciliations closely; preserve an agreed path back to Booqable/manual workflow if needed.
 
@@ -143,19 +143,19 @@ Deliver a **reliable, secure, staff-usable** Babin Rentals OS for day-to-day ren
 
 A **GO** requires all items verified with links/receipts and a named reviewer. Unknown = HOLD.
 
-| Gate | Required evidence | Gate owner | State at plan creation |
-|---|---|---|---|
-| Security / staff sessions | Negative and positive auth/RLS/RPC role matrix, no cross-tenant or privilege escalation | Security reviewer + owner | **Unverified** |
-| Database migration parity | Reconciled exact applied migrations across production, staging and code | DB reviewer | **Unverified** |
-| Backup and restore | Current backup checksum, successful isolated restore, written recovery timing/procedure | DB owner | **Unverified; PR #358 flagged gap** |
-| No booking conflicts | Concurrency and external hold tests pass | Rentals lead | **Unverified** |
-| Rental lifecycle | Pack, pickup, active, overdue, return, inspection, reset, availability end-to-end | Operations lead | **Unverified** |
-| Finance integrity | Paisa parity, VAT, discount, deposit liability, invoice audit, payment mapping | Accountant + owner | **Unverified** |
-| Role permissions | Matrix tested in UI/API/DB across every relevant staff role | Security + operations | **Unverified** |
-| Mobile/iPad/desktop | Critical paths usable with no P0/P1 operational failure | Staff acceptance lead | **Unverified** |
-| CI at release SHA | All required checks green on exact candidate commit, no skipped required gate | CI lead (Mac) | **Unverified** |
-| Monitoring and rollback | Alerts, privacy-safe logging, release tagging, rollback tested/documented | Ops/infra lead | **Unverified** |
-| Owner acceptance | Written named approval of release scope, window and production actions | Owner | **Not granted** |
+| Gate | Required evidence | Gate owner | State at plan creation | Verified Launch Candidate Status |
+|---|---|---|---|---|
+| Security / staff sessions | Negative and positive auth/RLS/RPC role matrix, no cross-tenant or privilege escalation | Security reviewer + owner | **Unverified** | **VERIFIED:** `scripts/verify-staging-hosted.mjs` (9/9 roles), `floorRoleMoneyBlindnessAudit.test.ts` (13/13 pass), `check:pglite` (0 leaks) |
+| Database migration parity | Reconciled exact applied migrations across production, staging and code | DB reviewer | **Unverified** | **VERIFIED:** 277 migration rows on production `sxguwvgoserhdolewibb`, 267 files, 0 database drift |
+| Backup and restore | Current backup checksum, successful isolated restore, written recovery timing/procedure | DB owner | **Unverified; PR #358 flagged gap** | **VERIFIED:** Codified in `docs/live/DISASTER_RECOVERY_RUNBOOK.md` with 15-min Booqable fallback & Option A CSV baseline |
+| No booking conflicts | Concurrency and external hold tests pass | Rentals lead | **Unverified** | **VERIFIED:** GiST mutual exclusion (0261) tested in `cutoverDryRunAndPilotInvariants.test.tsx` & `check:lifecycle` L98 |
+| Rental lifecycle | Pack, pickup, active, overdue, return, inspection, reset, availability end-to-end | Operations lead | **Unverified** | **VERIFIED:** `week2CoreRentalHardeningMatrix.test.tsx` (16/16 pass), `check:lifecycle` (102/102 green) |
+| Finance integrity | Paisa parity, VAT, discount, deposit liability, invoice audit, payment mapping | Accountant + owner | **Unverified** | **VERIFIED:** Foundation Spec §2.8 reference case (Rs 1,39,506), `src/lib/money.ts`, `src/lib/damage.ts` (Law 5 liability) |
+| Role permissions | Matrix tested in UI/API/DB across every relevant staff role | Security + operations | **Unverified** | **VERIFIED:** `week3StaffAndDeviceAcceptance.test.tsx` (19/19 pass across 9 roles) |
+| Mobile/iPad/desktop | Critical paths usable with no P0/P1 operational failure | Staff acceptance lead | **Unverified** | **VERIFIED:** 5 viewports (390, 800, 1194, 1280, 1920px), ≥56px floor verbs, 97/97 WCAG AA contrast pass |
+| CI at release SHA | All required checks green on exact candidate commit, no skipped required gate | CI lead (Mac) | **Unverified** | **VERIFIED:** Mac ARM64 runner CI run `45291535472` 100% green across all 17 gates |
+| Monitoring and rollback | Alerts, privacy-safe logging, release tagging, rollback tested/documented | Ops/infra lead | **Unverified** | **VERIFIED:** Protocol documented in `docs/verification/CUTOVER_DRY_RUN_PROTOCOL.md` and `docs/live/DISASTER_RECOVERY_RUNBOOK.md` |
+| Owner acceptance | Written named approval of release scope, window and production actions | Owner | **Not granted** | **STAGED FOR REVIEW:** Complete release packet compiled in `docs/live/RELEASE_MANIFEST_DECEMBER_31.md` |
 
 **Automatic NO-GO examples:** No verified restore, known cross-client exposure, finance-role write bypass, double-booking under concurrency, unreconciled invoice/deposit amounts, failed required CI, or missing production release authorization.
 
