@@ -53,7 +53,7 @@
 /** Extra facts attached to a report. Serialised as-is — no PII, no money. */
 export type ErrorContext = Record<string, unknown>
 
-interface ParsedDsn {
+export interface ParsedDsn {
   readonly envelopeUrl: string
 }
 
@@ -183,7 +183,7 @@ function readEnv(key: string): string {
  * `X-Sentry-Auth` header, because a custom header would force a CORS preflight
  * on every report and `navigator.sendBeacon` cannot set headers at all.
  */
-function parseDsn(dsn: string): ParsedDsn | null {
+export function parseDsn(dsn: string): ParsedDsn | null {
   if (!dsn) return null
   try {
     const u = new URL(dsn)
@@ -258,15 +258,53 @@ function describe(err: unknown): Described {
 }
 
 /** Allowlisted top-level module only; URL path parameters may contain client PII. */
-function pagePath(): string {
+export function pagePath(loc?: { pathname: string }): string {
   try {
-    if (typeof location === 'undefined') return ''
-    const topLevel = location.pathname.split('/').filter(Boolean)[0] ?? ''
+    const activeLoc = loc ?? (typeof location !== 'undefined' ? location : undefined)
+    if (!activeLoc) return ''
+    const topLevel = activeLoc.pathname.split('/').filter(Boolean)[0] ?? ''
     const safeModules = ['today', 'rentals', 'inventory', 'clients', 'operations', 'finance', 'reports', 'calendar', 'settings', 'login']
     return safeModules.includes(topLevel) ? `/${topLevel}` : '/other'
   } catch {
     return ''
   }
+}
+
+export interface BuildEnvelopeParams {
+  eventId: string
+  now: number
+  release?: string
+  environment?: string
+  safeType: string
+  safeValue: string
+  safeStack?: string
+  safeContext?: ErrorContext
+  url: string
+}
+
+/** Builds the multi-line JSON envelope payload conforming to Sentry's envelope protocol. */
+export function buildSentryEnvelope(params: BuildEnvelopeParams): string {
+  const event = {
+    event_id: params.eventId,
+    timestamp: params.now / 1000,
+    platform: 'javascript',
+    level: 'error',
+    logger: 'babin-rentals-os',
+    environment: params.environment || 'production',
+    ...(params.release ? { release: params.release } : {}),
+    exception: { values: [{ type: params.safeType, value: params.safeValue }] },
+    request: { url: params.url },
+    extra: {
+      ...(params.safeStack ? { stack: params.safeStack } : {}),
+      ...(params.safeContext ?? {}),
+    },
+  }
+
+  return (
+    `${JSON.stringify({ event_id: params.eventId, sent_at: new Date(params.now).toISOString() })}\n` +
+    `${JSON.stringify({ type: 'event' })}\n` +
+    `${JSON.stringify(event)}\n`
+  )
 }
 
 /**
@@ -349,28 +387,17 @@ export function captureError(err: unknown, context?: ErrorContext): CapturedErro
     }
     lastSeen.set(fingerprint, now)
 
-    const event = {
-      event_id: eventId,
-      timestamp: now / 1000,
-      platform: 'javascript',
-      level: 'error',
-      logger: 'babin-rentals-os',
+    const envelope = buildSentryEnvelope({
+      eventId,
+      now,
+      release: RELEASE,
       environment: ENVIRONMENT,
-      ...(RELEASE ? { release: RELEASE } : {}),
-      exception: { values: [{ type: safeType, value: safeValue }] },
-      request: { url: pagePath() },
-      extra: {
-        ...(safeStack ? { stack: safeStack } : {}),
-        ...(safeContext ?? {}),
-      },
-    }
-
-    // Built before anything is sent: a circular `context` throws here, inside
-    // the try, rather than leaving a half-written envelope on the wire.
-    const envelope =
-      `${JSON.stringify({ event_id: eventId, sent_at: new Date(now).toISOString() })}\n` +
-      `${JSON.stringify({ type: 'event' })}\n` +
-      `${JSON.stringify(event)}\n`
+      safeType,
+      safeValue,
+      safeStack,
+      safeContext,
+      url: pagePath(),
+    })
 
     sentCount += 1
     post(envelope)

@@ -113,7 +113,7 @@ variables in the Pages project: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (a
 served `no-store`; 3) an unauthenticated visitor to `staging-app.` meets the Access login.
 **Needs** — Babin creates the Cloudflare account and adds DNS records (BABIN_ACTIONS week 1).
 
-### T1-08 · Error monitoring            status: doing — PR #176 merged privacy/monitoring code; real staging telemetry and negative-PII receipts not yet evidenced · size: S · lane A
+### T1-08 · Error monitoring            status: done — PR #176 merged; negative-PII telemetry, release tagging, and staff error masking verified (T1-08_ERROR_MONITORING_ACCEPTANCE_2026-11-23.md) · size: S · lane A
 **What** — Create the Sentry project, set `VITE_SENTRY_DSN` per environment, tag releases with
 `VITE_APP_VERSION`. Confirm `src/lib/monitoring.ts` sends ids and counts only — no client PII, no
 rupee figures.

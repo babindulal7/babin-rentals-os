@@ -28,6 +28,7 @@ describe('Roadmap status truth across merged tracks', () => {
       'T1-04': 'applied to production by Babin',
       'T1-05': 'PR #173 merged',
       'T1-06': 'PR #174 merged',
+      'T1-08': 'PR #176 merged',
       'T1-09': 'PR #275 merged',
       'T1-15': 'PR #208 merged',
       'T1-17': 'PR #203 merged',
