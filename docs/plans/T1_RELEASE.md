@@ -191,7 +191,7 @@ shared devices (T1-15).
 **Done when** — every staff member on the roster has signed in once; the role list matches the roster.
 **Needs** — Batch 1 applied; Babin supplies the roster.
 
-### T1-14 · Performance on real devices            status: doing — PR #177 merged; desktop first-load performance remains pre-launch, physical iPad/scanner measurements deferred to Phase 2 · size: M · lane A
+### T1-14 · Performance on real devices            status: doing — PR #177 merged; desktop mock benchmark passed; staging counter-PC performance pending, physical iPad/scanner measurements deferred to Phase 2 · size: M · lane A
 **What** — Measure first load and route changes on the iPhone 17 Pro and M4 iPad Pro over 4G
 against `app.` (main bundle measured 704 kB on 20 Oct; scanner vendor chunk 453 kB). Lazy-load the
 scanner and the Calendar (4,264 lines) if they sit on the first-load path. Budget ⭐: first usable

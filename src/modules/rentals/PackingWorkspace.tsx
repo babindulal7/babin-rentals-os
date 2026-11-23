@@ -39,6 +39,7 @@ import { clearFloorScan, loadFloorScan, saveFloorScan, recordFloorScanEvent } fr
 import { rentalDaysBetween } from '../../lib/rentalDays'
 import { NON_PACKABLE_LINE_TYPES } from '../../lib/bookingLineTypes'
 import { useFloorPresence } from '../../lib/floorPresence'
+import { exportPackingListPdf, openPdfForPrint } from '../../lib/pdf/exportPdf'
 import { useBarcodeBurst } from '../../lib/barcodeBurst'
 import {
   playScanSuccess,
@@ -47,8 +48,6 @@ import {
   unlockAudioContext,
 } from '../../lib/acousticFeedback'
 import { getCinemaKitDependencies, evaluateKitCompleteness } from '../../lib/kitBuildVerification'
-import { exportPackingListPdf, openPdfForPrint } from '../../lib/pdf/exportPdf'
-import { buildPackingListPdfItems } from '../../lib/pdf/generatePdf'
 import { FloorOfflineStatus } from '../../components/ui/FloorOfflineStatus'
 import { AddConsumableModal } from './booking/AddConsumableModal'
 import type { SystemRole } from '../../types/database'
@@ -606,6 +605,7 @@ export default function PackingWorkspace({
     if (!floor) return
     setPrinting(true)
     try {
+      const { buildPackingListPdfItems } = await import('../../lib/pdf/generatePdf')
       const items = buildPackingListPdfItems(floor.lines)
       const result = await exportPackingListPdf({
         bookingNo: floor.bookingNo,

@@ -10,19 +10,13 @@
  */
 
 import { supabase } from '../supabase'
-import {
-  generateInvoicePdf,
-  generateDocumentPdf,
-  generateRentalAgreementPdf,
-  generatePackingListPdf,
-  generateReturnReportPdf,
-  generateClientStatementPdf,
-  type InvoicePdfData,
-  type DocumentPdfData,
-  type RentalAgreementPdfData,
-  type PackingListPdfData,
-  type ReturnReportPdfData,
-  type ClientStatementPdfData,
+import type {
+  InvoicePdfData,
+  DocumentPdfData,
+  RentalAgreementPdfData,
+  PackingListPdfData,
+  ReturnReportPdfData,
+  ClientStatementPdfData,
 } from './generatePdf'
 
 export interface ExportPdfOptions {
@@ -95,6 +89,7 @@ export async function exportInvoicePdf(
   const filename = options.filename || `${safeName}.pdf`
 
   // 1. Generate standard PDF bytes
+  const { generateInvoicePdf } = await import('./generatePdf')
   const bytes = generateInvoicePdf(invoiceData)
   const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
 
@@ -164,6 +159,7 @@ export async function exportProFormaPdf(
   const safeName = sanitizePathSegment(options.filename?.replace(/\.pdf$/i, '') || `PRO_FORMA_${safeBookingNo}`)
   const filename = options.filename || `${safeName}.pdf`
 
+  const { generateInvoicePdf } = await import('./generatePdf')
   const bytes = generateInvoicePdf(proFormData)
   const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
 
@@ -224,6 +220,7 @@ export async function exportDocumentPdf(
   const safeName = sanitizePathSegment(documentData.documentNo || documentId || 'DOC')
   const filename = options.filename || `${safeName}.pdf`
 
+  const { generateDocumentPdf } = await import('./generatePdf')
   const bytes = generateDocumentPdf(documentData)
   const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
 
@@ -284,6 +281,7 @@ export async function exportRentalAgreementPdf(
   const safeName = sanitizePathSegment(agreementData.agreementNo || documentId || 'AGREEMENT')
   const filename = options.filename || `${safeName}.pdf`
 
+  const { generateRentalAgreementPdf } = await import('./generatePdf')
   const bytes = generateRentalAgreementPdf(agreementData)
   const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
 
@@ -349,6 +347,7 @@ export async function exportPackingListPdf(
   const safeName = sanitizePathSegment(packingData.documentNo || `PACKING_LIST_${safeBookingNo}`)
   const filename = options.filename || `${safeName}.pdf`
 
+  const { generatePackingListPdf } = await import('./generatePdf')
   const bytes = generatePackingListPdf(packingData)
   const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
 
@@ -414,6 +413,7 @@ export async function exportReturnReportPdf(
   const safeName = sanitizePathSegment(returnData.documentNo || `RETURN_REPORT_${safeBookingNo}`)
   const filename = options.filename || `${safeName}.pdf`
 
+  const { generateReturnReportPdf } = await import('./generatePdf')
   const bytes = generateReturnReportPdf(returnData)
   const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
 
@@ -487,6 +487,7 @@ export async function exportClientStatementPdf(
 ): Promise<ExportPdfResult> {
   const safeName = sanitizePathSegment(`Statement_${statementData.client.name}`)
   const filename = options.filename || `${safeName}.pdf`
+  const { generateClientStatementPdf } = await import('./generatePdf')
   const bytes = generateClientStatementPdf(statementData)
   const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
 

@@ -1,5 +1,57 @@
 # T1-14 Loading and Route Performance Profiling Report
 
+## 21 November 2026 desktop follow-up
+
+The local baseline was built from `67281e9d` with the mock backend. Headless
+Chrome on Windows used a 1440 × 900 viewport, 70 ms latency, 10 Mbit/s down and
+5 Mbit/s up. Each direct navigation began in a fresh browser context with the
+HTTP cache disabled and a signed-in mock session. The service worker was
+disabled during timing runs to isolate the page's requests from offline
+installation traffic. Rentals and Operations rendered the mock empty state.
+Packing used the repository's booking 716 fixture with two lines. First usable
+meant that the route showed its list or empty state, or the Packing checklist.
+Loading placeholders were excluded.
+
+The entry document preloaded a 110 KiB gzipped QR library and a 16 KiB PDF
+chunk. The dependency ran from the app's shared Operations shell through the
+booking action menu to the PDF generator. Packing also loaded the camera
+decoder through a static import in the shared scanner modal. Calendar's own
+route chunk was absent from all three baseline route traces.
+
+PDF export functions now import the generator when called. Packing loads the
+pick-list formatter on Print pick list. Floor scanners start loading the
+decoder when the operator enables Camera Scan.
+
+The compressed JavaScript listed in the entry HTML fell from 519 KiB to
+398 KiB, a 121 KiB reduction (23%). This includes the entry script and every
+JavaScript module preload in the generated HTML. The QR library still appeared
+later alongside speculative Inventory requests. The service worker continues
+to precache Calendar, PDF generation and both scanner vendor chunks.
+
+| Route and mock role | Baseline median | Revised median | Slowest revised run |
+|---|---:|---:|---:|
+| Rentals · Owner | 2.94 s | 2.20 s | 2.59 s |
+| Operations · Warehouse | 2.46 s | 1.61 s | 1.71 s |
+| Packing · Warehouse | 1.98 s | 1.76 s | 2.03 s |
+
+Each cell uses five samples per route and build. The shared Windows host
+had variable background load, so the timing deltas are estimates. All revised
+samples met the 3-second budget locally. Hosted staging on the counter PC is
+the remaining Phase 1 performance check. Physical mobile and scanner timing
+is Phase 2.
+
+Chrome showed the Packing checklist and scanner modal without page overflow
+at 375, 820 and 1440 px as Owner and Warehouse. Opening manual entry made no
+decoder request. Camera Scan requested the decoder and showed the manual-entry
+fallback in the headless browser. At 1440 px, Print pick list handed a
+`%PDF-` blob to the browser as both roles.
+
+The October profile below is historical. Its device and staging conclusions
+are superseded by the Phase 1 and Phase 2 acceptance criteria in the
+[T1-14 card](../plans/T1_RELEASE.md#t1-14--performance-on-real-devices).
+
+## October 2026 profile
+
 ## 1. Executive Summary
 
 This report documents the performance optimizations, bundle code-splitting, and load-path profiling conducted for **T1-14 (Loading and route performance)** on an Apple M4 Mac mini running macOS.
