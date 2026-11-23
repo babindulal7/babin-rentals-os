@@ -30,7 +30,6 @@ create index if not exists idx_sign_in_events_created_at on public.sign_in_event
 alter table public.sign_in_events enable row level security;
 
 -- Policy: Only Owner and Admin can read sign-in events (B22)
-drop policy if exists sign_in_events_owner_admin_select on public.sign_in_events;
 create policy sign_in_events_owner_admin_select on public.sign_in_events
   for select to authenticated
   using (public.auth_user_role() in ('Owner', 'Admin'));
