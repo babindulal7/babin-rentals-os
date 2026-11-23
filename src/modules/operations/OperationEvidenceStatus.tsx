@@ -40,6 +40,7 @@ export function OperationEvidenceStatus({
 
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<string | null>(null)
+  const [uploadSuccessMessage, setUploadSuccessMessage] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [retryPayload, setRetryPayload] = useState<{
     file: Blob
@@ -118,6 +119,8 @@ export function OperationEvidenceStatus({
 
       setUploadProgress(null)
       setRetryPayload(null)
+      setUploadSuccessMessage(files.length > 1 ? `${files.length} photos uploaded and linked to evidence.` : 'Photo uploaded and linked to evidence.')
+      setTimeout(() => setUploadSuccessMessage(null), 5000)
       if (fileInputRef.current) fileInputRef.current.value = ''
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -161,6 +164,8 @@ export function OperationEvidenceStatus({
 
       setUploadProgress(null)
       setRetryPayload(null)
+      setUploadSuccessMessage(files.length > 1 ? `${files.length} photos uploaded and linked to evidence.` : 'Photo uploaded and linked to evidence.')
+      setTimeout(() => setUploadSuccessMessage(null), 5000)
       if (fileInputRef.current) fileInputRef.current.value = ''
       status.refresh()
       onPhotoUploaded?.()
@@ -180,10 +185,15 @@ export function OperationEvidenceStatus({
         style={{
           margin: '6px 0',
           fontSize: 'var(--t-meta)',
-          color: (status.error || uploadError) ? 'var(--danger-text)' : 'var(--muted)',
+          color: (status.error || uploadError)
+            ? 'var(--danger-text)'
+            : uploadSuccessMessage
+              ? 'var(--success-text)'
+              : 'var(--muted)',
+          fontWeight: uploadSuccessMessage ? 600 : undefined,
         }}
       >
-        {uploadError ?? status.error ?? uploadProgress ?? (
+        {uploadError ?? status.error ?? uploadProgress ?? uploadSuccessMessage ?? (
           status.evidence
             ? (itemId
               ? `${status.evidence.filesByUnit[itemId] ?? 0} saved photo(s) linked to ${itemLabel ?? 'this unit'}.`

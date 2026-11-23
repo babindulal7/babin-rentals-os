@@ -838,6 +838,7 @@ export default function PackingWorkspace({
   // more: re-sending the same marks resumes the In Progress session and
   // re-inserts their movements. The way on is the booking.
   const canComplete = firstBlockedGate === null && !dispatching && stageHeld === null
+  const gateSummary = canComplete ? null : (firstBlockedGate ? `${firstBlockedGate.label}${firstBlockedGate.detail ? ` — ${firstBlockedGate.detail}` : ''}` : null)
 
   const visible = useMemo(
     () =>
@@ -1909,10 +1910,62 @@ export default function PackingWorkspace({
                     what is still outstanding.
                   */}
                   {pendingRows.length === 0 && missingRows.length === 0 && rows.length > 0 && (
-                    <div style={{ margin: 12, padding: '10px 12px', borderRadius: 'var(--r-btn)', background: 'var(--card2)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: 'var(--t-meta)', fontWeight: 600, display: 'flex', gap: 7, alignItems: 'center' }}>
-                      <Icon name="checklist" size={13} />
-                      Every item on this checklist is ticked packed. Nothing is recorded yet — Complete Packing writes
-                      the session, and only then does {floor.bookingNo} move to Packed.
+                    <div
+                      style={{
+                        margin: 12,
+                        padding: '12px 14px',
+                        borderRadius: 'var(--r-btn)',
+                        background: firstBlockedGate ? 'var(--card2)' : 'var(--st-in-bg)',
+                        border: `1px solid ${firstBlockedGate ? 'var(--border)' : 'var(--st-in-fg)'}`,
+                        color: 'var(--text)',
+                        fontSize: 'var(--t-meta)',
+                        fontWeight: 600,
+                        display: 'flex',
+                        flexDirection: phone ? 'column' : 'row',
+                        gap: 10,
+                        alignItems: phone ? 'flex-start' : 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <Icon
+                          name={firstBlockedGate ? 'alert_triangle' : 'checklist'}
+                          size={15}
+                          style={{
+                            color: firstBlockedGate ? 'var(--progress-text)' : 'var(--st-in-fg)',
+                            flexShrink: 0,
+                          }}
+                        />
+                        <span>
+                          {firstBlockedGate
+                            ? `All items are packed, but ${firstBlockedGate.label.toLowerCase()} is still required before completion.`
+                            : `Every item on this checklist is ticked packed. Nothing is recorded yet — Complete Packing writes the session, and only then does ${floor.bookingNo} move to Packed.`}
+                        </span>
+                      </div>
+                      {firstBlockedGate?.label === 'Cinema kit & dependencies verified' && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={verifyAllKitDependencies}
+                          style={{ minHeight: 36, whiteSpace: 'nowrap' }}
+                        >
+                          Verify All Kit Accessories
+                        </Button>
+                      )}
+                      {firstBlockedGate?.label === 'Evidence photo taken for this booking' && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            const el = document.getElementById('pack-evidence')
+                            el?.scrollIntoView({ behavior: 'smooth' })
+                            ;(el?.querySelector('input[type="file"]') as HTMLInputElement)?.click()
+                          }}
+                          style={{ minHeight: 36, whiteSpace: 'nowrap' }}
+                        >
+                          Take / Upload Photo
+                        </Button>
+                      )}
                     </div>
                   )}
                 </Card>
@@ -2054,34 +2107,86 @@ export default function PackingWorkspace({
                 )}
 
                 {!embedded && (
-                  <button
-                    type="button"
-                    disabled={!isOnline || !canComplete || dispatching}
-                    onClick={completePacking}
-                    title={!isOnline ? 'Custody transitions require an internet connection (R-40)' : undefined}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 7,
-                      width: '100%',
-                      minHeight: 56,
-                      padding: '0 16px',
-                      borderRadius: 'var(--r-btn)',
-                      fontSize: 'var(--t-ui)',
-                      fontWeight: 600,
-                      fontFamily: 'inherit',
-                      cursor: isOnline && canComplete ? 'pointer' : 'not-allowed',
-                      ...(isOnline && canComplete ? BLUE_PRIMARY : { background: 'var(--card2)', color: 'var(--muted)', border: '1px solid var(--border)' }),
-                    }}
-                  >
-                    <Icon name={isOnline ? 'checklist' : 'alert_triangle'} size={15} />
-                    {dispatching
-                      ? 'Recording…'
-                      : !isOnline
-                      ? 'Needs connection to complete'
-                      : 'Complete Packing'}
-                  </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <button
+                      type="button"
+                      disabled={!isOnline || !canComplete || dispatching}
+                      onClick={completePacking}
+                      title={!isOnline ? 'Custody transitions require an internet connection (R-40)' : (gateSummary ?? undefined)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 7,
+                        width: '100%',
+                        minHeight: 56,
+                        padding: '0 16px',
+                        borderRadius: 'var(--r-btn)',
+                        fontSize: 'var(--t-ui)',
+                        fontWeight: 600,
+                        fontFamily: 'inherit',
+                        cursor: isOnline && canComplete ? 'pointer' : 'not-allowed',
+                        ...(isOnline && canComplete ? BLUE_PRIMARY : { background: 'var(--card2)', color: 'var(--muted)', border: '1px solid var(--border)' }),
+                      }}
+                    >
+                      <Icon name={isOnline && canComplete ? 'checklist' : 'alert_triangle'} size={15} />
+                      {dispatching
+                        ? 'Recording…'
+                        : !isOnline
+                        ? 'Needs connection to complete'
+                        : canComplete
+                        ? 'Complete Packing'
+                        : `Complete Packing (${firstBlockedGate?.label ?? 'Blocked'})`}
+                    </button>
+                    {!canComplete && firstBlockedGate && !dispatching && (
+                      <div
+                        role="status"
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: 'var(--r-btn)',
+                          background: 'var(--card2)',
+                          border: '1px solid var(--border)',
+                          fontSize: 'var(--t-meta)',
+                          color: 'var(--text2)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 6,
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: 'var(--progress-text)' }}>
+                          <Icon name="alert_triangle" size={13} />
+                          <span>Still needed: {firstBlockedGate.label}</span>
+                        </div>
+                        {firstBlockedGate.detail && (
+                          <div style={{ color: 'var(--muted)', lineHeight: 1.4 }}>{firstBlockedGate.detail}</div>
+                        )}
+                        {firstBlockedGate.label === 'Cinema kit & dependencies verified' && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={verifyAllKitDependencies}
+                            style={{ alignSelf: 'flex-start', minHeight: 36, marginTop: 2 }}
+                          >
+                            Verify All Kit Accessories
+                          </Button>
+                        )}
+                        {firstBlockedGate.label === 'Evidence photo taken for this booking' && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              const el = document.getElementById('pack-evidence')
+                              el?.scrollIntoView({ behavior: 'smooth' })
+                              ;(el?.querySelector('input[type="file"]') as HTMLInputElement)?.click()
+                            }}
+                            style={{ alignSelf: 'flex-start', minHeight: 36, marginTop: 2 }}
+                          >
+                            Take / Upload Photo
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {/* Law 12 — inline and persistent, never a toast. This is what
