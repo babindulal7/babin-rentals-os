@@ -3,6 +3,15 @@ param (
     [string]$BackupFile
 )
 $ErrorActionPreference = 'Stop'
+
+# Ensure standard PostgreSQL bin paths are available in PATH
+foreach ($ver in @('17', '18', '16', '15')) {
+    $pgBin = "C:\Program Files\PostgreSQL\$ver\bin"
+    if ((Test-Path $pgBin) -and ($env:PATH -notlike "*$pgBin*")) {
+        $env:PATH = "$pgBin;$env:PATH"
+    }
+}
+
 if (-not $DbUrl) {
     $secure = Read-Host -AsSecureString 'Database connection string (hidden)'
     $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
