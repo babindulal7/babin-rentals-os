@@ -3580,6 +3580,8 @@
 
 .rental-dashboard .movement-panel__footer {
   display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-sm, 8px);
   justify-content: flex-end;
   padding: var(--sp-xs, 6px) var(--sp-md, 12px);
   border-top: 1px solid var(--border);

@@ -1103,6 +1103,14 @@ export function canManageOfferCampaigns(role: SystemRole | null | undefined): bo
 }
 
 /**
+ * Check if role can import pricing structures.
+ * Owner, Admin, Manager — mirrors inventory.create capability.
+ */
+export function canImportPricingStructures(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin' || role === 'Manager'
+}
+
+/**
  * Role Home & Default Task Surface (W61, W79).
  * Every role opens on its own tasks; this path is where the role lands or defaults.
  */
@@ -1140,4 +1148,20 @@ const FINANCIAL_REPORTS: ReadonlySet<SystemRole> = new Set<SystemRole>(['Owner',
 
 export function canViewFinancialReports(role: SystemRole): boolean {
   return FINANCIAL_REPORTS.has(role)
+}
+
+/**
+ * Check if role can manage pricing structures.
+ * Owner, Admin, Manager only. Coordinator is read-only (T8-02, Law 3).
+ */
+export function canManagePricingStructures(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin' || role === 'Manager'
+}
+
+/**
+ * Check if role can import bundles.
+ * Owner, Admin, Manager — mirrors inventory.create capability.
+ */
+export function canImportBundles(role: SystemRole): boolean {
+  return role === 'Owner' || role === 'Admin' || role === 'Manager'
 }

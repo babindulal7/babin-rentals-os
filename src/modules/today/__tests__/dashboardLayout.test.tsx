@@ -148,7 +148,9 @@ describe('focused pickup and return dashboard', () => {
     expect(menu.textContent).toContain('Operations')
     const refresh = [...menu.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find((button) => button.textContent?.includes('Refresh movements'))!
     await act(async () => refresh.click())
-    expect(queueResults.refetch).toHaveBeenCalledTimes(2)
+    // The two movement queues, and the two head-only attention counts the footer links print (ADOPTIONS item 7).
+    // All four refresh together, so a count can never lag the queue it opens.
+    expect(queueResults.refetch).toHaveBeenCalledTimes(4)
     expect(document.querySelector('[role="menu"][aria-label="More actions"]')).toBeNull()
   })
 

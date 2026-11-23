@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import Icon from '../../components/ui/Icon'
 import { Card, PageActions, Button, Rail, cardStyle } from '../../components/ui/Page'
 import { PageShell } from '../../components/ui/PageShell'
@@ -442,6 +442,7 @@ const DEPOSIT_LINES = ['Held', 'Applied', 'Refunded'] as const
  * keeps the full header, because a deep link arrives with no tab strip above it.
  */
 export default function Payments({ embedded = false }: { embedded?: boolean }) {
+  const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   /* Law 13/14 — one width reading, at v4.1 §7.7's 768 / 1280. */
   const viewport = useViewport()
@@ -668,6 +669,15 @@ export default function Payments({ embedded = false }: { embedded?: boolean }) {
               ) : undefined
             }
             secondary={[
+              <Button
+                key="online-reconciliation"
+                icon="card"
+                variant="outline"
+                aria-label="Online Reconciliation"
+                onClick={() => navigate('/finance?tab=reconciliation')}
+              >
+                {phone ? 'Reconcile' : 'Online Reconciliation'}
+              </Button>,
               <Button key="refresh" icon="refresh" aria-label="Refresh" onClick={refreshAll}>
                 {phone ? '' : 'Refresh'}
               </Button>,

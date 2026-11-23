@@ -74,7 +74,7 @@ export function BarcodeLookupModal({ isOpen, onClose }: BarcodeLookupModalProps)
       // 1. Search bookings by booking_no or id
       const { data: bookings, error: bErr } = await supabase
         .from('bookings')
-        .select('id, booking_no, stage, clients:client_id (name)')
+        .select('id, booking_no, stage, clients ( name )')
         .or(`booking_no.ilike.%${term}%,id.eq.${term.length === 36 ? term : '00000000-0000-0000-0000-000000000000'}`)
         .limit(5)
 

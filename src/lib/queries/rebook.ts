@@ -183,7 +183,7 @@ export async function fetchRebookSource(
   if (productIds.length > 0) {
     const { data: productData, error: productError } = await supabase
       .from('products')
-      .select('id, name, is_active, daily_rate, categories ( name )')
+      .select('id, name, is_active, daily_rate, categories:inventory_categories ( name )')
       .in('id', productIds)
     if (productError) throw new Error(`Could not read today's product rates: ${productError.message}`)
     for (const p of (productData ?? []) as unknown as RawProductRow[]) {

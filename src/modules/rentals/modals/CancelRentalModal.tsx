@@ -72,26 +72,39 @@ export function CancelRentalModal({
     let cancelled = false
     void (async () => {
       try {
-        const { data } = await supabase
-          .from('bookings')
-          .select('starts_at, ends_at, rental_days, total_amount, paid_amount')
-          .eq('id', bookingId)
-          .maybeSingle()
+        const [bookingRes, invoiceRes] = await Promise.all([
+          supabase
+            .from('bookings')
+            .select('pickup_datetime, return_datetime, days')
+            .eq('id', bookingId)
+            .maybeSingle(),
+          supabase
+            .from('invoices')
+            .select('subtotal, total_amount, paid_amount, status, voided_at')
+            .eq('booking_id', bookingId),
+        ])
 
-        if (!cancelled && data) {
-          const row = data as unknown as {
-            starts_at: string | null
-            ends_at: string | null
-            rental_days: number | null
-            total_amount: number | null
-            paid_amount: number | null
+        if (cancelled) return
+
+        let subtotalRupees = 0
+        let paidRupees = 0
+
+        if (invoiceRes.data) {
+          for (const inv of invoiceRes.data) {
+            if (inv.voided_at !== null || inv.status === 'Void') continue
+            subtotalRupees += inv.subtotal || inv.total_amount || 0
+            paidRupees += inv.paid_amount || 0
           }
+        }
+
+        if (bookingRes.data) {
+          const row = bookingRes.data
           setFetchedBooking({
-            startsAt: row.starts_at,
-            endsAt: row.ends_at,
-            rentalDays: row.rental_days ?? 1,
-            rentalSubtotalPaisa: (row.total_amount ?? 0) as Paisa,
-            paidAdvancePaisa: (row.paid_amount ?? 0) as Paisa,
+            startsAt: row.pickup_datetime,
+            endsAt: row.return_datetime,
+            rentalDays: row.days ?? 1,
+            rentalSubtotalPaisa: rupees(subtotalRupees),
+            paidAdvancePaisa: rupees(paidRupees),
           })
         }
       } catch {

@@ -11,12 +11,24 @@
  */
 import { createHash } from 'node:crypto'
 import { readFileSync, readdirSync } from 'node:fs'
-import { join, dirname } from 'node:path'
+import { join, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const dir = join(root, 'supabase', 'migrations')
-const inventoryPath = join(root, 'docs', 'verification', 'STAGING_SQL_INVENTORY_2026-11-16.json')
+
+const args = process.argv.slice(2)
+let inventoryFile = 'STAGING_SQL_INVENTORY_2026-11-16.json'
+const invIdx = args.indexOf('--inventory')
+if (invIdx !== -1 && args[invIdx + 1]) {
+  inventoryFile = args[invIdx + 1]
+} else if (args.includes('--current') || args.includes('--latest') || process.env.STAGING_INVENTORY === 'current') {
+  inventoryFile = 'STAGING_SQL_INVENTORY_2026-11-23.json'
+}
+
+const inventoryPath = inventoryFile.startsWith('/') || inventoryFile.includes(':') || inventoryFile.startsWith('.')
+  ? resolve(inventoryFile)
+  : join(root, 'docs', 'verification', inventoryFile)
 
 const fileNames = readdirSync(dir).filter((name) => name.endsWith('.sql')).sort()
 const inventory = JSON.parse(readFileSync(inventoryPath, 'utf8'))

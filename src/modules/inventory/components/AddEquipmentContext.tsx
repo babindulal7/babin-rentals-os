@@ -197,6 +197,29 @@ export function useEquipmentFormState() {
   const [dismissedDuplicate, setDismissedDuplicate] = useState(false)
   const [clipboardError, setClipboardError] = useState<string | null>(null)
 
+  /* ── Smart Equipment Intelligence (T1) ─────────────────────────────────── */
+  const [isSmartDrawerOpen, setIsSmartDrawerOpen] = useState(false)
+  const [userTouchedFields, setUserTouchedFields] = useState<Set<string>>(new Set())
+
+  const markFieldTouched = (field: string) => {
+    setUserTouchedFields((prev) => new Set(prev).add(field))
+  }
+
+  const applySmartField = (field: string, value: string | number) => {
+    if (field === 'name') setName(String(value))
+    else if (field === 'shortName') setShortName(String(value))
+    else if (field === 'brand') setBrand(String(value))
+    else if (field === 'modelNo') setModelNo(String(value))
+    else if (field === 'category') setCategory(String(value))
+    else if (field === 'description') setDescription(String(value))
+    else if (field === 'dailyRate' && money) setDailyRate(String(value))
+    else if (field === 'replacementValue' && money) setReplacementValue(String(value))
+  }
+
+  const applyAllSmartFields = (fields: Record<string, string | number>) => {
+    Object.entries(fields).forEach(([f, v]) => applySmartField(f, v))
+  }
+
   /* ── derived ─────────────────────────────────────────────────────────── */
 
   const serialised = tracking === 'Serialised'
@@ -1164,7 +1187,13 @@ export function useEquipmentFormState() {
     addContained,
     runDuplicateCheck,
     handleSubmit,
-    railContent
+    railContent,
+    isSmartDrawerOpen,
+    setIsSmartDrawerOpen,
+    userTouchedFields,
+    markFieldTouched,
+    applySmartField,
+    applyAllSmartFields,
   }
 }
 

@@ -56,6 +56,7 @@ import Expenses from './Expenses'
 import DailyClosing from './DailyClosing'
 import WhoOwes from './WhoOwes'
 import { ReportCatalog } from '../reports/ReportCatalog'
+import { OnlineReconciliationWorkspace } from './OnlineReconciliationWorkspace'
 import { DateField } from '../../components/ui/DateField'
 import { exportInvoicePdf } from '../../lib/pdf/exportPdf'
 import { invoicePdfData } from '../../lib/pdf/invoicePdfData'
@@ -259,7 +260,16 @@ const OUTSTANDING_INVOICES: ListFilters = outstandingInvoices()
  * ruling.
  */
 const FINANCE_TABS = SPEC_TABS['/finance'] ?? []
-type FinanceTab = 'Dashboard' | 'Who owes' | 'Invoices' | 'Payments' | 'Expenses' | 'Closing' | 'Documents' | 'Reports'
+type FinanceTab =
+  | 'Dashboard'
+  | 'Who owes'
+  | 'Invoices'
+  | 'Payments'
+  | 'Expenses'
+  | 'Closing'
+  | 'Documents'
+  | 'Reports'
+  | 'Reconciliation'
 
 /**
  * §9.2's chip row — `(All)(Draft)(Sent)(Partially Paid)(Paid)(Overdue)(Void)`.
@@ -578,6 +588,7 @@ export default function Finance() {
   const tabParam = params.get('tab')?.toLowerCase()
   const tab: FinanceTab = useMemo(() => {
     if (!tabParam) return 'Dashboard'
+    if (tabParam === 'reconciliation' || tabParam === 'online-reconciliation') return 'Reconciliation'
     const found = (FINANCE_TABS as readonly string[]).find(
       (t) => t.toLowerCase() === tabParam || t.toLowerCase().replace(/\s+/g, '-') === tabParam,
     )
@@ -1408,6 +1419,7 @@ export default function Finance() {
         />
       )}
       {tab === 'Reports' && <ReportCatalog searchQuery={reportSearch} onSearchChange={setReportSearch} />}
+      {tab === 'Reconciliation' && <OnlineReconciliationWorkspace />}
 
       {/*
         THE gate. `restricted` outranks every other state in `PageBody`, so a
@@ -1438,6 +1450,8 @@ export default function Finance() {
                 label: 'Outstanding Invoices',
                 count: countOf(outstanding),
                 subtitle: `${moneyOf(receivableTotal)} receivable`,
+                definition: 'Live unpaid and partially-paid invoices; figure is Σ outstanding.',
+                ...(outstanding.total !== null ? { zeroExplanation: 'Nothing receivable — no unpaid invoices.' } : {}),
                 icon: 'receipt',
                 tone: 'amber',
                 active: chip === 'Partially Paid',
@@ -1451,6 +1465,8 @@ export default function Finance() {
                 label: 'Overdue Invoices',
                 count: countOf(overdue),
                 subtitle: `${moneyOf(overdueTotal)} past due`,
+                definition: 'Past due date and still unpaid; figure is Σ outstanding past due.',
+                ...(overdue.total !== null ? { zeroExplanation: 'Nothing past due — every invoice is within terms.' } : {}),
                 icon: 'alert_triangle',
                 tone: (overdue.total ?? 0) > 0 ? 'red' : 'neutral',
                 active: chip === 'Overdue',
@@ -1466,6 +1482,8 @@ export default function Finance() {
                 label: 'Received',
                 count: moneyOf(receivedTotal),
                 subtitle: `Collected ${period.label}`,
+                definition: `Sum of payment rows dated within ${period.label}.`,
+                ...(receivedTotal !== null ? { zeroExplanation: `No payments recorded ${period.label}.` } : {}),
                 icon: 'card',
                 tone: 'emerald',
                 active: chip === 'Paid',

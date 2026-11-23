@@ -10,7 +10,6 @@ const financeSource = readFileSync('src/modules/settings/sections/Financial.tsx'
 
 const unbuilt: ReadonlyArray<readonly [string, string]> = [
   ['Low stock alerts', 'T3-30'],
-  ['Two-factor authentication', 'T1-17'],
   ['Shared-device screen lock', 'T1-15'],
 ]
 
@@ -23,6 +22,11 @@ describe('T1-16: Settings controls must tell the truth', () => {
     expect(fieldLine).toContain(task)
     expect(fieldLine).not.toMatch(/\bon\s*:/)
     expect(fieldLine).not.toMatch(/\bsettingKey\s*:/)
+  })
+
+  it('Two-factor authentication is implemented with real database controls under T1-17', () => {
+    expect(sectionSource).toContain('<TwoStepAuthControl')
+    expect(sectionSource).not.toContain("readOnlyWhy: 'Not built yet — arrives with T1-17'")
   })
 
   it('rejects the original local-only switch shape and renders an inert NotBuilt marker', () => {

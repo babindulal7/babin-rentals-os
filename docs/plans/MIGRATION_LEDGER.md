@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0253**  (0241, 0242, 0243 are T3-29, T2-19 and T3-18 on `main`; 0245 R-9.8 on its own branch; 0244, 0246, 0247, 0248, 0249, 0250 and 0251 R-9.18 here)
+**Next free number: 0269**  (0245-0251 R-9.18; 0252 T2-23; 0253 T2-24; 0254 T3-14; 0255 T7-02; 0256 T7-04; 0257 T7-03; 0258 T7-05; 0259 T7-15; 0260 T7-07; 0261 T9-02; 0262 T7-14; 0263 T7-13; 0264 T7-13; 0265 T7-04; 0266 R-22.8; 0267 T1-17; 0268 T1-18)
 
 > **Legacy exception:** `0188` exists as two distinct, locally verified migration files
 > (`0188_smart_reservation_holds.sql` and `0188_staff_renting_gear.sql`). Both are preserved because
@@ -20,6 +20,23 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
+| 0268 | T1-18 | sign-in-events-and-new-device | lane-a/T1-18-sign-in-events-and-new-device | written |
+| 0267 | T1-17 | database-enforced-aal2-money-roles | main | written |
+| 0266 | R-22.8 | manager-approvals-to-owner | feat/launch-migrations-2026-11-22 | written |
+| 0265 | T7-04 | submit-request-rates-in-paisa | feat/launch-migrations-2026-11-22 | written |
+| 0264 | T7-13 | public-product-family-options | feat/launch-migrations-2026-11-22 | written |
+| 0263 | T7-13 | product-families | feat/launch-migrations-2026-11-22 | written |
+| 0262 | T7-14 | online-booking-away-mode | feat/t7-14-away-switch-20261122 | written |
+| 0261 | T9-02 | external-holds-and-double-booking-prevention | lane-a/T9-02-cutover-holds-prevention | verified |
+| 0260 | T7-07 | online-payment-refunds-and-reconciliation | lane-c/T7-07-refunds-and-reconciliation | verified |
+| 0259 | T7-15 | payment-link-from-any-booking | lane-c/T7-03-online-booking-requests-and-client-portal | verified |
+| 0258 | T7-05 | payment-intents-and-fonepay | lane-c/T7-03-online-booking-requests-and-client-portal | verified |
+| 0257 | T7-03 | client-accounts-and-portal-binding | lane-c/T7-03-online-booking-requests-and-client-portal | verified |
+| 0256 | T7-04 | booking-requests-and-staff-queue | lane-c/T7-03-online-booking-requests-and-client-portal | verified |
+| 0255 | T7-02 | booking-site-and-public-catalogue | lane-c/T7-02-booking-site-and-public-catalogue | verified |
+| 0254 | T3-14 | draft-invoice-resync-integrity-and-settlement-numbering | lane-c/T3-14-draft-invoice-full-settlement | verified |
+| 0253 | T2-24 | temporary-stock-from-partners | lane-a/T2-24-partner-stock-0253 | verified |
+| 0252 | T2-23 | allow-overbooking-on-chosen-products | feat/t2-23-product-overbooking-0245 | verified |
 | 0238 | T3-30 | consumables-pricing-restock-and-low-stock | lane-c/T3-30-consumables-unit-price-add-at-the | verified |
 | 0237 | T3-28 | rental-day-start-setting | lane-c/T3-28-rental-day-start-as-a-setting | verified |
 | 0225 | T0-12 / T6 glossary | owner-approved-glossary-revisions | lane-a/T0-12-main-integration | APPLIED live 7 Nov 2026 as 20261107105159 after validated backup; 17 local gates and live DB/RLS/RPC post-checks PASS; hosted/device acceptance pending |
@@ -101,5 +118,13 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 | 0252 | T2-23 | allow-overbooking-on-chosen-products | feat/t2-23-product-overbooking-0245 | verified |
 | 0253 | T2-24 | temporary-stock-from-partners | lane-a/T2-24-partner-stock-0253 | verified |
 | 0254 | T3-14 | draft-invoice-resync-integrity-and-settlement-numbering | lane-c/T3-14-draft-invoice-full-settlement | verified (check:pglite 252/252 + check:lifecycle 93/93 Step L92) |
+| 0255 | T7-02 | booking-site-and-public-catalogue | lane-c/T7-03-online-booking-requests-and-client-portal | verified (check:pglite 257/257 + check:lifecycle Step L93) |
+| 0256 | T7-04 | booking-requests-and-staff-queue | lane-c/T7-03-online-booking-requests-and-client-portal | verified (check:pglite 257/257 + check:lifecycle Step L94) |
+| 0257 | T7-03 | client-accounts-and-portal-binding | lane-c/T7-03-online-booking-requests-and-client-portal | verified (check:pglite 257/257 + check:lifecycle Step L95) |
+| 0258 | T7-05 | payment-intents-and-fonepay | lane-c/T7-15-payment-link-from-any-booking | verified (check:pglite 257/257) |
+| 0259 | T7-15 | payment-link-from-any-booking | lane-c/T7-15-payment-link-from-any-booking | verified (check:pglite 257/257 + check:lifecycle 97/97 Step L96) |
+| 0260 | T7-07 | online-payment-refunds-and-reconciliation | lane-c/T7-07-refunds-and-reconciliation | verified (check:pglite 258/258 + check:lifecycle 98/98 Step L97) |
+| 0261 | T9-02 | external-holds-and-double-booking-prevention | lane-a/T9-02-cutover-holds-prevention | verified (check:pglite 259/259 + check:lifecycle 99/99 Step L98) |
+| 0262 | T7-14 | online-booking-away-mode | feat/t7-14-away-switch-20261122 | VERIFIED locally in PGlite (check:pglite 260/260, check:lifecycle 100/100 L99, test:away-mode-db-gate 25/25); UI wired; no staging/production apply authorized |
 
 ## Expected migrations (not yet claimed)

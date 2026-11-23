@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import {
   assertMoneyAccess,
   isMoneyRole,
+  enrollTotpFactor,
+  verifyTotpFactor,
   type SessionSecurityContext,
   type MfaPolicyConfig,
 } from '../mfaBoundary'
@@ -83,5 +85,26 @@ describe('T1-17 Money Role MFA Boundary', () => {
     const expiredRes = assertMoneyAccess(sessionWithTrust, armedPolicy, expiredDate)
     expect(expiredRes.allowed).toBe(false)
     expect(expiredRes.code).toBe('AAL2_REQUIRED')
+  })
+
+  describe('enrollTotpFactor & verifyTotpFactor (mock mode provider simulation)', () => {
+    it('generates enrolment factor credentials with QR code and secret', async () => {
+      const enrolment = await enrollTotpFactor('Babin Rentals OS')
+      expect(enrolment.factorId).toBeDefined()
+      expect(enrolment.totpSecret).toBe('JBSWY3DPEHPK3PXP')
+      expect(enrolment.qrCode).toContain('svg')
+      expect(enrolment.uri).toContain('otpauth://totp/')
+    })
+
+    it('rejects invalid TOTP codes that are not 6 digits', async () => {
+      await expect(verifyTotpFactor('factor-1', '12345')).rejects.toThrow('exactly 6 digits')
+      await expect(verifyTotpFactor('factor-1', 'abcdef')).rejects.toThrow('exactly 6 digits')
+      await expect(verifyTotpFactor('factor-1', '1234567')).rejects.toThrow('exactly 6 digits')
+    })
+
+    it('accepts valid 6-digit TOTP code and marks user enrolled', async () => {
+      const res = await verifyTotpFactor('factor-1', '123456', '00000000-0000-0000-0000-000000000104')
+      expect(res).toBe(true)
+    })
   })
 })

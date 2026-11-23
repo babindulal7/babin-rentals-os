@@ -32,6 +32,10 @@ const db = vi.hoisted(() => {
         orCondition = condition;
         return chain;
       },
+      eq: (col: string, val: string) => {
+        orCondition = `${col}.eq.${val}`;
+        return chain;
+      },
       maybeSingle: async () => {
         if (currentTable === 'bookings') {
           const match = state.bookings.find(

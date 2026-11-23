@@ -12,6 +12,8 @@ export interface ResumeClientRemindersInput {
 }
 
 /**
+ * implemented: true
+ *
  * Pauses automatic payment reminders for a client via `pause_client_payment_reminders` (0219).
  * Carries a `client_uuid` idempotency key (Law 8).
  */

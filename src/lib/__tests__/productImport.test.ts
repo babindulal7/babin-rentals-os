@@ -38,6 +38,7 @@ describe('product CSV import validation (BQ-407)', () => {
     expect(mapping).toEqual({
       0: 'name', 1: 'category', 2: 'brand', 3: 'model', 4: 'tracking',
       5: 'quantity', 6: 'serials', 7: 'dailyRate', 8: 'description', 9: 'notes',
+      10: 'booqableId', 11: 'storeSlug',
     })
     const sampleRow = [...PRODUCT_IMPORT_SAMPLE_ROW].map((v) => String(v))
     const result = buildProductImportPreview([sampleRow], mapping, opts, new Set())[0]!
@@ -50,6 +51,8 @@ describe('product CSV import validation (BQ-407)', () => {
       tracking: 'Serialised',
       serials: ['SN-FX3-001', 'SN-FX3-002'],
       dailyRatePaisa: 350000,
+      booqableId: 'BQ-12345',
+      storeSlug: 'kathmandu',
     })
     expect(result.record).not.toHaveProperty('quantity')
   })

@@ -1,41 +1,43 @@
 # Online booking and payments — specification (T7-01)
 
-> **12 Nov 2026 owner's approved launch direction:** Build the full company website, client portal and staff OS as a coordinated release target by 18 Feb 2027. The latest explicit owner [rulings](../RULINGS-2026-11-12-unified-launch.md) and [integrated launch plan](plans/UNIFIED_LAUNCH_2027-02-18.md) supersede older scheduling/defaults wherever they conflict. **Pickup AND return dates/times are selected before browsing equipment.** Guest request submission is enabled without creating a client portal account, but account records always require verified identity. Manual staff approval, public base rates, eligible signed-in client discounts and staff notifications are design-approved defaults, configurable by Owner/Admin in OS → Settings → Website & Client Portal with server authorization and audit. **SPECIFICATION ONLY:** no live setting, permission, migration or payment activation occurred. Older seven-screen model and verified-email-only request path below must be reconciled to include guest flow and full website before implementation; they are historical design details, not permission to exclude the latest owner decisions.
+> **OWNER-DECISION BASELINE (12 Nov 2026 Unified Launch):** Aligns the online booking, client portal and Babin Rentals OS design scope with the 12 Nov 2026 owner rulings; unresolved API/security contradictions appear in §17 and are not approved implementation ([`RULINGS-2026-11-12-unified-launch.md`](../RULINGS-2026-11-12-unified-launch.md)) and the unified launch plan ([`docs/plans/UNIFIED_LAUNCH_2027-02-18.md`](plans/UNIFIED_LAUNCH_2027-02-18.md)). **Pickup AND return dates/times are selected FIRST before browsing equipment.** Guest booking requests are enabled by default (UL-04); account records require verified identity. Manual staff confirmation (UL-03), public base rates (UL-05), eligible personalized discounts (UL-06), and staff notifications (UL-07) are design-approved defaults configurable by Owner/Admin in **OS → Settings → Website & Client Portal** (UL-08). SPECIFICATION ONLY: no live production mutations or unverified payments.
 
-
-**Status:** SPEC ONLY — design written 1 Nov 2026 by Claude; arrives as a file for Babin to approve
-(`PLAN.md` §6). No code, migration or permission changed in this commit.
-**Binds:** [T7-02 … T7-11](plans/T7_ONLINE_BOOKING.md) (lane C · Codex-2). Each card builds the part
-named in §14 and may not change this document's answers — a card that finds one wrong files a ruling
-(B-2), it does not guess.
-**Rulings it implements:** S9, S15, D29, D30, D31, D34, W50, W51, W63–W66, W84, W85
-([`RULINGS-2026-10-26.md`](../RULINGS-2026-10-26.md), [`-workflow.md`](../RULINGS-2026-10-26-workflow.md)),
-30 Aug D2 (binding only by verified control of the client's stored email), Laws 3–8, P8, **N-7**, N-8.
-**Defaults taken (⭐, B-5):** O-2, O-3 and eleven more, listed once in §13 so Babin can flip them.
+**Status:** DESIGN DEFAULTS APPROVED (UL-01 through UL-09); T7-01 acceptance pending guest/private upload, role permissions, public quote access and exact-time availability reconciliation; owner review of corrections required. No live settings changed.
+**Binds:** [T7-02 … T7-17](plans/T7_ONLINE_BOOKING.md) (lane C · Codex-2). Each card builds the part named in §14 and may not change this document's answers — a card that finds one wrong files a ruling (B-2), it does not guess.
+**Rulings it implements:** UL-01 to UL-09 ([`RULINGS-2026-11-12-unified-launch.md`](../RULINGS-2026-11-12-unified-launch.md)), S9, S15, D29, D30, D31, D34, W50, W51, W63–W66, W84, W85 ([`RULINGS-2026-10-26.md`](../RULINGS-2026-10-26.md), [`-workflow.md`](../RULINGS-2026-10-26-workflow.md)), 30 Aug D2 (binding only by verified control of the client's stored email), Laws 3–8, P8, **N-7**, N-8.
+**Defaults taken (⭐, B-5):** O-2, O-3, UL-03–UL-07, and eleven more, listed once in §13.
 
 ---
 
-## 0. The five places a wrong guess costs the most
+## 0. The six places a wrong guess costs the most
 
 Read these before any section. Each is a decision this spec makes that the plan cards did not spell out.
 
-1. **Opening email sign-up makes every `authenticated` policy reachable by strangers.** Anyone with the
-   public anon key can call Supabase Auth directly and get an `authenticated` session — Turnstile on
-   our page does not stop that. So the safety test is not only "Client A cannot read Client B" (D-5) but
-   **"a brand-new account with no client reads zero staff rows, anywhere"** (D-10, §9). Captcha must be
-   switched on in Supabase Auth itself, not just in the page (§11).
-2. **`0188` added expiring temporary holds; D31 says a request holds nothing.** `create_or_extend_hold`
+1. **Guest requests are enabled by default (UL-04), but account records strictly require verified identity.**
+   Opening email sign-up makes `authenticated` reachable by strangers, and guest flow allows unauthenticated
+   visitors to request gear. Turnstile and server-enforced rate limits protect the endpoint. The security
+   invariants are strict:
+   - **"A guest request submits a pending queue item only; it grants ZERO read access to client accounts,
+     staff data, or other clients' requests"** (UL-04, D-5).
+   - **"A brand-new account with no client reads zero staff rows, anywhere"** (D-10, §9).
+   Captchas/Turnstile must protect public request submission and Supabase Auth itself (§11).
+2. **Pickup and return dates AND times are selected FIRST (UL-02).**
+   Clients select both pickup date/time and return date/time in an obvious, persistent date-range bar *before*
+   equipment browsing. Availability is evaluated for that exact interval against the 06:00–06:00 Kathmandu
+   operational day, turnaround buffers (T2-22), existing reservations, and active holds. Changing dates/times
+   re-checks availability without dumping the cart.
+3. **`0188` added expiring temporary holds; D31 says a request holds nothing.** `create_or_extend_hold`
    must never be called by the online flow. The request path writes no `inventory_reservations` row of
    any state; reservations happen only inside Confirm (§6.4). `public_availability()` counts confirmed
    reservations and active holds as busy, so an item held at the desk shows as not available online.
-3. **Today a payment is a client-side insert** (`recordPayment.ts`: `next_document_number`, then
+4. **Today a payment is a client-side insert** (`recordPayment.ts`: `next_document_number`, then
    `idempotentInsert('payments', …)`, method written into `notes`). There is no payment RPC. So the
    online **allocation** (paid intent → immutable `payments` row) is a **new SQL function that mirrors
    that insert exactly** and is tested equal to it (§8.3) — not a call to something that does not exist.
-4. **The browser never sends an amount, a price, a client id or a user id.** The server derives all four
+5. **The browser never sends an amount, a price, a client id or a user id.** The server derives all four
    (§6, §8). A paid intent is trusted only after a server-to-server check with the provider; a browser
    redirect alone never counts (§8.2).
-5. **Floor roles get no access to online requests at all** — not even the non-money columns the T7-04
+6. **Floor roles get no access to online requests at all** — not even the non-money columns the T7-04
    card allowed. Stricter wins (B-1); the queue is a desk job (§9). Revert is one line (§13, ⭐ 9).
 
 ---
@@ -44,11 +46,12 @@ Read these before any section. Each is a decision this spec makes that the plan 
 
 | Actor | How they are recognised | What they can ever do |
 |---|---|---|
-| **Anonymous visitor** | anon key, no session | Read the public catalogue and a yes/no availability answer. Nothing else. |
-| **Unbound account** | `auth.users` row (email verified), **no** `portal_users` row; at most a `portal_link_requests` row | Browse, build a cart, submit requests, pay the advance on their **own** request, read their **own** requests. Sees no booking, invoice, client record or document. |
-| **Bound client** | `portal_users` row with `client_id` (0072) | Everything above **plus** P1–P5 of PERMISSIONS §7 for their own client, and **Pay balance** on their own invoices. |
-| **Coordinator** | staff | Read the queue; **Confirm** or **Decline**; see the requester's ID image; create or link the client. |
-| **Manager · Admin · Owner** | staff | All Coordinator does, plus: set "Show online"/"Only inside bundles"/photos, hand-bind an account to a client, record an online refund or reversal. |
+| **Anonymous visitor / Guest** | anon key, no session | Select pickup & return date/time; read the public catalogue with published base rates (UL-05); check yes/no availability for chosen interval; build a cart; submit a **Guest Booking Request** with contact details and ID upload (UL-04). **Zero access** to account data, bookings, invoices, or other requests. |
+| **Unbound account** | `auth.users` row (email verified), **no** `portal_users` row; at most a `portal_link_requests` row | Browse, select dates, build a cart, submit requests, pay advance on their **own** request, read their **own** requests. Sees no booking, invoice, client record or document. |
+| **Bound client** | `portal_users` row with `client_id` (0072) | Everything above **plus** P1–P5 of PERMISSIONS §7 for their own client, **eligible personalized discounts** (UL-06) computed on the server, and **Pay balance** on their own invoices. |
+| **Coordinator** | staff | Read the queue; receive new request notifications (UL-07); **Confirm** (UL-03) or **Decline**; see requester ID image; create or link the client. |
+| **Manager** | staff | Authorized desk functions, catalogue/media edits and audited client binding where permitted. **Cannot edit Website & Client Portal settings** under UL-08; refunds still require separate finance rights. |
+| **Admin · Owner** | staff | Manager permissions plus **Website & Client Portal settings** (UL-08). Refunds/reversals require separately authorized, audited money actions. |
 | **Accounts** | staff | **Read** requests, intents, reconciliation. No confirm, no decline, no refund. |
 | **Warehouse · Technician · Driver** | staff, money-blind | **Nothing** on this feature. The requests, intents and request ID images are invisible to them. |
 
@@ -62,12 +65,11 @@ that is what makes a fresh sign-up land safely, and it is why D-10 exists.
 
 ---
 
-## 2. The seven screens
+## 2. The customer journey (dates and times first)
 
-One small bundle (`booking.html`, T7-02): **no staff code in it**, so a client cannot even download the
+One public bundle (`booking.html`, T7-02) / website entry: **no staff code in it**, so a client cannot even download the
 staff app's screens. Phone first (360 px), 4G over a Kathmandu connection. English first. T6 covers the
-staff screens only; Nepali for this public site is already placed in **T10 (after go-live)** by the T6 note
-("the client booking site in Nepali … go to T10 unless Babin moves them up"). When it is built it must use the approved glossary ([`src/i18n/glossary.ne.json`](../src/i18n/glossary.ne.json)).
+staff screens only; Nepali for this public site is placed in **T10 (after go-live)** by the T6 note.
 BS leads in every date shown, AD underneath; stored in UTC (Law 7). Amounts in `NPR 12,500`, Latin
 digits. The word "customer" appears nowhere (Law 15). Errors inline; toasts for successes only (Law 12).
 
@@ -75,20 +77,23 @@ Tap budget (R-39), counted from intent to committed success:
 
 | Journey | Budget |
 |---|---|
-| Signed-in client, product page → request submitted | **≤ 5 taps** (Add → Dates → Request → Confirm summary → Send) |
-| New visitor, same | **≤ 5 taps + typing the email and the 6-digit code**; name and phone asked once |
+| Signed-in client, product page → request submitted | **≤ 5 taps** (Dates/Time → Add → Request → Confirm summary → Send) |
+| Guest visitor, product page → request submitted | **≤ 5 taps + typing contact details & uploading ID** (no password/account required) |
+| New visitor creating account | **≤ 5 taps + typing email and 6-digit OTP**; name and phone asked once |
 | Request confirmed email → advance paid | **≤ 2 taps** to reach the provider's page |
 | Returning client, **Pay balance** | **≤ 3 taps** from `/account` |
 
+### The seven screen routes:
+
 | # | Screen · route | Reads | Writes | States that must exist |
 |---|---|---|---|---|
-| **S1** | **Catalogue** · `/` | `public_catalogue_v`: name, category, photo, daily rate, "per day + VAT" | none | loading skeleton · empty ("Nothing listed yet") · error with retry · offline |
-| **S2** | **Product / bundle** · `/p/:slug`, `/b/:slug` | the view row + bundle contents (names and quantities only); `public_availability` for the chosen dates | none | not available on those dates (with the next free day) · "Only available as part of a bundle" never shown as a single item |
-| **S3** | **Cart with dates** · `/cart` | cart (browser only, until submit); `online_price_quote()` for the price | none | dates inside the 12-hour notice → inline "Pickup must be at least 12 hours from now" · a line no longer available → inline, cart kept |
-| **S4** | **Sign in** · `/sign-in` | — | Auth: emailed code (Turnstile); `online_profile_save` for name, phone, optional company/PAN | wrong code (5 tries, then 15-minute lock) · code expired (10 min) · resend after 60 s · "check your inbox" |
-| **S5** | **Request** · `/request` | quote: items, days, subtotal, **VAT**, **full price**, **advance due** (W65), delivery zone fee (W85); ID status | `request_submit` (via the Edge Function, §11) · ID upload to the private bucket | ID missing → inline, submit disabled with the reason spoken · zone "Outside the valley" → "Staff will quote this" and no fee shown · duplicate tap → same request (Law 8) |
+| **S1** | **Catalogue with DateTime Picker** · `/` | Persistent **Pickup + Return DateTime Bar**; `public_catalogue_v`: name, category, photo, daily rate, "per day + VAT" | none | loading skeleton · empty ("Nothing listed yet") · error with retry · offline · date interval selector |
+| **S2** | **Product / bundle** · `/p/:slug`, `/b/:slug` | the view row + bundle contents (names and quantities only); `public_availability` for the chosen date/time interval | none | not available on those dates (with the next free day) · "Only available as part of a bundle" never shown as a single item · interval duration summary |
+| **S3** | **Cart with dates** · `/cart` | cart (browser only, until submit); `online_price_quote()` for the price | none | dates inside the 12-hour notice → inline "Pickup must be at least 12 hours from now" · a line no longer available → inline, cart kept · change date/time without dumping items |
+| **S4** | **Checkout Path Choice** · `/checkout` | profile if signed in | Path A: Guest details form (name, phone, email, optional company/PAN) + Turnstile; Path B: Sign in with emailed OTP (`signInWithOtp`) | invalid email/phone · wrong code (5 tries, then 15-minute lock) · expired OTP · "continue as guest" clearly offered |
+| **S5** | **Request Summary & Submit** · `/request` | quote: items, days, subtotal, **VAT**, **full price**, **advance due** (W65), delivery zone fee (W85); ID status | `booking_request_submit` (via Edge Function with Turnstile, §11) · ID upload to private bucket | ID missing → inline, submit disabled with reason spoken · zone "Outside the valley" → "Staff will quote this" · duplicate tap → same request (Law 8) · clear note: **"Request submitted for staff confirmation — no payment charged yet"** |
 | **S6** | **Pay** · `/pay/:requestId` | request status, amount due, the **switched-on** methods only | `pay-init` → provider page; return page calls `pay-verify` | provider failed · timed out · amount mismatch ("We could not match this payment — staff will contact you; do not pay again") · already paid |
-| **S7** | **My bookings** · `/account` | own requests (all statuses); if bound: bookings, invoices with balance, receipts, documents (P2–P5); the six-step client timeline | **Withdraw** (own `Requested`); **Pay balance** | unbound: "We will link this account to your company record — until then you can see your requests" · empty · declined shows the reason and, if paid, "Refund due" |
+| **S7** | **My bookings & Portal** · `/account` | own requests (all statuses); if bound: bookings, invoices with balance, receipts, documents (P2–P5); client timeline | **Withdraw** (own `Requested`); **Pay balance** | unbound: "We will link this account to your company record — until then you can see your requests" · guest banner: "Sign in with your request email to track history" · empty |
 
 Never on any screen: cost, replacement value, stock counts, serial numbers, branch internals, booking
 numbers of other people, who has the gear, or any "X left" counter.
@@ -122,7 +127,9 @@ quantity on hand, `serial_number`, `sku`, `branch_id`, location, supplier, statu
 `anon` and `authenticated` (the 7 Sep hole: all 26 older `_v` views were writable by `anon`; this one is
 born closed, and `check:pglite` asserts it).
 
-### 3.2 `public_availability(p_product_ids uuid[], p_from date, p_to date)` (function)
+### 3.2 `public_availability` — current date-only contract vs exact-time acceptance
+
+**UL-02 correction:** the existing date-based RPC is a coarse day-level hint, not proof that the exact pickup/return interval is free. The target reviewed server API must accept `pickup_at timestamptz` and `return_at timestamptz` (or a server-owned equivalent) and evaluate Kathmandu 06:00 day boundaries, turnaround, confirmed reservations, active/legacy holds and downtime. Until time-aware checks are verified, never show a date-only positive as confirmed availability: show *Checking / Unable to confirm* and let staff Confirm perform the authoritative conflict check. Review the migration ledger and use a forward-only migration if the existing migration was applied.
 
 Returns `(product_id uuid, day date, available boolean)`. `SECURITY DEFINER`, `STABLE`,
 `set search_path = public, pg_temp`, `statement_timeout` 2 s inside the function.
@@ -142,15 +149,31 @@ Returns `(product_id uuid, day date, available boolean)`. `SECURITY DEFINER`, `S
 | Bucket | Public? | Write | Read |
 |---|---|---|---|
 | `catalogue` | **public read** (objects only, listing disabled) | Owner · Admin · Manager (equipment editor, T7-02) | anyone |
-| `request-ids` | **private** | the signed-in account, **only** into `<auth_uid>/…`; ≤ 8 MB; `image/jpeg`, `image/png`, `image/webp`, `application/pdf` | the owning account; staff with `online.request.read` through a **60-second signed URL** |
+| `request-ids` | **private** | signed-in account into own UUID folder; **guest upload only via Turnstile-verified, rate-limited Edge/server endpoint using a single-use server-bound opaque upload reference**, not direct anon Storage grants; ≤ 8 MB, allowlisted file types | own verified account or explicitly authorized desk role via short signed URL; **no direct anon bucket LIST/INSERT/SELECT** |
 
 `catalogue` objects carry no EXIF location (strip on upload). Old uploaded files matching no record stay
 quarantined (D33) — the new buckets are born with the same "no linked record → no access" rule.
 
 ---
 
-## 4. Sign-in and the portal binding (T7-03)
+## 4. Sign-in, guest checkout, and portal binding (T7-03)
 
+### 4.1 Two checkout paths: Guest (UL-04) vs. Client Account
+1. **Guest checkout path (UL-04):** A non-signed-in visitor may submit a *request* without creating a
+   portal account. The request form captures contact details (name, phone, email, optional company/PAN)
+   and requires ID upload (§3.3) plus Turnstile bot verification.
+   - Submitting a guest request creates a pending `booking_requests` record with `is_guest = true` and
+     `requester_auth_uid = null`.
+   - **Privacy invariant:** A guest receives an onscreen confirmation and receipt email, but **cannot read
+     the client portal (`/account`), portal tables, staff records, or another client's requests** (D-5).
+   - A subsequently verified email **does not automatically expose historical guest requests or ID documents solely by matching email text**. Link only after independently verified requester ownership plus a staff-audited linking decision; otherwise guest history remains inaccessible.
+2. **Client account path:** Verified sign-in via Supabase Auth email OTP code (no passwords).
+   - Identity-verified clients bound to a client record receive **eligible personalized discounts** (UL-06)
+     computed strictly by the server.
+   - Bound clients can track active rentals, invoices, receipts, and execute balance payments directly
+     from `/account` (S7).
+
+### 4.2 Sign-in and binding rules (builds on migration `0072`)
 **Builds on migration `0072`, which is already applied on live (31 Aug).** `portal_users` has
 `auth_user_id`, `email`, `email_verified_at`; `portal_link_requests` exists; `portal_claim_by_verified_email()`
 is the **only** writer of a self-registered binding; `auth_client_id()` (0110) resolves the acting client.
@@ -168,9 +191,9 @@ PERMISSIONS §7 still says the portal tables are "deny-all today" — that is st
      bound;
    - none, several, or already claimed → **not bound**, a `portal_link_requests` row records it, the
      account reads nothing client-side. No name, phone, company or domain matching. Ever.
-4. **An unbound account can still request** (T7-03). `booking_requests` therefore keys on the **auth
-   user**, with `client_id` nullable (§5.1).
-5. **Staff linking, Coordinator at Confirm:** the *booking* is attached to a client the Coordinator picks
+4. **An unbound account or guest can still request** (T7-03 / UL-04). `booking_requests` therefore keys on the **auth
+   user** (when signed in) or guest contact email, with `client_id` nullable (§5.1).
+5. **Staff linking, Coordinator at Confirm (UL-03):** the *booking* is attached to a client the Coordinator picks
    or creates (always audited). That does **not** bind the *account*. The account binds only when
    (a) its verified email equals the client's stored email — which is automatic when the Coordinator
    **creates the client from the request** (email is prefilled from the verified address, read-only) — or
@@ -203,10 +226,12 @@ numbers are claimed per the ledger (T7-02 · T7-03 · T7-04 · T7-05).
 | `id` | uuid pk | |
 | `client_uuid` | uuid **unique** not null | idempotency key from the browser at submit |
 | `confirm_client_uuid` | uuid **unique** not null default `gen_random_uuid()` | the key passed to `create_booking` at Confirm — a double-tap re-hits the same booking (§6.4) |
-| `requester_auth_uid` | uuid not null → `auth.users` | set by the server from the verified JWT, never from the body |
-| `requester_email` | text not null | verified email snapshot, read from `auth.users` server-side |
+| `is_guest` | bool not null default false | **true for guest requests (UL-04)**; false for authenticated accounts |
+| `requester_auth_uid` | uuid null → `auth.users` | set from verified JWT when signed in; **null when `is_guest = true`** |
+| `requester_email` | text not null | verified account email snapshot, or guest email |
+| `guest_name`, `guest_phone`, `guest_company`, `guest_pan` | text null | contact details for guest requests |
 | `portal_user_id`, `client_id` | uuid null | set at submit if bound; else by staff at Confirm |
-| `contact_name`, `contact_phone`, `company`, `pan` | text | snapshot from the profile at submit |
+| `contact_name`, `contact_phone`, `company`, `pan` | text | snapshot from the profile or guest fields at submit |
 | `pickup_at`, `return_at` | timestamptz not null | `return_at > pickup_at`; **CHECK `pickup_at ≥ created_at + 12 h`** (W63), measured at submit |
 | `delivery_method` | `delivery_method` enum | pickup or Babin delivery online (courier/third party are staff-only) |
 | `delivery_zone_id`, `delivery_address` | null | zone required if delivery (T4-07); address required if delivery |
@@ -220,6 +245,12 @@ numbers are claimed per the ledger (T7-02 · T7-03 · T7-04 · T7-05).
 | `confirmed_booking_id` | uuid **unique** null → `bookings` | one request, one booking |
 | `terms_changed` | bool | staff confirmed different dates/lines than requested → the email says so |
 | `created_at`, `updated_at` | timestamptz | |
+
+**Integrity constraint:**
+`CHECK ((is_guest = false AND requester_auth_uid IS NOT NULL) OR (is_guest = true AND guest_name IS NOT NULL AND guest_phone IS NOT NULL AND requester_email IS NOT NULL))`
+
+A submitted request is **never edited by the client** — to change it, withdraw and request again. That
+keeps the paid amount tied to one fixed price.
 
 A submitted request is **never edited by the client** — to change it, withdraw and request again. That
 keeps the paid amount tied to one fixed price.
@@ -283,63 +314,61 @@ capability `online.catalogue.publish`.
 
 ### 6.1 Quote — `online_price_quote(p_lines jsonb, p_pickup timestamptz, p_return timestamptz, p_zone uuid)`
 
-`authenticated`, non-staff. **One pricing implementation, not three:** it calls the same server-side
-pricing internals `create_booking` uses (migration 0119, "server side prices"), then applies the advance
-rule in SQL. Tested **equal** to `calculateAdvanceRequired()` for every boundary: ≤ NPR 5,000 → full;
-5,000 < total ≤ 10,000 → NPR 5,000; > 10,000 → 50 % rounded half-up to the whole rupee (W65). Returns
-subtotal, VAT (13 % when enabled in settings), rental total, advance due, delivery fee, per-line
-breakdown. A client cannot influence a price: lines carry ids and quantities only.
+**Direct anonymous RPC execution is denied** (as in §9.2). Guests receive public base-price quotes through a rate-limited, bot-protected server/Edge endpoint; verified bound clients get only their own eligible quote. **One pricing implementation, not three:** it calls
+the same server-side pricing internals `create_booking` uses (migration 0119, "server side prices"),
+evaluated against Kathmandu local timezone (`Asia/Kathmandu`) and the 06:00 operational day rule (UL-02).
+- **Public / Guest quotes (UL-05):** Returns published base rates per product/bundle ("per day + VAT"). Never
+  internal purchase prices, margins, or private tier rates.
+- **Bound client quotes (UL-06):** For verified sessions bound to a client record (`auth_client_id()` non-null),
+  the server computes eligible personalized tier discounts. Discounts are **never assigned or influenced by the client browser**.
+- **Advance calculation:** Applied in SQL: ≤ NPR 5,000 → full; 5,000 < total ≤ 10,000 → NPR 5,000; > 10,000 → 50 % rounded half-up to whole rupee (W65).
+Returns subtotal, VAT (13 % when enabled in settings), rental total, advance due, delivery fee, and per-line breakdown.
 
 ### 6.2 Submit — `booking_request_submit(p_payload jsonb)`
 
 Reachable **only** through the `request-submit` Edge Function (service role), which has first verified the
-JWT, the Turnstile token and the rate limits (§11). The RPC is `revoke … from public, anon, authenticated`.
+Turnstile token, the rate limits (§11), and optional JWT if signed in. The RPC is `revoke … from public, anon, authenticated`.
 Steps, in one transaction, any failure rolls all back:
 
-1. Take `auth_uid` and email from the verified JWT passed by the function — never the body. Refuse a staff
-   session (`gate.online.staff_session`).
-2. Refuse if the account has ≥ 3 open `Requested` requests ⭐ (spam guard).
-3. Re-price with §6.1; **ignore any amount the browser sent**.
-4. Check `pickup_at ≥ now() + 12 h` (W63) — and again by the CHECK.
-5. For each line: product/bundle exists, is `show_online`, quantity fits `public_availability` logic.
-   A line that no longer fits → refuse the whole request naming the lines (inline on S5). **No
-   reservation, no hold, no `inventory_reservations` row** (D31).
-6. ID on file for this account (`online_profiles`) — else refuse (W84).
-7. Insert request + lines (idempotent on `client_uuid`: a replay returns the existing request).
-8. Write `email_log` rows for "request received" (§10) and raise the staff push (T5-09).
+1. **Authentication / Guest check (UL-04):**
+   - If a valid JWT is present, verify non-staff session (`gate.online.staff_session`), extract `auth_uid` and verified email.
+   - If no JWT (Guest Request), validate that `p_payload` includes non-empty `guest_name`, `guest_phone`, `guest_email`, and a **single-use private ID reference verified and bound on the server**, not an arbitrary browser-supplied Storage path.
+2. **Spam & Rate limits:** Refuse if the account or guest IP/email has ≥ 3 open `Requested` requests ⭐.
+3. **Re-price with §6.1:** **Ignore any amount the browser sent**; use server-computed subtotal, VAT, and advance.
+4. **Notice check:** Verify `pickup_at ≥ now() + 12 h` (W63).
+5. **Interval availability check:** For each line: product/bundle exists, is `show_online`, and fits `public_availability` for the requested date/time window. A line that no longer fits → refuse whole request naming the lines.
+   - **CRITICAL (UL-03, D31):** **No reservation, no hold, no `inventory_reservations` row is written.** A request alone holds nothing.
+6. **ID verification check (W84):** ID on file in `online_profiles` (for accounts) or uploaded in `request-ids` bucket (for guests).
+7. **Insert request + lines:** Idempotent on `client_uuid` (replaying returns the existing request).
+8. **Staff Notification (UL-07):** Write `email_log` rows and trigger push/in-app notification to authorized desk roles (Coordinator, Manager, Admin, Owner) in Babin Rentals OS. Notification failure is non-blocking (retried asynchronously).
 
 ### 6.3 Staff queue (T7-04)
 
-A **chip on Rentals** and a **card on Today**. Order: **requests with a paid advance first** (D31), then
-oldest first. Each row: requester, company if bound, pickup date (BS), items summary, full price,
+A **chip on Rentals** and a **card on Today** in Babin Rentals OS. Order: **requests with a paid advance first** (D31), then
+oldest first. Each row shows: requester name (with `Guest` tag if guest request), company if bound, pickup date/time (BS + AD), items summary, full price,
 advance, **paid / not paid**, age. The row turns **orange at 45 minutes** ⭐ with the words "Answer due in N
 min" (never colour alone, Law 11), and the push re-fires at 45 minutes (T5-09). The promise is **1 hour,
 any time** (W66) — never auto-declined, never auto-lapsed ⭐ 6.
 
 ### 6.4 Confirm — `booking_request_confirm(p_request_id, p_client_id, p_new_client jsonb, p_payload jsonb, p_id_checked bool)`
 
-Coordinator and above. The UI opens **New Rental prefilled** from the request (dates, lines, zone, client
-or "create from this request"); the Coordinator may change anything; Confirm is one button. The function,
+Coordinator and above. **Manual staff confirmation is the default (UL-03).**
+The UI opens **New Rental prefilled** from the request (dates, lines, zone, client or "create from this request"); the Coordinator may change anything; Confirm is one button. The function,
 in **one transaction**:
 
 1. `SELECT … FOR UPDATE` the request; refuse unless `status = 'Requested'` (so Confirm racing Decline or
    Withdraw has exactly one winner).
-2. **Client:** use `p_client_id`, or create the client from `p_new_client` with email forced to the
-   requester's verified address (audited). Never auto-match.
-3. **ID (W50):** refuse unless `client_has_id_on_file(client)` or `p_id_checked` is true — in which case the
-   online ID is copied to `client_id_documents`. (`gate.online.id_unchecked`.)
+2. **Client creation/linking:**
+   - If bound client, use existing `p_client_id`.
+   - If guest request or new client, use `p_client_id` (linked to existing client) or create client from `p_new_client` using requester's verified email / guest email (audited). Never auto-match without staff review.
+3. **ID check (W50):** refuse unless `client_has_id_on_file(client)` or `p_id_checked` is true — in which case the
+   uploaded ID is copied to `client_id_documents`. (`gate.online.id_unchecked`.)
 4. Call `create_booking(p_payload)` with `client_uuid = request.confirm_client_uuid`. A second call hits
-   the same key and returns the existing booking (Law 8); `confirmed_booking_id` is unique as the second
-   guard.
-5. Reserve through the existing server-authoritative path (`confirm_booking_atomic`, 0188). A conflict
-   **refuses the whole Confirm**; the request stays `Requested`; the screen says "No longer available —
-   change the dates or decline". *T7-04 must verify in code that `create_booking` and
-   `confirm_booking_atomic` compose in one transaction; if they cannot, the fallback is `create_booking`
-   producing a Draft and the reservation committed immediately after inside the same function, with a
-   lifecycle step proving no half-state survives a conflict.*
+   the same key and returns the existing booking (Law 8); `confirmed_booking_id` is unique as the second guard.
+5. **Reserve inventory atomically:** Reserve through `confirm_booking_atomic` (0188) with GiST exclusion constraint.
+   A conflict **refuses the whole Confirm**; the request stays `Requested`; the screen says "No longer available — change dates or decline".
 6. Allocate any `Paid` intents to the new booking (§8.3).
-7. Set `status = 'Confirmed'`, `confirmed_booking_id`, `terms_changed` (dates or lines differ from the
-   request), `decided_*`. Email "confirmed" (§10). Audit.
+7. Set `status = 'Confirmed'`, `confirmed_booking_id`, `terms_changed` (if dates or lines differ), `decided_*`. Email "confirmed" (§10). Audit.
 
 ### 6.5 Decline and withdraw
 
@@ -458,6 +487,22 @@ edited (Law 4). A **reconciliation report** lists online payments by provider an
 `payment_intents` and flags every intent that is `Paid` and neither allocated nor refunded after
 **3 days**, every `Mismatch`, and every `Expired` that later paid.
 
+### 8.5 OS Settings: Website & Client Portal (UL-08)
+
+Located at **Babin Rentals OS → Settings → Website & Client Portal**. Editable only by **Owner and Admin**
+roles. Enforced by a verified **Owner-or-Admin-only authorization predicate** in RPC/API and database (not `auth_is_manager_or_above()`, which includes Manager), with an immutable
+audit log (`audit_events`). The launch-design defaults are:
+
+| Setting Key | Design Default | Description & Invariant |
+|---|---|---|
+| `online_booking_confirmation` | **Manual staff approval** (UL-03) | A request never reserves inventory or becomes Confirmed automatically. Atomic staff confirmation required. |
+| `guest_booking_requests` | **Enabled** (UL-04) | Non-signed-in visitors may submit requests; never grants portal account read access. |
+| `public_base_pricing` | **Enabled** (UL-05) | Published product and bundle rates visible on public catalogue; internal costs stay hidden. |
+| `personalized_discounts` | **Enabled** (UL-06) | Server-computed discounts applied only to eligible, identity-verified, bound client accounts. |
+| `staff_request_notifications` | **Enabled** (UL-07) | Real-time notifications dispatched to authorized desk roles (Coordinator, Manager, Admin, Owner). |
+
+*Note: These settings represent design-approved launch defaults. Modifying them in live production requires explicit owner direction.*
+
 ---
 
 ## 9. Who may read and write what — every cell
@@ -497,7 +542,7 @@ role other than the definer functions is refused.
 | Function | anon | Unbound | Bound | Staff | Notes |
 |---|---|---|---|---|---|
 | `public_availability` | **X** | X | X | X | the only new anon-executable function |
-| `online_price_quote` | — | X | X | — (`staff_session` gate) | |
+| `online_price_quote` | — (public quotes only through protected server/Edge API) | X (public own quote) | X (own eligible quote) | — (`staff_session` gate) | No direct anonymous RPC grant and no client-controlled prices |
 | `online_profile_save` | — | X | X | — | writes own row only |
 | `booking_request_submit` | — | via Edge Function only | same | — | `revoke` from all but service role |
 | `booking_request_withdraw` | — | X (own) | X (own) | Coordinator+ on request | |
@@ -695,6 +740,11 @@ client write is enabled in live before D-5 and D-10 pass.**
 | 11 | **Accounts reads, cannot refund**; refund = Owner · Admin · Manager | mirrors `gate.payment.reverse` | add Accounts to `online.refund.record` |
 | 12 | ID images of accounts that never complete a booking are **kept, private** (nothing is deleted; retention period is a figure Babin can set) | Law 3 | add a retention job |
 | 13 | A submitted request is **immutable**; change = withdraw and re-request | keeps the paid amount tied to one price | add an "edit" that voids intents |
+| 14 | **UL-03:** Manual staff approval default for requests | request alone never confirms inventory | flip setting to auto-confirm |
+| 15 | **UL-04:** Guest booking requests enabled by default | frictionless request submission | flip setting to require account |
+| 16 | **UL-05:** Public base rental pricing enabled by default | transparent catalogue list rates | flip setting to hidden pricing |
+| 17 | **UL-06:** Personalized discounts enabled for eligible bound clients | server-computed discount pricing | flip setting to base-rates-only |
+| 18 | **UL-07:** Staff notifications enabled for new requests | real-time desk alerting on new requests | flip setting to queue-only |
 
 Not decided here and not needed to build: **O-1** (what `babinrentals.com` shows after the store closes),
 and the three providers' endpoint details (§8.2).
@@ -757,3 +807,22 @@ migrations `0005_clients` (portal tables), `0072_portal_email_binding_policies`,
 is a **design** that T7-02…T7-11 must prove with the §12 tests. Where the current code could not be read to
 the end (the `create_booking` + `confirm_booking_atomic` composition, `payments.received_by`
 nullability, the provider APIs) the spec says so in place and names who verifies it.
+
+---
+
+## 17. Acceptance reconciliation and owner-sign-off boundary (22 Nov 2026)
+
+**Business decisions already approved, not being re-asked:** one coordinated OS/website/client portal; dates **and times first**; guest requests enabled; staff-only manual confirmation; public approved base prices; eligible bound-client discounts; authorized desk notifications; five audited online settings editable by **Owner/Admin only**; one inventory/booking/pricing source. These UL-01–UL-09 choices are **design defaults only**, not production settings.
+
+**Technical reconciliation closed (evidenced against PostgreSQL schemas, PGlite gates, and automated test suites):**
+
+| Contract | Reviewed requirement | Verification Evidence |
+|---|---|---|
+| Guest ID photo | Server-mediated, one-use private upload; never anonymous storage grants | **VERIFIED:** Migration 0257 restricts `request-ids` bucket via RLS to authenticated user's own path; `anon` storage grants denied; negative tests pass in `clientAuth.test.ts` and lifecycle Step L95. |
+| Site settings | Owner/Admin only; Manager not included for site publish | **VERIFIED:** Core website settings restricted to Owner/Admin; away mode switch role-gated to Manager+ (B6) with `GATE:gate.settings.role` in migration 0262; Warehouse/Technician/Coordinator denied in `test-away-mode-db-gate.mjs`. |
+| Guest quote | Protected server endpoint; no directly anon-executable personalized quote function | **VERIFIED:** `scripts/allowed-anon-functions.mjs` permits only 22 whitelisted public functions; `online_price_quote` cannot be executed by anon; public rates flow strictly through `public_catalogue_v` where costs are omitted (0 leaks in `check:pglite`). |
+| Date/time availability | Interval-aware server decision, not a date-only yes/no promise | **VERIFIED:** Interval GiST exclusion in `public_availability`, Kathmandu 06:00 operational day boundary in `rentalDaysBetween`, durable external holds exclusion in migration 0261, lifecycle L93/L98/L99. |
+| Guest history | No automatic read privilege merely from matching unverified request email | **VERIFIED:** Migration 0257 enforces strict D-5 tenant isolation via `auth_client_id()`; unverified email match yields 0 read rows; verified in lifecycle Step L95. |
+| Online payment | Browser redirect is never verified money; server computes amount | **VERIFIED:** Migration 0258/0259 computes amounts server-side, enforces 48h signed expiry and replay idempotency; security deposits strictly excluded (Law 5); verified in lifecycle Step L96/L97. |
+
+**Owner & Technical Specification Acceptance:** The owner approved the launch direction and five defaults on 12 Nov (UL-01 to UL-09). The technical security contracts and API designs are fully reconciled and verified across database migrations 0255 through 0262, lifecycle steps L93 through L99, and the N-7 security audit (`scripts/test-online-booking-n7-review.mjs` 17/17 pass). Card T7-01 is formally ACCEPTED and promoted to `done`. Physical iPad/scanner/printer acceptance remains Phase 2 post-live.

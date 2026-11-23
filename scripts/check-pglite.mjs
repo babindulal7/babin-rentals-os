@@ -51,6 +51,7 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ALLOWED_ANON_FUNCTIONS } from './allowed-anon-functions.mjs'
+import { ALLOWED_ANON_VIEWS } from './allowed-anon-views.mjs'
 import { beginVerification, finishVerification } from './test-receipt.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -143,7 +144,8 @@ async function auditAnonViewReads(db) {
     join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'public' and c.relkind = 'v'
   `)
-  return { leaked: rows.map((r) => r.view), checked: total.rows[0].n }
+  const leaked = rows.map((r) => r.view).filter((v) => !ALLOWED_ANON_VIEWS.has(v))
+  return { leaked, checked: total.rows[0].n }
 }
 
 // ── the function-leak gate ───────────────────────────────────────────────────
@@ -239,10 +241,100 @@ async function auditClashTableIsolation(db) {
   return { checked: required.length, violations }
 }
 
+// ── public catalogue availability privacy gate ──────────────────────────────
+// One-use synthetic records in a rollback-only transaction. We exercise the
+// real anonymous SECURITY DEFINER RPC after applying the complete migration
+// chain. PGlite does not substitute for a hosted JWT/PostgREST acceptance test.
+async function auditPublicAvailabilityVisibility(db) {
+  const violations = []
+  let checked = 0
+  try {
+    await db.exec('begin')
+    const products = (await db.query(
+      'select id from public.products order by id limit 4',
+    )).rows
+    if (products.length < 4) throw new Error('four fixture products are required')
+
+    const [visible, hidden, bundleOnly, inactive] = products.map((p) => p.id)
+    const productCases = [
+      [visible, true, false, true],
+      [hidden, false, false, true],
+      [bundleOnly, true, true, true],
+      [inactive, true, false, false],
+    ]
+    for (const [id, showOnline, bundleOnlyFlag, active] of productCases) {
+      await db.query(
+        `update public.products
+           set show_online=$2, online_bundle_only=$3, is_active=$4, daily_rate=100
+         where id=$1`,
+        [id, showOnline, bundleOnlyFlag, active],
+      )
+    }
+
+    const publishedBundle = (await db.query(
+      `insert into public.bundles
+         (client_uuid,bundle_code,name,daily_rate,show_online,is_active)
+       values (gen_random_uuid(),'PUBLIC-AVAIL-TEST-01','Public QA bundle',100,true,true)
+       returning id`,
+    )).rows[0].id
+    const hiddenBundle = (await db.query(
+      `insert into public.bundles
+         (client_uuid,bundle_code,name,daily_rate,show_online,is_active)
+       values (gen_random_uuid(),'PUBLIC-AVAIL-TEST-02','Hidden QA bundle',100,false,true)
+       returning id`,
+    )).rows[0].id
+    // A bundle-only component must be counted within the published bundle,
+    // but its UUID must not independently reveal a schedule to an anonymous user.
+    await db.query(
+      `insert into public.bundle_items (client_uuid,bundle_id,product_id,quantity,days)
+       values (gen_random_uuid(),$1,$2,1,1)`,
+      [publishedBundle, bundleOnly],
+    )
+    await db.query(
+      `insert into public.bundle_items (client_uuid,bundle_id,product_id,quantity,days)
+       values (gen_random_uuid(),$1,$2,1,1)`,
+      [hiddenBundle, hidden],
+    )
+
+    await db.exec('set role anon')
+    const cases = [
+      ['published product', visible, true],
+      ['unpublished product', hidden, false],
+      ['bundle-only standalone product', bundleOnly, false],
+      ['inactive product', inactive, false],
+      ['published bundle with private component', publishedBundle, true],
+      ['unpublished bundle', hiddenBundle, false],
+      ['unknown UUID', '00000000-0000-4000-8000-000000000001', false],
+    ]
+    for (const [name, id, shouldReturn] of cases) {
+      const { rows } = await db.query(
+        'select * from public.public_availability(array[$1::uuid], current_date+1, current_date+1)',
+        [id],
+      )
+      checked++
+      const ok = shouldReturn
+        ? rows.length === 1 && rows[0].product_id === id &&
+          typeof rows[0].available === 'boolean' &&
+          Object.keys(rows[0]).sort().join(',') === 'available,day,product_id'
+        : rows.length === 0
+      if (!ok) violations.push(name + ': unexpected anonymous availability response')
+    }
+  } catch (e) {
+    violations.push('privacy regression probe failed: ' + String(e.message).split('\n')[0])
+  } finally {
+    try { await db.exec('reset role') } catch { /* an aborted transaction resets on rollback */ }
+    try { await db.exec('rollback') } catch { /* transaction already finished */ }
+  }
+  return { checked, violations }
+}
+
 const viewAudit = await auditAnonViewReads(db)
 const funcAudit = await auditAnonFunctionExecution(db)
 const definerAudit = await auditSecurityDefinerSearchPath(db)
 const clashAudit = !from ? await auditClashTableIsolation(db) : { checked: 0, violations: [] }
+const catalogueAudit = !from && failures.length === 0
+  ? await auditPublicAvailabilityVisibility(db)
+  : { checked: 0, violations: [] }
 
 console.log(`\n${applied}/${files.length} applied, ${failures.length} failed`)
 
@@ -288,6 +380,12 @@ console.log(
 )
 for (const violation of clashAudit.violations) console.log('  ' + violation)
 
+console.log(
+  `public-catalogue privacy gate: ${catalogueAudit.checked} anonymous cases checked, ` +
+    `${catalogueAudit.violations.length} violations`,
+)
+for (const violation of catalogueAudit.violations) console.log('  ' + violation)
+
 await db.close()
 
 if (failures.length) {
@@ -317,6 +415,10 @@ if (clashAudit.violations.length) {
   console.log('\nStaff-only clash and credit tables violate RLS or least-privilege ACL requirements.')
   process.exit(1)
 }
+if (catalogueAudit.violations.length) {
+  console.log('\nAnonymous catalogue availability reveals unpublished items or the runtime probe failed.')
+  process.exit(1)
+}
 const pgliteResult = {
   ...finishVerification(verificationStart, ROOT, !from),
   applied,
@@ -326,6 +428,8 @@ const pgliteResult = {
   views_leaked: viewAudit.leaked.length,
   clash_tables_checked: clashAudit.checked,
   clash_acl_rls_violations: clashAudit.violations.length,
+  catalogue_privacy_cases_checked: catalogueAudit.checked,
+  catalogue_privacy_violations: catalogueAudit.violations.length,
   at: new Date().toISOString(),
 }
 writeFileSync(join(ROOT, '.pglite-result.json'), JSON.stringify(pgliteResult, null, 2))

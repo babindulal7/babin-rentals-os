@@ -57,7 +57,7 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
             padding: 'var(--space-md, 1rem)',
             borderRadius: 'var(--radius-md, 8px)',
             backgroundColor: 'var(--danger-soft, rgba(239, 68, 68, 0.1))',
-            border: '1px solid var(--danger, #ef4444)',
+            border: '1px solid var(--danger)',
             color: 'var(--text-primary, inherit)',
           }}
         >
@@ -78,10 +78,10 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
               <div
                 key={item.lineId}
                 style={{
-                  border: '1px solid var(--border-subtle, #e5e7eb)',
+                  border: '1px solid var(--border)',
                   borderRadius: 'var(--radius-md, 8px)',
                   padding: 'var(--space-md, 1rem)',
-                  backgroundColor: 'var(--surface-raised, #ffffff)',
+                  backgroundColor: 'var(--card)',
                 }}
               >
                 {/* Header row — a disclosure: focusable, announces expanded/collapsed, Enter/Space toggle. */}
@@ -106,8 +106,8 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <Badge tone="danger" label={item.status === 'hold_conflict' ? 'Hold Conflict' : 'Unavailable'} />
-                    <span style={{ fontWeight: 600, fontSize: '1rem' }}>{item.productName}</span>
-                    <span style={{ fontSize: '0.875rem', color: 'var(--text-muted, #6b7280)' }}>
+                    <span style={{ fontWeight: 600, fontSize: '1rem', color: 'var(--text)' }}>{item.productName}</span>
+                    <span style={{ fontSize: '0.875rem', color: 'var(--muted)' }}>
                       requested {item.requestedQty}, available {item.availableQty}
                     </span>
                   </div>
@@ -120,7 +120,7 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
                     style={{
                       marginTop: '1rem',
                       paddingTop: '1rem',
-                      borderTop: '1px solid var(--border-subtle, #e5e7eb)',
+                      borderTop: '1px solid var(--border)',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: '0.75rem',
@@ -131,7 +131,8 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
                       style={{
                         fontSize: '0.875rem',
                         lineHeight: 1.5,
-                        backgroundColor: 'var(--surface-subtle, #f3f4f6)',
+                        backgroundColor: 'var(--surface-2)',
+                        color: 'var(--text)',
                         padding: '0.75rem',
                         borderRadius: 'var(--radius-sm, 6px)',
                       }}
@@ -165,17 +166,17 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
                         style={{
                           padding: '0.75rem',
                           borderRadius: 'var(--radius-sm, 6px)',
-                          backgroundColor: 'var(--surface-sunken, #f9fafb)',
+                          backgroundColor: 'var(--surface-2)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
                         }}
                       >
                         <div>
-                          <div style={{ fontWeight: 500, fontSize: '0.875rem' }}>
+                          <div style={{ fontWeight: 500, fontSize: '0.875rem', color: 'var(--text)' }}>
                             1. Assign another same-model unit
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #6b7280)' }}>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
                             {item.suggestedSolutions.alternativeUnits.length} alternate unit(s) available for entire period.
                           </div>
                         </div>
@@ -201,17 +202,17 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
                           style={{
                             padding: '0.75rem',
                             borderRadius: 'var(--radius-sm, 6px)',
-                            backgroundColor: 'var(--surface-sunken, #f9fafb)',
+                            backgroundColor: 'var(--surface-2)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
                           }}
                         >
                           <div>
-                            <div style={{ fontWeight: 500, fontSize: '0.875rem' }}>
+                            <div style={{ fontWeight: 500, fontSize: '0.875rem', color: 'var(--text)' }}>
                               2. Offer approved compatible replacement
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #6b7280)' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
                               Requires client confirmation of substitute model.
                             </div>
                           </div>
@@ -236,17 +237,17 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
                         style={{
                           padding: '0.75rem',
                           borderRadius: 'var(--radius-sm, 6px)',
-                          backgroundColor: 'var(--surface-sunken, #f9fafb)',
+                          backgroundColor: 'var(--surface-2)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
                         }}
                       >
                         <div>
-                          <div style={{ fontWeight: 500, fontSize: '0.875rem' }}>
+                          <div style={{ fontWeight: 500, fontSize: '0.875rem', color: 'var(--text)' }}>
                             3. Adjust dates to open window
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #6b7280)' }}>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
                             Genuinely free dates available for this stock.
                           </div>
                         </div>
@@ -270,17 +271,17 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
                       style={{
                         padding: '0.75rem',
                         borderRadius: 'var(--radius-sm, 6px)',
-                        backgroundColor: 'var(--surface-sunken, #f9fafb)',
+                        backgroundColor: 'var(--surface-2)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                       }}
                     >
                       <div>
-                        <div style={{ fontWeight: 500, fontSize: '0.875rem' }}>
+                        <div style={{ fontWeight: 500, fontSize: '0.875rem', color: 'var(--text)' }}>
                           4. Remove item or revise quantity
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #6b7280)' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
                           Remove conflicting line from draft; quote recalculates.
                         </div>
                       </div>
@@ -298,17 +299,17 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
                       style={{
                         padding: '0.75rem',
                         borderRadius: 'var(--radius-sm, 6px)',
-                        backgroundColor: 'var(--surface-sunken, #f9fafb)',
+                        backgroundColor: 'var(--surface-2)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                       }}
                     >
                       <div>
-                        <div style={{ fontWeight: 500, fontSize: '0.875rem' }}>
+                        <div style={{ fontWeight: 500, fontSize: '0.875rem', color: 'var(--text)' }}>
                           5. Arrange external sub-rental
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #6b7280)' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
                           Secure stock from external partner.
                         </div>
                       </div>
@@ -326,17 +327,17 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
                       style={{
                         padding: '0.75rem',
                         borderRadius: 'var(--radius-sm, 6px)',
-                        backgroundColor: 'var(--surface-sunken, #f9fafb)',
+                        backgroundColor: 'var(--surface-2)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                       }}
                     >
                       <div>
-                        <div style={{ fontWeight: 500, fontSize: '0.875rem' }}>
+                        <div style={{ fontWeight: 500, fontSize: '0.875rem', color: 'var(--text)' }}>
                           6. Keep draft & contact client
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted, #6b7280)' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
                           Retain original details; create a staff follow-up note.
                         </div>
                       </div>
@@ -363,7 +364,7 @@ export const BookingConflictModal: React.FC<BookingConflictModalProps> = ({
             justifyContent: 'flex-end',
             gap: '0.75rem',
             paddingTop: 'var(--space-md, 1rem)',
-            borderTop: '1px solid var(--border-subtle, #e5e7eb)',
+            borderTop: '1px solid var(--border)',
           }}
         >
           <Button variant="ghost" onClick={onKeepDraft}>

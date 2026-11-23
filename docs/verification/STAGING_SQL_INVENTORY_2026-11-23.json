@@ -1,0 +1,1902 @@
+{
+  "title": "Staging SQL Inventory — 2026-11-23 (re-pin of the 21 Nov snapshot)",
+  "observed_date": "2026-11-23",
+  "source_main_commit": "4171ff75930af3bb24925740e207bb22553df0af",
+  "target_staging_project_ref": "klhmsrunqrdxjudyhnkm",
+  "protected_production_project_ref": "sxguwvgoserhdolewibb",
+  "migration_files": 266,
+  "live_recorded_history_count": 157,
+  "exact_name_matches": 148,
+  "source_without_exact_live_name": 116,
+  "live_without_exact_source_name": 9,
+  "policy": "Exact filename matches alone do not prove content identity or safe apply. Git blob hashes verify source bytes, NOT applied SQL equivalence. This inventory is not a staged migration execution authorization.",
+  "must_not_run_automatically": [
+    "0012_seed_data.sql",
+    "0047_seed_reference_corpus.sql",
+    "0082_seed_operational_stage_corpus.sql"
+  ],
+  "duplicate_numeric_prefix_exception": [
+    "0188_smart_reservation_holds.sql",
+    "0188_staff_renting_gear.sql"
+  ],
+  "files": [
+    {
+      "filename": "0001_enums.sql",
+      "git_blob_sha": "822ab6b60cf6de4f02814502764af0e6461ae124",
+      "bytes": 69161,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0002_bookings.sql",
+      "git_blob_sha": "5de6f3bbbb177a6168a7c0734e720181d906cfb7",
+      "bytes": 45587,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0003_operations.sql",
+      "git_blob_sha": "d2fb91b86814e9c3ee6630bd8db5536798b6d20a",
+      "bytes": 88767,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0004_inventory.sql",
+      "git_blob_sha": "ee3369d8fd2332ec31c0edd42d9bf973860b2c70",
+      "bytes": 36585,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0005_clients.sql",
+      "git_blob_sha": "c04af52a89e3184b70ffb0c79c609e1661b80d0e",
+      "bytes": 57235,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0006_finance.sql",
+      "git_blob_sha": "b71cef1ec279c6f46f032adf9f61acf2574ca108",
+      "bytes": 28849,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0007_admin_security.sql",
+      "git_blob_sha": "0ad38069541f65b7747ca55dcd1d7ae356a681dc",
+      "bytes": 18814,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0008_automation_comms.sql",
+      "git_blob_sha": "4189f955d7034bed06844c9e244987c4c23bf9d9",
+      "bytes": 10798,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0009_crew_vehicles.sql",
+      "git_blob_sha": "143bdc33f53487606791860462406b6e39389f19",
+      "bytes": 14013,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0010_triggers_functions.sql",
+      "git_blob_sha": "c62d506e801a70cbec359103a2ca5df260f36e1d",
+      "bytes": 12730,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0011_rls_policies.sql",
+      "git_blob_sha": "f3f5156ff6a1ed3a5b0689d6fb132a87f2ecfce2",
+      "bytes": 7039,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0012_seed_data.sql",
+      "git_blob_sha": "3e69f9cabf9df71f5a7ef2e371dfa6f89846d6f0",
+      "bytes": 9134,
+      "live_exact_name_found": true,
+      "review_state": "SEED_PRIVACY_SYNTHETIC_REPLACEMENT_REQUIRED"
+    },
+    {
+      "filename": "0013_business_8_roles.sql",
+      "git_blob_sha": "9ec373fde2a185ae2aad67c6f36773f7934d17fa",
+      "bytes": 4155,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0014_business_8_policies.sql",
+      "git_blob_sha": "ce55bbe19d9864bc8df02af423860f0221d3b98e",
+      "bytes": 7285,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0015_canonical_six_stages.sql",
+      "git_blob_sha": "7b27193d49c8c25a039ab28aaf7fccf39f6573db",
+      "bytes": 14325,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0016_late_fee.sql",
+      "git_blob_sha": "258dbcd0d6346b830a63e75a5c34e3e78735ba32",
+      "bytes": 13754,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0017_reopen_manager_role.sql",
+      "git_blob_sha": "289ba859d09625bcb59b3fc3efc40554171d4d29",
+      "bytes": 2040,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0018_manager_role_policies.sql",
+      "git_blob_sha": "09fbf4602d2d2c89299661f5d46392e0be7f2868",
+      "bytes": 8462,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0019_column_level_money_masking.sql",
+      "git_blob_sha": "ca564332e3ffc0734bc0833e2178efc9daf3c7eb",
+      "bytes": 12773,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0020_role_lookup_and_staff_retrofit.sql",
+      "git_blob_sha": "4cbe4bb852b072e45a50f8c673f0401c2ad16fe7",
+      "bytes": 6384,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0021_forward_only_stage_transitions.sql",
+      "git_blob_sha": "74e1fd707b24cdbedb210ab6a7cfacf806a49d9d",
+      "bytes": 11573,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0022_branch_zone_role_lookup_policies.sql",
+      "git_blob_sha": "7ed2388a9f123e59b03dd267526892c2a65cd498",
+      "bytes": 6110,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0023_cases_charges.sql",
+      "git_blob_sha": "7314adfc449191095996a2dde0e00445f65596aa",
+      "bytes": 15245,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0024_booking_subtable_policies.sql",
+      "git_blob_sha": "57c0edd60e47c3c51ce3e8527fb5a67a2f0d5f85",
+      "bytes": 6090,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0025_client_subtable_policies.sql",
+      "git_blob_sha": "44235dde02d6c1330f4f84c6fa05858f9d9a273a",
+      "bytes": 6327,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0026_operation_session_line_policies.sql",
+      "git_blob_sha": "6bc8edd3f025aeed070adde4b0b9d41f11a9147a",
+      "bytes": 4780,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0027_product_catalogue_policies.sql",
+      "git_blob_sha": "d0723ce0c74246453969fee392f37a1de8e3fb07",
+      "bytes": 3503,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0028_inventory_logistics_policies.sql",
+      "git_blob_sha": "e1d20e8dc1da085a75ea3d14d373211eaeb30a01",
+      "bytes": 5989,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0029_system_config_policies.sql",
+      "git_blob_sha": "2651dee05142ffe4aeb2963f45eee5f99179c23d",
+      "bytes": 4602,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0030_crew_scheduling_and_document_registry_policies.sql",
+      "git_blob_sha": "d44d9a5340fcabae6f78ea48427159718c68c1ea",
+      "bytes": 5427,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0031_cleaning_and_comms_policies.sql",
+      "git_blob_sha": "22b6751f517da142ef4f186428a20d2f1db3f969",
+      "bytes": 8294,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0032_hr_and_misc_operational_policies.sql",
+      "git_blob_sha": "80faab6f792e6dc7ea4b947cd4f801ddab500aa2",
+      "bytes": 8716,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0033_fleet_bundle_and_sequence_policies.sql",
+      "git_blob_sha": "490c74775e79ffda1ea31700a5fd475eba6c0a54",
+      "bytes": 4344,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0034_incident_and_crew_profile_policies.sql",
+      "git_blob_sha": "4b7fb153cc0696277ac79464e335a7ca4e2da608",
+      "bytes": 11600,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0035_accessory_bundle_and_ledger_masking.sql",
+      "git_blob_sha": "819a178ae47ff2b3340c359f613b9ccd75bbc20c",
+      "bytes": 7143,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0036_crew_booking_and_vehicle_expense_policies.sql",
+      "git_blob_sha": "8d305ec9c91c6ded7f6742e18938ac0b767a238d",
+      "bytes": 11463,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0037_client_commercial_and_coupon_policies.sql",
+      "git_blob_sha": "212e5671e8a3067370ce913f1d2354b2e6a90acd",
+      "bytes": 9867,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0038_client_money_masking_corrections.sql",
+      "git_blob_sha": "8b07b9d890093ef2cbc1c668d3f5d2e129cc5b11",
+      "bytes": 9386,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0039_client_channel_identity_masking.sql",
+      "git_blob_sha": "67fddb77cf2c450b7a3afbd7e5fd18e765a82cac",
+      "bytes": 4784,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0040_booqable_sync.sql",
+      "git_blob_sha": "13ae84530723deeb157062ae74c43722df4783fa",
+      "bytes": 13965,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0041_supabase_auth_bridge.sql",
+      "git_blob_sha": "5510493f2d71c426f7007fea883e4082439692eb",
+      "bytes": 3280,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0042_deferred_cross_file_fks.sql",
+      "git_blob_sha": "74adbf45b62873ed86a8d8b19fec440075d03413",
+      "bytes": 26518,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0043_booking_flags_overdue_rename.sql",
+      "git_blob_sha": "0dbc34c5b9f2f06a0e96fe8229e13eea67bd416c",
+      "bytes": 3662,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0044_law3_delete_backstops.sql",
+      "git_blob_sha": "778b43b7fafe9340d9fe7f10f5a7e975001a5153",
+      "bytes": 13816,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0045_reservation_capacity_ceiling.sql",
+      "git_blob_sha": "e0933ea2c48218d3358c00b821fa9b19b64bf3cf",
+      "bytes": 11184,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0046_law4_payment_and_audit_immutability_backstops.sql",
+      "git_blob_sha": "5af9ea9b114719f78cf23a544825a71362d4ad0d",
+      "bytes": 10197,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0047_seed_reference_corpus.sql",
+      "git_blob_sha": "fdfaa0ebee3069b78fc630c2d9542a308b710fe2",
+      "bytes": 1871590,
+      "live_exact_name_found": false,
+      "review_state": "GENERATED_CORPUS_QUARANTINE_REQUIRED"
+    },
+    {
+      "filename": "0048_view_row_predicates.sql",
+      "git_blob_sha": "1715dada273bb4cee05f5161f407d2e0d91c6bfc",
+      "bytes": 23603,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0049_evidence_and_crew_document_policies.sql",
+      "git_blob_sha": "3bf10647314bae57ab63f60229c786f08ec34fae",
+      "bytes": 8611,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0050_function_hardening.sql",
+      "git_blob_sha": "facb434598f6c1a582abf3221b5ab9ecedcd30fa",
+      "bytes": 10213,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0051_audit_trigger_column_safety.sql",
+      "git_blob_sha": "a0ecac538c553d21cce26e0c834a9583f3b631c5",
+      "bytes": 3942,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0052_client_directory_view.sql",
+      "git_blob_sha": "a6fab337a97ae6335dc5a9fb09ab6e9048081fab",
+      "bytes": 4813,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0053_client_directory_view_contacts_membership_kyc.sql",
+      "git_blob_sha": "2535440555fb6fd3307f70596bb8cdd4a8b2cd97",
+      "bytes": 6888,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0054_rls_backstops_and_directory_block_flag.sql",
+      "git_blob_sha": "4241611c9c6dea688796c0d3eb3b10960f0d59f5",
+      "bytes": 21230,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0055_ruled_identifier_formats.sql",
+      "git_blob_sha": "a53931204b88d574981dae323e9c9b298dbfbdc0",
+      "bytes": 11287,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0056_0_auth_role_falls_back_to_auth_uid.sql",
+      "git_blob_sha": "dfb6f045f8e0540afae81dfb5fde3d43ce65af77",
+      "bytes": 2788,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0057_damage_approval_rank.sql",
+      "git_blob_sha": "cf64b1b761b4b3cc74be1394b05eeab73757d497",
+      "bytes": 6732,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0058_late_fee_rank_and_approver_is_actor.sql",
+      "git_blob_sha": "3ae293b102eb9645b7c191d27b8334d417d464e8",
+      "bytes": 8512,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0059_users_self_read_accepts_auth_uid.sql",
+      "git_blob_sha": "d991d1999936ad537e981daed172562640c41833",
+      "bytes": 2779,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0060_staff_row_for_the_current_owner_identity.sql",
+      "git_blob_sha": "071b12f079b1621caaaf99d443ad591774ad7dfc",
+      "bytes": 3065,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0061_bookings_deposit_masking_view.sql",
+      "git_blob_sha": "6bfbdf3f386df60b8f69ddb664d6b2534d24b8a3",
+      "bytes": 4212,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0062_law6_column_grants_arm_the_mask.sql",
+      "git_blob_sha": "0032e092e17c704ba4e1d551a4de3f608799f3d1",
+      "bytes": 6015,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0063_create_booking_function.sql",
+      "git_blob_sha": "b1ffb1a154f15304e200335fef91bf13910627e2",
+      "bytes": 11175,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0064_narrow_purchase_approval.sql",
+      "git_blob_sha": "30c8b833498e86040fc4cb8820fe6575e62b25f1",
+      "bytes": 7245,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0065_arm_0062_prerequisites.sql",
+      "git_blob_sha": "ad2cc1067a3fe95044413497bb22cc218d3f5516",
+      "bytes": 13074,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0066_staff_auth_pins.sql",
+      "git_blob_sha": "8ca1bdcfc3fad7f2c1ea84dd96b476150ded39c0",
+      "bytes": 22419,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0067_staff_directory_view.sql",
+      "git_blob_sha": "7f13eb0708ef1e7b36cd44a301a787ad89139875",
+      "bytes": 5687,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0068_credential_audit.sql",
+      "git_blob_sha": "45074b53a71f752970f4d69442c16b0bf2a66afe",
+      "bytes": 7872,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0069_purchase_approval_owner_manager_only.sql",
+      "git_blob_sha": "7d0e95956cc88cfcaa5d547436f1bb855ac5ffd7",
+      "bytes": 7064,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0070_create_booking_parent_line_linkage.sql",
+      "git_blob_sha": "3f4b1972b85e166b62fb3e6c5d496f802dc97b3d",
+      "bytes": 13272,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0071_create_booking_units_at_creation.sql",
+      "git_blob_sha": "8053cc6c3532e93a7188476d2e2ca56a1feaa95f",
+      "bytes": 16285,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0072_portal_email_binding_policies.sql",
+      "git_blob_sha": "e8bb5d4774bb7193bb9f88de1012c4a8b5b6a21d",
+      "bytes": 18002,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0073_auth_role_resolves_without_pre_request_hook.sql",
+      "git_blob_sha": "ac86bf679563d8226bf18fa629f0f13639c443c4",
+      "bytes": 3200,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0074_drop_discount_gate.sql",
+      "git_blob_sha": "2dae52848c98388739cb9f4dab34651255e8d458",
+      "bytes": 7573,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0075_drop_invoice_lines_discount_gate.sql",
+      "git_blob_sha": "2e7c65524f387760528ca960c75e6d7732d664ec",
+      "bytes": 6095,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0076_booking_line_units_release.sql",
+      "git_blob_sha": "22dd75127063157fbb0a98add69d37f78a754316",
+      "bytes": 6201,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0077_law6_arm_the_four_unarmed_tables.sql",
+      "git_blob_sha": "323db634ae2d074459b5b8fd8772bb666a313f86",
+      "bytes": 29554,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0078_daily_closings.sql",
+      "git_blob_sha": "9a3b56bcffa5d5da8ca4690866468815e9961aa7",
+      "bytes": 19313,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0079_invoice_vat_rate_is_authoritative.sql",
+      "git_blob_sha": "49fc86410eec33e7fcb1178cd0feb6abf794d71e",
+      "bytes": 7991,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0080_draft_is_sticky.sql",
+      "git_blob_sha": "5aa4cee70f8cac19d1b34fb0dc21aa3a62954e1b",
+      "bytes": 5321,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0081_ruled_sequences_completion.sql",
+      "git_blob_sha": "300169cb9a6cbbf090096de27c8e314e13f1509e",
+      "bytes": 7777,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0082_seed_operational_stage_corpus.sql",
+      "git_blob_sha": "58ca57438dd5d4f1c4400f1c084922c25bb25242",
+      "bytes": 12391,
+      "live_exact_name_found": false,
+      "review_state": "HISTORICAL_BOOKING_CORPUS_QUARANTINE_REQUIRED"
+    },
+    {
+      "filename": "0085_booking_numbers_bare.sql",
+      "git_blob_sha": "870cd7ba62844245dacb078d15b64273a17b6572",
+      "bytes": 26318,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0086_invoice_write_rights_and_draft_without_number.sql",
+      "git_blob_sha": "136412712bfb523377d6cb6d9eec00842f3f58ca",
+      "bytes": 20066,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0087_payment_totals_exclude_refunds_and_net_reversals.sql",
+      "git_blob_sha": "d939a3793edd2badddf3291a3941bf5415c2622c",
+      "bytes": 14435,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0088_booking_no_numeric_index.sql",
+      "git_blob_sha": "53a3adf331f1309c24dad7c56b7d5a51efd1f3d0",
+      "bytes": 3070,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0089_next_document_number_never_truncates.sql",
+      "git_blob_sha": "e8f40b0aa6267d464178345e91f212c83dde85fe",
+      "bytes": 14329,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0090_r06_handover_money_gate_warns.sql",
+      "git_blob_sha": "4179425193bc4583b68edf0082fcf86834365ef0",
+      "bytes": 16060,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0091_audit_events_refuse_anonymous_writes.sql",
+      "git_blob_sha": "94d9d7baa2d5c98d14db011e1c44763ad601e2ec",
+      "bytes": 6035,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0092_law6_warehouse_cannot_rewrite_prices.sql",
+      "git_blob_sha": "ab72623103786967fd6f086afc6803453412cbb2",
+      "bytes": 11013,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0093_state_the_grants.sql",
+      "git_blob_sha": "b73839099f09c8edb01fc895000e26eb7f18e8b0",
+      "bytes": 13450,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0094_stage_is_written_only_by_its_transition.sql",
+      "git_blob_sha": "06ab45f2eba3c8de71be51af12466c5182fc5bd6",
+      "bytes": 13673,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0095_views_are_read_only.sql",
+      "git_blob_sha": "c7335526f8a655146966aeb3129adffe0bedd814",
+      "bytes": 21124,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0096_create_invoice_rpc.sql",
+      "git_blob_sha": "79f8c3105d28d81a9ba5b47c5bc2bd71c1e13aac",
+      "bytes": 41642,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0097_sync_cursors_are_server_written.sql",
+      "git_blob_sha": "a80f30950b93e4f225ba93541bedb5d101d8e2bf",
+      "bytes": 15986,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0098_invoice_totals_match_engine.sql",
+      "git_blob_sha": "67c0dff2126469c23790c3e2e1eb8715799d703d",
+      "bytes": 40109,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0099_create_booking_discount_audit_class.sql",
+      "git_blob_sha": "0bf91b81a07165e2679d33b0ea3d1c1bcc0f5017",
+      "bytes": 24905,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0100_reservations_written_by_transition.sql",
+      "git_blob_sha": "7a9403d6c2d347a9870313029b2c9e5f35853b2a",
+      "bytes": 40066,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0101_staff_roles_are_assignable.sql",
+      "git_blob_sha": "07aa3eabcb4d1055d54287be776298c46636a09b",
+      "bytes": 23386,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0102_law6_money_blind_cannot_write_booking_money.sql",
+      "git_blob_sha": "c1a22ac9f1a0a683283c87504f7ff068e8be4488",
+      "bytes": 13303,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0103_preventive_maintenance.sql",
+      "git_blob_sha": "e38f00c80463fbd09be6ffe0a6fb6c1ffe94110e",
+      "bytes": 25391,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0104_reservation_conflicts_are_recorded.sql",
+      "git_blob_sha": "14dfc5b5b209e9b94d5052520ac72c9b98eace47",
+      "bytes": 15238,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0105_stage_gate_requires_floor_rows.sql",
+      "git_blob_sha": "d462b97026ff36eca87b466bc0816add5394b834",
+      "bytes": 4786,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0106_close_gate_requires_invoice.sql",
+      "git_blob_sha": "7a3c5ef3c97943cc6ea6e59cb2f3562ae05547fd",
+      "bytes": 5976,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0107_payments_validation_guards.sql",
+      "git_blob_sha": "e08b2a0861d0c4a2b9d8fa9c07daeec87fc2f368",
+      "bytes": 2956,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0108_issue_invoice_rpc.sql",
+      "git_blob_sha": "19b93b8b3380b5f9232d2704c184dde52401038f",
+      "bytes": 6239,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0109_cancel_booking_rpc.sql",
+      "git_blob_sha": "5044fa42e63cd05a968c7cef6879b7a98b54a9b5",
+      "bytes": 6570,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0110_client_own_rows_rls.sql",
+      "git_blob_sha": "41cbe958d9639920a12dc46e6e9530c52fa73e93",
+      "bytes": 3079,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0111_extend_booking_rpc.sql",
+      "git_blob_sha": "50b83a62f2e30676dd8e033da8371bfb3dfbb9bb",
+      "bytes": 6920,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0112_partial_return_missing_case.sql",
+      "git_blob_sha": "0fa30edcd87171c9c0295063ecaa89c9270e1a1c",
+      "bytes": 4236,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0113_law17_delivery_type_client_pickup.sql",
+      "git_blob_sha": "19a1e1af76e39e146a7fd5a3897063eb832e2003",
+      "bytes": 841,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0114_unit_status_engine.sql",
+      "git_blob_sha": "ba3188a0e0077b91c7f961d2a0be28c70d34dd86",
+      "bytes": 16512,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0115_stage_gates.sql",
+      "git_blob_sha": "dcfd9a86811a1df91f859bea7ef4b9508f2be64a",
+      "bytes": 22120,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0116_close_gate.sql",
+      "git_blob_sha": "6f62246cd4d851ba48425b78c24ed193e447027f",
+      "bytes": 14639,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0117_invoice_void_discipline.sql",
+      "git_blob_sha": "6d8a1616819329d0c3002c923357987add61be23",
+      "bytes": 7972,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0118_payment_ceiling.sql",
+      "git_blob_sha": "5d41e7e3b0f733a610783144b0f8446ccc4063fe",
+      "bytes": 5539,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0119_server_side_prices.sql",
+      "git_blob_sha": "09080420c2a275ca2860f3badc8ba2fd65107b4d",
+      "bytes": 15319,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0120_users_visibility_and_role_ceiling.sql",
+      "git_blob_sha": "1ff0480f9d560be406e9d3c114527390a782d198",
+      "bytes": 7894,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0121_void_invoice_rpc.sql",
+      "git_blob_sha": "dff8e6813202631417ef22533f097aa12f66dcd0",
+      "bytes": 5354,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0122_inspection_operation_session.sql",
+      "git_blob_sha": "0b1df171bed91d61bea4b730ad327454f474e8d4",
+      "bytes": 729,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0123_categorize_equipment_inventory.sql",
+      "git_blob_sha": "c598c7b20c25b0851acfce5e2e00a29da749449d",
+      "bytes": 14870,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0124_reservations_follow_booking_dates.sql",
+      "git_blob_sha": "43d76911abea3cade98b4ad4e50922c1fde32a94",
+      "bytes": 3853,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0125_rental_drafts.sql",
+      "git_blob_sha": "44b269b0bded4f0d59b8298b97ce2fb674e54736",
+      "bytes": 4853,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0126_performance_indexes.sql",
+      "git_blob_sha": "6df2d3d51c7ee0959f1f4c5e671c92541c272bf6",
+      "bytes": 3213,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0127_query_optimization_indexes.sql",
+      "git_blob_sha": "310526f0dc921f6d7c467d3e232ead7d6c0350dc",
+      "bytes": 3168,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0128_transition_cinema_assets_to_serialized.sql",
+      "git_blob_sha": "0309895ce3c62d8d354ffce7a182754471597904",
+      "bytes": 7414,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0129_audit_logs_view.sql",
+      "git_blob_sha": "d194508d3d21254d15683dc2e38206888439abc4",
+      "bytes": 895,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0130_law6_arm_money_grants_remaining_tables.sql",
+      "git_blob_sha": "acd90cf3a556a9e46c05faa26aebb7b25d3dc978",
+      "bytes": 24498,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0131_close_gate_pending_damage.sql",
+      "git_blob_sha": "f24697e73043e4eeec7e1497a0f91ff02cdaa9cd",
+      "bytes": 16750,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0132_create_booking_crew_transport.sql",
+      "git_blob_sha": "d44d91c1fd8a32e4095c0482ea780b514adb2671",
+      "bytes": 20022,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0133_create_documents_storage_bucket.sql",
+      "git_blob_sha": "74f332ed6ff690859b7e36a585e82caf3bdae20d",
+      "bytes": 2576,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0134_bundle_items_soft_delete.sql",
+      "git_blob_sha": "31b2d397faeb03759e1ab5e5670dce49011f7de2",
+      "bytes": 1574,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0135_zero_value_close_override.sql",
+      "git_blob_sha": "43a0668b6c479998100c7d26e8bb9e584742aa29",
+      "bytes": 14938,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0136_payment_reversal_ceiling.sql",
+      "git_blob_sha": "37101292a5cab477aee32be11b2888b1bf174850",
+      "bytes": 2281,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0137_law17_delivery_method_client_pickup.sql",
+      "git_blob_sha": "a5776f250b8a7f5a7f1295b9dca20004193cf919",
+      "bytes": 1760,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0138_subrental_return_by_date.sql",
+      "git_blob_sha": "dde260275e6d0eaff8786bd3f3087438bf657edd",
+      "bytes": 591,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0139_return_gate_exempt_non_physical_lines.sql",
+      "git_blob_sha": "ac25ec297357a6857474110dae53405545ed68ef",
+      "bytes": 15109,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0140_stock_adjustments.sql",
+      "git_blob_sha": "5912c7490227f66c1f64b2c0a50c7394c3ecc20c",
+      "bytes": 5009,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0141_return_gate_consumable_exemption.sql",
+      "git_blob_sha": "6040b8f35253471108ef2fea6adba239f9f96596",
+      "bytes": 16183,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0142_consumable_stock_deduction_on_handover.sql",
+      "git_blob_sha": "178d668e33d158a43acef08d8f171dd39d2a9593",
+      "bytes": 7560,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0143_smart_intel_notes_fields.sql",
+      "git_blob_sha": "dee6e3cf925d2d97de46bcff2199f3f6cb35d577",
+      "bytes": 11773,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0144_booking_project_type.sql",
+      "git_blob_sha": "4930edde6d918a5ad5d0ed8355aadf1e54eb453a",
+      "bytes": 19548,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0145_document_registry_read_scope.sql",
+      "git_blob_sha": "8efe8e2fcae975185413226f01c9d26b1934ea28",
+      "bytes": 932,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0146_record_editor_transactions.sql",
+      "git_blob_sha": "e172419b636b0db9fbbc6d1976d6c6041ffafe06",
+      "bytes": 13888,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0147_quote_editor_transactions.sql",
+      "git_blob_sha": "ac5e38db82e8b83e675b8877a0eae6f999cbed09",
+      "bytes": 12047,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0148_view_anon_leak_closure.sql",
+      "git_blob_sha": "c75d80ae3d2e15f3baac8d51c2ea8b6cb42f2969",
+      "bytes": 28541,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0149_handover_gate_exempt_non_physical_lines.sql",
+      "git_blob_sha": "4bb1726b67bf51c5b9fdcb83a3f0f79d54e3bd5c",
+      "bytes": 16701,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0150_rpc_security_and_mutation_closure.sql",
+      "git_blob_sha": "bd7aac4df7373f76f17fde86c2bbf9d06c0d1fae",
+      "bytes": 22127,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0151_payment_numbering_short_format.sql",
+      "git_blob_sha": "7d8ccdaaf3741de0848b5c5157b1b509faf0a98a",
+      "bytes": 1583,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0152_harden_storage_policies_revoke_anon.sql",
+      "git_blob_sha": "138342651ddcad17bcb425ad58d464556657c791",
+      "bytes": 2648,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0153_record_editor_fixes.sql",
+      "git_blob_sha": "6f46e37c7cbe5805a6f1b134f8d8a311c191f832",
+      "bytes": 17733,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0154_operation_sessions_audit_trigger.sql",
+      "git_blob_sha": "7b2b81e62f2b537abafc66d210e267daa8e016ea",
+      "bytes": 1821,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0155_close_deposit_skip_with_reason.sql",
+      "git_blob_sha": "7589956b5f806967056be444bc885482aebe899e",
+      "bytes": 18531,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0156_operation_session_audit_actor.sql",
+      "git_blob_sha": "bf275cb8600f1824c8223bd4d7339b4677b150ea",
+      "bytes": 3175,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0157_audit_triggers_for_trigger_less_tables.sql",
+      "git_blob_sha": "166450092400509318fa338243656514fb8f3fce",
+      "bytes": 4202,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0158_settings_table.sql",
+      "git_blob_sha": "c4f3a82afb8ed9848dd7202f6047304a5611e09e",
+      "bytes": 10752,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0159_saved_views.sql",
+      "git_blob_sha": "204eb2b16c9970051932415ba010683f5a1a80ed",
+      "bytes": 11972,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0160_pricing_structures.sql",
+      "git_blob_sha": "c12cc0c75f5f82e8c5bf1415cdc58c4ad43365fa",
+      "bytes": 11531,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0161_grant_booking_project_type.sql",
+      "git_blob_sha": "866ba47d95785eddcd24edc30920c714a06685c0",
+      "bytes": 2001,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0162_grant_non_money_columns.sql",
+      "git_blob_sha": "995bd6fa2f96b728393aea0ffa50db7a6809d8a2",
+      "bytes": 1763,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0163_close_six_anon_business_rpcs.sql",
+      "git_blob_sha": "0bd521b96f6cedbe44f1a72fbffbb65d71049f13",
+      "bytes": 3546,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0164_booking_discount_vat_payment_integrity.sql",
+      "git_blob_sha": "b09a261ef31eacafe6d0cdd10cc6b9f371ace031",
+      "bytes": 39157,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0165_delivery_jobs_and_event_rpc.sql",
+      "git_blob_sha": "5f46d2a84d9aa590bce91cc50c235c96796d8b99",
+      "bytes": 15140,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0166_booking_transport_dispatch.sql",
+      "git_blob_sha": "cea261e57222bbce2740c08e6885118d14856ea8",
+      "bytes": 8289,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0167_rental_revert_archive.sql",
+      "git_blob_sha": "d3f0f75f51326ba8c63feb2ae769b9aed0f456a8",
+      "bytes": 10883,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0168_booking_line_totals_and_breakdown.sql",
+      "git_blob_sha": "199b096e536b41404b70b32d04d206cedbe361f3",
+      "bytes": 42802,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0169_pin_intel_and_guard_search_paths.sql",
+      "git_blob_sha": "036e6e3b562f5cbf33383fb52565edff4d5c708d",
+      "bytes": 2275,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0170_astra_phase0_authorization.sql",
+      "git_blob_sha": "449cfde4ea72a90f671354b41998bde3997a4f9c",
+      "bytes": 13799,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0171_operations_branch_grants.sql",
+      "git_blob_sha": "24637225d0cccb2f8af6ef7ac00742714e38a520",
+      "bytes": 30878,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0172_reset_branch_write_boundary.sql",
+      "git_blob_sha": "ee3376f56e8875170d44619db95bee135089f8eb",
+      "bytes": 3506,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0173_section_saves_and_unit_lifecycle.sql",
+      "git_blob_sha": "3f8098540980b3db823d64176dcf9fb2e74fd6ae",
+      "bytes": 22523,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0174_change_client_membership.sql",
+      "git_blob_sha": "0ad69c3dee0575beda8ede785790dbae5d23c4b2",
+      "bytes": 6868,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0176_partial_return_reservation_release.sql",
+      "git_blob_sha": "39720c3f72a9e6e62993737d3fdd74cbd236545a",
+      "bytes": 12342,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0177_verified_return_reservations.sql",
+      "git_blob_sha": "269360bfac5478a4c8146c1d5af23298882f9f16",
+      "bytes": 19712,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0178_quantity_only_reset.sql",
+      "git_blob_sha": "52b72a893b54395423a19bebf5c455b72db96b3f",
+      "bytes": 2888,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0179_gate1_override_by_handover_staff.sql",
+      "git_blob_sha": "1db4c3d105a4e49944e3ba73d02942ff11670599",
+      "bytes": 20782,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0180_technician_floor_verbs.sql",
+      "git_blob_sha": "802179bdb5c349d2094fb44ba83cf32d11a52d3e",
+      "bytes": 5315,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0181_collateral_deposit_id_card.sql",
+      "git_blob_sha": "ba948d4e7558d629748727956fd4ffa9793fecca",
+      "bytes": 25124,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0182_client_collectors_and_id_on_file.sql",
+      "git_blob_sha": "2db875c17dd9e370d8c50d5b64ea45262748f993",
+      "bytes": 10101,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0183_reset_self_qc_when_alone.sql",
+      "git_blob_sha": "68d8c187c097bad5050ef9bf7c01fdf45352981b",
+      "bytes": 1041,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0184_repair_job_closes_damage.sql",
+      "git_blob_sha": "93e4103e13d0d49a4c582d8b2f1274f97f264226",
+      "bytes": 21914,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0185_team_notes.sql",
+      "git_blob_sha": "54f64790bb7585294edf840c937283f48373038e",
+      "bytes": 13934,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0186_shift_handovers.sql",
+      "git_blob_sha": "f25c3e8fb011f0c95d88cbe483fbc6ef00a4d663",
+      "bytes": 19114,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0187_delivery_dispatch_rpcs.sql",
+      "git_blob_sha": "f7e04abfc48dbd0fd39ca564d85074b1d94f824c",
+      "bytes": 12285,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0188_smart_reservation_holds.sql",
+      "git_blob_sha": "15efbaf597ee7f9d1402c29ca38321cb80e22953",
+      "bytes": 15989,
+      "live_exact_name_found": false,
+      "review_state": "DUPLICATE_PREFIX_ORDER_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0188_staff_renting_gear.sql",
+      "git_blob_sha": "d4dc4b88a480e49b467921ac2c5a43a1ce2b8406",
+      "bytes": 8938,
+      "live_exact_name_found": false,
+      "review_state": "DUPLICATE_PREFIX_ORDER_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0189_delivery_zones.sql",
+      "git_blob_sha": "57b6724b1b81ef92de1dedcd99759a85ad5bc504",
+      "bytes": 10815,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0190_one_time_rider_links.sql",
+      "git_blob_sha": "e806bc95358a11f5688199c0fe647228b45e4b26",
+      "bytes": 20219,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0191_delivery_reschedule_job.sql",
+      "git_blob_sha": "0f52c00d0c52b26950ef27367bbceb84852e3d0e",
+      "bytes": 3778,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0192_notification_records.sql",
+      "git_blob_sha": "126a2e4e41491c1b312972a64b452dd873ca6d66",
+      "bytes": 12686,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0193_invoice_write_hardening.sql",
+      "git_blob_sha": "a0c85ec03ad2430b34362a237504df0317f5c72e",
+      "bytes": 22651,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0194_reset_damage_opens_case.sql",
+      "git_blob_sha": "ce9eff6d3b069819702d5cbef461cf1562c71c75",
+      "bytes": 9902,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0195_load_membership_plans.sql",
+      "git_blob_sha": "2fb906a1840573b8767e49719268e8111636a926",
+      "bytes": 3791,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0196_membership_plans_admin.sql",
+      "git_blob_sha": "bd36eedf6b21cef958256fa0e40ac96e033f1017",
+      "bytes": 14640,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0197_membership_plan_change_credit.sql",
+      "git_blob_sha": "a63323ee14dd63e6b4acfe138c23d934a9b563b1",
+      "bytes": 13381,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0198_renew_client_membership.sql",
+      "git_blob_sha": "9a34ff1aa933ef2d0914dd136c76efcdf4e72133",
+      "bytes": 12205,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0199_tds_on_crew_payouts.sql",
+      "git_blob_sha": "bd9d3bb4d83c568725911812fc6fa5d3836c4259",
+      "bytes": 8564,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0200_draft_at_confirm_and_resync.sql",
+      "git_blob_sha": "905665e4bf89db47a22628106eb9896ae01ba0e8",
+      "bytes": 20445,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0201_fix_collateral_masking_chars.sql",
+      "git_blob_sha": "42ca77516dba4f71f972e9c8017d721e5437a724",
+      "bytes": 1701,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0202_staff_discount_is_money_setting.sql",
+      "git_blob_sha": "6ae06bb2972bcbf8c2f8ee421acefd37ef6cd84e",
+      "bytes": 1745,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0203_restore_driver_client_view_scopes.sql",
+      "git_blob_sha": "ec697f8ee1133d2df6e6928103fe1a41ba7225af",
+      "bytes": 2179,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0204_rider_link_v2_contract_fix.sql",
+      "git_blob_sha": "196772678757f1f7c2b6c95fbb751d600ee85fa9",
+      "bytes": 11230,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0205_extend_booking_without_draft.sql",
+      "git_blob_sha": "51451da0b3e0fe992439d4e55a2fc3d64039c310",
+      "bytes": 9303,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0206_delivery_route_map_pins.sql",
+      "git_blob_sha": "68cbcc455e3a935dad8f1f257f859eab5f7ebaf4",
+      "bytes": 10932,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0207_crew_overtime_half_full_day.sql",
+      "git_blob_sha": "b2e24440cf35bd75f62952be1aafffa9ae311130",
+      "bytes": 3343,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0208_staff_pin_four_digits.sql",
+      "git_blob_sha": "3ba00a60e3292fedbeca02b109e35e37d5451446",
+      "bytes": 10656,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0209_calendar_feed_tokens.sql",
+      "git_blob_sha": "e93c3effef7944bdfefd689181963b59b32cab12",
+      "bytes": 13239,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0210_problem_reports.sql",
+      "git_blob_sha": "84450b4e4ee7256a8961d3d289a9ab691fa2b00a",
+      "bytes": 19878,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0211_delivery_proof.sql",
+      "git_blob_sha": "8f64c78943f5e3868d6beffc782a5fd78cf09ccc",
+      "bytes": 6187,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0212_cancellation_fee_tiers.sql",
+      "git_blob_sha": "bd0c9f8a3649c10eab3e9a8232af2f649033fcea",
+      "bytes": 2706,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0213_non_vat_bills.sql",
+      "git_blob_sha": "30dc3ed205e7445d4cc05ab8824ff0c07e80e4b6",
+      "bytes": 2415,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0214_opening_balances.sql",
+      "git_blob_sha": "ce009781243099efad72b8bd326ebb7401934fda",
+      "bytes": 2929,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0215_email_sending_and_log.sql",
+      "git_blob_sha": "d635e50fbfde499f69b87c4af019436f81f40859",
+      "bytes": 12687,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0216_morning_digest_schedule_and_query.sql",
+      "git_blob_sha": "6c7caeede415b5da45d77ff1336fcece16c5022f",
+      "bytes": 10911,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0217_notification_preferences.sql",
+      "git_blob_sha": "31aa2fa2173ebfc327c826407e1095c36a1816f3",
+      "bytes": 12818,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0218_client_message_events.sql",
+      "git_blob_sha": "bf225d603cf8af8f6ce186f19f49665f83f34ceb",
+      "bytes": 26297,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0219_payment_reminders.sql",
+      "git_blob_sha": "0535d02fd4b7112bc3a5289c709be929b01db899",
+      "bytes": 27671,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0220_push_subscriptions.sql",
+      "git_blob_sha": "c709430a1092d7c42200a48cb39deff075a37526",
+      "bytes": 15428,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0221_guard_unit_identity_edits.sql",
+      "git_blob_sha": "766be5918e7695376b025f776e9e26307315e9c6",
+      "bytes": 2965,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0222_repair_confirm_booking_atomic_and_reservation_dedup.sql",
+      "git_blob_sha": "443f45f7a797ff357a48b44f7efd99a99b80fb1c",
+      "bytes": 12682,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0223_product_aliases.sql",
+      "git_blob_sha": "b9d209d6ab5c47d87e3a166e4262082539f3ab73",
+      "bytes": 9458,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0224_offer_campaigns_and_recipients.sql",
+      "git_blob_sha": "57d4eb9221094b1bc38b54ee4bce0b31dd529d5d",
+      "bytes": 20716,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0225_owner_approved_glossary_revisions.sql",
+      "git_blob_sha": "c681744378dcb60cb7d03759c3ebc931c31f58b7",
+      "bytes": 27051,
+      "live_exact_name_found": true,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0226_bulk_update_products.sql",
+      "git_blob_sha": "814bf66bd7bf25b0ee3f41c20ee32db1ababb574",
+      "bytes": 7261,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0227_message_templates.sql",
+      "git_blob_sha": "0112670b1e4b7265d6957dfff50058dbd8142d8f",
+      "bytes": 19214,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0228_membership_change_keep_join_date.sql",
+      "git_blob_sha": "74dc9ad5cbabca226192a8b349f7ac2e4280fe4f",
+      "bytes": 13327,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0229_booking_tags.sql",
+      "git_blob_sha": "e9f38e41986f45aadcdf53c5b18f21f19966140a",
+      "bytes": 5364,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0230_project_name_and_shoot_location.sql",
+      "git_blob_sha": "b18c5437d471542009aa18c593189f108330ea26",
+      "bytes": 33598,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0231_pro_forma_document_type.sql",
+      "git_blob_sha": "5a644811ac8c94ecf7e18886dd3a63783b0225f2",
+      "bytes": 1641,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0232_secure_temporary_hold_rpcs.sql",
+      "git_blob_sha": "6f3e10a372ef905f04b87ebbf84dfd457615b895",
+      "bytes": 16206,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0233_extend_booking_and_resync_auth.sql",
+      "git_blob_sha": "e26cb4ffdd09ddd4caa7a657b6109ca24cf8f724",
+      "bytes": 6515,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0234_return_damage_photo_per_unit.sql",
+      "git_blob_sha": "599e43fb1a535c4a193f7e7a9467e4bd703aee37",
+      "bytes": 2428,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0235_delivery_route_branch_hardening.sql",
+      "git_blob_sha": "660d05098ce1efbcf1562c4c2a5ac68657684e34",
+      "bytes": 5690,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0236_opening_balances_append_only.sql",
+      "git_blob_sha": "fb11efb39801d124bb533c19e6b6b23e2cb6039c",
+      "bytes": 838,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0237_planned_equipment_downtime.sql",
+      "git_blob_sha": "2b357d25c4288a2a7d0629112332404e33e29ce2",
+      "bytes": 10671,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0238_rental_day_start_setting.sql",
+      "git_blob_sha": "ea808888469fbcde8f7b83aa757b82e13c55e926",
+      "bytes": 29593,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0239_consumables_pricing_restock_and_low_stock.sql",
+      "git_blob_sha": "f0e3c25b9b11d67280c40e16ddc05629a52ce79b",
+      "bytes": 50940,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0240_time_between_rentals.sql",
+      "git_blob_sha": "93e2623c341fd346798403eef9be3825c4ed7fe6",
+      "bytes": 17079,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0241_extension_clash_manager_decision_and_at_risk.sql",
+      "git_blob_sha": "64baf789994b02b29bd2886ed259bfa461a6c770",
+      "bytes": 24724,
+      "live_exact_name_found": false,
+      "review_state": "P0_RBAC_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0242_return_damage_signature_and_refusal.sql",
+      "git_blob_sha": "d977e39bb265f57516cf219db9a999578864aab1",
+      "bytes": 4711,
+      "live_exact_name_found": false,
+      "review_state": "CONTENT_EQUIVALENCE_AND_DEPENDENCY_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0243_change_confirmed_booking.sql",
+      "git_blob_sha": "0081d0b95717919a4aa678efe0f5f99c19aaf54d",
+      "bytes": 43826,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0244_counter_sale.sql",
+      "git_blob_sha": "5db7285acfcadf53e7b2f36f67e01b65d8f003c5",
+      "bytes": 18912,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0245_delivery_zone_vehicle_fee_grid.sql",
+      "git_blob_sha": "04049d2f473ce42e347b68e2824d5e1a843e0acb",
+      "bytes": 7688,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0246_dispatch_zone_fee_from_grid.sql",
+      "git_blob_sha": "a47acf5a3c8a5d2039392fdfc85ded6e69a54ecd",
+      "bytes": 11226,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0247_retire_per_zone_fee_on_create.sql",
+      "git_blob_sha": "b8611aa9cdbb2e059baf6af487e5a69d2151b0ab",
+      "bytes": 3877,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0248_delivery_zone_distance_band.sql",
+      "git_blob_sha": "0a9881f66274a8d40ff5824cd7e6c908ca70731e",
+      "bytes": 5785,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0249_late_night_delivery_is_money_setting.sql",
+      "git_blob_sha": "cc589c7e60bec4735e05c9597b9dc66a29ec951e",
+      "bytes": 1625,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0250_outsourced_vehicle_quote.sql",
+      "git_blob_sha": "83f752190169c3aa638028a89ec74510d56824b9",
+      "bytes": 8413,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0251_waiting_charge_line.sql",
+      "git_blob_sha": "95e705b2165d3bd3cff4b39f279b98aaf79deef6",
+      "bytes": 8218,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0252_allow_overbooking_on_chosen_products.sql",
+      "git_blob_sha": "8080cdc00e52512b3e28910dcae930a75d00ed73",
+      "bytes": 31660,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0253_temporary_stock_from_partners.sql",
+      "git_blob_sha": "682bfdc9401e36be3b4079e2b1e947f1c522bbb0",
+      "bytes": 29656,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0254_draft_invoice_resync_integrity_and_settlement_numbering.sql",
+      "git_blob_sha": "ecddb39ddda7ffaa157bced569cf52fb0bab3310",
+      "bytes": 19787,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0255_booking_site_and_public_catalogue.sql",
+      "git_blob_sha": "f77787ecfb3570c0f02dfda7a42a9b025397f6f3",
+      "bytes": 13665,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0256_booking_requests_and_staff_queue.sql",
+      "git_blob_sha": "c96dcbb407ba75090a5d032b647f885b32464870",
+      "bytes": 12601,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0257_client_accounts_and_portal_binding.sql",
+      "git_blob_sha": "6821fe65a5feff98eb7e6a55f4974c4893747501",
+      "bytes": 19083,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0258_payment_intents_and_fonepay.sql",
+      "git_blob_sha": "5c3dcfb04e87b7fce5942dcf4d4071ee18d56983",
+      "bytes": 19033,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0259_payment_link_from_any_booking.sql",
+      "git_blob_sha": "a0c3f84265a055b44f80c17048cf03996cd7f796",
+      "bytes": 14415,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0260_online_payment_refunds_and_reconciliation.sql",
+      "git_blob_sha": "e6ca4701fff45a78ce7faeb777e7920dbf96fe73",
+      "bytes": 8736,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0261_external_holds_and_double_booking_prevention.sql",
+      "git_blob_sha": "271f53a5ad605ec466a267490e86f5867a2fcf79",
+      "bytes": 11892,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0262_online_booking_away_mode.sql",
+      "git_blob_sha": "1f86465ad22a492b93c52827865a739900d47cb6",
+      "bytes": 11856,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0263_product_families.sql",
+      "git_blob_sha": "32fc6da9af3eb8c26d00cbfe01adbdc30a672a40",
+      "bytes": 5352,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0264_public_product_family_options.sql",
+      "git_blob_sha": "fcaf21f891940d40f1f12a57305d5555263e89a6",
+      "bytes": 1644,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0265_submit_request_rates_in_paisa.sql",
+      "git_blob_sha": "37c35abdef214d2666cfd92047c193ca44605ef9",
+      "bytes": 7707,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0266_manager_approvals_to_owner.sql",
+      "git_blob_sha": "3aa01e389e89ffc70096ba7ae83542a510c7d01b",
+      "bytes": 3354,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0267_database_enforced_aal2_money_roles.sql",
+      "git_blob_sha": "6c13c7923d96e6f4670558b872d2c1499300354d",
+      "bytes": 11232,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    },
+    {
+      "filename": "0268_sign_in_events_and_new_device.sql",
+      "git_blob_sha": "f3fa84b9e59b2756b4a0d3d5cabc5a453909f36f",
+      "bytes": 7317,
+      "live_exact_name_found": false,
+      "review_state": "NEW_MIGRATION_REVIEW_REQUIRED"
+    }
+  ],
+  "historical_live_comparison_observed_date": "2026-11-20",
+  "historical_live_comparison_source_commit": "docs/live/schema_migrations_2026-11-20.txt",
+  "current_live_ledger_rechecked": false,
+  "historical_comparison_note": "Counts compare source filenames against docs/live/schema_migrations_2026-11-20.txt (production ledger snapshot, 20 Nov). No live ledger read on 2026-11-23, no SQL equivalence, no dependency validation, no hosted apply authorization. Generated by scripts/build-staging-inventory.mjs. The 21 Nov snapshot records source_without_exact_live_name 109 where the same method gives 110 (148 + 110 = 258); that figure is not corrected here.",
+  "source_drift_since_prior_snapshot": {
+    "prior_snapshot_date": "2026-11-21",
+    "prior_snapshot_commit": "3a8d90b9fa197d1a69326483a89140e404385b85",
+    "added_files": [
+      "0263_product_families.sql",
+      "0264_public_product_family_options.sql",
+      "0265_submit_request_rates_in_paisa.sql",
+      "0266_manager_approvals_to_owner.sql"
+    ],
+    "changed_files": [],
+    "removed_files": []
+  }
+}

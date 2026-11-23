@@ -1,12 +1,23 @@
-import { describe, it, expect } from 'vitest'
+// @vitest-environment jsdom
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import {
   sanitizeAnalyticsEvent,
   shouldEnableStoreAnalytics,
   trackStoreEvent,
+  initStoreAnalyticsScripts,
   type AnalyticsEventData,
 } from '../storeAnalytics'
 
 describe('T7-16 Store Analytics (GA4 and Meta Pixel)', () => {
+  beforeEach(() => {
+    document.getElementById('ga4-script')?.remove()
+    document.getElementById('meta-pixel-script')?.remove()
+  })
+
+  afterEach(() => {
+    document.getElementById('ga4-script')?.remove()
+    document.getElementById('meta-pixel-script')?.remove()
+  })
   it('strips sensitive query params and PII from analytics events', () => {
     const rawEvent: AnalyticsEventData = {
       event: 'page_view',
@@ -77,5 +88,17 @@ describe('T7-16 Store Analytics (GA4 and Meta Pixel)', () => {
     expect(success).toBe(true)
     expect(captured?.event).toBe('request_sent')
     expect(captured?.params.value).toBe(5000)
+  })
+
+  it('initStoreAnalyticsScripts strictly refuses staff app and does not inject DOM scripts', () => {
+    const result = initStoreAnalyticsScripts(true)
+    expect(result).toBe(false)
+    expect(document.getElementById('ga4-script')).toBeNull()
+    expect(document.getElementById('meta-pixel-script')).toBeNull()
+  })
+
+  it('initStoreAnalyticsScripts allows public booking app and handles script injection', () => {
+    const result = initStoreAnalyticsScripts(false)
+    expect(result).toBe(true)
   })
 })

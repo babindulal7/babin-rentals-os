@@ -81,6 +81,7 @@ const OperationsQueues  = lazy(() => import('./modules/operations/OperationsQueu
 const Finance           = lazy(() => import('./modules/finance/Finance'))
 const Settings          = lazy(() => import('./modules/settings/Settings'))
 const ToolsLanding      = lazy(() => import('./modules/tools/ToolsLanding'))
+const TrainingCenter    = lazy(() => import('./modules/intelligence/TrainingCenter'))
 const Clients           = lazy(() => import('./modules/clients/Clients'))
 const ClientDetail      = lazy(() => import('./modules/clients/ClientDetail'))
 const CasesWorkspace    = lazy(() => import('./modules/operations/CasesWorkspace').then(m => ({ default: m.CasesWorkspace })))
@@ -95,6 +96,7 @@ const InternalNotesPage = lazy(() => import('./modules/notes/InternalNotesPage')
 const RiderDeliveryPage = lazy(() => import('./modules/operations/RiderDeliveryPage'))
 const ApprovalsInbox    = lazy(() => import('./modules/approvals/ApprovalsInbox'))
 const UnsubscribePage   = lazy(() => import('./modules/communication/UnsubscribePage').then(m => ({ default: m.UnsubscribePage })))
+const PaymentLinkPage   = lazy(() => import('./booking/pay/PaymentLinkPage').then(m => ({ default: m.PaymentLinkPage })))
 const OfferCampaigns   = lazy(() => import('./modules/communication/OfferCampaigns').then(m => ({ default: m.OfferCampaigns })))
 
 function FinanceTabRedirect({ tab }: { tab: FinanceTabSlug }) {
@@ -179,6 +181,9 @@ export default function App() {
         <Route path="/rider" element={<Suspense fallback={AuthFallback}><RiderDeliveryPage /></Suspense>} />
         {/* Public Marketing Unsubscribe route (T5-12, K6): unauthenticated, token-hashed */}
         <Route path="/unsubscribe" element={<Suspense fallback={AuthFallback}><UnsubscribePage /></Suspense>} />
+        {/* Public Payment Link route (T7-15): unauthenticated, token-hashed */}
+        <Route path="/pay/link" element={<Suspense fallback={AuthFallback}><PaymentLinkPage /></Suspense>} />
+        <Route path="/pay/link/:token" element={<Suspense fallback={AuthFallback}><PaymentLinkPage /></Suspense>} />
         <Route path="/" element={<Navigate to={user ? defaultNavTarget(user.role) : '/login'} replace />} />
 
         {/*
@@ -864,6 +869,18 @@ export default function App() {
 
         <Route path="/tools/depreciation" element={<Navigate to="/tools?tab=depreciation" replace />} />
         <Route path="/tools/pricing" element={<Navigate to="/tools?tab=pricing" replace />} />
+
+        {/* ── Intelligence Training Center (TQC-01) ────────────────────── */}
+        <Route path="/intelligence" element={<Navigate to="/intelligence/training-center" replace />} />
+        <Route
+          path="/intelligence/training-center"
+          element={
+            <Shell crumbs={[{ label: 'Intelligence' }, { label: 'Training Center' }]} search="Search intelligence…">
+              <TrainingCenter />
+            </Shell>
+          }
+        />
+        <Route path="/tools/training-center" element={<Navigate to="/intelligence/training-center" replace />} />
 
         {/* Marketing / Communication Offer Campaigns (T5-12, B43, B50) */}
         <Route

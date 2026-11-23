@@ -7,8 +7,8 @@ const mockState = vi.hoisted(() => ({
       id: 'booking-uuid-1',
       booking_no: 'BK-2026-0001',
       client_id: 'client-uuid-1',
-      project_name: 'Kathmandu Indie Film',
-      deposit_required: 5000000,
+      project_title: 'Kathmandu Indie Film',
+      location: 'Kathmandu',
     },
   ],
   clients: [
@@ -84,6 +84,10 @@ vi.mock('../../../lib/supabase', () => ({
               }),
             }),
             maybeSingle: async () => {
+              if (table === 'bookings') {
+                const b = mockState.bookings.find((item) => item.id === val || item.booking_no === val)
+                return { data: b || null, error: null }
+              }
               if (table === 'clients') {
                 const cl = mockState.clients.find((c) => c.id === val)
                 return { data: cl || null, error: null }

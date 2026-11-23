@@ -36,6 +36,8 @@
     "check:pglite": "node scripts/check-pglite.mjs",
     "check:lifecycle": "node scripts/e2e-lifecycle.mjs",
     "check:dump": "node scripts/check-dump.mjs",
+    "test:backup": "node --test scripts/backup-db.test.mjs && node --test scripts/check-dump.test.mjs",
+    "test:staging-preflight": "node --test scripts/staging-schema-preflight.test.mjs && node --test scripts/verify-staging-readonly.test.mjs",
     "completion": "node scripts/completion.mjs",
     "lint:progress": "node scripts/lint-progress.mjs",
     "lint:shell": "node scripts/check-page-shell-lint.mjs",
@@ -63,8 +65,15 @@
     "i18n:import": "node scripts/i18n-review-import.mjs",
     "check:fixtures": "node scripts/check-no-fixtures.mjs",
     "check:security": "node scripts/check-astra-phase0.mjs && npm run test:operations-grants && node scripts/test-reset-branch-boundary.mjs && node scripts/test-glossary-revisions.mjs",
+    "test:online-booking-n7-review": "node scripts/test-online-booking-n7-review.mjs",
+    "test:away-mode-db-gate": "node scripts/test-away-mode-db-gate.mjs",
+    "test:mfa-db-gate": "node scripts/test-mfa-db-gate.mjs",
+    "test:login-audit-db-gate": "node scripts/test-login-audit-db-gate.mjs",
     "db:plan:reviewed": "node scripts/plan-migrations.mjs --accept-rename",
-    "test:db-plan-safety": "node --test scripts/plan-migrations-safety.test.mjs"
+    "test:db-plan-safety": "node --test scripts/plan-migrations-safety.test.mjs",
+    "build:staff": "node scripts/check-site-env.mjs staff && tsc --noEmit && vite build --mode staff && node scripts/finalize-site-build.mjs staff && node scripts/verify-site-builds.mjs staff",
+    "build:client": "node scripts/check-site-env.mjs client && tsc --noEmit && vite build --mode client && node scripts/finalize-site-build.mjs client && node scripts/verify-site-builds.mjs client",
+    "verify:sites": "node scripts/verify-site-builds.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
