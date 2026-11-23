@@ -422,9 +422,9 @@ export function TextsPane() {
                   style={{
                     padding: '10px 14px',
                     borderRadius: 'var(--r-sm)',
-                    background: 'rgba(34, 197, 94, 0.1)',
-                    border: '1px solid rgba(34, 197, 94, 0.3)',
-                    color: '#15803d',
+                    background: 'var(--success-surface, rgba(34, 197, 94, 0.1))',
+                    border: '1px solid var(--success-border, rgba(34, 197, 94, 0.3))',
+                    color: 'var(--success-text)',
                     fontSize: 'var(--t-body)',
                   }}
                 >

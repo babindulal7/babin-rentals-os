@@ -168,7 +168,7 @@ function TaskCard({
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.background = 'var(--primary)'
-          e.currentTarget.style.color = '#fff'
+          e.currentTarget.style.color = 'var(--on-primary, #ffffff)'
           e.currentTarget.style.borderColor = 'var(--primary)'
         }}
         onMouseLeave={(e) => {

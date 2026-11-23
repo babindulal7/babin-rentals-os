@@ -171,8 +171,8 @@ export const OnlineRequestsQueue: React.FC = () => {
                         <span
                           style={{
                             display: 'inline-block',
-                            background: 'rgba(234, 179, 8, 0.25)',
-                            color: '#b45309',
+                            background: 'var(--warn-surface, rgba(234, 179, 8, 0.25))',
+                            color: 'var(--warn-text)',
                             padding: '2px 6px',
                             borderRadius: '4px',
                             fontSize: '0.7rem',
