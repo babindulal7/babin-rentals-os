@@ -8,6 +8,21 @@ import type { NavSection, NavGroup } from '../../data/nav'
 import { useAuth } from '../../lib/auth'
 import { useCollapsed } from '../../lib/collapse'
 import { useViewport } from '../../lib/device'
+import { useTranslation } from '../../lib/i18n'
+
+const NAV_LABEL_KEYS: Record<string, string> = {
+  '/rentals/new': 'nav.newRental',
+  '/today': 'nav.today',
+  '/operations': 'nav.operations',
+  '/rentals': 'nav.rentals',
+  '/calendar': 'nav.calendar',
+  '/crew': 'nav.crewAssist',
+  '/inventory': 'nav.inventory',
+  '/clients': 'nav.clients',
+  '/finance': 'nav.finance',
+  '/tools': 'nav.tools',
+  '/settings': 'nav.settings',
+}
 
 /**
  * The application navigation is part of the same shell system as filters and
@@ -318,6 +333,7 @@ function NavList({
   activeTo: string | null
   rail: boolean
 }) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [hint, setHint] = useState<{ label: string; anchorRight: number; anchorCy: number } | null>(null)
   const isMoreActive = moreSections.some((m) => m.to === activeTo)
@@ -447,6 +463,8 @@ function NavList({
               const on = s.to === activeTo
               // Keep the one creation action visually distinct from ordinary navigation.
               const isNewRental = s.to === '/rentals/new'
+              const navKey = NAV_LABEL_KEYS[s.to]
+              const displayLabel = navKey ? t(navKey, s.label) : s.label
               return (
                 <div
                   key={s.to}
@@ -465,10 +483,10 @@ function NavList({
                        (RailTooltip, portaled). A title here would fire the
                        browser tooltip as a duplicate. The accessible name
                        comes from aria-label in rail, visible text otherwise. */
-                    aria-label={s.label}
+                    aria-label={displayLabel}
                     onMouseEnter={(e) => {
                       if (rail) {
-                        scheduleShow(e.currentTarget, s.label)
+                        scheduleShow(e.currentTarget, displayLabel)
                       }
                       if (!on && !isNewRental) e.currentTarget.style.background = 'var(--hover-sidebar)'
                     }}
@@ -481,7 +499,7 @@ function NavList({
                       if (!rail || e.pointerType === 'mouse') return
                       const el = e.currentTarget
                       clearPress()
-                      pressTimer.current = window.setTimeout(() => show(el, s.label), LONG_PRESS_MS)
+                      pressTimer.current = window.setTimeout(() => show(el, displayLabel), LONG_PRESS_MS)
                     }}
                     onPointerUp={() => {
                       clearPress()
@@ -500,7 +518,7 @@ function NavList({
                     }}
                     onFocus={(e) => {
                       if (rail) {
-                        scheduleShow(e.currentTarget, s.label)
+                        scheduleShow(e.currentTarget, displayLabel)
                         if (!on && !isNewRental) e.currentTarget.style.background = 'var(--hover-sidebar)'
                       }
                     }}
@@ -549,7 +567,7 @@ function NavList({
                     />
                     {!rail && (
                       <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {s.label}
+                        {displayLabel}
                       </span>
                     )}
                   </Link>
@@ -580,7 +598,7 @@ function NavList({
                         zIndex: 2,
                       }}
                     >
-                      {s.action.label}
+                      {s.action.label === '+ New' ? t('rentals.actions.newShort', '+ New') : t('nav.newRental', s.action.label)}
                     </button>
                   )}
                 </div>
@@ -663,7 +681,7 @@ function NavList({
                 <div
                   ref={moreFlyoutRef}
                   role="menu"
-                  aria-label="More modules"
+                  aria-label={t('nav.more', 'More modules')}
                   style={{
                     position: 'fixed',
                     left: `calc(${RAIL_W} + 6px)`,
@@ -685,6 +703,8 @@ function NavList({
                 >
                   {moreSections.map((m) => {
                     const on = m.to === activeTo
+                    const navKey = NAV_LABEL_KEYS[m.to]
+                    const displayLabel = navKey ? t(navKey, m.label) : m.label
                     return (
                       <Link
                         key={m.to}
@@ -708,7 +728,7 @@ function NavList({
                         }}
                       >
                         <Icon name={m.icon} size={16} style={{ color: on ? 'var(--select-fg)' : 'var(--nav-icon)' }} />
-                        <span>{m.label}</span>
+                        <span>{displayLabel}</span>
                       </Link>
                     )
                   })}
@@ -722,6 +742,7 @@ function NavList({
                 type="button"
                 aria-expanded={moreOpen}
                 aria-haspopup="true"
+                aria-label={t('nav.more', 'More')}
                 onClick={() => setMoreOpen((v) => !v)}
                 onMouseEnter={(e) => {
                   if (!isMoreActive) e.currentTarget.style.background = 'var(--hover-sidebar)'
@@ -770,7 +791,7 @@ function NavList({
                   style={{ color: isMoreActive ? 'var(--select-fg)' : 'var(--nav-icon)', flexShrink: 0 }}
                 />
                 <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  More
+                  {t('nav.more', 'More')}
                 </span>
                 <Icon
                   name={moreOpen ? 'chevron_down' : 'chevron_right'}
@@ -793,6 +814,8 @@ function NavList({
                 >
                   {moreSections.map((m) => {
                     const on = m.to === activeTo
+                    const navKey = NAV_LABEL_KEYS[m.to]
+                    const displayLabel = navKey ? t(navKey, m.label) : m.label
                     return (
                       <Link
                         key={m.to}
@@ -841,7 +864,7 @@ function NavList({
                           style={{ color: on ? 'var(--select-fg)' : 'var(--nav-icon)' }}
                         />
                         <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {m.label}
+                          {displayLabel}
                         </span>
                       </Link>
                     )
