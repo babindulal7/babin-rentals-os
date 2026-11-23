@@ -25,6 +25,7 @@ import { useViewport } from '../../lib/device'
 import { getBusinessToday } from '../../lib/bs'
 import { IS_MOCK } from '../../lib/supabase'
 import { canAssignPricedCrew } from '../../lib/crewAssignment'
+import { useTranslation } from '../../lib/i18n'
 import { BookCrewFlow } from './BookCrewFlow'
 import './crew.css'
 import {
@@ -163,6 +164,7 @@ const ROSTER_STATE_TONE: Record<CrewMember['state'], StatusKey> = {
 }
 
 export function CrewBooking() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { user } = useAuth()
   // gateContext() returns a fresh object literal on every call (see
@@ -330,17 +332,17 @@ export function CrewBooking() {
           derive from the configured rate in Settings ▸ Financial (Ruling D25 / O-5).
           Until a rate is configured, payouts show "TDS: rate not set". */}
       {canCrewMoney && (
-        <RailSection title="Payout ledger" badge={`${ledger.count} assignment${ledger.count === 1 ? '' : 's'}`}>
+        <RailSection title={t('crew.rail.payoutLedger', 'Payout ledger')} badge={`${ledger.count} assignment${ledger.count === 1 ? '' : 's'}`}>
           <SummaryRows
             rows={[
               { label: 'Gross', value: formatMoney(ledger.grossPaisa) },
               ...ledger.byStatus.map((s) => ({ label: s.status, value: `${s.count} · ${formatMoney(s.grossPaisa)}` })),
               {
-                label: ledger.tdsRatePercent !== null ? `TDS withheld (${ledger.tdsRatePercent}%)` : 'TDS withheld',
+                label: ledger.tdsRatePercent !== null ? `${t('crew.rail.tds', 'TDS withheld')} (${ledger.tdsRatePercent}%)` : t('crew.rail.tds', 'TDS withheld'),
                 value: ledger.tdsPaisa !== null ? formatMoney(ledger.tdsPaisa) : 'TDS: rate not set',
               },
               {
-                label: 'Net payable',
+                label: t('crew.rail.net', 'Net payable'),
                 value: ledger.netPaisa !== null ? formatMoney(ledger.netPaisa) : 'TDS: rate not set',
               },
             ]}
@@ -371,7 +373,7 @@ export function CrewBooking() {
       <div className="crew-v2">
         <PageHeader
           icon="crew"
-          title="Crew Assist"
+          title={t('crew.title', 'Crew Assist')}
           module="crew"
           leading={<FilterButton onClick={() => setFiltersOpen((open) => !open)} controls="crew-filters" expanded={filtersOpen} activeCount={Number(Boolean(selectedRole))} />}
           status={
@@ -390,17 +392,17 @@ export function CrewBooking() {
           search={{
             value: searchQuery,
             onChange: setSearchQuery,
-            placeholder: 'Search crew, role, production… (press /)',
+            placeholder: t('crew.filter.searchPlaceholder', 'Search crew, role, production… (press /)'),
             onClear: () => setSearchQuery(''),
-            ariaLabel: 'Search crew',
+            ariaLabel: t('crew.table.role', 'Search crew'),
           }}
-          description="Roster management, shoot-day assignments, and conflict detection."
+          description={t('crew.subtitle', 'Roster management, shoot-day assignments, and conflict detection.')}
           actions={
             <PageActions
               primary={
                 canBookCrew ? (
                   <Button variant="primary" icon="plus" onClick={() => setBookCrewOpen(true)}>
-                    Assign Crew
+                    {t('crew.actions.assign', 'Assign Crew')}
                   </Button>
                 ) : undefined
               }
@@ -408,14 +410,14 @@ export function CrewBooking() {
                  was cut when the page ran on invented rows); it reads
                  crew_shoot_days now, so Crew Assist links to it. Every staff role
                  may open it — the page withholds money from a money-blind one. */
-              overflow={[{ label: 'Timesheets', icon: 'timer', onClick: () => navigate('/crew/timesheet') }]}
+              overflow={[{ label: t('crew.actions.timesheets', 'Timesheets'), icon: 'timer', onClick: () => navigate('/crew/timesheet') }]}
             />
           }
         />
         <FilterDrawer id="crew-filters" open={filtersOpen} onClose={() => setFiltersOpen(false)} resultCount={filteredRoster.length} noun="crew members" activeCount={Number(Boolean(selectedRole))} onClearAll={() => setSelectedRole('')} standardFooter onApply={() => setFiltersOpen(false)}>
           <label style={{ display: 'grid', gap: 8, fontWeight: 600 }}>Role
             <Select aria-label="Filter crew by role" value={selectedRole} onChange={(event) => setSelectedRole(event.target.value)} style={{ minHeight: 44, width: '100%' }}>
-              <option value="">All roles</option>
+              <option value="">{t('crew.filter.allRoles', 'All roles')}</option>
               {roles.map((role) => <option key={role} value={role}>{role}</option>)}
             </Select>
           </label>
@@ -459,7 +461,7 @@ export function CrewBooking() {
           primaryAction={
             canBookCrew
               ? {
-                  label: '+ Assign Crew',
+                  label: t('crew.actions.assign', '+ Assign Crew'),
                   onClick: () => setBookCrewOpen(true),
                 }
               : undefined
@@ -470,9 +472,9 @@ export function CrewBooking() {
           items={[
             {
               id: 'Booked',
-              label: 'ON SET TODAY',
+              label: t('crew.kpi.onSetToday', 'ON SET TODAY'),
               count: String(crewBookedToday),
-              subtitle: 'Confirmed shoot day is today',
+              subtitle: t('crew.kpi.onSetTodaySub', 'Confirmed shoot day is today'),
               icon: 'crew',
               tone: 'emerald',
               active: rosterChip === 'Booked',
@@ -480,9 +482,9 @@ export function CrewBooking() {
             },
             {
               id: 'Available',
-              label: 'ROSTER AVAILABLE',
+              label: t('crew.kpi.rosterAvailable', 'ROSTER AVAILABLE'),
               count: String(roster.available),
-              subtitle: `${roster.total} crew members on roster`,
+              subtitle: t('crew.kpi.rosterAvailableSub', `${roster.total} crew members on roster`, { total: roster.total }),
               icon: 'check',
               tone: 'emerald',
               active: rosterChip === 'Available',
@@ -490,9 +492,9 @@ export function CrewBooking() {
             },
             {
               id: 'Conflicts',
-              label: 'CONFLICTS & ALERTS',
+              label: t('crew.kpi.conflicts', 'CONFLICTS & ALERTS'),
               count: String(conflicts.length + travelWarnings.length),
-              subtitle: `${crewDays} shoot days · ${fill.pct}% role fill rate`,
+              subtitle: t('crew.kpi.conflictsSub', `${crewDays} shoot days · ${fill.pct}% role fill rate`, { days: crewDays, pct: fill.pct }),
               icon: 'alert_triangle',
               tone: conflicts.length > 0 ? 'red' : 'neutral',
               active: rosterChip === 'Unavailable',
@@ -503,16 +505,16 @@ export function CrewBooking() {
 
         <ModuleFilterBar
           tabs={[
-            { id: 'All', label: 'All', count: chipCounts['All'] },
-            { id: 'Booked', label: 'On Set Today', count: chipCounts['Booked'], icon: 'crew' },
-            { id: 'Available', label: 'Available', count: chipCounts['Available'], icon: 'check' },
-            { id: 'Unavailable', label: 'Unavailable / Conflict', count: chipCounts['Unavailable'], icon: 'alert_triangle' },
+            { id: 'All', label: t('crew.filter.all', 'All'), count: chipCounts['All'] },
+            { id: 'Booked', label: t('crew.filter.onSetToday', 'On Set Today'), count: chipCounts['Booked'], icon: 'crew' },
+            { id: 'Available', label: t('crew.filter.available', 'Available'), count: chipCounts['Available'], icon: 'check' },
+            { id: 'Unavailable', label: t('crew.filter.unavailable', 'Unavailable / Conflict'), count: chipCounts['Unavailable'], icon: 'alert_triangle' },
           ]}
           activeTab={rosterChip}
           onTabChange={(id) => setRosterChip(id as RosterChip)}
           searchValue={searchQuery}
           onSearchChange={setSearchQuery}
-          searchPlaceholder="Search crew, role, production… (press /)"
+          searchPlaceholder={t('crew.filter.searchPlaceholder', 'Search crew, role, production… (press /)')}
           dropdownFilters={
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-xs)' }}>
               <Select
@@ -521,7 +523,7 @@ export function CrewBooking() {
                 onChange={(event) => setSelectedRole(event.target.value)}
                 style={{ minHeight: 44, fontSize: 'var(--t-meta)' }}
               >
-                <option value="">All roles</option>
+                <option value="">{t('crew.filter.allRoles', 'All roles')}</option>
                 {roles.map((role) => (
                   <option key={role} value={role}>
                     {role}
@@ -540,12 +542,12 @@ export function CrewBooking() {
               <WeekCalendar assignments={crewAssignments} conflictIds={conflictIds} />
 
               {/* §6.1's CREW list — `name │ role │ rate │ [Book] ⋮`. */}
-              <Card title="Crew" style={{ overflow: 'hidden' }}>
+              <Card title={t('crew.roster.title', 'Crew')} style={{ overflow: 'hidden' }}>
                 {filteredRoster.length === 0 ? (
                   <EmptyState
-                    title="Nobody matches this filter"
-                    description="Adjust the role, availability, or search filters."
-                    actionLabel="Clear Filters"
+                    title={t('crew.roster.nobodyMatches', 'Nobody matches this filter')}
+                    description={t('crew.roster.adjustFilters', 'Adjust the role, availability, or search filters.')}
+                    actionLabel={t('crew.roster.clearFilters', 'Clear Filters')}
                     onAction={() => {
                       setRosterChip('All')
                       setSearchQuery('')
@@ -563,10 +565,10 @@ export function CrewBooking() {
                     <table className="crew-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 'var(--t-meta)' }}>
                       <thead>
                         <tr style={{ background: 'var(--card2)', borderBottom: '1px solid var(--border)', color: 'var(--muted)', fontSize: 'var(--t-th)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                          <th style={thStyle}>Name</th>
-                          <th style={thStyle}>Role</th>
-                          <th style={thStyle}>Availability</th>
-                          {canCrewMoney && <th style={thStyle}>Day rate</th>}
+                          <th style={thStyle}>{t('crew.table.name', 'Name')}</th>
+                          <th style={thStyle}>{t('crew.table.role', 'Role')}</th>
+                          <th style={thStyle}>{t('crew.table.availability', 'Availability')}</th>
+                          {canCrewMoney && <th style={thStyle}>{t('crew.table.dayRate', 'Day rate')}</th>}
                         </tr>
                       </thead>
                       <tbody>
@@ -593,12 +595,12 @@ export function CrewBooking() {
                 )}
               </Card>
 
-              <Card title="Assignments" style={{ overflow: 'hidden' }}>
+              <Card title={t('crew.assignments.title', 'Assignments')} style={{ overflow: 'hidden' }}>
                 {filteredCrew.length === 0 ? (
                   <EmptyState
-                    title="No crew assignments found"
-                    description="Adjust the role or search filters to find crew assignments."
-                    actionLabel="Clear Filters"
+                    title={t('crew.assignments.noFound', 'No crew assignments found')}
+                    description={t('crew.assignments.adjustSearch', 'Adjust the role or search filters to find crew assignments.')}
+                    actionLabel={t('crew.roster.clearFilters', 'Clear Filters')}
                     onAction={() => {
                       setRosterChip('All')
                       setSearchQuery('')
@@ -625,16 +627,16 @@ export function CrewBooking() {
                     <table className="crew-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 'var(--t-meta)' }}>
                       <thead>
                         <tr style={{ background: 'var(--card2)', borderBottom: '1px solid var(--border)', color: 'var(--muted)', fontSize: 'var(--t-th)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                          <th style={thStyle}>Crew Member</th>
+                          <th style={thStyle}>{t('crew.table.name', 'Crew Member')}</th>
                           {/* Tablet drops the three widest columns — §6.1's tablet
                               drawing is `name │ role │ [Book] ⋮`, and eight columns
                               in 768–1279px is a sideways scroll, not a layout. */}
-                          {desktop && <th style={thStyle}>Production</th>}
-                          <th style={thStyle}>Dates &amp; Duration</th>
-                          {desktop && canCrewMoney && <th style={thStyle}>Financials (Cost)</th>}
-                          <th style={thStyle}>Assignment Status</th>
-                          {desktop && <th style={thStyle}>Payout Status</th>}
-                          <th style={{ ...thStyle, textAlign: 'right' }}>Actions</th>
+                          {desktop && <th style={thStyle}>{t('crew.table.production', 'Production')}</th>}
+                          <th style={thStyle}>{t('crew.table.shootDates', 'Dates & Duration')}</th>
+                          {desktop && canCrewMoney && <th style={thStyle}>{t('crew.table.pay', 'Financials (Cost)')}</th>}
+                          <th style={thStyle}>{t('crew.table.status', 'Assignment Status')}</th>
+                          {desktop && <th style={thStyle}>{t('crew.table.status', 'Payout Status')}</th>}
+                          <th style={{ ...thStyle, textAlign: 'right' }}>{t('crew.table.action', 'Actions')}</th>
                         </tr>
                       </thead>
                       <tbody>
