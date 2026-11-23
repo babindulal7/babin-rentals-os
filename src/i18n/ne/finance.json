@@ -31,7 +31,7 @@
   "finance.kpi.receivedThisMonth": "यस महिना प्राप्त",
   "finance.kpi.outstandingInvoices": "बाँकी बिलहरू",
   "finance.kpi.activeDeposits": "सक्रिय धरौटी",
-  "finance.table.invoiceNumber": "बिल #",
+  "finance.table.invoiceNumber": "बिल नं",
   "finance.table.client": "ग्राहक",
   "finance.table.issueDate": "जारी मिति",
   "finance.table.dueDate": "भुक्तानी मिति",

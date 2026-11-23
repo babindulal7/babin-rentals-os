@@ -9,7 +9,7 @@
     },
     "auth.emailLabel": {
       "english": "Work Email",
-      "nepali": "कार्य ईमेल",
+      "nepali": "कार्य इमेल",
       "reviewedBy": "Babin",
       "reviewedAt": "2026-11-19"
     },
@@ -39,7 +39,7 @@
     },
     "auth.missingFields": {
       "english": "Enter your work email and password.",
-      "nepali": "आफ्नो कार्य ईमेल र पासवर्ड प्रविष्ट गर्नुहोस्।",
+      "nepali": "आफ्नो कार्य इमेल र पासवर्ड प्रविष्ट गर्नुहोस्।",
       "reviewedBy": "Babin",
       "reviewedAt": "2026-11-19"
     },
@@ -63,7 +63,7 @@
     },
     "auth.rememberEmail": {
       "english": "Remember work email on this device",
-      "nepali": "यस उपकरणमा कार्य ईमेल सम्झनुहोस्",
+      "nepali": "यस उपकरणमा कार्य इमेल सम्झनुहोस्",
       "reviewedBy": "Babin",
       "reviewedAt": "2026-11-19"
     },
@@ -183,7 +183,7 @@
     },
     "auth.screenLock.title": {
       "english": "Session Locked",
-      "nepali": "सत्र बन्द गरिएको छ",
+      "nepali": "सत्र लक गरिएको छ",
       "reviewedBy": "Babin",
       "reviewedAt": "2026-11-19"
     },
@@ -219,7 +219,7 @@
     },
     "auth.welcomeSubtitle": {
       "english": "Sign in with your work email to continue.",
-      "nepali": "जारी राख्न आफ्नो कार्य ईमेलबाट साइन इन गर्नुहोस्।",
+      "nepali": "जारी राख्न आफ्नो कार्य इमेलबाट साइन इन गर्नुहोस्।",
       "reviewedBy": "Babin",
       "reviewedAt": "2026-11-19"
     },
@@ -507,7 +507,7 @@
     },
     "status.cancelled": {
       "english": "Cancelled",
-      "nepali": "रद्द",
+      "nepali": "रद्द भएको",
       "reviewedBy": "Babin",
       "reviewedAt": "2026-11-19"
     },
@@ -519,7 +519,7 @@
     },
     "status.confirmed": {
       "english": "Confirmed",
-      "nepali": "पक्का भयो",
+      "nepali": "पुष्टि भएको",
       "reviewedBy": "Babin",
       "reviewedAt": "2026-11-19"
     },
@@ -561,7 +561,7 @@
     },
     "operations.action.completePacking": {
       "english": "Mark Packed",
-      "nepali": "प्याक भएको जनाउनुहोस्",
+      "nepali": "प्याकिङ सम्पन्न गर्नुहोस्",
       "reviewedBy": "Babin",
       "reviewedAt": "2026-11-19"
     },
@@ -921,7 +921,7 @@
     },
     "today.timeline.title": {
       "english": "Daily Movement Timeline",
-      "nepali": "दैनिक चलखेल समयतालिका",
+      "nepali": "दैनिक आवतजावत समयतालिका",
       "reviewedBy": "Babin",
       "reviewedAt": "2026-11-19"
     },
@@ -1053,7 +1053,7 @@
     },
     "calendar.actions.nextMonth": {
       "english": "Next month",
-      "nepali": "पछिल्लो महिना",
+      "nepali": "अर्को महिना",
       "reviewedBy": "Babin",
       "reviewedAt": "2026-11-19"
     },
@@ -2961,7 +2961,7 @@
     },
     "finance.table.invoiceNumber": {
       "english": "Invoice #",
-      "nepali": "बिल #",
+      "nepali": "बिल नं",
       "reviewedBy": "Babin",
       "reviewedAt": "2026-11-19"
     },
@@ -3231,7 +3231,7 @@
     },
     "inventory.table.name": {
       "english": "Item Name",
-      "nepali": "सामग्री नाम",
+      "nepali": "उपकरणको नाम",
       "reviewedBy": "Babin",
       "reviewedAt": "2026-11-19"
     },
@@ -4576,6 +4576,192 @@
     "settings.staff.addStaff": {
       "english": "Add Staff Member",
       "nepali": "कर्मचारी थप्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.actions.timesheets": {
+      "english": "Timesheets",
+      "nepali": "टाइमसिट",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.filter.all": {
+      "english": "All",
+      "nepali": "सबै",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.filter.onSetToday": {
+      "english": "On Set Today",
+      "nepali": "आज अन-सेट",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.filter.available": {
+      "english": "Available",
+      "nepali": "उपलब्ध",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.filter.unavailable": {
+      "english": "Unavailable / Conflict",
+      "nepali": "अनुपलब्ध / द्वन्द्व",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.filter.searchPlaceholder": {
+      "english": "Search crew, role, production… (press /)",
+      "nepali": "क्रु, भूमिका, निर्माण खोज्नुहोस्… (/ थिच्नुहोस्)",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.filter.allRoles": {
+      "english": "All roles",
+      "nepali": "सबै भूमिकाहरू",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.kpi.onSetToday": {
+      "english": "ON SET TODAY",
+      "nepali": "आज अन-सेट",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.kpi.onSetTodaySub": {
+      "english": "Confirmed shoot day is today",
+      "nepali": "आज छायाङ्कन दिन पुष्टि भएको",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.kpi.rosterAvailable": {
+      "english": "ROSTER AVAILABLE",
+      "nepali": "उपलब्ध क्रु",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.kpi.rosterAvailableSub": {
+      "english": "{total} crew members on roster",
+      "nepali": "रोस्टरमा जम्मा {total} क्रु सदस्य",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.kpi.conflicts": {
+      "english": "CONFLICTS & ALERTS",
+      "nepali": "द्वन्द्व र सचेतना",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.kpi.conflictsSub": {
+      "english": "{days} shoot days · {pct}% role fill rate",
+      "nepali": "{days} छायाङ्कन दिन · {pct}% पूर्ति दर",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.roster.title": {
+      "english": "Crew",
+      "nepali": "क्रु रोस्टर",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.roster.nobodyMatches": {
+      "english": "Nobody matches this filter",
+      "nepali": "यो फिल्टरसँग मिल्ने कोही छैन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.roster.adjustFilters": {
+      "english": "Adjust the role, availability, or search filters.",
+      "nepali": "भूमिका, उपलब्धता वा खोज फिल्टर मिलाउनुहोस्।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.roster.clearFilters": {
+      "english": "Clear Filters",
+      "nepali": "फिल्टरहरू हटाउनुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.table.availability": {
+      "english": "Availability",
+      "nepali": "उपलब्धता",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.table.dayRate": {
+      "english": "Day rate",
+      "nepali": "दैनिक दर",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.assignments.title": {
+      "english": "Assignments",
+      "nepali": "खटनपटन विवरण",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.assignments.noFound": {
+      "english": "No crew assignments found",
+      "nepali": "कुनै क्रु खटनपटन भेटिएन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.assignments.adjustSearch": {
+      "english": "Adjust the role or search filters to find crew assignments.",
+      "nepali": "क्रु खटनपटन खोज्न भूमिका वा खोज फिल्टर मिलाउनुहोस्।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.table.production": {
+      "english": "Production / Booking",
+      "nepali": "निर्माण / बुकिङ",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.table.crew": {
+      "english": "Crew",
+      "nepali": "क्रु",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.table.shootDates": {
+      "english": "Shoot Dates",
+      "nepali": "छायाङ्कन मिति",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.table.overtime": {
+      "english": "Overtime",
+      "nepali": "ओभरटाइम",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.table.pay": {
+      "english": "Pay",
+      "nepali": "पारिश्रमिक",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.rail.payoutLedger": {
+      "english": "PAYOUT LEDGER",
+      "nepali": "भुक्तानी खाता",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.rail.unpaid": {
+      "english": "Unpaid payout",
+      "nepali": "भुक्तानी बाँकी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.rail.tds": {
+      "english": "TDS withheld",
+      "nepali": "TDS कट्टी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.rail.net": {
+      "english": "Net payable",
+      "nepali": "खुद भुक्तानी",
       "reviewedBy": "Babin",
       "reviewedAt": "2026-11-19"
     }
