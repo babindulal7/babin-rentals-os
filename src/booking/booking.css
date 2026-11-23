@@ -669,6 +669,22 @@ body {
   }
 }
 
+@media (min-width: 768px) and (max-width: 1024px) {
+  .booking-header-inner {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .date-selector-bar {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 @media (min-width: 768px) and (max-width: 1279px) {
   .product-grid {
     grid-template-columns: repeat(2, 1fr);
