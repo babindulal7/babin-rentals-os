@@ -347,7 +347,7 @@ export default function ShadowIntelligenceReview() {
           </select>
           <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#6b7280' }}>
             {selectedFixtureKey === 'all'
-              ? 'Evaluating 20 synthetic acceptance cases defined in Sprint Brief §7.'
+              ? 'Evaluating 20 synthetic acceptance test scenarios (S01–S20).'
               : SYNTHETIC_FIXTURES[selectedFixtureKey]?.description}
           </div>
         </div>
