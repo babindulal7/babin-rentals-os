@@ -4,6 +4,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useGSAP } from '@gsap/react'
 import { IconArrowRight, IconArrowLeft } from '@tabler/icons-react'
 import { tokens } from '@babin-rentals/design-tokens'
+import PublicGearCatalogue from './PublicGearCatalogue'
 import './design-tokens.css'
 
 gsap.registerPlugin(ScrollTrigger, useGSAP)
@@ -541,6 +542,11 @@ export default function MarketingPage() {
           </div>
         </div>
       </section>
+
+      {/* DEV ONLY — mock inventory is never advertised as real availability. */}
+      {import.meta.env.DEV && import.meta.env.VITE_ENABLE_PROTOTYPE_CATALOGUE === 'true' && (
+        <PublicGearCatalogue />
+      )}
 
       {/* ── Interest: bento ────────────────────────────────────────── */}
       <section id="kit" className="px-5 py-32 md:py-48">
