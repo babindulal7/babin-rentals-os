@@ -1,10 +1,10 @@
 # T9-01 Booqable Catalogue & Clients Match Report (Real DB Reconciliation)
 
-**Generated:** 2026-11-23T03:16:23.406Z  
+**Generated:** 2026-11-23T12:24:42.120Z  
 **Operator:** Babin Rentals OS Automated Migration Engine  
 **Authority:** Card T9-01 (`docs/plans/T9_CUTOVER.md`), PR #313 Review P1 Resolution, R-2026-10-26 (D20, S7), R-2026-10-27 (B4, B45, B49)  
 **Input Data Directory:** `C:/Users/use/Desktop/Babin rentals products app`  
-**Database State:** PGlite Engine (266 migrations applied, 70 products, 40 clients in seed DB)
+**Database State:** PGlite Engine (267 migrations applied, 70 products, 40 clients in seed DB)
 
 ---
 
@@ -55,7 +55,7 @@ The following 4 products exist in both the Booqable export and the OS seed datab
 ### 2.2 Client Record Matches (1 matched item)
 1. **client 84252d9369f2** (name redacted)  
    - Booqable ID (hashed): `84252d9369f2`  
-   - OS DB Client (hashed): `a01920ce86ca` (name and phone redacted)
+   - OS DB Client (hashed): `e17f7e50dc01` (name and phone redacted)
 
 ---
 
