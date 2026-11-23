@@ -142,24 +142,26 @@ export function searchRentalKnowledge(
   const now = new Date()
 
   if (isInjection) {
+    const advice: RentalAdvice = {
+      id: `adv-rag-injection-${Date.now()}`,
+      module: 'knowledge',
+      target: { type: 'report', id: 'sec-guard' },
+      evidenceState: 'blocked',
+      severity: 'urgent',
+      explanation:
+        'SECURITY ALERT (RI-A24): Input query contains suspicious instruction override patterns. Search query was sanitized and instruction execution was refused.',
+      sourceRefs: ['src/lib/rentalIntelligence/ragEngine.ts'],
+      sourceKinds: ['live_os'],
+      snapshotAt: now.toISOString(),
+      requiredChecks: ['Review audit log for unauthorized override attempt'],
+    }
+
     return {
       query: input.query,
       sanitizedQuery: sanitized,
       securityStatus: 'prompt_injection_flagged',
       results: [],
-      advice: {
-        id: `adv-rag-injection-${Date.now()}`,
-        module: 'knowledge',
-        target: { type: 'report', id: 'sec-guard' },
-        evidenceState: 'blocked',
-        severity: 'urgent',
-        explanation:
-          'SECURITY ALERT (RI-A24): Input query contains suspicious instruction override patterns. Search query was sanitized and instruction execution was refused.',
-        sourceRefs: ['src/lib/rentalIntelligence/ragEngine.ts'],
-        sourceKinds: ['live_os'],
-        snapshotAt: now.toISOString(),
-        requiredChecks: ['Review audit log for unauthorized override attempt'],
-      },
+      advice,
     }
   }
 

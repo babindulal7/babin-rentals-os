@@ -22,9 +22,9 @@ describe('Rental Intelligence RI-07: Rental RAG Knowledge & Retrieval Engine', (
 
     expect(response.securityStatus).toBe('safe')
     expect(response.results.length).toBeGreaterThan(0)
-    expect(response.results[0].title).toBe('Extreme Weather & Himalayan Operations Manual')
-    expect(response.results[0].citationPath).toBe('references/extreme_weather___himalayan_operations_manual.md')
-    expect(response.results[0].snippet).toContain('45-60 minutes')
+    expect(response.results[0]?.title).toBe('Extreme Weather & Himalayan Operations Manual')
+    expect(response.results[0]?.citationPath).toBe('references/extreme_weather___himalayan_operations_manual.md')
+    expect(response.results[0]?.snippet).toContain('45-60 minutes')
   })
 
   it('enforces Invariant RI-A24: detects prompt injection and blocks instruction execution', () => {

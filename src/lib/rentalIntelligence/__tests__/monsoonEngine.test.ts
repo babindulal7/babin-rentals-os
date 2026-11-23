@@ -33,10 +33,10 @@ describe('Rental Intelligence RI-06: Monsoon & Environmental Protection Engine',
       'Any gear returning damp must be routed to Cleaning Quarantine for 24-hour dry-cabinet bake before returning to Available.',
     )
     expect(assessment.suggestedFeeLines).toHaveLength(1)
-    expect(assessment.suggestedFeeLines[0].amountPaisa).toBe(
+    expect(assessment.suggestedFeeLines[0]?.amountPaisa).toBe(
       MONSOON_STANDARD_FEES.rainCoverRentalPaisa,
     )
-    expect(assessment.suggestedFeeLines[0].amountPaisa).toBe(50000) // Rs 500
+    expect(assessment.suggestedFeeLines[0]?.amountPaisa).toBe(50000) // Rs 500
   })
 
   it('triggers high-altitude cold weather battery derating and teahouse acclimatization in Mustang/Manang', () => {

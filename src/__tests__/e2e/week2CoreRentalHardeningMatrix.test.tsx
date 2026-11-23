@@ -20,7 +20,6 @@ import {
   validateDamageReport,
 } from '../../lib/damage'
 import { rupees, type Paisa } from '../../lib/money'
-import { rentalDaysBetween } from '../../lib/rentalDays'
 import { operationalDayOf, OPERATIONAL_DAY_START_DEFAULT_MINUTES } from '../../lib/operationalDay'
 import { getRentalPrimaryAction } from '../../lib/rentalActions'
 import { canViewMoney, canApproveDiscount } from '../../lib/rbac'
@@ -31,7 +30,7 @@ import {
   type OsReservationCandidate,
 } from '../../lib/externalHolds'
 import { lateBand, bandConsequence } from '../../lib/lateFee'
-import { gateContext, canViewMoneyField, moneyScope } from '../../lib/fieldGating'
+import { canViewMoneyField, moneyScope } from '../../lib/fieldGating'
 import type { SystemRole } from '../../types/database'
 
 describe('Week 2 Core Rental Flow Hardening & Boundary Matrix', () => {
