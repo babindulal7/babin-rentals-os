@@ -20,16 +20,16 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
-| 0269 | T1-17 | mfa-provider-proof-and-session-safety | fix/t1-17-postmerge-provider-proof-audit-integrity-20261123 | written |
-| 0268 | T1-18 | sign-in-events-and-new-device | lane-a/T1-18-sign-in-events-and-new-device | written |
-| 0267 | T1-17 | database-enforced-aal2-money-roles | main | written |
-| 0266 | R-22.8 | manager-approvals-to-owner | feat/launch-migrations-2026-11-22 | written |
-| 0265 | T7-04 | submit-request-rates-in-paisa | feat/launch-migrations-2026-11-22 | written |
-| 0264 | T7-13 | public-product-family-options | feat/launch-migrations-2026-11-22 | written |
-| 0263 | T7-13 | product-families | feat/launch-migrations-2026-11-22 | written |
-| 0262 | T7-14 | online-booking-away-mode | feat/t7-14-away-switch-20261122 | written |
-| 0261 | T9-02 | external-holds-and-double-booking-prevention | lane-a/T9-02-cutover-holds-prevention | verified |
-| 0260 | T7-07 | online-payment-refunds-and-reconciliation | lane-c/T7-07-refunds-and-reconciliation | verified |
+| 0269 | T1-17 | mfa-provider-proof-and-session-safety | fix/t1-17-postmerge-provider-proof-audit-integrity-20261123 | APPLIED live by Babin 24 Nov 2026 (sxguwvgoserhdolewibb; 277 total migrations verified, 0 drift with staging) |
+| 0268 | T1-18 | sign-in-events-and-new-device | lane-a/T1-18-sign-in-events-and-new-device | APPLIED live by Babin 24 Nov 2026 (sxguwvgoserhdolewibb; 277 total migrations verified, 0 drift with staging) |
+| 0267 | T1-17 | database-enforced-aal2-money-roles | main | APPLIED live by Babin 24 Nov 2026 (sxguwvgoserhdolewibb; 277 total migrations verified, 0 drift with staging) |
+| 0266 | R-22.8 | manager-approvals-to-owner | feat/launch-migrations-2026-11-22 | APPLIED live by Babin 24 Nov 2026 (sxguwvgoserhdolewibb; 277 total migrations verified, 0 drift with staging) |
+| 0265 | T7-04 | submit-request-rates-in-paisa | feat/launch-migrations-2026-11-22 | APPLIED live by Babin 24 Nov 2026 (sxguwvgoserhdolewibb; 277 total migrations verified, 0 drift with staging) |
+| 0264 | T7-13 | public-product-family-options | feat/launch-migrations-2026-11-22 | APPLIED live by Babin 24 Nov 2026 (sxguwvgoserhdolewibb; 277 total migrations verified, 0 drift with staging) |
+| 0263 | T7-13 | product-families | feat/launch-migrations-2026-11-22 | APPLIED live by Babin 24 Nov 2026 (sxguwvgoserhdolewibb; 277 total migrations verified, 0 drift with staging) |
+| 0262 | T7-14 | online-booking-away-mode | feat/t7-14-away-switch-20261122 | APPLIED live by Babin 24 Nov 2026 (sxguwvgoserhdolewibb; 277 total migrations verified, 0 drift with staging) |
+| 0261 | T9-02 | external-holds-and-double-booking-prevention | lane-a/T9-02-cutover-holds-prevention | APPLIED live by Babin 24 Nov 2026 (sxguwvgoserhdolewibb; 277 total migrations verified, 0 drift with staging) |
+| 0260 | T7-07 | online-payment-refunds-and-reconciliation | lane-c/T7-07-refunds-and-reconciliation | APPLIED live by Babin 24 Nov 2026 (sxguwvgoserhdolewibb; 277 total migrations verified, 0 drift with staging) |
 | 0259 | T7-15 | payment-link-from-any-booking | lane-c/T7-03-online-booking-requests-and-client-portal | verified |
 | 0258 | T7-05 | payment-intents-and-fonepay | lane-c/T7-03-online-booking-requests-and-client-portal | verified |
 | 0257 | T7-03 | client-accounts-and-portal-binding | lane-c/T7-03-online-booking-requests-and-client-portal | verified |

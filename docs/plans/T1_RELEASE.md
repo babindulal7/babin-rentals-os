@@ -141,7 +141,7 @@ bookings a day, plus staff digests and payment reminders) when picking the plan.
 with SPF/DKIM pass; a staging password reset arrives through the custom SMTP.
 **Needs** — T1-02; Babin (account + DNS). Owner-only §6.2 #8 is Babin's own call (S13).
 
-### T1-10 · Live batches (Babin applies)            status: ready — awaiting merge (lane-a/T1-10-live-batches-babin-applies-20261123) · size: S each · Babin + lane A
+### T1-10 · Live batches (Babin applies)            status: done — Babin applied batches 1–3 to production sxguwvgoserhdolewibb per PRODUCTION_LIVE_BATCH_PLAN_2026-11-23.md; 277 total migrations verified, zero drift with staging (0260–0269 active) · size: S each · Babin + lane A
 **What** — Three planned live windows, each: fresh backup (T1-01) → staging rehearsal of exactly
 the files in the batch → Babin runs `scripts/cutover-user-run.mjs` (hidden prompt, advisory lock,
 one transaction per file, stops at first failure) → `docs/live/POST_CUTOVER_CHECKS_2026-10-17.sql`
