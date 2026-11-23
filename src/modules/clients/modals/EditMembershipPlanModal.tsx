@@ -148,8 +148,8 @@ export function EditMembershipPlanModal({
             style={{
               padding: '10px 14px',
               borderRadius: 'var(--r-md, 6px)',
-              background: 'var(--danger-surface, #ffebee)',
-              color: 'var(--danger, #c62828)',
+              background: 'var(--danger-surface, rgba(239, 68, 68, 0.1))',
+              color: 'var(--danger-text)',
               fontSize: '14px',
               fontWeight: 500,
             }}
@@ -170,8 +170,8 @@ export function EditMembershipPlanModal({
                 padding: '0 10px',
                 borderRadius: 'var(--r-md, 6px)',
                 border: '1px solid var(--border)',
-                background: isEditing ? 'var(--bg-subtle, #f5f5f5)' : 'var(--bg-surface, #ffffff)',
-                color: 'var(--text1)',
+                background: isEditing ? 'var(--inset)' : 'var(--bg-surface, var(--surface))',
+                color: 'var(--text)',
                 fontFamily: 'inherit',
               }}
             >
@@ -191,8 +191,8 @@ export function EditMembershipPlanModal({
                 padding: '0 10px',
                 borderRadius: 'var(--r-md, 6px)',
                 border: '1px solid var(--border)',
-                background: 'var(--bg-surface, #ffffff)',
-                color: 'var(--text1)',
+                background: 'var(--bg-surface, var(--surface))',
+                color: 'var(--text)',
                 fontFamily: 'inherit',
               }}
             >
@@ -217,8 +217,8 @@ export function EditMembershipPlanModal({
                 padding: '0 10px',
                 borderRadius: 'var(--r-md, 6px)',
                 border: '1px solid var(--border)',
-                background: 'var(--bg-surface, #ffffff)',
-                color: 'var(--text1)',
+                background: 'var(--bg-surface, var(--surface))',
+                color: 'var(--text)',
                 fontFamily: 'var(--font-mono, monospace)',
               }}
             />
@@ -239,8 +239,8 @@ export function EditMembershipPlanModal({
                 padding: '0 10px',
                 borderRadius: 'var(--r-md, 6px)',
                 border: '1px solid var(--border)',
-                background: 'var(--bg-surface, #ffffff)',
-                color: 'var(--text1)',
+                background: 'var(--bg-surface, var(--surface))',
+                color: 'var(--text)',
                 fontFamily: 'var(--font-mono, monospace)',
               }}
             />
@@ -261,8 +261,8 @@ export function EditMembershipPlanModal({
                 padding: '0 10px',
                 borderRadius: 'var(--r-md, 6px)',
                 border: '1px solid var(--border)',
-                background: 'var(--bg-surface, #ffffff)',
-                color: 'var(--text1)',
+                background: 'var(--bg-surface, var(--surface))',
+                color: 'var(--text)',
                 fontFamily: 'var(--font-mono, monospace)',
               }}
             />
@@ -283,8 +283,8 @@ export function EditMembershipPlanModal({
                 padding: '0 10px',
                 borderRadius: 'var(--r-md, 6px)',
                 border: '1px solid var(--border)',
-                background: 'var(--bg-surface, #ffffff)',
-                color: 'var(--text1)',
+                background: 'var(--bg-surface, var(--surface))',
+                color: 'var(--text)',
                 fontFamily: 'var(--font-mono, monospace)',
               }}
             />
@@ -303,8 +303,8 @@ export function EditMembershipPlanModal({
                 padding: '0 10px',
                 borderRadius: 'var(--r-md, 6px)',
                 border: '1px solid var(--border)',
-                background: 'var(--bg-surface, #ffffff)',
-                color: 'var(--text1)',
+                background: 'var(--bg-surface, var(--surface))',
+                color: 'var(--text)',
                 fontFamily: 'var(--font-mono, monospace)',
               }}
             />
@@ -323,8 +323,8 @@ export function EditMembershipPlanModal({
                 padding: '0 10px',
                 borderRadius: 'var(--r-md, 6px)',
                 border: '1px solid var(--border)',
-                background: 'var(--bg-surface, #ffffff)',
-                color: 'var(--text1)',
+                background: 'var(--bg-surface, var(--surface))',
+                color: 'var(--text)',
                 fontFamily: 'var(--font-mono, monospace)',
               }}
             />
@@ -346,8 +346,8 @@ export function EditMembershipPlanModal({
                 padding: '0 10px',
                 borderRadius: 'var(--r-md, 6px)',
                 border: '1px solid var(--border)',
-                background: 'var(--bg-surface, #ffffff)',
-                color: 'var(--text1)',
+                background: 'var(--bg-surface, var(--surface))',
+                color: 'var(--text)',
                 fontFamily: 'var(--font-mono, monospace)',
               }}
             />
@@ -366,8 +366,8 @@ export function EditMembershipPlanModal({
                 padding: '0 10px',
                 borderRadius: 'var(--r-md, 6px)',
                 border: '1px solid var(--border)',
-                background: 'var(--bg-surface, #ffffff)',
-                color: 'var(--text1)',
+                background: 'var(--bg-surface, var(--surface))',
+                color: 'var(--text)',
                 fontFamily: 'var(--font-mono, monospace)',
               }}
             />
@@ -388,8 +388,8 @@ export function EditMembershipPlanModal({
                     gap: 8,
                     padding: '8px 12px',
                     borderRadius: 'var(--r-md, 6px)',
-                    border: `1px solid ${checked ? 'var(--nav-active-accent, #0070f3)' : 'var(--border)'}`,
-                    background: checked ? 'var(--accent-subtle, #e6f7ff)' : 'transparent',
+                    border: `1px solid ${checked ? 'var(--nav-active-accent, var(--primary))' : 'var(--border)'}`,
+                    background: checked ? 'var(--accent-subtle, color-mix(in srgb, var(--primary) 12%, transparent))' : 'transparent',
                     fontSize: '13px',
                     cursor: 'pointer',
                     userSelect: 'none',

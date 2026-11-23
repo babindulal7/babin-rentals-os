@@ -133,8 +133,9 @@ export function TemporaryStockModal({
             style={{
               padding: '10px 14px',
               borderRadius: '8px',
-              background: 'var(--bad-subtle, #fee2e2)',
-              color: 'var(--bad, #dc2626)',
+              background: 'var(--danger-surface, rgba(239, 68, 68, 0.1))',
+              border: '1px solid var(--danger-border, var(--danger))',
+              color: 'var(--danger-text)',
               fontSize: '13px',
             }}
           >

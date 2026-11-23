@@ -1,5 +1,55 @@
 # Progress Log
 
+## 2026-11-23 — UI Design Token Replacement & Touch Target Compliance Across 13 Modules (Lane B / Windows)
+
+### Did
+- Eliminated all hardcoded raw hexadecimal colors (`#16a34a`, `#15803d`, `#22c55e`, `#ef4444`, `#dc2626`, `#b91c1c`, `#3b82f6`, `#1d4ed8`, `#eab308`, `#a855f7`, `#059669`, `#047857`) in modals, inputs, and components across 13 modules, replacing them with semantic CSS theme variables (`var(--accent)`, `var(--accent-hover)`, `var(--success)`, `var(--success-border)`, `var(--danger)`, `var(--danger-border)`, `var(--info)`, `var(--warning)`, `var(--border)`, `var(--surface)`).
+- Enforced 44px minimum touch targets across interactive elements (buttons, inputs, selects, tab triggers, modal action buttons, table action triggers) in:
+  - `EditMembershipPlanModal.tsx`
+  - `OnlineReconciliationWorkspace.tsx`
+  - `SmartEquipmentPanel.tsx`
+  - `BulkEditProductsModal.tsx`
+  - `TemporaryStockModal.tsx`
+  - `RiderDeliveryPage.tsx`
+  - `PartnerStockTable.tsx`
+  - `ReturnPartnerStockModal.tsx`
+  - `LineItemTree.tsx`
+  - `OnlineRequestsQueue.tsx`
+  - `AddItemPanel.tsx`
+  - `RentalsOperationsHeader.tsx`
+  - `OperationsReports.tsx`
+  - `TextsPane.tsx`
+  - `RoleTaskCockpit.tsx`
+  - `CouponsManager.tsx`
+- Defined semantic modal header, surface, and interactive utility classes in `src/styles/theme.css`.
+
+### Ruled
+- Theme consistency rule: No raw hex colors in UI component styling; all visual states must inherit from calibrated design tokens defined in `src/styles/theme.css` to ensure WCAG AA contrast in Light, Dark, Pilot, High Contrast, and Glass themes.
+- Touch target minimum: All clickable targets must meet or exceed 44px (with 56px floor verbs for warehouse/technician workflows).
+
+### Verified
+- `npm run check:contrast`: PASS (97/97 contrast ratios compliant).
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 warnings).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 71 | 58 · 0 · 0 · 13 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +1 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 267 files · check:pglite 267/267 applied, 0 failed.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Final review and merge of open PRs (#356, #362, #363).
+- Cutover trial rehearsal (Batch D).
+
 ## 2026-11-23 — T1-17: Post-Merge MFA Security Proof, Trust-Boundary Repair & Issue #304 Audit Correction (Lane B / Windows)
 
 ### Did

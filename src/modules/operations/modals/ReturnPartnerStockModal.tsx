@@ -113,8 +113,9 @@ export function ReturnPartnerStockModal({
             style={{
               padding: '10px 14px',
               borderRadius: '8px',
-              background: 'var(--bad-subtle, #fee2e2)',
-              color: 'var(--bad, #dc2626)',
+              background: 'var(--danger-surface, rgba(239, 68, 68, 0.1))',
+              border: '1px solid var(--danger-border, var(--danger))',
+              color: 'var(--danger-text)',
               fontSize: '13px',
             }}
           >
@@ -171,8 +172,8 @@ export function ReturnPartnerStockModal({
                     width: '100%',
                     padding: '8px 12px',
                     borderRadius: '6px',
-                    border: '1px solid var(--border)',
-                    background: isChecked ? 'var(--good-subtle, #dcfce7)' : 'var(--card)',
+                    border: isChecked ? '1px solid var(--success-border, var(--success))' : '1px solid var(--border)',
+                    background: isChecked ? 'var(--success-surface, rgba(34, 197, 94, 0.15))' : 'var(--card)',
                     cursor: 'pointer',
                     minHeight: '44px',
                     textAlign: 'left',
@@ -185,8 +186,8 @@ export function ReturnPartnerStockModal({
                         display: 'inline-block',
                         fontSize: '10px',
                         fontWeight: 800,
-                        background: '#000',
-                        color: '#fff',
+                        background: 'var(--text)',
+                        color: 'var(--surface)',
                         padding: '2px 5px',
                         borderRadius: '3px',
                       }}
@@ -195,7 +196,7 @@ export function ReturnPartnerStockModal({
                     </span>
                     <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{u.serialNumber ?? u.assetCode}</span>
                   </div>
-                  <span style={{ fontSize: '12px', color: isChecked ? 'var(--good, #16a34a)' : 'var(--text2)' }}>
+                  <span style={{ fontSize: '12px', color: isChecked ? 'var(--success-text)' : 'var(--text2)', fontWeight: isChecked ? 600 : 400 }}>
                     {isChecked ? '✓ Scanned' : 'Pending scan'}
                   </span>
                 </button>

@@ -611,8 +611,8 @@ export function SmartEquipmentPanel({
                             borderRadius: 4,
                             fontSize: 'var(--t-th)',
                             fontWeight: 600,
-                            background: acc.relationType === 'included_mandatory' ? 'rgba(5, 150, 105, 0.15)' : 'rgba(37, 99, 235, 0.15)',
-                            color: acc.relationType === 'included_mandatory' ? '#059669' : '#2563eb',
+                            background: acc.relationType === 'included_mandatory' ? 'var(--success-surface)' : 'var(--info-surface)',
+                            color: acc.relationType === 'included_mandatory' ? 'var(--success-text)' : 'var(--primary-text, var(--primary))',
                           }}
                         >
                           {acc.relationType === 'included_mandatory' ? 'Included Standard' : 'Recommended Add-on'}
@@ -931,8 +931,8 @@ function SuggestionCard<T>({
       style={{
         padding: '14px 16px',
         borderRadius: 8,
-        background: isAccepted ? 'rgba(5, 150, 105, 0.04)' : isRejected ? 'rgba(239, 68, 68, 0.04)' : 'var(--card2)',
-        border: `1px solid ${isAccepted ? '#059669' : isRejected ? '#ef4444' : 'var(--border)'}`,
+        background: isAccepted ? 'var(--success-surface)' : isRejected ? 'var(--danger-surface)' : 'var(--card2)',
+        border: `1px solid ${isAccepted ? 'var(--success-border, var(--success))' : isRejected ? 'var(--danger-border, var(--danger))' : 'var(--border)'}`,
         display: 'flex',
         flexDirection: 'column',
         gap: 8,
@@ -1005,7 +1005,7 @@ function SuggestionCard<T>({
           <span
             style={{
               fontSize: 'var(--t-meta)',
-              color: isRejected ? 'var(--muted)' : '#059669',
+              color: isRejected ? 'var(--muted)' : 'var(--success-text)',
               fontWeight: 600,
               textDecoration: isRejected ? 'line-through' : 'none',
             }}

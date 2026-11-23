@@ -394,12 +394,12 @@ export function BulkEditProductsModal({
                         </td>
                         <td style={{ padding: '8px 12px' }}>
                           {item.success ? (
-                            <span style={{ color: '#059669', fontWeight: 600 }}>✓ Saved</span>
+                            <span style={{ color: 'var(--success-text)', fontWeight: 600 }}>✓ Saved</span>
                           ) : (
-                            <span style={{ color: '#dc2626', fontWeight: 600 }}>✗ Refused</span>
+                            <span style={{ color: 'var(--danger-text)', fontWeight: 600 }}>✗ Refused</span>
                           )}
                         </td>
-                        <td style={{ padding: '8px 12px', color: item.success ? 'var(--text-muted, #6b7280)' : '#dc2626' }}>
+                        <td style={{ padding: '8px 12px', color: item.success ? 'var(--text-muted)' : 'var(--danger-text)' }}>
                           {item.error ? item.error : 'Applied'}
                         </td>
                       </tr>
@@ -445,9 +445,9 @@ export function BulkEditProductsModal({
                 style={{
                   padding: '0.75rem 1rem',
                   borderRadius: '6px',
-                  background: '#fef2f2',
-                  border: '1px solid #f87171',
-                  color: '#991b1b',
+                  background: 'var(--danger-surface, rgba(239, 68, 68, 0.1))',
+                  border: '1px solid var(--danger-border, var(--danger))',
+                  color: 'var(--danger-text)',
                   fontSize: '0.875rem',
                 }}
               >
@@ -472,8 +472,9 @@ export function BulkEditProductsModal({
                   minHeight: 44,
                   padding: '0.5rem 0.75rem',
                   borderRadius: '6px',
-                  border: '1px solid var(--border-color, #cbd5e1)',
-                  background: 'var(--bg-surface, #ffffff)',
+                  border: '1px solid var(--border)',
+                  background: 'var(--input-bg, var(--surface))',
+                  color: 'var(--text)',
                   fontSize: '0.875rem',
                 }}
               >
@@ -722,7 +723,7 @@ export function BulkEditProductsModal({
                             {row.name}
                           </td>
                           <td style={{ padding: '6px 10px', color: 'var(--text-muted, #64748b)' }}>{row.oldDisplay}</td>
-                          <td style={{ padding: '6px 10px', fontWeight: 600, color: 'var(--primary, #0284c7)' }}>
+                          <td style={{ padding: '6px 10px', fontWeight: 600, color: 'var(--primary)' }}>
                             {row.newDisplay}
                           </td>
                         </tr>

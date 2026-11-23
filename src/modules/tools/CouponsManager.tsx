@@ -336,15 +336,18 @@ export default function CouponsManager() {
               key={tab}
               onClick={() => setFilterStatus(tab)}
               style={{
+                minHeight: '44px',
                 padding: '6px 14px',
                 borderRadius: 'var(--r-pill)',
                 border: '1px solid var(--border)',
                 background: filterStatus === tab ? 'var(--accent)' : 'var(--card)',
-                color: filterStatus === tab ? '#fff' : 'var(--text2)',
+                color: filterStatus === tab ? 'var(--on-accent, #ffffff)' : 'var(--text2)',
                 fontSize: 'var(--t-caption)',
                 fontWeight: 600,
                 cursor: 'pointer',
                 textTransform: 'capitalize',
+                display: 'inline-flex',
+                alignItems: 'center',
               }}
             >
               {tab}

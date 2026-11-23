@@ -182,10 +182,10 @@ export const OnlineReconciliationWorkspace: React.FC = () => {
             alignItems: 'center',
             gap: 12,
             padding: '12px 16px',
-            background: 'rgba(239, 68, 68, 0.12)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
+            background: 'var(--danger-surface)',
+            border: '1px solid var(--danger-border)',
             borderRadius: 'var(--radius-md)',
-            color: '#dc2626',
+            color: 'var(--danger-text)',
           }}
         >
           <Icon name="alert_triangle" size={20} />
@@ -240,7 +240,7 @@ export const OnlineReconciliationWorkspace: React.FC = () => {
               fontWeight: 700,
               fontFamily: 'var(--font-mono)',
               marginTop: 4,
-              color: 'var(--color-success, #16a34a)',
+              color: 'var(--success-text)',
             }}
           >
             {formatMoney(totalAllocated)}
@@ -263,7 +263,7 @@ export const OnlineReconciliationWorkspace: React.FC = () => {
               fontWeight: 700,
               fontFamily: 'var(--font-mono)',
               marginTop: 4,
-              color: '#d97706',
+              color: 'var(--warn-text)',
             }}
           >
             {formatMoney(totalRefunded)}
@@ -272,8 +272,8 @@ export const OnlineReconciliationWorkspace: React.FC = () => {
         <div
           style={{
             padding: 16,
-            background: staleCount > 0 ? 'rgba(239, 68, 68, 0.08)' : 'var(--card)',
-            border: staleCount > 0 ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid var(--border)',
+            background: staleCount > 0 ? 'var(--danger-surface)' : 'var(--card)',
+            border: staleCount > 0 ? '1px solid var(--danger-border)' : '1px solid var(--border)',
             borderRadius: 'var(--radius-md)',
           }}
         >
@@ -286,7 +286,7 @@ export const OnlineReconciliationWorkspace: React.FC = () => {
               fontWeight: 700,
               fontFamily: 'var(--font-mono)',
               marginTop: 4,
-              color: staleCount > 0 ? '#dc2626' : 'var(--text)',
+              color: staleCount > 0 ? 'var(--danger-text)' : 'var(--text)',
             }}
           >
             {staleCount}
@@ -321,11 +321,11 @@ export const OnlineReconciliationWorkspace: React.FC = () => {
                   {formatMoney(p.collected as Paisa)}
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#16a34a' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--success-text)' }}>
                 <span>Allocated:</span>
                 <span style={{ fontFamily: 'var(--font-mono)' }}>{formatMoney(p.allocated as Paisa)}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#d97706' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--warn-text)' }}>
                 <span>Refunded:</span>
                 <span style={{ fontFamily: 'var(--font-mono)' }}>{formatMoney(p.refunded as Paisa)}</span>
               </div>
@@ -436,7 +436,9 @@ export const OnlineReconciliationWorkspace: React.FC = () => {
                       <td style={{ padding: '10px 14px' }}>
                         <span
                           style={{
-                            display: 'inline-block',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
                             padding: '2px 8px',
                             borderRadius: '4px',
                             fontSize: '0.75rem',
@@ -444,29 +446,32 @@ export const OnlineReconciliationWorkspace: React.FC = () => {
                             textTransform: 'uppercase',
                             background:
                               i.status === 'allocated'
-                                ? 'rgba(34, 197, 94, 0.15)'
+                                ? 'var(--success-surface)'
                                 : i.status === 'refunded'
-                                ? 'rgba(217, 119, 6, 0.15)'
+                                ? 'var(--warn-surface)'
                                 : i.status === 'paid'
-                                ? 'rgba(59, 130, 246, 0.15)'
-                                : 'rgba(156, 163, 175, 0.15)',
+                                ? 'var(--info-surface)'
+                                : 'var(--inset)',
                             color:
                               i.status === 'allocated'
-                                ? '#16a34a'
+                                ? 'var(--success-text)'
                                 : i.status === 'refunded'
-                                ? '#d97706'
+                                ? 'var(--warn-text)'
                                 : i.status === 'paid'
-                                ? '#2563eb'
+                                ? 'var(--primary-text, var(--primary))'
                                 : 'var(--text-muted)',
                           }}
                         >
+                          {i.status === 'allocated' && <Icon name="check" size={12} />}
+                          {i.status === 'refunded' && <Icon name="return_arrow" size={12} />}
+                          {i.status === 'paid' && <Icon name="clock" size={12} />}
                           {i.status}
                         </span>
                         {isStale && (
                           <div
                             style={{
                               fontSize: '0.7rem',
-                              color: '#dc2626',
+                              color: 'var(--danger-text)',
                               fontWeight: 700,
                               marginTop: 2,
                             }}
@@ -527,7 +532,7 @@ export const OnlineReconciliationWorkspace: React.FC = () => {
             <p style={{ margin: '0 0 16px 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
               Total amount: <strong>{formatMoney(refundTarget.amount_paisa)}</strong> ({refundTarget.provider}).
               {refundTarget.status === 'allocated' && (
-                <span style={{ display: 'block', color: '#d97706', marginTop: 4, fontWeight: 600 }}>
+                <span style={{ display: 'block', color: 'var(--warn-text)', marginTop: 4, fontWeight: 600 }}>
                   Note: Payment is already allocated. An immutable payment reversal record will be issued.
                 </span>
               )}

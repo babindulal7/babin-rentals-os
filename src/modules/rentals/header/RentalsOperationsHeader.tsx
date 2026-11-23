@@ -312,8 +312,8 @@ function OperationsDropdown({
                         fontSize: 'var(--t-caption, 10px)',
                         padding: '2px 6px',
                         borderRadius: 4,
-                        background: 'var(--primary, #2563eb)',
-                        color: '#fff',
+                        background: 'var(--primary)',
+                        color: 'var(--on-primary, #ffffff)',
                         fontWeight: 700,
                       }}
                     >

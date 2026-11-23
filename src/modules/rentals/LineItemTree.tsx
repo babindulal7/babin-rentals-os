@@ -699,8 +699,8 @@ export function LineItemTree({
                                         fontSize: '0.675rem',
                                         padding: '1px 5px',
                                         borderRadius: 4,
-                                        background: 'rgba(245, 158, 11, 0.15)',
-                                        color: '#d97706',
+                                        background: 'var(--warn-surface, rgba(245, 158, 11, 0.15))',
+                                        color: 'var(--warn-text)',
                                         fontWeight: 700,
                                       }}
                                     >

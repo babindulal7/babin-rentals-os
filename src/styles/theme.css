@@ -709,14 +709,18 @@
 
   /* Elevation & text aliases across modules for theme consistency */
   --text-muted: var(--muted);
+  --text-main: var(--text);
   --border-subtle: var(--border);
+  --border-color: var(--border);
   --surface-raised: var(--card);
   --surface-subtle: var(--surface-2);
   --surface-sunken: var(--inset);
+  --bg-surface: var(--surface);
   --bg-card: var(--card);
   --bg-subtle: var(--surface-2);
   --bg-active: var(--surface-2);
   --bg-input: var(--surface);
+  --table-header-bg: var(--th-bg, var(--surface-2));
   --color-primary: var(--primary);
   --color-success: var(--success);
   --color-warning: var(--warn);
@@ -724,6 +728,25 @@
   --radius-md: var(--r-card, 8px);
   --radius-sm: var(--r-sm, 6px);
   --space-md: var(--sp-md, 12px);
+
+  /* Status surfaces and badges (theme-adaptive) */
+  --danger-surface: color-mix(in srgb, var(--danger) 12%, transparent);
+  --danger-border: color-mix(in srgb, var(--danger) 30%, transparent);
+  --success-surface: color-mix(in srgb, var(--success) 12%, transparent);
+  --success-border: color-mix(in srgb, var(--success) 30%, transparent);
+  --warn-surface: color-mix(in srgb, var(--warn) 12%, transparent);
+  --warn-border: color-mix(in srgb, var(--warn) 30%, transparent);
+  --info-surface: color-mix(in srgb, var(--primary) 12%, transparent);
+  --info-border: color-mix(in srgb, var(--primary) 30%, transparent);
+
+  --good-subtle: var(--success-surface);
+  --bad-subtle: var(--danger-surface);
+  --warn-subtle: var(--warn-surface);
+  --info-subtle: var(--info-surface);
+  --badge-success-bg: var(--success-surface);
+  --badge-danger-bg: var(--danger-surface);
+  --badge-warn-bg: var(--warn-surface);
+  --badge-info-bg: var(--info-surface);
 
   /* spacing */
   --sp-xs: 4px;

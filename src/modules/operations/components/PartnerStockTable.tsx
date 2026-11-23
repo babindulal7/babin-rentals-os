@@ -214,9 +214,9 @@ export function PartnerStockTable({
                               fontWeight: 700,
                               padding: '2px 6px',
                               borderRadius: 4,
-                              background: 'rgba(234, 179, 8, 0.15)',
-                              color: '#ca8a04',
-                              border: '1px solid rgba(234, 179, 8, 0.3)',
+                              background: 'var(--warn-surface, rgba(234, 179, 8, 0.15))',
+                              color: 'var(--warn-text)',
+                              border: '1px solid var(--warn-border, rgba(234, 179, 8, 0.3))',
                               letterSpacing: '0.04em',
                             }}>
                               PARTNER
