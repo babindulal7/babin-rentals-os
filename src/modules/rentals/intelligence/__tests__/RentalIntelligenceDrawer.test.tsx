@@ -126,4 +126,35 @@ describe('RentalIntelligenceDrawer UI Component', () => {
     expect(html).toContain('No active warnings or suggestions')
     expect(html).toContain('Current draft configuration passes deterministic kit, safety, and operational gates.')
   })
+
+  it('renders equipment safety baseline card with rig weight and lighting load', () => {
+    const html = renderToStaticMarkup(
+      <RentalIntelligenceDrawer
+        open={true}
+        onClose={() => {}}
+        advices={[]}
+        currentItems={[
+          { name: 'Sony FX3A Cinema Body', quantity: 1 },
+          { name: 'Aputure LS 600x Pro', quantity: 1 },
+        ]}
+      />,
+    )
+
+    expect(html).toContain('Equipment Safety Baseline')
+    expect(html).toContain('ESTIMATED RIG WEIGHT')
+    expect(html).toContain('LIGHTING LOAD')
+    expect(html).toContain('735W (Limit 2,760W)')
+  })
+
+  it('renders Kit Builder tab button in active modules bar', () => {
+    const html = renderToStaticMarkup(
+      <RentalIntelligenceDrawer
+        open={true}
+        onClose={() => {}}
+        advices={sampleAdvices}
+      />,
+    )
+
+    expect(html).toContain('Kit Builder')
+  })
 })
