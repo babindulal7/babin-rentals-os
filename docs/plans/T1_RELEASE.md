@@ -169,15 +169,15 @@ must see no money; create and cancel a test quote).
 **Done when** — the checklist is ticked with time and initials in PROGRESS.md.
 **Needs** — T1-10.
 
-### T1-12 · Backups and recovery as a routine            status: todo · size: S · lane A + Babin
+### T1-12 · Backups and recovery as a routine            status: ready — awaiting merge (lane-a/T1-12-backups-and-recovery-as-a-routine) · size: S · lane A + Babin
 **What** — Confirm what the live Supabase plan backs up automatically (daily backups / point-in-time
 recovery) and write it down; add a weekly scripted backup to Babin's Drive; restore into staging
-once a month and record the result.
+once a month and record the result [docs/verification/T1-12_BACKUP_AND_RECOVERY_ROUTINE_VERIFICATION_2026-11-23.md].
 **Why** — G10.
-**Where** — [`../archive/BACKUP_PROTOCOL.md`](../archive/BACKUP_PROTOCOL.md).
+**Where** — [`../archive/BACKUP_PROTOCOL.md`](../archive/BACKUP_PROTOCOL.md), `docs/runbooks/ROUTINE_BACKUP_AND_RESTORE.md`.
 **Database** — read-only on live; restore on staging.
 **Done when** — two weekly backups exist and one monthly restore is logged.
-**Needs** — T1-02.
+**Needs** — T1-02 (completed).
 
 ### T1-13 · Real staff accounts on live            status: todo · size: S · Babin + lane A
 **What** — Create a login for every staff member with the correct role; deactivate test or old
