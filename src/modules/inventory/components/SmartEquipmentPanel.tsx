@@ -255,8 +255,23 @@ export function SmartEquipmentPanel({
   }
 
   return (
-    <div style={overlayStyle} role="dialog" aria-modal="true" aria-label="Smart Equipment Intelligence Drawer" onClick={onClose}>
-      <div style={drawerContainerStyle} onClick={(e) => e.stopPropagation()}>
+    <div
+      style={overlayStyle}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Smart Equipment Intelligence Drawer"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose()
+        }
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          onClose()
+        }
+      }}
+    >
+      <div style={drawerContainerStyle}>
         {/* ── Header ────────────────────────────────────────────────────── */}
         <div
           style={{

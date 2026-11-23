@@ -159,8 +159,9 @@ describe('SmartEquipmentPanel (Phase T1 Acceptance Suite)', () => {
     })
 
     // The rejected field ('name') must NOT be in the applied payload
-    if (handleApplyAll.mock.calls.length > 0) {
-      const payload = handleApplyAll.mock.calls[0][0]
+    const firstCall = handleApplyAll.mock.calls[0]
+    if (firstCall) {
+      const payload = firstCall[0] as Record<string, unknown>
       expect(payload['name']).toBeUndefined()
     }
   })
@@ -194,8 +195,9 @@ describe('SmartEquipmentPanel (Phase T1 Acceptance Suite)', () => {
       acceptAllBtn?.click()
     })
 
-    if (handleApplyAll.mock.calls.length > 0) {
-      const payload = handleApplyAll.mock.calls[0][0]
+    const firstCall2 = handleApplyAll.mock.calls[0]
+    if (firstCall2) {
+      const payload = firstCall2[0] as Record<string, unknown>
       expect(payload['description']).toBeUndefined()
     }
   })
