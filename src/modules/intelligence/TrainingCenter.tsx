@@ -844,8 +844,8 @@ export default function TrainingCenter() {
             <div style={{ ...cardStyle, padding: '1.25rem', marginBottom: '1.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Golden Test Case Library</h3>
-                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.8125rem', color: '#64748b' }}>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text)' }}>Golden Test Case Library</h3>
+                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.8125rem', color: 'var(--muted)' }}>
                     Curated collection of 47 synthetic golden assertions with explicit expected dispositions.
                   </p>
                 </div>
@@ -854,9 +854,9 @@ export default function TrainingCenter() {
                   style={{
                     minHeight: '44px',
                     padding: '0.5rem 1rem',
-                    backgroundColor: '#0f172a',
-                    color: '#ffffff',
-                    border: 'none',
+                    backgroundColor: 'var(--surface-2)',
+                    color: 'var(--text)',
+                    border: '1px solid var(--border)',
                     borderRadius: '6px',
                     fontSize: '0.8125rem',
                     fontWeight: 600,
@@ -883,14 +883,16 @@ export default function TrainingCenter() {
                     minHeight: '44px',
                     padding: '0.5rem 0.75rem',
                     borderRadius: '6px',
-                    border: '1px solid #cbd5e1',
+                    border: '1px solid var(--border)',
+                    backgroundColor: 'var(--surface)',
+                    color: 'var(--text)',
                     fontSize: '0.875rem',
                   }}
                 />
                 <select
                   value={selectedSuite}
                   onChange={(e) => setSelectedSuite(e.target.value)}
-                  style={{ minHeight: '44px', padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.875rem' }}
+                  style={{ minHeight: '44px', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)', backgroundColor: 'var(--surface)', color: 'var(--text)', fontSize: '0.875rem' }}
                 >
                   <option value="all">All Suites</option>
                   {suitesList.map((s) => (
@@ -900,7 +902,7 @@ export default function TrainingCenter() {
                 <select
                   value={selectedSeverity}
                   onChange={(e) => setSelectedSeverity(e.target.value)}
-                  style={{ minHeight: '44px', padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.875rem' }}
+                  style={{ minHeight: '44px', padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)', backgroundColor: 'var(--surface)', color: 'var(--text)', fontSize: '0.875rem' }}
                 >
                   <option value="all">All Severities</option>
                   <option value="critical">Critical</option>
@@ -914,7 +916,7 @@ export default function TrainingCenter() {
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8125rem' }}>
                   <thead>
-                    <tr style={{ borderBottom: '2px solid #e2e8f0', color: '#64748b' }}>
+                    <tr style={{ borderBottom: '2px solid var(--border)', color: 'var(--muted)' }}>
                       <th style={{ padding: '0.625rem 0.5rem' }}>ID</th>
                       <th style={{ padding: '0.625rem 0.5rem' }}>Suite</th>
                       <th style={{ padding: '0.625rem 0.5rem' }}>Severity</th>
@@ -926,15 +928,15 @@ export default function TrainingCenter() {
                   </thead>
                   <tbody>
                     {filteredCases.map((c) => (
-                      <tr key={c.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '0.625rem 0.5rem', fontWeight: 600 }}><code>{c.id}</code></td>
-                        <td style={{ padding: '0.625rem 0.5rem' }}>{c.suite}</td>
+                      <tr key={c.id} style={{ borderBottom: '1px solid var(--divider)' }}>
+                        <td style={{ padding: '0.625rem 0.5rem', fontWeight: 600, color: 'var(--text)' }}><code>{c.id}</code></td>
+                        <td style={{ padding: '0.625rem 0.5rem', color: 'var(--text)' }}>{c.suite}</td>
                         <td style={{ padding: '0.625rem 0.5rem' }}>
                           <span
                             style={{
                               fontSize: '0.75rem',
                               fontWeight: 600,
-                              color: c.severity === 'critical' ? '#dc2626' : c.severity === 'high' ? '#d97706' : '#475569',
+                              color: c.severity === 'critical' ? 'var(--danger-text)' : c.severity === 'high' ? 'var(--warn-text)' : 'var(--muted)',
                             }}
                           >
                             {c.severity}
@@ -945,7 +947,8 @@ export default function TrainingCenter() {
                             style={{
                               padding: '0.125rem 0.375rem',
                               borderRadius: '4px',
-                              backgroundColor: '#f1f5f9',
+                              backgroundColor: 'var(--surface-2)',
+                              color: 'var(--text)',
                               fontSize: '0.75rem',
                               fontWeight: 600,
                             }}
@@ -953,19 +956,20 @@ export default function TrainingCenter() {
                             {c.expectedDisposition}
                           </span>
                         </td>
-                        <td style={{ padding: '0.625rem 0.5rem', color: '#64748b' }}>{c.audience}</td>
-                        <td style={{ padding: '0.625rem 0.5rem', color: '#1e293b' }}>{c.question}</td>
+                        <td style={{ padding: '0.625rem 0.5rem', color: 'var(--muted)' }}>{c.audience}</td>
+                        <td style={{ padding: '0.625rem 0.5rem', color: 'var(--text)' }}>{c.question}</td>
                         <td style={{ padding: '0.625rem 0.5rem' }}>
                           <button
                             onClick={() => setSelectedCaseModal(c)}
                             style={{
                               minHeight: '36px',
                               padding: '0.25rem 0.5rem',
-                              backgroundColor: '#f1f5f9',
-                              border: '1px solid #cbd5e1',
+                              backgroundColor: 'var(--surface-2)',
+                              border: '1px solid var(--border)',
                               borderRadius: '4px',
                               fontSize: '0.75rem',
                               cursor: 'pointer',
+                              color: 'var(--text)',
                             }}
                           >
                             Inspect
@@ -987,7 +991,7 @@ export default function TrainingCenter() {
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  backgroundColor: 'rgba(0,0,0,0.5)',
+                  backgroundColor: 'rgba(0,0,0,0.6)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -995,14 +999,14 @@ export default function TrainingCenter() {
                   zIndex: 9999,
                 }}
               >
-                <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', maxWidth: '600px', width: '100%', padding: '1.5rem', maxHeight: '90vh', overflowY: 'auto' }}>
+                <div style={{ backgroundColor: 'var(--card)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '8px', maxWidth: '600px', width: '100%', padding: '1.5rem', maxHeight: '90vh', overflowY: 'auto' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                     <h3 style={{ margin: 0, fontSize: '1.125rem', fontWeight: 700 }}>
                       Case {selectedCaseModal.id} Details
                     </h3>
                     <button
                       onClick={() => setSelectedCaseModal(null)}
-                      style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '0.5rem' }}
+                      style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '0.5rem', color: 'var(--text)' }}
                     >
                       <Icon name="x" size={20} />
                     </button>
@@ -1012,7 +1016,7 @@ export default function TrainingCenter() {
                     <div><strong>Expected Disposition:</strong> <code>{selectedCaseModal.expectedDisposition}</code></div>
                     <div>
                       <strong>Required Assertions:</strong>
-                      <ul style={{ margin: '0.25rem 0 0', paddingLeft: '1.25rem', color: '#15803d' }}>
+                      <ul style={{ margin: '0.25rem 0 0', paddingLeft: '1.25rem', color: 'var(--success-text)' }}>
                         {selectedCaseModal.requiredAssertions.map((a, i) => (
                           <li key={i}>{a}</li>
                         ))}
@@ -1020,7 +1024,7 @@ export default function TrainingCenter() {
                     </div>
                     <div>
                       <strong>Forbidden Assertions:</strong>
-                      <ul style={{ margin: '0.25rem 0 0', paddingLeft: '1.25rem', color: '#b91c1c' }}>
+                      <ul style={{ margin: '0.25rem 0 0', paddingLeft: '1.25rem', color: 'var(--danger-text)' }}>
                         {selectedCaseModal.forbiddenAssertions.map((a, i) => (
                           <li key={i}>{a}</li>
                         ))}
@@ -1041,8 +1045,8 @@ export default function TrainingCenter() {
             <div style={{ ...cardStyle, padding: '1.25rem', marginBottom: '1.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Evaluation Runs & Accuracy Reports</h3>
-                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.8125rem', color: '#64748b' }}>
+                  <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text)' }}>Evaluation Runs & Accuracy Reports</h3>
+                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.8125rem', color: 'var(--muted)' }}>
                     Run offline evaluations across test suites, compare deltas against baseline, and export reports.
                   </p>
                 </div>
@@ -1052,12 +1056,13 @@ export default function TrainingCenter() {
                     style={{
                       minHeight: '44px',
                       padding: '0.5rem 1rem',
-                      backgroundColor: '#f1f5f9',
-                      border: '1px solid #cbd5e1',
+                      backgroundColor: 'var(--surface-2)',
+                      border: '1px solid var(--border)',
                       borderRadius: '6px',
                       fontSize: '0.8125rem',
                       fontWeight: 600,
                       cursor: 'pointer',
+                      color: 'var(--text)',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '0.5rem',
@@ -1072,8 +1077,8 @@ export default function TrainingCenter() {
                     style={{
                       minHeight: '44px',
                       padding: '0.5rem 1rem',
-                      backgroundColor: '#2563eb',
-                      color: '#ffffff',
+                      backgroundColor: 'var(--primary)',
+                      color: 'var(--on-primary)',
                       border: 'none',
                       borderRadius: '6px',
                       fontWeight: 600,
@@ -1088,18 +1093,18 @@ export default function TrainingCenter() {
 
               {currentRun && (
                 <div>
-                  <div style={{ backgroundColor: '#f8fafc', padding: '1rem', borderRadius: '6px', border: '1px solid #e2e8f0', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.8125rem' }}>
+                  <div style={{ backgroundColor: 'var(--surface-2)', padding: '1rem', borderRadius: '6px', border: '1px solid var(--border)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.8125rem' }}>
                     <div><strong>Run ID:</strong> <code>{currentRun.runId}</code></div>
                     <div><strong>Environment:</strong> <code>{currentRun.environment}</code></div>
                     <div><strong>Evaluated At:</strong> {new Date(currentRun.asOf).toLocaleTimeString()}</div>
-                    <div><strong>Passed:</strong> <span style={{ color: '#16a34a', fontWeight: 700 }}>{currentRun.counts.pass}</span> / {currentRun.counts.total}</div>
+                    <div><strong>Passed:</strong> <span style={{ color: 'var(--success-text)', fontWeight: 700 }}>{currentRun.counts.pass}</span> / {currentRun.counts.total}</div>
                   </div>
 
                   {/* Per-Case Results */}
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.8125rem' }}>
                       <thead>
-                        <tr style={{ borderBottom: '2px solid #e2e8f0', color: '#64748b' }}>
+                        <tr style={{ borderBottom: '2px solid var(--border)', color: 'var(--muted)' }}>
                           <th style={{ padding: '0.5rem' }}>Case ID</th>
                           <th style={{ padding: '0.5rem' }}>Suite</th>
                           <th style={{ padding: '0.5rem' }}>Verdict</th>
@@ -1110,9 +1115,9 @@ export default function TrainingCenter() {
                       </thead>
                       <tbody>
                         {currentRun.results.map((res) => (
-                          <tr key={res.caseId} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '0.5rem', fontWeight: 600 }}><code>{res.caseId}</code></td>
-                            <td style={{ padding: '0.5rem' }}>{res.suite}</td>
+                          <tr key={res.caseId} style={{ borderBottom: '1px solid var(--divider)' }}>
+                            <td style={{ padding: '0.5rem', fontWeight: 600, color: 'var(--text)' }}><code>{res.caseId}</code></td>
+                            <td style={{ padding: '0.5rem', color: 'var(--text)' }}>{res.suite}</td>
                             <td style={{ padding: '0.5rem' }}>
                               <span
                                 style={{
@@ -1120,16 +1125,16 @@ export default function TrainingCenter() {
                                   fontWeight: 700,
                                   padding: '0.125rem 0.375rem',
                                   borderRadius: '4px',
-                                  backgroundColor: res.verdict === 'pass' ? '#dcfce7' : res.verdict === 'fail' ? '#fee2e2' : '#fef3c7',
-                                  color: res.verdict === 'pass' ? '#16a34a' : res.verdict === 'fail' ? '#dc2626' : '#d97706',
+                                  backgroundColor: res.verdict === 'pass' ? 'var(--success-bg)' : res.verdict === 'fail' ? 'var(--danger-bg)' : 'var(--st-progress-bg)',
+                                  color: res.verdict === 'pass' ? 'var(--success-text)' : res.verdict === 'fail' ? 'var(--danger-text)' : 'var(--warn-text)',
                                 }}
                               >
                                 {res.verdict.toUpperCase()}
                               </span>
                             </td>
-                            <td style={{ padding: '0.5rem' }}><code>{res.candidateDisposition}</code></td>
-                            <td style={{ padding: '0.5rem', color: '#64748b' }}>{res.evidenceStatus}</td>
-                            <td style={{ padding: '0.5rem', color: '#64748b' }}>{res.durationMs}ms</td>
+                            <td style={{ padding: '0.5rem', color: 'var(--text)' }}><code>{res.candidateDisposition}</code></td>
+                            <td style={{ padding: '0.5rem', color: 'var(--muted)' }}>{res.evidenceStatus}</td>
+                            <td style={{ padding: '0.5rem', color: 'var(--muted)' }}>{res.durationMs}ms</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1146,8 +1151,8 @@ export default function TrainingCenter() {
           <div role="tabpanel" id="panel-feedback" aria-labelledby="tab-feedback">
             <div style={{ ...cardStyle, padding: '1.25rem' }}>
               <div style={{ marginBottom: '1rem' }}>
-                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Staff Feedback & Correction Queue</h3>
-                <p style={{ margin: '0.25rem 0 0', fontSize: '0.8125rem', color: '#64748b' }}>
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text)' }}>Staff Feedback & Correction Queue</h3>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.8125rem', color: 'var(--muted)' }}>
                   Field corrections submitted by operators from How-to, AV Brain, and Add Equipment drawers.
                   Never mutates live pricing or booking rules automatically.
                 </p>
@@ -1158,35 +1163,35 @@ export default function TrainingCenter() {
                   <div
                     key={item.id}
                     style={{
-                      border: '1px solid #e2e8f0',
+                      border: '1px solid var(--border)',
                       borderRadius: '6px',
                       padding: '1rem',
-                      backgroundColor: '#ffffff',
+                      backgroundColor: 'var(--surface)',
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <code style={{ fontSize: '0.8125rem', fontWeight: 600 }}>{item.id}</code>
-                        <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>{item.modelName}</span>
+                        <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text)' }}>{item.modelName}</span>
                         <span
                           style={{
                             fontSize: '0.75rem',
                             fontWeight: 600,
                             padding: '0.125rem 0.375rem',
                             borderRadius: '4px',
-                            backgroundColor: item.feedbackType === 'unsafe' ? '#fee2e2' : '#f1f5f9',
-                            color: item.feedbackType === 'unsafe' ? '#dc2626' : '#475569',
+                            backgroundColor: item.feedbackType === 'unsafe' ? 'var(--danger-bg)' : 'var(--surface-2)',
+                            color: item.feedbackType === 'unsafe' ? 'var(--danger-text)' : 'var(--muted)',
                           }}
                         >
                           {item.feedbackType}
                         </span>
                       </div>
-                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
                         Reported by: <strong>{item.userRole}</strong> • Surface: {item.sourceType}
                       </span>
                     </div>
 
-                    <p style={{ margin: '0.5rem 0', fontSize: '0.875rem', color: '#334155' }}>
+                    <p style={{ margin: '0.5rem 0', fontSize: '0.875rem', color: 'var(--text2)' }}>
                       "{item.comment}"
                     </p>
 
@@ -1195,7 +1200,7 @@ export default function TrainingCenter() {
                         style={{
                           fontSize: '0.75rem',
                           fontWeight: 600,
-                          color: item.status === 'review_candidate_created' ? '#16a34a' : '#d97706',
+                          color: item.status === 'review_candidate_created' ? 'var(--success-text)' : 'var(--warn-text)',
                         }}
                       >
                         Status: {item.status === 'review_candidate_created' ? 'Review Candidate Created' : 'Pending Review'}
@@ -1210,8 +1215,8 @@ export default function TrainingCenter() {
                           style={{
                             minHeight: '36px',
                             padding: '0.25rem 0.75rem',
-                            backgroundColor: '#2563eb',
-                            color: '#ffffff',
+                            backgroundColor: 'var(--primary)',
+                            color: 'var(--on-primary)',
                             border: 'none',
                             borderRadius: '4px',
                             fontSize: '0.75rem',

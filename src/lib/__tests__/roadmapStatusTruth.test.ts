@@ -31,6 +31,7 @@ describe('Roadmap status truth across merged tracks', () => {
       'T1-09': 'PR #275 merged',
       'T1-15': 'PR #208 merged',
       'T1-17': 'PR #203 merged',
+      'T1-18': 'PR #204 merged',
     }
     for (const [key, ref] of Object.entries(doneCards)) {
       const heading = t1.split('\n').find((l) => l.startsWith(`### ${key} ·`))
@@ -223,10 +224,9 @@ describe('Roadmap status truth across merged tracks', () => {
     }
   })
 
-  it('T0-09 and T1-18 stay acceptance_pending until their enforcement is evidenced (22 Nov 2026 reconciliation)', () => {
+  it('T0-09 stays acceptance_pending until its enforcement is evidenced (22 Nov 2026 reconciliation)', () => {
     const pending: Array<[string, string, string]> = [
       ['docs/plans/T0_REPO_HYGIENE.md', 'T0-09', 'PR #289 merged'],
-      ['docs/plans/T1_RELEASE.md', 'T1-18', 'PR #204 merged'],
     ]
     for (const [file, key, ref] of pending) {
       const heading = read(file).split('\n').find((l) => l.startsWith(`### ${key} ·`))

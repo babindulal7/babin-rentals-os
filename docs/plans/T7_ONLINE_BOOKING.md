@@ -194,7 +194,7 @@ online never appears on the public page".
 next refresh; New Rental offers them after the camera is added; screen check.
 **Needs** — T7-02.
 
-### T7-13 · Products with options on one page            status: done — PR #197 & PR #343 merged; family variant option selectors, independent stock/rates, ProductDetailModal option picker UI with fail-closed availability gating, and reservation isolation verified [docs/verification/T7_ONLINE_BOOKING_ACCEPTANCE_2026-11-22.md] · size: M · lane C · [go-live] · slips first
+### T7-13 · Products with options on one page            status: done — PR #197 merged & PR #343 merged; family variant option selectors, independent stock/rates, ProductDetailModal option picker UI with fail-closed availability gating, and reservation isolation verified [docs/verification/T7_ONLINE_BOOKING_ACCEPTANCE_2026-11-22.md] · size: M · lane C · [go-live] · slips first
 **What** — Products that differ only in an option — lens **mount** (EF / PL / E), cable **length**,
 size — show as **one product page with an option picker** (B2), online and in New Rental. Each option
 stays its own product underneath (own stock, units, rate and availability), grouped under a parent
