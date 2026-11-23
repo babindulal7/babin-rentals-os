@@ -4,11 +4,13 @@
 **Track:** Track 1 (Release & Security)  
 **Date:** 2026-11-23 (Nepal Time)  
 **Authority:** Babin (Owner) · `AGENTS.md` · `CLAUDE.md` · `docs/plans/T1_RELEASE.md` · `docs/plans/prompts/T1-08.md`  
-**Status:** Acceptance Verified & Documented
+**Status:** Code-level acceptance documented; hosted staging Sentry receipt not yet verified
 
 ---
 
 ## 1. Executive Summary
+
+> **Acceptance boundary (23 November 2026):** These unit tests demonstrate implementation-level privacy and resilience. This report does not provide a dated receipt showing that a synthetic event arrived in the configured staging monitoring dashboard with matching reference code and verified absence of client PII. Under the launch plan, T1-08 remains `doing` until authorized hosted verification and owner sign-off. No live Sentry configuration, telemetry sending, or production changes are authorized by this document.
 
 Card **T1-08** establishes production error monitoring and telemetry privacy for Babin Rentals OS across all client surfaces and staff floor roles.
 
