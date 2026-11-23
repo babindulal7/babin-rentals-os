@@ -3,9 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   canAdvance,
   closeGates,
-  assertOneJobInProgress,
   assertItemCounts,
-  planTransition,
   FLAGS,
   type CloseGateInput,
   type ItemCounts,
@@ -23,16 +21,14 @@ import { rupees, toRupees, type Paisa, REFERENCE_CASE, REFERENCE_CASE_ERROR } fr
 import { rentalDaysBetween } from '../../lib/rentalDays'
 import { operationalDayOf, OPERATIONAL_DAY_START_DEFAULT_MINUTES } from '../../lib/operationalDay'
 import { getRentalPrimaryAction } from '../../lib/rentalActions'
-import { canViewMoney, canApproveDiscount, canApproveDailyClosing } from '../../lib/rbac'
-import { isMoneySurface } from '../../data/nav'
+import { canViewMoney, canApproveDailyClosing } from '../../lib/rbac'
 import {
   checkExternalHoldConflicts,
   type ExternalHoldRecord,
-  type OsReservationCandidate,
 } from '../../lib/externalHolds'
 import { lateBand, bandConsequence } from '../../lib/lateFee'
-import { gateContext, canViewMoneyField, moneyScope } from '../../lib/fieldGating'
-import { BP, TEST_WIDTHS, viewportFor } from '../../lib/breakpoints'
+import { moneyScope } from '../../lib/fieldGating'
+import { BP, viewportFor } from '../../lib/breakpoints'
 import type { SystemRole } from '../../types/database'
 
 function makePipelineInput(overrides: Partial<PricingPipelineInput>): PricingPipelineInput {
@@ -80,9 +76,9 @@ describe('Week 3 Staff & Device Acceptance Test Suite', () => {
       expect(canAdvance('Returned', 'Closed')).toBe(true)
 
       // Clean deposit settlement
-      const depositSettled = settleDeposit(rupees(10000), 0)
+      const depositSettled = settleDeposit(rupees(10000), 0 as Paisa)
       expect(depositSettled.refundPaisa).toBe(rupees(10000))
-      expect(depositSettled.shortfallPaisa).toBe(0)
+      expect(depositSettled.shortfallPaisa).toBe(0 as Paisa)
     })
 
     // RC-02: Multi-Day Commercial Shoot Package

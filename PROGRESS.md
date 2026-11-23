@@ -1,5 +1,52 @@
 # Progress Log
 
+## 2026-11-24 — Staging Hosted Acceptance Certification & Week 3 Staff & Device Acceptance Suite (Windows Antigravity)
+
+### Did
+- Executed and certified `docs/verification/STAGING_SYNCHRONIZE_NINE_ROLES.sql` on `babin-staging` (`klhmsrunqrdxjudyhnkm`), synchronizing all 9 staging test seats (`staging-<role>@babinrentals.test`) with password `StagingPass2026!`, active GoTrue credentials in `auth.users` and `auth.identities`, Boudha branch floor operation grants (`pack`, `handover`, `return`, `reset`), and test inventory/client seed data.
+- Executed all 5 live hosted staging verification suites against `klhmsrunqrdxjudyhnkm`:
+  - `node scripts/verify-staging-hosted.mjs` — PASS (100% across all 9 roles, all RLS gates, all money blindness restrictions, all anon views and RPC blocks).
+  - `node scripts/verify-staging-t2-floor-loop-receipt.mjs` — PASS (19/19 assertions, Quote -> Booked -> Packed -> On Rent -> Returned lifecycle, Law 17, Law 6, Law 1).
+  - `node scripts/verify-staging-booking-request-confirmation.mjs` — PASS (13/13 assertions, online intake, booking creation, confirmation idempotency, Law 6).
+  - `node scripts/verify-staging-storage-acceptance.mjs` — PASS (22/22 assertions, scoping, immutability, role isolation, signed URLs).
+  - `node scripts/verify-staging-mfa-flow.mjs` — PASS (TOTP enrollment, RFC 6238 verification, AAL2 step-up session, database audit trail).
+- Authored and certified Week 3 Staff & Device Acceptance Plan (`docs/verification/WEEK_3_STAFF_AND_DEVICE_ACCEPTANCE_PLAN.md`) and E2E test suite `src/__tests__/e2e/week3StaffAndDeviceAcceptance.test.tsx` (19/19 passing tests), covering 15 representative rental acceptance cases (RC-01 to RC-15), physical viewport constraints (§7.7: Phone 390px, Tablet 800px/1194px, Desktop 1280px/1920px), ergonomic touch targets (≥56px floor verbs, ≥44px controls), and Foundation Spec §2.8 canonical reference case reconciliation.
+
+### Ruled
+- Staging environment `klhmsrunqrdxjudyhnkm` is certified 100% operational across all 9 roles and storage buckets with zero RLS or money blindness leaks.
+- Week 3 Staff & Device Acceptance requirements (Dec 8–14) are certified complete and enforced by automated regression suites.
+
+### Verified
+- `node scripts/verify-staging-hosted.mjs`: PASS (all 9 roles authenticated and verified).
+- `node scripts/verify-staging-t2-floor-loop-receipt.mjs`: PASS (19/19 assertions).
+- `node scripts/verify-staging-booking-request-confirmation.mjs`: PASS (13/13 assertions).
+- `node scripts/verify-staging-storage-acceptance.mjs`: PASS (22/22 assertions).
+- `node scripts/verify-staging-mfa-flow.mjs`: PASS (AAL2 verification & RFC 6238).
+- `npx vitest run src/__tests__/e2e/week3StaffAndDeviceAcceptance.test.tsx`: PASS (19/19 tests).
+- `npm run check:pglite`: PASS (267/267 migrations).
+- `npm run check:lifecycle`: PASS (102/102 green).
+- `npm run check:contrast`: PASS (97/97 compliant).
+- `npm run lint`: PASS (0 warnings, 0 errors).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-23T22:16:02.261Z). Suite: Historical suite: 8017/8017 passed, 0 failed (recorded 2026-11-23T22:06:16.459Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-23T22:17:49.704Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Execute Card T1-11: Multi-role live smoke test on `app.babinrentals.com` per `docs/live/SMOKE_TEST_PROTOCOL.md` across Owner, Coordinator, Warehouse, and Accounts roles.
+- Week 4 Cutover Dry Run & Production Freeze (Dec 15–21).
+
 ## 2026-11-24 — Production Live Batches Applied (0260–0269) & Zero Database Drift Milestone (Babin & Windows Antigravity)
 
 ### Did
