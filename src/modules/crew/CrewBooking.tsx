@@ -386,7 +386,7 @@ export function CrewBooking() {
                 letterSpacing: 'normal',
               }}
             >
-              {filteredRoster.length} staff
+              {filteredRoster.length} {t('crew.status.staff', 'staff')}
             </span>
           }
           search={{
@@ -415,7 +415,7 @@ export function CrewBooking() {
           }
         />
         <FilterDrawer id="crew-filters" open={filtersOpen} onClose={() => setFiltersOpen(false)} resultCount={filteredRoster.length} noun="crew members" activeCount={Number(Boolean(selectedRole))} onClearAll={() => setSelectedRole('')} standardFooter onApply={() => setFiltersOpen(false)}>
-          <label style={{ display: 'grid', gap: 8, fontWeight: 600 }}>Role
+          <label style={{ display: 'grid', gap: 8, fontWeight: 600 }}>{t('crew.filter.roleLabel', 'Role')}
             <Select aria-label="Filter crew by role" value={selectedRole} onChange={(event) => setSelectedRole(event.target.value)} style={{ minHeight: 44, width: '100%' }}>
               <option value="">{t('crew.filter.allRoles', 'All roles')}</option>
               {roles.map((role) => <option key={role} value={role}>{role}</option>)}
@@ -442,8 +442,7 @@ export function CrewBooking() {
         >
           <Icon name="alert_triangle" size={13} style={{ flexShrink: 0, marginTop: 2 }} />
           <span>
-            The live crew roster could not be loaded, so the roster and assignments below are the built-in
-            reference set — not a live record. {rosterLoadError}
+            {t('crew.roster.loadErrorPrefix', 'The live crew roster could not be loaded, so the roster and assignments below are the built-in reference set — not a live record.')} {rosterLoadError}
           </span>
         </p>
       )}
@@ -583,7 +582,7 @@ export function CrewBooking() {
                               </td>
                               {canCrewMoney && (
                                 <td className="figure crew-mono" style={{ padding: '12px 14px', color: tone.fg === '' ? undefined : 'var(--text)' }}>
-                                  {formatMoney(m.dayRatePaisa)} / day
+                                  {formatMoney(m.dayRatePaisa)} {t('crew.table.perDay', '/ day')}
                                 </td>
                               )}
                             </tr>
@@ -683,13 +682,13 @@ export function CrewBooking() {
                                   {c.startDateBs} — {c.endDateBs}
                                 </div>
                                 <div className="figure crew-mono" style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)', marginTop: 2 }}>
-                                  {c.startDateAd} — {c.endDateAd} ({c.days + (c.overtimeDays ?? 0)} day{c.days + (c.overtimeDays ?? 0) === 1 ? '' : 's'}{c.overtimeDays ? ` [+${c.overtimeDays} OT]` : ''})
+                                  {c.startDateAd} — {c.endDateAd} ({c.days + (c.overtimeDays ?? 0)} {c.days + (c.overtimeDays ?? 0) === 1 ? t('crew.list.daysSingle', '{count} day', { count: '' }).trim() : t('crew.list.daysMulti', '{count} days', { count: '' }).trim()}{c.overtimeDays ? ` [+${c.overtimeDays} OT]` : ''})
                                 </div>
                               </td>
                               {desktop && canCrewMoney && (
                                 <td style={{ padding: '12px 14px' }}>
                                   <div className="figure crew-mono" style={{ fontWeight: 600, color: 'var(--text)' }}>{formatMoney(c.totalCostPaisa)}</div>
-                                  <div className="figure crew-mono" style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)', marginTop: 2 }}>{formatMoney(c.dayRatePaisa)} / day</div>
+                                  <div className="figure crew-mono" style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)', marginTop: 2 }}>{formatMoney(c.dayRatePaisa)} {t('crew.table.perDay', '/ day')}</div>
                                 </td>
                               )}
                               <td style={{ padding: '12px 14px' }}>
@@ -711,7 +710,7 @@ export function CrewBooking() {
                               )}
                               <td style={{ padding: '12px 14px', textAlign: 'right' }}>
                                 <Button variant="secondary" onClick={() => navigate(`/rentals/${c.linkedBooking}`)}>
-                                  View booking
+                                  {t('crew.actions.viewBooking', 'View booking')}
                                 </Button>
                               </td>
                             </tr>
@@ -756,6 +755,7 @@ function StateChip({ label, tone }: { label: string; tone: StatusKey }) {
 
 /** §6.1's phone drawing for the CREW list: `name · role / rate [Book]`. */
 function RosterCard({ member, showRate }: { member: CrewMember; showRate: boolean }) {
+  const { t } = useTranslation()
   return (
     <article className="crew-card-item" style={{ ...cardStyle, padding: 'var(--sp-sm) var(--sp-md)', display: 'flex', flexDirection: 'column', gap: 6 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--sp-sm)' }}>
@@ -768,7 +768,7 @@ function RosterCard({ member, showRate }: { member: CrewMember; showRate: boolea
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--sp-sm)' }}>
         {showRate ? (
           <span className="figure crew-mono" style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
-            {formatMoney(member.dayRatePaisa)} / day
+            {formatMoney(member.dayRatePaisa)} {t('crew.table.perDay', '/ day')}
           </span>
         ) : (
           <span />
@@ -790,6 +790,7 @@ function AssignmentCard({
   showMoney: boolean
   onOpen: () => void
 }) {
+  const { t } = useTranslation()
   const toneKey = assignmentTone(c, onShootToday(c))
   return (
     <article
@@ -810,11 +811,11 @@ function AssignmentCard({
         {inConflict && <Tag label="CONFLICT" tone="danger" />}
       </div>
       <div className="figure crew-mono" style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
-        {c.linkedBooking} · {c.startDateAd} — {c.endDateAd} ({c.days + (c.overtimeDays ?? 0)} day{c.days + (c.overtimeDays ?? 0) === 1 ? '' : 's'}{c.overtimeDays ? ` [+${c.overtimeDays} OT]` : ''})
+        {c.linkedBooking} · {c.startDateAd} — {c.endDateAd} ({c.days + (c.overtimeDays ?? 0)} {c.days + (c.overtimeDays ?? 0) === 1 ? t('crew.list.daysSingle', '{count} day', { count: '' }).trim() : t('crew.list.daysMulti', '{count} days', { count: '' }).trim()}{c.overtimeDays ? ` [+${c.overtimeDays} OT]` : ''})
       </div>
       {showMoney && (
         <div className="figure crew-mono" style={{ fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
-          {formatMoney(c.totalCostPaisa)} · {formatMoney(c.dayRatePaisa)} / day
+          {formatMoney(c.totalCostPaisa)} · {formatMoney(c.dayRatePaisa)} {t('crew.table.perDay', '/ day')}
         </div>
       )}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--sp-sm)', flexWrap: 'wrap' }}>
@@ -823,7 +824,7 @@ function AssignmentCard({
           <StateChip label={c.payoutStatus} tone={PAYOUT_TONE[c.payoutStatus]} />
         </div>
         <Button variant="primary" onClick={onOpen}>
-          View booking
+          {t('crew.actions.viewBooking', 'View booking')}
         </Button>
       </div>
     </article>
@@ -865,6 +866,7 @@ export function startOfWeek(d: Date, startDay: string = 'Sunday'): Date {
 }
 
 function WeekCalendar({ assignments, conflictIds }: { assignments: CrewAssignment[]; conflictIds: Set<string> }) {
+  const { t } = useTranslation()
   /* The week shown, and the column the grid highlights, both come from ONE
      reading of the clock taken while this renders (X-05) and honor the organization's
      configured week start day (Sunday by default in Nepal, UX-27). */
@@ -897,7 +899,7 @@ function WeekCalendar({ assignments, conflictIds }: { assignments: CrewAssignmen
   const weekday = (d: Date) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()]
 
   return (
-    <Card title="Crew Calendar" action={<span style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>Week view</span>}>
+    <Card title="Crew Calendar" action={<span style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>{t('crew.calendar.weekView', 'Week view')}</span>}>
       {rows.length === 0 ? (
         <EmptyState title="No bookings this week" description="Nobody on the roster has an assignment overlapping this week." />
       ) : (
@@ -1059,6 +1061,7 @@ function AlertsList({
   openRoles: typeof OPEN_ROLE_REQUESTS
   assignments: CrewAssignment[]
 }) {
+  const { t } = useTranslation()
   const payoutsDue = assignments.filter((a) => !a.cancelled && a.payoutStatus === 'Due')
 
   type Row = {
@@ -1109,7 +1112,7 @@ function AlertsList({
   ]
 
   if (rows.length === 0) {
-    return <div style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>No alerts right now.</div>
+    return <div style={{ fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>{t('crew.alerts.none', 'No alerts right now.')}</div>
   }
 
   return (

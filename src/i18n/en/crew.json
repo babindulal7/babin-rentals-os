@@ -64,5 +64,12 @@
   "crew.rail.payoutLedger": "PAYOUT LEDGER",
   "crew.rail.unpaid": "Unpaid payout",
   "crew.rail.tds": "TDS withheld",
-  "crew.rail.net": "Net payable"
+  "crew.rail.net": "Net payable",
+  "crew.status.staff": "staff",
+  "crew.filter.roleLabel": "Role",
+  "crew.roster.loadErrorPrefix": "The live crew roster could not be loaded, so the roster and assignments below are the built-in reference set — not a live record.",
+  "crew.table.perDay": "/ day",
+  "crew.actions.viewBooking": "View booking",
+  "crew.calendar.weekView": "Week view",
+  "crew.alerts.none": "No alerts right now."
 }

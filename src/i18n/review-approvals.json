@@ -4764,6 +4764,48 @@
       "nepali": "खुद भुक्तानी",
       "reviewedBy": "Babin",
       "reviewedAt": "2026-11-19"
+    },
+    "crew.status.staff": {
+      "english": "staff",
+      "nepali": "कर्मचारी",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.filter.roleLabel": {
+      "english": "Role",
+      "nepali": "भूमिका",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.roster.loadErrorPrefix": {
+      "english": "The live crew roster could not be loaded, so the roster and assignments below are the built-in reference set — not a live record.",
+      "nepali": "प्रत्यक्ष क्रु रोस्टर लोड हुन सकेन, त्यसैले तल देखाइएका विवरणहरू निर्मित सन्दर्भ सेट हुन् — प्रत्यक्ष रेकर्ड होइनन्।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.table.perDay": {
+      "english": "/ day",
+      "nepali": "/ दिन",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.actions.viewBooking": {
+      "english": "View booking",
+      "nepali": "बुकिङ हेर्नुहोस्",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.calendar.weekView": {
+      "english": "Week view",
+      "nepali": "हप्ता दृश्य",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
+    },
+    "crew.alerts.none": {
+      "english": "No alerts right now.",
+      "nepali": "हाल कुनै सचेतना छैन।",
+      "reviewedBy": "Babin",
+      "reviewedAt": "2026-11-19"
     }
   }
 }
