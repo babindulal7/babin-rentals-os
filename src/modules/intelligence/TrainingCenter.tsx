@@ -264,6 +264,27 @@ export default function TrainingCenter() {
         <PageHeader
           title="Intelligence Training Center"
           description="Staff workbench for accuracy benchmarks, golden dataset verification, human reviews, and continuous evaluation."
+          actions={
+            <Link
+              to="/intelligence/shadow-review"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                minHeight: '44px',
+                padding: '0.5rem 1rem',
+                backgroundColor: '#ffffff',
+                border: '1px solid #d1d5db',
+                borderRadius: '6px',
+                color: '#2563eb',
+                fontWeight: 600,
+                textDecoration: 'none',
+              }}
+            >
+              <Icon name="chart" size={16} />
+              Shadow Evaluation Review →
+            </Link>
+          }
         />
 
         {/* Tab Navigation (WCAG Accessible 44px+ targets) */}
