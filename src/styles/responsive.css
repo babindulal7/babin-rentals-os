@@ -41,6 +41,14 @@
   --rsp-opt-out: 1;
 }
 
+/* Horizontal chip track scrolling without unsightly scrollbars across platforms */
+.rsp-chip-scroll {
+  scrollbar-width: none;
+}
+.rsp-chip-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 /* ══ PHONE — below 768 ══════════════════════════════════════════════════════
    §16 of CLAUDE.md: do not simply shrink the desktop interface. Below 768 the
    decisions are what disappears, what stacks, and what becomes a sheet. */

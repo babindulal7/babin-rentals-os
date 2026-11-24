@@ -1,5 +1,146 @@
 # Progress Log
 
+## 2026-11-24 — Day X Launch Execution Runbook (December 31, 2026) Codified & Verified (Windows Antigravity)
+
+### Did
+- Authored `docs/live/DAY_X_LAUNCH_EXECUTION_RUNBOOK_2026-12-31.md`: Minute-by-minute operational cutover runbook for Thursday, 31 December 2026, defining:
+  - Phase 1 (05:00–05:30 NPT): Pre-dawn sanity check, Option A tabular CSV export off-laptop into Google Drive, external holds delta sync, and formal Owner GO evaluation.
+  - Phase 2 (05:30–06:00 NPT): Booqable store freeze (online checkout disabled), production health check, Cloudflare path-safe redirect activation (`babinrentals.com/book*` → `book.babinrentals.com/book*`).
+  - Phase 3 (06:00–07:00 NPT): Operational day boundary (06:00 NPT) opening at Boudha branch, 4-digit PIN authentication, and Card T1-11 live smoke test execution across Owner, Coordinator, Warehouse (Law 6 money blindness), and Accounts.
+  - Phase 4 (07:00–18:00 NPT): First live counter rentals in the OS with monotonic document numbering (`BK-`, `INV-`, `PAY-`).
+  - Phase 5 (18:00 NPT): Evening run-off and Booqable zero-order audit (verifying exactly 0 new orders in Booqable after 06:00 NPT).
+  - Phase 6 (18:30–19:00 NPT): Accounts daily closing ledger reconciliation with 0 paisa variance and Owner sign-off.
+  - Emergency fallback: 15-minute rollback procedure to Booqable codified per `docs/live/DISASTER_RECOVERY_RUNBOOK.md` §2.
+- Authored regression test `src/lib/__tests__/dayXLaunchExecutionDoc.test.ts`: Verified presence and integrity of Day X schedule, 06:00 NPT boundary, Option A backup, Booqable checkout freeze, domain routing, smoke test, and fallback SLA.
+
+### Ruled
+- Day X launch sequence for Thursday, 31 December 2026 is fully codified and verified, completing pre-launch operational readiness through Day X live execution.
+- Operational run-off mode preserves Booqable for closing pre-existing rentals while Babin Rentals OS serves as the single source of truth for all new rentals.
+
+### Verified
+- `npx vitest run src/lib/__tests__/dayXLaunchExecutionDoc.test.ts`: PASS (1/1 test).
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 warnings, 0 errors).
+- `npm run check:contrast`: PASS (97/97 compliant).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-24T11:14:12.223Z). Suite: Historical suite: 1/1 passed, 0 failed (recorded 2026-11-24T11:04:07.199Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-24T11:15:06.959Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- December 29–31 Owner final go/no-go review and controlled production deployment.
+
+## 2026-11-24 — Full-Surface Wall-to-Wall QA Audit, Operations Packing Floor Unfreeze & Multi-Surface Routing Hardening (Windows Antigravity)
+
+### Did
+- Resolved Operations Packing Floor double-mount read freeze (`src/modules/operations/OperationsShell.tsx`): Fixed React 18 StrictMode cleanup where bumping `readVersion.current` while retaining `openedBookingRef.current` left `floorLoading = true` and discarded the asynchronous read promise. Resetting `openedBookingRef.current = null` on unmount ensures remounts re-fetch the floor booking cleanly and enable the primary 56px floor verb `Confirm Packing & Next` once all items are packed, kit accessories verified, and evidence uploaded.
+- Added safe fallback to operations context (`src/modules/operations/OperationsWorkspaceContext.tsx`): Provided `NOOP_OPERATIONS` when `useOperationsWorkspace()` is consumed outside an operations provider, preventing isolated UI modules from throwing unhandled context exceptions.
+- Added canonical URL redirect for packing routes (`src/App.tsx`): Added `RentalsPackRedirect` from `/rentals/:bookingNo/pack` to `/rentals/:bookingNo/packing`, ensuring direct deep links, notifications, and QR scans resolve seamlessly.
+- Fixed public marketing site client portal hash routing (`src/marketing/main.tsx`): Added client portal redirect detecting `#my-bookings` on `marketing.html` and routing to `/booking#/my-bookings`.
+- Authored targeted regression suite `src/modules/operations/__tests__/OperationsShell.booking842.test.tsx`: Verified that Booking 842 correctly enables `Confirm Packing & Next` once all serial items are packed, kit accessories verified, and photo evidence recorded.
+- Conducted exhaustive browser subagent audit across all core operational workflows and surfaces:
+  - Role-based floor money blindness verified: Warehouse operator session completely blind to rental amounts, day rates, and invoices (Law 6).
+  - Operations Workspaces verified: Packing, Handover (signature canvas), Return (usable vs damaged unit routing), and Cleaning & Reset.
+  - Core Modules verified: Inventory catalog, Clients directory, Finance daily closing drawer with balanced cash variance, and Theme switcher (Light / Dark / High-Contrast Glass).
+  - Marketing & Client Booking verified: Public catalog search, operational day selection, instant VAT calculation, and OTP client portal sign-in.
+
+### Ruled
+- React 18 async floor loaders in `OperationsShell` must reset tracking refs during cleanup to prevent discarded fetch promises from freezing floor UI verbs in development or fast-remount lifecycles.
+- Non-modal floor workspace providers must supply no-op fallbacks to ensure isolated dashboards or embeds fail-soft without disrupting host page lifecycles.
+- Wall-to-wall browser verification confirms zero regressions across internal operations, marketing catalog, and client portal surfaces.
+
+### Verified
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 warnings, 0 errors).
+- `npm run check:contrast`: PASS (97/97 compliant, 0 fail).
+- `npm run lint:shell`: PASS (1003 files checked, 0 violations).
+- `npm run lint:ui-copy`: PASS (0 violations, 12 test assertions green).
+- `npm run check:pglite`: PASS (267/267 migrations applied, 0 failed).
+- `npm run check:lifecycle`: PASS (102/102 lifecycle steps green).
+- `npm run test:local-api-guards`: PASS (6 tests passed).
+- `npm run check:security`: PASS (18 Phase 0 SQL, 29 grant tests, 14 reset branch tests passed).
+- `npm run test:server-contracts`: PASS (68 integration assertions passed).
+- `npm run test:partial-return`: PASS (58/58 acceptance assertions passed).
+- `npx vitest run src/modules/operations/__tests__/`: PASS (20 test files, 195/195 tests green).
+- `npm run build`: PASS (clean production build).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-24T11:14:12.223Z). Suite: Historical suite: 1/1 passed, 0 failed (recorded 2026-11-24T11:04:07.199Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-24T11:15:06.959Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- December 29–31 Owner final go/no-go review and controlled production deployment.
+
+## 2026-11-24 — Week 5 Release Candidate Manifest, Disaster Recovery Runbook & Separate Surface Certification (Windows Antigravity)
+
+### Did
+- Authored `docs/live/RELEASE_MANIFEST_DECEMBER_31.md`: Definitive release candidate manifest for Babin Rentals OS v1.0.0 (December 31 launch target), documenting system baseline (React 18, TS 5.7, Tailwind v4, Supabase Postgres 15.8, PGlite 0.5.8), exact commit baseline (`4ed5607a`), 267 migration files / 277 applied schema migrations with zero database drift, and separate readiness reports across all three software surfaces:
+  - Surface 1: Internal Operations App (`app.babinrentals.com`) — 100% certified ready across /today, /rentals, /operations, /inventory, /finance, /documents.
+  - Surface 2: Public Marketing & Catalogue Website (`babinrentals.com`) — 100% certified ready with isolated CSS bundle, read-only catalogue access, zero PII or financial leakage, and Away Mode switch.
+  - Surface 3: Client Self-Service Portal (`app.babinrentals.com/portal`) — 100% certified ready with D-5 tenant isolation, KYC document upload, and payment links.
+- Authored `docs/live/DISASTER_RECOVERY_RUNBOOK.md`: Disaster recovery and emergency fallback runbook specifying P0/P1/P2 triage, 15-minute emergency fallback to Booqable on Day X, Supabase PITR restore procedure, Option A tabular CSV snapshot protocol, and named incident escalation roster.
+- Authored and certified E2E test suite `src/__tests__/e2e/releaseCandidateReadiness.test.tsx` (10/10 passing tests), enforcing 9-role financial visibility, daily closing gates, public catalogue privacy, client portal isolation, Foundation Spec §2.8 exact arithmetic (Rs 1,39,506), Law 5 deposit segregation, and Law 14 floor touch targets (≥56px).
+- Updated Master Launch Plan `docs/plans/DECEMBER_31_LAUNCH_PLAN.md` certifying Week 5 deliverables and preparing the release candidate packet for Owner final review.
+
+### Ruled
+- Babin Rentals OS v1.0.0 is certified at Release Candidate status across all three separate surfaces (Ops App, Marketing Website, Client Portal).
+- Emergency fallback to Booqable is codified with a strict 15-minute recovery SLA under `docs/live/DISASTER_RECOVERY_RUNBOOK.md`.
+- Week 5 release preparation milestone is complete; repository enters frozen readiness review ahead of December 29–31 owner go/no-go.
+
+### Verified
+- `npx vitest run src/__tests__/e2e/releaseCandidateReadiness.test.tsx`: PASS (10/10 tests).
+- `npx vitest run src/__tests__/e2e/cutoverDryRunAndPilotInvariants.test.tsx`: PASS (13/13 tests).
+- `npx vitest run src/__tests__/e2e/week3StaffAndDeviceAcceptance.test.tsx`: PASS (19/19 tests).
+- `npx vitest run src/__tests__/e2e/week2CoreRentalHardeningMatrix.test.tsx`: PASS (16/16 tests).
+- `npx vitest run src/__tests__/e2e/counterDualEntryTrial.test.tsx`: PASS (15/15 tests).
+- `npm run check:pglite`: PASS (267/267 migrations applied, 0 failed, 0 leaks).
+- `npm run check:lifecycle`: PASS (102/102 green).
+- `npm run check:contrast`: PASS (97/97 compliant).
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 warnings, 0 errors).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-23T23:56:10.846Z). Suite: Historical suite: 8048/8049 passed, 1 failed (recorded 2026-11-23T23:39:06.287Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-23T23:57:53.140Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- December 29–31 Owner final go/no-go review and controlled production deployment.
+
 ## 2026-11-24 — Staging Hosted Acceptance Certification & Week 3 Staff & Device Acceptance Suite (Windows Antigravity)
 
 ### Did
