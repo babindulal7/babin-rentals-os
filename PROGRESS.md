@@ -1,5 +1,52 @@
 # Progress Log
 
+## 2026-11-25 — Owner Grill-Me Launch Alignment, Dual-Entry Protocol & Cutover Exit Certification (Windows Antigravity)
+
+### Did
+- Conducted comprehensive `/grill-me` design tree interview with Babin Dulal, achieving 100% mutual alignment on all operational, financial, and cutover protocols for the December 31 Launch Plan.
+- Authored and locked `RULINGS-2026-11-25.md` recording owner rulings R-25.1 through R-25.7:
+  - R-25.1: 100% full parallel dual-entry from Day 1 for all counter walk-ins, phone reservations, and rental quotes.
+  - R-25.2: Daily shift-end financial reconciliation at 20:00 NPT against physical cash, Fonepay QR, and Booqable register totals, archiving zero-variance slips.
+  - R-25.3: Fail-closed Babin Rentals OS GiST reservation rules govern physical availability over external systems.
+  - R-25.4: Automatic "On Stop" at Stage 2 (24 hours overdue without approved extension), blocking new checkouts unless overridden with an audited Manager/Owner reason.
+  - R-25.5: Same-rail instant deposit refunds with net damage/late fee deductions signed off on dual receipts.
+  - R-25.6: Rental Intelligence Advisory Layer (PR #397) approved to merge as an advisory-only assistant for Owner and Coordinator roles.
+  - R-25.7: 14 consecutive days of zero financial & inventory discrepancies required before freezing Booqable to read-only archive mode.
+- Updated `docs/OPEN_DECISIONS.md` and `docs/plans/DECEMBER_31_LAUNCH_PLAN.md` incorporating the Day X cutover exit criteria.
+- Remediated mock payment race and draft offer banner in `src/booking/main.tsx`, `src/booking/pay/payApi.ts`, and `src/modules/rentals/NewRental.tsx`, and fixed `useCallback` dependency array in `src/modules/rentals/booking/useNewRentalSubmit.ts`.
+- Verified local quality gates: `typecheck`, `lint` (0 warnings, 0 errors), `check:pglite` (267/267 migrations), and `check:lifecycle` (102/102 lifecycle steps green).
+
+### Ruled
+- Babin Rentals OS GiST reservation engine takes physical precedence over external systems during dual-entry to eliminate double-booking risks.
+- Overdue accounts are automatically placed On Stop at 24 hours overdue (Recovery Stage 2), strictly requiring an audited Manager/Owner override to resume checkout.
+- Booqable will remain active as the shadow tax ledger until 14 unbroken days of zero financial and inventory discrepancies are achieved.
+
+### Verified
+- `npm run typecheck`: PASS (0 errors, `tsc --noEmit`).
+- `npm run lint`: PASS (0 errors, 0 warnings, `eslint src --max-warnings 0`).
+- `npm run check:pglite`: PASS (267/267 applied, 0 failed, 0 leaks, 253 definer functions with pinned search_path).
+- `npm run check:lifecycle`: PASS (102/102 green, 0 failed).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-24T19:32:39.864Z). Suite: Historical suite: 8061/8061 passed, 0 failed (recorded 2026-11-24T11:53:41.640Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-24T19:32:53.408Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- 1-month dual-entry operational pilot alongside Booqable starting December 1.
+- Complete 14 consecutive zero-discrepancy days before final Booqable freeze.
+- Merge PR #397 as advisory-only assistant following owner approval.
+
 ## 2026-11-24 — Full Browser UAT Swarm & Release Acceptance Audit (Candidate 232ba00a) (Windows Antigravity)
 
 ### Did

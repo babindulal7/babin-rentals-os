@@ -548,6 +548,7 @@ export function useNewRentalSubmit({
     draftHasUnsavedChanges,
     draftData,
     editBookingId,
+    requestId,
     confirmKey,
     draftBookingKey,
     setActionError,

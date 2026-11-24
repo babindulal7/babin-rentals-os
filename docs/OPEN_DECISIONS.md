@@ -1,5 +1,18 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 25 November 2026 — Dual-entry execution, physical GiST precedence, recovery On-Stop & cutover criteria (ANSWERED)
+
+The latest owner operational decisions are recorded in [RULINGS-2026-11-25.md](../RULINGS-2026-11-25.md):
+- **R-25.1 (Dual-entry scope):** Full parallel dual-entry from Day 1 — 100% of counter walk-ins, phone reservations, and quotes entered into both Booqable and Babin Rentals OS simultaneously.
+- **R-25.2 (Daily financial reconciliation):** Shift-end reconciliation at 20:00 NPT comparing physical cash, Fonepay QR, and bank slips against Babin Rentals OS `/finance/closing` and Booqable register totals, archiving zero-variance slips.
+- **R-25.3 (Physical conflict precedence):** Fail-closed Babin Rentals OS GiST reservation rules prevent physical double-booking. If a conflict occurs, staff resolve the schedule/serial before dispatch and log the incident in the cutover sheet.
+- **R-25.4 (Recovery On-Stop automation):** Automatic "On Stop" at Stage 2 (24 hours overdue without approved extension), blocking new checkouts unless overridden with an audited Manager/Owner reason.
+- **R-25.5 (Deposit return rail):** Same-rail instant refund with damage deduction — cash returned from cash deposit drawer, digital via bank/eSewa to client account, net refund signed off on receipt.
+- **R-25.6 (Rental intelligence deployment):** PR #397 approved to merge as an advisory-only assistant for Owner and Coordinator roles, non-blocking sidebars without autonomous state changes.
+- **R-25.7 (Booqable freeze Day X exit trigger):** Booqable frozen to read-only archive mode only after **14 consecutive days of zero financial & inventory discrepancies** between systems.
+
+---
+
 ## 24 November 2026 — Launch alignment, VAT invoice timing, recovery SOP & fee grid rulings (ANSWERED)
 
 The latest owner decisions are recorded in [RULINGS-2026-11-24.md](../RULINGS-2026-11-24.md):

@@ -137,7 +137,7 @@ Deliver a **reliable, secure, staff-usable** Babin Rentals OS for day-to-day ren
 - [x] December 29: frozen readiness review and blocker reconciliation. (Release packet staged in `docs/live/RELEASE_MANIFEST_DECEMBER_31.md`)
 - [x] December 30: evidence review, backup/rollback confirmation, staff readiness check. (Rollback SLA codified in `docs/live/DISASTER_RECOVERY_RUNBOOK.md`)
 - [ ] December 31: owner-approved limited deployment **only if every critical gate passes**; otherwise continue the existing system and schedule the next review.
-- [ ] If launched, monitor logs and operational reconciliations closely; preserve an agreed path back to Booqable/manual workflow if needed.
+- [ ] If launched, monitor logs and operational reconciliations closely; preserve an agreed path back to Booqable/manual workflow if needed. (Governed by R-25.1 through R-25.7: full dual-entry, daily 20:00 NPT closing balance, and 14 consecutive zero-discrepancy days required before Booqable freeze)
 
 ---
 
