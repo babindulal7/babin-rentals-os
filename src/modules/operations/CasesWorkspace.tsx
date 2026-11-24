@@ -453,11 +453,12 @@ export function CasesWorkspace({ embedded = false, searchControl }: {
             display: 'flex',
             alignItems: 'center',
             gap: 'var(--sp-sm)',
-            flexWrap: 'nowrap',
-            overflowX: 'auto',
+            flexWrap: phone ? 'nowrap' : 'wrap',
+            overflowX: phone ? 'auto' : 'visible',
             width: phone ? '100%' : 'auto',
-            maxWidth: phone ? '100%' : 'calc(100% - 500px)',
+            maxWidth: '100%',
             paddingBottom: phone ? 4 : 0,
+            scrollbarWidth: 'none',
           }}
         >
           {([

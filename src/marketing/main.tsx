@@ -12,6 +12,10 @@ import '@fontsource/outfit/latin-800.css'
 import './marketing.css'
 import MarketingPage from './MarketingPage'
 
+if (typeof window !== 'undefined' && window.location.hash.includes('my-bookings')) {
+  window.location.replace('/booking#/my-bookings')
+}
+
 const el = document.getElementById('marketing-root')
 if (!el) throw new Error('marketing-root missing from marketing.html')
 

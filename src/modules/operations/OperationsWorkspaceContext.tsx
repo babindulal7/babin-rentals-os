@@ -51,8 +51,12 @@ export function OperationsWorkspaceProvider({ children }: { children: ReactNode 
   </OperationsWorkspaceContext.Provider>
 }
 
+const NOOP_OPERATIONS: OperationsWorkspaceValue = {
+  openOperations: () => {},
+  closeOperations: () => {},
+}
+
 export function useOperationsWorkspace(): OperationsWorkspaceValue {
   const value = useContext(OperationsWorkspaceContext)
-  if (!value) throw new Error('useOperationsWorkspace must be used inside OperationsWorkspaceProvider')
-  return value
+  return value ?? NOOP_OPERATIONS
 }

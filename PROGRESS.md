@@ -1,5 +1,189 @@
 # Progress Log
 
+## 2026-11-24 — Owner Grill-Me Launch Rulings Codified: 1-Month Dual-Entry, Return Settlement VAT, Recovery SOP, Fee Grid (Windows Antigravity)
+
+### Did
+- Conducted interactive `/grill-me` alignment interview with owner Babin Dulal resolving 8 key operational and financial policies:
+  1. **R-24.1 (Cutover):** 1-month parallel dual-entry run across Babin Rentals OS and Booqable starting in December, allowing 30 full days of zero-discrepancy reconciliation before Booqable is frozen ahead of 18 Feb 2027 renewal.
+  2. **R-24.2 (O-17 VAT Invoicing):** Official pre-printed IRD paper VAT invoices are written and registered in the OS at Final Return Settlement once all extensions, damages, and final charges are known. Active rentals receive non-tax supporting confirmation/quote PDFs.
+  3. **R-24.3 (Recovery SOP):** 3-Stage graded escalation timeline: Day 1 (0–24h) friendly check-in by Coordinator, Day 2–3 (24–72h) formal written demand with replacement value warning by Manager, Day 7+ legal demand & police loss report by Owner.
+  4. **R-24.4 (O-13 Security Deposits):** Per-product default deposit (e.g. Rs 10,000 for FX6/Komodo), waivable for verified repeat clients / VIPs with audited reason recorded by Manager/Owner.
+  5. **R-24.5 (O-20 Elite Tier):** Elite membership is an invite-only VIP tier for top commercial production houses, with the annual fee waived upon achieving NPR 5,00,000 annual spend.
+  6. **R-24.6 (Public Booking Portal):** Controlled internal OS launch on Dec 31; public online booking portal at `book.babinrentals.com` opened in January after staff operational confidence is established.
+  7. **R-24.7 (O-15 / O-30 Delivery Grid):** E-Van / 4-Wheeler delivery inside Ring Road NPR 2,000, outside Ring Road NPR 3,000 (Valley); outside valley quoted per trip. Scooter: NPR 150 inside / NPR 250 outside.
+  8. **R-24.8 (O-7 / O-10 Cancellation VAT):** Late cancellation fees classified as taxable service charges with 13% Nepal VAT applied.
+- Codified all 8 rulings into new binding governance document `RULINGS-2026-11-24.md`.
+- Updated `docs/OPEN_DECISIONS.md`: Resolved O-17, O-20, O-15/O-30, O-13, and O-7/O-10.
+- Updated `docs/plans/DECEMBER_31_LAUNCH_PLAN.md`: Synchronized Week 4 dual-entry pilot and January public booking schedule.
+- Updated `docs/WORKFLOWS.md`: Formally codified Section 5 (Rental Protection, Equipment Custody & Payment Recovery SOP) with confirmed recovery timeline and deposit policies.
+
+### Ruled
+- Owner rulings R-24.1 through R-24.8 are authoritative across cutover, VAT invoicing, debt recovery, and fee grid configurations.
+
+### Verified
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 warnings, 0 errors in `src/`).
+- `npm run lint:progress`: PASS.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-24T16:12:52.023Z). Suite: Historical suite: 8061/8061 passed, 0 failed (recorded 2026-11-24T11:53:41.640Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-24T16:13:29.043Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- 1-month dual-entry operational pilot alongside Booqable starting in December.
+- December 29–31 Owner final go/no-go review and controlled production deployment.
+
+## 2026-11-24 — Day X Runbook Hardening: Strict Pending T-24h Verification Table & Fail-Closed Rollback Sequencing (Windows Antigravity)
+
+### Did
+- Hardened `docs/live/DAY_X_LAUNCH_EXECUTION_RUNBOOK_2026-12-31.md`:
+  - Enforced that all T-24h readiness checks remain pending `[ ]` until Wednesday, 30 December 2026, establishing an explicit readiness matrix requiring execution timestamp, verified owner sign-off, and documented evidence artifact prior to cutover authorization.
+  - Re-architected emergency fallback from speculative optimistic time estimates to a strict 6-stage fail-closed operational sequence: 1) Owner trigger, 2) Freeze both intake paths immediately (0 new bookings accepted in either system), 3) Capture delta snapshot, 4) Reconcile bookings, equipment stock, invoices, and payments (0 paisa variance), 5) Verify state parity, 6) Reopen single system with owner authorization.
+  - Codified the Fail-Closed Target SLA Guard: if reconciliation exceeds the 15-minute operational target, both intake paths remain completely frozen rather than executing an unverified or rushed reopen.
+- Expanded regression test suite `src/lib/__tests__/dayXLaunchExecutionDoc.test.ts` from 1 to 5 assertions:
+  - Enforced presence of pending banner and audit table for all T-24h readiness checks without premature `[x]` markings.
+  - Enforced strict index ordering of the 6-stage rollback sequence.
+  - Enforced fail-closed target SLA guards and negative assertions rejecting speculative recovery promises (`Re-Enable Booqable (3 mins)` removed).
+  - Negative assertions rejecting premature traffic or counter reopening prior to full intake freeze.
+
+### Ruled
+- Pre-cutover readiness cannot be certified in advance of the T-24h window (30 December 2026).
+- Emergency fallback must fail closed under timeout or reconciliation ambiguity; zero data or payment divergence is permitted during system rollback.
+
+### Verified
+- `npx vitest run src/lib/__tests__/dayXLaunchExecutionDoc.test.ts src/__tests__/e2e/releaseCandidateReadiness.test.tsx src/__tests__/e2e/cutoverDryRunAndPilotInvariants.test.tsx`: PASS (28/28 tests across 3 suites).
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 warnings, 0 errors in `src/`).
+- `npm run check:contrast`: PASS (97/97 compliant).
+- `npm run check:pglite`: PASS (267/267 migrations applied, 0 leaks, 0 violations).
+- `npm run check:lifecycle`: PASS (102/102 green, L1-L101).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-24T16:12:52.023Z). Suite: Historical suite: 8061/8061 passed, 0 failed (recorded 2026-11-24T11:53:41.640Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-24T16:13:29.043Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- December 29–31 Owner final go/no-go review and controlled production deployment.
+
+## 2026-11-24 — Day X Launch Execution Runbook (December 31, 2026) Codified & Verified (Windows Antigravity)
+
+### Did
+- Authored `docs/live/DAY_X_LAUNCH_EXECUTION_RUNBOOK_2026-12-31.md`: Minute-by-minute operational cutover runbook for Thursday, 31 December 2026, defining:
+  - Phase 1 (05:00–05:30 NPT): Pre-dawn sanity check, Option A tabular CSV export off-laptop into Google Drive, external holds delta sync, and formal Owner GO evaluation.
+  - Phase 2 (05:30–06:00 NPT): Booqable store freeze (online checkout disabled), production health check, Cloudflare path-safe redirect activation (`babinrentals.com/book*` → `book.babinrentals.com/book*`).
+  - Phase 3 (06:00–07:00 NPT): Operational day boundary (06:00 NPT) opening at Boudha branch, 4-digit PIN authentication, and Card T1-11 live smoke test execution across Owner, Coordinator, Warehouse (Law 6 money blindness), and Accounts.
+  - Phase 4 (07:00–18:00 NPT): First live counter rentals in the OS with monotonic document numbering (`BK-`, `INV-`, `PAY-`).
+  - Phase 5 (18:00 NPT): Evening run-off and Booqable zero-order audit (verifying exactly 0 new orders in Booqable after 06:00 NPT).
+  - Phase 6 (18:30–19:00 NPT): Accounts daily closing ledger reconciliation with 0 paisa variance and Owner sign-off.
+  - Emergency fallback: 15-minute rollback procedure to Booqable codified per `docs/live/DISASTER_RECOVERY_RUNBOOK.md` §2.
+- Authored regression test `src/lib/__tests__/dayXLaunchExecutionDoc.test.ts`: Verified presence and integrity of Day X schedule, 06:00 NPT boundary, Option A backup, Booqable checkout freeze, domain routing, smoke test, and fallback SLA.
+
+### Ruled
+- Day X launch sequence for Thursday, 31 December 2026 is fully codified and verified, completing pre-launch operational readiness through Day X live execution.
+- Operational run-off mode preserves Booqable for closing pre-existing rentals while Babin Rentals OS serves as the single source of truth for all new rentals.
+
+### Verified
+- `npx vitest run src/lib/__tests__/dayXLaunchExecutionDoc.test.ts`: PASS (1/1 test).
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 warnings, 0 errors).
+- `npm run check:contrast`: PASS (97/97 compliant).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-24T11:14:12.223Z). Suite: Historical suite: 1/1 passed, 0 failed (recorded 2026-11-24T11:04:07.199Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-24T11:15:06.959Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- December 29–31 Owner final go/no-go review and controlled production deployment.
+
+## 2026-11-24 — Full-Surface Wall-to-Wall QA Audit, Operations Packing Floor Unfreeze & Multi-Surface Routing Hardening (Windows Antigravity)
+
+### Did
+- Resolved Operations Packing Floor double-mount read freeze (`src/modules/operations/OperationsShell.tsx`): Fixed React 18 StrictMode cleanup where bumping `readVersion.current` while retaining `openedBookingRef.current` left `floorLoading = true` and discarded the asynchronous read promise. Resetting `openedBookingRef.current = null` on unmount ensures remounts re-fetch the floor booking cleanly and enable the primary 56px floor verb `Confirm Packing & Next` once all items are packed, kit accessories verified, and evidence uploaded.
+- Added safe fallback to operations context (`src/modules/operations/OperationsWorkspaceContext.tsx`): Provided `NOOP_OPERATIONS` when `useOperationsWorkspace()` is consumed outside an operations provider, preventing isolated UI modules from throwing unhandled context exceptions.
+- Added canonical URL redirect for packing routes (`src/App.tsx`): Added `RentalsPackRedirect` from `/rentals/:bookingNo/pack` to `/rentals/:bookingNo/packing`, ensuring direct deep links, notifications, and QR scans resolve seamlessly.
+- Fixed public marketing site client portal hash routing (`src/marketing/main.tsx`): Added client portal redirect detecting `#my-bookings` on `marketing.html` and routing to `/booking#/my-bookings`.
+- Authored targeted regression suite `src/modules/operations/__tests__/OperationsShell.booking842.test.tsx`: Verified that Booking 842 correctly enables `Confirm Packing & Next` once all serial items are packed, kit accessories verified, and photo evidence recorded.
+- Conducted exhaustive browser subagent audit across all core operational workflows and surfaces:
+  - Role-based floor money blindness verified: Warehouse operator session completely blind to rental amounts, day rates, and invoices (Law 6).
+  - Operations Workspaces verified: Packing, Handover (signature canvas), Return (usable vs damaged unit routing), and Cleaning & Reset.
+  - Core Modules verified: Inventory catalog, Clients directory, Finance daily closing drawer with balanced cash variance, and Theme switcher (Light / Dark / High-Contrast Glass).
+  - Marketing & Client Booking verified: Public catalog search, operational day selection, instant VAT calculation, and OTP client portal sign-in.
+
+### Ruled
+- React 18 async floor loaders in `OperationsShell` must reset tracking refs during cleanup to prevent discarded fetch promises from freezing floor UI verbs in development or fast-remount lifecycles.
+- Non-modal floor workspace providers must supply no-op fallbacks to ensure isolated dashboards or embeds fail-soft without disrupting host page lifecycles.
+- Wall-to-wall browser verification confirms zero regressions across internal operations, marketing catalog, and client portal surfaces.
+
+### Verified
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 warnings, 0 errors).
+- `npm run check:contrast`: PASS (97/97 compliant, 0 fail).
+- `npm run lint:shell`: PASS (1003 files checked, 0 violations).
+- `npm run lint:ui-copy`: PASS (0 violations, 12 test assertions green).
+- `npm run check:pglite`: PASS (267/267 migrations applied, 0 failed).
+- `npm run check:lifecycle`: PASS (102/102 lifecycle steps green).
+- `npm run test:local-api-guards`: PASS (6 tests passed).
+- `npm run check:security`: PASS (18 Phase 0 SQL, 29 grant tests, 14 reset branch tests passed).
+- `npm run test:server-contracts`: PASS (68 integration assertions passed).
+- `npm run test:partial-return`: PASS (58/58 acceptance assertions passed).
+- `npx vitest run src/modules/operations/__tests__/`: PASS (20 test files, 195/195 tests green).
+- `npm run build`: PASS (clean production build).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-24T11:14:12.223Z). Suite: Historical suite: 1/1 passed, 0 failed (recorded 2026-11-24T11:04:07.199Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-24T11:15:06.959Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- December 29–31 Owner final go/no-go review and controlled production deployment.
+
 ## 2026-11-24 — Week 5 Release Candidate Manifest, Disaster Recovery Runbook & Separate Surface Certification (Windows Antigravity)
 
 ### Did

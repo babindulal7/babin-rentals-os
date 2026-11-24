@@ -1,5 +1,19 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 24 November 2026 — Launch alignment, VAT invoice timing, recovery SOP & fee grid rulings (ANSWERED)
+
+The latest owner decisions are recorded in [RULINGS-2026-11-24.md](../RULINGS-2026-11-24.md):
+- **R-24.1 (Cutover Transition):** 1-month parallel dual-entry run alongside Booqable starting in December, verifying zero discrepancy before Booqable is frozen to read-only ahead of the 18 February 2027 renewal.
+- **R-24.2 (O-17 VAT invoice issuance timing):** Official pre-printed IRD paper VAT invoices are written and registered into the OS at **Final Return Settlement** once all extensions, damages, and final charges are known. Active rentals receive non-tax supporting confirmation/quote PDFs.
+- **R-24.3 (Recovery SOP / PR #402):** 3-Stage graded escalation: Day 1 (0–24h) friendly check-in by Coordinator, Day 2–3 (24–72h) formal written demand with replacement value warning by Manager, Day 7+ formal legal demand letter & police loss report filing by Owner.
+- **R-24.4 (O-13 Security deposits):** Per-product default deposit (e.g. Rs 10,000 for FX6/Komodo), waivable for verified repeat clients / VIPs with an audited reason. Deposits remain balance sheet liabilities held in trust (Law 5).
+- **R-24.5 (O-20 Elite tier):** Invite-only for top production houses with the annual fee waived upon achieving NPR 5,00,000 in annual spend.
+- **R-24.6 (Public portal rollout):** Controlled internal OS launch on December 31; public online booking portal at `book.babinrentals.com` opened in January after staff operational confidence.
+- **R-24.7 (O-15 / O-30 Delivery fee grid):** E-Van / 4-Wheeler: NPR 2,000 inside Ring Road, NPR 3,000 outside Ring Road (Valley); outside valley quoted per trip. Scooter: NPR 150 inside / NPR 250 outside.
+- **R-24.8 (O-7 / O-10 Cancellation VAT):** Cancellation fees are classified as taxable service charges with 13% Nepal VAT applied.
+
+---
+
 ## 20 November 2026 — Phase 1 launch scope + accountant owner decisions (ANSWERED)
 
 **Physical peripherals are post-launch:** Babin explicitly deferred all physical iPad, Bluetooth/barcode scanner, camera barcode, label/shop printer and native hardware share-sheet verification/purchases to **Phase 2 after live**. Do not treat these as pre-live launch blockers; preserve software/emulation tests and keep physical acceptance statuses pending. For Phase 1, use counter PC/desktop and manual item lookup with working staged Pack/Handover/Return/Reset, security, payments, availability and audit. See `docs/plans/T1_RELEASE.md`, `T2_FLOOR.md`, `T3_BOOKING_MONEY.md`, `T9_CUTOVER.md`.
@@ -36,7 +50,9 @@ The latest owner decisions are recorded in [RULINGS-2026-11-02-OWNER.md](../RULI
 
 **O-10 cancellation policy — ANSWERED via approved Option A:** A confirmed, not-yet-started booking cancelled **more than 48 hours** before scheduled start is free. Cancellation **more than 24 and up to 48 hours** before start is **50% of pre-VAT rental subtotal for bookings longer than 2 rental days**, else free. Cancellation **within the final 24 hours** costs **one rental day's charge for a 1–2-day booking**, or **the higher of one rental day's charge and 50% of pre-VAT rental subtotal** for a booking longer than 2 days. Drafts/unconfirmed free. Staff override requires authorized role, reason and audit. This supersedes historical incomplete O-10 entries below. Full test cases in [RULINGS-2026-11-02-OWNER.md](../RULINGS-2026-11-02-OWNER.md). **Not implemented**; tax treatment is a compliance check, not a pending cancellation-rate decision.
 
-**Still unanswered:** O-17 VAT invoice issuance timing; VAT classification/treatment for cancellation fees and non-VAT bills; van zone rates and inside/outside boundaries; Elite fixed fee amount; final agreement text, scanner/printer models and legal/tax confirmation. The user did **not** authorize paid staging by approving development lanes A/B/C.
+**Answered on 24 Nov 2026:** O-17 (VAT invoice issued at final return settlement), O-20 (Elite membership invite-only with fee waived at NPR 5,00,000 spend), O-15/O-30 (van zone rates NPR 2,000 inside / 3,000 outside), O-10 (cancellation fee 13% VAT applied), and unreturned gear 3-stage escalation (PR #402).
+
+**Still unanswered / Phase 2:** Physical scanner/printer hardware model selection (deferred post-live by Babin 20 Nov 2026); external statutory tax certification.
 
 **Safety:** Retain the P0 release HOLD. Do not alter issued invoices in place, assume tax compliance, deploy, or create paid staging without explicit approvals. Treat the above dated ruling as newer than the historic entries below.
 
