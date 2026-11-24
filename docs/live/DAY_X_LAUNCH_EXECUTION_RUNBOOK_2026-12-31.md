@@ -14,12 +14,23 @@
 
 On Thursday, 31 December 2026, Babin Rentals OS transitions from dual-entry staging to **sole active operating system** for new rentals.
 
-### Mandatory Pre-Conditions (T-24h, Wednesday 30 December):
-- [x] All 11 Go/No-Go gates in `docs/plans/DECEMBER_31_LAUNCH_PLAN.md` §5 verified green.
-- [x] Staging hosted suites passing 100% on `klhmsrunqrdxjudyhnkm` (`verify-staging-hosted.mjs`).
-- [x] Production schema verified at 267 migration files / 277 recorded migrations with **0 database drift**.
-- [x] Option A offline tabular backup completed and verified in Google Drive.
-- [x] Staff notified of 05:00 NPT cutover schedule via Staff WhatsApp.
+### Mandatory Pre-Conditions (T-24h, Wednesday 30 December 2026):
+> [!IMPORTANT]
+> All T-24h readiness checks remain **PENDING** until verified on Wednesday 30 December 2026. Future work is never certified in advance. Every check requires an execution timestamp, verified owner sign-off, and documented evidence artifact before cutover authorization.
+
+| Check | Required Evidence / Artifact | Sign-Off Owner | Execution Timestamp | Status |
+|---|---|---|---|---|
+| All 11 Go/No-Go launch gates green | `docs/plans/DECEMBER_31_LAUNCH_PLAN.md` §5 matrix log | Babin Dulal | *Pending 2026-12-30* | Pending `[ ]` |
+| Staging hosted suites passing 100% | `verify-staging-hosted.mjs` test run log on `klhmsrunqrdxjudyhnkm` | Technical Lead | *Pending 2026-12-30* | Pending `[ ]` |
+| Production schema 0-drift verification | `check-db.mjs` against `sxguwvgoserhdolewibb` (267 files / 277 ledger rows) | Technical Lead | *Pending 2026-12-30* | Pending `[ ]` |
+| Option A offline tabular backup | SHA-256 verified Google Drive export (`/BabinRentals_Backups/`) | Babin Dulal | *Pending 2026-12-30* | Pending `[ ]` |
+| Staff cutover notification | Staff WhatsApp acknowledgement broadcast log | Coordinator | *Pending 2026-12-30* | Pending `[ ]` |
+
+- [ ] All 11 Go/No-Go gates in `docs/plans/DECEMBER_31_LAUNCH_PLAN.md` §5 verified green (Pending — requires 2026-12-30 timestamp, owner sign-off, and evidence artifact).
+- [ ] Staging hosted suites passing 100% on `klhmsrunqrdxjudyhnkm` (`verify-staging-hosted.mjs`) (Pending — requires 2026-12-30 timestamp, owner sign-off, and evidence artifact).
+- [ ] Production schema verified at 267 migration files / 277 recorded migrations with **0 database drift** (Pending — requires 2026-12-30 timestamp, owner sign-off, and evidence artifact).
+- [ ] Option A offline tabular backup completed and verified in Google Drive (Pending — requires 2026-12-30 timestamp, owner sign-off, and evidence artifact).
+- [ ] Staff notified of 05:00 NPT cutover schedule via Staff WhatsApp (Pending — requires 2026-12-30 timestamp, owner sign-off, and evidence artifact).
 
 ---
 
@@ -132,13 +143,33 @@ timeline
 
 ---
 
-## 3. Emergency 15-Minute Fallback Trigger
+## 3. Emergency Fallback Procedure (15-Minute Target SLA)
 
-If a **P0 incident** (booking collision, money leak to warehouse, data corruption) occurs during Day X:
+If a **P0 incident** (booking collision, money leak to warehouse, data corruption, database unavailability) occurs during Day X, execute the following strict ordered recovery sequence.
 
-1. **Owner Decision:** Babin calls *"Execute Fallback"*.
-2. **Re-Enable Booqable (3 mins):** In Booqable admin, re-enable online checkout.
-3. **Revert DNS (5 mins):** In Cloudflare, revert booking redirect to Booqable store.
-4. **Data Sync (7 mins):** Export new bookings created today from OS and manually register in Booqable.
-5. **Staff Notice:** Inform counter staff via WhatsApp to resume Booqable counter operations.
-6. **Detailed runbook:** Follow [DISASTER_RECOVERY_RUNBOOK.md](DISASTER_RECOVERY_RUNBOOK.md) §2.
+> [!CAUTION]
+> **Rollback Order Protocol:** Never reopen Booqable or revert traffic before intake is frozen and data parity is mathematically verified. Reopening a system prematurely causes divergent state, double-bookings, and unrecorded cash custody.
+
+### Ordered Recovery Sequence:
+1. **Owner Trigger & Decision:** Babin Dulal (Owner) declares *"Execute Fallback"*.
+2. **Freeze Both Intake Paths Immediately:**
+   - In Babin Rentals OS: Enable global read-only maintenance mode / Away switch (`app.babinrentals.com` and `book.babinrentals.com` halt new bookings).
+   - In Booqable: Ensure online store checkout remains disabled. Counter walk-ins paused at floor counter. Zero new bookings accepted in either system during freeze.
+3. **Capture Delta Snapshot:**
+   - Export all events, draft/confirmed bookings, customer records, and ledger mutations created in Babin Rentals OS since 06:00 NPT.
+   - Export Booqable audit log and active equipment holds.
+4. **Reconcile Bookings, Stock, Invoices, and Payments:**
+   - **Bookings:** Match each Day X OS booking to equipment inventory.
+   - **Stock:** Verify physical unit allocations, scan events, and subrent reservations against actual shelf counts.
+   - **Invoices & Payments:** Reconcile all cash received, Fonepay QR transfers, and security deposits collected. Validate 0 paisa variance.
+5. **Verify State Parity:**
+   - Both technical lead and accounts verify 100% parity between physical assets, financial intake, and recorded customer contracts.
+6. **Reopen Single System with Owner Authorization:**
+   - Only after parity is verified and signed off, Babin Dulal authorizes reopening:
+     - Revert Cloudflare routing/DNS to Booqable store.
+     - Enable Booqable counter intake.
+     - Notify staff via Staff WhatsApp to resume counter intake in Booqable.
+7. **Fail-Closed Target SLA Guard:**
+   - The target operational window for steps 1–6 is **15 minutes**.
+   - **Fail-Closed Invariant:** If data reconciliation or parity verification exceeds the 15-minute target, the system **FAILS CLOSED**: both intake paths remain completely frozen. Counter staff must not take un-reconciled bookings, and traffic must not be cut over without verified parity evidence. Recovery within the target window is an operational objective and is never promised without exact-head verification evidence.
+8. **Detailed Runbook Reference:** Follow [DISASTER_RECOVERY_RUNBOOK.md](DISASTER_RECOVERY_RUNBOOK.md) §2 for physical disaster escalation and full database restore procedures.
