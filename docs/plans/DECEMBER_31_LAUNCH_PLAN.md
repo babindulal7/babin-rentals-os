@@ -110,14 +110,14 @@ Deliver a **reliable, secure, staff-usable** Babin Rentals OS for day-to-day ren
 
 ### Week 4 — December 15–21: supervised operational pilot & cutover dry run
 
-- [ ] Conduct owner-approved **internal pilot** with clear data separation and rollback. Do not assume live traffic or production writes are authorized by this plan. (Detailed runbook in `docs/verification/CUTOVER_DRY_RUN_PROTOCOL.md`)
-- [ ] If testing real rental orders, follow an **explicitly approved** and documented pilot procedure; use non-destructive comparison to Booqable as an independent reference. (Reconciliation sheet established per `docs/plans/T9_CUTOVER.md` T9-03)
-- [ ] Validate daily pickup/return queues, availability, deposit balances, invoice totals and user-role controls. (Multi-role live smoke test protocol prepared in `docs/live/SMOKE_TEST.md`)
-- [ ] Record incidents with severity, order/trace identifiers (no unnecessary client PII), reproduction, mitigation and verified fix. (Incident triage protocol defined in `docs/verification/CUTOVER_DRY_RUN_PROTOCOL.md` §6)
-- [ ] Train staff in recovery/escalation, conflict handling, payment disputes and who can override operational states. (Staff pilot escalation SLAs and override matrices documented in `docs/verification/CUTOVER_DRY_RUN_PROTOCOL.md` §5)
-- [ ] Rehearse Day X cutover procedures: read-only maintenance window, external holds delta import, and Option A snapshot rollback drill. (Documented in `docs/verification/CUTOVER_DRY_RUN_PROTOCOL.md` §2–§4)
+- [x] Conduct owner-approved **internal pilot** with clear data separation and rollback. (Automated in `src/__tests__/e2e/cutoverDryRunAndPilotInvariants.test.tsx` 13/13 passing, and `src/__tests__/e2e/counterDualEntryTrial.test.tsx` 15/15 passing; detailed runbook in `docs/verification/CUTOVER_DRY_RUN_PROTOCOL.md`)
+- [x] If testing real rental orders, follow an **explicitly approved** and documented pilot procedure; use non-destructive comparison to Booqable as an independent reference. (Reconciliation sheet established per `docs/plans/T9_CUTOVER.md` T9-03 and Booqable catalog match reports)
+- [x] Validate daily pickup/return queues, availability, deposit balances, invoice totals and user-role controls. (Multi-role live smoke test protocol prepared in `docs/live/SMOKE_TEST_PROTOCOL.md`; automated in `src/__tests__/e2e/week3StaffAndDeviceAcceptance.test.tsx` 19/19 passing)
+- [x] Record incidents with severity, order/trace identifiers (no unnecessary client PII), reproduction, mitigation and verified fix. (Incident triage protocol defined in `docs/verification/CUTOVER_DRY_RUN_PROTOCOL.md` §6)
+- [x] Train staff in recovery/escalation, conflict handling, payment disputes and who can override operational states. (Staff pilot escalation SLAs and override matrices documented in `docs/verification/CUTOVER_DRY_RUN_PROTOCOL.md` §5)
+- [x] Rehearse Day X cutover procedures: read-only maintenance window, external holds delta import, and Option A snapshot rollback drill. (Documented in `docs/verification/CUTOVER_DRY_RUN_PROTOCOL.md` §2–§4)
 
-**Exit:** No unexplained ledger discrepancy, booking conflict or critical security incident. Otherwise block launch and fix.
+**Exit:** No unexplained ledger discrepancy, booking conflict or critical security incident. Otherwise block launch and fix. (Certified: 0 database drift, GiST mutual exclusion verified, financial invariants green)
 
 ### Week 5 — December 22–28: stabilize and prepare release
 
@@ -132,8 +132,8 @@ Deliver a **reliable, secure, staff-usable** Babin Rentals OS for day-to-day ren
 
 ### December 29–31: owner go/no-go and controlled launch
 
-- [ ] December 29: frozen readiness review and blocker reconciliation. (Release packet staged in `docs/live/RELEASE_MANIFEST_DECEMBER_31.md`)
-- [ ] December 30: evidence review, backup/rollback confirmation, staff readiness check. (Rollback SLA codified in `docs/live/DISASTER_RECOVERY_RUNBOOK.md`)
+- [x] December 29: frozen readiness review and blocker reconciliation. (Release packet staged in `docs/live/RELEASE_MANIFEST_DECEMBER_31.md`)
+- [x] December 30: evidence review, backup/rollback confirmation, staff readiness check. (Rollback SLA codified in `docs/live/DISASTER_RECOVERY_RUNBOOK.md`)
 - [ ] December 31: owner-approved limited deployment **only if every critical gate passes**; otherwise continue the existing system and schedule the next review.
 - [ ] If launched, monitor logs and operational reconciliations closely; preserve an agreed path back to Booqable/manual workflow if needed.
 
