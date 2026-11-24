@@ -135,3 +135,64 @@ Authoritative register listing **every message the application sends a client**,
 | `wa_balance_due` | WhatsApp: Balance Due Reminder | WhatsApp draft (staff taps Send via `wa.me`) | Staff sends reminder, or no-email fallback task | On staff tap | Client | W18, W22, W60 | `balance_due` | Yes |
 | `wa_damage_notice` | WhatsApp: Damage Inspection Notice | WhatsApp draft (staff taps Send via `wa.me`) | Fallback task when client has no email | On staff tap | Client | W22, W23, W60 | `damage_notice` | No (Law 6) |
 | `wa_damage_charge` | WhatsApp: Approved Damage Charge | WhatsApp draft (staff taps Send via `wa.me`) | Fallback task when client has no email | On staff tap | Client | W22, W23, W60 | `damage_charge` | Yes |
+
+---
+
+## 5. Rental Protection, Equipment Custody & Payment Recovery SOP (24 November 2026)
+
+**Status:** Authoritative standard operating procedure, approved under Owner Rulings [RULINGS-2026-11-24.md](../RULINGS-2026-11-24.md) (R-24.1 through R-24.8).
+
+### 5.1 Booking and Client Verification — Coordinator / Authorized Staff
+
+- Verify the contracting client and authorized pickup representative before release. Record verification status, verifier, date, contact and current address; obtain a secondary contact with appropriate notice and authorization. For a production company, verify company registration and signatory authority or a documented industry reference where appropriate.
+- Inspect valid government ID; retain only the minimum necessary information and, where necessary and authorized, a securely stored copy. No retention of original ID as collateral. Restrict identity evidence to authorized staff; establish an approved retention schedule, lawful basis and secure disposal process with privacy/legal review.
+- Review account history, unpaid balances, unresolved loss/damage cases, approved credit and previous returns. Use internal classifications: New, Regular, Trusted, Production company, High-risk, Blocked (company type and risk status should be independent dimensions in implementation). Do not classify using protected characteristics. Allow corrections and documented management review; no public blacklist.
+- New-client full advance, high-risk full payment and enhanced deposit, and blocked-client release refusal require explicit manager/owner approval against existing payment/credit/override rules. Trusted clients receive reduced deposits or credit only under an approved policy. Never treat a score as an automatic adverse decision.
+
+### 5.2 Payment, Security Deposit and Insurance — Accounts / Manager
+
+- Verify cleared payment, required advance, deposit and approved credit exception against current settings and immutable ledger before release. A screenshot alone is not confirmation; reconcile against bank/cash records. Warehouse staff receive only a permitted readiness/refusal status, not amounts or debt details (Law 6).
+- **Security Deposit Policy (Ruling R-24.4):** Deposits are configured per-product on high-value gear (e.g. Cinema Cameras Rs 10,000–25,000; Lenses Rs 5,000–10,000). Cash deposits may be waived for verified repeat clients or Elite VIP production houses with an audited reason recorded by Manager/Owner.
+- Deposits remain balance sheet liabilities held in trust (Law 5); releases or approved damage deductions use existing audited settlement actions. Deposits never reduce rental total or outstanding balance.
+- For high-value cinema packages, request applicable production insurance evidence (insured party, rental equipment coverage, dates, geography, limits, exclusions and deductible); record verified/unknown/expired status.
+
+### 5.3 Rental Agreement and Packing — Coordinator / Warehouse
+
+- Before handover, obtain a versioned rental agreement accepted by the authorized client, linked to booking, dates/times and itemized packing list. Cover payment, approved late/extension rules, loss/theft/damage responsibility, reasonable repair or replacement valuation, environmental precautions, authorized operators and dispute resolution. Provide an accepted copy to the client and retain the booking-linked version.
+- Warehouse staff check availability, test functionality, confirm accessories and assemble kit items in the packing workspace. Verify unit and serial assignments against the packing list; record swaps, shortages or condition notes before release.
+- For high-risk, high-value or disputed-history rentals, capture date/time-stamped checkout condition photos or video and pack in tamper-evident sealed cases where practical. Complete the existing packing sign-off before handover.
+
+### 5.4 Handover and Custody Transfer — Warehouse / Coordinator
+
+- Complete checkout only in the designated handover workspace, not informal verbal release. Verify the pickup person's identity and authority; record name, contact, vehicle and whether they are the contracting client or authorized representative. For delivery, follow approved dispatch, transport checklist and signed proof-of-delivery.
+- Inspect gear jointly where practical, noting pre-existing cosmetic condition; review high-value items, accessories, battery/power checks and operational instructions. Both parties sign the digital handover confirmation; retain a permanent record.
+- Confirm required advance, cleared balance and deposit status before release. If an unpaid balance remains, require an authorized manager credit approval with a recorded operational justification; otherwise hold release. Provide the signed agreement, custody slip, packing list and emergency support contacts to the client upon release.
+
+### 5.5 Active Rental, Reminders and Extensions — Coordinator / Operations
+
+- Log active custody, scheduled operational return time (06:00 NPT boundary) and designated emergency contacts. Send only approved messages via the communications register: confirmation, pickup requirements, signed agreement/packing list, return reminders, overdue notice, damage report, payment reminders and settlement confirmation.
+- Scheduled reminder: two hours before scheduled return (04:00 NPT for 06:00 NPT deadline). Reschedule on approved extensions; suppress duplicate, cancelled or returned bookings and honor applicable communication settings. Use approved templates and authorized manual resend.
+- Escalate overdue returns and unpaid balances to authorized staff; log contacts and promised payment dates, do not impose unapproved fees. Record authorized extensions and check inventory conflicts before granting them.
+
+### 5.6 Return Inspection and Discrepancies — Warehouse / Technician
+
+- Check actual serials and accessory counts, note each partial return or outstanding unit, inspect condition against checkout evidence and test functionality. Record normal wear separately from new findings. Invite client to acknowledge discrepancies; record refusal/absence without fabricating signature.
+- Record missing, damaged or swapped equipment in the existing inspection and case workflows, with evidence, timestamps and responsible staff. Isolate unsafe or damaged units from availability pending technician assessment; complete cleaning/reset before reuse under existing rules.
+- Notify authorized management promptly; obtain reasonable repair/replacement estimates, allow client response, and retain supporting documents. No staff-imposed financial penalty or unsupported attribution. Follow existing damage approval and R-41 closure gate.
+
+### 5.7 Settlement, Disputes and Payment Recovery — Accounts / Manager / Owner
+
+- Verify invoice settlement, deposit resolution, damage disposition and other existing closure gates.
+- **VAT Invoicing Timing (Ruling R-24.2):** Official pre-printed IRD paper VAT invoices are written and registered into the OS at Final Return Settlement once all extensions, damages, and final charges are known.
+- **Cancellation VAT (Ruling R-24.8):** Late cancellation fees are classified as taxable service charges with 13% Nepal VAT applied.
+- **Graded Recovery Escalation Sequence (Ruling R-24.3):**
+  - **Stage 1 (0–24 Hours Overdue):** Friendly WhatsApp and phone check-in by Coordinator to confirm shoot extension versus transit delay.
+  - **Stage 2 (24–72 Hours Overdue):** Formal written demand notice with full equipment replacement value warning sent by Manager.
+  - **Stage 3 (Day 7+ Overdue):** Formal legal demand letter and police loss report filing executed by Owner.
+- Recovery sequence: respectful written reminder, documented follow-up, management-reviewed formal demand, then legal/police filing where needed. Staff must not threaten, publicly shame, disclose identity documents, or seize unrelated client property.
+
+### 5.8 Membership & Governance Alignment
+
+- **Elite Tier (Ruling R-24.5):** Elite membership is an invite-only VIP tier for top commercial production houses, with the annual fee waived upon achieving NPR 5,00,000 in annual rental spend.
+- **Delivery Grid (Ruling R-24.7):** E-Van delivery is NPR 2,000 inside Ring Road, NPR 3,000 outside Ring Road (Valley); scooter is NPR 150 inside / NPR 250 outside.
+- **Cutover Transition (Ruling R-24.1):** 1-month supervised parallel run with Booqable maintained throughout December to verify zero discrepancy before Booqable is frozen to read-only ahead of its 18 February 2027 renewal.

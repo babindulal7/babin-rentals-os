@@ -1,5 +1,50 @@
 # Progress Log
 
+## 2026-11-24 — Owner Grill-Me Launch Rulings Codified: 1-Month Dual-Entry, Return Settlement VAT, Recovery SOP, Fee Grid (Windows Antigravity)
+
+### Did
+- Conducted interactive `/grill-me` alignment interview with owner Babin Dulal resolving 8 key operational and financial policies:
+  1. **R-24.1 (Cutover):** 1-month parallel dual-entry run across Babin Rentals OS and Booqable starting in December, allowing 30 full days of zero-discrepancy reconciliation before Booqable is frozen ahead of 18 Feb 2027 renewal.
+  2. **R-24.2 (O-17 VAT Invoicing):** Official pre-printed IRD paper VAT invoices are written and registered in the OS at Final Return Settlement once all extensions, damages, and final charges are known. Active rentals receive non-tax supporting confirmation/quote PDFs.
+  3. **R-24.3 (Recovery SOP):** 3-Stage graded escalation timeline: Day 1 (0–24h) friendly check-in by Coordinator, Day 2–3 (24–72h) formal written demand with replacement value warning by Manager, Day 7+ legal demand & police loss report by Owner.
+  4. **R-24.4 (O-13 Security Deposits):** Per-product default deposit (e.g. Rs 10,000 for FX6/Komodo), waivable for verified repeat clients / VIPs with audited reason recorded by Manager/Owner.
+  5. **R-24.5 (O-20 Elite Tier):** Elite membership is an invite-only VIP tier for top commercial production houses, with the annual fee waived upon achieving NPR 5,00,000 annual spend.
+  6. **R-24.6 (Public Booking Portal):** Controlled internal OS launch on Dec 31; public online booking portal at `book.babinrentals.com` opened in January after staff operational confidence is established.
+  7. **R-24.7 (O-15 / O-30 Delivery Grid):** E-Van / 4-Wheeler delivery inside Ring Road NPR 2,000, outside Ring Road NPR 3,000 (Valley); outside valley quoted per trip. Scooter: NPR 150 inside / NPR 250 outside.
+  8. **R-24.8 (O-7 / O-10 Cancellation VAT):** Late cancellation fees classified as taxable service charges with 13% Nepal VAT applied.
+- Codified all 8 rulings into new binding governance document `RULINGS-2026-11-24.md`.
+- Updated `docs/OPEN_DECISIONS.md`: Resolved O-17, O-20, O-15/O-30, O-13, and O-7/O-10.
+- Updated `docs/plans/DECEMBER_31_LAUNCH_PLAN.md`: Synchronized Week 4 dual-entry pilot and January public booking schedule.
+- Updated `docs/WORKFLOWS.md`: Formally codified Section 5 (Rental Protection, Equipment Custody & Payment Recovery SOP) with confirmed recovery timeline and deposit policies.
+
+### Ruled
+- Owner rulings R-24.1 through R-24.8 are authoritative across cutover, VAT invoicing, debt recovery, and fee grid configurations.
+
+### Verified
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 warnings, 0 errors in `src/`).
+- `npm run lint:progress`: PASS.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-24T16:12:52.023Z). Suite: Historical suite: 8061/8061 passed, 0 failed (recorded 2026-11-24T11:53:41.640Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-24T16:13:29.043Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- 1-month dual-entry operational pilot alongside Booqable starting in December.
+- December 29–31 Owner final go/no-go review and controlled production deployment.
+
 ## 2026-11-24 — Day X Runbook Hardening: Strict Pending T-24h Verification Table & Fail-Closed Rollback Sequencing (Windows Antigravity)
 
 ### Did

@@ -110,6 +110,8 @@ Deliver a **reliable, secure, staff-usable** Babin Rentals OS for day-to-day ren
 
 ### Week 4 — December 15–21: supervised operational pilot & cutover dry run
 
+> **Owner ruling 24 Nov 2026 (R-24.1):** 1-month supervised parallel dual-entry run across Babin Rentals OS and Booqable confirmed starting in December. Counter staff maintain both systems in parallel for 30 days to verify zero discrepancy before Booqable is frozen ahead of its 18 February 2027 renewal.
+
 - [x] Conduct owner-approved **internal pilot** with clear data separation and rollback. (Automated in `src/__tests__/e2e/cutoverDryRunAndPilotInvariants.test.tsx` 13/13 passing, and `src/__tests__/e2e/counterDualEntryTrial.test.tsx` 15/15 passing; detailed runbook in `docs/verification/CUTOVER_DRY_RUN_PROTOCOL.md`)
 - [x] If testing real rental orders, follow an **explicitly approved** and documented pilot procedure; use non-destructive comparison to Booqable as an independent reference. (Reconciliation sheet established per `docs/plans/T9_CUTOVER.md` T9-03 and Booqable catalog match reports)
 - [x] Validate daily pickup/return queues, availability, deposit balances, invoice totals and user-role controls. (Multi-role live smoke test protocol prepared in `docs/live/SMOKE_TEST.md`; automated in `src/__tests__/e2e/week3StaffAndDeviceAcceptance.test.tsx` 19/19 passing)
@@ -180,7 +182,9 @@ Even if the OS is ready, the other two workstreams must **not** be automatically
 - Notifications cannot be sent accidentally or repeatedly; configured templates and sender must be verified.
 - Explicit owner approval before client accounts/invites are activated.
 
-**Possible outcome on December 31:** Internal OS = GO; website = HOLD; client portal = HOLD. This is a valid success, not a failed launch.
+> **Owner ruling 24 Nov 2026 (R-24.6):** December 31 launch targets the internal operations OS (`app.babinrentals.com`) exclusively. The public online booking portal (`book.babinrentals.com`) is scheduled for January 2027 rollout once counter staff are fully fluent. Public website remains catalogue and inquiry only with manual staff approval required.
+
+**Possible outcome on December 31:** Internal OS = GO; website = CATALOGUE ONLY; client portal = HELD FOR JANUARY. This is a valid success, not a failed launch.
 
 ---
 
