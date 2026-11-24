@@ -232,4 +232,77 @@ describe('Rental Intelligence RI-10: Safety Validator Engine', () => {
     expect(sdiAdv?.severity).toBe('info')
     expect(sdiAdv?.explanation).toContain('CRITICAL POWER SEQUENCE (RED Komodo 12G-SDI)')
   })
+
+  describe('RI-FIX-02: Real Hardware Safety Context & Rating Resolution', () => {
+    it('dynamically resolves Manfrotto 504X tripod payload limit to 12.0kg from model name', () => {
+      const report = validateKitSafety(
+        [
+          { name: 'Sony FX3A Cinema Body', weightGrams: 715 },
+          { name: 'Sigma 24-70mm f/2.8 DG DN II Art', weightGrams: 745 },
+        ],
+        {
+          targetId: 'SUPPORT-RES-01',
+          supportType: 'tripod',
+          supportModelName: 'Manfrotto 504X Fluid Video Head System',
+          // rating omitted: resolved dynamically
+        },
+      )
+      expect(report.isSafe).toBe(true)
+      expect(report.overallEvidenceState).toBe('supported')
+      const adv = report.advices.find((a) => a.id.includes('tripod'))
+      expect(adv?.explanation).toContain('12kg rating')
+    })
+
+    it('dynamically resolves DJI RS 4 Pro gimbal payload limit to 4.5kg from items list', () => {
+      const report = validateKitSafety(
+        [
+          { name: 'Sony FX3A Cinema Body', weightGrams: 715 },
+          { name: 'DJI RS 4 Pro Gimbal Stabilizer' },
+        ],
+        {
+          targetId: 'SUPPORT-RES-02',
+          supportType: 'gimbal',
+          // rating omitted: resolved dynamically from RS 4 Pro item
+        },
+      )
+      expect(report.isSafe).toBe(true)
+      expect(report.overallEvidenceState).toBe('supported')
+      const adv = report.advices.find((a) => a.id.includes('gimbal'))
+      expect(adv?.explanation).toContain('4.5kg rating')
+    })
+
+    it('fails closed with needs_verification when tripod support hardware rating is unverified', () => {
+      const report = validateKitSafety(
+        [
+          { name: 'Sony FX3A Cinema Body', weightGrams: 715 },
+        ],
+        {
+          targetId: 'SUPPORT-UNKNOWN-01',
+          supportType: 'tripod',
+          supportModelName: 'Custom Unrated Bamboo Monopod',
+          // unknown model and no rating provided
+        },
+      )
+      expect(report.isSafe).toBe(false)
+      expect(report.overallEvidenceState).toBe('needs_verification')
+      expect(report.blockingReasons.some((r) => r.includes('SUPPORT RATING UNVERIFIED'))).toBe(true)
+    })
+
+    it('fails closed with needs_verification when gimbal hardware rating is unverified', () => {
+      const report = validateKitSafety(
+        [
+          { name: 'Sony FX3A Cinema Body', weightGrams: 715 },
+        ],
+        {
+          targetId: 'GIMBAL-UNKNOWN-01',
+          supportType: 'gimbal',
+          supportModelName: 'Generic Unbranded 3-Axis Stabilizer',
+          // unknown model and no rating provided
+        },
+      )
+      expect(report.isSafe).toBe(false)
+      expect(report.overallEvidenceState).toBe('needs_verification')
+      expect(report.blockingReasons.some((r) => r.includes('GIMBAL RATING UNVERIFIED'))).toBe(true)
+    })
+  })
 })

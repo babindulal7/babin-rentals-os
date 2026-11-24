@@ -59,6 +59,10 @@ export interface KitRecommendationQuery {
   availabilityMap?: Record<string, ItemAvailabilityState> | undefined
   /** Timestamp when availabilityMap was fetched (used for 5min freshness check) */
   availabilityFetchedAt?: string | undefined
+  /** Rental window start and end (AD/UTC ISO strings) to detect race conditions when dates change */
+  rentalWindow?: { pickupAtIso: string; returnAtIso: string } | undefined
+  /** Window for which availabilityMap was actually queried */
+  availabilityWindow?: { pickupAtIso: string; returnAtIso: string } | undefined
 }
 
 export interface BlueprintItem {
@@ -911,16 +915,52 @@ export function recommendKit(query: KitRecommendationQuery): KitRecommendationRe
   const target: AdviceTarget = { type: 'booking', id: query.bookingId }
   const advices: RentalAdvice[] = []
 
-  // Check 1: Availability Freshness Gate (5-minute rule, RI-A07)
+  // Check 1: Availability Freshness & Provenance Gate (RI-A07, RI-FIX-01)
   let isAvailabilityStale = false
-  if (query.availabilityFetchedAt) {
-    const fetchedTime = new Date(query.availabilityFetchedAt).getTime()
-    const ageMs = Date.now() - fetchedTime
-    if (ageMs > 300000) { // 5 minutes
-      isAvailabilityStale = true
-    }
-  } else if (!query.availabilityMap) {
+  let freshnessExplanation = ''
+
+  if (!query.availabilityMap) {
     isAvailabilityStale = true
+    freshnessExplanation =
+      'AVAILABILITY STALE: Equipment availability data is missing. Live reservations and repair holds must be confirmed with warehouse staff before dispatch.'
+  } else if (Object.keys(query.availabilityMap).length === 0) {
+    isAvailabilityStale = true
+    freshnessExplanation =
+      'AVAILABILITY STALE: Equipment availability snapshot is empty. Stock records must be queried before confirming gear recommendations.'
+  } else if (!query.availabilityFetchedAt) {
+    isAvailabilityStale = true
+    freshnessExplanation =
+      'AVAILABILITY STALE: Equipment availability snapshot lacks an authoritative fetch timestamp. Freshness cannot be verified.'
+  } else {
+    const fetchedTime = new Date(query.availabilityFetchedAt).getTime()
+    if (isNaN(fetchedTime)) {
+      isAvailabilityStale = true
+      freshnessExplanation =
+        'AVAILABILITY STALE: Equipment availability snapshot contains an unparseable timestamp. Freshness cannot be verified.'
+    } else if (fetchedTime > Date.now() + 60000) {
+      isAvailabilityStale = true
+      freshnessExplanation =
+        'AVAILABILITY STALE: Equipment availability timestamp is in the future (clock skew detected). Re-query availability with synchronized system time.'
+    } else {
+      const ageMs = Date.now() - fetchedTime
+      if (ageMs > 300000) { // 5 minutes
+        isAvailabilityStale = true
+        freshnessExplanation =
+          'AVAILABILITY STALE: Equipment availability data is missing or older than 5 minutes. Live reservations and repair holds must be confirmed with warehouse staff before dispatch.'
+      }
+    }
+  }
+
+  // Check 1b: Date context / race conditions check
+  if (!isAvailabilityStale && query.rentalWindow && query.availabilityWindow) {
+    if (
+      query.rentalWindow.pickupAtIso !== query.availabilityWindow.pickupAtIso ||
+      query.rentalWindow.returnAtIso !== query.availabilityWindow.returnAtIso
+    ) {
+      isAvailabilityStale = true
+      freshnessExplanation =
+        'AVAILABILITY STALE: Rental dates changed after availability was queried (date window mismatch). Re-evaluate availability for the updated booking window.'
+    }
   }
 
   if (isAvailabilityStale) {
@@ -930,8 +970,7 @@ export function recommendKit(query: KitRecommendationQuery): KitRecommendationRe
       target,
       evidenceState: 'needs_verification',
       severity: 'review',
-      explanation:
-        'AVAILABILITY STALE: Equipment availability data is missing or older than 5 minutes. Live reservations and repair holds must be confirmed with warehouse staff before dispatch.',
+      explanation: freshnessExplanation,
       sourceRefs: ['src/lib/availability.ts', 'docs/intelligence/rental/RECOMMENDATION_DATA_SOURCE_MAP.md'],
       sourceKinds: ['live_os'],
       snapshotAt: nowIso,
@@ -940,7 +979,7 @@ export function recommendKit(query: KitRecommendationQuery): KitRecommendationRe
     })
   }
 
-  // Check 2: Equipment Status & Hold Validation (RI-A04, RI-A06)
+  // Check 2: Equipment Status & Hold Validation (RI-A04, RI-A06, RI-FIX-01)
   const unavailableItems: KitRecommendationResult['unavailableItems'] = []
   const currentItems = query.currentItems ?? []
   const currentItemNames = currentItems.map((i) => i.name.toLowerCase())
@@ -948,8 +987,21 @@ export function recommendKit(query: KitRecommendationQuery): KitRecommendationRe
   for (const item of blueprint.items) {
     if (query.availabilityMap) {
       const state = query.availabilityMap[item.productId] ?? query.availabilityMap[item.displayName]
-      if (state) {
-        if (state.status === 'qc_hold' || state.status === 'maintenance' || state.status === 'damaged') {
+      if (!state) {
+        // Unknown item or partial map
+        advices.push({
+          id: `adv-unknown-avail-${item.productId}-${query.bookingId}`,
+          module: 'kit',
+          target,
+          evidenceState: 'needs_verification',
+          severity: 'review',
+          explanation: `AVAILABILITY UNCONFIRMED: ${item.displayName} has no verified availability record in the current snapshot. Verify physical unit availability before adding to quote.`,
+          sourceRefs: ['src/lib/availability.ts'],
+          sourceKinds: ['live_os'],
+          snapshotAt: nowIso,
+          requiredChecks: ['Confirm unit availability with warehouse manager'],
+        })
+      } else if (state.status === 'qc_hold' || state.status === 'maintenance' || state.status === 'damaged') {
           unavailableItems.push({
             productId: item.productId,
             displayName: item.displayName,
@@ -992,7 +1044,6 @@ export function recommendKit(query: KitRecommendationQuery): KitRecommendationRe
         }
       }
     }
-  }
 
   // Check 3: Missing Required Dependencies (RI-A08 child item separation)
   const suggestedAdditions: SuggestedAddition[] = []

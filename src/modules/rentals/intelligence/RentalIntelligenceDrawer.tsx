@@ -25,19 +25,67 @@ import {
   type OperationalStage,
   type BookingLineForChecklist,
 } from '../../../lib/rentalIntelligence/checklistGenerator'
+import {
+  evaluateClientIntelligence,
+  type ClientProfileInput,
+} from '../../../lib/rentalIntelligence/clientIntelligence'
+import {
+  evaluateFleetIdleStock,
+  type AssetPerformanceInput,
+} from '../../../lib/rentalIntelligence/idleStockEngine'
+import {
+  generateMorningReport,
+  type MorningReportInput,
+} from '../../../lib/rentalIntelligence/morningReport'
+import {
+  evaluateMonsoonRisk,
+  generateMonsoonAdvice,
+} from '../../../lib/rentalIntelligence/monsoonEngine'
+import {
+  searchRentalKnowledge,
+} from '../../../lib/rentalIntelligence/ragEngine'
+import {
+  calculateJournalSummary,
+  generateDecisionJournalAdvice,
+} from '../../../lib/rentalIntelligence/decisionJournal'
+import {
+  generatePlaybookAdvice,
+} from '../../../lib/rentalIntelligence/rulesPlaybooks'
+import type {
+  MonsoonEvaluationInput,
+  RagSearchInput,
+  DecisionRecord,
+} from '../../../lib/rentalIntelligence/types'
+import type { ItemAvailabilityState } from '../../../lib/rentalIntelligence/kitRecommender'
+import type { SafetyValidationContext } from '../../../lib/rentalIntelligence/safetyValidator'
+import { useAuth } from '../../../lib/auth'
 import type { SystemRole } from '../../../types/database'
 import type { Surface } from '../../../lib/fieldGating'
 
 export interface RentalIntelligenceDrawerProps {
   open: boolean
   onClose: () => void
-  advices: RentalAdvice[]
+  advices?: RentalAdvice[] | undefined
   userRole?: SystemRole | undefined
   surface?: Surface | undefined
   bookingNo?: string | undefined
   currentItems?: Array<{ id?: string | undefined; name: string; quantity?: number | undefined }> | undefined
   quoteSnapshot?: CanonicalQuoteSnapshot | undefined
   checklistLines?: BookingLineForChecklist[] | undefined
+  clientProfile?: ClientProfileInput | undefined
+  fleetPerformance?: AssetPerformanceInput[] | undefined
+  morningReportInput?: MorningReportInput | undefined
+  monsoonInput?: MonsoonEvaluationInput | undefined
+  ragSearchInput?: RagSearchInput | undefined
+  decisionRecords?: DecisionRecord[] | undefined
+  shootTypePlaybook?: string | undefined
+  // RI-FIX-01: Canonical availability evidence props
+  availabilityMap?: Record<string, ItemAvailabilityState> | undefined
+  availabilityFetchedAt?: string | undefined
+  rentalWindow?: { pickupAtIso: string; returnAtIso: string } | undefined
+  availabilityWindow?: { pickupAtIso: string; returnAtIso: string } | undefined
+  // RI-FIX-02: Real safety context props
+  safetyContext?: SafetyValidationContext | undefined
   onAddSuggestion?: ((item: {
     productId: string
     displayName: string
@@ -48,42 +96,122 @@ export interface RentalIntelligenceDrawerProps {
 export function RentalIntelligenceDrawer({
   open,
   onClose,
-  advices: propAdvices,
-  userRole = 'Coordinator',
+  advices: propAdvices = [],
+  userRole: propUserRole,
   surface = 'default',
   bookingNo,
   currentItems = [],
   quoteSnapshot,
   checklistLines,
+  clientProfile,
+  fleetPerformance,
+  morningReportInput,
+  monsoonInput,
+  ragSearchInput,
+  decisionRecords,
+  shootTypePlaybook,
+  availabilityMap,
+  availabilityFetchedAt,
+  rentalWindow,
+  availabilityWindow,
+  safetyContext,
   onAddSuggestion,
 }: RentalIntelligenceDrawerProps) {
+  // Canonical session role derivation (Section 6: Fail closed on unresolved role)
+  const auth = useAuth()
+  const authenticatedRole = auth?.user?.role
+  const userRole: SystemRole = authenticatedRole ?? propUserRole ?? 'Technician'
+
   const [selectedModule, setSelectedModule] = useState<AdviceModule | 'all' | 'recommender'>('all')
   const [selectedShootType, setSelectedShootType] = useState<ShootType>('Documentary')
   const [selectedTier, setSelectedTier] = useState<PackageTier>('STANDARD')
   const [selectedChecklistStage, setSelectedChecklistStage] = useState<OperationalStage>('pack')
 
-  // Live Blueprint Recommendation computation
+  // Live Blueprint Recommendation computation (RI-FIX-01: authoritative availability evidence)
   const kitResult = useMemo(() => {
     return recommendKit({
       bookingId: bookingNo ?? 'DRAFT',
       shootType: selectedShootType,
       tier: selectedTier,
       currentItems,
-      availabilityFetchedAt: new Date().toISOString(),
+      availabilityMap,
+      availabilityFetchedAt,
+      rentalWindow,
+      availabilityWindow,
     })
-  }, [bookingNo, selectedShootType, selectedTier, currentItems])
+  }, [
+    bookingNo,
+    selectedShootType,
+    selectedTier,
+    currentItems,
+    availabilityMap,
+    availabilityFetchedAt,
+    rentalWindow,
+    availabilityWindow,
+  ])
+
+  // Real Safety Evaluation context resolution (RI-FIX-02: Eliminate fixed tripod 10kg assumption)
+  const resolvedSafetyContext = useMemo((): SafetyValidationContext => {
+    if (safetyContext) return safetyContext
+
+    let detectedType: 'tripod' | 'gimbal' | 'handheld' = 'handheld'
+    let detectedRating: number | undefined = undefined
+    let detectedModel: string | undefined = undefined
+
+    for (const item of currentItems) {
+      const name = item.name.toLowerCase()
+      if (
+        name.includes('tripod') ||
+        name.includes('504x') ||
+        name.includes('sachtler') ||
+        name.includes('manfrotto')
+      ) {
+        detectedType = 'tripod'
+        detectedModel = item.name
+        if (name.includes('504x') || name.includes('504')) detectedRating = 12.0
+        else if (name.includes('sachtler') || name.includes('ace')) detectedRating = 8.0
+        break
+      } else if (
+        name.includes('gimbal') ||
+        name.includes('rs 4') ||
+        name.includes('rs 3') ||
+        name.includes('ronin')
+      ) {
+        detectedType = 'gimbal'
+        detectedModel = item.name
+        if (
+          name.includes('rs 4 pro') ||
+          name.includes('rs 3 pro') ||
+          name.includes('rs4 pro') ||
+          name.includes('rs3 pro')
+        ) {
+          detectedRating = 4.5
+        } else if (
+          name.includes('rs 4') ||
+          name.includes('rs 3') ||
+          name.includes('rs 2')
+        ) {
+          detectedRating = 3.0
+        }
+        break
+      }
+    }
+
+    return {
+      targetId: bookingNo ?? 'DRAFT',
+      supportType: detectedType,
+      supportRatingKg: detectedRating,
+      supportModelName: detectedModel,
+    }
+  }, [safetyContext, currentItems, bookingNo])
 
   // Live Safety Evaluation computation
   const safetyReport = useMemo(() => {
     return validateKitSafety(
       currentItems.map((i) => ({ name: i.name, quantity: i.quantity })),
-      {
-        targetId: bookingNo ?? 'DRAFT',
-        supportType: 'tripod',
-        supportRatingKg: 10.0,
-      },
+      resolvedSafetyContext,
     )
-  }, [bookingNo, currentItems])
+  }, [currentItems, resolvedSafetyContext])
 
   // Live Canonical Quote Explanation computation (RI-02)
   const quoteResult = useMemo(() => {
@@ -110,6 +238,60 @@ export function RentalIntelligenceDrawer({
       lines: linesToUse,
     })
   }, [checklistLines, currentItems, bookingNo, selectedChecklistStage])
+
+  // Live Client Intelligence computation (RI-04)
+  const clientResult = useMemo(() => {
+    if (!clientProfile) return null
+    return evaluateClientIntelligence(clientProfile, userRole, surface)
+  }, [clientProfile, userRole, surface])
+
+  // Live Fleet Idle Stock computation (RI-05)
+  const idleStockResult = useMemo(() => {
+    if (!fleetPerformance || fleetPerformance.length === 0) return null
+    return evaluateFleetIdleStock(fleetPerformance, userRole, surface)
+  }, [fleetPerformance, userRole, surface])
+
+  // Live Morning Report computation (RI-03)
+  const morningReportResult = useMemo(() => {
+    if (!morningReportInput) return null
+    return generateMorningReport(morningReportInput, userRole, surface)
+  }, [morningReportInput, userRole, surface])
+
+  // Live Monsoon Risk computation (RI-06)
+  const monsoonAdvice = useMemo(() => {
+    if (monsoonInput) {
+      const assessment = evaluateMonsoonRisk(monsoonInput)
+      return generateMonsoonAdvice(assessment, bookingNo ?? 'DRAFT', userRole, surface)
+    }
+    if (currentItems.length > 0) {
+      const assessment = evaluateMonsoonRisk({
+        targetId: bookingNo ?? 'DRAFT',
+        items: currentItems.map((i) => ({ name: i.name })),
+      })
+      return generateMonsoonAdvice(assessment, bookingNo ?? 'DRAFT', userRole, surface)
+    }
+    return null
+  }, [monsoonInput, currentItems, bookingNo, userRole, surface])
+
+  // Live Rental RAG Knowledge Search computation (RI-07)
+  const ragAdvice = useMemo(() => {
+    if (!ragSearchInput) return null
+    const response = searchRentalKnowledge(ragSearchInput, userRole, surface)
+    return response.advice ?? null
+  }, [ragSearchInput, userRole, surface])
+
+  // Live Decision Journal Summary computation (RI-09)
+  const decisionAdvice = useMemo(() => {
+    if (!decisionRecords || decisionRecords.length === 0) return null
+    const summary = calculateJournalSummary(decisionRecords)
+    return generateDecisionJournalAdvice(summary, userRole, surface)
+  }, [decisionRecords, userRole, surface])
+
+  // Live Rules & Playbooks computation (RI-11)
+  const playbookAdvice = useMemo(() => {
+    if (!shootTypePlaybook) return null
+    return generatePlaybookAdvice(shootTypePlaybook, bookingNo ?? 'DRAFT', userRole, surface)
+  }, [shootTypePlaybook, bookingNo, userRole, surface])
 
   // Combine external advices with live-evaluated modules
   const allAdvices = useMemo(() => {
@@ -140,8 +322,55 @@ export function RentalIntelligenceDrawer({
         }
       }
     }
+    if (clientResult) {
+      for (const adv of clientResult.advices) {
+        if (!combined.some((a) => a.id === adv.id)) {
+          combined.push(adv)
+        }
+      }
+    }
+    if (idleStockResult) {
+      for (const adv of idleStockResult.advices) {
+        if (!combined.some((a) => a.id === adv.id)) {
+          combined.push(adv)
+        }
+      }
+    }
+    if (morningReportResult) {
+      for (const adv of morningReportResult.advices) {
+        if (!combined.some((a) => a.id === adv.id)) {
+          combined.push(adv)
+        }
+      }
+    }
+    if (monsoonAdvice && !combined.some((a) => a.id === monsoonAdvice.id)) {
+      combined.push(monsoonAdvice)
+    }
+    if (ragAdvice && !combined.some((a) => a.id === ragAdvice.id)) {
+      combined.push(ragAdvice)
+    }
+    if (decisionAdvice && !combined.some((a) => a.id === decisionAdvice.id)) {
+      combined.push(decisionAdvice)
+    }
+    if (playbookAdvice && !combined.some((a) => a.id === playbookAdvice.id)) {
+      combined.push(playbookAdvice)
+    }
     return combined
-  }, [propAdvices, kitResult.advices, safetyReport.advices, quoteResult, checklistResult, currentItems.length])
+  }, [
+    propAdvices,
+    kitResult.advices,
+    safetyReport.advices,
+    quoteResult,
+    checklistResult,
+    clientResult,
+    idleStockResult,
+    morningReportResult,
+    monsoonAdvice,
+    ragAdvice,
+    decisionAdvice,
+    playbookAdvice,
+    currentItems.length,
+  ])
 
   const workingModules = RENTAL_INTELLIGENCE_MODULES.filter((m) => m.status === 'working')
   const plannedModules = RENTAL_INTELLIGENCE_MODULES.filter((m) => m.status === 'planned')
@@ -572,6 +801,242 @@ export function RentalIntelligenceDrawer({
           </div>
         )}
 
+        {/* Client Intelligence View (RI-04) */}
+        {(selectedModule === 'all' || selectedModule === 'client') && clientResult && (
+          <div
+            style={{
+              padding: '14px',
+              borderRadius: '8px',
+              border: '1px solid var(--border)',
+              background: 'var(--surface)',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--ink)' }}>
+                Client Intelligence ({clientResult.clientName})
+              </span>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <Badge tone="primary" size="sm" label={clientResult.title} />
+                <Badge tone="neutral" size="sm" label={`Trust ${clientResult.trustFactor}x`} />
+              </div>
+            </div>
+
+            <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '6px', lineHeight: '1.4' }}>
+              <strong>Communication Tone:</strong> {clientResult.tone}
+            </div>
+
+            <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '10px' }}>
+              <strong>Technical Depth:</strong> {clientResult.technicalDepth}
+            </div>
+
+            {/* Safeguards */}
+            <div style={{ marginBottom: '10px' }}>
+              <span style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--ink)', marginBottom: '4px' }}>
+                Operational Safeguards
+              </span>
+              <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '11.5px', color: 'var(--muted)', lineHeight: '1.4' }}>
+                {clientResult.safeguards.map((sg, idx) => (
+                  <li key={idx}>{sg}</li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Due Recovery Draft */}
+            {clientResult.dueRecoveryDraft && !clientResult.isMoneyMasked && (
+              <div
+                style={{
+                  padding: '10px',
+                  background: 'var(--surface-sunken, #f8fafc)',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border)',
+                  fontSize: '11.5px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--ink)' }}>
+                    Overdue Recovery Draft ({clientResult.dueRecoveryDraft.stageName})
+                  </span>
+                  <Badge
+                    tone={clientResult.dueRecoveryDraft.warningTone === 'hold' ? 'danger' : 'warning'}
+                    size="sm"
+                    label="Staff Review Only"
+                  />
+                </div>
+                <div style={{ color: 'var(--muted)', marginBottom: '4px' }}>
+                  <strong>Subject:</strong> {clientResult.dueRecoveryDraft.subject}
+                </div>
+                <pre
+                  style={{
+                    margin: 0,
+                    padding: '8px',
+                    background: 'var(--surface)',
+                    borderRadius: '4px',
+                    border: '1px solid var(--border-light, #e2e8f0)',
+                    fontSize: '11px',
+                    fontFamily: 'inherit',
+                    whiteSpace: 'pre-wrap',
+                    color: 'var(--ink)',
+                    lineHeight: '1.4',
+                  }}
+                >
+                  {clientResult.dueRecoveryDraft.body}
+                </pre>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Idle Stock Activation View (RI-05) */}
+        {(selectedModule === 'all' || selectedModule === 'idle_stock') && idleStockResult && (
+          <div
+            style={{
+              padding: '14px',
+              borderRadius: '8px',
+              border: '1px solid var(--border)',
+              background: 'var(--surface-sunken, #f8fafc)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--ink)' }}>
+                Fleet Idle Stock &amp; Activation
+              </span>
+              {idleStockResult.totalIdleCapitalFormatted && (
+                <Badge tone="warning" size="sm" label={`Idle Capital: ${idleStockResult.totalIdleCapitalFormatted}`} />
+              )}
+            </div>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+              <Badge tone="primary" size="sm" label={`${idleStockResult.expansionCandidatesCount} Expansion`} />
+              <Badge tone="warning" size="sm" label={`${idleStockResult.idleHighCapitalCount} High Idle Capital`} />
+              <Badge tone="neutral" size="sm" label={`${idleStockResult.steadyEarnersCount} Steady Earners`} />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {idleStockResult.assets.map((asset) => {
+                const actionBadgeTone =
+                  asset.action === 'BUY_ADD_ONE_MORE'
+                    ? 'primary'
+                    : asset.action === 'BUNDLE_OR_REPOSITION'
+                      ? 'warning'
+                      : asset.action === 'HOLD_AND_OPTIMIZE'
+                        ? 'neutral'
+                        : 'neutral'
+
+                return (
+                  <div
+                    key={asset.productId}
+                    style={{
+                      padding: '8px 10px',
+                      background: 'var(--surface)',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border-light, #e2e8f0)',
+                      fontSize: '12px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{asset.displayName}</span>
+                      <Badge tone={actionBadgeTone} size="sm" label={asset.action.replace(/_/g, ' ')} />
+                    </div>
+                    {asset.utilizationPct !== undefined && (
+                      <span style={{ display: 'block', fontSize: '11px', color: 'var(--muted)', marginBottom: '2px' }}>
+                        Monthly Utilization: {asset.utilizationPct}%
+                      </span>
+                    )}
+                    <p style={{ margin: 0, fontSize: '11px', color: 'var(--muted)', lineHeight: '1.3' }}>
+                      {asset.reasoning}
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Morning Report View (RI-03) */}
+        {(selectedModule === 'all' || selectedModule === 'operations') && morningReportResult && (
+          <div
+            style={{
+              padding: '14px',
+              borderRadius: '8px',
+              border: '1px solid var(--border)',
+              background: 'var(--surface)',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--ink)' }}>
+                Today Morning Operational Report
+              </span>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <Badge tone="primary" size="sm" label={`AD ${morningReportResult.reportDateIso.slice(0, 10)}`} />
+                {morningReportResult.nepaliDateBs && (
+                  <Badge tone="neutral" size="sm" label={`BS ${morningReportResult.nepaliDateBs}`} />
+                )}
+              </div>
+            </div>
+
+            {/* Queue Counts Bar */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+              <Badge tone="primary" size="sm" label={`${morningReportResult.pickupsTodayCount} Pickups Today`} />
+              <Badge tone="neutral" size="sm" label={`${morningReportResult.returnsTodayCount} Returns Today`} />
+              <Badge
+                tone={morningReportResult.overdueCount > 0 ? 'danger' : 'neutral'}
+                size="sm"
+                label={`${morningReportResult.overdueCount} Overdue`}
+              />
+              <Badge tone="neutral" size="sm" label={`${morningReportResult.maintenanceHoldCount} QC/Quarantine`} />
+            </div>
+
+            {/* Leakage Audit Details for Authorized Roles */}
+            {morningReportResult.leakageCount > 0 && !morningReportResult.isMoneyMasked && (
+              <div
+                style={{
+                  padding: '10px',
+                  background: 'var(--surface-sunken, #f8fafc)',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border-light, #e2e8f0)',
+                  fontSize: '11.5px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--ink)' }}>
+                    Revenue Leakage Audits ({morningReportResult.leakageCount})
+                  </span>
+                  {morningReportResult.totalRecoverableLeakageFormatted && (
+                    <Badge tone="danger" size="sm" label={`Recoverable: ${morningReportResult.totalRecoverableLeakageFormatted}`} />
+                  )}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {morningReportResult.leakageItems.map((leak, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: '6px 8px',
+                        background: 'var(--surface)',
+                        borderRadius: '4px',
+                        border: '1px solid var(--border-light, #e2e8f0)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontWeight: 500, color: 'var(--ink)' }}>{leak.message}</span>
+                        {leak.recoverableFormatted && (
+                          <span style={{ fontWeight: 600, color: 'var(--status-critical, #b91c1c)', marginLeft: '6px' }}>
+                            {leak.recoverableFormatted}
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ display: 'block', fontSize: '10.5px', color: 'var(--muted)', marginTop: '2px' }}>
+                        Action: {leak.action}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Live Safety Metrics Summary Card (RI-10) */}
         {(selectedModule === 'all' || selectedModule === 'safety') && (
           <div
@@ -813,51 +1278,83 @@ export function RentalIntelligenceDrawer({
           )}
         </div>
 
-        {/* Planned Modules Taxonomy Status */}
-        <div
-          style={{
-            marginTop: '8px',
-            padding: '12px',
-            borderRadius: '8px',
-            background: 'var(--surface-sunken, #f8fafc)',
-            border: '1px solid var(--border-light, #e2e8f0)',
-          }}
-        >
-          <span
+        {/* Capabilities Taxonomy Status */}
+        {plannedModules.length === 0 ? (
+          <div
             style={{
-              display: 'block',
-              fontSize: '12px',
-              fontWeight: 600,
-              color: 'var(--muted)',
-              textTransform: 'uppercase',
-              marginBottom: '8px',
+              marginTop: '8px',
+              padding: '12px',
+              borderRadius: '8px',
+              background: 'var(--surface-sunken, #f8fafc)',
+              border: '1px solid var(--border-light, #e2e8f0)',
             }}
           >
-            Planned Capabilities ({plannedModules.length})
-          </span>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-            {plannedModules.map((m) => (
-              <div
-                key={m.id}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span
                 style={{
-                  padding: '8px',
-                  borderRadius: '6px',
-                  background: 'var(--surface)',
-                  border: '1px solid var(--border)',
                   fontSize: '12px',
+                  fontWeight: 600,
+                  color: 'var(--ink)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontWeight: 500, color: 'var(--ink)' }}>{m.title}</span>
-                  <Badge tone="neutral" size="sm" label="Planned" />
-                </div>
-                <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--muted)', lineHeight: '1.3' }}>
-                  {m.shortDesc}
-                </p>
-              </div>
-            ))}
+                <Icon name="check" size={14} color="#16a34a" />
+                All 11 Intelligence Capabilities Active & Verified
+              </span>
+              <Badge tone="primary" size="sm" label="11 / 11 Active" />
+            </div>
+            <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--muted)', lineHeight: '1.4' }}>
+              All core advisory modules are integrated under read-only, evidence-backed contracts with strict role-based field gating.
+            </p>
           </div>
-        </div>
+        ) : (
+          <div
+            style={{
+              marginTop: '8px',
+              padding: '12px',
+              borderRadius: '8px',
+              background: 'var(--surface-sunken, #f8fafc)',
+              border: '1px solid var(--border-light, #e2e8f0)',
+            }}
+          >
+            <span
+              style={{
+                display: 'block',
+                fontSize: '12px',
+                fontWeight: 600,
+                color: 'var(--muted)',
+                textTransform: 'uppercase',
+                marginBottom: '8px',
+              }}
+            >
+              Planned Capabilities ({plannedModules.length})
+            </span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              {plannedModules.map((m) => (
+                <div
+                  key={m.id}
+                  style={{
+                    padding: '8px',
+                    borderRadius: '6px',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    fontSize: '12px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontWeight: 500, color: 'var(--ink)' }}>{m.title}</span>
+                    <Badge tone="neutral" size="sm" label="Planned" />
+                  </div>
+                  <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--muted)', lineHeight: '1.3' }}>
+                    {m.shortDesc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </ContextDrawer>
   )

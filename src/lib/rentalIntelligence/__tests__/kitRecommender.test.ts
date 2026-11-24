@@ -23,6 +23,12 @@ describe('Rental Intelligence RI-01: Kit Recommender Engine', () => {
       shootType: 'Wedding',
       tier: 'STANDARD',
       availabilityFetchedAt: new Date().toISOString(),
+      availabilityMap: {
+        'BRPI-SONY-FX3A-BODY': { available: true, status: 'available' },
+        'BRPI-NISI-ATHENA-SET': { available: true, status: 'available' },
+        'BRPI-DJI-RS4PRO': { available: true, status: 'available' },
+        'BRPI-AMARAN-200D': { available: true, status: 'available' },
+      },
     }
 
     const result = recommendKit(query)
@@ -190,5 +196,117 @@ describe('Rental Intelligence RI-01: Kit Recommender Engine', () => {
         }
       }
     }
+  })
+
+  describe('RI-FIX-01: Canonical Availability Evidence and Freshness Gates', () => {
+    it('fails closed with needs_verification when availabilityMap is missing despite fresh timestamp', () => {
+      const query: KitRecommendationQuery = {
+        bookingId: 'BK-FIX01-01',
+        shootType: 'Wedding',
+        tier: 'STANDARD',
+        availabilityFetchedAt: new Date().toISOString(),
+      }
+      const result = recommendKit(query)
+      expect(result.evidenceState).toBe('needs_verification')
+      expect(result.advices.some((a) => a.explanation.includes('AVAILABILITY STALE: Equipment availability data is missing'))).toBe(true)
+    })
+
+    it('fails closed with needs_verification when availabilityMap is empty object', () => {
+      const query: KitRecommendationQuery = {
+        bookingId: 'BK-FIX01-02',
+        shootType: 'Wedding',
+        tier: 'STANDARD',
+        availabilityFetchedAt: new Date().toISOString(),
+        availabilityMap: {},
+      }
+      const result = recommendKit(query)
+      expect(result.evidenceState).toBe('needs_verification')
+      expect(result.advices.some((a) => a.explanation.includes('snapshot is empty'))).toBe(true)
+    })
+
+    it('fails closed when availabilityMap is present but availabilityFetchedAt is missing', () => {
+      const query: KitRecommendationQuery = {
+        bookingId: 'BK-FIX01-03',
+        shootType: 'Wedding',
+        tier: 'STANDARD',
+        availabilityMap: {
+          'BRPI-SONY-FX3A-BODY': { available: true, status: 'available' },
+        },
+      }
+      const result = recommendKit(query)
+      expect(result.evidenceState).toBe('needs_verification')
+      expect(result.advices.some((a) => a.explanation.includes('lacks an authoritative fetch timestamp'))).toBe(true)
+    })
+
+    it('fails closed when availabilityFetchedAt is invalid unparseable string', () => {
+      const query: KitRecommendationQuery = {
+        bookingId: 'BK-FIX01-04',
+        shootType: 'Wedding',
+        tier: 'STANDARD',
+        availabilityFetchedAt: 'not-a-valid-iso-date',
+        availabilityMap: {
+          'BRPI-SONY-FX3A-BODY': { available: true, status: 'available' },
+        },
+      }
+      const result = recommendKit(query)
+      expect(result.evidenceState).toBe('needs_verification')
+      expect(result.advices.some((a) => a.explanation.includes('unparseable timestamp'))).toBe(true)
+    })
+
+    it('fails closed when availabilityFetchedAt exhibits future clock skew (> 60s)', () => {
+      const futureTime = new Date(Date.now() + 120000).toISOString() // +2 minutes
+      const query: KitRecommendationQuery = {
+        bookingId: 'BK-FIX01-05',
+        shootType: 'Wedding',
+        tier: 'STANDARD',
+        availabilityFetchedAt: futureTime,
+        availabilityMap: {
+          'BRPI-SONY-FX3A-BODY': { available: true, status: 'available' },
+        },
+      }
+      const result = recommendKit(query)
+      expect(result.evidenceState).toBe('needs_verification')
+      expect(result.advices.some((a) => a.explanation.includes('clock skew detected'))).toBe(true)
+    })
+
+    it('fails closed when date window mismatch is detected between rental and availability query', () => {
+      const query: KitRecommendationQuery = {
+        bookingId: 'BK-FIX01-06',
+        shootType: 'Wedding',
+        tier: 'STANDARD',
+        availabilityFetchedAt: new Date().toISOString(),
+        rentalWindow: {
+          pickupAtIso: '2026-12-01T06:00:00+05:45',
+          returnAtIso: '2026-12-03T18:00:00+05:45',
+        },
+        availabilityWindow: {
+          pickupAtIso: '2026-12-01T06:00:00+05:45',
+          returnAtIso: '2026-12-02T18:00:00+05:45', // mismatched return window
+        },
+        availabilityMap: {
+          'BRPI-SONY-FX3A-BODY': { available: true, status: 'available' },
+        },
+      }
+      const result = recommendKit(query)
+      expect(result.evidenceState).toBe('needs_verification')
+      expect(result.advices.some((a) => a.explanation.includes('date window mismatch'))).toBe(true)
+    })
+
+    it('emits unconfirmed advice for items missing from partial availabilityMap', () => {
+      const query: KitRecommendationQuery = {
+        bookingId: 'BK-FIX01-07',
+        shootType: 'Wedding',
+        tier: 'STANDARD',
+        availabilityFetchedAt: new Date().toISOString(),
+        availabilityMap: {
+          'BRPI-SONY-FX3A-BODY': { available: true, status: 'available' },
+          // Missing NiSi, RS 4 Pro, Amaran 200d
+        },
+      }
+      const result = recommendKit(query)
+      expect(result.evidenceState).toBe('needs_verification')
+      const unconfirmed = result.advices.filter((a) => a.explanation.includes('AVAILABILITY UNCONFIRMED'))
+      expect(unconfirmed.length).toBeGreaterThan(0)
+    })
   })
 })
