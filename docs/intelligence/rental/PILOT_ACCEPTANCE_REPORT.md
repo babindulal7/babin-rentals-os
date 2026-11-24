@@ -18,7 +18,20 @@ In strict adherence to the Executive Directive (§0) and the Master Task Plan:
 2. **Complete 11-Module Taxonomy:** All 11 distinct capabilities from the architecture are fully implemented, verified with unit tests, and integrated into the in-context staff UI.
 3. **Exact Integer Paisa Standard:** All financial calculations strictly use integer paisa (`rupees()`, `roundHalfUp()`, `Paisa`) with South Asian lakh formatting (`Rs 7,90,000`).
 4. **Field-Level Gating (HIS v2.1 §4):** Money and commercial terms are completely stripped for floor roles (`Warehouse`, `Technician`, `Driver`) and on all `floor` surfaces.
-5. **Exact PR Head CI Green:** GitHub Actions CI run **[45267569154](https://github.com/babindulal7/babin-rentals-os/actions/runs/45267569154)** on commit `f4ebe013` passed all required checks (`typecheck · test · build` in 4m42s).
+5. **Exact PR Head CI Green:** GitHub Actions CI run **[45299182175](https://github.com/babindulal7/babin-rentals-os/actions/runs/45299182175/job/138127109352)** on commit `c237a292` passed all required checks (`typecheck · test · build` in 4m53s).
+6. **Integrity Hardening (RI-FIX-01 & RI-FIX-02):** Fixed synthetic UI clock availability assumptions by wiring canonical `queryBookingAvailability()` read-only queries with strict $\le 5\text{-minute}$ freshness and race-condition date window checks. Completely eliminated fixed tripod/10kg assumptions by implementing dynamic support hardware resolution with fail-closed doctrine for unverified gear.
+7. **Production Screen Integration:** Integrated `RentalIntelligenceDrawer` into production `BookingDetail.tsx` via `RentalMoreActions` (`moreItems`), strictly maintaining the 15 Oct header rule (maximum 3 controls: `Operations`, `More booking actions`, and stage action).
+
+---
+
+## 1.1 Post-Review Integrity Repairs & Verification
+
+| Issue ID | Root Cause & Security Risk | Solution & Architectural Implementation | Verification Evidence |
+|---|---|---|---|
+| **RI-FIX-01** | Synthetic UI clock timestamp passed without availability map in `RentalIntelligenceDrawer.tsx`. Stale/missing maps could be treated as fresh. | Wired canonical read-only query `queryBookingAvailability()` from `src/lib/queries/smartReservationQueries.ts`. Added `buildAvailabilityMapFromEvaluation()`. Enforced $\le 5\text{-min}$ freshness policy, $>60\text{s}$ future clock skew detection, and date window mismatch checks (`rentalWindow` vs `availabilityWindow`). | 7 dedicated tests in `kitRecommender.test.ts` verifying missing maps, empty maps, invalid timestamps, future clock skew, date window mismatch, and unmapped items. |
+| **RI-FIX-02** | Fixed `supportType: 'tripod'` and `10.0kg` assumed for all rigs. | Implemented dynamic support hardware resolution in `safetyValidator.ts` (Manfrotto 504X $\to$ 12kg, Sachtler Ace $\to$ 8kg, DJI RS 4 Pro $\to$ 4.5kg, RS 3 $\to$ 3kg). Fails closed with `needs_verification` (`SUPPORT RATING UNVERIFIED` / `GIMBAL RATING UNVERIFIED`) if gear is unrated. | 4 dedicated tests in `safetyValidator.test.ts` verifying model resolution, item list detection, and unrated fail-closed behavior. |
+| **RI-INT-01** | `RentalIntelligenceDrawer` was not wired to production screen callers. | Connected to `src/modules/rentals/BookingDetail.tsx`. Supplied live canonical booking, quote snapshot, floor checklist, client profile, monsoon input, and availability evaluation. | Wired via `RentalMoreActions` (`moreItems`), preserving 15 Oct header rule (36/36 tests in `BookingDetail.layout.test.tsx` pass). |
+| **RI-ROLE-01** | Role could theoretically default to coordinator or caller prop. | Derived role directly from authenticated session `useAuth().user?.role`. Fails closed to `'Technician'` (money-blind floor role) if unresolved. | `RentalIntelligenceDrawer.test.tsx` and adapter tests enforce HIS v2.1 §4 money-blindness. |
 
 ---
 
@@ -101,7 +114,7 @@ The in-context UI component (`src/modules/rentals/intelligence/RentalIntelligenc
 | **RI-A33** | Desktop 1440px layout | **PASS** | High-density operational stats; multi-tab contextual drawer. |
 | **RI-A34** | Repeat evaluation determinism | **PASS** | Deterministic outputs on identical inputs; 100% test repeatability. |
 | **RI-A35** | Regression on main | **PASS** | Core rental, booking, stock, invoice, payment, and custody flows unchanged. |
-| **RI-A36** | PR CI exact-head pass | **PASS** | GitHub Actions Run 45267569154 (`typecheck · test · build` pass in 4m42s). |
+| **RI-A36** | PR CI exact-head pass | **PASS** | GitHub Actions Run 45299182175 on commit `c237a292` (`typecheck · test · build` pass in 4m53s). |
 
 ---
 
