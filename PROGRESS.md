@@ -1,5 +1,58 @@
 # Progress Log
 
+## 2026-11-24 — Full-Surface Wall-to-Wall QA Audit, Operations Packing Floor Unfreeze & Multi-Surface Routing Hardening (Windows Antigravity)
+
+### Did
+- Resolved Operations Packing Floor double-mount read freeze (`src/modules/operations/OperationsShell.tsx`): Fixed React 18 StrictMode cleanup where bumping `readVersion.current` while retaining `openedBookingRef.current` left `floorLoading = true` and discarded the asynchronous read promise. Resetting `openedBookingRef.current = null` on unmount ensures remounts re-fetch the floor booking cleanly and enable the primary 56px floor verb `Confirm Packing & Next` once all items are packed, kit accessories verified, and evidence uploaded.
+- Added safe fallback to operations context (`src/modules/operations/OperationsWorkspaceContext.tsx`): Provided `NOOP_OPERATIONS` when `useOperationsWorkspace()` is consumed outside an operations provider, preventing isolated UI modules from throwing unhandled context exceptions.
+- Added canonical URL redirect for packing routes (`src/App.tsx`): Added `RentalsPackRedirect` from `/rentals/:bookingNo/pack` to `/rentals/:bookingNo/packing`, ensuring direct deep links, notifications, and QR scans resolve seamlessly.
+- Fixed public marketing site client portal hash routing (`src/marketing/main.tsx`): Added client portal redirect detecting `#my-bookings` on `marketing.html` and routing to `/booking#/my-bookings`.
+- Authored targeted regression suite `src/modules/operations/__tests__/OperationsShell.booking842.test.tsx`: Verified that Booking 842 correctly enables `Confirm Packing & Next` once all serial items are packed, kit accessories verified, and photo evidence recorded.
+- Conducted exhaustive browser subagent audit across all core operational workflows and surfaces:
+  - Role-based floor money blindness verified: Warehouse operator session completely blind to rental amounts, day rates, and invoices (Law 6).
+  - Operations Workspaces verified: Packing, Handover (signature canvas), Return (usable vs damaged unit routing), and Cleaning & Reset.
+  - Core Modules verified: Inventory catalog, Clients directory, Finance daily closing drawer with balanced cash variance, and Theme switcher (Light / Dark / High-Contrast Glass).
+  - Marketing & Client Booking verified: Public catalog search, operational day selection, instant VAT calculation, and OTP client portal sign-in.
+
+### Ruled
+- React 18 async floor loaders in `OperationsShell` must reset tracking refs during cleanup to prevent discarded fetch promises from freezing floor UI verbs in development or fast-remount lifecycles.
+- Non-modal floor workspace providers must supply no-op fallbacks to ensure isolated dashboards or embeds fail-soft without disrupting host page lifecycles.
+- Wall-to-wall browser verification confirms zero regressions across internal operations, marketing catalog, and client portal surfaces.
+
+### Verified
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 warnings, 0 errors).
+- `npm run check:contrast`: PASS (97/97 compliant, 0 fail).
+- `npm run lint:shell`: PASS (1003 files checked, 0 violations).
+- `npm run lint:ui-copy`: PASS (0 violations, 12 test assertions green).
+- `npm run check:pglite`: PASS (267/267 migrations applied, 0 failed).
+- `npm run check:lifecycle`: PASS (102/102 lifecycle steps green).
+- `npm run test:local-api-guards`: PASS (6 tests passed).
+- `npm run check:security`: PASS (18 Phase 0 SQL, 29 grant tests, 14 reset branch tests passed).
+- `npm run test:server-contracts`: PASS (68 integration assertions passed).
+- `npm run test:partial-return`: PASS (58/58 acceptance assertions passed).
+- `npx vitest run src/modules/operations/__tests__/`: PASS (20 test files, 195/195 tests green).
+- `npm run build`: PASS (clean production build).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-24T11:14:12.223Z). Suite: Historical suite: 1/1 passed, 0 failed (recorded 2026-11-24T11:04:07.199Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-24T11:15:06.959Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- December 29–31 Owner final go/no-go review and controlled production deployment.
+
 ## 2026-11-24 — Week 5 Release Candidate Manifest, Disaster Recovery Runbook & Separate Surface Certification (Windows Antigravity)
 
 ### Did
