@@ -75,6 +75,9 @@ class SyncEngine {
   }
   private intervalTimer: number | null = null
   private syncing = false
+  // A rejected credential must not generate another request every 25 seconds.
+  // Kept in memory only; a new access token permits a fresh attempt.
+  private rejectedAccessToken: string | null = null
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -181,12 +184,23 @@ class SyncEngine {
     this.updateState({ status: 'syncing', error: undefined })
 
     try {
+      const { data, error: sessionError } = await supabase.auth.getSession()
+      const session = data?.session
+      if (sessionError || !session?.user?.id || !session.access_token) {
+        this.rejectedAccessToken = null
+        throw new Error('Sign in to synchronize saved work.')
+      }
+      const token = session.access_token
+      if (this.rejectedAccessToken === token) {
+        throw new Error('Sync authorization failed. Refresh your session or sign in again.')
+      }
+      this.rejectedAccessToken = null
       // 1. Drain upstream offline queue
       await drainQueue()
       const remainingPending = await this.refreshPendingCount()
 
       // 2. Pull downstream deltas into local Dexie store
-      await this.pullDeltas()
+      await this.pullDeltas(token)
 
       const now = new Date()
       this.updateState({
@@ -212,77 +226,92 @@ class SyncEngine {
   /**
    * Pulls delta tables from Supabase into Dexie localStore.
    */
-  private async pullDeltas(): Promise<void> {
+  private async pullDeltas(token: string): Promise<void> {
     if (!isIndexedDbAvailable()) return
 
-    try {
-      // Pull products / equipment
-      const { data: products } = await supabase
-        .from('products_v')
-        .select('id, name, asset_code, brand, model, status, is_active, tracking_mode, daily_rate, created_at, updated_at')
-        .limit(300)
-      if (products && products.length > 0) {
-        await localStore.products.bulkPut(
-          products.map((p: RemoteProduct) => withoutUndefined<CachedProduct>({
-            id: p.id,
-            name: p.name ?? '',
-            asset_tag: p.asset_code ?? undefined,
-            category: p.brand ? `${p.brand} ${p.model ?? ''}`.trim() : undefined,
-            daily_rate_paisa: p.daily_rate != null ? rupees(Number(p.daily_rate)) : undefined,
-            tracking_mode: p.tracking_mode ?? undefined,
-            status: p.status ?? undefined,
-            updated_at: p.updated_at || p.created_at || new Date().toISOString(),
-          }))
-        )
+    const assertSession = async () => {
+      const { data, error } = await supabase.auth.getSession()
+      if (error || data?.session?.access_token !== token) {
+        throw new Error('Session changed during sync. Retry with the current account.')
       }
+    }
+    const checkResponse = (error: unknown, status: number, label: string) => {
+      if (status === 401 || status === 403) {
+        this.rejectedAccessToken = token
+        throw new Error('Sync authorization failed. Refresh your session or sign in again.')
+      }
+      if (error) throw new Error(`Unable to synchronize ${label}.`)
+    }
+    await assertSession()
+    // Pull products / equipment
+    const { data: products, error: productError, status: productStatus } = await supabase
+      .from('products_v')
+      .select('id, name, asset_code, brand, model, status, is_active, tracking_mode, daily_rate, created_at, updated_at')
+      .limit(300)
+    checkResponse(productError, productStatus, 'products')
+    await assertSession()
+    if (products && products.length > 0) {
+      await localStore.products.bulkPut(
+        products.map((p: RemoteProduct) => withoutUndefined<CachedProduct>({
+          id: p.id,
+          name: p.name ?? '',
+          asset_tag: p.asset_code ?? undefined,
+          category: p.brand ? `${p.brand} ${p.model ?? ''}`.trim() : undefined,
+          daily_rate_paisa: p.daily_rate != null ? rupees(Number(p.daily_rate)) : undefined,
+          tracking_mode: p.tracking_mode ?? undefined,
+          status: p.status ?? undefined,
+          updated_at: p.updated_at || p.created_at || new Date().toISOString(),
+        }))
+      )
+    }
 
-      // Pull client directory
-      const { data: clients } = await supabase
-        .from('client_directory_v')
-        .select('id, name, phone, email, address_line, membership_level, is_blocked, created_at')
-        .limit(300)
-      if (clients && clients.length > 0) {
-        await localStore.clients.bulkPut(
-          clients.map((c: RemoteClient) => withoutUndefined<CachedClient>({
-            id: c.id,
-            name: c.name ?? '',
-            phone: c.phone ?? '',
-            email: c.email ?? undefined,
-            address: c.address_line ?? undefined,
-            credit_tier: c.membership_level ?? undefined,
-            is_blocked: c.is_blocked === true,
-            updated_at: c.created_at || new Date().toISOString(),
-          }))
-        )
-      }
+    // Pull client directory
+    const { data: clients, error: clientError, status: clientStatus } = await supabase
+      .from('client_directory_v')
+      .select('id, name, phone, email, address_line, membership_level, is_blocked, created_at')
+      .limit(300)
+    checkResponse(clientError, clientStatus, 'clients')
+    await assertSession()
+    if (clients && clients.length > 0) {
+      await localStore.clients.bulkPut(
+        clients.map((c: RemoteClient) => withoutUndefined<CachedClient>({
+          id: c.id,
+          name: c.name ?? '',
+          phone: c.phone ?? '',
+          email: c.email ?? undefined,
+          address: c.address_line ?? undefined,
+          credit_tier: c.membership_level ?? undefined,
+          is_blocked: c.is_blocked === true,
+          updated_at: c.created_at || new Date().toISOString(),
+        }))
+      )
+    }
 
-      // Pull recent operational bookings for offline warehouse verification
-      const { data: bookings } = await supabase
-        .from('bookings')
-        .select('id, booking_no, stage, client_id, project, pickup_at, return_at, actual_return_at, delivery_type, updated_at')
-        .order('updated_at', { ascending: false })
-        .limit(200)
-      if (bookings && bookings.length > 0) {
-        await localStore.bookings.bulkPut(
-          bookings.map((b: { id: string; booking_no: string; stage: string; client_id: string; project?: string | null; pickup_at?: string | null; return_at?: string | null; actual_return_at?: string | null; delivery_type?: string | null; updated_at?: string | null }) =>
-            withoutUndefined<CachedBooking>({
-              id: b.id,
-              booking_no: b.booking_no,
-              stage: b.stage,
-              client_id: b.client_id,
-              project: b.project ?? undefined,
-              pickup_at: b.pickup_at ?? undefined,
-              return_at: b.return_at ?? undefined,
-              actual_return_at: b.actual_return_at ?? undefined,
-              delivery_type: b.delivery_type ?? undefined,
-              updated_at: b.updated_at ?? undefined,
-            })
-          )
+    // Pull recent operational bookings for offline warehouse verification
+    const { data: bookings, error: bookingError, status: bookingStatus } = await supabase
+      .from('bookings')
+      .select('id, booking_no, stage, client_id, project, pickup_at, return_at, actual_return_at, delivery_type, updated_at')
+      .order('updated_at', { ascending: false })
+      .limit(200)
+    checkResponse(bookingError, bookingStatus, 'bookings')
+    await assertSession()
+    if (bookings && bookings.length > 0) {
+      await localStore.bookings.bulkPut(
+        bookings.map((b: { id: string; booking_no: string; stage: string; client_id: string; project?: string | null; pickup_at?: string | null; return_at?: string | null; actual_return_at?: string | null; delivery_type?: string | null; updated_at?: string | null }) =>
+          withoutUndefined<CachedBooking>({
+            id: b.id,
+            booking_no: b.booking_no,
+            stage: b.stage,
+            client_id: b.client_id,
+            project: b.project ?? undefined,
+            pickup_at: b.pickup_at ?? undefined,
+            return_at: b.return_at ?? undefined,
+            actual_return_at: b.actual_return_at ?? undefined,
+            delivery_type: b.delivery_type ?? undefined,
+            updated_at: b.updated_at ?? undefined,
+          })
         )
-      }
-    } catch (e) {
-      // Soft-fail delta caching without interrupting operational flow
-      console.debug('[SyncEngine] Delta caching bypassed or unauthenticated:', e)
+      )
     }
   }
 }
