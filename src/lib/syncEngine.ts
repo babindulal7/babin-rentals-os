@@ -188,11 +188,15 @@ class SyncEngine {
       const session = data?.session
       if (sessionError || !session?.user?.id || !session.access_token) {
         this.rejectedAccessToken = null
-        throw new Error('Sign in to synchronize saved work.')
+        const error = 'Sign in to synchronize saved work.'
+        this.updateState({ status: 'error', error })
+        return { success: false, pushed: 0, error }
       }
       const token = session.access_token
       if (this.rejectedAccessToken === token) {
-        throw new Error('Sync authorization failed. Refresh your session or sign in again.')
+        const error = 'Sync authorization failed. Refresh your session or sign in again.'
+        this.updateState({ status: 'error', error })
+        return { success: false, pushed: 0, error }
       }
       this.rejectedAccessToken = null
       // 1. Drain upstream offline queue
