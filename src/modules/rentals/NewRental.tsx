@@ -1279,7 +1279,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
           {actionBusy ? 'Saving…' : saveState === 'error' ? 'Not saved' : draftBookingNo ? `Draft #${draftBookingNo}${draftHasUnsavedChanges ? ' · Unsaved changes' : ' · Saved'}` : '* Required to confirm'}
         </span>
       </nav>
-      {localDraftOffer && !editBookingId && (() => {
+      {localDraftOffer && !editBookingId && !requestId && (() => {
         const d = localDraftOffer.data
         const clientName = d.clientName || clientPool.find((c) => c.id === d.selectedClientId)?.name || 'Unnamed client'
         const itemCount = (d.lines ?? []).reduce((acc, l) => acc + (l.qty || 1), 0)

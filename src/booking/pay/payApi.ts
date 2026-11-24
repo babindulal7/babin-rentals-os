@@ -175,6 +175,14 @@ export async function fetchPaymentLinkDetails(token: string): Promise<PaymentLin
  * Returns only configured and enabled providers for customer checkout.
  */
 export async function fetchOnlinePaymentProviders(): Promise<OnlinePaymentProviderInfo[]> {
+  if (import.meta.env.VITE_DATA_SOURCE === 'mock') {
+    return [
+      { provider: 'fonepay', name: 'Fonepay', enabled: true, env: 'sandbox' },
+      { provider: 'esewa', name: 'eSewa', enabled: true, env: 'sandbox' },
+      { provider: 'khalti', name: 'Khalti', enabled: true, env: 'sandbox' },
+    ]
+  }
+
   try {
     // 1. Try Edge function invocation
     const { data, error } = await supabase.functions.invoke<{
@@ -222,48 +230,63 @@ export async function initOnlinePayment(params: {
     (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'client-intent-uuid')
   const { bookingRequestId, bookingId, token, provider = 'fonepay', returnUrl } = params
 
-  try {
-    const { data, error } = await supabase.functions.invoke<PayInitResponse>('pay-init', {
-      body: { clientUuid, bookingRequestId, bookingId, token, provider, returnUrl },
-    })
-
-    if (!error && data && data.success) {
-      return data
-    }
-  } catch (err) {
-    console.warn('[payApi] Edge function pay-init failed, trying direct RPC fallback:', err)
-  }
-
-  // Fallback: direct RPC invocation (for local / mock environment)
+  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock'
   let intentId: string
   let amountPaisa: number
 
-  if (token) {
-    const details = await fetchPaymentLinkDetails(token)
-    if (!details.valid || !details.intent_id || !details.amount_paisa) {
-      throw new Error(details.reason === 'expired' ? 'Payment link has expired (48h).' : 'Payment link is invalid or already paid.')
+  if (isMock) {
+    if (token) {
+      const details = await fetchPaymentLinkDetails(token)
+      if (!details.valid || !details.intent_id || !details.amount_paisa) {
+        throw new Error(details.reason === 'expired' ? 'Payment link has expired (48h).' : 'Payment link is invalid or already paid.')
+      }
+      intentId = details.intent_id
+      amountPaisa = details.amount_paisa
+    } else {
+      intentId = `intent-mock-${(bookingId || bookingRequestId || Date.now()).toString().slice(0, 12)}`
+      amountPaisa = 500000
     }
-    intentId = details.intent_id
-    amountPaisa = details.amount_paisa
   } else {
-    const { data: rpcData, error: rpcError } = await supabase.rpc('create_payment_intent', {
-      p_client_uuid: clientUuid,
-      p_booking_id: bookingId || null,
-      p_booking_request_id: bookingRequestId || null,
-      p_provider: provider,
-    })
+    try {
+      const { data, error } = await supabase.functions.invoke<PayInitResponse>('pay-init', {
+        body: { clientUuid, bookingRequestId, bookingId, token, provider, returnUrl },
+      })
 
-    if (rpcError || !rpcData) {
-      throw new Error(rpcError?.message || 'Failed to initialize payment intent on server.')
+      if (!error && data && data.success) {
+        return data
+      }
+    } catch (err) {
+      console.warn('[payApi] Edge function pay-init failed, trying direct RPC fallback:', err)
     }
 
-    const res = rpcData as {
-      intent_id: string
-      amount_paisa: number
-      provider: string
+    // Fallback: direct RPC invocation
+    if (token) {
+      const details = await fetchPaymentLinkDetails(token)
+      if (!details.valid || !details.intent_id || !details.amount_paisa) {
+        throw new Error(details.reason === 'expired' ? 'Payment link has expired (48h).' : 'Payment link is invalid or already paid.')
+      }
+      intentId = details.intent_id
+      amountPaisa = details.amount_paisa
+    } else {
+      const { data: rpcData, error: rpcError } = await supabase.rpc('create_payment_intent', {
+        p_client_uuid: clientUuid,
+        p_booking_id: bookingId || null,
+        p_booking_request_id: bookingRequestId || null,
+        p_provider: provider,
+      })
+
+      if (rpcError || !rpcData) {
+        throw new Error(rpcError?.message || 'Failed to initialize payment intent on server.')
+      }
+
+      const res = rpcData as {
+        intent_id: string
+        amount_paisa: number
+        provider: string
+      }
+      intentId = res.intent_id
+      amountPaisa = res.amount_paisa
     }
-    intentId = res.intent_id
-    amountPaisa = res.amount_paisa
   }
 
   const amtRupees = (amountPaisa / 100).toFixed(2)
@@ -345,6 +368,17 @@ export async function verifyOnlinePayment(params: {
   responseCode?: string | undefined
 }): Promise<PayVerifyResponse> {
   const { intentId, provider, providerRef, bid = '', uid = '', pidx = '', data = '', responseCode = 'successful' } = params
+
+  if (import.meta.env.VITE_DATA_SOURCE === 'mock') {
+    return {
+      success: true,
+      intent_id: intentId,
+      status: 'allocated',
+      payment_id: `pay-mock-${Date.now()}`,
+      payment_no: `PAY-MOCK-${String(Date.now()).slice(-4)}`,
+      already_allocated: false,
+    }
+  }
 
   try {
     const { data: edgeData, error } = await supabase.functions.invoke<PayVerifyResponse>('pay-verify', {

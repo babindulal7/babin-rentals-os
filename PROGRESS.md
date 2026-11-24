@@ -1,5 +1,50 @@
 # Progress Log
 
+## 2026-11-24 — Full Browser UAT Swarm & Release Acceptance Audit (Candidate 232ba00a) (Windows Antigravity)
+
+### Did
+- Resolved all 18 TypeScript compilation errors across `PaymentLinkPage.tsx`, `BookingModals.tsx`, `NewRental.tsx`, and `RentalsList.tsx`, verified with clean zero-error `tsc --noEmit`.
+- Committed clean candidate baseline SHA `232ba00aa2b0d8388be374b4e4be62869996ed68` (`feat(booking): wire online booking requests queue and 48h payment link flow`).
+- Conducted interactive `/grill-me` alignment with owner establishing UAT boundaries: local mock mode (`MOCK-ONLY`), 3-wave staged swarm, and strict black-box defect documentation.
+- Generated full UAT audit suite in `audit/browser-uat/build-candidate-232ba00a/`:
+  - `00-environment.md`: Environment identity, host facts, role aliases, viewports, command trace.
+  - `01-route-inventory.csv`: Discovered and mapped 23 user-facing routes across all module shells.
+  - `02-control-matrix.csv`: 23 representative test cases with execution trace, expectation source, and pass 1 & pass 2 status.
+  - `03-journeys.md`: 4 end-to-end business journeys (Online Request → Review/Confirm, 48h Payment Link → Customer Settlement, Floor Operations & 5-Shift Day, Law 6 Money-Blindness).
+  - `04-defects.md`: Logged and **remediated** `DEF-UAT-02` (P1 mock payment client initialization race in `src/booking/main.tsx` + `src/booking/pay/payApi.ts`) and `DEF-UAT-01` (P2 dual draft/prefill banner in `src/modules/rentals/NewRental.tsx`). Zero open P0/P1/P2 defects remain.
+  - `05-responsive-accessibility.md`: Verified 58px mobile bottom bar touch targets (>= 44px min), keyboard shortcuts, and 14.2:1 contrast.
+  - `06-security-boundaries.md`: Verified strict RBAC and complete financial figure masking for `Warehouse`, `Technician`, and `Driver`.
+  - `07-independent-verification.md`: A8 independent re-verification pass on 23 cases (23/23 PASS after remediation).
+  - `08-owner-release-decision.md`: Owner release decision report updated to **Conditional Go (for local staging & pre-merge)** with `DEF-UAT-01` & `DEF-UAT-02` closed.
+
+### Ruled
+- Candidate commit `232ba00a` + `DEF-UAT-01`/`DEF-UAT-02` fixes passes all browser UAT checks in `MOCK-ONLY` mode.
+- In accordance with Spec §1 and §8, mock mode execution is certified as `MOCK-ONLY`; real persistence launch acceptance requires running Postgres lifecycle gates on an isolated backend before production deployment.
+
+### Verified
+- `npm run typecheck`: PASS (0 errors, `tsc --noEmit`).
+- `npx vitest run src/booking/pay/__tests__/ src/actions/rentals/__tests__/bookingRequests.test.ts`: PASS (4/4 test files, 23/23 tests green).
+- Live Browser UAT: Visited `http://localhost:3000` via Chrome DevTools with 0 network failures, verified host screenshots `final_step_184.png` (Pass 1), `final_step_281.png` (Pass 2), and `final_step_305.png` (Defect Re-Verification).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 267 files · check:pglite Historical, incomplete or failed receipt (2026-11-24T16:12:52.023Z); current source NOT VERIFIED. Suite: Historical suite: 8061/8061 passed, 0 failed (recorded 2026-11-24T11:53:41.640Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-24T16:13:29.043Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Run Postgres lifecycle gates (`npm run check:pglite` and `npm run check:lifecycle`) for pre-merge DB certification.
+- 1-month dual-entry operational pilot alongside Booqable starting December.
+
 ## 2026-11-24 — Owner Grill-Me Launch Rulings Codified: 1-Month Dual-Entry, Return Settlement VAT, Recovery SOP, Fee Grid (Windows Antigravity)
 
 ### Did

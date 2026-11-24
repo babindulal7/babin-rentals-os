@@ -1,0 +1,24 @@
+route,component,accessible_roles,states_tested,control_count,variants,status
+/login,Login,"Guest, Anonymous",normal;error;invalid;lock,6,desktop;mobile,PASS
+/forgot-password,ForgotPassword,"Guest, Anonymous",normal;submit;error,3,desktop;mobile,PASS
+/reset-password,ResetPassword,"Guest, Anonymous",normal;submit;invalid_token,3,desktop;mobile,PASS
+/today,Today,"Owner, Manager, Billing, Warehouse, Technician, Driver",normal;empty;refresh;date_filter,24,desktop;tablet;mobile,PASS
+/rentals,RentalsList,"Owner, Manager, Billing, Warehouse, Technician",normal;empty;filtered;density,38,desktop;tablet;mobile,PASS
+/rentals?action=new,NewRental,"Owner, Manager, Billing",normal;stepper;prefill;validation,45,desktop;tablet;mobile,PASS
+/rentals?tab=requests,OnlineRequestsQueue,"Owner, Manager, Billing",normal;review_action;status_badge,14,desktop;tablet;mobile,PASS
+/rentals/:bookingNo/packing,PackingWorkspace,"Owner, Manager, Warehouse, Technician",normal;barcode_scan;checklist;exception,22,desktop;mobile,PASS
+/rentals/:bookingNo/handover,HandoverWorkspace,"Owner, Manager, Warehouse, Technician",normal;signature;id_check;handover_doc,18,desktop;mobile,PASS
+/rentals/:bookingNo/return,ReturnWorkspace,"Owner, Manager, Warehouse, Technician",normal;damage_log;partial_return;missing_item,20,desktop;mobile,PASS
+/rentals/:bookingNo/reset,ResetWorkspace,"Owner, Manager, Warehouse, Technician",normal;cleaning_buffer;inspection,12,desktop;mobile,PASS
+/inventory,Inventory,"Owner, Manager, Warehouse, Technician",normal;search;category;status_chips;barcode,32,desktop;tablet;mobile,PASS
+/calendar,Calendar,"Owner, Manager, Warehouse, Technician, Driver",normal;month;week;day;bs_ad_toggle,18,desktop;tablet,PASS
+/operations,OperationsQueues,"Owner, Manager, Warehouse, Technician, Driver",normal;pickup_queue;return_queue;overdue,28,desktop;tablet;mobile,PASS
+/operations/delivery,DeliveryWorkspace,"Owner, Manager, Driver",normal;dispatch;route_map;driver_confirm,16,desktop;mobile,PASS
+/finance,Finance,"Owner, Billing, Accountant",normal;invoices;payments;expenses;vat,35,desktop;tablet,RESTRICTED_MONEY_BLIND
+/clients,Clients,"Owner, Manager, Billing",normal;search;create;membership;risk_tag,26,desktop;tablet;mobile,PASS
+/settings,Settings,"Owner, Manager",normal;system;pricing;discounts;taxes;staff,30,desktop;tablet,RESTRICTED_ROLE_GATE
+/tools,ToolsLanding,"Owner, Manager, Warehouse, Technician",normal;calculators;label_gen;audit_log,15,desktop;tablet,PASS
+/pay/link,PaymentLinkPage,"Public, Client, Guest",normal;50_advance;100_full;settled;expired;invalid,12,desktop;mobile,PASS
+/rider/:token,RiderDeliveryPage,"Public, Driver",normal;token_view;status_update,8,mobile;desktop,PASS
+/unsubscribe,UnsubscribePage,"Public, Guest",normal;one_click;confirmed,4,desktop;mobile,PASS
+/booking,BookingPortal,"Public, Client, Guest",catalog;cart;checkout;my_bookings,42,desktop;tablet;mobile,PASS

@@ -10,12 +10,21 @@ import '@fontsource/outfit/latin-800.css'
 
 import './booking.css'
 import BookingApp from './App'
+import { IS_MOCK, loadMockClient } from '../lib/supabase'
 
 const el = document.getElementById('booking-root')
 if (!el) throw new Error('booking-root missing from booking.html')
 
-createRoot(el).render(
-  <StrictMode>
-    <BookingApp />
-  </StrictMode>,
-)
+function renderBookingApp() {
+  createRoot(el!).render(
+    <StrictMode>
+      <BookingApp />
+    </StrictMode>,
+  )
+}
+
+if (IS_MOCK) {
+  void loadMockClient().then(renderBookingApp)
+} else {
+  renderBookingApp()
+}
