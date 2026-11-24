@@ -56,13 +56,16 @@ import type {
   RagSearchInput,
   DecisionRecord,
 } from '../../../lib/rentalIntelligence/types'
+import type { ItemAvailabilityState } from '../../../lib/rentalIntelligence/kitRecommender'
+import type { SafetyValidationContext } from '../../../lib/rentalIntelligence/safetyValidator'
+import { useAuth } from '../../../lib/auth'
 import type { SystemRole } from '../../../types/database'
 import type { Surface } from '../../../lib/fieldGating'
 
 export interface RentalIntelligenceDrawerProps {
   open: boolean
   onClose: () => void
-  advices: RentalAdvice[]
+  advices?: RentalAdvice[] | undefined
   userRole?: SystemRole | undefined
   surface?: Surface | undefined
   bookingNo?: string | undefined
@@ -76,6 +79,13 @@ export interface RentalIntelligenceDrawerProps {
   ragSearchInput?: RagSearchInput | undefined
   decisionRecords?: DecisionRecord[] | undefined
   shootTypePlaybook?: string | undefined
+  // RI-FIX-01: Canonical availability evidence props
+  availabilityMap?: Record<string, ItemAvailabilityState> | undefined
+  availabilityFetchedAt?: string | undefined
+  rentalWindow?: { pickupAtIso: string; returnAtIso: string } | undefined
+  availabilityWindow?: { pickupAtIso: string; returnAtIso: string } | undefined
+  // RI-FIX-02: Real safety context props
+  safetyContext?: SafetyValidationContext | undefined
   onAddSuggestion?: ((item: {
     productId: string
     displayName: string
@@ -86,8 +96,8 @@ export interface RentalIntelligenceDrawerProps {
 export function RentalIntelligenceDrawer({
   open,
   onClose,
-  advices: propAdvices,
-  userRole = 'Coordinator',
+  advices: propAdvices = [],
+  userRole: propUserRole,
   surface = 'default',
   bookingNo,
   currentItems = [],
@@ -100,35 +110,108 @@ export function RentalIntelligenceDrawer({
   ragSearchInput,
   decisionRecords,
   shootTypePlaybook,
+  availabilityMap,
+  availabilityFetchedAt,
+  rentalWindow,
+  availabilityWindow,
+  safetyContext,
   onAddSuggestion,
 }: RentalIntelligenceDrawerProps) {
+  // Canonical session role derivation (Section 6: Fail closed on unresolved role)
+  const auth = useAuth()
+  const authenticatedRole = auth?.user?.role
+  const userRole: SystemRole = authenticatedRole ?? propUserRole ?? 'Technician'
+
   const [selectedModule, setSelectedModule] = useState<AdviceModule | 'all' | 'recommender'>('all')
   const [selectedShootType, setSelectedShootType] = useState<ShootType>('Documentary')
   const [selectedTier, setSelectedTier] = useState<PackageTier>('STANDARD')
   const [selectedChecklistStage, setSelectedChecklistStage] = useState<OperationalStage>('pack')
 
-  // Live Blueprint Recommendation computation
+  // Live Blueprint Recommendation computation (RI-FIX-01: authoritative availability evidence)
   const kitResult = useMemo(() => {
     return recommendKit({
       bookingId: bookingNo ?? 'DRAFT',
       shootType: selectedShootType,
       tier: selectedTier,
       currentItems,
-      availabilityFetchedAt: new Date().toISOString(),
+      availabilityMap,
+      availabilityFetchedAt,
+      rentalWindow,
+      availabilityWindow,
     })
-  }, [bookingNo, selectedShootType, selectedTier, currentItems])
+  }, [
+    bookingNo,
+    selectedShootType,
+    selectedTier,
+    currentItems,
+    availabilityMap,
+    availabilityFetchedAt,
+    rentalWindow,
+    availabilityWindow,
+  ])
+
+  // Real Safety Evaluation context resolution (RI-FIX-02: Eliminate fixed tripod 10kg assumption)
+  const resolvedSafetyContext = useMemo((): SafetyValidationContext => {
+    if (safetyContext) return safetyContext
+
+    let detectedType: 'tripod' | 'gimbal' | 'handheld' = 'handheld'
+    let detectedRating: number | undefined = undefined
+    let detectedModel: string | undefined = undefined
+
+    for (const item of currentItems) {
+      const name = item.name.toLowerCase()
+      if (
+        name.includes('tripod') ||
+        name.includes('504x') ||
+        name.includes('sachtler') ||
+        name.includes('manfrotto')
+      ) {
+        detectedType = 'tripod'
+        detectedModel = item.name
+        if (name.includes('504x') || name.includes('504')) detectedRating = 12.0
+        else if (name.includes('sachtler') || name.includes('ace')) detectedRating = 8.0
+        break
+      } else if (
+        name.includes('gimbal') ||
+        name.includes('rs 4') ||
+        name.includes('rs 3') ||
+        name.includes('ronin')
+      ) {
+        detectedType = 'gimbal'
+        detectedModel = item.name
+        if (
+          name.includes('rs 4 pro') ||
+          name.includes('rs 3 pro') ||
+          name.includes('rs4 pro') ||
+          name.includes('rs3 pro')
+        ) {
+          detectedRating = 4.5
+        } else if (
+          name.includes('rs 4') ||
+          name.includes('rs 3') ||
+          name.includes('rs 2')
+        ) {
+          detectedRating = 3.0
+        }
+        break
+      }
+    }
+
+    return {
+      targetId: bookingNo ?? 'DRAFT',
+      supportType: detectedType,
+      supportRatingKg: detectedRating,
+      supportModelName: detectedModel,
+    }
+  }, [safetyContext, currentItems, bookingNo])
 
   // Live Safety Evaluation computation
   const safetyReport = useMemo(() => {
     return validateKitSafety(
       currentItems.map((i) => ({ name: i.name, quantity: i.quantity })),
-      {
-        targetId: bookingNo ?? 'DRAFT',
-        supportType: 'tripod',
-        supportRatingKg: 10.0,
-      },
+      resolvedSafetyContext,
     )
-  }, [bookingNo, currentItems])
+  }, [currentItems, resolvedSafetyContext])
 
   // Live Canonical Quote Explanation computation (RI-02)
   const quoteResult = useMemo(() => {

@@ -142,87 +142,196 @@ export function validateKitSafety(
     }
   }
 
-  // 3. Support & Headroom Validation
-  if (context.supportType === 'tripod' && context.supportRatingKg) {
-    const rigWeightKg = totalRigWeightG / 1000
-    const safeLimitKg = context.supportRatingKg * 0.7 // 30% headroom rule
-    const utilizationPct = Math.round((rigWeightKg / context.supportRatingKg) * 100)
+  // 3. Support & Headroom Validation (RI-FIX-02: Real Support Context)
+  const isTripodSupport =
+    context.supportType === 'tripod' ||
+    (!context.supportType &&
+      items.some(
+        (i) =>
+          i.name.toLowerCase().includes('tripod') ||
+          i.name.toLowerCase().includes('504x') ||
+          i.name.toLowerCase().includes('sachtler'),
+      ))
+  const isGimbalSupport =
+    context.supportType === 'gimbal' ||
+    (!context.supportType &&
+      items.some(
+        (i) =>
+          i.name.toLowerCase().includes('gimbal') ||
+          i.name.toLowerCase().includes('rs 4') ||
+          i.name.toLowerCase().includes('rs 3') ||
+          i.name.toLowerCase().includes('ronin-s'),
+      ))
 
-    if (rigWeightKg > safeLimitKg) {
-      const reason = `Rig payload (${rigWeightKg.toFixed(1)}kg) exceeds safe 70% threshold of tripod capacity (${context.supportRatingKg}kg max rating, safe limit ${safeLimitKg.toFixed(1)}kg). Utilization is ${utilizationPct}%. Risk of fluid head slipping or leg clamp collapse.`
-      blockingReasons.push(reason)
-      advices.push({
-        id: `adv-safety-tripod-${context.targetId}`,
-        module: 'safety',
-        target,
-        evidenceState: 'needs_verification',
-        severity: 'urgent',
-        explanation: `SAFETY WARNING: ${reason}`,
-        sourceRefs: ['references/grip.md', 'data/payload_matrix.json'],
-        sourceKinds: ['approved_knowledge'],
-        snapshotAt: nowIso,
-        requiredChecks: [
-          'Upgrade to Studio Assist Heavy Tripod (15kg rating)',
-          'Remove redundant heavy cage accessories',
-          'Lock fluid head tilt friction before untended operation',
-        ],
-        blockingReasons: [reason],
-      })
-    } else {
-      advices.push({
-        id: `adv-safety-tripod-${context.targetId}`,
-        module: 'safety',
-        target,
-        evidenceState: 'supported',
-        severity: 'info',
-        explanation: `Tripod payload utilization is ${utilizationPct}% (${rigWeightKg.toFixed(1)}kg / ${context.supportRatingKg}kg rating), well within safe 70% operational ceiling.`,
-        sourceRefs: ['references/grip.md', 'data/payload_matrix.json'],
-        sourceKinds: ['approved_knowledge'],
-        snapshotAt: nowIso,
-        requiredChecks: ['Verify fluid head tilt lock engagement'],
-      })
+  // Dynamically resolve support rating from model specs if not explicitly passed
+  let effectiveRatingKg = context.supportRatingKg
+  let effectiveSupportType = context.supportType
+
+  if (!effectiveRatingKg || effectiveRatingKg <= 0 || isNaN(effectiveRatingKg)) {
+    const candidateName =
+      context.supportModelName?.toLowerCase() ??
+      items.find(
+        (i) =>
+          i.name.toLowerCase().includes('tripod') ||
+          i.name.toLowerCase().includes('504x') ||
+          i.name.toLowerCase().includes('sachtler') ||
+          i.name.toLowerCase().includes('gimbal') ||
+          i.name.toLowerCase().includes('rs 4') ||
+          i.name.toLowerCase().includes('rs 3'),
+      )?.name.toLowerCase()
+
+    if (candidateName) {
+      if (candidateName.includes('504x') || candidateName.includes('504')) {
+        effectiveRatingKg = 12.0
+        effectiveSupportType = 'tripod'
+      } else if (candidateName.includes('sachtler') || candidateName.includes('ace')) {
+        effectiveRatingKg = 8.0
+        effectiveSupportType = 'tripod'
+      } else if (
+        candidateName.includes('rs 4 pro') ||
+        candidateName.includes('rs 3 pro') ||
+        candidateName.includes('rs4 pro') ||
+        candidateName.includes('rs3 pro')
+      ) {
+        effectiveRatingKg = 4.5
+        effectiveSupportType = 'gimbal'
+      } else if (
+        candidateName.includes('rs 4') ||
+        candidateName.includes('rs 3') ||
+        candidateName.includes('rs 2')
+      ) {
+        effectiveRatingKg = 3.0
+        effectiveSupportType = 'gimbal'
+      }
     }
-  } else if (context.supportType === 'gimbal' && context.supportRatingKg) {
-    const rigWeightKg = totalRigWeightG / 1000
-    const safeLimitKg = context.supportRatingKg * 0.85 // 85% dynamic motor strain rule
-    const utilizationPct = Math.round((rigWeightKg / context.supportRatingKg) * 100)
+  }
 
-    if (rigWeightKg > safeLimitKg) {
-      const reason = `Gimbal payload (${rigWeightKg.toFixed(1)}kg) exceeds safe 85% motor strain threshold of stabilizer (${context.supportRatingKg}kg rating, utilization ${utilizationPct}%). High probability of motor jitter, overheating, and mid-take shutdown.`
+  if (effectiveSupportType === 'tripod' || (!effectiveSupportType && isTripodSupport)) {
+    if (!effectiveRatingKg || effectiveRatingKg <= 0 || isNaN(effectiveRatingKg)) {
+      const reason =
+        'SUPPORT RATING UNVERIFIED: Support equipment payload rating is unknown or unverified. Verify manufacturer rating before mounting camera package.'
       blockingReasons.push(reason)
       advices.push({
-        id: `adv-safety-gimbal-${context.targetId}`,
+        id: `adv-safety-tripod-unverified-${context.targetId}`,
         module: 'safety',
         target,
         evidenceState: 'needs_verification',
         severity: 'urgent',
-        explanation: `MOTOR STRAIN WARNING: ${reason}`,
+        explanation:
+          'SUPPORT RATING UNVERIFIED: Tripod payload capacity cannot be determined from verified equipment records. Verify manufacturer specification or physical rating plate before mounting camera rig.',
         sourceRefs: ['references/grip.md', 'data/payload_matrix.json'],
         sourceKinds: ['approved_knowledge'],
         snapshotAt: nowIso,
         requiredChecks: [
-          'Strip non-essential monitor/matte box to lower payload',
-          'Perform physical 3-axis re-balancing before powering motors',
-          'Upgrade from RS3 to RS4 Pro (4.5kg capacity)',
+          'Inspect physical tripod head serial / rating plate',
+          'Verify fluid head model in manufacturer catalogue',
         ],
         blockingReasons: [reason],
       })
     } else {
+      const rigWeightKg = totalRigWeightG / 1000
+      const safeLimitKg = effectiveRatingKg * 0.7 // 30% headroom rule
+      const utilizationPct = Math.round((rigWeightKg / effectiveRatingKg) * 100)
+
+      if (rigWeightKg > safeLimitKg) {
+        const reason = `Rig payload (${rigWeightKg.toFixed(1)}kg) exceeds safe 70% threshold of tripod capacity (${effectiveRatingKg}kg max rating, safe limit ${safeLimitKg.toFixed(1)}kg). Utilization is ${utilizationPct}%. Risk of fluid head slipping or leg clamp collapse.`
+        blockingReasons.push(reason)
+        advices.push({
+          id: `adv-safety-tripod-${context.targetId}`,
+          module: 'safety',
+          target,
+          evidenceState: 'needs_verification',
+          severity: 'urgent',
+          explanation: `SAFETY WARNING: ${reason}`,
+          sourceRefs: ['references/grip.md', 'data/payload_matrix.json'],
+          sourceKinds: ['approved_knowledge'],
+          snapshotAt: nowIso,
+          requiredChecks: [
+            'Upgrade to Studio Assist Heavy Tripod (15kg rating)',
+            'Remove redundant heavy cage accessories',
+            'Lock fluid head tilt friction before untended operation',
+          ],
+          blockingReasons: [reason],
+        })
+      } else {
+        advices.push({
+          id: `adv-safety-tripod-${context.targetId}`,
+          module: 'safety',
+          target,
+          evidenceState: 'supported',
+          severity: 'info',
+          explanation: `Tripod payload utilization is ${utilizationPct}% (${rigWeightKg.toFixed(1)}kg / ${effectiveRatingKg}kg rating), well within safe 70% operational ceiling.`,
+          sourceRefs: ['references/grip.md', 'data/payload_matrix.json'],
+          sourceKinds: ['approved_knowledge'],
+          snapshotAt: nowIso,
+          requiredChecks: ['Verify fluid head tilt lock engagement'],
+        })
+      }
+    }
+  } else if (effectiveSupportType === 'gimbal' || (!effectiveSupportType && isGimbalSupport)) {
+    if (!effectiveRatingKg || effectiveRatingKg <= 0 || isNaN(effectiveRatingKg)) {
+      const reason =
+        'GIMBAL RATING UNVERIFIED: Gimbal motor payload rating is unknown or unverified. Verify manufacturer rating before mounting camera package.'
+      blockingReasons.push(reason)
       advices.push({
-        id: `adv-safety-gimbal-${context.targetId}`,
+        id: `adv-safety-gimbal-unverified-${context.targetId}`,
         module: 'safety',
         target,
-        evidenceState: 'supported',
-        severity: 'info',
-        explanation: `Gimbal payload utilization is ${utilizationPct}% (${rigWeightKg.toFixed(1)}kg / ${context.supportRatingKg}kg rating), within 85% dynamic motor threshold.`,
+        evidenceState: 'needs_verification',
+        severity: 'urgent',
+        explanation:
+          'GIMBAL RATING UNVERIFIED: Gimbal payload capacity cannot be determined from verified equipment records. Verify manufacturer specification before balancing camera rig.',
         sourceRefs: ['references/grip.md', 'data/payload_matrix.json'],
         sourceKinds: ['approved_knowledge'],
         snapshotAt: nowIso,
         requiredChecks: [
-          'Perform physical 3-axis re-balancing before powering motors',
-          'Run DJI auto-tune calibration',
+          'Verify gimbal model in manufacturer catalogue',
+          'Check balancing tolerances',
         ],
+        blockingReasons: [reason],
       })
+    } else {
+      const rigWeightKg = totalRigWeightG / 1000
+      const safeLimitKg = effectiveRatingKg * 0.85 // 85% dynamic motor strain rule
+      const utilizationPct = Math.round((rigWeightKg / effectiveRatingKg) * 100)
+
+      if (rigWeightKg > safeLimitKg) {
+        const reason = `Gimbal payload (${rigWeightKg.toFixed(1)}kg) exceeds safe 85% motor strain threshold of stabilizer (${effectiveRatingKg}kg rating, utilization ${utilizationPct}%). High probability of motor jitter, overheating, and mid-take shutdown.`
+        blockingReasons.push(reason)
+        advices.push({
+          id: `adv-safety-gimbal-${context.targetId}`,
+          module: 'safety',
+          target,
+          evidenceState: 'needs_verification',
+          severity: 'urgent',
+          explanation: `MOTOR STRAIN WARNING: ${reason}`,
+          sourceRefs: ['references/grip.md', 'data/payload_matrix.json'],
+          sourceKinds: ['approved_knowledge'],
+          snapshotAt: nowIso,
+          requiredChecks: [
+            'Strip non-essential monitor/matte box to lower payload',
+            'Perform physical 3-axis re-balancing before powering motors',
+            'Upgrade from RS3 to RS4 Pro (4.5kg capacity)',
+          ],
+          blockingReasons: [reason],
+        })
+      } else {
+        advices.push({
+          id: `adv-safety-gimbal-${context.targetId}`,
+          module: 'safety',
+          target,
+          evidenceState: 'supported',
+          severity: 'info',
+          explanation: `Gimbal payload utilization is ${utilizationPct}% (${rigWeightKg.toFixed(1)}kg / ${effectiveRatingKg}kg rating), within 85% dynamic motor threshold.`,
+          sourceRefs: ['references/grip.md', 'data/payload_matrix.json'],
+          sourceKinds: ['approved_knowledge'],
+          snapshotAt: nowIso,
+          requiredChecks: [
+            'Perform physical 3-axis re-balancing before powering motors',
+            'Run DJI auto-tune calibration',
+          ],
+        })
+      }
     }
   }
 

@@ -12,6 +12,8 @@
 import { formatMoney, type Paisa } from '../money'
 import { moneyScope, type Surface } from '../fieldGating'
 import type { SystemRole } from '../../types/database'
+import type { BookingAvailabilityEvaluation } from '../availabilityEvaluation'
+import type { ItemAvailabilityState } from './kitRecommender'
 import type {
   RentalAdvice,
   RigPayloadInput,
@@ -25,6 +27,39 @@ import type {
 /* ------------------------------------------------------------------
  * Module RI-01: Kit Intelligence & Auto-Completion Adapter
  * ------------------------------------------------------------------ */
+
+/**
+ * Builds canonical ItemAvailabilityState map from a live BookingAvailabilityEvaluation query.
+ * Reuses the existing canonical availability evaluation without creating a second ledger.
+ */
+export function buildAvailabilityMapFromEvaluation(
+  evaluation: BookingAvailabilityEvaluation | null | undefined,
+): Record<string, ItemAvailabilityState> | undefined {
+  if (!evaluation || !evaluation.lineResults || evaluation.lineResults.length === 0) {
+    return undefined
+  }
+  const map: Record<string, ItemAvailabilityState> = {}
+  for (const line of evaluation.lineResults) {
+    const isAvail = line.status === 'available' || line.status === 'available_with_reassignment'
+    const status: ItemAvailabilityState['status'] =
+      line.status === 'unavailable_maintenance'
+        ? 'maintenance'
+        : line.status === 'conflict' || line.status === 'hold_conflict'
+          ? 'booked'
+          : isAvail
+            ? 'available'
+            : 'qc_hold'
+    const entry: ItemAvailabilityState = {
+      available: isAvail,
+      status,
+      holdReason: line.conflictingReason,
+      conflictBookingId: line.conflictingBookingNo,
+    }
+    map[line.productId] = entry
+    map[line.productName] = entry
+  }
+  return map
+}
 
 export interface KitIntelligenceInput {
   bookingId: string
@@ -216,6 +251,25 @@ export function evaluateKitIntelligence(input: KitIntelligenceInput): RentalAdvi
 export function evaluateRigPayloadSafety(input: RigPayloadInput): RentalAdvice {
   const target: AdviceTarget = { type: 'product', id: input.targetId }
   const nowIso = new Date().toISOString()
+
+  if (!input.supportRatingKg || input.supportRatingKg <= 0 || isNaN(input.supportRatingKg)) {
+    return {
+      id: `adv-safety-payload-unverified-${input.targetId}`,
+      module: 'safety',
+      target,
+      evidenceState: 'needs_verification',
+      severity: 'urgent',
+      explanation:
+        'SUPPORT RATING UNVERIFIED: Support equipment payload rating is unknown or invalid. Verify manufacturer specification before mounting camera rig.',
+      sourceRefs: ['references/grip.md', 'data/payload_matrix.json'],
+      sourceKinds: ['approved_knowledge'],
+      snapshotAt: nowIso,
+      requiredChecks: [
+        'Verify support equipment model and rated capacity in manufacturer documentation',
+      ],
+      blockingReasons: ['Support rating is missing or unverified.'],
+    }
+  }
 
   if (input.supportType === 'tripod') {
     // 30% safety headroom rule: rig weight must not exceed 70% of max tripod capacity

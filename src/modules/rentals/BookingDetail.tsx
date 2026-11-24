@@ -96,7 +96,7 @@ import type { InvoiceListRow, PaymentListRow } from '../../lib/queries/finance'
 import { listBookingNotes, notesForBooking } from '../../lib/queries/bookingNotes'
 import type { BookingNoteRow, BookingNoteType } from '../../lib/queries/bookingNotes'
 import { addBookingNote } from '../../actions/notes/addBookingNote'
-import { getClient } from '../../lib/queries/clients'
+import { getClient, type ClientListItem } from '../../lib/queries/clients'
 import { whatsappActionsFor } from '../../lib/whatsappActions'
 import { paymentReceipt } from '../../lib/whatsappTemplates'
 import { buildWaLink } from '../../lib/whatsapp'
@@ -116,6 +116,12 @@ import { BookingConflictModal } from './booking/BookingConflictModal'
 import type { LineEvaluationResult, BookingAvailabilityEvaluation } from '../../lib/availabilityEvaluation'
 import { exportPackingListPdf, openPdfForPrint } from '../../lib/pdf/exportPdf'
 import { buildPackingListPdfItems } from '../../lib/pdf/generatePdf'
+import { RentalIntelligenceDrawer } from './intelligence/RentalIntelligenceDrawer'
+import { buildAvailabilityMapFromEvaluation } from '../../lib/rentalIntelligence'
+import type { CanonicalQuoteSnapshot } from '../../lib/rentalIntelligence/quoteExplainer'
+import type { BookingLineForChecklist } from '../../lib/rentalIntelligence/checklistGenerator'
+import type { ClientProfileInput } from '../../lib/rentalIntelligence/clientIntelligence'
+import type { MonsoonEvaluationInput } from '../../lib/rentalIntelligence/types'
 
 /**
  * # Booking Detail — live, for ANY `:bookingNo`
@@ -1552,17 +1558,30 @@ function BookingDetailView() {
   const [draftOverlapNotice, setDraftOverlapNotice] = useState<string | null>(null)
   const [availabilityEvaluation, setAvailabilityEvaluation] = useState<BookingAvailabilityEvaluation | null>(null)
   const [availabilityError, setAvailabilityError] = useState<string | null>(null)
+  const [intelligenceOpen, setIntelligenceOpen] = useState(false)
+  const [availabilityFetchedAt, setAvailabilityFetchedAt] = useState<string | undefined>(undefined)
+  const [availabilityWindow, setAvailabilityWindow] = useState<{ pickupAtIso: string; returnAtIso: string } | undefined>(undefined)
+  const [clientRecord, setClientRecord] = useState<ClientListItem | null>(null)
 
   useEffect(() => {
     let active = true
     setAvailabilityEvaluation(null)
     setAvailabilityError(null)
-    if (booking?.stage === 'Quote' && id) {
+    setAvailabilityFetchedAt(undefined)
+    setAvailabilityWindow(undefined)
+    if (id) {
       void import('../../lib/queries/smartReservationQueries')
         .then((m) => m.queryBookingAvailability(id))
         .then((res) => {
           if (active && res.evaluation) {
             setAvailabilityEvaluation(res.evaluation)
+            setAvailabilityFetchedAt(new Date().toISOString())
+            if (res.window) {
+              setAvailabilityWindow({
+                pickupAtIso: res.window.fromAd,
+                returnAtIso: res.window.toAd,
+              })
+            }
             setAvailabilityError(null)
             const conflicts = res.evaluation.lineResults.filter((r) => r.status !== 'available')
             if (conflicts.length > 0) {
@@ -1573,6 +1592,8 @@ function BookingDetailView() {
         .catch(() => {
           if (!active) return
           setAvailabilityEvaluation(null)
+          setAvailabilityFetchedAt(undefined)
+          setAvailabilityWindow(undefined)
           setConflictsList([])
           setAvailabilityError('Availability cannot be verified right now. Retry before confirming this rental.')
         })
@@ -1905,16 +1926,23 @@ function BookingDetailView() {
     const cid = booking?.clientId
     if (!cid) {
       setContact({ kind: 'absent' })
+      setClientRecord(null)
       return
     }
     let cancelled = false
     setContact({ kind: 'loading' })
     getClient(cid)
       .then((c) => {
-        if (!cancelled) setContact({ kind: 'ready', phone: c?.phone ?? null, email: c?.email ?? null })
+        if (!cancelled) {
+          setClientRecord(c ?? null)
+          setContact({ kind: 'ready', phone: c?.phone ?? null, email: c?.email ?? null })
+        }
       })
       .catch((err: unknown) => {
-        if (!cancelled) setContact({ kind: 'failed', message: err instanceof Error ? err.message : String(err) })
+        if (!cancelled) {
+          setClientRecord(null)
+          setContact({ kind: 'failed', message: err instanceof Error ? err.message : String(err) })
+        }
       })
     return () => {
       cancelled = true
@@ -1975,6 +2003,94 @@ function BookingDetailView() {
       },
     })
   }, [booking, user, clientPhone, floor, canBookingMoney, hasInvoice, totals])
+
+  // Canonical Rental Intelligence Advisory Memos
+  const bookingDays = useMemo(() => {
+    if (!booking?.pickupAtAd || !booking?.returnAtAd) return 1
+    return rentalDaysBetween(booking.pickupAtAd, booking.returnAtAd, booking.rentalDayStart ?? 360) ?? 1
+  }, [booking?.pickupAtAd, booking?.returnAtAd, booking?.rentalDayStart])
+
+  const canonicalQuoteSnapshot: CanonicalQuoteSnapshot | undefined = useMemo(() => {
+    if (!booking) return undefined
+    return {
+      bookingId: booking.bookingNo,
+      days: bookingDays,
+      lineItems: (floor?.lines ?? []).map((l) => ({
+        productId: l.productId ?? l.id,
+        displayName: l.productName ?? l.description ?? 'Equipment Line',
+        quantity: l.qty,
+        unitRatePaisa: 0,
+        lineTotalPaisa: 0,
+      })),
+      equipmentSubtotalPaisa: totals.subtotal,
+      discountPercent: liveInvoices[0]?.discountPercent ?? 0,
+      discountAmountPaisa: totals.discount,
+      discountReason: liveInvoices[0]?.voidReason ?? undefined,
+      taxRatePercent: liveInvoices[0]?.vatRate ? Math.round(liveInvoices[0].vatRate * 100) : 13,
+      taxAmountPaisa: totals.vat,
+      totalRentalPaisa: totals.total,
+      depositPaisa: booking.depositRequired ?? 0,
+      advancePaidPaisa: totals.paid,
+      outstandingPaisa: totals.outstanding,
+      currency: 'NPR',
+      calculatedAtIso: new Date().toISOString(),
+      isStale: false,
+    }
+  }, [booking, bookingDays, floor?.lines, totals, liveInvoices])
+
+  const canonicalChecklistLines: BookingLineForChecklist[] | undefined = useMemo(() => {
+    if (!floor?.lines) return undefined
+    return floor.lines.map((fl) => ({
+      id: fl.id,
+      productId: fl.productId ?? fl.id,
+      displayName: fl.productName ?? fl.description ?? 'Equipment Line',
+      dispatchedQuantity: fl.qty,
+      serialNumbers: fl.units.map((u) => u.serial).filter((s): s is string => !!s),
+      hasDamage: fl.units.some((u) => u.damaged || u.unitState === 'Damaged'),
+    }))
+  }, [floor?.lines])
+
+  const canonicalClientProfile: ClientProfileInput | undefined = useMemo(() => {
+    if (!booking?.clientId) return undefined
+    return {
+      clientId: booking.clientId,
+      clientName: booking.clientName ?? clientRecord?.name ?? 'Client',
+      orderCount: clientRecord?.totalBookingsCount ?? 1,
+      outstandingBalancePaisa:
+        typeof clientRecord?.outstanding === 'number' ? clientRecord.outstanding : undefined,
+      flags: [
+        clientRecord?.membershipLevel ? `tier:${clientRecord.membershipLevel}` : null,
+        clientRecord?.status ? `status:${clientRecord.status}` : null,
+      ].filter(Boolean) as string[],
+    }
+  }, [booking?.clientId, booking?.clientName, clientRecord])
+
+  const canonicalMonsoonInput: MonsoonEvaluationInput | undefined = useMemo(() => {
+    if (!booking) return undefined
+    return {
+      targetId: booking.bookingNo,
+      targetDateIso: booking.pickupAtAd,
+      isOutdoor: Boolean(booking.shootLocation?.toLowerCase().includes('outdoor')),
+      locationName: booking.shootLocation,
+      items: (floor?.lines ?? []).map((l) => ({
+        id: l.productId ?? l.id,
+        name: l.productName ?? l.description ?? 'Item',
+        quantity: l.qty,
+      })),
+    }
+  }, [booking, floor?.lines])
+
+  const bookingWindow = useMemo(() => {
+    if (!booking?.pickupAtAd || !booking?.returnAtAd) return undefined
+    return {
+      pickupAtIso: booking.pickupAtAd,
+      returnAtIso: booking.returnAtAd,
+    }
+  }, [booking?.pickupAtAd, booking?.returnAtAd])
+
+  const canonicalAvailabilityMap = useMemo(() => {
+    return buildAvailabilityMapFromEvaluation(availabilityEvaluation)
+  }, [availabilityEvaluation])
 
   const stage = (booking?.stage ?? 'Draft') as BookingStatus
   const isTerminalStage = stage === 'Returned' || stage === 'Closed' || !!booking?.isCancelled
@@ -2586,6 +2702,18 @@ function BookingDetailView() {
           }
           actions={
             <PageActions
+            secondary={
+              <Button
+                icon="sparkles"
+                variant="secondary"
+                size="sm"
+                onClick={() => setIntelligenceOpen(true)}
+                title="Rental Intelligence advisory drawer"
+                data-testid="rental-intelligence-trigger"
+              >
+                Intelligence
+              </Button>
+            }
             persistent={
               /* The 44px icon at every width (its name stays "Operations"): the labelled
                  trigger cost 64px more of the record title at 1280. Cleaning & Reset is
@@ -4185,6 +4313,30 @@ function BookingDetailView() {
         conflicts={conflictsList}
         onKeepDraft={() => setConflictModalOpen(false)}
       />
+
+      {booking && (
+        <RentalIntelligenceDrawer
+          open={intelligenceOpen}
+          onClose={() => setIntelligenceOpen(false)}
+          advices={[]}
+          bookingNo={booking.bookingNo}
+          currentItems={(floor?.lines ?? []).map((l) => ({
+            id: l.productId ?? l.id,
+            name: l.productName ?? l.description ?? 'Equipment Item',
+            quantity: l.qty,
+          }))}
+          quoteSnapshot={canonicalQuoteSnapshot}
+          checklistLines={canonicalChecklistLines}
+          clientProfile={canonicalClientProfile}
+          monsoonInput={canonicalMonsoonInput}
+          availabilityMap={canonicalAvailabilityMap}
+          availabilityFetchedAt={availabilityFetchedAt}
+          rentalWindow={bookingWindow}
+          availabilityWindow={availabilityWindow}
+          userRole={user?.role}
+          surface="default"
+        />
+      )}
     </PageShell>
   )
 }
