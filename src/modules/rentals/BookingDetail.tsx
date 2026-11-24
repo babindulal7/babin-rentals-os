@@ -2620,6 +2620,11 @@ function BookingDetailView() {
     },
     { label: 'Print booking', icon: 'file' as const, onClick: () => window.print() },
     ...bookingMoreItems,
+    {
+      label: 'Rental Intelligence',
+      icon: 'sparkles' as const,
+      onClick: () => setIntelligenceOpen(true),
+    },
   ]
 
   /*
@@ -2702,18 +2707,6 @@ function BookingDetailView() {
           }
           actions={
             <PageActions
-            secondary={
-              <Button
-                icon="sparkles"
-                variant="secondary"
-                size="sm"
-                onClick={() => setIntelligenceOpen(true)}
-                title="Rental Intelligence advisory drawer"
-                data-testid="rental-intelligence-trigger"
-              >
-                Intelligence
-              </Button>
-            }
             persistent={
               /* The 44px icon at every width (its name stays "Operations"): the labelled
                  trigger cost 64px more of the record title at 1280. Cleaning & Reset is
