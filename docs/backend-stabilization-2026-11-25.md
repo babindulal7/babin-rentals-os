@@ -18,3 +18,6 @@ Staging security advisor: mutable search paths 7 -> 0. Performance advisor: dupl
 - Test real authenticated owner/staff/client sessions and positive and negative permissions in staging, booking concurrency, payments, partial returns and offline reconnect.
 - Review existing intentional owner-executed masking views and RPC grants individually. Never switch views to invoker or revoke all RPC grants indiscriminately.
 - Do not merge, deploy or apply to production until independent verification and owner approval. No production data mutation is authorized by this PR.
+
+## Source-only prerequisite
+`0270_reconcile_sign_in_events_immutability.sql` reproduces the already observed staging update/delete trigger and hardened function, absent from the checked-in chain. This is a new source-only migration; it was not applied to either hosted project in this turn. The three previously recorded migration files remain verbatim. The preflight must still block the older inventory as drift; do not mark this new migration as hosted-applied until reviewed.
