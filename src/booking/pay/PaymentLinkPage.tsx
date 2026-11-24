@@ -15,6 +15,13 @@ export const PaymentLinkPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [showPayModal, setShowPayModal] = useState(false)
   const [paymentSettled, setPaymentSettled] = useState(false)
+  const [paymentChoice, setPaymentChoice] = useState<'advance' | 'full'>('advance')
+  const [paidAmount, setPaidAmount] = useState<number | null>(null)
+
+  const hasOptions = typeof details?.total_amount_paisa === 'number' && typeof details?.advance_due_paisa === 'number'
+  const payableAmount = hasOptions
+    ? (paymentChoice === 'advance' ? details.advance_due_paisa! : details.total_amount_paisa!)
+    : (details?.amount_paisa ?? 0)
 
   useEffect(() => {
     let isMounted = true
@@ -124,7 +131,7 @@ export const PaymentLinkPage: React.FC = () => {
             <div>Loading payment link information…</div>
           </div>
         ) : paymentSettled || (details && !details.valid && details.reason === 'already_paid') ? (
-          <div style={{ textAlign: 'center', padding: '24px 0' }}>
+          <div style={{ textAlign: 'center', padding: '16px 0' }}>
             <div
               style={{
                 width: 56,
@@ -144,18 +151,95 @@ export const PaymentLinkPage: React.FC = () => {
               Payment Already Settled
             </h2>
             <p style={{ fontSize: '0.9rem', color: 'var(--muted, #94a3b8)', margin: '0 0 20px', lineHeight: 1.5 }}>
-              Thank you! The balance for booking <strong>{details?.booking_no || 'your rental'}</strong> has already been received and recorded in our system.
+              Thank you! Payment for booking <strong>{details?.booking_no || 'your rental'}</strong> has been received and verified.
             </p>
+
+            {/* Official Payment Receipt Card */}
             <div
               style={{
                 background: 'var(--surface-sunken, #0f172a)',
-                padding: '12px 16px',
+                border: '1px solid var(--border, #334155)',
                 borderRadius: 8,
-                fontSize: '0.85rem',
-                color: 'var(--muted, #94a3b8)',
+                padding: '16px',
+                textAlign: 'left',
+                marginBottom: 20,
               }}
             >
-              If you have questions about equipment handover or your schedule, please contact our operations desk.
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Icon name="check" size={18} /> Official Payment Receipt
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: '0.85rem' }}>
+                <div><span style={{ color: 'var(--muted, #94a3b8)' }}>Booking:</span> <strong>{details?.booking_no}</strong></div>
+                {details?.project_name && <div><span style={{ color: 'var(--muted, #94a3b8)' }}>Project:</span> <strong>{details.project_name}</strong></div>}
+                <div><span style={{ color: 'var(--muted, #94a3b8)' }}>Amount Received:</span> <strong style={{ color: '#22c55e' }}>{formatMoney((paidAmount ?? details?.amount_paisa ?? 0) as Paisa)}</strong></div>
+                <div><span style={{ color: 'var(--muted, #94a3b8)' }}>Status:</span> <strong style={{ color: '#22c55e' }}>Verified</strong></div>
+              </div>
+              <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  style={{
+                    flex: 1,
+                    minHeight: 38,
+                    borderRadius: 6,
+                    background: 'var(--card, #1e293b)',
+                    color: 'var(--text, #f8fafc)',
+                    border: '1px solid var(--border, #334155)',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <Icon name="download" size={15} /> Download Receipt (PDF)
+                </button>
+                <Link
+                  to="/booking#/my-bookings"
+                  style={{
+                    flex: 1,
+                    minHeight: 38,
+                    borderRadius: 6,
+                    background: 'var(--brand-primary, #6366f1)',
+                    color: '#ffffff',
+                    border: 'none',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <Icon name="external_link" size={15} /> My Bookings Portal
+                </Link>
+              </div>
+            </div>
+
+            {/* Boudha Warehouse Pickup Instructions & Checklist */}
+            <div
+              style={{
+                background: 'rgba(59, 130, 246, 0.08)',
+                border: '1px solid rgba(59, 130, 246, 0.25)',
+                borderRadius: 8,
+                padding: '14px 16px',
+                textAlign: 'left',
+                fontSize: '0.85rem',
+                color: 'var(--text, #f8fafc)',
+              }}
+            >
+              <h4 style={{ fontSize: '0.9rem', fontWeight: 700, margin: '0 0 8px', color: '#60a5fa' }}>
+                Boudha Warehouse Pickup Instructions &amp; Checklist
+              </h4>
+              <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.6, color: 'var(--muted, #94a3b8)' }}>
+                <li><strong>Original Government Photo ID:</strong> Citizenship, Passport, or Driving License must be presented at counter.</li>
+                <li><strong>Digital Reference:</strong> Show booking #{details?.booking_no} and receipt confirmation on your mobile.</li>
+                <li><strong>Security Deposit:</strong> Refundable deposit / pre-authorization handled at checkout counter before gear release.</li>
+                <li><strong>Inspection:</strong> Allow 15 minutes with our technician for optical and functional verification.</li>
+              </ul>
             </div>
           </div>
         ) : error || !details || !details.valid ? (
@@ -252,6 +336,54 @@ export const PaymentLinkPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Payment Option Toggle (50% Advance vs 100% Full) */}
+            {hasOptions && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => setPaymentChoice('advance')}
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    border: `1.5px solid ${paymentChoice === 'advance' ? 'var(--brand-primary, #6366f1)' : 'var(--border, #334155)'}`,
+                    background: paymentChoice === 'advance' ? 'rgba(99, 102, 241, 0.15)' : 'var(--surface-sunken, #0f172a)',
+                    color: paymentChoice === 'advance' ? '#ffffff' : 'var(--muted, #94a3b8)',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: '0.85rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 2,
+                  }}
+                >
+                  <span>50% Advance Deposit</span>
+                  <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>Hold Reservation</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentChoice('full')}
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    border: `1.5px solid ${paymentChoice === 'full' ? 'var(--brand-primary, #6366f1)' : 'var(--border, #334155)'}`,
+                    background: paymentChoice === 'full' ? 'rgba(99, 102, 241, 0.15)' : 'var(--surface-sunken, #0f172a)',
+                    color: paymentChoice === 'full' ? '#ffffff' : 'var(--muted, #94a3b8)',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: '0.85rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 2,
+                  }}
+                >
+                  <span>100% Full Payment</span>
+                  <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>Complete Settlement</span>
+                </button>
+              </div>
+            )}
+
             {/* Authoritative Amount Due */}
             <div
               style={{
@@ -273,7 +405,7 @@ export const PaymentLinkPage: React.FC = () => {
                   color: 'var(--text, #f8fafc)',
                 }}
               >
-                {formatMoney(details.amount_paisa as Paisa)}
+                {formatMoney(payableAmount as Paisa)}
               </div>
               <div
                 style={{
@@ -351,8 +483,10 @@ export const PaymentLinkPage: React.FC = () => {
           onClose={() => setShowPayModal(false)}
           bookingId={details.booking_id}
           token={token}
+          amountPaisa={payableAmount}
           onPaymentSuccess={() => {
             setShowPayModal(false)
+            setPaidAmount(payableAmount)
             setPaymentSettled(true)
           }}
         />

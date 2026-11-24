@@ -24,12 +24,13 @@ import type { Line } from './RentalLineItemsTree'
 export interface UseNewRentalSubmitOptions {
   editBookingId?: string | undefined
   parentBookingId?: string | null | undefined
+  requestId?: string | undefined
   confirmBlocked: boolean
   saveState: 'saved' | 'saving' | 'error'
   setSaveState: (state: 'saved' | 'saving' | 'error') => void
   dispatchContext: () => ActionContext | null
   setActionError: (msg: string | null) => void
-  setConfirmedSuccess: (success: { bookingId: string; bookingNo: string } | null) => void
+  setConfirmedSuccess: (success: { bookingId: string; bookingNo: string; paymentLink?: string | undefined; paymentToken?: string | undefined } | null) => void
   showSuccessToast?: (title: string, message?: string) => void
 
   client: ClientRecord | null | undefined
@@ -126,6 +127,7 @@ function quoteFieldsForLine(
 export function useNewRentalSubmit({
   editBookingId,
   parentBookingId,
+  requestId,
   confirmBlocked,
   saveState,
   setSaveState,
@@ -477,6 +479,28 @@ export function useNewRentalSubmit({
         const bookedId = createdQuote.current.id
         const bookedNo = createdQuote.current.no
 
+        if (requestId) {
+          try {
+            const { confirmBookingRequest } = await import('../../../actions/rentals/confirmBookingRequest')
+            await confirmBookingRequest({ requestId, bookingId: bookedId }, ctx)
+          } catch (reqErr) {
+            console.warn('[useNewRentalSubmit] could not link booking request:', reqErr)
+          }
+        }
+
+        let paymentLinkUrl: string | undefined
+        let paymentToken: string | undefined
+        try {
+          const { createBookingPaymentLink } = await import('../../../booking/pay/payApi')
+          const linkRes = await createBookingPaymentLink(bookedId)
+          if (linkRes?.token) {
+            paymentToken = linkRes.token
+            paymentLinkUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/pay/link/${linkRes.token}`
+          }
+        } catch (linkErr) {
+          console.warn('[useNewRentalSubmit] could not mint auto payment link:', linkErr)
+        }
+
         confirmKey.current = null
         createdQuote.current = null
         discountKeys.current = []
@@ -486,7 +510,12 @@ export function useNewRentalSubmit({
         setSaveState('saved')
         const label = bookedNo.startsWith('BK-') || bookedNo.startsWith('Rental ') ? bookedNo : `Rental ${bookedNo}`
         showSuccessToast?.('Booking Confirmed', `${label} is now Booked`)
-        setConfirmedSuccess({ bookingId: bookedId, bookingNo: bookedNo })
+        setConfirmedSuccess({
+          bookingId: bookedId,
+          bookingNo: bookedNo,
+          paymentLink: paymentLinkUrl,
+          paymentToken: paymentToken,
+        })
       } catch (err) {
         setSaveState('error')
         const reason = err instanceof Error ? err.message : String(err)

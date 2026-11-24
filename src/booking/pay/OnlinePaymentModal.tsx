@@ -16,6 +16,7 @@ export interface OnlinePaymentModalProps {
   bookingId?: string | undefined
   clientUuid?: string | undefined
   token?: string | undefined
+  amountPaisa?: number | undefined
   onPaymentSuccess?: ((result: { intentId: string; paymentNo?: string | undefined; amountPaisa: number }) => void) | undefined
 }
 
@@ -26,6 +27,7 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
   bookingId,
   clientUuid,
   token,
+  amountPaisa,
   onPaymentSuccess,
 }) => {
   const [providers, setProviders] = useState<OnlinePaymentProviderInfo[]>([])
@@ -139,7 +141,7 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
         const result = {
           intentId: initData.intent_id,
           paymentNo: verifyRes.payment_no,
-          amountPaisa: initData.amount_paisa,
+          amountPaisa: amountPaisa || initData.amount_paisa,
         }
         setSuccessResult(result)
         onPaymentSuccess?.(result)

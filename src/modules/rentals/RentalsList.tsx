@@ -96,6 +96,8 @@ import { captureError } from '../../lib/monitoring'
 import { TouchTarget } from '../../components/ui/TouchTarget'
 import BookingOperationsMenu from './BookingOperationsMenu'
 import { useToast } from '../../components/ui/Toast'
+import { OnlineRequestsQueue } from './OnlineRequestsQueue'
+import { fetchBookingRequests } from '../../lib/queries/bookingRequests'
 import './rentals.css'
 import { useOperationsWorkspace } from '../operations/OperationsWorkspaceContext'
 /**
@@ -927,6 +929,20 @@ export default function RentalsList() {
    * page can own this one directly and the two writers compose.
    */
   const [rawParams, setRawParams] = useSearchParams()
+  const isRequestsTab = rawParams.get('tab') === 'requests'
+  const [pendingRequestsCount, setPendingRequestsCount] = useState<number | undefined>(undefined)
+
+  useEffect(() => {
+    fetchBookingRequests()
+      .then((requests) => {
+        const pending = requests.filter((r) => r.status === 'pending').length
+        setPendingRequestsCount(pending)
+      })
+      .catch(() => {
+        // Non-blocking
+      })
+  }, [])
+
   const isNew = rawParams.get('action') === 'new' || rawParams.get('tab') === 'new' || Boolean(rawParams.get('draft'))
   const isCounterSale = rawParams.get('action') === 'counter-sale'
   const perPage = useMemo(() => {
@@ -1737,6 +1753,7 @@ export default function RentalsList() {
   const countedTitle = total === null ? 'Rentals' : `${total} ${total === 1 ? 'Rental' : 'Rentals'} found`
 
   const activeRentalTab = useMemo(() => {
+    if (isRequestsTab) return 'Requests'
     if (chip === 'Cancelled') return 'Cancelled'
     if (stageChips.length === 0 && chip === 'All') return 'All'
     if (statusFilter.size === 3 && statusFilter.has('Quote') && statusFilter.has('Booked') && statusFilter.has('Packed')) {
@@ -1744,10 +1761,27 @@ export default function RentalsList() {
     }
     const match = RENTAL_VIEWS.find((v) => v.stages.length === 1 && v.stages[0] && stageChips.includes(v.stages[0]))
     return match?.id ?? 'All'
-  }, [chip, stageChips, statusFilter])
+  }, [isRequestsTab, chip, stageChips, statusFilter])
 
   const handleTabChange = useCallback(
     (viewId: string) => {
+      if (viewId === 'Requests') {
+        setRawParams((prev) => {
+          const next = new URLSearchParams(prev)
+          next.set('tab', 'requests')
+          return next
+        })
+        return
+      }
+
+      setRawParams((prev) => {
+        const next = new URLSearchParams(prev)
+        if (next.get('tab') === 'requests') {
+          next.delete('tab')
+        }
+        return next
+      })
+
       const viewItem = RENTAL_VIEWS.find((v) => v.id === viewId)
       if (!viewItem) return
       const isAll = viewItem.id === 'All'
@@ -1773,7 +1807,7 @@ export default function RentalsList() {
         if (chip !== 'All') pickChip('All')
       }
     },
-    [chip, stageChips, statusFilter, pickChip, f],
+    [chip, stageChips, statusFilter, pickChip, f, setRawParams],
   )
 
   if (isNew) {
@@ -2093,12 +2127,20 @@ export default function RentalsList() {
 
       {/* Zone 3: Unified Filter & Tab Bar */}
       <ModuleFilterBar
-        tabs={RENTAL_VIEWS.map((viewItem) => ({
-          id: viewItem.id,
-          label: viewItem.label,
-          icon: viewItem.icon as IconName,
-          count: getTabCount(viewItem.id, viewItem.stages),
-        }))}
+        tabs={[
+          ...RENTAL_VIEWS.map((viewItem) => ({
+            id: viewItem.id,
+            label: viewItem.label,
+            icon: viewItem.icon as IconName,
+            count: getTabCount(viewItem.id, viewItem.stages),
+          })),
+          {
+            id: 'Requests',
+            label: 'Online Requests',
+            icon: 'mail' as IconName,
+            count: pendingRequestsCount,
+          },
+        ]}
         activeTab={activeRentalTab}
         onTabChange={handleTabChange}
         dropdownFilters={
@@ -2261,12 +2303,12 @@ export default function RentalsList() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)', minWidth: 0, flex: 1 }}>
         <div style={{ background: 'var(--card)', borderRadius: 'var(--r-card)', border: '1.5px solid var(--border)', overflow: 'hidden' }}>
             <PageBody
-              loading={list.loading || (subOn && subPending)}
-              error={subOn && !subPending && subIds === null ? SUB_RENTAL_UNANSWERED : list.error}
+              loading={isRequestsTab ? false : (list.loading || (subOn && subPending))}
+              error={isRequestsTab ? null : (subOn && !subPending && subIds === null ? SUB_RENTAL_UNANSWERED : list.error)}
               onRetry={refreshAll}
-              hasRows={list.rows.length > 0}
-              empty={list.isEmpty || query.impossible}
-              emptyIsFiltered={list.isFiltered}
+              hasRows={isRequestsTab ? true : list.rows.length > 0}
+              empty={isRequestsTab ? false : (list.isEmpty || query.impossible)}
+              emptyIsFiltered={isRequestsTab ? false : list.isFiltered}
               noun="rentals"
               skeleton="table"
               skeletonRows={6}
@@ -2316,9 +2358,15 @@ export default function RentalsList() {
                 ? { emptyActionLabel: t('rentals.actions.newRental', 'New Rental'), onEmptyAction: () => navigate('/rentals/new') }
                 : {})}
             >
-              {view === 'Timeline' && (
-                <RentalTimeline rows={rowsWithIntel.map(({ row }) => row)} />
-              )}
+              {isRequestsTab ? (
+                <div style={{ padding: 'var(--sp-md)' }}>
+                  <OnlineRequestsQueue />
+                </div>
+              ) : (
+                <>
+                  {view === 'Timeline' && (
+                    <RentalTimeline rows={rowsWithIntel.map(({ row }) => row)} />
+                  )}
 
               {view !== 'Timeline' && ((view === 'Cards' && tabular) || !tabular) && (
                 <div
@@ -2927,12 +2975,14 @@ export default function RentalsList() {
                   </table>
                 </DataTableShell>
               )}
+                </>
+              )}
             </PageBody>
 
             {/* The pager reports the SERVER's count, not the array's length.
                 Rendered only once rows have arrived — "Showing 0 rentals"
                 over a skeleton is a claim, not a placeholder. */}
-            {list.rows.length > 0 && total !== null && (
+            {!isRequestsTab && list.rows.length > 0 && total !== null && (
               <div style={{ padding: 'var(--sp-md)', borderTop: '1px solid var(--border)' }}>
                 <Pagination
                   page={page}

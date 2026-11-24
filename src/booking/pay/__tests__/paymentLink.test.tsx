@@ -168,5 +168,82 @@ describe('Payment Link Components (T7-15)', () => {
       expect(container.textContent).toContain('Payment Already Settled')
       expect(container.textContent).toContain('BK-2026-0042')
     })
+
+    it('allows toggling between 50% advance and 100% full payment', async () => {
+      vi.mocked(payApi.fetchPaymentLinkDetails).mockResolvedValueOnce({
+        valid: true,
+        intent_id: 'intent-link-toggle',
+        amount_paisa: 500000,
+        total_amount_paisa: 1000000,
+        advance_due_paisa: 500000,
+        booking_id: 'bk-toggle',
+        booking_no: 'BK-2026-0099',
+        project_name: 'Toggle Shoot',
+        client_name_masked: 'T*** e',
+        items_count: 1,
+        pickup_at: '2026-12-01T06:00:00Z',
+        return_at: '2026-12-02T06:00:00Z',
+        expires_at: new Date(Date.now() + 48 * 3600 * 1000).toISOString(),
+      })
+
+      await act(async () => {
+        root.render(
+          <MemoryRouter initialEntries={['/pay/link?token=token-toggle']}>
+            <Routes>
+              <Route path="/pay/link" element={<PaymentLinkPage />} />
+            </Routes>
+          </MemoryRouter>
+        )
+      })
+
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 20))
+      })
+
+      expect(container.textContent).toContain('50% Advance Deposit')
+      expect(container.textContent).toContain('100% Full Payment')
+      expect(container.textContent).toContain('5,000')
+
+      // Click 100% Full Payment button
+      const buttons = container.querySelectorAll('button')
+      const fullButton = Array.from(buttons).find((b) => b.textContent?.includes('100% Full Payment'))
+      expect(fullButton).toBeDefined()
+
+      await act(async () => {
+        fullButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      })
+
+      expect(container.textContent).toContain('10,000')
+    })
+
+    it('renders official receipt download, portal link and pickup instructions on settled state', async () => {
+      vi.mocked(payApi.fetchPaymentLinkDetails).mockResolvedValueOnce({
+        valid: false,
+        reason: 'already_paid',
+        booking_no: 'BK-2026-0042',
+        project_name: 'Summer Shoot',
+        amount_paisa: 1500000,
+      })
+
+      await act(async () => {
+        root.render(
+          <MemoryRouter initialEntries={['/pay/link?token=token-settled']}>
+            <Routes>
+              <Route path="/pay/link" element={<PaymentLinkPage />} />
+            </Routes>
+          </MemoryRouter>
+        )
+      })
+
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 20))
+      })
+
+      expect(container.textContent).toContain('Official Payment Receipt')
+      expect(container.textContent).toContain('Download Receipt (PDF)')
+      expect(container.textContent).toContain('My Bookings Portal')
+      expect(container.textContent).toContain('Boudha Warehouse Pickup Instructions')
+      expect(container.textContent).toContain('Original Government Photo ID')
+    })
   })
 })

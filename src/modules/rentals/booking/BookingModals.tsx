@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { NavigateFunction } from 'react-router-dom'
 import Icon from '../../../components/ui/Icon'
 import { Button } from '../../../components/ui/Button'
@@ -33,8 +34,8 @@ export interface BookingModalsProps {
   reloadPrompt: boolean
   setReloadPrompt: (prompt: boolean) => void
   onReloadQuote: () => void
-  confirmedSuccess: { bookingId?: string; bookingNo: string } | null
-  setConfirmedSuccess: (val: { bookingId: string; bookingNo: string } | null) => void
+  confirmedSuccess: { bookingId?: string; bookingNo: string; paymentLink?: string | undefined; paymentToken?: string | undefined } | null
+  setConfirmedSuccess: (val: { bookingId: string; bookingNo: string; paymentLink?: string | undefined; paymentToken?: string | undefined } | null) => void
   /** T3-14: the Quote saved by "Save as quote" — drives its own success modal. */
   quoteSaved: { bookingId: string; bookingNo: string } | null
   setQuoteSaved: (val: { bookingId: string; bookingNo: string } | null) => void
@@ -80,6 +81,7 @@ export function BookingModals({
   setQuoteSaved,
   onRebookBooking,
 }: BookingModalsProps) {
+  const [linkCopied, setLinkCopied] = useState(false)
   return (
     <>
       {client && (
@@ -220,9 +222,82 @@ export function BookingModals({
             <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 700 }}>
               Rental {confirmedSuccess.bookingNo} Confirmed
             </h3>
-            <p style={{ margin: '0 0 20px', color: 'var(--text2)', fontSize: 'var(--t-body)', lineHeight: 1.5 }}>
+            <p style={{ margin: '0 0 16px', color: 'var(--text2)', fontSize: 'var(--t-body)', lineHeight: 1.5 }}>
               The booking has been successfully recorded in the database and inventory has been reserved.
             </p>
+
+            {confirmedSuccess.paymentLink && (
+              <div
+                style={{
+                  margin: '0 auto 20px',
+                  maxWidth: 380,
+                  padding: '14px 16px',
+                  background: 'var(--surface-sunken, #0f172a)',
+                  borderRadius: 'var(--radius-md, 8px)',
+                  border: '1px solid var(--border)',
+                  textAlign: 'left',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                    48-Hour Secure Payment Link
+                  </span>
+                  <span style={{ fontSize: '0.7rem', color: '#eab308', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <Icon name="clock" size={12} /> Auto-generated
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                  <input
+                    type="text"
+                    readOnly
+                    value={confirmedSuccess.paymentLink}
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      padding: '6px 10px',
+                      fontSize: '0.75rem',
+                      borderRadius: 'var(--r-btn, 4px)',
+                      border: '1px solid var(--border)',
+                      background: 'var(--card)',
+                      color: 'var(--text)',
+                      fontFamily: 'var(--font-mono, monospace)',
+                    }}
+                  />
+                  <Button
+                    size="sm"
+                    variant={linkCopied ? 'primary' : 'outline'}
+                    onClick={() => {
+                      if (confirmedSuccess.paymentLink && typeof navigator !== 'undefined') {
+                        void navigator.clipboard?.writeText(confirmedSuccess.paymentLink)
+                        setLinkCopied(true)
+                        setTimeout(() => setLinkCopied(false), 2000)
+                      }
+                    }}
+                  >
+                    {linkCopied ? 'Copied!' : 'Copy'}
+                  </Button>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <a
+                    href={confirmedSuccess.paymentLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      fontSize: '0.8rem',
+                      color: 'var(--brand-primary, #6366f1)',
+                      textDecoration: 'none',
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    <Icon name="external_link" size={13} />
+                    Open customer checkout page
+                  </a>
+                </div>
+              </div>
+            )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 320, margin: '0 auto' }}>
               <Button
                 variant="primary"

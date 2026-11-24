@@ -18,6 +18,7 @@ import { useNetwork } from '../../lib/network'
 import { formatAd } from '../../lib/bs'
 import { isProjectType } from '../../lib/projectTypes'
 import { fetchLastProjectType, fetchRecentClientProjects } from '../../lib/queries/bookings'
+import { fetchBookingRequestDetails, type BookingRequestWithLines } from '../../lib/queries/bookingRequests'
 import { formatMoney, rupees } from '../../lib/money'
 import type { Paisa } from '../../lib/money'
 import type { RentalDraftData } from '../../actions/rentals/saveDraft'
@@ -419,7 +420,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
   const [depositOverrideReason, setDepositOverrideReason] = useState('')
   const [depositAuthorizedBy, setDepositAuthorizedBy] = useState('')
 
-  const [confirmedSuccess, setConfirmedSuccess] = useState<{ bookingId: string; bookingNo: string } | null>(null)
+  const [confirmedSuccess, setConfirmedSuccess] = useState<{ bookingId: string; bookingNo: string; paymentLink?: string | undefined; paymentToken?: string | undefined } | null>(null)
   const [validationAttempted, setValidationAttempted] = useState(false)
 
   /**
@@ -450,6 +451,75 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
       return changed ? next : prev
     })
   }, [days])
+
+  /* Online booking request prefill (T7-04 / T7-15) */
+  const requestId = searchParams.get('request_id') || searchParams.get('requestId') || undefined
+  const [onlineRequest, setOnlineRequest] = useState<BookingRequestWithLines | null>(null)
+
+  useEffect(() => {
+    if (!requestId) return
+    let active = true
+    fetchBookingRequestDetails(requestId)
+      .then((req) => {
+        if (!active || !req) return
+        setOnlineRequest(req)
+
+        if (req.start_date) setPickup(req.start_date)
+        if (req.end_date) setRet(req.end_date)
+        if (req.project_name) setProject(req.project_name)
+        if (req.shoot_location) setShootLocation(req.shoot_location)
+
+        if (req.fulfillment_type === 'delivery') {
+          setDeliveryType('Babin Delivery')
+          if (req.delivery_address) setPickupLocation(req.delivery_address)
+          if (req.delivery_zone_id) handleUpdateTransport({ deliveryZone: req.delivery_zone_id })
+        } else {
+          setDeliveryType('Client Pickup')
+        }
+
+        if (req.lines && req.lines.length > 0) {
+          const mappedLines: Line[] = req.lines.map((l, idx) => {
+            const eq = liveEquipment?.find((e) => e.id === l.product_id)
+            return {
+              id: `req-line-${l.id || idx}-${Date.now()}`,
+              productId: l.product_id || undefined,
+              name: eq?.name || l.product_name || 'Equipment',
+              serial: '',
+              category: eq?.category || 'Cameras',
+              lineType: 'Equipment',
+              qty: Math.max(1, l.quantity || 1),
+              days: Math.max(1, days || 1),
+              daysOverridden: false,
+              ratePaisa: (l.daily_rate_paisa || eq?.ratePaisa || 0) as Paisa,
+              discountPct: 0,
+              location: 'Main Warehouse',
+              committedTo: '—',
+            }
+          })
+          setLines(mappedLines)
+        }
+      })
+      .catch((err) => {
+        console.warn('[NewRental] Could not load booking request details:', err)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [requestId, liveEquipment, days, setPickup, setRet, setDeliveryType, setPickupLocation, handleUpdateTransport])
+
+  useEffect(() => {
+    if (!onlineRequest || selectedClientId || clientPool.length === 0) return
+    const match = clientPool.find(
+      (c) =>
+        (c.name && onlineRequest.client_name && c.name.toLowerCase() === onlineRequest.client_name.toLowerCase()) ||
+        (c.phone && onlineRequest.client_phone && c.phone === onlineRequest.client_phone) ||
+        (c.email && onlineRequest.client_email && c.email.toLowerCase() === onlineRequest.client_email.toLowerCase())
+    )
+    if (match) {
+      setSelectedClientId(match.id)
+    }
+  }, [onlineRequest, clientPool, selectedClientId, setSelectedClientId])
 
   /* C6 — what the products on this booking ask as a deposit. Read once per set of products. */
   const { terms: productDepositTerms, error: productDepositError } = useNewRentalProductDeposits(lines)
@@ -807,6 +877,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
   const { confirmBooking, saveAsQuote, quoteSaved, setQuoteSaved } = useNewRentalSubmit({
     editBookingId,
     parentBookingId: searchParams.get('parentBookingId') || undefined,
+    requestId,
     confirmBlocked,
     saveState,
     setSaveState,
@@ -1243,6 +1314,49 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
           </div>
         )
       })()}
+      {onlineRequest && (
+        <div
+          role="region"
+          aria-label="Reviewing online booking request"
+          style={{
+            margin: '0 0 16px',
+            padding: '12px 16px',
+            background: 'rgba(99, 102, 241, 0.1)',
+            border: '1px solid var(--brand-primary, #6366f1)',
+            borderRadius: 'var(--r-card, 8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 12,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Icon name="mail" size={20} style={{ color: 'var(--brand-primary, #6366f1)', flexShrink: 0 }} />
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>
+                Reviewing Online Request #{onlineRequest.request_number}
+              </div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text2)' }}>
+                Client: <strong>{onlineRequest.client_name}</strong> ({onlineRequest.client_phone} · {onlineRequest.client_email})
+                {onlineRequest.isOverdue45Min && (
+                  <span style={{ color: 'var(--danger)', marginLeft: 8, fontWeight: 700 }}>
+                    ⚠️ Response overdue (&gt;45m)
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span>Fulfillment: <strong>{onlineRequest.fulfillment_type === 'delivery' ? 'Babin Delivery' : 'Client Pickup'}</strong></span>
+            {onlineRequest.advance_due_paisa && canBookingMoney && (
+              <span style={{ padding: '2px 8px', borderRadius: 4, background: 'var(--card)', border: '1px solid var(--border)', fontWeight: 600 }}>
+                Est. Advance: {formatMoney(onlineRequest.advance_due_paisa as Paisa)}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
       {productDepositError && canBookingMoney && (
         <p role="status" style={inlineErrorStyle}>
           <Icon name="error" size={14} style={{ flexShrink: 0, marginTop: 1 }} />

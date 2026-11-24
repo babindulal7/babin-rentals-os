@@ -61,6 +61,8 @@ export interface PaymentLinkDetails {
   reason?: string
   intent_id?: string
   amount_paisa?: number
+  total_amount_paisa?: number
+  advance_due_paisa?: number
   booking_id?: string
   booking_no?: string
   project_name?: string
@@ -85,6 +87,21 @@ export async function createBookingPaymentLink(bookingId: string): Promise<{
   booking_id: string
   booking_no: string
 }> {
+  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock' || !supabase
+  if (isMock) {
+    const token = 'mock-link-' + (bookingId ? bookingId.slice(0, 8) : Date.now().toString())
+    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
+    return {
+      success: true,
+      intent_id: 'intent-mock-' + (bookingId ? bookingId.slice(0, 8) : Date.now().toString()),
+      token,
+      amount_paisa: 500000,
+      expires_at: expiresAt,
+      booking_id: bookingId,
+      booking_no: 'BK-MOCK-1',
+    }
+  }
+
   const clientUuid = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'link-' + Date.now()
   const { data, error } = await supabase.rpc('create_booking_payment_link', {
     p_client_uuid: clientUuid,
@@ -110,6 +127,26 @@ export async function createBookingPaymentLink(bookingId: string): Promise<{
  * Fetches sanitized payment link details for public payment page (T7-15).
  */
 export async function fetchPaymentLinkDetails(token: string): Promise<PaymentLinkDetails> {
+  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock'
+  if (isMock && (token.startsWith('mock-link-') || token.startsWith('token-mock') || token === 'token-abc-123')) {
+    return {
+      valid: true,
+      intent_id: 'intent-' + token,
+      amount_paisa: 500000,
+      total_amount_paisa: 1000000,
+      advance_due_paisa: 500000,
+      booking_id: 'mock-booking-id',
+      booking_no: 'BK-2026-0042',
+      project_name: 'Documentary - Solukhumbu',
+      pickup_at: '2026-11-25T06:00:00Z',
+      return_at: '2026-11-30T06:00:00Z',
+      client_name_masked: 'P*** a',
+      items_count: 2,
+      expires_at: new Date(Date.now() + 48 * 3600 * 1000).toISOString(),
+      provider: 'fonepay',
+    }
+  }
+
   try {
     const { data, error } = await supabase.functions.invoke<{ success: boolean; details: PaymentLinkDetails }>('pay-init', {
       body: { action: 'link_details', token },
