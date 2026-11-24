@@ -1,5 +1,47 @@
 # Progress Log
 
+## 2026-11-24 — Day X Launch Execution Runbook (December 31, 2026) Codified & Verified (Windows Antigravity)
+
+### Did
+- Authored `docs/live/DAY_X_LAUNCH_EXECUTION_RUNBOOK_2026-12-31.md`: Minute-by-minute operational cutover runbook for Thursday, 31 December 2026, defining:
+  - Phase 1 (05:00–05:30 NPT): Pre-dawn sanity check, Option A tabular CSV export off-laptop into Google Drive, external holds delta sync, and formal Owner GO evaluation.
+  - Phase 2 (05:30–06:00 NPT): Booqable store freeze (online checkout disabled), production health check, Cloudflare path-safe redirect activation (`babinrentals.com/book*` → `book.babinrentals.com/book*`).
+  - Phase 3 (06:00–07:00 NPT): Operational day boundary (06:00 NPT) opening at Boudha branch, 4-digit PIN authentication, and Card T1-11 live smoke test execution across Owner, Coordinator, Warehouse (Law 6 money blindness), and Accounts.
+  - Phase 4 (07:00–18:00 NPT): First live counter rentals in the OS with monotonic document numbering (`BK-`, `INV-`, `PAY-`).
+  - Phase 5 (18:00 NPT): Evening run-off and Booqable zero-order audit (verifying exactly 0 new orders in Booqable after 06:00 NPT).
+  - Phase 6 (18:30–19:00 NPT): Accounts daily closing ledger reconciliation with 0 paisa variance and Owner sign-off.
+  - Emergency fallback: 15-minute rollback procedure to Booqable codified per `docs/live/DISASTER_RECOVERY_RUNBOOK.md` §2.
+- Authored regression test `src/lib/__tests__/dayXLaunchExecutionDoc.test.ts`: Verified presence and integrity of Day X schedule, 06:00 NPT boundary, Option A backup, Booqable checkout freeze, domain routing, smoke test, and fallback SLA.
+
+### Ruled
+- Day X launch sequence for Thursday, 31 December 2026 is fully codified and verified, completing pre-launch operational readiness through Day X live execution.
+- Operational run-off mode preserves Booqable for closing pre-existing rentals while Babin Rentals OS serves as the single source of truth for all new rentals.
+
+### Verified
+- `npx vitest run src/lib/__tests__/dayXLaunchExecutionDoc.test.ts`: PASS (1/1 test).
+- `npm run typecheck`: PASS (0 errors).
+- `npm run lint`: PASS (0 warnings, 0 errors).
+- `npm run check:contrast`: PASS (97/97 compliant).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+
+Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-24T11:14:12.223Z). Suite: Historical suite: 1/1 passed, 0 failed (recorded 2026-11-24T11:04:07.199Z); current source NOT VERIFIED.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-24T11:15:06.959Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- December 29–31 Owner final go/no-go review and controlled production deployment.
+
 ## 2026-11-24 — Full-Surface Wall-to-Wall QA Audit, Operations Packing Floor Unfreeze & Multi-Surface Routing Hardening (Windows Antigravity)
 
 ### Did
