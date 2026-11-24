@@ -269,6 +269,7 @@ export default function App() {
 
         {/* Declared before /rentals/:bookingNo so "new" is not read as an ID. */}
         <Route path="/rentals/new" element={<RentalsNewRedirect />} />
+        <Route path="/rentals/:bookingNo/pack" element={<RentalsPackRedirect />} />
 
         {/* §4.3 — operations are full-screen routes, never modals. */}
         <Route
@@ -1182,6 +1183,11 @@ function MockBanner() {
 function CasesLegacyRedirect() {
   const { id } = useParams()
   return <Navigate to={id ? `/inventory/cases/${id}` : '/inventory/cases'} replace />
+}
+
+function RentalsPackRedirect() {
+  const { bookingNo } = useParams<{ bookingNo: string }>()
+  return <Navigate to={bookingNo ? `/rentals/${bookingNo}/packing` : '/rentals'} replace />
 }
 
 function BundleEditRedirect() {

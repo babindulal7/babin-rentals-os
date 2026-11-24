@@ -158,7 +158,10 @@ export default function OperationsShell({
     setSubmitting(false)
     setPending(null)
     void refreshFloor()
-    return () => { readVersion.current += 1 }
+    return () => {
+      openedBookingRef.current = null
+      readVersion.current += 1
+    }
     // Status notifications must not discard an operator's pending marks.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- bookingStatus is a live push: a status change must not reset the floor mid-pack
   }, [bookingNo, initialJob, isOpen, refreshFloor])
