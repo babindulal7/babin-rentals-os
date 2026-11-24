@@ -46,14 +46,20 @@ NEEDS_DECISION, BLOCKED, CI_FAILED, CHANGES_REQUESTED and STALE_EVIDENCE are exp
 
 Do not include customer PII, real invoices, secrets, API keys, tokens, or production exports in the public repository, generated reports or agent prompts.
 
-## Agent responsibilities (proposed overlay, not a change to permissions)
+## Provider-independent agent responsibilities (proposed overlay, not a change to permissions)
 
 - ChatGPT: product owner support, triage proposals, review of task specifications; GitHub inspection and authorized draft documentation only.
 - Claude: Skin prototype analysis and proposed frontend/backend parity; review according to existing policy. Do not push code if existing lane rules disallow it.
-- Windows Antigravity: bounded implementation in authorized worktrees, mock and local checks. Confirm lane/availability before assignment. Never assume an agent is online.
+- Windows coding agent (provider-neutral): bounded implementation in authorized worktrees, mock and local checks. Antigravity is unavailable per owner report; do not assign it work. Candidate harness: OpenCode or existing authorized Codex/Claude CLI with a verified compatible provider. Confirm lane/availability before assignment. Never assume an agent is online.
 - Codex/Gemini: existing lane work or independent audit, according to PLAN and explicit owner assignment; separate implementer and verifier.
 - Mac: existing required CI and builds only; no factory polling workload on the CI machine. Do not change runner labels, workflows, concurrency or required checks in v1.
 - Owner: product decisions, permission changes, merge, release, operational cutover and costs.
+
+## Model gateway and cost policy — proposed revision, 25 Nov
+
+Separate agent harness (file edits, shell, tools) from model inference and CI. A provider failure must not change task identity, claim, worktree or permissions. Prefer an already available local or approved no-cost endpoint, not a specific provider subscription. FreeLLMAPI is a candidate for isolated synthetic experimentation only until its installed version, license and every upstream provider's commercial-use/data-handling terms are verified; upstream project describes personal experimentation only. Do not send company source, credentials, real data or private prompts to an unapproved service. Use a commercially permitted local model or approved provider for actual business development. Do not bypass quotas or account restrictions.
+
+SF-00 (prerequisite to AI execution; read-only queue work can proceed independently): verify installed gateway identity, loopback endpoint, model discovery, actual model/provider ID, supported tool calls, context limits and patch reliability on synthetic fixtures. Keep credentials outside Git, use a separate client profile and never change the working Claude login. Start with one agent. Fail closed on tool/schema mismatch, unapproved fallback, rate limits, or unknown price. Use bounded retries/backoff; if all approved zero-cost routes fail, mark WAITING_FOR_MODEL and retain worktree/claim for safe manual resume. No automatic paid fallback. Require owner approval for spend or external data transfer. Test with a fake gateway: success, 429, timeout, unavailable model, unexpected paid route, malformed tool call, attempted out-of-scope file change. Record provider/model and cost if independently measurable; do not claim unlimited access or guaranteed free capacity. Mac stays CI-only.
 
 ## Initial work packages (proposals; reconcile into existing cards before execution)
 
@@ -81,4 +87,4 @@ Phase 1 acceptance: owner reviews this plan, reconciles SF-01 into existing card
 
 ## First handoff
 
-Windows Antigravity: fetch main, read AGENTS.md and current rulings, search existing cards/PRs and tooling for SF-01 overlap, report match or proposed canonical card and allowed paths. Once authorized, implement only the read-only adapter and fixture tests in an isolated worktree. Run repository-required verification and report actual results, not estimates. Open a draft PR; no merge, deployment, production access, workflow edits or live settings changes. Mac remains CI-only. If factory work conflicts with a December launch task, stop factory work and report the dependency to the owner.
+Available authorized Windows coding agent: fetch main, read AGENTS.md and current rulings, search existing cards/PRs and tooling for SF-01 overlap, report match or proposed canonical card and allowed paths. Once authorized, implement only the read-only adapter and fixture tests in an isolated worktree. Run repository-required verification and report actual results, not estimates. Open a draft PR; no merge, deployment, production access, workflow edits or live settings changes. Mac remains CI-only. If factory work conflicts with a December launch task, stop factory work and report the dependency to the owner.
