@@ -10,8 +10,12 @@
 
 import { createContext, useContext, useEffect, useState, lazy, Suspense, type ReactNode, type Dispatch, type SetStateAction } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../../lib/auth'
+import { Modal } from '../Modal'
+import { Button } from '../Button'
 import {
   CREATION_ACTIONS,
+  isCreationActionReady,
 } from './CreationActionRegistry'
 
 const QuickCreateDialog = lazy(() => import('./QuickCreateDialog').then(m => ({ default: m.QuickCreateDialog })))
@@ -64,6 +68,8 @@ export function useRegisterCreationContext(
 
 export function CreationContextProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const [unavailable, setUnavailable] = useState<string | null>(null)
   // Empty until a page registers one; GlobalAddMenu then falls back to the route.
   const [activeModule, setActiveModule] = useState('')
   const [contextData, setContextData] = useState<Record<string, unknown>>({})
@@ -72,7 +78,11 @@ export function CreationContextProvider({ children }: { children: ReactNode }) {
 
   const openCreationAction = (actionId: string, extraContext?: Record<string, unknown>) => {
     const act = CREATION_ACTIONS.find((a) => a.id === actionId)
-    if (!act) return
+    if (!act || !user || !act.isPermitted(user.role) || !isCreationActionReady(act)) {
+      setUnavailable('This creation action is not available for your account or is not connected to a saved-record workflow. Nothing was created.')
+      return
+    }
+    setUnavailable(null)
 
     const combined = { ...contextData, ...(extraContext ?? {}) }
 
@@ -108,6 +118,12 @@ export function CreationContextProvider({ children }: { children: ReactNode }) {
     >
       {children}
 
+      {unavailable && (
+        <Modal isOpen title="Creation unavailable" onClose={() => setUnavailable(null)}
+          footer={<Button onClick={() => setUnavailable(null)}>Close</Button>}>
+          <p role="alert">{unavailable}</p>
+        </Modal>
+      )}
       {/* Single-Active Creation Interface State Machine */}
       <Suspense fallback={null}>
         {activeAction && activeAction.openingMode === 'wizard' && (

@@ -293,7 +293,7 @@ export function BookingModals({
                     }}
                   >
                     <Icon name="external_link" size={13} />
-                    Open customer checkout page
+                    Open client checkout page
                   </a>
                 </div>
               </div>
