@@ -20,7 +20,12 @@
 - Auth at the API level: all three E2E accounts receive a token from staging GoTrue (HTTP 200). Two seed defects were fixed on the way: `instance_id` was unset, and NULL token columns caused a GoTrue 500.
 - Found and fixed (product code, `src/modules/auth/Login.tsx`): after a successful password sign-in the login page navigated at once, while the staff profile was still loading. The route guard saw `user === null` and sent the visitor back to `/login`. That is why sign-in looked broken for Owner, Manager and Staff alike, with no console errors. The fix leaves `/login` only once `user` is set. Unit test `login.test.tsx` updated to model the same order.
 - Verified: `npm run typecheck` (tsc --noEmit) exit 0. `login.test.tsx`, `passwordReset.test.tsx`, `auth.identity.test.tsx`: 23/23 pass (run with `VITE_DATA_SOURCE=mock`; without it these suites fail at import on the missing Supabase variables, which was already true before this change). Staging desktop: owner, manager and staff sign-in tests pass, with smoke tests 6/6 in total.
-- NOT VERIFIED: iPad and Pixel projects, Windows and macOS CI runs, authenticated P0 flows (blocked by the session finding above), `typecheck` / `lint` on this branch.
+- Added functional specs: `tests/e2e/finance.spec.ts` (expense draft persists after reload; failed save shows an error and a retry succeeds; payment dialog cancel; payment recording) and `tests/e2e/operations.spec.ts` (packing Confirm stays disabled and says why). Shared sign-in and onboarding handling in `tests/e2e/helpers.ts`.
+- Verified on staging: full suite on desktop, iPad (WebKit) and mobile: 30 passed, 3 skipped (the payment-recording test on each project). The skip is deliberate: an earlier desktop run settled the one open staging invoice (now `INV-1`, fully settled), which is evidence the payment write persisted. Re-running it needs a new Draft invoice seeded on staging.
+- Staging writes from these runs: expense drafts accumulate (each run adds ~2 rows, tagged `E2E …`).
+- NOT COVERED yet: New booking persists in Supabase; Save draft survives refresh; Operations Next / Back and the full Confirm path (needs evidence photo and per-unit ticks); Cancel / Close with unsaved changes ("Discard & Go Back"); performance and accessibility.
+- Known gap in the app (not fixed here): the expense dialog's Vendor, Description, Settlement and Date inputs have no accessible labels, so the test selects them by position.
+- `typecheck` on this branch: not re-run since the spec changes (spec files are outside `src/`).
 
 ### Completion
 Not measured by this entry. Run `npm run completion` on the branch for the R-29 table.
