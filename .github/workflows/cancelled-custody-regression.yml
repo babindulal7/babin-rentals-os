@@ -1,0 +1,26 @@
+name: Cancelled custody stage regression
+on:
+  pull_request:
+    branches: [fix/cancellation-boundary-promotion-440]
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+jobs:
+  reproduce:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'test/cancelled-custody-stage-440'
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 15
+    env:
+      SUPABASE_ACCESS_TOKEN: ''
+      SUPABASE_DB_PASSWORD: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci
+      - name: Reproduce stage boundary with positive controls in disposable PGlite
+        run: node scripts/test-cancellation-branch-boundary.mjs
