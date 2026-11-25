@@ -327,17 +327,30 @@
     gap: 10px;
   }
   .br-reference-shell .rental-dashboard .dispatch-summary {
-    padding: 11px;
-    min-height: 112px;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    align-content: start;
+    align-items: center;
+    padding: 9px 10px;
+    min-height: 0;
+    gap: 4px 7px;
+    border-radius: 12px;
+    box-shadow: none;
   }
   .br-reference-shell .rental-dashboard .dispatch-summary__icon {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
   }
+  .br-reference-shell .rental-dashboard .dispatch-summary__body { display: contents; }
+  .br-reference-shell .rental-dashboard .dispatch-summary__heading { align-items: baseline; gap: 2px 5px; min-width: 0; }
+  .br-reference-shell .rental-dashboard .dispatch-summary__period { font-size: 11px; line-height: 1.2; }
+  .br-reference-shell .rental-dashboard .dispatch-summary p { grid-column: 1 / -1; margin: 0; font-size: 12px; line-height: 1.3; overflow-wrap: anywhere; }
+  .br-reference-shell .rental-dashboard .dispatch-summary .dispatch-summary__warning { align-items: flex-start; }
+  .br-reference-shell .rental-dashboard .dispatch-summary--packing .dispatch-summary__icon { background: var(--warn-bg); color: var(--warn-text); }
   .br-reference-workbench { grid-template-columns: minmax(0, 1fr); }
   .br-reference-inspector--desktop { display: none; }
-  .br-reference-inspector--phone { display: block; margin-bottom: 12px; order: -1; }
+  .br-reference-inspector--phone { display: block; margin-top: 4px; order: 1; }
   .br-reference-inspector--phone .br-reference-inspector__card { margin-top: 8px; }
   .br-reference-shell .app-shell-layout { min-width: 0; }
   .br-reference-shell .app-global-header { min-height: 64px; }

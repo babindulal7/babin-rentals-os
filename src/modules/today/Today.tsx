@@ -768,9 +768,9 @@ export default function Today() {
       <section className="dispatch-summaries" aria-label="Movement totals">
         {([
           { key: 'pickups', title: 'Pickups', icon: 'truck', list: pickups, filter: pickupDateFilter,
-            detail: isDispatchToday ? 'Scheduled and unfulfilled departures' : 'Scheduled departures' },
+            detail: isDispatchToday ? (isPhone ? 'Awaiting pickup' : 'Scheduled and unfulfilled departures') : 'Scheduled departures' },
           { key: 'returns', title: 'Returns', icon: 'return_arrow', list: returns, filter: returnDateFilter,
-            detail: isReturnToday ? 'Due today, including overdue returns' : 'Scheduled returns' },
+            detail: isReturnToday ? (isPhone ? 'Due incl. overdue' : 'Due today, including overdue returns') : 'Scheduled returns' },
         ] as const).map(({ key, title, icon, list, filter, detail }) => (
           <div key={key} className={`dispatch-summary dispatch-summary--${key}`} aria-label={title} aria-busy={list.loading}>
             <span className="dispatch-summary__icon" aria-hidden="true"><Icon name={icon} size={22} /></span>
@@ -784,7 +784,7 @@ export default function Today() {
               </div>
               <p>{list.loading ? 'Loading movements…' : list.error ? 'Movements unavailable' : list.total === null ? 'Count unavailable · see loaded movements below' : detail}</p>
               {key === 'pickups' && isDispatchToday && overduePickups.length > 0 && (
-                <p className="dispatch-summary__warning"><Icon name="alert_triangle" size={14} /> Includes overdue pickups</p>
+                <p className="dispatch-summary__warning"><Icon name="alert_triangle" size={14} /> {isPhone ? 'Includes overdue' : 'Includes overdue pickups'}</p>
               )}
             </div>
           </div>
@@ -798,7 +798,7 @@ export default function Today() {
               </strong>
               <h2>To pack</h2>
             </div>
-            <p>Among {pickups.loading || pickups.error ? '—' : pickups.rows.length} loaded pickup bookings</p>
+            <p>{isPhone ? `Of ${pickups.loading || pickups.error ? '—' : pickups.rows.length} loaded pickups` : `Among ${pickups.loading || pickups.error ? '—' : pickups.rows.length} loaded pickup bookings`}</p>
           </div>
         </div>
         <div className="dispatch-summary dispatch-summary--overdue" aria-label="Overdue pickups in loaded queue">
@@ -810,7 +810,7 @@ export default function Today() {
               </strong>
               <h2>Overdue</h2>
             </div>
-            <p>Among loaded pickups · not an all-bookings total</p>
+            <p>{isPhone ? 'Loaded pickups only' : 'Among loaded pickups · not an all-bookings total'}</p>
           </div>
         </div>
       </section>

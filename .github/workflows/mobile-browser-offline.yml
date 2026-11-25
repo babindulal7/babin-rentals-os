@@ -1,0 +1,93 @@
+name: Mobile browser (offline)
+on:
+  pull_request:
+    branches: [main, integration/launch-repair-20261125]
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/mobile-browser-offline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mobile-browser-offline-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  browser:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 25
+    env:
+      CI: 'true'
+      VITE_DATA_SOURCE: mock
+      VITE_SUPABASE_URL: ''
+      VITE_SUPABASE_ANON_KEY: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install chromium webkit
+      - name: Mock browser responsive acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run dev:mock -- --host 127.0.0.1 --port 4189 --strictPort > "$RUNNER_TEMP/babin-mobile-vite.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:4189/ >/dev/null; then break; fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then cat "$RUNNER_TEMP/babin-mobile-vite.log"; exit 1; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:4189/ >/dev/null
+          node --input-type=module <<'JS'
+          import { chromium, webkit, expect } from '@playwright/test'
+          const origin = 'http://127.0.0.1:4189'
+          const cases = [[320, 700], [375, 812], [390, 844], [430, 932], [768, 1024], [1024, 768], [1440, 900]]
+          const failures = []
+          for (const [width, height] of cases) {
+            const browser = await (width === 768 || width === 1024 ? webkit : chromium).launch()
+            try {
+              const context = await browser.newContext({ viewport: { width, height }, serviceWorkers: 'block', hasTouch: width < 1100, isMobile: width < 768 })
+              await context.route('**/*', route => {
+                const url = new URL(route.request().url())
+                return url.origin === origin ? route.continue() : route.abort()
+              })
+              const page = await context.newPage()
+              await page.goto(origin + '/login')
+              await page.getByTitle('Sign in as Owner', { exact: true }).click({ timeout: 20000 })
+              const welcome = page.getByRole('dialog', { name: 'Welcome to Babin Rentals OS' })
+              await expect(welcome).toBeVisible({ timeout: 30000 })
+              await welcome.getByRole('button', { name: 'Get Started', exact: true }).click()
+              await expect(welcome).toBeHidden()
+              await expect(page.locator('.dispatch-summaries')).toBeVisible({ timeout: 30000 })
+              await expect(page.locator('.dispatch-summary')).toHaveCount(4)
+              await expect(page.locator('.app-global-header__environment')).toHaveCount(0)
+              const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+              if (overflow > 1) throw new Error('Horizontal overflow: ' + overflow + 'px')
+              const create = page.getByRole('button', { name: 'Create new record', exact: true })
+              await expect(create).toBeVisible()
+              const rect = await create.boundingBox()
+              if (!rect || rect.width < 43.5 || rect.height < 43.5) throw new Error('Create control below 44px target (0.5px rendering tolerance)')
+              if (width < 768) {
+                const tabs = page.locator('.dashboard-mobile-nav')
+                await expect(tabs).toBeVisible()
+                await tabs.getByText('Returns', { exact: true }).click()
+                await expect(page.getByLabel('Date filter for returns', { exact: true })).toBeVisible()
+                await tabs.getByText('Pickups', { exact: true }).click()
+                await expect(page.getByLabel('Date filter for pickups', { exact: true })).toBeVisible()
+                await expect(page.locator('.br-reference-inspector--phone')).toBeVisible()
+              }
+              console.log('PASS ' + width + 'x' + height)
+            } catch (error) {
+              failures.push(width + 'x' + height + ': ' + String(error))
+              console.error(failures.at(-1))
+            } finally { await browser.close() }
+          }
+          if (failures.length) throw new Error(failures.join('\n'))
+          JS

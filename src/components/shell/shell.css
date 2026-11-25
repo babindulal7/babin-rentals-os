@@ -162,3 +162,11 @@
   .app-global-header__breadcrumbs { min-width: 120px; }
 }
 .app-global-header__breadcrumbs .workspace-page-actions { flex-shrink: 0; }
+
+/* Non-production indicator stays inside the existing single header row. */
+.app-global-header__environment { display: block; width: fit-content; max-width: 100%; border-radius: 4px; padding: 2px 5px; margin-top: 2px; font-size: 10px; font-weight: 700; line-height: 1.1; letter-spacing: .04em; color: var(--warn-text); background: var(--warn-bg); }
+@media (max-width: 767px) {
+  .app-global-header--dispatch { padding-inline: 8px !important; gap: 3px !important; }
+  .app-global-header--dispatch .app-global-header__breadcrumbs { min-width: 80px !important; flex-basis: 80px !important; }
+  .app-global-header--dispatch .dispatch-create-menu-trigger svg:last-child { display: none; }
+}
