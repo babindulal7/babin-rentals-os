@@ -63,8 +63,9 @@ async function run() {
       const clientId = randomUUID()
       const bookingId = randomUUID()
       const intentId = randomUUID()
-      await conn.query("insert into public.clients (id,client_uuid,client_code,name,email,phone,status,created_by) values ($1,$2,$3,$4,$5,$6,'Active',$7)", [clientId, randomUUID(), 'CI-' + randomBytes(6).toString('hex'), 'Disposable Payment Client ' + label, email, label === 'A' ? '+977-9800000011' : '+977-9800000012', fixtureOwner])
-      await conn.query("insert into public.portal_users (client_uuid,client_id,auth_user_id,email,email_verified_at,invited_by_staff_id,role) values ($1,$2,$3,$4,now(),$5,'Member')", [randomUUID(), clientId, uid, email, fixtureOwner])
+      const phone = label === 'A' ? '+9779800000011' : '+9779800000012'
+      await conn.query("insert into public.clients (id,client_uuid,client_code,name,email,phone,status,created_by) values ($1,$2,public.next_document_number('client'),$3,$4,$5,'Active',$6)", [clientId, randomUUID(), 'Disposable Payment Client ' + label, email, phone, fixtureOwner])
+      await conn.query("insert into public.portal_users (client_uuid,client_id,auth_user_id,email,email_verified_at,invited_by_staff_id,role,phone,status,activated_at) values ($1,$2,$3,$4,now(),$5,'Member',$6,'Active',now())", [randomUUID(), clientId, uid, email, fixtureOwner, phone])
       await conn.query("insert into public.bookings (id,client_uuid,booking_no,client_id,branch_id,pickup_at,return_at,delivery_type,stage,created_by,updated_by) values ($1,$2,public.next_document_number('booking'),$3,$4,now()+interval '2 days',now()+interval '4 days','Client Pickup','Quote',$5,$5)", [bookingId, randomUUID(), clientId, branch, fixtureOwner])
       await conn.query("insert into public.invoices (client_uuid,invoice_no,booking_id,client_id,branch_id,status,subtotal,total_amount,paid_amount,outstanding_amount,issue_date,due_date,created_by) values ($1,public.next_document_number('invoice'),$2,$3,$4,'Partially Paid',10000,10000,4000,6000,current_date,current_date+7,$5)", [randomUUID(), bookingId, clientId, branch, fixtureOwner])
       await conn.query("insert into public.payment_intents (id,client_uuid,booking_id,client_id,requester_auth_uid,provider,amount_paisa,status) values ($1,$2,$3,$4,$5,'fonepay',600000,'pending')", [intentId, randomUUID(), bookingId, clientId, uid])
