@@ -1,7 +1,7 @@
 name: Floor cleaning QC verification
 on:
   pull_request:
-    branches: [integration/combined-launch-candidate-20261125]
+    branches: [fix/custody-reconciled-440-20261125]
     types: [opened, synchronize, reopened]
 permissions:
   contents: read
