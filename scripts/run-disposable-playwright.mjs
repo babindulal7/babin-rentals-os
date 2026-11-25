@@ -73,7 +73,11 @@ async function run() {
       // Begin with no fictional paid balance: the ledger starts empty.
       await conn.query("insert into public.invoices (id,client_uuid,invoice_no,booking_id,client_id,branch_id,status,subtotal,taxable_amount,vat_rate,vat_amount,total_amount,paid_amount,outstanding_amount,issue_date,due_date,created_by) values ($1,$2,null,$3,$4,$5,'Draft',10000,10000,0.13,1300,11300,0,11300,null,current_date+7,$6)", [invoiceId, randomUUID(), bookingId, clientId, branch, fixtureOwner])
       await conn.query("insert into public.payment_intents (id,client_uuid,booking_id,client_id,requester_auth_uid,provider,amount_paisa,status) values ($1,$2,$3,$4,$5,'fonepay',1130000,'pending')", [intentId, randomUUID(), bookingId, clientId, uid])
-      targets.push({ label, uid, email, password, clientId, bookingId, intentId, invoiceId })
+      // Pre-existing synthetic link: seed directly, not through the held issuance RPC.
+      const linkId = randomUUID()
+      const linkToken = randomBytes(32).toString('hex')
+      await conn.query("insert into public.payment_intents (id,client_uuid,booking_id,client_id,requester_auth_uid,provider,amount_paisa,status,token_hash,is_payment_link,expires_at,created_by) values ($1,$2,$3,$4,$5,'fonepay',1130000,'pending',encode(sha256(convert_to($6,'UTF8')),'hex'),true,now()+interval '48 hours',$7)", [linkId, randomUUID(), bookingId, clientId, uid, linkToken, fixtureOwner])
+      targets.push({ label, uid, email, password, clientId, bookingId, intentId, invoiceId, linkId, linkToken })
     }
     if (!fixtureWarehouse) throw new Error('Synthetic Warehouse required')
     await verifyCancellationRace({ connectionString: status.DB_URL, observer: conn,
@@ -83,6 +87,14 @@ async function run() {
       const intents = await conn.query('select * from public.payment_intents where booking_id = any($1::uuid[]) order by id', [bookingIds])
       const payments = await conn.query('select * from public.payments where booking_id = any($1::uuid[]) order by id', [bookingIds])
       return JSON.stringify([intents.rows, payments.rows])
+    }
+    const verifyExistingLink = async (client, target) => {
+      const result = await client.rpc('get_payment_link_details', { p_token: target.linkToken })
+      const details = result.data
+      if (result.error || details?.valid !== true || details.intent_id !== target.linkId || details.booking_id !== target.bookingId || Number(details.amount_paisa) !== 1130000 || details.provider !== 'fonepay') throw new Error('Existing read-only payment link unavailable during hold')
+      if (Object.hasOwn(details, 'token_hash') || Object.hasOwn(details, 'requester_auth_uid') || Object.hasOwn(details, 'client_id')) throw new Error('Read-only payment link exposed internal fields')
+      const invalid = await client.rpc('get_payment_link_details', { p_token: randomBytes(32).toString('hex') })
+      if (invalid.error || invalid.data?.valid !== false || invalid.data?.reason !== 'not_found') throw new Error('Unknown payment link must remain invalid')
     }
     const before = await snapshot()
     for (const actor of targets) {
@@ -95,6 +107,7 @@ async function run() {
         if (role.error || role.data !== 'Client' || binding.error || binding.data !== actor.clientId) throw new Error('Synthetic client role or binding mismatch')
         const visible = await client.from('bookings').select('id').in('id', bookingIds)
         if (visible.error || visible.data?.length !== 1 || visible.data[0].id !== actor.bookingId) throw new Error('Client booking isolation failed')
+        await verifyExistingLink(client, actor)
         for (const target of targets) {
           const denied = [
             await client.rpc('create_payment_intent', { p_client_uuid: randomUUID(), p_booking_id: target.bookingId, p_booking_request_id: null, p_provider: 'fonepay' }),
@@ -139,6 +152,10 @@ async function run() {
       if (!invoice || Number(invoice.paid_amount) !== 1000 || Number(invoice.outstanding_amount) !== 10300 || invoice.status !== 'Draft') throw new Error('Manual payment invoice balance or draft state mismatch')
       const afterIntents = JSON.stringify((await conn.query('select * from public.payment_intents where booking_id = any($1::uuid[]) order by id', [bookingIds])).rows)
       if (beforeIntents !== afterIntents) throw new Error('Manual payment changed online payment intents')
+      const afterManual = await snapshot()
+      await verifyExistingLink(owner, target)
+      if (await snapshot() !== afterManual) throw new Error('Reading an existing payment link mutated payment records')
+      console.log('Verified existing payment links remain read-only during online hold')
       console.log('Verified authorized manual payment and exact draft invoice balance during online hold')
     } finally {
       await owner.auth.signOut({ scope: 'local' })
