@@ -29,6 +29,8 @@
 
 ## 2. Permission Laws (P1–P10)
 
+**Source-qualified references:** `PRODUCT_RULES:P8–P10` are product invariants, not aliases of `PERMISSIONS:P8–P10`. For capability decisions use the role matrix and conflict rules in [PERMISSIONS.md](PERMISSIONS.md); these product invariants still apply. Never resolve a bare P8, P9 or P10 without identifying its source. See the proposed [Master Law Registry](MASTER_LAW_REGISTRY.md) for the crosswalk; it does not grant new permissions or supersede approved rulings.
+
 1. **P1 — Deny by default:** Any capability not explicitly granted is denied. Unauthenticated sessions resolve to `Client`.
 2. **P2 — Enforce in Postgres, mirror in UI:** RLS and triggers are authoritative; UI gating mirrors database rules to prevent dead ends.
 3. **P3 — UI ⊆ DB:** A UI must never permit what the database policy refuses.
