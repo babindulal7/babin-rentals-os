@@ -164,7 +164,7 @@ const receipts = []
 
 function recordReceipt(card, title, pass, details) {
   receipts.push({ card, title, pass, details, timestamp: new Date().toISOString() })
-  console.log(`[PASS] ${card} — ${title}`)
+  console.log(`[${pass ? 'PASS' : 'FAIL'}] ${card} — ${title}`)
 }
 
 // Create base test booking
@@ -508,14 +508,16 @@ recordReceipt('T2-22', 'Per-product cleaning turnaround buffer exclusion', turna
 // Generate Markdown Receipt
 // ============================================================================
 const durationMs = Date.now() - startTime
-const receiptPath = join(ROOT, 'docs/verification/FLOOR_OPERATIONS_ACCEPTANCE_RECEIPT_2026-11-19.md')
+const receiptPath = process.env.FLOOR_ACCEPTANCE_RECEIPT_PATH || join(ROOT, 'docs/verification/FLOOR_OPERATIONS_ACCEPTANCE_RECEIPT_2026-11-19.md')
+const passed = receipts.filter(r => r.pass === true).length
+const allPassed = receipts.length === 6 && passed === 6
 
 const markdown = `# Floor Operations Simulated Multi-User Walkthrough Receipt
 
-**Date:** 19 November 2026, 22:30 NPT  
-**Environment:** Local in-process PGlite 0.5.8 (${migrationFiles.length} migration files through 0244_counter_sale.sql applied from scratch)  
+**Executed:** ${new Date().toISOString()}  
+**Environment:** Local in-process PGlite 0.5.8 (${migrationFiles.length} migration files applied from scratch)  
 **Total Duration:** ${durationMs}ms  
-**Status:** ALL 6 SIMULATED WALKTHROUGHS PASSED (PGlite)
+**Status:** ${passed}/${receipts.length} SIMULATED WALKTHROUGHS PASSED (PGlite)
 
 > **NOTE:** This receipt certifies automated in-process PostgreSQL RLS, triggers, and constraint logic via PGlite simulation. It does **NOT** constitute physical iPad hardware, Bluetooth barcode scanner, or hosted Supabase staging acceptance, which remain pending under \`acceptance_pending\`.
 
@@ -527,12 +529,12 @@ This receipt documents simulated multi-user walkthroughs across PostgreSQL RLS b
 
 | Card | Operation Walkthrough | Role Boundary & Security Checks | Execution Result |
 |---|---|---|---|
-| **T2-13** | Self-QC when alone on shift | Database CHECK constraint rejects unflagged same-person QC; accepts flagged self-QC; writes audit record with \`qc_self_checked = true\` | **PASS** |
-| **T2-15** | Damage found during Reset | Creates damage finding with source='Cleaning'; automatically mints linked \`cases\` row linked to returned booking; defaults unpriced; Law 6 masks money on \`cases_v\` for Warehouse | **PASS** |
-| **T2-06** | Repair job closes damage | Unit with open finding blocked from reservations; Technician closes maintenance job with required note; marks finding repaired and restores unit to \`In Stock\` | **PASS** |
-| **T2-20** | Floor adds consumables | Warehouse adds consumable line; server calculates pricing; Law 6 ensures \`booking_lines_v\` masks rate and total from Warehouse | **PASS** |
-| **T2-21** | Planned downtime with reason | Planned downtime on equipment blocks concurrent booking reservations; early release ("End now") clears hold immediately | **PASS** |
-| **T2-22** | Per-product turnaround buffer | 120-minute post-return cleaning window expands reservation window; pickup attempted within buffer is rejected by exclusion constraint | **PASS** |
+| **T2-13** | Self-QC when alone on shift | Database CHECK constraint rejects unflagged same-person QC; accepts flagged self-QC; writes audit record with \`qc_self_checked = true\` | **${receipts.find(r => r.card === 'T2-13')?.pass === true ? 'PASS' : 'FAIL'}** |
+| **T2-15** | Damage found during Reset | Creates damage finding with source='Cleaning'; automatically mints linked \`cases\` row linked to returned booking; defaults unpriced; Law 6 masks money on \`cases_v\` for Warehouse | **${receipts.find(r => r.card === 'T2-15')?.pass === true ? 'PASS' : 'FAIL'}** |
+| **T2-06** | Repair job closes damage | Unit with open finding blocked from reservations; Technician closes maintenance job with required note; marks finding repaired and restores unit to \`In Stock\` | **${receipts.find(r => r.card === 'T2-06')?.pass === true ? 'PASS' : 'FAIL'}** |
+| **T2-20** | Floor adds consumables | Warehouse adds consumable line; server calculates pricing; Law 6 ensures \`booking_lines_v\` masks rate and total from Warehouse | **${receipts.find(r => r.card === 'T2-20')?.pass === true ? 'PASS' : 'FAIL'}** |
+| **T2-21** | Planned downtime with reason | Planned downtime on equipment blocks concurrent booking reservations; early release ("End now") clears hold immediately | **${receipts.find(r => r.card === 'T2-21')?.pass === true ? 'PASS' : 'FAIL'}** |
+| **T2-22** | Per-product turnaround buffer | 120-minute post-return cleaning window expands reservation window; pickup attempted within buffer is rejected by exclusion constraint | **${receipts.find(r => r.card === 'T2-22')?.pass === true ? 'PASS' : 'FAIL'}** |
 
 ---
 
@@ -551,10 +553,12 @@ ${JSON.stringify(r.details, null, 2)}
 
 ## 3. Conclusion & Acceptance Path
 
-- **Code Maturity:** All 6 database-backed floor operations workflows function truthfully according to all product rules (W43, W44, D4, B10, B11, B35).
+- **Result:** ${allPassed ? 'All six simulated checks passed.' : 'One or more simulated checks failed; do not treat this receipt as acceptance.'}
 - **Staging Step Remaining:** When live hosted staging environment (T1-02/T1-06) is available, these receipts provide the exact script parameters to execute against live Supabase.
 `
 
 writeFileSync(receiptPath, markdown, 'utf8')
 console.log(`\n[floor-walkthrough] Receipt successfully written to: ${receiptPath}`)
-console.log(`[floor-walkthrough] Completed in ${durationMs}ms. All 6 walkthroughs verified green.`)
+console.log(`[floor-walkthrough] Completed in ${durationMs}ms. ${passed}/${receipts.length} walkthroughs passed.`)
+await db.close()
+if (!allPassed) process.exitCode = 1
