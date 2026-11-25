@@ -80,5 +80,7 @@ describe('CancellationFeeTiersCard — read error truthfulness (UX-17)', () => {
     expect(container.querySelector('[role="alert"]')).toBeNull()
     expect(container.textContent).toContain('24h notice')
     expect(container.textContent).toContain('50% fee')
+    expect(container.textContent).toContain('financial settlement is not posted automatically')
+    expect(container.textContent).toContain('A cancellation is not a refund or a reversal receipt')
   })
 })
