@@ -2374,13 +2374,17 @@ export default function RentalsList() {
                     view === 'Cards' && tabular
                       ? {
                           display: 'grid',
-                          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                          gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))',
                           gap: 'var(--sp-md)',
                           padding: 'var(--sp-md)',
                         }
                       : { display: 'flex', flexDirection: 'column' }
                   }
                 >
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '0 12px', gridColumn: '1 / -1', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={allSelected} ref={(el) => { if (el) el.indeterminate = !allSelected && someSelected }} onChange={toggleSelectAll} aria-label="Select all bookings on this page" style={{ width: 16, height: 16, accentColor: 'var(--primary)' }} />
+                    Select page{selectedIds.size > 0 ? ` · ${selectedIds.size} selected` : ''}
+                  </label>
                   {rowsWithIntel.map(({ row: r, glance, detail }) => (
                     <div
                       key={r.id}
@@ -2406,7 +2410,8 @@ export default function RentalsList() {
                           : {
                               display: 'flex',
                               flexDirection: 'column',
-                              gap: 'var(--sp-sm)',
+                              gap: viewport === 'phone' ? 'var(--sp-xs, 6px)' : 'var(--sp-sm)',
+                              minWidth: 0,
                               padding: '13px 14px',
                               borderBottom: '1.5px solid var(--border)',
                               // §4.1 — "gold outline row = external gear". Fires
@@ -2416,13 +2421,22 @@ export default function RentalsList() {
                             }
                       }
                     >
-                      <span style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                      <span style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                        <label style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 44, minHeight: 44, flexShrink: 0, cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(r.id)}
+                            onChange={() => toggleSelectRow(r.id)}
+                            aria-label={`Select booking ${r.bookingNo}`}
+                            style={{ width: 16, height: 16, accentColor: 'var(--primary)' }}
+                          />
+                        </label>
                         <Avatar row={r} />
                         <span style={{ minWidth: 0, flex: 1 }}>
                           <ClientIntelFromId clientId={r.clientId} name={r.client} context="rental-list" gateContext={gctx} actionContext={user ? { userId: user.id, role: user.role } : null}>
-                            <span style={{ display: 'block', fontSize: 'var(--t-ui)', fontWeight: 700, color: 'var(--text)' }}>{r.client}</span>
+                            <span style={{ display: 'block', fontSize: 'var(--t-ui)', fontWeight: 700, color: 'var(--text)', overflowWrap: 'anywhere' }}>{r.client}</span>
                           </ClientIntelFromId>
-                          <span style={{ display: 'block', fontSize: 'var(--t-meta)', color: 'var(--text2)', marginTop: 1 }}>
+                          <span style={{ display: 'block', fontSize: 'var(--t-meta)', color: 'var(--text2)', marginTop: 1, overflowWrap: 'anywhere' }}>
                             {r.project ?? '—'}
                           </span>
                           {/* Spec §15 — type directly under client/project name. */}
@@ -2481,27 +2495,29 @@ export default function RentalsList() {
                         {r.isExternal === true && <ExternalGearMark />}
                       </span>
 
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
-                        <Icon name="file" size={12} style={{ color: 'var(--muted)' }} />
-                        Created <span className="figure">{formatCreatedDate(r.createdOn)}</span>
-                      </span>
-
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
-                        <Icon name="box" size={12} style={{ color: 'var(--muted)' }} />
-                        <span className="figure">{r.itemCount}</span> item{r.itemCount === 1 ? '' : 's'}
-                      </span>
-
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
                         <Icon name="calendar" size={12} style={{ color: 'var(--muted)' }} />
                         Pickup <span className="figure" style={{ color: 'var(--booking-date-text)' }}>{r.pickup.date} {r.pickup.time}</span>
                       </span>
 
                       {r.ret.date && (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
                           <Icon name="return_arrow" size={12} style={{ color: 'var(--muted)' }} />
                           Return <span className="figure" style={{ color: 'var(--booking-date-text)' }}>{r.ret.date} {r.ret.time}</span>
                         </span>
                       )}
+
+                      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 12px' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+                          <Icon name="file" size={12} style={{ color: 'var(--muted)' }} />
+                          Created <span className="figure">{formatCreatedDate(r.createdOn)}</span>
+                        </span>
+  
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+                          <Icon name="box" size={12} style={{ color: 'var(--muted)' }} />
+                          <span className="figure">{r.itemCount}</span> item{r.itemCount === 1 ? '' : 's'}
+                        </span>
+                      </div>
 
                       {/* §7: "one primary button each" on a phone card row. */}
                       <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', marginTop: 2 }}>

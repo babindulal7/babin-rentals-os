@@ -170,3 +170,33 @@
   .app-global-header--dispatch .app-global-header__breadcrumbs { min-width: 80px !important; flex-basis: 80px !important; }
   .app-global-header--dispatch .dispatch-create-menu-trigger svg:last-child { display: none; }
 }
+
+/* Responsive bulk dock: retain labelled actions and keep selection controls
+ * reachable without pushing the page beyond the viewport. */
+.bulk-selection-floating-bar {
+  box-sizing: border-box;
+  max-width: calc(100vw - 24px);
+}
+@media (max-width: 767px) {
+  .bulk-selection-floating-bar {
+    width: max-content;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+    padding: 8px 10px !important;
+    border-radius: var(--r-card, 12px) !important;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px !important;
+  }
+  .bulk-selection-floating-bar > div:last-child {
+    flex-wrap: wrap;
+    justify-content: center;
+    min-width: 0;
+  }
+  .bulk-selection-floating-bar > div:nth-child(2) { display: none; }
+  .bulk-selection-floating-bar button { min-width: 44px; min-height: 44px; }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .app-global-header { padding-inline: 12px !important; gap: 6px !important; }
+  .app-global-header__right { gap: 4px !important; }
+  .app-global-header__action-slot--secondary { gap: 4px; }
+}

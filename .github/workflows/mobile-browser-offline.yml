@@ -1,7 +1,7 @@
 name: Mobile browser (offline)
 on:
   pull_request:
-    branches: [main, integration/launch-repair-20261125]
+    branches: [main, integration/launch-repair-20261125, fix/mobile-dispatch-preview-20261125]
     paths:
       - 'src/**'
       - 'package.json'
@@ -83,6 +83,42 @@ jobs:
                 await expect(page.getByLabel('Date filter for pickups', { exact: true })).toBeVisible()
                 await expect(page.locator('.br-reference-inspector--phone')).toBeVisible()
               }
+              // Test real booking navigation, filter multi-selection and card selection.
+              await page.goto(origin + '/rentals')
+              await expect(page.getByRole('heading', { name: 'Rentals', exact: true })).toBeVisible({ timeout: 30000 })
+              const filter = page.getByRole('button', { name: /Show filters panel/ })
+              await expect(filter).toBeVisible()
+              await filter.click()
+              const statusOptions = page.getByRole('checkbox', { name: /Filter by status:/ })
+              await expect(statusOptions.first()).toBeVisible()
+              const first = statusOptions.nth(0)
+              const second = statusOptions.nth(1)
+              // Controlled checkboxes commit through router navigation. Use the
+              // normal user click and wait for each committed state before the
+              // next interaction; do not force or skip a failing checkbox.
+              if (!(await first.isChecked())) await first.click()
+              await expect(first).toBeChecked()
+              if (!(await second.isChecked())) await second.click()
+              await expect(second).toBeChecked()
+              await expect(first).toBeChecked()
+              const tags = page.getByRole('checkbox', { name: /Filter by tag:/ })
+              const tag = tags.first()
+              await expect(tag).toBeVisible()
+              if (!(await tag.isChecked())) await tag.click()
+              await expect(tag).toBeChecked()
+              await expect(first).toBeChecked()
+              await expect(second).toBeChecked()
+              await page.reload()
+              await expect(filter).toBeVisible()
+              if (!(await first.isVisible())) await filter.click()
+              await expect(first).toBeChecked()
+              await expect(second).toBeChecked()
+              await expect(tag).toBeChecked()
+              await first.click()
+              await expect(first).not.toBeChecked()
+              await expect(second).toBeChecked()
+              await expect(tag).toBeChecked()
+              console.log('PASS rental filters ' + width + 'x' + height)
               console.log('PASS ' + width + 'x' + height)
             } catch (error) {
               failures.push(width + 'x' + height + ': ' + String(error))
