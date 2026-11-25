@@ -183,6 +183,7 @@ test.describe('Operations packing confirmation and duplicate-submit protection',
       await expect(popup.getByRole('checkbox', { name: 'Booking Authorization Verified', exact: true })).toBeChecked()
       await popup.getByRole('checkbox', { name: 'Government ID Verified', exact: true }).check()
       if (partial) {
+        await popup.getByRole('tablist', { name: 'Filter handover checklist items' }).getByRole('tab', { name: /^All(?:\s|$)/ }).click({ timeout: 10_000 })
         const cable = popup.getByRole('checkbox', { name: 'Mark Disposable Operations Cable picked up', exact: true })
         const stand = popup.getByRole('checkbox', { name: 'Mark Disposable Operations Stand picked up', exact: true })
         console.log('[partial:' + testInfo.project.name + '] Verify individual pickup controls')
@@ -192,7 +193,9 @@ test.describe('Operations packing confirmation and duplicate-submit protection',
         // Use a bounded real pointer action and assert the controlled state
         // separately, rather than allowing locator.check to consume the entire
         // test budget after the click. Do not force, retry, or bypass selection.
-        await cable.click({ timeout: 10_000 })
+        // Tap the real enclosing label (including its designed 44px hit area).
+        // The Ready filter would remove the row; All keeps both states observable.
+        await popup.locator('label').filter({ has: cable }).click({ timeout: 10_000 })
         console.log('[partial:' + testInfo.project.name + '] Individual pickup click returned')
         await expect(cable).toBeChecked({ timeout: 10_000 })
         await expect(stand).not.toBeChecked()
@@ -266,6 +269,7 @@ test.describe('Operations packing confirmation and duplicate-submit protection',
       if (partial) {
         await page.getByRole('button', { name: 'Handover', exact: true }).filter({ visible: true }).first().click()
         await expect(popup.getByRole('checkbox', { name: 'Booking Authorization Verified', exact: true })).toBeChecked()
+        await popup.getByRole('tablist', { name: 'Filter handover checklist items' }).getByRole('tab', { name: /^All(?:\s|$)/ }).click({ timeout: 10_000 })
         const pickedBefore = popup.getByRole('checkbox', { name: 'Mark Disposable Operations Cable picked up', exact: true })
         const remaining = popup.getByRole('checkbox', { name: 'Mark Disposable Operations Stand picked up', exact: true })
         await expect(remaining).toBeEnabled({ timeout: 30_000 })
