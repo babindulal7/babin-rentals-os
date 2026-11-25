@@ -2421,9 +2421,9 @@ export default function RentalsList() {
                         <Avatar row={r} />
                         <span style={{ minWidth: 0, flex: 1 }}>
                           <ClientIntelFromId clientId={r.clientId} name={r.client} context="rental-list" gateContext={gctx} actionContext={user ? { userId: user.id, role: user.role } : null}>
-                            <span style={{ display: 'block', fontSize: 'var(--t-ui)', fontWeight: 700, color: 'var(--text)' }}>{r.client}</span>
+                            <span style={{ display: 'block', fontSize: 'var(--t-ui)', fontWeight: 700, color: 'var(--text)', overflowWrap: 'anywhere' }}>{r.client}</span>
                           </ClientIntelFromId>
-                          <span style={{ display: 'block', fontSize: 'var(--t-meta)', color: 'var(--text2)', marginTop: 1 }}>
+                          <span style={{ display: 'block', fontSize: 'var(--t-meta)', color: 'var(--text2)', marginTop: 1, overflowWrap: 'anywhere' }}>
                             {r.project ?? '—'}
                           </span>
                           {/* Spec §15 — type directly under client/project name. */}
