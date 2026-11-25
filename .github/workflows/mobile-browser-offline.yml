@@ -1,7 +1,7 @@
 name: Mobile browser (offline)
 on:
   pull_request:
-    branches: [main, integration/launch-repair-20261125, fix/mobile-dispatch-preview-20261125]
+    branches: [main, integration/launch-repair-20261125, fix/mobile-dispatch-preview-20261125, fix/mobile-bookings-layout-20261125]
     paths:
       - 'src/**'
       - 'package.json'
@@ -119,6 +119,23 @@ jobs:
               await expect(second).toBeChecked()
               await expect(tag).toBeChecked()
               console.log('PASS rental filters ' + width + 'x' + height)
+              await page.goto(origin + '/settings')
+              await expect(page.locator('.settings-v2')).toBeVisible({ timeout: 30000 })
+              const categories = page.locator('.app-settings-mobile-row, .app-settings-tablet-tab, .app-settings-nav-item')
+              await expect(categories.first()).toBeVisible()
+              if (await categories.count() < 2) throw new Error('Missing settings categories')
+              for (const category of await categories.all()) {
+                const bounds = await category.boundingBox()
+                if (!bounds || bounds.height < 43.5 || bounds.x < -1 || bounds.x + bounds.width > width + 1) throw new Error('Settings category clipped or below touch minimum')
+              }
+              const tabletNav = page.locator('.app-settings-tablet-tabs')
+              if (await tabletNav.isVisible()) {
+                const scroll = await tabletNav.evaluate(el => el.scrollWidth - el.clientWidth)
+                if (scroll > 1) throw new Error('Settings categories require horizontal scrolling')
+              }
+              await categories.last().click()
+              await expect(page.locator('.app-settings-pane')).toBeVisible()
+              console.log('PASS settings navigation ' + width + 'x' + height)
               console.log('PASS ' + width + 'x' + height)
             } catch (error) {
               failures.push(width + 'x' + height + ': ' + String(error))
