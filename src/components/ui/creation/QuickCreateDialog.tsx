@@ -155,6 +155,10 @@ export function QuickCreateDialog({
 
   const handleSaveClient = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (actionId !== 'client.new' || !user) {
+      setPhoneError('Sign in with an authorized staff account. Nothing was saved.')
+      return
+    }
     if (!clientName.trim()) {
       setNameError('Client name is required.')
       return
@@ -181,17 +185,18 @@ export function QuickCreateDialog({
       }
 
       const res = await createClient(input, {
-        userId: user?.id ?? '00000000-0000-0000-0000-000000000000',
-        role: user?.role ?? 'Owner',
+        userId: user.id,
+        role: user.role,
       })
 
+      if (!res.clientId) throw new Error('No persisted client identity returned. Check the client list before retrying.')
       showSuccessToast(
         'Client Created',
         `${clientName.trim()} has been registered successfully.`,
       )
 
       const clientRecord = {
-        id: (res as unknown as { clientId?: string }).clientId ?? (res as unknown as { id?: string }).id ?? `cl-${Date.now()}`,
+        id: res.clientId,
         name: clientName.trim(),
         phone: storedPhone,
         type: clientType,
@@ -207,40 +212,9 @@ export function QuickCreateDialog({
     }
   }
 
-  const handleSaveGeneric = async (e: FormEvent) => {
+  const handleSaveGeneric = (e: FormEvent) => {
     e.preventDefault()
-    if (!title.trim() && !description.trim()) {
-      return
-    }
-
-    setLoading(true)
-    try {
-      const createdRecord = {
-        id: `rec-${Date.now()}`,
-        actionId,
-        title: title.trim(),
-        description: description.trim(),
-        code: code.trim(),
-        priority,
-        bookingNo,
-        equipmentRef,
-        roleTitle,
-        createdAt: new Date().toISOString(),
-      }
-
-      showSuccessToast(
-        'Record Created',
-        `${getDialogTitle(actionId)} created successfully.`,
-      )
-
-      onSuccess?.(createdRecord)
-      onClose()
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to create record.'
-      setGenericError(msg)
-    } finally {
-      setLoading(false)
-    }
+    setGenericError('This quick form is not connected to a saved-record workflow. Nothing was created. Use the relevant module.')
   }
 
   const dialogTitle = getDialogTitle(actionId)
@@ -638,7 +612,7 @@ export function QuickCreateDialog({
             </div>
 
             {genericError && (
-              <div style={{ color: 'var(--danger-text)', fontSize: 'var(--t-caption, 12px)' }}>
+              <div role="alert" style={{ color: 'var(--danger-text)', fontSize: 'var(--t-caption, 12px)' }}>
                 {genericError}
               </div>
             )}
