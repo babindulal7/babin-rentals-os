@@ -1,4 +1,4 @@
-name: Cancelled custody stage regression
+name: Cancelled custody repair verification
 on:
   pull_request:
     branches: [fix/cancellation-boundary-promotion-440]
@@ -6,8 +6,8 @@ on:
 permissions:
   contents: read
 jobs:
-  reproduce:
-    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'test/cancelled-custody-stage-440'
+  verify:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'fix/cancelled-custody-stage-440'
     runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 15
     env:
@@ -22,5 +22,11 @@ jobs:
         with:
           node-version: '24'
       - run: npm ci
-      - name: Reproduce stage boundary with positive controls in disposable PGlite
+      - name: Verify repaired stage boundary with positive controls in disposable PGlite
         run: node scripts/test-cancellation-branch-boundary.mjs
+      - name: Full migration chain (isolated PGlite)
+        run: npm run check:pglite
+      - name: Rental lifecycle (isolated PGlite)
+        run: npm run check:lifecycle
+      - name: Security regressions
+        run: npm run check:security
