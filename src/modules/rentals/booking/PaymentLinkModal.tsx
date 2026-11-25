@@ -28,6 +28,7 @@ export function PaymentLinkModal({
   clientPhone,
   clientEmail,
 }: PaymentLinkModalProps) {
+  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock'
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [linkData, setLinkData] = useState<{
@@ -38,7 +39,8 @@ export function PaymentLinkModal({
   const [copied, setCopied] = useState(false)
 
   const generateLink = useCallback(async () => {
-    if (!bookingId) return
+    setLinkData(null)
+    if (!isMock || !bookingId) return
     setLoading(true)
     setError(null)
     setCopied(false)
@@ -58,7 +60,7 @@ export function PaymentLinkModal({
     } finally {
       setLoading(false)
     }
-  }, [bookingId])
+  }, [bookingId, isMock])
 
   useEffect(() => {
     if (isOpen) {
@@ -135,13 +137,13 @@ export function PaymentLinkModal({
       onClose={onClose}
       size="md"
       title={`Payment Link — ${bookingNo}`}
-      subtitle="Generate a 48-hour secure online payment link for the client."
+      subtitle={isMock ? 'Generate a local test payment link.' : 'Online payment links are temporarily unavailable.'}
       footer={
         <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
           <Button
             variant="ghost"
             onClick={generateLink}
-            disabled={loading}
+            disabled={loading || !isMock}
             style={{ minHeight: 44 }}
             title="Creates a new link and invalidates the previous link"
           >
@@ -173,7 +175,9 @@ export function PaymentLinkModal({
           </div>
         )}
 
-        {loading ? (
+        {!isMock ? (
+          <p role="status">Online payment links are temporarily unavailable. Use the approved manual payment workflow. Do not send payment links to clients.</p>
+        ) : loading ? (
           <div style={{ padding: 'var(--sp-xl) 0', textAlign: 'center', color: 'var(--muted)' }}>
             Generating secure server-calculated payment link…
           </div>
