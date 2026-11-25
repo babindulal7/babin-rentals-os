@@ -15,7 +15,8 @@
 ### Verified
 - `npx playwright test --project=desktop` against the staging Supabase project: 3/3 passed (run after the dev server was warm).
 - First run failed on a cold Vite start (60s navigation timeout); timeout raised to 120s. Not re-run cold after the change.
-- NOT VERIFIED: iPad and Pixel projects, Windows and macOS CI runs, authenticated P0 flows (no staff logins yet), `typecheck` / `lint` on this branch.
+- Added `tests/e2e/auth.spec.ts` (owner sign-in; skipped without `E2E_OWNER_*`). Run on staging with the supplied owner login: FAILED, the server returned "Invalid login credentials" and the app stayed on /login. Not retried. The account is either absent on staging or its password differs. Credentials were not written to any file.
+- NOT VERIFIED: iPad and Pixel projects, Windows and macOS CI runs, authenticated P0 flows (no working staff logins yet), `typecheck` / `lint` on this branch.
 
 ### Completion
 Not measured by this entry. Run `npm run completion` on the branch for the R-29 table.
