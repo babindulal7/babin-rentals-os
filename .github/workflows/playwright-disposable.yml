@@ -2,7 +2,7 @@ name: Playwright disposable cloud auth
 
 on:
   push:
-    branches: [fix/playwright-staging-safety-20261125, integration/launch-repair-20261125]
+    branches: [fix/playwright-staging-safety-20261125, integration/launch-repair-20261125, integration/payment-expense-verification-20261125]
     # Re-run the real disposable auth gate on application and migration changes too.
 
 permissions:
