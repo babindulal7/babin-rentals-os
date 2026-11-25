@@ -45,6 +45,10 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      # Install the Supabase CLI binary directly; npm ci --ignore-scripts skips the npm package's install step.
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.114.0
       - run: npm ci --ignore-scripts
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test
