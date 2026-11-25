@@ -54,7 +54,7 @@ for (const name of fileNames) {
   const expected = expectedByName.get(name)
   totalBytes += content.length
   manifestHash.update(name).update('\0').update(sha256).update('\n')
-  const number = /^(\d{4})_[a-z0-9_]+\.sql$/.exec(name)?.[1] ?? 'unknown'
+  const number = /^(\d{4}|\d{14})_[a-z0-9_]+\.sql$/.exec(name)?.[1] ?? 'unknown'
   prefixes.set(number, [...(prefixes.get(number) || []), name])
 
   if (!expected) errors.push(name + ': absent from pinned inventory')
