@@ -114,6 +114,8 @@ export default function Header({ crumbs, actions }: HeaderProps) {
   const isTablet = vp === 'tablet'
   const compactHeader = useCompactHeader()
   const isDispatch = crumbs.some((crumb) => crumb.label === 'Today' || crumb.label === 'Dashboard')
+  // Identify the isolated backend, not a query parameter or a user-editable role.
+  const isStaging = import.meta.env['VITE_SUPABASE_URL'] === 'https://klhmsrunqrdxjudyhnkm.supabase.co' && !IS_MOCK
   const [profileOpen, setProfileOpen] = useState(false)
   const [showHandover, setShowHandover] = useState(false)
   const [notesOpen, setNotesOpen] = useState(false)
@@ -429,7 +431,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
   return (
     <>
       <header
-        className="app-global-header"
+        className={`app-global-header${isStaging ? ' app-global-header--staging' : ''}${isDispatch ? ' app-global-header--dispatch' : ''}`}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -587,6 +589,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                 )
               })}
             </ol>
+            {isStaging && <span className="app-global-header__environment" aria-label="Staging test environment">STAGING</span>}
           </nav>
 
           {/* Contextual record status badge */}

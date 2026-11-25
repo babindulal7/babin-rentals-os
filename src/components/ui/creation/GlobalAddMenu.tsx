@@ -230,6 +230,7 @@ function GlobalAddMenuView({
           aria-expanded={open}
           aria-controls={menuId}
           aria-label="Create new record"
+          className="dispatch-create-menu-trigger"
           onClick={() => setOpen((prev) => !prev)}
           style={{ ...segment, minWidth: 44, padding: isPhone ? '0 10px' : '0 14px', borderRadius: 'var(--r-btn, 8px)' }}
         >
