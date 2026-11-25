@@ -39,6 +39,9 @@ export function validateDiscount(
   _reason?: string | null,
   _approverId?: string | null
 ): DiscountValidationResult {
+  if (!Number.isFinite(percent)) {
+    return { valid: false, requiresApproval: false, error: 'Discount percent must be a finite number' }
+  }
   if (percent < 0) {
     return { valid: false, requiresApproval: false, error: 'Discount percent cannot be negative' }
   }
