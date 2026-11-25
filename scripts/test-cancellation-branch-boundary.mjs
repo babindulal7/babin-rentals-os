@@ -37,6 +37,12 @@ try {
     await db.exec(readFileSync(join(root, 'supabase/migrations', file), 'utf8'))
   }
 
+  // Explicit opt-in for isolated repair proof; default still tests real migrations.
+  if (process.argv.includes('--candidate')) {
+    console.log('TEST-ONLY candidate SQL: not part of deployable migrations')
+    await db.exec(readFileSync(join(root, 'scripts/fixtures/cancellation-branch-boundary-candidate.sql'), 'utf8'))
+  }
+
   const owner = (await one("select id from public.users where primary_role = 'Owner' order by created_at limit 1"))?.id
   assert.ok(owner, 'seed must contain an Owner')
   const branchA = (await one('select id from public.branches order by created_at limit 1'))?.id
