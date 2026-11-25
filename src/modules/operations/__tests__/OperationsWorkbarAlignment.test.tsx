@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { OperationsWorkspaceProvider } from '../OperationsWorkspaceContext'
 import OperationsQueues from '../OperationsQueues'
 
@@ -146,6 +146,44 @@ describe('Operations Workbar & Queue Alignment — Global Shell Phase 2', () => 
     const allActiveTab = container.querySelector('#operations-queue-tab-all')
     expect(allActiveTab?.getAttribute('tabindex')).toBe('0')
     expect(allActiveTab?.getAttribute('aria-selected')).toBe('true')
+  })
+
+  it.each(['click', 'keyboard'] as const)('clears stale rental exceptions when entering Cases via %s without dropping day scope', async (method) => {
+    function CurrentQuery() {
+      const location = useLocation()
+      return <output data-testid="current-query">{location.search}</output>
+    }
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={['/operations?exception=overdue_start&day=tomorrow']}>
+          <OperationsWorkspaceProvider>
+            <OperationsQueues />
+            <CurrentQuery />
+          </OperationsWorkspaceProvider>
+        </MemoryRouter>,
+      )
+    })
+
+    const cases = container.querySelector<HTMLElement>('#operations-queue-tab-Cases')!
+    const tabs = container.querySelector<HTMLElement>('.operations-v2__queues')!
+    expect(cases).not.toBeNull()
+    await act(async () => {
+      if (method === 'click') cases.click()
+      else tabs.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }))
+    })
+    const query = () => new URLSearchParams(container.querySelector('[data-testid="current-query"]')?.textContent ?? '')
+    expect(query().get('queue')).toBe('cases')
+    expect(query().has('exception')).toBe(false)
+    expect(query().has('quick')).toBe(false)
+    expect(query().get('day')).toBe('tomorrow')
+    expect(cases.getAttribute('aria-selected')).toBe('true')
+
+    await act(async () => { cases.click() })
+    expect(query().has('queue')).toBe(false)
+    expect(query().has('exception')).toBe(false)
+    expect(query().get('day')).toBe('tomorrow')
+    expect(container.querySelector('#operations-queue-tab-all')?.getAttribute('aria-selected')).toBe('true')
   })
 
   it('enforces minHeight >= 44px on all queue chips and action controls', async () => {
