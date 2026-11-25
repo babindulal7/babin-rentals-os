@@ -94,6 +94,8 @@ describe('CancelRentalModal', () => {
     await mountModal(defaultProps)
     expect(container.textContent).toContain('Cancel Booking — BK-2026-0042')
     expect(container.textContent).toContain('Inventory Allocation')
+    expect(container.textContent).toContain('Cancellation fee estimate unavailable')
+    expect(container.textContent).not.toContain('Suggested cancellation fee:')
     expect(container.textContent).toContain('0/10 characters minimum')
   })
 
@@ -166,6 +168,7 @@ describe('CancelRentalModal', () => {
         id: 'booking-uuid-123',
         reason: 'Production rescheduled to next month',
         clientUuid: expect.any(String),
+        cancellationFeePaisa: null,
       }),
       { userId: 'user-coord-1', role: 'Coordinator' },
     )
