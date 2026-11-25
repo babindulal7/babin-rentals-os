@@ -76,7 +76,7 @@ describe('useNewRentalSubmit', () => {
     vi.mocked(confirmBookingRequest).mockResolvedValue({ success: true, requestId: 'request-1', bookingId: 'test-booking-id-123' })
   })
 
-  it.each(['success', 'rapid repeat', 'confirm retry', 'draft link retry', 'request link retry', 'request link mismatch', 'create retry', 'blocked', 'no session', 'missing client'] as const)('handles %s without losing the booking identity', async (scenario) => {
+  it.each(['success', 'rapid repeat', 'confirm retry', 'draft link retry', 'request link retry', 'request link mismatch', 'request link rejected', 'create retry', 'blocked', 'no session', 'missing client'] as const)('handles %s without losing the booking identity', async (scenario) => {
     const host = document.createElement('div')
     document.body.appendChild(host)
     const root = createRoot(host)
@@ -127,12 +127,13 @@ describe('useNewRentalSubmit', () => {
     if (scenario === 'draft link retry') vi.mocked(convertDraft).mockRejectedValueOnce(new Error('Draft link unavailable'))
     if (scenario === 'request link retry') vi.mocked(confirmBookingRequest).mockRejectedValueOnce(new Error('Request link unavailable'))
     if (scenario === 'request link mismatch') vi.mocked(confirmBookingRequest).mockResolvedValueOnce({ success: true, requestId: 'request-1', bookingId: 'other-booking' })
+    if (scenario === 'request link rejected') vi.mocked(confirmBookingRequest).mockResolvedValueOnce({ success: false, requestId: 'request-1', bookingId: 'test-booking-id-123' })
     if (scenario === 'create retry') vi.mocked(createRental).mockRejectedValueOnce(new Error('Connection interrupted'))
     const overrides: Partial<UseNewRentalSubmitOptions> = scenario === 'blocked' ? { confirmBlocked: true }
       : scenario === 'no session' ? { dispatchContext: () => null }
       : scenario === 'missing client' ? { client: null }
       : scenario === 'draft link retry' ? { draftId: 'draft-1' }
-      : scenario === 'request link retry' || scenario === 'request link mismatch' ? { requestId: 'request-1' } : {}
+      : scenario === 'request link retry' || scenario === 'request link mismatch' || scenario === 'request link rejected' ? { requestId: 'request-1' } : {}
 
     function TestComponent() {
       submitHook = useNewRentalSubmit({
@@ -204,7 +205,7 @@ describe('useNewRentalSubmit', () => {
         expect(createRental).toHaveBeenCalledTimes(1)
         await act(async () => releaseCreate?.())
       }
-      if (scenario === 'request link retry' || scenario === 'request link mismatch') {
+      if (scenario === 'request link retry' || scenario === 'request link mismatch' || scenario === 'request link rejected') {
         await act(async () => { await vi.dynamicImportSettled() })
         await vi.waitFor(() => expect(setSaveState).toHaveBeenCalledWith('error'))
         expect(setActionError).toHaveBeenCalledWith(expect.stringContaining('is confirmed, but the online request is not linked'))
@@ -217,6 +218,14 @@ describe('useNewRentalSubmit', () => {
         expect(setSaveState).toHaveBeenCalledWith('error')
         expect(showSuccessToast).not.toHaveBeenCalled()
         await act(async () => { submitHook.confirmBooking() })
+      }
+      if (scenario === 'request link mismatch') {
+        // A request already attached to a different booking must remain blocked
+        // across repeated retries; the user must reconcile the existing rental.
+        // This run models recovery when the backend subsequently returns the
+        // correct booking, while the pre-retry assertion proves no success was
+        // shown for the mismatched result.
+        expect(setActionError).toHaveBeenCalledWith(expect.stringContaining('did not confirm against this booking'))
       }
       expect(createRental).toHaveBeenCalledTimes(scenario === 'create retry' ? 2 : 1)
       if (scenario === 'create retry') {
@@ -231,7 +240,7 @@ describe('useNewRentalSubmit', () => {
       // Confirmation also awaits the dynamically imported payment-link module.
       await act(async () => { await vi.dynamicImportSettled() })
       await vi.waitFor(() => expect(setConfirmedSuccess).toHaveBeenCalledTimes(1))
-      if (scenario === 'request link retry' || scenario === 'request link mismatch') {
+      if (scenario === 'request link retry' || scenario === 'request link mismatch' || scenario === 'request link rejected') {
         expect(confirmBookingRequest).toHaveBeenCalledTimes(2)
         for (const [input] of vi.mocked(confirmBookingRequest).mock.calls) {
           expect(input).toEqual({ requestId: 'request-1', bookingId: 'test-booking-id-123' })
