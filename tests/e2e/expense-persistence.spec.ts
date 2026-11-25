@@ -94,10 +94,12 @@ test.describe('Disposable expense persistence and access control', () => {
 
     await page.reload()
     await expect(page.getByRole('button', { name: 'Add Expense', exact: true }).first()).toBeVisible()
-    const search = page.getByRole('textbox', { name: 'Search expenses' }).first()
+    const search = page.getByRole('textbox', { name: 'Search expenses by expense number, vendor, or description', exact: true }).first()
     await expect(search).toBeVisible()
     await search.fill(marker)
-    await expect(page.getByText(marker, { exact: true }).first()).toBeVisible({ timeout: 30_000 })
+    // Compact cards append the category to the vendor label.
+    await expect(page.getByText(marker, { exact: false }).filter({ visible: true }).first()).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByText(row.expense_no, { exact: true }).filter({ visible: true }).first()).toBeVisible()
 
     const denied = await staff.from('expenses').select('id').eq('id', row.id)
     expect(denied.data ?? []).toHaveLength(0)
