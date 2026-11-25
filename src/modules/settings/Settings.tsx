@@ -499,6 +499,8 @@ export default function Settings() {
                   role="tab"
                   type="button"
                   aria-selected={on}
+                  aria-label={t.label}
+                  title={t.label}
                   onClick={() => go(t.key)}
                   className={`app-settings-tablet-tab settings-tab-pill ${on ? 'is-active' : ''}`}
                 >
