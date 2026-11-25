@@ -33,8 +33,20 @@ jobs:
           version: 2.114.0
       - name: Start disposable Supabase
         run: supabase start
+      - name: Reproduce historical migration-time table defaults (disposable only)
+        # Older migrations contain behavioral RLS probes which assume the legacy
+        # Supabase default table grants. Match supabase/pglite-prelude.sql only
+        # inside this fresh local container, never on a hosted project.
+        run: |
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          test -z "${DOCKER_HOST:-}" && test -z "${DOCKER_CONTEXT:-}"
+          docker exec supabase_db_babin-rentals-os psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c 'alter default privileges in schema public grant all on tables to anon, authenticated, service_role;'
       - name: Apply local migrations including money-mask migration
         run: node scripts/apply-migrations-local.mjs --include-held-back
+      - name: Remove historical default grants and check anonymous view exposure
+        run: |
+          docker exec supabase_db_babin-rentals-os psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c 'alter default privileges in schema public revoke all on tables from anon, authenticated, service_role;'
+          docker exec supabase_db_babin-rentals-os psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c "do \$\$ begin if exists (select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='v' and has_table_privilege('anon', c.oid, 'SELECT')) then raise exception 'Anonymous view exposure: disposable security gate failed'; end if; end \$\$;"
       - run: npx playwright install --with-deps chromium webkit
       - name: Bootstrap local roles and run Playwright
         run: node scripts/run-disposable-playwright.mjs
