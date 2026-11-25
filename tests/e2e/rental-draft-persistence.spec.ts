@@ -77,7 +77,7 @@ test.describe('Durable rental draft — disposable database only', () => {
       expect(updated.data?.status).toBe('Active')
 
       // Saving a provisional draft must not silently create a confirmed booking.
-      const bookings = await owner.from('bookings').select('id,status').eq('client_uuid', first.data!.booking_client_uuid)
+      const bookings = await owner.from('bookings').select('id,stage').eq('client_uuid', first.data!.booking_client_uuid)
       expect(bookings.error?.code ?? null).toBeNull()
       expect(bookings.data).toEqual([])
       await page.reload()
