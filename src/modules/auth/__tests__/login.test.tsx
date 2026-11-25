@@ -10,9 +10,11 @@ import Login from '../Login'
 const signIn = vi.fn(async (_email: string, _password: string) => ({ error: null as string | null }))
 const navigate = vi.fn()
 
+let mockUser: { id: string } | null = null
+
 vi.mock('../../../lib/auth', () => ({
   useAuth: () => ({
-    user: null,
+    user: mockUser,
     loading: false,
     signIn,
     requestPasswordReset: vi.fn(),
@@ -140,7 +142,21 @@ describe('Login component', () => {
     })
 
     expect(signIn).toHaveBeenCalledWith('owner@babinrentals.com', 'validpass123')
+    // Signing in is not enough: the route guard still sees no user until the
+    // staff profile loads, so leaving /login now would bounce straight back.
+    expect(navigate).not.toHaveBeenCalled()
+
+    // Profile loaded: the page may now leave /login.
+    mockUser = { id: 'owner-1' }
+    act(() => {
+      root.render(
+        <MemoryRouter>
+          <Login />
+        </MemoryRouter>
+      )
+    })
     expect(navigate).toHaveBeenCalledWith('/dashboard', { replace: true })
+    mockUser = null
   })
 
   it('persists work email to localStorage when Remember email is checked', async () => {
