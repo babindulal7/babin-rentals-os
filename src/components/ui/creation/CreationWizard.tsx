@@ -64,7 +64,7 @@ export function CreationWizard({
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
 
   // Draft Form State
-  const [clientId, setClientId] = useState('')
+  const [, setClientId] = useState('')
   const [clientName, setClientName] = useState('')
   const [projectName, setProjectName] = useState('')
   const [startDate, setStartDate] = useState(() => {

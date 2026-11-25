@@ -46,7 +46,7 @@ export function CreationDrawer({
   const [eqSerial, setEqSerial] = useState('')
   const [eqAssetId, setEqAssetId] = useState('')
   const [eqTrackingMode, setEqTrackingMode] = useState<'serialized' | 'bulk'>('serialized')
-  const [eqQuantity, setEqQuantity] = useState(1)
+  const [, setEqQuantity] = useState(1)
   const [eqCondition, setEqCondition] = useState<'New' | 'Good' | 'Fair'>('Good')
   const [eqLocation, setEqLocation] = useState('Main Warehouse')
   const [eqAccessories, setEqAccessories] = useState('')

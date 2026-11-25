@@ -1,0 +1,10 @@
+set local lock_timeout = '3s';
+set local statement_timeout = '30s';
+alter function public.generate_catalogue_slug() set search_path = pg_catalog, pg_temp;
+alter function public.saved_view_query_touches_money(text) set search_path = pg_catalog, pg_temp;
+alter function public.set_invoice_vat_treatment() set search_path = pg_catalog, pg_temp;
+alter function public.settings_is_money_key(text) set search_path = pg_catalog, pg_temp;
+alter function public.settings_location_overridable(text) set search_path = pg_catalog, pg_temp;
+alter function public.trg_sync_booking_project_name() set search_path = pg_catalog, pg_temp;
+alter function public.trg_prevent_sign_in_events_mutation() set search_path = pg_catalog, pg_temp;
+alter table public.booking_lines validate constraint booking_lines_subrental_return_by_required;
