@@ -67,9 +67,11 @@ async function run() {
       await conn.query("insert into public.clients (id,client_uuid,client_code,name,email,phone,status,created_by) values ($1,$2,public.next_document_number('client'),$3,$4,$5,'Active',$6)", [clientId, randomUUID(), 'Disposable Payment Client ' + label, email, phone, fixtureOwner])
       await conn.query("insert into public.portal_users (client_uuid,client_id,auth_user_id,email,email_verified_at,invited_by_staff_id,role,phone,status,activated_at) values ($1,$2,$3,$4,now(),$5,'Member',$6,'Active',now())", [randomUUID(), clientId, uid, email, fixtureOwner, phone])
       await conn.query("insert into public.bookings (id,client_uuid,booking_no,client_id,branch_id,pickup_at,return_at,delivery_type,stage,created_by,updated_by) values ($1,$2,public.next_document_number('booking'),$3,$4,now()+interval '2 days',now()+interval '4 days','Client Pickup','Quote',$5,$5)", [bookingId, randomUUID(), clientId, branch, fixtureOwner])
-      await conn.query("insert into public.invoices (client_uuid,invoice_no,booking_id,client_id,branch_id,status,subtotal,total_amount,paid_amount,outstanding_amount,issue_date,due_date,created_by) values ($1,public.next_document_number('invoice'),$2,$3,$4,'Partially Paid',10000,10000,4000,6000,current_date,current_date+7,$5)", [randomUUID(), bookingId, clientId, branch, fixtureOwner])
-      await conn.query("insert into public.payment_intents (id,client_uuid,booking_id,client_id,requester_auth_uid,provider,amount_paisa,status) values ($1,$2,$3,$4,$5,'fonepay',600000,'pending')", [intentId, randomUUID(), bookingId, clientId, uid])
-      targets.push({ label, uid, email, password, clientId, bookingId, intentId })
+      const invoiceId = randomUUID()
+      // Begin with no fictional paid balance: the ledger starts empty.
+      await conn.query("insert into public.invoices (id,client_uuid,invoice_no,booking_id,client_id,branch_id,status,subtotal,taxable_amount,vat_rate,vat_amount,total_amount,paid_amount,outstanding_amount,issue_date,due_date,created_by) values ($1,$2,null,$3,$4,$5,'Draft',10000,10000,0.13,1300,11300,0,11300,null,current_date+7,$6)", [invoiceId, randomUUID(), bookingId, clientId, branch, fixtureOwner])
+      await conn.query("insert into public.payment_intents (id,client_uuid,booking_id,client_id,requester_auth_uid,provider,amount_paisa,status) values ($1,$2,$3,$4,$5,'fonepay',1130000,'pending')", [intentId, randomUUID(), bookingId, clientId, uid])
+      targets.push({ label, uid, email, password, clientId, bookingId, intentId, invoiceId })
     }
     const bookingIds = targets.map(t => t.bookingId)
     const snapshot = async () => {
@@ -103,6 +105,38 @@ async function run() {
       }
       if (await snapshot() !== before) throw new Error('Denied client RPC changed payment intent or ledger')
       console.log('Verified disposable payment RPC hold and booking isolation: Client ' + actor.label)
+    }
+
+    // Positive control: the exact same restricted database must still permit
+    // the normal manual-payment write using a real money-role API session.
+    // Only the synthetic invoice is affected; no gateway or provider is called.
+    const owner = createClient(API, publicKey, options)
+    const ownerAuth = await owner.auth.signInWithPassword({ email: env.E2E_OWNER_EMAIL, password: env.E2E_OWNER_PASSWORD })
+    if (ownerAuth.error || ownerAuth.data.user?.id !== fixtureOwner || !ownerAuth.data.session) throw new Error('Manual payment owner authentication failed')
+    try {
+      const money = await owner.rpc('auth_can_view_money')
+      if (money.error || money.data !== true) throw new Error('Manual payment money-role preflight failed')
+      const target = targets[0]
+      const beforeIntents = JSON.stringify((await conn.query('select * from public.payment_intents where booking_id = any($1::uuid[]) order by id', [bookingIds])).rows)
+      const number = await owner.rpc('next_document_number', { p_sequence_key: 'payment' })
+      if (number.error || typeof number.data !== 'string' || !number.data) throw new Error('Manual payment number allocation failed')
+      const key = randomUUID()
+      const result = await owner.from('payments').insert({
+        client_uuid: key, payment_no: number.data, booking_id: target.bookingId,
+        invoice_id: target.invoiceId, client_id: target.clientId, branch_id: branch,
+        amount: 1000, payment_type: 'Advance Payment', status: 'Received',
+        notes: 'Synthetic disposable manual payment', received_by: fixtureOwner,
+      }).select('id').single()
+      if (result.error || !result.data?.id) throw new Error('Authorized manual payment failed: ' + (result.error?.code || 'missing receipt'))
+      const ledger = (await conn.query('select id,invoice_id,amount from public.payments where booking_id = any($1::uuid[])', [bookingIds])).rows
+      if (ledger.length !== 1 || ledger[0].id !== result.data.id || ledger[0].invoice_id !== target.invoiceId || Number(ledger[0].amount) !== 1000) throw new Error('Manual payment ledger mismatch')
+      const invoice = (await conn.query('select paid_amount,outstanding_amount,status from public.invoices where id = $1', [target.invoiceId])).rows[0]
+      if (!invoice || Number(invoice.paid_amount) !== 1000 || Number(invoice.outstanding_amount) !== 10300 || invoice.status !== 'Draft') throw new Error('Manual payment invoice balance or draft state mismatch')
+      const afterIntents = JSON.stringify((await conn.query('select * from public.payment_intents where booking_id = any($1::uuid[]) order by id', [bookingIds])).rows)
+      if (beforeIntents !== afterIntents) throw new Error('Manual payment changed online payment intents')
+      console.log('Verified authorized manual payment and exact draft invoice balance during online hold')
+    } finally {
+      await owner.auth.signOut({ scope: 'local' })
     }
   } finally {
     await conn.end()
