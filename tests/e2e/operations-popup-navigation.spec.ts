@@ -77,3 +77,85 @@ test.describe('Operations popup persisted-stage navigation', () => {
     })
   }
 })
+
+test.describe('Operations packing confirmation and duplicate-submit protection', () => {
+  test.skip(!disposable, 'Synthetic local CI only')
+  test('evidence gate, discard protection and successful packing persist exactly once', async ({ page }, testInfo) => {
+    const email = process.env.E2E_OWNER_EMAIL
+    const password = process.env.E2E_OWNER_PASSWORD
+    const key = process.env.E2E_LOCAL_ANON_KEY
+    const prefix = 'E2E_OPS_CONFIRM_' + testInfo.project.name.toUpperCase()
+    const id = process.env[prefix + '_ID']
+    const no = process.env[prefix + '_NO']
+    if (!disposable || !email?.startsWith('disposable-') || !email.endsWith('@example.test') || !password || !key || !id || !no) throw new Error('Dedicated local packing fixture required')
+    const api = createClient(API, key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } })
+    const auth = await api.auth.signInWithPassword({ email, password })
+    expect(auth.error).toBeNull()
+    expect(auth.data.session).not.toBeNull()
+    const stage = async () => {
+      const result = await api.from('bookings').select('stage').eq('id', id).single()
+      expect(result.error).toBeNull()
+      return result.data?.stage
+    }
+    const sessions = async () => {
+      const result = await api.from('operation_sessions').select('id,state').eq('booking_id', id).eq('operation', 'Packing')
+      expect(result.error).toBeNull()
+      return result.data ?? []
+    }
+    try {
+      expect(await stage()).toBe('Booked')
+      expect(await sessions()).toHaveLength(0)
+      await page.goto('/login')
+      await page.locator('input[type="email"]').fill(email)
+      await page.locator('input[type="password"]').fill(password)
+      await page.locator('button[type="submit"]').first().click()
+      await expect(page).toHaveURL(/\/today(?:[/?#]|$)/, { timeout: 30_000 })
+      const welcome = page.getByRole('dialog', { name: 'Welcome to Babin Rentals OS', exact: true })
+      await expect(welcome).toBeVisible()
+      await welcome.getByRole('button', { name: 'Skip', exact: true }).click()
+      await page.goto('/rentals/' + encodeURIComponent(no))
+      await page.getByRole('button', { name: 'Start Packing', exact: true }).filter({ visible: true }).first().click()
+      const popup = page.getByRole('dialog', { name: /^Operations ·/ })
+      const confirm = popup.getByRole('button', { name: 'Confirm Packing & Next', exact: true })
+      const notes = popup.getByRole('textbox', { name: 'Packing session notes', exact: true })
+      await expect(confirm).toBeDisabled()
+      await notes.fill('Synthetic packing acceptance')
+      await popup.getByRole('group', { name: 'Browse operation stages' }).getByRole('button', { name: 'Close', exact: true }).click()
+      const discard = page.getByRole('alertdialog').or(page.getByRole('dialog', { name: 'Discard unsaved operations work?', exact: true })).filter({ visible: true }).last()
+      await expect(discard.getByRole('button', { name: 'Keep Editing', exact: true })).toBeVisible()
+      await discard.getByRole('button', { name: 'Keep Editing', exact: true }).click()
+      await expect(notes).toHaveValue('Synthetic packing acceptance')
+      await popup.getByRole('button', { name: 'Mark Pending Packed', exact: true }).click()
+      await expect(confirm).toBeDisabled()
+      expect(await stage()).toBe('Booked')
+      expect(await sessions()).toHaveLength(0)
+      // Real upload of a tiny synthetic JPEG via the existing file-input handler.
+      const jpeg = await page.evaluate(() => {
+        const canvas = document.createElement('canvas')
+        canvas.width = canvas.height = 96
+        const ctx = canvas.getContext('2d')!
+        ctx.fillStyle = '#777'
+        ctx.fillRect(0, 0, 96, 96)
+        return canvas.toDataURL('image/jpeg').split(',')[1]!
+      })
+      await popup.locator('#pack-evidence input[type="file"]').setInputFiles({
+        name: 'synthetic-packing.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(jpeg, 'base64'),
+      })
+      await expect(confirm).toBeEnabled({ timeout: 30_000 })
+      await confirm.click({ clickCount: 2 })
+      await expect.poll(stage, { timeout: 30_000 }).toBe('Packed')
+      await expect(popup.getByRole('navigation', { name: 'Operation stage' }).locator('[aria-current="step"]')).toHaveAccessibleName(/^Handover ·/, { timeout: 30_000 })
+      const recorded = await sessions()
+      expect(recorded).toHaveLength(1)
+      expect(recorded[0]?.state).toBe('Completed')
+      const transitions = await api.from('booking_stage_transitions').select('id').eq('booking_id', id).eq('from_stage', 'Booked').eq('to_stage', 'Packed')
+      expect(transitions.error).toBeNull()
+      expect(transitions.data).toHaveLength(1)
+      await page.reload()
+      expect(await stage()).toBe('Packed')
+      expect(await sessions()).toHaveLength(1)
+    } finally {
+      await api.auth.signOut({ scope: 'local' })
+    }
+  })
+})
