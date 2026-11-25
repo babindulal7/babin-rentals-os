@@ -50,7 +50,9 @@ describe('Login component', () => {
     host = document.createElement('div')
     document.body.append(host)
     root = createRoot(host)
-    signIn.mockClear()
+    mockUser = null
+    signIn.mockReset()
+    signIn.mockResolvedValue({ error: null })
     navigate.mockClear()
     localStorage.clear()
   })
@@ -145,6 +147,12 @@ describe('Login component', () => {
     // Signing in is not enough: the route guard still sees no user until the
     // staff profile loads, so leaving /login now would bounce straight back.
     expect(navigate).not.toHaveBeenCalled()
+    expect(host.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true)
+    expect(host.textContent).toContain('Loading staff profile')
+    await act(async () => {
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    })
+    expect(signIn).toHaveBeenCalledTimes(1)
 
     // Profile loaded: the page may now leave /login.
     mockUser = { id: 'owner-1' }
@@ -157,6 +165,30 @@ describe('Login component', () => {
     })
     expect(navigate).toHaveBeenCalledWith('/dashboard', { replace: true })
     mockUser = null
+  })
+
+  it('allows an honest retry when the staff profile never resolves', async () => {
+    vi.useFakeTimers()
+    try {
+      act(() => root.render(<MemoryRouter><Login /></MemoryRouter>))
+      const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!
+      act(() => {
+        for (const [id, value] of [['login-email', 'owner@example.test'], ['login-password', 'test-password']] as const) {
+          const field = host.querySelector<HTMLInputElement>('#' + id)!
+          nativeSetter.call(field, value)
+          field.dispatchEvent(new Event('input', { bubbles: true }))
+        }
+      })
+      await act(async () => {
+        host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+      })
+      await act(async () => { await vi.advanceTimersByTimeAsync(20_000) })
+      expect(navigate).not.toHaveBeenCalled()
+      expect(host.querySelector('#login-error')?.textContent).toContain('Could not load your staff profile')
+      expect(host.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('persists work email to localStorage when Remember email is checked', async () => {

@@ -30,6 +30,13 @@ for (const account of accounts) {
     await expect(page.locator('input[type="password"]')).toHaveCount(0)
     await page.goto('/operations')
     await expect(page).toHaveURL(/\/operations(?:[/?#]|$)/)
-    await expect(page.getByLabel('Operational queues', { exact: true })).toBeVisible({ timeout: 30_000 })
+    const queues = page.getByLabel('Operational queues', { exact: true })
+    await expect(queues).toBeVisible({ timeout: 30_000 })
+    // Exercise restoration of the genuine session after a hard reload. Never
+    // bypass the guard, inject credentials into storage or retry sign-in.
+    await page.reload()
+    await expect(page).toHaveURL(/\/operations(?:[/?#]|$)/, { timeout: 30_000 })
+    await expect(queues).toBeVisible({ timeout: 30_000 })
+    await expect(page.locator('input[type="password"]')).toHaveCount(0)
   })
 }

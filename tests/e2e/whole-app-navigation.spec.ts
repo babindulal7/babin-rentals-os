@@ -100,8 +100,13 @@ test.describe('Whole-app core navigation and recovery', () => {
     await expect(booked).toBeVisible()
     await expect(booked).not.toBeChecked()
     await expect(packed).not.toBeChecked()
-    await booked.check()
-    await packed.check()
+    // React Router commits controlled checkbox state through navigation.
+    // Click normally, then assert the eventual checked state AND URL before
+    // interacting again; do not force the input or bypass its event handler.
+    await booked.click()
+    await expect(booked).toBeChecked()
+    await expect.poll(stages).toEqual(['Booked'])
+    await packed.click()
     await expect(booked).toBeChecked()
     await expect(packed).toBeChecked()
     await expect.poll(stages).toEqual(['Booked', 'Packed'])
@@ -110,7 +115,7 @@ test.describe('Whole-app core navigation and recovery', () => {
     await toggle.click()
     await expect(booked).toBeChecked()
     await expect(packed).toBeChecked()
-    await booked.uncheck()
+    await booked.click()
     await expect(booked).not.toBeChecked()
     await expect(packed).toBeChecked()
     await expect.poll(stages).toEqual(['Packed'])

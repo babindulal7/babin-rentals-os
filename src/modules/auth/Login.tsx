@@ -55,6 +55,18 @@ export default function Login() {
     navigate(from && from !== '/login' ? from : '/dashboard', { replace: true })
   }, [awaitingProfile, user, location.state, navigate])
 
+  // A valid password is not yet a resolved staff session. Prevent a second
+  // request while the profile arrives; recover with an honest retry if it
+  // never resolves, rather than redirecting or leaving the form stuck.
+  useEffect(() => {
+    if (!awaitingProfile || user) return
+    const timer = window.setTimeout(() => {
+      setAwaitingProfile(false)
+      setError(t('auth.profileTimeout', 'Could not load your staff profile. Please try signing in again.'))
+    }, 20_000)
+    return () => window.clearTimeout(timer)
+  }, [awaitingProfile, user, t])
+
   // Lockout countdown timer ticker
   useEffect(() => {
     if (lockoutSeconds > 0) {
@@ -75,7 +87,7 @@ export default function Login() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (busy || lockoutSeconds > 0) return
+    if (busy || awaitingProfile || lockoutSeconds > 0) return
     setError(null)
 
     const trimmedEmail = email.trim()
@@ -85,8 +97,15 @@ export default function Login() {
     }
 
     setBusy(true)
-    const { error: signInError } = await signIn(trimmedEmail, password)
-    setBusy(false)
+    let signInError: string | null
+    try {
+      const result = await signIn(trimmedEmail, password)
+      signInError = result.error
+    } catch {
+      signInError = t('auth.signInUnavailable', 'Sign-in could not complete. Please try again.')
+    } finally {
+      setBusy(false)
+    }
 
     if (signInError) {
       // Parse rate limit or lockout cooldowns if returned by Supabase
@@ -197,7 +216,9 @@ export default function Login() {
                   key={l.email}
                   type="button"
                   className="auth-mock-btn"
+                  disabled={busy || awaitingProfile || lockoutSeconds > 0}
                   onClick={async () => {
+                    if (busy || awaitingProfile || lockoutSeconds > 0) return
                     setEmail(l.email)
                     setPassword('demo1234')
                     setBusy(true)
@@ -213,8 +234,7 @@ export default function Login() {
                           /* ignore */
                         }
                       }
-                      const from = (location.state as { from?: string } | null)?.from
-                      navigate(from && from !== '/login' ? from : '/dashboard', { replace: true })
+                      setAwaitingProfile(true)
                     }
                   }}
                   title={`Sign in as ${l.role}`}
@@ -239,10 +259,10 @@ export default function Login() {
         <Button
           type="submit"
           variant="primary"
-          disabled={busy || lockoutSeconds > 0}
+          disabled={busy || awaitingProfile || lockoutSeconds > 0}
           style={{ minHeight: 44, fontSize: 16 }}
         >
-          {busy ? t('auth.submitting', 'Signing in…') : lockoutSeconds > 0 ? `Wait (${lockoutSeconds}s)` : t('auth.submit', 'Sign In')}
+          {awaitingProfile ? t('auth.loadingProfile', 'Loading staff profile…') : busy ? t('auth.submitting', 'Signing in…') : lockoutSeconds > 0 ? `Wait (${lockoutSeconds}s)` : t('auth.submit', 'Sign In')}
         </Button>
       </form>
     </AuthCard>
