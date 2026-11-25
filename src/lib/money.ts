@@ -189,6 +189,7 @@ export const calculatePrice = price
 export const DISCOUNT_CAP = 100
 
 export function discountGate(percent: number, _reason: string, _approver: string | null) {
+  if (!Number.isFinite(percent)) return { ok: false as const, why: 'A discount must be a finite number' }
   if (percent < 0) return { ok: false as const, why: 'A discount cannot be negative — that is a price increase' }
   if (percent > DISCOUNT_CAP) return { ok: false as const, why: 'A discount above 100% is a negative price, not a discount' }
   return { ok: true as const }
