@@ -88,6 +88,7 @@ export default function OperationsShell({
   const firstRead = useRef(true)
   const awaitingCompletion = useRef<JobName | null>(null)
   const submitLock = useRef(false)
+  const submitAttempt = useRef(0)
   const [submitting, setSubmitting] = useState(false)
   const identity = useRef({ bookingNo, isOpen })
   identity.current = { bookingNo, isOpen }
@@ -154,12 +155,14 @@ export default function OperationsShell({
     setFloor(null)
     firstRead.current = true
     awaitingCompletion.current = null
+    submitAttempt.current += 1
     submitLock.current = false
     setSubmitting(false)
     setPending(null)
     void refreshFloor()
     return () => {
       openedBookingRef.current = null
+      submitAttempt.current += 1
       readVersion.current += 1
     }
     // Status notifications must not discard an operator's pending marks.
@@ -171,11 +174,6 @@ export default function OperationsShell({
     onBusyChange?.(busy)
     return () => onBusyChange?.(false)
   }, [busy, onBusyChange])
-  useEffect(() => {
-    if (!actions?.error) return
-    submitLock.current = false
-    setSubmitting(false)
-  }, [actions?.error])
 
   useEffect(() => {
     if (!isOpen || !actions?.isDirty) return
@@ -563,20 +561,29 @@ export default function OperationsShell({
                 onClick={() => {
                   if (submitLock.current || readingFloor.current || floorError || !floor || floor.isCancelled || floor.isClosed || !currentGate.allowed || !actions?.canComplete) return
                   submitLock.current = true
+                  const attempt = ++submitAttempt.current
                   setSubmitting(true)
-                  try {
-                    const result: unknown = (actions.complete as () => unknown)()
-                    if (result && typeof (result as Promise<unknown>).catch === 'function') {
-                      ;(result as Promise<unknown>).catch((error: unknown) => {
-                        submitLock.current = false
-                        setSubmitting(false)
-                        setFloorError(error instanceof Error ? error.message : 'The operation failed. Retry before continuing.')
-                      })
-                    }
-                  } catch (error) {
+                  const stillCurrent = () => submitAttempt.current === attempt &&
+                    identity.current.bookingNo === bookingNo && identity.current.isOpen
+                  const settle = () => {
+                    // The successful callback owns the lock while it verifies the
+                    // persisted stage. Held, refused and no-start dispatches settle
+                    // here without advancing, even if the same error repeats.
+                    if (!stillCurrent() || awaitingCompletion.current) return
                     submitLock.current = false
                     setSubmitting(false)
-                    setFloorError(error instanceof Error ? error.message : 'The operation could not be started. Retry before continuing.')
+                  }
+                  const failed = (error: unknown) => {
+                    if (!stillCurrent() || awaitingCompletion.current) return
+                    settle()
+                    setFloorError(error instanceof Error ? error.message : 'The operation failed. Retry before continuing.')
+                  }
+                  try {
+                    const result = actions.complete()
+                    if (result) void result.then(settle, failed)
+                    else settle()
+                  } catch (error) {
+                    failed(error)
                   }
                 }}
                 disabled={floorLoading || !!floorError || !floor || floor.isCancelled || floor.isClosed || !currentGate.allowed || (job === 'Reset' && (!taskFacts || !!taskError)) || isCurrentJobCompleted || !actions?.canComplete || busy || !!awaitingCompletion.current}

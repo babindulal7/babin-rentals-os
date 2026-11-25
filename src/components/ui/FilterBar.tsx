@@ -184,12 +184,12 @@ export function FilterBar({
         <div
           role="group"
           aria-label={groupAriaLabel}
-          className={!isDesktop ? 'rsp-chip-scroll' : undefined}
+          className={!isDesktop && !onToggleOptionId ? 'rsp-chip-scroll' : undefined}
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: 'var(--sp-sm, 8px)',
-            ...(isDesktop
+            ...(isDesktop || onToggleOptionId
               ? { flexWrap: 'wrap' as const }
               : { overflowX: 'auto' as const, paddingBottom: 2 }),
           }}
@@ -201,6 +201,44 @@ export function FilterBar({
             // A filter with no selection handler is informational, not an actionable control.
             const canSelect = Boolean(onToggleOptionId || onSelectOption)
 
+            // Independent facets use native checkboxes; single-choice presets
+            // retain their existing button semantics and callbacks.
+            if (onToggleOptionId) {
+              return (
+                <label
+                  key={opt.id}
+                  className="filter-bar__option"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    minHeight: 44,
+                    padding: '0 10px',
+                    borderRadius: 'var(--r-btn, 8px)',
+                    border: `1.5px solid ${isMultiSelected ? 'var(--nav-active-accent)' : 'var(--border)'}`,
+                    background: isMultiSelected ? 'var(--nav-active-bg)' : 'var(--card)',
+                    color: 'var(--text)',
+                    fontSize: 'var(--t-meta, 12px)',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    aria-label={opt.label}
+                    checked={isMultiSelected}
+                    onChange={() => onToggleOptionId(opt.id)}
+                    style={{ width: 16, height: 16, flexShrink: 0, accentColor: 'var(--primary)' }}
+                  />
+                  {opt.icon && <Icon name={opt.icon} size={13} />}
+                  <span>{opt.label}</span>
+                  {opt.count !== undefined && opt.count !== null && Number.isFinite(opt.count) && opt.count >= 0 && (
+                    <span style={{ fontSize: '11px', opacity: 0.75 }}>({opt.count})</span>
+                  )}
+                </label>
+              )
+            }
+
             return (
               <button
                 key={opt.id}
@@ -208,10 +246,7 @@ export function FilterBar({
                 className="filter-bar__option"
                 aria-pressed={canSelect ? isSelected : undefined}
                 disabled={!canSelect}
-                onClick={() => {
-                  if (onToggleOptionId) onToggleOptionId(opt.id)
-                  else if (onSelectOption) onSelectOption(opt.id)
-                }}
+                onClick={() => onSelectOption?.(opt.id)}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',

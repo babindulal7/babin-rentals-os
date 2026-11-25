@@ -507,11 +507,13 @@ function RowOperations({
   onCancel,
   onInspect,
   compact = false,
+  showDraftAction = true,
 }: {
   row: RentalListRow
   onCancel?: ((row: RentalListRow) => void) | undefined
   onInspect?: ((row: RentalListRow) => void) | undefined
   compact?: boolean
+  showDraftAction?: boolean
 }) {
   const { openOperations } = useOperationsWorkspace()
   const navigate = useNavigate()
@@ -558,7 +560,7 @@ function RowOperations({
 
   return (
     <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
-      {primaryOp && (
+      {primaryOp && (showDraftAction || !primaryOp.isDraft) && (
         <button
           type="button"
           className="module-table__row-cta tap"
@@ -2374,7 +2376,7 @@ export default function RentalsList() {
                     view === 'Cards' && tabular
                       ? {
                           display: 'grid',
-                          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                          gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))',
                           gap: 'var(--sp-md)',
                           padding: 'var(--sp-md)',
                         }
@@ -2416,36 +2418,7 @@ export default function RentalsList() {
                             }
                       }
                     >
-                      <span style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                        <Avatar row={r} />
-                        <span style={{ minWidth: 0, flex: 1 }}>
-                          <ClientIntelFromId clientId={r.clientId} name={r.client} context="rental-list" gateContext={gctx} actionContext={user ? { userId: user.id, role: user.role } : null}>
-                            <span style={{ display: 'block', fontSize: 'var(--t-ui)', fontWeight: 700, color: 'var(--text)' }}>{r.client}</span>
-                          </ClientIntelFromId>
-                          <span style={{ display: 'block', fontSize: 'var(--t-meta)', color: 'var(--text2)', marginTop: 1 }}>
-                            {r.project ?? '—'}
-                          </span>
-                          {/* Spec §15 — type directly under client/project name. */}
-                          <span style={{ display: 'block', fontSize: 'var(--t-meta)', color: 'var(--muted)', marginTop: 1 }}>
-                            {r.projectTypeDisplay}
-                          </span>
-                        </span>
-                        {/* §8.3 — omitted, never shown blank. `totalAmount` is
-                            null when the query did not ask, which is the
-                            money-blind case. */}
-                        {show('Total Amount') && (
-                          <span style={{ textAlign: 'right', flexShrink: 0 }}>
-                            <span className="figure" style={{ display: 'block', fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--text)' }}>
-                              {typeof r.totalAmount === 'number' ? formatMoney(r.totalAmount) : '—'}
-                            </span>
-                            <span style={{ display: 'block', fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
-                              Total Amount
-                            </span>
-                          </span>
-                        )}
-                      </span>
-
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', flexWrap: 'wrap' }}>
+                      <span className="rental-card-status">
                         <IntelCard
                           glance={glance}
                           detail={detail}
@@ -2481,30 +2454,54 @@ export default function RentalsList() {
                         {r.isExternal === true && <ExternalGearMark />}
                       </span>
 
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
-                        <Icon name="file" size={12} style={{ color: 'var(--muted)' }} />
-                        Created <span className="figure">{formatCreatedDate(r.createdOn)}</span>
-                      </span>
-
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
-                        <Icon name="box" size={12} style={{ color: 'var(--muted)' }} />
-                        <span className="figure">{r.itemCount}</span> item{r.itemCount === 1 ? '' : 's'}
-                      </span>
-
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
-                        <Icon name="calendar" size={12} style={{ color: 'var(--muted)' }} />
-                        Pickup <span className="figure" style={{ color: 'var(--booking-date-text)' }}>{r.pickup.date} {r.pickup.time}</span>
-                      </span>
-
-                      {r.ret.date && (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
-                          <Icon name="return_arrow" size={12} style={{ color: 'var(--muted)' }} />
-                          Return <span className="figure" style={{ color: 'var(--booking-date-text)' }}>{r.ret.date} {r.ret.time}</span>
+                      <span className="rental-card-client">
+                        <Avatar row={r} />
+                        <span className="rental-card-client-name">
+                          <ClientIntelFromId clientId={r.clientId} name={r.client} context="rental-list" gateContext={gctx} actionContext={user ? { userId: user.id, role: user.role } : null}>
+                            <span style={{ display: 'block', fontSize: 'var(--t-ui)', fontWeight: 700, color: 'var(--text)' }}>{r.client}</span>
+                          </ClientIntelFromId>
+                          <span style={{ display: 'block', fontSize: 'var(--t-meta)', color: 'var(--text2)', marginTop: 1 }}>
+                            {r.project ?? '—'}
+                          </span>
+                          {/* Spec §15 — type directly under client/project name. */}
+                          <span style={{ display: 'block', fontSize: 'var(--t-meta)', color: 'var(--muted)', marginTop: 1 }}>
+                            {r.projectTypeDisplay}
+                          </span>
                         </span>
-                      )}
+                        {/* §8.3 — omitted, never shown blank. `totalAmount` is
+                            null when the query did not ask, which is the
+                            money-blind case. */}
+                        {show('Total Amount') && (
+                          <span className="rental-card-amount">
+                            <span className="figure" style={{ display: 'block', fontSize: 'var(--t-meta)', fontWeight: 700, color: 'var(--text)' }}>
+                              {typeof r.totalAmount === 'number' ? formatMoney(r.totalAmount) : '—'}
+                            </span>
+                            <span style={{ display: 'block', fontSize: 'var(--t-meta)', color: 'var(--muted)' }}>
+                              Total Amount
+                            </span>
+                          </span>
+                        )}
+                      </span>
+
+                      <div className="rental-card-dates" role="group" aria-label="Rental schedule">
+                        <div className="rental-card-date">
+                          <span><Icon name="calendar" size={12} /> Pickup</span>
+                          <strong className="figure">{r.pickup.date} {r.pickup.time}</strong>
+                        </div>
+                        {r.ret.date && (
+                          <div className="rental-card-date">
+                            <span><Icon name="return_arrow" size={12} /> Return</span>
+                            <strong className="figure">{r.ret.date} {r.ret.time}</strong>
+                          </div>
+                        )}
+                      </div>
+                      <div className="rental-card-meta">
+                        <span><Icon name="box" size={12} /> <span className="figure">{r.itemCount}</span> item{r.itemCount === 1 ? '' : 's'}</span>
+                        <span>Created <span className="figure">{formatCreatedDate(r.createdOn)}</span></span>
+                      </div>
 
                       {/* §7: "one primary button each" on a phone card row. */}
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', marginTop: 2 }}>
+                      <span className="rental-card-actions">
                         <Link
                           to={(r.status as string) === 'Draft' ? `/rentals?action=new&draft=${r.id}` : `/rentals/${r.bookingNo}`}
                           style={{
@@ -2529,7 +2526,7 @@ export default function RentalsList() {
                           {(r.status as string) === 'Draft' ? 'Edit Draft' : 'Open Booking'}
                         </Link>
                         <span style={{ flexShrink: 0 }}>
-                          <RowOperations row={r} onCancel={canWriteDesk ? setCancellingRental : undefined} onInspect={setInspectingRental} />
+                          <RowOperations row={r} onCancel={canWriteDesk ? setCancellingRental : undefined} onInspect={setInspectingRental} showDraftAction={false} />
                         </span>
                       </span>
                     </div>

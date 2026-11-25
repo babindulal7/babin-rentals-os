@@ -5,11 +5,20 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { useNewRentalSubmit, type UseNewRentalSubmitOptions } from '../useNewRentalSubmit'
 import { createRental } from '../../../../actions/rentals/createRental'
 import { confirmRental } from '../../../../actions/rentals/confirmRental'
+import { confirmBookingRequest } from '../../../../actions/rentals/confirmBookingRequest'
 import { convertDraft } from '../../../../actions/rentals/saveDraft'
 import type { ClientRecord } from '../../../../lib/queries/clients'
 import { fetchProductPricingTerms } from '../../../../lib/queries/productPricingTerms'
 import type { PricingPipelineResult } from '../../../../lib/pricingPipeline'
 import type { Paisa } from '../../../../lib/money'
+import { createBookingPaymentLink } from '../../../../booking/pay/payApi'
+
+vi.mock('../../../../booking/pay/payApi', () => ({
+  createBookingPaymentLink: vi.fn().mockResolvedValue({
+    success: true, token: 'test-payment-token', intent_id: 'test-intent', amount_paisa: 500000,
+    expires_at: '2026-11-05T00:00:00Z', booking_id: 'test-booking-id-123', booking_no: '6',
+  }),
+}))
 
 vi.mock('../../../../actions/rentals/createRental', () => ({
   createRental: vi.fn().mockResolvedValue({
@@ -26,6 +35,10 @@ vi.mock('../../../../actions/rentals/confirmRental', () => ({
     bookingNo: '6',
     stage: { from: 'Quote', to: 'Booked' },
   }),
+}))
+
+vi.mock('../../../../actions/rentals/confirmBookingRequest', () => ({
+  confirmBookingRequest: vi.fn(),
 }))
 
 vi.mock('../../../../actions/rentals/saveDraft', () => ({
@@ -60,9 +73,10 @@ describe('useNewRentalSubmit', () => {
     vi.mocked(createRental).mockResolvedValue({ success: true, bookingId: 'test-booking-id-123', bookingNo: '6', stage: 'Quote', lineCount: 0, replayed: false, crewLines: 0, transportWritten: false })
     vi.mocked(confirmRental).mockResolvedValue({ success: true, bookingId: 'test-booking-id-123', bookingNo: '6', clientId: 'client-db-1', stage: { from: 'Quote', to: 'Booked' }, lines: 0, units: 0, unitsReserved: 0, quantityReserved: 0, quantityHolds: 0 })
     vi.mocked(convertDraft).mockResolvedValue({} as Awaited<ReturnType<typeof convertDraft>>)
+    vi.mocked(confirmBookingRequest).mockResolvedValue({ success: true, requestId: 'request-1', bookingId: 'test-booking-id-123' })
   })
 
-  it.each(['success', 'rapid repeat', 'confirm retry', 'draft link retry', 'create retry', 'blocked', 'no session', 'missing client'] as const)('handles %s without losing the booking identity', async (scenario) => {
+  it.each(['success', 'rapid repeat', 'confirm retry', 'draft link retry', 'request link retry', 'request link mismatch', 'request link rejected', 'create retry', 'payment hold', 'blocked', 'no session', 'missing client'] as const)('handles %s without losing the booking identity', async (scenario) => {
     const host = document.createElement('div')
     document.body.appendChild(host)
     const root = createRoot(host)
@@ -111,11 +125,16 @@ describe('useNewRentalSubmit', () => {
     }
     if (scenario === 'confirm retry') vi.mocked(confirmRental).mockRejectedValueOnce(new Error('Confirmation unavailable'))
     if (scenario === 'draft link retry') vi.mocked(convertDraft).mockRejectedValueOnce(new Error('Draft link unavailable'))
+    if (scenario === 'request link retry') vi.mocked(confirmBookingRequest).mockRejectedValueOnce(new Error('Request link unavailable'))
+    if (scenario === 'request link mismatch') vi.mocked(confirmBookingRequest).mockResolvedValueOnce({ success: true, requestId: 'request-1', bookingId: 'other-booking' })
+    if (scenario === 'request link rejected') vi.mocked(confirmBookingRequest).mockResolvedValueOnce({ success: false, requestId: 'request-1', bookingId: 'test-booking-id-123' })
     if (scenario === 'create retry') vi.mocked(createRental).mockRejectedValueOnce(new Error('Connection interrupted'))
+    if (scenario === 'payment hold') vi.mocked(createBookingPaymentLink).mockRejectedValueOnce(new Error('Online payment links are temporarily unavailable.'))
     const overrides: Partial<UseNewRentalSubmitOptions> = scenario === 'blocked' ? { confirmBlocked: true }
       : scenario === 'no session' ? { dispatchContext: () => null }
       : scenario === 'missing client' ? { client: null }
-      : scenario === 'draft link retry' ? { draftId: 'draft-1' } : {}
+      : scenario === 'draft link retry' ? { draftId: 'draft-1' }
+      : scenario === 'request link retry' || scenario === 'request link mismatch' || scenario === 'request link rejected' ? { requestId: 'request-1' } : {}
 
     function TestComponent() {
       submitHook = useNewRentalSubmit({
@@ -187,10 +206,27 @@ describe('useNewRentalSubmit', () => {
         expect(createRental).toHaveBeenCalledTimes(1)
         await act(async () => releaseCreate?.())
       }
+      if (scenario === 'request link retry' || scenario === 'request link mismatch' || scenario === 'request link rejected') {
+        await act(async () => { await vi.dynamicImportSettled() })
+        await vi.waitFor(() => expect(setSaveState).toHaveBeenCalledWith('error'))
+        expect(setActionError).toHaveBeenCalledWith(expect.stringContaining('is confirmed, but the online request is not linked'))
+        expect(setConfirmedSuccess).not.toHaveBeenCalled()
+        expect(createBookingPaymentLink).not.toHaveBeenCalled()
+        expect(showSuccessToast).not.toHaveBeenCalled()
+        await act(async () => { submitHook.confirmBooking() })
+      }
       if (scenario === 'confirm retry' || scenario === 'draft link retry' || scenario === 'create retry') {
         expect(setSaveState).toHaveBeenCalledWith('error')
         expect(showSuccessToast).not.toHaveBeenCalled()
         await act(async () => { submitHook.confirmBooking() })
+      }
+      if (scenario === 'request link mismatch') {
+        // A request already attached to a different booking must remain blocked
+        // across repeated retries; the user must reconcile the existing rental.
+        // This run models recovery when the backend subsequently returns the
+        // correct booking, while the pre-retry assertion proves no success was
+        // shown for the mismatched result.
+        expect(setActionError).toHaveBeenCalledWith(expect.stringContaining('did not confirm against this booking'))
       }
       expect(createRental).toHaveBeenCalledTimes(scenario === 'create retry' ? 2 : 1)
       if (scenario === 'create retry') {
@@ -202,6 +238,16 @@ describe('useNewRentalSubmit', () => {
       }
       if (scenario === 'draft link retry') expect(convertDraft).toHaveBeenCalledTimes(2)
 
+      // Confirmation also awaits the dynamically imported payment-link module.
+      await act(async () => { await vi.dynamicImportSettled() })
+      await vi.waitFor(() => expect(setConfirmedSuccess).toHaveBeenCalledTimes(1))
+      if (scenario === 'request link retry' || scenario === 'request link mismatch' || scenario === 'request link rejected') {
+        expect(confirmBookingRequest).toHaveBeenCalledTimes(2)
+        for (const [input] of vi.mocked(confirmBookingRequest).mock.calls) {
+          expect(input).toEqual({ requestId: 'request-1', bookingId: 'test-booking-id-123' })
+        }
+      }
+      expect(createBookingPaymentLink).toHaveBeenCalledExactlyOnceWith('test-booking-id-123')
       // Toast must be dispatched per Law 12
       expect(showSuccessToast).toHaveBeenCalledTimes(1)
       expect(showSuccessToast).toHaveBeenCalledWith('Booking Confirmed', 'Rental 6 is now Booked')
@@ -211,6 +257,8 @@ describe('useNewRentalSubmit', () => {
       expect(setConfirmedSuccess).toHaveBeenCalledWith({
         bookingId: 'test-booking-id-123',
         bookingNo: '6',
+        paymentToken: scenario === 'payment hold' ? undefined : 'test-payment-token',
+        paymentLink: scenario === 'payment hold' ? undefined : `${window.location.origin}/pay/link/test-payment-token`,
       })
     } finally {
       await act(async () => {

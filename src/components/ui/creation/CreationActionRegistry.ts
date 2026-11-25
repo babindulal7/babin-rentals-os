@@ -401,7 +401,8 @@ export const CREATION_ACTIONS: CreationActionDefinition[] = [
     group: 'admin',
     displayPriority: 1,
     isMoneyAction: true,
-    openingMode: 'drawer',
+    openingMode: 'route',
+    route: '/finance?tab=expenses&create=expense',
     isPermitted: (role) => isStaff(role) && canViewMoney(role),
   },
   {
@@ -624,6 +625,7 @@ export const READY_CREATION_ACTION_IDS: ReadonlySet<string> = new Set([
   'client.new',
   'equipment.new',
   'bundle.new',
+  'expense.new',
 ])
 
 export function isCreationActionReady(action: CreationActionDefinition): boolean {

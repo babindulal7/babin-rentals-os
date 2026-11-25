@@ -74,7 +74,8 @@
     "test:db-plan-safety": "node --test scripts/plan-migrations-safety.test.mjs",
     "build:staff": "node scripts/check-site-env.mjs staff && tsc --noEmit && vite build --mode staff && node scripts/finalize-site-build.mjs staff && node scripts/verify-site-builds.mjs staff",
     "build:client": "node scripts/check-site-env.mjs client && tsc --noEmit && vite build --mode client && node scripts/finalize-site-build.mjs client && node scripts/verify-site-builds.mjs client",
-    "verify:sites": "node scripts/verify-site-builds.mjs"
+    "verify:sites": "node scripts/verify-site-builds.mjs",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
@@ -101,6 +102,7 @@
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
     "@eslint/js": "^9.39.5",
+    "@playwright/test": "^1.65.1",
     "@tailwindcss/vite": "^4.1.11",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",

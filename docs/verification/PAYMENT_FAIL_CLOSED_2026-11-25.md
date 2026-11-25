@@ -1,0 +1,7 @@
+# Online payment launch safety repair (25 Nov 2026)
+Status: **IMPLEMENTED ON REPAIR BRANCH; TESTS AND HOSTED ACCEPTANCE PENDING.**
+- Browser checkout, gateway initiation and settlement are held outside explicit mock mode. Staff link creation remains available as a non-settlement operation; do not distribute checkout links until gateway acceptance.
+- Migration 0271 makes allocation service-role-only. PR #409 reserves 0270: coordinate merge/order and reconcile the hosted migration ledger before applying. No hosted migration or deployment is authorized by this PR.
+- Prior provider adapters were removed from the hosted Edge handlers; their code remains in git history. This is safety containment, not a completed Fonepay integration.
+- Required before enabling: merchant credentials and official contract; verified transaction reference, merchant, exact amount/currency and intent binding; replay and cross-account tests; fail closed on timeout/missing/ambiguous response; authenticated staging E2E; signed provider callback/verification as required by merchant; independent review and explicit Owner approval.
+- Local checks: hostedPaymentHold.test.ts, existing mock checkout tests, lifecycle payment-link assertions (trusted service allocation, anonymous/authenticated privilege refusal, replay). Check Edge TypeScript separately with Deno; full CI on exact PR head. No claim of execution from this connector.

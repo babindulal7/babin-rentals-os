@@ -500,6 +500,7 @@ export function canApproveDiscount(_role: SystemRole, percent: number, _isOnline
      survives (absent-not-disabled applies to UI, not to engine exports with
      six call sites) and now answers the only questions left — arithmetic
      validity, keeping the R3-1 hole closed: */
+  if (!Number.isFinite(percent)) return false
   if (percent < 0) return false // a negative discount is a price rise, not approvable-because-not-a-discount
   if (percent > 100) return false // a >100% discount is a negative price
   return true

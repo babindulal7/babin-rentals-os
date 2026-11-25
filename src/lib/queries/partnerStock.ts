@@ -65,7 +65,7 @@ interface PartnerStockDbRow {
 export async function listPartnerStock(): Promise<{ rows: PartnerStockRecord[]; error: string | null }> {
   try {
     const { data, error } = await supabase
-      .from('temporary_stock_v')
+      .from('partner_stock_read_v')
       .select(`
         id,
         partner_name,
@@ -79,17 +79,8 @@ export async function listPartnerStock(): Promise<{ rows: PartnerStockRecord[]; 
         status,
         notes,
         returned_at,
-        products (
-          name,
-          brand,
-          model
-        ),
-        product_units (
-          id,
-          asset_code,
-          serial_number,
-          status
-        )
+        products,
+        product_units
       `)
       .order('created_at', { ascending: false })
 

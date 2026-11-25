@@ -63,6 +63,26 @@ describe('CANCEL_RENTAL action', () => {
     ).toThrow(/Cancellation reason of at least ten characters is required/)
   })
 
+  it('rejects invalid cancellation fee amounts before any RPC write', () => {
+    for (const amount of [-1, NaN, Infinity, -Infinity, 0.5, Number.MAX_SAFE_INTEGER + 1]) {
+      expect(() => cancelRentalConfig.validate({
+        id: '11111111-1111-4111-8111-111111111111',
+        reason: 'Customer requested cancellation',
+        cancellationFeePaisa: amount as NonNullable<CancelRentalInput['cancellationFeePaisa']>,
+      })).toThrow(/non-negative safe integer/)
+    }
+  })
+
+  it('preserves valid fee amounts and no-fee cancellation', () => {
+    for (const amount of [0, 125000, null]) {
+      expect(() => cancelRentalConfig.validate({
+        id: '11111111-1111-4111-8111-111111111111',
+        reason: 'Customer requested cancellation',
+        cancellationFeePaisa: amount as CancelRentalInput['cancellationFeePaisa'],
+      })).not.toThrow()
+    }
+  })
+
   it('allows draft-new without 10-char reason constraint', () => {
     expect(() =>
       cancelRentalConfig.validate({ id: 'draft-new', reason: null })

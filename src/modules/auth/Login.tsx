@@ -26,7 +26,8 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null)
   const [lockoutSeconds, setLockoutSeconds] = useState(0)
   const [busy, setBusy] = useState(false)
-  const { signIn } = useAuth()
+  const [awaitingProfile, setAwaitingProfile] = useState(false)
+  const { signIn, user } = useAuth()
   const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
@@ -44,6 +45,15 @@ export default function Login() {
       /* ignore storage access error */
     }
   }, [])
+
+  // Leave /login only once the staff profile has loaded. Navigating straight
+  // after signIn races the route guard, which sees user === null and sends the
+  // visitor straight back here.
+  useEffect(() => {
+    if (!awaitingProfile || !user) return
+    const from = (location.state as { from?: string } | null)?.from
+    navigate(from && from !== '/login' ? from : '/dashboard', { replace: true })
+  }, [awaitingProfile, user, location.state, navigate])
 
   // Lockout countdown timer ticker
   useEffect(() => {
@@ -104,8 +114,7 @@ export default function Login() {
     }
 
     // Return the user to wherever the guard intercepted them, not always /dashboard.
-    const from = (location.state as { from?: string } | null)?.from
-    navigate(from && from !== '/login' ? from : '/dashboard', { replace: true })
+    setAwaitingProfile(true)
   }
 
   return (
