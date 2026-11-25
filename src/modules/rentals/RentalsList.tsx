@@ -2417,7 +2417,16 @@ export default function RentalsList() {
                             }
                       }
                     >
-                      <span style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                      <span style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                        <label style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 44, minHeight: 44, flexShrink: 0, cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(r.id)}
+                            onChange={() => toggleSelectRow(r.id)}
+                            aria-label={`Select booking ${r.bookingNo}`}
+                            style={{ width: 16, height: 16, accentColor: 'var(--primary)' }}
+                          />
+                        </label>
                         <Avatar row={r} />
                         <span style={{ minWidth: 0, flex: 1 }}>
                           <ClientIntelFromId clientId={r.clientId} name={r.client} context="rental-list" gateContext={gctx} actionContext={user ? { userId: user.id, role: user.role } : null}>
