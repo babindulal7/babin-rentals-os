@@ -10,3 +10,7 @@ Draft integration only; no hosted migration, deployment, or merge authorized.
 - #413, #414, #415 and #416 remain independent until exact-head verification; #415 uses duplicate migration prefix 0271 and must be reconciled before integration (candidate 0272 for its unapplied partner-stock migration; verify ledger first). Avoid conflicting concurrent edits.
 - Payment checkout remains deliberately disabled in hosted mode; actual verified gateway integration is separate. Do not distribute payment links while on hold. Do not merge until hosted migration ledger and production-safe release decision have been independently reviewed.
 - All physical device and real business workflow/persistence acceptance remain required.
+
+## Integration update
+
+- Booking recovery #413 (`32f7b35c53f9efe7d7174925a949e3cd4483a214`) passed full Mac CI run 45528432901. Integrated its two non-overlapping hook/test changes. Combined exact-head verification is required again; prior integration receipts do not certify this revision.
