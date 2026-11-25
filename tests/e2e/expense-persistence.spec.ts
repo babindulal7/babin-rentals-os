@@ -94,7 +94,7 @@ test.describe('Disposable expense persistence and access control', () => {
 
     await page.reload()
     await expect(page.getByRole('button', { name: 'Add Expense', exact: true }).first()).toBeVisible()
-    const search = page.getByRole('textbox', { name: 'Search expenses by expense number, vendor, or description', exact: true }).first()
+    const search = page.getByRole('group', { name: 'Filter by status', exact: true }).getByRole('searchbox', { name: 'Search expenses', exact: true })
     await expect(search).toBeVisible()
     await search.fill(marker)
     // Compact cards append the category to the vendor label.
