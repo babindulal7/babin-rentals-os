@@ -3,7 +3,7 @@ import { Modal } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Button'
 import { useAuth } from '../../../lib/auth'
 import { useToast } from '../../../components/ui/Toast'
-import { newClientUuid, supabase } from '../../../lib/supabase'
+import { newClientUuid } from '../../../lib/supabase'
 import { cancelRental } from '../../../actions/rentals/cancelRental'
 import { formatGateError } from '../../../lib/gates'
 import type { BookingStatus } from '../../../lib/workflow'
@@ -49,14 +49,6 @@ export function CancelRentalModal({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [fetchedBooking, setFetchedBooking] = useState<{
-    startsAt: string | null
-    endsAt: string | null
-    rentalDays: number
-    rentalSubtotalPaisa: Paisa
-    paidAdvancePaisa: Paisa
-  } | null>(null)
-
   const [overrideFee, setOverrideFee] = useState(false)
   const [customFeeRupees, setCustomFeeRupees] = useState<number>(0)
   const [feeOverrideReason, setFeeOverrideReason] = useState('')
@@ -65,65 +57,23 @@ export function CancelRentalModal({
   const isReasonValid = trimmedReason.length >= 10
   const isPacked = stage === 'Packed'
 
-  // Fetch booking details if not provided via props
-  useEffect(() => {
-    if (!isOpen || startsAt !== undefined || bookingId === 'draft-new') return
-
-    let cancelled = false
-    void (async () => {
-      try {
-        const [bookingRes, invoiceRes] = await Promise.all([
-          supabase
-            .from('bookings')
-            .select('pickup_datetime, return_datetime, days')
-            .eq('id', bookingId)
-            .maybeSingle(),
-          supabase
-            .from('invoices')
-            .select('subtotal, total_amount, paid_amount, status, voided_at')
-            .eq('booking_id', bookingId),
-        ])
-
-        if (cancelled) return
-
-        let subtotalRupees = 0
-        let paidRupees = 0
-
-        if (invoiceRes.data) {
-          for (const inv of invoiceRes.data) {
-            if (inv.voided_at !== null || inv.status === 'Void') continue
-            subtotalRupees += inv.subtotal || inv.total_amount || 0
-            paidRupees += inv.paid_amount || 0
-          }
-        }
-
-        if (bookingRes.data) {
-          const row = bookingRes.data
-          setFetchedBooking({
-            startsAt: row.pickup_datetime,
-            endsAt: row.return_datetime,
-            rentalDays: row.days ?? 1,
-            rentalSubtotalPaisa: rupees(subtotalRupees),
-            paidAdvancePaisa: rupees(paidRupees),
-          })
-        }
-      } catch {
-        // Fallback to defaults
-      }
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [isOpen, startsAt, bookingId])
-
-  const resolvedStartsAt = startsAt ?? fetchedBooking?.startsAt ?? null
-  const resolvedRentalDays = rentalDays ?? fetchedBooking?.rentalDays ?? 1
-  const resolvedSubtotal: Paisa = (rentalSubtotalPaisa ?? fetchedBooking?.rentalSubtotalPaisa ?? (0 as Paisa)) as Paisa
-  const resolvedAdvance: Paisa = (paidAdvancePaisa ?? fetchedBooking?.paidAdvancePaisa ?? (0 as Paisa)) as Paisa
-  const resolvedOneDay: Paisa =
-    (oneDayChargePaisa ??
-      (resolvedRentalDays > 0 ? Math.round(resolvedSubtotal / resolvedRentalDays) : resolvedSubtotal)) as Paisa
+  // Invoice totals and paid amounts are not a verified equipment-only fee base
+  // or advance ledger. Do not turn missing data into a free cancellation.
+  // The desk list currently supplies no such financial snapshot; Finance must
+  // reconcile separately until the server-owned settlement contract exists.
+  const validPaisa = (value: Paisa | null | undefined): value is Paisa =>
+    value != null && Number.isSafeInteger(value) && value >= 0
+  const estimateAvailable = Boolean(
+    startsAt && Number.isFinite(Date.parse(startsAt)) &&
+    rentalDays != null && Number.isSafeInteger(rentalDays) && rentalDays > 0 &&
+    validPaisa(rentalSubtotalPaisa) && validPaisa(oneDayChargePaisa) &&
+    validPaisa(paidAdvancePaisa)
+  )
+  const resolvedStartsAt = startsAt ?? null
+  const resolvedRentalDays = rentalDays ?? 0
+  const resolvedSubtotal = rentalSubtotalPaisa ?? (0 as Paisa)
+  const resolvedAdvance = paidAdvancePaisa ?? (0 as Paisa)
+  const resolvedOneDay = oneDayChargePaisa ?? (0 as Paisa)
 
   const hoursUntilStart = useMemo(() => {
     if (!resolvedStartsAt) return 0
@@ -132,7 +82,7 @@ export function CancelRentalModal({
   }, [resolvedStartsAt])
 
   const feeCalc: CancellationFeeCalculationResult | null = useMemo(() => {
-    if (!resolvedStartsAt || stage === 'Closed' || stage === 'Cancelled') return null
+    if (!estimateAvailable || !resolvedStartsAt || stage === 'Closed' || stage === 'Cancelled') return null
     return calculateOptionACancellationFee({
       hoursUntilStart,
       rentalDays: resolvedRentalDays,
@@ -140,7 +90,7 @@ export function CancelRentalModal({
       oneDayChargePaisa: resolvedOneDay,
       paidAdvancePaisa: resolvedAdvance,
     })
-  }, [resolvedStartsAt, stage, hoursUntilStart, resolvedRentalDays, resolvedSubtotal, resolvedOneDay, resolvedAdvance])
+  }, [estimateAvailable, resolvedStartsAt, stage, hoursUntilStart, resolvedRentalDays, resolvedSubtotal, resolvedOneDay, resolvedAdvance])
 
   useEffect(() => {
     if (feeCalc) {
@@ -187,7 +137,7 @@ export function CancelRentalModal({
           id: bookingId,
           reason: trimmedReason,
           clientUuid,
-          cancellationFeePaisa: effectiveFeePaisa,
+          cancellationFeePaisa: feeCalc ? effectiveFeePaisa : null,
           feeOverrideReason: isOverridden ? feeOverrideReason.trim() : null,
         },
         { userId: user.id, role: user.role },
@@ -195,7 +145,7 @@ export function CancelRentalModal({
 
       showSuccessToast(
         'Booking Cancelled',
-        `${bookingNo} has been cancelled and its inventory reservations have been released.`,
+        `${bookingNo} has been cancelled and its inventory reservations have been released. Financial settlement must be reviewed separately.`,
       )
       onSuccess(bookingId)
       onClose()
@@ -266,6 +216,12 @@ export function CancelRentalModal({
           Cancelling will immediately release all reserved equipment and inventory allocations for{' '}
           <span style={{ color: 'var(--text)', fontWeight: 600 }}>{bookingNo}</span>. This action is irreversible.
         </div>
+
+        {!feeCalc && bookingId !== 'draft-new' && (
+          <p role="note" style={{ margin: 0, color: 'var(--muted)', fontSize: 'var(--t-meta)' }}>
+            Cancellation fee estimate unavailable. Finance must verify the rental subtotal, advance and any refund separately. Cancelling does not post a fee or issue a refund.
+          </p>
+        )}
 
         {/* Cancellation Fee Policy (Option A — Ruling 2 Nov 2026) */}
         {feeCalc && (
