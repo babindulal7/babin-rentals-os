@@ -1,0 +1,30 @@
+name: Serial unit custody repair
+on:
+  pull_request:
+    branches: [integration/combined-launch-candidate-20261125]
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+jobs:
+  session-boundary:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'fix/custody-reconciled-440-20261125'
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 15
+    env:
+      SUPABASE_ACCESS_TOKEN: ''
+      SUPABASE_DB_PASSWORD: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - name: Parse real transaction regression
+        run: node --check scripts/test-cancellation-two-session.mjs
+      - name: Verify cancellation and custody boundary
+        run: node scripts/test-cancellation-branch-boundary.mjs
+      - name: Verify return and inventory reservation compatibility
+        run: node scripts/test-partial-return-reservation-release.mjs
