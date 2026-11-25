@@ -154,6 +154,20 @@ async function run() {
       env['E2E_OPS_' + prefix + '_ID'] = bookingId
       env['E2E_OPS_' + prefix + '_NO'] = row.booking_no
     }
+    // Separate mutating fixtures per device. Use the actual Quote -> Booked
+    // transition to acquire the normal inventory reservation, not a fake pack.
+    for (const [device, offset] of [['desktop', 16], ['ipad', 20], ['mobile', 24]]) {
+      const bookingId = randomUUID()
+      const pickup = new Date(Date.now() + offset * 86400000)
+      const end = new Date(pickup.getTime() + 2 * 86400000)
+      const row = (await conn.query("insert into public.bookings (id,client_uuid,booking_no,client_id,branch_id,pickup_at,return_at,delivery_type,stage,created_by,updated_by) values ($1,$2,public.next_document_number('booking'),$3,$4,$5,$6,'Client Pickup','Quote',$7,$7) returning booking_no", [bookingId, randomUUID(), targets[0].clientId, branch, pickup, end, fixtureOwner])).rows[0]
+      await conn.query("insert into public.booking_lines (client_uuid,booking_id,line_type,product_id,description,qty,days,rate,created_by) values ($1,$2,'Equipment',$3,'Disposable Operations Cable',2,2,250,$4)", [randomUUID(), bookingId, productId, fixtureOwner])
+      await conn.query("insert into public.booking_stage_transitions (client_uuid,booking_id,branch_id,from_stage,to_stage,actor_id,actor_role,occurred_at) values ($1,$2,$3,'Quote','Booked',$4,'Owner',now())", [randomUUID(), bookingId, branch, fixtureOwner])
+      const stage = (await conn.query("select stage from public.bookings where id=$1", [bookingId])).rows[0]?.stage
+      if (stage !== 'Booked') throw new Error('Operations confirmation fixture did not reach Booked')
+      env['E2E_OPS_CONFIRM_' + device.toUpperCase() + '_ID'] = bookingId
+      env['E2E_OPS_CONFIRM_' + device.toUpperCase() + '_NO'] = row.booking_no
+    }
   } finally {
     await conn.end()
   }
