@@ -205,6 +205,39 @@ try {
       })
     }
   }
+  // Serial ordering is a necessary precondition for race safety; this is NOT a
+  // two-connection concurrency test. Use the same authenticated floor writer
+  // and matching positive controls to isolate cancellation as the difference.
+  const stageTransition = (id, from, to) => q(
+    `insert into public.booking_stage_transitions
+       (client_uuid, booking_id, branch_id, from_stage, to_stage, actor_id, actor_role, occurred_at, reason)
+     values (gen_random_uuid(), $1, $2, $3, $4, $5, 'Warehouse', now(), $6)`,
+    [id, branchB, from, to, ids.WarehouseB, 'Synthetic stage boundary control'],
+  )
+  const stageSnapshot = async id => ({
+    ...(await snapshot(id)),
+    transitions: (await q('select * from public.booking_stage_transitions where booking_id=$1 order by id', [id])).rows,
+    sessions: (await q('select * from public.operation_sessions where booking_id=$1 order by id', [id])).rows,
+  })
+  for (const [from, to] of [['Booked', 'Packed'], ['Packed', 'On Rent']]) {
+    await check(`uncancelled ${from} → ${to} positive control`, async () => {
+      const id = await booking(clientB, branchB, from)
+      await asActor(ids.WarehouseB, () => stageTransition(id, from, to))
+      assert.equal((await snapshot(id)).booking.stage, to)
+    })
+    await check(`cancelled ${from} → ${to} refused with no side effects`, async () => {
+      const id = await booking(clientB, branchB, from)
+      await asActor(owner, async () => assert.equal((await call(id, 'json')).rows[0].result.success, true))
+      const before = await stageSnapshot(id)
+      assert.ok(before.booking.cancelled_at)
+      let refusal
+      await asActor(ids.WarehouseB, async () => {
+        try { await stageTransition(id, from, to) } catch (error) { refusal = error }
+      })
+      assert.deepEqual(await stageSnapshot(id), before, 'Cancellation must be terminal for stage, audit, sessions and reservations')
+      assert.ok(refusal, 'Cancelled booking transition must be refused')
+    })
+  }
   console.log(`Cancellation boundary: ${passed} PASS, ${failures.length} FAIL (disposable PGlite)`)
   assert.equal(failures.length, 0, failures.join('; '))
 } finally {
