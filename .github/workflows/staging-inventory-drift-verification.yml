@@ -1,0 +1,25 @@
+name: Historical migration snapshot verification
+on:
+  pull_request:
+    branches: [integration/combined-launch-candidate-20261125]
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'fix/staging-inventory-cancellation-drift-20261125'
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - name: Verify pinned source drift remains fail-closed
+        env:
+          VITE_DATA_SOURCE: mock
+        run: npx --no-install vitest run src/lib/__tests__/stagingInventory20261121.test.ts
