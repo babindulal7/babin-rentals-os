@@ -2,14 +2,14 @@ name: Playwright disposable cloud auth
 
 on:
   push:
-    branches: [fix/playwright-staging-safety-20261125, integration/launch-repair-20261125]
+    branches: [fix/playwright-staging-safety-20261125, integration/launch-repair-20261125, test/whole-app-refinement-20261125]
     # Re-run the real disposable auth gate on application and migration changes too.
 
 permissions:
   contents: read
 
 concurrency:
-  group: playwright-disposable-cloud
+  group: ${{ github.ref_name == 'test/whole-app-refinement-20261125' && 'playwright-disposable-refinement' || 'playwright-disposable-cloud' }}
   cancel-in-progress: false
 
 jobs:
@@ -51,6 +51,8 @@ jobs:
           docker exec supabase_db_babin-rentals-os psql -v ON_ERROR_STOP=1 -U postgres -d postgres -At -c "select c.relname from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind in ('v','m') and has_table_privilege('anon', c.oid, 'SELECT') order by c.relname;" | node --input-type=module -e 'import { readFileSync } from "node:fs"; import { ALLOWED_ANON_VIEWS } from "./scripts/allowed-anon-views.mjs"; const actual = readFileSync(0, "utf8").split(/\r?\n/).filter(Boolean); const unexpected = actual.filter(v => !ALLOWED_ANON_VIEWS.has(v)); const missing = [...ALLOWED_ANON_VIEWS].filter(v => !actual.includes(v)); if (unexpected.length || missing.length) { console.error("Anonymous view ACL mismatch", { unexpected, missing }); process.exit(1) } console.log("Approved anonymous catalogue views only:", actual.join(", "))'
       - run: npx playwright install --with-deps chromium webkit
       - name: Bootstrap local roles and run Playwright
+        env:
+          E2E_TARGET_SUITE: ${{ github.ref_name == 'test/whole-app-refinement-20261125' && 'refinement' || 'all' }}
         run: node scripts/run-disposable-playwright.mjs
       - name: Stop disposable Supabase
         if: always()
