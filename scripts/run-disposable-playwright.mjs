@@ -138,6 +138,22 @@ async function run() {
     } finally {
       await owner.auth.signOut({ scope: 'local' })
     }
+
+    // Read-only navigation fixtures: explicitly seed stage snapshots, not
+    // simulated evidence of successful physical custody transitions.
+    const category = (await conn.query('select id from public.inventory_categories order by name limit 1')).rows[0]?.id
+    if (!category) throw new Error('Operations fixture category missing')
+    const productId = randomUUID()
+    await conn.query("insert into public.products (id,client_uuid,asset_code,name,category_id,brand,tracking_mode,total_quantity,daily_rate,created_by) values ($1,$2,public.next_document_number('equipment'),'Disposable Operations Cable',$3,'Disposable','Quantity',20,250,$4)", [productId, randomUUID(), category, fixtureOwner])
+    for (const [stage, prefix, offset] of [['Booked', 'BOOKED', 8], ['Packed', 'PACKED', 12]]) {
+      const bookingId = randomUUID()
+      const pickup = new Date(Date.now() + offset * 86400000)
+      const end = new Date(pickup.getTime() + 2 * 86400000)
+      const row = (await conn.query("insert into public.bookings (id,client_uuid,booking_no,client_id,branch_id,pickup_at,return_at,delivery_type,stage,created_by,updated_by) values ($1,$2,public.next_document_number('booking'),$3,$4,$5,$6,'Client Pickup',$7,$8,$8) returning booking_no", [bookingId, randomUUID(), targets[0].clientId, branch, pickup, end, stage, fixtureOwner])).rows[0]
+      await conn.query("insert into public.booking_lines (client_uuid,booking_id,line_type,product_id,description,qty,days,rate,created_by) values ($1,$2,'Equipment',$3,'Disposable Operations Cable',2,2,250,$4)", [randomUUID(), bookingId, productId, fixtureOwner])
+      env['E2E_OPS_' + prefix + '_ID'] = bookingId
+      env['E2E_OPS_' + prefix + '_NO'] = row.booking_no
+    }
   } finally {
     await conn.end()
   }
