@@ -812,6 +812,7 @@ function ParentCardView({
   actionContext,
   money,
   checked,
+  onToggle,
 }: {
   row: InventoryListRow
   glance: ReturnType<typeof inventoryGlance>
@@ -831,7 +832,10 @@ function ParentCardView({
     <div
       className={['inventory-model-card', checked ? 'is-selected' : ''].filter(Boolean).join(' ')}
     >
-      <span style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+      <span style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+        <label style={{ display: 'inline-grid', placeItems: 'center', minWidth: 44, minHeight: 44, flexShrink: 0, cursor: 'pointer' }}>
+          <input type="checkbox" checked={checked} onChange={onToggle} aria-label={`Select model ${row.name} (${row.assetCode})`} style={{ width: 16, height: 16, accentColor: 'var(--primary)' }} />
+        </label>
         <Thumb category={category} />
         <IntelCard glance={glance} detail={detail} detailTitle={row.name} detailSubtitle={category} entityType="equipment" entityId={row.id} context="inventory" gateContext={gctx} actionContext={actionContext}>
           <span style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-xs)', minWidth: 0 }}>
@@ -1129,6 +1133,7 @@ function FilterRail({
                       color: 'var(--text2)',
                       cursor: 'pointer',
                       padding: '2px 0',
+                      minHeight: 44,
                     }}
                   >
                     <input
@@ -1668,6 +1673,13 @@ export default function Inventory() {
     if (page > pageCount) setPage(pageCount)
   }, [page, pageCount])
 
+  // All existing bulk operations are current-page operations. Never retain
+  // hidden selections after changing the page, tab, filters or sort.
+  const selectionScope = JSON.stringify([params.toString(), page, rowsPerPage, sort])
+  useEffect(() => {
+    setSelected(prev => prev.size === 0 ? prev : new Set())
+  }, [selectionScope])
+
   const rowsWithIntel = useMemo(
     () =>
       list.rows.map((r) => ({
@@ -2139,6 +2151,12 @@ export default function Inventory() {
               the table keeps the width the rail was taking.
             */}
             <Card title={countedTitle} bodyStyle={{ padding: 0 }}>
+              {(!tabular || view === 'grid') && list.rows.length > 0 && (
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '0 12px', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={allOnPageSelected} onChange={toggleAllOnPage} ref={el => { if (el) el.indeterminate = !allOnPageSelected && list.rows.some(row => selected.has(row.id)) }} aria-label="Select every model on this page" style={{ width: 16, height: 16, accentColor: 'var(--primary)' }} />
+                  Select page
+                </label>
+              )}
               {selected.size > 0 && (
                 <div
                   style={{
@@ -2267,6 +2285,10 @@ export default function Inventory() {
                   <div className="inventory-desktop-grid">
                     {rowsWithIntel.map(({ row: p, glance, detail }) => (
                       <article key={p.id} className="inventory-grid-item">
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minHeight: 44, cursor: 'pointer' }}>
+                          <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleRow(p.id)} aria-label={`Select model ${p.name} (${p.assetCode})`} style={{ width: 16, height: 16, accentColor: 'var(--primary)' }} />
+                          Select
+                        </label>
                         <IntelCard glance={glance} detail={detail} detailTitle={p.name} detailSubtitle={p.category ?? '—'} entityType="equipment" entityId={p.id} context="inventory" gateContext={gctx} actionContext={user ? { userId: user.id, role: user.role } : null}>
                           <span style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                             <Thumb category={p.category ?? '—'} size={38} />
@@ -2555,6 +2577,8 @@ export default function Inventory() {
             id: 'bulk-print-tag',
             label: 'Print Thermal Tag',
             icon: 'barcode',
+            disabled: selected.size !== 1 || !list.rows.some(row => selected.has(row.id)),
+            title: 'Select exactly one model on this page to print its tag',
             onClick: () => {
               const selRow = list.rows.find((r) => selected.has(r.id))
               if (selRow) {

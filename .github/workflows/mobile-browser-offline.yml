@@ -1,7 +1,7 @@
 name: Mobile browser (offline)
 on:
   pull_request:
-    branches: [main, integration/launch-repair-20261125, fix/mobile-dispatch-preview-20261125, fix/mobile-bookings-layout-20261125]
+    branches: [main, integration/launch-repair-20261125, fix/mobile-dispatch-preview-20261125, fix/mobile-bookings-layout-20261125, fix/settings-responsive-navigation-20261126]
     paths:
       - 'src/**'
       - 'package.json'
@@ -136,6 +136,20 @@ jobs:
               await categories.last().click()
               await expect(page.locator('.app-settings-pane')).toBeVisible()
               console.log('PASS settings navigation ' + width + 'x' + height)
+              await page.goto(origin + '/inventory')
+              const inventoryFilter = page.getByRole('button', { name: /Show filters panel/ })
+              await expect(inventoryFilter).toBeVisible({ timeout: 30000 })
+              if (width < 768) {
+                const selectAll = page.getByRole('checkbox', { name: 'Select every model on this page', exact: true })
+                await expect(selectAll).toBeVisible({ timeout: 30000 })
+                const model = page.getByRole('checkbox', { name: /^Select model / }).first()
+                await expect(model).toBeVisible()
+                await model.click()
+                await expect(model).toBeChecked()
+                await model.click()
+                await expect(model).not.toBeChecked()
+              }
+              console.log('PASS inventory navigation ' + width + 'x' + height)
               console.log('PASS ' + width + 'x' + height)
             } catch (error) {
               failures.push(width + 'x' + height + ': ' + String(error))
