@@ -151,6 +151,39 @@ try {
   }
   console.log('PASS: money-blind direct booking INSERT cannot select zero VAT')
 
+  // #445: baseline evidence only; no approved fee/refund treatment is assumed.
+  const feeProbe=await booking({code:'990496',vatRate:0.13,discountRows:[]})
+  const paymentId=id()
+  const paymentNo=(await sql("select next_document_number('payment') as no")).rows[0].no
+  await sql(`insert into payments
+      (id,client_uuid,payment_no,booking_id,client_id,branch_id,amount,
+       payment_type,payment_date,status,received_by)
+      values($1,gen_random_uuid(),$2,$3,$4,$5,1000,'Advance Payment',now(),'Received',$6)`,
+      [paymentId,paymentNo,feeProbe.bookingId,client,branch,ownerId])
+  const readLedger=async () => ({
+    original:(await sql('select * from public.payments where id=$1',[paymentId])).rows[0],
+    payments:(await sql('select * from public.payments where booking_id=$1 order by id',[feeProbe.bookingId])).rows,
+    invoices:(await sql('select * from public.invoices where booking_id=$1 order by id',[feeProbe.bookingId])).rows,
+    intents:(await sql('select * from public.payment_intents where booking_id=$1 order by id',[feeProbe.bookingId])).rows,
+  })
+  const before=await readLedger()
+  requireMoney(before.original,'amount',1000)
+  await db.exec(`select set_config('app.current_user_id','${ownerId}',false),set_config('request.jwt.claim.sub','${ownerId}',false); set role authenticated;`)
+  try {
+    const cancelled=(await sql('select public.cancel_booking($1::jsonb) as result',
+      [JSON.stringify({booking_id:feeProbe.bookingId,client_uuid:id(),reason:'Synthetic cancellation ledger baseline [Fee estimate: NPR 500]'})])).rows[0].result
+    if (cancelled?.success!==true) throw new Error('Cancellation was not persisted')
+  } finally {
+    await db.exec("reset role; select set_config('request.jwt.claim.sub','',false)")
+  }
+  const after=await readLedger()
+  if (JSON.stringify(after.original)!==JSON.stringify(before.original)) throw new Error('Cancellation edited original received payment')
+  const persisted=(await sql('select cancelled_at from public.bookings where id=$1',[feeProbe.bookingId])).rows[0]
+  if (!persisted?.cancelled_at) throw new Error('Cancellation flag missing')
+  const unchanged=JSON.stringify(before)===JSON.stringify(after)
+  console.log('PASS: received payment is immutable on cancellation')
+  console.log('CANCELLATION SETTLEMENT BASELINE: ledger '+(unchanged?'unchanged (no fee/refund posted)':'changed; requires accounting review'))
+
   console.log('FINANCIAL INTEGRITY VERIFIED IN ISOLATED PGLITE')
 } finally {
   await db.close()
