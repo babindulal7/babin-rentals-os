@@ -1,0 +1,28 @@
+name: Handover navigation targeted verification
+on:
+  pull_request:
+    branches: [integration/combined-launch-candidate-20261125]
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+jobs:
+  handover:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'fix/handover-hydration-unsaved-navigation-443'
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 15
+    env:
+      VITE_DATA_SOURCE: mock
+      VITE_SUPABASE_URL: ''
+      VITE_SUPABASE_ANON_KEY: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Handover dirty state and navigation regressions
+        run: npx --no-install vitest run src/modules/rentals/__tests__/handoverCollectors.test.tsx src/modules/operations/__tests__/OperationsShell.test.tsx src/modules/operations/__tests__/OperationsWorkspaceContext.test.tsx src/modules/operations/__tests__/QuickOperationsPopUp.test.tsx

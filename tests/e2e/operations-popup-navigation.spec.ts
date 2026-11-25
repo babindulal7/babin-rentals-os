@@ -50,13 +50,29 @@ test.describe('Operations popup persisted-stage navigation', () => {
         const next = (name: string) => browse.getByRole('button', { name: 'Next stage: ' + name, exact: true })
         if (initial === 'PACKED') {
           await expect(active).toHaveAccessibleName(/^Handover ·/)
+          // Wait for the real asynchronous receiver defaults. Hydration is not
+          // an edit and must not trigger the unsaved-work dialog on Back.
+          await expect(popup.getByRole('checkbox', { name: 'Booking Authorization Verified', exact: true })).toBeChecked()
           await expect(next('Return & Inspection')).toBeDisabled()
           await browse.getByRole('button', { name: /Packing/ }).click()
           await expect(active).toHaveAccessibleName(/^Packing ·/)
           await expect(next('Handover')).toBeEnabled()
           await next('Handover').click()
           await expect(active).toHaveAccessibleName(/^Handover ·/)
+          const authorization = popup.getByRole('checkbox', { name: 'Booking Authorization Verified', exact: true })
+          await expect(authorization).toBeChecked()
+          // Explicitly changing a check (including turning it OFF) is unsaved
+          // work. The original discard protection must still operate.
+          await authorization.click()
+          await expect(authorization).not.toBeChecked()
           await browse.getByRole('button', { name: /Packing/ }).click()
+          const discard = page.getByRole('dialog', { name: 'You have unsaved changes.', exact: true }).or(page.getByRole('alertdialog')).filter({ visible: true }).last()
+          await expect(discard.getByRole('button', { name: 'Stay Here', exact: true })).toBeVisible()
+          await discard.getByRole('button', { name: 'Stay Here', exact: true }).click()
+          await expect(active).toHaveAccessibleName(/^Handover ·/)
+          await expect(authorization).not.toBeChecked()
+          await browse.getByRole('button', { name: /Packing/ }).click()
+          await discard.getByRole('button', { name: 'Discard & Go Back', exact: true }).click()
         } else {
           await expect(active).toHaveAccessibleName(/^Packing ·/)
           await expect(next('Handover')).toBeDisabled()

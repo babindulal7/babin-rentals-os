@@ -554,6 +554,11 @@ export default function HandoverWorkspace({
   /* §11.1 gate 1 — the receiver's ID and authorization, actually checked. */
   const [govIdVerified, setGovIdVerified] = useState(false)
   const [bookingAuthVerified, setBookingAuthVerified] = useState(false)
+  // Loaded receiver defaults are not unsaved operator work. Keep explicit
+  // edits distinct and never overwrite them when asynchronous hydration lands.
+  const receiverEditedRef = useRef(false)
+  const [receiverEdited, setReceiverEdited] = useState(false)
+  const markReceiverEdited = () => { receiverEditedRef.current = true; setReceiverEdited(true) }
   /** Gate 1 override reason when physical ID cannot be checked (D2, T2-04). */
   const [gate1OverrideReason, setGate1OverrideReason] = useState('')
   /** Client ID document on file and authorized collectors (W28, W34, W50, W51, T2-12). */
@@ -694,6 +699,10 @@ export default function HandoverWorkspace({
     setMarks({})
     setScanLog([])
     setSessionNotes('')
+    receiverEditedRef.current = false
+    setReceiverEdited(false)
+    setSelectedCollectorId(null)
+    setGate1OverrideReason('')
     setGovIdVerified(false)
     setBookingAuthVerified(false)
     setPaymentVerified(false)
@@ -729,6 +738,7 @@ export default function HandoverWorkspace({
       if (!active) return
       setIdDocument(idDoc)
       setCollectors(cols)
+      if (receiverEditedRef.current) return
       if (idDoc) {
         setGovIdVerified(true)
       }
@@ -744,7 +754,7 @@ export default function HandoverWorkspace({
     return () => {
       active = false
     }
-  }, [floor?.clientId])
+  }, [floor?.clientId, floorId])
 
   const rows = useMemo<HandRow[]>(() => (floor ? buildRows(floor) : []), [floor])
   const serviceLines = useMemo(() => floor?.lines.filter((l) => NON_PACKABLE_LINE_TYPES.has(l.lineType)) ?? [], [floor])
@@ -810,7 +820,8 @@ export default function HandoverWorkspace({
     (signatures.receiver ? 1 : 0) + (signatures.warehouse ? 1 : 0) > 0
       ? `${(signatures.receiver ? 1 : 0) + (signatures.warehouse ? 1 : 0)} signature${signatures.receiver && signatures.warehouse ? 's' : ''}`
       : null,
-    govIdVerified || bookingAuthVerified ? 'the receiver ID checks' : null,
+    receiverEdited ? 'the receiver ID checks' : null,
+    gate1OverrideReason.trim() !== '' ? 'the receiver verification override reason' : null,
     paymentVerified || depositReceived || collateralHeld ? 'the payment and deposit gate marks' : null,
     sessionNotes.trim() !== '' ? 'the session notes' : null,
     overrideReason.trim() !== '' ? 'the money-outstanding reason' : null,
@@ -1269,6 +1280,7 @@ export default function HandoverWorkspace({
     }))
     if (activeSigningRole === 'receiver') {
       if (sig.verifiedGovId) {
+        markReceiverEdited()
         setGovIdVerified(true)
         setBookingAuthVerified(true)
       }
@@ -1649,6 +1661,7 @@ export default function HandoverWorkspace({
                       <button
                         type="button"
                         onClick={() => {
+                          markReceiverEdited()
                           setGovIdVerified(true)
                           setBookingAuthVerified(true)
                         }}
@@ -1746,6 +1759,7 @@ export default function HandoverWorkspace({
                       <button
                         type="button"
                         onClick={() => {
+                          markReceiverEdited()
                           setSelectedCollectorId('client')
                           setBookingAuthVerified(true)
                         }}
@@ -1772,6 +1786,7 @@ export default function HandoverWorkspace({
                           key={c.id}
                           type="button"
                           onClick={() => {
+                            markReceiverEdited()
                             setSelectedCollectorId(c.id)
                             setBookingAuthVerified(true)
                           }}
@@ -1798,8 +1813,8 @@ export default function HandoverWorkspace({
                   </div>
 
                   <div style={{ marginTop: 10, paddingTop: 9, borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 7 }}>
-                    <CheckLine label="Government ID Verified" checked={govIdVerified} onToggle={() => setGovIdVerified((v) => !v)} disabled={dispatching} />
-                    <CheckLine label="Booking Authorization Verified" checked={bookingAuthVerified} onToggle={() => setBookingAuthVerified((v) => !v)} disabled={dispatching} />
+                    <CheckLine label="Government ID Verified" checked={govIdVerified} onToggle={() => { markReceiverEdited(); setGovIdVerified((v) => !v) }} disabled={dispatching} />
+                    <CheckLine label="Booking Authorization Verified" checked={bookingAuthVerified} onToggle={() => { markReceiverEdited(); setBookingAuthVerified((v) => !v) }} disabled={dispatching} />
                   </div>
                   {(!govIdVerified || !bookingAuthVerified) && (
                     <div style={{ marginTop: 10, paddingTop: 9, borderTop: '1px dashed var(--border)' }}>
@@ -2760,6 +2775,7 @@ export default function HandoverWorkspace({
                 notes: null,
                 createdAt: new Date().toISOString(),
               })
+              markReceiverEdited()
               setGovIdVerified(true)
               showSuccessToast('ID on File Saved', `Document recorded for ${floor.clientName}`)
             }}
@@ -2785,6 +2801,7 @@ export default function HandoverWorkspace({
                 createdAt: new Date().toISOString(),
               }
               setCollectors((prev) => [...prev, newCol])
+              markReceiverEdited()
               setSelectedCollectorId(collector.id)
               setBookingAuthVerified(true)
               showSuccessToast('Collector Added', `${collector.name} added as authorized collector`)
