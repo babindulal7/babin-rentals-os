@@ -2374,7 +2374,7 @@ export default function RentalsList() {
                     view === 'Cards' && tabular
                       ? {
                           display: 'grid',
-                          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                          gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))',
                           gap: 'var(--sp-md)',
                           padding: 'var(--sp-md)',
                         }
@@ -2406,7 +2406,8 @@ export default function RentalsList() {
                           : {
                               display: 'flex',
                               flexDirection: 'column',
-                              gap: 'var(--sp-sm)',
+                              gap: viewport === 'phone' ? 'var(--sp-xs, 6px)' : 'var(--sp-sm)',
+                              minWidth: 0,
                               padding: '13px 14px',
                               borderBottom: '1.5px solid var(--border)',
                               // §4.1 — "gold outline row = external gear". Fires
