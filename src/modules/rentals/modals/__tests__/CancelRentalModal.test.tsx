@@ -24,7 +24,10 @@ vi.mock('../../../../components/ui/Toast', () => ({
   }),
 }))
 
+;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
+
 let container: HTMLDivElement
+let dialog: HTMLElement
 let root: Root
 
 function setNativeValue(element: HTMLInputElement | HTMLTextAreaElement, value: string) {
@@ -35,10 +38,7 @@ function setNativeValue(element: HTMLInputElement | HTMLTextAreaElement, value: 
 }
 
 function setNativeChecked(element: HTMLInputElement, checked: boolean) {
-  const checkedSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'checked')?.set
-  checkedSetter?.call(element, checked)
-  element.dispatchEvent(new Event('click', { bubbles: true }))
-  element.dispatchEvent(new Event('change', { bubbles: true }))
+  if (element.checked !== checked) element.click()
 }
 
 async function flush(rounds = 4) {
@@ -57,6 +57,9 @@ async function mountModal(props: Parameters<typeof CancelRentalModal>[0]) {
     root.render(<CancelRentalModal {...props} />)
   })
   await flush()
+  const surface = document.querySelector<HTMLElement>('[role="dialog"]')
+  expect(surface).not.toBeNull()
+  dialog = surface!
 }
 
 describe('CancelRentalModal', () => {
@@ -92,27 +95,27 @@ describe('CancelRentalModal', () => {
 
   it('renders modal details and Law 3 inventory warning', async () => {
     await mountModal(defaultProps)
-    expect(container.textContent).toContain('Cancel Booking — BK-2026-0042')
-    expect(container.textContent).toContain('Inventory Allocation')
-    expect(container.textContent).toContain('Cancellation fee estimate unavailable')
-    expect(container.textContent).not.toContain('Suggested cancellation fee:')
-    expect(container.textContent).toContain('0/10 characters minimum')
+    expect(dialog.textContent).toContain('Cancel Booking — BK-2026-0042')
+    expect(dialog.textContent).toContain('Inventory Allocation')
+    expect(dialog.textContent).toContain('Cancellation fee estimate unavailable')
+    expect(dialog.textContent).not.toContain('Suggested cancellation fee:')
+    expect(dialog.textContent).toContain('0/10 characters minimum')
   })
 
   it('shows Manager Authority notice when stage is Packed', async () => {
     await mountModal({ ...defaultProps, stage: 'Packed' })
-    expect(container.textContent).toContain('Manager Authority Required:')
+    expect(dialog.textContent).toContain('Manager Authority Required:')
   })
 
   it('disables Cancel Booking button until reason >= 10 chars and confirmation checkbox is ticked', async () => {
     await mountModal(defaultProps)
-    const button = Array.from(container.querySelectorAll('button')).find((b) =>
+    const button = Array.from(dialog.querySelectorAll('button')).find((b) =>
       b.textContent?.includes('Cancel Booking'),
     ) as HTMLButtonElement
     expect(button).toBeDefined()
     expect(button.disabled).toBe(true)
 
-    const textarea = container.querySelector('textarea') as HTMLTextAreaElement
+    const textarea = dialog.querySelector('textarea') as HTMLTextAreaElement
     expect(textarea).toBeDefined()
 
     await act(async () => {
@@ -127,7 +130,7 @@ describe('CancelRentalModal', () => {
     await flush()
     expect(button.disabled).toBe(true)
 
-    const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement
+    const checkbox = dialog.querySelector('input[type="checkbox"]') as HTMLInputElement
     expect(checkbox).toBeDefined()
 
     await act(async () => {
@@ -142,18 +145,18 @@ describe('CancelRentalModal', () => {
     const onClose = vi.fn()
     await mountModal({ ...defaultProps, onSuccess, onClose })
 
-    const textarea = container.querySelector('textarea') as HTMLTextAreaElement
+    const textarea = dialog.querySelector('textarea') as HTMLTextAreaElement
     await act(async () => {
       setNativeValue(textarea, 'Production rescheduled to next month')
     })
 
-    const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement
+    const checkbox = dialog.querySelector('input[type="checkbox"]') as HTMLInputElement
     await act(async () => {
       setNativeChecked(checkbox, true)
     })
     await flush()
 
-    const button = Array.from(container.querySelectorAll('button')).find((b) =>
+    const button = Array.from(dialog.querySelectorAll('button')).find((b) =>
       b.textContent?.includes('Cancel Booking'),
     ) as HTMLButtonElement
 
@@ -188,18 +191,18 @@ describe('CancelRentalModal', () => {
 
     await mountModal(defaultProps)
 
-    const textarea = container.querySelector('textarea') as HTMLTextAreaElement
+    const textarea = dialog.querySelector('textarea') as HTMLTextAreaElement
     await act(async () => {
       setNativeValue(textarea, 'Attempting cancellation too late')
     })
 
-    const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement
+    const checkbox = dialog.querySelector('input[type="checkbox"]') as HTMLInputElement
     await act(async () => {
       setNativeChecked(checkbox, true)
     })
     await flush()
 
-    const button = Array.from(container.querySelectorAll('button')).find((b) =>
+    const button = Array.from(dialog.querySelectorAll('button')).find((b) =>
       b.textContent?.includes('Cancel Booking'),
     ) as HTMLButtonElement
 
@@ -208,6 +211,6 @@ describe('CancelRentalModal', () => {
     })
     await flush()
 
-    expect(container.textContent).toContain('Cancellation Authorization Required')
+    expect(dialog.textContent).toContain('Cancellation Authorization Required')
   })
 })
