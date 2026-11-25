@@ -1,0 +1,25 @@
+name: Handover hydration focused verification
+on:
+  push:
+    branches: [verify/handover-hydration-443]
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: b4354f4c5e38c0d29db90ee2a43b442c28d36ff8
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci
+      - name: Verify exact candidate and focused offline regressions
+        env:
+          VITE_DATA_SOURCE: mock
+        run: |
+          test "$(git rev-parse HEAD)" = b4354f4c5e38c0d29db90ee2a43b442c28d36ff8
+          npm run test -- src/modules/rentals/__tests__/handoverCollectors.test.tsx src/modules/rentals/__tests__/handoverWorkspace.test.tsx src/modules/operations/__tests__/OperationsWorkspaceContext.test.tsx src/modules/operations/__tests__/OperationsShell.test.tsx
