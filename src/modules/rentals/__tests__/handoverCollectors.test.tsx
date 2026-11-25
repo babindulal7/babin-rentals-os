@@ -13,6 +13,8 @@ const CLIENT_A = 'client-uuid-001'
 
 let mockIdDocA: any = null
 let mockCollectorsA: any[] = []
+let mockCollateralHeld = false
+const reportActions = vi.fn()
 
 vi.mock('../../../lib/queries/clients', () => ({
   fetchClientIdDocument: vi.fn().mockImplementation(async (clientId: string) => {
@@ -42,7 +44,7 @@ vi.mock('../../../lib/queries/operationEvidence', () => ({
 }))
 
 vi.mock('../../../lib/queries/collateral', () => ({
-  hasHeldCollateral: async () => false,
+  hasHeldCollateral: async () => mockCollateralHeld,
 }))
 
 vi.mock('../../../lib/queries/bookings', () => ({
@@ -99,6 +101,7 @@ describe('HandoverWorkspace: T2-12 Client Collectors & ID on File', () => {
     root = null
     mockIdDocA = null
     mockCollectorsA = []
+    mockCollateralHeld = false
     vi.clearAllMocks()
   })
 
@@ -108,7 +111,7 @@ describe('HandoverWorkspace: T2-12 Client Collectors & ID on File', () => {
         <MemoryRouter initialEntries={['/rentals/B-999/handover']}>
           <ToastProvider>
             <Routes>
-              <Route path="/rentals/:bookingNo/handover" element={<HandoverWorkspace />} />
+              <Route path="/rentals/:bookingNo/handover" element={<HandoverWorkspace onRegisterActions={reportActions} />} />
             </Routes>
           </ToastProvider>
         </MemoryRouter>,
@@ -128,6 +131,15 @@ describe('HandoverWorkspace: T2-12 Client Collectors & ID on File', () => {
     const text = container?.textContent ?? ''
     expect(text).toContain('First-time client — one government ID must be recorded on file before handover (Ruling W50)')
     expect(text).toContain('+ Add ID on File')
+    expect(reportActions).toHaveBeenCalled()
+    expect(reportActions.mock.calls.at(-1)?.[0].isDirty).toBe(false)
+  })
+
+  it('does not report persisted collateral as an unsaved edit', async () => {
+    mockCollateralHeld = true
+    await mount()
+    expect(reportActions).toHaveBeenCalled()
+    expect(reportActions.mock.calls.at(-1)?.[0].isDirty).toBe(false)
   })
 
   it('renders "ID on file ✓" with masked number and marks Government ID verified for repeat client (W50, W51)', async () => {
@@ -156,6 +168,11 @@ describe('HandoverWorkspace: T2-12 Client Collectors & ID on File', () => {
     // Government ID Verified line is checked
     const idCheck = container?.querySelector('input[type="checkbox"][aria-label="Government ID Verified"]') as HTMLInputElement
     expect(idCheck?.checked).toBe(true)
+    expect(reportActions.mock.calls.at(-1)?.[0].isDirty).toBe(false)
+    // Unchecking a prefilled gate is an explicit edit and must be protected.
+    await act(async () => { idCheck.click() })
+    expect(idCheck.checked).toBe(false)
+    expect(reportActions.mock.calls.at(-1)?.[0].isDirty).toBe(true)
   })
 
   it('renders known collectors for 1-tap selection and verifies booking authorization upon selection (W28, W34)', async () => {
@@ -196,6 +213,11 @@ describe('HandoverWorkspace: T2-12 Client Collectors & ID on File', () => {
     // Since collectors were loaded, first collector was selected, so bookingAuthVerified is true
     const authCheck = container?.querySelector('input[type="checkbox"][aria-label="Booking Authorization Verified"]') as HTMLInputElement
     expect(authCheck?.checked).toBe(true)
+    expect(reportActions.mock.calls.at(-1)?.[0].isDirty).toBe(false)
+    const accountHolder = Array.from(container?.querySelectorAll('button') ?? []).find(b => b.textContent?.includes('(Account Holder)'))
+    expect(accountHolder).toBeDefined()
+    await act(async () => { accountHolder!.click() })
+    expect(reportActions.mock.calls.at(-1)?.[0].isDirty).toBe(true)
   })
 
   it('renders quick collector selection chips in SignOnGlassModal', async () => {
