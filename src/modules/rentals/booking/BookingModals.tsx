@@ -226,7 +226,12 @@ export function BookingModals({
               The booking has been successfully recorded in the database and inventory has been reserved.
             </p>
 
-            {confirmedSuccess.paymentLink && (
+            {import.meta.env.VITE_DATA_SOURCE !== 'mock' && (
+              <p role="status" style={{ color: 'var(--text2)', marginBottom: 16 }}>
+                Online payment links are temporarily unavailable. Use the approved manual payment workflow.
+              </p>
+            )}
+            {import.meta.env.VITE_DATA_SOURCE === 'mock' && confirmedSuccess.paymentLink && (
               <div
                 style={{
                   margin: '0 auto 20px',
@@ -293,7 +298,7 @@ export function BookingModals({
                     }}
                   >
                     <Icon name="external_link" size={13} />
-                    Open customer checkout page
+                    Open client checkout page
                   </a>
                 </div>
               </div>

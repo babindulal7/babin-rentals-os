@@ -61,6 +61,10 @@ export const cancelRentalConfig: ActionConfig<CancelRentalInput, CancelRentalRes
     if (!input.id || input.id.trim() === '') {
       throw new Error('Booking ID is required.')
     }
+    const fee = input.cancellationFeePaisa
+    if (fee != null && (!Number.isSafeInteger(fee) || fee < 0)) {
+      throw new Error('Cancellation fee must be a non-negative safe integer in paisa.')
+    }
     if (input.id.trim() !== 'draft-new') {
       if (!input.reason || input.reason.trim().length < 10) {
         throw new Error('Cancellation reason of at least ten characters is required.')

@@ -19,6 +19,12 @@ describe('validateDiscount — ungated (31 Aug 2026)', () => {
     }
   })
 
+  it('rejects NaN and both infinities without reintroducing approval gates', () => {
+    for (const pct of [NaN, Infinity, -Infinity]) {
+      expect(validateDiscount(pct)).toMatchObject({ valid: false, requiresApproval: false })
+    }
+  })
+
   it('the old ceremony inputs are accepted and ignored — never required', () => {
     expect(validateDiscount(40, null, null).valid).toBe(true)
     expect(validateDiscount(40, 'a reason nobody asked for', 'usr-owner').valid).toBe(true)

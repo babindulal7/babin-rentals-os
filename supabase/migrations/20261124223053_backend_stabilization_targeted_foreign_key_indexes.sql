@@ -1,0 +1,14 @@
+set local lock_timeout = '3s';
+set local statement_timeout = '30s';
+create index if not exists idx_be_booking_lines_bundle on public.booking_lines(bundle_id);
+create index if not exists idx_be_booking_lines_supplier on public.booking_lines(supplier_id);
+create index if not exists idx_be_bookings_authorized_contact on public.bookings(authorized_contact_id);
+create index if not exists idx_be_bookings_contact on public.bookings(contact_id);
+create index if not exists idx_be_bookings_delivery_zone on public.bookings(delivery_zone_id);
+create index if not exists idx_be_clients_assigned_staff on public.clients(assigned_staff_id);
+create index if not exists idx_be_invoices_branch on public.invoices(branch_id);
+create index if not exists idx_be_payments_bank_account on public.payments(bank_account_id);
+create index if not exists idx_be_payments_branch on public.payments(branch_id);
+create index if not exists idx_be_product_units_storage_zone on public.product_units(storage_zone_id);
+drop index public.idx_invoices_booking_id;
+drop index public.idx_payments_booking_id;

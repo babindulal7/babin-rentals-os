@@ -121,7 +121,7 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
   }
 
   const handleSimulatePayment = async () => {
-    if (!initData) return
+    if (!initData || import.meta.env.VITE_DATA_SOURCE !== 'mock') return
     setVerifying(true)
     setError(null)
 
@@ -532,7 +532,7 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
                     : 'Pay via Fonepay Hosted Page ↗'}
                 </a>
 
-                <button
+                {import.meta.env.VITE_DATA_SOURCE === 'mock' && <button
                   type="button"
                   onClick={handleSimulatePayment}
                   disabled={verifying}
@@ -549,7 +549,7 @@ export const OnlinePaymentModal: React.FC<OnlinePaymentModalProps> = ({
                   {verifying
                     ? 'Verifying with payment server...'
                     : `Simulate Successful ${selectedProvider.toUpperCase()} Payment`}
-                </button>
+                </button>}
               </div>
             </div>
           ) : null}

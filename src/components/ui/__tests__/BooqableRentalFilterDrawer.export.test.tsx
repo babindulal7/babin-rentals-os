@@ -74,3 +74,19 @@ describe('BooqableRentalFilterDrawer export pin', () => {
     expect(calls).toBe(1)
   })
 })
+
+
+describe('Rental multi-select tag controls', () => {
+  it('exposes native visible tag checkboxes and preserves separate selections', () => {
+    const toggled: string[] = []
+    mount(<BooqableRentalFilterDrawer {...baseProps()} tagFilter={new Set(['wedding', 'repeat'])} onToggleTag={tag => toggled.push(tag)} />)
+    const checks = [...(container?.querySelectorAll<HTMLInputElement>('input[aria-label^="Filter by tag:"]') ?? [])]
+    expect(checks).toHaveLength(3)
+    expect(checks.map(c => c.checked)).toEqual([true, true, false])
+    expect(checks.every(c => c.style.display !== 'none' && c.tabIndex === 0)).toBe(true)
+    act(() => checks[2]!.click())
+    expect(toggled).toEqual(['festival'])
+    expect(checks[0]!.checked).toBe(true)
+    expect(checks[1]!.checked).toBe(true)
+  })
+})

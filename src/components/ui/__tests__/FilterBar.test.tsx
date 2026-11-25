@@ -153,16 +153,16 @@ describe('FilterBar Component', () => {
       />
     )
 
-    const buttons = container.querySelectorAll<HTMLButtonElement>('[role="group"] button')
-    expect(buttons[0]!.getAttribute('aria-pressed')).toBe('true')
-    expect(buttons[1]!.getAttribute('aria-pressed')).toBe('false')
-    expect(buttons[2]!.getAttribute('aria-pressed')).toBe('true')
+    const checks = container.querySelectorAll<HTMLInputElement>('[role="group"] input[type="checkbox"]')
+    expect(checks).toHaveLength(3)
+    expect(Array.from(checks, c => c.checked)).toEqual([true, false, true])
+    expect(checks[1]!.getAttribute('aria-label')).toBe('Active')
 
-    act(() => {
-      buttons[1]!.click()
-    })
-
+    act(() => { checks[1]!.click() })
     expect(handleToggle).toHaveBeenCalledWith('active')
+    act(() => { checks[0]!.click() })
+    expect(handleToggle).toHaveBeenLastCalledWith('all')
+    expect(checks[2]!.checked).toBe(true)
   })
 
   it('renders filter drawer trigger button with aria-expanded and aria-controls', () => {

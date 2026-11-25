@@ -1197,7 +1197,7 @@ export default function ResetWorkspace({
      * `cleaning_queue_entries` is UNSERVED (corpus.ts), so the dispatch is
      * refused by name and the refusal renders below — no success is invented.
      */
-    import('../../actions/rentals/index')
+    return import('../../actions/rentals/index')
       .then((m) =>
         m.completeReset(
           {

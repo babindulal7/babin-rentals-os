@@ -582,9 +582,9 @@
 .module-status-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: var(--r-badge, 999px);
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.2;
@@ -595,35 +595,42 @@
 
 /* Emerald (Active / Paid / Available) */
 .module-status-pill--emerald {
-  background: color-mix(in srgb, var(--success, #16a34a) 12%, var(--card));
-  color: var(--success-text, #15803d);
-  border-color: color-mix(in srgb, var(--success, #16a34a) 35%, transparent);
+  background: #166534;
+  color: #ffffff;
+  border-color: transparent;
 }
 
 /* Amber (Pending / Prep / Partial) */
 .module-status-pill--amber {
-  background: color-mix(in srgb, var(--warn, #ea580c) 12%, var(--card));
-  color: var(--warn-text, #c2410c);
-  border-color: color-mix(in srgb, var(--warn, #ea580c) 35%, transparent);
+  background: #facc15;
+  color: #422006;
+  border-color: transparent;
 }
 
 /* Red (Overdue / Hold / Unpaid / Blocked) */
 .module-status-pill--red {
-  background: color-mix(in srgb, var(--danger, #dc2626) 12%, var(--card));
-  color: var(--danger-text, #b91c1c);
-  border-color: color-mix(in srgb, var(--danger, #dc2626) 35%, transparent);
+  background: #b91c1c;
+  color: #ffffff;
+  border-color: transparent;
 }
 
 /* Slate (Completed / Draft / Closed) */
 .module-status-pill--slate {
-  background: color-mix(in srgb, var(--muted, #64748b) 12%, var(--card));
-  color: var(--text2, #334155);
-  border-color: color-mix(in srgb, var(--border, #cbd5e1) 60%, transparent);
+  background: #475569;
+  color: #ffffff;
+  border-color: transparent;
 }
 
 /* Blue (On Set / Scheduled / Confirmed) */
 .module-status-pill--blue {
-  background: color-mix(in srgb, var(--primary, #2563eb) 12%, var(--card));
-  color: var(--primary-text, #1d4ed8);
-  border-color: color-mix(in srgb, var(--primary, #2563eb) 35%, transparent);
+  background: #1d4ed8;
+  color: #ffffff;
+  border-color: transparent;
+}
+
+/* Neutral (Unspecified / informational) */
+.module-status-pill--neutral {
+  background: #e2e8f0;
+  color: #334155;
+  border-color: #94a3b8;
 }
