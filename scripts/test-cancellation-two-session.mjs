@@ -90,7 +90,10 @@ export async function verifyCancellationRace({ connectionString, observer, owner
       }
       console.log('PASS real PostgreSQL lock and losing transaction rollback: '+(cancellationFirst?'cancel first':'stage first'))
     }
-    for (const kind of ['movement','handover line']) {
+    const writePickup = (conn, fixture, kind) => kind === 'session completion'
+      ? conn.query("update public.operation_sessions set state='Completed',completed_at=clock_timestamp(),completed_by=$1 where id=$2 returning id",[warehouseId,fixture.sessionId]).then(result=>{assert.equal(result.rowCount,1);return result})
+      : pickup(conn,fixture,kind,warehouseId)
+    for (const kind of ['movement','handover line','session completion']) {
       for (const cancellationFirst of [true,false]) {
         const fixture = await makePickupFixture({q,ownerId,warehouseId,branchId,clientId})
         const read = async () => ({
@@ -106,9 +109,9 @@ export async function verifyCancellationRace({ connectionString, observer, owner
         if (cancellationFirst) {
           const receipt = await cancel(first,fixture.id)
           assert.equal(receipt.rows[0]?.receipt?.success,true)
-          pending = capture(pickup(second,fixture,kind,warehouseId))
+          pending = capture(writePickup(second,fixture,kind))
         } else {
-          await pickup(first,fixture,kind,warehouseId)
+          await writePickup(first,fixture,kind)
           pending = capture(cancel(second,fixture.id))
         }
         await waitForLock(second,first)
@@ -118,7 +121,7 @@ export async function verifyCancellationRace({ connectionString, observer, owner
         pending = undefined
         assert.ok(outcome.error,'Losing physical operation must reject')
         assert.equal(outcome.error.code,'P0001')
-        assert.match(outcome.error.message,cancellationFirst ? /no longer ready for pickup/ : /pickup has already occurred/)
+        assert.match(outcome.error.message,cancellationFirst ? (kind==='session completion' ? /gate\.booking\.cancelled/ : /no longer ready for pickup/) : /pickup has already occurred/)
         await second.query('rollback')
         assert.deepEqual(await read(),winner,'Losing physical operation persisted changes')
         assert.equal(winner.booking.stage,'Packed','Partial pickup must not advance stage')
@@ -126,11 +129,13 @@ export async function verifyCancellationRace({ connectionString, observer, owner
           assert.equal(winner.booking.cancelled_by,ownerId)
           assert.deepEqual(winner.movements,before.movements)
           assert.deepEqual(winner.handover,before.handover)
+          assert.deepEqual(winner.sessions,before.sessions)
           assert.ok(winner.reservations.every(r=>r.released_at!==null),'Cancellation releases active holds')
         } else {
           assert.equal(winner.booking.cancelled_at,null)
           assert.deepEqual(winner.reservations,before.reservations,'Partial pickup must retain holds')
-          assert.equal(kind==='movement' ? winner.movements.length : winner.handover.length,1)
+          if(kind==='session completion') assert.equal(winner.sessions.find(row=>row.id===fixture.sessionId)?.state,'Completed')
+          else assert.equal(kind==='movement' ? winner.movements.length : winner.handover.length,1)
         }
         console.log('PASS real pickup race: '+kind+' / '+(cancellationFirst?'cancel first':'pickup first'))
       }
