@@ -50,6 +50,9 @@ test.describe('Operations popup persisted-stage navigation', () => {
         const next = (name: string) => browse.getByRole('button', { name: 'Next stage: ' + name, exact: true })
         if (initial === 'PACKED') {
           await expect(active).toHaveAccessibleName(/^Handover ·/)
+          // Wait for real client facts to hydrate before browsing. A clean
+          // session must stay clean even after its default collector loads.
+          await expect(popup.getByRole('checkbox', { name: 'Booking Authorization Verified', exact: true })).toBeChecked()
           await expect(next('Return & Inspection')).toBeDisabled()
           await browse.getByRole('button', { name: /Packing/ }).click()
           await expect(active).toHaveAccessibleName(/^Packing ·/)
