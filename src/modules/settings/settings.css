@@ -308,14 +308,15 @@
   color: var(--nav-active-accent, #3b82f6);
 }
 
-/* Tablet Horizontal Tabs */
+/* Tablet section chooser: wrap into available space instead of hiding sections
+   off-screen. At narrower workspace widths every section remains reachable. */
 .app-settings-tablet-tabs,
 .settings-tab-scroll {
   display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
   gap: 8px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 4px;
+  padding-bottom: 8px;
   margin-bottom: var(--sp-md, 16px);
   border-bottom: 1px solid var(--border);
 }
@@ -335,9 +336,23 @@
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
-  white-space: nowrap;
-  flex-shrink: 0;
+  white-space: normal;
+  min-width: 0;
+  flex: 1 1 120px;
+  justify-content: flex-start;
   transition: all var(--dur) var(--ease);
+}
+
+.app-settings-tablet-tab > span,
+.settings-tab-pill > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.app-settings-tablet-tab:focus-visible,
+.settings-tab-pill:focus-visible {
+  outline: 2px solid var(--input-focus, var(--primary));
+  outline-offset: 2px;
 }
 
 .app-settings-tablet-tab:hover,
@@ -355,6 +370,7 @@
 }
 
 .app-settings-tablet-icon {
+  flex-shrink: 0;
   width: 24px;
   height: 24px;
   border-radius: 6px;

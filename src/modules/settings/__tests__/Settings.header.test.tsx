@@ -164,6 +164,18 @@ describe('Settings header — phone', () => {
 describe('Settings header — tablet', () => {
   beforeEach(() => { state.viewport = 'tablet' })
 
+  it('renders all authorized section controls and can select the last section without moving the page', async () => {
+    await mount('?tab=business')
+    const chooser = container.querySelector('[role="tablist"][aria-label="Settings sections"]')
+    const tabs = [...(chooser?.querySelectorAll<HTMLButtonElement>('[role="tab"]') ?? [])]
+    expect(tabs.map(tab => tab.textContent?.trim())).toEqual(['Business', 'People', 'Branches', 'System', 'Texts'])
+    expect(tabs.filter(tab => tab.getAttribute('aria-selected') === 'true')).toHaveLength(1)
+    await click(tabs[4])
+    expect(chooser?.querySelector('[aria-selected="true"]')?.textContent?.trim()).toBe('Texts')
+    expect(container.querySelector('.app-settings-pane-title')?.textContent).toBe('Texts')
+  })
+
+
   it('keeps the full Edit settings label and moves Export and the audit log into More', async () => {
     await mount('?tab=business')
     expect(visible('Edit settings')).toHaveLength(1)
