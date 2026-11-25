@@ -30,6 +30,8 @@ test.describe('expenses', () => {
 
     await page.reload()
     await dismissOnboarding(page)
+    // The list is long and not guaranteed to show the newest row first; search for this run's tag.
+    await page.getByPlaceholder(/Search vendor, description/).fill(tag)
     await expect(page.getByText(tag).first()).toBeVisible({ timeout: 20_000 })
   })
 
@@ -62,6 +64,8 @@ test.describe('expenses', () => {
     await expect(dialog).toBeHidden({ timeout: 20_000 })
     await page.reload()
     await dismissOnboarding(page)
+    // The list is long and not guaranteed to show the newest row first; search for this run's tag.
+    await page.getByPlaceholder(/Search vendor, description/).fill(tag)
     await expect(page.getByText(tag).first()).toBeVisible({ timeout: 20_000 })
   })
 })
