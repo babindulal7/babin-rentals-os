@@ -812,6 +812,7 @@ function ParentCardView({
   actionContext,
   money,
   checked,
+  onToggle,
 }: {
   row: InventoryListRow
   glance: ReturnType<typeof inventoryGlance>
@@ -831,7 +832,10 @@ function ParentCardView({
     <div
       className={['inventory-model-card', checked ? 'is-selected' : ''].filter(Boolean).join(' ')}
     >
-      <span style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+      <span style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+        <label style={{ display: 'inline-grid', placeItems: 'center', minWidth: 44, minHeight: 44, flexShrink: 0, cursor: 'pointer' }}>
+          <input type="checkbox" checked={checked} onChange={onToggle} aria-label={`Select model ${row.name} (${row.assetCode})`} style={{ width: 16, height: 16, accentColor: 'var(--primary)' }} />
+        </label>
         <Thumb category={category} />
         <IntelCard glance={glance} detail={detail} detailTitle={row.name} detailSubtitle={category} entityType="equipment" entityId={row.id} context="inventory" gateContext={gctx} actionContext={actionContext}>
           <span style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-xs)', minWidth: 0 }}>
@@ -1129,6 +1133,7 @@ function FilterRail({
                       color: 'var(--text2)',
                       cursor: 'pointer',
                       padding: '2px 0',
+                      minHeight: 44,
                     }}
                   >
                     <input
@@ -2267,6 +2272,10 @@ export default function Inventory() {
                   <div className="inventory-desktop-grid">
                     {rowsWithIntel.map(({ row: p, glance, detail }) => (
                       <article key={p.id} className="inventory-grid-item">
+                        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minHeight: 44, cursor: 'pointer' }}>
+                          <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleRow(p.id)} aria-label={`Select model ${p.name} (${p.assetCode})`} style={{ width: 16, height: 16, accentColor: 'var(--primary)' }} />
+                          Select
+                        </label>
                         <IntelCard glance={glance} detail={detail} detailTitle={p.name} detailSubtitle={p.category ?? '—'} entityType="equipment" entityId={p.id} context="inventory" gateContext={gctx} actionContext={user ? { userId: user.id, role: user.role } : null}>
                           <span style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                             <Thumb category={p.category ?? '—'} size={38} />
