@@ -83,12 +83,12 @@ test.describe('Operations popup persisted-stage navigation', () => {
 
 test.describe('Operations packing confirmation and duplicate-submit protection', () => {
   test.skip(!disposable, 'Synthetic local CI only')
-  test('packing and handover persist once, with evidence, signatures and discard protection', async ({ page }, testInfo) => {
+  for (const partial of [false, true]) test(partial ? 'partial pickup keeps booking Packed and preserves both inventory reservations' : 'packing and handover persist once, with evidence, signatures and discard protection', async ({ page }, testInfo) => {
     test.setTimeout(180_000)
     const email = process.env.E2E_OWNER_EMAIL
     const password = process.env.E2E_OWNER_PASSWORD
     const key = process.env.E2E_LOCAL_ANON_KEY
-    const prefix = 'E2E_OPS_CONFIRM_' + testInfo.project.name.toUpperCase()
+    const prefix = 'E2E_OPS_' + (partial ? 'PARTIAL_' : 'CONFIRM_') + testInfo.project.name.toUpperCase()
     const id = process.env[prefix + '_ID']
     const no = process.env[prefix + '_NO']
     if (!disposable || !email?.startsWith('disposable-') || !email.endsWith('@example.test') || !password || !key || !id || !no) throw new Error('Dedicated local packing fixture required')
@@ -166,13 +166,28 @@ test.describe('Operations packing confirmation and duplicate-submit protection',
         expect(result.error).toBeNull()
         return result.data ?? []
       }
+      const reservations = async () => {
+        const result = await api.from('inventory_reservations').select('id,booking_line_id,qty,released_at').eq('booking_id', id).order('id')
+        expect(result.error).toBeNull()
+        return result.data ?? []
+      }
+      const before = partial ? await reservations() : []
+      if (partial) {
+        expect(before).toHaveLength(2)
+        expect(before.every(row => row.released_at === null && Number(row.qty) === 1)).toBe(true)
+      }
       expect(await handoverSessions()).toHaveLength(0)
       await page.getByRole('button', { name: 'Handover', exact: true }).filter({ visible: true }).first().click()
       const handover = popup.getByRole('button', { name: 'Confirm Handover & Next', exact: true })
       await expect(handover).toBeDisabled()
       await expect(popup.getByRole('checkbox', { name: 'Booking Authorization Verified', exact: true })).toBeChecked()
       await popup.getByRole('checkbox', { name: 'Government ID Verified', exact: true }).check()
-      await popup.getByRole('button', { name: 'Mark Ready Picked Up', exact: true }).click()
+      if (partial) {
+        await popup.getByRole('checkbox', { name: 'Mark Disposable Operations Cable picked up', exact: true }).check()
+        await expect(popup.getByRole('checkbox', { name: 'Mark Disposable Operations Stand picked up', exact: true })).not.toBeChecked()
+      } else {
+        await popup.getByRole('button', { name: 'Mark Ready Picked Up', exact: true }).click()
+      }
       for (const gate of [3, 4]) {
         const row = popup.locator('[data-operation-gate="' + gate + '"]')
         await row.getByRole('button', { name: 'Mark Cleared →', exact: true }).click()
@@ -197,7 +212,12 @@ test.describe('Operations packing confirmation and duplicate-submit protection',
       }
       await expect(handover).toBeEnabled({ timeout: 30_000 })
       await handover.click({ clickCount: 2 })
-      await expect.poll(stage, { timeout: 30_000 }).toBe('On Rent')
+      if (partial) {
+        await expect(popup.getByText(/Session recorded — .* stays Packed/)).toBeVisible({ timeout: 30_000 })
+        expect(await stage()).toBe('Packed')
+      } else {
+        await expect.poll(stage, { timeout: 30_000 }).toBe('On Rent')
+      }
       await expect.poll(async () => (await handoverSessions()).map(s => s.state), { timeout: 30_000 }).toEqual(['Completed'])
       const receipt = (await handoverSessions())[0]!
       expect(receipt.government_id_verified).toBe(true)
@@ -210,12 +230,23 @@ test.describe('Operations packing confirmation and duplicate-submit protection',
       expect(movements.error).toBeNull()
       expect(movements.data?.length).toBeGreaterThan(0)
       expect(movements.data?.every(m => m.resulting_item_state === 'Picked Up')).toBe(true)
-      expect(movements.data?.reduce((sum, m) => sum + Number(m.qty), 0)).toBe(2)
+      expect(movements.data?.reduce((sum, m) => sum + Number(m.qty), 0)).toBe(partial ? 1 : 2)
+      if (partial) {
+        const lines = await api.from('booking_lines').select('id,description').eq('booking_id', id)
+        expect(lines.error).toBeNull()
+        const picked = lines.data?.find(l => l.description === 'Disposable Operations Cable')
+        expect(picked).toBeDefined()
+        const moved = await api.from('session_line_movements').select('booking_line_id').eq('session_id', receipt.id)
+        expect(moved.error).toBeNull()
+        expect(moved.data?.every(m => m.booking_line_id === picked?.id)).toBe(true)
+        expect(await reservations()).toEqual(before)
+      }
       const handoverTransitions = await api.from('booking_stage_transitions').select('id').eq('booking_id', id).eq('from_stage', 'Packed').eq('to_stage', 'On Rent')
       expect(handoverTransitions.error).toBeNull()
-      expect(handoverTransitions.data).toHaveLength(1)
+      expect(handoverTransitions.data).toHaveLength(partial ? 0 : 1)
       await page.reload()
-      expect(await stage()).toBe('On Rent')
+      expect(await stage()).toBe(partial ? 'Packed' : 'On Rent')
+      if (partial) expect(await reservations()).toEqual(before)
       expect(await handoverSessions()).toHaveLength(1)
       expect(await sessions()).toHaveLength(1)
     } finally {
