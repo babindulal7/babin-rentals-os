@@ -83,7 +83,8 @@ test.describe('Operations popup persisted-stage navigation', () => {
 
 test.describe('Operations packing confirmation and duplicate-submit protection', () => {
   test.skip(!disposable, 'Synthetic local CI only')
-  test('evidence gate, discard protection and successful packing persist exactly once', async ({ page }, testInfo) => {
+  test('packing and handover persist once, with evidence, signatures and discard protection', async ({ page }, testInfo) => {
+    test.setTimeout(180_000)
     const email = process.env.E2E_OWNER_EMAIL
     const password = process.env.E2E_OWNER_PASSWORD
     const key = process.env.E2E_LOCAL_ANON_KEY
@@ -156,6 +157,66 @@ test.describe('Operations packing confirmation and duplicate-submit protection',
       expect(transitions.data).toHaveLength(1)
       await page.reload()
       expect(await stage()).toBe('Packed')
+      expect(await sessions()).toHaveLength(1)
+
+      // Start Handover from the real persisted Packed record, never from a
+      // fabricated On Rent snapshot or a privileged browser session.
+      const handoverSessions = async () => {
+        const result = await api.from('operation_sessions').select('id,state,government_id_verified,booking_authorization_verified').eq('booking_id', id).eq('operation', 'Handover')
+        expect(result.error).toBeNull()
+        return result.data ?? []
+      }
+      expect(await handoverSessions()).toHaveLength(0)
+      await page.getByRole('button', { name: 'Handover', exact: true }).filter({ visible: true }).first().click()
+      const handover = popup.getByRole('button', { name: 'Confirm Handover & Next', exact: true })
+      await expect(handover).toBeDisabled()
+      await expect(popup.getByRole('checkbox', { name: 'Booking Authorization Verified', exact: true })).toBeChecked()
+      await popup.getByRole('checkbox', { name: 'Government ID Verified', exact: true }).check()
+      await popup.getByRole('button', { name: 'Mark Ready Picked Up', exact: true }).click()
+      for (const gate of [3, 4]) {
+        const row = popup.locator('[data-operation-gate="' + gate + '"]')
+        await row.getByRole('button', { name: 'Mark Cleared →', exact: true }).click()
+        await expect(row).toHaveClass(/is-pass/)
+      }
+      await expect(handover).toBeDisabled()
+      expect(await stage()).toBe('Packed')
+      expect(await handoverSessions()).toHaveLength(0)
+
+      // Use the existing digital attestation flow, including real evidence
+      // upload, for two synthetic signers. No actual client identity is used.
+      for (const [role, signer] of [['Receiver', 'Disposable Test Receiver'], ['Warehouse Staff', 'Disposable Test Dispatcher']]) {
+        await popup.locator('[data-operation-signature="' + role + '"]').getByRole('button', { name: 'Sign on Glass', exact: true }).click()
+        const signature = page.getByRole('dialog', { name: /^Digital Sign-on-Glass/ })
+        await expect(signature).toBeVisible()
+        await signature.getByRole('tab', { name: /Type Legal Signature/ }).click()
+        await signature.getByRole('textbox', { name: 'Signer Legal Full Name' }).fill(signer)
+        if (role === 'Receiver') await signature.getByRole('checkbox', { name: /Verify Government Photo ID/ }).check()
+        await signature.getByRole('checkbox', { name: /I acknowledge and accept this digital signature/ }).check()
+        await signature.getByRole('button', { name: 'Accept & Sign Handover', exact: true }).click()
+        await expect(signature).toHaveCount(0, { timeout: 30_000 })
+      }
+      await expect(handover).toBeEnabled({ timeout: 30_000 })
+      await handover.click({ clickCount: 2 })
+      await expect.poll(stage, { timeout: 30_000 }).toBe('On Rent')
+      await expect.poll(async () => (await handoverSessions()).map(s => s.state), { timeout: 30_000 }).toEqual(['Completed'])
+      const receipt = (await handoverSessions())[0]!
+      expect(receipt.government_id_verified).toBe(true)
+      expect(receipt.booking_authorization_verified).toBe(true)
+      const signatures = await api.from('signatures').select('signature_role,evidence_file_id').eq('session_id', receipt.id)
+      expect(signatures.error).toBeNull()
+      expect(signatures.data?.map(s => s.signature_role).sort()).toEqual(['Receiver', 'Warehouse staff'])
+      expect(signatures.data?.every(s => Boolean(s.evidence_file_id))).toBe(true)
+      const movements = await api.from('session_line_movements').select('qty,resulting_item_state').eq('session_id', receipt.id)
+      expect(movements.error).toBeNull()
+      expect(movements.data?.length).toBeGreaterThan(0)
+      expect(movements.data?.every(m => m.resulting_item_state === 'Picked Up')).toBe(true)
+      expect(movements.data?.reduce((sum, m) => sum + Number(m.qty), 0)).toBe(2)
+      const handoverTransitions = await api.from('booking_stage_transitions').select('id').eq('booking_id', id).eq('from_stage', 'Packed').eq('to_stage', 'On Rent')
+      expect(handoverTransitions.error).toBeNull()
+      expect(handoverTransitions.data).toHaveLength(1)
+      await page.reload()
+      expect(await stage()).toBe('On Rent')
+      expect(await handoverSessions()).toHaveLength(1)
       expect(await sessions()).toHaveLength(1)
     } finally {
       await api.auth.signOut({ scope: 'local' })

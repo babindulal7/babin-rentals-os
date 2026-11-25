@@ -210,6 +210,19 @@ async function run() {
         await fixtureQuery('Quote to Booked transition', "insert into public.booking_stage_transitions (client_uuid,booking_id,branch_id,from_stage,to_stage,actor_id,actor_role,occurred_at) values ($1,$2,$3,'Quote','Booked',$4,'Owner',now())", [randomUUID(), bookingId, branch, fixtureOwner])
         const stage = (await fixtureQuery('persisted stage read', "select stage from public.bookings where id=$1", [bookingId])).rows[0]?.stage
         if (stage !== 'Booked') throw new Error('Operations confirmation fixture did not reach Booked')
+        // Settle the actual synthetic rental estimate and any required deposit
+        // before the Owner certifies the financial gates in the browser.
+        const estimate = Number((await fixtureQuery('handover estimate', 'select public.booking_estimate_total($1) as total', [bookingId])).rows[0]?.total)
+        if (!Number.isFinite(estimate) || estimate <= 0) throw new Error('Handover fixture estimate invalid')
+        await fixtureQuery('handover advance payment', "insert into public.payments (client_uuid,payment_no,booking_id,client_id,branch_id,amount,payment_type,status,received_by) values ($1,public.next_document_number('payment'),$2,$3,$4,$5,'Advance Payment','Received',$6)", [randomUUID(),bookingId,targets[0].clientId,branch,estimate,fixtureOwner])
+        const deposits = (await fixtureQuery('handover deposit status', 'select id,pending_amount from public.security_deposits where booking_id=$1', [bookingId])).rows
+        for (const deposit of deposits) {
+          if (Number(deposit.pending_amount) > 0) {
+            await fixtureQuery('handover deposit receipt', "insert into public.deposit_movements (client_uuid,movement_no,security_deposit_id,movement_type,amount,handled_by) values ($1,$2,$3,'Received',$4,$5)", [randomUUID(),'CI-'+randomBytes(8).toString('hex'),deposit.id,deposit.pending_amount,fixtureOwner])
+          }
+        }
+        const pending = (await fixtureQuery('handover financial clearance', "select (select coalesce(sum(pending_amount),0) from public.security_deposits where booking_id=$1) as deposit, (select coalesce(sum(outstanding_amount),0) from public.invoices where booking_id=$1 and status<>'Void') as rental", [bookingId])).rows[0]
+        if (Number(pending.deposit) !== 0 || Number(pending.rental) !== 0) throw new Error('Handover fixture financial gates not cleared')
         env['E2E_OPS_CONFIRM_' + device.toUpperCase() + '_ID'] = bookingId
         env['E2E_OPS_CONFIRM_' + device.toUpperCase() + '_NO'] = row.booking_no
       }
