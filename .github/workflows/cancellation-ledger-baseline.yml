@@ -1,0 +1,29 @@
+name: Cancellation ledger baseline verification
+on:
+  pull_request:
+    branches: [integration/combined-launch-candidate-20261125]
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+jobs:
+  financial-baseline:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'test/cancellation-ledger-baseline-445'
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 10
+    env:
+      VITE_DATA_SOURCE: mock
+      VITE_SUPABASE_URL: ''
+      VITE_SUPABASE_ANON_KEY: ''
+      SUPABASE_ACCESS_TOKEN: ''
+      SUPABASE_DB_PASSWORD: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - name: Verify cancellation ledger baseline in disposable PGlite
+        run: node scripts/test-booking-financial-integrity.mjs
