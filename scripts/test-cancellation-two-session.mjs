@@ -1,10 +1,11 @@
 // #440: real two-connection PostgreSQL stage/cancellation serialization.
 // Called only by the existing guarded disposable Linux runner. No hosted DB.
-// These stage-only fixtures are not evidence of physical equipment pickup.
+// Stage-only and quantity pickup fixtures; no claim of complete UI or serialised custody coverage.
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { setTimeout as sleep } from 'node:timers/promises'
 import pg from 'pg'
+import { makePickupFixture, pickup } from './fixtures/cancellation-pickup-fixture.mjs'
 
 export async function verifyCancellationRace({ connectionString, observer, ownerId, warehouseId, branchId, clientId }) {
   const url = new URL(connectionString)
@@ -88,6 +89,56 @@ export async function verifyCancellationRace({ connectionString, observer, owner
         assert.equal(winner.transitions.length,baseline.transitions.length+1)
       }
       console.log('PASS real PostgreSQL lock and losing transaction rollback: '+(cancellationFirst?'cancel first':'stage first'))
+    }
+    const writePickup = (conn, fixture, kind) => kind === 'session completion'
+      ? conn.query("update public.operation_sessions set state='Completed',completed_at=clock_timestamp(),completed_by=$1 where id=$2 returning id",[warehouseId,fixture.sessionId]).then(result=>{assert.equal(result.rowCount,1);return result})
+      : pickup(conn,fixture,kind,warehouseId)
+    for (const kind of ['movement','handover line','session completion']) {
+      for (const cancellationFirst of [true,false]) {
+        const fixture = await makePickupFixture({q,ownerId,warehouseId,branchId,clientId})
+        const read = async () => ({
+          ...(await snapshot(fixture.id)),
+          sessions: (await q('select * from public.operation_sessions where booking_id=$1 order by id',[fixture.id])).rows,
+          movements: (await q('select * from public.session_line_movements where session_id=$1 order by id',[fixture.sessionId])).rows,
+          handover: (await q('select * from public.handover_lines where booking_line_id=$1 order by id',[fixture.lineId])).rows,
+          relatedAudit: (await q('select id from public.audit_events where record_id=any($1::uuid[]) order by id',[[fixture.lineId,fixture.sessionId]])).rows,
+        })
+        const before = await read()
+        await begin(first,cancellationFirst ? ownerId : warehouseId)
+        await begin(second,cancellationFirst ? warehouseId : ownerId)
+        if (cancellationFirst) {
+          const receipt = await cancel(first,fixture.id)
+          assert.equal(receipt.rows[0]?.receipt?.success,true)
+          pending = capture(writePickup(second,fixture,kind))
+        } else {
+          await writePickup(first,fixture,kind)
+          pending = capture(cancel(second,fixture.id))
+        }
+        await waitForLock(second,first)
+        await first.query('commit')
+        const winner = await read()
+        const outcome = await pending
+        pending = undefined
+        assert.ok(outcome.error,'Losing physical operation must reject')
+        assert.equal(outcome.error.code,'P0001')
+        assert.match(outcome.error.message,cancellationFirst ? (kind==='session completion' ? /gate\.booking\.cancelled/ : /no longer ready for pickup/) : /pickup has already occurred/)
+        await second.query('rollback')
+        assert.deepEqual(await read(),winner,'Losing physical operation persisted changes')
+        assert.equal(winner.booking.stage,'Packed','Partial pickup must not advance stage')
+        if (cancellationFirst) {
+          assert.equal(winner.booking.cancelled_by,ownerId)
+          assert.deepEqual(winner.movements,before.movements)
+          assert.deepEqual(winner.handover,before.handover)
+          assert.deepEqual(winner.sessions,before.sessions)
+          assert.ok(winner.reservations.every(r=>r.released_at!==null),'Cancellation releases active holds')
+        } else {
+          assert.equal(winner.booking.cancelled_at,null)
+          assert.deepEqual(winner.reservations,before.reservations,'Partial pickup must retain holds')
+          if(kind==='session completion') assert.equal(winner.sessions.find(row=>row.id===fixture.sessionId)?.state,'Completed')
+          else assert.equal(kind==='movement' ? winner.movements.length : winner.handover.length,1)
+        }
+        console.log('PASS real pickup race: '+kind+' / '+(cancellationFirst?'cancel first':'pickup first'))
+      }
     }
   } finally {
     // Unblock the second session on any failed assertion before awaiting it.
