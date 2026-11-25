@@ -10592,8 +10592,17 @@ STEPS.push({
       assertEq(oldDetails.reason, 'expired', 'old link reason is expired')
     })
 
+    // No browser/session role may allocate payments. Only the trusted server can.
+    const allocatorSignature = 'public.allocate_payment_intent(uuid,text,jsonb)'
+    for (const role of ['anon', 'authenticated']) {
+      const privilege = (await q("select has_function_privilege($1, $2, 'EXECUTE') as allowed", [role, allocatorSignature])).rows[0].allowed
+      assertEq(privilege, false, `${role} cannot allocate payments`)
+    }
+    const servicePrivilege = (await q("select has_function_privilege($1, $2, 'EXECUTE') as allowed", ['service_role', allocatorSignature])).rows[0].allowed
+    assertEq(servicePrivilege, true, 'trusted service role can allocate verified payments')
+
     // 7. "An expired link refuses" — allocate_payment_intent on old intent throws
-    await as('Admin', async () => {
+    await asService(async () => {
       let threw = false
       try {
         await q(
@@ -10607,9 +10616,9 @@ STEPS.push({
       assert(threw, 'attempting to allocate expired link intent failed closed')
     })
 
-    // 8. Client pays the new link (server-to-server confirmation via Fonepay)
+    // 8. Simulate trusted server allocation in the isolated database only.
     const providerRef = 'FP-LINK-' + Date.now()
-    await as('Admin', async () => {
+    await asService(async () => {
       const allocRes = (await q(
         `select public.allocate_payment_intent($1::uuid, $2, $3::jsonb) as res`,
         [link2.intent_id, providerRef, JSON.stringify({ fonepay_status: 'SUCCESS' })]
@@ -10621,7 +10630,7 @@ STEPS.push({
     })
 
     // 9. "A replayed callback changes nothing" (Law 4 & D30 idempotency)
-    await as('Admin', async () => {
+    await asService(async () => {
       const replayRes = (await q(
         `select public.allocate_payment_intent($1::uuid, $2, $3::jsonb) as res`,
         [link2.intent_id, providerRef, JSON.stringify({ fonepay_status: 'SUCCESS' })]
