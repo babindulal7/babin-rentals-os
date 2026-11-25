@@ -210,11 +210,22 @@ async function run() {
         await fixtureQuery('Quote to Booked transition', "insert into public.booking_stage_transitions (client_uuid,booking_id,branch_id,from_stage,to_stage,actor_id,actor_role,occurred_at) values ($1,$2,$3,'Quote','Booked',$4,'Owner',now())", [randomUUID(), bookingId, branch, fixtureOwner])
         const stage = (await fixtureQuery('persisted stage read', "select stage from public.bookings where id=$1", [bookingId])).rows[0]?.stage
         if (stage !== 'Booked') throw new Error('Operations confirmation fixture did not reach Booked')
-        // Settle the actual synthetic rental estimate and any required deposit
-        // before the Owner certifies the financial gates in the browser.
-        const estimate = Number((await fixtureQuery('handover estimate', 'select public.booking_estimate_total($1) as total', [bookingId])).rows[0]?.total)
-        if (!Number.isFinite(estimate) || estimate <= 0) throw new Error('Handover fixture estimate invalid')
-        await fixtureQuery('handover advance payment', "insert into public.payments (client_uuid,payment_no,booking_id,client_id,branch_id,amount,payment_type,status,received_by) values ($1,public.next_document_number('payment'),$2,$3,$4,$5,'Advance Payment','Received',$6)", [randomUUID(),bookingId,targets[0].clientId,branch,estimate,fixtureOwner])
+        // Confirmation creates a draft invoice. Settle that actual invoice
+        // through the normal payment trigger; a booking-only advance does not
+        // update invoice balances. Never modify invoice totals or bypass gates.
+        const invoices = (await fixtureQuery('handover draft invoice', "select id,status,total_amount,paid_amount,outstanding_amount from public.invoices where booking_id=$1 and status<>'Void'", [bookingId])).rows
+        const invoice = invoices[0]
+        const amount = Number(invoice?.outstanding_amount)
+        if (invoices.length !== 1 || invoice?.status !== 'Draft' || Number(invoice.paid_amount) !== 0 || !Number.isFinite(amount) || amount <= 0 || amount !== Number(invoice.total_amount)) {
+          console.error('Handover fixture expected one positive unpaid draft invoice')
+          throw new Error('Handover fixture invoice precondition failed')
+        }
+        await fixtureQuery('handover linked invoice payment', "insert into public.payments (client_uuid,payment_no,booking_id,invoice_id,client_id,branch_id,amount,payment_type,status,received_by) values ($1,public.next_document_number('payment'),$2,$3,$4,$5,$6,'Advance Payment','Received',$7)", [randomUUID(),bookingId,invoice.id,targets[0].clientId,branch,amount,fixtureOwner])
+        const settled = (await fixtureQuery('handover invoice settlement readback', 'select paid_amount,outstanding_amount,status from public.invoices where id=$1', [invoice.id])).rows[0]
+        if (Number(settled?.paid_amount) !== amount || Number(settled?.outstanding_amount) !== 0 || settled?.status !== 'Paid') {
+          console.error('Handover fixture linked payment did not settle invoice')
+          throw new Error('Handover fixture invoice settlement failed')
+        }
         const deposits = (await fixtureQuery('handover deposit status', 'select id,pending_amount from public.security_deposits where booking_id=$1', [bookingId])).rows
         for (const deposit of deposits) {
           if (Number(deposit.pending_amount) > 0) {
@@ -222,7 +233,10 @@ async function run() {
           }
         }
         const pending = (await fixtureQuery('handover financial clearance', "select (select coalesce(sum(pending_amount),0) from public.security_deposits where booking_id=$1) as deposit, (select coalesce(sum(outstanding_amount),0) from public.invoices where booking_id=$1 and status<>'Void') as rental", [bookingId])).rows[0]
-        if (Number(pending.deposit) !== 0 || Number(pending.rental) !== 0) throw new Error('Handover fixture financial gates not cleared')
+        if (Number(pending?.deposit) !== 0 || Number(pending?.rental) !== 0) {
+          console.error('Handover fixture clearance failed: depositClear=' + (Number(pending?.deposit) === 0) + '; rentalClear=' + (Number(pending?.rental) === 0))
+          throw new Error('Handover fixture financial gates not cleared')
+        }
         env['E2E_OPS_CONFIRM_' + device.toUpperCase() + '_ID'] = bookingId
         env['E2E_OPS_CONFIRM_' + device.toUpperCase() + '_NO'] = row.booking_no
       }
