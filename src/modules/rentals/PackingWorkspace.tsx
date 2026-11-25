@@ -1179,7 +1179,7 @@ export default function PackingWorkspace({
      * resolved promise, landing the operator on a still-Booked booking with no
      * word of why (PK-01). A held stage now stays here and says so.
      */
-    import('../../actions/rentals/index')
+    return import('../../actions/rentals/index')
       .then((m) =>
         m.packRental(
           {
