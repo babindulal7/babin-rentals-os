@@ -10523,24 +10523,43 @@ STEPS.push({
     const expectedPaisa = Math.round(invoiceOutstandingRupees * 100)
     assert(expectedPaisa > 0, 'invoice has positive outstanding amount')
 
-    // 2. Law 6: Warehouse cannot make a payment link
-    await as('Warehouse', async () => {
-      let threw = false
-      try {
-        await q(
-          `select public.create_booking_payment_link($1, $2::uuid) as res`,
-          [crypto.randomUUID(), bookingId]
-        )
-      } catch (err) {
-        threw = true
-        assert(err.message.includes('GATE:gate.rbac.money_denied'), 'Warehouse denied with GATE:gate.rbac.money_denied')
+    // 2. Launch hold: no session can create online intents or links.
+    const signatures = [
+      'public.create_payment_intent(text,uuid,uuid,text)',
+      'public.create_booking_payment_link(text,uuid)',
+    ]
+    for (const role of ['anon', 'authenticated', 'service_role']) {
+      for (const signature of signatures) {
+        const allowed = (await q("select has_function_privilege($1, $2, 'EXECUTE') as allowed", [role, signature])).rows[0].allowed
+        assertEq(allowed, false, role + ' cannot issue ' + signature)
       }
-      assert(threw, 'Warehouse refused from generating payment link')
+    }
+    const countBefore = await one('select count(*)::int from public.payment_intents where booking_id = $1', [bookingId])
+    const payBefore = await one('select count(*)::int from public.payments where booking_id = $1', [bookingId])
+    const denyIssuance = async () => {
+      await refuses('payment link on hold', 'select public.create_booking_payment_link($1,$2::uuid)', [crypto.randomUUID(), bookingId], /permission denied/i)
+      await refuses('payment intent on hold', 'select public.create_payment_intent($1,$2::uuid,null::uuid,$3)', [crypto.randomUUID(), bookingId, 'fonepay'], /permission denied/i)
+    }
+    await asAnon(denyIssuance)
+    for (const role of ['Warehouse', 'Client', 'Coordinator', 'Owner']) {
+      await as(role, denyIssuance)
+    }
+    await asService(denyIssuance)
+    assertEq(await one('select count(*)::int from public.payment_intents where booking_id = $1', [bookingId]), countBefore, 'denial creates no intent')
+    assertEq(await one('select count(*)::int from public.payments where booking_id = $1', [bookingId]), payBefore, 'denial creates no ledger row')
+
+    // Historical behavior is exercised ONLY by the isolated migration owner
+    // using the synthetic actor claims; no API role gains issuance privileges.
+    // The Warehouse body-level permission check remains tested separately.
+    await as('Warehouse', async () => {
+      await db.exec('reset role;')
+      await refuses('Warehouse body money gate', 'select public.create_booking_payment_link($1,$2::uuid)', [crypto.randomUUID(), bookingId], /GATE:gate.rbac.money_denied/)
     })
 
-    // 3. Coordinator creates first payment link
+    // 3. Isolated database owner creates the historical test link with Coordinator claims
     let link1
     await as('Coordinator', async () => {
+      await db.exec('reset role;')
       const res = (await q(
         `select public.create_booking_payment_link($1, $2::uuid) as res`,
         [crypto.randomUUID(), bookingId]
@@ -10572,6 +10591,7 @@ STEPS.push({
     // 5. "A new link replaces the old" — Coordinator creates a second payment link
     let link2
     await as('Coordinator', async () => {
+      await db.exec('reset role;')
       const res = (await q(
         `select public.create_booking_payment_link($1, $2::uuid) as res`,
         [crypto.randomUUID(), bookingId]
