@@ -8,7 +8,8 @@ export interface OperationProgress {
 export interface OperationWorkspaceActions {
   canComplete: boolean
   dispatching: boolean
-  complete: () => void
+  /** Return the dispatch promise so the host can release its lock even when the stage is held. */
+  complete: () => void | Promise<void>
   isDirty: boolean
   label?: string
   error?: string | null

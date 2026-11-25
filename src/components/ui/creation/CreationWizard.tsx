@@ -55,7 +55,6 @@ export function CreationWizard({
   actionId,
   contextData = {},
   onClose,
-  onSuccess,
 }: CreationWizardProps) {
   const navigate = useNavigate()
   useAuth()
@@ -65,7 +64,7 @@ export function CreationWizard({
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
 
   // Draft Form State
-  const [clientId, setClientId] = useState('')
+  const [, setClientId] = useState('')
   const [clientName, setClientName] = useState('')
   const [projectName, setProjectName] = useState('')
   const [startDate, setStartDate] = useState(() => {
@@ -88,7 +87,7 @@ export function CreationWizard({
 
   // Nested Quick-Create Client dialog state
   const [quickClientOpen, setQuickClientOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const loading = false
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
@@ -159,79 +158,14 @@ export function CreationWizard({
     )
   }
 
-  const handleSaveDraft = async () => {
-    setLoading(true)
-    try {
-      const draftRecord = {
-        id: `draft-${Date.now()}`,
-        isQuote,
-        status: 'Draft',
-        client: clientName || 'Walk-in Client',
-        clientId,
-        projectName: projectName || 'Untitled Project',
-        startDate,
-        endDate,
-        rentalDays: dayCount,
-        deliveryType,
-        items,
-        notes,
-        createdAt: new Date().toISOString(),
-      }
-
-      showSuccessToast(
-        isQuote ? 'Quote Draft Saved' : 'Rental Draft Saved',
-        `${projectName || 'Draft'} saved. You can resume anytime from Rentals.`
-      )
-
-      onSuccess?.(draftRecord)
-      onClose()
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to save draft.'
-      setErrors({ form: msg })
-    } finally {
-      setLoading(false)
-    }
+  // The quick wizard has no persistence adapter. Never manufacture booking IDs
+  // or report success. Preserve the entered form while displaying the limitation.
+  const handleSaveDraft = () => {
+    setErrors(prev => ({ ...prev, form: 'Nothing was saved. Use the full New Rental workspace to save a draft.' }))
   }
 
-  const handleConfirmBooking = async () => {
-    if (!clientName.trim()) {
-      setErrors({ client: 'Please specify or select a client before confirming.' })
-      setStep(1)
-      return
-    }
-
-    setLoading(true)
-    try {
-      const bookingNo = `BK-2026-${Math.floor(1000 + Math.random() * 9000)}`
-      const record = {
-        id: `booking-${Date.now()}`,
-        bookingNo,
-        status: isQuote ? 'Draft' : 'Booked',
-        client: clientName,
-        clientId,
-        projectName,
-        startDate,
-        endDate,
-        rentalDays: dayCount,
-        deliveryType,
-        items,
-        notes,
-        confirmedAt: new Date().toISOString(),
-      }
-
-      showSuccessToast(
-        isQuote ? 'Quotation Generated' : 'Booking Confirmed',
-        `${isQuote ? 'Quote' : 'Booking'} ${bookingNo} created for ${clientName}.`
-      )
-
-      onSuccess?.(record)
-      onClose()
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Confirmation failed.'
-      setErrors({ form: msg })
-    } finally {
-      setLoading(false)
-    }
+  const handleConfirmBooking = () => {
+    setErrors(prev => ({ ...prev, form: 'Nothing was confirmed. Use the full New Rental workspace to create and verify the booking or quote.' }))
   }
 
   const handleOpenFullWorkspace = () => {
@@ -685,11 +619,12 @@ export function CreationWizard({
                   lineHeight: 1.5,
                 }}
               >
-                <strong>Rule Enforced:</strong> Save Draft preserves your choices without allocating physical gear or minting financial claims. Confirm Booking commits the reservation.
+                <strong>Not connected to persistence:</strong> This quick wizard cannot save or confirm. Open the full New Rental workspace to create a real record. Your entries here are not transferred automatically.
               </div>
             </div>
           )}
 
+          {errors.form && <p role="alert" style={{ color: 'var(--danger-text)' }}>{errors.form}</p>}
           {/* Navigation Controls */}
           <div
             style={{
@@ -723,6 +658,7 @@ export function CreationWizard({
                 </Button>
               ) : (
                 <>
+                  <Button variant="ghost" onClick={handleOpenFullWorkspace}>Open Full Workspace</Button>
                   <Button variant="secondary" onClick={handleSaveDraft} disabled={loading}>
                     Save Draft
                   </Button>

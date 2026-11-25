@@ -25,7 +25,7 @@ import {
   getReadyPermittedActions,
 } from '../CreationActionRegistry'
 import { GlobalAddMenu } from '../GlobalAddMenu'
-import { CreationContextProvider } from '../CreationContextProvider'
+import { CreationContextProvider, useCreationContext } from '../CreationContextProvider'
 import { CreationActionSearch } from '../CreationActionSearch'
 import { QuickCreateDialog } from '../QuickCreateDialog'
 import type { SystemRole } from '../../../../types/database'
@@ -409,6 +409,28 @@ describe('Universal Add Dropdown — Specification Verification', () => {
   // SECTION 5: QuickCreateDialog Client Creation
   // ───────────────────────────────────────────────────────────────────────────
   describe('Section 5: QuickCreateDialog Behavior', () => {
+    it('blocks direct opening of unimplemented creation actions, not just menu entries', async () => {
+      function Probe() {
+        const ctx = useCreationContext()
+        return <><button onClick={() => ctx.openCreationAction('expense.new')}>Try unavailable</button><output>{ctx.activeActionId ?? 'none'}</output></>
+      }
+      await act(async () => root.render(<MemoryRouter><ToastProvider><CreationContextProvider><Probe /></CreationContextProvider></ToastProvider></MemoryRouter>))
+      await act(async () => [...container.querySelectorAll('button')].find(b => b.textContent === 'Try unavailable')?.click())
+      expect(container.querySelector('output')?.textContent).toBe('none')
+      expect(document.body.textContent).toContain('Nothing was created.')
+    })
+
+    it('never invents a record if an unsupported dialog is mounted directly', async () => {
+      const onSuccess = vi.fn()
+      const onClose = vi.fn()
+      await act(async () => root.render(<MemoryRouter><ToastProvider><QuickCreateDialog isOpen actionId="task.new" onSuccess={onSuccess} onClose={onClose} /></ToastProvider></MemoryRouter>))
+      const form = document.querySelector('form')
+      expect(form).not.toBeNull()
+      await act(async () => form?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+      expect(document.body.textContent).toContain('Nothing was created.')
+      expect(onSuccess).not.toHaveBeenCalled()
+      expect(onClose).not.toHaveBeenCalled()
+    })
     it('validates client name and phone number without premature save', async () => {
       const onCloseSpy = vi.fn()
       const onSuccessSpy = vi.fn()
