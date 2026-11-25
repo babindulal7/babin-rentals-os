@@ -9,7 +9,7 @@ import { assertStagingEnvironment } from './tests/e2e/staging-guard.mjs'
  * Required env (names only; values live in your local .env.staging.local or CI secrets):
  *   BABIN_STAGING_SUPABASE_URL   e.g. https://<staging-ref>.supabase.co
  *   BABIN_STAGING_ANON_KEY       staging publishable/anon key
- * Optional (authenticated suites are skipped when absent):
+ * Required in CI; optional only for local unauthenticated smoke runs:
  *   E2E_OWNER_EMAIL / E2E_OWNER_PASSWORD
  *   E2E_MANAGER_EMAIL / E2E_MANAGER_PASSWORD
  *   E2E_STAFF_EMAIL / E2E_STAFF_PASSWORD
