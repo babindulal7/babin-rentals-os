@@ -6,10 +6,16 @@ import { formatMoney, type Paisa } from '../../lib/money'
 import Icon from '../../components/ui/Icon'
 
 export const PaymentLinkPage: React.FC = () => {
-  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock'
   const [searchParams] = useSearchParams()
   const { token: pathToken } = useParams<{ token?: string }>()
   const token = searchParams.get('token') || pathToken || ''
+  // Settlement, receipt amount and checkout state belong to exactly one token.
+  // Remount before rendering a different link, including a missing token.
+  return <PaymentLinkContent key={token} token={token} />
+}
+
+const PaymentLinkContent: React.FC<{ token: string }> = ({ token }) => {
+  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock'
 
   const [loading, setLoading] = useState(true)
   const [details, setDetails] = useState<PaymentLinkDetails | null>(null)

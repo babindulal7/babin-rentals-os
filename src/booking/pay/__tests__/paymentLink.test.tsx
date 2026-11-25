@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { Link, MemoryRouter, Route, Routes } from 'react-router-dom'
 import { PaymentLinkModal } from '../../../modules/rentals/booking/PaymentLinkModal'
 import { PaymentLinkPage } from '../PaymentLinkPage'
 import * as payApi from '../payApi'
@@ -191,6 +191,40 @@ describe('Payment Link Components (T7-15)', () => {
 
       expect(container.textContent).toContain('Payment Already Settled')
       expect(container.textContent).toContain('BK-2026-0042')
+    })
+
+    it('does not transfer a settled receipt to a different or missing payment token', async () => {
+      vi.stubEnv('VITE_DATA_SOURCE', 'supabase')
+      vi.mocked(payApi.fetchPaymentLinkDetails)
+        .mockResolvedValueOnce({ valid: false, reason: 'already_paid', booking_no: 'BK-PAID', amount_paisa: 1500000 })
+        .mockResolvedValueOnce({ valid: true, booking_no: 'BK-UNPAID', amount_paisa: 500000 })
+      await act(async () => {
+        root.render(
+          <MemoryRouter initialEntries={['/pay/link?token=paid-token']}>
+            <Link to="/pay/link?token=unpaid-token">Open unpaid link</Link>
+            <Link to="/pay/link">Open missing link</Link>
+            <Routes><Route path="/pay/link" element={<PaymentLinkPage />} /></Routes>
+          </MemoryRouter>
+        )
+      })
+      expect(container.textContent).toContain('Payment Already Settled')
+      expect(container.textContent).toContain('BK-PAID')
+      await act(async () => {
+        container.querySelector<HTMLAnchorElement>('a[href="/pay/link?token=unpaid-token"]')?.click()
+      })
+      expect(payApi.fetchPaymentLinkDetails).toHaveBeenLastCalledWith('unpaid-token')
+      expect(container.textContent).toContain('BK-UNPAID')
+      expect(container.textContent).not.toContain('BK-PAID')
+      expect(container.textContent).not.toContain('Payment Already Settled')
+      expect(container.textContent).not.toContain('Official Payment Receipt')
+      expect(container.textContent).toContain('Online payment is temporarily unavailable')
+      await act(async () => {
+        container.querySelector<HTMLAnchorElement>('a[href="/pay/link"]')?.click()
+      })
+      expect(container.textContent).toContain('Missing payment link token')
+      expect(container.textContent).not.toContain('BK-UNPAID')
+      expect(container.textContent).not.toContain('Official Payment Receipt')
+      expect(payApi.fetchPaymentLinkDetails).toHaveBeenCalledTimes(2)
     })
 
     it('allows toggling between 50% advance and 100% full payment', async () => {
