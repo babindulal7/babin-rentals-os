@@ -1,7 +1,7 @@
 name: Mobile browser (offline)
 on:
   pull_request:
-    branches: [main, integration/launch-repair-20261125]
+    branches: [main, integration/launch-repair-20261125, fix/mobile-dispatch-preview-20261125]
     paths:
       - 'src/**'
       - 'package.json'
@@ -83,6 +83,25 @@ jobs:
                 await expect(page.getByLabel('Date filter for pickups', { exact: true })).toBeVisible()
                 await expect(page.locator('.br-reference-inspector--phone')).toBeVisible()
               }
+              // Test real booking navigation, filter multi-selection and card selection.
+              await page.goto(origin + '/rentals')
+              await expect(page.getByRole('heading', { name: 'Rentals', exact: true })).toBeVisible({ timeout: 30000 })
+              const filter = page.getByRole('button', { name: /Show filters panel/ })
+              await expect(filter).toBeVisible()
+              await filter.click()
+              const statusOptions = page.getByRole('checkbox', { name: /Filter by status:/ })
+              await expect(statusOptions.first()).toBeVisible()
+              const first = statusOptions.nth(0)
+              const second = statusOptions.nth(1)
+              if (!(await first.isChecked())) await first.check()
+              if (!(await second.isChecked())) await second.check()
+              await expect(first).toBeChecked()
+              await expect(second).toBeChecked()
+              const tags = page.getByRole('checkbox', { name: /Filter by tag:/ })
+              await expect(tags.first()).toBeVisible()
+              await tags.first().check()
+              await expect(tags.first()).toBeChecked()
+              console.log('PASS rental filters ' + width + 'x' + height)
               console.log('PASS ' + width + 'x' + height)
             } catch (error) {
               failures.push(width + 'x' + height + ': ' + String(error))
