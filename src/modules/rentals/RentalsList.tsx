@@ -2381,6 +2381,10 @@ export default function RentalsList() {
                       : { display: 'flex', flexDirection: 'column' }
                   }
                 >
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '0 12px', gridColumn: '1 / -1', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={allSelected} ref={(el) => { if (el) el.indeterminate = !allSelected && someSelected }} onChange={toggleSelectAll} aria-label="Select all bookings on this page" style={{ width: 16, height: 16, accentColor: 'var(--primary)' }} />
+                    Select page{selectedIds.size > 0 ? ` · ${selectedIds.size} selected` : ''}
+                  </label>
                   {rowsWithIntel.map(({ row: r, glance, detail }) => (
                     <div
                       key={r.id}
