@@ -55,8 +55,23 @@ test.describe('Disposable expense persistence and access control', () => {
     await expect(save).toBeEnabled({ timeout: 30_000 })
     await save.click()
     await expect(dialog.getByText('This expense was not recorded')).toBeVisible()
-    await dialog.getByLabel('Category', { exact: true }).selectOption({ index: 1 })
-    await dialog.getByLabel('Branch', { exact: true }).selectOption({ index: 1 })
+    // The native selects are wrapped in labels containing option text.
+    // Locate the actual visible controls by their unique placeholder options,
+    // rather than requiring the implicit label's entire text to equal a word.
+    for (const placeholder of ['Choose a category…', 'Choose a branch…']) {
+      const control = dialog.locator('select').filter({
+        has: page.locator('option[value=""]').filter({ hasText: placeholder }),
+      })
+      await expect(control).toHaveCount(1)
+      await expect(control).toBeVisible()
+      await expect(control).toBeEnabled()
+      const options = control.locator('option:not([value=""]):not(:disabled)')
+      await expect.poll(() => options.count()).toBeGreaterThan(0)
+      const value = await options.first().getAttribute('value')
+      if (!value) throw new Error('No usable expense lookup option: ' + placeholder)
+      await control.selectOption(value)
+      await expect(control).toHaveValue(value)
+    }
     await dialog.getByLabel('Vendor', { exact: true }).fill(marker)
     await dialog.getByLabel('Description', { exact: true }).fill('Synthetic disposable CI expense')
     await dialog.locator('input[type="number"]').fill('1234')
@@ -79,7 +94,7 @@ test.describe('Disposable expense persistence and access control', () => {
 
     await page.reload()
     await expect(page.getByRole('button', { name: 'Add Expense', exact: true }).first()).toBeVisible()
-    const search = page.getByPlaceholder(/search expenses/i).first()
+    const search = page.getByRole('textbox', { name: 'Search expenses' }).first()
     await expect(search).toBeVisible()
     await search.fill(marker)
     await expect(page.getByText(marker, { exact: true }).first()).toBeVisible({ timeout: 30_000 })
