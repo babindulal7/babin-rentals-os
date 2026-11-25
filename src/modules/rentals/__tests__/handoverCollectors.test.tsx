@@ -212,10 +212,10 @@ describe('HandoverWorkspace: T2-12 Client Collectors & ID on File', () => {
   it('protects a typed receiver override reason even before a gate passes', async () => {
     const register = vi.fn()
     await mount(register)
-    const override = container?.querySelector<HTMLTextAreaElement>('#gate1-override-input')
+    const override = container?.querySelector<HTMLInputElement>('#gate1-override-input')
     expect(override).not.toBeNull()
     await act(async () => {
-      const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set
       expect(setter).toBeDefined()
       setter!.call(override, 'Synthetic receiver override')
       override!.dispatchEvent(new Event('input', { bubbles: true }))
