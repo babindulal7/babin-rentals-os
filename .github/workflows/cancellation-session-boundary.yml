@@ -1,4 +1,4 @@
-name: Handover session custody repair
+name: Serial unit custody boundary
 on:
   pull_request:
     branches: [integration/combined-launch-candidate-20261125]
@@ -7,7 +7,7 @@ permissions:
   contents: read
 jobs:
   session-boundary:
-    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'fix/cancelled-handover-session-440'
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'test/cancellation-serial-unit-boundary-440'
     runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 15
     env:
