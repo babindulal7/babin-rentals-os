@@ -5,11 +5,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { OperationsWorkspaceProvider, useOperationsWorkspace } from '../OperationsWorkspaceContext'
 import type { OperationsShellProps } from '../OperationsShell'
 
-vi.mock('../OperationsShell', () => ({ default: ({ bookingNo, initialJob, onClose, onDirtyChange, onBusyChange }: OperationsShellProps) => <section aria-label="Workspace"><p>{bookingNo} {initialJob}</p><button onClick={() => onDirtyChange?.(true)}>Mark dirty</button><button onClick={() => onBusyChange?.(true)}>Begin save</button><button onClick={() => onBusyChange?.(false)}>Finish save</button><button onClick={onClose}>Shell close</button></section> }))
+vi.mock('../OperationsShell', () => ({ default: ({ bookingNo, initialJob, onClose, onDirtyChange, onBusyChange, onJobChange }: OperationsShellProps) => <section aria-label="Workspace"><p>{bookingNo} {initialJob}</p><button onClick={() => onDirtyChange?.(true)}>Mark dirty</button><button onClick={() => onBusyChange?.(true)}>Begin save</button><button onClick={() => onBusyChange?.(false)}>Finish save</button><button onClick={() => onJobChange?.('Handover')}>Browse Handover</button><button onClick={onClose}>Shell close</button></section> }))
 ;(globalThis as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true
 function Controls() {
   const { openOperations, closeOperations } = useOperationsWorkspace()
-  return <><button onClick={() => openOperations('BK-A', 'Booked')}>Open A</button><button onClick={() => openOperations('BK-B', 'On Rent')}>Open B</button><button onClick={closeOperations}>External close</button></>
+  return <><button onClick={() => openOperations('BK-A', 'Booked')}>Open A</button><button onClick={() => openOperations('BK-B', 'On Rent')}>Open B</button><button onClick={() => openOperations('BK-A', 'Packed', 'Handover')}>Open A Handover</button><button onClick={closeOperations}>External close</button></>
 }
 let root: Root
 let container: HTMLDivElement
@@ -22,6 +22,14 @@ afterEach(async () => { await act(async () => root.unmount()); container.remove(
 describe('canonical Operations host', () => {
   it('defaults to the eligible stage and never mutates a booking', async () => {
     await mount(); await click('Open B'); expect(container.textContent).toContain('BK-B Return')
+  })
+  it('keeps entry stable during shell browsing and deduplicates the current selection', async () => {
+    await mount(); await click('Open A'); await click('Browse Handover')
+    expect(container.querySelector('section')?.textContent).toContain('BK-A Pack')
+    await click('Mark dirty'); await click('Open A Handover')
+    expect(container.textContent).not.toContain('Discard unsaved operations work?')
+    await click('Open A')
+    expect(container.textContent).toContain('Discard unsaved operations work?')
   })
   it('keeps dirty marks when a booking switch is cancelled', async () => {
     await mount(); await click('Open A'); await click('Mark dirty'); await click('Open B')

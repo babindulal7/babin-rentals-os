@@ -1533,7 +1533,7 @@ export default function PackingWorkspace({
                     phone ? (
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         <Button icon="zap" onClick={quickPackAll}>Quick Pack</Button>
-                        <Button icon="checklist" onClick={markPendingPacked}>Pending</Button>
+                        <Button icon="checklist" aria-label="Mark Pending Packed" onClick={markPendingPacked}>Pending</Button>
                         <Button icon="package" onClick={() => setShowAddConsumable(true)}>Add Consumables</Button>
                       </div>
                     ) : (

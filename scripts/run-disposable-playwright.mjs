@@ -4,6 +4,7 @@ import { randomBytes, randomUUID } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 import pg from 'pg'
 import { requirePublicClientKey } from './local-api-guard.mjs'
+import { verifyCancellationRace } from './test-cancellation-two-session.mjs'
 
 const API = 'http://127.0.0.1:54321'
 const options = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
@@ -30,7 +31,7 @@ async function run() {
   try {
     const branch = (await conn.query('select id from public.branches where is_active order by is_headquarters desc, created_at asc limit 1')).rows[0]?.id
     if (!branch) throw new Error('No seeded active branch; migration/fixture prerequisite missing')
-    let fixtureOwner
+    let fixtureOwner, fixtureWarehouse
     for (const [prefix, role] of [['OWNER', 'Owner'], ['MANAGER', 'Manager'], ['STAFF', 'Warehouse']]) {
       const email = 'disposable-' + prefix.toLowerCase() + '-' + randomUUID() + '@example.test'
       const password = randomBytes(32).toString('base64url')
@@ -38,6 +39,7 @@ async function run() {
       if (created.error || !created.data.user) throw new Error('Local Auth user creation failed: ' + role)
       const uid = created.data.user.id
       if (prefix === 'OWNER') fixtureOwner = uid
+      if (prefix === 'STAFF') fixtureWarehouse = uid
       await conn.query('insert into public.users (id, client_uuid, employee_code, email, full_name, mobile, primary_role, branch_id, is_active) values ($1,$2,$3,$4,$5,$6,$7,$8,true)', [uid, randomUUID(), 'CI-' + prefix + '-' + randomBytes(4).toString('hex'), email, 'Disposable ' + role, '+977-9800000000', role, branch])
       const client = createClient(API, publicKey, options)
       const auth = await client.auth.signInWithPassword({ email, password })
@@ -73,6 +75,9 @@ async function run() {
       await conn.query("insert into public.payment_intents (id,client_uuid,booking_id,client_id,requester_auth_uid,provider,amount_paisa,status) values ($1,$2,$3,$4,$5,'fonepay',1130000,'pending')", [intentId, randomUUID(), bookingId, clientId, uid])
       targets.push({ label, uid, email, password, clientId, bookingId, intentId, invoiceId })
     }
+    if (!fixtureWarehouse) throw new Error('Synthetic Warehouse required')
+    await verifyCancellationRace({ connectionString: status.DB_URL, observer: conn,
+      ownerId: fixtureOwner, warehouseId: fixtureWarehouse, branchId: branch, clientId: targets[0].clientId })
     const bookingIds = targets.map(t => t.bookingId)
     const snapshot = async () => {
       const intents = await conn.query('select * from public.payment_intents where booking_id = any($1::uuid[]) order by id', [bookingIds])
