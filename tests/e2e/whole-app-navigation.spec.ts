@@ -19,6 +19,8 @@ test.describe('Whole-app core navigation and recovery', () => {
   test.skip(!disposable, 'Disposable CI only')
 
   test.beforeEach(async ({ page }) => {
+    page.setDefaultTimeout(15_000)
+    page.setDefaultNavigationTimeout(30_000)
     const email = process.env.E2E_OWNER_EMAIL
     const password = process.env.E2E_OWNER_PASSWORD
     if (!disposable || !email?.startsWith('disposable-') || !email.endsWith('@example.test') || !password) {
@@ -51,13 +53,18 @@ test.describe('Whole-app core navigation and recovery', () => {
   }
 
   test('Rentals opens the canonical New Rental form', async ({ page }) => {
-    await test.step('Open Rentals and navigate to real creation form', async () => {
+    await test.step('Open Rentals list', async () => {
       await page.goto('/rentals')
+    })
+    await test.step('Click visible enabled New Rental control', async () => {
       const create = page.getByRole('button', { name: 'New Rental', exact: true }).filter({ visible: true }).first()
       await expect(create).toBeVisible({ timeout: 30_000 })
-      await create.click()
+      await expect(create).toBeEnabled()
+      await create.click({ timeout: 15_000 })
+    })
+    await test.step('Verify canonical creation route and form', async () => {
+      await expect(page).toHaveURL(/\/rentals\?(?:[^#]*&)?action=new(?:&|$)/, { timeout: 30_000 })
       await expect(page.getByRole('textbox', { name: 'Project / production name', exact: true })).toBeVisible({ timeout: 30_000 })
-      await expect(page).toHaveURL(/\/rentals\?(?:[^#]*&)?action=new(?:&|$)/)
     })
     // No mutation; draft persistence is covered independently.
   })
