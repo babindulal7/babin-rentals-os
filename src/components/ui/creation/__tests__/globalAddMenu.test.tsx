@@ -243,6 +243,14 @@ describe('Universal Add Dropdown — Specification Verification', () => {
       expect(location()).toBe('/inventory/new')
     })
 
+    it('opens the canonical Add Expense flow through Finance instead of a prototype drawer', async () => {
+      await renderMenu({ module: 'expenses' })
+      expect(primaryButton()?.textContent).toContain('New Expense')
+      await act(async () => { primaryButton()?.click() })
+      expect(location()).toBe('/finance?tab=expenses&create=expense')
+      expect(document.querySelector('[role="dialog"]')).toBeNull()
+    })
+
     it('keeps New Rental inside one Add menu, since navigation already has a New Rental door', async () => {
       await renderMenu({ module: 'today' })
 
@@ -334,8 +342,8 @@ describe('Universal Add Dropdown — Specification Verification', () => {
 
     it('never offers a creation flow that only shows a toast', () => {
       const ids = getReadyPermittedActions('Owner').map((a) => a.id)
-      expect(ids.sort()).toEqual(['bundle.new', 'client.new', 'equipment.new', 'rental.new'])
-      for (const id of ['quote.new', 'payment.record', 'expense.new', 'task.new', 'user.new']) {
+      expect(ids.sort()).toEqual(['bundle.new', 'client.new', 'equipment.new', 'expense.new', 'rental.new'])
+      for (const id of ['quote.new', 'payment.record', 'task.new', 'user.new']) {
         expect(ids).not.toContain(id)
       }
     })
@@ -412,7 +420,7 @@ describe('Universal Add Dropdown — Specification Verification', () => {
     it('blocks direct opening of unimplemented creation actions, not just menu entries', async () => {
       function Probe() {
         const ctx = useCreationContext()
-        return <><button onClick={() => ctx.openCreationAction('expense.new')}>Try unavailable</button><output>{ctx.activeActionId ?? 'none'}</output></>
+        return <><button onClick={() => ctx.openCreationAction('task.new')}>Try unavailable</button><output>{ctx.activeActionId ?? 'none'}</output></>
       }
       await act(async () => root.render(<MemoryRouter><ToastProvider><CreationContextProvider><Probe /></CreationContextProvider></ToastProvider></MemoryRouter>))
       await act(async () => [...container.querySelectorAll('button')].find(b => b.textContent === 'Try unavailable')?.click())

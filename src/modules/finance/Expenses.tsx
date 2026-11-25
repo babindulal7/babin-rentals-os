@@ -951,6 +951,8 @@ export default function Expenses({
   searchQuery: externalSearchQuery,
   onSearchChange,
   onActiveFilterCountChange,
+  openExpenseRequested = false,
+  onConsumeExpenseRequest,
 }: {
   embedded?: boolean
   filtersOpen?: boolean
@@ -958,6 +960,8 @@ export default function Expenses({
   searchQuery?: string
   onSearchChange?: (q: string) => void
   onActiveFilterCountChange?: (count: number) => void
+  openExpenseRequested?: boolean
+  onConsumeExpenseRequest?: () => void
 }) {
   const { user } = useAuth()
   /** The one money gate. Mirrors `auth_can_view_money()` — Law 6. */
@@ -1004,6 +1008,17 @@ export default function Expenses({
   const closeFilters = onFiltersClose ?? (() => setInternalFiltersOpen(false))
   const [page, setPage] = useState(1)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const consumedExpenseRequest = useRef(false)
+  useEffect(() => {
+    if (!openExpenseRequested) {
+      consumedExpenseRequest.current = false
+      return
+    }
+    if (!money || !user || consumedExpenseRequest.current) return
+    consumedExpenseRequest.current = true
+    setSheetOpen(true)
+    onConsumeExpenseRequest?.()
+  }, [openExpenseRequested, onConsumeExpenseRequest, money, user])
   const [banner, setBanner] = useState<{ title: string; message: string } | null>(null)
   const [movingId, setMovingId] = useState<string | null>(null)
   const [selectedReceipt, setSelectedReceipt] = useState<ExpenseListRow | null>(null)
