@@ -1,0 +1,32 @@
+name: Cancelled custody repair verification
+on:
+  pull_request:
+    branches: [fix/cancellation-boundary-promotion-440]
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'fix/cancelled-custody-stage-440'
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 15
+    env:
+      SUPABASE_ACCESS_TOKEN: ''
+      SUPABASE_DB_PASSWORD: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci
+      - name: Verify repaired stage boundary with positive controls in disposable PGlite
+        run: node scripts/test-cancellation-branch-boundary.mjs
+      - name: Full migration chain (isolated PGlite)
+        run: npm run check:pglite
+      - name: Rental lifecycle (isolated PGlite)
+        run: npm run check:lifecycle
+      - name: Security regressions
+        run: npm run check:security

@@ -158,4 +158,34 @@ grant execute on function public.cancel_booking(jsonb) to authenticated;
 revoke execute on function public.cancel_booking(uuid, text, uuid) from anon, public;
 grant execute on function public.cancel_booking(uuid, text, uuid) to authenticated;
 
+-- Cancellation is terminal, independent of stage. Run after INSERT RLS
+-- and before trg_apply_booking_stage_transition (same-event name ordering).
+-- Share the booking lock with cancel_booking; do not rely on a browser read.
+create function public.guard_cancelled_booking_transition()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_cancelled_at timestamptz;
+begin
+  select b.cancelled_at into v_cancelled_at
+    from public.bookings b
+   where b.id = NEW.booking_id
+   for update;
+  if v_cancelled_at is not null then
+    raise exception 'GATE:gate.booking.cancelled|Cancelled bookings cannot change stage.'
+      using errcode = 'P0001';
+  end if;
+  return NEW;
+end;
+$$;
+
+revoke all on function public.guard_cancelled_booking_transition() from public, anon, authenticated;
+
+create trigger trg_00_guard_cancelled_booking_transition
+  after insert on public.booking_stage_transitions
+  for each row execute function public.guard_cancelled_booking_transition();
+
 commit;
