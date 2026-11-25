@@ -25,7 +25,10 @@ vi.mock('../../../../components/ui/Toast', () => ({
   }),
 }))
 
+;(globalThis as Record<string, unknown>)['IS_REACT_ACT_ENVIRONMENT'] = true
+
 let container: HTMLDivElement
+let dialog: HTMLElement
 let root: Root
 
 function setNativeValue(element: HTMLInputElement | HTMLTextAreaElement, value: string) {
@@ -36,10 +39,7 @@ function setNativeValue(element: HTMLInputElement | HTMLTextAreaElement, value: 
 }
 
 function setNativeChecked(element: HTMLInputElement, checked: boolean) {
-  const checkedSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'checked')?.set
-  checkedSetter?.call(element, checked)
-  element.dispatchEvent(new Event('click', { bubbles: true }))
-  element.dispatchEvent(new Event('change', { bubbles: true }))
+  if (element.checked !== checked) element.click()
 }
 
 async function flush(rounds = 4) {
@@ -58,6 +58,9 @@ async function mountModal(props: Parameters<typeof CancelRentalModal>[0]) {
     root.render(<CancelRentalModal {...props} />)
   })
   await flush()
+  const surface = document.querySelector<HTMLElement>('[role="dialog"]')
+  expect(surface).not.toBeNull()
+  dialog = surface!
 }
 
 describe('CancelRentalModal - T3-03 Cancellation Fee Tiers', () => {
@@ -105,27 +108,27 @@ describe('CancelRentalModal - T3-03 Cancellation Fee Tiers', () => {
   it('renders Option A fee policy card, suggests 1-day fee and calculates advance refund', async () => {
     await mountModal(tierProps)
 
-    expect(container.textContent).toContain('Cancellation Fee Policy (Option A)')
-    expect(container.textContent).toContain('One rental day charge')
-    expect(container.textContent).toContain('Client advance paid:Rs 6,000')
-    expect(container.textContent).toContain('Estimated refund to client:Rs 1,000')
-    expect(container.textContent).toContain('Estimated fee deduction:')
-    expect(container.textContent).toContain('it does not post a fee or issue a refund')
+    expect(dialog.textContent).toContain('Cancellation Fee Policy (Option A)')
+    expect(dialog.textContent).toContain('One rental day charge')
+    expect(dialog.textContent).toContain('Client advance paid:Rs 6,000')
+    expect(dialog.textContent).toContain('Estimated refund to client:Rs 1,000')
+    expect(dialog.textContent).toContain('Estimated fee deduction:')
+    expect(dialog.textContent).toContain('it does not post a fee or issue a refund')
   })
 
   it('enforces override reason if fee is adjusted/waived', async () => {
     await mountModal(tierProps)
 
-    const button = Array.from(container.querySelectorAll('button')).find((b) =>
+    const button = Array.from(dialog.querySelectorAll('button')).find((b) =>
       b.textContent?.includes('Cancel Booking'),
     ) as HTMLButtonElement
 
-    const textarea = container.querySelector('textarea') as HTMLTextAreaElement
+    const textarea = dialog.querySelector('textarea') as HTMLTextAreaElement
     await act(async () => {
       setNativeValue(textarea, 'Rescheduling event due to emergency')
     })
 
-    const checkboxes = Array.from(container.querySelectorAll('input[type="checkbox"]')) as HTMLInputElement[]
+    const checkboxes = Array.from(dialog.querySelectorAll('input[type="checkbox"]')) as HTMLInputElement[]
     const overrideCheckbox = checkboxes.find((cb) => cb.parentElement?.textContent?.includes('Waive or adjust'))
     const confirmCheckbox = checkboxes.find((cb) => cb.parentElement?.textContent?.includes('I confirm that this booking'))
 
@@ -146,7 +149,7 @@ describe('CancelRentalModal - T3-03 Cancellation Fee Tiers', () => {
     await flush()
 
     // Change custom fee to 0 (waiver) so fee differs from suggested fee
-    const numberInput = container.querySelector('input[type="number"]') as HTMLInputElement
+    const numberInput = dialog.querySelector('input[type="number"]') as HTMLInputElement
     expect(numberInput).toBeDefined()
     await act(async () => {
       setNativeValue(numberInput, '0')
@@ -157,7 +160,7 @@ describe('CancelRentalModal - T3-03 Cancellation Fee Tiers', () => {
     expect(button.disabled).toBe(true)
 
     // Find override reason input
-    const inputs = Array.from(container.querySelectorAll('input')) as HTMLInputElement[]
+    const inputs = Array.from(dialog.querySelectorAll('input')) as HTMLInputElement[]
     const overrideInput = inputs.find((inp) => inp.placeholder.includes('Reason for waiving/adjusting fee'))
     expect(overrideInput).toBeDefined()
 
@@ -178,12 +181,12 @@ describe('CancelRentalModal - T3-03 Cancellation Fee Tiers', () => {
     const onSuccess = vi.fn()
     await mountModal({ ...tierProps, onSuccess })
 
-    const textarea = container.querySelector('textarea') as HTMLTextAreaElement
+    const textarea = dialog.querySelector('textarea') as HTMLTextAreaElement
     await act(async () => {
       setNativeValue(textarea, 'Rescheduled to December 2026')
     })
 
-    const checkboxes = Array.from(container.querySelectorAll('input[type="checkbox"]')) as HTMLInputElement[]
+    const checkboxes = Array.from(dialog.querySelectorAll('input[type="checkbox"]')) as HTMLInputElement[]
     const overrideCheckbox = checkboxes.find((cb) => cb.parentElement?.textContent?.includes('Waive or adjust'))
     const confirmCheckbox = checkboxes.find((cb) => cb.parentElement?.textContent?.includes('I confirm that this booking'))
 
@@ -197,7 +200,7 @@ describe('CancelRentalModal - T3-03 Cancellation Fee Tiers', () => {
     })
     await flush()
 
-    const numberInput = container.querySelector('input[type="number"]') as HTMLInputElement
+    const numberInput = dialog.querySelector('input[type="number"]') as HTMLInputElement
     expect(numberInput).toBeDefined()
     // Change fee to NPR 2,500 (250000 paisa)
     await act(async () => {
@@ -205,7 +208,7 @@ describe('CancelRentalModal - T3-03 Cancellation Fee Tiers', () => {
     })
     await flush()
 
-    const inputs = Array.from(container.querySelectorAll('input')) as HTMLInputElement[]
+    const inputs = Array.from(dialog.querySelectorAll('input')) as HTMLInputElement[]
     const overrideInput = inputs.find((inp) => inp.placeholder.includes('Reason for waiving/adjusting fee'))
     expect(overrideInput).toBeDefined()
 
@@ -214,7 +217,7 @@ describe('CancelRentalModal - T3-03 Cancellation Fee Tiers', () => {
     })
     await flush()
 
-    const button = Array.from(container.querySelectorAll('button')).find((b) =>
+    const button = Array.from(dialog.querySelectorAll('button')).find((b) =>
       b.textContent?.includes('Cancel Booking'),
     ) as HTMLButtonElement
 
