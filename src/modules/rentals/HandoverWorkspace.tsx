@@ -1312,7 +1312,7 @@ export default function HandoverWorkspace({
      * write landed" signal — a failed write must never read as a closed
      * handover, and the seed build's Complete Session did exactly that.
      */
-    import('../../actions/rentals/index')
+    return import('../../actions/rentals/index')
       .then((m) =>
         m.handoverRental(
           {

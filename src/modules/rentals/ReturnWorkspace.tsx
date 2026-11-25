@@ -1447,7 +1447,7 @@ export default function ReturnWorkspace({
      * this page always failed. It now carries the real booking-line ids the
      * operator triaged, and leaving the workspace happens on success only.
      */
-    import('../../actions/rentals/index')
+    return import('../../actions/rentals/index')
       .then((m) =>
         m.completeReturn(
           attempt.input,

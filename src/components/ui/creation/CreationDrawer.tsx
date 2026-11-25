@@ -16,7 +16,6 @@ import React, { useCallback, useEffect, useId, useState } from 'react'
 import { createPortal } from 'react-dom'
 import Icon from '../Icon'
 import { Button } from '../Button'
-import { useToast } from '../Toast'
 import { useAuth } from '../../../lib/auth'
 import { canViewMoney } from '../../../lib/rbac'
 import { Modal } from '../Modal'
@@ -34,10 +33,8 @@ export function CreationDrawer({
   actionId,
   contextData = {},
   onClose,
-  onSuccess,
 }: CreationDrawerProps) {
   const { user } = useAuth()
-  const { showSuccessToast } = useToast()
   const formId = useId()
   const isMoneyViewer = user ? canViewMoney(user.role) : false
 
@@ -49,7 +46,7 @@ export function CreationDrawer({
   const [eqSerial, setEqSerial] = useState('')
   const [eqAssetId, setEqAssetId] = useState('')
   const [eqTrackingMode, setEqTrackingMode] = useState<'serialized' | 'bulk'>('serialized')
-  const [eqQuantity, setEqQuantity] = useState(1)
+  const [, setEqQuantity] = useState(1)
   const [eqCondition, setEqCondition] = useState<'New' | 'Good' | 'Fair'>('Good')
   const [eqLocation, setEqLocation] = useState('Main Warehouse')
   const [eqAccessories, setEqAccessories] = useState('')
@@ -63,7 +60,7 @@ export function CreationDrawer({
   const [expDate, setExpDate] = useState(() => new Date().toISOString().split('T')[0] ?? '')
   const [expNotes, setExpNotes] = useState('')
 
-  const [loading, setLoading] = useState(false)
+  const loading = false
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
 
@@ -125,98 +122,16 @@ export function CreationDrawer({
     return () => window.removeEventListener('keydown', onKey)
   }, [isOpen, showDiscardConfirm, handleRequestClose])
 
-  const handleSaveEquipment = async (e: React.FormEvent) => {
+  // These prototype drawers have no persistence adapter. Do not synthesize
+  // record identities, dismiss the user's work, or report a successful write.
+  const handleSaveEquipment = (e: React.FormEvent) => {
     e.preventDefault()
-    const newErrors: Record<string, string> = {}
-    if (!eqName.trim()) {
-      newErrors.eqName = 'Equipment name is required.'
-    }
-    if (eqTrackingMode === 'serialized' && !eqSerial.trim()) {
-      newErrors.eqSerial = 'Serial number is required for tracked assets.'
-    }
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors)
-      return
-    }
-
-    setLoading(true)
-    try {
-      const record = {
-        id: `eq-${Date.now()}`,
-        name: eqName.trim(),
-        category: eqCategory,
-        brand: eqBrand.trim(),
-        model: eqModel.trim(),
-        serialNumber: eqSerial.trim(),
-        assetId: eqAssetId.trim() || `EQ-${Date.now().toString().slice(-4)}`,
-        trackingMode: eqTrackingMode,
-        quantity: eqQuantity,
-        condition: eqCondition,
-        location: eqLocation,
-        accessories: eqAccessories.trim() ? eqAccessories.split(',').map((s) => s.trim()) : [],
-        // Financial fields included only if user is authorized
-        ...(isMoneyViewer && eqDailyRate
-          ? { dailyRate: Math.round(parseFloat(eqDailyRate) * 100) }
-          : {}),
-        ...(isMoneyViewer && eqReplacementCost
-          ? { replacementCost: Math.round(parseFloat(eqReplacementCost) * 100) }
-          : {}),
-      }
-
-      showSuccessToast(
-        'Equipment Registered',
-        `${eqName.trim()} has been added to inventory.`
-      )
-
-      onSuccess?.(record)
-      onClose()
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to register equipment.'
-      setErrors({ form: msg })
-    } finally {
-      setLoading(false)
-    }
+    setErrors({ form: 'Nothing was saved. Use Inventory → New Equipment to register real equipment.' })
   }
 
-  const handleSaveExpense = async (e: React.FormEvent) => {
+  const handleSaveExpense = (e: React.FormEvent) => {
     e.preventDefault()
-    const newErrors: Record<string, string> = {}
-    if (!expTitle.trim()) {
-      newErrors.expTitle = 'Expense title or payee is required.'
-    }
-    if (!expAmount.trim() || isNaN(Number(expAmount))) {
-      newErrors.expAmount = 'Valid amount in NPR is required.'
-    }
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors)
-      return
-    }
-
-    setLoading(true)
-    try {
-      const record = {
-        id: `exp-${Date.now()}`,
-        title: expTitle.trim(),
-        category: expCategory,
-        amountPaisa: Math.round(parseFloat(expAmount) * 100),
-        date: expDate,
-        notes: expNotes.trim(),
-        recordedBy: user?.name ?? 'Staff',
-      }
-
-      showSuccessToast(
-        'Expense Recorded',
-        `${expTitle.trim()} logged under ${expCategory}.`
-      )
-
-      onSuccess?.(record)
-      onClose()
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to save expense.'
-      setErrors({ form: msg })
-    } finally {
-      setLoading(false)
-    }
+    setErrors({ form: 'Nothing was saved. Use the Expenses page to record an expense.' })
   }
 
   if (!isOpen) return null
@@ -781,6 +696,7 @@ export function CreationDrawer({
             gap: 10,
           }}
         >
+          {errors.form && <p role="alert" style={{ color: 'var(--danger-text)' }}>{errors.form}</p>}
           <Button variant="ghost" onClick={handleRequestClose} disabled={loading}>
             Cancel
           </Button>

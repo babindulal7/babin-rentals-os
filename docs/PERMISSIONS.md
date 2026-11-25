@@ -70,6 +70,8 @@ Location: `docs/PERMISSIONS.md` (beside Foundation v3.0 and UI_UX.md)
 
 ## 0. Precedence and scope
 
+**Reference disambiguation:** P8, P9 and P10 in this document mean `PERMISSIONS:P8`, `PERMISSIONS:P9` and `PERMISSIONS:P10`. The separately numbered product invariants in [PRODUCT_RULES.md](PRODUCT_RULES.md) remain applicable and must be cited with their source. See the proposed [Master Law Registry](MASTER_LAW_REGISTRY.md) for the crosswalk. This clarification changes no role, capability, grant or approval threshold.
+
 | Rule | Statement |
 |---|---|
 | Authority | This file supersedes every role/permission table inside module specs: Foundation v1.x §08, Administration v3.1 §1/§7, the 22 Jul RBAC grid, Automation/Communication v3.1 permission tables, Crew v3.2 §permissions, Handover v1.1 §13, Finance v2.1 §RBAC. Those sections become one line: *"Permissions: see PERMISSIONS.md §4."* ⛔ **Scoped 8 Sep:** every spec named here (Foundation, Administration v3.1, Crew v3.2, Handover v1.1, Finance v2.1, the 22 Jul grid) lives in `ARCHIVE/mds and photos/` **outside this repo** and is already retired by being there — there is nothing in the repo to rewrite. The one in-repo set that *looks* like a target, `docs/pages/*.md`, is **not** one: it records what the code gates on with a `file:line` per predicate, and §16 measured this document's own catalogue at 26% against it. Replacing those Gates tables with a pointer would delete the better source. They carry a cross-reference instead. |

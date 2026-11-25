@@ -108,3 +108,6 @@ astra-main-tests-final.json
 .coverage-result.json
 repomix-output.*
 repomix-part*.xml
+playwright-report/
+test-results/
+playwright/.auth/
