@@ -66,7 +66,7 @@
     "i18n:import": "node scripts/i18n-review-import.mjs",
     "check:fixtures": "node scripts/check-no-fixtures.mjs",
     "test:cancellation-branch-security": "node scripts/test-cancellation-branch-boundary.mjs",
-    "check:security": "node scripts/check-astra-phase0.mjs && npm run test:operations-grants && node scripts/test-reset-branch-boundary.mjs && node scripts/test-glossary-revisions.mjs && npm run test:cancellation-branch-security",
+    "check:security": "node scripts/check-astra-phase0.mjs && npm run test:operations-grants && node scripts/test-reset-branch-boundary.mjs && node scripts/test-glossary-revisions.mjs && npm run test:cancellation-branch-security -- --candidate && npm run test:cancellation-branch-security",
     "test:online-booking-n7-review": "node scripts/test-online-booking-n7-review.mjs",
     "test:away-mode-db-gate": "node scripts/test-away-mode-db-gate.mjs",
     "test:mfa-db-gate": "node scripts/test-mfa-db-gate.mjs",
