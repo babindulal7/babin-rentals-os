@@ -183,8 +183,20 @@ test.describe('Operations packing confirmation and duplicate-submit protection',
       await expect(popup.getByRole('checkbox', { name: 'Booking Authorization Verified', exact: true })).toBeChecked()
       await popup.getByRole('checkbox', { name: 'Government ID Verified', exact: true }).check()
       if (partial) {
-        await popup.getByRole('checkbox', { name: 'Mark Disposable Operations Cable picked up', exact: true }).check()
-        await expect(popup.getByRole('checkbox', { name: 'Mark Disposable Operations Stand picked up', exact: true })).not.toBeChecked()
+        const cable = popup.getByRole('checkbox', { name: 'Mark Disposable Operations Cable picked up', exact: true })
+        const stand = popup.getByRole('checkbox', { name: 'Mark Disposable Operations Stand picked up', exact: true })
+        console.log('[partial:' + testInfo.project.name + '] Verify individual pickup controls')
+        await expect(cable).toBeEnabled()
+        await expect(cable).not.toBeChecked()
+        await expect(stand).not.toBeChecked()
+        // Use a bounded real pointer action and assert the controlled state
+        // separately, rather than allowing locator.check to consume the entire
+        // test budget after the click. Do not force, retry, or bypass selection.
+        await cable.click({ timeout: 10_000 })
+        console.log('[partial:' + testInfo.project.name + '] Individual pickup click returned')
+        await expect(cable).toBeChecked({ timeout: 10_000 })
+        await expect(stand).not.toBeChecked()
+        console.log('[partial:' + testInfo.project.name + '] Individual selection verified')
       } else {
         await popup.getByRole('button', { name: 'Mark Ready Picked Up', exact: true }).click()
       }
