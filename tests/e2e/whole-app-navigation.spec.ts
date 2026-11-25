@@ -56,6 +56,38 @@ test.describe('Whole-app core navigation and recovery', () => {
     })
   }
 
+  test('Settings section navigation stays reachable across viewport sizes', async ({ page }, testInfo) => {
+    await page.goto('/settings')
+    const verifyChooser = async () => {
+      const width = await page.evaluate(() => window.innerWidth)
+      const chooser = page.locator(width < 768 ? '.app-settings-mobile-list' : width < 1280 ? '.app-settings-tablet-tabs' : 'nav[aria-label="Settings sections"]')
+      await expect(chooser).toBeVisible({ timeout: 30_000 })
+      const controls = chooser.locator(width < 768 ? 'button.app-settings-mobile-row' : 'button')
+      await expect(controls).toHaveCount(5)
+      for (const control of await controls.all()) {
+        await expect(control).toBeVisible()
+        await expect(control).toBeEnabled()
+        const rect = await control.boundingBox()
+        expect(rect, 'Section control has a rendered target').not.toBeNull()
+        expect(rect!.x).toBeGreaterThanOrEqual(-1)
+        expect(rect!.x + rect!.width).toBeLessThanOrEqual(width + 1)
+        expect(rect!.height).toBeGreaterThanOrEqual(44)
+      }
+      if (width >= 768 && width < 1280) {
+        expect(await chooser.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
+      }
+      return controls.last()
+    }
+    await verifyChooser()
+    if (testInfo.project.name === 'ipad') {
+      await page.setViewportSize({ width: 1194, height: 834 })
+      await verifyChooser()
+    }
+    await (await verifyChooser()).click()
+    await expect(page).toHaveURL(/[?&]tab=texts(?:&|$)/)
+    await expect(page.getByText('This screen hit a system problem', { exact: true })).toHaveCount(0)
+  })
+
   test('Rentals opens the canonical New Rental form', async ({ page }) => {
     await test.step('Open Rentals list', async () => {
       await page.goto('/rentals')

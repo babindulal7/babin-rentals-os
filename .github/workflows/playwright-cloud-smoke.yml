@@ -2,7 +2,7 @@ name: Playwright cloud staging smoke
 
 on:
   push:
-    branches: [fix/playwright-staging-safety-20261125, integration/launch-repair-20261125]
+    branches: [fix/playwright-staging-safety-20261125, integration/launch-repair-20261125, integration/responsive-ui-20261125]
 
 permissions:
   contents: read
