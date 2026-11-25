@@ -51,7 +51,10 @@ async function run() {
     await conn.end()
   }
   // Do not expose admin keys to the browser or persist credentials to files.
-  const result = spawnSync(process.execPath, ['node_modules/@playwright/test/cli.js', 'test', '--config=playwright.disposable.config.ts'], { env, stdio: 'inherit' })
+  const suite = process.env.E2E_TARGET_SUITE ?? 'all'
+  if (!['all', 'rental-draft'].includes(suite)) throw new Error('Unknown disposable E2E target suite')
+  const target = suite === 'rental-draft' ? ['tests/e2e/rental-draft-persistence.spec.ts'] : []
+  const result = spawnSync(process.execPath, ['node_modules/@playwright/test/cli.js', 'test', '--config=playwright.disposable.config.ts', ...target], { env, stdio: 'inherit' })
   if (result.status !== 0) throw new Error('Disposable Playwright run failed')
 }
 run().catch(() => { console.error('Disposable E2E failed. Inspect the failing step and role preflight; no credentials printed.'); process.exitCode = 1 })
