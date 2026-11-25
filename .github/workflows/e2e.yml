@@ -1,12 +1,25 @@
 name: E2E (staging)
 
 on:
-  # Manual only until the BABIN_STAGING_* and E2E_* secrets are set in GitHub.
-  # Re-enable pull_request on main after that.
+  # Run by hand from the Actions tab.
   workflow_dispatch:
+  # Run by commenting `/e2e` on a pull request. Only repository members can
+  # trigger it, because the job reads the staging secrets.
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: read
 
 jobs:
   e2e:
+    # Skip every comment except `/e2e` on a PR from a trusted author.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.issue.pull_request &&
+       startsWith(github.event.comment.body, '/e2e') &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
     strategy:
       fail-fast: false
       matrix:
@@ -25,6 +38,9 @@ jobs:
       CI: 'true'
     steps:
       - uses: actions/checkout@v4
+        with:
+          # For a PR comment, test the PR head, not the default branch.
+          ref: ${{ github.event_name == 'issue_comment' && format('refs/pull/{0}/head', github.event.issue.number) || github.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 24
