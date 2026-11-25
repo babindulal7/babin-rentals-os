@@ -153,34 +153,48 @@ async function run() {
         throw new Error('Operations fixture setup failed')
       }
     }
-    // Read-only navigation fixtures: explicitly seed stage snapshots, not
-    // simulated evidence of successful physical custody transitions.
-    const category = (await fixtureQuery('category lookup', 'select id from public.inventory_categories order by name limit 1')).rows[0]?.id
-    if (!category) throw new Error('Operations fixture category missing')
-    const productId = randomUUID()
-    await fixtureQuery('product insert', "insert into public.products (id,client_uuid,asset_code,name,category_id,brand,tracking_mode,total_quantity,daily_rate,created_by) values ($1,$2,public.next_document_number('equipment'),'Disposable Operations Cable',$3,'Disposable','Quantity',20,250,$4)", [productId, randomUUID(), category, fixtureOwner])
-    for (const [stage, prefix, offset] of [['Booked', 'BOOKED', 8], ['Packed', 'PACKED', 12]]) {
-      const bookingId = randomUUID()
-      const pickup = new Date(Date.now() + offset * 86400000)
-      const end = new Date(pickup.getTime() + 2 * 86400000)
-      const row = (await fixtureQuery('booking insert', "insert into public.bookings (id,client_uuid,booking_no,client_id,branch_id,pickup_at,return_at,delivery_type,stage,created_by,updated_by) values ($1,$2,public.next_document_number('booking'),$3,$4,$5,$6,'Client Pickup',$7,$8,$8) returning booking_no", [bookingId, randomUUID(), targets[0].clientId, branch, pickup, end, stage, fixtureOwner])).rows[0]
-      await fixtureQuery('booking line insert', "insert into public.booking_lines (client_uuid,booking_id,line_type,product_id,description,qty,days,rate,created_by) values ($1,$2,'Equipment',$3,'Disposable Operations Cable',2,2,250,$4)", [randomUUID(), bookingId, productId, fixtureOwner])
-      env['E2E_OPS_' + prefix + '_ID'] = bookingId
-      env['E2E_OPS_' + prefix + '_NO'] = row.booking_no
-    }
-    // Separate mutating fixtures per device. Use the actual Quote -> Booked
-    // transition to acquire the normal inventory reservation, not a fake pack.
-    for (const [device, offset] of [['desktop', 16], ['ipad', 20], ['mobile', 24]]) {
-      const bookingId = randomUUID()
-      const pickup = new Date(Date.now() + offset * 86400000)
-      const end = new Date(pickup.getTime() + 2 * 86400000)
-      const row = (await fixtureQuery('booking insert', "insert into public.bookings (id,client_uuid,booking_no,client_id,branch_id,pickup_at,return_at,delivery_type,stage,created_by,updated_by) values ($1,$2,public.next_document_number('booking'),$3,$4,$5,$6,'Client Pickup','Quote',$7,$7) returning booking_no", [bookingId, randomUUID(), targets[0].clientId, branch, pickup, end, fixtureOwner])).rows[0]
-      await fixtureQuery('booking line insert', "insert into public.booking_lines (client_uuid,booking_id,line_type,product_id,description,qty,days,rate,created_by) values ($1,$2,'Equipment',$3,'Disposable Operations Cable',2,2,250,$4)", [randomUUID(), bookingId, productId, fixtureOwner])
-      await fixtureQuery('Quote to Booked transition', "insert into public.booking_stage_transitions (client_uuid,booking_id,branch_id,from_stage,to_stage,actor_id,actor_role,occurred_at) values ($1,$2,$3,'Quote','Booked',$4,'Owner',now())", [randomUUID(), bookingId, branch, fixtureOwner])
-      const stage = (await fixtureQuery('persisted stage read', "select stage from public.bookings where id=$1", [bookingId])).rows[0]?.stage
-      if (stage !== 'Booked') throw new Error('Operations confirmation fixture did not reach Booked')
-      env['E2E_OPS_CONFIRM_' + device.toUpperCase() + '_ID'] = bookingId
-      env['E2E_OPS_CONFIRM_' + device.toUpperCase() + '_NO'] = row.booking_no
+    // The booking-line money guard requires a real money-visible actor even
+    // for a privileged local fixture connection. Bind the synthetic Owner
+    // in this transaction only and verify the same policy the trigger uses.
+    await conn.query('begin')
+    try {
+      await conn.query("select set_config('app.current_user_id',$1,true),set_config('request.jwt.claim.sub',$1,true),set_config('request.jwt.claim.role','authenticated',true),set_config('request.jwt.claims',$2,true)", [fixtureOwner, JSON.stringify({ sub: fixtureOwner, role: 'authenticated', aal: 'aal1' })])
+      const actor = (await conn.query('select public.auth_user_id() as id, public.auth_can_view_money() as money')).rows[0]
+      if (actor?.id !== fixtureOwner || actor.money !== true) throw new Error('Operations fixture Owner authorization failed')
+      console.log('Operations fixture passed: Owner money authorization')
+      // Read-only navigation fixtures: explicitly seed stage snapshots, not
+      // simulated evidence of successful physical custody transitions.
+      const category = (await fixtureQuery('category lookup', 'select id from public.inventory_categories order by name limit 1')).rows[0]?.id
+      if (!category) throw new Error('Operations fixture category missing')
+      const productId = randomUUID()
+      await fixtureQuery('product insert', "insert into public.products (id,client_uuid,asset_code,name,category_id,brand,tracking_mode,total_quantity,daily_rate,created_by) values ($1,$2,public.next_document_number('equipment'),'Disposable Operations Cable',$3,'Disposable','Quantity',20,250,$4)", [productId, randomUUID(), category, fixtureOwner])
+      for (const [stage, prefix, offset] of [['Booked', 'BOOKED', 8], ['Packed', 'PACKED', 12]]) {
+        const bookingId = randomUUID()
+        const pickup = new Date(Date.now() + offset * 86400000)
+        const end = new Date(pickup.getTime() + 2 * 86400000)
+        const row = (await fixtureQuery('booking insert', "insert into public.bookings (id,client_uuid,booking_no,client_id,branch_id,pickup_at,return_at,delivery_type,stage,created_by,updated_by) values ($1,$2,public.next_document_number('booking'),$3,$4,$5,$6,'Client Pickup',$7,$8,$8) returning booking_no", [bookingId, randomUUID(), targets[0].clientId, branch, pickup, end, stage, fixtureOwner])).rows[0]
+        await fixtureQuery('booking line insert', "insert into public.booking_lines (client_uuid,booking_id,line_type,product_id,description,qty,days,rate,created_by) values ($1,$2,'Equipment',$3,'Disposable Operations Cable',2,2,250,$4)", [randomUUID(), bookingId, productId, fixtureOwner])
+        env['E2E_OPS_' + prefix + '_ID'] = bookingId
+        env['E2E_OPS_' + prefix + '_NO'] = row.booking_no
+      }
+      // Separate mutating fixtures per device. Use the actual Quote -> Booked
+      // transition to acquire the normal inventory reservation, not a fake pack.
+      for (const [device, offset] of [['desktop', 16], ['ipad', 20], ['mobile', 24]]) {
+        const bookingId = randomUUID()
+        const pickup = new Date(Date.now() + offset * 86400000)
+        const end = new Date(pickup.getTime() + 2 * 86400000)
+        const row = (await fixtureQuery('booking insert', "insert into public.bookings (id,client_uuid,booking_no,client_id,branch_id,pickup_at,return_at,delivery_type,stage,created_by,updated_by) values ($1,$2,public.next_document_number('booking'),$3,$4,$5,$6,'Client Pickup','Quote',$7,$7) returning booking_no", [bookingId, randomUUID(), targets[0].clientId, branch, pickup, end, fixtureOwner])).rows[0]
+        await fixtureQuery('booking line insert', "insert into public.booking_lines (client_uuid,booking_id,line_type,product_id,description,qty,days,rate,created_by) values ($1,$2,'Equipment',$3,'Disposable Operations Cable',2,2,250,$4)", [randomUUID(), bookingId, productId, fixtureOwner])
+        await fixtureQuery('Quote to Booked transition', "insert into public.booking_stage_transitions (client_uuid,booking_id,branch_id,from_stage,to_stage,actor_id,actor_role,occurred_at) values ($1,$2,$3,'Quote','Booked',$4,'Owner',now())", [randomUUID(), bookingId, branch, fixtureOwner])
+        const stage = (await fixtureQuery('persisted stage read', "select stage from public.bookings where id=$1", [bookingId])).rows[0]?.stage
+        if (stage !== 'Booked') throw new Error('Operations confirmation fixture did not reach Booked')
+        env['E2E_OPS_CONFIRM_' + device.toUpperCase() + '_ID'] = bookingId
+        env['E2E_OPS_CONFIRM_' + device.toUpperCase() + '_NO'] = row.booking_no
+      }
+      await conn.query('commit')
+    } catch (error) {
+      await conn.query('rollback')
+      throw error
     }
   } finally {
     await conn.end()
