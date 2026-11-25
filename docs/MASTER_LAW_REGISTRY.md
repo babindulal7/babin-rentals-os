@@ -100,3 +100,34 @@ Reference dates: checked 2026-11-25; not a legal opinion. Accountant/lawyer must
 
 ## 8. Owner decisions reserved
 Confirm client own-finance exception wording and field allowlist, precise late-fee/cancellation snapshot policy, permitted tax categories with accountant, original ID alternatives and retention with counsel, employee/contractor compensation classification, overbooking/cleaning policy and authorized exception handling. Existing rules stay in place pending separate reviewed implementation. Do not treat this proposed registry as a release approval.
+
+
+## 9. Second-pass conflict and error audit (2026-11-25)
+Baseline unchanged: ccfc7bd8926c10fd9db589b35d1564cb71e6d474. Reviewed changed paths of 26 then-open PRs for overlap with the targeted discount, money, cancellation, policy and registry files. Payment/auth integration candidates #432, #431, #429, #421, #417, #412 and related staging work must be reused, not reimplemented. No merge or runtime verification claimed.
+
+| Track | Current static evidence | Status / next action |
+|---|---|---|
+| RC-01 | 0257 account binding and scoped own-profile policies exist | Verify own invoices and isolation using direct API and role matrix; not proven safe |
+| RC-02 | NaN accepted by discount.ts, money.ts and rbac.ts | Draft PR #434 adds finite-number checks and tests; stale waiver comments still need reconciliation |
+| RC-03 | blanket archival rule vs retention requirements | Policy/legal review; inventory actual storage before drafting retention mechanism |
+| RC-04 | lateFee bookingDayRate assumes all crew and daily vehicles retained | Verify actual item-level return/crew records; policy decision before amount changes |
+| RC-05 | cancelRental passes fee in reason string; 0109 does not post a typed fee or refund | Draft PR #435 adds action-boundary amount guard; full transactional accounting and later RPC definitions require review |
+| RC-06 | 0213 non-VAT derives category from zero rate; 0193 locks invoice issuance; 0254 resyncs draft VAT | Preserve invoice immutability; accountant validates tax categories, then test backend |
+| RC-07 | 0181 original ID collateral and masked view | Review statutory basis, retention and alternative collateral; no original-document workflow expansion |
+| RC-08 | 0207 commercial half/full day overtime | Employment classification and legal payroll calculation must be separate from billing; no automatic rate changes |
+| RC-09 | 0252 explicitly handles turnaround windows and product prep/cleaning fields | Verify current buffer behavior including dirty gear and same-day turnover before changing |
+| RC-10 | Option A function in cancellationFeeTiers.ts and configurable table 0212 coexist | Verify settings usage; preserve 2 Nov Option A pending approval for policy source |
+| RC-11 | 0252 adds per-product overbooking, shortage tracking and pack/handover gates | Verify concurrency and shortage closure; legacy device toggle is not itself a server bypass |
+| RC-12 | PRODUCT/PERMISSIONS P8–P10 divergent identifiers | Registry maps source-qualified aliases; no authorization behavior change; review required |
+| RC-13 | 0257 verifies auth.uid for own-profile access; older P1 wording still conflates guest/client | Verify all portal RPCs and anonymous denial, particularly existing payment holds |
+| RC-14 | Existing consistency guard checks authority rows, gate list, links only | Add registry structural checker after format review; CI integration separately; semantic verification requires tests |
+
+Partial patches: #434 head bfb55552695cfbc84290c3a4c0331ef460cc3e7a; #435 head 65cbfe5fa54d119f63a1e525f55bf7e43160debd. Both are draft and unverified. No other track is marked repaired. Static evidence does not confirm deployed state. Existing protections in 0177 (verified usable partial returns), 0252 (shortage/turnaround), 0193 and 0254 (invoice safeguards) must be tested rather than replaced.
+
+External legal references checked 2026-11-25:
+- Nepal Law Commission Privacy Act (official Nepali text): https://lawcommission.gov.np/content/12261/the-privacy-act-2075/ — personal documents and electronic information are protected.
+- Labour Act English text hosted by ICAN: https://en.ican.org.np/_browsable/file/downloads/Labour_Act_2074.pdf — §§28–31 working hours and covered employee overtime; confirm consolidated amendments and worker classification.
+- Consumer Protection Act (government-hosted English text): https://www.nml.gov.np/uploads/file/2023031819401576741208The-Consumer-Protection-Act-2075-2018.pdf — confirm application to rental charges and remedies.
+- VAT Act summary with amendments: https://policynepal.org/laws/act-2052-value-added-tax/ — standard rate and exceptions require accountant confirmation, including current Finance Act and Gazette notices. Do not infer legality from the UI's zero-rate toggle.
+
+**Gate:** zero verified repairs until exact-head tests and independent review. The owner has authorized work on all tracks, not unilateral legal conclusions, new pricing terms, payroll rate changes, production migrations or deployment.
