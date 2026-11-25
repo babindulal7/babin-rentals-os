@@ -15,7 +15,7 @@ on:
       - 'docs/**'
       - '.gitignore'
   pull_request:
-    branches: [main, integration/launch-repair-20261125, fix/mobile-dispatch-preview-20261125]
+    branches: [main, integration/launch-repair-20261125, fix/mobile-dispatch-preview-20261125, fix/mobile-bookings-layout-20261125]
     paths-ignore:
       - '**.md'
       - 'docs/**'
