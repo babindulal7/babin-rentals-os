@@ -2,7 +2,7 @@ name: Playwright disposable cloud auth
 
 on:
   push:
-    branches: [fix/playwright-staging-safety-20261125, integration/launch-repair-20261125]
+    branches: [fix/playwright-staging-safety-20261125, integration/launch-repair-20261125, test/disposable-expense-persistence-20261125]
     paths:
       - '.github/workflows/playwright-disposable.yml'
       - 'playwright.disposable.config.ts'
