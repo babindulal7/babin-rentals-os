@@ -13,6 +13,7 @@ let mockError: string | null = null
 let mockBlocked: string | null = null
 let mockProgress: { done: number; total: number } | undefined
 const completionCalls = vi.fn()
+let mockDispatch: (() => void | Promise<void>) | null = null
 
 type MockProps = {
   bookingNo?: string
@@ -28,7 +29,11 @@ function MockWorkspace({ bookingNo, onConfirmSuccess, onRegisterActions }: MockP
       dispatching: false,
       isDirty: dirty,
       label: 'Confirm Action',
-      complete: () => { completionCalls(); onConfirmSuccess?.() },
+      complete: () => {
+        completionCalls()
+        if (mockDispatch) return mockDispatch()
+        onConfirmSuccess?.()
+      },
       error: mockError,
       progress: mockProgress,
     })
@@ -128,6 +133,7 @@ beforeEach(() => {
   mockBlocked = null
   mockProgress = undefined
   completionCalls.mockClear()
+  mockDispatch = null
   fetchFloor.mockReset().mockImplementation(originalFetch)
 })
 
@@ -257,6 +263,37 @@ describe('Task 5 — Operations popup navigation and state', () => {
     const confirm = [...container.querySelectorAll('button')].find(b => b.textContent?.trim() === 'Confirm Packing & Next')
     expect(confirm?.disabled).toBe(true)
     expect(completionCalls).not.toHaveBeenCalled()
+  })
+
+  it.each([['Booked', 'Pack', 'Confirm Packing & Next'], ['Packed', 'Handover', 'Confirm Handover & Next']] as const)(
+    'releases a held %s dispatch without advancing or losing navigation', async (status, job, label) => {
+      let resolve!: () => void
+      mockDispatch = () => new Promise<void>(r => { resolve = r })
+      await mount(vi.fn(), status, job)
+      const confirm = () => [...container.querySelectorAll('button')].find(b => b.textContent?.trim() === label)
+      await act(async () => { confirm()?.click(); confirm()?.click() })
+      expect(completionCalls).toHaveBeenCalledTimes(1)
+      expect(container.textContent).toContain('Saving…')
+      await act(async () => resolve())
+      expect(container.textContent).not.toContain('Saving…')
+      expect(container.textContent).toContain('Status: ' + status)
+      expect(confirm()?.disabled).toBe(false)
+      const prev = container.querySelector<HTMLButtonElement>('.operations-shell__navigation button')
+      expect(prev?.disabled).toBe(false)
+      expect(container.querySelector<HTMLButtonElement>('.operations-shell__navigation button:nth-child(2)')?.disabled).toBe(true)
+    },
+  )
+
+  it('unlocks after repeated settled refusals without requiring the error text to change', async () => {
+    mockError = 'Same refusal'
+    mockDispatch = async () => {}
+    await mount(vi.fn(), 'Booked', 'Pack')
+    const confirm = () => [...container.querySelectorAll('button')].find(b => b.textContent?.trim() === 'Confirm Packing & Next')
+    await act(async () => confirm()?.click())
+    expect(confirm()?.disabled).toBe(false)
+    await act(async () => confirm()?.click())
+    expect(completionCalls).toHaveBeenCalledTimes(2)
+    expect(confirm()?.disabled).toBe(false)
   })
 
   it('accepts only one completion while its persisted status read is pending', async () => {

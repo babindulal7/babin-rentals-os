@@ -14,3 +14,5 @@ Draft integration only; no hosted migration, deployment, or merge authorized.
 ## Integration update
 
 - Booking recovery #413 (`32f7b35c53f9efe7d7174925a949e3cd4483a214`) passed full Mac CI run 45528432901. Integrated its two non-overlapping hook/test changes. Combined exact-head verification is required again; prior integration receipts do not certify this revision.
+
+- Operations settlement #414 (`7f47f00fe482768e8ac7165865313887cf9940f9`) passed full CI run 45530151200. Integrated its non-overlapping workspace and regression changes; held/refused submissions now release the host lock. Real browser custody/workflow acceptance remains pending. Previous integration `82a93c603d1fbe86b636de270b0562cc72d1f1d0` passed full CI run 45530303159; new head requires independent verification.
