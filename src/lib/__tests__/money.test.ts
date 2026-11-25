@@ -356,6 +356,13 @@ describe('discountGate — ungated (D3, Babin 31 Aug: "don\'t put any gate on di
     expect(over.ok === false && over.why).toMatch(/negative price/)
   })
 
+  it('rejects non-finite percentages consistently with RBAC', () => {
+    for (const pct of [NaN, Infinity, -Infinity]) {
+      expect(discountGate(pct, '', null).ok).toBe(false)
+      expect(canApproveDiscount('Owner', pct)).toBe(false)
+    }
+  })
+
   it('ignores reason and approver entirely — required never, harmless always', () => {
     expect(discountGate(40, '', null).ok).toBe(true)
     expect(discountGate(40, 'a reason nobody asked for', 'usr-owner').ok).toBe(true)
