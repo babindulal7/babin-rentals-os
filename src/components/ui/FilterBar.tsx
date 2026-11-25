@@ -246,10 +246,7 @@ export function FilterBar({
                 className="filter-bar__option"
                 aria-pressed={canSelect ? isSelected : undefined}
                 disabled={!canSelect}
-                onClick={() => {
-                  if (onToggleOptionId) onToggleOptionId(opt.id)
-                  else if (onSelectOption) onSelectOption(opt.id)
-                }}
+                onClick={() => onSelectOption?.(opt.id)}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
