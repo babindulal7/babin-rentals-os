@@ -8,7 +8,7 @@ export const test = base.extend({
     const unexpected: string[] = []
     await context.route('**/*', async route => {
       const url = new URL(route.request().url())
-      if (url.origin === 'http://localhost:4179' || url.origin === STAGING_URL || url.protocol === 'data:' || url.protocol === 'blob:') {
+      if (url.origin === 'http://localhost:4179' || url.origin === (process.env.BABIN_E2E_DISPOSABLE === '1' ? 'http://127.0.0.1:54321' : STAGING_URL) || url.protocol === 'data:' || url.protocol === 'blob:') {
         await route.continue()
       } else {
         if (url.hostname.endsWith('.supabase.co') || !['GET', 'HEAD', 'OPTIONS'].includes(route.request().method())) {

@@ -1,0 +1,43 @@
+name: Playwright disposable cloud auth
+
+on:
+  push:
+    branches: [fix/playwright-staging-safety-20261125]
+    paths:
+      - '.github/workflows/playwright-disposable.yml'
+      - 'playwright.disposable.config.ts'
+      - 'scripts/run-disposable-playwright.mjs'
+      - 'tests/e2e/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: playwright-disposable-cloud
+  cancel-in-progress: false
+
+jobs:
+  disposable:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci --ignore-scripts
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.114.0
+      - name: Start disposable Supabase
+        run: supabase start
+      - name: Apply local migrations including money-mask migration
+        run: node scripts/apply-migrations-local.mjs --include-held-back
+      - run: npx playwright install --with-deps chromium webkit
+      - name: Bootstrap local roles and run Playwright
+        run: node scripts/run-disposable-playwright.mjs
+      - name: Stop disposable Supabase
+        if: always()
+        run: supabase stop --no-backup
