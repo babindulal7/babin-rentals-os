@@ -1673,6 +1673,13 @@ export default function Inventory() {
     if (page > pageCount) setPage(pageCount)
   }, [page, pageCount])
 
+  // All existing bulk operations are current-page operations. Never retain
+  // hidden selections after changing the page, tab, filters or sort.
+  const selectionScope = JSON.stringify([params.toString(), page, rowsPerPage, sort])
+  useEffect(() => {
+    setSelected(prev => prev.size === 0 ? prev : new Set())
+  }, [selectionScope])
+
   const rowsWithIntel = useMemo(
     () =>
       list.rows.map((r) => ({
@@ -2144,6 +2151,12 @@ export default function Inventory() {
               the table keeps the width the rail was taking.
             */}
             <Card title={countedTitle} bodyStyle={{ padding: 0 }}>
+              {(!tabular || view === 'grid') && list.rows.length > 0 && (
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '0 12px', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={allOnPageSelected} onChange={toggleAllOnPage} ref={el => { if (el) el.indeterminate = !allOnPageSelected && list.rows.some(row => selected.has(row.id)) }} aria-label="Select every model on this page" style={{ width: 16, height: 16, accentColor: 'var(--primary)' }} />
+                  Select page
+                </label>
+              )}
               {selected.size > 0 && (
                 <div
                   style={{
@@ -2564,6 +2577,8 @@ export default function Inventory() {
             id: 'bulk-print-tag',
             label: 'Print Thermal Tag',
             icon: 'barcode',
+            disabled: selected.size !== 1 || !list.rows.some(row => selected.has(row.id)),
+            title: 'Select exactly one model on this page to print its tag',
             onClick: () => {
               const selRow = list.rows.find((r) => selected.has(r.id))
               if (selRow) {
