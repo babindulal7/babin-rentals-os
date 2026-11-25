@@ -1,4 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
+import { existsSync, readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { assertStagingEnvironment } from './tests/e2e/staging-guard.mjs'
 
 /**
  * E2E runs against a LOCAL dev server whose Supabase backend is the STAGING
@@ -8,47 +12,37 @@ import { defineConfig, devices } from '@playwright/test'
  * Required env (names only; values live in your local .env.staging.local or CI secrets):
  *   BABIN_STAGING_SUPABASE_URL   e.g. https://<staging-ref>.supabase.co
  *   BABIN_STAGING_ANON_KEY       staging publishable/anon key
- * Optional (authenticated suites are skipped when absent):
+ * Required in CI; optional only for local unauthenticated smoke runs:
  *   E2E_OWNER_EMAIL / E2E_OWNER_PASSWORD
  *   E2E_MANAGER_EMAIL / E2E_MANAGER_PASSWORD
  *   E2E_STAFF_EMAIL / E2E_STAFF_PASSWORD
  */
 
-// Load the gitignored staging env file, without overriding variables already set.
-// Values are never logged.
-import { existsSync, readFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+// Read only known staging variables from the ignored local file. Never
+// override explicit environment variables or bypass the exact-project guard.
 const envFile = resolve(dirname(fileURLToPath(import.meta.url)), '.env.staging.local')
+const stagingKeys = new Set([
+  'BABIN_STAGING_SUPABASE_URL', 'BABIN_STAGING_ANON_KEY',
+  'E2E_OWNER_EMAIL', 'E2E_OWNER_PASSWORD', 'E2E_MANAGER_EMAIL', 'E2E_MANAGER_PASSWORD',
+  'E2E_STAFF_EMAIL', 'E2E_STAFF_PASSWORD',
+])
 if (existsSync(envFile)) {
   for (const line of readFileSync(envFile, 'utf8').split(/\r?\n/)) {
-    const t = line.trim()
-    if (!t || t.startsWith('#')) continue
-    const i = t.indexOf('=')
-    if (i > 0) {
-      const key = t.slice(0, i).trim()
-      const val = t.slice(i + 1).trim().replace(/^["']|["']$/g, '')
-      if (process.env[key] === undefined) process.env[key] = val
+    const i = line.indexOf('=')
+    if (i <= 0) continue
+    const key = line.slice(0, i).trim()
+    if (stagingKeys.has(key) && process.env[key] === undefined) {
+      process.env[key] = line.slice(i + 1).trim().replace(/^["']|["']$/g, '')
     }
   }
 }
-if (!process.env.BABIN_STAGING_SUPABASE_URL) {
-  process.env.BABIN_STAGING_SUPABASE_URL = 'https://klhmsrunqrdxjudyhnkm.supabase.co'
-}
-
 const stagingUrl = process.env.BABIN_STAGING_SUPABASE_URL
 const stagingAnonKey = process.env.BABIN_STAGING_ANON_KEY
 
-if (!stagingUrl || !stagingAnonKey) {
-  throw new Error(
-    'E2E refused to start: set BABIN_STAGING_SUPABASE_URL and BABIN_STAGING_ANON_KEY (staging only).',
-  )
-}
-if (!/^https:\/\/[a-z0-9]+\.supabase\.co\/?$/.test(stagingUrl)) {
-  throw new Error('E2E refused to start: BABIN_STAGING_SUPABASE_URL must be a *.supabase.co project URL.')
-}
+assertStagingEnvironment(stagingUrl, stagingAnonKey)
+if (!stagingUrl || !stagingAnonKey) throw new Error('Missing staging configuration.')
 
-const PORT = 3000
+const PORT = 4179
 const baseURL = `http://localhost:${PORT}`
 
 export default defineConfig({
@@ -61,19 +55,20 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
   use: {
     baseURL,
-    trace: 'retain-on-failure',
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    serviceWorkers: 'block',
+    trace: 'off', // Auth requests and form values may contain credentials.
+    screenshot: 'off', // Enable only for sanitized, non-auth scenarios.
+    video: 'off',
   },
   webServer: {
     command: `npx vite --port ${PORT} --strictPort`,
     url: baseURL,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 180_000,
     env: {
       VITE_SUPABASE_URL: stagingUrl,
       VITE_SUPABASE_ANON_KEY: stagingAnonKey,
-      VITE_DATA_SOURCE: 'supabase',
+      VITE_DATA_SOURCE: 'live',
     },
   },
   projects: [

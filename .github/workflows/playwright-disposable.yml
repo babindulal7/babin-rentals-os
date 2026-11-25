@@ -1,0 +1,61 @@
+name: Playwright disposable cloud auth
+
+on:
+  push:
+    branches: [fix/playwright-staging-safety-20261125]
+    paths:
+      - '.github/workflows/playwright-disposable.yml'
+      - 'playwright.disposable.config.ts'
+      - 'scripts/run-disposable-playwright.mjs'
+      - 'tests/e2e/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: playwright-disposable-cloud
+  cancel-in-progress: false
+
+jobs:
+  disposable:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci --ignore-scripts
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.114.0
+      - name: Start disposable Supabase
+        run: supabase start
+      - name: Reproduce historical migration-time table defaults (disposable only)
+        # Older migrations contain behavioral RLS probes which assume the legacy
+        # Supabase default table grants. Match supabase/pglite-prelude.sql only
+        # inside this fresh local container, never on a hosted project.
+        run: |
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          test -z "${DOCKER_HOST:-}" && test -z "${DOCKER_CONTEXT:-}"
+          docker exec supabase_db_babin-rentals-os psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c 'alter default privileges in schema public grant all on tables to anon, authenticated, service_role;'
+      - name: Apply local migrations including money-mask migration
+        run: node scripts/apply-migrations-local.mjs --include-held-back
+      - name: Remove historical default grants and check anonymous view exposure
+        run: |
+          docker exec supabase_db_babin-rentals-os psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c 'alter default privileges in schema public revoke all on tables from anon, authenticated, service_role;'
+          # Print only schema/object names and ACL metadata, never any view rows.
+          docker exec supabase_db_babin-rentals-os psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c "select n.nspname, c.relname, c.relacl from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='v' and has_table_privilege('anon', c.oid, 'SELECT') order by c.relname;"
+          # Use the same explicit public-view allowlist as check-pglite and check-anon.
+          # The catalogue and product-family option views are intentionally public.
+          # All other anonymous view grants remain release-blocking.
+          set -o pipefail
+          docker exec supabase_db_babin-rentals-os psql -v ON_ERROR_STOP=1 -U postgres -d postgres -At -c "select c.relname from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind in ('v','m') and has_table_privilege('anon', c.oid, 'SELECT') order by c.relname;" | node --input-type=module -e 'import { readFileSync } from "node:fs"; import { ALLOWED_ANON_VIEWS } from "./scripts/allowed-anon-views.mjs"; const actual = readFileSync(0, "utf8").split(/\r?\n/).filter(Boolean); const unexpected = actual.filter(v => !ALLOWED_ANON_VIEWS.has(v)); const missing = [...ALLOWED_ANON_VIEWS].filter(v => !actual.includes(v)); if (unexpected.length || missing.length) { console.error("Anonymous view ACL mismatch", { unexpected, missing }); process.exit(1) } console.log("Approved anonymous catalogue views only:", actual.join(", "))'
+      - run: npx playwright install --with-deps chromium webkit
+      - name: Bootstrap local roles and run Playwright
+        run: node scripts/run-disposable-playwright.mjs
+      - name: Stop disposable Supabase
+        if: always()
+        run: supabase stop --no-backup

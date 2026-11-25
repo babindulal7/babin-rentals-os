@@ -1,28 +1,35 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixture'
 
-/**
- * Real sign-in against the staging backend, for each E2E test account.
- * Each role is skipped unless its login is supplied via environment
- * variables (never committed).
- */
-
-const roles = [
-  { key: 'OWNER', label: 'owner' },
-  { key: 'MANAGER', label: 'manager' },
-  { key: 'STAFF', label: 'staff' },
+const accounts = [
+  { role: 'Owner', email: process.env.E2E_OWNER_EMAIL, password: process.env.E2E_OWNER_PASSWORD },
+  { role: 'Manager', email: process.env.E2E_MANAGER_EMAIL, password: process.env.E2E_MANAGER_PASSWORD },
+  { role: 'Warehouse', email: process.env.E2E_STAFF_EMAIL, password: process.env.E2E_STAFF_PASSWORD },
 ] as const
 
-for (const role of roles) {
-  const email = process.env[`E2E_${role.key}_EMAIL`]
-  const password = process.env[`E2E_${role.key}_PASSWORD`]
+// Local smoke runs may omit credentials; CI may never silently skip a role.
+if (process.env.CI) {
+  for (const account of accounts) {
+    if (!account.email || !account.password) {
+      throw new Error(`E2E CI requires dedicated staging credentials for ${account.role}.`)
+    }
+  }
+  if (new Set(accounts.map(a => a.email?.trim().toLowerCase())).size !== accounts.length) {
+    throw new Error('E2E CI requires separate accounts for each role.')
+  }
+}
 
-  test(`${role.label} can sign in and leave the login screen`, async ({ page }) => {
-    test.skip(!email || !password, `E2E_${role.key}_EMAIL / E2E_${role.key}_PASSWORD not set`)
-
+for (const account of accounts) {
+  test(`${account.role} can sign in and access Operations`, async ({ page }) => {
+    test.skip(!account.email || !account.password, 'Dedicated staging credentials not configured')
     await page.goto('/login')
-    await page.locator('input[type="email"]').fill(email!)
-    await page.locator('input[type="password"]').fill(password!)
+    await page.locator('input[type="email"]').fill(account.email!)
+    await page.locator('input[type="password"]').fill(account.password!)
     await page.locator('button[type="submit"]').first().click()
-    await expect(page).not.toHaveURL(/\/login/, { timeout: 30_000 })
+    // /dashboard is only a redirect to /today, so assert the final route.
+    await expect(page).toHaveURL(/\/today(?:[/?#]|$)/, { timeout: 30_000 })
+    await expect(page.locator('input[type="password"]')).toHaveCount(0)
+    await page.goto('/operations')
+    await expect(page).toHaveURL(/\/operations(?:[/?#]|$)/)
+    await expect(page.getByLabel('Operational queues', { exact: true })).toBeVisible({ timeout: 30_000 })
   })
 }
