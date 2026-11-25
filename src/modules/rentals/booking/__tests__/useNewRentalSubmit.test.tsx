@@ -202,16 +202,29 @@ describe('useNewRentalSubmit', () => {
       }
       if (scenario === 'draft link retry') expect(convertDraft).toHaveBeenCalledTimes(2)
 
-      // Toast must be dispatched per Law 12
-      expect(showSuccessToast).toHaveBeenCalledTimes(1)
+      // Confirmation now also attempts an optional async payment-link request.
+      // Wait for the actual booking success state, not the first microtask.
+      // A link failure must not suppress a confirmed booking or its toast.
+      await vi.waitFor(() => {
+        expect(showSuccessToast).toHaveBeenCalledTimes(1)
+        expect(setConfirmedSuccess).toHaveBeenCalledTimes(1)
+      })
       expect(showSuccessToast).toHaveBeenCalledWith('Booking Confirmed', 'Rental 6 is now Booked')
 
-      // Modal state and save state must be updated
+      // Assert the durable booking identity strictly, while permitting the
+      // separate optional payment link/token metadata in the success payload.
       expect(setSaveState).toHaveBeenCalledWith('saved')
-      expect(setConfirmedSuccess).toHaveBeenCalledWith({
+      expect(setConfirmedSuccess).toHaveBeenCalledWith(expect.objectContaining({
         bookingId: 'test-booking-id-123',
         bookingNo: '6',
-      })
+      }))
+      const successPayload = setConfirmedSuccess.mock.calls[0]?.[0] as
+        | { bookingId: string; bookingNo: string; paymentLink?: string; paymentToken?: string }
+        | undefined
+      if (successPayload?.paymentLink) {
+        expect(successPayload.paymentLink).toContain('/pay/link/')
+        expect(successPayload.paymentLink).toContain(successPayload.paymentToken)
+      }
     } finally {
       await act(async () => {
         root.unmount()
