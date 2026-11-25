@@ -5,6 +5,7 @@
  * Hosted JWT/PostgREST verification is STILL REQUIRED before production.
  */
 import assert from 'node:assert/strict'
+import { makePickupFixture, pickup } from './fixtures/cancellation-pickup-fixture.mjs'
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -238,6 +239,127 @@ try {
       assert.ok(refusal, 'Cancelled booking transition must be refused')
     })
   }
+  // Validate the exact real-race fixture and business errors in a single
+  // disposable connection first. This is serial ordering, NOT race proof.
+  for (const kind of ['movement','handover line']) {
+    for (const cancelFirst of [true,false]) {
+      await check('Physical pickup fixture '+kind+' / '+(cancelFirst?'cancel first':'pickup first'), async () => {
+        const fixture=await makePickupFixture({q,ownerId:owner,warehouseId:ids.WarehouseB,branchId:branchB,clientId:clientB})
+        const read=async()=>({
+          ...(await stageSnapshot(fixture.id)),
+          movements:(await q('select * from public.session_line_movements where session_id=$1 order by id',[fixture.sessionId])).rows,
+          handover:(await q('select * from public.handover_lines where booking_line_id=$1 order by id',[fixture.lineId])).rows,
+        })
+        const before=await read()
+        const write=()=>pickup(db,fixture,kind,ids.WarehouseB)
+        if(cancelFirst){
+          await asActor(owner,async()=>assert.equal((await call(fixture.id,'json')).rows[0].result.success,true))
+          const winner=await read()
+          assert.equal(winner.booking.cancelled_by,owner)
+          assert.ok(winner.reservations.length>0)
+          assert.ok(winner.reservations.every(row=>row.released_at!==null))
+          await asActor(ids.WarehouseB,()=>assert.rejects(write(),e=>e.code==='P0001'&&/no longer ready for pickup/.test(e.message)))
+          assert.deepEqual(await read(),winner)
+        }else{
+          await asActor(ids.WarehouseB,write)
+          const winner=await read()
+          assert.equal(winner.booking.stage,'Packed')
+          assert.equal(kind==='movement'?winner.movements.length:winner.handover.length,1)
+          assert.deepEqual(winner.reservations,before.reservations)
+          await asActor(owner,()=>assert.rejects(call(fixture.id,'json'),e=>e.code==='P0001'&&/pickup has already occurred/.test(e.message)))
+          assert.deepEqual(await read(),winner)
+        }
+      })
+    }
+  }
+  // Test the distinct session-completion writer used by floorVerb.ts.
+  // No movement is recorded before this probe: it isolates the final
+  // session write, rather than relying on the already-tested movement guard.
+  const sessionFixture = () => makePickupFixture({q,ownerId:owner,warehouseId:ids.WarehouseB,branchId:branchB,clientId:clientB})
+  const seal = fixture => q("update public.operation_sessions set state='Completed',completed_at=clock_timestamp(),completed_by=$1 where id=$2 returning id,state",[ids.WarehouseB,fixture.sessionId])
+  let completionControl = false
+  await check('uncancelled Handover session completion positive control',async()=>{
+    const fixture=await sessionFixture()
+    await asActor(ids.WarehouseB,async()=>{
+      const receipt=await seal(fixture)
+      assert.equal(receipt.rows.length,1,'Floor writer must actually update one row')
+      assert.equal(receipt.rows[0].state,'Completed')
+    })
+    const row=await one('select state,completed_at from public.operation_sessions where id=$1',[fixture.sessionId])
+    assert.equal(row.state,'Completed')
+    assert.ok(row.completed_at)
+    const before=await stageSnapshot(fixture.id)
+    await asActor(owner,()=>assert.rejects(call(fixture.id,'json'),e=>e.code==='P0001'&&/pickup has already occurred/.test(e.message)))
+    assert.deepEqual(await stageSnapshot(fixture.id),before)
+    completionControl=true
+  })
+  await check('cancelled Handover session completion refused without mutation',async()=>{
+    assert.ok(completionControl,'Positive control must pass before interpreting the cancellation probe')
+    const fixture=await sessionFixture()
+    await asActor(owner,async()=>assert.equal((await call(fixture.id,'json')).rows[0].result.success,true))
+    const before=await stageSnapshot(fixture.id)
+    let refused=false
+    await asActor(ids.WarehouseB,async()=>{
+      try {
+        const receipt=await seal(fixture)
+        refused=receipt.rows.length===0
+      } catch(error) {
+        assert.ok(['P0001','42501'].includes(error.code),'Unexpected database error: '+error.code)
+        refused=true
+      }
+    })
+    assert.deepEqual(await stageSnapshot(fixture.id),before,'Cancelled session completion must not persist a custody receipt')
+    assert.ok(refused,'Cancelled session completion unexpectedly succeeded')
+  })
+  // Direct serial-unit writer used by floorVerb.ts: isolate this from movement
+  // and handover-line writes so those existing guards cannot hide a gap.
+  const serialFixture=()=>makePickupFixture({q,ownerId:owner,warehouseId:ids.WarehouseB,branchId:branchB,clientId:clientB,serialised:true})
+  const pickUnit=fixture=>q("update public.booking_line_units set unit_state='Picked Up',handover_session_id=$1 where id=$2 returning id,unit_state",[fixture.sessionId,fixture.unitId])
+  const serialSnapshot=async fixture=>({
+    ...(await stageSnapshot(fixture.id)),
+    units:(await q('select * from public.booking_line_units where booking_line_id=$1 order by id',[fixture.lineId])).rows,
+    assets:(await q('select * from public.product_units where id=$1',[fixture.assetId])).rows,
+    movements:(await q('select * from public.session_line_movements where booking_line_id=$1 order by id',[fixture.lineId])).rows,
+  })
+  let serialControl=false
+  await check('uncancelled serial unit pickup positive control',async()=>{
+    const fixture=await serialFixture()
+    const before=await serialSnapshot(fixture)
+    assert.equal(before.units[0]?.unit_state,'Ready')
+    assert.ok(before.reservations.some(row=>row.released_at===null&&row.asset_id===fixture.assetId),'Serial fixture must own the matching physical hold')
+    await asActor(ids.WarehouseB,async()=>{
+      const receipt=await pickUnit(fixture)
+      assert.equal(receipt.rows.length,1)
+      assert.equal(receipt.rows[0].unit_state,'Picked Up')
+    })
+    const winner=await serialSnapshot(fixture)
+    assert.equal(winner.units[0].unit_state,'Picked Up')
+    assert.equal(winner.booking.stage,'Packed')
+    assert.deepEqual(winner.reservations,before.reservations)
+    await asActor(owner,()=>assert.rejects(call(fixture.id,'json'),e=>e.code==='P0001'&&/units already picked up|pickup has already occurred/.test(e.message)))
+    assert.deepEqual(await serialSnapshot(fixture),winner)
+    serialControl=true
+  })
+  await check('cancelled serial unit pickup refused without custody mutation',async()=>{
+    assert.ok(serialControl,'Positive control must pass before interpreting the cancellation probe')
+    const fixture=await serialFixture()
+    await asActor(owner,async()=>assert.equal((await call(fixture.id,'json')).rows[0].result.success,true))
+    const before=await serialSnapshot(fixture)
+    assert.ok(before.reservations.length>0)
+    assert.ok(before.reservations.every(row=>row.released_at!==null))
+    let refused=false
+    await asActor(ids.WarehouseB,async()=>{
+      try{
+        const receipt=await pickUnit(fixture)
+        refused=receipt.rows.length===0
+      }catch(error){
+        assert.ok(['P0001','42501'].includes(error.code),'Unexpected database error: '+error.code)
+        refused=true
+      }
+    })
+    assert.deepEqual(await serialSnapshot(fixture),before,'Cancelled rental cannot acquire serial custody or mutate a released hold')
+    assert.ok(refused,'Cancelled serial unit pickup unexpectedly succeeded')
+  })
   console.log(`Cancellation boundary: ${passed} PASS, ${failures.length} FAIL (disposable PGlite)`)
   assert.equal(failures.length, 0, failures.join('; '))
 } finally {

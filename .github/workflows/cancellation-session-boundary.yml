@@ -1,0 +1,25 @@
+name: Serial unit custody boundary
+on:
+  pull_request:
+    branches: [integration/combined-launch-candidate-20261125]
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+jobs:
+  session-boundary:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'test/cancellation-serial-unit-boundary-440'
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 15
+    env:
+      SUPABASE_ACCESS_TOKEN: ''
+      SUPABASE_DB_PASSWORD: ''
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: node scripts/test-cancellation-branch-boundary.mjs
