@@ -102,13 +102,13 @@ describe('HandoverWorkspace: T2-12 Client Collectors & ID on File', () => {
     vi.clearAllMocks()
   })
 
-  async function mount() {
+  async function mount(onRegisterActions = vi.fn()) {
     await act(async () => {
       root!.render(
         <MemoryRouter initialEntries={['/rentals/B-999/handover']}>
           <ToastProvider>
             <Routes>
-              <Route path="/rentals/:bookingNo/handover" element={<HandoverWorkspace />} />
+              <Route path="/rentals/:bookingNo/handover" element={<HandoverWorkspace onRegisterActions={onRegisterActions} />} />
             </Routes>
           </ToastProvider>
         </MemoryRouter>,
@@ -196,6 +196,31 @@ describe('HandoverWorkspace: T2-12 Client Collectors & ID on File', () => {
     // Since collectors were loaded, first collector was selected, so bookingAuthVerified is true
     const authCheck = container?.querySelector('input[type="checkbox"][aria-label="Booking Authorization Verified"]') as HTMLInputElement
     expect(authCheck?.checked).toBe(true)
+  })
+
+  it('does not mark hydrated receiver defaults as unsaved work, but protects an explicit uncheck', async () => {
+    const register = vi.fn()
+    await mount(register)
+    const authorization = container?.querySelector<HTMLInputElement>('input[aria-label="Booking Authorization Verified"]')
+    expect(authorization?.checked).toBe(true)
+    expect(register.mock.lastCall?.[0]?.isDirty).toBe(false)
+    await act(async () => { authorization!.click() })
+    expect(authorization?.checked).toBe(false)
+    expect(register.mock.lastCall?.[0]?.isDirty).toBe(true)
+  })
+
+  it('protects a typed receiver override reason even before a gate passes', async () => {
+    const register = vi.fn()
+    await mount(register)
+    const override = container?.querySelector<HTMLInputElement>('#gate1-override-input')
+    expect(override).not.toBeNull()
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set
+      expect(setter).toBeDefined()
+      setter!.call(override, 'Synthetic receiver override')
+      override!.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    expect(register.mock.lastCall?.[0]?.isDirty).toBe(true)
   })
 
   it('renders quick collector selection chips in SignOnGlassModal', async () => {
