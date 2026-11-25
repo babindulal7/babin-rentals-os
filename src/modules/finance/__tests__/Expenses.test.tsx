@@ -145,14 +145,14 @@ function categoryRow() {
   return { id: CATEGORY_ID, code: 'EXP-MAINT', name: 'Equipment Maintenance & Repair', description: null }
 }
 
-async function mount(): Promise<HTMLElement> {
+async function mount(props: Parameters<typeof Expenses>[0] = {}): Promise<HTMLElement> {
   const container = document.createElement('div')
   document.body.appendChild(container)
   const root = createRoot(container)
   await act(async () => {
     root.render(
       <StrictMode>
-        <Expenses />
+        <Expenses {...props} />
       </StrictMode>,
     )
   })
@@ -186,6 +186,15 @@ beforeEach(() => {
 })
 
 describe('Expenses — a money-blind session is RESTRICTED, never empty', () => {
+  it('ignores a direct create request for money-blind users', async () => {
+    auth.role = 'Warehouse'
+    const consume = vi.fn()
+    const c = await mount({ openExpenseRequested: true, onConsumeExpenseRequest: consume })
+    expect(c.textContent).toContain('Access restricted')
+    expect(consume).not.toHaveBeenCalled()
+    expect(db.calls).toEqual([])
+  })
+
   it('renders the restricted state and never claims the business has no expenses', async () => {
     auth.role = 'Warehouse'
     const c = await mount()
@@ -236,6 +245,13 @@ describe('Expenses — a money-visible session with no rows is EMPTY, never rest
     expect(c.textContent).toContain('No expenses yet')
     expect(c.textContent).not.toContain('Access restricted')
     expect(c.textContent).not.toContain(FINANCE_RESTRICTED_REASON)
+  })
+
+  it('opens the existing expense sheet exactly once from an authorized create request', async () => {
+    const consume = vi.fn()
+    await mount({ openExpenseRequested: true, onConsumeExpenseRequest: consume })
+    expect(consume).toHaveBeenCalledTimes(1)
+    expect(document.body.textContent).toContain('Record a cost against a branch and category.')
   })
 
   /* From main's Phase 9 work, ported 8 Oct 2026. */

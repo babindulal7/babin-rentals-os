@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fetchOnlinePaymentProviders, initOnlinePayment, verifyOnlinePayment } from '../payApi'
+import { createBookingPaymentLink, fetchPaymentLinkDetails, fetchOnlinePaymentProviders, initOnlinePayment, verifyOnlinePayment } from '../payApi'
 
 const { rpc, invoke } = vi.hoisted(() => ({ rpc: vi.fn(), invoke: vi.fn() }))
 vi.mock('../../../lib/supabase', () => ({ supabase: { rpc, functions: { invoke } } }))
@@ -12,6 +12,7 @@ afterEach(() => {
 describe('hosted payment safety hold', () => {
   it('does not advertise hosted providers or initiate/allocate from a browser session', async () => {
     vi.stubEnv('VITE_DATA_SOURCE', 'supabase')
+    await expect(createBookingPaymentLink('booking-1')).rejects.toThrow('temporarily unavailable')
     expect(await fetchOnlinePaymentProviders()).toEqual([])
     await expect(initOnlinePayment({ bookingId: 'booking-1' })).rejects.toThrow('temporarily unavailable')
     await expect(verifyOnlinePayment({ intentId: 'intent-1', providerRef: 'unverified' })).rejects.toThrow('No payment has been recorded')
@@ -19,8 +20,17 @@ describe('hosted payment safety hold', () => {
     expect(invoke).not.toHaveBeenCalled()
   })
 
+  it('rejects unknown mock tokens without invoking any hosted backend', async () => {
+    vi.stubEnv('VITE_DATA_SOURCE', 'mock')
+    await expect(fetchPaymentLinkDetails('unknown-test-token')).resolves.toEqual({ valid: false, reason: 'not_found' })
+    await expect(initOnlinePayment({ token: 'unknown-test-token' })).rejects.toThrow('invalid or already paid')
+    expect(rpc).not.toHaveBeenCalled()
+    expect(invoke).not.toHaveBeenCalled()
+  })
+
   it('retains explicitly local mock checkout without touching the backend', async () => {
     vi.stubEnv('VITE_DATA_SOURCE', 'mock')
+    expect((await createBookingPaymentLink('booking-1')).token).toMatch(/^mock-link-/)
     expect((await fetchOnlinePaymentProviders()).length).toBeGreaterThan(0)
     expect((await initOnlinePayment({ bookingId: 'booking-1' })).is_sandbox).toBe(true)
     expect((await verifyOnlinePayment({ intentId: 'intent-1', providerRef: 'mock' })).success).toBe(true)
