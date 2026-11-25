@@ -15,7 +15,7 @@ on:
       - 'docs/**'
       - '.gitignore'
   pull_request:
-    branches: [main]
+    branches: [main, integration/launch-repair-20261125]
     paths-ignore:
       - '**.md'
       - 'docs/**'
