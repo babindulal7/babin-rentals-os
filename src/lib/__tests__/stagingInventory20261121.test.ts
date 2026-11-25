@@ -37,7 +37,7 @@ describe('T1-02 exact-head 21 Nov 2026 staging inventory (no database writes)', 
     expect(inventory.source_drift_since_prior_snapshot.removed_files).toEqual([])
   })
 
-  it('reports all thirteen migrations added after this snapshot as drift, and nothing else', () => {
+  it('reports all fourteen migrations added after this snapshot as drift, and nothing else', () => {
     const child = spawnSync(process.execPath, ['scripts/staging-schema-preflight.mjs', '--inventory', 'STAGING_SQL_INVENTORY_2026-11-21.json'], {
       cwd: process.cwd(),
       encoding: 'utf8',
@@ -59,13 +59,13 @@ describe('T1-02 exact-head 21 Nov 2026 staging inventory (no database writes)', 
     }
     expect(result.mode).toBe('READ_ONLY_PINNED_SOURCE_INTEGRITY')
     expect(result.sourceBaseline).toBe('3a8d90b9fa197d1a69326483a89140e404385b85')
-    expect(result.localFileCount).toBe(273)
+    expect(result.localFileCount).toBe(274)
     expect(result.pinnedFileCount).toBe(260)
     expect(result.approvalToApplyStaging).toBe(false)
     expect(result.databaseConnected).toBe(false)
     expect(result.sqlExecuted).toBe(false)
     expect(result.errors).toEqual([
-      'migration file count differs from pinned inventory: local=273, pinned=260',
+      'migration file count differs from pinned inventory: local=274, pinned=260',
       '0263_product_families.sql: absent from pinned inventory',
       '0264_public_product_family_options.sql: absent from pinned inventory',
       '0265_submit_request_rates_in_paisa.sql: absent from pinned inventory',
@@ -79,6 +79,7 @@ describe('T1-02 exact-head 21 Nov 2026 staging inventory (no database writes)', 
       '20261124223021_backend_stabilization_search_paths_and_subrental_constraint.sql: absent from pinned inventory',
       '20261124223053_backend_stabilization_targeted_foreign_key_indexes.sql: absent from pinned inventory',
       '20261124223115_backend_stabilization_client_policy_initplans.sql: absent from pinned inventory',
+      '20261125150654_cancellation_branch_boundary.sql: absent from pinned inventory',
     ])
     expect(result.sourceIdentityVerified).toBe(false)
     expect(result.status).toBe('BLOCKED_SOURCE_DRIFT')
