@@ -201,17 +201,48 @@ async function run() {
       }
       // Separate mutating fixtures per device. Use the actual Quote -> Booked
       // transition to acquire the normal inventory reservation, not a fake pack.
-      for (const [device, offset] of [['desktop', 16], ['ipad', 20], ['mobile', 24]]) {
+      const secondProductId = randomUUID()
+      await fixtureQuery('partial pickup second product', "insert into public.products (id,client_uuid,asset_code,name,category_id,brand,tracking_mode,total_quantity,daily_rate,created_by) values ($1,$2,public.next_document_number('equipment'),'Disposable Operations Stand',$3,'Disposable','Quantity',20,250,$4)", [secondProductId,randomUUID(),category,fixtureOwner])
+      for (const [device, offset, partial] of [['desktop', 16, false], ['ipad', 20, false], ['mobile', 24, false], ['desktop', 28, true], ['ipad', 32, true], ['mobile', 36, true]]) {
         const bookingId = randomUUID()
         const pickup = new Date(Date.now() + offset * 86400000)
         const end = new Date(pickup.getTime() + 2 * 86400000)
         const row = (await fixtureQuery('booking insert', "insert into public.bookings (id,client_uuid,booking_no,client_id,branch_id,pickup_at,return_at,delivery_type,stage,created_by,updated_by) values ($1,$2,public.next_document_number('booking'),$3,$4,$5,$6,'Client Pickup','Quote',$7,$7) returning booking_no", [bookingId, randomUUID(), targets[0].clientId, branch, pickup, end, fixtureOwner])).rows[0]
-        await fixtureQuery('booking line insert', "insert into public.booking_lines (client_uuid,booking_id,line_type,product_id,description,qty,days,rate,created_by) values ($1,$2,'Equipment',$3,'Disposable Operations Cable',2,2,250,$4)", [randomUUID(), bookingId, productId, fixtureOwner])
+        await fixtureQuery('booking line insert', "insert into public.booking_lines (client_uuid,booking_id,line_type,product_id,description,qty,days,rate,created_by) values ($1,$2,'Equipment',$3,'Disposable Operations Cable',$5,2,250,$4)", [randomUUID(), bookingId, productId, fixtureOwner, partial ? 1 : 2])
+        if (partial) await fixtureQuery('partial pickup second line', "insert into public.booking_lines (client_uuid,booking_id,line_type,product_id,description,qty,days,rate,created_by) values ($1,$2,'Equipment',$3,'Disposable Operations Stand',1,2,250,$4)", [randomUUID(),bookingId,secondProductId,fixtureOwner])
         await fixtureQuery('Quote to Booked transition', "insert into public.booking_stage_transitions (client_uuid,booking_id,branch_id,from_stage,to_stage,actor_id,actor_role,occurred_at) values ($1,$2,$3,'Quote','Booked',$4,'Owner',now())", [randomUUID(), bookingId, branch, fixtureOwner])
         const stage = (await fixtureQuery('persisted stage read', "select stage from public.bookings where id=$1", [bookingId])).rows[0]?.stage
         if (stage !== 'Booked') throw new Error('Operations confirmation fixture did not reach Booked')
-        env['E2E_OPS_CONFIRM_' + device.toUpperCase() + '_ID'] = bookingId
-        env['E2E_OPS_CONFIRM_' + device.toUpperCase() + '_NO'] = row.booking_no
+        // Confirmation creates a draft invoice. Settle that actual invoice
+        // through the normal payment trigger; a booking-only advance does not
+        // update invoice balances. Never modify invoice totals or bypass gates.
+        const invoices = (await fixtureQuery('handover draft invoice', "select id,status,total_amount,paid_amount,outstanding_amount from public.invoices where booking_id=$1 and status<>'Void'", [bookingId])).rows
+        const invoice = invoices[0]
+        const amount = Number(invoice?.outstanding_amount)
+        if (invoices.length !== 1 || invoice?.status !== 'Draft' || Number(invoice.paid_amount) !== 0 || !Number.isFinite(amount) || amount <= 0 || amount !== Number(invoice.total_amount)) {
+          console.error('Handover fixture expected one positive unpaid draft invoice')
+          throw new Error('Handover fixture invoice precondition failed')
+        }
+        await fixtureQuery('handover linked invoice payment', "insert into public.payments (client_uuid,payment_no,booking_id,invoice_id,client_id,branch_id,amount,payment_type,status,received_by) values ($1,public.next_document_number('payment'),$2,$3,$4,$5,$6,'Advance Payment','Received',$7)", [randomUUID(),bookingId,invoice.id,targets[0].clientId,branch,amount,fixtureOwner])
+        const settled = (await fixtureQuery('handover invoice settlement readback', 'select paid_amount,outstanding_amount,status from public.invoices where id=$1', [invoice.id])).rows[0]
+        if (Number(settled?.paid_amount) !== amount || Number(settled?.outstanding_amount) !== 0 || settled?.status !== 'Paid') {
+          console.error('Handover fixture linked payment did not settle invoice')
+          throw new Error('Handover fixture invoice settlement failed')
+        }
+        const deposits = (await fixtureQuery('handover deposit status', 'select id,pending_amount from public.security_deposits where booking_id=$1', [bookingId])).rows
+        for (const deposit of deposits) {
+          if (Number(deposit.pending_amount) > 0) {
+            await fixtureQuery('handover deposit receipt', "insert into public.deposit_movements (client_uuid,movement_no,security_deposit_id,movement_type,amount,handled_by) values ($1,$2,$3,'Received',$4,$5)", [randomUUID(),'CI-'+randomBytes(8).toString('hex'),deposit.id,deposit.pending_amount,fixtureOwner])
+          }
+        }
+        const pending = (await fixtureQuery('handover financial clearance', "select (select coalesce(sum(pending_amount),0) from public.security_deposits where booking_id=$1) as deposit, (select coalesce(sum(outstanding_amount),0) from public.invoices where booking_id=$1 and status<>'Void') as rental", [bookingId])).rows[0]
+        if (Number(pending?.deposit) !== 0 || Number(pending?.rental) !== 0) {
+          console.error('Handover fixture clearance failed: depositClear=' + (Number(pending?.deposit) === 0) + '; rentalClear=' + (Number(pending?.rental) === 0))
+          throw new Error('Handover fixture financial gates not cleared')
+        }
+        const fixturePrefix = 'E2E_OPS_' + (partial ? 'PARTIAL_' : 'CONFIRM_') + device.toUpperCase()
+        env[fixturePrefix + '_ID'] = bookingId
+        env[fixturePrefix + '_NO'] = row.booking_no
       }
       await conn.query('commit')
     } catch (error) {
