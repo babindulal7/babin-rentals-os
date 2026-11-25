@@ -202,10 +202,10 @@ test.describe('Operations packing confirmation and duplicate-submit protection',
       const receipt = (await handoverSessions())[0]!
       expect(receipt.government_id_verified).toBe(true)
       expect(receipt.booking_authorization_verified).toBe(true)
-      const signatures = await api.from('signatures').select('signature_role,evidence_file_id').eq('session_id', receipt.id)
+      const signatures = await api.from('signatures').select('signature_role,signature_evidence_file_id').eq('session_id', receipt.id)
       expect(signatures.error).toBeNull()
       expect(signatures.data?.map(s => s.signature_role).sort()).toEqual(['Receiver', 'Warehouse staff'])
-      expect(signatures.data?.every(s => Boolean(s.evidence_file_id))).toBe(true)
+      expect(signatures.data?.every(s => Boolean(s.signature_evidence_file_id))).toBe(true)
       const movements = await api.from('session_line_movements').select('qty,resulting_item_state').eq('session_id', receipt.id)
       expect(movements.error).toBeNull()
       expect(movements.data?.length).toBeGreaterThan(0)
