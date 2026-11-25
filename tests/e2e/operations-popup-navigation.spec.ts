@@ -195,7 +195,9 @@ test.describe('Operations packing confirmation and duplicate-submit protection',
         // test budget after the click. Do not force, retry, or bypass selection.
         // Tap the real enclosing label (including its designed 44px hit area).
         // The Ready filter would remove the row; All keeps both states observable.
-        await popup.locator('label').filter({ has: cable }).click({ timeout: 10_000 })
+        await popup.locator('label').filter({
+          has: page.getByRole('checkbox', { name: 'Mark Disposable Operations Cable picked up', exact: true }),
+        }).click({ timeout: 10_000 })
         console.log('[partial:' + testInfo.project.name + '] Individual pickup click returned')
         await expect(cable).toBeChecked({ timeout: 10_000 })
         await expect(stand).not.toBeChecked()
