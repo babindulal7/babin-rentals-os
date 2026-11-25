@@ -151,6 +151,58 @@ try {
   }
   console.log('PASS: money-blind direct booking INSERT cannot select zero VAT')
 
+  // #445: no fee, refund or deposit movement may be implied by an
+  // operational cancellation. These are synthetic amounts, not policy rates.
+  const fixtures = [
+    {code:'990496', label:'no advance', amount:0, vatRate:0.13},
+    {code:'990497', label:'partial advance', amount:1000, vatRate:0.13},
+    {code:'990498', label:'full advance', amount:11300, vatRate:0.13},
+    {code:'990499', label:'issued invoice and partial advance', amount:5000, vatRate:0.13, invoice:true},
+    {code:'990500', label:'separate held security deposit', amount:1000, vatRate:0.13, deposit:true},
+  ]
+  for (const fixture of fixtures) {
+    const feeProbe=await booking({code:fixture.code,vatRate:fixture.vatRate,discountRows:[]})
+    const paymentId=id()
+    if (fixture.invoice) {
+      const receipt=(await sql('select public.create_invoice($1::jsonb) as result',
+        [JSON.stringify({client_uuid:id(),created_by:ownerId,booking_id:feeProbe.bookingId,booking_no:feeProbe.code,vat_rate:fixture.vatRate})])).rows[0].result
+      if (!receipt?.invoice_id && !receipt?.id) throw new Error('Invoice control missing')
+    }
+    if (fixture.amount > 0) {
+      const paymentNo=(await sql("select next_document_number('payment') as no")).rows[0].no
+      await sql(`insert into payments (id,client_uuid,payment_no,booking_id,client_id,branch_id,amount,payment_type,payment_date,status,received_by)
+        values($1,gen_random_uuid(),$2,$3,$4,$5,$6,'Advance Payment',now(),'Received',$7)`,
+        [paymentId,paymentNo,feeProbe.bookingId,client,branch,fixture.amount,ownerId])
+    }
+    if (fixture.deposit) {
+      await sql(`insert into security_deposits (client_uuid,deposit_no,booking_id,client_id,branch_id,required_amount,received_amount,refunded_amount,applied_amount,pending_amount,created_by)
+        values(gen_random_uuid(),'DEP-990500',$1,$2,$3,2500,2500,0,0,0,$4)`,[feeProbe.bookingId,client,branch,ownerId])
+    }
+    const ledger=async()=>({
+      payments:(await sql('select * from public.payments where booking_id=$1 order by id',[feeProbe.bookingId])).rows,
+      invoices:(await sql('select * from public.invoices where booking_id=$1 order by id',[feeProbe.bookingId])).rows,
+      intents:(await sql('select * from public.payment_intents where booking_id=$1 order by id',[feeProbe.bookingId])).rows,
+      reversals:(await sql('select r.* from public.payment_reversals r join public.payments p on p.id=r.original_payment_id where p.booking_id=$1 order by r.id',[feeProbe.bookingId])).rows,
+      deposits:(await sql('select * from public.security_deposits where booking_id=$1 order by id',[feeProbe.bookingId])).rows,
+    })
+    const before=await ledger()
+    if(before.payments.length!==(fixture.amount>0?1:0))throw new Error('Payment positive control failed')
+    if(fixture.amount>0)requireMoney(before.payments[0],'amount',fixture.amount)
+    if(fixture.invoice && before.invoices.length!==1)throw new Error('Invoice positive control failed')
+    if(fixture.deposit)requireMoney(before.deposits[0],'received_amount',2500)
+    const payload={booking_id:feeProbe.bookingId,client_uuid:id(),reason:'Synthetic cancellation settlement matrix [Fee estimate: NPR 500]'}
+    await db.exec(`select set_config('app.current_user_id','${ownerId}',false),set_config('request.jwt.claim.sub','${ownerId}',false); set role authenticated;`)
+    try {
+      const result=(await sql('select public.cancel_booking($1::jsonb) as result',[JSON.stringify(payload)])).rows[0].result
+      if(result?.success!==true)throw new Error('Cancellation control failed')
+    } finally {
+      await db.exec("reset role; select set_config('request.jwt.claim.sub','',false)")
+    }
+    if(!(await sql('select cancelled_at from public.bookings where id=$1',[feeProbe.bookingId])).rows[0]?.cancelled_at)throw new Error('Cancellation flag missing')
+    if(JSON.stringify(await ledger())!==JSON.stringify(before))throw new Error('Unexpected settlement mutation: '+fixture.label)
+    console.log('PASS: operational cancellation preserves financial records — '+fixture.label)
+  }
+
   console.log('FINANCIAL INTEGRITY VERIFIED IN ISOLATED PGLITE')
 } finally {
   await db.close()
