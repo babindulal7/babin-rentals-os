@@ -16,7 +16,11 @@
 - `npx playwright test --project=desktop` against the staging Supabase project: 3/3 passed (run after the dev server was warm).
 - First run failed on a cold Vite start (60s navigation timeout); timeout raised to 120s. Not re-run cold after the change.
 - Added `tests/e2e/auth.spec.ts` (owner sign-in; skipped without `E2E_OWNER_*`). Run on staging with the supplied owner login: FAILED, the server returned "Invalid login credentials" and the app stayed on /login. Not retried. The account is either absent on staging or its password differs. Credentials were not written to any file.
-- NOT VERIFIED: iPad and Pixel projects, Windows and macOS CI runs, authenticated P0 flows (no working staff logins yet), `typecheck` / `lint` on this branch.
+- Added `scripts/e2e-seed-staging-users.mjs`: creates three dedicated test accounts on staging (`e2e-owner`, `e2e-manager`, `e2e-staff` @babinrentals.test) with generated passwords written only to the gitignored `.env.staging.local`. Refuses to run unless the connection string is the staging project. Does not touch the shared `staging-*` seats.
+- Auth at the API level: all three E2E accounts receive a token from staging GoTrue (HTTP 200). Two seed defects were fixed on the way: `instance_id` was unset, and NULL token columns caused a GoTrue 500.
+- Found and fixed (product code, `src/modules/auth/Login.tsx`): after a successful password sign-in the login page navigated at once, while the staff profile was still loading. The route guard saw `user === null` and sent the visitor back to `/login`. That is why sign-in looked broken for Owner, Manager and Staff alike, with no console errors. The fix leaves `/login` only once `user` is set. Unit test `login.test.tsx` updated to model the same order.
+- Verified: `npm run typecheck` (tsc --noEmit) exit 0. `login.test.tsx`, `passwordReset.test.tsx`, `auth.identity.test.tsx`: 23/23 pass (run with `VITE_DATA_SOURCE=mock`; without it these suites fail at import on the missing Supabase variables, which was already true before this change). Staging desktop: owner, manager and staff sign-in tests pass, with smoke tests 6/6 in total.
+- NOT VERIFIED: iPad and Pixel projects, Windows and macOS CI runs, authenticated P0 flows (blocked by the session finding above), `typecheck` / `lint` on this branch.
 
 ### Completion
 Not measured by this entry. Run `npm run completion` on the branch for the R-29 table.

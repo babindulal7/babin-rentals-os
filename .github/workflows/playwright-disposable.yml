@@ -46,6 +46,8 @@ jobs:
       - name: Remove historical default grants and check anonymous view exposure
         run: |
           docker exec supabase_db_babin-rentals-os psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c 'alter default privileges in schema public revoke all on tables from anon, authenticated, service_role;'
+          # Print only schema/object names and ACL metadata, never any view rows.
+          docker exec supabase_db_babin-rentals-os psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c "select n.nspname, c.relname, c.relacl from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='v' and has_table_privilege('anon', c.oid, 'SELECT') order by c.relname;"
           docker exec supabase_db_babin-rentals-os psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c "do \$\$ begin if exists (select 1 from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='v' and has_table_privilege('anon', c.oid, 'SELECT')) then raise exception 'Anonymous view exposure: disposable security gate failed'; end if; end \$\$;"
       - run: npx playwright install --with-deps chromium webkit
       - name: Bootstrap local roles and run Playwright

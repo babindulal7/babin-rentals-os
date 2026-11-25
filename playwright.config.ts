@@ -1,4 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
+import { existsSync, readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { assertStagingEnvironment } from './tests/e2e/staging-guard.mjs'
 
 /**
@@ -15,6 +18,24 @@ import { assertStagingEnvironment } from './tests/e2e/staging-guard.mjs'
  *   E2E_STAFF_EMAIL / E2E_STAFF_PASSWORD
  */
 
+// Read only known staging variables from the ignored local file. Never
+// override explicit environment variables or bypass the exact-project guard.
+const envFile = resolve(dirname(fileURLToPath(import.meta.url)), '.env.staging.local')
+const stagingKeys = new Set([
+  'BABIN_STAGING_SUPABASE_URL', 'BABIN_STAGING_ANON_KEY',
+  'E2E_OWNER_EMAIL', 'E2E_OWNER_PASSWORD', 'E2E_MANAGER_EMAIL', 'E2E_MANAGER_PASSWORD',
+  'E2E_STAFF_EMAIL', 'E2E_STAFF_PASSWORD',
+])
+if (existsSync(envFile)) {
+  for (const line of readFileSync(envFile, 'utf8').split(/\r?\n/)) {
+    const i = line.indexOf('=')
+    if (i <= 0) continue
+    const key = line.slice(0, i).trim()
+    if (stagingKeys.has(key) && process.env[key] === undefined) {
+      process.env[key] = line.slice(i + 1).trim().replace(/^["']|["']$/g, '')
+    }
+  }
+}
 const stagingUrl = process.env.BABIN_STAGING_SUPABASE_URL
 const stagingAnonKey = process.env.BABIN_STAGING_ANON_KEY
 
