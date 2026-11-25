@@ -6,6 +6,7 @@ import { formatMoney, type Paisa } from '../../lib/money'
 import Icon from '../../components/ui/Icon'
 
 export const PaymentLinkPage: React.FC = () => {
+  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock'
   const [searchParams] = useSearchParams()
   const { token: pathToken } = useParams<{ token?: string }>()
   const token = searchParams.get('token') || pathToken || ''
@@ -447,8 +448,8 @@ export const PaymentLinkPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Pay Button */}
-            <button
+            {/* Hosted checkout is on safety hold; only local mock mode may open it. */}
+            {isMock ? <button
               type="button"
               onClick={() => setShowPayModal(true)}
               style={{
@@ -471,13 +472,13 @@ export const PaymentLinkPage: React.FC = () => {
             >
               <Icon name="card" size={18} />
               Pay Now with Fonepay / eSewa / Khalti
-            </button>
+            </button> : <p role="status">Online payment is temporarily unavailable. Contact Babin Rentals for payment instructions.</p>}
           </div>
         )}
       </main>
 
       {/* Online Payment Modal */}
-      {showPayModal && details && (
+      {isMock && showPayModal && details && (
         <OnlinePaymentModal
           isOpen={showPayModal}
           onClose={() => setShowPayModal(false)}
@@ -494,7 +495,7 @@ export const PaymentLinkPage: React.FC = () => {
 
       {/* Footer */}
       <footer style={{ marginTop: 'auto', paddingTop: 'var(--sp-xl, 24px)', textAlign: 'center', fontSize: '0.75rem', color: 'var(--muted, #64748b)' }}>
-        © 2026 Babin Rentals. Payments are processed securely via licensed payment systems in Nepal.
+        © 2026 Babin Rentals. {isMock ? 'Local payment simulation.' : 'Contact Babin Rentals for payment instructions.'}
       </footer>
     </div>
   )

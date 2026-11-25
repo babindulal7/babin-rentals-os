@@ -23,6 +23,7 @@ describe('Payment Link Components (T7-15)', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubEnv('VITE_DATA_SOURCE', 'mock')
     container = document.createElement('div')
     document.body.appendChild(container)
     root = createRoot(container)
@@ -35,9 +36,21 @@ describe('Payment Link Components (T7-15)', () => {
       })
     }
     container?.remove()
+    vi.unstubAllEnvs()
   })
 
   describe('PaymentLinkModal', () => {
+    it('does not generate or share a link while hosted checkout is on hold', async () => {
+      vi.stubEnv('VITE_DATA_SOURCE', 'supabase')
+      await act(async () => {
+        root.render(<PaymentLinkModal isOpen={true} onClose={vi.fn()} bookingId="bk-1" bookingNo="BK-1" clientName="Test client" />)
+      })
+      expect(payApi.createBookingPaymentLink).not.toHaveBeenCalled()
+      expect(container.textContent).toContain('Online payment links are temporarily unavailable')
+      expect(container.textContent).not.toContain('Shareable Link')
+      expect(container.textContent).not.toContain('Email Draft')
+    })
+
     it('generates payment link on open, renders authoritative amount and 48h expiry', async () => {
       vi.mocked(payApi.createBookingPaymentLink).mockResolvedValueOnce({
         success: true,
@@ -80,6 +93,17 @@ describe('Payment Link Components (T7-15)', () => {
   })
 
   describe('PaymentLinkPage', () => {
+    it('keeps valid existing hosted links read-only without a checkout action', async () => {
+      vi.stubEnv('VITE_DATA_SOURCE', 'supabase')
+      vi.mocked(payApi.fetchPaymentLinkDetails).mockResolvedValueOnce({ valid: true, booking_no: 'BK-1', amount_paisa: 500000 })
+      await act(async () => {
+        root.render(<MemoryRouter initialEntries={['/pay/link?token=token-test']}><Routes><Route path="/pay/link" element={<PaymentLinkPage />} /></Routes></MemoryRouter>)
+      })
+      expect(container.textContent).toContain('Online payment is temporarily unavailable')
+      expect(container.textContent).not.toContain('Pay Now with Fonepay')
+      expect(payApi.initOnlinePayment).not.toHaveBeenCalled()
+    })
+
     it('renders booking details and authoritative amount when link is valid', async () => {
       vi.mocked(payApi.fetchPaymentLinkDetails).mockResolvedValueOnce({
         valid: true,

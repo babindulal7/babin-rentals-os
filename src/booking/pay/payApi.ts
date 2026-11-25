@@ -87,7 +87,7 @@ export async function createBookingPaymentLink(bookingId: string): Promise<{
   booking_id: string
   booking_no: string
 }> {
-  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock' || !supabase
+  const isMock = import.meta.env.VITE_DATA_SOURCE === 'mock'
   if (isMock) {
     const token = 'mock-link-' + (bookingId ? bookingId.slice(0, 8) : Date.now().toString())
     const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
@@ -102,25 +102,7 @@ export async function createBookingPaymentLink(bookingId: string): Promise<{
     }
   }
 
-  const clientUuid = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'link-' + Date.now()
-  const { data, error } = await supabase.rpc('create_booking_payment_link', {
-    p_client_uuid: clientUuid,
-    p_booking_id: bookingId,
-  })
-
-  if (error || !data) {
-    throw new Error(error?.message || 'Failed to generate payment link on server.')
-  }
-
-  return data as {
-    success: boolean
-    intent_id: string
-    token: string
-    amount_paisa: number
-    expires_at: string
-    booking_id: string
-    booking_no: string
-  }
+  throw new Error('Online payment links are temporarily unavailable. Use the approved manual payment workflow.')
 }
 
 /**
