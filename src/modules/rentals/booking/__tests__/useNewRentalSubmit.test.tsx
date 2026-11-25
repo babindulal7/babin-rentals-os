@@ -76,7 +76,7 @@ describe('useNewRentalSubmit', () => {
     vi.mocked(confirmBookingRequest).mockResolvedValue({ success: true, requestId: 'request-1', bookingId: 'test-booking-id-123' })
   })
 
-  it.each(['success', 'rapid repeat', 'confirm retry', 'draft link retry', 'request link retry', 'request link mismatch', 'request link rejected', 'create retry', 'blocked', 'no session', 'missing client'] as const)('handles %s without losing the booking identity', async (scenario) => {
+  it.each(['success', 'rapid repeat', 'confirm retry', 'draft link retry', 'request link retry', 'request link mismatch', 'request link rejected', 'create retry', 'payment hold', 'blocked', 'no session', 'missing client'] as const)('handles %s without losing the booking identity', async (scenario) => {
     const host = document.createElement('div')
     document.body.appendChild(host)
     const root = createRoot(host)
@@ -129,6 +129,7 @@ describe('useNewRentalSubmit', () => {
     if (scenario === 'request link mismatch') vi.mocked(confirmBookingRequest).mockResolvedValueOnce({ success: true, requestId: 'request-1', bookingId: 'other-booking' })
     if (scenario === 'request link rejected') vi.mocked(confirmBookingRequest).mockResolvedValueOnce({ success: false, requestId: 'request-1', bookingId: 'test-booking-id-123' })
     if (scenario === 'create retry') vi.mocked(createRental).mockRejectedValueOnce(new Error('Connection interrupted'))
+    if (scenario === 'payment hold') vi.mocked(createBookingPaymentLink).mockRejectedValueOnce(new Error('Online payment links are temporarily unavailable.'))
     const overrides: Partial<UseNewRentalSubmitOptions> = scenario === 'blocked' ? { confirmBlocked: true }
       : scenario === 'no session' ? { dispatchContext: () => null }
       : scenario === 'missing client' ? { client: null }
@@ -256,8 +257,8 @@ describe('useNewRentalSubmit', () => {
       expect(setConfirmedSuccess).toHaveBeenCalledWith({
         bookingId: 'test-booking-id-123',
         bookingNo: '6',
-        paymentToken: 'test-payment-token',
-        paymentLink: `${window.location.origin}/pay/link/test-payment-token`,
+        paymentToken: scenario === 'payment hold' ? undefined : 'test-payment-token',
+        paymentLink: scenario === 'payment hold' ? undefined : `${window.location.origin}/pay/link/test-payment-token`,
       })
     } finally {
       await act(async () => {
