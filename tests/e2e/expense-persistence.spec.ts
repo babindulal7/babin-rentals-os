@@ -24,13 +24,23 @@ test.describe('Disposable expense persistence and access control', () => {
   async function apiSession(role: 'OWNER' | 'STAFF') {
     const key = process.env.E2E_LOCAL_ANON_KEY
     if (!disposable || !key) throw new Error('Disposable public API key required')
-    const client = createClient(API, key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } })
+    const client = createClient(API, key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: {
+      fetch: (input, init) => {
+        const timeout = AbortSignal.timeout(15_000)
+        return fetch(input, { ...init, signal: init?.signal ? AbortSignal.any([init.signal, timeout]) : timeout })
+      },
+    } })
     const { error, data } = await client.auth.signInWithPassword(creds(role))
     if (error || !data.session) throw new Error('Synthetic API sign-in failed: ' + role)
     return client
   }
 
   test('Owner saves one real expense draft, reads it after reload, and Warehouse cannot read it', async ({ page }, testInfo) => {
+    page.setDefaultTimeout(15_000)
+    page.setDefaultNavigationTimeout(30_000)
+    // Log fixed phase names only, never form values, IDs, tokens or URLs.
+    const checkpoint = (phase: string) => console.log('[expense:' + testInfo.project.name + '] ' + phase)
+    checkpoint('API authentication')
     const marker = 'E2E Expense ' + testInfo.project.name + ' ' + randomUUID().slice(0, 12)
     const owner = await apiSession('OWNER')
     const staff = await apiSession('STAFF')
@@ -42,13 +52,15 @@ test.describe('Disposable expense persistence and access control', () => {
     expect(staffGate.error?.message ?? null).toBeNull()
     expect(staffGate.data).toBe(false)
 
+    checkpoint('Browser authentication')
     await page.goto('/login')
     await page.locator('input[type="email"]').fill(creds('OWNER').email)
     await page.locator('input[type="password"]').fill(creds('OWNER').password)
     await page.locator('button[type="submit"]').first().click()
     await expect(page).toHaveURL(/\/today(?:[/?#]|$)/, { timeout: 30_000 })
+    checkpoint('Open expense form')
     await page.goto('/finance?tab=expenses')
-    await page.getByRole('button', { name: 'Add Expense', exact: true }).first().click()
+    await page.getByRole('button', { name: 'Add Expense', exact: true }).filter({ visible: true }).first().click()
     const dialog = page.getByRole('dialog', { name: 'Add Expense' })
     await expect(dialog).toBeVisible()
     const save = dialog.getByRole('button', { name: 'Save Draft', exact: true })
@@ -58,6 +70,7 @@ test.describe('Disposable expense persistence and access control', () => {
     // The native selects are wrapped in labels containing option text.
     // Locate the actual visible controls by their unique placeholder options,
     // rather than requiring the implicit label's entire text to equal a word.
+    checkpoint('Choose category and branch')
     for (const placeholder of ['Choose a category…', 'Choose a branch…']) {
       const control = dialog.locator('select').filter({
         has: page.locator('option[value=""]').filter({ hasText: placeholder }),
@@ -72,12 +85,15 @@ test.describe('Disposable expense persistence and access control', () => {
       await control.selectOption(value)
       await expect(control).toHaveValue(value)
     }
+    checkpoint('Fill expense fields')
     await dialog.getByLabel('Vendor', { exact: true }).fill(marker)
     await dialog.getByLabel('Description', { exact: true }).fill('Synthetic disposable CI expense')
     await dialog.locator('input[type="number"]').fill('1234')
+    checkpoint('Save draft and close form')
     await save.click()
     await expect(dialog).toBeHidden({ timeout: 30_000 })
 
+    checkpoint('Read persisted expense')
     const read = () => owner.from('expenses').select('id,expense_no,status,amount,vendor_name').eq('vendor_name', marker)
     await expect.poll(async () => {
       const { data, error } = await read()
@@ -92,8 +108,10 @@ test.describe('Disposable expense persistence and access control', () => {
     expect(Number(row.amount)).toBe(1234)
     expect(row.expense_no).toBeTruthy()
 
+    checkpoint('Reload expense list')
     await page.reload()
     await expect(page.getByRole('button', { name: 'Add Expense', exact: true }).first()).toBeVisible()
+    checkpoint('Search persisted expense')
     const search = page.getByRole('group', { name: 'Filter by status', exact: true }).getByRole('searchbox', { name: 'Search expenses', exact: true })
     await expect(search).toBeVisible()
     await search.fill(marker)
@@ -101,11 +119,13 @@ test.describe('Disposable expense persistence and access control', () => {
     await expect(page.getByText(marker, { exact: false }).filter({ visible: true }).first()).toBeVisible({ timeout: 30_000 })
     await expect(page.getByText(row.expense_no, { exact: true }).filter({ visible: true }).first()).toBeVisible()
 
+    checkpoint('Verify Warehouse denial')
     const denied = await staff.from('expenses').select('id').eq('id', row.id)
     expect(denied.data ?? []).toHaveLength(0)
     if (denied.error) expect(denied.error.code).toBe('42501')
-    await owner.auth.signOut()
-    await staff.auth.signOut()
+    checkpoint('Release API sessions only')
+    await owner.auth.signOut({ scope: 'local' })
+    await staff.auth.signOut({ scope: 'local' })
   })
 
   test('Warehouse cannot open finance through a direct URL', async ({ page }) => {
