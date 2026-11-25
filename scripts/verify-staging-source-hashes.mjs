@@ -24,7 +24,7 @@ const prefixToFiles = new Map()
 const rows = files.map(filename => {
   const content = readFileSync(join(dir, filename))
   const sql = content.toString('utf8')
-  const prefix = /^(\d{4})_/.exec(filename)?.[1] ?? 'UNKNOWN'
+  const prefix = /^(\d{4}|\d{14})_/.exec(filename)?.[1] ?? 'UNKNOWN'
   prefixToFiles.set(prefix, [...(prefixToFiles.get(prefix) ?? []), filename])
   const flags = ['REVIEW_REQUIRED_NO_AUTO_APPLY']
   let stagingTreatment = 'REVIEW_SCHEMA_DEPENDENCIES'
