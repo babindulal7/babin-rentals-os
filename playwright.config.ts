@@ -14,6 +14,28 @@ import { defineConfig, devices } from '@playwright/test'
  *   E2E_STAFF_EMAIL / E2E_STAFF_PASSWORD
  */
 
+// Load the gitignored staging env file, without overriding variables already set.
+// Values are never logged.
+import { existsSync, readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+const envFile = resolve(dirname(fileURLToPath(import.meta.url)), '.env.staging.local')
+if (existsSync(envFile)) {
+  for (const line of readFileSync(envFile, 'utf8').split(/\r?\n/)) {
+    const t = line.trim()
+    if (!t || t.startsWith('#')) continue
+    const i = t.indexOf('=')
+    if (i > 0) {
+      const key = t.slice(0, i).trim()
+      const val = t.slice(i + 1).trim().replace(/^["']|["']$/g, '')
+      if (process.env[key] === undefined) process.env[key] = val
+    }
+  }
+}
+if (!process.env.BABIN_STAGING_SUPABASE_URL) {
+  process.env.BABIN_STAGING_SUPABASE_URL = 'https://klhmsrunqrdxjudyhnkm.supabase.co'
+}
+
 const stagingUrl = process.env.BABIN_STAGING_SUPABASE_URL
 const stagingAnonKey = process.env.BABIN_STAGING_ANON_KEY
 

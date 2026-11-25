@@ -16,7 +16,10 @@
 - `npx playwright test --project=desktop` against the staging Supabase project: 3/3 passed (run after the dev server was warm).
 - First run failed on a cold Vite start (60s navigation timeout); timeout raised to 120s. Not re-run cold after the change.
 - Added `tests/e2e/auth.spec.ts` (owner sign-in; skipped without `E2E_OWNER_*`). Run on staging with the supplied owner login: FAILED, the server returned "Invalid login credentials" and the app stayed on /login. Not retried. The account is either absent on staging or its password differs. Credentials were not written to any file.
-- NOT VERIFIED: iPad and Pixel projects, Windows and macOS CI runs, authenticated P0 flows (no working staff logins yet), `typecheck` / `lint` on this branch.
+- Added `scripts/e2e-seed-staging-users.mjs`: creates three dedicated test accounts on staging (`e2e-owner`, `e2e-manager`, `e2e-staff` @babinrentals.test) with generated passwords written only to the gitignored `.env.staging.local`. Refuses to run unless the connection string is the staging project. Does not touch the shared `staging-*` seats.
+- Auth at the API level: all three E2E accounts receive a token from staging GoTrue (HTTP 200). Two seed defects were fixed on the way: `instance_id` was unset, and NULL token columns caused a GoTrue 500.
+- Found, NOT resolved: in the browser, after a successful sign-in the app goes `/login` → `/dashboard` → `/today` → `/login`. This happens for Owner, Manager and Staff alike, with no console errors. The data calls that succeed are token, users, audit_events, staff_pin_status and settings. The cause is in the app's session or device layer (`src/lib/auth.tsx`, `deviceSession.ts`), which was not identified.
+- NOT VERIFIED: iPad and Pixel projects, Windows and macOS CI runs, authenticated P0 flows (blocked by the session finding above), `typecheck` / `lint` on this branch.
 
 ### Completion
 Not measured by this entry. Run `npm run completion` on the branch for the R-29 table.
