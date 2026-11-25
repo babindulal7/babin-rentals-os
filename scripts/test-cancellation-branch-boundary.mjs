@@ -68,7 +68,7 @@ try {
     const code = (await one("select next_document_number('client') as code")).code
     return (await one(
       `insert into public.clients(client_uuid,client_code,name,phone,created_by)
-       values(gen_random_uuid(),$1,$2,'9800000010',$3) returning id`, [code, name, owner],
+       values(gen_random_uuid(),$1,$2,$3,$4) returning id`, [code, name, name.endsWith(' A') ? '+9779700000440' : '+9779700000441', owner],
     )).id
   }
   const clientA = await client('Cancellation Security A')
