@@ -1,5 +1,44 @@
 # Progress Log
 
+## 2026-11-25 — E2E: merge, staging secrets, /e2e comment trigger (branch test/playwright-e2e)
+
+### Did
+- Merged `origin/test/playwright-e2e` (another session's sync-engine and sign-in commits) into the branch as `a173ef55`. No force push.
+- `.github/workflows/e2e.yml`: added an `issue_comment` trigger. A comment starting `/e2e` on a PR runs the suite on the PR head, for OWNER, MEMBER and COLLABORATOR authors only. Committed as `645c01ba` and pushed.
+- Set the GitHub Actions secrets `E2E_OWNER_PASSWORD`, `E2E_MANAGER_EMAIL`, `E2E_MANAGER_PASSWORD`, `E2E_STAFF_EMAIL`, `E2E_STAFF_PASSWORD` with `gh secret set`, reading values from the gitignored `.env.staging.local`. Values were not printed. The other three secrets were already set.
+- Removed the token embedded in the `origin` remote URL and the matching `url.insteadOf` rewrite in the global `~/.gitconfig`. Git now authenticates through the credential manager.
+
+### Ruled
+- None. Writes stay on the staging project; production was not touched.
+
+### Verified
+- Last functional run before the merge (desktop, iPad, mobile): 30 passed, 3 skipped. The skips are the payment-recording test, because the staging invoice is already settled.
+- After the merge: `npx tsc --noEmit` exit 0; desktop suite 10 passed, 1 skipped.
+- `git ls-remote origin test/playwright-e2e` succeeds without the old token; remote head is `645c01ba`.
+- `e2e.yml` parses as YAML with both triggers registered. The `/e2e` comment trigger has not run on GitHub. Comment triggers fire only from the default branch, so it stays inactive until merge to `main`.
+- `npm run completion` (counted by the script, not typed):
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | — |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 | — |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | — |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+
+### Completion
+- Backend 118/118 (100%) · Permissions 89/89 (100%) · Real data 58 DB-only of 72 · DB enforcement not measured · Lifecycle not measured · Overall not measured (two dimensions lack a current receipt).
+- Structural counts only. Functional, hosted and device acceptance are not verified by this counter.
+
+### Remaining
+- Confirm the old GitHub token was deleted (user action).
+- Rotate the Babin app password that was pasted in chat (user action).
+- Write specs for new booking persistence, save draft after refresh, Operations Next/Back/Confirm, and Cancel with unsaved changes. Needs approval because they write to staging.
+- Re-seed a Draft invoice on staging so the payment-recording test can run again. Needs approval.
+- Merge to `main` so the `/e2e` comment trigger can run. Then decide on PR #411.
+- Fix the expense dialog's unlabelled fields (Vendor, Description, Settlement, Date) in the app.
+
 ## 2026-11-25 — Playwright E2E foundation against staging (branch test/playwright-e2e)
 
 ### Did
