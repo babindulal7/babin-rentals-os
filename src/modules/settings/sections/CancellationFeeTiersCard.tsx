@@ -59,7 +59,7 @@ export function CancellationFeeTiersCard() {
     <Card title="Cancellation fees (Option A)">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-md)' }}>
         <p style={{ color: 'var(--muted)', fontSize: 'var(--t-meta)', lineHeight: 1.5, margin: 0 }}>
-          Owner-approved cancellation policy (Ruling 2 Nov 2026). Applied automatically to confirmed bookings cancelled prior to scheduled pickup.
+          Owner-approved cancellation policy (Ruling 2 Nov 2026). Reference policy for confirmed bookings cancelled prior to scheduled pickup. Estimates only; financial settlement is not posted automatically.
         </p>
 
         {loadError ? (
@@ -133,7 +133,7 @@ export function CancellationFeeTiersCard() {
             <strong style={{ color: 'var(--text2)' }}>Staff overrides:</strong> Authorized staff (Coordinator+) may lower or waive the suggested fee with a mandatory recorded reason.
           </div>
           <div>
-            <strong style={{ color: 'var(--text2)' }}>Payment reversals:</strong> Any client advance paid in excess of the cancellation fee is refunded via an immutable reversal row.
+            <strong style={{ color: 'var(--text2)' }}>Payment reversals:</strong> Finance must reconcile excess advances separately. A cancellation is not a refund or a reversal receipt.
           </div>
           <div>
             <strong style={{ color: 'var(--text2)' }}>Statutory note (Ruling O-7):</strong> VAT application on cancellation fee awaits final accountant review; charges rendered before VAT.
