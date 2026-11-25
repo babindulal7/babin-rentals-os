@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
@@ -35,5 +36,19 @@ describe('partner stock read contract', () => {
   it('does not present backend errors as successful empty data', async () => {
     mocks.order.mockResolvedValue({ data: null, error: { message: 'Read denied' } })
     expect(await listPartnerStock()).toEqual({ rows: [], error: 'Read denied' })
+  })
+})
+
+describe('both partner stock projections remain role scoped', () => {
+  it('keeps both the legacy and new views behind the same explicit staff role filter and money mask', () => {
+    const sql = readFileSync('supabase/migrations/0272_partner_stock_read_contract.sql', 'utf8')
+    for (const view of ['temporary_stock_v', 'partner_stock_read_v']) {
+      const definition = sql.split('view public.' + view + ' with (security_barrier = true) as')[1]?.split(';')[0] ?? ''
+      expect(definition).toContain("where public.auth_user_role()::text in")
+      expect(definition).toContain("('Owner','Admin','Manager','Coordinator','Warehouse','Technician','Accounts')")
+      expect(definition.match(/case when public\.auth_can_view_money\(\) then/g)).toHaveLength(2)
+      expect(sql).toContain('revoke all on public.' + view + ' from public, anon, authenticated;')
+      expect(sql).toContain('grant select on public.' + view + ' to authenticated;')
+    }
   })
 })
