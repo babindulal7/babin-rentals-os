@@ -786,3 +786,68 @@
   border-radius: var(--r-btn, 8px);
   flex-shrink: 0;
 }
+
+
+/* Rental cards: status and identity first, schedule grouped, secondary facts below. */
+.rental-card-status,
+.rental-card-meta,
+.rental-card-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-sm, 8px);
+  min-width: 0;
+}
+.rental-card-client {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
+}
+.rental-card-client-name {
+  min-width: 0;
+  flex: 1 1 140px;
+  overflow-wrap: anywhere;
+}
+.rental-card-amount {
+  text-align: end;
+  margin-inline-start: auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.rental-card-dates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 116px), 1fr));
+  gap: 8px;
+  background: var(--surface-2, var(--card2));
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm, 8px);
+  padding: 8px 10px;
+}
+.rental-card-date {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  font-size: var(--t-meta);
+  color: var(--text2);
+}
+.rental-card-date > span,
+.rental-card-meta > span {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.rental-card-date > strong {
+  color: var(--booking-date-text);
+  overflow-wrap: anywhere;
+}
+.rental-card-meta {
+  font-size: var(--t-meta);
+  color: var(--text2);
+  justify-content: space-between;
+}
+.rental-card-actions > a {
+  min-width: min(100%, 120px);
+}

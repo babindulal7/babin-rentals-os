@@ -331,6 +331,7 @@ export function BooqableRentalFilterDrawer({
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 6,
+                      minHeight: 44,
                       padding: '4px 10px',
                       borderRadius: 'var(--r-full)',
                       border: `1.5px solid ${isChecked ? 'var(--primary)' : 'var(--border)'}`,
@@ -345,7 +346,7 @@ export function BooqableRentalFilterDrawer({
                       type="checkbox"
                       checked={isChecked}
                       aria-label={`Filter by tag: ${tag}`}
-                      style={{ display: 'none' }}
+                      style={{ width: 16, height: 16, flexShrink: 0, accentColor: 'var(--primary)' }}
                       onChange={() => onToggleTag(tag)}
                     />
                     <span>#{tag}</span>
