@@ -1,0 +1,67 @@
+name: Supabase CLI isolated verification
+
+on:
+  pull_request:
+    branches: [integration/combined-launch-candidate-20261125]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-cli-isolated-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  cli-smoke:
+    if: >-
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       github.head_ref == 'fix/cancellation-boundary-promotion-440') ||
+      (github.event_name == 'workflow_dispatch' &&
+       github.ref == 'refs/heads/fix/cancellation-boundary-promotion-440')
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 15
+    env:
+      SUPABASE_ACCESS_TOKEN: ''
+      SUPABASE_DB_PASSWORD: ''
+    steps:
+      - name: Checkout exact repair head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install pinned Supabase CLI
+        uses: supabase/setup-cli@v3
+        with:
+          version: '2.118.0'
+      - name: Verify CLI and generate local migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase --version
+          test "$(supabase --version | tail -n 1)" = "2.118.0"
+          if test -f supabase/migrations/20261125150654_cancellation_branch_boundary.sql; then
+            echo "Testing committed CLI-generated migration."
+          else
+            git switch --detach
+            git switch -C fix/cancellation-boundary-promotion-440
+            node scripts/promote-cancellation-boundary.mjs
+          fi
+          echo "CLI verification passed; no hosted commands were run." >> "$GITHUB_STEP_SUMMARY"
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Verify generated migration against isolated PGlite
+        run: node scripts/test-cancellation-branch-boundary.mjs
+      - name: Preserve generated migration for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: cancellation-migration-review-only
+          path: supabase/migrations/*_cancellation_branch_boundary.sql
+          if-no-files-found: error
+          retention-days: 3
