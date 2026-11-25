@@ -21,7 +21,7 @@ export async function makePickupFixture({q,ownerId,warehouseId,branchId,clientId
       await q("insert into public.booking_lines (id,client_uuid,booking_id,line_type,product_id,description,qty,days,rate,created_by) values ($1,$2,$3,'Equipment',$4,'Disposable Pickup Race Cable',$6,6,250,$5)",[lineId,randomUUID(),id,productId,ownerId,serialised?1:2])
       if(serialised){
         let site=(await q('select id from public.warehouses where branch_id=$1 limit 1',[branchId])).rows[0]?.id
-        if(!site) site=(await q("insert into public.warehouses (client_uuid,branch_id,warehouse_code,name) values(gen_random_uuid(),$1,$2,'Disposable custody warehouse') returning id",[branchId,'WH-'+randomUUID().slice(0,8)])).rows[0].id
+        if(!site) site=(await q("insert into public.warehouses (client_uuid,branch_id,warehouse_code,name) values(gen_random_uuid(),$1,$2,'Disposable custody warehouse') returning id",[branchId,'WH-'+randomUUID().slice(0,8).toUpperCase()])).rows[0].id
         await q("insert into public.product_units (id,client_uuid,product_id,serial_no,asset_tag,branch_id,warehouse_id,status,condition,created_by) values($1,gen_random_uuid(),$2,$3,$4,$5,$6,'In Stock','Good',$7)",[assetId,productId,assetId,'TEST-'+assetId,branchId,site,ownerId])
         await q("insert into public.booking_line_units (id,client_uuid,booking_line_id,asset_id,qty,unit_state,created_by) values($1,gen_random_uuid(),$2,$3,1,'Ready',$4)",[unitId,lineId,assetId,ownerId])
       }
