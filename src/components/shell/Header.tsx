@@ -1443,15 +1443,22 @@ export default function Header({ crumbs, actions }: HeaderProps) {
           className="bulk-selection-floating-bar"
           style={{
             position: 'fixed',
-            bottom: isPhone ? 16 : 24,
+            bottom: isPhone ? 'calc(16px + env(safe-area-inset-bottom, 0px))' : 24,
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 90,
             display: 'flex',
             alignItems: 'center',
-            gap: 12,
-            padding: '8px 16px',
-            borderRadius: 999,
+            gap: 8,
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            width: 'max-content',
+            maxWidth: 'calc(100% - 24px)',
+            boxSizing: 'border-box',
+            maxHeight: 'min(45dvh, 320px)',
+            overflowY: 'auto',
+            padding: '8px 12px',
+            borderRadius: 'var(--r-card, 12px)',
             background: 'var(--dropdown, var(--card))',
             border: '1px solid var(--border)',
             boxShadow: 'var(--shadow-modal), 0 10px 25px -5px rgba(0, 0, 0, 0.25)',
@@ -1490,8 +1497,7 @@ export default function Header({ crumbs, actions }: HeaderProps) {
               Clear
             </button>
           </div>
-          <div style={{ width: 1, height: 20, background: 'var(--border)', flexShrink: 0 }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', minWidth: 0, maxWidth: '100%', gap: 8 }}>
             {visibleBulkActions.map((act) => {
               const status = isActionEnabled(act, actionContext)
               return (
@@ -1501,11 +1507,11 @@ export default function Header({ crumbs, actions }: HeaderProps) {
                   icon={act.icon}
                   onClick={() => handleActionClick(act)}
                   disabled={!status.enabled}
-                  style={{ height: 38, minHeight: 44, padding: isTablet && act.icon ? '0 8px' : '0 12px' }}
+                  style={{ minHeight: 44, minWidth: 44, maxWidth: '100%', whiteSpace: 'normal', padding: '6px 12px' }}
                   title={status.reason ?? act.label}
                   aria-label={act.label}
                 >
-                  {isTablet && act.icon ? null : (act.loading ? act.loadingLabel ?? `${act.label}…` : act.label)}
+                  {act.loading ? act.loadingLabel ?? `${act.label}…` : act.label}
                 </Button>
               )
             })}
