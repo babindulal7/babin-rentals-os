@@ -125,11 +125,18 @@ try {
     await check(`cross-branch Coordinator denied without side effects (${overload})`, async () => {
       const id = await booking(clientB, branchB)
       const before = await snapshot(id)
+      let rejection
       await asActor(ids.CoordinatorA, async () => {
         assert.equal((await one('select auth_user_branch_id() as site')).site, branchA)
-        await assert.rejects(call(id, overload), error => error.code === '42501')
+        try {
+          await call(id, overload)
+        } catch (error) {
+          rejection = error
+        }
       })
-      assert.deepEqual(await snapshot(id), before)
+      const after = await snapshot(id)
+      assert.deepEqual(after, before, 'Cross-branch cancellation must not change booking, audit or reservations')
+      assert.equal(rejection?.code, '42501', 'Cross-branch cancellation must explicitly deny access')
     })
     await check(`Owner can cancel across branches (${overload})`, async () => {
       const id = await booking(clientB, branchB)
