@@ -1,0 +1,62 @@
+name: E2E (staging)
+
+on:
+  # Run by hand from the Actions tab.
+  workflow_dispatch:
+  # Run by commenting `/e2e` on a pull request. Only repository members can
+  # trigger it, because the job reads the staging secrets.
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  e2e:
+    # Skip every comment except `/e2e` on a PR from a trusted author.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.issue.pull_request &&
+       startsWith(github.event.comment.body, '/e2e') &&
+       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association))
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    env:
+      BABIN_STAGING_SUPABASE_URL: ${{ secrets.BABIN_STAGING_SUPABASE_URL }}
+      BABIN_STAGING_ANON_KEY: ${{ secrets.BABIN_STAGING_ANON_KEY }}
+      E2E_OWNER_EMAIL: ${{ secrets.E2E_OWNER_EMAIL }}
+      E2E_OWNER_PASSWORD: ${{ secrets.E2E_OWNER_PASSWORD }}
+      E2E_MANAGER_EMAIL: ${{ secrets.E2E_MANAGER_EMAIL }}
+      E2E_MANAGER_PASSWORD: ${{ secrets.E2E_MANAGER_PASSWORD }}
+      E2E_STAFF_EMAIL: ${{ secrets.E2E_STAFF_EMAIL }}
+      E2E_STAFF_PASSWORD: ${{ secrets.E2E_STAFF_PASSWORD }}
+      CI: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # For a PR comment, test the PR head, not the default branch.
+          ref: ${{ github.event_name == 'issue_comment' && format('refs/pull/{0}/head', github.event.issue.number) || github.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      # Install the Supabase CLI binary directly; npm ci --ignore-scripts skips the npm package's install step.
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.114.0
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-${{ matrix.os }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14

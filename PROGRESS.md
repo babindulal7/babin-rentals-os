@@ -1,5 +1,80 @@
 # Progress Log
 
+## 2026-11-25 — E2E: merge, staging secrets, /e2e comment trigger (branch test/playwright-e2e)
+
+### Did
+- Merged `origin/test/playwright-e2e` (another session's sync-engine and sign-in commits) into the branch as `a173ef55`. No force push.
+- `.github/workflows/e2e.yml`: added an `issue_comment` trigger. A comment starting `/e2e` on a PR runs the suite on the PR head, for OWNER, MEMBER and COLLABORATOR authors only. Committed as `645c01ba` and pushed.
+- Set the GitHub Actions secrets `E2E_OWNER_PASSWORD`, `E2E_MANAGER_EMAIL`, `E2E_MANAGER_PASSWORD`, `E2E_STAFF_EMAIL`, `E2E_STAFF_PASSWORD` with `gh secret set`, reading values from the gitignored `.env.staging.local`. Values were not printed. The other three secrets were already set.
+- Removed the token embedded in the `origin` remote URL and the matching `url.insteadOf` rewrite in the global `~/.gitconfig`. Git now authenticates through the credential manager.
+
+### Ruled
+- None. Writes stay on the staging project; production was not touched.
+
+### Verified
+- Last functional run before the merge (desktop, iPad, mobile): 30 passed, 3 skipped. The skips are the payment-recording test, because the staging invoice is already settled.
+- After the merge: `npx tsc --noEmit` exit 0; desktop suite 10 passed, 1 skipped.
+- `git ls-remote origin test/playwright-e2e` succeeds without the old token; remote head is `645c01ba`.
+- `e2e.yml` parses as YAML with both triggers registered. The `/e2e` comment trigger has not run on GitHub. Comment triggers fire only from the default branch, so it stays inactive until merge to `main`.
+- `npm run completion` (counted by the script, not typed):
+
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | — |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 | — |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | — |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+
+### Completion
+- Backend 118/118 (100%) · Permissions 89/89 (100%) · Real data 58 DB-only of 72 · DB enforcement not measured · Lifecycle not measured · Overall not measured (two dimensions lack a current receipt).
+- Structural counts only. Functional, hosted and device acceptance are not verified by this counter.
+
+### Remaining
+- Confirm the old GitHub token was deleted (user action).
+- Rotate the Babin app password that was pasted in chat (user action).
+- Write specs for new booking persistence, save draft after refresh, Operations Next/Back/Confirm, and Cancel with unsaved changes. Needs approval because they write to staging.
+- Re-seed a Draft invoice on staging so the payment-recording test can run again. Needs approval.
+- Merge to `main` so the `/e2e` comment trigger can run. Then decide on PR #411.
+- Fix the expense dialog's unlabelled fields (Vendor, Description, Settlement, Date) in the app.
+
+## 2026-11-25 — Playwright E2E foundation against staging (branch test/playwright-e2e)
+
+### Did
+- Added `@playwright/test` 1.65.1 (devDependency) and `npm run test:e2e`.
+- Added `playwright.config.ts`: starts a local Vite dev server (port 3000) with `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` taken from `BABIN_STAGING_SUPABASE_URL` / `BABIN_STAGING_ANON_KEY`. Refuses to start unless the staging URL is a `*.supabase.co` address. Projects: desktop, iPad, Pixel 7.
+- Added `tests/e2e/smoke.spec.ts` (login renders; anonymous `/rentals` redirects to login; bad credentials rejected).
+- Added `.github/workflows/e2e.yml` (Windows + macOS matrix), `workflow_dispatch` only until staging secrets are set in GitHub.
+- Added `playwright-report/`, `test-results/`, `playwright/.auth/` to `.gitignore`.
+
+### Ruled
+- None. Staging backend use confirmed by Babin in chat; test accounts to be supplied by Babin (not stored in repo).
+
+### Verified
+- `npx playwright test --project=desktop` against the staging Supabase project: 3/3 passed (run after the dev server was warm).
+- First run failed on a cold Vite start (60s navigation timeout); timeout raised to 120s. Not re-run cold after the change.
+- Added `tests/e2e/auth.spec.ts` (owner sign-in; skipped without `E2E_OWNER_*`). Run on staging with the supplied owner login: FAILED, the server returned "Invalid login credentials" and the app stayed on /login. Not retried. The account is either absent on staging or its password differs. Credentials were not written to any file.
+- Added `scripts/e2e-seed-staging-users.mjs`: creates three dedicated test accounts on staging (`e2e-owner`, `e2e-manager`, `e2e-staff` @babinrentals.test) with generated passwords written only to the gitignored `.env.staging.local`. Refuses to run unless the connection string is the staging project. Does not touch the shared `staging-*` seats.
+- Auth at the API level: all three E2E accounts receive a token from staging GoTrue (HTTP 200). Two seed defects were fixed on the way: `instance_id` was unset, and NULL token columns caused a GoTrue 500.
+- Found and fixed (product code, `src/modules/auth/Login.tsx`): after a successful password sign-in the login page navigated at once, while the staff profile was still loading. The route guard saw `user === null` and sent the visitor back to `/login`. That is why sign-in looked broken for Owner, Manager and Staff alike, with no console errors. The fix leaves `/login` only once `user` is set. Unit test `login.test.tsx` updated to model the same order.
+- Verified: `npm run typecheck` (tsc --noEmit) exit 0. `login.test.tsx`, `passwordReset.test.tsx`, `auth.identity.test.tsx`: 23/23 pass (run with `VITE_DATA_SOURCE=mock`; without it these suites fail at import on the missing Supabase variables, which was already true before this change). Staging desktop: owner, manager and staff sign-in tests pass, with smoke tests 6/6 in total.
+- Added functional specs: `tests/e2e/finance.spec.ts` (expense draft persists after reload; failed save shows an error and a retry succeeds; payment dialog cancel; payment recording) and `tests/e2e/operations.spec.ts` (packing Confirm stays disabled and says why). Shared sign-in and onboarding handling in `tests/e2e/helpers.ts`.
+- Verified on staging: full suite on desktop, iPad (WebKit) and mobile: 30 passed, 3 skipped (the payment-recording test on each project). The skip is deliberate: an earlier desktop run settled the one open staging invoice (now `INV-1`, fully settled), which is evidence the payment write persisted. Re-running it needs a new Draft invoice seeded on staging.
+- Staging writes from these runs: expense drafts accumulate (each run adds ~2 rows, tagged `E2E …`).
+- NOT COVERED yet: New booking persists in Supabase; Save draft survives refresh; Operations Next / Back and the full Confirm path (needs evidence photo and per-unit ticks); Cancel / Close with unsaved changes ("Discard & Go Back"); performance and accessibility.
+- Known gap in the app (not fixed here): the expense dialog's Vendor, Description, Settlement and Date inputs have no accessible labels, so the test selects them by position.
+- `typecheck` on this branch: not re-run since the spec changes (spec files are outside `src/`).
+
+### Completion
+Not measured by this entry. Run `npm run completion` on the branch for the R-29 table.
+
+### Remaining
+- Features to build: 0 (E2E suite is foundation only; P0 authenticated suites not started).
+- Bugs to fix: 1 (cold-start navigation timeout not yet re-verified; commit subject carries a stray BOM, remote branch commit c2e73fb7).
+- Rulings open: 0 for this entry.
+- Next session starts with: add staff test logins (E2E_*_EMAIL / E2E_*_PASSWORD), then write P0 operations-popup and rental-lifecycle specs.
+
 ## 2026-11-25 — Owner Grill-Me Launch Alignment, Dual-Entry Protocol & Cutover Exit Certification (Windows Antigravity)
 
 ### Did
