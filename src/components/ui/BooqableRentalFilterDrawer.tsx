@@ -286,7 +286,8 @@ export function BooqableRentalFilterDrawer({
                     fontSize: 'var(--t-meta)',
                     fontWeight: isChecked ? 600 : 500,
                     color: 'var(--text2)',
-                    whiteSpace: 'nowrap',
+                    maxWidth: '100%',
+                    overflowWrap: 'anywhere',
                   }}
                   onFocus={(e) => { e.currentTarget.style.outline = '2px solid var(--input-focus)'; e.currentTarget.style.outlineOffset = '2px'; }}
                   onBlur={(e) => { e.currentTarget.style.outline = 'none'; }}
@@ -330,7 +331,9 @@ export function BooqableRentalFilterDrawer({
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: 6,
+                      gap: 8,
+                      minHeight: 44,
+                      maxWidth: '100%',
                       padding: '4px 10px',
                       borderRadius: 'var(--r-full)',
                       border: `1.5px solid ${isChecked ? 'var(--primary)' : 'var(--border)'}`,
@@ -345,10 +348,10 @@ export function BooqableRentalFilterDrawer({
                       type="checkbox"
                       checked={isChecked}
                       aria-label={`Filter by tag: ${tag}`}
-                      style={{ display: 'none' }}
+                      style={{ width: 16, height: 16, flexShrink: 0, accentColor: 'var(--primary)' }}
                       onChange={() => onToggleTag(tag)}
                     />
-                    <span>#{tag}</span>
+                    <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>#{tag}</span>
                   </label>
                 )
               })}
