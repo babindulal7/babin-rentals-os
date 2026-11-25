@@ -65,10 +65,10 @@ export function QuickCreateDialog({
   // ── Generic Item State ──
   const [title, setTitle] = useState('')
   const [code, setCode] = useState('')
-  const [priority, setPriority] = useState('Normal')
+  const [, setPriority] = useState('Normal')
   const [bookingNo, setBookingNo] = useState('')
   const [equipmentRef, setEquipmentRef] = useState('')
-  const [roleTitle, setRoleTitle] = useState('Technician')
+  const [, setRoleTitle] = useState('Technician')
   const [description, setDescription] = useState('')
   const [genericError, setGenericError] = useState<string | null>(null)
 
