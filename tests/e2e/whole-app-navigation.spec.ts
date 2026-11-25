@@ -71,7 +71,9 @@ test.describe('Whole-app core navigation and recovery', () => {
         expect(rect, 'Section control has a rendered target').not.toBeNull()
         expect(rect!.x).toBeGreaterThanOrEqual(-1)
         expect(rect!.x + rect!.width).toBeLessThanOrEqual(width + 1)
-        expect(rect!.height).toBeGreaterThanOrEqual(44)
+        // WebKit can report 43.999984px for a 44px CSS target. Permit only
+        // floating-point measurement noise, not a smaller design target.
+        expect(rect!.height).toBeGreaterThanOrEqual(44 - 0.01)
       }
       if (width >= 768 && width < 1280) {
         expect(await chooser.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
