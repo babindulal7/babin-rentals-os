@@ -333,7 +333,7 @@ export function CancelRentalModal({
                   <span className="finance-mono">{formatMoney(resolvedAdvance)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Fee deducted:</span>
+                  <span>Estimated fee deduction:</span>
                   <span className="finance-mono">{formatMoney(effectiveFeePaisa)}</span>
                 </div>
                 <div
@@ -344,11 +344,15 @@ export function CancelRentalModal({
                     color: refundPaisa > 0 ? 'var(--st-completed-fg)' : 'var(--text)',
                   }}
                 >
-                  <span>Refund to client:</span>
+                  <span>Estimated refund to client:</span>
                   <span className="finance-mono">{formatMoney(refundPaisa)}</span>
                 </div>
               </div>
             )}
+
+            <p role="note" style={{ margin: 0, color: 'var(--muted)', fontSize: 'var(--t-caption)' }}>
+              These amounts are estimates only. Cancelling the booking records the decision and releases inventory; it does not post a fee or issue a refund. Finance must reconcile the settlement separately.
+            </p>
 
             {/* Staff override / waiver */}
             <div style={{ marginTop: 4, paddingTop: 6, borderTop: '1px dashed var(--border)' }}>
