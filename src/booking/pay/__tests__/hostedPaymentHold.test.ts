@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createBookingPaymentLink, fetchOnlinePaymentProviders, initOnlinePayment, verifyOnlinePayment } from '../payApi'
+import { createBookingPaymentLink, fetchPaymentLinkDetails, fetchOnlinePaymentProviders, initOnlinePayment, verifyOnlinePayment } from '../payApi'
 
 const { rpc, invoke } = vi.hoisted(() => ({ rpc: vi.fn(), invoke: vi.fn() }))
 vi.mock('../../../lib/supabase', () => ({ supabase: { rpc, functions: { invoke } } }))
@@ -16,6 +16,14 @@ describe('hosted payment safety hold', () => {
     expect(await fetchOnlinePaymentProviders()).toEqual([])
     await expect(initOnlinePayment({ bookingId: 'booking-1' })).rejects.toThrow('temporarily unavailable')
     await expect(verifyOnlinePayment({ intentId: 'intent-1', providerRef: 'unverified' })).rejects.toThrow('No payment has been recorded')
+    expect(rpc).not.toHaveBeenCalled()
+    expect(invoke).not.toHaveBeenCalled()
+  })
+
+  it('rejects unknown mock tokens without invoking any hosted backend', async () => {
+    vi.stubEnv('VITE_DATA_SOURCE', 'mock')
+    await expect(fetchPaymentLinkDetails('unknown-test-token')).resolves.toEqual({ valid: false, reason: 'not_found' })
+    await expect(initOnlinePayment({ token: 'unknown-test-token' })).rejects.toThrow('invalid or already paid')
     expect(rpc).not.toHaveBeenCalled()
     expect(invoke).not.toHaveBeenCalled()
   })

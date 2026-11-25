@@ -129,6 +129,9 @@ export async function fetchPaymentLinkDetails(token: string): Promise<PaymentLin
     }
   }
 
+  // An unrecognized synthetic link must never escape the isolated mock environment.
+  if (isMock) return { valid: false, reason: 'not_found' }
+
   try {
     const { data, error } = await supabase.functions.invoke<{ success: boolean; details: PaymentLinkDetails }>('pay-init', {
       body: { action: 'link_details', token },
