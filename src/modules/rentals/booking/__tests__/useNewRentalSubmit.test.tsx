@@ -10,6 +10,14 @@ import type { ClientRecord } from '../../../../lib/queries/clients'
 import { fetchProductPricingTerms } from '../../../../lib/queries/productPricingTerms'
 import type { PricingPipelineResult } from '../../../../lib/pricingPipeline'
 import type { Paisa } from '../../../../lib/money'
+import { createBookingPaymentLink } from '../../../../booking/pay/payApi'
+
+vi.mock('../../../../booking/pay/payApi', () => ({
+  createBookingPaymentLink: vi.fn().mockResolvedValue({
+    success: true, token: 'test-payment-token', intent_id: 'test-intent', amount_paisa: 500000,
+    expires_at: '2026-11-05T00:00:00Z', booking_id: 'test-booking-id-123', booking_no: '6',
+  }),
+}))
 
 vi.mock('../../../../actions/rentals/createRental', () => ({
   createRental: vi.fn().mockResolvedValue({
@@ -202,6 +210,10 @@ describe('useNewRentalSubmit', () => {
       }
       if (scenario === 'draft link retry') expect(convertDraft).toHaveBeenCalledTimes(2)
 
+      // Confirmation also awaits the dynamically imported payment-link module.
+      await act(async () => { await vi.dynamicImportSettled() })
+      await vi.waitFor(() => expect(setConfirmedSuccess).toHaveBeenCalledTimes(1))
+      expect(createBookingPaymentLink).toHaveBeenCalledExactlyOnceWith('test-booking-id-123')
       // Toast must be dispatched per Law 12
       expect(showSuccessToast).toHaveBeenCalledTimes(1)
       expect(showSuccessToast).toHaveBeenCalledWith('Booking Confirmed', 'Rental 6 is now Booked')
@@ -211,6 +223,8 @@ describe('useNewRentalSubmit', () => {
       expect(setConfirmedSuccess).toHaveBeenCalledWith({
         bookingId: 'test-booking-id-123',
         bookingNo: '6',
+        paymentToken: 'test-payment-token',
+        paymentLink: `${window.location.origin}/pay/link/test-payment-token`,
       })
     } finally {
       await act(async () => {
