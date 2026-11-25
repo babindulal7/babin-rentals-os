@@ -1,4 +1,4 @@
-name: Serial unit custody repair
+name: Floor cleaning QC verification
 on:
   pull_request:
     branches: [integration/combined-launch-candidate-20261125]
@@ -7,7 +7,7 @@ permissions:
   contents: read
 jobs:
   session-boundary:
-    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'fix/custody-reconciled-440-20261125'
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'test/floor-qc-truthful-verification-20261125'
     runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 15
     env:
@@ -28,3 +28,11 @@ jobs:
         run: node scripts/test-cancellation-branch-boundary.mjs
       - name: Verify return and inventory reservation compatibility
         run: node scripts/test-partial-return-reservation-release.mjs
+      - name: Reset branch permissions
+        run: node scripts/test-reset-branch-boundary.mjs
+      - name: Cleaning and QC component regressions
+        run: npx --no-install vitest run src/modules/rentals/__tests__/resetQc.test.tsx src/modules/rentals/__tests__/ResetWorkspace.embedded.test.tsx
+      - name: Floor walkthrough (truthful receipt, isolated)
+        env:
+          FLOOR_ACCEPTANCE_RECEIPT_PATH: ${{ runner.temp }}/floor-acceptance.md
+        run: node scripts/verify-floor-operations-acceptance.mjs
