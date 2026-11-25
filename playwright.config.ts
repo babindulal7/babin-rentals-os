@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test'
+import { assertStagingEnvironment } from './tests/e2e/staging-guard.mjs'
 
 /**
  * E2E runs against a LOCAL dev server whose Supabase backend is the STAGING
@@ -17,16 +18,10 @@ import { defineConfig, devices } from '@playwright/test'
 const stagingUrl = process.env.BABIN_STAGING_SUPABASE_URL
 const stagingAnonKey = process.env.BABIN_STAGING_ANON_KEY
 
-if (!stagingUrl || !stagingAnonKey) {
-  throw new Error(
-    'E2E refused to start: set BABIN_STAGING_SUPABASE_URL and BABIN_STAGING_ANON_KEY (staging only).',
-  )
-}
-if (!/^https:\/\/[a-z0-9]+\.supabase\.co\/?$/.test(stagingUrl)) {
-  throw new Error('E2E refused to start: BABIN_STAGING_SUPABASE_URL must be a *.supabase.co project URL.')
-}
+assertStagingEnvironment(stagingUrl, stagingAnonKey)
+if (!stagingUrl || !stagingAnonKey) throw new Error('Missing staging configuration.')
 
-const PORT = 3000
+const PORT = 4179
 const baseURL = `http://localhost:${PORT}`
 
 export default defineConfig({
@@ -39,19 +34,20 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
   use: {
     baseURL,
-    trace: 'retain-on-failure',
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    serviceWorkers: 'block',
+    trace: 'off', // Auth requests and form values may contain credentials.
+    screenshot: 'off', // Enable only for sanitized, non-auth scenarios.
+    video: 'off',
   },
   webServer: {
     command: `npx vite --port ${PORT} --strictPort`,
     url: baseURL,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 180_000,
     env: {
       VITE_SUPABASE_URL: stagingUrl,
       VITE_SUPABASE_ANON_KEY: stagingAnonKey,
-      VITE_DATA_SOURCE: 'supabase',
+      VITE_DATA_SOURCE: 'live',
     },
   },
   projects: [

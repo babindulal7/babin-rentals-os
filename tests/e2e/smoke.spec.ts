@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixture'
 
 /**
  * Smoke tests that need no staff credentials.
@@ -23,5 +23,6 @@ test('bad credentials show an error and stay on login', async ({ page }) => {
   await page.locator('input[type="email"]').fill('nobody@example.invalid')
   await page.locator('input[type="password"]').fill('wrong-password-for-e2e')
   await page.locator('button[type="submit"]').first().click()
+  await expect(page.locator('#login-error')).toBeVisible({ timeout: 30_000 })
   await expect(page).toHaveURL(/\/login/)
 })
