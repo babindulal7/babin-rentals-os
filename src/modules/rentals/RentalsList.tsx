@@ -2482,27 +2482,29 @@ export default function RentalsList() {
                         {r.isExternal === true && <ExternalGearMark />}
                       </span>
 
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
-                        <Icon name="file" size={12} style={{ color: 'var(--muted)' }} />
-                        Created <span className="figure">{formatCreatedDate(r.createdOn)}</span>
-                      </span>
-
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
-                        <Icon name="box" size={12} style={{ color: 'var(--muted)' }} />
-                        <span className="figure">{r.itemCount}</span> item{r.itemCount === 1 ? '' : 's'}
-                      </span>
-
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
                         <Icon name="calendar" size={12} style={{ color: 'var(--muted)' }} />
                         Pickup <span className="figure" style={{ color: 'var(--booking-date-text)' }}>{r.pickup.date} {r.pickup.time}</span>
                       </span>
 
                       {r.ret.date && (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
                           <Icon name="return_arrow" size={12} style={{ color: 'var(--muted)' }} />
                           Return <span className="figure" style={{ color: 'var(--booking-date-text)' }}>{r.ret.date} {r.ret.time}</span>
                         </span>
                       )}
+
+                      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 12px' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+                          <Icon name="file" size={12} style={{ color: 'var(--muted)' }} />
+                          Created <span className="figure">{formatCreatedDate(r.createdOn)}</span>
+                        </span>
+  
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--t-meta)', color: 'var(--text2)' }}>
+                          <Icon name="box" size={12} style={{ color: 'var(--muted)' }} />
+                          <span className="figure">{r.itemCount}</span> item{r.itemCount === 1 ? '' : 's'}
+                        </span>
+                      </div>
 
                       {/* §7: "one primary button each" on a phone card row. */}
                       <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', marginTop: 2 }}>
