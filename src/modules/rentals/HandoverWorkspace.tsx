@@ -702,6 +702,7 @@ export default function HandoverWorkspace({
     receiverEditedRef.current = false
     setReceiverEdited(false)
     setSelectedCollectorId(null)
+    setGate1OverrideReason('')
     setGovIdVerified(false)
     setBookingAuthVerified(false)
     setPaymentVerified(false)
