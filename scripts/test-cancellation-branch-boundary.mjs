@@ -73,13 +73,13 @@ try {
   }
   const clientA = await client('Cancellation Security A')
   const clientB = await client('Cancellation Security B')
-  const booking = async (clientId, site) => {
+  const booking = async (clientId, site, stage = 'Booked') => {
     const number = (await one("select next_document_number('booking') as no")).no
     return (await one(
       `insert into public.bookings(client_uuid,booking_no,client_id,branch_id,pickup_at,return_at,delivery_type,stage,created_by,updated_by)
        values(gen_random_uuid(),$1,$2,$3,'2099-12-20T04:00:00Z','2099-12-26T04:00:00Z',
-              'Babin Delivery','Booked',$4,$4) returning id`,
-      [number, clientId, site, owner],
+              'Babin Delivery',$5,$4,$4) returning id`,
+      [number, clientId, site, owner, stage],
     )).id
   }
   const asActor = async (id, action) => {
@@ -137,6 +137,35 @@ try {
       const after = await snapshot(id)
       assert.deepEqual(after, before, 'Cross-branch cancellation must not change booking, audit or reservations')
       assert.equal(rejection?.code, '42501', 'Cross-branch cancellation must explicitly deny access')
+    })
+    await check(`Coordinator cannot distinguish foreign from nonexistent booking (${overload})`, async () => {
+      const id = await booking(clientB, branchB)
+      const before = await snapshot(id)
+      const errors = []
+      await asActor(ids.CoordinatorA, async () => {
+        for (const target of [id, crypto.randomUUID()]) {
+          try {
+            await call(target, overload)
+          } catch (error) {
+            errors.push({ code: error.code, message: error.message })
+          }
+        }
+      })
+      assert.deepEqual(await snapshot(id), before, 'Foreign booking must remain unchanged')
+      assert.equal(errors.length, 2, 'Both targets must be refused')
+      assert.equal(errors[0].code, '42501')
+      assert.deepEqual(errors[0], errors[1], 'Foreign and missing target must produce the same denial')
+    })
+    await check(`own-branch Packed booking denied to Coordinator (${overload})`, async () => {
+      const id = await booking(clientA, branchA, 'Packed')
+      const before = await snapshot(id)
+      await asActor(ids.CoordinatorA, async () => assert.rejects(call(id, overload), error => error.code === '42501'))
+      assert.deepEqual(await snapshot(id), before)
+    })
+    await check(`Admin can cancel across branches (${overload})`, async () => {
+      const id = await booking(clientB, branchB)
+      await asActor(ids.AdminA, async () => assert.equal((await call(id, overload)).rows[0].result.success, true))
+      assert.equal((await snapshot(id)).booking.cancelled_by, ids.AdminA)
     })
     await check(`Owner can cancel across branches (${overload})`, async () => {
       const id = await booking(clientB, branchB)
