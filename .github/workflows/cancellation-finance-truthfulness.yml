@@ -1,0 +1,26 @@
+name: Cancellation finance truthfulness
+on:
+  pull_request:
+    branches: [integration/combined-launch-candidate-20261125]
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+jobs:
+  finance-ui:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'fix/cancellation-finance-truthfulness-445'
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 15
+    env:
+      SUPABASE_ACCESS_TOKEN: ''
+      SUPABASE_DB_PASSWORD: ''
+      VITE_DATA_MODE: mock
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npx --no-install vitest run --mode mock src/modules/rentals/modals/__tests__/CancelRentalModal.test.tsx src/modules/rentals/modals/__tests__/CancelRentalModal.tiers.test.tsx src/modules/settings/sections/__tests__/CancellationFeeTiersCard.error.test.tsx
