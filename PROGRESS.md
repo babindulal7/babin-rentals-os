@@ -11,24 +11,25 @@
 **Verified**
 - The locator clicked the intended label in a local Chrome fixture at 375, 820 and 1440 px, with the chosen checkbox checked and the other checkbox unchanged. The staging guard tests passed 3/3. The fixture checks selector semantics and does not exercise the full application.
 - GitHub run 45713152538 failed three partial pickup tests on PR #487, with 66 tests passing. It ran on e65c1fbc before this repair.
+- Full ordered local gates passed all 18 steps, including typecheck, lint, API guards, 8,204 tests, 274 migrations, financial integrity, security, 102 lifecycle steps, server contracts, partial returns, progress and receipt checks, shell and copy lint, contrast, build and full coverage.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
-| Backend | actions implemented / total | 118 / 118 (100%) | — |
-| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 | — |
-| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
-| Permissions | capabilities mapped / declared | 89 / 89 (100%) | — |
-| Lifecycle | steps green / total | not measured — current receipt required | — |
-| Overall | structural mean of five | not measured | — |
-Migrations 274 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
-Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | — |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 274 files · check:pglite 274/274 applied, 0 failed (recorded 2026-11-26T09:02:01.967Z). Suite: PASS — 8204/8204 passed, 0 failed (recorded 2026-11-26T09:14:22.914Z); source fingerprint matches.
+Coverage suite: PASS — 8204/8204 passed, 0 failed (recorded 2026-11-26T09:14:22.914Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-26T09:03:09.512Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Run the complete disposable Supabase Playwright suite against this fix on a Docker-capable machine or GitHub runner. Full CI gates and merge remain pending.
+- Run the complete disposable Supabase Playwright suite against this fix on a Docker-capable machine or GitHub runner. GitHub CI and merge remain pending.
 
 ## 2026-11-25 — Playwright E2E foundation against staging (branch test/playwright-e2e)
 
