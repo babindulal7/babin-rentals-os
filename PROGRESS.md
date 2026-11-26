@@ -25,20 +25,21 @@
 - PGlite lifecycle passed 102/102 with the resumable-session view checked for an open pickup, a fully reversed pickup, a completed session and client-role visibility. Focused action and workspace tests passed 139/139, including empty-session refusal and interrupted-session recovery. End-to-end browser recovery remains unverified.
 - A focused workspace test also cleared the other gates and verified the recovery dispatch sends the open session ID with no new lines.
 - On the newer PR #487 head ef3efcbc, disposable run 45799564428 still failed the same three partial-pickup browser tests (66 passed); the local application repair was not included in that run. A new database regression first reproduced duplicate serial pickup before the guard, then passed with the correction-and-repickup path; PGlite rebuilt 275/275 migrations and lifecycle passed 102/102.
-- The first full local gate passed typecheck, lint and local API guards, then stopped at the full test suite: 8,219 tests passed and the staging-inventory count assertion failed because the new migration was not listed. The corrected inventory test passes 2/2; the full gate must run again against the updated source.
+- The first full local gate passed typecheck, lint and local API guards, then stopped at the full test suite: 8,219 tests passed and the staging-inventory count assertion failed because the new migration was not listed. The corrected inventory test passed 2/2 before the full rerun below.
+- Full local gate rerun passed all 18 steps on the merged local source: typecheck; lint; local API guards; 8,220/8,220 tests; 275/275 migration rebuild; migration planner; financial integrity; security; 102/102 lifecycle; server contracts; partial return; progress lint; receipt integrity; shell lint; UI-copy lint; 97/97 contrast; build; and coverage (8,220/8,220 tests). These are local checks, not GitHub CI or real PostgreSQL concurrency proof.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
 | Backend | actions implemented / total | 118 / 118 (100%) | +0 |
 | Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
-| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
 | Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | not measured — current receipt required | — |
-| Overall | structural mean of five | not measured | — |
-Migrations 275 files · check:pglite Historical, incomplete or failed receipt (2026-11-26T15:06:58.390Z); current source NOT VERIFIED. Suite: Historical suite: 8219/8220 passed, 1 failed (recorded 2026-11-26T15:20:12.357Z); current source NOT VERIFIED.
-Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-26T15:07:56.718Z); current source NOT VERIFIED.
+| Lifecycle | steps green / total | 102 / 102 (100%) | — |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 275 files · check:pglite 275/275 applied, 0 failed (recorded 2026-11-26T15:31:38.122Z). Suite: PASS — 8220/8220 passed, 0 failed (recorded 2026-11-26T15:46:23.154Z); source fingerprint matches.
+Coverage suite: PASS — 8220/8220 passed, 0 failed (recorded 2026-11-26T15:46:23.154Z); source fingerprint matches.
+Gates read from .lifecycle-result.json, written 2026-11-26T15:32:59.778Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
