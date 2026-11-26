@@ -252,9 +252,11 @@ describe('useNewRentalSubmit', () => {
       expect(showSuccessToast).toHaveBeenCalledTimes(1)
       expect(showSuccessToast).toHaveBeenCalledWith('Booking Confirmed', 'Rental 6 is now Booked')
 
-      // Modal state and save state must be updated
+      // Preserve booking identity AND the added secure payment-link fields.
+      // A link is not proof that a payment has been received.
       expect(setSaveState).toHaveBeenCalledWith('saved')
-      expect(setConfirmedSuccess).toHaveBeenCalledWith({
+      expect(setConfirmedSuccess).toHaveBeenCalledTimes(1)
+      expect(setConfirmedSuccess).toHaveBeenCalledWith(expect.objectContaining({
         bookingId: 'test-booking-id-123',
         bookingNo: '6',
         paymentToken: scenario === 'payment hold' ? undefined : 'test-payment-token',
