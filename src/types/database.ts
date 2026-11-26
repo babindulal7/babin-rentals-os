@@ -57,6 +57,14 @@ export type PackingLineState = 'Pending' | 'Packed' | 'Partial' | 'Missing' | 'N
 export type PhysicalCondition = 'Excellent' | 'Good' | 'Fair' | 'Damaged' | 'Not Inspected'
 export type SignatureRole = 'Receiver' | 'Warehouse staff' | 'Driver' | 'Witness' | 'Returning person'
 export type CollateralType = 'citizenship_card' | 'passport' | 'driving_licence' | 'other'
+
+export type ClientIdDocumentType =
+  | 'citizenship_card'
+  | 'passport'
+  | 'driving_licence'
+  | 'pan_card'
+  | 'voter_id'
+  | 'other'
 export type OverrideType =
   | 'Gate override'
   | 'Scan block override'
@@ -1720,6 +1728,76 @@ export interface Database {
           updated_by?: string | null
         }
         Update: Partial<Database['public']['Tables']['collateral_documents']['Insert']>
+      }
+      client_id_documents: {
+        Row: {
+          id: string
+          client_uuid: string
+          client_id: string
+          id_type: ClientIdDocumentType
+          id_number: string
+          evidence_file_id: string | null
+          expiry_date: string | null
+          verified_at: string
+          verified_by: string | null
+          notes: string | null
+          created_at: string
+          created_by: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          client_uuid?: string
+          client_id: string
+          id_type: ClientIdDocumentType
+          id_number: string
+          evidence_file_id?: string | null
+          expiry_date?: string | null
+          verified_at?: string
+          verified_by?: string | null
+          notes?: string | null
+          created_at?: string
+          created_by: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['client_id_documents']['Insert']>
+      }
+      client_collectors: {
+        Row: {
+          id: string
+          client_uuid: string
+          client_id: string
+          name: string
+          phone: string
+          role_title: string | null
+          id_type: ClientIdDocumentType | null
+          id_number: string | null
+          evidence_file_id: string | null
+          is_active: boolean
+          created_at: string
+          created_by: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          client_uuid?: string
+          client_id: string
+          name: string
+          phone: string
+          role_title?: string | null
+          id_type?: ClientIdDocumentType | null
+          id_number?: string | null
+          evidence_file_id?: string | null
+          is_active?: boolean
+          created_at?: string
+          created_by: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['client_collectors']['Insert']>
       }
     }
   }

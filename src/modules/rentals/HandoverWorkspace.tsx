@@ -29,7 +29,8 @@ import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/Toast'
 import { toBs, formatBs, formatAd, formatAdDateTime } from '../../lib/bs'
 import { rentalDaysBetween } from '../../lib/rentalDays'
-import { supabase, newClientUuid } from '../../lib/supabase'
+import { newClientUuid } from '../../lib/supabase'
+import { hasHeldCollateral } from '../../lib/queries/collateral'
 import { fetchFloorBooking, type FloorBooking, type FloorLine } from '../../lib/queries/bookings'
 import type { FloorLineInput } from '../../actions/rentals/floorVerb'
 import { CompactButton, TapCheckbox } from '../../components/ui/TouchTarget'
@@ -47,6 +48,14 @@ import {
   unlockAudioContext,
 } from '../../lib/acousticFeedback'
 import { FloorOfflineStatus } from '../../components/ui/FloorOfflineStatus'
+import {
+  fetchClientIdDocument,
+  fetchClientCollectors,
+  type ClientIdDocument,
+  type ClientCollector,
+} from '../../lib/queries/clients'
+import { AddClientIdModal } from '../clients/modals/AddClientIdModal'
+import { AddCollectorModal } from '../clients/modals/AddCollectorModal'
 import './rentals.css'
 
 
@@ -453,6 +462,24 @@ function bsLabel(iso: string | null): string {
  * the route for ANY booking — resolved by `fetchFloorBooking`, not compared
  * against a seed.
  */
+function formatIdType(type: string | undefined): string {
+  if (!type) return 'Government ID'
+  switch (type) {
+    case 'citizenship_card':
+      return 'Citizenship Card'
+    case 'passport':
+      return 'Passport'
+    case 'driving_licence':
+      return 'Driving Licence'
+    case 'pan_card':
+      return 'PAN Card'
+    case 'voter_id':
+      return 'Voter ID'
+    default:
+      return type
+  }
+}
+
 export interface HandoverWorkspaceProps {
   bookingNo?: string
   embedded?: boolean
@@ -524,6 +551,12 @@ export default function HandoverWorkspace({
   const [bookingAuthVerified, setBookingAuthVerified] = useState(false)
   /** Gate 1 override reason when physical ID cannot be checked (D2, T2-04). */
   const [gate1OverrideReason, setGate1OverrideReason] = useState('')
+  /** Client ID document on file and authorized collectors (W28, W34, W50, W51, T2-12). */
+  const [idDocument, setIdDocument] = useState<ClientIdDocument | null>(null)
+  const [collectors, setCollectors] = useState<ClientCollector[]>([])
+  const [selectedCollectorId, setSelectedCollectorId] = useState<string | 'client' | null>(null)
+  const [showAddIdModal, setShowAddIdModal] = useState(false)
+  const [showAddCollectorModal, setShowAddCollectorModal] = useState(false)
   /* §11.1 gates 3 / 4 — booleans, never amounts (Law 6). */
   const [paymentVerified, setPaymentVerified] = useState(false)
   const [depositReceived, setDepositReceived] = useState(false)
@@ -673,20 +706,40 @@ export default function HandoverWorkspace({
   useEffect(() => {
     if (!floorId) return
     let active = true
-    void supabase
-      .from('collateral_documents_v')
-      .select('id')
-      .eq('booking_id', floorId)
-      .is('returned_at', null)
-      .then(({ data, error }) => {
-        if (active && !error && data && data.length > 0) {
-          setCollateralHeld(true)
-        }
-      })
+    void hasHeldCollateral(floorId).then((held) => {
+      if (active) setCollateralHeld(held)
+    })
     return () => {
       active = false
     }
   }, [floorId])
+
+  useEffect(() => {
+    if (!floor?.clientId) return
+    let active = true
+    Promise.all([
+      fetchClientIdDocument(floor.clientId),
+      fetchClientCollectors(floor.clientId),
+    ]).then(([idDoc, cols]) => {
+      if (!active) return
+      setIdDocument(idDoc)
+      setCollectors(cols)
+      if (idDoc) {
+        setGovIdVerified(true)
+      }
+      const firstCol = cols[0]
+      if (firstCol) {
+        setSelectedCollectorId(firstCol.id)
+        setBookingAuthVerified(true)
+      } else {
+        setSelectedCollectorId('client')
+        setBookingAuthVerified(true)
+      }
+    })
+    return () => {
+      active = false
+    }
+  }, [floor?.clientId])
 
   const rows = useMemo<HandRow[]>(() => (floor ? buildRows(floor) : []), [floor])
   const serviceLines = useMemo(() => floor?.lines.filter((l) => NON_PACKABLE_LINE_TYPES.has(l.lineType)) ?? [], [floor])
@@ -1162,11 +1215,14 @@ export default function HandoverWorkspace({
     setActiveSigningRole(role)
   }
 
+  const selectedCollector = collectors.find((c) => c.id === selectedCollectorId)
+  const currentReceiverName = selectedCollector ? selectedCollector.name : (floor?.clientName ?? 'Receiver')
+
   const quickCaptureSignature = (role: 'receiver' | 'warehouse' | 'driver') => {
     const at = new Date().toISOString()
     const name =
       role === 'receiver'
-        ? (floor?.clientName ?? 'Receiver')
+        ? currentReceiverName
         : role === 'driver'
           ? 'Driver'
           : (user?.name ?? 'Warehouse Staff')
@@ -1599,6 +1655,131 @@ export default function HandoverWorkspace({
                     <InfoRow label="Client" value={floor.clientName ?? '—'} />
                     <InfoRow label="Delivery" value={deliveryTypeLabel(floor.deliveryType)} />
                   </div>
+
+                  {/* ID on File Status (W50, W51) */}
+                  <div style={{ marginTop: 10, paddingTop: 9, borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                      <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
+                        Client Government ID (W50, W51)
+                      </span>
+                      {idDocument ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 'var(--r-xs)', background: 'color-mix(in srgb, var(--success) 12%, var(--card))', color: 'var(--success-text)', fontSize: 'var(--t-caption)', fontWeight: 700 }}>
+                          <Icon name="check" size={14} /> ID on file ✓
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setShowAddIdModal(true)}
+                          disabled={dispatching}
+                          style={{
+                            border: '1px solid var(--primary)',
+                            borderRadius: 'var(--r-xs)',
+                            background: 'color-mix(in srgb, var(--primary) 10%, var(--card))',
+                            color: 'var(--primary)',
+                            fontSize: 'var(--t-caption)',
+                            fontWeight: 700,
+                            padding: '4px 10px',
+                            cursor: 'pointer',
+                            minHeight: 32,
+                          }}
+                        >
+                          + Add ID on File
+                        </button>
+                      )}
+                    </div>
+                    {idDocument ? (
+                      <p style={{ margin: 0, fontSize: 'var(--t-caption)', color: 'var(--text2)', lineHeight: 1.4 }}>
+                        {formatIdType(idDocument.idType)}: <strong className="figure client-mono">{idDocument.idNumber}</strong>
+                        {idDocument.expiryDate ? ` · Expires: ${idDocument.expiryDate}` : ' · No expiry (Nepali citizenship)'}
+                      </p>
+                    ) : (
+                      <div style={{ padding: '8px 10px', borderRadius: 'var(--r-xs)', background: 'color-mix(in srgb, var(--warn-text) 8%, var(--card))', border: '1px solid color-mix(in srgb, var(--warn-text) 30%, transparent)' }}>
+                        <span style={{ fontSize: 'var(--t-caption)', color: 'var(--warn-text)', fontWeight: 600 }}>
+                          First-time client — one government ID must be recorded on file before handover (Ruling W50).
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Collectors Selection (W28, W34) */}
+                  <div style={{ marginTop: 10, paddingTop: 9, borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                      <span style={{ fontSize: 'var(--t-meta)', fontWeight: 600, color: 'var(--text)' }}>
+                        Receiver / Collector (1 Tap, W28/W34)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddCollectorModal(true)}
+                        disabled={dispatching}
+                        style={{
+                          border: 'none',
+                          background: 'transparent',
+                          color: 'var(--link)',
+                          fontSize: 'var(--t-caption)',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          minHeight: 32,
+                        }}
+                      >
+                        + Add Collector
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 2 }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedCollectorId('client')
+                          setBookingAuthVerified(true)
+                        }}
+                        style={{
+                          minHeight: 40,
+                          padding: '6px 12px',
+                          borderRadius: 'var(--r-sm)',
+                          border: selectedCollectorId === 'client' ? '1px solid var(--primary)' : '1px solid var(--border)',
+                          background: selectedCollectorId === 'client' ? 'color-mix(in srgb, var(--primary) 15%, var(--card))' : 'var(--card2)',
+                          color: 'var(--text)',
+                          fontSize: 'var(--t-meta)',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
+                      >
+                        <Icon name="user" size={16} />
+                        <span>{floor.clientName ?? 'Client'} (Account Holder)</span>
+                      </button>
+                      {collectors.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedCollectorId(c.id)
+                            setBookingAuthVerified(true)
+                          }}
+                          style={{
+                            minHeight: 40,
+                            padding: '6px 12px',
+                            borderRadius: 'var(--r-sm)',
+                            border: selectedCollectorId === c.id ? '1px solid var(--primary)' : '1px solid var(--border)',
+                            background: selectedCollectorId === c.id ? 'color-mix(in srgb, var(--primary) 15%, var(--card))' : 'var(--card2)',
+                            color: 'var(--text)',
+                            fontSize: 'var(--t-meta)',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                          }}
+                        >
+                          <Icon name="user" size={16} />
+                          <span>{c.name} {c.roleTitle ? `(${c.roleTitle})` : ''}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div style={{ marginTop: 10, paddingTop: 9, borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 7 }}>
                     <CheckLine label="Government ID Verified" checked={govIdVerified} onToggle={() => setGovIdVerified((v) => !v)} disabled={dispatching} />
                     <CheckLine label="Booking Authorization Verified" checked={bookingAuthVerified} onToggle={() => setBookingAuthVerified((v) => !v)} disabled={dispatching} />
@@ -2506,7 +2687,7 @@ export default function HandoverWorkspace({
           role={activeSigningRole}
           defaultName={
             activeSigningRole === 'receiver'
-              ? (floor?.clientName ?? '')
+              ? currentReceiverName
               : activeSigningRole === 'driver'
                 ? 'Driver'
                 : (user?.name ?? 'Warehouse Staff')
@@ -2517,8 +2698,64 @@ export default function HandoverWorkspace({
           clientName={floor?.clientName}
           deliveryType={floor?.deliveryType}
           isDepositPending={!depositReceived}
+          collectors={collectors}
           onSignComplete={handleSignComplete}
         />
+      )}
+
+      {floor?.clientId && (
+        <>
+          <AddClientIdModal
+            isOpen={showAddIdModal}
+            onClose={() => setShowAddIdModal(false)}
+            clientId={floor.clientId}
+            clientName={floor.clientName ?? 'Client'}
+            bookingId={floor.id}
+            onSuccess={(doc) => {
+              setIdDocument({
+                id: doc.id,
+                clientUuid: '',
+                clientId: floor.clientId!,
+                idType: doc.idType,
+                idNumber: doc.idNumber,
+                evidenceFileId: null,
+                expiryDate: null,
+                verifiedAt: new Date().toISOString(),
+                verifiedBy: user?.id ?? null,
+                notes: null,
+                createdAt: new Date().toISOString(),
+              })
+              setGovIdVerified(true)
+              showSuccessToast('ID on File Saved', `Document recorded for ${floor.clientName}`)
+            }}
+          />
+          <AddCollectorModal
+            isOpen={showAddCollectorModal}
+            onClose={() => setShowAddCollectorModal(false)}
+            clientId={floor.clientId}
+            clientName={floor.clientName ?? 'Client'}
+            bookingId={floor.id}
+            onSuccess={(collector) => {
+              const newCol: ClientCollector = {
+                id: collector.id,
+                clientUuid: '',
+                clientId: floor.clientId!,
+                name: collector.name,
+                phone: collector.phone,
+                roleTitle: collector.roleTitle,
+                idType: null,
+                idNumber: null,
+                evidenceFileId: null,
+                isActive: true,
+                createdAt: new Date().toISOString(),
+              }
+              setCollectors((prev) => [...prev, newCol])
+              setSelectedCollectorId(collector.id)
+              setBookingAuthVerified(true)
+              showSuccessToast('Collector Added', `${collector.name} added as authorized collector`)
+            }}
+          />
+        </>
       )}
     </div>
   )
@@ -2536,7 +2773,7 @@ function InfoRow({ label, value, mono }: { label: string; value: string; mono?: 
 function CheckLine({ label, checked, onToggle, disabled }: { label: string; checked: boolean; onToggle: () => void; disabled: boolean }) {
   return (
     <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-sm)', minHeight: 44, fontSize: 'var(--t-meta)', color: checked ? 'var(--success-text)' : 'var(--text2)', fontWeight: 600, cursor: disabled ? 'not-allowed' : 'pointer' }}>
-      <input type="checkbox" checked={checked} disabled={disabled} onChange={onToggle} style={{ width: 22, height: 22 }} />
+      <input type="checkbox" aria-label={label} checked={checked} disabled={disabled} onChange={onToggle} style={{ width: 22, height: 22 }} />
       <Icon name={checked ? 'checklist' : 'alert_triangle'} size={13} />
       {label}
     </label>

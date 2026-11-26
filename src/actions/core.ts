@@ -182,6 +182,8 @@ async function checkCapability(capability: string, ctx: ActionContext): Promise<
       return rbac.canConfirmRental(ctx.role);
     case 'client.create':
       return rbac.canCreateClient(ctx.role);
+    case 'client.manage_id':
+      return rbac.canManageClientCollectors(ctx.role);
     case 'client.block':
       return rbac.canBlockClient(ctx.role);
     // RULING 2026-10-22: new capability, mirrors `client_memberships_all` (0037) — Owner, Admin, Manager, Coordinator.
