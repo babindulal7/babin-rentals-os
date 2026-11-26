@@ -126,6 +126,16 @@ describe('T3-18 · Change confirmed booking & linked booking', () => {
       expect(payload.lines[0]?.product_id).toBe('prod-1')
     })
 
+    it('sends a desk-reviewed line total with explicit acknowledgement', () => {
+      const snapshot = { ...mockSnapshot, lines: mockSnapshot.lines.map((line, index) => index === 0
+        ? { ...line, line_total: 12000, price_breakdown: { method: 'structure' } } : line) }
+      const draft = bookingChangeToDraft(snapshot)
+      const payload = bookingChangePayload(draft, snapshot, rupees(15000), undefined,
+        [{ lineId: 'line-1', totalPaisa: rupees(9876.50) }])
+      expect(payload.lines[0]).toMatchObject({ reviewed_line_total: 9876.50, price_reviewed: true })
+      expect(payload.lines[1]).not.toHaveProperty('reviewed_line_total')
+    })
+
     it('sends the fuel charge in the server field and rupee units', () => {
       const draft = bookingChangeToDraft(mockSnapshot)
       draft.deliveryType = 'Babin Delivery'

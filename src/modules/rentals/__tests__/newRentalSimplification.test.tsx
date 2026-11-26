@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter } from 'react-router-dom'
-const device = vi.hoisted(() => ({ viewport: 'desktop' }))
+const device = vi.hoisted(() => ({ viewport: 'desktop', role: 'Coordinator' }))
 
 vi.mock('../../../actions/rentals/saveDraft', () => ({
   saveDraft: vi.fn(),
@@ -13,12 +13,18 @@ vi.mock('../../../actions/rentals/saveDraft', () => ({
 }))
 vi.mock('../../../lib/auth', () => ({
   useAuth: () => ({
-    user: { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', name: 'Coordinator', role: 'Coordinator', isSharedDevice: false },
+    user: { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', name: 'Staff', role: device.role, isSharedDevice: false },
     loading: false,
     isLocked: false,
   }),
 }))
 vi.mock('../../../components/ui/Toast', () => ({ useToast: () => ({ showSuccessToast: vi.fn() }) }))
+vi.mock('../booking/useNewRentalPricing', async (importOriginal) => {
+  const real = await importOriginal<typeof import('../booking/useNewRentalPricing')>()
+  return { ...real, useNewRentalPricing: (...args: Parameters<typeof real.useNewRentalPricing>) => ({
+    ...real.useNewRentalPricing(...args), pricingHints: { 1: 123400 as import('../../../lib/money').Paisa },
+  }) }
+})
 vi.mock('../../../lib/network', () => ({ useNetwork: () => true }))
 vi.mock('../../../lib/device', () => ({
   useViewport: () => device.viewport,
@@ -47,6 +53,22 @@ window.matchMedia = ((query: string) => ({
 import NewRental from '../NewRental'
 
 describe('NewRental simplification (Part A - D)', () => {
+  it.each([['Warehouse', false], ['Coordinator', true]] as const)('shows duration price hints only to money-visible staff: %s', async (role, visible) => {
+    device.role = role
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+    try {
+      await act(async () => root.render(<MemoryRouter><NewRental /></MemoryRouter>))
+      const duration = container.querySelector('[aria-label="Rental duration"]')!
+      expect(duration.textContent?.includes('1,234')).toBe(visible)
+    } finally {
+      await act(async () => root.unmount())
+      container.remove()
+      device.role = 'Coordinator'
+    }
+  })
+
   it('keeps one save and confirm action on a tablet', async () => {
     device.viewport = 'tablet'
     const container = document.createElement('div')

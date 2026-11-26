@@ -214,3 +214,10 @@
 @media (min-width: 768px) and (max-width: 1279px) {
   body:has(.new-rental-shell) .app-global-header__breadcrumbs { min-width: 190px !important; }
 }
+
+.new-rental-price-review { padding: 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.new-rental-price-review h2 { margin: 0 0 8px; font-size: 16px; }
+.new-rental-price-review p { margin: 0 0 16px; color: var(--text2); }
+.new-rental-price-review__line { display: grid; gap: 8px; padding: 12px 0; border-top: 1px solid var(--border); }
+.new-rental-price-review__confirm { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.new-rental-price-review__confirm input { width: 20px; height: 20px; }

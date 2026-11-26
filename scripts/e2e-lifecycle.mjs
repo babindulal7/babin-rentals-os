@@ -8130,6 +8130,127 @@ STEPS.push({
   },
 })
 
+STEPS.push({
+  id: 'L80',
+  title: 'Warehouse bundle additions match the catalogue without exposing prices',
+  expect: 'green',
+  run: async () => {
+    const bundleId = crypto.randomUUID()
+    await asOwnerOfTheDatabase(async () => {
+      await q('insert into bundles (id, client_uuid, bundle_code, name, daily_rate) values ($1, $2, $3, $4, $5)',
+        [bundleId, crypto.randomUUID(), 'L80-KIT', 'L80 Kit', 750])
+      await q('insert into bundle_items (client_uuid, bundle_id, product_id, quantity, is_mandatory) values ($1, $2, $3, 1, true)',
+        [crypto.randomUUID(), bundleId, QTY_PRODUCT])
+    })
+    let bookingId
+    await as('Coordinator', async () => {
+      const created = await createBooking({ key: 'l80_bundle', window: ['2100-03-01T04:00:00Z', '2100-03-03T04:00:00Z'], actor: 'Coordinator',
+        lines: [{ productId: QTY_PRODUCT, description: 'Existing cable', qty: 1, days: 2, rate: 250 }] })
+      bookingId = created.booking_id
+      await transition('l80_bundle', 'Quote', 'Booked', 'Coordinator')
+    })
+    await as('Warehouse', async () => {
+      const snapshot = await one('select read_booking_for_change($1)', [bookingId])
+      const parentKey = crypto.randomUUID()
+      const parent = { client_uuid: parentKey, line_type: 'Bundle', bundle_id: bundleId, description: 'L80 Kit', qty: 1, days: 2, is_included: false }
+      const child = { client_uuid: crypto.randomUUID(), parent_client_uuid: parentKey, line_type: 'Equipment', bundle_id: bundleId,
+        product_id: QTY_PRODUCT, description: 'Included cable', qty: 1, days: 2, is_included: true }
+      const request = lines => ({ booking_id: bookingId, client_uuid: crypto.randomUUID(), revision: snapshot.revision, values: {}, lines })
+      await refuses('missing required component', 'select change_booking($1::jsonb)', [JSON.stringify(request([...snapshot.lines, parent]))], /bundle|component/i)
+      await refuses('substituted bundle component', 'select change_booking($1::jsonb)', [JSON.stringify(request([...snapshot.lines, parent, { ...child, product_id: SERIAL_PRODUCT }]))], /bundle|component/i)
+      await refuses('excess bundle component quantity', 'select change_booking($1::jsonb)', [JSON.stringify(request([...snapshot.lines, parent, { ...child, qty: 2 }]))], /bundle|component/i)
+      await refuses('duplicated bundle component', 'select change_booking($1::jsonb)', [JSON.stringify(request([...snapshot.lines, parent, child, { ...child, client_uuid: crypto.randomUUID() }]))], /bundle|component/i)
+      const validRequest = request([...snapshot.lines, parent, child])
+      const result = (await q("with saved as materialized (select change_booking($1::jsonb) as response) select response, current_setting('app.in_create_booking', true) as marker from saved", [JSON.stringify(validRequest)])).rows[0]
+      const saved = result.response
+      assert(result.marker !== 'on', 'The temporary insert guard is closed before the call returns')
+      const replay = await one('select change_booking($1::jsonb)', [JSON.stringify(validRequest)])
+      assertEq(replay.revision, saved.revision, 'Retry does not duplicate the bundle')
+      await refuses('Warehouse still cannot read a catalogue price', 'select get_model_daily_rate(null, $1)', [bundleId], /financial rate access/i)
+      assertEq(saved.lines.length, 3, 'Warehouse can add the complete bundle')
+      assert(saved.lines.every(line => !('rate' in line) && !('line_total' in line)), 'Warehouse response contains no prices')
+      await refuses('existing included component cannot be inflated', 'select change_booking($1::jsonb)', [JSON.stringify({
+        booking_id: bookingId, client_uuid: crypto.randomUUID(), revision: saved.revision, values: {},
+        lines: saved.lines.map(line => line.client_uuid === child.client_uuid ? { ...line, qty: 2 } : line),
+      })], /bundle|component/i)
+      const resized = await one('select change_booking($1::jsonb)', [JSON.stringify({
+        booking_id: bookingId, client_uuid: crypto.randomUUID(), revision: saved.revision, values: {},
+        lines: saved.lines.map(line => line.client_uuid === child.client_uuid || line.client_uuid === parentKey ? { ...line, qty: 2 } : line),
+      })])
+      assertEq(resized.lines.find(line => line.client_uuid === child.client_uuid).qty, 2, 'Matching bundle and component quantities may increase together')
+
+    })
+    assertEq(Number(await one("select line_total from booking_lines where booking_id = $1 and line_type = 'Bundle' and voided_at is null", [bookingId])), 3000, 'The server prices the bundle parent')
+    assertEq(Number(await one("select line_total from booking_lines where booking_id = $1 and is_included and voided_at is null", [bookingId])), 0, 'Included component has no additional charge')
+    assertEq(Number(await one("select subtotal from invoices where booking_id = $1 and status = 'Draft'", [bookingId])), 3500, 'Draft invoice follows the bundle')
+  },
+})
+
+STEPS.push({
+  id: 'L79',
+  title: 'Custom prices require an explicit desk review before booking changes',
+  expect: 'green',
+  run: async () => {
+    let bookingId
+    await as('Coordinator', async () => {
+      const { payload } = createPayload({
+        key: 'l79_review', window: ['2100-02-01T04:00:00Z', '2100-02-03T04:00:00Z'], actor: 'Coordinator',
+        lines: [{ productId: QTY_PRODUCT, description: 'L79 cable', qty: 1, days: 2, rate: 250 }],
+      })
+      payload.lines[0].line_total = 475
+      payload.lines[0].price_breakdown = { source: 'pricing-quote-v1', method: 'structure' }
+      const created = await one('select create_booking($1::jsonb)', [JSON.stringify(payload)])
+      bookingId = created.booking_id
+      bookingIds.l79_review = bookingId
+      await transition('l79_review', 'Quote', 'Booked', 'Coordinator')
+      const snapshot = await one('select read_booking_for_change($1)', [bookingId])
+      assertEq(snapshot.lines[0].price_breakdown.source, 'pricing-quote-v1', 'Desk sees original pricing snapshot')
+      await refuses('adding another item needs review of existing custom pricing', 'select change_booking($1::jsonb)', [JSON.stringify({
+        booking_id: bookingId, client_uuid: crypto.randomUUID(), revision: snapshot.revision, values: {},
+        lines: [...snapshot.lines, { ...snapshot.lines[0], id: null, client_uuid: crypto.randomUUID(), description: 'Extra cable', price_breakdown: null }],
+      })], /stored pricing|review/i)
+      await refuses('removing a custom item needs review', 'select change_booking($1::jsonb)', [JSON.stringify({
+        booking_id: bookingId, client_uuid: crypto.randomUUID(), revision: snapshot.revision, values: {}, lines: [],
+      })], /stored pricing|review/i)
+      const lines = snapshot.lines.map(line => ({ ...line, qty: 2, days: 3 }))
+      await refuses('a changed custom price needs review', 'select change_booking($1::jsonb)', [JSON.stringify({
+        booking_id: bookingId, client_uuid: crypto.randomUUID(), revision: snapshot.revision, values: {}, lines,
+      })], /stored pricing|review/i)
+      const request = { booking_id: bookingId, client_uuid: crypto.randomUUID(), revision: snapshot.revision, values: {},
+        lines: lines.map(line => ({ ...line, reviewed_line_total: 900.25, price_reviewed: true })) }
+      const saved = await one('select change_booking($1::jsonb)', [JSON.stringify(request)])
+      const replay = await one('select change_booking($1::jsonb)', [JSON.stringify(request)])
+      assertEq(replay.revision, saved.revision, 'The reviewed save is idempotent')
+      await refuses('a removed custom price must be reviewed at zero', 'select change_booking($1::jsonb)', [JSON.stringify({
+        booking_id: bookingId, client_uuid: crypto.randomUUID(), revision: saved.revision, values: {}, lines: [],
+        removed_price_reviews: [{ id: snapshot.lines[0].id, price_reviewed: true, reviewed_line_total: 1 }],
+      })], /zero|review/i)
+
+    })
+    assertEq(Number(await one('select line_total from booking_lines where booking_id = $1 and voided_at is null', [bookingId])), 900.25, 'Reviewed total persists')
+    assertEq(Number(await one("select subtotal from invoices where booking_id = $1 and status = 'Draft'", [bookingId])), 900.25, 'Draft invoice uses the reviewed amount')
+    await as('Warehouse', async () => {
+      const snapshot = await one('select read_booking_for_change($1)', [bookingId])
+      assert(!('line_total' in snapshot.lines[0]) && !('price_breakdown' in snapshot.lines[0]), 'Warehouse sees no price snapshot')
+      await refuses('Warehouse cannot submit reviewed amounts', 'select change_booking($1::jsonb)', [JSON.stringify({
+        booking_id: bookingId, client_uuid: crypto.randomUUID(), revision: snapshot.revision, values: {},
+        lines: snapshot.lines.map(line => ({ ...line, qty: 3, reviewed_line_total: 1, price_reviewed: true })),
+      })], /money|permission|price/i)
+    })
+    await as('Coordinator', async () => {
+      const snapshot = await one('select read_booking_for_change($1)', [bookingId])
+      await one('select change_booking($1::jsonb)', [JSON.stringify({
+        booking_id: bookingId, client_uuid: crypto.randomUUID(), revision: snapshot.revision, values: {}, lines: [],
+        removed_price_reviews: [{ id: snapshot.lines[0].id, price_reviewed: true, reviewed_line_total: 0 }],
+      })])
+    })
+    const removed = (await q('select price_breakdown, voided_at from booking_lines where booking_id = $1', [bookingId])).rows[0]
+    assert(removed.voided_at, 'Reviewed removal voids the original item')
+    assertEq(Number(removed.price_breakdown.reviewed_total), 0, 'Removed item retains its reviewed zero price')
+    assertEq(Number(removed.price_breakdown.previous_total), 900.25, 'Removed item retains its previous price')
+  },
+})
+
 for (const step of STEPS) {
   if (only !== null && step.id !== only && results.length > 0 && STEPS.findIndex((s) => s.id === only) < STEPS.indexOf(step)) {
     break

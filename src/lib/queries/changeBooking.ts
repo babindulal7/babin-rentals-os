@@ -5,7 +5,7 @@ import { readTransportForm, transportInstructions } from '../bookingTransportFor
 import { rentalDaysBetween } from '../rentalDays'
 import type { RentalDraftData } from '../../actions/rentals/saveDraft'
 
-export interface BookingChangeLine extends RecordValues {
+export interface BookingChangeLine {
   id: string
   client_uuid: string
   parent_line_id?: string | null
@@ -17,6 +17,9 @@ export interface BookingChangeLine extends RecordValues {
   days: number
   rate: number
   discount_amount?: number
+  line_total?: number | null
+  price_breakdown?: Record<string, unknown> | null
+  supplier_cost?: number | null
   is_included?: boolean
   service_basis?: 'Flat' | 'Per day' | null
   line_note?: string | null
@@ -38,6 +41,20 @@ export interface BookingChangeSnapshot {
   crew: RecordValues[]
   transport: RecordValues | null
   discounts: RecordValues[]
+}
+
+export interface ReviewedLinePrice {
+  lineId: string
+  totalPaisa: Paisa
+}
+
+/** A stored quote cannot be reconstructed unless its original pricing terms exist. */
+export function requiresDeskPriceReview(line: BookingChangeLine): boolean {
+  if (line.price_breakdown != null) return true
+  if (line.line_total == null) return false
+  if (![line.line_total, line.rate, line.qty, line.days, line.discount_amount ?? 0].every(Number.isFinite)) return true
+  const ordinary = Math.max(0, line.qty * line.days * rupees(line.rate) - rupees(line.discount_amount ?? 0))
+  return rupees(line.line_total) !== ordinary
 }
 
 const text = (v: unknown) => (typeof v === 'string' ? v : '')
@@ -143,6 +160,7 @@ export function bookingChangePayload(
   snapshot: BookingChangeSnapshot,
   depositPaisa: Paisa,
   reason?: string,
+  reviewedPrices: readonly ReviewedLinePrice[] = [],
 ) {
   const pickup = new Date(`${data.pickup}T${data.pickupTime}:00+05:45`)
   const ret = new Date(`${data.returnDate}T${data.returnTime}:00+05:45`)
@@ -183,6 +201,7 @@ export function bookingChangePayload(
     },
     lines: data.lines.map((l, index) => {
       const original = snapshot.lines.find((row) => row.id === l.bookingLineId)
+      const review = reviewedPrices.find((item) => item.lineId === l.bookingLineId)
       return {
         id: l.bookingLineId ?? null,
         client_uuid: l.clientUuid,
@@ -199,8 +218,16 @@ export function bookingChangePayload(
         service_basis: l.serviceBasis ?? original?.service_basis ?? (l.lineType === 'Service' ? 'Per day' : null),
         line_note: l.lineNote ?? original?.line_note ?? (l.lineType === 'Manual item' ? l.name : null),
         sort_order: index,
+        ...(review ? {
+          reviewed_line_total: toRupees(review.totalPaisa),
+          price_reviewed: true,
+        } : {}),
       }
     }),
+    ...(reviewedPrices.some(review => !data.lines.some(line => line.bookingLineId === review.lineId)) ? {
+      removed_price_reviews: reviewedPrices.filter(review => !data.lines.some(line => line.bookingLineId === review.lineId))
+        .map(review => ({ id: review.lineId, reviewed_line_total: toRupees(review.totalPaisa), price_reviewed: true })),
+    } : {}),
     crew: data.crew.map((c) => {
       const original = snapshot.crew.find((row) => row.id === (c.bookingCrewLineId ?? c.crewId))
       return {

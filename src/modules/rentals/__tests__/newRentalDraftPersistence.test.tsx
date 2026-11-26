@@ -4,7 +4,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 
-const state = vi.hoisted(() => ({ failSave: true, search: '' }))
+const state = vi.hoisted(() => ({ failSave: true, search: '', role: 'Coordinator' }))
 const showSuccessToast = vi.hoisted(() => vi.fn())
 const persistRentalDraft = vi.hoisted(() => vi.fn(async (input: Record<string, unknown>) => {
   if (state.failSave) throw new Error('database unavailable')
@@ -33,7 +33,7 @@ vi.mock('../../../actions/rentals/saveDraft', () => ({
 }))
 vi.mock('../../../lib/auth', () => ({
   useAuth: () => ({
-    user: { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', name: 'Coordinator', role: 'Coordinator', isSharedDevice: false },
+    user: { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', name: 'Staff', role: state.role, isSharedDevice: false },
     loading: false,
     isLocked: false,
   }),
@@ -147,6 +147,7 @@ afterEach(async () => {
   container?.remove()
   state.failSave = true
   state.search = ''
+  state.role = 'Coordinator'
   showSuccessToast.mockClear()
   persistRentalDraft.mockClear()
   fetchRentalDraft.mockReset()
@@ -231,6 +232,14 @@ describe('New Rental keeps an unsaved booking on this device', () => {
   }
 
   beforeEach(() => window.localStorage.clear())
+
+  it.each([['Warehouse', false], ['Coordinator', true]] as const)('limits draft price details to authorized staff: %s', async (role, visible) => {
+    state.role = role
+    window.localStorage.setItem(KEY, JSON.stringify({ data: kept(), savedAt: new Date().toISOString() }))
+    await mount()
+    const notice = container.querySelector('[aria-label="Unsaved booking found on this device"]')!
+    expect(notice.textContent?.includes('Rs')).toBe(visible)
+  })
 
   it('offers nothing when no copy was kept', async () => {
     await mount()

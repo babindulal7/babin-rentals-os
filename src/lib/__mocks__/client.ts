@@ -153,6 +153,12 @@ for (const booking of store['bookings'] ?? []) {
 /** Views are computed on read so they always reflect the latest base rows. */
 function read(table: string): Row[] {
   if (table === 'client_directory_v') return clientDirectory(store)
+  if (table === 'bundles_v') {
+    const actor = readSession()?.user.id
+    const role = store['users']?.find(user => user['id'] === actor)?.['primary_role']
+    const canSeeMoney = ['Owner', 'Admin', 'Manager', 'Coordinator', 'Accounts'].includes(String(role))
+    return (store['bundles'] ?? []).map(row => canSeeMoney ? row : { ...row, daily_rate: null, weekly_rate: null })
+  }
   const base = VIEW_OF[table]
   if (base) return store[base] ?? []
   const rows = store[table]
@@ -1394,7 +1400,7 @@ function readBookingChangeMock(id: string): { data: Row | null; error: PgError |
     id: b['id'], code: b['booking_no'], stage: b['stage'], parent_booking_id: b['parent_booking_id'] ?? null,
     money_visible: moneyVisible, revision: `mock-rev-${String(b['mock_change_revision'] ?? 0)}`,
     values: pick(b, ['client_id', 'contact_id', 'branch_id', 'project', 'project_name', 'shoot_location', 'project_type', 'project_type_other', 'pickup_at', 'return_at', 'delivery_type', 'pickup_location', 'return_location', ...(moneyVisible ? ['deposit_required'] : [])]),
-    lines: lines.map(l => ({ ...pick(l, ['id', 'client_uuid', 'parent_line_id', 'line_type', 'product_id', 'bundle_id', 'description', 'qty', 'days', 'is_included', 'service_basis', 'line_note', 'sort_order', ...(moneyVisible ? ['rate', 'discount_amount'] : [])]),
+    lines: lines.map(l => ({ ...pick(l, ['id', 'client_uuid', 'parent_line_id', 'line_type', 'product_id', 'bundle_id', 'description', 'qty', 'days', 'is_included', 'service_basis', 'line_note', 'sort_order', ...(moneyVisible ? ['rate', 'discount_amount', 'line_total', 'price_breakdown'] : [])]),
       name: l['description'], parent_client_uuid: lines.find(parent => parent['id'] === l['parent_line_id'])?.['client_uuid'] ?? null,
       is_packed: (store['packing_lines'] ?? []).some(row => row['booking_line_id'] === l['id'] && row['state'] === 'Packed') ||
         (['Packed', 'On Rent'].includes(String(b['stage'])) && (store['booking_line_units'] ?? []).some(row => row['booking_line_id'] === l['id'] && !row['released_at'])) })),
@@ -1701,8 +1707,8 @@ export const mockSupabase = {
       }
       const moneyVisible = store['users']?.find(row => row['id'] === actor)?.['primary_role'] !== 'Warehouse'
       if (!moneyVisible && ((payload['values'] && typeof payload['values'] === 'object' && 'deposit_required' in payload['values']) ||
-        'discount_percent' in payload || 'crew' in payload || 'transport' in payload ||
-        (Array.isArray(payload['lines']) && payload['lines'].some((line: Row) => ['rate', 'discount_amount', 'line_total', 'price_breakdown', 'supplier_cost', 'markup_amount'].some(field => field in line))))) {
+        'discount_percent' in payload || 'crew' in payload || 'transport' in payload || 'removed_price_reviews' in payload ||
+        (Array.isArray(payload['lines']) && payload['lines'].some((line: Row) => ['rate', 'discount_amount', 'line_total', 'price_breakdown', 'supplier_cost', 'markup_amount', 'reviewed_line_total', 'price_reviewed'].some(field => field in line))))) {
         return Promise.resolve({ data: null, error: pgErr('42501', 'Money fields cannot be changed by this role.') })
       }
       const request = JSON.stringify(payload)
@@ -1734,6 +1740,21 @@ export const mockSupabase = {
       }
       const datesMoved = ['pickup_at', 'return_at'].some(field => requestedHeader[field] != null &&
         Date.parse(String(requestedHeader[field])) !== Date.parse(String(b[field])))
+      const itemsChanged = existingLines.length !== incoming.length || incoming.some(line => {
+        const old = existingLines.find(row => row['id'] === line['id'])
+        return !old || ['qty', 'days', 'product_id', 'bundle_id', 'line_type', 'service_basis', 'is_included', 'description', 'line_note'].some(field => (line[field] ?? (field === 'is_included' ? false : null)) !== (old[field] ?? (field === 'is_included' ? false : null))) ||
+          (line['parent_client_uuid'] ?? null) !== (existingLines.find(parent => parent['id'] === old['parent_line_id'])?.['client_uuid'] ?? null) ||
+          (moneyVisible && ['rate', 'discount_amount'].some(field => field in line && Number(line[field]) !== Number(old[field] ?? 0)))
+      })
+      const removedReviews = payload['removed_price_reviews'] == null ? [] : payload['removed_price_reviews']
+      if (!Array.isArray(removedReviews) || (removedReviews.length > 0 && !moneyVisible) || removedReviews.some((review: Row, index: number) => {
+        const old = existingLines.find(row => row['id'] === review['id'])
+        return !old || !hasProtectedBookingPriceMock(old) || review['price_reviewed'] !== true || review['reviewed_line_total'] !== 0 ||
+          incoming.some(line => line['id'] === review['id']) || removedReviews.findIndex((other: Row) => other['id'] === review['id']) !== index
+      })) return Promise.resolve({ data: null, error: pgErr('22023', 'Removed custom prices must be reviewed at zero by a booking desk user.') })
+      if ((datesMoved || itemsChanged) && existingLines.some(old => hasProtectedBookingPriceMock(old) && !incoming.some(line => line['id'] === old['id'] && line['price_reviewed'] === true && typeof line['reviewed_line_total'] === 'number') && !removedReviews.some((review: Row) => review['id'] === old['id']))) {
+        return Promise.resolve({ data: null, error: pgErr('P0001', 'This line has stored pricing; every custom-priced item requires desk review when items or dates change, including removed items.') })
+      }
       const seen = new Set<string>()
       for (const line of incoming) {
         const lineId = line['id'] == null ? '' : String(line['id'])
@@ -1745,7 +1766,13 @@ export const mockSupabase = {
             !Number.isInteger(Number(line['days'])) || Number(line['days']) < 1) {
           return Promise.resolve({ data: null, error: pgErr('22023', 'A booking line is invalid or duplicated.') })
         }
-        if (old && hasProtectedBookingPriceMock(old) &&
+        const hasReview = 'reviewed_line_total' in line || 'price_reviewed' in line
+        if (hasReview && (!moneyVisible || !old || !hasProtectedBookingPriceMock(old) || line['price_reviewed'] !== true ||
+            typeof line['reviewed_line_total'] !== 'number' || !Number.isFinite(line['reviewed_line_total']) ||
+            line['reviewed_line_total'] < 0 || toRupees(rupees(line['reviewed_line_total'])) !== line['reviewed_line_total'])) {
+          return Promise.resolve({ data: null, error: pgErr('22023', 'A custom price must be reviewed by a money-visible booking desk user.') })
+        }
+        if (old && hasProtectedBookingPriceMock(old) && !hasReview &&
             (datesMoved || ['qty', 'days', 'product_id', 'bundle_id', 'line_type', 'service_basis', 'is_included'].some(field => (line[field] ?? null) !== (old[field] ?? null)) ||
              (line['parent_client_uuid'] ?? null) !== (existingLines.find(parent => parent['id'] === old['parent_line_id'])?.['client_uuid'] ?? null) ||
              (moneyVisible && ['rate', 'discount_amount'].some(field => field in line && Number(line[field]) !== Number(old[field] ?? 0))))) {
@@ -1755,14 +1782,40 @@ export const mockSupabase = {
       }
       if (!moneyVisible && incoming.some(line => {
         const old = existingLines.find(row => row['id'] === line['id'])
-        return old && ['product_id', 'bundle_id', 'line_type', 'is_included'].some(field => (line[field] ?? (field === 'is_included' ? false : null)) !== (old[field] ?? (field === 'is_included' ? false : null)))
+        return old && (['product_id', 'bundle_id', 'line_type', 'is_included'].some(field => (line[field] ?? (field === 'is_included' ? false : null)) !== (old[field] ?? (field === 'is_included' ? false : null))) || (line['parent_client_uuid'] ?? null) !== (existingLines.find(parent => parent['id'] === old['parent_line_id'])?.['client_uuid'] ?? null))
       })) return Promise.resolve({ data: null, error: pgErr('22023', 'Remove and add an item to change its identity.') })
-      if (!moneyVisible && incoming.some(line => !line['id'] && (line['parent_client_uuid'] || line['is_included']))) {
-        return Promise.resolve({ data: null, error: pgErr('42501', 'A money-visible desk user must add bundle components.') })
+      if (!moneyVisible) {
+        const bundleItems = (store['bundle_items'] ?? []).filter(item => item['is_active'] !== false)
+        const invalidComponent = incoming.some(line => {
+          if (line['id'] || (!line['parent_client_uuid'] && !line['is_included'])) return false
+          const parent = incoming.find(candidate => candidate['client_uuid'] === line['parent_client_uuid'])
+          const components = bundleItems.filter(item => item['bundle_id'] === parent?.['bundle_id'] && item['product_id'] === line['product_id'])
+          const expected = components.reduce((sum, item) => sum + Number(item['quantity']), 0)
+          return !parent || Boolean(parent['id']) || parent['line_type'] !== 'Bundle' || Boolean(parent['product_id']) ||
+            Boolean(parent['parent_client_uuid']) || Boolean(parent['is_included']) || line['line_type'] !== 'Equipment' || line['is_included'] !== true ||
+            line['bundle_id'] !== parent['bundle_id'] || expected === 0 || Number(line['qty']) !== expected * Number(parent['qty']) ||
+            Number(line['days']) !== Number(parent['days']) || incoming.filter(other => other['parent_client_uuid'] === line['parent_client_uuid'] && other['product_id'] === line['product_id']).length !== 1
+        })
+        const invalidChangedComponent = incoming.some(line => {
+          const old = existingLines.find(row => row['id'] === line['id'])
+          if (!old || !old['is_included']) return false
+          const originalParent = existingLines.find(row => row['id'] === old['parent_line_id'])
+          const parent = incoming.find(row => row['client_uuid'] === line['parent_client_uuid'])
+          const changed = Number(line['qty']) !== Number(old['qty']) || Number(line['days']) !== Number(old['days']) ||
+            Number(parent?.['qty']) !== Number(originalParent?.['qty']) || Number(parent?.['days']) !== Number(originalParent?.['days'])
+          if (!changed) return false
+          const expected = bundleItems.filter(item => item['bundle_id'] === parent?.['bundle_id'] && item['product_id'] === line['product_id'])
+            .reduce((sum, item) => sum + Number(item['quantity']), 0)
+          return !parent || !originalParent || parent['id'] !== originalParent['id'] || parent['line_type'] !== 'Bundle' ||
+            line['bundle_id'] !== parent['bundle_id'] || expected === 0 || Number(line['qty']) !== expected * Number(parent['qty']) || Number(line['days']) !== Number(parent['days'])
+        })
+        const missingComponent = incoming.some(parent => !parent['id'] && parent['line_type'] === 'Bundle' && bundleItems.some(item =>
+          item['bundle_id'] === parent['bundle_id'] && item['is_mandatory'] !== false && !incoming.some(line => line['parent_client_uuid'] === parent['client_uuid'] && line['product_id'] === item['product_id'])))
+        if (invalidComponent || invalidChangedComponent || missingComponent) return Promise.resolve({ data: null, error: pgErr('42501', 'Bundle components must match the active catalogue.') })
       }
       if (!moneyVisible && incoming.some(line => !line['id'] && !line['parent_client_uuid'] && !line['is_included'] &&
-        !((store['products'] ?? []).some(row => row['id'] === line['product_id'] && row['daily_rate'] != null) ||
-          (store['bundles'] ?? []).some(row => row['id'] === line['bundle_id'] && row['daily_rate'] != null)))) {
+        !((line['product_id'] && !line['bundle_id'] && (store['products'] ?? []).some(row => row['id'] === line['product_id'] && row['is_active'] !== false && row['daily_rate'] != null)) ||
+          (!line['product_id'] && line['line_type'] === 'Bundle' && (store['bundles'] ?? []).some(row => row['id'] === line['bundle_id'] && row['is_active'] !== false && row['daily_rate'] != null))))) {
         return Promise.resolve({ data: null, error: pgErr('22023', 'A priced catalogue item is required.') })
       }
       const packed = (line: Row) => (store['packing_lines'] ?? []).some(row => row['booking_line_id'] === line['id'] && row['state'] === 'Packed') ||
@@ -1804,7 +1857,13 @@ export const mockSupabase = {
           if (result.error) throw new Error(result.error.message)
         }
         for (const old of existingLines) {
-          if (!incoming.some(line => line['id'] === old['id'])) hooks.update('booking_lines', { voided_at: at, voided_reason: 'Removed while changing booking' }, row => row['id'] === old['id'])
+          if (!incoming.some(line => line['id'] === old['id'])) hooks.update('booking_lines', {
+            voided_at: at, voided_reason: 'Removed while changing booking',
+            ...(removedReviews.some((review: Row) => review['id'] === old['id']) ? { price_breakdown: {
+              source: 'desk-review-v1', reviewed_by: actor, reviewed_at: at, reviewed_total: 0,
+              previous_total: old['line_total'] ?? null, previous_breakdown: old['price_breakdown'] ?? null,
+            } } : {}),
+          }, row => row['id'] === old['id'])
         }
         for (const line of incoming) {
           const id = mapped.get(String(line['client_uuid'])) as string
@@ -1814,7 +1873,12 @@ export const mockSupabase = {
             Object.assign(patch, { rate: line['parent_client_uuid'] || line['is_included'] ? 0 : product?.['daily_rate'], discount_amount: 0 })
           }
           const old = existingLines.find(row => row['id'] === line['id'])
-          if (!old || !hasProtectedBookingPriceMock(old)) {
+          if (old && hasProtectedBookingPriceMock(old) && line['price_reviewed'] === true) {
+            Object.assign(patch, { line_total: line['reviewed_line_total'], price_breakdown: {
+              source: 'desk-review-v1', reviewed_by: actor, reviewed_at: at,
+              previous_total: old['line_total'] ?? null, previous_breakdown: old['price_breakdown'] ?? null,
+            } })
+          } else if (!old || !hasProtectedBookingPriceMock(old)) {
             const total = dailyBookingLineTotalMock({ ...old, ...patch })
             if (total === null) throw new Error('The line charge or discount is invalid.')
             Object.assign(patch, { line_total: total, price_breakdown: null })

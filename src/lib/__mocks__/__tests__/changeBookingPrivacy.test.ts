@@ -29,6 +29,16 @@ async function boot(role: string, invoices: Array<Record<string, unknown>> = [],
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.resetModules() })
 
 describe('booking change mock privacy', () => {
+  it.each(['Warehouse', 'Owner'])('serves real bundle components and masks prices for %s', async role => {
+    const client = await boot(role, [], {}, [
+      { table: 'bundles', row: { id: 'bundle-real', name: 'Real kit', daily_rate: 750, weekly_rate: 3000, is_active: true } },
+      { table: 'bundle_items', row: { id: 'component-real', bundle_id: 'bundle-real', product_id: 'product-real', quantity: 2, is_active: true } },
+    ])
+    const result = await client.from('bundles_v').select('id, name, daily_rate, weekly_rate, items:bundle_items(id, product_id, quantity)')
+    expect(result.error).toBeNull()
+    expect(result.data).toMatchObject([{ id: 'bundle-real', daily_rate: role === 'Warehouse' ? null : 750,
+      weekly_rate: role === 'Warehouse' ? null : 3000, items: [{ id: 'component-real', quantity: 2 }] }])
+  })
   it('lets Warehouse edit without receiving or writing financial fields', async () => {
     const client = await boot('Warehouse', [], {}, [{ table: 'booking_transport', row: {
       id: 'transport-1', booking_id: booking, delivery_charge: 450.75, fuel_charge: 50,
@@ -157,6 +167,47 @@ describe('booking change mock privacy', () => {
     } })
     expect(saved.error).toBeNull()
     expect((await client.from('booking_lines').select('*')).data).toMatchObject([{ line_total: 1501 }])
+  })
+  it('lets Warehouse add only the actual included components of a priced bundle', async () => {
+    const client = await boot('Warehouse', [], {}, [
+      { table: 'bundles', row: { id: 'kit-1', daily_rate: 5000 } },
+      { table: 'bundle_items', row: { id: 'component-1', bundle_id: 'kit-1', product_id: 'camera-1', quantity: 2, is_active: true } },
+    ])
+    const read = await client.rpc('read_booking_for_change', { p_id: booking })
+    const snapshot = read.data as { revision: string; lines: Row[] }
+    const parent = { id: null, client_uuid: 'kit-key', line_type: 'Bundle', bundle_id: 'kit-1', qty: 1, days: 1, is_included: false }
+    const child = { id: null, client_uuid: 'child-key', parent_client_uuid: 'kit-key', line_type: 'Equipment', bundle_id: 'kit-1', product_id: 'camera-1', qty: 2, days: 1, is_included: true }
+    const payload = { booking_id: booking, revision: snapshot.revision, actor_id: actor, values: {} }
+    const missing = await client.rpc('change_booking', { p_payload: { ...payload, client_uuid: 'missing', lines: [...snapshot.lines, parent] } })
+    expect(missing.error?.message).toMatch(/bundle|component/i)
+    const duplicated = await client.rpc('change_booking', { p_payload: { ...payload, client_uuid: 'duplicate', lines: [...snapshot.lines, parent, child, { ...child, client_uuid: 'child-2' }] } })
+    expect(duplicated.error?.message).toMatch(/bundle|component/i)
+    const forged = await client.rpc('change_booking', { p_payload: { ...payload, client_uuid: 'forged', lines: [...snapshot.lines, parent, { ...child, product_id: 'other' }] } })
+    expect(forged.error?.message).toMatch(/bundle|component/i)
+    const excessive = await client.rpc('change_booking', { p_payload: { ...payload, client_uuid: 'excessive', lines: [...snapshot.lines, parent, { ...child, qty: 3 }] } })
+    expect(excessive.error?.message).toMatch(/bundle|component/i)
+    const saved = await client.rpc('change_booking', { p_payload: { ...payload, client_uuid: 'valid-bundle', lines: [...snapshot.lines, parent, child] } })
+    expect(saved.error).toBeNull()
+    expect(JSON.stringify(saved.data)).not.toContain('5000')
+    expect((saved.data as { lines: Row[] }).lines).toHaveLength(3)
+    const current = saved.data as { revision: string; lines: Row[] }
+    const inflated = await client.rpc('change_booking', { p_payload: { ...payload, revision: current.revision, client_uuid: 'inflated',
+      lines: current.lines.map(line => line['client_uuid'] === 'child-key' ? { ...line, qty: 3 } : line) } })
+    expect(inflated.error?.message).toMatch(/bundle|component/i)
+
+  })
+  it('requires and preserves a desk review when a custom item is removed', async () => {
+    const client = await boot('Coordinator', [], { line_total: 1800, price_breakdown: { method: 'structure' } })
+    const read = await client.rpc('read_booking_for_change', { p_id: booking })
+    const snapshot = read.data as { revision: string; lines: Row[] }
+    const base = { booking_id: booking, revision: snapshot.revision, actor_id: actor, values: {}, lines: [] }
+    const denied = await client.rpc('change_booking', { p_payload: { ...base, client_uuid: 'remove-denied' } })
+    expect(denied.error?.message).toMatch(/review/i)
+    const saved = await client.rpc('change_booking', { p_payload: { ...base, client_uuid: 'remove-reviewed',
+      removed_price_reviews: [{ id: 'line-1', price_reviewed: true, reviewed_line_total: 0 }] } })
+    expect(saved.error).toBeNull()
+    expect((await client.from('booking_lines').select('*')).data).toMatchObject([{ voided_reason: 'Removed while changing booking',
+      price_breakdown: { reviewed_total: 0, previous_total: 1800, previous_breakdown: { method: 'structure' } } }])
   })
   it('refuses a schedule move for structure pricing without overwriting its snapshot', async () => {
     const client = await boot('Coordinator', [], { line_total: 1800, price_breakdown: { method: 'structure' } })

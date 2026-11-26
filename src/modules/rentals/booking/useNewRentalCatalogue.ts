@@ -91,6 +91,7 @@ export function useNewRentalCatalogue({
   })
 
   useEffect(() => {
+    setLiveBundles(null)
     if (!pickupAt || !returnAt || returnAt.getTime() <= pickupAt.getTime()) {
       setAvailabilitySource({ state: 'no-window' })
       return
@@ -115,7 +116,7 @@ export function useNewRentalCatalogue({
         ])
         if (!cancelled) {
           setAvailabilitySource({ state: 'ready', byProduct })
-          if (bundles && bundles.length > 0) {
+          if (bundles) {
             /* G4: kit capacity from the same windowed answers the catalogue rows use. A component with no
                answer (or a serialised product with no unit rows) yields no capacity at all — never a guess. */
             const freeOf = (id: string): number | undefined => {
@@ -143,7 +144,7 @@ export function useNewRentalCatalogue({
   )
 
   const liveBundleResults = useMemo(
-    () => bundleResults(bookingWindow, liveBundles ?? undefined),
+    () => bundleResults(bookingWindow, liveBundles ?? []),
     [bookingWindow, liveBundles],
   )
 

@@ -477,7 +477,9 @@ export function RentalLineItemsTree({
             {lineGroups.map((g) => {
               const nested = isNested(g)
               const isCollapsed = Boolean(collapsedBundles[g.key])
-              const groupUnits = g.lines.reduce((s, l) => s + l.qty, 0)
+              const componentLines = g.kind === 'bundle' && g.lines.some(l => l.parentClientUuid)
+                ? g.lines.filter(l => l.lineType !== 'Bundle' || l.parentClientUuid) : g.lines
+              const groupUnits = componentLines.reduce((s, l) => s + l.qty, 0)
               const dayValues = Array.from(new Set(g.lines.map((l) => l.days)))
               const minDays = Math.min(...dayValues)
               const maxDays = Math.max(...dayValues)
@@ -536,7 +538,7 @@ export function RentalLineItemsTree({
                         </span>
                         <span style={{ display: 'block', marginTop: 1, marginLeft: 28, fontSize: 'var(--t-th)', color: 'var(--text2)' }}>
                           {g.kind === 'bundle'
-                            ? `Bundle · ${g.lines.length} component${g.lines.length === 1 ? '' : 's'}${isCollapsed ? ' (collapsed)' : ''}`
+                            ? `Bundle · ${componentLines.length} component${componentLines.length === 1 ? '' : 's'}${isCollapsed ? ' (collapsed)' : ''}`
                             : `${g.lines.length} units${isCollapsed ? ' (collapsed)' : ''}`}
                         </span>
                       </td>
@@ -582,7 +584,7 @@ export function RentalLineItemsTree({
                     </tr>
                   ) : null}
                   {(!nested || !isCollapsed) &&
-                    g.lines.map((l) => renderEquipmentRow(l, nested, g.label, nested ? undefined : menuItems))}
+                    componentLines.map((l) => renderEquipmentRow(l, nested, g.label, nested ? undefined : menuItems))}
                 </Fragment>
               )
             })}

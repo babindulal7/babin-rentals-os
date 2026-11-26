@@ -13,7 +13,7 @@ import {
   type QuoteSaveAttempt,
 } from '../../../actions/rentals/updateRentalQuote'
 import { useUnsavedRecord } from '../../../components/ui/RecordWorkspace'
-import { rupees, type Paisa } from '../../../lib/money'
+import { parseMoney, rupees, type Paisa } from '../../../lib/money'
 import type { ClientRecord } from '../../../lib/queries/clients'
 import { quoteToDraft, readQuoteEditor, type QuoteSnapshot } from '../../../lib/queries/quoteEditor'
 import {
@@ -158,6 +158,8 @@ export function useNewRentalDraft({
   const [quoteLoading, setQuoteLoading] = useState(Boolean(editBookingId))
   const [quoteReload, setQuoteReload] = useState(0)
   const [changeSnapshot, setChangeSnapshot] = useState<BookingChangeSnapshot | null>(null)
+  const [priceReviews, setPriceReviews] = useState<Record<string, { amount: string; confirmed: boolean }>>({})
+  const priceReviewBasis = useRef<string | null>(null)
 
   const quoteInitial = useRef<string | null>(null)
   const quoteSaving = useRef(false)
@@ -453,7 +455,11 @@ export function useNewRentalDraft({
   if (editBookingId && quoteSnapshot && !quoteLoading && quoteInitial.current === null && client) {
     quoteInitial.current = quoteFingerprint
   }
-  const quoteDirty = quoteInitial.current !== null && quoteInitial.current !== quoteFingerprint
+  useEffect(() => {
+    if (priceReviewBasis.current !== null && priceReviewBasis.current !== quoteFingerprint) setPriceReviews({})
+    priceReviewBasis.current = quoteFingerprint
+  }, [quoteFingerprint])
+  const quoteDirty = (quoteInitial.current !== null && quoteInitial.current !== quoteFingerprint) || Object.keys(priceReviews).length > 0
   useUnsavedRecord(editBookingId ? quoteDirty : draftHasUnsavedChanges)
 
   const saveQuote = useCallback(async () => {
@@ -467,6 +473,13 @@ export function useNewRentalDraft({
       setSaveState('saving')
       setActionError(null)
       try {
+        const reviewedPrices = Object.entries(priceReviews).map(([lineId, review]) => {
+          const totalPaisa = parseMoney(review.amount)
+          if (!review.confirmed || totalPaisa === null || totalPaisa < 0) {
+            throw new Error('Enter a valid new total and confirm each desk price review before saving.')
+          }
+          return { lineId, totalPaisa }
+        })
         changeAttempt.current = prepareBookingChangeSave(
           {
             bookingId: changeSnapshot.id,
@@ -474,6 +487,7 @@ export function useNewRentalDraft({
             draft: draftData,
             snapshot: changeSnapshot,
             depositPaisa: requiredDepositPaisa,
+            reviewedPrices,
           },
           changeAttempt.current,
         )
@@ -517,6 +531,7 @@ export function useNewRentalDraft({
     }
   }, [
     changeSnapshot,
+    priceReviews,
     quoteSnapshot,
     dispatchContext,
     quoteFingerprint,
@@ -676,6 +691,9 @@ export function useNewRentalDraft({
     setCancelIntent,
     quoteLoading,
     setQuoteLoading,
+    changeSnapshot,
+    priceReviews,
+    setPriceReviews,
     quoteReload,
     setQuoteReload,
     quoteDirty,

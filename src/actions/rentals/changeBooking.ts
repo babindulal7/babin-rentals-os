@@ -1,7 +1,7 @@
 import { createAction, type ActionConfig } from '../core'
 import { newClientUuid, supabase } from '../../lib/supabase'
 import type { BookingChangeSnapshot } from '../../lib/queries/changeBooking'
-import { bookingChangePayload, bookingChangeToDraft } from '../../lib/queries/changeBooking'
+import { bookingChangePayload, bookingChangeToDraft, requiresDeskPriceReview, type ReviewedLinePrice } from '../../lib/queries/changeBooking'
 import type { RentalDraftData } from './saveDraft'
 import type { Paisa } from '../../lib/money'
 
@@ -13,6 +13,7 @@ export interface ChangeBookingInput {
   snapshot: BookingChangeSnapshot
   depositPaisa: Paisa
   reason?: string
+  reviewedPrices?: readonly ReviewedLinePrice[]
 }
 
 export interface BookingChangeSaveAttempt {
@@ -62,6 +63,17 @@ export const changeBookingConfig: ActionConfig<ChangeBookingInput, BookingChange
     if (input.draft.clientDbId !== input.snapshot.values.client_id) {
       throw new Error('The client cannot be changed on this booking. Keep the original client or create a new booking.')
     }
+    const reviews = input.reviewedPrices ?? []
+    const seenReviewLines = new Set<string>()
+    for (const review of reviews) {
+      const originalLine = input.snapshot.lines.find((line) => line.id === review.lineId)
+      if (ctx.role === 'Warehouse' || !originalLine || !requiresDeskPriceReview(originalLine) ||
+          (!input.draft.lines.some((line) => line.bookingLineId === review.lineId) && review.totalPaisa !== 0) || seenReviewLines.has(review.lineId) ||
+          !Number.isSafeInteger(review.totalPaisa) || review.totalPaisa < 0) {
+        throw new Error('The reviewed price is invalid. Review the booking and try again.')
+      }
+      seenReviewLines.add(review.lineId)
+    }
     if (ctx.role === 'Warehouse') {
       const original = bookingChangeToDraft(input.snapshot)
       const crewSummary = (draft: RentalDraftData) => draft.crew.map(c => [c.bookingCrewLineId ?? null, c.crewMemberId ?? null, c.name, c.role, c.phone, c.days, c.overtimeDays])
@@ -72,7 +84,7 @@ export const changeBookingConfig: ActionConfig<ChangeBookingInput, BookingChange
         throw new Error('Ask the booking desk to change crew or delivery details.')
       }
     }
-    const fullPayload = bookingChangePayload(input.draft, input.snapshot, input.depositPaisa, input.reason)
+    const fullPayload = bookingChangePayload(input.draft, input.snapshot, input.depositPaisa, input.reason, reviews)
     const payload = ctx.role === 'Warehouse'
       ? {
           values: Object.fromEntries(Object.entries(fullPayload.values).filter(([key]) => key !== 'deposit_required')),

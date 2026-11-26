@@ -75,6 +75,12 @@ export { CREW_ROSTER, type CrewMember } from '../../../lib/queries/crew'
  * the page and the panel a cycle). `SHAPE_NOTE` below names the coupling so a
  * future change to `Line` has a reason to come here too.
  */
+/** Count physical component units once; the bundle header is a priced container. */
+export function countBookingUnits(lines: readonly { qty: number; lineType?: string | undefined; clientUuid?: string | undefined; parentClientUuid?: string | null | undefined }[]): number {
+  return lines.reduce((total, line) => total + (line.lineType === 'Bundle' && line.clientUuid &&
+    lines.some(child => child.parentClientUuid === line.clientUuid) ? 0 : line.qty), 0)
+}
+
 export interface BookingLineDraft {
   id: string
   clientUuid?: string

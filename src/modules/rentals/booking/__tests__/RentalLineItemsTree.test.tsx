@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { RentalLineItemsTree, type Line } from '../RentalLineItemsTree'
 import type { PricingPipelineResult } from '../../../../lib/pricingPipeline'
 import { rupees } from '../../../../lib/money'
+import { countBookingUnits } from '../itemCatalogue'
 
 vi.mock('../../../../lib/device', () => ({ useViewport: () => 'desktop' }))
 
@@ -71,6 +72,30 @@ const sampleLines: Line[] = [
 ]
 
 describe('RentalLineItemsTree', () => {
+  it('counts bundle components without counting the bundle header as an item', async () => {
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const root = createRoot(host)
+    const parent: Line = { ...sampleLines[1]!, id: 'bundle', clientUuid: 'parent', lineType: 'Bundle', name: 'Indie Cinema Kit', qty: 1 }
+    const child: Line = { ...sampleLines[1]!, parentClientUuid: 'parent', lineType: 'Equipment', qty: 3 }
+    const rows = [parent, child]
+    try {
+      expect(countBookingUnits(rows)).toBe(3)
+      expect(countBookingUnits([parent])).toBe(1)
+      await act(async () => root.render(<MemoryRouter><RentalLineItemsTree
+        lines={rows} setLines={vi.fn()} collapsedBundles={{}} setCollapsedBundles={vi.fn()}
+        canBookingMoney={false} conflictSummary={{ conflicts: [], state: 'ready', text: 'All available', verdictByLineId: new Map() }}
+        gateContext={{ role: 'Warehouse', surface: 'default' }} user={null} navigate={vi.fn()}
+        totalUnits={3} bundleCount={1} days={2} pricing={mockPricing} /></MemoryRouter>))
+      expect(host.textContent).toContain('Bundle · 1 component')
+      expect(host.querySelectorAll('tbody tr')).toHaveLength(2)
+      expect(host.textContent).not.toContain('Part of Indie Cinema Kit: Indie Cinema Kit')
+    } finally {
+      await act(async () => root.unmount())
+      host.remove()
+    }
+  })
+
   it('renders empty state when lines array is empty', async () => {
     const host = document.createElement('div')
     document.body.appendChild(host)

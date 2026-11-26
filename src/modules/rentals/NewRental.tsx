@@ -23,7 +23,7 @@ import type { Paisa } from '../../lib/money'
 import type { RentalDraftData } from '../../actions/rentals/saveDraft'
 import { calculateDraftTotal } from '../../lib/rentalDraftPricing'
 import type { InvStatus } from '../../lib/queries/inventory'
-import { equipmentConflicts, type ConflictCheckLine } from './booking/itemCatalogue'
+import { countBookingUnits, equipmentConflicts, type ConflictCheckLine } from './booking/itemCatalogue'
 import type { CrewRole } from '../../lib/queries/crew'
 import { useAuth } from '../../lib/auth'
 import type { ActionContext } from '../../actions/core'
@@ -60,6 +60,7 @@ import { RebookDialog } from './actions/RebookDialog'
 import { Modal } from '../../components/ui/Modal'
 import { newClientUuid } from '../../lib/supabase'
 import { useNewRentalProductDeposits } from './booking/useNewRentalProductDeposits'
+import { PriceReviewSection } from './booking/PriceReviewSection'
 export type { Line, CrewLine, BlockingNotice, ConfirmWriteState }
 export { lineAmountPaisa, confirmWriteRefusals }
 
@@ -665,6 +666,9 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
     cancelIntent,
     setCancelIntent,
     quoteLoading,
+    changeSnapshot,
+    priceReviews,
+    setPriceReviews,
     setQuoteReload,
     quoteDirty,
     confirmKey,
@@ -883,7 +887,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
   })
 
   const bundleCount = useMemo(() => new Set(lines.map((l) => l.bundleCode).filter(Boolean)).size, [lines])
-  const totalUnits = lines.reduce((s, l) => s + l.qty, 0)
+  const totalUnits = countBookingUnits(lines)
   /* NR-12: documentTiles was removed — document storage/generation is unwired
    * and documents are intentionally outside the creation checklist until a booking persists. */
 
@@ -1136,8 +1140,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
         const d = localDraftOffer.data
         const clientName = d.clientName || clientPool.find((c) => c.id === d.selectedClientId)?.name || 'Unnamed client'
         const itemCount = (d.lines ?? []).reduce((acc, l) => acc + (l.qty || 1), 0)
-        const totalPaisa = calculateDraftTotal(d)
-        const metaText = `${clientName} · ${itemCount} ${itemCount === 1 ? 'item' : 'items'} · ${formatMoney(totalPaisa)}`
+        const metaText = `${clientName} · ${itemCount} ${itemCount === 1 ? 'item' : 'items'}${canBookingMoney ? ` · ${formatMoney(calculateDraftTotal(d))}` : ''}`
 
         return (
           <div
@@ -1348,7 +1351,7 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
             pickupTime={pickupTime}
             ret={ret}
             returnTime={returnTime}
-            pricingHints={pricingHints}
+            pricingHints={canBookingMoney ? pricingHints : undefined}
             onPickupChange={setPickup}
             onPickupTimeChange={setPickupTime}
             onReturnChange={setRet}
@@ -1364,6 +1367,13 @@ export default function NewRental({ onDone, editBookingId }: NewRentalProps = {}
 
         </div>
 
+        {editBookingId && canBookingMoney && changeSnapshot?.stage !== 'Quote' && changeSnapshot && (
+          <PriceReviewSection
+            lines={changeSnapshot.lines.filter((line) => draftData.lines.some((draftLine) => draftLine.bookingLineId === line.id))}
+            reviews={priceReviews}
+            setReviews={setPriceReviews}
+          />
+        )}
         <div className="new-rental-stage new-rental-stage--equipment">
           <BookingEquipmentSection
             open={open[2] ?? true}

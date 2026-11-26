@@ -1006,7 +1006,9 @@ begin
       'id', 'client_uuid', 'parent_line_id', 'line_type', 'product_id', 'bundle_id',
       'description', 'qty', 'days', 'rate', 'discount_amount', 'is_included',
       'service_basis', 'line_note', 'sort_order'
-    ]) || jsonb_build_object(
+    ]) || (case when coalesce(auth_can_view_money(), false)
+      then record_editor_private.pick(to_jsonb(l), array['line_total', 'price_breakdown']) else '{}'::jsonb end)
+    || jsonb_build_object(
       'name', coalesce(l.description, p.name, k.name),
       'parent_client_uuid', parent.client_uuid,
       'is_packed', exists (
@@ -1127,6 +1129,13 @@ declare
   v_line_days     integer;
   v_line_discount numeric(14,2);
   v_line_total    numeric(14,2);
+  v_reviewed_total numeric;
+  v_has_price_review boolean;
+  v_items_changed boolean;
+  v_bundle_parent jsonb;
+  v_original_parent jsonb;
+  v_component_qty bigint;
+  v_previous_create_setting text;
 begin
   -- 1. Role verification (W88: Any desk staff — Owner, Admin, Manager, Coordinator, Warehouse)
   v_role := auth_user_role();
@@ -1137,9 +1146,9 @@ begin
 
   if not coalesce(auth_can_view_money(), false) and (
     coalesce(p_payload -> 'values', '{}'::jsonb) ? 'deposit_required'
-    or p_payload ? 'discount_percent' or p_payload ? 'crew' or p_payload ? 'transport'
+    or p_payload ? 'discount_percent' or p_payload ? 'crew' or p_payload ? 'transport' or p_payload ? 'removed_price_reviews'
     or exists (select 1 from jsonb_array_elements(case when jsonb_typeof(p_payload -> 'lines') = 'array' then p_payload -> 'lines' else '[]'::jsonb end) x
-               where x ?| array['rate', 'discount_amount', 'line_total', 'price_breakdown', 'supplier_cost', 'markup_amount'])
+               where x ?| array['rate', 'discount_amount', 'line_total', 'price_breakdown', 'supplier_cost', 'markup_amount', 'reviewed_line_total', 'price_reviewed'])
   ) then
     raise exception 'Money fields cannot be changed by this role.' using errcode = '42501';
   end if;
@@ -1261,6 +1270,69 @@ begin
   end if;
 
   v_dates_moved := (v_new_pickup <> b.pickup_at or v_new_return <> b.return_at);
+  -- Any item change requires every old custom-priced line to be reviewed.
+  select exists (
+    select 1 from booking_lines old
+    full join jsonb_array_elements(p_payload -> 'lines') incoming
+      on incoming ->> 'id' = old.id::text and old.booking_id = v_booking_id and old.voided_at is null
+    where (old.booking_id = v_booking_id and old.voided_at is null or old.id is null)
+      and (old.id is null or incoming is null
+        or (incoming ->> 'qty')::integer is distinct from old.qty
+        or (incoming ->> 'days')::integer is distinct from old.days
+        or incoming ->> 'product_id' is distinct from old.product_id::text
+        or incoming ->> 'bundle_id' is distinct from old.bundle_id::text
+        or incoming ->> 'line_type' is distinct from old.line_type::text
+        or incoming ->> 'description' is distinct from old.description
+        or incoming ->> 'line_note' is distinct from old.line_note
+        or incoming ->> 'parent_client_uuid' is distinct from (select parent.client_uuid::text from booking_lines parent where parent.id = old.parent_line_id)
+        or coalesce((incoming ->> 'is_included')::boolean, false) is distinct from coalesce(old.is_included, false)
+        or incoming ->> 'service_basis' is distinct from old.service_basis::text
+        or (coalesce(auth_can_view_money(), false) and (
+          (incoming ? 'rate' and (incoming ->> 'rate')::numeric is distinct from old.rate)
+          or (incoming ? 'discount_amount' and coalesce((incoming ->> 'discount_amount')::numeric, 0) is distinct from coalesce(old.discount_amount, 0)))))
+  ) into v_items_changed;
+
+  if p_payload ? 'removed_price_reviews' then
+    if not coalesce(auth_can_view_money(), false) or jsonb_typeof(p_payload -> 'removed_price_reviews') <> 'array'
+      or exists (select 1 from jsonb_array_elements(p_payload -> 'removed_price_reviews') review
+        where review -> 'price_reviewed' is distinct from 'true'::jsonb or review -> 'reviewed_line_total' is distinct from '0'::jsonb
+          or not exists (select 1 from booking_lines old where old.id::text = review ->> 'id' and old.booking_id = v_booking_id and old.voided_at is null
+            and ((old.price_breakdown is not null and old.price_breakdown <> 'null'::jsonb) or (old.line_total is not null and old.line_total <> greatest(0, old.qty * old.days * old.rate - coalesce(old.discount_amount, 0)))))
+          or exists (select 1 from jsonb_array_elements(p_payload -> 'lines') incoming where incoming ->> 'id' = review ->> 'id'))
+      or (select count(*) <> count(distinct review ->> 'id') from jsonb_array_elements(p_payload -> 'removed_price_reviews') review) then
+      raise exception 'Removed custom prices must be reviewed at zero by a booking desk user.';
+    end if;
+  end if;
+
+  if v_dates_moved or v_items_changed then
+    if exists (
+      select 1 from booking_lines old
+      where old.booking_id = v_booking_id and old.voided_at is null
+        and ((old.price_breakdown is not null and old.price_breakdown <> 'null'::jsonb) or (old.line_total is not null and old.line_total <>
+          greatest(0, old.qty * old.days * old.rate - coalesce(old.discount_amount, 0))))
+        and not exists (select 1 from jsonb_array_elements(p_payload -> 'lines') incoming
+          where incoming ->> 'id' = old.id::text
+            and incoming -> 'price_reviewed' = 'true'::jsonb
+            and jsonb_typeof(incoming -> 'reviewed_line_total') = 'number')
+        and not (coalesce(auth_can_view_money(), false) and not exists (select 1 from jsonb_array_elements(p_payload -> 'lines') incoming where incoming ->> 'id' = old.id::text)
+          and exists (select 1 from jsonb_array_elements(case when jsonb_typeof(p_payload -> 'removed_price_reviews') = 'array' then p_payload -> 'removed_price_reviews' else '[]'::jsonb end) review
+            where review ->> 'id' = old.id::text and review -> 'price_reviewed' = 'true'::jsonb and review -> 'reviewed_line_total' = '0'::jsonb))
+    ) then
+      raise exception 'This line has stored pricing; every custom-priced item requires desk review when items or dates change, including removed items.';
+    end if;
+  end if;
+
+  if not coalesce(auth_can_view_money(), false) and exists (
+    select 1 from jsonb_array_elements(p_payload -> 'lines') parent
+    join bundle_items item on item.bundle_id::text = parent ->> 'bundle_id' and item.is_active and item.is_mandatory
+    where parent ->> 'id' is null and parent ->> 'line_type' = 'Bundle'
+      and not exists (select 1 from jsonb_array_elements(p_payload -> 'lines') component
+        where component ->> 'parent_client_uuid' = parent ->> 'client_uuid'
+          and component ->> 'product_id' = item.product_id::text)
+  ) then
+    raise exception 'The bundle is missing a required catalogue component.' using errcode = '42501';
+  end if;
+
   v_period := tstzrange(v_new_pickup, v_new_return, '[)');
 
   update bookings
@@ -1314,7 +1386,53 @@ begin
     end if;
     if not coalesce(auth_can_view_money(), false) and existing is null
        and (row_data ->> 'parent_client_uuid' is not null or coalesce((row_data ->> 'is_included')::boolean, false)) then
-      raise exception 'A money-visible desk user must add bundle components.' using errcode = '42501';
+      -- Only components of a new, priced bundle may be included free. The
+      -- catalogue, not the caller, supplies their permitted identity/quantity.
+      select value into v_bundle_parent from jsonb_array_elements(p_payload -> 'lines')
+       where value ->> 'client_uuid' = row_data ->> 'parent_client_uuid';
+      select sum(quantity) into v_component_qty from bundle_items
+       where bundle_id::text = v_bundle_parent ->> 'bundle_id'
+         and product_id::text = row_data ->> 'product_id' and is_active;
+      if v_bundle_parent is null or v_bundle_parent ->> 'id' is not null
+         or v_bundle_parent ->> 'line_type' is distinct from 'Bundle'
+         or v_bundle_parent ->> 'product_id' is not null
+         or v_bundle_parent ->> 'parent_client_uuid' is not null
+         or coalesce((v_bundle_parent ->> 'is_included')::boolean, false)
+         or row_data ->> 'line_type' is distinct from 'Equipment'
+         or not coalesce((row_data ->> 'is_included')::boolean, false)
+         or row_data ->> 'bundle_id' is distinct from v_bundle_parent ->> 'bundle_id'
+         or v_component_qty is null
+         or (row_data ->> 'qty')::integer is distinct from v_component_qty * (v_bundle_parent ->> 'qty')::integer
+         or (row_data ->> 'days')::integer is distinct from (v_bundle_parent ->> 'days')::integer
+         or (select count(*) from jsonb_array_elements(p_payload -> 'lines') component
+              where component ->> 'parent_client_uuid' = row_data ->> 'parent_client_uuid'
+                and component ->> 'product_id' = row_data ->> 'product_id') <> 1 then
+        raise exception 'Bundle components must match the active catalogue.' using errcode = '42501';
+      end if;
+    end if;
+
+    if not coalesce(auth_can_view_money(), false) and existing is not null
+       and coalesce((existing ->> 'is_included')::boolean, false) then
+      select value into v_bundle_parent from jsonb_array_elements(p_payload -> 'lines')
+       where value ->> 'client_uuid' = row_data ->> 'parent_client_uuid';
+      select to_jsonb(parent) into v_original_parent from booking_lines parent
+       where parent.id = (existing ->> 'parent_line_id')::uuid and parent.booking_id = v_booking_id and parent.voided_at is null;
+      if (row_data ->> 'qty')::integer is distinct from (existing ->> 'qty')::integer
+         or (row_data ->> 'days')::integer is distinct from (existing ->> 'days')::integer
+         or (v_bundle_parent ->> 'qty')::integer is distinct from (v_original_parent ->> 'qty')::integer
+         or (v_bundle_parent ->> 'days')::integer is distinct from (v_original_parent ->> 'days')::integer then
+        select sum(quantity) into v_component_qty from bundle_items
+         where bundle_id::text = v_bundle_parent ->> 'bundle_id' and product_id::text = row_data ->> 'product_id' and is_active;
+        if v_bundle_parent is null or v_original_parent is null
+           or v_bundle_parent ->> 'id' is distinct from v_original_parent ->> 'id'
+           or v_bundle_parent ->> 'line_type' is distinct from 'Bundle'
+           or row_data ->> 'bundle_id' is distinct from v_bundle_parent ->> 'bundle_id'
+           or v_component_qty is null
+           or (row_data ->> 'qty')::integer is distinct from v_component_qty * (v_bundle_parent ->> 'qty')::integer
+           or (row_data ->> 'days')::integer is distinct from (v_bundle_parent ->> 'days')::integer then
+          raise exception 'Bundle components must match the active catalogue.' using errcode = '42501';
+        end if;
+      end if;
     end if;
 
     -- Ordinary daily lines also store a total (0168). Reprice only when the
@@ -1325,7 +1443,19 @@ begin
         greatest(0, (existing ->> 'qty')::integer * (existing ->> 'days')::integer
           * (existing ->> 'rate')::numeric - coalesce((existing ->> 'discount_amount')::numeric, 0)))
     );
-    if v_protected_price
+    v_has_price_review := row_data ? 'reviewed_line_total' or row_data ? 'price_reviewed';
+    if v_has_price_review then
+      if not coalesce(auth_can_view_money(), false) or not v_protected_price
+         or row_data -> 'price_reviewed' is distinct from 'true'::jsonb
+         or jsonb_typeof(row_data -> 'reviewed_line_total') is distinct from 'number' then
+        raise exception 'A custom price must be reviewed by a money-visible booking desk user.';
+      end if;
+      v_reviewed_total := (row_data ->> 'reviewed_line_total')::numeric;
+      if v_reviewed_total < 0 or v_reviewed_total <> round(v_reviewed_total, 2) then
+        raise exception 'The reviewed price must be non-negative and in whole paisa.';
+      end if;
+    end if;
+    if v_protected_price and not v_has_price_review
        and (v_dates_moved
          or (row_data ->> 'qty')::integer is distinct from (existing ->> 'qty')::integer
          or (row_data ->> 'days')::integer is distinct from (existing ->> 'days')::integer
@@ -1372,6 +1502,7 @@ begin
       or (patch ->> 'bundle_id') is distinct from (existing ->> 'bundle_id')
       or (patch ->> 'line_type') is distinct from (existing ->> 'line_type')
       or coalesce((patch ->> 'is_included')::boolean, false) is distinct from coalesce((existing ->> 'is_included')::boolean, false)
+      or row_data ->> 'parent_client_uuid' is distinct from (select parent.client_uuid::text from booking_lines parent where parent.id = (existing ->> 'parent_line_id')::uuid)
     ) then
       raise exception 'Remove and add an item to change its identity.';
     end if;
@@ -1383,7 +1514,19 @@ begin
       rate := 0; base_rate := 0;
       patch := patch || jsonb_build_object('rate', rate, 'rate_overridden', false);
     else
-      base_rate := get_model_daily_rate((patch ->> 'product_id')::uuid, (patch ->> 'bundle_id')::uuid);
+      if not coalesce(auth_can_view_money(), false) then
+        -- This definer reads the catalogue internally; the public rate RPC stays
+        -- inaccessible to Warehouse, including after this save returns.
+        if patch ->> 'product_id' is not null and patch ->> 'bundle_id' is null then
+          select daily_rate into base_rate from products where id = (patch ->> 'product_id')::uuid and is_active;
+        elsif patch ->> 'bundle_id' is not null and patch ->> 'product_id' is null and patch ->> 'line_type' = 'Bundle' then
+          select daily_rate into base_rate from bundles where id = (patch ->> 'bundle_id')::uuid and is_active;
+        else
+          base_rate := null;
+        end if;
+      else
+        base_rate := get_model_daily_rate((patch ->> 'product_id')::uuid, (patch ->> 'bundle_id')::uuid);
+      end if;
       if not coalesce(auth_can_view_money(), false) and base_rate is null then
         raise exception 'A priced catalogue item is required.';
       end if;
@@ -1391,7 +1534,18 @@ begin
       patch := patch || jsonb_build_object('rate', rate, 'rate_overridden', base_rate is not null and rate <> base_rate);
     end if;
 
-    if not v_protected_price then
+    if v_protected_price and v_has_price_review then
+      -- The authenticated desk user explicitly reviewed this new line total.
+      -- Preserve the original pricing snapshot and total for audit/history.
+      patch := patch || jsonb_build_object(
+        'line_total', v_reviewed_total,
+        'price_breakdown', jsonb_build_object(
+          'source', 'desk-review-v1', 'reviewed_by', v_actor, 'reviewed_at', now(),
+          'previous_total', existing -> 'line_total',
+          'previous_breakdown', existing -> 'price_breakdown'
+        )
+      );
+    elsif not v_protected_price then
       v_line_qty := coalesce((patch ->> 'qty')::integer, (existing ->> 'qty')::integer, 1);
       v_line_days := coalesce((patch ->> 'days')::integer, (existing ->> 'days')::integer, 1);
       if v_line_qty < 1 or v_line_days < 1 then
@@ -1413,7 +1567,16 @@ begin
       patch := patch || jsonb_build_object('booking_id', v_booking_id, 'client_uuid', row_data ->> 'client_uuid', 'created_by', v_actor);
     end if;
 
-    row_id := record_editor_private.write_row('booking_lines', row_id, patch);
+    -- The insert guard admits server-priced rows only within this call. Restore
+    -- the previous setting immediately, so later RPCs cannot read scalar prices.
+    if not coalesce(auth_can_view_money(), false) and row_id is null then
+      v_previous_create_setting := current_setting('app.in_create_booking', true);
+      perform set_config('app.in_create_booking', 'on', true);
+      row_id := record_editor_private.write_row('booking_lines', row_id, patch);
+      perform set_config('app.in_create_booking', coalesce(v_previous_create_setting, ''), true);
+    else
+      row_id := record_editor_private.write_row('booking_lines', row_id, patch);
+    end if;
     if row_id = any(kept) then
       raise exception 'A booking line appears twice.';
     end if;
@@ -1430,6 +1593,14 @@ begin
     end if;
     update booking_lines set parent_line_id = parent_id where id = row_id;
   end loop;
+
+  -- Preserve the removed item's reviewed zero price and its previous snapshot.
+  update booking_lines old
+     set price_breakdown = jsonb_build_object('source', 'desk-review-v1', 'reviewed_by', v_actor,
+       'reviewed_at', now(), 'reviewed_total', 0, 'previous_total', old.line_total, 'previous_breakdown', old.price_breakdown)
+   where old.booking_id = v_booking_id and old.voided_at is null and not old.id = any(kept)
+     and exists (select 1 from jsonb_array_elements(case when jsonb_typeof(p_payload -> 'removed_price_reviews') = 'array' then p_payload -> 'removed_price_reviews' else '[]'::jsonb end) review
+       where review ->> 'id' = old.id::text and review -> 'price_reviewed' = 'true'::jsonb and review -> 'reviewed_line_total' = '0'::jsonb);
 
   -- Void lines not kept
   update booking_lines

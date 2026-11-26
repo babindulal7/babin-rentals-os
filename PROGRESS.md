@@ -1,5 +1,187 @@
 # Progress Log
 
+## 2026-11-17 — T3-18 Warehouse bundle save
+
+**Did**
+- Connected the mock bundle view and its components to the same catalogue used by the save validator, masking its rates for money-blind roles. Removed sample-bundle fallback from the booking editor while the actual catalogue is unavailable or empty.
+- Corrected the editor to exclude the priced bundle header from component rows and physical item totals, retaining it for pricing and removal.
+
+**Ruled**
+- The numbered-invoice safeguard remains in force. T3-18 remains doing.
+
+**Verified**
+- Focused mock privacy and bundle tree suites PASS (22 tests); typecheck and lint PASS. In mock mode, created a separate confirmed test booking 918 without an invoice, signed in as Warehouse, added the real Lighting Starter Kit, saw 2 components and 4 total physical items, and received Booking updated. No prices appeared in the Warehouse editor. This is mock only; physical-device and staging acceptance remain open. Local PGlite and lifecycle passed for the unchanged database migration in the previous entry; full current-source gates have not passed.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 229 files · check:pglite Historical, incomplete or failed receipt (2026-11-16T20:34:28.008Z); current source NOT VERIFIED. Suite: Historical suite: 22/22 passed, 0 failed (recorded 2026-11-16T23:31:02.080Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 6974/6974 passed, 0 failed (recorded 2026-11-16T20:55:36.434Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-16T20:35:58.332Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Correct the booking detail and related item counts: after the mock save the detail view presented the bundle header as a third component and counted 5 items instead of 4. Review shared count consumers and add regression coverage.
+- Run full current-source gates, full screen checks and independent review; complete staging on two devices and Babin's merge. Migration 0232 is WRITTEN, locally checked, NOT APPLIED or PRODUCTION-VERIFIED.
+
+## 2026-11-17 — T3-18 bundle item count
+
+**Did**
+- Corrected the booking editor to exclude the priced bundle header from its component rows and physical item total while retaining it for pricing and removal.
+
+**Ruled**
+- The numbered-invoice safeguard remains in force. T3-18 remains doing.
+
+**Verified**
+- Focused bundle tree suite PASS (6 tests); typecheck and lint PASS. Warehouse mock screen showed the bundle and hid price figures before this display correction; a save on booking 715 was refused because its seeded invoice is numbered. The final screen display and a successful save through the screen remain unverified. Prior local lifecycle 80/80 and PGlite 229/229 apply to the unchanged database migration; full current-source gates and two-device staging remain outstanding.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 229 files · check:pglite Historical, incomplete or failed receipt (2026-11-16T20:34:28.008Z); current source NOT VERIFIED. Suite: NOT VERIFIED — focused or unspecified run: 6/6 passed, 0 failed (recorded 2026-11-16T23:15:26.685Z).
+Coverage suite: Historical suite: 6974/6974 passed, 0 failed (recorded 2026-11-16T20:55:36.434Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-16T20:35:58.332Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Verify the corrected screen and a successful Warehouse bundle save using an eligible synthetic booking; run full current-source gates and independent review.
+- Complete staging on two devices and Babin's merge. Migration 0232 is WRITTEN, locally checked, NOT APPLIED or PRODUCTION-VERIFIED.
+
+## 2026-11-17 — T3-18 Warehouse price privacy
+
+**Did**
+- Hid date-preset price hints and local-draft totals from money-blind roles. Preserved these details for authorized desk staff.
+
+**Ruled**
+- Law 6 applies to price hints and draft notices. T3-18 remains doing.
+
+**Verified**
+- Focused duration, draft and bundle tests PASS. In isolated mock mode as Warehouse, adding a bundle no longer shows price hints. The test booking's save was correctly refused because it has a numbered invoice; a successful bundle save through the screen remains unverified. The earlier full gate run passed through build and was stopped during coverage after the screen check found the privacy leak; that run does not certify current source. Local lifecycle 80/80 and PGlite 229/229 passed for the unchanged database migration.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 229 files · check:pglite Historical, incomplete or failed receipt (2026-11-16T20:00:35.011Z); current source NOT VERIFIED. Suite: NOT VERIFIED — focused or unspecified run: 10/10 passed, 0 failed (recorded 2026-11-16T20:18:13.232Z).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-16T20:01:53.783Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Run current-source full gates, finish the Warehouse successful-save and other screen checks, and obtain independent review; staging on two devices and Babin's merge remain outstanding.
+- Migration 0232 is WRITTEN and locally VERIFIED by PGlite and lifecycle, NOT APPLIED or PRODUCTION-VERIFIED.
+
+## 2026-11-17 — T3-18 Warehouse bundle changes
+
+**Did**
+- Allowed Warehouse to add priced bundles and their included components after the database checks the active catalogue, required items and quantities. Existing component quantity changes must remain consistent with the bundle. The server applies prices without exposing them to Warehouse.
+- Added rollback, forgery, duplication, retry, repricing and price-privacy checks in the local lifecycle and mock tests.
+
+**Ruled**
+- Existing W88 and Law 6 govern the change; custom-priced bookings still require a desk review on item or date changes. T3-18 remains doing.
+
+**Verified**
+- Focused mock tests PASS (14). Local lifecycle PASS 80/80; PGlite rebuild PASS 229/229 with security checks. The previous full gate attempt stopped during tests; current-source full gates and screen acceptance remain pending.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | 80 / 80 (100%) | — |
+| Overall | structural mean of five | ≈ 97% | — |
+Migrations 229 files · check:pglite 229/229 applied, 0 failed (recorded 2026-11-16T19:49:06.052Z). Suite: Historical suite: 14/14 passed, 0 failed (recorded 2026-11-16T19:47:57.226Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 6963/6963 passed, 0 failed (recorded 2026-11-16T12:47:38.425Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-16T19:48:50.765Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Run current-source full gates, complete screen checks and independent review; staging on two devices and Babin's merge remain outstanding.
+- Migration 0232 is WRITTEN and locally VERIFIED by PGlite and lifecycle, NOT APPLIED or PRODUCTION-VERIFIED.
+
+## 2026-11-17 — T3-18 custom-price review scope
+
+**Did**
+- Added desk review for custom-priced booking lines and preserved prior price snapshots. A removed custom item requires confirmation of a zero total; Warehouse receives no pricing fields and cannot approve prices.
+
+**Ruled**
+- The user chose review of custom prices for any item change or date change, including changes to other items. T3-18 remains doing.
+
+**Verified**
+- Typecheck and lint PASS. Three focused suites PASS, 28 tests. Local PGlite rebuild PASS, 229/229 migrations and security checks; lifecycle PASS 79/79, including refusal and approved removal. The full gate run passed typecheck, lint and local API guards, then was stopped during the test suite before further bundle work; it is incomplete. Visual acceptance is still open.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 229 files · check:pglite 229/229 applied, 0 failed (recorded 2026-11-16T18:46:33.548Z). Suite: Historical suite: 28/28 passed, 0 failed (recorded 2026-11-16T18:40:06.468Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 6963/6963 passed, 0 failed (recorded 2026-11-16T12:47:38.425Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-16T18:41:25.586Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Run full local gates and screen checks; independently review the price-review workflow. Complete server-validated Warehouse bundle additions, any authorized client reassignment workflow, staging and Babin's merge.
+- Migration 0232 is WRITTEN and locally VERIFIED by PGlite and lifecycle, NOT APPLIED or PRODUCTION-VERIFIED.
+
+## 2026-11-16 — T3-18 desk price review in progress
+
+**Did**
+- Added a local desk-review path for custom-priced lines, with an explicit new total and confirmation. The database retains the prior price snapshot and withholds price fields from Warehouse.
+
+**Ruled**
+- The user requires a desk review and a new price for older custom-priced bookings whose original pricing rules were not saved. The scope for changes to other items is awaiting the user's answer; the implementation is incomplete.
+
+**Verified**
+- Typecheck and lint passed. Three focused suites passed 26 tests, including review confirmation and Warehouse privacy. The local lifecycle passed 79/79 before the latest editor changes. Full gates, the final database receipts and screen acceptance have not been run on the final source.
+
+## Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 229 files · check:pglite Historical, incomplete or failed receipt (2026-11-16T15:04:30.177Z); current source NOT VERIFIED. Suite: NOT VERIFIED — focused or unspecified run: 26/26 passed, 0 failed (recorded 2026-11-16T18:11:53.841Z).
+Coverage suite: Historical suite: 6963/6963 passed, 0 failed (recorded 2026-11-16T12:47:38.425Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-16T18:07:19.935Z); current source NOT VERIFIED.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+## Remaining
+- Resolve the pending item-change scope, protect removals, complete the review flow and test all cases before using it.
+- Run all local gates and screen checks; complete Warehouse bundles and client reassignment, independent review, two-device staging and Babin's merge. Migration 0232 is WRITTEN, NOT APPLIED or PRODUCTION-VERIFIED.
+
 ## 2026-11-16 — T3-18 client and fuel save contracts
 
 **Did**
