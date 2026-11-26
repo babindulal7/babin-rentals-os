@@ -2568,6 +2568,10 @@ STEPS.push({
         await q(`insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,moved_at,created_by)
           values(gen_random_uuid(),$1,$2,1,'Picked Up',now(),$3)`, [handover,line.id,U.Warehouse])
       })
+      assertEq(Number(await as('Warehouse', () => one('select picked_qty from handover_pickup_totals where booking_line_id=$1', [line.id]))), 1,
+        'warehouse reads the partial pickup quantity')
+      assertEq(Number(await as('Client', () => one('select count(*) from handover_pickup_totals where booking_line_id=$1', [line.id]))), 0,
+        'client cannot read staff pickup movements through the view')
       assertEq(await stageOf('qty-ok'), 'Packed', 'partial quantity handover has not advanced the stage')
       await reject('Warehouse', 'quantity pickup cannot exceed the booked quantity',
         `insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,moved_at,created_by)
@@ -2593,6 +2597,32 @@ STEPS.push({
         `insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,moved_at,created_by)
          values(gen_random_uuid(),$1,$2,1,'Picked Up',now(),$3)`,
         [nextHandover,line.id,U.Warehouse], /pickup.*quantity|quantity.*pickup/i)
+      await reject('Warehouse', 'a serialized movement cannot bypass the pickup quantity limit',
+        `insert into session_line_movements(client_uuid,session_id,booking_line_id,unit_id,qty,resulting_item_state,moved_at,created_by)
+         values(gen_random_uuid(),$1,$2,$3,1,'Picked Up',now(),$4)`,
+        [nextHandover,line.id,UNITS[0],U.Warehouse], /pickup.*quantity|quantity.*pickup/i)
+      const original = await one('select id from session_line_movements where session_id=$1 and booking_line_id=$2', [handover,line.id])
+      const otherLine = await one('select id from booking_lines where booking_id=$1 limit 1', [bookingIds.c])
+      await reject('Warehouse', 'a pickup correction cannot be applied to another line',
+        `insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,reverses_movement_id,moved_at,created_by)
+         values(gen_random_uuid(),$1,$2,1,'Picked Up',$3,now(),$4)`,
+        [nextHandover,otherLine,original,U.Warehouse], /correction.*same booking line/i)
+      await as('Warehouse', async () => {
+        await q(`insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,reverses_movement_id,moved_at,created_by)
+          values(gen_random_uuid(),$1,$2,1,'Picked Up',$3,now(),$4)`, [nextHandover,line.id,original,U.Warehouse])
+      })
+      assertEq(Number(await as('Warehouse', () => one('select picked_qty from handover_pickup_totals where booking_line_id=$1', [line.id]))), line.qty - 1,
+        'pickup read model subtracts the correction')
+      await reject('Warehouse', 'a pickup correction cannot reverse the same unit twice',
+        `insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,reverses_movement_id,moved_at,created_by)
+         values(gen_random_uuid(),$1,$2,1,'Picked Up',$3,now(),$4)`,
+        [nextHandover,line.id,original,U.Warehouse], /correction.*quantity|quantity.*correction/i)
+      await as('Warehouse', async () => {
+        await q(`insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,moved_at,created_by)
+          values(gen_random_uuid(),$1,$2,1,'Picked Up',now(),$3)`, [nextHandover,line.id,U.Warehouse])
+      })
+      assertEq(Number(await as('Warehouse', () => one('select picked_qty from handover_pickup_totals where booking_line_id=$1', [line.id]))), line.qty,
+        'pickup read model adds the replacement movement')
     })
     await undone(async () => {
       assertEq(await stageOf('a'), 'Closed', 'closed archive fixture')

@@ -4,12 +4,14 @@
 
 **Did**
 - Claimed and wrote migration 20261126153000. It locks the booking then booking line and refuses a quantity pickup movement that would exceed the booked quantity. It leaves idempotent client UUID retries to the existing uniqueness constraint.
+- Extended the guard to include serialized movements and limit corrections to the original movement on the same booking line. Added an invoker-security pickup-total view for the later screen/action repair; it exposes physical counts under the source tables' RLS.
 
 **Ruled**
 - Custody writes are fail-closed and the booked quantity is the upper bound.
 
 **Verified**
 - Added a lifecycle regression that first failed on the previous source because excess pickup was accepted. The revised migration applied in PGlite (275/275), and lifecycle passed 102/102. The regression covers an excess pickup, a later session collecting the remainder, an exact retry and a subsequent excess pickup.
+- A new regression first demonstrated that a serialized movement bypassed the original guard. The revised lifecycle checks serialized over-pickup, same-line correction, correction limits and the warehouse-visible net pickup total; client-role visibility and migration rebuild are also checked locally.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
@@ -20,14 +22,14 @@
 | Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
 | Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
 | Overall | structural mean of five | ≈ 96% | — |
-Migrations 275 files · check:pglite 275/275 applied, 0 failed (recorded 2026-11-26T09:42:20.679Z). Suite: not run this session (static inspection; pass --tests to execute suite).
+Migrations 275 files · check:pglite 275/275 applied, 0 failed (recorded 2026-11-26T09:50:56.511Z). Suite: not run this session (static inspection; pass --tests to execute suite).
 Coverage suite: NOT VERIFIED — invalid test receipt.
-Gates read from .lifecycle-result.json, written 2026-11-26T09:42:31.140Z.
+Gates read from .lifecycle-result.json, written 2026-11-26T09:50:59.628Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Implement truthful prior-session quantity display and cumulative handover-line completion. Verify reversals, serialized and quantity combinations, concurrent sessions on real PostgreSQL, full local gates and disposable Playwright. Migration is WRITTEN and locally VERIFIED. It is not applied to staging or production.
+- Implement truthful prior-session quantity display and cumulative handover-line completion. Verify correction edge cases, concurrent sessions on real PostgreSQL, full local gates and disposable Playwright. The pickup-total view is not yet used by the application. Migration is WRITTEN and locally VERIFIED in PGlite, not verified for real PostgreSQL concurrency or applied to staging or production.
 
 ## 2026-11-26 — Partial pickup Playwright locator repair (Lane A)
 
