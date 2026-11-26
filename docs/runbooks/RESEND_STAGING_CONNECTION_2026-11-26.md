@@ -37,3 +37,32 @@
 ## 4. Operational note
 
 The source currently contains a `DraftEmailModal` marked unavailable and a separate `DocumentShareModal` using `sendEmail`. Reconcile their user-visible states; a draft must never claim an email was sent. Reuse the existing `src/lib/email/client.ts` and Supabase `send-email` pipeline. The separate, previously planned visual template editor and configurable schedules are not implemented by this recipient-security PR.
+
+## 5. Verified staging privilege finding — activation-blocking (read-only audit, 2026-11-26)
+
+A read-only query of the **babin-staging** database confirmed that all four functions below are `SECURITY DEFINER` and currently executable by the broad `authenticated` database role:
+
+| Function | Current risk |
+|---|---|
+| `public.build_email_payload(text,uuid,text)` | Authenticated users can directly ask privileged SQL to resolve other users' email addresses or booking details without going through the Edge Function staff-only check |
+| `public.record_email_send(text,text,uuid,text,text,text,text,text,jsonb)` | Authenticated users can directly create email audit rows with a sender-controlled status and recipient |
+| `public.process_due_payment_reminders(integer)` | Authenticated users can run privileged reminder-processing work outside an approved scheduler |
+| `public.process_client_unsubscribe(text)` | Authenticated users can invoke privileged unsubscribe processing; review bearer-token validation and intended access |
+
+**Required** before enabling Resend: least-privilege, *tracked migration* (not an ad hoc production SQL change), plus tests proving `authenticated` cannot EXECUTE internal mail RPCs but `service_role` and intended trusted scheduler still can. Do not change customer access to email logs without a separate RLS review. The Edge Function already performs DB work with service role.
+
+Proposed SQL for an isolated reviewed migration (not executed):
+
+```sql
+revoke execute on function public.build_email_payload(text, uuid, text) from authenticated;
+revoke execute on function public.record_email_send(text, text, uuid, text, text, text, text, text, jsonb) from authenticated;
+revoke execute on function public.process_due_payment_reminders(integer) from authenticated;
+-- The unsubscribe function requires a separate confirmation of the token-only public workflow:
+-- revoke execute on function public.process_client_unsubscribe(text) from authenticated;
+```
+
+Before applying, check routines' execute grants and verify no legitimate direct browser call uses them. Keep `service_role` execution. Do not switch client/warehouse users to privileged roles to bypass the restriction.
+
+**Second activation blocker:** `process_due_payment_reminders` in original migration 0219 currently marks emails `mock_sent` in `email_log` and changes the reminder to `sent` **without calling Resend**. Do not activate its cron schedule as real mailing. A new outbox worker must claim due rows, honor per-client pauses and balances, call the real sender, record provider IDs, and update truthful delivery status with idempotent retries.
+
+**Review source:** `supabase/migrations/0215_email_sending_and_log.sql`, `supabase/migrations/0219_payment_reminders.sql`, `supabase/functions/send-email/index.ts`. The staging permission findings were verified live; the proposed SQL is NOT applied.
