@@ -153,6 +153,20 @@ for (const booking of store['bookings'] ?? []) {
 /** Views are computed on read so they always reflect the latest base rows. */
 function read(table: string): Row[] {
   if (table === 'client_directory_v') return clientDirectory(store)
+  if (table === 'handover_pickup_totals') {
+    const sessions = new Map((store['operation_sessions'] ?? []).map((session) => [session['id'], session]))
+    const movements = store['session_line_movements'] ?? []
+    const totals = new Map<string, number>()
+    for (const movement of movements) {
+      const lineId = movement['booking_line_id']
+      if (typeof lineId !== 'string' || movement['reverses_movement_id'] != null ||
+          movement['resulting_item_state'] !== 'Picked Up' || sessions.get(movement['session_id'])?.['operation'] !== 'Handover') continue
+      const reversed = movements.filter((row) => row['reverses_movement_id'] === movement['id'])
+        .reduce((sum, row) => sum + Number(row['qty']), 0)
+      totals.set(lineId, (totals.get(lineId) ?? 0) + Number(movement['qty']) - reversed)
+    }
+    return [...totals].map(([booking_line_id, picked_qty]) => ({ booking_line_id, picked_qty }))
+  }
   const base = VIEW_OF[table]
   if (base) return store[base] ?? []
   const rows = store[table]

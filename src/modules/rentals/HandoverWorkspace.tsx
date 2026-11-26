@@ -32,6 +32,7 @@ import { rentalDaysBetween } from '../../lib/rentalDays'
 import { newClientUuid } from '../../lib/supabase'
 import { hasHeldCollateral } from '../../lib/queries/collateral'
 import { fetchFloorBooking, type FloorBooking, type FloorLine } from '../../lib/queries/bookings'
+import { fetchHandoverPickupTotals } from '../../lib/queries/handoverPickupTotals'
 import type { FloorLineInput } from '../../actions/rentals/floorVerb'
 import { CompactButton, TapCheckbox } from '../../components/ui/TouchTarget'
 import { deliveryTypeLabel } from '../../lib/format'
@@ -289,7 +290,7 @@ function handoverLines(lines: readonly FloorLine[]): FloorLine[] {
   return lines.filter((l) => !NON_PACKABLE_LINE_TYPES.has(l.lineType) && !(l.lineType === 'Bundle' && parentIds.has(l.id)))
 }
 
-function buildRows(floor: FloorBooking): HandRow[] {
+export function buildHandoverRows(floor: FloorBooking, pickupTotals: ReadonlyMap<string, number>): HandRow[] {
   const lineById = new Map(floor.lines.map((l) => [l.id, l]))
   const groupOf = (line: FloorLine): string => {
     const parent = line.parentLineId !== null ? lineById.get(line.parentLineId) : undefined
@@ -316,23 +317,19 @@ function buildRows(floor: FloorBooking): HandRow[] {
         })
       })
     } else {
-      // A quantity-tracked line (or one whose units are simply unassigned):
-      // one row for the whole line, ticked as one. `unitsPresence === 'absent'`
-      // is handled before this function is called — an absent embed must never
-      // read as "no units" (the defect bookingQuery.ts:110-113 records).
-      // No unit state exists for it, so no prior-session fact can be shown.
-      rows.push({
-        key: `line:${line.id}`,
+      const picked = pickupTotals.get(line.id) ?? 0
+      const common = {
         lineId: line.id,
         assetId: null,
         serial: null,
-        name,
-        qty: line.qty,
         required: true,
         location: null,
         group: groupOf(line),
-        prior: null,
-      })
+      }
+      if (picked > 0) rows.push({ ...common, key: `picked:${line.id}`,
+        name: picked < line.qty ? `${name} · already picked up` : name, qty: picked, prior: 'Picked Up' })
+      if (picked < line.qty) rows.push({ ...common, key: `line:${line.id}`,
+        name, qty: line.qty - picked, prior: null })
     }
   }
   return rows
@@ -510,6 +507,7 @@ export default function HandoverWorkspace({
 
   /* ── the read — fetchFloorBooking, same cancellation rule as BookingDetail ── */
   const [floor, setFloor] = useState<FloorBooking | null>(null)
+  const [pickupTotals, setPickupTotals] = useState<ReadonlyMap<string, number>>(new Map())
   const [floorLoading, setFloorLoading] = useState(true)
   const [floorError, setFloorError] = useState<string | null>(null)
   const [reload, setReload] = useState(0)
@@ -518,8 +516,14 @@ export default function HandoverWorkspace({
     setFloorLoading(true)
     setFloorError(null)
     fetchFloorBooking(id)
-      .then((b) => {
+      .then(async (b) => {
+        const quantityLines = b ? handoverLines(b.lines).filter((line) => line.unitsPresence === 'present' && line.units.length === 0) : []
+        const totals = await fetchHandoverPickupTotals(quantityLines.map((line) => line.id))
+        if (quantityLines.some((line) => (totals.get(line.id) ?? 0) > line.qty)) {
+          throw new Error('Previous pickup quantities exceed the booking. Ask a manager to review the movements.')
+        }
         if (cancelled) return
+        setPickupTotals(totals)
         setFloor(b)
         setFloorLoading(false)
       })
@@ -751,7 +755,7 @@ export default function HandoverWorkspace({
     }
   }, [floor?.clientId])
 
-  const rows = useMemo<HandRow[]>(() => (floor ? buildRows(floor) : []), [floor])
+  const rows = useMemo<HandRow[]>(() => (floor ? buildHandoverRows(floor, pickupTotals) : []), [floor, pickupTotals])
   const serviceLines = useMemo(() => floor?.lines.filter((l) => NON_PACKABLE_LINE_TYPES.has(l.lineType)) ?? [], [floor])
   const rowByKey = useMemo(() => new Map(rows.map((r) => [r.key, r])), [rows])
   /** A mark wins over a prior state (the UI never lets a prior row be marked). */
