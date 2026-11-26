@@ -1011,6 +1011,16 @@ export async function runFloorVerb(
     )
   }
 
+  // RULING 2026-10-23: fail closed before any floor write. Reset also has
+  // database queue/task boundaries (0172); this RPC is early feedback only.
+  const { error: grantError } = await supabase.rpc('assert_operation_branch_grant', {
+    p_operation: job.toLowerCase(),
+    p_booking_id: booking.id,
+  })
+  if (grantError) {
+    throw new Error(`${job} authorization could not be confirmed: ${grantError.message}. Nothing was written.`)
+  }
+
   /* 2 — Reset has no session. It is the queue, per item. */
   if (!isSessionJob(job)) {
     const resetOutcome = await completeResetQueue(booking, resetEntriesOf(input), ctx, occurredAt, actionUuid)

@@ -216,6 +216,8 @@ Ladder shorthand: `M+` = Owner · Admin · Manager. `C+` = M+ · Coordinator. `F
 
 ### 4.2 Floor (Operations)
 
+**Reset site ruling, 23 October 2026 (candidate 0172):** linked queue items use the booking branch; unbooked items use the unit's current warehouse branch (`warehouse_id → warehouses.branch_id`), not the actor's home branch or a stale unit branch. Queue/task inserts and updates require that Reset scope, including old and new scope on reassignment. This boundary only narrows existing DB role policies; it grants no additional role or delete permission. Broader 0171 defaults/administration and integration remain pending in OPEN_DECISIONS.md.
+
 | Capability | Roles | Notes | Code |
 |---|---|---|---|
 | `rental.pack` | C+ · Warehouse | Technician **view-only** (22 Jul) | ○ (packRental) |

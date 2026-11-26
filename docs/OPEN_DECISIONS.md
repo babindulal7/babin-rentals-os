@@ -1,5 +1,9 @@
 # Babin Rentals OS — Open Decisions Register
 
+## 23 October 2026: unbooked Reset site — RESOLVED; candidate integration pending
+
+Babin selected the unit's **current warehouse branch** for an unbooked cleaning/reset item. Candidate 0172 enforces queue/task writes against that site (linked entries retain booking branch), with old/new scope on reassignment and no new role permission. The broader 0171 location/default/admin model and canonical shared-checkout integration remain unapproved. No migration was applied remotely. Root PLAN.md is absent, so this is the active decision record.
+
 ## 20 October 2026: per-operation grant matrix (P0-B) — ACTIVE, one open cell
 
 - The four global operations now carry **one grant each** (Booqable adoption spec P0-B: Booqable's 13 flat grants cover no operational action, so the granularity is net-new). `lib/rbac.ts` exposes `canPack` / `canHandover` / `canReturn` / `canReset` + `canPerformOp(role, op)`; `actions/core.ts` resolves `operations.pack|handover|return|reset`; the four rental actions declare their specific grant instead of the coarse `operations.perform` (kept as a dispatcher case for compatibility).
