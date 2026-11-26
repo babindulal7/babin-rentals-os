@@ -479,6 +479,8 @@ export function useNewRentalSubmit({
         const bookedId = createdQuote.current.id
         const bookedNo = createdQuote.current.no
 
+        let paymentLinkUrl: string | undefined
+        let paymentToken: string | undefined
         if (requestId) {
           try {
             const { confirmBookingRequest } = await import('../../../actions/rentals/confirmBookingRequest')
@@ -486,19 +488,17 @@ export function useNewRentalSubmit({
           } catch (reqErr) {
             console.warn('[useNewRentalSubmit] could not link booking request:', reqErr)
           }
-        }
 
-        let paymentLinkUrl: string | undefined
-        let paymentToken: string | undefined
-        try {
-          const { createBookingPaymentLink } = await import('../../../booking/pay/payApi')
-          const linkRes = await createBookingPaymentLink(bookedId)
-          if (linkRes?.token) {
-            paymentToken = linkRes.token
-            paymentLinkUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/pay/link/${linkRes.token}`
+          try {
+            const { createBookingPaymentLink } = await import('../../../booking/pay/payApi')
+            const linkRes = await createBookingPaymentLink(bookedId)
+            if (linkRes?.token) {
+              paymentToken = linkRes.token
+              paymentLinkUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/pay/link/${linkRes.token}`
+            }
+          } catch (linkErr) {
+            console.warn('[useNewRentalSubmit] could not mint auto payment link:', linkErr)
           }
-        } catch (linkErr) {
-          console.warn('[useNewRentalSubmit] could not mint auto payment link:', linkErr)
         }
 
         confirmKey.current = null
@@ -513,8 +513,8 @@ export function useNewRentalSubmit({
         setConfirmedSuccess({
           bookingId: bookedId,
           bookingNo: bookedNo,
-          paymentLink: paymentLinkUrl,
-          paymentToken: paymentToken,
+          ...(paymentLinkUrl ? { paymentLink: paymentLinkUrl } : {}),
+          ...(paymentToken ? { paymentToken } : {}),
         })
       } catch (err) {
         setSaveState('error')
