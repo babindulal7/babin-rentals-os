@@ -1,6 +1,6 @@
 # T9-01 Booqable Catalogue & Clients Match Report
 
-**Generated:** 2026-11-21T06:04:46.741Z  
+**Generated:** 2026-11-21T08:55:42.670Z  
 **Operator:** Babin Rentals OS Automated Migration Engine  
 **Authority:** Card T9-01 (`docs/plans/T9_CUTOVER.md`), R-2026-10-26 (D20, S7), R-2026-10-27 (B4, B45, B49)  
 **Input Data Directory:** `C:/Users/use/Desktop/Babin rentals products app`
