@@ -6705,29 +6705,58 @@ STEPS.push({
         assertEq(events[0].channel, 'email', 'Client with email receives payment reminder via email')
       })
 
-      // 3. Process due events: sends Day 0 and automatically schedules Day 5 (sequence 1)
+      // 3. The legacy SQL processor is not an email transport. It must NOT
+      // mark a reminder sent, write mock email logs, or create the next cadence
+      // row until a verified Resend provider confirms a real send.
       await as('Owner', async () => {
-        // Force payment_reminder to be due now
+        // Force payment_reminder to be due now.
         await q(`
           update payment_reminders
           set due_at = now() - interval '365 days'
           where booking_id = $1::uuid and sequence = 0
         `, [bookingId])
 
-        const processed = (await q(`select * from process_due_payment_reminders(50)`)).rows
-        const reminderEvt = processed.find(p => p.booking_id === bookingId)
-        assert(reminderEvt, 'Payment reminder was processed')
-        assertEq(reminderEvt.status, 'sent', 'Payment reminder sent')
+        // Owner is an authenticated role, NOT the trusted server role.
+        await q('savepoint unauthorized_email_processor')
+        try {
+          await refuses(
+            'Direct staff execution of privileged payment reminder processor is REFUSED',
+            'select * from process_due_payment_reminders(50)',
+            [],
+            /permission denied|42501/i,
+          )
+        } finally {
+          await q('rollback to savepoint unauthorized_email_processor')
+          await q('release savepoint unauthorized_email_processor')
+        }
+      })
 
-        // Assert sequence 1 (Day 5) was automatically scheduled
-        const seq1 = (await q(`
-          select sequence, status, due_at
-          from payment_reminders
-          where booking_id = $1::uuid and sequence = 1
+      await asService(async () => {
+        const processed = (await q(`
+          select * from process_due_payment_reminders(50)
+          where booking_id = $1::uuid
+        `, [bookingId])).rows
+        assertEq(processed.length, 0, 'No email is dispatched by the legacy SQL worker')
+
+        const day0 = (await q(`
+          select status, sent_at from payment_reminders
+          where booking_id = $1::uuid and sequence = 0
         `, [bookingId])).rows[0]
+        assertEq(day0.status, 'pending', 'Due email remains pending for real Resend transport')
+        assertEq(day0.sent_at, null, 'Pending reminder has no sent timestamp')
 
-        assert(seq1, 'Day 5 payment reminder (sequence 1) was automatically scheduled after completion send')
-        assertEq(seq1.status, 'pending', 'Sequence 1 reminder is pending')
+        const successor = (await q(`
+          select count(*)::int as total from payment_reminders
+          where booking_id = $1::uuid and sequence > 0
+        `, [bookingId])).rows[0]
+        assertEq(successor.total, 0, 'No next-cadence reminder before provider acceptance')
+
+        const phantom = (await q(`
+          select count(*)::int as total from email_log
+          where entity_type = 'booking' and entity_id = $1
+            and template_id = 'payment_reminder'
+        `, [bookingId])).rows[0]
+        assertEq(phantom.total, 0, 'No mock-sent email log for an unsent reminder')
       })
 
       // 4. Staff pauses client: cancels pending reminder (W18b)
@@ -6749,22 +6778,22 @@ STEPS.push({
         assertEq(client.reminders_paused_reason, 'Client requested extension to next Monday', 'Pause reason recorded')
         assertEq(client.reminders_paused_by, U.Coordinator, 'Paused by user recorded')
 
-        // Assert pending payment reminder was cancelled
-        const cancelledSeq1 = (await q(`
+        // No mock send occurred: the original pending Day 0 row is cancelled
+        // directly when this client is paused.
+        const cancelledDay0 = (await q(`
           select status, error_message
           from payment_reminders
-          where booking_id = $1::uuid and sequence = 1
+          where booking_id = $1::uuid and sequence = 0
         `, [bookingId])).rows[0]
 
-        assertEq(cancelledSeq1.status, 'cancelled', 'Pending reminder cancelled when client paused')
-        assert(cancelledSeq1.error_message.includes('paused by staff'), 'Cancellation reason noted')
+        assertEq(cancelledDay0.status, 'cancelled', 'Pending reminder cancelled when client paused')
+        assert(cancelledDay0.error_message.includes('paused by staff'), 'Cancellation reason noted')
 
-        // Processor yields 0 sends for this booking
-        const recheck = (await q(`
-          select * from process_due_payment_reminders(50)
-          where booking_id = $1::uuid
+        const pending = (await q(`
+          select id from payment_reminders
+          where booking_id = $1::uuid and status = 'pending'
         `, [bookingId])).rows
-        assertEq(recheck.length, 0, 'No payment reminders sent while client paused')
+        assertEq(pending.length, 0, 'No payment reminders remain queued while client paused')
       })
 
       // 5. Staff resumes client: re-schedules reminder
@@ -6924,9 +6953,13 @@ STEPS.push({
         assertEq(reminder.channel, 'whatsapp_draft', 'No email routes to whatsapp_draft')
       })
 
-      await as('Owner', async () => {
+      await asService(async () => {
         await q(`select * from process_due_payment_reminders(50) where booking_id = $1::uuid`, [noEmailBookingId])
+      })
 
+      // This read RPC is staff-scoped: don't accidentally test it under a
+      // service-role session with no staff user/JWT identity.
+      await as('Owner', async () => {
         const tasks = (await q(`select * from get_pending_whatsapp_draft_tasks()`)).rows
         const task = tasks.find(t => t.booking_id === noEmailBookingId && t.event_type === 'payment_reminder')
         assert(task, 'WhatsApp draft task appears in get_pending_whatsapp_draft_tasks')

@@ -37,7 +37,7 @@ describe('T1-02 exact-head 21 Nov 2026 staging inventory (no database writes)', 
     expect(inventory.source_drift_since_prior_snapshot.removed_files).toEqual([])
   })
 
-  it('reports exactly the four migrations added after this snapshot as drift, and nothing else', () => {
+  it('reports every migration added after this snapshot as blocked drift', () => {
     const child = spawnSync(process.execPath, ['scripts/staging-schema-preflight.mjs', '--inventory', 'STAGING_SQL_INVENTORY_2026-11-21.json'], {
       cwd: process.cwd(),
       encoding: 'utf8',
@@ -59,13 +59,13 @@ describe('T1-02 exact-head 21 Nov 2026 staging inventory (no database writes)', 
     }
     expect(result.mode).toBe('READ_ONLY_PINNED_SOURCE_INTEGRITY')
     expect(result.sourceBaseline).toBe('3a8d90b9fa197d1a69326483a89140e404385b85')
-    expect(result.localFileCount).toBe(267)
+    expect(result.localFileCount).toBe(268)
     expect(result.pinnedFileCount).toBe(260)
     expect(result.approvalToApplyStaging).toBe(false)
     expect(result.databaseConnected).toBe(false)
     expect(result.sqlExecuted).toBe(false)
     expect(result.errors).toEqual([
-      'migration file count differs from pinned inventory: local=267, pinned=260',
+      'migration file count differs from pinned inventory: local=268, pinned=260',
       '0263_product_families.sql: absent from pinned inventory',
       '0264_public_product_family_options.sql: absent from pinned inventory',
       '0265_submit_request_rates_in_paisa.sql: absent from pinned inventory',
@@ -73,6 +73,7 @@ describe('T1-02 exact-head 21 Nov 2026 staging inventory (no database writes)', 
       '0267_database_enforced_aal2_money_roles.sql: absent from pinned inventory',
       '0268_sign_in_events_and_new_device.sql: absent from pinned inventory',
       '0269_mfa_provider_proof_and_session_safety.sql: absent from pinned inventory',
+      '0270_email_rpc_least_privilege_and_disable_mock_payment_sends.sql: absent from pinned inventory',
     ])
     expect(result.sourceIdentityVerified).toBe(false)
     expect(result.status).toBe('BLOCKED_SOURCE_DRIFT')
