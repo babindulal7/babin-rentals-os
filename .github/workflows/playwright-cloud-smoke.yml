@@ -1,0 +1,40 @@
+name: Playwright cloud staging smoke
+
+on:
+  push:
+    branches: [fix/playwright-staging-safety-20261125, integration/launch-repair-20261125, integration/combined-launch-candidate-20261125]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: playwright-cloud-staging-smoke
+  cancel-in-progress: false
+
+jobs:
+  staging-smoke:
+    # Standard hosted Linux runner: no owner PC or Windows runner required.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci --ignore-scripts
+      - run: node --test tests/e2e/staging-guard.test.mjs
+      - run: npx playwright install --with-deps chromium webkit
+      - name: Run unauthenticated staging smoke tests only
+        env:
+          BABIN_STAGING_SUPABASE_URL: ${{ secrets.BABIN_STAGING_SUPABASE_URL }}
+          BABIN_STAGING_ANON_KEY: ${{ secrets.BABIN_STAGING_ANON_KEY }}
+        run: npx playwright test tests/e2e/smoke.spec.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-cloud-staging-smoke
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7

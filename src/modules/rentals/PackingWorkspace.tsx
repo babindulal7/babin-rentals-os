@@ -1179,7 +1179,7 @@ export default function PackingWorkspace({
      * resolved promise, landing the operator on a still-Booked booking with no
      * word of why (PK-01). A held stage now stays here and says so.
      */
-    import('../../actions/rentals/index')
+    return import('../../actions/rentals/index')
       .then((m) =>
         m.packRental(
           {
@@ -1533,7 +1533,7 @@ export default function PackingWorkspace({
                     phone ? (
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         <Button icon="zap" onClick={quickPackAll}>Quick Pack</Button>
-                        <Button icon="checklist" onClick={markPendingPacked}>Pending</Button>
+                        <Button icon="checklist" aria-label="Mark Pending Packed" onClick={markPendingPacked}>Pending</Button>
                         <Button icon="package" onClick={() => setShowAddConsumable(true)}>Add Consumables</Button>
                       </div>
                     ) : (

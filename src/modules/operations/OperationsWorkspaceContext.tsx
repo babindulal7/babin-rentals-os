@@ -14,7 +14,8 @@ const OperationsWorkspaceContext = createContext<OperationsWorkspaceValue | null
 export function OperationsWorkspaceProvider({ children }: { children: ReactNode }) {
   const [workspace, setWorkspace] = useState<OpenWorkspace | null>(null)
   const active = useRef(workspace)
-  active.current = workspace
+  // Active selection follows the shell, but its initial entry prop stays stable.
+  const [entryRevision, setEntryRevision] = useState(0)
   const dirty = useRef(false)
   const busy = useRef(false)
   const discard = useRef<(() => void) | null>(null)
@@ -23,6 +24,8 @@ export function OperationsWorkspaceProvider({ children }: { children: ReactNode 
   const replace = useCallback((target: OpenWorkspace | null) => {
     dirty.current = false
     setNotice(null)
+    active.current = target
+    if (target) setEntryRevision(revision => revision + 1)
     setWorkspace(target)
   }, [])
   const request = useCallback((target: OpenWorkspace | null) => {
@@ -40,13 +43,13 @@ export function OperationsWorkspaceProvider({ children }: { children: ReactNode 
   const reportBusy = useCallback((value: boolean) => { busy.current = value; if (!value) setNotice(null) }, [])
   const registerDiscard = useCallback((value: (() => void) | null) => { discard.current = value }, [])
   const handleJobChange = useCallback((nextJob: JobName) => {
-    setWorkspace((current) => (current ? { ...current, job: nextJob } : null))
+    if (active.current) active.current = { ...active.current, job: nextJob }
   }, [])
   const value = useMemo(() => ({ openOperations, closeOperations }), [closeOperations, openOperations])
   return <OperationsWorkspaceContext.Provider value={value}>
     {children}
     {notice && <p role="status">{notice}</p>}
-    {workspace && <OperationsShell key={workspace.bookingNo} isOpen bookingNo={workspace.bookingNo} bookingStatus={workspace.bookingStatus} initialJob={workspace.job} onDirtyChange={reportDirty} onBusyChange={reportBusy} onRegisterDiscard={registerDiscard} onJobChange={handleJobChange} onClose={() => replace(null)} />}
+    {workspace && <OperationsShell key={`${workspace.bookingNo}:${entryRevision}`} isOpen bookingNo={workspace.bookingNo} bookingStatus={workspace.bookingStatus} initialJob={workspace.job} onDirtyChange={reportDirty} onBusyChange={reportBusy} onRegisterDiscard={registerDiscard} onJobChange={handleJobChange} onClose={() => replace(null)} />}
     <ConfirmDialog isOpen={pending !== null} title="Discard unsaved operations work?" description={pending?.target ? `Discard the current marks and open ${pending.target.bookingNo}?` : 'Discard the current unsaved operations work and close?'} cancelLabel="Keep editing" confirmLabel="Discard changes" variant="danger" onClose={() => setPending(null)} onConfirm={() => { if (busy.current) return; const target = pending?.target ?? null; discard.current?.(); setPending(null); replace(target) }} />
   </OperationsWorkspaceContext.Provider>
 }

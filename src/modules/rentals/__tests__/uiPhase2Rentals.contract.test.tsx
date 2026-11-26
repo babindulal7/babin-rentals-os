@@ -76,3 +76,16 @@ describe('UI Consistency Phase 2 — Rentals contracts', () => {
     expect(Button).toBeDefined()
   })
 })
+
+
+describe('Responsive rental cards', () => {
+  it('groups pickup and return ahead of secondary metadata and preserves canonical actions', () => {
+    const card = rentalsListRaw.slice(rentalsListRaw.indexOf('className="rental-card-status"'), rentalsListRaw.indexOf('/* §7: "one primary button each"'))
+    expect(card.indexOf('className="rental-card-status"')).toBeLessThan(card.indexOf('className="rental-card-client"'))
+    expect(card.indexOf('className="rental-card-dates"')).toBeLessThan(card.indexOf('className="rental-card-meta"'))
+    expect(card).toContain("show('Total Amount')")
+    expect(card).toContain('aria-label="Rental schedule"')
+    expect(rentalsListRaw).toContain('showDraftAction={false}')
+    expect(rentalsCss).toContain('minmax(min(100%, 116px), 1fr)')
+  })
+})

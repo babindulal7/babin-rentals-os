@@ -685,7 +685,7 @@ export default function OperationsQueues() {
     if (nextKey === 'all') {
       setActive(null)
     } else if (nextKey === 'Cases') {
-      patch({ queue: 'cases', quick: null })
+      patch({ queue: 'cases', quick: null, exception: null })
     } else {
       setActive(nextKey)
     }
@@ -1060,7 +1060,7 @@ export default function OperationsQueues() {
           id="operations-queue-tab-Cases"
           role="tab"
           to="/inventory/cases"
-          onClick={(event) => { event.preventDefault(); patch({ queue: selected === 'Cases' ? null : 'cases', quick: null }) }}
+          onClick={(event) => { event.preventDefault(); patch({ queue: selected === 'Cases' ? null : 'cases', quick: null, exception: null }) }}
           aria-selected={selected === 'Cases'}
           aria-pressed={selected === 'Cases'}
           tabIndex={selected === 'Cases' ? 0 : -1}

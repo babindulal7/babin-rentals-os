@@ -449,7 +449,7 @@ export function useNewRentalSubmit({
     setSaveState('saving')
     if (!confirmKey.current) confirmKey.current = draftBookingKey.current ?? newClientUuid()
     const pressKey: string = confirmKey.current
-    let step: 'save-draft' | 'create' | 'confirm' | 'convert' = 'create'
+    let step: 'save-draft' | 'create' | 'confirm' | 'convert' | 'link-request' = 'create'
 
     void (async () => {
       try {
@@ -482,11 +482,11 @@ export function useNewRentalSubmit({
         let paymentLinkUrl: string | undefined
         let paymentToken: string | undefined
         if (requestId) {
-          try {
-            const { confirmBookingRequest } = await import('../../../actions/rentals/confirmBookingRequest')
-            await confirmBookingRequest({ requestId, bookingId: bookedId }, ctx)
-          } catch (reqErr) {
-            console.warn('[useNewRentalSubmit] could not link booking request:', reqErr)
+          step = 'link-request'
+          const { confirmBookingRequest } = await import('../../../actions/rentals/confirmBookingRequest')
+          const linked = await confirmBookingRequest({ requestId, bookingId: bookedId }, ctx)
+          if (!linked.success || linked.requestId !== requestId || linked.bookingId !== bookedId) {
+            throw new Error('The request did not confirm against this booking. Check the request and existing rental before retrying.')
           }
 
           try {
@@ -519,7 +519,12 @@ export function useNewRentalSubmit({
       } catch (err) {
         setSaveState('error')
         const reason = err instanceof Error ? err.message : String(err)
-        if (step === 'convert' && createdQuote.current) {
+        if (step === 'link-request' && createdQuote.current) {
+          setActionError(
+            `Booking ${createdQuote.current.no} is confirmed, but the online request is not linked: ${reason}. ` +
+              'Keep this form open. Confirm again to retry linking the same booking; do not create a new rental.',
+          )
+        } else if (step === 'convert' && createdQuote.current) {
           setActionError(
             `Booking ${createdQuote.current.no} is confirmed, but the draft link did not update: ${reason}. ` +
               'Press Confirm Booking again to finish linking this same draft; no second booking will be created.',

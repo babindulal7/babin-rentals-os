@@ -49,6 +49,37 @@ Structural coverage only. Functional, hosted, integration and device acceptance:
 - Complete 14 consecutive zero-discrepancy days before final Booqable freeze.
 - Proceed with remaining P0 launch items (cancellation ledger integrity, operations custody lifecycle).
 
+## 2026-11-25 — Playwright E2E foundation against staging (branch test/playwright-e2e)
+
+### Did
+- Added `@playwright/test` 1.65.1 (devDependency) and `npm run test:e2e`.
+- Added `playwright.config.ts`: starts a local Vite dev server (port 3000) with `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` taken from `BABIN_STAGING_SUPABASE_URL` / `BABIN_STAGING_ANON_KEY`. Refuses to start unless the staging URL is a `*.supabase.co` address. Projects: desktop, iPad, Pixel 7.
+- Added `tests/e2e/smoke.spec.ts` (login renders; anonymous `/rentals` redirects to login; bad credentials rejected).
+- Added `.github/workflows/e2e.yml` (Windows + macOS matrix), `workflow_dispatch` only until staging secrets are set in GitHub.
+- Added `playwright-report/`, `test-results/`, `playwright/.auth/` to `.gitignore`.
+
+### Ruled
+- None. Staging backend use confirmed by Babin in chat; test accounts to be supplied by Babin (not stored in repo).
+
+### Verified
+- `npx playwright test --project=desktop` against the staging Supabase project: 3/3 passed (run after the dev server was warm).
+- First run failed on a cold Vite start (60s navigation timeout); timeout raised to 120s. Not re-run cold after the change.
+- Added `tests/e2e/auth.spec.ts` (owner sign-in; skipped without `E2E_OWNER_*`). Run on staging with the supplied owner login: FAILED, the server returned "Invalid login credentials" and the app stayed on /login. Not retried. The account is either absent on staging or its password differs. Credentials were not written to any file.
+- Added `scripts/e2e-seed-staging-users.mjs`: creates three dedicated test accounts on staging (`e2e-owner`, `e2e-manager`, `e2e-staff` @babinrentals.test) with generated passwords written only to the gitignored `.env.staging.local`. Refuses to run unless the connection string is the staging project. Does not touch the shared `staging-*` seats.
+- Auth at the API level: all three E2E accounts receive a token from staging GoTrue (HTTP 200). Two seed defects were fixed on the way: `instance_id` was unset, and NULL token columns caused a GoTrue 500.
+- Found and fixed (product code, `src/modules/auth/Login.tsx`): after a successful password sign-in the login page navigated at once, while the staff profile was still loading. The route guard saw `user === null` and sent the visitor back to `/login`. That is why sign-in looked broken for Owner, Manager and Staff alike, with no console errors. The fix leaves `/login` only once `user` is set. Unit test `login.test.tsx` updated to model the same order.
+- Verified: `npm run typecheck` (tsc --noEmit) exit 0. `login.test.tsx`, `passwordReset.test.tsx`, `auth.identity.test.tsx`: 23/23 pass (run with `VITE_DATA_SOURCE=mock`; without it these suites fail at import on the missing Supabase variables, which was already true before this change). Staging desktop: owner, manager and staff sign-in tests pass, with smoke tests 6/6 in total.
+- NOT VERIFIED: iPad and Pixel projects, Windows and macOS CI runs, authenticated P0 flows (blocked by the session finding above), `typecheck` / `lint` on this branch.
+
+### Completion
+Not measured by this entry. Run `npm run completion` on the branch for the R-29 table.
+
+### Remaining
+- Features to build: 0 (E2E suite is foundation only; P0 authenticated suites not started).
+- Bugs to fix: 1 (cold-start navigation timeout not yet re-verified; commit subject carries a stray BOM, remote branch commit c2e73fb7).
+- Rulings open: 0 for this entry.
+- Next session starts with: add staff test logins (E2E_*_EMAIL / E2E_*_PASSWORD), then write P0 operations-popup and rental-lifecycle specs.
+
 ## 2026-11-25 — Owner Grill-Me Launch Alignment, Dual-Entry Protocol & Cutover Exit Certification (Windows Antigravity)
 
 ### Did

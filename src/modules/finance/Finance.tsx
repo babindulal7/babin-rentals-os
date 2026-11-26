@@ -586,6 +586,14 @@ export default function Finance() {
 
   const [params, setParams] = useSearchParams()
   const tabParam = params.get('tab')?.toLowerCase()
+  const openExpenseRequested = params.get('create') === 'expense'
+  const consumeExpenseRequest = useCallback(() => {
+    setParams(prev => {
+      const next = new URLSearchParams(prev)
+      if (next.get('create') === 'expense') next.delete('create')
+      return next
+    }, { replace: true })
+  }, [setParams])
   const tab: FinanceTab = useMemo(() => {
     if (!tabParam) return 'Dashboard'
     if (tabParam === 'reconciliation' || tabParam === 'online-reconciliation') return 'Reconciliation'
@@ -600,6 +608,7 @@ export default function Finance() {
       setParams(
         (prev) => {
           const p = new URLSearchParams(prev)
+          if (next !== 'Expenses' && p.get('create') === 'expense') p.delete('create')
           if (next === 'Dashboard') p.delete('tab')
           else p.set('tab', next.toLowerCase().replace(/\s+/g, '-'))
           return p
@@ -1405,6 +1414,8 @@ export default function Finance() {
           searchQuery={expenseSearch}
           onSearchChange={setExpenseSearch}
           onActiveFilterCountChange={setExpenseFilterCount}
+          openExpenseRequested={openExpenseRequested}
+          onConsumeExpenseRequest={consumeExpenseRequest}
         />
       )}
       {tab === 'Closing' && <DailyClosing embedded />}
