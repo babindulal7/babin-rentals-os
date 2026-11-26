@@ -1,5 +1,54 @@
 # Progress Log
 
+## 2026-11-26 — P0 Main CI Restoration: Rental Submit Idempotency & Law 17 Terminology Repair (Windows Antigravity)
+
+### Did
+- Investigated and resolved the 6 test failures on `main` at commit `ccfc7bd8` (CI run 45473426825):
+  - Fixed Law 17 terminology violation in `src/modules/rentals/booking/BookingModals.tsx`: replaced "Open customer checkout page" with "Open client checkout page".
+  - Fixed booking submission failures in `src/modules/rentals/booking/useNewRentalSubmit.ts`: scoped auto payment link creation to `if (requestId)` so standard in-person counter bookings do not attempt online request linking or async RPC link minting.
+  - In `useNewRentalSubmit.ts`, conditionally spread optional payment link fields (`paymentLink` and `paymentToken`) to preserve the canonical `{ bookingId, bookingNo }` payload contract on counter bookings, preserving booking identity, idempotency, retry safety, and duplicate-submission prevention.
+  - Hardened `src/booking/pay/payApi.ts` so test and mock environments (`import.meta.env.MODE === 'test'` or missing `supabase.rpc`) gracefully fall back to mock links without unhandled TypeErrors.
+- Preserved existing tests strictly without weakening assertions or changing core business rules.
+- Created isolated repair branch `fix/p0-restore-main-ci-rental-submit-law17` and opened draft PR #495.
+- Verified all quality gates locally and confirmed 100% green status on GitHub Actions runner (`typecheck · test · build` passed in 5m33s).
+
+### Ruled
+- Automatic 48h payment link minting on booking confirmation is strictly scoped to online booking requests (`requestId`), never standard in-person counter bookings.
+- The word "customer" remains completely forbidden across all UI copy under Law 17 ("client" used exclusively).
+
+### Verified
+- `npx vitest run src/lib/__tests__/law17.test.ts`: PASS (3/3 tests).
+- `npx vitest run src/modules/rentals/booking/__tests__/useNewRentalSubmit.test.tsx`: PASS (12/12 tests).
+- `npm run typecheck`: PASS (0 errors, `tsc --noEmit`).
+- `npm run lint`: PASS (0 warnings, 0 errors, `eslint src --max-warnings 0`).
+- `npm run test:local-api-guards`: PASS (6/6 tests).
+- `npm run check:pglite`: PASS (267/267 migrations applied, 0 failed, 253 definer functions with pinned search_path).
+- `npm run check:lifecycle`: PASS (102/102 lifecycle steps green).
+- `npm run build`: PASS (`dist/` built in 1m 31s with zero errors).
+- `npm test`: PASS (755/755 test files passed, 8,160/8,160 tests passed).
+- GitHub Actions CI (PR #495, run 45805661405): PASS on all 20 job steps.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 267 files · check:pglite 267/267 applied, 0 failed (recorded 2026-11-24T22:02:50.444Z). Suite: PASS — 8160/8160 passed, 0 failed (recorded 2026-11-24T22:17:16.857Z); source fingerprint matches.
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written 2026-11-24T22:03:14.536Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Awaiting Babin's review and local merge of PR #495.
+- 1-month dual-entry operational pilot alongside Booqable starting December 1.
+- Complete 14 consecutive zero-discrepancy days before final Booqable freeze.
+- Proceed with remaining P0 launch items (cancellation ledger integrity, operations custody lifecycle).
+
 ## 2026-11-25 — Owner Grill-Me Launch Alignment, Dual-Entry Protocol & Cutover Exit Certification (Windows Antigravity)
 
 ### Did
