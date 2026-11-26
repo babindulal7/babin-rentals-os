@@ -241,15 +241,19 @@ export function BookingEquipmentSection({
       type ScannedUnit = { product?: { id?: string | null } | null }
       let unit: ScannedUnit | null = null
       try {
-        const { data, error } = await supabase
-          .from('product_units_v')
-          .select('product:products_v (id)')
-          .or(`barcode.eq.${code},serial_no.eq.${code},asset_tag.eq.${code}`)
-          .limit(1)
-          .maybeSingle()
-        if (error) throw error
-        if (data) {
-          unit = data as ScannedUnit
+        // Pass scan input as a filter value, never as PostgREST filter syntax.
+        for (const column of ['barcode', 'serial_no', 'asset_tag'] as const) {
+          const { data, error } = await supabase
+            .from('product_units_v')
+            .select('product:products_v (id)')
+            .eq(column, code)
+            .limit(1)
+            .maybeSingle()
+          if (error) throw error
+          if (data) {
+            unit = data as ScannedUnit
+            break
+          }
         }
       } catch {
         return null

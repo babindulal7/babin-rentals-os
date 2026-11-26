@@ -1,5 +1,23 @@
 # Progress Log
 
+## 2026-11-19 — T3-19 scanner lookup investigation (Lane C)
+
+**Did**
+- Started exact-unit repair. Draft scanner lookup passes the code as an exact filter value rather than interpolating filter syntax; it is not verified or complete.
+
+**Ruled**
+- No new product decisions.
+
+**Verified**
+- No application checks completed. Dependency installation and completion commands did not finish and were interrupted.
+
+### Completion
+Not measured: completion command did not finish.
+
+### Remaining
+- Carry scanned unit identity through draft and booking; validate requested-window availability and test role and device flows. Review and test lookup draft. Run all required gates.
+
+
 ## 2026-11-18 — T3-18: Change a confirmed booking (Lane C)
 
 **Did**
