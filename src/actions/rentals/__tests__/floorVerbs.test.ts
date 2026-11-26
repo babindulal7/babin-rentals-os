@@ -5,6 +5,7 @@ import { handoverRental } from '../handoverRental'
 import { completeReturn } from '../returnRental'
 import { completeReset } from '../completeReset'
 import { notReturnedDecisionEndsLine } from '../floorVerb'
+import { operationSessionId } from '../../../lib/deterministicId'
 import { ActionPermissionError } from '../../core'
 import { JOBS, JOB_ORDER, type JobName } from '../../../lib/workflow'
 import type { NotReturnedDecision } from '../../../types/database'
@@ -780,6 +781,64 @@ describe('Handover', () => {
       ],
     ]
     db.state.responses['operation_sessions'] = [[]]
+  })
+
+  it('confirms a committed session and stage after the seal response is lost', async () => {
+    const sessionId = await operationSessionId(BOOKING_ID, 'Handover', 1)
+    db.state.responses['operation_sessions'] = [[], [{ id: sessionId, booking_id: BOOKING_ID, operation: 'Handover', state: 'Completed' }]]
+    db.state.responses['handover_lines'] = [[], [
+      { id: 'hl-1', booking_line_id: LINE_A, state: 'Picked Up' },
+      { id: 'hl-2', booking_line_id: LINE_B, state: 'Picked Up' },
+    ]]
+    db.state.responses['bookings'] = [[bookingAt('Packed')], [bookingAt('On Rent')]]
+    writes.state.loseSessionSealResponse = true
+    const result = await handoverRental({ bookingId: 'B-715', lines: [
+      { bookingLineId: LINE_A, qty: 2 }, { bookingLineId: LINE_B, qty: 1 },
+    ] }, OWNER)
+    expect(result).toMatchObject({ sessionId, sessionClosed: true, stage: { from: 'Packed', to: 'On Rent' } })
+    expect(insertsOn('booking_stage_transitions')).toHaveLength(1)
+  })
+
+  it('does not claim success if the session was not sealed', async () => {
+    const sessionId = await operationSessionId(BOOKING_ID, 'Handover', 1)
+    db.state.responses['operation_sessions'] = [[], [{ id: sessionId, booking_id: BOOKING_ID, operation: 'Handover', state: 'In Progress' }]]
+    db.state.responses['handover_lines'] = [[], [
+      { id: 'hl-1', booking_line_id: LINE_A, state: 'Picked Up' },
+      { id: 'hl-2', booking_line_id: LINE_B, state: 'Picked Up' },
+    ]]
+    db.state.responses['bookings'] = [[bookingAt('Packed')], [bookingAt('On Rent')]]
+    writes.state.loseSessionSealResponse = true
+    await expect(handoverRental({ bookingId: 'B-715', lines: [
+      { bookingLineId: LINE_A, qty: 2 }, { bookingLineId: LINE_B, qty: 1 },
+    ] }, OWNER)).rejects.toThrow('seal committed; response lost')
+  })
+
+  it('does not accept a completed session belonging to another booking', async () => {
+    const sessionId = await operationSessionId(BOOKING_ID, 'Handover', 1)
+    db.state.responses['operation_sessions'] = [[], [{ id: sessionId, booking_id: 'other-booking', operation: 'Handover', state: 'Completed' }]]
+    db.state.responses['handover_lines'] = [[], [
+      { id: 'hl-1', booking_line_id: LINE_A, state: 'Picked Up' },
+      { id: 'hl-2', booking_line_id: LINE_B, state: 'Picked Up' },
+    ]]
+    db.state.responses['bookings'] = [[bookingAt('Packed')], [bookingAt('On Rent')]]
+    writes.state.loseSessionSealResponse = true
+    await expect(handoverRental({ bookingId: 'B-715', lines: [
+      { bookingLineId: LINE_A, qty: 2 }, { bookingLineId: LINE_B, qty: 1 },
+    ] }, OWNER)).rejects.toThrow('seal committed; response lost')
+  })
+
+  it('does not claim the stage moved when a seal read-back finds another stage', async () => {
+    const sessionId = await operationSessionId(BOOKING_ID, 'Handover', 1)
+    db.state.responses['operation_sessions'] = [[], [{ id: sessionId, booking_id: BOOKING_ID, operation: 'Handover', state: 'Completed' }]]
+    db.state.responses['handover_lines'] = [[], [
+      { id: 'hl-1', booking_line_id: LINE_A, state: 'Picked Up' },
+      { id: 'hl-2', booking_line_id: LINE_B, state: 'Picked Up' },
+    ]]
+    db.state.responses['bookings'] = [[bookingAt('Packed')], [bookingAt('On Rent')], [bookingAt('Packed')]]
+    writes.state.loseSessionSealResponse = true
+    await expect(handoverRental({ bookingId: 'B-715', lines: [
+      { bookingLineId: LINE_A, qty: 2 }, { bookingLineId: LINE_B, qty: 1 },
+    ] }, OWNER)).rejects.toThrow('seal committed; response lost')
   })
 
   it('copies the booking delivery type onto the session — CHECK 0003:91 demands one', async () => {

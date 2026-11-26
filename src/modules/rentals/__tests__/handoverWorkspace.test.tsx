@@ -390,7 +390,7 @@ describe('HO-14 — one booking’s dispatch never speaks for another', () => {
     })
     await flush()
 
-    expect(text()).not.toContain('This handover was not recorded')
+    expect(text()).not.toContain('Could not confirm this handover')
     expect(text()).not.toContain('Gate Check Failure: B-901 did not move')
     // B-902's own session is untouched, and says so.
     expect(text()).toContain('Nothing has been scanned or marked in this session yet')
@@ -410,7 +410,7 @@ describe('HO-14 — one booking’s dispatch never speaks for another', () => {
     })
     await flush()
 
-    expect(text()).toContain('This handover was not recorded')
+    expect(text()).toContain('Could not confirm this handover')
     expect(text()).toContain('Gate Check Failure: B-901 did not move')
   })
 

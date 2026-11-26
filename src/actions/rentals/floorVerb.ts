@@ -1533,13 +1533,29 @@ export async function runFloorVerb(
    *     and finish. */
   const closed = complete ? stageMoved : CLOSES_WHILE_INCOMPLETE[job]
   if (closed) {
-    await safeUpdate(
-      'operation_sessions',
-      sessionId,
-      { state: 'Completed', completed_at: occurredAt, completed_by: ctx.userId, updated_at: occurredAt },
-      actionUuid,
-      job === 'Return' || job === 'Handover' ? { queueOnFailure: false } : undefined,
-    )
+    try {
+      await safeUpdate(
+        'operation_sessions',
+        sessionId,
+        { state: 'Completed', completed_at: occurredAt, completed_by: ctx.userId, updated_at: occurredAt },
+        actionUuid,
+        job === 'Return' || job === 'Handover' ? { queueOnFailure: false } : undefined,
+      )
+    } catch (sealError) {
+      if (job !== 'Handover') throw sealError
+      // A failed response is not proof of a failed write. Only acknowledge it
+      // when both the exact session and the resulting booking stage read back.
+      const [sessionRead, bookingRead] = await Promise.all([
+        supabase.from('operation_sessions').select('id, booking_id, operation, state').eq('id', sessionId).maybeSingle(),
+        supabase.from('bookings').select('id, stage').eq('id', booking.id).maybeSingle(),
+      ])
+      const session = sessionRead.data as { id?: string; booking_id?: string; operation?: string; state?: string } | null
+      const current = bookingRead.data as { id?: string; stage?: string } | null
+      const expectedStage = stageMoved ? JOBS.Handover.sets : booking.stage
+      if (sessionRead.error || bookingRead.error || session?.id !== sessionId || session.booking_id !== booking.id ||
+          session.operation !== 'Handover' || session.state !== 'Completed' ||
+          current?.id !== booking.id || current.stage !== expectedStage) throw sealError
+    }
   }
 
   /* RULING 2026-10-06 (§4.36): the audit of record for `operation_sessions` is the database trigger

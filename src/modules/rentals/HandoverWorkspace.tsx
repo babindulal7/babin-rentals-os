@@ -2501,7 +2501,7 @@ export default function HandoverWorkspace({
                 {/* Law 12 — inline and persistent, never a toast. This is what
                     the operator sees instead of being navigated away from a
                     session that was never recorded. */}
-                {dispatchError && <ErrorBanner title="This handover was not recorded" message={dispatchError} />}
+                {dispatchError && <ErrorBanner title="Could not confirm this handover" message={dispatchError} />}
 
                 {/* HO-05 — recorded but held. Inline and persistent (Law 12): the
                     operator is not navigated away as if the booking were On Rent. */}
