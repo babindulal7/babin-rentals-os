@@ -1,5 +1,43 @@
 # Progress Log
 
+## 2026-11-13 — T3-19: scan to add in New Rental — scan rules, honest messages, exact unit reserved (Lane C)
+
+**Did**
+- New engine `src/lib/scanAdd.ts`: `resolveScanAdd` decides what a scanned code does (added, unknown code, not in rentable catalogue, already on booking, unavailable, lookup failed, catalogue not loaded) and returns one inline sentence; `createScanRepeatGuard` ignores the same code inside 1.5 s and never holds back a different code. When an item is not free the message names who has it and the booking number, from the money-free `lookupItemCard` (Law 6).
+- **Exact unit (no migration):** `create_booking` already accepts per-line `units` (0071 / 0230 D5), so the client now sends the scanned unit. New pure `src/lib/preferredUnits.ts` (`assignPreferredUnits`); `planCreationUnits` honours `preferredUnitIds` first and fills the rest least-used; `checkPreferredUnit` tells the operator at scan time whether that serial is free for the dates. A second different unit of a product already on the booking adds one to its quantity and the unit to its list; the same unit twice is refused.
+- `useNewRentalSubmit.ts` passes the scanned units into the plan and **stops the booking with the reason** if a scanned unit is no longer free (`CreationUnitPlan.refusals`) — never a quiet swap for another serial.
+- `BookingEquipmentSection.tsx` calls the engine instead of its own query; `AddItemPanel.tsx` shows the engine message and applies the repeat guard. `preferredUnitIds` added to `Line` and `BookingLineDraft`.
+
+**Ruled**
+- Babin, 13 Nov: reserve the exact scanned unit; if it is not free the booking is refused with the reason, not swapped (`RULINGS-2026-11-13-scan-unit.md`). Revert = in `planCreationUnits`, treat `refusals` as `problems`.
+- Babin, 13 Nov: the similar-item / sub-rent offer waits for T3-13 to merge; nothing from that branch was pulled in.
+
+**Verified**
+- `npx vitest run src/lib src/modules/rentals`: 290 files, 3,697 tests pass. New: `scanAdd.test.ts` (16), `preferredUnits.test.ts` (6), panel scan tests (2), submit tests for scanned units (2: units reach the plan and the line; refusal stops `createRental`).
+- `npx tsc --noEmit`: exit 0. `eslint src/lib src/modules/rentals/booking`: exit 0. `npm run lint:ui-copy`: pass.
+- NOT run: `npm run gates` (full 17 steps), check:pglite / check:lifecycle (no SQL changed), any browser or screen check at 375/820/1440, a camera or Bluetooth scanner on a device. The live catalogue still lists one row per product, so the unit-chip UI is unchanged.
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 102 / 102 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 67 | 56 · 0 · 0 · 11 |  |
+| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| Permissions | capabilities mapped / declared | 83 / 83 (100%) | +0 |
+| Lifecycle | steps green / total | not measured — current receipt required | — |
+| Overall | structural mean of five | not measured | — |
+Migrations 233 files · check:pglite not run this session (pass --migrations to run). Suite: not run this session (static inspection; pass --tests to execute suite).
+Coverage suite: NOT VERIFIED — invalid test receipt.
+Gates read from .lifecycle-result.json, written not measured — run npm run check:lifecycle.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Features to build (1): offer a similar free item or sub-rent when a scanned unit is booked, once T3-13 (branch `lane-c/T3-13-fully-booked-to-similar-item-or`) merges.
+- Bugs to fix (0 known).
+- Rulings open (0 new).
+- Next session starts with: full `npm run gates` and a 375/820/1440 screen check of New Rental scan as Owner and Warehouse, then move T3-19 to `ready`.
+
 ## 2026-11-10 — Card 4: register D-UX-01 to D-UX-05 as O-23 to O-27 (docs only)
 
 **Did**

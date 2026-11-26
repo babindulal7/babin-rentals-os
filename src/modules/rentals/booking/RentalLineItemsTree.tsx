@@ -40,6 +40,8 @@ export interface Line {
   location: string
   status?: InvStatus | undefined
   committedTo: string
+  /** T3-19 — `product_units.id`s scanned for this line; reserved exactly at creation. */
+  preferredUnitIds?: readonly string[] | undefined
 }
 
 export function lineAmountPaisa(l: Line): Paisa {

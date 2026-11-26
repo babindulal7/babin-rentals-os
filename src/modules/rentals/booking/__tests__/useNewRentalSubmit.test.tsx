@@ -7,6 +7,7 @@ import { createRental } from '../../../../actions/rentals/createRental'
 import { confirmRental } from '../../../../actions/rentals/confirmRental'
 import { convertDraft } from '../../../../actions/rentals/saveDraft'
 import type { ClientRecord } from '../../../../lib/queries/clients'
+import { planCreationUnits } from '../../../../lib/queries/availability'
 import { fetchProductPricingTerms } from '../../../../lib/queries/productPricingTerms'
 import type { PricingPipelineResult } from '../../../../lib/pricingPipeline'
 import type { Paisa } from '../../../../lib/money'
@@ -698,5 +699,102 @@ describe('useNewRentalSubmit', () => {
       })
       host.remove()
     }
+  })
+  describe('T3-19 scanned units', () => {
+    const PRODUCT = '22222222-2222-4222-8222-222222222222'
+    const UNIT = '44444444-4444-4444-8444-444444444444'
+
+    async function submitWithScannedUnit(setActionError: (m: string | null) => void) {
+      const host = document.createElement('div')
+      document.body.appendChild(host)
+      const root = createRoot(host)
+      const scanned = [
+        { id: PRODUCT, name: 'Sony FX3', lineType: 'Equipment' as const, productId: PRODUCT, qty: 1, days: 2, ratePaisa: 500000 as Paisa, preferredUnitIds: [UNIT] },
+      ]
+      let submitHook!: ReturnType<typeof useNewRentalSubmit>
+      function TestComponent() {
+        submitHook = useNewRentalSubmit({
+          confirmBlocked: false,
+          saveState: 'saved',
+          setSaveState: vi.fn(),
+          dispatchContext: () => ({ userId: 'user-1', role: 'Coordinator' }),
+          setActionError,
+          setConfirmedSuccess: vi.fn(),
+          showSuccessToast: vi.fn(),
+          client: { dbId: 'client-db-1', id: 'CL-001', name: 'Test Client', phone: '9841000000' } as unknown as ClientRecord,
+          lines: scanned as never,
+          equipmentLines: scanned as never,
+          project: 'Commercial',
+          pickupAt: new Date('2026-11-01T09:00:00Z'),
+          returnAt: new Date('2026-11-03T18:00:00Z'),
+          deliveryType: 'Client Pickup',
+          pricing: { securityDeposit: { requiredPaisa: 0 }, discounts: { discountPaisa: 0, appliedPercent: 0 } } as unknown as PricingPipelineResult,
+          manualDiscountReason: '',
+          manualDiscountAuthorizedBy: '',
+          womenDopEligible: false,
+          crew: [],
+          clientPickup: true,
+          deliveryChargePaisa: 0 as Paisa,
+          fuelChargePaisa: 0 as Paisa,
+          returnPickupType: 'Client Return',
+          returnPickupAddress: '',
+          returnPickupTime: '18:00',
+          returnPickupChargePaisa: 0,
+          returnTransportPaisa: 0,
+          vehicle: '',
+          numberPlate: '',
+          driverContact: '',
+          pickupLocation: '',
+          returnLocation: '',
+          specialInstructions: '',
+          days: 2,
+          draftId: null,
+          draftBookingNo: null,
+          draftHasUnsavedChanges: false,
+          draftData: {} as never,
+          setSavedDraftFingerprint: vi.fn(),
+          kind: 'Commercial',
+          kindOther: '',
+          confirmKey: { current: null },
+          draftBookingKey: { current: null },
+        } as unknown as UseNewRentalSubmitOptions)
+        return null
+      }
+      try {
+        await act(async () => { root.render(<TestComponent />) })
+        await act(async () => { submitHook.confirmBooking() })
+      } finally {
+        await act(async () => { root.unmount() })
+        host.remove()
+      }
+    }
+
+    it('sends the scanned unit to the plan and onto the line', async () => {
+      vi.mocked(createRental).mockClear()
+      vi.mocked(planCreationUnits).mockClear()
+      vi.mocked(planCreationUnits).mockResolvedValueOnce({
+        unitsByKey: new Map([[PRODUCT, [UNIT]]]),
+        problems: [],
+        refusals: [],
+        source: 'planned',
+      })
+      await submitWithScannedUnit(vi.fn())
+      expect(vi.mocked(planCreationUnits).mock.calls[0]?.[1][0]).toMatchObject({ productId: PRODUCT, preferredUnitIds: [UNIT] })
+      expect(vi.mocked(createRental).mock.calls[0]?.[0].lines[0]).toMatchObject({ units: [UNIT] })
+    })
+
+    it('refuses the booking, with the reason, when the scanned unit is no longer free', async () => {
+      vi.mocked(createRental).mockClear()
+      const setActionError = vi.fn()
+      vi.mocked(planCreationUnits).mockResolvedValueOnce({
+        unitsByKey: new Map(),
+        problems: [],
+        refusals: ['Sony FX3: unit FX3-2 is held by BK-204 for these dates.'],
+        source: 'planned',
+      })
+      await submitWithScannedUnit(setActionError)
+      expect(createRental).not.toHaveBeenCalled()
+      expect(JSON.stringify(setActionError.mock.calls)).toContain('FX3-2 is held by BK-204')
+    })
   })
 })

@@ -61,6 +61,7 @@ import { AvailabilityChip, BundlePreview, KitCapacityLine } from './BundlePrevie
 import { TOUCH } from './ClientHealthChip'
 import { OverbookingOverrideModal } from './OverbookingOverrideModal'
 import { getAllowOverbooking } from '../../../lib/bookingRules'
+import { createScanRepeatGuard, type ScanAddOutcome } from '../../../lib/scanAdd'
 import './add-item-panel.css'
 import {
   DERIVED_CATEGORIES,
@@ -211,9 +212,10 @@ export interface AddItemPanelProps {
   /**
    * Called when a barcode/scan code is matched and should add the item.
    * Receives the scanned code, the booking window, and days.
-   * Should return the scanned equipment ID if found and added, or null.
+   * Returns a `ScanAddOutcome` (T3-19 — the panel shows its message inline).
+   * A bare equipment id (added) or null (not added) is still accepted.
    */
-  onScan?: (code: string, window: BookingWindow, days: number) => Promise<string | null>
+  onScan?: (code: string, window: BookingWindow, days: number) => Promise<string | null | ScanAddOutcome>
   /**
    * T3-01 · W8: "copy a past booking" sits beside search, scan and bundle as
    * the fourth way to add gear. The page owns the flow (usually: pick one of
@@ -356,6 +358,7 @@ export function AddItemPanel({
   const rootRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const scanInputRef = useRef<HTMLInputElement | null>(null)
+  const scanRepeatGuard = useRef(createScanRepeatGuard())
   const triggerRef = useRef<HTMLButtonElement | null>(null)
   const resultsRef = useRef<HTMLDivElement | null>(null)
   const catalogueRef = useRef<HTMLDivElement | null>(null)
@@ -426,16 +429,31 @@ export function AddItemPanel({
   const submitScan = async () => {
     const code = scanCode.trim()
     if (!code || !onScan || scanBusy) return
+    // T3-19: the same code twice inside 1.5 s is one scan (a trigger bounce), not two lines.
+    if (scanRepeatGuard.current(code)) {
+      setScanCode('')
+      return
+    }
     setScanBusy(true)
     setScanMessage(null)
     try {
-      const addedId = await onScan(code, bookingWindow, days)
-      if (addedId) {
+      const result = await onScan(code, bookingWindow, days)
+      const added = typeof result === 'string' ? true : result === null ? false : result.status === 'added'
+      if (added) {
         setScanCode('')
-        setScanMessage({ error: false, text: 'Item added to this booking.' })
+        setScanMessage({
+          error: false,
+          text: result !== null && typeof result === 'object' ? result.message : 'Item added to this booking.',
+        })
         scanInputRef.current?.focus()
       } else {
-        setScanMessage({ error: true, text: 'Could not add this code. Check that it matches a rentable item, is available for these dates, and is not already on this booking.' })
+        setScanMessage({
+          error: true,
+          text:
+            result !== null && typeof result === 'object'
+              ? result.message
+              : 'Could not add this code. Check that it matches a rentable item, is available for these dates, and is not already on this booking.',
+        })
       }
     } catch (error: unknown) {
       setScanMessage({ error: true, text: error instanceof Error ? error.message : 'Could not look up this code. Try again.' })

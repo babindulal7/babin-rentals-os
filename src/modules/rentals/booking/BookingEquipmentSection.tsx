@@ -19,7 +19,10 @@ import { crewPool, type CrewMember } from '../../../lib/queries/crew'
 import type { PricingPipelineResult } from '../../../lib/pricingPipeline'
 import type { GateContext } from '../../../lib/fieldGating'
 import type { AuthUser } from '../../../lib/auth'
-import { supabase, newClientUuid } from '../../../lib/supabase'
+import { newClientUuid } from '../../../lib/supabase'
+import { lookupItemCard } from '../../../lib/scannerLookup'
+import { resolveScanAdd, type ScanAddOutcome } from '../../../lib/scanAdd'
+import { checkPreferredUnit } from '../../../lib/queries/availability'
 import { rupees, type Paisa } from '../../../lib/money'
 import './booking-equipment-section.css'
 
@@ -177,44 +180,50 @@ export function BookingEquipmentSection({
   }, [customLineName, customLineRate, customLineQty, customLineType, customLineVendor, days, setLines])
 
   const addScannedEquipment = useCallback(
-    async (rawCode: string): Promise<string | null> => {
-      const code = rawCode.trim()
-      if (!code) return null
-      if (!liveEquipment) {
-        return null
-      }
-      type ScannedUnit = { product?: { id?: string | null } | null }
-      let unit: ScannedUnit | null = null
-      try {
-        const { data, error } = await supabase
-          .from('product_units_v')
-          .select('product:products_v (id)')
-          .or(`barcode.eq.${code},serial_no.eq.${code},asset_tag.eq.${code}`)
-          .limit(1)
-          .maybeSingle()
-        if (error) throw error
-        if (data) {
-          unit = data as ScannedUnit
+    async (rawCode: string): Promise<ScanAddOutcome> => {
+      // T3-19: the decision lives in src/lib/scanAdd.ts; this only adds the line. Money-free lookup (Law 6).
+      const outcome = await resolveScanAdd({
+        code: rawCode,
+        days: days || 1,
+        existingLineIds: lines.map((line) => line.id),
+        existingUnitIds: lines.flatMap((line) => line.preferredUnitIds ?? []),
+        checkUnit: (unitId, productId, label) =>
+          bookingWindow.pickupAd && bookingWindow.returnAd
+            ? checkPreferredUnit(
+                unitId,
+                productId,
+                { fromAd: bookingWindow.pickupAd.toISOString(), toAd: bookingWindow.returnAd.toISOString() },
+                label,
+              )
+            : Promise.resolve(null),
+        equipment: liveEquipment
+          ? liveEquipment.map((item) => ({ id: item.id, name: item.name, unavailable: item.availability.level === 'unavailable' }))
+          : null,
+        lookup: (code) => lookupItemCard(code, { withMoney: false }),
+      })
+      if (outcome.status === 'added') {
+        const match = liveEquipment?.find((item) => item.id === outcome.id)
+        if (match && outcome.mode === 'more_units' && outcome.unitId) {
+          // The product is already a line: one more of it, with this exact unit reserved too.
+          const unitId = outcome.unitId
+          setLines((prev) =>
+            prev.map((line) =>
+              line.id === match.id
+                ? { ...line, qty: line.qty + 1, preferredUnitIds: [...(line.preferredUnitIds ?? []), unitId] }
+                : line,
+            ),
+          )
+        } else if (match) {
+          const draft = equipmentLineDraft(match, days || 1)
+          addDrafts(
+            [outcome.unitId ? { ...draft, preferredUnitIds: [outcome.unitId] } : draft],
+            { kind: match.kind, id: match.id, name: match.name },
+          )
         }
-      } catch {
-        return null
       }
-
-      const productId = unit?.product?.id ?? null
-      const match = productId ? liveEquipment.find((item) => item.id === productId) : undefined
-      if (!match) {
-        return null
-      }
-      if (lines.some((line) => line.id === match.id)) {
-        return null
-      }
-      if (match.availability.level === 'unavailable') {
-        return null
-      }
-      addDrafts([equipmentLineDraft(match, days || 1)], { kind: match.kind, id: match.id, name: match.name })
-      return match.id
+      return outcome
     },
-    [liveEquipment, lines, addDrafts, days],
+    [liveEquipment, lines, addDrafts, setLines, days, bookingWindow],
   )
 
   // RULING 2026-10-08: catalogue, selected items, then optional charges follow the rental workflow.

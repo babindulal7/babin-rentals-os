@@ -96,6 +96,8 @@ export interface BookingLineDraft {
   location: string
   status?: InvStatus
   committedTo: string
+  /** T3-19 — `product_units.id`s scanned for this line; reserved exactly at creation. */
+  preferredUnitIds?: readonly string[]
 }
 
 /** Read by nothing at runtime; here so the coupling above is greppable. */

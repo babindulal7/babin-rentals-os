@@ -18,6 +18,7 @@ import {
   type UnitHold,
   type AssignmentOutcome,
 } from '../availability'
+import { assignPreferredUnits } from '../preferredUnits'
 
 /**
  * # Auto Assign Serials — the read, the plan, and the reservation
@@ -863,6 +864,11 @@ export interface CreationLineRequest {
   readonly qty: number
   /** What the operator sees in a shortfall sentence. */
   readonly label: string
+  /**
+   * T3-19 — units the operator scanned for this line. Honoured exactly when free
+   * for the window; a preferred unit that is not free is a refusal, never a swap.
+   */
+  readonly preferredUnitIds?: readonly string[]
 }
 
 export interface CreationUnitPlan {
@@ -875,6 +881,12 @@ export interface CreationUnitPlan {
   readonly unitsByKey: ReadonlyMap<string, readonly string[]>
   /** Law 12 sentences for anything short — rendered inline, never invented. */
   readonly problems: readonly string[]
+  /**
+   * T3-19 — sentences for a scanned (preferred) unit that could not be reserved.
+   * Unlike `problems` these must stop the booking: the operator named that
+   * serial, and creating the booking with different gear would be a quiet swap.
+   */
+  readonly refusals: readonly string[]
   /**
    * `'planned'` — the reads succeeded and the map is meaningful (possibly
    * empty). `'unavailable'` — a read failed, so per D5 the caller sends NO
@@ -928,7 +940,7 @@ export async function planCreationUnits(
   lines: readonly CreationLineRequest[],
 ): Promise<CreationUnitPlan> {
   const assignable = lines.filter((line) => line.productId !== null && line.qty >= 1)
-  if (assignable.length === 0) return { unitsByKey: new Map(), problems: [], source: 'planned' }
+  if (assignable.length === 0) return { unitsByKey: new Map(), problems: [], refusals: [], source: 'planned' }
 
   let candidatesByProduct: Map<string, UnitCandidate[]>
   let holds: UnitHold[]
@@ -947,6 +959,7 @@ export async function planCreationUnits(
         'Availability could not be read, so no units were assigned at creation — the booking is created ' +
           `with unit-less lines and Packing assigns them. (${err instanceof Error ? err.message : String(err)})`,
       ],
+      refusals: [],
       source: 'unavailable',
     }
   }
@@ -955,32 +968,78 @@ export async function planCreationUnits(
   const claimed = new Set<string>()
   const unitsByKey = new Map<string, readonly string[]>()
   const problems: string[] = []
+  const refusals: string[] = []
 
   for (const line of assignable) {
-    const pool = rankLeastUsed(
-      (candidatesByProduct.get(line.productId as string) ?? []).filter((unit) => !claimed.has(unit.unitId)),
-      usage,
-    )
-    const outcome = selectUnitsForLine({
-      needed: line.qty,
+    const unclaimed = (candidatesByProduct.get(line.productId as string) ?? []).filter((unit) => !claimed.has(unit.unitId))
+
+    /* T3-19: scanned units first, exactly as asked; the rest is least-used as before. */
+    const preferred = assignPreferredUnits({
+      preferredIds: (line.preferredUnitIds ?? []).slice(0, line.qty),
+      candidates: unclaimed,
       window,
-      candidates: pool,
       holds,
       disqualifyingStates: rules.disqualifyingStates,
       bounds: rules.bounds,
+      label: line.label,
     })
-    for (const unit of outcome.assigned) claimed.add(unit.unitId)
-    if (outcome.assigned.length > 0) {
-      unitsByKey.set(
-        line.key,
-        outcome.assigned.map((unit) => unit.unitId),
+    for (const id of preferred.assigned) claimed.add(id)
+    refusals.push(...preferred.refusals)
+
+    const remaining = line.qty - preferred.assigned.length
+    let autoAssigned: readonly string[] = []
+    if (remaining >= 1) {
+      const pool = rankLeastUsed(
+        unclaimed.filter((unit) => !claimed.has(unit.unitId)),
+        usage,
       )
+      const outcome = selectUnitsForLine({
+        needed: remaining,
+        window,
+        candidates: pool,
+        holds,
+        disqualifyingStates: rules.disqualifyingStates,
+        bounds: rules.bounds,
+      })
+      for (const unit of outcome.assigned) claimed.add(unit.unitId)
+      autoAssigned = outcome.assigned.map((unit) => unit.unitId)
+      const problem = explainShortfall(outcome, line.label)
+      if (problem !== null && preferred.refusals.length === 0) problems.push(problem)
     }
-    const problem = explainShortfall(outcome, line.label)
-    if (problem !== null) problems.push(problem)
+    const all = [...preferred.assigned, ...autoAssigned]
+    if (all.length > 0) unitsByKey.set(line.key, all)
   }
 
-  return { unitsByKey, problems, source: 'planned' }
+  return { unitsByKey, problems, refusals, source: 'planned' }
+}
+
+/**
+ * T3-19 — is this scanned unit free for the booking window? `null` means yes (or
+ * that the answer could not be read — the creation plan checks again at Create,
+ * so an outage here never blocks a scan); a string is the sentence to show.
+ */
+export async function checkPreferredUnit(
+  unitId: string,
+  productId: string,
+  window: RentalWindow,
+  label: string,
+): Promise<string | null> {
+  try {
+    const [candidatesByProduct, holds] = await Promise.all([readCandidates([productId]), readHolds(null)])
+    const rules = availabilityRules()
+    const outcome = assignPreferredUnits({
+      preferredIds: [unitId],
+      candidates: candidatesByProduct.get(productId) ?? [],
+      window,
+      holds,
+      disqualifyingStates: rules.disqualifyingStates,
+      bounds: rules.bounds,
+      label,
+    })
+    return outcome.refusals[0] ?? null
+  } catch {
+    return null
+  }
 }
 /* ══ RULING 2026-09-08 (R-26) ═══════════════════════════════════════════════
  *

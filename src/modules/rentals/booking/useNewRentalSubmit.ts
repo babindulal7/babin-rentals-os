@@ -210,10 +210,16 @@ export function useNewRentalSubmit({
             productId: l.productId ?? l.id ?? null,
             qty: l.qty,
             label: l.name ?? `Line ${i + 1}`,
+            ...(l.preferredUnitIds && l.preferredUnitIds.length > 0 ? { preferredUnitIds: l.preferredUnitIds } : {}),
           })),
         )
       } catch {
         creationUnitPlan = null
+      }
+      /* T3-19: a unit the operator scanned that is no longer free stops the booking with the
+         reason — never a quiet swap for a different serial. */
+      if (creationUnitPlan && creationUnitPlan.refusals.length > 0) {
+        throw new Error(creationUnitPlan.refusals.join(' '))
       }
 
       /* 0168 (G3) — structure/fixed quote totals ride the lines so the
