@@ -1,5 +1,58 @@
 # Progress Log
 
+## 2026-11-26 — P0 Playwright Operations Acceptance & Disposable CI Fixtures (branch test/playwright-p0-acceptance)
+
+### Did
+- Audited and hardened the P0 Playwright operations acceptance batch (`tests/e2e/operations-p0-acceptance.spec.ts`, `tests/e2e/helpers.ts`, `scripts/run-disposable-playwright.mjs`, `docs/verification/PLAYWRIGHT_STAGING_ACCEPTANCE.md`).
+- Fixed three acceptance-spec defects identified during source audit:
+  - Updated the post-return active stage assertion in `tests/e2e/operations-p0-acceptance.spec.ts` from `/^Reset ·/` to `/^Cleaning & Reset ·/` to match `STAGE_LABEL.Reset` in `src/modules/operations/OperationsStageBar.tsx`.
+  - Updated the repeat-identical-failure write intercept in `tests/e2e/operations-p0-acceptance.spec.ts` from `POST **/rest/v1/operation_sessions**` to `POST **/rest/v1/packing_lines**` (since `#pack-evidence` upload already creates the single `'In Progress'` session via `resolveOrCreateSession`), asserting 1 `'In Progress'` session (no duplicates), 0 `packing_lines`, and 0 `booking_stage_transitions` across two HTTP 500 failures before clean recovery to `Packed`.
+  - Hardened the `GET **/rest/v1/bookings**` abort guard so both `OperationsShell` (`Retry booking status`) and `PackingWorkspace` (`Retry`) fail deterministically and recover together on retry.
+- Added `test/playwright-p0-acceptance` (and `workflow_dispatch`) to `.github/workflows/playwright-disposable.yml`.
+
+### Ruled
+- None (E2E acceptance spec & disposable CI fixture batch; execution status remains pending real browser CI / staging run).
+
+### Verified
+- `node --check scripts/run-disposable-playwright.mjs`: PASS.
+- `node --test tests/e2e/staging-guard.test.mjs`: PASS (3/3).
+- Strict TypeScript `ts.transpileModule` check on `tests/e2e/helpers.ts` and `tests/e2e/operations-p0-acceptance.spec.ts`: PASS (0 diagnostics).
+- `npm run typecheck`: PASS (`tsc --noEmit`, 0 errors).
+- `npm run lint`: PASS (`eslint src --max-warnings 0`, 0 warnings, 0 errors).
+- `npm run test:local-api-guards`: PASS (`local-api-guard.test.mjs` 3/3, `test-electron-storage-path.test.mjs` 3/3).
+- `npm run lint:ui-copy`: PASS (0 violations; `check-ui-copy.test.mjs` 6/6, `test-i18n-review.test.mjs` 6/6).
+- `npm run lint:shell`: PASS (1,011 files checked).
+- `npm run check:contrast`: PASS (97/97 checks).
+- `npm run check:pglite`: PASS (275/275 migrations applied, 0 failed; 49 views, 22 functions, 254 definers, 3 staff-only tables, 7 public-catalogue cases).
+- `npm run db:plan:selftest`: PASS (12 classifier checks + 5 safety tests).
+- `node scripts/test-booking-financial-integrity.mjs`: PASS (13/13 checks).
+- `npm run check:security`: PASS (`check-astra-phase0`, `test:operations-grants`, `test-reset-branch-boundary` 14/14, `test-glossary-revisions`, `test-cancellation-branch-boundary` 34/34).
+- `npm run check:lifecycle`: PASS (102/102 green, 0 failed).
+- `npm run test:server-contracts`: PASS (68/68 integration assertions).
+- `npm run test:partial-return`: PASS (58/58 partial return acceptance assertions).
+- `node --test scripts/test-receipt.test.mjs`: PASS (11/11 tests).
+- NOT RUN / BLOCKED IN WSL SHELL: `npm run build` (`tsc --noEmit` passed, `vite build` failed on missing `@rollup/rollup-linux-x64-gnu` in Windows-populated `node_modules`), `npm test` (same Rollup native binary gap), and Playwright browser execution (no `@playwright/test` browsers or staging secrets in this environment).
+
+### Completion
+| Dimension | Counts | Now | Δ |
+|---|---|---|---|
+| Backend | actions implemented / total | 118 / 118 (100%) | +0 |
+| Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | +0 |
+| Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
+| Lifecycle | steps green / total | 102 / 102 (100%) | +0 |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 275 files · check:pglite 275/275 applied, 0 failed (recorded 2026-11-26T13:35:38.108Z). Suite: Historical suite: 8160/8160 passed, 0 failed (recorded 2026-11-26T12:23:37.402Z); current source NOT VERIFIED.
+Coverage suite: Historical suite: 8160/8160 passed, 0 failed (recorded 2026-11-26T12:23:37.402Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-26T13:38:45.310Z.
+Counted by `npm run completion`, not typed.
+Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
+
+### Remaining
+- Commit and push `test/playwright-p0-acceptance` (if `.git/refs/` is read-only in this sandbox, run from the host shell).
+- Run `.github/workflows/playwright-disposable.yml` on GitHub Actions (`ubuntu-24.04` + local Supabase) across `desktop`, `ipad`, and `mobile`, and update `docs/verification/PLAYWRIGHT_STAGING_ACCEPTANCE.md` after real browser execution passes.
+- Proceed with remaining P0 launch items (1-month dual-entry pilot and 14 consecutive zero-discrepancy days).
+
 ## 2026-11-26 — P0 Main CI Restoration: Rental Submit Idempotency & Law 17 Terminology Repair (Windows Antigravity)
 
 ### Did

@@ -23,20 +23,20 @@ npm run test:e2e
 
 Local smoke runs may skip unavailable credentials; CI fails if any role's credentials are absent or if email identities are duplicated. The current tests exercise login and Operations route access; they do not assert the actual database role or full permission boundaries.
 
-## Next acceptance batch (not yet implemented or executed)
+## Next acceptance batch (implemented in `tests/e2e/operations-p0-acceptance.spec.ts`; execution pending CI / staging run)
 
-Seed isolated synthetic bookings using a reviewed staging-only fixture procedure. Never select arbitrary existing bookings for writes.
+Seed isolated synthetic bookings using a reviewed staging-only fixture procedure (or `scripts/run-disposable-playwright.mjs` for disposable local CI). Never select arbitrary existing bookings for writes.
 
-| Case | Required evidence |
-| --- | --- |
-| Pack, Next, Back | correct stage, no lost changes |
-| Confirm succeeds | persisted session and authoritative stage; no permanent busy state |
-| Confirm held | no false advance, navigation and retry recover |
-| Repeat identical failure | no stuck lock, no duplicate mutation |
-| Partial return | persisted returned quantities, stay on Return |
-| Network failure / timeout | honest uncertainty, refresh/retry safely |
-| Cancel / close | no unintended write, dirty-work warning where applicable |
-| Role restrictions | UI and API/database denial, not merely hidden buttons |
-| Desktop / iPad / mobile | execute each case and record exact source SHA |
+| Case | Spec / Coverage | Execution Status |
+| --- | --- | --- |
+| Pack, Next, Back | `operations-popup-navigation.spec.ts` (`BOOKED` / `PACKED`) & `operations-p0-acceptance.spec.ts` | Pending CI / staging run |
+| Confirm succeeds | `operations-popup-navigation.spec.ts` (Packing) & `operations-p0-acceptance.spec.ts` (Retry + Return) | Pending CI / staging run |
+| Confirm held | `operations-p0-acceptance.spec.ts` (Handover partial lines stays `Packed`) | Pending CI / staging run |
+| Repeat identical failure | `operations-p0-acceptance.spec.ts` (2x write 500s unlock `Saving…` with 0 duplicate sessions) | Pending CI / staging run |
+| Partial return | `operations-p0-acceptance.spec.ts` (1 of 2 returned stays `On Rent`, 2nd completes `Returned` → `Reset`) | Pending CI / staging run |
+| Network failure / timeout | `operations-p0-acceptance.spec.ts` (`bookings` GET abort → `Retry booking status` recovers) | Pending CI / staging run |
+| Cancel / close | `operations-p0-acceptance.spec.ts` (`Discard Changes` clears dirty marks with 0 writes) | Pending CI / staging run |
+| Role restrictions | `operations-p0-acceptance.spec.ts`, `expense-persistence.spec.ts`, `payment-hold-acl.spec.ts` (Warehouse UI + API/DB `42501` denial + Law 6) | Pending CI / staging run |
+| Desktop / iPad / mobile | `playwright.config.ts` & `playwright.disposable.config.ts` (`desktop`, `ipad`, `mobile`) | Pending CI / staging run |
 
 No pass claim until real browser execution and appropriate persisted-state assertions succeed. Do not merge or deploy this test branch as a side effect of running tests.

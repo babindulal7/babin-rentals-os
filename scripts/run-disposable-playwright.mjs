@@ -201,17 +201,84 @@ async function run() {
       }
       // Separate mutating fixtures per device. Use the actual Quote -> Booked
       // transition to acquire the normal inventory reservation, not a fake pack.
-      for (const [device, offset] of [['desktop', 16], ['ipad', 20], ['mobile', 24]]) {
-        const bookingId = randomUUID()
-        const pickup = new Date(Date.now() + offset * 86400000)
-        const end = new Date(pickup.getTime() + 2 * 86400000)
-        const row = (await fixtureQuery('booking insert', "insert into public.bookings (id,client_uuid,booking_no,client_id,branch_id,pickup_at,return_at,delivery_type,stage,created_by,updated_by) values ($1,$2,public.next_document_number('booking'),$3,$4,$5,$6,'Client Pickup','Quote',$7,$7) returning booking_no", [bookingId, randomUUID(), targets[0].clientId, branch, pickup, end, fixtureOwner])).rows[0]
-        await fixtureQuery('booking line insert', "insert into public.booking_lines (client_uuid,booking_id,line_type,product_id,description,qty,days,rate,created_by) values ($1,$2,'Equipment',$3,'Disposable Operations Cable',2,2,250,$4)", [randomUUID(), bookingId, productId, fixtureOwner])
-        await fixtureQuery('Quote to Booked transition', "insert into public.booking_stage_transitions (client_uuid,booking_id,branch_id,from_stage,to_stage,actor_id,actor_role,occurred_at) values ($1,$2,$3,'Quote','Booked',$4,'Owner',now())", [randomUUID(), bookingId, branch, fixtureOwner])
-        const stage = (await fixtureQuery('persisted stage read', "select stage from public.bookings where id=$1", [bookingId])).rows[0]?.stage
-        if (stage !== 'Booked') throw new Error('Operations confirmation fixture did not reach Booked')
-        env['E2E_OPS_CONFIRM_' + device.toUpperCase() + '_ID'] = bookingId
-        env['E2E_OPS_CONFIRM_' + device.toUpperCase() + '_NO'] = row.booking_no
+      const heldProductId = randomUUID()
+      const returnProductId = randomUUID()
+      await fixtureQuery('held second product insert', "insert into public.products (id,client_uuid,asset_code,name,category_id,brand,tracking_mode,total_quantity,daily_rate,created_by) values ($1,$2,public.next_document_number('equipment'),'Disposable Held Tripod',$3,'Disposable','Quantity',20,300,$4)", [heldProductId, randomUUID(), category, fixtureOwner])
+      await fixtureQuery('return product insert', "insert into public.products (id,client_uuid,asset_code,name,category_id,brand,tracking_mode,total_quantity,daily_rate,created_by) values ($1,$2,public.next_document_number('equipment'),'Disposable Return Cable',$3,'Disposable','Quantity',20,250,$4)", [returnProductId, randomUUID(), category, fixtureOwner])
+
+      for (const [device, baseOffset] of [['desktop', 16], ['ipad', 32], ['mobile', 48]]) {
+        const keyPrefix = device.toUpperCase()
+        const createBooked = async (label, offset, linesSpec) => {
+          const bookingId = randomUUID()
+          const pickup = new Date(Date.now() + offset * 86400000)
+          const end = new Date(pickup.getTime() + 2 * 86400000)
+          const row = (await fixtureQuery(`${label} booking insert`, "insert into public.bookings (id,client_uuid,booking_no,client_id,branch_id,pickup_at,return_at,delivery_type,stage,created_by,updated_by) values ($1,$2,public.next_document_number('booking'),$3,$4,$5,$6,'Client Pickup','Quote',$7,$7) returning booking_no", [bookingId, randomUUID(), targets[0].clientId, branch, pickup, end, fixtureOwner])).rows[0]
+          const lineIds = []
+          for (const spec of linesSpec) {
+            const lineId = randomUUID()
+            await fixtureQuery(`${label} booking line insert`, "insert into public.booking_lines (id,client_uuid,booking_id,line_type,product_id,description,qty,days,rate,created_by) values ($1,$2,$3,'Equipment',$4,$5,$6,2,$7,$8)", [lineId, randomUUID(), bookingId, spec.productId, spec.description, spec.qty, spec.rate, fixtureOwner])
+            lineIds.push({ id: lineId, qty: spec.qty })
+          }
+          await fixtureQuery(`${label} Quote to Booked`, "insert into public.booking_stage_transitions (client_uuid,booking_id,branch_id,from_stage,to_stage,actor_id,actor_role,occurred_at) values ($1,$2,$3,'Quote','Booked',$4,'Owner',now())", [randomUUID(), bookingId, branch, fixtureOwner])
+          const stage = (await fixtureQuery(`${label} stage read`, "select stage from public.bookings where id=$1", [bookingId])).rows[0]?.stage
+          if (stage !== 'Booked') throw new Error(`Operations ${label} fixture did not reach Booked`)
+          return { bookingId, bookingNo: row.booking_no, lineIds }
+        }
+
+        const advanceToPacked = async (label, bookingId, lineIds) => {
+          const packSessionId = randomUUID()
+          await fixtureQuery(`${label} pack session`, "insert into public.operation_sessions (id,client_uuid,booking_id,operation,session_no,state,warehouse_staff_id,created_by) values ($1,$2,$3,'Packing',1,'In Progress',$4,$4)", [packSessionId, randomUUID(), bookingId, fixtureOwner])
+          for (const line of lineIds) {
+            await fixtureQuery(`${label} packing line`, "insert into public.packing_lines (client_uuid,session_id,booking_line_id,state,qty_required,qty_packed_entered,packed_at,packed_by,created_by) values ($1,$2,$3,'Packed',$4,$4,now(),$5,$5)", [randomUUID(), packSessionId, line.id, line.qty, fixtureOwner])
+            await fixtureQuery(`${label} packing movement`, "insert into public.session_line_movements (client_uuid,session_id,booking_line_id,qty,moved_at,created_by) values ($1,$2,$3,$4,now(),$5)", [randomUUID(), packSessionId, line.id, line.qty, fixtureOwner])
+          }
+          await fixtureQuery(`${label} Booked to Packed`, "insert into public.booking_stage_transitions (client_uuid,booking_id,branch_id,from_stage,to_stage,actor_id,actor_role,occurred_at) values ($1,$2,$3,'Booked','Packed',$4,'Owner',now())", [randomUUID(), bookingId, branch, fixtureOwner])
+          await fixtureQuery(`${label} seal pack session`, "update public.operation_sessions set state='Completed' where id=$1", [packSessionId])
+          const stage = (await fixtureQuery(`${label} packed stage read`, "select stage from public.bookings where id=$1", [bookingId])).rows[0]?.stage
+          if (stage !== 'Packed') throw new Error(`Operations ${label} fixture did not reach Packed`)
+        }
+
+        const advanceToOnRent = async (label, bookingId, lineIds) => {
+          const handoverSessionId = randomUUID()
+          await fixtureQuery(`${label} handover session`, "insert into public.operation_sessions (id,client_uuid,booking_id,operation,session_no,state,delivery_method,warehouse_staff_id,created_by,government_id_verified,booking_authorization_verified) values ($1,$2,$3,'Handover',1,'In Progress','Client Pickup',$4,$4,true,true)", [handoverSessionId, randomUUID(), bookingId, fixtureOwner])
+          for (const line of lineIds) {
+            await fixtureQuery(`${label} handover line`, "insert into public.handover_lines (client_uuid,booking_line_id,state,qty_required,first_session_id,completed_session_id,picked_up_at,created_by) values ($1,$2,'Picked Up',$3,$4,$4,now(),$5)", [randomUUID(), line.id, line.qty, handoverSessionId, fixtureOwner])
+            await fixtureQuery(`${label} handover movement`, "insert into public.session_line_movements (client_uuid,session_id,booking_line_id,qty,resulting_item_state,moved_at,created_by) values ($1,$2,$3,$4,'Picked Up',now(),$5)", [randomUUID(), handoverSessionId, line.id, line.qty, fixtureOwner])
+          }
+          await fixtureQuery(`${label} receiver signature`, "insert into public.signatures (client_uuid,session_id,signature_role,signer_name,signed_at,device,is_required,created_by) values ($1,$2,'Receiver','Disposable Client Rep',now(),'E2E',true,$3)", [randomUUID(), handoverSessionId, fixtureOwner])
+          await fixtureQuery(`${label} Packed to On Rent`, "insert into public.booking_stage_transitions (client_uuid,booking_id,branch_id,from_stage,to_stage,actor_id,actor_role,reason,occurred_at) values ($1,$2,$3,'Packed','On Rent',$4,'Owner','Disposable handover fixture',now())", [randomUUID(), bookingId, branch, fixtureOwner])
+          await fixtureQuery(`${label} seal handover session`, "update public.operation_sessions set state='Completed' where id=$1", [handoverSessionId])
+          const stage = (await fixtureQuery(`${label} on-rent stage read`, "select stage from public.bookings where id=$1", [bookingId])).rows[0]?.stage
+          if (stage !== 'On Rent') throw new Error(`Operations ${label} fixture did not reach On Rent`)
+        }
+
+        const confirmBooking = await createBooked('confirm', baseOffset, [
+          { productId, description: 'Disposable Operations Cable', qty: 2, rate: 250 },
+        ])
+        env['E2E_OPS_CONFIRM_' + keyPrefix + '_ID'] = confirmBooking.bookingId
+        env['E2E_OPS_CONFIRM_' + keyPrefix + '_NO'] = confirmBooking.bookingNo
+
+        const retryBooking = await createBooked('retry', baseOffset + 4, [
+          { productId, description: 'Disposable Operations Cable', qty: 2, rate: 250 },
+        ])
+        env['E2E_OPS_RETRY_' + keyPrefix + '_ID'] = retryBooking.bookingId
+        env['E2E_OPS_RETRY_' + keyPrefix + '_NO'] = retryBooking.bookingNo
+
+        const heldBooking = await createBooked('held', baseOffset + 8, [
+          { productId, description: 'Disposable Operations Cable', qty: 1, rate: 250 },
+          { productId: heldProductId, description: 'Disposable Held Tripod', qty: 1, rate: 300 },
+        ])
+        await advanceToPacked('held', heldBooking.bookingId, heldBooking.lineIds)
+        env['E2E_OPS_HELD_' + keyPrefix + '_ID'] = heldBooking.bookingId
+        env['E2E_OPS_HELD_' + keyPrefix + '_NO'] = heldBooking.bookingNo
+
+        const returnBooking = await createBooked('return', baseOffset + 12, [
+          { productId: returnProductId, description: 'Disposable Return Cable', qty: 2, rate: 250 },
+        ])
+        await advanceToPacked('return', returnBooking.bookingId, returnBooking.lineIds)
+        await advanceToOnRent('return', returnBooking.bookingId, returnBooking.lineIds)
+        env['E2E_OPS_RETURN_' + keyPrefix + '_ID'] = returnBooking.bookingId
+        env['E2E_OPS_RETURN_' + keyPrefix + '_NO'] = returnBooking.bookingNo
       }
       await conn.query('commit')
     } catch (error) {
