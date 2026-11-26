@@ -26,5 +26,6 @@ describe('email RPC least-privilege migration (0270)', () => {
     expect(sql).not.toMatch(/insert\s+into\s+public\.email_log\s*\(/i)
     expect(sql).not.toMatch(/set\s+status\s*=\s*'sent'/i)
     expect(sql).toContain("if r.channel = 'whatsapp_draft' then")
+    expect(sql).toContain("and pr.channel = 'whatsapp_draft'")
   })
 })
