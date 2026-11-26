@@ -2572,6 +2572,11 @@ STEPS.push({
         'warehouse reads the partial pickup quantity')
       assertEq(await one('select state::text from handover_lines where booking_line_id=$1', [line.id]), 'Remaining',
         'the movement transaction creates a remaining handover line')
+      await q('savepoint partial_missing_probe')
+      await as('Warehouse', () => q("update handover_lines set state='Missing',missing_reason='Remaining cable not found' where booking_line_id=$1", [line.id]))
+      assertEq(await one('select state::text from handover_lines where booking_line_id=$1', [line.id]), 'Missing', 'a partly collected line can record its missing remainder')
+      await q('rollback to savepoint partial_missing_probe')
+      await q('release savepoint partial_missing_probe')
       assertEq(await as('Warehouse', () => one('select session_id from handover_resumable_sessions where booking_id=$1', [id])), handover,
         'an open session with a recorded pickup is resumable')
       assertEq(Number(await as('Client', () => one('select count(*) from handover_resumable_sessions where booking_id=$1', [id]))), 0,
@@ -2631,6 +2636,9 @@ STEPS.push({
         'only the open session is resumable')
       assertEq(await one('select state::text from handover_lines where booking_line_id=$1', [line.id]), 'Picked Up',
         'the final movement atomically completes the handover line')
+      await reject('Warehouse', 'a fully picked up line cannot be marked missing',
+        "update handover_lines set state='Missing',missing_reason='Stale missing line report' where booking_line_id=$1",
+        [line.id], /fully picked up line cannot be recorded as missing/i)
       await reject('Warehouse', 'later session cannot pick up the same quantity again',
         `insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,moved_at,created_by)
          values(gen_random_uuid(),$1,$2,1,'Picked Up',now(),$3)`,

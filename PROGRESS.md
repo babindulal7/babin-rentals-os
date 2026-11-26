@@ -12,6 +12,7 @@
 - Guarded a specific unit or serial from being recorded twice while its prior pickup is unreversed; a fully corrected unit may be recorded again.
 - Merged PR #487's newer CI-only commit ef3efcbc into the local repair branch. Updated the pinned staging-inventory test to report this new migration as source drift, without changing the historical inventory or approving any database apply.
 - Independent review identified four blockers: stale application writes can overwrite the movement projection, serial-unit state can lag after interruption, a fully reversed quantity can be skipped as a retry, and a lost session-seal response after stage advance cannot be recovered. Removed the direct application projection update for successful pickups; the separate Missing path still needs concurrency review.
+- Added a database guard which rechecks a Missing decision under the booking lock and refuses it when the whole line is already picked up. A partial line can still be marked Missing. PostgreSQL may abort a transaction on a competing lock-order deadlock; the reverse ordering needs explicit verification and a user-facing recovery check.
 
 **Ruled**
 - Custody writes are fail-closed and the booked quantity is the upper bound.
@@ -29,24 +30,25 @@
 - The first full local gate passed typecheck, lint and local API guards, then stopped at the full test suite: 8,219 tests passed and the staging-inventory count assertion failed because the new migration was not listed. The corrected inventory test passed 2/2 before the full rerun below.
 - Full local gate rerun passed all 18 steps on the merged local source: typecheck; lint; local API guards; 8,220/8,220 tests; 275/275 migration rebuild; migration planner; financial integrity; security; 102/102 lifecycle; server contracts; partial return; progress lint; receipt integrity; shell lint; UI-copy lint; 97/97 contrast; build; and coverage (8,220/8,220 tests). These are local checks, not GitHub CI or real PostgreSQL concurrency proof.
 - On a newly initialized, loopback-only PostgreSQL 17 cluster with all 275 migrations, two-connection probes observed the second writer block: an over-pickup was rejected with P0001 after the first committed, while a pickup waiting for a correction succeeded once quantity was released. Both left the expected total and line state. These tests cover those two interleavings only. The cluster was stopped; no hosted database was touched. After the projection-write change, 111/111 focused floor-verb tests, typecheck and lint passed. The prior full gate predates this change and must be rerun.
+- A third PostgreSQL 17 probe first reproduced a stale Missing update overwriting a completed pickup, then passed after the guard: the waiting update was rejected with P0001 and the full pickup remained recorded. The isolated cluster was stopped. PGlite rebuilt 275/275 migrations and passed 102/102 lifecycle checks, including valid partial Missing and refusal after full pickup.
 
 ### Completion
 | Dimension | Counts | Now | Δ |
 |---|---|---|---|
 | Backend | actions implemented / total | 118 / 118 (100%) | +0 |
 | Real data | DB-only · mixed · seed · none / 72 | 58 · 0 · 0 · 14 |  |
-| DB enforcement | gates in Postgres / unknown | not measured — current receipt required | — |
+| DB enforcement | gates in Postgres / 9 | 9 / 9 (100%) | — |
 | Permissions | capabilities mapped / declared | 89 / 89 (100%) | +0 |
-| Lifecycle | steps green / total | not measured — current receipt required | — |
-| Overall | structural mean of five | not measured | — |
-Migrations 275 files · check:pglite Historical, incomplete or failed receipt (2026-11-26T15:31:38.122Z); current source NOT VERIFIED. Suite: Historical suite: 8220/8220 passed, 0 failed (recorded 2026-11-26T15:46:23.154Z); current source NOT VERIFIED.
+| Lifecycle | steps green / total | 102 / 102 (100%) | — |
+| Overall | structural mean of five | ≈ 96% | — |
+Migrations 275 files · check:pglite 275/275 applied, 0 failed (recorded 2026-11-26T18:17:46.154Z). Suite: Historical suite: 8220/8220 passed, 0 failed (recorded 2026-11-26T15:46:23.154Z); current source NOT VERIFIED.
 Coverage suite: Historical suite: 8220/8220 passed, 0 failed (recorded 2026-11-26T15:46:23.154Z); current source NOT VERIFIED.
-Gates read from .lifecycle-result.json, written Historical, incomplete or failed receipt (2026-11-26T15:32:59.778Z); current source NOT VERIFIED.
+Gates read from .lifecycle-result.json, written 2026-11-26T18:17:49.370Z.
 Counted by `npm run completion`, not typed.
 Structural coverage only. Functional, hosted, integration and device acceptance: NOT VERIFIED by this counter.
 
 ### Remaining
-- Resolve the remaining independent-review blockers: concurrent Missing updates, interrupted serial-unit state, fully reversed quantity retries, and recovery after a lost session-seal response. Expand real PostgreSQL concurrency and correction coverage, verify the full browser flow, rerun all local gates and obtain independent review before disposable Playwright. The screen requires the new views. Migration is WRITTEN and locally VERIFIED in PGlite and for two PostgreSQL 17 races, not applied to staging or production.
+- Resolve the remaining independent-review blockers: interrupted serial-unit state, fully reversed quantity retries, and recovery after a lost session-seal response. Test reverse lock ordering for Missing versus pickup, deadlock recovery and other PostgreSQL concurrency and correction cases; verify the full browser flow, rerun all local gates and obtain independent review before disposable Playwright. The screen requires the new views. Migration is WRITTEN and locally VERIFIED in PGlite and three PostgreSQL 17 races, not applied to staging or production.
 
 ## 2026-11-26 — Partial pickup Playwright locator repair (Lane A)
 

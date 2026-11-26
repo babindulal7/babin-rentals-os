@@ -77,6 +77,31 @@ try {
   assert.equal(Number(afterCorrection.picked_qty), 2)
   assert.equal(afterCorrection.state, 'Picked Up')
   console.log('PASS PostgreSQL 17: pickup waits for correction and records the released quantity')
+
+  const missingRace = await makePickupFixture({ q, ownerId, warehouseId, branchId, clientId })
+  await insert(observer, 1, missingRace)
+  await begin(first)
+  await begin(second)
+  await insert(first, 1, missingRace)
+  pending = second.query("update handover_lines set state='Missing', missing_reason='Concurrent missing report' where booking_line_id=$1", [missingRace.lineId])
+    .then(result => ({ result }), error => ({ error }))
+  blocked = false
+  for (let i = 0; i < 100; i++) {
+    const result = await observer.query('select $2::int = any(pg_blocking_pids($1::int)) as blocked', [second.processID, first.processID])
+    if (result.rows[0]?.blocked) { blocked = true; break }
+    await sleep(50)
+  }
+  assert.ok(blocked, 'Expected the Missing update to wait for the final pickup')
+  await first.query('commit')
+  const staleMissing = await pending
+  pending = undefined
+  assert.equal(staleMissing.error?.code, 'P0001', 'A stale Missing update must be refused by the business gate')
+  assert.match(staleMissing.error.message, /fully picked up line cannot be recorded as missing/i)
+  await second.query('rollback')
+  const afterMissingRace = (await observer.query('select picked_qty, state from handover_pickup_totals join handover_lines using (booking_line_id) where booking_line_id=$1', [missingRace.lineId])).rows[0]
+  assert.equal(Number(afterMissingRace.picked_qty), 2)
+  assert.equal(afterMissingRace.state, 'Picked Up')
+  console.log('PASS PostgreSQL 17: stale Missing update rejected after final pickup')
 } finally {
   await first.query('rollback').catch(() => {})
   if (pending) await pending

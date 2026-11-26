@@ -146,6 +146,35 @@ create trigger trg_guard_quantity_pickup_total
 before insert on public.session_line_movements
 for each row execute function public.guard_quantity_pickup_total();
 
+-- Recheck a Missing decision against pickup facts under the same booking lock.
+-- A competing row update can deadlock with pickup's booking-first order; in
+-- that case PostgreSQL aborts a transaction rather than accepting stale state.
+create function public.guard_missing_handover_after_pickup()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_booking uuid;
+  v_qty integer;
+  v_picked bigint;
+begin
+  if NEW.state <> 'Missing' then return NEW; end if;
+  select booking_id into v_booking from public.booking_lines where id = NEW.booking_line_id;
+  perform 1 from public.bookings where id = v_booking for update;
+  select qty into v_qty from public.booking_lines where id = NEW.booking_line_id for update;
+  select coalesce((select picked_qty from public.handover_pickup_totals where booking_line_id = NEW.booking_line_id), 0) into v_picked;
+  if v_qty is null or v_picked >= v_qty then
+    raise exception 'A fully picked up line cannot be recorded as missing.' using errcode = 'P0001';
+  end if;
+  return NEW;
+end
+$$;
+create trigger trg_guard_missing_handover_after_pickup
+before insert or update of state on public.handover_lines
+for each row execute function public.guard_missing_handover_after_pickup();
+
 -- Commit the line projection in the same transaction as its physical
 -- movement. An interrupted client can then reload without a missing line.
 create function public.sync_handover_line_from_pickup()
