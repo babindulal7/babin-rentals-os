@@ -2570,6 +2570,8 @@ STEPS.push({
       })
       assertEq(Number(await as('Warehouse', () => one('select picked_qty from handover_pickup_totals where booking_line_id=$1', [line.id]))), 1,
         'warehouse reads the partial pickup quantity')
+      assertEq(await one('select state::text from handover_lines where booking_line_id=$1', [line.id]), 'Remaining',
+        'the movement transaction creates a remaining handover line')
       assertEq(Number(await as('Client', () => one('select count(*) from handover_pickup_totals where booking_line_id=$1', [line.id]))), 0,
         'client cannot read staff pickup movements through the view')
       assertEq(await stageOf('qty-ok'), 'Packed', 'partial quantity handover has not advanced the stage')
@@ -2593,6 +2595,8 @@ STEPS.push({
           values($1,$2,$3,$4,'Picked Up',now(),$5) on conflict(client_uuid) do nothing`,
           [remainingKey,nextHandover,line.id,line.qty - 1,U.Warehouse])
       })
+      assertEq(await one('select state::text from handover_lines where booking_line_id=$1', [line.id]), 'Picked Up',
+        'the final movement atomically completes the handover line')
       await reject('Warehouse', 'later session cannot pick up the same quantity again',
         `insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,moved_at,created_by)
          values(gen_random_uuid(),$1,$2,1,'Picked Up',now(),$3)`,
@@ -2613,6 +2617,8 @@ STEPS.push({
       })
       assertEq(Number(await as('Warehouse', () => one('select picked_qty from handover_pickup_totals where booking_line_id=$1', [line.id]))), line.qty - 1,
         'pickup read model subtracts the correction')
+      assertEq(await one('select state::text from handover_lines where booking_line_id=$1', [line.id]), 'Remaining',
+        'a correction atomically reopens the quantity line')
       await reject('Warehouse', 'a pickup correction cannot reverse the same unit twice',
         `insert into session_line_movements(client_uuid,session_id,booking_line_id,qty,resulting_item_state,reverses_movement_id,moved_at,created_by)
          values(gen_random_uuid(),$1,$2,1,'Picked Up',$3,now(),$4)`,

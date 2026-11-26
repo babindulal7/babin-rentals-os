@@ -923,6 +923,16 @@ describe('Handover', () => {
     expect(opsOn('handover_lines')[0]?.payload).toMatchObject({ state: 'Picked Up', qty_required: 2 })
   })
 
+  it('reads the line created atomically by a first pickup before updating it', async () => {
+    db.state.responses['handover_pickup_totals'] = [[{ booking_line_id: LINE_A, picked_qty: 1 }]]
+    db.state.responses['handover_lines'] = [
+      [], [{ id: 'trigger-line', booking_line_id: LINE_A, state: 'Remaining' }],
+      [{ id: 'trigger-line', booking_line_id: LINE_A, state: 'Remaining' }],
+    ]
+    await handoverRental({ bookingId: 'B-715', lines: [{ bookingLineId: LINE_A, qty: 1 }] }, OWNER)
+    expect(opsOn('handover_lines')[0]).toMatchObject({ kind: 'update', id: 'trigger-line', payload: { state: 'Remaining' } })
+  })
+
   it('refuses a changed quantity when retrying a session with an immutable pickup receipt', async () => {
     db.state.responses['operation_sessions'] = [[{ id: 'open-session', session_no: 1, state: 'In Progress' }]]
     db.state.responses['session_line_movements'] = [[{ id: 'movement', booking_line_id: LINE_A,

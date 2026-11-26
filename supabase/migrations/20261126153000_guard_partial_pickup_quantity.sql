@@ -108,3 +108,59 @@ $$;
 create trigger trg_guard_quantity_pickup_total
 before insert on public.session_line_movements
 for each row execute function public.guard_quantity_pickup_total();
+
+-- Commit the line projection in the same transaction as its physical
+-- movement. An interrupted client can then reload without a missing line.
+create function public.sync_handover_line_from_pickup()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_line uuid;
+  v_session uuid;
+  v_actor uuid;
+  v_required integer;
+  v_picked bigint;
+  v_state public.handover_line_state;
+begin
+  if NEW.reverses_movement_id is null then
+    if NEW.resulting_item_state is distinct from 'Picked Up'::public.item_quantity_state
+       or not exists (select 1 from public.operation_sessions where id = NEW.session_id and operation = 'Handover') then
+      return NEW;
+    end if;
+    v_line := NEW.booking_line_id;
+    v_session := NEW.session_id;
+    v_actor := NEW.created_by;
+  else
+    select m.booking_line_id, m.session_id, m.created_by
+      into v_line, v_session, v_actor
+      from public.session_line_movements m
+      join public.operation_sessions s on s.id = m.session_id
+     where m.id = NEW.reverses_movement_id and m.reverses_movement_id is null
+       and m.resulting_item_state = 'Picked Up' and s.operation = 'Handover';
+    if v_line is null then return NEW; end if;
+  end if;
+  select qty into v_required from public.booking_lines where id = v_line;
+  select coalesce((select picked_qty from public.handover_pickup_totals where booking_line_id = v_line), 0)
+    into v_picked;
+  v_state := case when v_picked = v_required then 'Picked Up'::public.handover_line_state
+                  else 'Remaining'::public.handover_line_state end;
+  insert into public.handover_lines
+    (client_uuid, booking_line_id, state, qty_required, first_session_id, completed_session_id, picked_up_at, created_by)
+  values
+    (gen_random_uuid(), v_line, v_state, v_required, v_session,
+     case when v_state = 'Picked Up' then NEW.session_id end,
+     case when v_state = 'Picked Up' then NEW.moved_at end, v_actor)
+  on conflict (booking_line_id) do update
+    set state = excluded.state, qty_required = excluded.qty_required,
+        completed_session_id = excluded.completed_session_id, picked_up_at = excluded.picked_up_at,
+        updated_at = now();
+  return NEW;
+end
+$$;
+
+create trigger trg_sync_handover_line_from_pickup
+after insert on public.session_line_movements
+for each row execute function public.sync_handover_line_from_pickup();

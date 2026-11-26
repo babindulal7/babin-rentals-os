@@ -192,7 +192,7 @@ function commitInsert(table: string, row: Row, at: string): void {
 }
 
 /**
- * The ONE database trigger this store emulates.
+ * Selected database projections this store emulates.
  *
  * `bookings.stage` is a read model: "Written ONLY by that table's trigger; a
  * direct UPDATE is rejected" (0002:81, the trigger itself in
@@ -226,6 +226,30 @@ function commitInsert(table: string, row: Row, at: string): void {
  * — an exclusion over a range type is not something this store can express.
  */
 function applyTriggers(table: string, row: Row): void {
+  if (table === 'session_line_movements') {
+    const original = row['reverses_movement_id'] == null ? row
+      : (store['session_line_movements'] ?? []).find((m) => m['id'] === row['reverses_movement_id'])
+    const session = (store['operation_sessions'] ?? []).find((s) => s['id'] === original?.['session_id'])
+    if (!original || original['resulting_item_state'] !== 'Picked Up' || session?.['operation'] !== 'Handover') return
+    const lineId = original['booking_line_id']
+    const line = (store['booking_lines'] ?? []).find((item) => item['id'] === lineId)
+    if (!line) return
+    const total = read('handover_pickup_totals').find((item) => item['booking_line_id'] === lineId)
+    const picked = Number(total?.['picked_qty'] ?? 0)
+    const complete = picked === Number(line['qty'])
+    const patch: Row = { state: complete ? 'Picked Up' : 'Remaining', qty_required: line['qty'],
+      completed_session_id: complete ? row['session_id'] : null, picked_up_at: complete ? row['moved_at'] : null,
+      updated_at: new Date().toISOString() }
+    const current = (store['handover_lines'] ?? []).find((item) => item['booking_line_id'] === lineId)
+    if (current) {
+      Object.assign(current, patch)
+      overlay.updates.push({ table: 'handover_lines', id: current['id'], patch })
+    } else {
+      commitInsert('handover_lines', { id: crypto.randomUUID(), client_uuid: crypto.randomUUID(),
+        booking_line_id: lineId, first_session_id: original['session_id'], created_by: original['created_by'], ...patch }, new Date().toISOString())
+    }
+    return
+  }
   if (table === 'booking_stage_transitions') {
     const bookingId = row['booking_id']
     const to = row['to_stage']
