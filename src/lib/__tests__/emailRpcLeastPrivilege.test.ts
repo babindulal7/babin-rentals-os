@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 
 const sql = readFileSync(
-  new URL('../../../supabase/migrations/0270_email_rpc_least_privilege_and_disable_mock_payment_sends.sql', import.meta.url),
+  new URL('../../../supabase/migrations/0273_email_rpc_least_privilege_and_disable_mock_payment_sends.sql', import.meta.url),
   'utf8',
 )
 
-describe('email RPC least-privilege migration (0270)', () => {
+describe('email RPC least-privilege migration (0273)', () => {
   it('requires server role for all privileged email RPCs', () => {
     const signatures = [
       'build_email_payload(text, uuid, text)',

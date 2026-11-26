@@ -1,4 +1,4 @@
--- 0270_email_rpc_least_privilege_and_disable_mock_payment_sends.sql
+-- 0273_email_rpc_least_privilege_and_disable_mock_payment_sends.sql
 -- Prepared 2026-11-26. Staging-first, reviewed release only.
 -- Privileged email RPCs must only be reached via service_role Edge Functions.
 -- No real email or simulated email is sent by this migration.

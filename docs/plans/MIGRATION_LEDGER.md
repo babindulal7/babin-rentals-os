@@ -12,7 +12,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 5. Never reuse a number that exists in the repo **or** in the live ledger
    (`docs/live/schema_migrations_*.txt`). `0175` is unused on purpose — do not take it.
 
-**Next free number: 0270**  (0245-0251 R-9.18; 0252 T2-23; 0253 T2-24; 0254 T3-14; 0255 T7-02; 0256 T7-04; 0257 T7-03; 0258 T7-05; 0259 T7-15; 0260 T7-07; 0261 T9-02; 0262 T7-14; 0263 T7-13; 0264 T7-13; 0265 T7-04; 0266 R-22.8; 0267 T1-17; 0268 T1-18; 0269 T1-17)
+**Next free number: 0274**  (0245-0251 R-9.18; 0252 T2-23; 0253 T2-24; 0254 T3-14; 0255 T7-02; 0256 T7-04; 0257 T7-03; 0258 T7-05; 0259 T7-15; 0260 T7-07; 0261 T9-02; 0262 T7-14; 0263 T7-13; 0264 T7-13; 0265 T7-04; 0266 R-22.8; 0267 T1-17; 0268 T1-18; 0269 T1-17; 0270 sign-in event immutability; 0271 service-role payment allocation; 0272 partner stock read contract; 0273 email RPC least privilege)
 
 > **Legacy exception:** `0188` exists as two distinct, locally verified migration files
 > (`0188_smart_reservation_holds.sql` and `0188_staff_renting_gear.sql`). Both are preserved because
@@ -20,6 +20,7 @@ Three lanes write migrations in parallel. To stop two branches using the same nu
 
 | Number | Task | Slug | Branch | Status |
 |---|---|---|---|---|
+| 0273 | Email RPC hardening | email-rpc-least-privilege-and-disable-mock-payment-sends | lane-c/T7-10-backend-verification | VERIFIED locally with PGlite and lifecycle checks on 27 Nov 2026 |
 | 0269 | T1-17 | mfa-provider-proof-and-session-safety | fix/t1-17-postmerge-provider-proof-audit-integrity-20261123 | APPLIED live by Babin 24 Nov 2026 (sxguwvgoserhdolewibb; 277 total migrations verified, 0 drift with staging) |
 | 0268 | T1-18 | sign-in-events-and-new-device | lane-a/T1-18-sign-in-events-and-new-device | APPLIED live by Babin 24 Nov 2026 (sxguwvgoserhdolewibb; 277 total migrations verified, 0 drift with staging) |
 | 0267 | T1-17 | database-enforced-aal2-money-roles | main | APPLIED live by Babin 24 Nov 2026 (sxguwvgoserhdolewibb; 277 total migrations verified, 0 drift with staging) |
